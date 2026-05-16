@@ -278,6 +278,7 @@ export interface SimulateCycleResult {
   playbooksUpdated?: number;
   candidatesScanned?: number;
   candidatesSelected?: number;
+  uniqueSymbolsSeen?: number;
   gateRejections?: number;
   gateRejectionReasons?: Record<string, number>;
 }

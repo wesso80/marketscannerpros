@@ -136,7 +136,7 @@ export default function PortfolioLabPage() {
       const r = await fetch("/api/admin/portfolio-lab/simulate-cycle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ maxNewIdeas: 5, sinceMinutes: 240 }),
+        body: JSON.stringify({ maxNewIdeas: 5, sinceMinutes: 720 }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
@@ -152,7 +152,7 @@ export default function PortfolioLabPage() {
           .map(([k, v]) => `${k} ×${v}`).join(" · ");
         gateLine = `\nTop gate rejections: ${top}`;
       }
-      const scanned = res?.candidatesScanned != null ? `\nScanned ${res.candidatesScanned} edge packets (${res?.gateRejections ?? 0} gated, ${res?.candidatesSelected ?? 0} selected).` : "";
+      const scanned = res?.candidatesScanned != null ? `\nScanned ${res.candidatesScanned} edge packets across ${res?.uniqueSymbolsSeen ?? "?"} unique symbols (${res?.gateRejections ?? 0} gated, ${res?.candidatesSelected ?? 0} selected).` : "";
       setCycleResult(baseLine + scanned + gateLine);
       await load();
     } catch (e) {

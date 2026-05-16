@@ -48,8 +48,13 @@ const ALLOWED_BIAS_SHORT = new Set(["BEAR", "SHORT", "STRONG_BEAR"]);
 
 export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<DecisionEngineResult> {
   const { portfolio } = opts;
-  const limit = Math.max(20, Math.min(200, opts.maxNewIdeas ?? 10) * 8);
-  const sinceMs = (opts.sinceMinutes ?? 240) * 60_000;
+  // Load a much larger window so the engine actually sees the whole
+  // universe each cycle. Without this, a small set of stale mega-cap
+  // packets monopolise the dedupe slots and the engine appears to
+  // "do nothing different" cycle after cycle.
+  const maxIdeas = opts.maxNewIdeas ?? 10;
+  const limit = Math.max(100, Math.min(500, maxIdeas * 30));
+  const sinceMs = (opts.sinceMinutes ?? 720) * 60_000;
   const since = new Date(Date.now() - sinceMs).toISOString();
 
   const rows = await loadEdgePackets({
@@ -58,15 +63,16 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
     limit,
   });
 
-  const seen = new Set<string>();      // dedupe by symbol (latest packet wins)
-  const selected: SelectedCandidate[] = [];
+  // Two-pass:
+  //  1. Gate every row (so the inspector / journal sees the full
+  //     rejection picture across the whole universe, not just the
+  //     first 10 unique symbols).
+  //  2. Dedupe at SELECTION time only — keep the highest-scoring
+  //     passing packet per symbol.
+  const selectedBySymbol = new Map<string, SelectedCandidate>();
   const rejected: CandidateGate[] = [];
 
   for (const row of rows) {
-    if (selected.length >= (opts.maxNewIdeas ?? 10)) break;
-    if (seen.has(row.symbol)) continue;
-    seen.add(row.symbol);
-
     const gateReasons = gateRow(row, portfolio);
     if (gateReasons.length > 0) {
       rejected.push({ packetId: row.packetId, symbol: row.symbol, passed: false, reasons: gateReasons });
@@ -77,11 +83,20 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
       rejected.push({ packetId: row.packetId, symbol: row.symbol, passed: false, reasons: ["entry_or_stop_missing"] });
       continue;
     }
-    selected.push(sel);
+    const existing = selectedBySymbol.get(row.symbol);
+    if (!existing || row.opportunityRankScore > existing.row.opportunityRankScore) {
+      selectedBySymbol.set(row.symbol, sel);
+    }
   }
+
+  // Rank passing candidates by opportunityRankScore desc, cap at maxNewIdeas.
+  const selected = Array.from(selectedBySymbol.values())
+    .sort((a, b) => b.row.opportunityRankScore - a.row.opportunityRankScore)
+    .slice(0, maxIdeas);
 
   return { selected, rejected, scannedPackets: rows.length };
 }
+
 
 export function gateRow(row: EdgePacketRow, portfolio: ArcaPortfolio): string[] {
   const reasons: string[] = [];

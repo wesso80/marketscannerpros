@@ -58,8 +58,8 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   // Build a symbol → latest price map from recent edge-packet snapshots.
   const recent = await loadEdgePackets({
     workspaceId: opts.workspaceId,
-    since: new Date(Date.now() - (opts.sinceMinutes ?? 240) * 60_000).toISOString(),
-    limit: 300,
+    since: new Date(Date.now() - (opts.sinceMinutes ?? 720) * 60_000).toISOString(),
+    limit: 500,
   });
   const priceBySymbol = new Map<string, number>();
   for (const r of recent) {
@@ -110,7 +110,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   const decision = await runDecisionEngine({
     portfolio: runningPortfolio,
     maxNewIdeas: opts.maxNewIdeas ?? 5,
-    sinceMinutes: opts.sinceMinutes ?? 240,
+    sinceMinutes: opts.sinceMinutes ?? 720,
   });
 
   for (const cand of decision.selected) {
@@ -281,6 +281,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     playbooksUpdated,
     candidatesScanned: decision.scannedPackets,
     candidatesSelected: decision.selected.length,
+    uniqueSymbolsSeen: new Set([...decision.rejected.map((r) => r.symbol), ...decision.selected.map((s) => s.row.symbol)]).size,
     gateRejections: decision.rejected.length,
     gateRejectionReasons: gateReasonHistogram,
   };
