@@ -98,6 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/equity-research", label: "Equity Research", code: "ER" },
         { href: "/admin/earnings-analyzer", label: "Earnings Analyzer", code: "EA" },
         { href: "/admin/sector-rotation", label: "Sector Rotation", code: "SR" },
+        { href: "/admin/macro-outlook", label: "Macro Outlook", code: "MO" },
         { href: "/admin/options-architect", label: "Options Architect", code: "OA" },
         { href: "/admin/quant-screener", label: "Quant Screener", code: "QS" },
         { href: "/admin/risk-assessment", label: "Risk Assessment", code: "RA" },
