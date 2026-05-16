@@ -70,6 +70,28 @@ export async function POST(req: NextRequest) {
     const opAction = body.operatorAction as 'taken' | 'skipped' | 'pending' | undefined;
     const overrideReason = typeof body.overrideReason === 'string' ? body.overrideReason : undefined;
     persistedId = await persistChecklist(input, result, opAction, overrideReason);
+
+    // If the operator overrode a no-go / caution recommendation and TOOK the trade,
+    // mirror the decision into edge_ledger_self_attribution so behavioral-drift can
+    // reason about discipline. Best-effort: never block the checklist write.
+    const tookOverride =
+      opAction === 'taken' &&
+      (result.recommendation === 'no-go' || result.recommendation === 'caution') &&
+      typeof input.setupId === 'number';
+    if (tookOverride) {
+      try {
+        const { recordSelfAttribution } = await import('@/lib/edge/ledger');
+        await recordSelfAttribution({
+          workspaceId,
+          setupId: input.setupId as number,
+          action: 'taken',
+          overrideReason: overrideReason ?? `override:${result.recommendation}`,
+          checklistOverrides: [...result.blockingGates, ...result.warningGates],
+        });
+      } catch {
+        // swallow — checklist row already persisted; attribution is supplemental
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, result, persistedId });
