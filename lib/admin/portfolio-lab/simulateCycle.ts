@@ -185,16 +185,29 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   }
 
   // Journal rejections in bulk (no DB row per — single REJECTED summary).
+  const gateReasonHistogram: Record<string, number> = {};
+  for (const r of decision.rejected) {
+    for (const reason of r.reasons) {
+      // Bucket reasons by their leading token (e.g. "thesis_status_DEVELOPING" → "thesis_status")
+      const bucket = reason.replace(/(_\d+(\.\d+)?)+$/, "").replace(/_(lt|gt)_.*$/, "");
+      gateReasonHistogram[bucket] = (gateReasonHistogram[bucket] ?? 0) + 1;
+    }
+  }
   if (decision.rejected.length > 0) {
+    const topHist = Object.entries(gateReasonHistogram)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([k, v]) => `  ${k}: ${v}`).join("\n");
+    const perRow = decision.rejected
+      .slice(0, 25)
+      .map((r) => `${r.symbol}: ${r.reasons.join("|")}`)
+      .join("\n");
     await writeJournal({
       workspaceId: opts.workspaceId,
       portfolioId: portfolio.id,
       journalType: "REJECTED",
-      title: `Rejected ${decision.rejected.length} candidates in cycle`,
-      reasoning: decision.rejected
-        .slice(0, 25)
-        .map((r) => `${r.symbol}: ${r.reasons.join("|")}`)
-        .join("\n"),
+      title: `Rejected ${decision.rejected.length} candidates in cycle (scanned ${decision.scannedPackets})`,
+      reasoning: `Top gate reasons:\n${topHist}\n\nPer-symbol detail:\n${perRow}`,
     });
   }
 
@@ -266,6 +279,10 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     benchmarkCaptured,
     benchmarkSymbol,
     playbooksUpdated,
+    candidatesScanned: decision.scannedPackets,
+    candidatesSelected: decision.selected.length,
+    gateRejections: decision.rejected.length,
+    gateRejectionReasons: gateReasonHistogram,
   };
 }
 

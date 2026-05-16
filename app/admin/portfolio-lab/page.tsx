@@ -57,7 +57,7 @@ interface JournalEntry {
   journalType: string;
   title: string;
   symbol: string | null;
-  reasoning: string | null;
+  arcaReasoning: string | null;
 }
 interface RiskEvent {
   id: string;
@@ -141,11 +141,19 @@ export default function PortfolioLabPage() {
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       const res = j?.data;
-      setCycleResult(
+      const baseLine =
         `Cycle ok — marked ${res?.positionsMarked ?? 0}, triggered ${res?.ordersTriggered ?? 0}, ` +
         `opened ${res?.positionsOpened ?? 0}, closed ${res?.positionsClosed ?? 0}, ` +
-        `new orders ${res?.ordersCreated ?? 0}, rejections ${res?.rejections ?? 0}.`,
-      );
+        `new orders ${res?.ordersCreated ?? 0}, rejections ${res?.rejections ?? 0}.`;
+      const gateHist: Record<string, number> | undefined = res?.gateRejectionReasons;
+      let gateLine = "";
+      if (gateHist && Object.keys(gateHist).length > 0) {
+        const top = Object.entries(gateHist).sort((a, b) => b[1] - a[1]).slice(0, 5)
+          .map(([k, v]) => `${k} ×${v}`).join(" · ");
+        gateLine = `\nTop gate rejections: ${top}`;
+      }
+      const scanned = res?.candidatesScanned != null ? `\nScanned ${res.candidatesScanned} edge packets (${res?.gateRejections ?? 0} gated, ${res?.candidatesSelected ?? 0} selected).` : "";
+      setCycleResult(baseLine + scanned + gateLine);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -239,7 +247,7 @@ export default function PortfolioLabPage() {
 
         {error && <ErrorBox text={error} />}
         {cycleResult && (
-          <div style={{ background: "#064E3B", border: "1px solid #10B981", color: "#A7F3D0", padding: 10, borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
+          <div style={{ background: "#064E3B", border: "1px solid #10B981", color: "#A7F3D0", padding: 10, borderRadius: 8, fontSize: 13, marginBottom: 12, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
             {cycleResult}
           </div>
         )}
@@ -350,8 +358,8 @@ export default function PortfolioLabPage() {
                         <span>{new Date(j.createdAt).toLocaleString()}</span>
                       </div>
                       <div style={{ fontSize: 13, color: "#E2E8F0", marginTop: 4 }}>{j.title}</div>
-                      {j.reasoning && (
-                        <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, whiteSpace: "pre-wrap" }}>{j.reasoning}</div>
+                      {j.arcaReasoning && (
+                        <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{j.arcaReasoning}</div>
                       )}
                     </div>
                   ))}

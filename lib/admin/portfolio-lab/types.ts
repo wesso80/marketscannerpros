@@ -276,4 +276,8 @@ export interface SimulateCycleResult {
   benchmarkCaptured?: boolean;
   benchmarkSymbol?: string;
   playbooksUpdated?: number;
+  candidatesScanned?: number;
+  candidatesSelected?: number;
+  gateRejections?: number;
+  gateRejectionReasons?: Record<string, number>;
 }
