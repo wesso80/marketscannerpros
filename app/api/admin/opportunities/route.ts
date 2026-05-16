@@ -18,6 +18,7 @@ import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchP
 import { projectEdgePacket, deriveCrossAssetConfluence, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { syncQueueFromPacket } from "@/lib/admin/queueStore";
 import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type ChangeTapeEvent, type ChangeTapeSeverity } from "@/lib/admin/changeTape";
+import { persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
 
 export const runtime = "nodejs";
@@ -95,11 +96,16 @@ export async function GET(req: NextRequest) {
       }
     }));
 
-    // Side-effects: sync queue state + emit change-tape events. Best-effort.
+    // Side-effects: sync queue state + emit change-tape events + persist
+    // edge-packet snapshots for audit/calibration. All best-effort.
     const changesBySymbol: Record<string, Array<{ eventType: string; severity: ChangeTapeSeverity; magnitude: number }>> = {};
     if (session?.workspaceId) {
       const ws = session.workspaceId;
       await Promise.allSettled(edgePackets.map((p) => syncQueueFromPacket({ workspaceId: ws, packet: p })));
+      // Persist canonical edge-packet snapshots (Tier 1 #2). Awaited so
+      // any DB error surfaces in logs while still being non-blocking via
+      // the outer try/catch — see persistEdgePackets internal swallow.
+      await persistEdgePackets({ workspaceId: ws, packets: edgePackets }).catch(() => 0);
       const allEvents: ChangeTapeEvent[][] = await Promise.all(
         packets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[])),
       );

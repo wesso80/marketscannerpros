@@ -17,6 +17,7 @@ import { timingSafeEqual } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { buildEveningPacket } from '@/lib/eveningPacket/builder';
+import { pruneEdgePackets } from '@/lib/admin/edgePacketSnapshots';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -138,11 +139,17 @@ export async function POST(req: NextRequest) {
     }
   }));
 
+  // Tier 1 #2 retention: prune admin_edge_packets rows older than 30
+  // days. Best-effort; failure is logged inside pruneEdgePackets and
+  // never blocks the evening packet response.
+  const edgePacketsPruned = await pruneEdgePackets(30).catch(() => 0);
+
   return NextResponse.json({
     ok: true,
     dateISO,
     processed: summaries.length,
     summaries,
+    edgePacketsPruned,
     durationMs: Date.now() - started,
   });
 }
