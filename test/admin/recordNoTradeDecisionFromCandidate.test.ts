@@ -104,13 +104,16 @@ describe("recordNoTradeDecisionFromCandidate — journal + dedupe + fields", () 
     expect(arg.journalType).toBe("RISK_BLOCK");
   });
 
-  it("uses DEFERRED journal type for WAIT_FOR_CONFIRMATION", async () => {
+  it("uses REJECTED journal type with DEFERRED title prefix for WAIT_FOR_CONFIRMATION", async () => {
     await recordNoTradeDecisionFromCandidate({
       ...baseInput,
       rejectionStage: "WAIT_FOR_CONFIRMATION",
     });
-    const arg = writeJournalMock.mock.calls[0][0] as { journalType: string };
-    expect(arg.journalType).toBe("DEFERRED");
+    const arg = writeJournalMock.mock.calls[0][0] as { journalType: string; title: string };
+    // DB CHECK on arca_trade_journal.journal_type does not admit DEFERRED — the
+    // semantics live in the title prefix instead.
+    expect(arg.journalType).toBe("REJECTED");
+    expect(arg.title.startsWith("DEFERRED ")).toBe(true);
   });
 
   it("dedupes by symbol+stage when given a shared Set", async () => {

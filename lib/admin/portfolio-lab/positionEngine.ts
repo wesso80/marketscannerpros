@@ -15,6 +15,7 @@ import {
   updatePortfolioBalances,
 } from "./portfolioStore";
 import { writeJournal } from "./journalEngine";
+import { recordTradeClosureLearning } from "@/lib/admin/arca-brain/recordTradeClosureLearning";
 import type {
   ArcaPortfolio,
   ArcaPosition,
@@ -188,6 +189,14 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     sourcePacketIds: position.sourceEdgePacketId ? [position.sourceEdgePacketId] : [],
   });
 
+  // P1 — Closed-trade learning loop. Soft-failed so a labeller/doctrine
+  // failure cannot corrupt the close itself.
+  await recordTradeClosureLearning({
+    trade,
+    portfolio,
+    manualClose: false,
+  }).catch(() => undefined);
+
   return {
     positionId: position.id,
     unrealisedPnl,
@@ -274,6 +283,16 @@ export async function manualSimClose(args: {
     tradeId: trade.id,
     reasoning: args.reason,
   });
+
+  // P1 — Closed-trade learning loop. Manual closes still feed the labeller
+  // so EXIT_TOO_EARLY / NO_MISTAKE_SYSTEM_VALID branches reach the engine.
+  await recordTradeClosureLearning({
+    trade,
+    portfolio,
+    manualClose: true,
+    overrides: { reasoningNote: args.reason },
+  }).catch(() => undefined);
+
   return trade;
 }
 

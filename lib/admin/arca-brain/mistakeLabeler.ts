@@ -96,7 +96,7 @@ export function classifyMistake(t: ClosedTradeForLabeling): {
   }
 
   // Exit pattern issues.
-  if (!winning && t.exitReason === "STOP_HIT" && t.stopInsideNoise) {
+  if (!winning && t.exitReason === "STOP_LOSS" && t.stopInsideNoise) {
     return {
       mistakeType: "BAD_STOP_PLACEMENT",
       severity: "medium",
@@ -110,14 +110,14 @@ export function classifyMistake(t: ClosedTradeForLabeling): {
       reasoning: "Entry filled after the trigger window expired; risk:reward already eroded.",
     };
   }
-  if (winning && t.exitReason === "MANUAL_CLOSE" && (t.rRealised ?? 0) < 0.5) {
+  if (winning && t.exitReason === "MANUAL_SIM_CLOSE" && (t.rRealised ?? 0) < 0.5) {
     return {
       mistakeType: "EXIT_TOO_EARLY",
       severity: "low",
       reasoning: "Manual close before structural target; cut a winner too soon.",
     };
   }
-  if (!winning && t.exitReason === "TIME_STOP" && (t.holdMinutes ?? 0) > 60 * 24) {
+  if (!winning && t.exitReason === "TIME_EXIT" && (t.holdMinutes ?? 0) > 60 * 24) {
     return {
       mistakeType: "HELD_TOO_LONG",
       severity: "medium",

@@ -106,8 +106,11 @@ function mapStageToSource(stage: RejectionStage): NoTradeRejectionSource {
 }
 
 /** Which journal type best fits a given stage. */
-function mapStageToJournalType(stage: RejectionStage): "REJECTED" | "RISK_BLOCK" | "DEFERRED" {
-  if (stage === "WAIT_FOR_CONFIRMATION") return "DEFERRED";
+function mapStageToJournalType(stage: RejectionStage): "REJECTED" | "RISK_BLOCK" {
+  // NOTE: DB CHECK on arca_trade_journal.journal_type does not allow "DEFERRED";
+  // WAIT_FOR_CONFIRMATION still uses REJECTED at the journal layer and the title
+  // prefix communicates the DEFERRED semantics to the operator.
+  if (stage === "WAIT_FOR_CONFIRMATION") return "REJECTED";
   if (
     stage === "RISK_CAP" ||
     stage === "PORTFOLIO_HEAT" ||
@@ -333,9 +336,9 @@ export async function recordNoTradeDecisionFromCandidate(
     ].filter(Boolean);
 
     const titlePrefix =
-      journalType === "RISK_BLOCK" ? "RISK BLOCK" :
-      journalType === "DEFERRED"   ? "DEFERRED"   :
-                                     "REJECTED";
+      journalType === "RISK_BLOCK"               ? "RISK BLOCK" :
+      input.rejectionStage === "WAIT_FOR_CONFIRMATION" ? "DEFERRED" :
+                                                       "REJECTED";
     const j = await writeJournal({
       workspaceId: input.workspaceId,
       portfolioId: input.portfolioId,

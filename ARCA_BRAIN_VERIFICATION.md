@@ -7,7 +7,7 @@ Verdict summary:
 | # | Module | Claimed | Verified |
 |---|---|---|---|
 | 1 | Doctrine Engine | B | PARTIAL — UI orphaned (not in nav); no test; `todaysDoctrineWarning` uses heuristic, not real review state |
-| 2 | Mistake Taxonomy | B | PARTIAL — engine called by cycle (frequency only); never invoked on close; no UI; no labeler runner |
+| 2 | Mistake Taxonomy | B | PARTIAL+ — every closed simulated trade now flows through `recordTradeClosureLearning` (label + REVIEW journal + POST_TRADE doctrine review + playbook rollup); UI page still missing (P1) |
 | 3 | Regret Map | S | STUB — table + engine + route; no UI; no writer; no test |
 | 4 | Adversarial ARCA | B | LIVE — wired into `simulateCycle`, debate_id stamped on orders; but freshness input is **hardcoded to "fresh" (LIE)** and info-edge is null |
 | 5 | Capital Allocation | W | DEAD — engine exists, **never called anywhere** in the cycle or any route (PATCHED below) |
@@ -25,7 +25,7 @@ Failure-mode coverage status:
 - ⚠ Wrong-regime playbook firing → blocked by Regime-Playbook Matrix decision wrapper in `simulateCycle.ts` (DISABLED / WAIT_FOR_CONFIRMATION / UNKNOWN_REGIME-strict). Still requires operator to seed `arca_regime_playbook_matrix` rows + supply `currentRegime` to the cycle.
 - ✅ Crowded/obvious setup penalty → reaches prosecutor (Information Edge now computed per candidate, P0-B)
 - ⚠ Survivorship bias → table exists, nothing writes to it
-- ⚠ Improvement amnesia → table exists, nothing writes to it
+- ✅ Improvement amnesia → every close (auto SL/TP exit + manual close) writes an `arca_trade_mistake_labels` row + REVIEW journal entry + (when triggered) `arca_doctrine_reviews` proposal via `recordTradeClosureLearning` (P1)
 - ⚠ Silent doctrine drift → append-only enforced at DB, but no auto-promotion writer
 - ✅ Silent rejection drops → blocked (every cycle rejection path writes an `arca_no_trade_alpha` row + journal entry via `recordNoTradeDecisionFromCandidate`, P0-D)
 
@@ -58,24 +58,22 @@ Failure-mode coverage status:
 ## 2. Mistake Taxonomy
 
 - **Claimed status**: B
-- **Verified status**: PARTIAL
-- **Files inspected**: [lib/admin/arca-brain/mistakeLabeler.ts](lib/admin/arca-brain/mistakeLabeler.ts), [app/api/admin/mistakes/route.ts](app/api/admin/mistakes/route.ts)
+- **Verified status**: PARTIAL+
+- **Files inspected**: [lib/admin/arca-brain/mistakeLabeler.ts](lib/admin/arca-brain/mistakeLabeler.ts), [lib/admin/arca-brain/recordTradeClosureLearning.ts](lib/admin/arca-brain/recordTradeClosureLearning.ts), [lib/admin/portfolio-lab/positionEngine.ts](lib/admin/portfolio-lab/positionEngine.ts), [app/api/admin/mistakes/route.ts](app/api/admin/mistakes/route.ts)
 - **Tables inspected**: `arca_trade_mistake_labels` (FK to `arca_trades`, `arca_portfolios`, `arca_doctrine_rules`)
 - **Routes inspected**: `/api/admin/mistakes` — `requireAdmin` ✓ — accepts `tradeId` POST
 - **UI inspected**: **none** (no `app/admin/mistakes/*` page exists)
-- **Reports inspected**: `recentMistakeFrequency(workspaceId, 7)` is called in `simulateCycle.ts:170` and flows to debate context
-- **Tests inspected**: [test/admin/arcaBrainCore.test.ts](test/admin/arcaBrainCore.test.ts) — covers `BROKE_RULE` and `POSITION_TOO_LARGE` branches only
+- **Reports inspected**: `recentMistakeFrequency(workspaceId, 7)` is called in `simulateCycle.ts` and flows to debate context
+- **Tests inspected**: [test/admin/arcaBrainCore.test.ts](test/admin/arcaBrainCore.test.ts) — covers `BROKE_RULE` and `POSITION_TOO_LARGE` branches; [test/admin/recordTradeClosureLearning.test.ts](test/admin/recordTradeClosureLearning.test.ts) — 10 specs covering funnel, packet-derived flags, doctrine-trigger gating, soft-fail invariants, manual-close path
 
-- **What is real**: deterministic `classifyMistake` (pure), persist via `recordMistakeLabel`, frequency rollup
-- **What is missing**: no caller invokes `classifyMistake` + `recordMistakeLabel` on trade close anywhere — `markAndMaybeExit` and `positionEngine.ts` do not call the labeler; UI page; tests for 19 of 21 branches
-- **What is dead/orphaned**: `classifyMistake` for `GOOD_TRADE_BAD_OUTCOME`, `LATE_ENTRY`, `EARLY_ENTRY`, `CHASING`, `LOW_QUALITY_SETUP`, `BAD_REGIME`, `BAD_STOP_PLACEMENT`, `TARGET_TOO_AMBITIOUS`, `EXIT_TOO_EARLY`, `HELD_TOO_LONG`, `IGNORED_BEAR_CASE`, `STALE_DATA_DECISION`, `OVERLAPPED_EXPOSURE`, `NEWS_EVENT_RISK`, `OPTIONS_FLOW_MISREAD`, `VOLATILITY_TRAP`, `LIQUIDITY_SWEEP_FAILED`, `PLAYBOOK_INVALID`, `NO_MISTAKE_SYSTEM_VALID` are unreachable in the live flow
-- **What is unsafe**: `recentMistakeFrequency` returns 0 on every cycle today (no rows are written), so the debate's `elevated_recent_mistake_rate` block can never fire
-- **What is untested**: classifier branches beyond two
-- **Mock data**: none
-- **What breaks if this runs live**: zero learning loop on closed trades — every closed trade is forgotten
-- **Exact patch required**: hook into `positionEngine.markAndMaybeExit` on close: build `ClosedTradeForLabeling` from the trade row + entry packet + freshness snapshot, call `classifyMistake` + `recordMistakeLabel`
-- **Estimated effort**: medium (requires reading entry packet metadata back from `arca_simulated_orders.source_edge_packet_id`)
-- **Priority**: P1 — the learning loop is the whole point
+- **What is real (P1, this commit)**: every `arca_trades` insert (auto SL/TP exits in `markAndMaybeExit` AND `manualSimClose`) is now followed by `recordTradeClosureLearning(...)` which: (1) derives `dataStaleAtEntry` / `lateEntry` / `stopInsideNoise` / `regimeContraindicated` from `admin_edge_packets`; (2) derives `brokeRule` from the source `arca_simulated_orders.arca_reason_summary`; (3) calls `classifyMistake` + persists `arca_trade_mistake_labels`; (4) writes a `REVIEW` journal entry; (5) proposes a `POST_TRADE` `arca_doctrine_reviews` row against every ACTIVE matching rule for `BROKE_RULE / STALE_DATA_DECISION / BAD_REGIME / PLAYBOOK_INVALID / POSITION_TOO_LARGE / LOW_QUALITY_SETUP`; (6) re-runs `rollupPlaybookPerformance`. Every step is soft-failed individually so the close path itself can never break.
+- **What is fixed in classifier**: `classifyMistake` exit-reason string comparisons were misaligned with the `TradeExitReason` union (`STOP_HIT` / `MANUAL_CLOSE` / `TIME_STOP` → `STOP_LOSS` / `MANUAL_SIM_CLOSE` / `TIME_EXIT`). Those three branches (`BAD_STOP_PLACEMENT`, `EXIT_TOO_EARLY`, `HELD_TOO_LONG`) are now reachable from real close paths.
+- **What is missing**: `/admin/mistakes/*` page; chronological labeler test coverage for the remaining 17 classifier branches in `arcaBrainCore.test.ts`; mistake-frequency-to-debate end-to-end test.
+- **What is unsafe**: nothing in this loop, but `recentMistakeFrequency` numbers will now start incrementing for the first time — debate's `elevated_recent_mistake_rate` block will fire once enough closes accumulate.
+- **What breaks if this runs live**: nothing — soft-fail wrapper means a labelling failure is logged into `result.errors` but the trade still closes cleanly.
+- **Exact patch required (remaining)**: build `/admin/mistakes` UI; backfill classifier branch coverage in `arcaBrainCore.test.ts`.
+- **Estimated effort (remaining)**: low (UI only)
+- **Priority**: P2 (writer is live; UI is operator convenience)
 
 ---
 
@@ -297,7 +295,7 @@ Failure-mode coverage status:
 | Respects risk caps | ✅ `checkPreTrade` + `emitRiskEventIfBreached` |
 | Calls Information Edge | ✅ `deriveInformationEdge` + `computeInformationEdge` per candidate (P0-B) |
 | Calls Regime-Playbook Matrix | ✅ `simulateCycle.ts` → `getRegimeMatrix` + `evaluateRegimePlaybook` per candidate |
-| Labels closed trades | ❌ no caller to `classifyMistake` |
+| Labels closed trades | ✅ every close path calls `recordTradeClosureLearning` → `classifyMistake` + `recordMistakeLabel` + REVIEW journal + POST_TRADE doctrine review + `rollupPlaybookPerformance` (P1) |
 | `notifyAdmin` on failure | ❌ no calls anywhere in the brain |
 
 ### Opportunity Queue / Board
@@ -372,7 +370,7 @@ Both are reachable by URL only.
 | # | Module | Final status |
 |---|---|---|
 | 1 | Doctrine Engine | PARTIAL |
-| 2 | Mistake Taxonomy | PARTIAL (frequency-read only; no writer) |
+| 2 | Mistake Taxonomy | PARTIAL+ (closed-trade writer live via `recordTradeClosureLearning`; UI still missing) |
 | 3 | Regret Map | STUB |
 | 4 | Adversarial ARCA | LIVE (patched freshness + capital-allocation context) |
 | 5 | Capital Allocation | PARTIAL (now wired, no UI, no test) |
