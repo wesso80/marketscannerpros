@@ -15,9 +15,10 @@ import type { Market } from "@/types/operator";
 import { wrapTruth } from "@/lib/admin";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
-import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
+import { projectEdgePacket, deriveCrossAssetConfluence, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { syncQueueFromPacket } from "@/lib/admin/queueStore";
 import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type ChangeTapeEvent, type ChangeTapeSeverity } from "@/lib/admin/changeTape";
+import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,6 +79,20 @@ export async function GET(req: NextRequest) {
       return b.opportunityRankScore - a.opportunityRankScore;
     });
     edgePackets.forEach((p, i) => { p.opportunityRank = i + 1; });
+
+    // Macro / cross-asset confluence — enrich only the top 5 to bound market-data cost.
+    // Equities-only (basket is SPY/QQQ/TLT/GLD/USO/UUP — not meaningful for crypto symbols).
+    const macroTargets = edgePackets
+      .slice(0, 5)
+      .filter((p) => p.assetClass === "equity" && p.bias !== "NEUTRAL");
+    await Promise.allSettled(macroTargets.map(async (p) => {
+      try {
+        const report = await buildCrossAssetReport(p.symbol);
+        p.crossAssetConfluence = deriveCrossAssetConfluence(report, p.bias);
+      } catch {
+        p.crossAssetConfluence = null;
+      }
+    }));
 
     // Side-effects: sync queue state + emit change-tape events. Best-effort.
     const changesBySymbol: Record<string, Array<{ eventType: string; severity: ChangeTapeSeverity; magnitude: number }>> = {};

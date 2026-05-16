@@ -48,6 +48,26 @@ export interface ArcaDeskRead {
   classification: "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION";
 }
 
+/* ────────────── Cross-asset / macro confluence ────────────── */
+
+export interface CrossAssetConfluence {
+  /** Underlying cross-asset risk-tilt score in [-1, +1]. */
+  riskTiltScore: number;
+  /** Coarse label derived from the score. */
+  riskTilt: "risk-on" | "risk-off" | "mixed" | "unknown";
+  /** Does the macro tilt SUPPORT or CONFLICT with the packet's directional bias? */
+  alignment: "supports" | "conflicts" | "neutral" | "unknown";
+  /** 0..100 — higher = stronger macro support for the trade direction. Caps at 50 when neutral/conflict. */
+  confluenceScore: number;
+  /** Short evidence list (e.g., "SPY above 50EMA", "TLT trending higher (1m +3.2%)"). */
+  supports: string[];
+  conflicts: string[];
+  /** Freshness inherited from the worst basket member. */
+  freshness: "real-time" | "delayed" | "stale" | "unknown";
+  /** ISO timestamp the underlying cross-asset report was generated at. */
+  asOf: string;
+}
+
 /* ────────────── Canonical edge packet ────────────── */
 
 export interface AdminEdgePacket {
@@ -121,6 +141,9 @@ export interface AdminEdgePacket {
   /* desk officer read (optional — populated by /api/admin/arca DESK_READ) */
   arcaDeskRead: ArcaDeskRead | null;
 
+  /** Cross-asset / macro confluence summary (optional — attached by callers that own market-data side-effects). */
+  crossAssetConfluence: CrossAssetConfluence | null;
+
   /* truth + score-trio (kept separate per ADMIN_RULES.md) */
   evidenceQualityScore: number;       // 0..100 — copy of dataTruth.trustScore
   personalExposureFlag: "none" | "low" | "elevated" | "high";
@@ -142,6 +165,8 @@ export interface ProjectEdgePacketOptions {
   personalExposureFlag?: AdminEdgePacket["personalExposureFlag"];
   /** Optional pre-computed ARCA desk read. */
   arcaDeskRead?: ArcaDeskRead | null;
+  /** Optional pre-computed macro / cross-asset confluence summary. */
+  crossAssetConfluence?: CrossAssetConfluence | null;
 }
 
 export function projectEdgePacket(
@@ -235,6 +260,7 @@ export function projectEdgePacket(
     nextRequiredConfirmation: packet.nextResearchChecks?.[0] ?? null,
 
     arcaDeskRead: opts.arcaDeskRead ?? null,
+    crossAssetConfluence: opts.crossAssetConfluence ?? null,
 
     evidenceQualityScore,
     personalExposureFlag: opts.personalExposureFlag ?? "none",
@@ -461,4 +487,81 @@ function buildNarrative(packet: AdminResearchPacket): {
   ];
 
   return { whyNow, whatChanged, bearCase, contradictionEvidence };
+}
+
+/**
+ * Derive a CrossAssetConfluence summary from a pre-computed cross-asset
+ * report (see lib/crossAsset/confluence.ts) and the packet directional bias.
+ * Pure / sync. Callers own the cost of producing the underlying report.
+ *
+ * Alignment rules:
+ *   BULL + risk-on  -> supports
+ *   BEAR + risk-off -> supports
+ *   opposite combos -> conflicts
+ *   mixed/unknown   -> neutral/unknown
+ */
+export function deriveCrossAssetConfluence(report: {
+  riskTilt: "risk-on" | "risk-off" | "mixed" | "unknown";
+  riskTiltScore: number;
+  basket: { symbol: string; aboveEma50: boolean | null; trend1m: number | null; freshness: string }[];
+  generatedAt: string;
+}, bias: BiasState): CrossAssetConfluence {
+  let alignment: CrossAssetConfluence["alignment"] = "neutral";
+  if (report.riskTilt === "unknown") alignment = "unknown";
+  else if (bias === "LONG") {
+    if (report.riskTilt === "risk-on") alignment = "supports";
+    else if (report.riskTilt === "risk-off") alignment = "conflicts";
+  } else if (bias === "SHORT") {
+    if (report.riskTilt === "risk-off") alignment = "supports";
+    else if (report.riskTilt === "risk-on") alignment = "conflicts";
+  }
+
+  const magnitude = Math.min(1, Math.abs(report.riskTiltScore)) * 100;
+  let confluenceScore: number;
+  if (alignment === "supports") confluenceScore = Math.round(50 + magnitude / 2);
+  else if (alignment === "conflicts") confluenceScore = Math.round(Math.max(0, 50 - magnitude / 2));
+  else confluenceScore = Math.round(magnitude / 2);
+
+  const supports: string[] = [];
+  const conflicts: string[] = [];
+  for (const m of report.basket) {
+    if (m.aboveEma50 === null) continue;
+    const dir = m.aboveEma50 ? "above 50EMA" : "below 50EMA";
+    const trend = m.trend1m === null
+      ? ""
+      : ` (1m ${m.trend1m >= 0 ? "+" : ""}${m.trend1m.toFixed(1)}%)`;
+    const isEquityProxy = m.symbol === "SPY" || m.symbol === "QQQ";
+    const isSafeHaven = m.symbol === "TLT" || m.symbol === "GLD" || m.symbol === "UUP";
+    const note = `${m.symbol} ${dir}${trend}`;
+    if (bias === "LONG") {
+      if (isEquityProxy && m.aboveEma50) supports.push(note);
+      else if (isEquityProxy && !m.aboveEma50) conflicts.push(note);
+      else if (isSafeHaven && m.aboveEma50) conflicts.push(note);
+      else if (isSafeHaven && !m.aboveEma50) supports.push(note);
+    } else if (bias === "SHORT") {
+      if (isEquityProxy && !m.aboveEma50) supports.push(note);
+      else if (isEquityProxy && m.aboveEma50) conflicts.push(note);
+      else if (isSafeHaven && m.aboveEma50) supports.push(note);
+      else if (isSafeHaven && !m.aboveEma50) conflicts.push(note);
+    }
+  }
+
+  const order = ["stale", "delayed", "real-time"];
+  let worst = "real-time";
+  for (const m of report.basket) {
+    const ix = order.indexOf(m.freshness);
+    if (ix >= 0 && ix < order.indexOf(worst)) worst = m.freshness;
+  }
+  const freshness = (order.includes(worst) ? worst : "unknown") as CrossAssetConfluence["freshness"];
+
+  return {
+    riskTiltScore: Number(report.riskTiltScore.toFixed(3)),
+    riskTilt: report.riskTilt,
+    alignment,
+    confluenceScore,
+    supports: supports.slice(0, 4),
+    conflicts: conflicts.slice(0, 4),
+    freshness,
+    asOf: report.generatedAt,
+  };
 }
