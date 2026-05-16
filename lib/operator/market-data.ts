@@ -13,6 +13,7 @@ import type { MarketDataProvider } from './orchestrator';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
 import { makeEnvelope } from './shared';
+import { getOHLCWithVolume, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -106,6 +107,60 @@ async function fetchAVBars(
     return parseTimeSeries(timeSeries, symbol, market, timeframe);
   } catch (err) {
     console.error(`[operator:market-data] Fetch failed for ${symbol}:`, err);
+    return [];
+  }
+}
+
+/* ── CoinGecko Bar Fetcher (Crypto) ──────────────────────────
+ * Crypto markets are routed through CoinGecko instead of Alpha Vantage.
+ * AV's crypto endpoints are restricted on the operator plan and were
+ * silently returning empty bars — causing the admin-radar-crypto-*
+ * Render crons to exit with HTTP 5xx (curl exit 22). CoinGecko is the
+ * canonical crypto provider in this codebase (see lib/coingecko.ts).
+ */
+
+function timeframeToCgDays(timeframe: string): 1 | 7 | 14 | 30 | 90 | 180 | 365 {
+  const tf = timeframe.toLowerCase();
+  if (['5m', '5min', '15m', '15min'].includes(tf)) return 1;
+  if (['1h', '60min', '4h', '240min'].includes(tf)) return 7;
+  if (['1d', 'd', 'daily'].includes(tf)) return 30;
+  if (['1w', 'w', 'weekly'].includes(tf)) return 90;
+  return 7;
+}
+
+async function fetchCGBars(
+  symbol: string,
+  market: Market,
+  timeframe: string,
+): Promise<Bar[]> {
+  try {
+    const clean = symbol.replace(/-?USD$/i, '').toUpperCase();
+    const coinId = COINGECKO_ID_MAP[clean] || (await resolveSymbolToId(clean));
+    if (!coinId) {
+      console.warn(`[operator:market-data] CoinGecko id not found for ${symbol}`);
+      return [];
+    }
+
+    const days = timeframeToCgDays(timeframe);
+    const candles = await getOHLCWithVolume(coinId, days);
+    if (!candles || candles.length === 0) return [];
+
+    return candles
+      .filter(c => Number.isFinite(c.c) && c.c > 0)
+      .map(c => ({
+        symbol,
+        market,
+        timeframe,
+        timestamp: new Date(c.t).toISOString(),
+        open: c.o,
+        high: c.h,
+        low: c.l,
+        close: c.c,
+        volume: Math.round(c.v || 0),
+      }))
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  } catch (err) {
+    console.error(`[operator:market-data] CoinGecko fetch failed for ${symbol}:`, err);
     return [];
   }
 }
@@ -363,12 +418,20 @@ function getEventWindow(_symbol: string): EventWindow {
  */
 export const alphaVantageProvider: MarketDataProvider = {
   async getBars(symbol: string, market: Market, timeframe: string): Promise<Bar[]> {
+    if (market === 'CRYPTO') {
+      const cg = await fetchCGBars(symbol, market, timeframe);
+      if (cg.length > 0) return cg;
+      // CoinGecko miss — fall back to AV crypto endpoints as a secondary
+      return fetchAVBars(symbol, market, timeframe);
+    }
     return fetchAVBars(symbol, market, timeframe);
   },
 
   async getKeyLevels(symbol: string, market: Market): Promise<KeyLevel[]> {
     // Fetch daily bars and compute levels from them
-    const bars = await fetchAVBars(symbol, market, '1D');
+    const bars = market === 'CRYPTO'
+      ? await fetchCGBars(symbol, market, '1D')
+      : await fetchAVBars(symbol, market, '1D');
     return computeKeyLevels(bars);
   },
 
@@ -386,7 +449,12 @@ export const alphaVantageProvider: MarketDataProvider = {
 export async function getMarketSnapshot(
   req: MarketDataSnapshotRequest,
 ): Promise<MarketDataSnapshot> {
-  const bars = await fetchAVBars(req.symbol, req.market, req.timeframe);
+  const bars = req.market === 'CRYPTO'
+    ? await (async () => {
+        const cg = await fetchCGBars(req.symbol, req.market, req.timeframe);
+        return cg.length > 0 ? cg : fetchAVBars(req.symbol, req.market, req.timeframe);
+      })()
+    : await fetchAVBars(req.symbol, req.market, req.timeframe);
   const keyLevels = computeKeyLevels(bars);
   const crossMarket = await fetchCrossMarketState();
   const eventWindow = getEventWindow(req.symbol);
