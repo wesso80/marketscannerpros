@@ -79,12 +79,12 @@ export default function NetBuySellWidget() {
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-        <span style={{ fontSize: '14px', color: '#10b981', fontWeight: 700 }}>FLOW</span>
+        <span style={{ fontSize: '14px', color: 'var(--msp-bull)', fontWeight: 700 }}>FLOW</span>
         <div>
-          <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 600, margin: 0 }}>
+          <h3 style={{ color: 'var(--msp-text)', fontSize: '16px', fontWeight: 600, margin: 0 }}>
             Net Buy / Sell Pressure
           </h3>
-          <p style={{ color: '#64748b', fontSize: '11px', margin: 0 }}>
+          <p style={{ color: 'var(--msp-text-muted)', fontSize: '11px', margin: 0 }}>
             DEX pool volume breakdown by timeframe
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function NetBuySellWidget() {
             background: '#1e293b',
             border: '1px solid #334155',
             borderRadius: '8px',
-            color: '#e2e8f0',
+            color: 'var(--msp-text)',
             fontSize: '12px',
             cursor: 'pointer',
           }}
@@ -120,7 +120,7 @@ export default function NetBuySellWidget() {
             background: '#1e293b',
             border: '1px solid #334155',
             borderRadius: '8px',
-            color: '#e2e8f0',
+            color: 'var(--msp-text)',
             fontSize: '12px',
             outline: 'none',
           }}
@@ -134,7 +134,7 @@ export default function NetBuySellWidget() {
             background: 'rgba(16, 185, 129, 0.2)',
             border: '1px solid rgba(16, 185, 129, 0.4)',
             borderRadius: '8px',
-            color: '#10b981',
+            color: 'var(--msp-bull)',
             fontSize: '12px',
             fontWeight: 600,
             cursor: loading || !address.trim() ? 'not-allowed' : 'pointer',
@@ -151,7 +151,7 @@ export default function NetBuySellWidget() {
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid rgba(239, 68, 68, 0.3)',
           borderRadius: '8px',
-          color: '#ef4444',
+          color: 'var(--msp-bear)',
           fontSize: '13px',
           marginBottom: '12px',
         }}>
@@ -168,7 +168,7 @@ export default function NetBuySellWidget() {
               background: 'rgba(16, 185, 129, 0.1)',
               border: '1px solid rgba(16, 185, 129, 0.3)',
               borderRadius: '6px',
-              color: '#10b981',
+              color: 'var(--msp-bull)',
               fontSize: '12px',
               fontWeight: 600,
             }}>
@@ -188,7 +188,7 @@ export default function NetBuySellWidget() {
                   background: selectedTf === b.timeframe ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
                   border: selectedTf === b.timeframe ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #334155',
                   borderRadius: '6px',
-                  color: selectedTf === b.timeframe ? '#10b981' : '#64748b',
+                  color: selectedTf === b.timeframe ? 'var(--msp-bull)' : 'var(--msp-text-muted)',
                   fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -214,8 +214,8 @@ export default function NetBuySellWidget() {
                 borderRadius: '8px',
                 textAlign: 'center',
               }}>
-                <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>BUY VOLUME</div>
-                <div style={{ color: '#10b981', fontSize: '18px', fontWeight: 700 }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px' }}>BUY VOLUME</div>
+                <div style={{ color: 'var(--msp-bull)', fontSize: '18px', fontWeight: 700 }}>
                   {formatUsd(selected.buyVolumeUsd)}
                 </div>
               </div>
@@ -226,8 +226,8 @@ export default function NetBuySellWidget() {
                 borderRadius: '8px',
                 textAlign: 'center',
               }}>
-                <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>SELL VOLUME</div>
-                <div style={{ color: '#ef4444', fontSize: '18px', fontWeight: 700 }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px' }}>SELL VOLUME</div>
+                <div style={{ color: 'var(--msp-bear)', fontSize: '18px', fontWeight: 700 }}>
                   {formatUsd(selected.sellVolumeUsd)}
                 </div>
               </div>
@@ -242,9 +242,9 @@ export default function NetBuySellWidget() {
                 borderRadius: '8px',
                 textAlign: 'center',
               }}>
-                <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>NET PRESSURE</div>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px' }}>NET PRESSURE</div>
                 <div style={{
-                  color: selected.netVolumeUsd >= 0 ? '#10b981' : '#ef4444',
+                  color: selected.netVolumeUsd >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                   fontSize: '18px',
                   fontWeight: 700,
                 }}>
@@ -256,7 +256,7 @@ export default function NetBuySellWidget() {
 
           {/* Bar Chart - All Timeframes */}
           <div>
-            <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '10px', fontWeight: 600 }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', marginBottom: '10px', fontWeight: 600 }}>
               ALL TIMEFRAMES
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -268,7 +268,7 @@ export default function NetBuySellWidget() {
                 return (
                   <div key={b.timeframe}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                      <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 600, width: '28px' }}>
+                      <span style={{ color: 'var(--msp-flat)', fontSize: '10px', fontWeight: 600, width: '28px' }}>
                         {TF_LABELS[b.timeframe]}
                       </span>
                       <div style={{ flex: 1, position: 'relative' }}>
@@ -294,7 +294,7 @@ export default function NetBuySellWidget() {
                       </div>
                       <span style={{
                         fontSize: '10px',
-                        color: b.netVolumeUsd >= 0 ? '#10b981' : '#ef4444',
+                        color: b.netVolumeUsd >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                         fontWeight: 600,
                         width: '60px',
                         textAlign: 'right',
@@ -308,12 +308,12 @@ export default function NetBuySellWidget() {
             </div>
             <div style={{ display: 'flex', gap: '16px', marginTop: '8px', justifyContent: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#10b981' }} />
-                <span style={{ color: '#64748b', fontSize: '10px' }}>Buy pressure</span>
+                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--msp-bull)' }} />
+                <span style={{ color: 'var(--msp-text-muted)', fontSize: '10px' }}>Buy pressure</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#ef4444' }} />
-                <span style={{ color: '#64748b', fontSize: '10px' }}>Sell pressure</span>
+                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--msp-bear)' }} />
+                <span style={{ color: 'var(--msp-text-muted)', fontSize: '10px' }}>Sell pressure</span>
               </div>
             </div>
           </div>
@@ -324,7 +324,7 @@ export default function NetBuySellWidget() {
         <div style={{
           padding: '32px',
           textAlign: 'center',
-          color: '#475569',
+          color: 'var(--msp-text-muted)',
           fontSize: '13px',
         }}>
           Enter a DEX pool address to analyze buy/sell pressure
