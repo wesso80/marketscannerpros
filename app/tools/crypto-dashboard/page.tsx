@@ -13,6 +13,7 @@ import DerivativesCoreGrid from '@/components/derivatives/DerivativesCoreGrid';
 import TradeIdeasSection from '@/components/derivatives/TradeIdeasSection';
 import DerivativesContextSection from '@/components/derivatives/DerivativesContextSection';
 import type { DashboardData, DerivativesTradeIdea } from '@/components/derivatives/types';
+import { PageHero } from '@/components/ui';
 
 export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { tier } = useUserTier();
@@ -356,64 +357,33 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     <div className={`mx-auto w-full max-w-none ${embeddedInDashboard ? 'px-0 pb-6 pt-0' : 'px-4 pb-24 pt-6 md:px-6'}`}>
       {/* Page Header */}
       {embeddedInDashboard ? (
-        <section
-          className="mb-3 rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-          aria-label="Crypto Derivatives command header"
-        >
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-                <span className="text-emerald-300">Derivatives lens</span>
-                <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
-                  <span style={{ color: permission === 'Yes' ? 'var(--msp-bull)' : permission === 'Conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>Permission {permission}</span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">{rotation}</span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">Vol <span className="text-slate-200">{volRegime}</span></span>
-                </span>
-                <label className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">
-                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-3 w-3" aria-label="Toggle auto-refresh" />
-                  Auto 60s
-                </label>
-              </div>
-              <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Bias, rotation, and volatility for the morning derivatives review.</h2>
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Funding, open interest, and liquidations compressed into a single bias gate. Educational only; not a trade signal.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={fetchData} disabled={loading} className={`rounded-md border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${loading ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60' : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'}`}>
-                  {loading ? 'Refreshing…' : 'Refresh data'}
-                </button>
-                <a href="/tools/options" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Options</a>
-                <a href="/tools/scanner" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Scanner</a>
-              </div>
-              {lastUpdate && (
-                <p className="mt-2 text-[11px] text-slate-500">Last updated {lastUpdate.toLocaleTimeString()}</p>
-              )}
-            </div>
-
-            <div className="grid self-start gap-1.5 sm:grid-cols-2">
-              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Bias</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: biasLabel.includes('Bullish') ? 'var(--msp-bull)' : biasLabel.includes('Bearish') ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>{biasLabel}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500">Confidence {marketBias.confidence}%</div>
-              </div>
-              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Liquidity</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: liquidityState === 'Expanding' ? 'var(--msp-bull)' : liquidityState === 'Contracting' ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>{liquidityState}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500" title={oiDriver}>{oiDriver}</div>
-              </div>
-              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Funding</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? 'var(--msp-warn)' : data.fundingRates.avgRate < -0.01 ? 'var(--msp-bull)' : 'var(--msp-flat)') : 'var(--msp-flat)' }}>{data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Pending'}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500" title={fundingDriver}>{fundingDriver}</div>
-              </div>
-              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: permission === 'No' ? 'var(--msp-bear)' : 'var(--msp-warn)' }}>{playbook}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500" title={liquidationDriver}>{liquidationDriver}</div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <div className="mb-3">
+        <PageHero
+          ariaLabel="Crypto Derivatives command header"
+          eyebrow="Derivatives lens"
+          badges={[
+            { label: `Permission ${permission}`, tone: permission === 'Yes' ? 'bull' : permission === 'Conditional' ? 'warn' : 'bear' },
+            { label: rotation },
+            { label: `Vol ${volRegime}` },
+          ]}
+          title="Bias, rotation, and volatility for the morning derivatives review."
+          subtitle="Funding, open interest, and liquidations compressed into a single bias gate. Educational only; not a trade signal."
+          actions={[
+            { label: loading ? 'Refreshing…' : 'Refresh data', variant: 'primary', onClick: () => fetchData(), disabled: loading },
+            { label: 'Open Options', variant: 'secondary', href: '/tools/options' },
+            { label: 'Open Scanner', variant: 'ghost', href: '/tools/scanner' },
+          ]}
+          metrics={[
+            { label: 'Bias', value: biasLabel, tone: biasLabel.includes('Bullish') ? 'bull' : biasLabel.includes('Bearish') ? 'bear' : 'neutral', detail: `Confidence ${marketBias.confidence}%` },
+            { label: 'Liquidity', value: liquidityState, tone: liquidityState === 'Expanding' ? 'bull' : liquidityState === 'Contracting' ? 'bear' : 'neutral', detail: oiDriver, title: oiDriver },
+            { label: 'Funding', value: data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Pending', tone: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? 'warn' : data.fundingRates.avgRate < -0.01 ? 'bull' : 'neutral') : 'neutral', detail: fundingDriver, title: fundingDriver },
+            { label: 'Next check', value: playbook, tone: permission === 'No' ? 'bear' : 'warn', detail: liquidationDriver, title: liquidationDriver },
+          ]}
+        />
+        {lastUpdate && (
+          <p className="mt-2 text-[11px] text-slate-500">Last updated {lastUpdate.toLocaleTimeString()}</p>
+        )}
+        </div>
       ) : (
         <div className="mb-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
