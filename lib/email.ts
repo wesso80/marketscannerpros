@@ -127,7 +127,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
   const isPT = tier === 'pro_trader';
   const planName = isPT ? 'Pro Trader' : 'Pro';
   const features = isPT ? PRO_TRADER_FEATURES : PRO_FEATURES;
-  const accent = '#10b981';
+  const accent = 'var(--msp-bull)';
 
   const featureRows = features
     .map(

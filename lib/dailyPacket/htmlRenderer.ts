@@ -14,7 +14,7 @@ const esc = (s: unknown): string => String(s ?? '')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 function badge(freshness: DailyPacketSection['freshness']): string {
-  const color = freshness === 'fresh' ? '#10B981' : freshness === 'stale' ? '#F59E0B' : '#9CA3AF';
+  const color = freshness === 'fresh' ? 'var(--msp-bull)' : freshness === 'stale' ? 'var(--msp-warn)' : '#9CA3AF';
   return `<span style="background:${color};color:#0F172A;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">${freshness}</span>`;
 }
 
@@ -82,10 +82,10 @@ export function renderDailyPacketHtml(p: DailyOperatorPacket): string {
             <td>${esc(r.description)}</td>
             <td style="text-align:right">${r.latestValue === null ? '—' : r.latestValue.toFixed(2)} ${esc(r.units)}</td>
             <td>${esc(r.latestObservedOn ?? '—')}</td>
-            <td style="text-align:right;color:${r.change === null ? '#9CA3AF' : r.change >= 0 ? '#10B981' : '#EF4444'}">
+            <td style="text-align:right;color:${r.change === null ? '#9CA3AF' : r.change >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'}">
               ${r.change === null ? '—' : (r.change >= 0 ? '+' : '') + r.change.toFixed(2)}
             </td>
-            <td style="text-align:right;color:${r.changePct === null ? '#9CA3AF' : r.changePct >= 0 ? '#10B981' : '#EF4444'}">
+            <td style="text-align:right;color:${r.changePct === null ? '#9CA3AF' : r.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'}">
               ${r.changePct === null ? '—' : (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%'}
             </td>
             <td style="text-align:right">${r.freshnessAgeDays ?? '—'}</td>
@@ -111,8 +111,8 @@ export function renderDailyPacketHtml(p: DailyOperatorPacket): string {
       <td style="text-align:right">${r.setups}</td>
       <td style="text-align:right">${r.withOutcome}</td>
       <td style="text-align:right">${r.winRate === null ? '—' : (r.winRate * 100).toFixed(0) + '%'}</td>
-      <td style="text-align:right;color:${r.avgR5d === null ? '#9CA3AF' : r.avgR5d >= 0 ? '#10B981' : '#EF4444'}">${r.avgR5d === null ? '—' : r.avgR5d.toFixed(2)}</td>
-      <td style="text-align:right;color:${r.avgR20d === null ? '#9CA3AF' : r.avgR20d >= 0 ? '#10B981' : '#EF4444'}">${r.avgR20d === null ? '—' : r.avgR20d.toFixed(2)}</td>
+      <td style="text-align:right;color:${r.avgR5d === null ? '#9CA3AF' : r.avgR5d >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'}">${r.avgR5d === null ? '—' : r.avgR5d.toFixed(2)}</td>
+      <td style="text-align:right;color:${r.avgR20d === null ? '#9CA3AF' : r.avgR20d >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'}">${r.avgR20d === null ? '—' : r.avgR20d.toFixed(2)}</td>
     </tr>`).join('')}</tbody></table>`;
   const calHtml = !p.calibration
     ? '<div class="muted">Calibration not available.</div>'

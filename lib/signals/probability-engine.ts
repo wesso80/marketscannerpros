@@ -634,11 +634,11 @@ export function calculateOptionsProbability(
  * Get color for probability display
  */
 export function getProbabilityColor(probability: number): string {
-  if (probability >= 70) return '#10B981'; // Green
-  if (probability >= 60) return '#22C55E'; // Light green
-  if (probability >= 50) return '#F59E0B'; // Yellow/orange
+  if (probability >= 70) return 'var(--msp-bull)'; // Green
+  if (probability >= 60) return 'var(--msp-bull)'; // Light green
+  if (probability >= 50) return 'var(--msp-warn)'; // Yellow/orange
   if (probability >= 40) return '#F97316'; // Orange
-  return '#EF4444'; // Red
+  return 'var(--msp-bear)'; // Red
 }
 
 /**
@@ -647,15 +647,15 @@ export function getProbabilityColor(probability: number): string {
 export function getConfidenceBadgeStyle(label: string): { bg: string; text: string; border: string } {
   switch (label) {
     case 'High Alignment':
-      return { bg: 'rgba(16,185,129,0.2)', text: '#10B981', border: 'rgba(16,185,129,0.5)' };
+      return { bg: 'rgba(16,185,129,0.2)', text: 'var(--msp-bull)', border: 'rgba(16,185,129,0.5)' };
     case 'Strong':
-      return { bg: 'rgba(34,197,94,0.2)', text: '#22C55E', border: 'rgba(34,197,94,0.5)' };
+      return { bg: 'rgba(34,197,94,0.2)', text: 'var(--msp-bull)', border: 'rgba(34,197,94,0.5)' };
     case 'Moderate':
-      return { bg: 'rgba(245,158,11,0.2)', text: '#F59E0B', border: 'rgba(245,158,11,0.5)' };
+      return { bg: 'rgba(245,158,11,0.2)', text: 'var(--msp-warn)', border: 'rgba(245,158,11,0.5)' };
     case 'Weak':
       return { bg: 'rgba(249,115,22,0.2)', text: '#F97316', border: 'rgba(249,115,22,0.5)' };
     default:
-      return { bg: 'rgba(239,68,68,0.2)', text: '#EF4444', border: 'rgba(239,68,68,0.5)' };
+      return { bg: 'rgba(239,68,68,0.2)', text: 'var(--msp-bear)', border: 'rgba(239,68,68,0.5)' };
   }
 }
 
