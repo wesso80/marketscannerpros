@@ -1,4 +1,4 @@
-ï»¿'use client';
+'use client';
 
 import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -132,7 +132,7 @@ function PositionSizerCalculator() {
       margin: '0 auto'
     }}>
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <h2 style={{ color: 'var(--msp-text)', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           Position Metrics Calculator (Educational)
         </h2>
         <p style={{ color: 'var(--msp-text-muted)', fontSize: '14px' }}>
@@ -185,7 +185,7 @@ function PositionSizerCalculator() {
       <div className="grid-equal-2-col-responsive" style={{ marginBottom: '24px' }}>
         {/* Account Size */}
         <div>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+          <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
             Account Size ($)
           </label>
           <input
@@ -195,10 +195,10 @@ function PositionSizerCalculator() {
             style={{
               width: '100%',
               padding: '12px',
-              background: '#0f172a',
+              background: 'var(--msp-bg)',
               border: '1px solid #334155',
               borderRadius: '8px',
-              color: '#f1f5f9',
+              color: 'var(--msp-text)',
               fontSize: '15px'
             }}
           />
@@ -206,7 +206,7 @@ function PositionSizerCalculator() {
 
         {/* Risk % */}
         <div>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+          <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
             Risk Per Trade (%)
           </label>
           <input
@@ -217,10 +217,10 @@ function PositionSizerCalculator() {
             style={{
               width: '100%',
               padding: '12px',
-              background: '#0f172a',
+              background: 'var(--msp-bg)',
               border: '1px solid #334155',
               borderRadius: '8px',
-              color: '#f1f5f9',
+              color: 'var(--msp-text)',
               fontSize: '15px'
             }}
           />
@@ -228,7 +228,7 @@ function PositionSizerCalculator() {
 
         {/* Exposure Toggle */}
         <div style={{ gridColumn: 'span 2' }}>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+          <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
             Exposure Type
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -239,10 +239,10 @@ function PositionSizerCalculator() {
               style={{
                 flex: 1,
                 padding: '10px',
-                background: side === 'LONG' ? 'rgba(16,185,129,0.2)' : '#0f172a',
+                background: side === 'LONG' ? 'rgba(16,185,129,0.2)' : 'var(--msp-bg)',
                 border: side === 'LONG' ? '1px solid #10b981' : '1px solid #334155',
                 borderRadius: '6px',
-                color: side === 'LONG' ? '#10b981' : '#94a3b8',
+                color: side === 'LONG' ? 'var(--msp-bull)' : 'var(--msp-flat)',
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
@@ -256,10 +256,10 @@ function PositionSizerCalculator() {
               style={{
                 flex: 1,
                 padding: '10px',
-                background: side === 'SHORT' ? 'rgba(239,68,68,0.2)' : '#0f172a',
+                background: side === 'SHORT' ? 'rgba(239,68,68,0.2)' : 'var(--msp-bg)',
                 border: side === 'SHORT' ? '1px solid #ef4444' : '1px solid #334155',
                 borderRadius: '6px',
-                color: side === 'SHORT' ? '#ef4444' : '#94a3b8',
+                color: side === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-flat)',
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
@@ -271,7 +271,7 @@ function PositionSizerCalculator() {
 
         {/* Reference Price */}
         <div>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+          <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
             Reference Price ($)
           </label>
           <input
@@ -283,10 +283,10 @@ function PositionSizerCalculator() {
             style={{
               width: '100%',
               padding: '12px',
-              background: '#0f172a',
+              background: 'var(--msp-bg)',
               border: '1px solid #334155',
               borderRadius: '8px',
-              color: '#f1f5f9',
+              color: 'var(--msp-text)',
               fontSize: '15px'
             }}
           />
@@ -294,7 +294,7 @@ function PositionSizerCalculator() {
 
         {/* Risk Level */}
         <div>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+          <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
             Risk Level ($)
           </label>
           <input
@@ -306,10 +306,10 @@ function PositionSizerCalculator() {
             style={{
               width: '100%',
               padding: '12px',
-              background: '#0f172a',
+              background: 'var(--msp-bg)',
               border: '1px solid rgba(239,68,68,0.5)',
               borderRadius: '8px',
-              color: '#ef4444',
+              color: 'var(--msp-bear)',
               fontSize: '15px'
             }}
           />
@@ -317,8 +317,8 @@ function PositionSizerCalculator() {
 
         {/* Reaction Zone */}
         <div style={{ gridColumn: 'span 2' }}>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-            Reaction Zone ($) <span style={{ color: '#64748b' }}>(optional)</span>
+          <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
+            Reaction Zone ($) <span style={{ color: 'var(--msp-text-muted)' }}>(optional)</span>
           </label>
           <input
             type="number"
@@ -329,10 +329,10 @@ function PositionSizerCalculator() {
             style={{
               width: '100%',
               padding: '12px',
-              background: '#0f172a',
+              background: 'var(--msp-bg)',
               border: '1px solid rgba(16,185,129,0.5)',
               borderRadius: '8px',
-              color: '#10b981',
+              color: 'var(--msp-bull)',
               fontSize: '15px'
             }}
           />
@@ -353,7 +353,7 @@ function PositionSizerCalculator() {
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '12px', marginBottom: '4px' }}>
                 Win Rate (%)
               </label>
               <input
@@ -364,16 +364,16 @@ function PositionSizerCalculator() {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  background: '#0f172a',
+                  background: 'var(--msp-bg)',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '12px', marginBottom: '4px' }}>
                 Avg Win ($)
               </label>
               <input
@@ -384,16 +384,16 @@ function PositionSizerCalculator() {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  background: '#0f172a',
+                  background: 'var(--msp-bg)',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '12px', marginBottom: '4px' }}>
                 Avg Loss ($)
               </label>
               <input
@@ -404,16 +404,16 @@ function PositionSizerCalculator() {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  background: '#0f172a',
+                  background: 'var(--msp-bg)',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
             </div>
           </div>
-          <p style={{ color: '#94a3b8', fontSize: '11px', marginTop: '10px' }}>
+          <p style={{ color: 'var(--msp-flat)', fontSize: '11px', marginTop: '10px' }}>
             Kelly % = Win Rate - [(1 - Win Rate) / (Avg Win / Avg Loss)]
           </p>
         </div>
@@ -426,21 +426,21 @@ function PositionSizerCalculator() {
         borderRadius: '16px',
         padding: '24px'
       }}>
-        <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
+        <h3 style={{ color: 'var(--msp-bull)', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
           Position Estimate Results
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
           <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
               Position Size
             </div>
-            <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+            <div style={{ color: 'var(--msp-text)', fontSize: '24px', fontWeight: '700' }}>
               ${formatNumber(method === 'kelly' ? kellyShares * (parseFloat(entryPrice) || 0) : result.positionSize)}
             </div>
           </div>
           <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
               Shares/Units
             </div>
             <div style={{ color: 'var(--msp-muted)', fontSize: '24px', fontWeight: '700' }}>
@@ -448,10 +448,10 @@ function PositionSizerCalculator() {
             </div>
           </div>
           <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
               Risk Amount
             </div>
-            <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+            <div style={{ color: 'var(--msp-bear)', fontSize: '24px', fontWeight: '700' }}>
               ${formatNumber(result.dollarRisk)}
             </div>
           </div>
@@ -460,14 +460,14 @@ function PositionSizerCalculator() {
         {result.rr > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
             <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(16,185,129,0.1)', borderRadius: '8px' }}>
-              <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Potential Reward</div>
-              <div style={{ color: '#10b981', fontSize: '18px', fontWeight: '600' }}>
+              <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', marginBottom: '2px' }}>Potential Reward</div>
+              <div style={{ color: 'var(--msp-bull)', fontSize: '18px', fontWeight: '600' }}>
                 ${formatNumber(result.dollarReward)}
               </div>
             </div>
             <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(251,191,36,0.1)', borderRadius: '8px' }}>
-              <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Risk/Reward Ratio</div>
-              <div style={{ color: '#fbbf24', fontSize: '18px', fontWeight: '600' }}>
+              <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', marginBottom: '2px' }}>Risk/Reward Ratio</div>
+              <div style={{ color: 'var(--msp-warn)', fontSize: '18px', fontWeight: '600' }}>
                 1:{formatNumber(result.rr, 1)}
               </div>
             </div>
@@ -479,7 +479,7 @@ function PositionSizerCalculator() {
             <div style={{ color: 'var(--msp-muted)', fontSize: '13px' }}>
               Kelly Optimal Bet Size: <strong>{formatNumber(result.kellyPercent, 1)}%</strong> of account
             </div>
-            <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', marginTop: '4px' }}>
               Many traders use Half-Kelly ({formatNumber(result.kellyPercent / 2, 1)}%) for reduced volatility
             </div>
           </div>
@@ -494,7 +494,7 @@ function PositionSizerCalculator() {
         border: '1px solid rgba(251,191,36,0.3)',
         borderRadius: '8px'
       }}>
-        <div style={{ color: '#fbbf24', fontSize: '12px' }}>
+        <div style={{ color: 'var(--msp-warn)', fontSize: '12px' }}>
           <strong>Disclaimer:</strong> This calculator is for educational and informational purposes only.
           It displays mathematical outputs based on user-entered data and does not constitute investment advice.
         </div>
@@ -648,14 +648,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     let s = raw.toUpperCase().trim();
     
     // Remove common suffixes that APIs don't need (but preserve the base ticker)
-    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT â†’ BTC, XRP-USD â†’ XRP
+    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT ? BTC, XRP-USD ? XRP
     s = s.replace(/[-_\/]?EUR$/i, '');
     s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
     
     return s;
   }
 
-  // Detect if a symbol is likely a stock vs crypto â€” delegates to shared detectAssetClass()
+  // Detect if a symbol is likely a stock vs crypto — delegates to shared detectAssetClass()
   function isLikelyStock(symbol: string): boolean {
     return detectAssetClass(symbol) === 'equity';
   }
@@ -961,7 +961,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         });
       } catch (e) {
         console.error('Failed to sync portfolio to server');
-        setSyncError('Portfolio sync failed â€” changes saved locally only');
+        setSyncError('Portfolio sync failed — changes saved locally only');
       }
     };
     
@@ -1281,7 +1281,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const deletePosition = (id: number) => {
     if (!confirm('Delete this position? This cannot be undone.')) return;
     setPositions((prev) => prev.filter((p) => p.id !== id));
-    // Hard-delete on the server too â€” the POST wipe-and-replace path skips
+    // Hard-delete on the server too — the POST wipe-and-replace path skips
     // journal-linked rows, so without this they'd reappear on next GET.
     fetch('/api/portfolio', {
       method: 'DELETE',
@@ -1493,7 +1493,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   ];
 
   // Color palette for pie chart
-  const colors = ['#10b981', '#f59e0b', '#ef4444', 'var(--msp-accent)', '#f97316', '#22c55e', '#eab308', '#84cc16', '#fb7185'];
+  const colors = ['var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-bear)', 'var(--msp-accent)', '#f97316', 'var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-bull)', 'var(--msp-bear)'];
 
   const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
@@ -1537,7 +1537,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const isRiskEvent = currentDrawdownPct > riskSettings.maxDrawdownThreshold || correlationRiskPct > riskSettings.maxCorrelatedExposure || deploymentPct > 90;
   const isRiskElevated = !isRiskEvent && (currentDrawdownPct > (riskSettings.maxDrawdownThreshold * 0.6) || correlationRiskPct > (riskSettings.maxCorrelatedExposure * 0.75) || deploymentPct > 75);
   const riskStateLabel = isRiskEvent ? 'RISK EVENT' : isRiskElevated ? 'ELEVATED' : 'STABLE';
-  const riskStateTone = isRiskEvent ? '#ef4444' : isRiskElevated ? '#f59e0b' : '#10b981';
+  const riskStateTone = isRiskEvent ? 'var(--msp-bear)' : isRiskElevated ? 'var(--msp-warn)' : 'var(--msp-bull)';
   const riskStateCode = isRiskEvent ? 'RISK' : isRiskElevated ? 'ELEVATED' : 'STABLE';
   const portfolioRiskProfile = isRiskEvent ? 'Aggressive' : isRiskElevated ? 'Moderate' : 'Low';
   const longExposurePct = capitalBase > 0 ? (longExposureValue / capitalBase) * 100 : 0;
@@ -1843,17 +1843,17 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Total Return</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: totalReturn >= 0 ? '#10B981' : '#EF4444' }} title={`${totalReturn.toFixed(2)}%`}>{`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: totalReturn >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }} title={`${totalReturn.toFixed(2)}%`}>{`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{`Unrealized ${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(0)}`}</div>
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Top Allocation</div>
-                <div className="mt-0.5 truncate text-sm font-black text-white" title={topAllocation?.symbol || 'â€”'}>{topAllocation?.symbol || 'â€”'}</div>
+                <div className="mt-0.5 truncate text-sm font-black text-white" title={topAllocation?.symbol || '—'}>{topAllocation?.symbol || '—'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions'}</div>
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk Load</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: riskLoadLabel === 'High' ? '#EF4444' : riskLoadLabel === 'Medium' ? '#FBBF24' : '#10B981' }} title={riskLoadLabel}>{riskLoadLabel}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: riskLoadLabel === 'High' ? 'var(--msp-bear)' : riskLoadLabel === 'Medium' ? 'var(--msp-warn)' : 'var(--msp-bull)' }} title={riskLoadLabel}>{riskLoadLabel}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{`Bias ${biasLabel}`}</div>
               </div>
             </div>
@@ -1881,7 +1881,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         <CommandCenterStateBar
           mode="OBSERVE"
           actionableNow={positions.length > 0
-            ? `Recorded positions: ${positions.length} open Â· Largest allocation: ${topAllocation?.symbol || 'N/A'}`
+            ? `Recorded positions: ${positions.length} open · Largest allocation: ${topAllocation?.symbol || 'N/A'}`
             : 'No recorded positions.'}
           nextStep={positions.length > 0
             ? totalReturn < 0
@@ -1943,7 +1943,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               <div id="manual-price-modal-title" className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
               <button type="button" onClick={closeManual} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
             </div>
-            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didnâ€™t return a value for this symbol.</div>
+            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
             <input
               autoFocus
               value={manualValue}
@@ -2141,13 +2141,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                               const lastVal = values[values.length - 1];
                               const fillColor = lastVal >= costBasis ? 'url(#eqGradGreen)' : 'url(#eqGradRed)';
                               const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},200 ${sx(0)},200`;
-                              const lineColor = lastVal >= costBasis ? '#10B981' : '#ef4444';
+                              const lineColor = lastVal >= costBasis ? 'var(--msp-bull)' : 'var(--msp-bear)';
                               return (
                                 <>
                                   <polygon points={gradPts} fill={fillColor} />
                                   <polyline points={linePts} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                                   {values.map((v: number, i: number) => (
-                                    <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill={v >= costBasis ? '#10B981' : '#ef4444'} stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                                    <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill={v >= costBasis ? 'var(--msp-bull)' : 'var(--msp-bear)'} stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
                                   ))}
                                   {showDrawdownOverlay && values.map((v: number, i: number) => {
                                     if (v >= max) return null;
@@ -2188,7 +2188,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
                     </div>
                     <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
-                      Long {longExposurePct.toFixed(1)}% â€¢ Short {shortExposurePct.toFixed(1)}%
+                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
@@ -2275,8 +2275,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 mb-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
                   <div className="text-xs text-slate-400 leading-relaxed">
-                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;Â·&nbsp;
-                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;Â·&nbsp;
+                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
                     <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
                   </div>
                 </div>
@@ -2385,7 +2385,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               </div>
               <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-[0.06em] text-emerald-300">Simulate Portfolio After Entry</div>
-                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% â€¢ Risk budget used {formatMoney(draftRiskBudget)}</div>
+                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% • Risk budget used {formatMoney(draftRiskBudget)}</div>
               </div>
               <button
                 type="button"
@@ -2495,7 +2495,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:opacity-50 transition-colors"
                 >
                   <span className={refreshingAll ? 'animate-pulse' : ''}>Refresh</span>
-                  {refreshingAll ? 'Refreshingâ€¦' : 'Refresh Prices'}
+                  {refreshingAll ? 'Refreshing…' : 'Refresh Prices'}
                 </button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
@@ -2633,7 +2633,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                                 <polygon points={gradPts} fill="url(#clGrad)" />
                                 <polyline points={linePts} fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                                 {values.map((v, i) => (
-                                  <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill={v >= 0 ? '#22d3ee' : '#ef4444'} stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                                  <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill={v >= 0 ? '#22d3ee' : 'var(--msp-bear)'} stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
                                 ))}
                               </>
                             );
@@ -2676,7 +2676,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
                           <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
-                          <td className="px-2 py-2">{trade.strategy || 'â€”'}</td>
+                          <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2 text-center">
                             <button type="button" onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">Delete</button>
