@@ -25,9 +25,9 @@ import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 
 /* ─── Helpers ─── */
 function dirColor(d?: string) {
-  if (d === 'bullish') return '#10B981';
-  if (d === 'bearish') return '#EF4444';
-  return '#94A3B8';
+  if (d === 'bullish') return 'var(--msp-bull)';
+  if (d === 'bearish') return 'var(--msp-bear)';
+  return 'var(--msp-flat)';
 }
 function formatPrice(p: number | undefined | null) {
   if (p == null) return '—';
@@ -67,12 +67,12 @@ function dataQualityDetail(label: string, missing: string[]): string {
 }
 
 function dataQualityColor(label: string): string {
-  if (label === 'GOOD') return '#10B981';
-  if (label === 'DEGRADED') return '#F59E0B';
-  return '#EF4444';
+  if (label === 'GOOD') return 'var(--msp-bull)';
+  if (label === 'DEGRADED') return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
-function ScannerMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function ScannerMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -380,7 +380,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
         const trust = rankedTrustLabel(row);
         const trustDetail = rankedTrustDetail(row);
         const reason = summarizeRankedReason(row, lifecycle, isRegimeCompatibleForRegime(row, activeRegime), activeRegime);
-        const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+        const mspColor = msp >= 70 ? 'var(--msp-bull)' : msp >= 50 ? 'var(--msp-warn)' : msp >= 30 ? 'var(--msp-flat)' : 'var(--msp-bear)';
 
         return (
           <button
@@ -439,7 +439,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
         const trust = rankedTrustLabel(row);
         const trustDetail = rankedTrustDetail(row);
         const reason = summarizeRankedReason(row, lifecycle, isRegimeCompatibleForRegime(row, activeRegime), activeRegime);
-        const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+        const mspColor = msp >= 70 ? 'var(--msp-bull)' : msp >= 50 ? 'var(--msp-warn)' : msp >= 30 ? 'var(--msp-flat)' : 'var(--msp-bear)';
         return (
           <button
             key={`${(row as any)._assetClass || 'asset'}-${row.symbol || 'unknown'}-${index}`}
@@ -521,7 +521,7 @@ function RankedDesktopFallbackTable({ rows, activeRegime, onRowClick }: { rows: 
           {rows.map((row) => {
             const lifecycle = deriveLifecycleState(row, activeRegime);
             const msp = computeMspScore(row, activeRegime);
-            const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+            const mspColor = msp >= 70 ? 'var(--msp-bull)' : msp >= 50 ? 'var(--msp-warn)' : msp >= 30 ? 'var(--msp-flat)' : 'var(--msp-bear)';
             return (
               <tr key={`fallback-${row.symbol}`} className="border-b border-slate-800/40 hover:bg-slate-800/30">
                 <td className="py-2.5 px-2 font-bold text-white whitespace-nowrap">{row.symbol}</td>
@@ -672,8 +672,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           : quality === 'MEDIUM' && direction !== 'neutral'
             ? 'MODERATE ALIGNMENT'
             : 'LOW ALIGNMENT — REVIEW';
-  const statusColor = highAlignment ? '#10B981' : needsConfirmation || (quality === 'MEDIUM' && direction !== 'neutral') || alignedInputs ? '#F59E0B' : '#EF4444';
-  const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
+  const statusColor = highAlignment ? 'var(--msp-bull)' : needsConfirmation || (quality === 'MEDIUM' && direction !== 'neutral') || alignedInputs ? 'var(--msp-warn)' : 'var(--msp-bear)';
+  const confBarColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 55 ? 'var(--msp-warn)' : 'var(--msp-bear)';
 
   const blockReasons = highAlignment
     ? ['Structure aligned', biasLabel(direction)]
@@ -1366,7 +1366,7 @@ export default function ScannerPage() {
     : queueCount > 0
       ? `${queueCount} ${headerStage === 'pro' ? 'candidates' : 'symbols'}`
       : 'Empty';
-  const queueTone = queueCount > 0 || headerStage === 'analysis' ? '#10B981' : '#94A3B8';
+  const queueTone = queueCount > 0 || headerStage === 'analysis' ? 'var(--msp-bull)' : 'var(--msp-flat)';
   const queueDetail = headerStage === 'analysis'
     ? 'Active analysis case'
     : headerStage === 'pro'
@@ -1381,7 +1381,7 @@ export default function ScannerPage() {
   ].filter(Boolean) as string[];
   const dataLoadingCount = [equity.loading, crypto.loading, proScanLoading, detailLoading].filter(Boolean).length;
   const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : 'Ready';
-  const dataHealthTone = dataIssues.length ? '#F59E0B' : dataLoadingCount ? '#94A3B8' : '#10B981';
+  const dataHealthTone = dataIssues.length ? 'var(--msp-warn)' : dataLoadingCount ? 'var(--msp-flat)' : 'var(--msp-bull)';
   const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
   const topRankedSymbol = rankedRows[0]?.symbol;
   const topProSymbol = proScreenerRows[0]?.symbol;
@@ -1398,21 +1398,21 @@ export default function ScannerPage() {
     : headerStage === 'pro'
       ? proScanResults ? 'Click a row to inspect a candidate' : 'Configure filters then run scan'
       : topRankedSymbol ? 'Top-ranked candidate' : 'Cached scanner data syncing';
-  const nextCheckTone = (headerStage === 'analysis' || headerTopSymbol) ? '#FBBF24' : '#94A3B8';
+  const nextCheckTone = (headerStage === 'analysis' || headerTopSymbol) ? 'var(--msp-warn)' : 'var(--msp-flat)';
   const goldenEggHref = headerTopSymbol ? `/tools/golden-egg?symbol=${encodeURIComponent(headerTopSymbol)}` : '/tools/golden-egg';
   const showRegimeChip = Boolean(regime.data);
   const regimeColor = currentRegime === 'trend' || currentRegime === 'risk_on' || currentRegime === 'expansion'
-    ? '#10B981'
+    ? 'var(--msp-bull)'
     : currentRegime === 'risk_off'
-      ? '#EF4444'
+      ? 'var(--msp-bear)'
       : currentRegime === 'compression' || currentRegime === 'transition'
-        ? '#F59E0B'
+        ? 'var(--msp-warn)'
         : '#A5B4FC';
   const riskLevel = regime.data?.riskLevel || 'moderate';
-  const riskColor = riskLevel === 'low' ? '#10B981' : riskLevel === 'moderate' ? '#F59E0B' : '#EF4444';
+  const riskColor = riskLevel === 'low' ? 'var(--msp-bull)' : riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const permission = regime.data?.permission || 'full';
   const permissionLabel = permission === 'full' ? 'Allowed' : permission === 'reduced' ? 'Reduced' : 'Blocked';
-  const permissionColor = permission === 'full' ? '#10B981' : permission === 'reduced' ? '#F59E0B' : '#EF4444';
+  const permissionColor = permission === 'full' ? 'var(--msp-bull)' : permission === 'reduced' ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const weightTooltip = Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
 
   /* ═══════════════════════════════════════════════════════════════════════ */
@@ -1514,11 +1514,11 @@ export default function ScannerPage() {
 
           <div className="grid gap-2 md:grid-cols-5">
             {[
-              ['Symbols', String(filtered.length), '#CBD5E1'],
-              ['Aligned Scenarios', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
+              ['Symbols', String(filtered.length), 'var(--msp-text)'],
+              ['Aligned Scenarios', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), 'var(--msp-bull)'],
               ['Developing', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
-              ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), '#EF4444'],
-              ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), '#F59E0B'],
+              ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), 'var(--msp-bear)'],
+              ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), 'var(--msp-warn)'],
             ].map(([label, value, color]) => (
               <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
                 <div className="text-[11px] uppercase tracking-wider text-slate-500">{label}</div>
@@ -1580,7 +1580,7 @@ export default function ScannerPage() {
                       const regimeLabel = r.scoreV2?.regime?.label || r.type || '';
                       const msp = computeMspScore(r, currentRegime);
                       const lifecycle = deriveLifecycleState(r, currentRegime);
-                      const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+                      const mspColor = msp >= 70 ? 'var(--msp-bull)' : msp >= 50 ? 'var(--msp-warn)' : msp >= 30 ? 'var(--msp-flat)' : 'var(--msp-bear)';
                       const regimeCompatible = isRegimeCompatible(r);
                       const trust = rankedTrustLabel(r);
                       const reason = summarizeRankedReason(r, lifecycle, regimeCompatible, currentRegime);
@@ -1839,11 +1839,11 @@ export default function ScannerPage() {
             <div>
               <div className="mb-2 grid gap-2 md:grid-cols-5">
                 {[
-                  ['Scanned', String(proScanResults.scanned ?? '—'), '#CBD5E1'],
-                  ['Candidates', String(proScreenerRows.length), '#10B981'],
-                  ['Aligned', String(proScreenerRows.filter(r => r.permission === 'COMPLIANT').length), '#10B981'],
-                  ['Mixed Evidence', String(proScreenerRows.filter(r => r.permission === 'TIGHT').length), '#F59E0B'],
-                  ['Data Weak', String(proScreenerRows.filter(r => r.dataQuality !== 'GOOD').length), '#EF4444'],
+                  ['Scanned', String(proScanResults.scanned ?? '—'), 'var(--msp-text)'],
+                  ['Candidates', String(proScreenerRows.length), 'var(--msp-bull)'],
+                  ['Aligned', String(proScreenerRows.filter(r => r.permission === 'COMPLIANT').length), 'var(--msp-bull)'],
+                  ['Mixed Evidence', String(proScreenerRows.filter(r => r.permission === 'TIGHT').length), 'var(--msp-warn)'],
+                  ['Data Weak', String(proScreenerRows.filter(r => r.dataQuality !== 'GOOD').length), 'var(--msp-bear)'],
                 ].map(([label, value, color]) => (
                   <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
                     <div className="text-[11px] uppercase tracking-wider text-slate-500">{label}</div>
