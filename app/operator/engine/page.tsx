@@ -72,20 +72,20 @@ type TabMode = 'auto' | 'manual';
 /* ── Color helpers ──────────────────────────────────────────── */
 
 const permissionColor: Record<Permission, string> = {
-  ALLOW: '#10B981',
-  ALLOW_REDUCED: '#F59E0B',
+  ALLOW: 'var(--msp-bull)',
+  ALLOW_REDUCED: 'var(--msp-warn)',
   WAIT: '#6B7280',
-  BLOCK: '#EF4444',
+  BLOCK: 'var(--msp-bear)',
 };
 
 const regimeColor: Record<Regime, string> = {
-  TREND_EXPANSION: '#10B981',
-  TREND_CONTINUATION: '#34D399',
-  TREND_EXHAUSTION: '#F59E0B',
+  TREND_EXPANSION: 'var(--msp-bull)',
+  TREND_CONTINUATION: 'var(--msp-bull)',
+  TREND_EXHAUSTION: 'var(--msp-warn)',
   ROTATIONAL_RANGE: '#6B7280',
   COMPRESSION_COIL: '#8B5CF6',
-  FAILED_BREAKOUT_TRAP: '#EF4444',
-  EVENT_SHOCK: '#DC2626',
+  FAILED_BREAKOUT_TRAP: 'var(--msp-bear)',
+  EVENT_SHOCK: 'var(--msp-bear)',
   POST_NEWS_PRICE_DISCOVERY: '#F97316',
   ILLIQUID_DRIFT: '#374151',
   PANIC_CORRELATION_CASCADE: '#991B1B',
@@ -93,9 +93,9 @@ const regimeColor: Record<Regime, string> = {
 
 const envModeColor: Record<EnvironmentMode, string> = {
   RESEARCH: '#6B7280',
-  PAPER: '#3B82F6',
-  LIVE_ASSISTED: '#F59E0B',
-  LIVE_AUTO: '#EF4444',
+  PAPER: 'var(--msp-info)',
+  LIVE_ASSISTED: 'var(--msp-warn)',
+  LIVE_AUTO: 'var(--msp-bear)',
 };
 
 /* ── Radar Card (shared between tabs) ───────────────────────── */
@@ -112,7 +112,7 @@ function RadarCard({ opp }: { opp: RadarOpportunity }) {
           <span style={{
             fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
             background: opp.direction === 'LONG' ? '#10B98120' : '#EF444420',
-            color: opp.direction === 'LONG' ? '#10B981' : '#EF4444',
+            color: opp.direction === 'LONG' ? 'var(--msp-bull)' : 'var(--msp-bear)',
           }}>
             {opp.direction}
           </span>
@@ -141,25 +141,25 @@ function RadarCard({ opp }: { opp: RadarOpportunity }) {
         </span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-        <span style={{ color: '#94A3B8' }}>
-          Confidence: <strong style={{ color: '#E2E8F0' }}>{(opp.confidenceScore * 100).toFixed(1)}%</strong>
+        <span style={{ color: 'var(--msp-flat)' }}>
+          Confidence: <strong style={{ color: 'var(--msp-text)' }}>{(opp.confidenceScore * 100).toFixed(1)}%</strong>
         </span>
-        <span style={{ color: '#94A3B8' }}>
-          Size: <strong style={{ color: '#E2E8F0' }}>{opp.sizeMultiplier.toFixed(1)}x</strong>
+        <span style={{ color: 'var(--msp-flat)' }}>
+          Size: <strong style={{ color: 'var(--msp-text)' }}>{opp.sizeMultiplier.toFixed(1)}x</strong>
         </span>
       </div>
       <div style={{ marginTop: 6, fontSize: 12 }}>
-        <span style={{ color: '#64748B' }}>Symbol Trust: </span>
+        <span style={{ color: 'var(--msp-text-muted)' }}>Symbol Trust: </span>
         <span style={{
-          color: opp.symbolTrust > 0.7 ? '#10B981' :
-            opp.symbolTrust > 0.5 ? '#F59E0B' : '#EF4444',
+          color: opp.symbolTrust > 0.7 ? 'var(--msp-bull)' :
+            opp.symbolTrust > 0.5 ? 'var(--msp-warn)' : 'var(--msp-bear)',
           fontWeight: 600,
         }}>
           {(opp.symbolTrust * 100).toFixed(0)}%
         </span>
       </div>
       {opp.reasonCodes.length > 0 && (
-        <div style={{ marginTop: 6, fontSize: 11, color: '#64748B' }}>
+        <div style={{ marginTop: 6, fontSize: 11, color: 'var(--msp-text-muted)' }}>
           {opp.reasonCodes.slice(0, 4).join(' · ')}
         </div>
       )}
@@ -333,16 +333,16 @@ export default function OperatorEnginePage() {
 
   if (loading) {
     return (
-      <div style={{ background: '#0F172A', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#94A3B8', fontSize: 18 }}>Loading Operator Engine...</div>
+      <div style={{ background: 'var(--msp-bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--msp-flat)', fontSize: 18 }}>Loading Operator Engine...</div>
       </div>
     );
   }
 
   if (!authorized) {
     return (
-      <div style={{ background: '#0F172A', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#EF4444', fontSize: 18 }}>Access Denied — Operator Engine is private.</div>
+      <div style={{ background: 'var(--msp-bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--msp-bear)', fontSize: 18 }}>Access Denied — Operator Engine is private.</div>
       </div>
     );
   }
@@ -351,14 +351,14 @@ export default function OperatorEnginePage() {
   const liveRadar = autoScan?.liveRadar ?? [];
 
   return (
-    <div style={{ background: '#0F172A', minHeight: '100vh', color: '#E2E8F0', padding: '24px' }}>
+    <div style={{ background: 'var(--msp-bg)', minHeight: '100vh', color: 'var(--msp-text)', padding: '24px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: '#10B981' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: 'var(--msp-bull)' }}>
             MSP Operator Engine
           </h1>
-          <p style={{ color: '#64748B', margin: '4px 0 0', fontSize: 14 }}>
+          <p style={{ color: 'var(--msp-text-muted)', margin: '4px 0 0', fontSize: 14 }}>
             Private adaptive trading decision system
           </p>
         </div>
@@ -376,8 +376,8 @@ export default function OperatorEnginePage() {
               padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600,
               background: health.metaHealth.compositeHealth > 0.7 ? '#10B98120' :
                 health.metaHealth.compositeHealth > 0.4 ? '#F59E0B20' : '#EF444420',
-              color: health.metaHealth.compositeHealth > 0.7 ? '#10B981' :
-                health.metaHealth.compositeHealth > 0.4 ? '#F59E0B' : '#EF4444',
+              color: health.metaHealth.compositeHealth > 0.7 ? 'var(--msp-bull)' :
+                health.metaHealth.compositeHealth > 0.4 ? 'var(--msp-warn)' : 'var(--msp-bear)',
             }}>
               Health: {(health.metaHealth.compositeHealth * 100).toFixed(0)}%
             </span>
@@ -387,8 +387,8 @@ export default function OperatorEnginePage() {
             style={{
               padding: '10px 20px', borderRadius: 8, border: 'none',
               fontWeight: 600, fontSize: 14, cursor: 'pointer',
-              background: killSwitch.active ? '#EF4444' : '#1E293B',
-              color: killSwitch.active ? '#FFF' : '#94A3B8',
+              background: killSwitch.active ? 'var(--msp-bear)' : '#1E293B',
+              color: killSwitch.active ? '#FFF' : 'var(--msp-flat)',
             }}
           >
             {killSwitch.active ? '🔴 KILL SWITCH ACTIVE' : '⚫ Kill Switch Off'}
@@ -407,7 +407,7 @@ export default function OperatorEnginePage() {
               fontWeight: 600, fontSize: 14,
               borderBottom: tab === t ? '2px solid #10B981' : '2px solid transparent',
               background: 'transparent',
-              color: tab === t ? '#10B981' : '#64748B',
+              color: tab === t ? 'var(--msp-bull)' : 'var(--msp-text-muted)',
             }}
           >
             {t === 'auto' ? '⚡ Auto-Scan' : '🔍 Manual Scan'}
@@ -419,7 +419,7 @@ export default function OperatorEnginePage() {
           style={{
             padding: '6px 14px', borderRadius: 6, border: '1px solid #334155',
             background: showCriteria ? '#334155' : 'transparent',
-            color: '#94A3B8', fontSize: 12, cursor: 'pointer',
+            color: 'var(--msp-flat)', fontSize: 12, cursor: 'pointer',
           }}
         >
           {showCriteria ? 'Hide' : 'Show'} Pass Criteria
@@ -432,12 +432,12 @@ export default function OperatorEnginePage() {
           background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
           border: '1px solid #334155',
         }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 12, color: '#10B981' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 12, color: 'var(--msp-bull)' }}>
             How a Symbol Passes the Engine
           </h3>
-          <div style={{ fontSize: 13, lineHeight: 1.8, color: '#94A3B8' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--msp-flat)' }}>
             <p style={{ margin: '0 0 8px' }}>
-              Each symbol goes through an <strong style={{ color: '#E2E8F0' }}>8-engine pipeline</strong>. A weighted confidence score is computed from 10 evidence dimensions:
+              Each symbol goes through an <strong style={{ color: 'var(--msp-text)' }}>8-engine pipeline</strong>. A weighted confidence score is computed from 10 evidence dimensions:
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6, marginBottom: 12, fontSize: 12 }}>
               {[
@@ -452,27 +452,27 @@ export default function OperatorEnginePage() {
                 { name: 'Symbol Trust', weight: '5%' },
                 { name: 'Model Health', weight: '5%' },
               ].map(d => (
-                <div key={d.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 8px', background: '#0F172A', borderRadius: 4 }}>
+                <div key={d.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 8px', background: 'var(--msp-bg)', borderRadius: 4 }}>
                   <span>{d.name}</span>
-                  <span style={{ color: '#10B981', fontWeight: 600 }}>{d.weight}</span>
+                  <span style={{ color: 'var(--msp-bull)', fontWeight: 600 }}>{d.weight}</span>
                 </div>
               ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
               <div style={{ background: '#10B98115', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #10B981' }}>
-                <strong style={{ color: '#10B981' }}>ALLOW</strong> — Confidence ≥ 80%<br />Full position size (1.0x)
+                <strong style={{ color: 'var(--msp-bull)' }}>ALLOW</strong> — Confidence ≥ 80%<br />Full position size (1.0x)
               </div>
               <div style={{ background: '#F59E0B15', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #F59E0B' }}>
-                <strong style={{ color: '#F59E0B' }}>ALLOW_REDUCED</strong> — 68–79%<br />Half position size (0.5x)
+                <strong style={{ color: 'var(--msp-warn)' }}>ALLOW_REDUCED</strong> — 68–79%<br />Half position size (0.5x)
               </div>
               <div style={{ background: '#6B728015', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #6B7280' }}>
                 <strong style={{ color: '#6B7280' }}>WAIT</strong> — 55–67%<br />On radar, no execution
               </div>
               <div style={{ background: '#EF444415', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #EF4444' }}>
-                <strong style={{ color: '#EF4444' }}>BLOCK</strong> — Below 55%<br />Filtered out entirely
+                <strong style={{ color: 'var(--msp-bear)' }}>BLOCK</strong> — Below 55%<br />Filtered out entirely
               </div>
             </div>
-            <p style={{ margin: '12px 0 0', fontSize: 12, color: '#64748B' }}>
+            <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--msp-text-muted)' }}>
               Governance then applies portfolio-level risk limits (daily loss cap, drawdown, correlation, kill switch) which can downgrade or block.
             </p>
           </div>
@@ -489,7 +489,7 @@ export default function OperatorEnginePage() {
           }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--msp-flat)', marginBottom: 4 }}>
                   Watchlist
                 </label>
                 <select
@@ -498,7 +498,7 @@ export default function OperatorEnginePage() {
                   disabled={autoRunning}
                   style={{
                     padding: '8px 12px', borderRadius: 6, minWidth: 200,
-                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    background: 'var(--msp-bg)', border: '1px solid #334155', color: 'var(--msp-text)',
                     fontSize: 14, opacity: autoRunning ? 0.6 : 1,
                   }}
                 >
@@ -510,7 +510,7 @@ export default function OperatorEnginePage() {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--msp-flat)', marginBottom: 4 }}>
                   Timeframe
                 </label>
                 <select
@@ -519,7 +519,7 @@ export default function OperatorEnginePage() {
                   disabled={autoRunning}
                   style={{
                     padding: '8px 12px', borderRadius: 6,
-                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    background: 'var(--msp-bg)', border: '1px solid #334155', color: 'var(--msp-text)',
                     fontSize: 14, opacity: autoRunning ? 0.6 : 1,
                   }}
                 >
@@ -532,7 +532,7 @@ export default function OperatorEnginePage() {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--msp-flat)', marginBottom: 4 }}>
                   Scan Every
                 </label>
                 <select
@@ -541,7 +541,7 @@ export default function OperatorEnginePage() {
                   disabled={autoRunning}
                   style={{
                     padding: '8px 12px', borderRadius: 6,
-                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    background: 'var(--msp-bg)', border: '1px solid #334155', color: 'var(--msp-text)',
                     fontSize: 14, opacity: autoRunning ? 0.6 : 1,
                   }}
                 >
@@ -560,7 +560,7 @@ export default function OperatorEnginePage() {
                   disabled={killSwitch.active}
                   style={{
                     padding: '8px 28px', borderRadius: 6, border: 'none',
-                    background: killSwitch.active ? '#374151' : '#10B981',
+                    background: killSwitch.active ? '#374151' : 'var(--msp-bull)',
                     color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                   }}
                 >
@@ -571,7 +571,7 @@ export default function OperatorEnginePage() {
                   onClick={stopAutoScan}
                   style={{
                     padding: '8px 28px', borderRadius: 6, border: 'none',
-                    background: '#EF4444',
+                    background: 'var(--msp-bear)',
                     color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                   }}
                 >
@@ -583,19 +583,19 @@ export default function OperatorEnginePage() {
             {/* Status bar */}
             {autoRunning && (
               <div style={{ marginTop: 12, display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
-                <span style={{ color: '#10B981', fontWeight: 600 }}>
+                <span style={{ color: 'var(--msp-bull)', fontWeight: 600 }}>
                   {autoScanning ? '⟳ Scanning...' : `● Live`}
                 </span>
                 {countdown > 0 && !autoScanning && (
-                  <span style={{ color: '#64748B' }}>
+                  <span style={{ color: 'var(--msp-text-muted)' }}>
                     Next scan in {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
                   </span>
                 )}
                 {autoScan?.totalScans != null && (
-                  <span style={{ color: '#64748B' }}>Cycles: {autoScan.totalScans}</span>
+                  <span style={{ color: 'var(--msp-text-muted)' }}>Cycles: {autoScan.totalScans}</span>
                 )}
                 {autoScan?.lastScanDurationMs != null && autoScan.lastScanDurationMs > 0 && (
-                  <span style={{ color: '#64748B' }}>Last: {(autoScan.lastScanDurationMs / 1000).toFixed(1)}s</span>
+                  <span style={{ color: 'var(--msp-text-muted)' }}>Last: {(autoScan.lastScanDurationMs / 1000).toFixed(1)}s</span>
                 )}
               </div>
             )}
@@ -606,7 +606,7 @@ export default function OperatorEnginePage() {
             <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
               Live Radar — {liveRadar.length} Opportunities
               {autoScan?.lastScanAt && (
-                <span style={{ fontSize: 12, color: '#64748B', fontWeight: 400, marginLeft: 12 }}>
+                <span style={{ fontSize: 12, color: 'var(--msp-text-muted)', fontWeight: 400, marginLeft: 12 }}>
                   Last scan: {new Date(autoScan.lastScanAt).toLocaleTimeString()} · {autoScan.symbolsScanned} symbols scanned
                 </span>
               )}
@@ -617,10 +617,10 @@ export default function OperatorEnginePage() {
                 background: '#1E293B', borderRadius: 8, padding: 40,
                 textAlign: 'center', border: '1px solid #334155',
               }}>
-                <div style={{ color: '#64748B', marginBottom: 8 }}>
+                <div style={{ color: 'var(--msp-text-muted)', marginBottom: 8 }}>
                   {autoScan?.totalScans ? 'No opportunities found meeting confidence thresholds.' : 'Start auto-scan to begin monitoring.'}
                 </div>
-                <div style={{ color: '#475569', fontSize: 12 }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: 12 }}>
                   Symbols need ≥55% confidence across 10 weighted evidence dimensions to appear on radar.
                 </div>
               </div>
@@ -646,17 +646,17 @@ export default function OperatorEnginePage() {
                     display: 'flex', gap: 12, padding: '4px 0', fontSize: 12,
                     borderBottom: '1px solid #1E293B',
                   }}>
-                    <span style={{ color: '#475569', minWidth: 70 }}>
+                    <span style={{ color: 'var(--msp-text-muted)', minWidth: 70 }}>
                       {new Date(ev.timestamp).toLocaleTimeString()}
                     </span>
                     <span style={{
-                      color: ev.action === 'appeared' ? '#10B981' : '#EF4444',
+                      color: ev.action === 'appeared' ? 'var(--msp-bull)' : 'var(--msp-bear)',
                       fontWeight: 600, minWidth: 80,
                     }}>
                       {ev.action === 'appeared' ? '▲ APPEARED' : '▼ DROPPED'}
                     </span>
                     <span style={{ fontWeight: 600 }}>{ev.symbol}</span>
-                    <span style={{ color: '#64748B' }}>
+                    <span style={{ color: 'var(--msp-text-muted)' }}>
                       {ev.permission} · {(ev.confidence * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -668,10 +668,10 @@ export default function OperatorEnginePage() {
           {/* Auto-Scan Errors */}
           {autoScan?.errors && autoScan.errors.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#F59E0B', marginBottom: 8 }}>Scan Errors</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--msp-warn)', marginBottom: 8 }}>Scan Errors</h3>
               <div style={{ background: '#1E293B', borderRadius: 8, padding: 12, border: '1px solid #334155', maxHeight: 150, overflowY: 'auto' }}>
                 {autoScan.errors.map((e, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#EF4444', padding: '2px 0' }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--msp-bear)', padding: '2px 0' }}>
                     <strong>{e.symbol}</strong>: {e.error}
                   </div>
                 ))}
@@ -691,7 +691,7 @@ export default function OperatorEnginePage() {
           }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 300px' }}>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--msp-flat)', marginBottom: 4 }}>
                   Symbols (comma-separated)
                 </label>
                 <input
@@ -699,13 +699,13 @@ export default function OperatorEnginePage() {
                   onChange={e => setSymbols(e.target.value)}
                   style={{
                     width: '100%', padding: '8px 12px', borderRadius: 6,
-                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    background: 'var(--msp-bg)', border: '1px solid #334155', color: 'var(--msp-text)',
                     fontSize: 14,
                   }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--msp-flat)', marginBottom: 4 }}>
                   Market
                 </label>
                 <select
@@ -713,7 +713,7 @@ export default function OperatorEnginePage() {
                   onChange={e => setMarket(e.target.value)}
                   style={{
                     padding: '8px 12px', borderRadius: 6,
-                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    background: 'var(--msp-bg)', border: '1px solid #334155', color: 'var(--msp-text)',
                     fontSize: 14,
                   }}
                 >
@@ -725,7 +725,7 @@ export default function OperatorEnginePage() {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--msp-flat)', marginBottom: 4 }}>
                   Timeframe
                 </label>
                 <select
@@ -733,7 +733,7 @@ export default function OperatorEnginePage() {
                   onChange={e => setTimeframe(e.target.value)}
                   style={{
                     padding: '8px 12px', borderRadius: 6,
-                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    background: 'var(--msp-bg)', border: '1px solid #334155', color: 'var(--msp-text)',
                     fontSize: 14,
                   }}
                 >
@@ -750,7 +750,7 @@ export default function OperatorEnginePage() {
                 disabled={scanning || killSwitch.active}
                 style={{
                   padding: '8px 24px', borderRadius: 6, border: 'none',
-                  background: killSwitch.active ? '#374151' : '#10B981',
+                  background: killSwitch.active ? '#374151' : 'var(--msp-bull)',
                   color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                   opacity: scanning ? 0.6 : 1,
                 }}
@@ -766,9 +766,9 @@ export default function OperatorEnginePage() {
               background: '#1E293B', borderRadius: 8, padding: 12, marginBottom: 16,
               border: '1px solid #334155', display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12,
             }}>
-              <span style={{ color: '#64748B' }}>Request: <span style={{ color: '#94A3B8' }}>{scanResult.requestId}</span></span>
-              <span style={{ color: '#64748B' }}>Scanned: <span style={{ color: '#94A3B8' }}>{scanResult.symbolsScanned} symbols</span></span>
-              <span style={{ color: '#64748B' }}>Mode: <span style={{ color: envModeColor[scanResult.environmentMode] }}>{scanResult.environmentMode}</span></span>
+              <span style={{ color: 'var(--msp-text-muted)' }}>Request: <span style={{ color: 'var(--msp-flat)' }}>{scanResult.requestId}</span></span>
+              <span style={{ color: 'var(--msp-text-muted)' }}>Scanned: <span style={{ color: 'var(--msp-flat)' }}>{scanResult.symbolsScanned} symbols</span></span>
+              <span style={{ color: 'var(--msp-text-muted)' }}>Mode: <span style={{ color: envModeColor[scanResult.environmentMode] }}>{scanResult.environmentMode}</span></span>
             </div>
           )}
 
@@ -778,7 +778,7 @@ export default function OperatorEnginePage() {
               <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
                 Radar — {scanResult.radar.length} Opportunities
               </h2>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--msp-text-muted)', marginBottom: 12 }}>
                 {new Date(scanResult.timestamp).toLocaleTimeString()}
                 {scanResult.errors.length > 0 && ` · ${scanResult.errors.length} errors`}
               </div>
@@ -786,7 +786,7 @@ export default function OperatorEnginePage() {
               {scanResult.radar.length === 0 ? (
                 <div style={{
                   background: '#1E293B', borderRadius: 8, padding: 40,
-                  textAlign: 'center', color: '#64748B', border: '1px solid #334155',
+                  textAlign: 'center', color: 'var(--msp-text-muted)', border: '1px solid #334155',
                 }}>
                   No actionable opportunities found. All candidates scored below thresholds.
                 </div>
@@ -803,10 +803,10 @@ export default function OperatorEnginePage() {
           {/* Manual Errors */}
           {scanResult && scanResult.errors.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#F59E0B', marginBottom: 8 }}>Scan Errors</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--msp-warn)', marginBottom: 8 }}>Scan Errors</h3>
               <div style={{ background: '#1E293B', borderRadius: 8, padding: 12, border: '1px solid #334155' }}>
                 {scanResult.errors.map((e, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#EF4444', padding: '4px 0' }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--msp-bear)', padding: '4px 0' }}>
                     <strong>{e.symbol}</strong>: {e.error}
                   </div>
                 ))}
@@ -836,15 +836,15 @@ export default function OperatorEnginePage() {
               { label: 'Slippage', value: health.metaHealth.slippageDeterioration, good: false },
             ].map(({ label, value, good }) => (
               <div key={label} style={{
-                background: '#0F172A', borderRadius: 8, padding: 12,
+                background: 'var(--msp-bg)', borderRadius: 8, padding: 12,
                 border: '1px solid #334155',
               }}>
-                <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>{label}</div>
+                <div style={{ fontSize: 11, color: 'var(--msp-text-muted)', marginBottom: 4 }}>{label}</div>
                 <div style={{
                   fontSize: 16, fontWeight: 700,
                   color: good
-                    ? (value > 0.7 ? '#10B981' : value > 0.4 ? '#F59E0B' : '#EF4444')
-                    : (value < 0.3 ? '#10B981' : value < 0.6 ? '#F59E0B' : '#EF4444'),
+                    ? (value > 0.7 ? 'var(--msp-bull)' : value > 0.4 ? 'var(--msp-warn)' : 'var(--msp-bear)')
+                    : (value < 0.3 ? 'var(--msp-bull)' : value < 0.6 ? 'var(--msp-warn)' : 'var(--msp-bear)'),
                 }}>
                   {(value * 100).toFixed(0)}%
                 </div>
@@ -856,7 +856,7 @@ export default function OperatorEnginePage() {
               {health.metaHealth.alerts.map((a, i) => (
                 <span key={i} style={{
                   fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                  background: '#EF444420', color: '#EF4444',
+                  background: '#EF444420', color: 'var(--msp-bear)',
                 }}>
                   {a}
                 </span>
@@ -888,13 +888,13 @@ export default function OperatorEnginePage() {
             { name: 'Thesis Monitor', version: 'v1.0.0' },
           ].map(({ name, version }) => (
             <div key={name} style={{
-              background: '#0F172A', borderRadius: 8, padding: 12,
+              background: 'var(--msp-bg)', borderRadius: 8, padding: 12,
               border: '1px solid #334155',
             }}>
-              <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>{name}</div>
+              <div style={{ fontSize: 11, color: 'var(--msp-text-muted)', marginBottom: 4 }}>{name}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600 }}>Ready</span>
-                <span style={{ fontSize: 10, color: '#475569' }}>{version}</span>
+                <span style={{ fontSize: 13, color: 'var(--msp-bull)', fontWeight: 600 }}>Ready</span>
+                <span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}>{version}</span>
               </div>
             </div>
           ))}
