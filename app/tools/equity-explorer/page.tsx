@@ -552,7 +552,7 @@ export default function EquityExplorerPage() {
               <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Equity Analysis Gate</p>
+                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">Zone 1 · Equity analysis gate</p>
                     <span className="text-[11px] text-slate-500">US session anchor</span>
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
@@ -571,7 +571,7 @@ export default function EquityExplorerPage() {
 
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown</p>
+                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">Environment breakdown</p>
                     <span className="text-[11px] text-slate-500">Inputs</span>
                   </div>
                   <div className="grid gap-1.5 text-xs">
@@ -608,7 +608,7 @@ export default function EquityExplorerPage() {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">Zone 2 · Action</p>
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
                   <button
