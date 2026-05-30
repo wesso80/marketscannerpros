@@ -143,8 +143,8 @@ export default function CapitalFlowCard({
     ? flow.institutional_risk_governor.hardBlockReasons
     : [];
 
-  const modeColor = flow.market_mode === 'pin' ? '#10B981' : flow.market_mode === 'launch' ? '#F59E0B' : '#94A3B8';
-  const biasColor = flow.bias === 'bullish' ? '#10B981' : flow.bias === 'bearish' ? '#EF4444' : '#94A3B8';
+  const modeColor = flow.market_mode === 'pin' ? 'var(--msp-bull)' : flow.market_mode === 'launch' ? 'var(--msp-warn)' : 'var(--msp-flat)';
+  const biasColor = flow.bias === 'bullish' ? 'var(--msp-bull)' : flow.bias === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-flat)';
 
   return (
     <div className="msp-card" style={{
@@ -160,17 +160,17 @@ export default function CapitalFlowCard({
       </div>
 
       <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.45rem', marginBottom: '0.5rem' }}>
-        <div style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
-          <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Flow Bias:</span>{' '}
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
+          <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Flow Bias:</span>{' '}
           <span style={{ color: biasColor, fontWeight: 800 }}>{flow.bias.toUpperCase()}</span>
         </div>
-        <div style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
-          <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Conviction:</span>{' '}
-          <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{flow.conviction}</span>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
+          <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Conviction:</span>{' '}
+          <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{flow.conviction}</span>
         </div>
-        <div style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
-          <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Pin Strike:</span>{' '}
-          <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{flow.pin_strike ?? 'n/a'}</span>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
+          <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Pin Strike:</span>{' '}
+          <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{flow.pin_strike ?? 'n/a'}</span>
         </div>
       </div>
 
@@ -186,12 +186,12 @@ export default function CapitalFlowCard({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Confluence Card</div>
-            <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
+            <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem', fontWeight: 800 }}>
               Confluence Score {Math.round(flow.brain_decision.score)}/100 • {flow.brain_decision.permission === 'ALLOW' ? 'ALIGNED' : flow.brain_decision.permission === 'ALLOW_SMALL' ? 'REDUCED' : 'NOT ALIGNED'}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.72rem', color: '#CBD5E1', fontSize: '0.71rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.72rem', color: 'var(--msp-text)', fontSize: '0.71rem' }}>
             <span><strong>Regime Fit:</strong> {Math.round(flow.brain_decision.regimeFit)}/100</span>
             <span><strong>Flow Align:</strong> {Math.round(flow.brain_decision.flowAlignment)}/100</span>
             <span><strong>Setup Quality:</strong> {Math.round(flow.brain_decision.setupQuality)}/100</span>
@@ -199,7 +199,7 @@ export default function CapitalFlowCard({
             <span><strong>Data Health:</strong> {Math.round(flow.brain_decision.dataHealth)}/100</span>
           </div>
 
-          <div style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
+          <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
             <strong>Mode:</strong> {flow.brain_decision.mode.replace('_', ' ')} • <strong>State:</strong> {flow.brain_decision.stateSummary}
           </div>
           <div style={{ color: '#FCD34D', fontSize: '0.7rem' }}>
@@ -213,13 +213,13 @@ export default function CapitalFlowCard({
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Favorable</strong>
               {brainAllowed.slice(0, 2).map((entry, index) => (
-                <div key={`brain-allow-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
+                <div key={`brain-allow-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
               <strong>✖ Unfavorable</strong>
               {brainBlocked.slice(0, 2).map((entry, index) => (
-                <div key={`brain-block-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
+                <div key={`brain-block-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
           </div>
@@ -229,7 +229,7 @@ export default function CapitalFlowCard({
       <div style={{ display: 'grid', gap: '0.35rem', marginBottom: '0.55rem' }}>
         <div style={{ color: '#A7F3D0', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Most Likely Path</div>
         {likelyPath.slice(0, 3).map((step, index) => (
-          <div key={step + index} style={{ color: '#E2E8F0', fontSize: '0.78rem' }}>
+          <div key={step + index} style={{ color: 'var(--msp-text)', fontSize: '0.78rem' }}>
             {index + 1}. {step}
           </div>
         ))}
@@ -247,16 +247,16 @@ export default function CapitalFlowCard({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Analytical Probability Matrix</div>
-            <div style={{ color: '#E2E8F0', fontSize: '0.68rem', fontWeight: 700 }}>{flow.probability_matrix.regime}</div>
+            <div style={{ color: 'var(--msp-text)', fontSize: '0.68rem', fontWeight: 700 }}>{flow.probability_matrix.regime}</div>
           </div>
 
           {[
-            { label: 'Trend Continuation', value: flow.probability_matrix.continuation, color: '#10B981' },
-            { label: 'Pin / Reversion', value: flow.probability_matrix.pinReversion, color: '#F59E0B' },
-            { label: 'Vol Expansion', value: flow.probability_matrix.expansion, color: '#EF4444' },
+            { label: 'Trend Continuation', value: flow.probability_matrix.continuation, color: 'var(--msp-bull)' },
+            { label: 'Pin / Reversion', value: flow.probability_matrix.pinReversion, color: 'var(--msp-warn)' },
+            { label: 'Vol Expansion', value: flow.probability_matrix.expansion, color: 'var(--msp-bear)' },
           ].map((row) => (
             <div key={row.label} style={{ display: 'grid', gap: '0.18rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#CBD5E1' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--msp-text)' }}>
                 <span>{row.label}</span>
                 <span style={{ fontWeight: 700 }}>{row.value}%</span>
               </div>
@@ -266,9 +266,9 @@ export default function CapitalFlowCard({
             </div>
           ))}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', color: '#94A3B8', fontSize: '0.68rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', color: 'var(--msp-flat)', fontSize: '0.68rem' }}>
             <span>Expansion Shift: {toNum(flow.probability_matrix.deltaExpansion) > 0 ? '+' : ''}{toNum(flow.probability_matrix.deltaExpansion).toFixed(1)}%</span>
-            <span style={{ color: flow.probability_matrix.acceleration === 'rising' ? '#10B981' : flow.probability_matrix.acceleration === 'falling' ? '#EF4444' : '#94A3B8' }}>
+            <span style={{ color: flow.probability_matrix.acceleration === 'rising' ? 'var(--msp-bull)' : flow.probability_matrix.acceleration === 'falling' ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>
               {flow.probability_matrix.acceleration.toUpperCase()}
             </span>
           </div>
@@ -287,11 +287,11 @@ export default function CapitalFlowCard({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Analytical Flow State</div>
-            <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
+            <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem', fontWeight: 800 }}>
               {flow.flow_state.state} ({Math.round(flow.flow_state.confidence)}%)
             </div>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: 'var(--msp-text)', fontSize: '0.72rem' }}>
             <span><strong>Bias:</strong> {flow.flow_state.bias.toUpperCase()}</span>
             <span><strong>Risk:</strong> {flow.flow_state.riskMode.toUpperCase()}</span>
             <span>
@@ -317,12 +317,12 @@ export default function CapitalFlowCard({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Analysis Matrix</div>
-            <div style={{ color: flow.flow_trade_permission.blocked ? '#EF4444' : '#10B981', fontSize: '0.72rem', fontWeight: 800 }}>
+            <div style={{ color: flow.flow_trade_permission.blocked ? 'var(--msp-bear)' : 'var(--msp-bull)', fontSize: '0.72rem', fontWeight: 800 }}>
               TPS {toNum(flow.flow_trade_permission.tps).toFixed(0)} • {flow.flow_trade_permission.blocked ? 'NOT ALIGNED' : 'ALIGNED'}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: 'var(--msp-text)', fontSize: '0.72rem' }}>
             <span><strong>Risk:</strong> {flow.flow_trade_permission.riskMode.toUpperCase()}</span>
             <span><strong>Size:</strong> {Math.round(toNum(flow.flow_trade_permission.sizeMultiplier) * 100)}%</span>
             <span><strong>Invalidation:</strong> {flow.flow_trade_permission.stopStyle.replace('_', ' ')}</span>
@@ -338,13 +338,13 @@ export default function CapitalFlowCard({
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Favorable</strong>
               {ftpAllowed.slice(0, 3).map((entry, index) => (
-                <div key={`allow-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
+                <div key={`allow-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
               <strong>✖ Unfavorable</strong>
               {ftpBlocked.slice(0, 3).map((entry, index) => (
-                <div key={`block-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
+                <div key={`block-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
           </div>
@@ -363,12 +363,12 @@ export default function CapitalFlowCard({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Risk Metrics Engine</div>
-            <div style={{ color: flow.institutional_risk_governor.executionAllowed ? '#10B981' : '#EF4444', fontSize: '0.72rem', fontWeight: 800 }}>
+            <div style={{ color: flow.institutional_risk_governor.executionAllowed ? 'var(--msp-bull)' : 'var(--msp-bear)', fontSize: '0.72rem', fontWeight: 800 }}>
               {flow.institutional_risk_governor.executionAllowed ? 'REVIEW CLEAR' : 'REVIEW BLOCKED'}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: 'var(--msp-text)', fontSize: '0.72rem' }}>
             <span><strong>Risk Mode:</strong> {flow.institutional_risk_governor.riskMode.replace('_', ' ')}</span>
             <span><strong>IRS:</strong> {toNum(flow.institutional_risk_governor.irs).toFixed(2)}</span>
             <span><strong>Exposure Context:</strong> {Math.round(toNum(flow.institutional_risk_governor.capital?.usedPercent) * 100)}% used</span>
@@ -376,7 +376,7 @@ export default function CapitalFlowCard({
             <span><strong>Drawdown:</strong> {toNum(flow.institutional_risk_governor.drawdown?.dailyR).toFixed(1)}R</span>
           </div>
 
-          <div style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
+          <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
             <strong>Volatility:</strong> {flow.institutional_risk_governor.volatility?.regime || 'N/A'} • <strong>Behavior:</strong> {flow.institutional_risk_governor.behavior?.reason || 'N/A'}
           </div>
 
@@ -395,13 +395,13 @@ export default function CapitalFlowCard({
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Favorable</strong>
               {irgAllowed.slice(0, 3).map((entry, index) => (
-                <div key={`irg-allow-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
+                <div key={`irg-allow-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
               <strong>✖ Unfavorable</strong>
               {irgBlocked.slice(0, 3).map((entry, index) => (
-                <div key={`irg-block-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
+                <div key={`irg-block-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
           </div>
@@ -413,22 +413,22 @@ export default function CapitalFlowCard({
         gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
         gap: '0.45rem',
       }}>
-        <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>
-          <div style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Key Strikes</div>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem' }}>
+          <div style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Key Strikes</div>
           {keyStrikes.slice(0, 3).map((strike, index) => (
             <div key={strike.strike + index}>• {strike.strike} ({strike.type}, g={toNum(strike.gravity).toFixed(2)})</div>
           ))}
         </div>
 
-        <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>
-          <div style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Liquidity Magnets</div>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem' }}>
+          <div style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Liquidity Magnets</div>
           {liquidityLevels.slice(0, 3).map((level, index) => (
             <div key={level.label + index}>• {level.label} {toNum(level.level).toFixed(2)} ({Math.round(toNum(level.prob) * 100)}%)</div>
           ))}
         </div>
 
-        <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>
-          <div style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Risk / Flip</div>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem' }}>
+          <div style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Risk / Flip</div>
           {flipZones.slice(0, 2).map((zone, index) => (
             <div key={zone.level + index}>• {zone.direction === 'bullish_above' ? 'Bullish above' : 'Bearish below'} {toNum(zone.level).toFixed(2)}</div>
           ))}
