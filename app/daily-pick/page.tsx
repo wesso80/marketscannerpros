@@ -123,7 +123,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      types: {
+        'application/rss+xml': [
+          { url: `${url}/feed.xml`, title: 'MarketScanner Pros — Daily Picks RSS' },
+        ],
+      },
+    },
     openGraph: { type: 'article', url, title, description, images: [{ url: og, width: 1200, height: 630 }] },
     twitter: { card: 'summary_large_image', title, description, images: [og] },
   };
