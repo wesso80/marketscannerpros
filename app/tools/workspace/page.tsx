@@ -1,7 +1,7 @@
 'use client';
 
 /* ---------------------------------------------------------------------------
-   SURFACE 6: WORKSPACE — Watchlists, Journal, Portfolio, Settings
+   SURFACE 6: WORKSPACE â€” Watchlists, Journal, Portfolio, Settings
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
    --------------------------------------------------------------------------- */
 
@@ -88,7 +88,7 @@ function WorkspaceContent() {
   const [tab, setTab] = useState<typeof TABS[number]>(initialTab);
 
   // Only re-sync from URL when the URL param itself changes (e.g. external nav).
-  // Do NOT depend on `tab` here — that would force user clicks back to the URL value.
+  // Do NOT depend on `tab` here â€” that would force user clicks back to the URL value.
   useEffect(() => {
     const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);
     if (requestedTab) setTab(requestedTab);

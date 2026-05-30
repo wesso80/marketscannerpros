@@ -655,7 +655,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     return s;
   }
 
-  // Detect if a symbol is likely a stock vs crypto — delegates to shared detectAssetClass()
+  // Detect if a symbol is likely a stock vs crypto â€” delegates to shared detectAssetClass()
   function isLikelyStock(symbol: string): boolean {
     return detectAssetClass(symbol) === 'equity';
   }
@@ -961,7 +961,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         });
       } catch (e) {
         console.error('Failed to sync portfolio to server');
-        setSyncError('Portfolio sync failed — changes saved locally only');
+        setSyncError('Portfolio sync failed â€” changes saved locally only');
       }
     };
     
@@ -1281,7 +1281,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const deletePosition = (id: number) => {
     if (!confirm('Delete this position? This cannot be undone.')) return;
     setPositions((prev) => prev.filter((p) => p.id !== id));
-    // Hard-delete on the server too — the POST wipe-and-replace path skips
+    // Hard-delete on the server too â€” the POST wipe-and-replace path skips
     // journal-linked rows, so without this they'd reappear on next GET.
     fetch('/api/portfolio', {
       method: 'DELETE',
@@ -1848,7 +1848,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Top Allocation</div>
-                <div className="mt-0.5 truncate text-sm font-black text-white" title={topAllocation?.symbol || '—'}>{topAllocation?.symbol || '—'}</div>
+                <div className="mt-0.5 truncate text-sm font-black text-white" title={topAllocation?.symbol || 'â€”'}>{topAllocation?.symbol || 'â€”'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions'}</div>
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
@@ -1881,7 +1881,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         <CommandCenterStateBar
           mode="OBSERVE"
           actionableNow={positions.length > 0
-            ? `Recorded positions: ${positions.length} open · Largest allocation: ${topAllocation?.symbol || 'N/A'}`
+            ? `Recorded positions: ${positions.length} open Â· Largest allocation: ${topAllocation?.symbol || 'N/A'}`
             : 'No recorded positions.'}
           nextStep={positions.length > 0
             ? totalReturn < 0
@@ -1943,7 +1943,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               <div id="manual-price-modal-title" className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
               <button type="button" onClick={closeManual} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
             </div>
-            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
+            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didnâ€™t return a value for this symbol.</div>
             <input
               autoFocus
               value={manualValue}
@@ -2188,7 +2188,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
                     </div>
                     <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
-                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
+                      Long {longExposurePct.toFixed(1)}% â€¢ Short {shortExposurePct.toFixed(1)}%
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
@@ -2275,8 +2275,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 mb-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
                   <div className="text-xs text-slate-400 leading-relaxed">
-                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
-                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
+                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;Â·&nbsp;
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;Â·&nbsp;
                     <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
                   </div>
                 </div>
@@ -2385,7 +2385,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               </div>
               <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-[0.06em] text-emerald-300">Simulate Portfolio After Entry</div>
-                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% • Risk budget used {formatMoney(draftRiskBudget)}</div>
+                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% â€¢ Risk budget used {formatMoney(draftRiskBudget)}</div>
               </div>
               <button
                 type="button"
@@ -2495,7 +2495,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:opacity-50 transition-colors"
                 >
                   <span className={refreshingAll ? 'animate-pulse' : ''}>Refresh</span>
-                  {refreshingAll ? 'Refreshing…' : 'Refresh Prices'}
+                  {refreshingAll ? 'Refreshingâ€¦' : 'Refresh Prices'}
                 </button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
@@ -2676,7 +2676,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
                           <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
-                          <td className="px-2 py-2">{trade.strategy || '—'}</td>
+                          <td className="px-2 py-2">{trade.strategy || 'â€”'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2 text-center">
                             <button type="button" onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">Delete</button>
