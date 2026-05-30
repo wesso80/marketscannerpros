@@ -103,10 +103,10 @@ export function ProModeDashboard({
             }}>
               {probability.confidenceLabel}
             </div>
-            <div style={{ color: '#94A3B8', fontSize: '12px' }}>
+            <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
               {probability.signalCount}/{probability.totalSignals} signals aligned
             </div>
-            <div style={{ color: '#64748B', fontSize: '11px' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>
               Kelly: {formatKellySize(probability.kellySizePercent)}
             </div>
           </div>
@@ -114,7 +114,7 @@ export function ProModeDashboard({
           {/* Direction arrow */}
           <div style={{
             fontSize: '24px',
-            color: probability.direction === 'bullish' ? '#10B981' : probability.direction === 'bearish' ? '#EF4444' : '#64748B',
+            color: probability.direction === 'bullish' ? 'var(--msp-bull)' : probability.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)',
           }}>
             {probability.direction === 'bullish' ? '↗' : probability.direction === 'bearish' ? '↘' : '→'}
           </div>
@@ -151,12 +151,12 @@ export function ProModeDashboard({
           }}>
             🏦 PRO MODE
           </span>
-          <span style={{ color: '#94A3B8', fontSize: '13px' }}>
+          <span style={{ color: 'var(--msp-flat)', fontSize: '13px' }}>
             Professional-Level Analysis
           </span>
         </div>
         {symbol && (
-          <span style={{ color: '#F1F5F9', fontWeight: '600' }}>
+          <span style={{ color: 'var(--msp-text)', fontWeight: '600' }}>
             {symbol}
           </span>
         )}
@@ -213,7 +213,7 @@ export function ProModeDashboard({
               }}>
                 {probability.winProbability}%
               </span>
-              <span style={{ fontSize: '10px', color: '#64748B', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '10px', color: 'var(--msp-text-muted)', textTransform: 'uppercase' }}>
                 Win Prob
               </span>
             </div>
@@ -242,13 +242,13 @@ export function ProModeDashboard({
             padding: '0.75rem',
             border: '1px solid rgba(255,255,255,0.05)',
           }}>
-            <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)', marginBottom: '4px' }}>
               KELLY SIZE
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#F1F5F9' }}>
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--msp-text)' }}>
               {probability.kellySizePercent.toFixed(1)}%
             </div>
-            <div style={{ fontSize: '10px', color: '#94A3B8' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
               of Capital
             </div>
           </div>
@@ -260,13 +260,13 @@ export function ProModeDashboard({
             padding: '0.75rem',
             border: '1px solid rgba(255,255,255,0.05)',
           }}>
-            <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)', marginBottom: '4px' }}>
               RISK/REWARD
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#F1F5F9' }}>
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--msp-text)' }}>
               1:{tradeLevels?.riskRewardRatio?.toFixed(1) || probability.rMultiple.toFixed(1)}
             </div>
-            <div style={{ fontSize: '10px', color: '#94A3B8' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
               R-Multiple
             </div>
           </div>
@@ -278,13 +278,13 @@ export function ProModeDashboard({
             padding: '0.75rem',
             border: '1px solid rgba(255,255,255,0.05)',
           }}>
-            <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)', marginBottom: '4px' }}>
               CONFLUENCE
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#F1F5F9' }}>
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--msp-text)' }}>
               {probability.signalCount}/{probability.totalSignals}
             </div>
-            <div style={{ fontSize: '10px', color: '#94A3B8' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
               Signals Aligned
             </div>
           </div>
@@ -296,21 +296,21 @@ export function ProModeDashboard({
             padding: '0.75rem',
             border: '1px solid rgba(255,255,255,0.05)',
           }}>
-            <div style={{ fontSize: '10px', color: '#64748B', marginBottom: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)', marginBottom: '4px' }}>
               DIRECTION
             </div>
             <div style={{
               fontSize: '18px',
               fontWeight: 'bold',
-              color: probability.direction === 'bullish' ? '#10B981' 
-                : probability.direction === 'bearish' ? '#EF4444' 
-                : '#64748B',
+              color: probability.direction === 'bullish' ? 'var(--msp-bull)' 
+                : probability.direction === 'bearish' ? 'var(--msp-bear)' 
+                : 'var(--msp-text-muted)',
             }}>
               {probability.direction === 'bullish' ? '↗ BULL' 
                 : probability.direction === 'bearish' ? '↘ BEAR' 
                 : '→ FLAT'}
             </div>
-            <div style={{ fontSize: '10px', color: '#94A3B8' }}>
+            <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
               Bias
             </div>
           </div>
@@ -328,7 +328,7 @@ export function ProModeDashboard({
           <div style={{
             fontSize: '11px',
             fontWeight: '600',
-            color: '#94A3B8',
+            color: 'var(--msp-flat)',
             marginBottom: '0.75rem',
             display: 'flex',
             alignItems: 'center',
@@ -344,11 +344,11 @@ export function ProModeDashboard({
               borderRadius: '8px',
               border: '1px solid rgba(239,68,68,0.3)',
             }}>
-              <div style={{ fontSize: '9px', color: '#EF4444', marginBottom: '2px' }}>RISK LEVEL</div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#EF4444' }}>
+              <div style={{ fontSize: '9px', color: 'var(--msp-bear)', marginBottom: '2px' }}>RISK LEVEL</div>
+              <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--msp-bear)' }}>
                 ${tradeLevels.stopLoss.toFixed(2)}
               </div>
-              <div style={{ fontSize: '9px', color: '#F87171' }}>
+              <div style={{ fontSize: '9px', color: 'var(--msp-bear)' }}>
                 -{tradeLevels.stopLossPercent.toFixed(1)}%
               </div>
             </div>
@@ -363,7 +363,7 @@ export function ProModeDashboard({
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--msp-accent)' }}>
                 ${currentPrice.toFixed(2)}
               </div>
-              <div style={{ fontSize: '9px', color: '#60A5FA' }}>
+              <div style={{ fontSize: '9px', color: 'var(--msp-info)' }}>
                 Current
               </div>
             </div>
@@ -374,11 +374,11 @@ export function ProModeDashboard({
               borderRadius: '8px',
               border: '1px solid rgba(16,185,129,0.3)',
             }}>
-              <div style={{ fontSize: '9px', color: '#10B981', marginBottom: '2px' }}>LEVEL 1</div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#10B981' }}>
+              <div style={{ fontSize: '9px', color: 'var(--msp-bull)', marginBottom: '2px' }}>LEVEL 1</div>
+              <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--msp-bull)' }}>
                 ${tradeLevels.target1.price.toFixed(2)}
               </div>
-              <div style={{ fontSize: '9px', color: '#34D399' }}>
+              <div style={{ fontSize: '9px', color: 'var(--msp-bull)' }}>
                 At {tradeLevels.target1.takeProfit}%
               </div>
             </div>
@@ -390,11 +390,11 @@ export function ProModeDashboard({
                 borderRadius: '8px',
                 border: '1px solid rgba(16,185,129,0.4)',
               }}>
-                <div style={{ fontSize: '9px', color: '#10B981', marginBottom: '2px' }}>LEVEL 2</div>
-                <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#10B981' }}>
+                <div style={{ fontSize: '9px', color: 'var(--msp-bull)', marginBottom: '2px' }}>LEVEL 2</div>
+                <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--msp-bull)' }}>
                   ${tradeLevels.target2.price.toFixed(2)}
                 </div>
-                <div style={{ fontSize: '9px', color: '#34D399' }}>
+                <div style={{ fontSize: '9px', color: 'var(--msp-bull)' }}>
                   At {tradeLevels.target2.takeProfit}%
                 </div>
               </div>
@@ -412,7 +412,7 @@ export function ProModeDashboard({
         <div style={{
           fontSize: '11px',
           fontWeight: '600',
-          color: '#94A3B8',
+          color: 'var(--msp-flat)',
           marginBottom: '0.75rem',
           display: 'flex',
           alignItems: 'center',
@@ -426,13 +426,13 @@ export function ProModeDashboard({
             // Color based on contribution strength, not just direction
             const isStrong = component.contribution >= 60;
             const isMedium = component.contribution >= 30;
-            const barColor = !component.triggered ? '#64748B'
-              : component.direction === 'neutral' ? '#64748B' 
+            const barColor = !component.triggered ? 'var(--msp-text-muted)'
+              : component.direction === 'neutral' ? 'var(--msp-text-muted)' 
               : isStrong 
-                ? (component.direction === 'bullish' ? '#10B981' : '#EF4444')
+                ? (component.direction === 'bullish' ? 'var(--msp-bull)' : 'var(--msp-bear)')
                 : isMedium 
                   ? (component.direction === 'bullish' ? '#6EE7B7' : '#FCA5A5')
-                  : '#94A3B8'; // Weak = grey
+                  : 'var(--msp-flat)'; // Weak = grey
             
             return (
               <div
@@ -475,16 +475,16 @@ export function ProModeDashboard({
                 
                 {/* Name with weight */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '500', color: '#F1F5F9' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '500', color: 'var(--msp-text)' }}>
                     {component.name}
                     <span style={{ 
                       fontSize: '9px', 
-                      color: '#64748B',
+                      color: 'var(--msp-text-muted)',
                       marginLeft: '4px',
                       fontWeight: '400',
                     }}>({Math.round(component.confidence * 100)}%)</span>
                   </div>
-                  <div style={{ fontSize: '10px', color: '#64748B' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)' }}>
                     {component.reason}
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export function ProModeDashboard({
                 <div style={{
                   fontSize: '11px',
                   fontWeight: '600',
-                  color: component.triggered ? barColor : '#64748B',
+                  color: component.triggered ? barColor : 'var(--msp-text-muted)',
                   minWidth: '35px',
                   textAlign: 'right',
                 }}>
@@ -552,10 +552,10 @@ export function ProModeDashboard({
           fontSize: '13px',
           fontWeight: '600',
           color: probability.direction === 'bullish'
-            ? '#10B981'
+            ? 'var(--msp-bull)'
             : probability.direction === 'bearish'
-            ? '#EF4444'
-            : '#94A3B8',
+            ? 'var(--msp-bear)'
+            : 'var(--msp-flat)',
         }}>
           {probability.direction === 'bullish'
             ? 'BULLISH BIAS — Consider Long Entries'
