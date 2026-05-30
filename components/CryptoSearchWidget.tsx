@@ -124,7 +124,7 @@ export default function CryptoSearchWidget() {
         marginBottom: '16px'
       }}>
         <span style={{ fontSize: '20px' }}>🔍</span>
-        <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 600, margin: 0 }}>
+        <h3 style={{ color: 'var(--msp-text)', fontSize: '16px', fontWeight: 600, margin: 0 }}>
           Coin Search
         </h3>
       </div>
@@ -145,7 +145,7 @@ export default function CryptoSearchWidget() {
             background: 'rgba(0,0,0,0.3)',
             border: '1px solid #334155',
             borderRadius: '8px',
-            color: '#f1f5f9',
+            color: 'var(--msp-text)',
             fontSize: '14px',
             outline: 'none',
           }}
@@ -155,7 +155,7 @@ export default function CryptoSearchWidget() {
           left: '14px',
           top: '50%',
           transform: 'translateY(-50%)',
-          color: '#64748b',
+          color: 'var(--msp-text-muted)',
           fontSize: '16px'
         }}>
           {loading ? '⏳' : '🔍'}
@@ -202,16 +202,16 @@ export default function CryptoSearchWidget() {
                   onError={(e) => { e.currentTarget.style.display = 'none' }}
                 />
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 600 }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '13px', fontWeight: 600 }}>
                     {coin.name}
                   </div>
-                  <div style={{ color: '#64748b', fontSize: '11px' }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>
                     {coin.symbol}
                   </div>
                 </div>
                 {coin.marketCapRank && (
                   <span style={{
-                    color: '#64748b',
+                    color: 'var(--msp-text-muted)',
                     fontSize: '10px',
                     background: 'rgba(0,0,0,0.3)',
                     padding: '2px 6px',
@@ -248,10 +248,10 @@ export default function CryptoSearchWidget() {
                   style={{ width: '32px', height: '32px', borderRadius: '50%' }}
                 />
                 <div>
-                  <div style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 700 }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '16px', fontWeight: 700 }}>
                     {coinData.name}
                   </div>
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '12px' }}>
                     {coinData.symbol?.toUpperCase()} • Rank #{coinData.market_cap_rank}
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export default function CryptoSearchWidget() {
                   onClick={() => setSelectedCoin(null)}
                   style={{
                     marginLeft: 'auto',
-                    color: '#64748b',
+                    color: 'var(--msp-text-muted)',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
@@ -277,15 +277,15 @@ export default function CryptoSearchWidget() {
                 gap: '12px' 
               }}>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '2px' }}>PRICE</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '2px' }}>PRICE</div>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '18px', fontWeight: 700 }}>
                     {formatPrice(coinData.market_data?.current_price?.usd || 0)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '2px' }}>24H CHANGE</div>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '2px' }}>24H CHANGE</div>
                   <div style={{ 
-                    color: (coinData.market_data?.price_change_percentage_24h ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                    color: (coinData.market_data?.price_change_percentage_24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                     fontSize: '18px', 
                     fontWeight: 700 
                   }}>
@@ -294,26 +294,26 @@ export default function CryptoSearchWidget() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '2px' }}>MARKET CAP</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 600 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '2px' }}>MARKET CAP</div>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 600 }}>
                     {formatNumber(coinData.market_data?.market_cap?.usd || 0)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '2px' }}>24H VOLUME</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 600 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '2px' }}>24H VOLUME</div>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 600 }}>
                     {formatNumber(coinData.market_data?.total_volume?.usd || 0)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '2px' }}>24H HIGH</div>
-                  <div style={{ color: '#10b981', fontSize: '12px', fontWeight: 500 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '2px' }}>24H HIGH</div>
+                  <div style={{ color: 'var(--msp-bull)', fontSize: '12px', fontWeight: 500 }}>
                     {formatPrice(coinData.market_data?.high_24h?.usd || 0)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '2px' }}>24H LOW</div>
-                  <div style={{ color: '#ef4444', fontSize: '12px', fontWeight: 500 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '2px' }}>24H LOW</div>
+                  <div style={{ color: 'var(--msp-bear)', fontSize: '12px', fontWeight: 500 }}>
                     {formatPrice(coinData.market_data?.low_24h?.usd || 0)}
                   </div>
                 </div>
@@ -329,9 +329,9 @@ export default function CryptoSearchWidget() {
                 gap: '8px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b', fontSize: '11px' }}>7d Change</span>
+                  <span style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>7d Change</span>
                   <span style={{ 
-                    color: (coinData.market_data?.price_change_percentage_7d ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                    color: (coinData.market_data?.price_change_percentage_7d ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                     fontSize: '11px',
                     fontWeight: 600
                   }}>
@@ -339,9 +339,9 @@ export default function CryptoSearchWidget() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b', fontSize: '11px' }}>30d Change</span>
+                  <span style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>30d Change</span>
                   <span style={{ 
-                    color: (coinData.market_data?.price_change_percentage_30d ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                    color: (coinData.market_data?.price_change_percentage_30d ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                     fontSize: '11px',
                     fontWeight: 600
                   }}>
@@ -349,15 +349,15 @@ export default function CryptoSearchWidget() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b', fontSize: '11px' }}>ATH</span>
-                  <span style={{ color: '#f1f5f9', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>ATH</span>
+                  <span style={{ color: 'var(--msp-text)', fontSize: '11px' }}>
                     {formatPrice(coinData.market_data?.ath?.usd || 0)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b', fontSize: '11px' }}>From ATH</span>
+                  <span style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>From ATH</span>
                   <span style={{ 
-                    color: '#ef4444',
+                    color: 'var(--msp-bear)',
                     fontSize: '11px',
                     fontWeight: 600
                   }}>
@@ -375,7 +375,7 @@ export default function CryptoSearchWidget() {
                   background: 'rgba(16, 185, 129, 0.15)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   borderRadius: '6px',
-                  color: '#10b981',
+                  color: 'var(--msp-bull)',
                   textDecoration: 'none',
                   textAlign: 'center',
                   fontSize: '12px',
@@ -386,7 +386,7 @@ export default function CryptoSearchWidget() {
               </a>
             </>
           ) : (
-            <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
+            <div style={{ color: 'var(--msp-flat)', textAlign: 'center', padding: '20px' }}>
               <div style={{ marginBottom: '12px' }}>Failed to load coin data</div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                 <button
@@ -402,7 +402,7 @@ export default function CryptoSearchWidget() {
                     background: 'rgba(16, 185, 129, 0.2)',
                     border: '1px solid rgba(16, 185, 129, 0.3)',
                     borderRadius: '6px',
-                    color: '#10b981',
+                    color: 'var(--msp-bull)',
                     fontSize: '12px',
                     cursor: 'pointer'
                   }}
@@ -417,7 +417,7 @@ export default function CryptoSearchWidget() {
                     background: 'rgba(100, 116, 139, 0.2)',
                     border: '1px solid #334155',
                     borderRadius: '6px',
-                    color: '#94a3b8',
+                    color: 'var(--msp-flat)',
                     fontSize: '12px',
                     cursor: 'pointer'
                   }}
@@ -433,7 +433,7 @@ export default function CryptoSearchWidget() {
       {/* Quick Access Chips */}
       {!selectedCoin && (
         <div style={{ marginTop: '12px' }}>
-          <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '8px' }}>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '8px' }}>
             POPULAR SEARCHES
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -447,7 +447,7 @@ export default function CryptoSearchWidget() {
                   background: 'rgba(0,0,0,0.3)',
                   border: '1px solid #334155',
                   borderRadius: '16px',
-                  color: '#94a3b8',
+                  color: 'var(--msp-flat)',
                   fontSize: '11px',
                   cursor: 'pointer'
                 }}
