@@ -18,6 +18,7 @@ import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { PageHero } from '@/components/ui';
 
 interface Position {
   id: number;
@@ -1795,70 +1796,29 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         </div>
       )}
       {embeddedInWorkspace ? (
-        <section
-          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-          aria-label="Portfolio command header"
-        >
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-                <span className="text-emerald-300">Portfolio review</span>
-                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{positions.length} open</span>
-                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{closedPositions.length} closed</span>
-                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Health {portfolioHealthLabel}</span>
-              </div>
-              <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Portfolio Tracking</h1>
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Recorded paper positions, exposure, cash controls, and descriptive risk analytics.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('add-manual')}
-                  className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15"
-                >
-                  Add Position
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('overview')}
-                  className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15"
-                >
-                  View Overview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('risk-model')}
-                  className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 transition-colors hover:bg-sky-400/15"
-                >
-                  Open Risk Model
-                </button>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-start gap-2">{portfolioHeaderActions}</div>
-            </div>
-
-            <div className="grid self-start gap-1.5 sm:grid-cols-2">
-              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Portfolio Value</div>
-                <div className="mt-0.5 truncate text-sm font-black text-white" title={`$${totalValue.toFixed(2)}`}>{`$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500">Open exposure</div>
-              </div>
-              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Total Return</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: totalReturn >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }} title={`${totalReturn.toFixed(2)}%`}>{`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500">{`Unrealized ${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(0)}`}</div>
-              </div>
-              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Top Allocation</div>
-                <div className="mt-0.5 truncate text-sm font-black text-white" title={topAllocation?.symbol || '—'}>{topAllocation?.symbol || '—'}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500">{topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions'}</div>
-              </div>
-              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk Load</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: riskLoadLabel === 'High' ? 'var(--msp-bear)' : riskLoadLabel === 'Medium' ? 'var(--msp-warn)' : 'var(--msp-bull)' }} title={riskLoadLabel}>{riskLoadLabel}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500">{`Bias ${biasLabel}`}</div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHero
+          ariaLabel="Portfolio command header"
+          eyebrow="Portfolio review"
+          badges={[
+            { label: `${positions.length} open` },
+            { label: `${closedPositions.length} closed` },
+            { label: `Health ${portfolioHealthLabel}` },
+          ]}
+          title="Portfolio tracking"
+          subtitle="Recorded paper positions, exposure, cash controls, and descriptive risk analytics."
+          actions={[
+            { label: 'Add position', variant: 'primary', onClick: () => setActiveTab('add-manual') },
+            { label: 'View overview', variant: 'secondary', onClick: () => setActiveTab('overview') },
+            { label: 'Open risk model', variant: 'ghost', onClick: () => setActiveTab('risk-model') },
+          ]}
+          trailing={portfolioHeaderActions}
+          metrics={[
+            { label: 'Portfolio value', value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, detail: 'Open exposure' },
+            { label: 'Total return', value: `${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`, tone: totalReturn >= 0 ? 'bull' : 'bear', detail: `Unrealized ${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(0)}` },
+            { label: 'Top allocation', value: topAllocation?.symbol || '—', detail: topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions' },
+            { label: 'Risk load', value: riskLoadLabel, tone: riskLoadLabel === 'High' ? 'bear' : riskLoadLabel === 'Medium' ? 'warn' : 'bull', detail: `Bias ${biasLabel}` },
+          ]}
+        />
       ) : (
         <ToolsPageHeader
           badge="PORTFOLIO TRACKER"
