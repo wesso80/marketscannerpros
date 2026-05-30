@@ -14,6 +14,7 @@ import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMov
 import { CROSS_MARKET, REGIME_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
+import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
@@ -113,57 +114,28 @@ export default function ExplorerPage() {
 
   return (
     <div className="space-y-3">
-      <section
-        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-        aria-label="Markets command header"
-      >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-              <span className="text-emerald-300">Cross-market map</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{TABS.length} lenses</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Tier {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}</span>
-              {regime.data?.regime ? (
-                <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-emerald-200">Regime {String(regime.data.regime).toUpperCase()}</span>
-              ) : null}
-            </div>
-            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Markets.</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Scanner</a>
-              <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Golden Egg</a>
-              <a href="/tools/dashboard?tab=macro" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Macro Lens</a>
-            </div>
-          </div>
-
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <MarketsMetric
-              label="Sectors Leading"
-              value={sectorData.length ? `${sectorData.filter((s: SectorData) => (s.changePercent ?? 0) > 0).length}/${sectorData.length} green` : '—'}
-              tone="#10B981"
-              detail={sectorData.length ? `Top: ${[...sectorData].sort((a: SectorData, b: SectorData) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]?.name}` : 'Sector data loading'}
-            />
-            <MarketsMetric
-              label="Crypto Cap"
-              value={cryptoData?.totalMarketCapFormatted || '—'}
-              tone="#A5B4FC"
-              detail={cryptoData ? `BTC ${cryptoData.btcDominance.toFixed(1)}% · ETH ${cryptoData.ethDominance.toFixed(1)}%` : 'Crypto market loading'}
-            />
-            <MarketsMetric
-              label="Top Gainer"
-              value={allGainers[0]?.ticker || '—'}
-              tone="#F59E0B"
-              detail={allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading'}
-            />
-            <MarketsMetric
-              label="Next Check"
-              value={tab}
-              tone="#FBBF24"
-              detail="Pick one lens, then drop into Scanner or Golden Egg"
-            />
-          </div>
-        </div>
-      </section>
+      <PageHero
+        ariaLabel="Markets command header"
+        eyebrow="Cross-market map"
+        badges={[
+          { label: `${TABS.length} lenses` },
+          { label: `Tier ${tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}` },
+          ...(regime.data?.regime ? [{ label: `Regime ${String(regime.data.regime).toUpperCase()}` }] : []),
+        ]}
+        title="Markets."
+        subtitle="Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens."
+        actions={[
+          { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
+          { label: 'Open Golden Egg', variant: 'secondary', href: '/tools/golden-egg' },
+          { label: 'Open Macro Lens', variant: 'ghost', href: '/tools/dashboard?tab=macro' },
+        ]}
+        metrics={[
+          { label: 'Sectors leading', value: sectorData.length ? `${sectorData.filter((s: SectorData) => (s.changePercent ?? 0) > 0).length}/${sectorData.length} green` : '—', tone: 'bull', detail: sectorData.length ? `Top: ${[...sectorData].sort((a: SectorData, b: SectorData) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]?.name}` : 'Sector data loading' },
+          { label: 'Crypto cap', value: cryptoData?.totalMarketCapFormatted || '—', tone: 'info', detail: cryptoData ? `BTC ${cryptoData.btcDominance.toFixed(1)}% · ETH ${cryptoData.ethDominance.toFixed(1)}%` : 'Crypto market loading' },
+          { label: 'Top gainer', value: allGainers[0]?.ticker || '—', tone: 'warn', detail: allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading' },
+          { label: 'Next check', value: tab, tone: 'warn', detail: 'Pick one lens, then drop into Scanner or Golden Egg' },
+        ]}
+      />
 
       {/* Tabs */}
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
