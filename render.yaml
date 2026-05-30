@@ -592,3 +592,20 @@
         value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
+
+  # Pulls Alpha Vantage OVERVIEW for every enabled equity in symbol_universe
+  # and persists float / short interest / company-info into company_overview.
+  # Powers /api/scanner/low-float without re-hitting AV on every scan.
+  # Runs after US close (22:00 UTC ~= 5pm ET) on weekdays; AV's OVERVIEW
+  # data only refreshes on filings/EOD so daily is sufficient.
+  - type: cron
+    name: refresh-fundamentals
+    runtime: node
+    schedule: "0 22 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 30 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/refresh-fundamentals" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"maxAgeHours":20}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
