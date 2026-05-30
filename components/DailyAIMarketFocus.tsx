@@ -21,9 +21,9 @@ interface MarketFocusData {
 }
 
 const assetColors: Record<string, { bg: string; border: string; accent: string }> = {
-  Equity: { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', accent: '#60a5fa' },
-  Crypto: { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', accent: '#fbbf24' },
-  Commodity: { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)', accent: '#34d399' },
+  Equity: { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', accent: 'var(--msp-info)' },
+  Crypto: { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', accent: 'var(--msp-warn)' },
+  Commodity: { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)', accent: 'var(--msp-bull)' },
 };
 
 function getRelativeDate(dateStr: string): { text: string; isStale: boolean } {
@@ -105,8 +105,8 @@ export default function DailyAIMarketFocus() {
         border: '1px solid rgba(239, 68, 68, 0.3)',
       }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>🤖</div>
-        <div style={{ color: '#f87171', fontSize: 16, marginBottom: 8 }}>{error}</div>
-        <p style={{ color: '#94a3b8', fontSize: 14 }}>
+        <div style={{ color: 'var(--msp-bear)', fontSize: 16, marginBottom: 8 }}>{error}</div>
+        <p style={{ color: 'var(--msp-flat)', fontSize: 14 }}>
           The AI Market Focus is generated daily. Use the refresh button above to trigger generation.
         </p>
       </div>
@@ -131,7 +131,7 @@ export default function DailyAIMarketFocus() {
           <h2 style={{ color: '#a78bfa', fontSize: 26, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span>🎯</span> Today's AI Market Focus
           </h2>
-          <p style={{ color: dateInfo.isStale ? '#f59e0b' : '#64748b', fontSize: 13, margin: '6px 0 0 0' }}>
+          <p style={{ color: dateInfo.isStale ? 'var(--msp-warn)' : 'var(--msp-text-muted)', fontSize: 13, margin: '6px 0 0 0' }}>
             {dateInfo.isStale ? `⚠️ Generated ${dateInfo.text}` : `Generated: ${dateInfo.text}`} • Notable setups across asset classes
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function DailyAIMarketFocus() {
             border: '1px solid rgba(245, 158, 11, 0.3)',
             borderRadius: 20,
             fontSize: 12,
-            color: '#fbbf24',
+            color: 'var(--msp-warn)',
           }}>
             Needs Refresh
           </span>
@@ -154,7 +154,7 @@ export default function DailyAIMarketFocus() {
             border: '1px solid rgba(245, 158, 11, 0.3)',
             borderRadius: 20,
             fontSize: 12,
-            color: '#fbbf24',
+            color: 'var(--msp-warn)',
           }}>
             Awaiting Generation
           </span>
@@ -166,10 +166,10 @@ export default function DailyAIMarketFocus() {
           const colors = assetColors[pick.assetClass] || assetColors.Equity;
           const score = pick.score ?? 0;
           const microBadge = score >= 70 
-            ? { icon: '🟢', label: 'Trend-Favored', color: '#34d399' }
+            ? { icon: '🟢', label: 'Trend-Favored', color: 'var(--msp-bull)' }
             : score >= 40 
-            ? { icon: '🟡', label: 'Neutral / Range', color: '#fbbf24' }
-            : { icon: '🔴', label: 'Risk-Off', color: '#f87171' };
+            ? { icon: '🟡', label: 'Neutral / Range', color: 'var(--msp-warn)' }
+            : { icon: '🔴', label: 'Risk-Off', color: 'var(--msp-bear)' };
           
           return (
             <div
@@ -212,7 +212,7 @@ export default function DailyAIMarketFocus() {
                     borderRadius: 12,
                     fontSize: 13,
                     fontWeight: 600,
-                    color: pick.score >= 70 ? '#34d399' : pick.score >= 50 ? '#fbbf24' : '#f87171',
+                    color: pick.score >= 70 ? 'var(--msp-bull)' : pick.score >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)',
                   }}>
                     Score: {pick.score}
                   </span>
@@ -220,28 +220,28 @@ export default function DailyAIMarketFocus() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--msp-text)', marginBottom: 4 }}>
                   {pick.asset}
                 </div>
                 {pick.name && pick.name !== pick.asset && (
-                  <div style={{ fontSize: 13, color: '#94a3b8' }}>{pick.name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--msp-flat)' }}>{pick.name}</div>
                 )}
               </div>
 
               <div className="grid-equal-2-col-responsive" style={{ marginBottom: 16 }}>
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: 10 }}>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Phase</div>
-                  <div style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 500 }}>{pick.phase}</div>
+                  <div style={{ fontSize: 11, color: 'var(--msp-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Phase</div>
+                  <div style={{ fontSize: 14, color: 'var(--msp-text)', fontWeight: 500 }}>{pick.phase}</div>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: 10 }}>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Structure</div>
-                  <div style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 500 }}>{pick.structure}</div>
+                  <div style={{ fontSize: 11, color: 'var(--msp-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Structure</div>
+                  <div style={{ fontSize: 14, color: 'var(--msp-text)', fontWeight: 500 }}>{pick.structure}</div>
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: 10, marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Risk Assessment</div>
-                <div style={{ fontSize: 14, color: pick.risk.includes('Overbought') ? '#fbbf24' : pick.risk.includes('Oversold') ? '#f87171' : '#e2e8f0', fontWeight: 500 }}>
+                <div style={{ fontSize: 11, color: 'var(--msp-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Risk Assessment</div>
+                <div style={{ fontSize: 14, color: pick.risk.includes('Overbought') ? 'var(--msp-warn)' : pick.risk.includes('Oversold') ? 'var(--msp-bear)' : 'var(--msp-text)', fontWeight: 500 }}>
                   {pick.risk}
                 </div>
               </div>
@@ -252,11 +252,11 @@ export default function DailyAIMarketFocus() {
                 borderRadius: 12,
                 minHeight: 80,
               }}>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: 'var(--msp-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
                   AI Analysis
                 </div>
                 <div style={{ fontSize: 13, color: '#a3e635', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                  {pick.explanation || <span style={{ color: '#64748b', fontStyle: 'italic' }}>Explanation not yet generated.</span>}
+                  {pick.explanation || <span style={{ color: 'var(--msp-text-muted)', fontStyle: 'italic' }}>Explanation not yet generated.</span>}
                 </div>
               </div>
             </div>
@@ -275,7 +275,7 @@ export default function DailyAIMarketFocus() {
         gap: 10,
       }}>
         <span style={{ fontSize: 18 }}>📊</span>
-        <p style={{ color: '#94a3b8', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+        <p style={{ color: 'var(--msp-flat)', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
           <strong style={{ color: '#c4b5fd' }}>How to use:</strong> This panel highlights tickers with notable multi-timeframe structure, phase logic, and volatility context. For research only — not trade signals or personal advice. Always do your own analysis.
         </p>
       </div>
