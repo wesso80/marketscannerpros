@@ -91,7 +91,7 @@ export default function PlaybooksPage() {
                   <h3 style={{ margin: 0, fontSize: 16, color: '#F9FAFB' }}>{pb.name}</h3>
                   <code style={{ fontSize: 11, color: '#6B7280' }}>{pb.id}</code>
                 </div>
-                <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#0F172A', background: pb.direction === 'long' ? '#10B981' : '#EF4444' }}>
+                <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: 'var(--msp-bg)', background: pb.direction === 'long' ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                   {pb.direction.toUpperCase()}
                 </span>
               </div>
@@ -121,7 +121,7 @@ export default function PlaybooksPage() {
       )}
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );

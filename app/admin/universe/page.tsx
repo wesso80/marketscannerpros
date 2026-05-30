@@ -183,7 +183,7 @@ export default function UniversePage() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: killState?.enabled ? '#FCA5A5' : '#10B981' }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: killState?.enabled ? '#FCA5A5' : 'var(--msp-bull)' }}>
               Kill switch: {killState?.enabled ? 'ON — alerts & notifications suppressed' : 'OFF — alerts active'}
             </div>
             {killState?.enabled && killState.reason && (
@@ -199,8 +199,8 @@ export default function UniversePage() {
           </div>
           <button onClick={toggleKill} disabled={!killState}
             style={{
-              background: killState?.enabled ? '#10B981' : '#B91C1C',
-              color: killState?.enabled ? '#0F172A' : '#FECACA',
+              background: killState?.enabled ? 'var(--msp-bull)' : '#B91C1C',
+              color: killState?.enabled ? 'var(--msp-bg)' : '#FECACA',
               border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 700, cursor: 'pointer',
             }}>
             {killState?.enabled ? 'Disable kill switch' : 'Enable kill switch'}
@@ -220,7 +220,7 @@ export default function UniversePage() {
                 {killLog.map((l) => (
                   <tr key={l.id} style={{ borderTop: '1px solid #1F2937' }}>
                     <td style={{ padding: 4 }}>{new Date(l.createdAt).toLocaleString()}</td>
-                    <td style={{ padding: 4, color: l.enabled ? '#FCA5A5' : '#10B981' }}>{l.enabled ? 'ON' : 'OFF'}</td>
+                    <td style={{ padding: 4, color: l.enabled ? '#FCA5A5' : 'var(--msp-bull)' }}>{l.enabled ? 'ON' : 'OFF'}</td>
                     <td style={{ padding: 4 }}>{l.actor ?? '—'}</td>
                     <td style={{ padding: 4, color: '#9CA3AF' }}>{l.reason ?? '—'}</td>
                   </tr>
@@ -260,7 +260,7 @@ export default function UniversePage() {
             <input value={fThesis} onChange={(e) => setFThesis(e.target.value)} placeholder="Short one-liner" style={inp} />
           </Field>
           <div style={{ display: 'flex', alignItems: 'end' }}>
-            <button type="submit" style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', width: '100%' }}>
+            <button type="submit" style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', width: '100%' }}>
               Save
             </button>
           </div>
@@ -299,7 +299,7 @@ export default function UniversePage() {
                     e.tags.map((t) => <span key={t} style={{ background: '#1F2937', borderRadius: 4, padding: '2px 6px', fontSize: 11, marginRight: 4 }}>{t}</span>)}</Td>
                   <Td align="right">{e.maxPositionUsd === null ? '—' : `$${e.maxPositionUsd.toLocaleString()}`}</Td>
                   <Td align="right">{e.maxPositionPctEquity === null ? '—' : `${e.maxPositionPctEquity}%`}</Td>
-                  <Td><span style={{ color: e.active ? '#10B981' : '#9CA3AF', fontWeight: 600 }}>{e.active ? 'Active' : 'Inactive'}</span></Td>
+                  <Td><span style={{ color: e.active ? 'var(--msp-bull)' : '#9CA3AF', fontWeight: 600 }}>{e.active ? 'Active' : 'Inactive'}</span></Td>
                   <Td>
                     <button onClick={() => toggleActive(e)} style={btnSmall}>{e.active ? 'Deactivate' : 'Activate'}</button>
                     <button onClick={() => remove(e.symbol)} style={{ ...btnSmall, color: '#FCA5A5', marginLeft: 6 }}>Remove</button>
@@ -312,14 +312,14 @@ export default function UniversePage() {
       </section>
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );
 }
 
 const inp: React.CSSProperties = {
-  width: '100%', background: '#0F172A', border: '1px solid #374151',
+  width: '100%', background: 'var(--msp-bg)', border: '1px solid #374151',
   borderRadius: 6, padding: '8px 10px', color: '#E5E7EB', fontSize: 13,
 };
 const btnSmall: React.CSSProperties = {

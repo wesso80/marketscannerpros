@@ -91,10 +91,10 @@ function fmtPct(v: number | null, digits = 1): string {
 }
 function rColor(v: number | null): string {
   if (v === null) return '#6B7280';
-  if (v >= 1) return '#10B981';
+  if (v >= 1) return 'var(--msp-bull)';
   if (v > 0) return '#86EFAC';
-  if (v >= -1) return '#FBBF24';
-  return '#EF4444';
+  if (v >= -1) return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
 export default function EveningPacketPage() {
@@ -138,7 +138,7 @@ export default function EveningPacketPage() {
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
             style={{ background: '#111827', color: '#E5E7EB', border: '1px solid #374151', borderRadius: 6, padding: '6px 10px' }} />
           <button onClick={fetchData} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Loading…' : 'Refresh'}
           </button>
         </div>
@@ -214,7 +214,7 @@ export default function EveningPacketPage() {
                         <Td>{e.eventType.replace(/_/g, ' ')}</Td>
                         <Td align="right">{e.count}</Td>
                         <Td align="right">
-                          <span style={{ color: e.criticalCount > 0 ? '#EF4444' : '#6B7280' }}>{e.criticalCount}</span>
+                          <span style={{ color: e.criticalCount > 0 ? 'var(--msp-bear)' : '#6B7280' }}>{e.criticalCount}</span>
                         </Td>
                         <Td>{e.topSymbols.join(', ') || '—'}</Td>
                       </tr>
@@ -308,15 +308,15 @@ function SetupTable({ rows, emptyText }: { rows: ReconciledSetup[]; emptyText: s
               <Td><strong>{r.symbol}</strong> <span style={{ color: '#6B7280', fontSize: 11 }}>{r.market}</span></Td>
               <Td>{r.setupType}</Td>
               <Td><span style={{ color: '#9CA3AF' }}>{r.playbook ?? '—'}</span></Td>
-              <Td><span style={{ color: r.direction === 'long' ? '#10B981' : '#EF4444', fontWeight: 700 }}>{r.direction.toUpperCase()}</span></Td>
+              <Td><span style={{ color: r.direction === 'long' ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 700 }}>{r.direction.toUpperCase()}</span></Td>
               <Td align="right">{r.opportunityScore ?? '—'}</Td>
               <Td align="right"><span style={{ color: rColor(r.realisedR5d), fontWeight: 700 }}>{fmtR(r.realisedR5d)}</span></Td>
               <Td align="right"><span style={{ color: rColor(r.realisedR20d) }}>{fmtR(r.realisedR20d)}</span></Td>
               <Td align="right">{fmtR(r.mfe5d)}</Td>
               <Td align="right">{fmtR(r.mae5d)}</Td>
               <Td>
-                {r.hitTarget5d === true && <span style={{ color: '#10B981', fontSize: 11, fontWeight: 700 }}>TGT </span>}
-                {r.hitStop5d === true && <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700 }}>STOP</span>}
+                {r.hitTarget5d === true && <span style={{ color: 'var(--msp-bull)', fontSize: 11, fontWeight: 700 }}>TGT </span>}
+                {r.hitStop5d === true && <span style={{ color: 'var(--msp-bear)', fontSize: 11, fontWeight: 700 }}>STOP</span>}
                 {r.hitTarget5d !== true && r.hitStop5d !== true && <span style={{ color: '#6B7280', fontSize: 11 }}>—</span>}
               </Td>
             </tr>

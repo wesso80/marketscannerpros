@@ -94,7 +94,7 @@ export default function PreTradeChecklistPage() {
   }, [symbol, playbookId, observedRegime, evidenceQuality, ivBucket, freshness, proposedSizePct, sameSymbolPct, sameSectorPct]);
 
   const recColor = (r: Recommendation): string =>
-    r === 'go' ? '#10B981' : r === 'caution' ? '#F59E0B' : '#EF4444';
+    r === 'go' ? 'var(--msp-bull)' : r === 'caution' ? 'var(--msp-warn)' : 'var(--msp-bear)';
 
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto', color: '#E5E7EB' }}>
@@ -171,7 +171,7 @@ export default function PreTradeChecklistPage() {
           {data && (
             <>
               <div style={{ marginBottom: 12 }}>
-                <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 6, fontSize: 14, fontWeight: 700, color: '#0F172A', background: recColor(data.result.recommendation), textTransform: 'uppercase' }}>
+                <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 6, fontSize: 14, fontWeight: 700, color: 'var(--msp-bg)', background: recColor(data.result.recommendation), textTransform: 'uppercase' }}>
                   {data.result.recommendation}
                 </span>
                 {data.persistedId && (
@@ -186,8 +186,8 @@ export default function PreTradeChecklistPage() {
                       <div style={{ fontSize: 13, color: '#E5E7EB' }}>{g.label}</div>
                       {g.detail && <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{g.detail}</div>}
                     </div>
-                    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#0F172A',
-                      background: g.passed === true ? '#10B981' : g.passed === false ? (g.severity === 'blocking' ? '#EF4444' : '#F59E0B') : '#6B7280' }}>
+                    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: 'var(--msp-bg)',
+                      background: g.passed === true ? 'var(--msp-bull)' : g.passed === false ? (g.severity === 'blocking' ? 'var(--msp-bear)' : 'var(--msp-warn)') : '#6B7280' }}>
                       {g.passed === true ? 'pass' : g.passed === false ? 'fail' : 'n/a'}
                     </span>
                   </div>
@@ -199,7 +199,7 @@ export default function PreTradeChecklistPage() {
       </div>
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );
@@ -210,7 +210,7 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid #374151', borderRadius: 6, padding: '8px 10px', fontSize: 13,
 };
 const primaryBtn: React.CSSProperties = {
-  background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6,
+  background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6,
   padding: '8px 16px', fontWeight: 600, cursor: 'pointer',
 };
 const secondaryBtn: React.CSSProperties = {

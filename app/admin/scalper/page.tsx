@@ -47,9 +47,9 @@ const EQUITY_DEFAULTS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'META', 'GOOGL'
 
 /* ─── Helpers ─── */
 function dirColor(d: string) {
-  if (d === 'long' || d === 'bullish') return '#10B981';
-  if (d === 'short' || d === 'bearish') return '#EF4444';
-  return '#94A3B8';
+  if (d === 'long' || d === 'bullish') return 'var(--msp-bull)';
+  if (d === 'short' || d === 'bearish') return 'var(--msp-bear)';
+  return 'var(--msp-flat)';
 }
 function fmtP(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—';
@@ -272,7 +272,7 @@ export default function AdminScalperPage() {
                           {r.signals.bbSqueeze ? 'SQZ' : r.signals.bbBreakout ? (r.signals.bbBreakout === 'upper' ? 'UP' : 'DOWN') : <span className="text-slate-600">—</span>}
                         </td>
                         <td className="py-2.5 px-2 text-center">{signalCode(r.signals.macdSignal)}</td>
-                        <td className="py-2.5 px-2 text-right font-mono" style={{ color: r.riskReward >= 1.5 ? '#10B981' : r.riskReward >= 1 ? '#F59E0B' : '#94A3B8' }}>
+                        <td className="py-2.5 px-2 text-right font-mono" style={{ color: r.riskReward >= 1.5 ? 'var(--msp-bull)' : r.riskReward >= 1 ? 'var(--msp-warn)' : 'var(--msp-flat)' }}>
                           {r.riskReward > 0 ? `${r.riskReward}:1` : '—'}
                         </td>
                       </tr>
@@ -306,7 +306,7 @@ export default function AdminScalperPage() {
 /* ═══════════ Sub-Components ═══════════ */
 
 function StrengthBar({ value }: { value: number }) {
-  const color = value >= 60 ? '#10B981' : value >= 30 ? '#F59E0B' : '#EF4444';
+  const color = value >= 60 ? 'var(--msp-bull)' : value >= 30 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   return (
     <div className="flex items-center gap-1.5 justify-end">
       <span className="text-[10px] font-bold" style={{ color }}>{value}</span>
@@ -321,9 +321,9 @@ function PriceLadder({ result: r }: { result: ScalpResult }) {
   const isLong = r.direction === 'long';
   const levels = [
     { label: 'T2', price: r.target2, color: '#6EE7B7' },
-    { label: 'T1', price: r.target1, color: '#10B981' },
+    { label: 'T1', price: r.target1, color: 'var(--msp-bull)' },
     { label: 'Entry', price: r.entry, color: '#FFFFFF' },
-    { label: 'Stop', price: r.stop, color: '#EF4444' },
+    { label: 'Stop', price: r.stop, color: 'var(--msp-bear)' },
   ].filter((l) => l.price > 0 && Number.isFinite(l.price));
 
   if (levels.length < 2) return null;
@@ -451,7 +451,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
         </div>
         <div className="mt-2 flex items-center justify-between text-[10px]">
           <span className="text-slate-500">Risk:Reward</span>
-          <span className="font-bold" style={{ color: r.riskReward >= 1.5 ? '#10B981' : '#F59E0B' }}>{r.riskReward > 0 ? `${r.riskReward}:1` : '—'}</span>
+          <span className="font-bold" style={{ color: r.riskReward >= 1.5 ? 'var(--msp-bull)' : 'var(--msp-warn)' }}>{r.riskReward > 0 ? `${r.riskReward}:1` : '—'}</span>
         </div>
       </div>
 
@@ -462,8 +462,8 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <SignalRow code={signalCode(s.emaCross)} label="EMA Crossover" value={s.emaDetail} color={dirColor(s.emaCross)} />
           <SignalRow code={signalCode(s.rsiSignal)} label="RSI(7)" value={s.rsi7 != null ? `${s.rsi7.toFixed(1)} — ${s.rsiSignal}` : '—'} color={dirColor(s.rsiSignal)} />
           <SignalRow code={signalCode(s.vwapSignal)} label="VWAP" value={s.vwapDev != null ? `${s.vwapDev > 0 ? '+' : ''}${s.vwapDev.toFixed(2)}% ${s.vwapSignal}` : '—'} color={dirColor(s.vwapSignal)} />
-          <SignalRow code={s.volSpike ? 'VOL' : 'NEUT'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? '#F59E0B' : '#94A3B8'} />
-          <SignalRow code={s.bbSqueeze ? 'SQZ' : s.bbBreakout ? 'BRK' : 'NEUT'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? '#F59E0B' : s.bbBreakout === 'upper' ? '#10B981' : s.bbBreakout === 'lower' ? '#EF4444' : '#94A3B8'} />
+          <SignalRow code={s.volSpike ? 'VOL' : 'NEUT'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
+          <SignalRow code={s.bbSqueeze ? 'SQZ' : s.bbBreakout ? 'BRK' : 'NEUT'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? 'var(--msp-warn)' : s.bbBreakout === 'upper' ? 'var(--msp-bull)' : s.bbBreakout === 'lower' ? 'var(--msp-bear)' : 'var(--msp-flat)'} />
           <SignalRow code={signalCode(s.macdSignal)} label="MACD" value={s.macdHist != null ? `Hist: ${s.macdHist > 0 ? '+' : ''}${s.macdHist.toFixed(4)} — ${s.macdSignal}` : '—'} color={dirColor(s.macdSignal)} />
           <SignalRow code="ATR" label="ATR(14)" value={s.atr != null ? fmtP(s.atr) : '—'} color="#94A3B8" />
         </div>

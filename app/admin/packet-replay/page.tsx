@@ -75,7 +75,7 @@ export default function PacketReplayPage() {
             <option value={365}>1 year</option>
           </select>
           <button onClick={load} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Loading…' : 'Reload'}
           </button>
         </div>
@@ -121,10 +121,10 @@ export default function PacketReplayPage() {
                     <td style={{ ...td, textAlign: 'right' }}>{b.setupsTaken}</td>
                     <td style={{ ...td, textAlign: 'right' }}>{b.setupsSkipped}</td>
                     <td style={{ ...td, textAlign: 'right' }}>{b.setupsResolved}</td>
-                    <td style={{ ...td, textAlign: 'right', color: wr === null ? '#9CA3AF' : wr >= 0.5 ? '#10B981' : '#EF4444' }}>
+                    <td style={{ ...td, textAlign: 'right', color: wr === null ? '#9CA3AF' : wr >= 0.5 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                       {wr === null ? '—' : (wr * 100).toFixed(0) + '%'}
                     </td>
-                    <td style={{ ...td, textAlign: 'right', color: b.avgRealisedR5d === null ? '#9CA3AF' : b.avgRealisedR5d >= 0 ? '#10B981' : '#EF4444' }}>
+                    <td style={{ ...td, textAlign: 'right', color: b.avgRealisedR5d === null ? '#9CA3AF' : b.avgRealisedR5d >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                       {b.avgRealisedR5d === null ? '—' : b.avgRealisedR5d.toFixed(2)}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>{b.avgEvidenceQuality?.toFixed(0) ?? '—'}</td>
@@ -151,7 +151,7 @@ export default function PacketReplayPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ background: '#0F172A', border: '1px solid #1F2937', borderRadius: 8, padding: 12 }}>
+    <div style={{ background: 'var(--msp-bg)', border: '1px solid #1F2937', borderRadius: 8, padding: 12 }}>
       <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</div>
       <div style={{ fontSize: 22, color: '#F3F4F6', fontWeight: 700, marginTop: 4 }}>{value}</div>
     </div>

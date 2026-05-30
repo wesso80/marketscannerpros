@@ -85,19 +85,19 @@ interface DashboardResponse {
 // ── Style tokens ────────────────────────────────────────────────────────────
 const C = {
   bg: '#0B1220',
-  panel: '#0F172A',
+  panel: 'var(--msp-bg)',
   border: '#1F2937',
   text: '#E5E7EB',
   textDim: '#9CA3AF',
-  accent: '#10B981',
-  warn: '#F59E0B',
-  danger: '#EF4444',
-  info: '#3B82F6',
+  accent: 'var(--msp-bull)',
+  warn: 'var(--msp-warn)',
+  danger: 'var(--msp-bear)',
+  info: 'var(--msp-info)',
 };
 
 const TIER_COLOR: Record<string, string> = {
-  elite: '#10B981', strong: '#22D3EE', emerging: '#3B82F6',
-  weak: '#F59E0B', noise: '#EF4444', insufficient_sample: '#6B7280',
+  elite: 'var(--msp-bull)', strong: '#22D3EE', emerging: 'var(--msp-info)',
+  weak: 'var(--msp-warn)', noise: 'var(--msp-bear)', insufficient_sample: '#6B7280',
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

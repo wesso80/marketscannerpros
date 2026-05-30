@@ -39,16 +39,16 @@ interface Report {
 }
 
 function tiltColor(t: Report['riskTilt']): string {
-  if (t === 'risk-on') return '#10B981';
-  if (t === 'risk-off') return '#EF4444';
-  if (t === 'mixed') return '#F59E0B';
+  if (t === 'risk-on') return 'var(--msp-bull)';
+  if (t === 'risk-off') return 'var(--msp-bear)';
+  if (t === 'mixed') return 'var(--msp-warn)';
   return '#6B7280';
 }
 function corrColor(c: number | null): string {
   if (c === null) return '#6B7280';
   const a = Math.abs(c);
-  if (a >= 0.7) return c > 0 ? '#10B981' : '#EF4444';
-  if (a >= 0.4) return c > 0 ? '#34D399' : '#F87171';
+  if (a >= 0.7) return c > 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
+  if (a >= 0.4) return c > 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
   return '#9CA3AF';
 }
 function fmtCorr(c: number | null): string {
@@ -94,7 +94,7 @@ export default function CrossAssetPage() {
           onKeyDown={(e) => { if (e.key === 'Enter') fetchData(); }}
           style={{ background: '#111827', color: '#E5E7EB', border: '1px solid #374151', borderRadius: 6, padding: '8px 12px', fontSize: 14, flex: 1, maxWidth: 240 }} />
         <button onClick={fetchData} disabled={loading}
-          style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
+          style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
           {loading ? 'Loading…' : 'Analyse'}
         </button>
       </div>
@@ -114,7 +114,7 @@ export default function CrossAssetPage() {
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 }}>Risk Tilt</div>
-              <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 6, fontSize: 14, fontWeight: 700, color: '#0F172A', background: tiltColor(data.riskTilt) }}>
+              <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 6, fontSize: 14, fontWeight: 700, color: 'var(--msp-bg)', background: tiltColor(data.riskTilt) }}>
                 {data.riskTilt.toUpperCase()} ({data.riskTiltScore >= 0 ? '+' : ''}{data.riskTiltScore})
               </span>
             </div>
@@ -147,11 +147,11 @@ export default function CrossAssetPage() {
                       <Td align="right">{m.lastClose?.toFixed(2) ?? '—'}</Td>
                       <Td align="right">{m.ema50?.toFixed(2) ?? '—'}</Td>
                       <Td align="right">
-                        <span style={{ color: m.aboveEma50 === null ? '#6B7280' : m.aboveEma50 ? '#10B981' : '#EF4444', fontWeight: 700 }}>
+                        <span style={{ color: m.aboveEma50 === null ? '#6B7280' : m.aboveEma50 ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 700 }}>
                           {m.aboveEma50 === null ? '—' : m.aboveEma50 ? '▲' : '▼'}
                         </span>
                       </Td>
-                      <Td align="right" style={{ color: m.trend1m === null ? '#6B7280' : m.trend1m >= 0 ? '#10B981' : '#EF4444' }}>
+                      <Td align="right" style={{ color: m.trend1m === null ? '#6B7280' : m.trend1m >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                         {fmtPct(m.trend1m)}
                       </Td>
                       <Td><span style={{ fontSize: 11, color: '#9CA3AF' }}>{m.freshness}</span></Td>
@@ -198,7 +198,7 @@ export default function CrossAssetPage() {
 
           <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
             Generated at {new Date(data.generatedAt).toLocaleString()} ·{' '}
-            <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+            <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
           </div>
         </>
       )}

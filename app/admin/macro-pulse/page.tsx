@@ -36,9 +36,9 @@ const CATEGORY_LABEL: Record<string, string> = {
 function freshnessColor(age: number | null, cadence: string): string {
   if (age === null) return '#6B7280';
   const cap = cadence === 'daily' ? 3 : cadence === 'weekly' ? 10 : cadence === 'monthly' ? 45 : 120;
-  if (age <= cap) return '#10B981';
-  if (age <= cap * 2) return '#F59E0B';
-  return '#EF4444';
+  if (age <= cap) return 'var(--msp-bull)';
+  if (age <= cap * 2) return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
 function fmtVal(v: number | null, units: string): string {
@@ -109,7 +109,7 @@ export default function MacroPulsePage() {
             {ingesting ? 'Ingesting…' : 'Ingest now'}
           </button>
           <button onClick={fetchData} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Loading…' : 'Refresh'}
           </button>
         </div>
@@ -153,10 +153,10 @@ export default function MacroPulsePage() {
                     <Td align="right">{fmtVal(r.latestValue, r.units)}</Td>
                     <Td>{r.latestObservedOn ?? '—'}</Td>
                     <Td align="right">{fmtVal(r.prevValue, r.units)}</Td>
-                    <Td align="right" style={{ color: r.change === null ? '#6B7280' : r.change >= 0 ? '#10B981' : '#EF4444' }}>
+                    <Td align="right" style={{ color: r.change === null ? '#6B7280' : r.change >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                       {r.change === null ? '—' : (r.change >= 0 ? '+' : '') + r.change.toFixed(2)}
                     </Td>
-                    <Td align="right" style={{ color: r.changePct === null ? '#6B7280' : r.changePct >= 0 ? '#10B981' : '#EF4444' }}>
+                    <Td align="right" style={{ color: r.changePct === null ? '#6B7280' : r.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                       {r.changePct === null ? '—' : (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%'}
                     </Td>
                     <Td align="right">
@@ -173,7 +173,7 @@ export default function MacroPulsePage() {
       ))}
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );

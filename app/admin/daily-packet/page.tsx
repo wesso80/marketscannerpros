@@ -42,8 +42,8 @@ interface Packet {
   warnings: string[];
 }
 
-const FRESHNESS_COLOR: Record<string, string> = { fresh: '#10B981', stale: '#F59E0B', unknown: '#9CA3AF' };
-const SEV_COLOR: Record<string, string> = { high: '#EF4444', medium: '#F59E0B', low: '#3B82F6' };
+const FRESHNESS_COLOR: Record<string, string> = { fresh: 'var(--msp-bull)', stale: 'var(--msp-warn)', unknown: '#9CA3AF' };
+const SEV_COLOR: Record<string, string> = { high: 'var(--msp-bear)', medium: 'var(--msp-warn)', low: 'var(--msp-info)' };
 
 export default function DailyPacketPage() {
   const [packet, setPacket] = useState<Packet | null>(null);
@@ -80,7 +80,7 @@ export default function DailyPacketPage() {
             Open print-friendly PDF
           </a>
           <button onClick={fetchData} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Loading…' : 'Refresh'}
           </button>
         </div>
@@ -108,7 +108,7 @@ export default function DailyPacketPage() {
             border: '1px solid ' + (packet.killSwitch.enabled ? '#B91C1C' : '#1F2937'),
             borderRadius: 8, padding: 14, marginBottom: 18,
           }}>
-            <strong style={{ color: packet.killSwitch.enabled ? '#FCA5A5' : '#10B981' }}>
+            <strong style={{ color: packet.killSwitch.enabled ? '#FCA5A5' : 'var(--msp-bull)' }}>
               Kill switch: {packet.killSwitch.enabled ? 'ON — alerts suppressed' : 'OFF'}
             </strong>
             {packet.killSwitch.reason && <div style={{ fontSize: 13, color: '#FECACA', marginTop: 4 }}>Reason: {packet.killSwitch.reason}</div>}
@@ -146,10 +146,10 @@ export default function DailyPacketPage() {
                       <Td><span style={{ color: '#9CA3AF' }}>{r.description}</span></Td>
                       <Td align="right">{r.latestValue === null ? '—' : r.latestValue.toFixed(2)}</Td>
                       <Td>{r.latestObservedOn ?? '—'}</Td>
-                      <Td align="right" style={{ color: r.change === null ? '#9CA3AF' : r.change >= 0 ? '#10B981' : '#EF4444' }}>
+                      <Td align="right" style={{ color: r.change === null ? '#9CA3AF' : r.change >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                         {r.change === null ? '—' : (r.change >= 0 ? '+' : '') + r.change.toFixed(2)}
                       </Td>
-                      <Td align="right" style={{ color: r.changePct === null ? '#9CA3AF' : r.changePct >= 0 ? '#10B981' : '#EF4444' }}>
+                      <Td align="right" style={{ color: r.changePct === null ? '#9CA3AF' : r.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                         {r.changePct === null ? '—' : (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%'}
                       </Td>
                       <Td align="right">{r.freshnessAgeDays ?? '—'}</Td>
@@ -183,7 +183,7 @@ export default function DailyPacketPage() {
 
           <div style={{ fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 20 }}>
             Generated {new Date(packet.generatedAt).toLocaleString()} · Universe: {packet.universeSize} symbols ·{' '}
-            <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+            <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
           </div>
         </>
       )}
@@ -198,12 +198,12 @@ function Section({ title, sec, children }: { title: string; sec: Section; childr
         <h2 style={{ margin: 0, fontSize: 15, color: '#F3F4F6' }}>{title}</h2>
         <div style={{ fontSize: 10, color: '#9CA3AF', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{
-            background: FRESHNESS_COLOR[sec.freshness], color: '#0F172A',
+            background: FRESHNESS_COLOR[sec.freshness], color: 'var(--msp-bg)',
             padding: '2px 8px', borderRadius: 999, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
           }}>{sec.freshness}</span>
           <span>source: <code>{sec.source}</code></span>
           <span>updated: {sec.lastUpdated ? new Date(sec.lastUpdated).toLocaleString() : '—'}</span>
-          {sec.notes && <span style={{ color: '#F59E0B' }}>{sec.notes}</span>}
+          {sec.notes && <span style={{ color: 'var(--msp-warn)' }}>{sec.notes}</span>}
         </div>
       </div>
       {children}
@@ -222,7 +222,7 @@ function CalTable({ title, rows }: { title: string; rows: CalBucket[] }) {
           <tr key={i} style={{ borderTop: '1px solid #1F2937' }}>
             <Td>{r.bucket}</Td><Td align="right">{r.setups}</Td><Td align="right">{r.withOutcome}</Td>
             <Td align="right">{r.winRate === null ? '—' : (r.winRate * 100).toFixed(0) + '%'}</Td>
-            <Td align="right" style={{ color: r.avgR5d === null ? '#9CA3AF' : r.avgR5d >= 0 ? '#10B981' : '#EF4444' }}>
+            <Td align="right" style={{ color: r.avgR5d === null ? '#9CA3AF' : r.avgR5d >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
               {r.avgR5d === null ? '—' : r.avgR5d.toFixed(2)}
             </Td>
           </tr>

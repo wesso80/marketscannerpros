@@ -62,9 +62,9 @@ interface TimeToDecisionReport {
 }
 
 function sevColor(s: DriftSignal['severity']): string {
-  if (s === 'high') return '#EF4444';
-  if (s === 'medium') return '#F59E0B';
-  return '#10B981';
+  if (s === 'high') return 'var(--msp-bear)';
+  if (s === 'medium') return 'var(--msp-warn)';
+  return 'var(--msp-bull)';
 }
 function fmtPct(v: number | null, d = 1): string {
   if (v === null || !Number.isFinite(v)) return '—';
@@ -130,7 +130,7 @@ export default function OperatorHealthPage() {
             <option value={90}>90 days</option>
           </select>
           <button onClick={fetchAll} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Loading…' : 'Refresh'}
           </button>
         </div>
@@ -152,7 +152,7 @@ export default function OperatorHealthPage() {
               <div key={s.key} style={{ background: '#0B1220', border: '1px solid #1F2937', borderRadius: 8, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
-                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, color: '#0F172A', background: sevColor(s.severity) }}>
+                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, color: 'var(--msp-bg)', background: sevColor(s.severity) }}>
                     {s.severity}
                   </span>
                 </div>
@@ -206,7 +206,7 @@ export default function OperatorHealthPage() {
       )}
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );

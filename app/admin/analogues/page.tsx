@@ -145,7 +145,7 @@ export default function AnaloguesPage() {
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
           <button onClick={search} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '10px 18px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '10px 18px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Searching…' : 'Find analogues'}
           </button>
           <button onClick={backfill}
@@ -165,7 +165,7 @@ export default function AnaloguesPage() {
       {result && !result.ok && result.reason === 'pgvector-unavailable' && (
         <div style={{ background: '#3F2D0A', border: '1px solid #92400E', color: '#FCD34D', padding: 14, borderRadius: 8, marginBottom: 16 }}>
           <strong>pgvector not available.</strong> Install the extension in your Postgres instance (Neon: enable in dashboard, or run
-          <code style={{ background: '#0F172A', padding: '0 4px', marginLeft: 4 }}>CREATE EXTENSION vector;</code>)
+          <code style={{ background: 'var(--msp-bg)', padding: '0 4px', marginLeft: 4 }}>CREATE EXTENSION vector;</code>)
           and re-run migration 092.
         </div>
       )}
@@ -175,7 +175,7 @@ export default function AnaloguesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
             <Stat label="Analogues found" value={result.summary.count.toString()} />
             <Stat label="Avg R-multiple" value={result.summary.avgRMultiple === null ? '—' : result.summary.avgRMultiple.toFixed(2)}
-              color={result.summary.avgRMultiple === null ? undefined : result.summary.avgRMultiple >= 0 ? '#10B981' : '#F87171'} />
+              color={result.summary.avgRMultiple === null ? undefined : result.summary.avgRMultiple >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
             <Stat label="Win rate" value={result.summary.winRate === null ? '—' : `${(result.summary.winRate * 100).toFixed(0)}%`} />
             <Stat label="Median distance" value={result.summary.medianDistance === null ? '—' : result.summary.medianDistance.toFixed(3)} />
           </div>
@@ -197,7 +197,7 @@ export default function AnaloguesPage() {
                 )}
                 {result.analogues.map((a) => (
                   <tr key={a.setupId} style={{ borderTop: '1px solid #1F2937' }}>
-                    <Td><span style={{ color: a.distance < 0.1 ? '#10B981' : a.distance < 0.3 ? '#F59E0B' : '#9CA3AF', fontFamily: 'monospace' }}>
+                    <Td><span style={{ color: a.distance < 0.1 ? 'var(--msp-bull)' : a.distance < 0.3 ? 'var(--msp-warn)' : '#9CA3AF', fontFamily: 'monospace' }}>
                       {a.distance.toFixed(3)}
                     </span></Td>
                     <Td><strong>{a.symbol}</strong></Td>
@@ -209,7 +209,7 @@ export default function AnaloguesPage() {
                     <Td align="right">{a.opportunityScore?.toFixed(0) ?? '—'}</Td>
                     <Td align="right">{a.evidenceQuality?.toFixed(0) ?? '—'}</Td>
                     <Td>{a.outcome?.classification ?? <span style={{ color: '#6B7280' }}>unresolved</span>}</Td>
-                    <Td align="right" style={{ color: a.outcome?.rMultiple == null ? '#6B7280' : a.outcome.rMultiple >= 0 ? '#10B981' : '#F87171' }}>
+                    <Td align="right" style={{ color: a.outcome?.rMultiple == null ? '#6B7280' : a.outcome.rMultiple >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                       {a.outcome?.rMultiple == null ? '—' : a.outcome.rMultiple.toFixed(2)}
                     </Td>
                   </tr>
@@ -221,7 +221,7 @@ export default function AnaloguesPage() {
       )}
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );
@@ -250,6 +250,6 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 const inp: React.CSSProperties = {
-  width: '100%', background: '#0F172A', border: '1px solid #374151',
+  width: '100%', background: 'var(--msp-bg)', border: '1px solid #374151',
   borderRadius: 6, padding: '8px 10px', color: '#E5E7EB', fontSize: 13,
 };

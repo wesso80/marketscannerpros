@@ -117,7 +117,7 @@ export default function InsiderPage() {
           </select>
         </label>
         <button onClick={() => fetchData(symbol)} disabled={loading}
-          style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: 'pointer' }}>
+          style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: 'pointer' }}>
           {loading ? 'Loading…' : 'Load'}
         </button>
         <button onClick={runIngest} disabled={ingesting || !symbol}
@@ -169,7 +169,7 @@ export default function InsiderPage() {
                   <Td>{r.reporterName ?? '—'}</Td>
                   <Td><span style={{ color: '#9CA3AF', fontSize: 12 }}>{r.reporterRelationship ?? '—'}</span></Td>
                   <Td>
-                    <span style={{ color: buy ? '#10B981' : sell ? '#F87171' : '#E5E7EB', fontWeight: 600 }}>
+                    <span style={{ color: buy ? 'var(--msp-bull)' : sell ? 'var(--msp-bear)' : '#E5E7EB', fontWeight: 600 }}>
                       {r.transactionCode ?? '—'}
                     </span>
                     <div style={{ fontSize: 11, color: '#9CA3AF' }}>
@@ -178,14 +178,14 @@ export default function InsiderPage() {
                   </Td>
                   <Td align="right">{fmt(r.shares)}</Td>
                   <Td align="right">{r.pricePerShare === null ? '—' : `$${r.pricePerShare.toFixed(2)}`}</Td>
-                  <Td align="right" style={{ color: buy ? '#10B981' : sell ? '#F87171' : '#E5E7EB' }}>
+                  <Td align="right" style={{ color: buy ? 'var(--msp-bull)' : sell ? 'var(--msp-bear)' : '#E5E7EB' }}>
                     {fmt(r.totalValue, { money: true })}
                   </Td>
                   <Td align="right">{fmt(r.sharesAfter)}</Td>
                   <Td>{r.directOrIndirect ?? '—'}</Td>
                   <Td>
                     {r.filingUrl
-                      ? <a href={r.filingUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#10B981', fontSize: 12 }}>EDGAR</a>
+                      ? <a href={r.filingUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--msp-bull)', fontSize: 12 }}>EDGAR</a>
                       : '—'}
                   </Td>
                 </tr>
@@ -197,14 +197,14 @@ export default function InsiderPage() {
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
         Source: SEC EDGAR (free, public). Set <code>EDGAR_USER_AGENT</code> env var per SEC policy.
-        {' '}<Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        {' '}<Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );
 }
 
 const inp: React.CSSProperties = {
-  background: '#0F172A', border: '1px solid #374151', borderRadius: 6,
+  background: 'var(--msp-bg)', border: '1px solid #374151', borderRadius: 6,
   padding: '8px 10px', color: '#E5E7EB', fontSize: 13, minWidth: 140,
 };
 const lbl: React.CSSProperties = {

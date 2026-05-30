@@ -41,10 +41,10 @@ interface StoredSummary {
 }
 
 const TONE_COLOR: Record<string, string> = {
-  bullish: '#10B981', bearish: '#EF4444', mixed: '#F59E0B', neutral: '#9CA3AF',
+  bullish: 'var(--msp-bull)', bearish: 'var(--msp-bear)', mixed: 'var(--msp-warn)', neutral: '#9CA3AF',
 };
 const SURPRISE_COLOR: Record<string, string> = {
-  beat: '#10B981', miss: '#EF4444', in_line: '#9CA3AF', unknown: '#6B7280',
+  beat: 'var(--msp-bull)', miss: 'var(--msp-bear)', in_line: '#9CA3AF', unknown: '#6B7280',
 };
 
 export default function TranscriptsPage() {
@@ -122,7 +122,7 @@ export default function TranscriptsPage() {
           <input value={quarter} onChange={(e) => setQuarter(e.target.value.toUpperCase())} style={inp} placeholder="2025Q4" maxLength={10} />
         </label>
         <button onClick={() => run('both')} disabled={busy}
-          style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}>
+          style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}>
           {busy ? 'Working…' : 'Ingest + summarise'}
         </button>
         <button onClick={() => run('summarise')} disabled={busy}
@@ -142,8 +142,8 @@ export default function TranscriptsPage() {
             <button key={q} onClick={() => setQuarter(q)}
               style={{
                 marginRight: 6, marginBottom: 4,
-                background: q === quarter ? '#10B981' : '#1F2937',
-                color: q === quarter ? '#0F172A' : '#E5E7EB',
+                background: q === quarter ? 'var(--msp-bull)' : '#1F2937',
+                color: q === quarter ? 'var(--msp-bg)' : '#E5E7EB',
                 border: '1px solid #374151', borderRadius: 4,
                 padding: '3px 8px', fontSize: 11, cursor: 'pointer',
               }}>{q}</button>
@@ -198,7 +198,7 @@ export default function TranscriptsPage() {
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
         Source: Alpha Vantage EARNINGS_CALL_TRANSCRIPT · summarised by gpt-4.1 ·{' '}
-        <Link href="/admin" style={{ color: '#10B981' }}>Back to admin</Link>
+        <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
     </div>
   );
@@ -224,14 +224,14 @@ function SummarySection({ title, items, accent, emptyHint }: {
 }
 function Pill({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <span style={{ background: '#0F172A', border: '1px solid #1F2937', borderRadius: 999, padding: '4px 10px', fontSize: 11, color: '#9CA3AF' }}>
+    <span style={{ background: 'var(--msp-bg)', border: '1px solid #1F2937', borderRadius: 999, padding: '4px 10px', fontSize: 11, color: '#9CA3AF' }}>
       {label}: <strong style={{ color, marginLeft: 4, textTransform: 'capitalize' }}>{value.replace('_', ' ')}</strong>
     </span>
   );
 }
 
 const inp: React.CSSProperties = {
-  background: '#0F172A', border: '1px solid #374151', borderRadius: 6,
+  background: 'var(--msp-bg)', border: '1px solid #374151', borderRadius: 6,
   padding: '8px 10px', color: '#E5E7EB', fontSize: 13, minWidth: 140,
 };
 const lbl: React.CSSProperties = {

@@ -66,7 +66,7 @@ export default function EngineHealthPage() {
   }, []);
 
   return (
-    <div style={{ padding: 24, color: '#E5E7EB', background: '#0F172A', minHeight: '100vh' }}>
+    <div style={{ padding: 24, color: '#E5E7EB', background: 'var(--msp-bg)', minHeight: '100vh' }}>
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Engine Health (Brain Layer)</h1>
       <p style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 16 }}>
         Per-engine 24h observability — confidence, direction-floor failures, Risk Governor blocks, stale-data %, and 30d hit rate
@@ -74,7 +74,7 @@ export default function EngineHealthPage() {
       </p>
 
       {loading && <div style={{ color: '#9CA3AF' }}>Loading…</div>}
-      {err && <div style={{ color: '#F87171' }}>Error: {err}</div>}
+      {err && <div style={{ color: 'var(--msp-bear)' }}>Error: {err}</div>}
 
       {!loading && !err && (
         <>
@@ -101,13 +101,13 @@ export default function EngineHealthPage() {
                     <td style={{ ...cell, fontWeight: 600 }}>{r.engine}</td>
                     <td style={cell}>{fmtNum(r.events_24h)}</td>
                     <td style={cell}>{fmtNum(r.events_7d)}</td>
-                    <td style={{ ...cell, color: (r.pct_neutral ?? 0) > 70 ? '#FBBF24' : '#E5E7EB' }}>{fmtPct(r.pct_neutral)}</td>
+                    <td style={{ ...cell, color: (r.pct_neutral ?? 0) > 70 ? 'var(--msp-warn)' : '#E5E7EB' }}>{fmtPct(r.pct_neutral)}</td>
                     <td style={cell}>{fmtNum(r.mean_confidence)}</td>
-                    <td style={{ ...cell, color: (r.pct_floor_failed ?? 0) > 50 ? '#FBBF24' : '#E5E7EB' }}>{fmtPct(r.pct_floor_failed)}</td>
-                    <td style={{ ...cell, color: (r.pct_rg_blocked ?? 0) > 0 ? '#F87171' : '#E5E7EB' }}>{fmtPct(r.pct_rg_blocked)}</td>
-                    <td style={{ ...cell, color: (r.pct_stale ?? 0) > 30 ? '#FBBF24' : '#E5E7EB' }}>{fmtPct(r.pct_stale)}</td>
+                    <td style={{ ...cell, color: (r.pct_floor_failed ?? 0) > 50 ? 'var(--msp-warn)' : '#E5E7EB' }}>{fmtPct(r.pct_floor_failed)}</td>
+                    <td style={{ ...cell, color: (r.pct_rg_blocked ?? 0) > 0 ? 'var(--msp-bear)' : '#E5E7EB' }}>{fmtPct(r.pct_rg_blocked)}</td>
+                    <td style={{ ...cell, color: (r.pct_stale ?? 0) > 30 ? 'var(--msp-warn)' : '#E5E7EB' }}>{fmtPct(r.pct_stale)}</td>
                     <td style={cell}>{fmtNum(r.outcomes_resolved)}</td>
-                    <td style={{ ...cell, color: r.hit_rate == null ? '#6B7280' : r.hit_rate >= 55 ? '#10B981' : r.hit_rate >= 45 ? '#E5E7EB' : '#F87171' }}>
+                    <td style={{ ...cell, color: r.hit_rate == null ? '#6B7280' : r.hit_rate >= 55 ? 'var(--msp-bull)' : r.hit_rate >= 45 ? '#E5E7EB' : 'var(--msp-bear)' }}>
                       {fmtPct(r.hit_rate)}
                     </td>
                     <td style={cell}>{fmtTs(r.last_ts)}</td>

@@ -98,16 +98,16 @@ function fmtPrice(v: number | null): string {
 }
 
 function bandColor(b: Band): string {
-  if (b === 'tight') return '#10B981';
-  if (b === 'wide') return '#F59E0B';
+  if (b === 'tight') return 'var(--msp-bull)';
+  if (b === 'wide') return 'var(--msp-warn)';
   return '#6B7280';
 }
 
 function statusColor(s: LedgerRow['status']): string {
-  if (s === 'taken') return '#10B981';
+  if (s === 'taken') return 'var(--msp-bull)';
   if (s === 'skipped') return '#6B7280';
-  if (s === 'invalidated') return '#EF4444';
-  return '#3B82F6';
+  if (s === 'invalidated') return 'var(--msp-bear)';
+  return 'var(--msp-info)';
 }
 
 export default function EdgeLedgerPage() {
@@ -172,7 +172,7 @@ export default function EdgeLedgerPage() {
             <option value="invalidated">Invalidated</option>
           </select>
           <button onClick={fetchData} disabled={loading}
-            style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
+            style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Loading…' : 'Refresh'}
           </button>
         </div>
@@ -240,7 +240,7 @@ export default function EdgeLedgerPage() {
                           <Td align="right" muted>{fmtR(c.cfAvgR5d)}</Td>
                           <Td align="right">{c.minSample}</Td>
                           <Td>
-                            <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: '#0F172A', background: bandColor(c.confidenceBand) }}>
+                            <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: 'var(--msp-bg)', background: bandColor(c.confidenceBand) }}>
                               {c.confidenceBand}
                             </span>
                           </Td>
@@ -291,7 +291,7 @@ export default function EdgeLedgerPage() {
                       <Td>{r.playbook ?? '—'}</Td>
                       <Td>{r.setupType}</Td>
                       <Td>
-                        <span style={{ color: r.direction === 'long' ? '#10B981' : '#EF4444', fontWeight: 600 }}>
+                        <span style={{ color: r.direction === 'long' ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 600 }}>
                           {r.direction}
                         </span>
                       </Td>
@@ -303,7 +303,7 @@ export default function EdgeLedgerPage() {
                       <Td align="right">{fmtPrice(r.targetPrice)}</Td>
                       <Td align="right">{r.rewardRisk?.toFixed(2) ?? '—'}</Td>
                       <Td>
-                        <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: '#0F172A', background: statusColor(r.status) }}>
+                        <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, color: 'var(--msp-bg)', background: statusColor(r.status) }}>
                           {r.status}
                         </span>
                       </Td>
@@ -321,7 +321,7 @@ export default function EdgeLedgerPage() {
 
           <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
             Generated at {new Date(data.generatedAt).toLocaleString()} ·
-            <Link href="/admin" style={{ color: '#10B981', marginLeft: 6 }}>Back to admin</Link>
+            <Link href="/admin" style={{ color: 'var(--msp-bull)', marginLeft: 6 }}>Back to admin</Link>
           </div>
         </>
       )}

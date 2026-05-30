@@ -53,7 +53,7 @@ export default function MlScorerPage() {
           </p>
         </div>
         <button onClick={train} disabled={loading}
-          style={{ background: '#10B981', color: '#0F172A', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
+          style={{ background: 'var(--msp-bull)', color: 'var(--msp-bg)', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer' }}>
           {loading ? 'Training…' : 'Re-train'}
         </button>
       </div>
@@ -93,7 +93,7 @@ export default function MlScorerPage() {
               {model.topFeatures.map((f) => (
                 <tr key={f.name} style={{ borderTop: '1px solid #1F2937' }}>
                   <td style={td}><code>{f.name}</code></td>
-                  <td style={{ ...td, textAlign: 'right', color: f.weight >= 0 ? '#10B981' : '#EF4444' }}>
+                  <td style={{ ...td, textAlign: 'right', color: f.weight >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                     {(f.weight >= 0 ? '+' : '') + f.weight.toFixed(3)}
                   </td>
                   <td style={td}>{f.weight >= 0 ? 'increases win prob' : 'decreases win prob'}</td>
@@ -104,8 +104,8 @@ export default function MlScorerPage() {
 
           <div style={{ marginTop: 16, fontSize: 11, color: '#6B7280' }}>
             Trained {new Date(model.trainedAt).toLocaleString()} ·{' '}
-            <Link href="/admin/edge-ledger" style={{ color: '#10B981' }}>edge ledger</Link> ·{' '}
-            <Link href="/admin/operator-health" style={{ color: '#10B981' }}>calibration</Link>
+            <Link href="/admin/edge-ledger" style={{ color: 'var(--msp-bull)' }}>edge ledger</Link> ·{' '}
+            <Link href="/admin/operator-health" style={{ color: 'var(--msp-bull)' }}>calibration</Link>
           </div>
         </>
       )}
@@ -115,7 +115,7 @@ export default function MlScorerPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ background: '#0F172A', border: '1px solid #1F2937', borderRadius: 8, padding: 12 }}>
+    <div style={{ background: 'var(--msp-bg)', border: '1px solid #1F2937', borderRadius: 8, padding: 12 }}>
       <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</div>
       <div style={{ fontSize: 22, color: '#F3F4F6', fontWeight: 700, marginTop: 4 }}>{value}</div>
     </div>
