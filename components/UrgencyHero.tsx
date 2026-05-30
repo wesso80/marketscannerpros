@@ -112,12 +112,12 @@ export default function UrgencyHero() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#ef4444',
+              background: 'var(--msp-bear)',
               animation: 'pulse 1.5s ease-in-out infinite',
               boxShadow: '0 0 10px #ef4444'
             }} />
             <span style={{ color: '#fca5a5', fontSize: 14, fontWeight: 500 }}>
-              While you read this, <strong style={{ color: '#f87171' }}>{missedSignals} traders</strong> just found signals you're missing
+              While you read this, <strong style={{ color: 'var(--msp-bear)' }}>{missedSignals} traders</strong> just found signals you're missing
             </span>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function UrgencyHero() {
           }}>
             Every minute, <strong style={{ color: '#e5e7eb' }}>AI-powered signals</strong> reveal breakouts, 
             reversals, and momentum shifts across 500+ assets. 
-            <strong style={{ color: '#22c55e' }}> Most traders see them too late.</strong>
+            <strong style={{ color: 'var(--msp-bull)' }}> Most traders see them too late.</strong>
           </p>
         </div>
 
@@ -185,7 +185,7 @@ export default function UrgencyHero() {
             <div style={{
               fontSize: 36,
               fontWeight: 800,
-              color: '#f87171',
+              color: 'var(--msp-bear)',
               animation: 'countUp 0.5s ease'
             }}>
               {missedSignals}+
@@ -207,7 +207,7 @@ export default function UrgencyHero() {
             <div style={{
               fontSize: 36,
               fontWeight: 800,
-              color: '#22c55e'
+              color: 'var(--msp-bull)'
             }}>
               2,847
             </div>
@@ -304,13 +304,13 @@ export default function UrgencyHero() {
             flexWrap: 'wrap'
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#22c55e' }}>✓</span> No credit card required
+              <span style={{ color: 'var(--msp-bull)' }}>✓</span> No credit card required
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#22c55e' }}>✓</span> Instant access
+              <span style={{ color: 'var(--msp-bull)' }}>✓</span> Instant access
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#22c55e' }}>✓</span> Real-time market data
+              <span style={{ color: 'var(--msp-bull)' }}>✓</span> Real-time market data
             </span>
           </p>
         </div>

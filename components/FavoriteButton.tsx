@@ -43,7 +43,7 @@ export default function FavoriteButton({ pageKey }: { pageKey: string }) {
       style={{
         fontSize: 16,
         lineHeight: 1,
-        color: isFav ? '#FBBF24' : '#475569',
+        color: isFav ? 'var(--msp-warn)' : 'var(--msp-text-muted)',
         background: 'none',
         border: 'none',
         cursor: 'pointer',

@@ -93,7 +93,7 @@ export default function TrendingCoinsWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load trending</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load trending</div>
       </div>
     );
   }
@@ -115,7 +115,7 @@ export default function TrendingCoinsWidget() {
         flexWrap: 'wrap'
       }}>
         <h3 style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '16px', 
           fontWeight: 600,
           margin: 0,
@@ -128,8 +128,8 @@ export default function TrendingCoinsWidget() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{
             fontSize: '11px',
-            color: '#64748b',
-            background: '#0f172a',
+            color: 'var(--msp-text-muted)',
+            background: 'var(--msp-bg)',
             padding: '4px 8px',
             borderRadius: '4px'
           }}>
@@ -161,7 +161,7 @@ export default function TrendingCoinsWidget() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ 
-                color: index === 0 ? '#eab308' : '#64748b', 
+                color: index === 0 ? 'var(--msp-warn)' : 'var(--msp-text-muted)', 
                 fontSize: '12px', 
                 fontWeight: 600,
                 width: '20px'
@@ -175,20 +175,20 @@ export default function TrendingCoinsWidget() {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
-                <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 500 }}>
+                <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 500 }}>
                   {coin.symbol}
                 </div>
-                <div style={{ color: '#64748b', fontSize: '11px' }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>
                   {coin.name.length > 15 ? coin.name.slice(0, 15) + '...' : coin.name}
                 </div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 500, fontFamily: 'monospace' }}>
+              <div style={{ color: 'var(--msp-text)', fontSize: '13px', fontWeight: 500, fontFamily: 'monospace' }}>
                 {formatPrice(coin.price)}
               </div>
               <div style={{ 
-                color: (coin.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444', 
+                color: (coin.change24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', 
                 fontSize: '12px',
                 fontWeight: 500
               }}>
@@ -202,7 +202,7 @@ export default function TrendingCoinsWidget() {
       {/* Trending Categories */}
       {categories.length > 0 && (
         <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #334155' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase' }}>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase' }}>
             Hot Categories
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -214,7 +214,7 @@ export default function TrendingCoinsWidget() {
                   padding: '4px 10px',
                   borderRadius: '12px',
                   background: (cat.change1h ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  color: (cat.change1h ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                  color: (cat.change1h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                   border: `1px solid ${(cat.change1h ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                 }}
               >

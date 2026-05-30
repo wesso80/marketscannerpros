@@ -107,7 +107,7 @@ export default function DistributionChart({ label, stats, height = 80 }: Props) 
 
     // ── Median line
     const medX = toX(median);
-    ctx.strokeStyle = median >= 0 ? '#10B981' : '#F43F5E';
+    ctx.strokeStyle = median >= 0 ? 'var(--msp-bull)' : '#F43F5E';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(medX, cy - boxH / 2);

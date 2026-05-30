@@ -86,7 +86,7 @@ export default function NewListingsWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load new listings</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load new listings</div>
       </div>
     );
   }
@@ -108,7 +108,7 @@ export default function NewListingsWidget() {
         flexWrap: 'wrap'
       }}>
         <h3 style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '16px', 
           fontWeight: 600,
           margin: 0,
@@ -121,8 +121,8 @@ export default function NewListingsWidget() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{
             fontSize: '11px',
-            color: '#64748b',
-            background: '#0f172a',
+            color: 'var(--msp-text-muted)',
+            background: 'var(--msp-bg)',
             padding: '4px 8px',
             borderRadius: '4px'
           }}>
@@ -153,9 +153,9 @@ export default function NewListingsWidget() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
               <div style={{
-                background: coin.hoursAgo < 12 ? '#eab308' : 
+                background: coin.hoursAgo < 12 ? 'var(--msp-warn)' : 
                             coin.hoursAgo < 24 ? 'rgba(234, 179, 8, 0.3)' : 'rgba(100, 116, 139, 0.3)',
-                color: coin.hoursAgo < 24 ? '#000' : '#94a3b8',
+                color: coin.hoursAgo < 24 ? '#000' : 'var(--msp-flat)',
                 fontSize: '9px',
                 fontWeight: 700,
                 padding: '3px 6px',
@@ -166,7 +166,7 @@ export default function NewListingsWidget() {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ 
-                  color: '#f1f5f9', 
+                  color: 'var(--msp-text)', 
                   fontSize: '13px', 
                   fontWeight: 600,
                   overflow: 'hidden',
@@ -176,7 +176,7 @@ export default function NewListingsWidget() {
                   {coin.symbol}
                 </div>
                 <div style={{ 
-                  color: '#64748b', 
+                  color: 'var(--msp-text-muted)', 
                   fontSize: '10px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -188,7 +188,7 @@ export default function NewListingsWidget() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ 
-                color: '#f1f5f9', 
+                color: 'var(--msp-text)', 
                 fontSize: '12px', 
                 fontWeight: 500, 
                 fontFamily: 'monospace' 
@@ -197,7 +197,7 @@ export default function NewListingsWidget() {
               </div>
               {coin.change24h != null && (
                 <div style={{ 
-                  color: (coin.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444', 
+                  color: (coin.change24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', 
                   fontSize: '11px',
                   fontWeight: 500
                 }}>
@@ -217,7 +217,7 @@ export default function NewListingsWidget() {
         borderRadius: '8px',
         border: '1px solid rgba(234, 179, 8, 0.2)',
         fontSize: '11px',
-        color: '#eab308'
+        color: 'var(--msp-warn)'
       }}>
         ⚠️ New listings are high-risk. DYOR before investing. Many new coins fail.
       </div>

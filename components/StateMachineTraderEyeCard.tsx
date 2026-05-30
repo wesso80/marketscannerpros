@@ -107,11 +107,11 @@ export default function StateMachineTraderEyeCard({
   const stateMachine = payload?.state_machine;
 
   const stateColor = useMemo(() => {
-    if (!stateMachine) return '#94A3B8';
-    if (stateMachine.state === 'BLOCKED') return '#EF4444';
-    if (stateMachine.state === 'EXECUTE' || stateMachine.state === 'ARMED') return '#10B981';
-    if (stateMachine.state === 'STALK' || stateMachine.state === 'WATCH') return '#F59E0B';
-    return '#94A3B8';
+    if (!stateMachine) return 'var(--msp-flat)';
+    if (stateMachine.state === 'BLOCKED') return 'var(--msp-bear)';
+    if (stateMachine.state === 'EXECUTE' || stateMachine.state === 'ARMED') return 'var(--msp-bull)';
+    if (stateMachine.state === 'STALK' || stateMachine.state === 'WATCH') return 'var(--msp-warn)';
+    return 'var(--msp-flat)';
   }, [stateMachine]);
 
   const stateLabel = useMemo(() => {
@@ -144,11 +144,11 @@ export default function StateMachineTraderEyeCard({
         </div>
       </div>
 
-      <div style={{ color: '#E2E8F0', fontSize: '0.72rem' }}>
+      <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem' }}>
         <strong>WHY:</strong> {stateMachine?.audit?.transition_reason || 'No transition snapshot yet'}
       </div>
 
-      <div style={{ color: '#CBD5E1', fontSize: '0.7rem' }}>
+      <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
         <strong>WAITING FOR:</strong>{' '}
         {stateMachine?.gates?.trigger?.pass
           ? 'Trigger confirmed'
@@ -161,7 +161,7 @@ export default function StateMachineTraderEyeCard({
       </div>
 
       {stateMachine?.gates?.setup_quality?.invalidate_level !== null && stateMachine?.gates?.setup_quality?.invalidate_level !== undefined && (
-        <div style={{ color: '#CBD5E1', fontSize: '0.7rem' }}>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
           <strong>INVALIDATE:</strong> {stateMachine.gates.setup_quality.invalidate_level.toFixed(2)}
         </div>
       )}

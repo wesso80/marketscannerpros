@@ -38,12 +38,12 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
 
   const s = suggestion;
   const isBull = s.direction === 'bullish';
-  const dirColor = isBull ? '#10B981' : '#EF4444';
+  const dirColor = isBull ? 'var(--msp-bull)' : 'var(--msp-bear)';
   const dirLabel = isBull ? 'LONG' : 'SHORT';
   const confidence = Math.round(s.confidence_score * 100);
   const edgeMatch = Math.round(s.edge_match_score * 100);
 
-  const confColor = confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#94A3B8';
+  const confColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 50 ? 'var(--msp-warn)' : 'var(--msp-flat)';
 
   const expiresIn = getTimeRemaining(s.expires_at);
 
@@ -60,7 +60,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
 
   if (done) {
     const label = acting === 'accept' ? 'Logged — journal entry created' : 'Dismissed';
-    const color = acting === 'accept' ? '#10B981' : '#94A3B8';
+    const color = acting === 'accept' ? 'var(--msp-bull)' : 'var(--msp-flat)';
     return (
       <div className="msp-card" style={{ padding: '0.7rem 0.9rem', opacity: 0.7 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -76,10 +76,10 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
       {/* ── Header: Symbol + Direction + Confidence ─────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <span style={{ color: '#F1F5F9', fontWeight: 800, fontSize: '1.05rem' }}>{s.symbol}</span>
+          <span style={{ color: 'var(--msp-text)', fontWeight: 800, fontSize: '1.05rem' }}>{s.symbol}</span>
           <span style={{
             background: dirColor,
-            color: '#0F172A',
+            color: 'var(--msp-bg)',
             padding: '0.1rem 0.4rem',
             borderRadius: '0.25rem',
             fontWeight: 800,
@@ -91,7 +91,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
           {s.asset_class && (
             <span style={{
               background: 'rgba(148,163,184,0.15)',
-              color: '#94A3B8',
+              color: 'var(--msp-flat)',
               padding: '0.1rem 0.35rem',
               borderRadius: '0.2rem',
               fontSize: '0.62rem',
@@ -106,13 +106,13 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
           <span style={{ color: confColor, fontWeight: 800, fontSize: '0.78rem' }}>
             {confidence}% confluence
           </span>
-          <span style={{ color: '#64748B', fontSize: '0.65rem' }}>{expiresIn}</span>
+          <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.65rem' }}>{expiresIn}</span>
         </div>
       </div>
 
       {/* ── Setup description ──────────────────────────────────────── */}
       {s.setup && (
-        <div style={{ color: '#CBD5E1', fontSize: '0.78rem', marginTop: '0.4rem', lineHeight: 1.4 }}>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.78rem', marginTop: '0.4rem', lineHeight: 1.4 }}>
           {s.setup}
         </div>
       )}
@@ -143,13 +143,13 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
         display: 'flex',
         gap: '1rem',
         marginTop: '0.45rem',
-        color: '#94A3B8',
+        color: 'var(--msp-flat)',
         fontSize: '0.7rem',
         flexWrap: 'wrap',
       }}>
-        <span>Scanner: <strong style={{ color: '#CBD5E1' }}>{s.scanner_score}</strong>/100</span>
-        <span>Alignment Match: <strong style={{ color: '#CBD5E1' }}>{edgeMatch}%</strong></span>
-        {s.strategy && <span>Strategy: <strong style={{ color: '#CBD5E1' }}>{s.strategy.replace(/_/g, ' ')}</strong></span>}
+        <span>Scanner: <strong style={{ color: 'var(--msp-text)' }}>{s.scanner_score}</strong>/100</span>
+        <span>Alignment Match: <strong style={{ color: 'var(--msp-text)' }}>{edgeMatch}%</strong></span>
+        {s.strategy && <span>Strategy: <strong style={{ color: 'var(--msp-text)' }}>{s.strategy.replace(/_/g, ' ')}</strong></span>}
       </div>
 
       {/* ── Action buttons ─────────────────────────────────────────── */}
@@ -158,8 +158,8 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
           onClick={() => handleAction('accept')}
           disabled={acting !== null}
           style={{
-            background: '#10B981',
-            color: '#0F172A',
+            background: 'var(--msp-bull)',
+            color: 'var(--msp-bg)',
             border: 'none',
             borderRadius: '0.35rem',
             padding: '0.4rem 0.9rem',
@@ -176,7 +176,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
           disabled={acting !== null}
           style={{
             background: 'transparent',
-            color: '#94A3B8',
+            color: 'var(--msp-flat)',
             border: '1px solid rgba(148,163,184,0.3)',
             borderRadius: '0.35rem',
             padding: '0.4rem 0.9rem',
@@ -203,7 +203,7 @@ function LevelBox({ label, value, color }: { label: string; value: string; color
       padding: '0.35rem 0.5rem',
       textAlign: 'center',
     }}>
-      <div style={{ color: '#64748B', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase' }}>
+      <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase' }}>
         {label}
       </div>
       <div style={{ color, fontWeight: 800, fontSize: '0.82rem', marginTop: '0.1rem' }}>

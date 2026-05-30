@@ -83,7 +83,7 @@ export default function SuggestionsWidget() {
           Scenario Ideas
         </div>
         <div style={{
-          color: '#F59E0B',
+          color: 'var(--msp-warn)',
           fontSize: '0.65rem',
           fontWeight: 700,
         }}>

@@ -20,10 +20,10 @@ const INSIGHT_CODES: Record<string, string> = {
 };
 
 const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string }> = {
-  strength: { border: '#10B981', bg: 'rgba(16,185,129,0.08)', text: '#6EE7B7' },
-  weakness: { border: '#EF4444', bg: 'rgba(239,68,68,0.08)', text: '#FCA5A5' },
+  strength: { border: 'var(--msp-bull)', bg: 'rgba(16,185,129,0.08)', text: '#6EE7B7' },
+  weakness: { border: 'var(--msp-bear)', bg: 'rgba(239,68,68,0.08)', text: '#FCA5A5' },
   pattern:  { border: '#6366F1', bg: 'rgba(99,102,241,0.08)', text: '#A5B4FC' },
-  caution:  { border: '#F59E0B', bg: 'rgba(245,158,11,0.08)', text: '#FCD34D' },
+  caution:  { border: 'var(--msp-warn)', bg: 'rgba(245,158,11,0.08)', text: '#FCD34D' },
 };
 
 /* ── Sub-components ─────────────────────────────────────────────────── */
@@ -32,7 +32,7 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
   const colors = INSIGHT_COLORS[insight.type] ?? INSIGHT_COLORS.pattern;
   const code = INSIGHT_CODES[insight.type] ?? 'EDGE';
   const edgeLabel = insight.confidence >= 0.7 ? 'Established pattern' : insight.confidence >= 0.4 ? 'Developing pattern' : 'Early observation';
-  const edgeLabelColor = insight.confidence >= 0.7 ? '#10B981' : insight.confidence >= 0.4 ? '#F59E0B' : '#6B7280';
+  const edgeLabelColor = insight.confidence >= 0.7 ? 'var(--msp-bull)' : insight.confidence >= 0.4 ? 'var(--msp-warn)' : '#6B7280';
 
   return (
     <div
@@ -67,7 +67,7 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = pct >= 70 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#6B7280';
+  const color = pct >= 70 ? 'var(--msp-bull)' : pct >= 40 ? 'var(--msp-warn)' : '#6B7280';
   return (
     <div className="flex items-center gap-1.5">
       <div className="w-12 h-1.5 rounded-full bg-slate-700 overflow-hidden">
@@ -84,10 +84,10 @@ function ConfidenceBar({ value }: { value: number }) {
 function OverallStats({ overall }: { overall: EdgeSlice }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <StatCell label="Win Rate" value={`${(overall.winRate * 100).toFixed(0)}%`} color={overall.winRate >= 0.5 ? '#10B981' : '#EF4444'} />
-      <StatCell label="Avg R" value={`${overall.avgR.toFixed(2)}R`} color={overall.avgR >= 0 ? '#10B981' : '#EF4444'} />
-      <StatCell label="Profit Factor" value={overall.profitFactor === Infinity ? '∞' : overall.profitFactor.toFixed(2)} color={overall.profitFactor >= 1 ? '#10B981' : '#EF4444'} />
-      <StatCell label="Expectancy" value={`${overall.expectancy.toFixed(2)}R`} color={overall.expectancy >= 0 ? '#10B981' : '#EF4444'} />
+      <StatCell label="Win Rate" value={`${(overall.winRate * 100).toFixed(0)}%`} color={overall.winRate >= 0.5 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
+      <StatCell label="Avg R" value={`${overall.avgR.toFixed(2)}R`} color={overall.avgR >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
+      <StatCell label="Profit Factor" value={overall.profitFactor === Infinity ? '∞' : overall.profitFactor.toFixed(2)} color={overall.profitFactor >= 1 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
+      <StatCell label="Expectancy" value={`${overall.expectancy.toFixed(2)}R`} color={overall.expectancy >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
     </div>
   );
 }

@@ -48,20 +48,20 @@ export default function FearGreedHistory({
   }, []);
 
   const getColor = (val: number) => {
-    if (val <= 19) return '#dc2626'; // Extreme Fear
+    if (val <= 19) return 'var(--msp-bear)'; // Extreme Fear
     if (val <= 39) return '#f97316'; // Fear
-    if (val <= 59) return '#eab308'; // Neutral
-    if (val <= 79) return '#84cc16'; // Greed
-    return '#22c55e'; // Extreme Greed
+    if (val <= 59) return 'var(--msp-warn)'; // Neutral
+    if (val <= 79) return 'var(--msp-bull)'; // Greed
+    return 'var(--msp-bull)'; // Extreme Greed
   };
 
   const getZoneColor = (zone: string) => {
     switch (zone) {
-      case 'Extreme Fear': return '#dc2626';
+      case 'Extreme Fear': return 'var(--msp-bear)';
       case 'Fear': return '#f97316';
-      case 'Neutral': return '#eab308';
-      case 'Greed': return '#84cc16';
-      case 'Extreme Greed': return '#22c55e';
+      case 'Neutral': return 'var(--msp-warn)';
+      case 'Greed': return 'var(--msp-bull)';
+      case 'Extreme Greed': return 'var(--msp-bull)';
       default: return '#6b7280';
     }
   };

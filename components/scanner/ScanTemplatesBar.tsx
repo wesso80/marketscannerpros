@@ -30,7 +30,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
       volatilityState: 'moderate',
       quality: 'high',
     },
-    color: '#10B981',
+    color: 'var(--msp-bull)',
   },
   {
     id: 'breakout',
@@ -43,7 +43,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
       volatilityState: 'high',
       quality: 'all',
     },
-    color: '#F59E0B',
+    color: 'var(--msp-warn)',
   },
   {
     id: 'mean_reversion',
@@ -96,7 +96,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
       volatilityState: 'all',
       quality: 'high',
     },
-    color: '#10B981',
+    color: 'var(--msp-bull)',
   },
 ];
 
@@ -123,7 +123,7 @@ export default function ScanTemplatesBar({ onSelect, activeId }: ScanTemplatesBa
               borderRadius: 8,
               border: `1px solid ${isActive ? tmpl.color : 'rgba(51, 65, 85, 0.5)'}`,
               background: isActive ? `${tmpl.color}18` : 'rgba(15, 23, 42, 0.4)',
-              color: isActive ? tmpl.color : '#94a3b8',
+              color: isActive ? tmpl.color : 'var(--msp-flat)',
               fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',

@@ -99,7 +99,7 @@ export default function TopMoversWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load top movers</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load top movers</div>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export default function TopMoversWidget() {
         marginBottom: '16px'
       }}>
         <h3 style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '16px', 
           fontWeight: 600,
           margin: 0,
@@ -146,8 +146,8 @@ export default function TopMoversWidget() {
                 borderRadius: '4px',
                 border: 'none',
                 cursor: 'pointer',
-                background: duration === d ? '#10b981' : '#0f172a',
-                color: duration === d ? '#000' : '#64748b',
+                background: duration === d ? 'var(--msp-bull)' : 'var(--msp-bg)',
+                color: duration === d ? '#000' : 'var(--msp-text-muted)',
                 transition: 'all 0.2s'
               }}
             >
@@ -162,7 +162,7 @@ export default function TopMoversWidget() {
         display: 'flex', 
         gap: '8px', 
         marginBottom: '16px',
-        background: '#0f172a',
+        background: 'var(--msp-bg)',
         padding: '4px',
         borderRadius: '8px'
       }}>
@@ -178,7 +178,7 @@ export default function TopMoversWidget() {
             border: 'none',
             cursor: 'pointer',
             background: view === 'gainers' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-            color: view === 'gainers' ? '#10b981' : '#64748b',
+            color: view === 'gainers' ? 'var(--msp-bull)' : 'var(--msp-text-muted)',
             transition: 'all 0.2s'
           }}
         >
@@ -196,7 +196,7 @@ export default function TopMoversWidget() {
             border: 'none',
             cursor: 'pointer',
             background: view === 'losers' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-            color: view === 'losers' ? '#ef4444' : '#64748b',
+            color: view === 'losers' ? 'var(--msp-bear)' : 'var(--msp-text-muted)',
             transition: 'all 0.2s'
           }}
         >
@@ -223,7 +223,7 @@ export default function TopMoversWidget() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ 
-                color: '#64748b', 
+                color: 'var(--msp-text-muted)', 
                 fontSize: '11px', 
                 fontWeight: 600,
                 width: '18px'
@@ -237,20 +237,20 @@ export default function TopMoversWidget() {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
-                <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 500 }}>
+                <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 500 }}>
                   {coin.symbol}
                 </div>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px' }}>
                   Vol: {formatVolume(coin.volume)}
                 </div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 500, fontFamily: 'monospace' }}>
+              <div style={{ color: 'var(--msp-text)', fontSize: '13px', fontWeight: 500, fontFamily: 'monospace' }}>
                 {formatPrice(coin.price)}
               </div>
               <div style={{ 
-                color: (coin.change ?? 0) >= 0 ? '#10b981' : '#ef4444', 
+                color: (coin.change ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', 
                 fontSize: '13px',
                 fontWeight: 600
               }}>
@@ -268,7 +268,7 @@ export default function TopMoversWidget() {
         background: 'rgba(0,0,0,0.3)',
         borderRadius: '8px',
         fontSize: '11px',
-        color: '#64748b'
+        color: 'var(--msp-text-muted)'
       }}>
         💡 {view === 'gainers' 
           ? `Top ${duration} gainers often indicate momentum — review volume context before acting.`

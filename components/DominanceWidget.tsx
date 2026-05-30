@@ -72,7 +72,7 @@ export default function DominanceWidget() {
   // High USDT+USDC = bearish (money in stables), Low = bullish (money in risk assets)
   const stableDominance = data.usdt + data.usdc;
   const stableSentiment = stableDominance > 8 ? 'BEARISH' : stableDominance > 6 ? 'CAUTIOUS' : 'BULLISH';
-  const stableColor = stableDominance > 8 ? '#ef4444' : stableDominance > 6 ? '#f59e0b' : '#10b981';
+  const stableColor = stableDominance > 8 ? 'var(--msp-bear)' : stableDominance > 6 ? 'var(--msp-warn)' : 'var(--msp-bull)';
 
   if (data.loading) {
     return (
@@ -82,7 +82,7 @@ export default function DominanceWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#64748b', textAlign: 'center' }}>Loading dominance data...</div>
+        <div style={{ color: 'var(--msp-text-muted)', textAlign: 'center' }}>Loading dominance data...</div>
       </div>
     );
   }
@@ -95,7 +95,7 @@ export default function DominanceWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', textAlign: 'center' }}>Failed to load dominance</div>
+        <div style={{ color: 'var(--msp-bear)', textAlign: 'center' }}>Failed to load dominance</div>
       </div>
     );
   }
@@ -118,7 +118,7 @@ export default function DominanceWidget() {
       }}>
         <div>
           <h3 style={{ 
-            color: '#f1f5f9', 
+            color: 'var(--msp-text)', 
             fontSize: '16px', 
             fontWeight: 600,
             margin: 0,
@@ -138,14 +138,14 @@ export default function DominanceWidget() {
         </div>
         <div style={{
           fontSize: '11px',
-          color: '#64748b',
-          background: '#0f172a',
+          color: 'var(--msp-text-muted)',
+          background: 'var(--msp-bg)',
           padding: '4px 8px',
           borderRadius: '4px'
         }}>
           Total: {formatMarketCap(data.totalMarketCap)}
           <span style={{ 
-            color: data.totalMarketCapChange24h >= 0 ? '#10b981' : '#ef4444',
+            color: data.totalMarketCapChange24h >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
             marginLeft: '4px'
           }}>
             {data.totalMarketCapChange24h >= 0 ? '+' : ''}{data.totalMarketCapChange24h.toFixed(1)}%
@@ -164,7 +164,7 @@ export default function DominanceWidget() {
           <span style={{ color: '#f7931a', fontWeight: 600, fontSize: '14px' }}>
             ₿ BTC Dominance
           </span>
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '18px' }}>
+          <span style={{ color: 'var(--msp-text)', fontWeight: 700, fontSize: '18px' }}>
             {data.btc.toFixed(1)}%
           </span>
         </div>
@@ -184,7 +184,7 @@ export default function DominanceWidget() {
         </div>
         <div style={{ 
           fontSize: '11px', 
-          color: '#64748b', 
+          color: 'var(--msp-text-muted)', 
           marginTop: '4px'
         }}>
           {data.btc > 55 ? '🔥 BTC Season - Alts underperforming' : 
@@ -204,7 +204,7 @@ export default function DominanceWidget() {
           <span style={{ color: '#627eea', fontWeight: 600, fontSize: '14px' }}>
             Ξ ETH Dominance
           </span>
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '18px' }}>
+          <span style={{ color: 'var(--msp-text)', fontWeight: 700, fontSize: '18px' }}>
             {data.eth.toFixed(1)}%
           </span>
         </div>
@@ -235,7 +235,7 @@ export default function DominanceWidget() {
           <span style={{ color: '#26a17b', fontWeight: 600, fontSize: '14px' }}>
             💵 Stablecoin Dominance
           </span>
-          <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '18px' }}>
+          <span style={{ color: 'var(--msp-text)', fontWeight: 700, fontSize: '18px' }}>
             {stableDominance.toFixed(1)}%
           </span>
         </div>
@@ -259,7 +259,7 @@ export default function DominanceWidget() {
           fontSize: '11px', 
           marginTop: '6px'
         }}>
-          <span style={{ color: '#64748b' }}>
+          <span style={{ color: 'var(--msp-text-muted)' }}>
             USDT: {data.usdt.toFixed(2)}% | USDC: {data.usdc.toFixed(2)}%
           </span>
           <span style={{ 
@@ -273,16 +273,16 @@ export default function DominanceWidget() {
 
       {/* Interpretation */}
       <div style={{
-        background: '#0f172a',
+        background: 'var(--msp-bg)',
         borderRadius: '8px',
         padding: '12px',
         marginTop: '12px'
       }}>
-        <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
-          <strong style={{ color: '#f1f5f9' }}>📈 How to read:</strong><br/>
+        <div style={{ fontSize: '11px', color: 'var(--msp-flat)', lineHeight: 1.5 }}>
+          <strong style={{ color: 'var(--msp-text)' }}>📈 How to read:</strong><br/>
           • <span style={{ color: '#f7931a' }}>High BTC dominance</span> = Risk-off, BTC outperforms alts<br/>
           • <span style={{ color: '#26a17b' }}>High stablecoin dominance</span> = Money on sidelines, bearish<br/>
-          • <span style={{ color: '#10b981' }}>Low stablecoin dominance</span> = Money in market, bullish
+          • <span style={{ color: 'var(--msp-bull)' }}>Low stablecoin dominance</span> = Money in market, bullish
         </div>
       </div>
     </div>

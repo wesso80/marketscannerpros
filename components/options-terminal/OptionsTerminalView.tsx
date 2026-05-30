@@ -967,13 +967,13 @@ function OIHeatmapInline({ heatmap, spot }: { heatmap: OIHeatmapRow[]; spot: num
         return (
           <div key={row.strike} className="flex items-center gap-1 py-0.5">
             <div className="flex-1 h-3 flex justify-end">
-              <div className="h-full rounded-l-sm" style={{ width: `${callPct}%`, background: isWall ? '#2FB36E' : 'rgba(47,179,110,0.3)' }} />
+              <div className="h-full rounded-l-sm" style={{ width: `${callPct}%`, background: isWall ? 'var(--msp-bull)' : 'rgba(47,179,110,0.3)' }} />
             </div>
             <div className={`text-[9px] font-mono font-bold text-center w-12 shrink-0 ${isAtm ? 'text-emerald-300' : isWall ? 'text-yellow-300' : 'text-zinc-400'}`}>
               {row.strike.toFixed(0)}
             </div>
             <div className="flex-1 h-3 flex justify-start">
-              <div className="h-full rounded-r-sm" style={{ width: `${putPct}%`, background: isWall ? '#E46767' : 'rgba(228,103,103,0.3)' }} />
+              <div className="h-full rounded-r-sm" style={{ width: `${putPct}%`, background: isWall ? 'var(--msp-bear)' : 'rgba(228,103,103,0.3)' }} />
             </div>
           </div>
         );

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useFavorites } from '@/hooks/useFavorites';
 import { TOOL_CATALOG, TOOL_CATEGORIES, type ToolPage } from '@/lib/toolCatalog';
 
-function MyPagesMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function MyPagesMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -76,10 +76,10 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
             </div>
 
             <div className="grid self-start gap-1.5 sm:grid-cols-2">
-              <MyPagesMetric label="Saved" value={favoriteTools.length ? `${favoriteTools.length} pages` : 'Empty'} tone={favoriteTools.length ? '#10B981' : '#94A3B8'} detail={favoriteTools.length ? `Top: ${favoriteTools[0]?.label}` : 'Use Manage Pages to pin tools'} />
+              <MyPagesMetric label="Saved" value={favoriteTools.length ? `${favoriteTools.length} pages` : 'Empty'} tone={favoriteTools.length ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail={favoriteTools.length ? `Top: ${favoriteTools[0]?.label}` : 'Use Manage Pages to pin tools'} />
               <MyPagesMetric label="Catalog" value={`${TOOL_CATALOG.length} tools`} tone="#A5B4FC" detail={`${TOOL_CATEGORIES.length} categories available`} />
               <MyPagesMetric label="Coverage" value={favoriteTools.length ? `${Math.round((favoriteTools.length / TOOL_CATALOG.length) * 100)}%` : '0%'} tone="#F59E0B" detail="Share of catalog pinned" />
-              <MyPagesMetric label="Next Check" value={favoriteTools[0] ? `Open ${favoriteTools[0].label}` : 'Pin a page'} tone={favoriteTools[0] ? '#FBBF24' : '#94A3B8'} detail={favoriteTools[0] ? 'Resume from your top page' : 'Click Manage Pages to start'} />
+              <MyPagesMetric label="Next Check" value={favoriteTools[0] ? `Open ${favoriteTools[0].label}` : 'Pin a page'} tone={favoriteTools[0] ? 'var(--msp-warn)' : 'var(--msp-flat)'} detail={favoriteTools[0] ? 'Resume from your top page' : 'Click Manage Pages to start'} />
             </div>
           </div>
         </section>
@@ -103,7 +103,7 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
                 </div>
                 <span className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{tool.description}</span>
                 {tool.tier && (
-                  <span className="text-[9px] uppercase tracking-wider mt-auto" style={{ color: tool.tier === 'pro_trader' ? '#A78BFA' : '#10B981' }}>
+                  <span className="text-[9px] uppercase tracking-wider mt-auto" style={{ color: tool.tier === 'pro_trader' ? '#A78BFA' : 'var(--msp-bull)' }}>
                     {tool.tier.replace('_', ' ')}
                   </span>
                 )}

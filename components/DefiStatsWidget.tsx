@@ -84,14 +84,14 @@ export default function DefiStatsWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load DeFi stats</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load DeFi stats</div>
       </div>
     );
   }
 
   // DeFi health indicator
   const defiHealth = data.defiToEthRatio > 50 ? 'Strong' : data.defiToEthRatio > 30 ? 'Healthy' : 'Weak';
-  const healthColor = data.defiToEthRatio > 50 ? '#10b981' : data.defiToEthRatio > 30 ? '#eab308' : '#ef4444';
+  const healthColor = data.defiToEthRatio > 50 ? 'var(--msp-bull)' : data.defiToEthRatio > 30 ? 'var(--msp-warn)' : 'var(--msp-bear)';
 
   return (
     <div style={{
@@ -110,7 +110,7 @@ export default function DefiStatsWidget() {
         flexWrap: 'wrap'
       }}>
         <h3 style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '16px', 
           fontWeight: 600,
           margin: 0,
@@ -154,10 +154,10 @@ export default function DefiStatsWidget() {
           borderRadius: '8px',
           border: '1px solid rgba(51, 65, 85, 0.5)'
         }}>
-          <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
             DeFi Market Cap
           </div>
-          <div style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700 }}>
+          <div style={{ color: 'var(--msp-text)', fontSize: '18px', fontWeight: 700 }}>
             {formatValue(data.marketCap)}
           </div>
         </div>
@@ -169,10 +169,10 @@ export default function DefiStatsWidget() {
           borderRadius: '8px',
           border: '1px solid rgba(51, 65, 85, 0.5)'
         }}>
-          <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
             24h Volume
           </div>
-          <div style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700 }}>
+          <div style={{ color: 'var(--msp-text)', fontSize: '18px', fontWeight: 700 }}>
             {formatValue(data.volume24h)}
           </div>
         </div>
@@ -184,10 +184,10 @@ export default function DefiStatsWidget() {
           borderRadius: '8px',
           border: '1px solid rgba(51, 65, 85, 0.5)'
         }}>
-          <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
             DeFi Dominance
           </div>
-          <div style={{ color: '#10b981', fontSize: '18px', fontWeight: 700 }}>
+          <div style={{ color: 'var(--msp-bull)', fontSize: '18px', fontWeight: 700 }}>
             {(data.dominance ?? 0).toFixed(2)}%
           </div>
         </div>
@@ -199,7 +199,7 @@ export default function DefiStatsWidget() {
           borderRadius: '8px',
           border: '1px solid rgba(51, 65, 85, 0.5)'
         }}>
-          <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
             DeFi/ETH Ratio
           </div>
           <div style={{ color: 'var(--msp-accent)', fontSize: '18px', fontWeight: 700 }}>
@@ -222,12 +222,12 @@ export default function DefiStatsWidget() {
           <div style={{ color: '#a78bfa', fontSize: '10px', textTransform: 'uppercase' }}>
             Top DeFi Coin
           </div>
-          <div style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>
+          <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 600, marginTop: '2px' }}>
             {data.topCoin}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ color: '#64748b', fontSize: '10px' }}>DeFi Dominance</div>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px' }}>DeFi Dominance</div>
           <div style={{ color: 'var(--msp-accent)', fontSize: '16px', fontWeight: 700 }}>
             {(data.topCoinDominance ?? 0).toFixed(1)}%
           </div>

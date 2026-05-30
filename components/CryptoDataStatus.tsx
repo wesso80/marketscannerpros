@@ -33,7 +33,7 @@ function getStatusStyles(status: FreshnessStatus) {
   return {
     border: '1px solid rgba(100, 116, 139, 0.28)',
     background: 'rgba(100, 116, 139, 0.12)',
-    color: '#94a3b8',
+    color: 'var(--msp-flat)',
   };
 }
 
@@ -68,7 +68,7 @@ export default function CryptoDataStatus({ source, freshnessStatus, lastUpdated 
       >
         {getLabel(normalizedStatus)}
       </span>
-      <span style={{ color: '#64748b', fontSize: '10px' }}>
+      <span style={{ color: 'var(--msp-text-muted)', fontSize: '10px' }}>
         {normalizedSource}
         {lastUpdated ? ` • ${new Date(lastUpdated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
       </span>

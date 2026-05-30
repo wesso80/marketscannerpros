@@ -80,7 +80,7 @@ export default function TrendingPoolsWidget() {
     if (lower.includes('polygon') || lower.includes('matic')) return '#8247e5';
     if (lower.includes('bsc') || lower.includes('bnb')) return '#f3ba2f';
     if (lower.includes('avalanche') || lower.includes('avax')) return '#e84142';
-    return '#64748b';
+    return 'var(--msp-text-muted)';
   };
 
   if (loading) {
@@ -111,7 +111,7 @@ export default function TrendingPoolsWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load trending pools</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load trending pools</div>
       </div>
     );
   }
@@ -133,7 +133,7 @@ export default function TrendingPoolsWidget() {
         flexWrap: 'wrap'
       }}>
         <h3 style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '16px', 
           fontWeight: 600,
           margin: 0,
@@ -182,7 +182,7 @@ export default function TrendingPoolsWidget() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ 
-                    color: '#f1f5f9', 
+                    color: 'var(--msp-text)', 
                     fontSize: '13px', 
                     fontWeight: 600,
                     overflow: 'hidden',
@@ -207,7 +207,7 @@ export default function TrendingPoolsWidget() {
                       padding: '2px 6px',
                       borderRadius: '4px',
                       background: 'rgba(100, 116, 139, 0.2)',
-                      color: '#94a3b8'
+                      color: 'var(--msp-flat)'
                     }}>
                       {pool.dex.length > 12 ? pool.dex.slice(0, 12) : pool.dex}
                     </span>
@@ -215,13 +215,13 @@ export default function TrendingPoolsWidget() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ 
-                    color: (pool.priceChange24h ?? 0) >= 0 ? '#10b981' : '#ef4444', 
+                    color: (pool.priceChange24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', 
                     fontSize: '14px',
                     fontWeight: 700
                   }}>
                     {(pool.priceChange24h ?? 0) >= 0 ? '+' : ''}{(pool.priceChange24h ?? 0).toFixed(1)}%
                   </div>
-                  <div style={{ color: '#64748b', fontSize: '10px' }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '10px' }}>
                     1h: {(pool.priceChange1h ?? 0) >= 0 ? '+' : ''}{(pool.priceChange1h ?? 0).toFixed(1)}%
                   </div>
                 </div>
@@ -232,14 +232,14 @@ export default function TrendingPoolsWidget() {
                 display: 'flex', 
                 justifyContent: 'space-between',
                 fontSize: '10px',
-                color: '#94a3b8',
+                color: 'var(--msp-flat)',
                 borderTop: '1px solid rgba(51, 65, 85, 0.5)',
                 paddingTop: '8px',
                 marginTop: '4px'
               }}>
                 <span>Vol: {formatVolume(pool.volume24h)}</span>
                 <span>Liq: {formatVolume(pool.liquidity)}</span>
-                <span style={{ color: buyRatio > 50 ? '#10b981' : '#ef4444' }}>
+                <span style={{ color: buyRatio > 50 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                   {buyRatio.toFixed(0)}% buys
                 </span>
               </div>
@@ -255,7 +255,7 @@ export default function TrendingPoolsWidget() {
         background: 'rgba(0,0,0,0.3)',
         borderRadius: '8px',
         fontSize: '11px',
-        color: '#64748b'
+        color: 'var(--msp-text-muted)'
       }}>
         💡 Trending pools across all DEXs. High volume + high buy ratio = strong demand.
       </div>

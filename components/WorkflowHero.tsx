@@ -94,7 +94,7 @@ export default function WorkflowHero() {
 
           <p style={{
             fontSize: 'clamp(16px, 2vw, 20px)',
-            color: '#94a3b8',
+            color: 'var(--msp-flat)',
             maxWidth: 780,
             margin: '0 auto 40px',
             lineHeight: 1.7
@@ -198,7 +198,7 @@ export default function WorkflowHero() {
           transition: 'all 0.8s ease 0.6s'
         }}>
           <p style={{
-            color: '#64748b',
+            color: 'var(--msp-text-muted)',
             fontSize: 13,
             fontWeight: 500,
             letterSpacing: '0.02em'

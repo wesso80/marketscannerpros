@@ -82,19 +82,19 @@ export default function EvolutionStatusCard({ compact = true }: { compact?: bool
         <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>
           System Adaptation Status
         </div>
-        <div style={{ color: '#10B981', fontSize: '0.72rem', fontWeight: 800 }}>
+        <div style={{ color: 'var(--msp-bull)', fontSize: '0.72rem', fontWeight: 800 }}>
           {latest.cadence.toUpperCase()} • CONFL {Math.round(latest.confidence * 100)}%
         </div>
       </div>
 
       {latest.changes_json.slice(0, 2).map((change, index) => (
-        <div key={index} style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
+        <div key={index} style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
           ✔ {formatAdaptationMessage(change)}
         </div>
       ))}
 
       {openVsMidday !== null && (
-        <div style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
+        <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
           ✔ Open session edge {openVsMidday >= 0 ? 'strengthening' : 'weakening'} ({Math.abs(openVsMidday * 100).toFixed(1)}%)
         </div>
       )}

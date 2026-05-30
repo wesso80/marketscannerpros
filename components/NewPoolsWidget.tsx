@@ -97,7 +97,7 @@ export default function NewPoolsWidget() {
         padding: '20px',
         border: '1px solid #334155',
         textAlign: 'center',
-        color: '#ef4444',
+        color: 'var(--msp-bear)',
       }}>
         {error}
       </div>
@@ -121,14 +121,14 @@ export default function NewPoolsWidget() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '20px' }}>🌱</span>
-          <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 600, margin: 0 }}>
+          <h3 style={{ color: 'var(--msp-text)', fontSize: '16px', fontWeight: 600, margin: 0 }}>
             New DEX Pools
           </h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{
             fontSize: '10px',
-            color: '#10b981',
+            color: 'var(--msp-bull)',
             background: 'rgba(16, 185, 129, 0.15)',
             padding: '4px 8px',
             borderRadius: '12px',
@@ -169,7 +169,7 @@ export default function NewPoolsWidget() {
                 </span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ 
-                    color: '#f1f5f9', 
+                    color: 'var(--msp-text)', 
                     fontSize: '13px', 
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
@@ -180,7 +180,7 @@ export default function NewPoolsWidget() {
                     {pool.name}
                   </div>
                   <div style={{ 
-                    color: '#64748b', 
+                    color: 'var(--msp-text-muted)', 
                     fontSize: '10px',
                     display: 'flex',
                     gap: '6px',
@@ -194,11 +194,11 @@ export default function NewPoolsWidget() {
               </div>
 
               <div style={{ textAlign: 'center', minWidth: '70px' }}>
-                <div style={{ color: '#f1f5f9', fontSize: '12px', fontWeight: 600 }}>
+                <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 600 }}>
                   {formatPrice(pool.priceUsd)}
                 </div>
                 <div style={{ 
-                  color: (pool.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                  color: (pool.change24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                   fontSize: '10px',
                   fontWeight: 600
                 }}>
@@ -207,12 +207,12 @@ export default function NewPoolsWidget() {
               </div>
 
               <div style={{ textAlign: 'right', minWidth: '80px' }}>
-                <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>
                   Vol: {formatVolume(pool.volume24h)}
                 </div>
                 <div style={{ 
                   fontSize: '10px',
-                  color: buyRatio > 55 ? '#10b981' : buyRatio < 45 ? '#ef4444' : '#64748b'
+                  color: buyRatio > 55 ? 'var(--msp-bull)' : buyRatio < 45 ? 'var(--msp-bear)' : 'var(--msp-text-muted)'
                 }}>
                   {buyRatio.toFixed(0)}% buys
                 </div>
@@ -230,7 +230,7 @@ export default function NewPoolsWidget() {
         border: '1px solid rgba(234, 179, 8, 0.2)'
       }}>
         <p style={{ 
-          color: '#eab308', 
+          color: 'var(--msp-warn)', 
           fontSize: '10px', 
           margin: 0,
           display: 'flex',

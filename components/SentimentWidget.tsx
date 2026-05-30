@@ -59,11 +59,11 @@ export default function SentimentWidget({
   }, []);
 
   const getColor = (val: number) => {
-    if (val <= 24) return '#ef4444';
+    if (val <= 24) return 'var(--msp-bear)';
     if (val <= 44) return '#f97316';
-    if (val <= 55) return '#eab308';
-    if (val <= 75) return '#84cc16';
-    return '#22c55e';
+    if (val <= 55) return 'var(--msp-warn)';
+    if (val <= 75) return 'var(--msp-bull)';
+    return 'var(--msp-bull)';
   };
 
   const getEmoji = (val: number) => {

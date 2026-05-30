@@ -86,9 +86,9 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
 
   const tone = useMemo(() => {
     const score = data?.match?.adaptiveScore ?? 50;
-    if (score >= 70) return '#10B981';
-    if (score >= 50) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 70) return 'var(--msp-bull)';
+    if (score >= 50) return 'var(--msp-warn)';
+    return 'var(--msp-bear)';
   }, [data?.match?.adaptiveScore]);
 
   if (!data) return null;
@@ -102,7 +102,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
         <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
           MSP AI Personality Match
         </div>
-        <div style={{ color: data.match.noTradeBias ? '#EF4444' : tone, fontWeight: 800, fontSize: '0.75rem' }}>
+        <div style={{ color: data.match.noTradeBias ? 'var(--msp-bear)' : tone, fontWeight: 800, fontSize: '0.75rem' }}>
           {data.match.noTradeBias ? 'PATTERN MISMATCH' : `${data.match.adaptiveScore}% PATTERN ALIGNMENT`}
         </div>
       </div>
@@ -112,13 +112,13 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
         gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))',
         gap: '0.35rem',
         marginTop: '0.4rem',
-        color: '#CBD5E1',
+        color: 'var(--msp-text)',
         fontSize: '0.76rem',
       }}>
-        <div><span style={{ color: '#94A3B8' }}>Setup Fit:</span> <strong>{data.match.personalityMatch}%</strong></div>
-        <div><span style={{ color: '#94A3B8' }}>Style:</span> <strong>{data.profile?.styleBias || 'warming_up'}</strong></div>
-        <div><span style={{ color: '#94A3B8' }}>Risk DNA:</span> <strong>{data.profile?.riskDNA || 'warming_up'}</strong></div>
-        <div><span style={{ color: '#94A3B8' }}>Timing:</span> <strong>{data.profile?.decisionTiming?.replace('_', ' ') || 'warming_up'}</strong></div>
+        <div><span style={{ color: 'var(--msp-flat)' }}>Setup Fit:</span> <strong>{data.match.personalityMatch}%</strong></div>
+        <div><span style={{ color: 'var(--msp-flat)' }}>Style:</span> <strong>{data.profile?.styleBias || 'warming_up'}</strong></div>
+        <div><span style={{ color: 'var(--msp-flat)' }}>Risk DNA:</span> <strong>{data.profile?.riskDNA || 'warming_up'}</strong></div>
+        <div><span style={{ color: 'var(--msp-flat)' }}>Timing:</span> <strong>{data.profile?.decisionTiming?.replace('_', ' ') || 'warming_up'}</strong></div>
       </div>
 
       {data.institutionalFilter && (
@@ -135,7 +135,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
               Analytical Filter Engine
             </span>
             <span style={{
-              color: data.institutionalFilter.noTrade ? '#EF4444' : '#10B981',
+              color: data.institutionalFilter.noTrade ? 'var(--msp-bear)' : 'var(--msp-bull)',
               fontSize: '0.75rem',
               fontWeight: 800,
             }}>
@@ -145,7 +145,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
 
           <div style={{ display: 'grid', gap: '0.2rem' }}>
             {data.institutionalFilter.filters.slice(0, 4).map((filter, index) => (
-              <div key={index} style={{ color: '#CBD5E1', fontSize: '0.73rem' }}>
+              <div key={index} style={{ color: 'var(--msp-text)', fontSize: '0.73rem' }}>
                 {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
               </div>
             ))}
@@ -156,9 +156,9 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
       {!props.compact && (
         <div style={{ marginTop: '0.45rem', display: 'grid', gap: '0.2rem' }}>
           {(data.match.reasons || []).slice(0, 2).map((reason, index) => (
-            <div key={index} style={{ color: '#E2E8F0', fontSize: '0.76rem' }}>✔ {reason}</div>
+            <div key={index} style={{ color: 'var(--msp-text)', fontSize: '0.76rem' }}>✔ {reason}</div>
           ))}
-          <div style={{ color: '#94A3B8', fontSize: '0.72rem' }}>
+          <div style={{ color: 'var(--msp-flat)', fontSize: '0.72rem' }}>
             {data.profile ? `Profile: ${data.profile.sampleSize} closed trades (${data.profile.wins} wins)` : 'Profile warming up: close at least 6 trades in Journal'}
           </div>
         </div>

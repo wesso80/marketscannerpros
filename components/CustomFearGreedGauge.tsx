@@ -57,11 +57,11 @@ export default function CustomFearGreedGauge({
   }, [market]);
 
   const getColor = (val: number) => {
-    if (val <= 19) return '#dc2626'; // red-600 - extreme fear
+    if (val <= 19) return 'var(--msp-bear)'; // red-600 - extreme fear
     if (val <= 39) return '#f97316'; // orange-500 - fear
-    if (val <= 59) return '#eab308'; // yellow-500 - neutral
-    if (val <= 79) return '#84cc16'; // lime-500 - greed
-    return '#22c55e'; // green-500 - extreme greed
+    if (val <= 59) return 'var(--msp-warn)'; // yellow-500 - neutral
+    if (val <= 79) return 'var(--msp-bull)'; // lime-500 - greed
+    return 'var(--msp-bull)'; // green-500 - extreme greed
   };
 
   const getEmoji = (val: number) => {

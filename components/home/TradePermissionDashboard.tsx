@@ -231,7 +231,7 @@ export default function TradePermissionDashboard() {
             <div style={{ display: 'grid', gap: '0.45rem' }}>
               {STRATEGIES.map((strategy) => (
                 <div key={strategy} style={{ display: 'grid', gridTemplateColumns: 'minmax(min(80px, 100%), 1fr) auto auto', gap: '0.45rem', alignItems: 'center' }}>
-                  <div style={{ color: '#cbd5e1', fontSize: '0.74rem', fontWeight: 700 }}>{strategy.replaceAll('_', ' ')}</div>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem', fontWeight: 700 }}>{strategy.replaceAll('_', ' ')}</div>
                   {DIRECTIONS.map((direction) => {
                     const permission = snapshot?.matrix?.[strategy]?.[direction] || 'BLOCK';
                     return (
@@ -256,7 +256,7 @@ export default function TradePermissionDashboard() {
                 <span style={{ fontSize: '0.82rem', letterSpacing: '0.06em', color: 'var(--msp-text-faint)', textTransform: 'uppercase', fontWeight: 800 }}>
                   Alignment-Filtered Observations
                 </span>
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.4rem', borderRadius: 999, background: candidateSource === 'none' ? 'rgba(148,163,184,0.15)' : 'rgba(16,185,129,0.18)', color: candidateSource === 'none' ? '#cbd5e1' : '#10b981' }}>
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.4rem', borderRadius: 999, background: candidateSource === 'none' ? 'rgba(148,163,184,0.15)' : 'rgba(16,185,129,0.18)', color: candidateSource === 'none' ? 'var(--msp-text)' : 'var(--msp-bull)' }}>
                   {candidateSource === 'none' ? 'NO LIVE DATA' : 'LIVE'}
                 </span>
               </div>
@@ -271,7 +271,7 @@ export default function TradePermissionDashboard() {
                       padding: '0.16rem 0.52rem',
                       fontSize: '0.68rem',
                       fontWeight: 800,
-                      color: permissionFilter === filter ? '#e2e8f0' : '#94a3b8',
+                      color: permissionFilter === filter ? 'var(--msp-text)' : 'var(--msp-flat)',
                       background: permissionFilter === filter ? 'rgba(30,41,59,0.95)' : 'transparent',
                     }}
                   >
@@ -290,22 +290,22 @@ export default function TradePermissionDashboard() {
                 return (
                   <div key={candidate.symbol} style={{ border: '1px solid var(--msp-border)', borderRadius: 12, background: 'var(--msp-panel)', padding: '0.6rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                      <div style={{ color: '#e2e8f0', fontWeight: 800 }}>{candidate.symbol} · {candidate.structure}</div>
+                      <div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{candidate.symbol} · {candidate.structure}</div>
                       <div style={{ ...permissionStyle(p), borderRadius: 999, padding: '0.14rem 0.44rem', fontSize: '0.66rem', fontWeight: 800 }}>{permissionLabel(p)}</div>
                     </div>
 
-                    <div style={{ marginTop: '0.35rem', color: '#94a3b8', fontSize: '0.74rem' }}>
+                    <div style={{ marginTop: '0.35rem', color: 'var(--msp-flat)', fontSize: '0.74rem' }}>
                       {candidate.strategy_tag.replaceAll('_', ' ')} · {candidate.direction} · Confidence {candidate.confidence}%
                     </div>
 
                     {candidate.evaluated?.reason_codes?.length ? (
-                      <div style={{ marginTop: '0.35rem', color: '#cbd5e1', fontSize: '0.72rem' }}>
+                      <div style={{ marginTop: '0.35rem', color: 'var(--msp-text)', fontSize: '0.72rem' }}>
                         Why: {reasonCodeCopy(candidate.evaluated.reason_codes[0])}
                       </div>
                     ) : null}
 
                     {candidate.evaluated ? (
-                      <div style={{ marginTop: '0.28rem', color: '#94a3b8', fontSize: '0.72rem' }}>
+                      <div style={{ marginTop: '0.28rem', color: 'var(--msp-flat)', fontSize: '0.72rem' }}>
                         Exposure cap: {candidate.evaluated.max_position_size} · Invalidation floor: {candidate.evaluated.required_stop_min_distance.toFixed(2)}
                       </div>
                     ) : null}
@@ -317,7 +317,7 @@ export default function TradePermissionDashboard() {
                           borderRadius: 8,
                           border: blocked ? '1px solid var(--msp-border)' : '1px solid rgba(16,185,129,0.45)',
                           background: blocked ? 'rgba(30,41,59,0.45)' : 'rgba(16,185,129,0.16)',
-                          color: blocked ? '#64748b' : '#6ee7b7',
+                          color: blocked ? 'var(--msp-text-muted)' : '#6ee7b7',
                           padding: '0.32rem 0.56rem',
                           fontSize: '0.72rem',
                           fontWeight: 800,
@@ -331,7 +331,7 @@ export default function TradePermissionDashboard() {
                           borderRadius: 8,
                           border: '1px solid var(--msp-border)',
                           background: 'transparent',
-                          color: globalLocked ? '#64748b' : '#cbd5e1',
+                          color: globalLocked ? 'var(--msp-text-muted)' : 'var(--msp-text)',
                           padding: '0.32rem 0.56rem',
                           fontSize: '0.72rem',
                           fontWeight: 800,
@@ -345,7 +345,7 @@ export default function TradePermissionDashboard() {
                           textDecoration: 'none',
                           borderRadius: 8,
                           border: '1px solid var(--msp-border)',
-                          color: '#cbd5e1',
+                          color: 'var(--msp-text)',
                           padding: '0.32rem 0.56rem',
                           fontSize: '0.72rem',
                           fontWeight: 800,

@@ -152,11 +152,11 @@ export default function LiveMarketPulse() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#22c55e',
+              background: 'var(--msp-bull)',
               animation: 'liveDot 1.5s ease-in-out infinite',
               boxShadow: '0 0 10px #22c55e'
             }} />
-            <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>LIVE MARKET INTELLIGENCE</span>
+            <span style={{ color: 'var(--msp-bull)', fontWeight: 600, fontSize: 13 }}>LIVE MARKET INTELLIGENCE</span>
           </div>
           
           <h2 style={{
@@ -166,7 +166,7 @@ export default function LiveMarketPulse() {
             marginBottom: 12,
             lineHeight: 1.1
           }}>
-            See What Our AI is Finding <span style={{ color: '#22c55e' }}>Right Now</span>
+            See What Our AI is Finding <span style={{ color: 'var(--msp-bull)' }}>Right Now</span>
           </h2>
           <p style={{ color: '#9ca3af', fontSize: 16, maxWidth: 600, margin: '0 auto' }}>
             Real analysis. Real explanations. Real-time data. Watch the market intelligence unfold.
@@ -219,7 +219,7 @@ export default function LiveMarketPulse() {
                 </span>
                 <span style={{
                   background: signal.asset === 'crypto' ? 'rgba(251,191,36,0.15)' : 'rgba(96,165,250,0.15)',
-                  color: signal.asset === 'crypto' ? '#fbbf24' : '#60a5fa',
+                  color: signal.asset === 'crypto' ? 'var(--msp-warn)' : 'var(--msp-info)',
                   padding: '4px 10px',
                   borderRadius: 999,
                   fontSize: 11,
@@ -232,7 +232,7 @@ export default function LiveMarketPulse() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: '#e5e7eb', fontSize: 20, fontWeight: 600 }}>{signal.price}</span>
                 <span style={{
-                  color: signal.change.startsWith('+') ? '#22c55e' : '#ef4444',
+                  color: signal.change.startsWith('+') ? 'var(--msp-bull)' : 'var(--msp-bear)',
                   fontSize: 16,
                   fontWeight: 600,
                   background: signal.change.startsWith('+') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
@@ -261,7 +261,7 @@ export default function LiveMarketPulse() {
                 <div style={{
                   fontSize: 28,
                   fontWeight: 800,
-                  color: '#22c55e'
+                  color: 'var(--msp-bull)'
                 }}>
                   {signal.confidence}%
                 </div>
@@ -283,7 +283,7 @@ export default function LiveMarketPulse() {
             animation: isAnimating ? 'slideIn 0.4s ease-out 0.15s both' : 'none'
           }}>
             <span style={{ fontSize: 18 }}>🎯</span>
-            <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 15 }}>{signal.type}</span>
+            <span style={{ color: 'var(--msp-bull)', fontWeight: 700, fontSize: 15 }}>{signal.type}</span>
           </div>
 
           {/* AI Insight - the magic */}

@@ -334,7 +334,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
               style={{
                 padding: '6px 14px', fontSize: '12px', fontWeight: '600',
                 background: saveState === 'saved' ? 'rgba(16,185,129,0.16)' : 'rgba(59,130,246,0.12)',
-                color: saveState === 'saved' ? 'var(--msp-bull)' : '#93c5fd',
+                color: saveState === 'saved' ? 'var(--msp-bull)' : 'var(--msp-info)',
                 border: `1px solid ${saveState === 'saved' ? 'var(--msp-bull)' : 'rgba(147,197,253,0.7)'}`,
                 borderRadius: '8px', cursor: saveState === 'saving' ? 'wait' : 'pointer',
               }}

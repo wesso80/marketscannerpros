@@ -56,7 +56,7 @@ export default function PageHowItWorks({ route }: PageHowItWorksProps) {
             >
               {guide.badge}
             </span>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}>{guide.title}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--msp-text)' }}>{guide.title}</span>
             <Link href="/guide" style={{ marginLeft: 'auto', color: '#2dd4bf', fontSize: 12, textDecoration: 'none' }}>
               Full Guide →
             </Link>
@@ -77,7 +77,7 @@ export default function PageHowItWorks({ route }: PageHowItWorksProps) {
                   borderRadius: 999,
                   border: tab === item.key ? '1px solid rgba(45,212,191,0.6)' : '1px solid rgba(51,65,85,0.9)',
                   background: tab === item.key ? 'rgba(20,184,166,0.12)' : 'rgba(15,23,42,0.85)',
-                  color: tab === item.key ? '#2dd4bf' : '#94a3b8',
+                  color: tab === item.key ? '#2dd4bf' : 'var(--msp-flat)',
                   fontSize: 11,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -89,15 +89,15 @@ export default function PageHowItWorks({ route }: PageHowItWorksProps) {
           </div>
 
           {tab === 'overview' ? (
-            <p style={{ margin: 0, color: '#94a3b8', fontSize: 13 }}>{guide.summary}</p>
+            <p style={{ margin: 0, color: 'var(--msp-flat)', fontSize: 13 }}>{guide.summary}</p>
           ) : tab === 'steps' ? (
-            <ul style={{ margin: 0, paddingLeft: 16, color: '#94a3b8', fontSize: 13 }}>
+            <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--msp-flat)', fontSize: 13 }}>
               {guide.steps.map((step, index) => (
                 <li key={index} style={{ marginBottom: 4 }}>{step}</li>
               ))}
             </ul>
           ) : (
-            <ul style={{ margin: 0, paddingLeft: 16, color: '#94a3b8', fontSize: 13 }}>
+            <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--msp-flat)', fontSize: 13 }}>
               {guide.tips.map((tip, index) => (
                 <li key={index} style={{ marginBottom: 4 }}>{tip}</li>
               ))}

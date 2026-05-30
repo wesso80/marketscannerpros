@@ -70,7 +70,7 @@ export default function InteractiveChart({
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#94a3b8',
+        textColor: 'var(--msp-flat)',
         fontSize: 11,
         attributionLogo: true, // Required by Apache 2.0 license
       },
@@ -80,8 +80,8 @@ export default function InteractiveChart({
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: '#10B981' },
-        horzLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: '#10B981' },
+        vertLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: 'var(--msp-bull)' },
+        horzLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: 'var(--msp-bull)' },
       },
       rightPriceScale: {
         borderColor: 'rgba(51, 65, 85, 0.5)',
@@ -97,12 +97,12 @@ export default function InteractiveChart({
 
     // Candlestick series
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#10B981',
-      downColor: '#EF4444',
-      borderUpColor: '#10B981',
-      borderDownColor: '#EF4444',
-      wickUpColor: '#10B981',
-      wickDownColor: '#EF4444',
+      upColor: 'var(--msp-bull)',
+      downColor: 'var(--msp-bear)',
+      borderUpColor: 'var(--msp-bull)',
+      borderDownColor: 'var(--msp-bear)',
+      wickUpColor: 'var(--msp-bull)',
+      wickDownColor: 'var(--msp-bear)',
     });
     candleSeriesRef.current = candleSeries;
 
@@ -121,7 +121,7 @@ export default function InteractiveChart({
     // EMA 200 line
     if (showEMA) {
       const emaSeries = chart.addSeries(LineSeries, {
-        color: '#FBBF24',
+        color: 'var(--msp-warn)',
         lineWidth: 1,
         priceLineVisible: false,
         lastValueVisible: false,
@@ -234,12 +234,12 @@ export default function InteractiveChart({
             left: 12,
             zIndex: 2,
             fontSize: 12,
-            color: '#94a3b8',
+            color: 'var(--msp-flat)',
             fontWeight: 600,
             pointerEvents: 'none',
           }}
         >
-          {symbol} {interval && <span style={{ color: '#64748b' }}>· {interval}</span>}
+          {symbol} {interval && <span style={{ color: 'var(--msp-text-muted)' }}>· {interval}</span>}
         </div>
       )}
       <div ref={containerRef} style={{ width: '100%', height, borderRadius: 12, overflow: 'hidden' }} />

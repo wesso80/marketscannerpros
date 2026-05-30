@@ -58,9 +58,9 @@ export default function AdaptiveTraderPersonalityBar({ skill }: { skill: PageSki
 
   const toneColor = useMemo(() => {
     const score = data?.match?.adaptiveScore ?? 50;
-    if (score >= 70) return '#10B981';
-    if (score >= 50) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 70) return 'var(--msp-bull)';
+    if (score >= 50) return 'var(--msp-warn)';
+    return 'var(--msp-bear)';
   }, [data?.match?.adaptiveScore]);
 
   if (!data) return null;
@@ -79,17 +79,17 @@ export default function AdaptiveTraderPersonalityBar({ skill }: { skill: PageSki
         <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
           MSP Adaptive Trader Personality Layer
         </div>
-        <div style={{ color: data.match.noTradeBias ? '#EF4444' : toneColor, fontSize: '0.74rem', fontWeight: 800 }}>
+        <div style={{ color: data.match.noTradeBias ? 'var(--msp-bear)' : toneColor, fontSize: '0.74rem', fontWeight: 800 }}>
           {data.match.noTradeBias ? 'CAUTION FILTER ACTIVE' : `${data.match.adaptiveScore}% ADAPTIVE CONFLUENCE`}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.74rem', color: '#CBD5E1' }}>
-        <span><strong style={{ color: '#94A3B8' }}>Style:</strong> {labelStyle(data.profile?.styleBias)}</span>
-        <span><strong style={{ color: '#94A3B8' }}>Risk DNA:</strong> {data.profile?.riskDNA || 'warming_up'}</span>
-        <span><strong style={{ color: '#94A3B8' }}>Timing:</strong> {data.profile?.decisionTiming?.replace('_', ' ') || 'warming_up'}</span>
-        <span><strong style={{ color: '#94A3B8' }}>Fit:</strong> {data.match.personalityMatch}%</span>
-        <span><strong style={{ color: '#94A3B8' }}>Sample:</strong> {data.profile ? `${data.profile.sampleSize} closed / ${data.profile.wins} wins` : 'Need 6+ closed trades'}</span>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.74rem', color: 'var(--msp-text)' }}>
+        <span><strong style={{ color: 'var(--msp-flat)' }}>Style:</strong> {labelStyle(data.profile?.styleBias)}</span>
+        <span><strong style={{ color: 'var(--msp-flat)' }}>Risk DNA:</strong> {data.profile?.riskDNA || 'warming_up'}</span>
+        <span><strong style={{ color: 'var(--msp-flat)' }}>Timing:</strong> {data.profile?.decisionTiming?.replace('_', ' ') || 'warming_up'}</span>
+        <span><strong style={{ color: 'var(--msp-flat)' }}>Fit:</strong> {data.match.personalityMatch}%</span>
+        <span><strong style={{ color: 'var(--msp-flat)' }}>Sample:</strong> {data.profile ? `${data.profile.sampleSize} closed / ${data.profile.wins} wins` : 'Need 6+ closed trades'}</span>
       </div>
     </div>
   );

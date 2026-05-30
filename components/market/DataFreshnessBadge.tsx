@@ -1,10 +1,10 @@
 import type { MarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 
 export function providerStatusColor(status?: MarketDataProviderStatus | null): string {
-  if (!status) return '#64748B';
-  if (status.alertLevel === 'critical') return '#EF4444';
-  if (status.alertLevel === 'warning' || status.degraded || status.stale || status.simulated) return '#F59E0B';
-  return '#10B981';
+  if (!status) return 'var(--msp-text-muted)';
+  if (status.alertLevel === 'critical') return 'var(--msp-bear)';
+  if (status.alertLevel === 'warning' || status.degraded || status.stale || status.simulated) return 'var(--msp-warn)';
+  return 'var(--msp-bull)';
 }
 
 export function providerStatusLabel(status?: MarketDataProviderStatus | null): string {

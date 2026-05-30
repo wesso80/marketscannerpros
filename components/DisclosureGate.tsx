@@ -46,7 +46,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
 
   // Still loading — show minimal spinner rather than blank page
   if (accepted === null) return (
-    <div style={{ minHeight: '100vh', background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--msp-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #10B981', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -69,7 +69,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
       backdropFilter: 'blur(6px)',
     }}>
       <div style={{
-        background: '#0F172A',
+        background: 'var(--msp-bg)',
         border: '1px solid rgba(234,179,8,0.25)',
         borderRadius: 16,
         maxWidth: 620,
@@ -80,10 +80,10 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
       }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <span style={{ fontSize: 40 }}>⚠️</span>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#EAB308', margin: '12px 0 4px' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--msp-warn)', margin: '12px 0 4px' }}>
             Important Disclosure
           </h2>
-          <p style={{ fontSize: 13, color: '#94A3B8', margin: 0 }}>
+          <p style={{ fontSize: 13, color: 'var(--msp-flat)', margin: 0 }}>
             Please read and acknowledge before continuing
           </p>
         </div>
@@ -94,12 +94,12 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
           borderRadius: 10,
           padding: '16px 18px',
           fontSize: 13,
-          color: '#CBD5E1',
+          color: 'var(--msp-text)',
           lineHeight: 1.7,
           marginBottom: 20,
         }}>
           <p style={{ margin: '0 0 12px' }}>
-            <strong style={{ color: '#EAB308' }}>General Advice Warning:</strong>{' '}
+            <strong style={{ color: 'var(--msp-warn)' }}>General Advice Warning:</strong>{' '}
             MarketScanner Pros (&quot;MSP&quot;) provides <strong>general information only</strong>. 
             It does not consider your personal objectives, financial situation, or needs.
           </p>
@@ -124,9 +124,9 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
           </p>
           <p style={{ margin: 0 }}>
             By proceeding, you acknowledge that you have read and understood the full{' '}
-            <a href="/terms" target="_blank" style={{ color: '#10B981', textDecoration: 'underline' }}>Terms of Service</a>,{' '}
-            <a href="/disclaimer" target="_blank" style={{ color: '#10B981', textDecoration: 'underline' }}>Disclaimer</a>, and{' '}
-            <a href="/privacy" target="_blank" style={{ color: '#10B981', textDecoration: 'underline' }}>Privacy Policy</a>, 
+            <a href="/terms" target="_blank" style={{ color: 'var(--msp-bull)', textDecoration: 'underline' }}>Terms of Service</a>,{' '}
+            <a href="/disclaimer" target="_blank" style={{ color: 'var(--msp-bull)', textDecoration: 'underline' }}>Disclaimer</a>, and{' '}
+            <a href="/privacy" target="_blank" style={{ color: 'var(--msp-bull)', textDecoration: 'underline' }}>Privacy Policy</a>, 
             and agree to be bound by them.
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
           gap: 10,
           cursor: 'pointer',
           fontSize: 13,
-          color: '#E2E8F0',
+          color: 'var(--msp-text)',
           lineHeight: 1.5,
           marginBottom: 20,
           padding: '0 4px',
@@ -146,13 +146,13 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
             type="checkbox"
             checked={checked}
             onChange={(e) => setChecked(e.target.checked)}
-            style={{ marginTop: 3, accentColor: '#10B981', width: 16, height: 16, flexShrink: 0 }}
+            style={{ marginTop: 3, accentColor: 'var(--msp-bull)', width: 16, height: 16, flexShrink: 0 }}
           />
           <span>
             I acknowledge that MarketScanner Pros provides general information only and does not 
             provide financial advice. I accept full responsibility for my own investment decisions 
             and agree to the{' '}
-            <a href="/terms" target="_blank" style={{ color: '#10B981' }}>Terms of Service</a>.
+            <a href="/terms" target="_blank" style={{ color: 'var(--msp-bull)' }}>Terms of Service</a>.
           </span>
         </label>
 
@@ -167,8 +167,8 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
             fontSize: 15,
             fontWeight: 600,
             cursor: checked && !saving ? 'pointer' : 'not-allowed',
-            background: checked ? '#10B981' : '#334155',
-            color: checked ? '#061018' : '#64748B',
+            background: checked ? 'var(--msp-bull)' : '#334155',
+            color: checked ? '#061018' : 'var(--msp-text-muted)',
             transition: 'all 0.2s',
           }}
         >
@@ -178,7 +178,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
         <p style={{
           textAlign: 'center',
           fontSize: 11,
-          color: '#64748B',
+          color: 'var(--msp-text-muted)',
           marginTop: 12,
           margin: '12px 0 0',
         }}>

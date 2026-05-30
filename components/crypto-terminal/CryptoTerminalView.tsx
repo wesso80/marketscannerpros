@@ -146,7 +146,7 @@ function Sparkline({ data, width = 120, height = 36 }: { data: number[]; width?:
   const up = data[data.length - 1] >= data[0];
   return (
     <svg width={width} height={height} className="block">
-      <polyline fill="none" stroke={up ? '#10B981' : '#EF4444'} strokeWidth="1.5" points={points} />
+      <polyline fill="none" stroke={up ? 'var(--msp-bull)' : 'var(--msp-bear)'} strokeWidth="1.5" points={points} />
     </svg>
   );
 }

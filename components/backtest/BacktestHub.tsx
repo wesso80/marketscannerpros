@@ -454,7 +454,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     <div className="flex items-center gap-2 mb-2">
                       <Badge
                         label={result.validation.status}
-                        color={result.validation.status === 'validated' ? '#10B981' : result.validation.status === 'invalidated' ? '#EF4444' : '#F59E0B'}
+                        color={result.validation.status === 'validated' ? 'var(--msp-bull)' : result.validation.status === 'invalidated' ? 'var(--msp-bear)' : 'var(--msp-warn)'}
                         small
                       />
                       <span className="text-xs text-slate-400">{result.validation.reason}</span>
@@ -509,12 +509,12 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Strategy Diagnostics</h3>
                   <Badge
                     label={`${result.diagnostics.score}/100`}
-                    color={result.diagnostics.score >= 70 ? '#10B981' : result.diagnostics.score >= 40 ? '#F59E0B' : '#EF4444'}
+                    color={result.diagnostics.score >= 70 ? 'var(--msp-bull)' : result.diagnostics.score >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)'}
                     small
                   />
                   <Badge
                     label={result.diagnostics.verdict}
-                    color={result.diagnostics.verdict === 'healthy' ? '#10B981' : result.diagnostics.verdict === 'watch' ? '#F59E0B' : '#EF4444'}
+                    color={result.diagnostics.verdict === 'healthy' ? 'var(--msp-bull)' : result.diagnostics.verdict === 'watch' ? 'var(--msp-warn)' : 'var(--msp-bear)'}
                     small
                   />
                 </div>
@@ -583,7 +583,7 @@ function EquityCurveChart({ data }: { data: EquityPoint[] }) {
 
   const startVal = values[0] ?? 0;
   const endVal = values[values.length - 1] ?? 0;
-  const lineColor = endVal >= startVal ? '#10B981' : '#EF4444';
+  const lineColor = endVal >= startVal ? 'var(--msp-bull)' : 'var(--msp-bear)';
 
   return (
     <div className="w-full overflow-hidden">
@@ -632,7 +632,7 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
             {slice.map((t, i) => (
               <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                 <td className="py-2 px-2">
-                  <Badge label={t.side} color={t.side === 'LONG' ? '#10B981' : '#EF4444'} small />
+                  <Badge label={t.side} color={t.side === 'LONG' ? 'var(--msp-bull)' : 'var(--msp-bear)'} small />
                 </td>
                 <td className="py-2 px-2 text-slate-400 font-mono">{t.entryDate?.slice(0, 10)}</td>
                 <td className="py-2 px-2 text-slate-400 font-mono">{t.exitDate?.slice(0, 10)}</td>

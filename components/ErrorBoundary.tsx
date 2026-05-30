@@ -53,7 +53,7 @@ class ErrorBoundary extends Component<Props, State> {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '40px 20px',
-          background: '#0f172a'
+          background: 'var(--msp-bg)'
         }}>
           <div style={{
             maxWidth: '500px',
@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
             <h2 style={{ 
-              color: '#f1f5f9', 
+              color: 'var(--msp-text)', 
               fontSize: '24px', 
               fontWeight: '700', 
               marginBottom: '12px' 
@@ -74,7 +74,7 @@ class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h2>
             <p style={{ 
-              color: '#94a3b8', 
+              color: 'var(--msp-flat)', 
               fontSize: '14px', 
               lineHeight: '1.6',
               marginBottom: '24px' 
@@ -93,14 +93,14 @@ class ErrorBoundary extends Component<Props, State> {
                 overflow: 'auto'
               }}>
                 <code style={{ 
-                  color: '#ef4444', 
+                  color: 'var(--msp-bear)', 
                   fontSize: '12px',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word'
                 }}>
                   {this.state.error.toString()}
                   {this.state.errorInfo?.componentStack && (
-                    <div style={{ color: '#64748b', marginTop: '8px' }}>
+                    <div style={{ color: 'var(--msp-text-muted)', marginTop: '8px' }}>
                       {this.state.errorInfo.componentStack}
                     </div>
                   )}
@@ -140,19 +140,19 @@ class ErrorBoundary extends Component<Props, State> {
                   background: 'transparent',
                   border: '1px solid #334155',
                   borderRadius: '8px',
-                  color: '#94a3b8',
+                  color: 'var(--msp-flat)',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'border-color 0.2s, color 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#10b981';
-                  e.currentTarget.style.color = '#10b981';
+                  e.currentTarget.style.borderColor = 'var(--msp-bull)';
+                  e.currentTarget.style.color = 'var(--msp-bull)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = '#334155';
-                  e.currentTarget.style.color = '#94a3b8';
+                  e.currentTarget.style.color = 'var(--msp-flat)';
                 }}
               >
                 Go to Dashboard

@@ -127,7 +127,7 @@ export default function CategoryHeatmapWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load sectors</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load sectors</div>
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function CategoryHeatmapWidget() {
         marginBottom: '16px'
       }}>
         <h3 style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '16px', 
           fontWeight: 600,
           margin: 0,
@@ -175,8 +175,8 @@ export default function CategoryHeatmapWidget() {
             fontWeight: 600,
             background: marketSentiment === 'RISK ON' ? 'rgba(16, 185, 129, 0.2)' : 
                         marketSentiment === 'RISK OFF' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-            color: marketSentiment === 'RISK ON' ? '#10b981' : 
-                   marketSentiment === 'RISK OFF' ? '#ef4444' : '#94a3b8'
+            color: marketSentiment === 'RISK ON' ? 'var(--msp-bull)' : 
+                   marketSentiment === 'RISK OFF' ? 'var(--msp-bear)' : 'var(--msp-flat)'
           }}>
             {marketSentiment}
           </div>
@@ -204,8 +204,8 @@ export default function CategoryHeatmapWidget() {
             borderRadius: '4px',
             border: 'none',
             cursor: 'pointer',
-            background: sortBy === 'marketCap' ? '#10b981' : '#0f172a',
-            color: sortBy === 'marketCap' ? '#000' : '#64748b',
+            background: sortBy === 'marketCap' ? 'var(--msp-bull)' : 'var(--msp-bg)',
+            color: sortBy === 'marketCap' ? '#000' : 'var(--msp-text-muted)',
           }}
         >
           By Market Cap
@@ -220,8 +220,8 @@ export default function CategoryHeatmapWidget() {
             borderRadius: '4px',
             border: 'none',
             cursor: 'pointer',
-            background: sortBy === 'change24h' ? '#10b981' : '#0f172a',
-            color: sortBy === 'change24h' ? '#000' : '#64748b',
+            background: sortBy === 'change24h' ? 'var(--msp-bull)' : 'var(--msp-bg)',
+            color: sortBy === 'change24h' ? '#000' : 'var(--msp-text-muted)',
           }}
         >
           By Change
@@ -254,7 +254,7 @@ export default function CategoryHeatmapWidget() {
             }}>
               <span style={{ fontSize: '14px' }}>{getCategoryEmoji(cat.name)}</span>
               <span style={{ 
-                color: '#f1f5f9', 
+                color: 'var(--msp-text)', 
                 fontSize: '12px', 
                 fontWeight: 600,
                 overflow: 'hidden',
@@ -269,11 +269,11 @@ export default function CategoryHeatmapWidget() {
               justifyContent: 'space-between', 
               alignItems: 'flex-end' 
             }}>
-              <span style={{ color: '#94a3b8', fontSize: '10px' }}>
+              <span style={{ color: 'var(--msp-flat)', fontSize: '10px' }}>
                 {formatMarketCap(cat.marketCap)}
               </span>
               <span style={{ 
-                color: (cat.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                color: (cat.change24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
                 fontSize: '14px',
                 fontWeight: 700
               }}>
@@ -291,10 +291,10 @@ export default function CategoryHeatmapWidget() {
         background: 'rgba(0,0,0,0.3)',
         borderRadius: '8px',
         fontSize: '11px',
-        color: '#64748b'
+        color: 'var(--msp-text-muted)'
       }}>
         💡 {bullishCount}/{categories.length} sectors green • Avg change: {' '}
-        <span style={{ color: (avgChange ?? 0) >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+        <span style={{ color: (avgChange ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 600 }}>
           {(avgChange ?? 0) >= 0 ? '+' : ''}{(avgChange ?? 0).toFixed(1)}%
         </span>
       </div>

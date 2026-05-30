@@ -132,7 +132,7 @@ export function PriceChart({
                 {
                   label: `${symbol} Price`,
                   data: closes,
-                  borderColor: '#10B981',
+                  borderColor: 'var(--msp-bull)',
                   backgroundColor: 'rgba(16, 185, 129, 0.1)',
                   borderWidth: 2,
                   tension: 0.1,
@@ -143,7 +143,7 @@ export function PriceChart({
                 {
                   label: 'EMA 200',
                   data: ema200Data,
-                  borderColor: '#F59E0B',
+                  borderColor: 'var(--msp-warn)',
                   borderWidth: 1.5,
                   borderDash: [5, 5],
                   tension: 0.1,
@@ -160,12 +160,12 @@ export function PriceChart({
                 legend: {
                   display: true,
                   position: 'top',
-                  labels: { color: '#94A3B8', font: { size: 11 }, boxWidth: 12 },
+                  labels: { color: 'var(--msp-flat)', font: { size: 11 }, boxWidth: 12 },
                 },
                 tooltip: {
                   backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                  titleColor: '#F1F5F9',
-                  bodyColor: '#CBD5E1',
+                  titleColor: 'var(--msp-text)',
+                  bodyColor: 'var(--msp-text)',
                   borderColor: 'rgba(16, 185, 129, 0.3)',
                   borderWidth: 1,
                 },
@@ -173,12 +173,12 @@ export function PriceChart({
               scales: {
                 x: {
                   grid: { color: 'rgba(148, 163, 184, 0.1)' },
-                  ticks: { color: '#64748B', font: { size: 10 }, maxRotation: 0 },
+                  ticks: { color: 'var(--msp-text-muted)', font: { size: 10 }, maxRotation: 0 },
                 },
                 y: {
                   position: 'right',
                   grid: { color: 'rgba(148, 163, 184, 0.1)' },
-                  ticks: { color: '#64748B', font: { size: 10 } },
+                  ticks: { color: 'var(--msp-text-muted)', font: { size: 10 } },
                 },
               },
             },
@@ -213,12 +213,12 @@ export function PriceChart({
                 legend: {
                   display: true,
                   position: 'top',
-                  labels: { color: '#94A3B8', font: { size: 10 }, boxWidth: 10 },
+                  labels: { color: 'var(--msp-flat)', font: { size: 10 }, boxWidth: 10 },
                 },
                 tooltip: {
                   backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                  titleColor: '#F1F5F9',
-                  bodyColor: '#CBD5E1',
+                  titleColor: 'var(--msp-text)',
+                  bodyColor: 'var(--msp-text)',
                   borderColor: 'rgba(139, 92, 246, 0.3)',
                   borderWidth: 1,
                   callbacks: {
@@ -234,7 +234,7 @@ export function PriceChart({
                   max: 100,
                   grid: { color: 'rgba(148, 163, 184, 0.1)' },
                   ticks: { 
-                    color: '#64748B', 
+                    color: 'var(--msp-text-muted)', 
                     font: { size: 9 },
                     stepSize: 30,
                     callback: (v) => v === 70 ? '70' : v === 30 ? '30' : ''
@@ -313,12 +313,12 @@ export function PriceChart({
                 legend: {
                   display: true,
                   position: 'top',
-                  labels: { color: '#94A3B8', font: { size: 10 }, boxWidth: 10 },
+                  labels: { color: 'var(--msp-flat)', font: { size: 10 }, boxWidth: 10 },
                 },
                 tooltip: {
                   backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                  titleColor: '#F1F5F9',
-                  bodyColor: '#CBD5E1',
+                  titleColor: 'var(--msp-text)',
+                  bodyColor: 'var(--msp-text)',
                   borderColor: 'rgba(59, 130, 246, 0.3)',
                   borderWidth: 1,
                   callbacks: {
@@ -332,12 +332,12 @@ export function PriceChart({
               scales: {
                 x: {
                   grid: { color: 'rgba(148, 163, 184, 0.1)' },
-                  ticks: { color: '#64748B', font: { size: 9 }, maxRotation: 0 },
+                  ticks: { color: 'var(--msp-text-muted)', font: { size: 9 }, maxRotation: 0 },
                 },
                 y: {
                   position: 'right',
                   grid: { color: 'rgba(148, 163, 184, 0.1)' },
-                  ticks: { color: '#64748B', font: { size: 9 } },
+                  ticks: { color: 'var(--msp-text-muted)', font: { size: 9 } },
                 },
               },
             },

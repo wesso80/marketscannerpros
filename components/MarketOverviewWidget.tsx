@@ -71,7 +71,7 @@ export default function MarketOverviewWidget() {
     }).join(' ');
 
     const isUp = values[values.length - 1] > values[0];
-    const color = isUp ? '#10b981' : '#ef4444';
+    const color = isUp ? 'var(--msp-bull)' : 'var(--msp-bear)';
 
     return (
       <svg width={width} height={height} style={{ display: 'block' }}>
@@ -121,7 +121,7 @@ export default function MarketOverviewWidget() {
         padding: '20px',
         border: '1px solid #334155'
       }}>
-        <div style={{ color: '#ef4444', fontSize: '14px' }}>Failed to load market data</div>
+        <div style={{ color: 'var(--msp-bear)', fontSize: '14px' }}>Failed to load market data</div>
       </div>
     );
   }
@@ -145,7 +145,7 @@ export default function MarketOverviewWidget() {
       }}>
         <div>
           <h3 style={{ 
-            color: '#f1f5f9', 
+            color: 'var(--msp-text)', 
             fontSize: '16px', 
             fontWeight: 600,
             margin: 0,
@@ -165,7 +165,7 @@ export default function MarketOverviewWidget() {
         </div>
         <span style={{
           fontSize: '12px',
-          color: (data.marketCapChange24h ?? 0) >= 0 ? '#10b981' : '#ef4444',
+          color: (data.marketCapChange24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
           fontWeight: 600
         }}>
           {(data.marketCapChange24h ?? 0) >= 0 ? '↗' : '↘'} {Math.abs(data.marketCapChange24h ?? 0).toFixed(2)}%
@@ -182,11 +182,11 @@ export default function MarketOverviewWidget() {
           ? '1px solid rgba(16, 185, 129, 0.2)' 
           : '1px solid rgba(239, 68, 68, 0.2)'
       }}>
-        <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '4px' }}>
+        <div style={{ color: 'var(--msp-flat)', fontSize: '11px', marginBottom: '4px' }}>
           Total Crypto Market Cap
         </div>
         <div style={{ 
-          color: '#f1f5f9', 
+          color: 'var(--msp-text)', 
           fontSize: '28px', 
           fontWeight: 700,
           marginBottom: '8px'
@@ -195,7 +195,7 @@ export default function MarketOverviewWidget() {
         </div>
         {renderSparkline()}
         <div style={{ 
-          color: '#64748b', 
+          color: 'var(--msp-text-muted)', 
           fontSize: '10px', 
           marginTop: '8px' 
         }}>
@@ -212,15 +212,15 @@ export default function MarketOverviewWidget() {
         borderRadius: '8px',
         marginBottom: '16px'
       }}>
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>24h Volume</span>
-        <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 600 }}>
+        <span style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>24h Volume</span>
+        <span style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 600 }}>
           {data.totalVolumeFormatted}
         </span>
       </div>
 
       {/* Dominance */}
       <div>
-        <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '10px' }}>
+        <div style={{ color: 'var(--msp-flat)', fontSize: '11px', marginBottom: '10px' }}>
           Market Dominance
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -244,7 +244,7 @@ export default function MarketOverviewWidget() {
                   {coin.symbol}
                 </span>
                 <span style={{ 
-                  color: '#94a3b8', 
+                  color: 'var(--msp-flat)', 
                   fontSize: '11px',
                   marginLeft: '6px'
                 }}>

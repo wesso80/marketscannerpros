@@ -163,9 +163,9 @@ function BacktestAssumptionsPanel({ totalTrades, monteCarlo }: { totalTrades: nu
 
 export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, profitFactorLabel, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade, kelly, monteCarlo }: PerformanceMetricsProps) {
   const pfScore = scoreProfitFactor(profitFactor);
-  const pfColor = pfScore >= 1.5 ? '#10b981' : pfScore >= 1 ? '#fbbf24' : '#ef4444';
+  const pfColor = pfScore >= 1.5 ? 'var(--msp-bull)' : pfScore >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const pfBorder = pfScore >= 1.5 ? 'rgba(16,185,129,0.65)' : pfScore >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
-  const ddColor = maxDrawdown <= 10 ? '#10b981' : maxDrawdown <= 20 ? '#fbbf24' : '#ef4444';
+  const ddColor = maxDrawdown <= 10 ? 'var(--msp-bull)' : maxDrawdown <= 20 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const ddBorder = maxDrawdown <= 10 ? 'rgba(16,185,129,0.55)' : maxDrawdown <= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
 
   return (
