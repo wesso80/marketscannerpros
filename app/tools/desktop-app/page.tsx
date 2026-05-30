@@ -8,6 +8,7 @@ import OpenInterestWidget from '@/components/OpenInterestWidget';
 import MarketOverviewWidget from '@/components/MarketOverviewWidget';
 import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
 import DefiStatsWidget from '@/components/DefiStatsWidget';
+import { PageHero } from '@/components/ui';
 
 type PanelId =
   | 'market-pulse'
@@ -94,71 +95,46 @@ export default function DesktopAppPage() {
   return (
     <main className="min-h-screen bg-[#0F172A] text-white">
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="rounded-xl border border-emerald-400/20 bg-[linear-gradient(120deg,rgba(15,23,42,0.98),rgba(6,12,22,0.98))] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-emerald-300">
-                Isolated Desktop Workspace
-              </div>
-              <h1 className="mt-1 text-2xl font-black text-white md:text-3xl">
-                MSP Desktop App Lab
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm text-slate-300">
-                This screen is isolated from your existing dashboard routes and navigation.
-                Use it as a desktop-style workspace prototype.
-              </p>
-            </div>
+        <PageHero
+          ariaLabel="Desktop App command header"
+          eyebrow="Isolated desktop workspace"
+          badges={[
+            { label: layout.compactMode ? 'Compact mode' : 'Expanded mode' },
+            { label: `${visibleCount} visible` },
+          ]}
+          title="MSP Desktop App Lab"
+          subtitle="This screen is isolated from your existing dashboard routes and navigation. Use it as a desktop-style workspace prototype."
+          actions={[
+            { label: 'Toggle compact mode', variant: 'primary', onClick: () => setLayout((prev) => ({ ...prev, compactMode: !prev.compactMode })) },
+            { label: 'Reset layout', variant: 'secondary', onClick: resetLayout },
+          ]}
+          metrics={[
+            { label: 'Visible panels', value: `${visibleCount}`, tone: 'bull', detail: `${Object.keys(PANEL_LABELS).length} total` },
+            { label: 'Layout mode', value: layout.compactMode ? 'Compact' : 'Expanded', tone: 'info', detail: 'Density preset' },
+            { label: 'Hidden', value: `${Object.keys(PANEL_LABELS).length - visibleCount}`, tone: 'warn', detail: 'Toggled off' },
+          ]}
+        />
 
-            <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-              <div className="rounded-lg border border-white/10 bg-slate-950/35 px-3 py-2">
-                <div className="text-slate-500">Visible Panels</div>
-                <div className="mt-0.5 text-lg font-black text-emerald-300">{visibleCount}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-slate-950/35 px-3 py-2">
-                <div className="text-slate-500">Layout Mode</div>
-                <div className="mt-0.5 text-lg font-black text-sky-300">
-                  {layout.compactMode ? 'Compact' : 'Expanded'}
-                </div>
-              </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {Object.entries(PANEL_LABELS).map(([id, label]) => {
+            const panelId = id as PanelId;
+            const hidden = layout.hidden[panelId];
+            return (
               <button
+                key={id}
                 type="button"
-                onClick={resetLayout}
-                className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-left text-amber-200 transition hover:bg-amber-400/15"
+                onClick={() => togglePanel(panelId)}
+                className={`rounded-md border px-2.5 py-1.5 text-[11px] font-medium ${
+                  hidden
+                    ? 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'
+                    : 'border-[var(--msp-accent)]/40 bg-[var(--msp-accent-tint)] text-[var(--msp-accent)]'
+                }`}
               >
-                <div className="text-[10px] uppercase tracking-[0.12em] text-amber-300">Action</div>
-                <div className="mt-0.5 font-bold">Reset Layout</div>
+                {hidden ? 'Show' : 'Hide'} {label}
               </button>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setLayout((prev) => ({ ...prev, compactMode: !prev.compactMode }))}
-              className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 hover:bg-emerald-400/15"
-            >
-              Toggle Compact Mode
-            </button>
-            {Object.entries(PANEL_LABELS).map(([id, label]) => {
-              const panelId = id as PanelId;
-              const hidden = layout.hidden[panelId];
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => togglePanel(panelId)}
-                  className={`rounded-md border px-2.5 py-1.5 text-[11px] font-bold ${
-                    hidden
-                      ? 'border-slate-600 bg-slate-800/40 text-slate-400'
-                      : 'border-sky-400/30 bg-sky-400/10 text-sky-200'
-                  }`}
-                >
-                  {hidden ? 'Show' : 'Hide'} {label}
-                </button>
-              );
-            })}
-          </div>
-        </header>
+            );
+          })}
+        </div>
 
         <div className="mt-4">
           <ComplianceDisclaimer compact />
