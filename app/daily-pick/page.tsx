@@ -116,7 +116,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const data = await loadLatest();
   const dateStr = data?.scan_date ?? new Date().toISOString().slice(0, 10);
   const topSymbols = (data?.picks ?? []).slice(0, 3).map((p) => p.symbol).join(', ') || 'today';
-  const title = `Daily Picks — ${dateStr} (${topSymbols})`;
+  const title = `Daily Picks ${dateStr} · ${topSymbols} · MarketScanner Pros`;
   const description = `Top scanner-ranked stocks and crypto for ${dateStr}: ${topSymbols}. Educational technical-analysis snapshots updated daily.`;
   const url = 'https://marketscannerpros.app/daily-pick';
   const og = `https://marketscannerpros.app/api/og/scan?symbol=DAILY&side=WATCH&headline=${encodeURIComponent('Top picks for ' + dateStr)}&sub=${encodeURIComponent(topSymbols)}`;
