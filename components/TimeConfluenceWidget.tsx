@@ -90,14 +90,14 @@ export default function TimeConfluenceWidget({
     switch (impact) {
       case 'extreme':
       case 'maximum':
-        return '#EF4444'; // Red
+        return 'var(--msp-bear)'; // Red
       case 'high':
       case 'very_high':
-        return '#F59E0B'; // Orange
+        return 'var(--msp-warn)'; // Orange
       case 'medium':
         return 'var(--msp-accent)';
       default:
-        return '#64748B'; // Gray
+        return 'var(--msp-text-muted)'; // Gray
     }
   };
 
@@ -120,10 +120,10 @@ export default function TimeConfluenceWidget({
 
   const sessionBadge = () => {
     const colors: Record<string, { bg: string; text: string }> = {
-      pre: { bg: 'rgba(251,191,36,0.2)', text: '#FBBF24' },
-      regular: { bg: 'rgba(16,185,129,0.2)', text: '#10B981' },
+      pre: { bg: 'rgba(251,191,36,0.2)', text: 'var(--msp-warn)' },
+      regular: { bg: 'rgba(16,185,129,0.2)', text: 'var(--msp-bull)' },
       after: { bg: 'rgba(148,163,184,0.2)', text: 'var(--msp-muted)' },
-      closed: { bg: 'rgba(100,116,139,0.2)', text: '#64748B' },
+      closed: { bg: 'rgba(100,116,139,0.2)', text: 'var(--msp-text-muted)' },
     };
     const { bg, text } = colors[state.sessionType];
     return (
@@ -160,7 +160,7 @@ export default function TimeConfluenceWidget({
         
         {state.nowConfluenceScore > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Now:</span>
+            <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>Now:</span>
             <span style={{ 
               color: impactColor(state.nowImpact),
               fontWeight: 600,
@@ -174,11 +174,11 @@ export default function TimeConfluenceWidget({
         
         {state.nextMajor && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Next:</span>
+            <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>Next:</span>
             <span style={{ color: '#A855F7', fontWeight: 600, fontSize: '0.9rem' }}>
               {state.nextMajor.timeET}
             </span>
-            <span style={{ color: '#F59E0B', fontSize: '0.8rem' }}>
+            <span style={{ color: 'var(--msp-warn)', fontSize: '0.8rem' }}>
               ({formatCountdown(state.minutesToNextMajor)})
             </span>
           </div>
@@ -186,8 +186,8 @@ export default function TimeConfluenceWidget({
 
         {state.nextMacroConfluence && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Macro:</span>
-            <span style={{ color: '#EF4444', fontWeight: 600, fontSize: '0.9rem' }}>
+            <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>Macro:</span>
+            <span style={{ color: 'var(--msp-bear)', fontWeight: 600, fontSize: '0.9rem' }}>
               {state.daysToNextMacro}d
             </span>
           </div>
@@ -215,7 +215,7 @@ export default function TimeConfluenceWidget({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span aria-hidden="true" style={{ fontSize: '1.3rem' }}>⏰</span>
-          <h3 style={{ margin: 0, color: '#E2E8F0', fontSize: '1.1rem', fontWeight: 600 }}>
+          <h3 style={{ margin: 0, color: 'var(--msp-text)', fontSize: '1.1rem', fontWeight: 600 }}>
             Time Confluence Engine
           </h3>
         </div>
@@ -246,7 +246,7 @@ export default function TimeConfluenceWidget({
               background: activeTab === tab.id ? 'rgba(168,85,247,0.2)' : 'transparent',
               border: 'none',
               borderBottom: activeTab === tab.id ? '2px solid #A855F7' : '2px solid transparent',
-              color: activeTab === tab.id ? '#A855F7' : '#64748B',
+              color: activeTab === tab.id ? '#A855F7' : 'var(--msp-text-muted)',
               cursor: 'pointer',
               fontSize: '0.85rem',
               fontWeight: 500,
@@ -271,7 +271,7 @@ export default function TimeConfluenceWidget({
               position: 'relative',
             }}>
               <div style={{ 
-                color: '#64748B', 
+                color: 'var(--msp-text-muted)', 
                 fontSize: '0.8rem', 
                 marginBottom: '0.5rem',
                 display: 'flex',
@@ -326,14 +326,14 @@ export default function TimeConfluenceWidget({
                   <div style={{ color: '#A855F7', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
                     <span aria-hidden="true">📊 </span>Score Breakdown
                   </div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '0.8rem', lineHeight: 1.5 }}>
                     {getConfidenceExplanation(state)}
                   </div>
                   <div style={{ 
                     marginTop: '0.75rem', 
                     paddingTop: '0.75rem', 
                     borderTop: '1px solid rgba(100,116,139,0.3)',
-                    color: '#64748B',
+                    color: 'var(--msp-text-muted)',
                     fontSize: '0.75rem',
                   }}>
                     Higher scores = more timeframes aligning = stronger reversal/continuation signals
@@ -369,14 +369,14 @@ export default function TimeConfluenceWidget({
                     gap: '0.5rem',
                   }}>
                     <span aria-hidden="true" style={{ fontSize: '1.1rem' }}>📈</span>
-                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: '1.1rem' }}>
+                    <span style={{ color: 'var(--msp-bull)', fontWeight: 600, fontSize: '1.1rem' }}>
                       {getHistoricalHitRate(state.nowConfluenceScore).rate}%
                     </span>
-                    <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--msp-flat)', fontSize: '0.8rem' }}>
                       target hit rate
                     </span>
                   </div>
-                  <div style={{ color: '#64748B', fontSize: '0.7rem', marginTop: '0.25rem' }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.7rem', marginTop: '0.25rem' }}>
                     Simulated — modelled from {getHistoricalHitRate(state.nowConfluenceScore).samples} pattern setups
                   </div>
                 </div>
@@ -394,10 +394,10 @@ export default function TimeConfluenceWidget({
               {!alertSet ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.85rem', fontWeight: 500 }}>
+                    <div style={{ color: 'var(--msp-text)', fontSize: '0.85rem', fontWeight: 500 }}>
                       <span aria-hidden="true">🔔 </span>Set Confluence Alert
                     </div>
-                    <div style={{ color: '#64748B', fontSize: '0.75rem' }}>
+                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                       Notify when score hits strong again
                     </div>
                   </div>
@@ -408,7 +408,7 @@ export default function TimeConfluenceWidget({
                       background: 'rgba(0,0,0,0.3)',
                       border: '1px solid rgba(168,85,247,0.3)',
                       borderRadius: '6px',
-                      color: '#E2E8F0',
+                      color: 'var(--msp-text)',
                       padding: '0.4rem 0.6rem',
                       fontSize: '0.8rem',
                       cursor: 'pointer',
@@ -449,10 +449,10 @@ export default function TimeConfluenceWidget({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span aria-hidden="true" style={{ fontSize: '1.1rem' }}>✅</span>
                     <div>
-                      <div style={{ color: '#10B981', fontSize: '0.85rem', fontWeight: 500 }}>
+                      <div style={{ color: 'var(--msp-bull)', fontSize: '0.85rem', fontWeight: 500 }}>
                         Alert Active
                       </div>
-                      <div style={{ color: '#64748B', fontSize: '0.75rem' }}>
+                      <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                         Will notify when score ≥ {alertThreshold}
                       </div>
                     </div>
@@ -464,7 +464,7 @@ export default function TimeConfluenceWidget({
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.3)',
                       borderRadius: '6px',
-                      color: '#EF4444',
+                      color: 'var(--msp-bear)',
                       padding: '0.4rem 0.8rem',
                       fontSize: '0.75rem',
                       cursor: 'pointer',
@@ -484,7 +484,7 @@ export default function TimeConfluenceWidget({
                 padding: '1rem',
                 marginBottom: '1rem',
               }}>
-                <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                   CLOSING NOW
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -493,7 +493,7 @@ export default function TimeConfluenceWidget({
                       key={candle}
                       style={{
                         background: candle.includes('Fib') ? 'rgba(245,158,11,0.2)' : 'var(--msp-panel)',
-                        color: candle.includes('Fib') ? '#F59E0B' : 'var(--msp-accent)',
+                        color: candle.includes('Fib') ? 'var(--msp-warn)' : 'var(--msp-accent)',
                         padding: '4px 10px',
                         borderRadius: '6px',
                         fontSize: '0.85rem',
@@ -520,17 +520,17 @@ export default function TimeConfluenceWidget({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#E2E8F0' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--msp-text)' }}>
                       {state.nextMajor.timeET}
                     </div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '0.85rem' }}>
                       {state.nextMajor.description}
                     </div>
                   </div>
                   <div style={{
                     fontSize: '1.5rem',
                     fontWeight: 'bold',
-                    color: '#F59E0B',
+                    color: 'var(--msp-warn)',
                   }}>
                     {formatCountdown(state.minutesToNextMajor)}
                   </div>
@@ -545,7 +545,7 @@ export default function TimeConfluenceWidget({
                 borderRadius: '10px',
                 padding: '1rem',
               }}>
-                <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                   <span aria-hidden="true">🏦 </span>INSTITUTIONAL TWAP WINDOWS
                 </div>
                 <div style={{ display: 'grid', gap: '0.5rem' }}>
@@ -564,7 +564,7 @@ export default function TimeConfluenceWidget({
                       <span style={{ color: 'var(--msp-accent)', fontWeight: 500, fontSize: '0.85rem' }}>
                         {window.start} - {window.end}
                       </span>
-                      <span style={{ color: '#64748B', fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                         {window.description.split(' - ')[0]}
                       </span>
                     </div>
@@ -578,12 +578,12 @@ export default function TimeConfluenceWidget({
         {/* TODAY Tab */}
         {activeTab === 'today' && (
           <div>
-            <div style={{ color: '#64748B', fontSize: '0.8rem', marginBottom: '1rem' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
               Medium+ impact confluences for today
             </div>
             
             {state.todayConfluences.length === 0 ? (
-              <div style={{ color: '#94A3B8', textAlign: 'center', padding: '2rem' }}>
+              <div style={{ color: 'var(--msp-flat)', textAlign: 'center', padding: '2rem' }}>
                 No major confluences scheduled
               </div>
             ) : (
@@ -602,8 +602,8 @@ export default function TimeConfluenceWidget({
                     }}
                   >
                     <div>
-                      <div style={{ color: '#E2E8F0', fontWeight: 500 }}>{conf.timeET}</div>
-                      <div style={{ color: '#64748B', fontSize: '0.75rem' }}>
+                      <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>{conf.timeET}</div>
+                      <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                         {conf.closingCandles.slice(0, 4).join(', ')}
                         {conf.closingCandles.length > 4 && ` +${conf.closingCandles.length - 4}`}
                       </div>
@@ -624,12 +624,12 @@ export default function TimeConfluenceWidget({
         {/* FIB Tab */}
         {activeTab === 'fib' && (
           <div>
-            <div style={{ color: '#64748B', fontSize: '0.8rem', marginBottom: '1rem' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
               Fibonacci time confluence — minutes where 2+ Fib intervals close simultaneously
             </div>
 
             {state.fibConfluenceWindows.length === 0 ? (
-              <div style={{ color: '#94A3B8', textAlign: 'center', padding: '2rem' }}>
+              <div style={{ color: 'var(--msp-flat)', textAlign: 'center', padding: '2rem' }}>
                 {state.marketOpen ? 'No multi-Fib confluences remaining today' : 'Market closed — Fib windows available during RTH'}
               </div>
             ) : (
@@ -644,18 +644,18 @@ export default function TimeConfluenceWidget({
                       padding: '0.75rem',
                       background: 'rgba(0,0,0,0.2)',
                       borderRadius: '8px',
-                      borderLeft: `3px solid ${conf.fibCount >= 4 ? '#EF4444' : conf.fibCount >= 3 ? '#F59E0B' : '#A855F7'}`,
+                      borderLeft: `3px solid ${conf.fibCount >= 4 ? 'var(--msp-bear)' : conf.fibCount >= 3 ? 'var(--msp-warn)' : '#A855F7'}`,
                     }}
                   >
                     <div>
-                      <div style={{ color: '#E2E8F0', fontWeight: 500 }}>{conf.timeET}</div>
-                      <div style={{ color: '#F59E0B', fontSize: '0.75rem' }}>
+                      <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>{conf.timeET}</div>
+                      <div style={{ color: 'var(--msp-warn)', fontSize: '0.75rem' }}>
                         {conf.closingCandles.filter(c => c.includes('Fib')).join(', ')}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <span style={{ color: '#F59E0B', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                        <span style={{ color: 'var(--msp-warn)', fontWeight: 'bold', fontSize: '1.1rem' }}>
                           {conf.fibScore.toFixed(1)}
                         </span>
                         <span style={{
@@ -663,7 +663,7 @@ export default function TimeConfluenceWidget({
                           padding: '2px 6px',
                           borderRadius: '4px',
                           background: conf.fibCount >= 4 ? 'rgba(239,68,68,0.2)' : conf.fibCount >= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(168,85,247,0.2)',
-                          color: conf.fibCount >= 4 ? '#EF4444' : conf.fibCount >= 3 ? '#F59E0B' : '#A855F7',
+                          color: conf.fibCount >= 4 ? 'var(--msp-bear)' : conf.fibCount >= 3 ? 'var(--msp-warn)' : '#A855F7',
                         }}>
                           {conf.fibCount}× Fib
                         </span>
@@ -694,10 +694,10 @@ export default function TimeConfluenceWidget({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       NEXT MAJOR MACRO PIVOT
                     </div>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#E2E8F0' }}>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--msp-text)' }}>
                       {state.nextMacroConfluence.date.toLocaleDateString('en-US', { 
                         weekday: 'long',
                         month: 'long', 
@@ -705,7 +705,7 @@ export default function TimeConfluenceWidget({
                         year: 'numeric'
                       })}
                     </div>
-                    <div style={{ color: '#94A3B8', marginTop: '0.25rem' }}>
+                    <div style={{ color: 'var(--msp-flat)', marginTop: '0.25rem' }}>
                       {state.nextMacroConfluence.description}
                     </div>
                   </div>
@@ -722,7 +722,7 @@ export default function TimeConfluenceWidget({
                 </div>
 
                 <div style={{ marginTop: '1rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                     CANDLES CLOSING
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -733,8 +733,8 @@ export default function TimeConfluenceWidget({
                           background: candle === 'Yearly' ? 'rgba(239,68,68,0.2)' :
                                      candle === 'Quarterly' ? 'rgba(245,158,11,0.2)' :
                                      'var(--msp-panel)',
-                          color: candle === 'Yearly' ? '#EF4444' :
-                                 candle === 'Quarterly' ? '#F59E0B' :
+                          color: candle === 'Yearly' ? 'var(--msp-bear)' :
+                                 candle === 'Quarterly' ? 'var(--msp-warn)' :
                                  'var(--msp-accent)',
                           padding: '4px 10px',
                           borderRadius: '6px',
@@ -756,24 +756,24 @@ export default function TimeConfluenceWidget({
               borderRadius: '10px',
               padding: '1rem',
             }}>
-              <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                 MACRO TIMEFRAME GUIDE
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100px, 100%), 1fr))', gap: '0.5rem' }}>
                 {(assetClass === 'crypto' ? [
-                  { label: '1D', days: '1', color: '#64748B' },
+                  { label: '1D', days: '1', color: 'var(--msp-text-muted)' },
                   { label: '3D', days: '3', color: 'var(--msp-accent)' },
                   { label: '10D', days: '10', color: 'var(--msp-accent)' },
                   { label: '18D', days: '18', color: 'var(--msp-muted)' },
-                  { label: '30D', days: '30', color: '#F59E0B' },
-                  { label: '3M', days: 'Q', color: '#EF4444' },
+                  { label: '30D', days: '30', color: 'var(--msp-warn)' },
+                  { label: '3M', days: 'Q', color: 'var(--msp-bear)' },
                 ] : [
-                  { label: '1D', days: '1', color: '#64748B' },
+                  { label: '1D', days: '1', color: 'var(--msp-text-muted)' },
                   { label: '4D', days: '4', color: 'var(--msp-accent)' },
                   { label: '22D', days: '22', color: 'var(--msp-accent)' },
                   { label: '1W', days: '5', color: 'var(--msp-muted)' },
-                  { label: '4W', days: '~20', color: '#F59E0B' },
-                  { label: '12W', days: '~60', color: '#EF4444' },
+                  { label: '4W', days: '~20', color: 'var(--msp-warn)' },
+                  { label: '12W', days: '~60', color: 'var(--msp-bear)' },
                 ]).map((tf) => (
                   <div
                     key={tf.label}
@@ -787,7 +787,7 @@ export default function TimeConfluenceWidget({
                     <div style={{ color: tf.color, fontWeight: 600, fontSize: '0.85rem' }}>
                       {tf.label}
                     </div>
-                    <div style={{ color: '#64748B', fontSize: '0.7rem' }}>
+                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.7rem' }}>
                       ~{tf.days}d
                     </div>
                   </div>
@@ -800,7 +800,7 @@ export default function TimeConfluenceWidget({
         {/* CALENDAR Tab */}
         {activeTab === 'calendar' && showCalendar && (
           <div>
-            <div style={{ color: '#64748B', fontSize: '0.8rem', marginBottom: '1rem' }}>
+            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
               High-impact confluence dates
             </div>
             
@@ -825,21 +825,21 @@ export default function TimeConfluenceWidget({
                                    'rgba(0,0,0,0.2)',
                         borderRadius: '8px',
                         borderLeft: `3px solid ${
-                          isYearly ? '#EF4444' :
-                          isQuarterly ? '#F59E0B' :
+                          isYearly ? 'var(--msp-bear)' :
+                          isQuarterly ? 'var(--msp-warn)' :
                           'var(--msp-accent)'
                         }`,
                       }}
                     >
                       <div>
-                        <div style={{ color: '#E2E8F0', fontWeight: 500 }}>
+                        <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>
                           {new Date(event.date).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric',
                             year: 'numeric'
                           })}
                         </div>
-                        <div style={{ color: '#64748B', fontSize: '0.75rem' }}>
+                        <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                           {event.description}
                         </div>
                       </div>
