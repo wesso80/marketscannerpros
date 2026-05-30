@@ -50,7 +50,7 @@ export function SectionHeader({ title, subtitle, action }: { title: string; subt
 
 // ─── Score Bar ────────────────────────────────────────────────────────────────
 
-export function ScoreBar({ value, max = 100, color = '#10B981' }: { value: number; max?: number; color?: string }) {
+export function ScoreBar({ value, max = 100, color = 'var(--msp-bull)' }: { value: number; max?: number; color?: string }) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   return (
     <div className="h-1.5 w-full rounded-full bg-slate-700/50 overflow-hidden">
@@ -140,7 +140,7 @@ export function UpgradeGate({
   if (hasAccess) return <>{children}</>;
 
   const tierLabel = requiredTier === 'pro_trader' ? 'Pro Trader' : 'Pro';
-  const tierColor = requiredTier === 'pro_trader' ? '#F59E0B' : '#3B82F6';
+  const tierColor = requiredTier === 'pro_trader' ? 'var(--msp-warn)' : 'var(--msp-info)';
 
   return (
     <div className="relative">
@@ -170,6 +170,6 @@ export function UpgradeGate({
 // ─── Impact Dot ───────────────────────────────────────────────────────────────
 
 export function ImpactDot({ impact }: { impact: 'high' | 'medium' | 'low' }) {
-  const c = impact === 'high' ? '#EF4444' : impact === 'medium' ? '#F59E0B' : '#64748B';
+  const c = impact === 'high' ? 'var(--msp-bear)' : impact === 'medium' ? 'var(--msp-warn)' : 'var(--msp-text-muted)';
   return <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: c }} />;
 }

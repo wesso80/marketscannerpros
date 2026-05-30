@@ -13,9 +13,9 @@ import { useUserTier, type UserTier } from '@/lib/useUserTier';
 
 const TIER_BADGE: Record<UserTier, { label: string; color: string } | null> = {
   anonymous: null,
-  free: { label: 'Free', color: '#64748B' },
-  pro: { label: '✨ Pro', color: '#3B82F6' },
-  pro_trader: { label: '⭐ Pro Trader', color: '#F59E0B' },
+  free: { label: 'Free', color: 'var(--msp-text-muted)' },
+  pro: { label: '✨ Pro', color: 'var(--msp-info)' },
+  pro_trader: { label: '⭐ Pro Trader', color: 'var(--msp-warn)' },
 };
 
 export default function TopNav() {

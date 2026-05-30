@@ -7,38 +7,38 @@ import type { RegimePriority, Verdict, LifecycleState, VolRegime, Surface } from
 // ─── Color Maps ───────────────────────────────────────────────────────────────
 
 export const REGIME_COLORS: Record<RegimePriority, string> = {
-  trend: '#10B981',
+  trend: 'var(--msp-bull)',
   range: '#6366F1',
-  compression: '#3B82F6',
+  compression: 'var(--msp-info)',
   transition: '#A855F7',
-  expansion: '#F59E0B',
-  risk_off: '#EF4444',
-  risk_on: '#22C55E',
+  expansion: 'var(--msp-warn)',
+  risk_off: 'var(--msp-bear)',
+  risk_on: 'var(--msp-bull)',
 };
 
 export const VERDICT_COLORS: Record<Verdict, string> = {
-  TRADE: '#10B981',
-  WATCH: '#F59E0B',
-  NO_TRADE: '#EF4444',
+  TRADE: 'var(--msp-bull)',
+  WATCH: 'var(--msp-warn)',
+  NO_TRADE: 'var(--msp-bear)',
 };
 
 export const LIFECYCLE_COLORS: Record<LifecycleState, string> = {
-  DISCOVERED: '#64748B',
+  DISCOVERED: 'var(--msp-text-muted)',
   WATCHING: '#6366F1',
   SETTING_UP: '#A855F7',
-  READY: '#F59E0B',
-  TRIGGERED: '#10B981',
-  ACTIVE: '#22C55E',
-  COMPLETED: '#3B82F6',
-  INVALIDATED: '#EF4444',
+  READY: 'var(--msp-warn)',
+  TRIGGERED: 'var(--msp-bull)',
+  ACTIVE: 'var(--msp-bull)',
+  COMPLETED: 'var(--msp-info)',
+  INVALIDATED: 'var(--msp-bear)',
 };
 
 export const VOL_COLORS: Record<VolRegime, string> = {
-  compression: '#3B82F6',
-  neutral: '#64748B',
+  compression: 'var(--msp-info)',
+  neutral: 'var(--msp-text-muted)',
   transition: '#A855F7',
-  expansion: '#F59E0B',
-  climax: '#EF4444',
+  expansion: 'var(--msp-warn)',
+  climax: 'var(--msp-bear)',
 };
 
 // ─── Regime-Weighted Scanner Ranking ──────────────────────────────────────────

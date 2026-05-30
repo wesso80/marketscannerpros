@@ -25,13 +25,13 @@ export default function RegimeBar() {
         <span className="text-[10px] text-slate-600 animate-pulse">Loading...</span>
       ) : (
         <>
-          <Badge label={regimeLabel} color={REGIME_COLORS[regimeLabel as RegimePriority] || '#64748B'} small />
+          <Badge label={regimeLabel} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
           {nonStaleSignals.length > 0 && (
             <>
               <div className="h-3 w-px bg-slate-700" />
               {nonStaleSignals.map(s => (
                 <span key={s.source} className="text-[10px] text-slate-500 whitespace-nowrap">
-                  <span style={{ color: REGIME_COLORS[s.regime as RegimePriority] || '#64748B' }}>{s.source}</span>
+                  <span style={{ color: REGIME_COLORS[s.regime as RegimePriority] || 'var(--msp-text-muted)' }}>{s.source}</span>
                   <span className="text-slate-600 ml-1">{s.regime}</span>
                 </span>
               ))}
