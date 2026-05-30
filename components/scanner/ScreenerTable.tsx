@@ -56,9 +56,9 @@ function formatVol(n: number | undefined): string {
 }
 
 function dirColor(dir: string): string {
-  if (dir === 'LONG') return '#10B981';
-  if (dir === 'SHORT') return '#EF4444';
-  return '#94a3b8';
+  if (dir === 'LONG') return 'var(--msp-bull)';
+  if (dir === 'SHORT') return 'var(--msp-bear)';
+  return 'var(--msp-flat)';
 }
 
 function dirLabel(dir: string): string {
@@ -68,29 +68,29 @@ function dirLabel(dir: string): string {
 }
 
 function qualityColor(q: string): string {
-  if (q === 'high') return '#10B981';
-  if (q === 'medium') return '#FBBF24';
-  return '#94a3b8';
+  if (q === 'high') return 'var(--msp-bull)';
+  if (q === 'medium') return 'var(--msp-warn)';
+  return 'var(--msp-flat)';
 }
 
 function permColor(p: string | undefined): string {
-  if (p === 'COMPLIANT') return '#10B981';
-  if (p === 'TIGHT') return '#FBBF24';
-  if (p === 'BLOCKED') return '#EF4444';
-  return '#64748b';
+  if (p === 'COMPLIANT') return 'var(--msp-bull)';
+  if (p === 'TIGHT') return 'var(--msp-warn)';
+  if (p === 'BLOCKED') return 'var(--msp-bear)';
+  return 'var(--msp-text-muted)';
 }
 
 function dataQualityColor(q: string | undefined): string {
-  if (q === 'GOOD') return '#10B981';
-  if (q === 'DEGRADED') return '#FBBF24';
-  if (q === 'MISSING') return '#EF4444';
-  return '#64748b';
+  if (q === 'GOOD') return 'var(--msp-bull)';
+  if (q === 'DEGRADED') return 'var(--msp-warn)';
+  if (q === 'MISSING') return 'var(--msp-bear)';
+  return 'var(--msp-text-muted)';
 }
 
 function confColor(c: number): string {
-  if (c >= 75) return '#10B981';
-  if (c >= 60) return '#FBBF24';
-  return '#94a3b8';
+  if (c >= 75) return 'var(--msp-bull)';
+  if (c >= 60) return 'var(--msp-warn)';
+  return 'var(--msp-flat)';
 }
 
 /* ─── Column definitions ─── */
@@ -107,7 +107,7 @@ const COLUMNS: Column[] = [
   {
     key: 'symbol', label: 'Symbol', width: '110px',
     render: (r) => (
-      <span style={{ fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.02em' }}>{r.symbol}</span>
+      <span style={{ fontWeight: 700, color: 'var(--msp-text)', letterSpacing: '0.02em' }}>{r.symbol}</span>
     ),
   },
   {
@@ -143,7 +143,7 @@ const COLUMNS: Column[] = [
   { key: 'strategy', label: 'Strategy', width: '130px' },
   {
     key: 'reason', label: 'Reason', width: '135px',
-    render: (r) => <span title={r.reason} style={{ color: '#cbd5e1' }}>{r.reason || 'Mixed evidence'}</span>,
+    render: (r) => <span title={r.reason} style={{ color: 'var(--msp-text)' }}>{r.reason || 'Mixed evidence'}</span>,
   },
   {
     key: 'dataQuality', label: 'Trust', width: '80px', align: 'center',
@@ -180,8 +180,8 @@ const COLUMNS: Column[] = [
   {
     key: 'sectorRelStr', label: 'Sec RS', width: '70px', align: 'right',
     render: (r) => {
-      if (r.sectorRelStr == null) return <span style={{ color: '#475569' }}>{"\u2014"}</span>;
-      const color = r.sectorRelStr > 0 ? '#10B981' : r.sectorRelStr < 0 ? '#EF4444' : '#94a3b8';
+      if (r.sectorRelStr == null) return <span style={{ color: 'var(--msp-text-muted)' }}>{"\u2014"}</span>;
+      const color = r.sectorRelStr > 0 ? 'var(--msp-bull)' : r.sectorRelStr < 0 ? 'var(--msp-bear)' : 'var(--msp-flat)';
       return <span style={{ fontSize: 11, fontWeight: 600, color }}>{r.sectorRelStr > 0 ? '+' : ''}{r.sectorRelStr.toFixed(1)}%</span>;
     },
   },
@@ -189,20 +189,20 @@ const COLUMNS: Column[] = [
     key: 'momentumAccelScore', label: 'Accel', width: '65px', align: 'center',
     render: (r) => (
       r.momentumAccel
-        ? <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+        ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--msp-bull)', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
             {r.momentumAccelScore ?? 0}
           </span>
-        : <span style={{ color: '#475569' }}>{"\u2014"}</span>
+        : <span style={{ color: 'var(--msp-text-muted)' }}>{"\u2014"}</span>
     ),
   },
   {
     key: 'squeeze', label: 'Squeeze', width: '75px', align: 'center',
     render: (r) => (
       r.squeeze
-        ? <span style={{ fontSize: 11, fontWeight: 700, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+        ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--msp-warn)', background: 'rgba(251,191,36,0.12)', borderRadius: 4, padding: '1px 5px' }}>
             {r.squeezeStrength != null ? `${r.squeezeStrength}%` : 'Yes'}
           </span>
-        : <span style={{ color: '#475569' }}>—</span>
+        : <span style={{ color: 'var(--msp-text-muted)' }}>—</span>
     ),
   },
   {
@@ -252,7 +252,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
 
   if (!rows.length) {
     return (
-      <div style={{ padding: 32, textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+      <div style={{ padding: 32, textAlign: 'center', color: 'var(--msp-text-muted)', fontSize: 14 }}>
         No scan results yet. Run a scan to see candidates.
       </div>
     );
@@ -279,7 +279,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
                 style={{
                   padding: '8px 8px',
                   textAlign: col.align ?? 'left',
-                  color: sortKey === col.key ? '#10B981' : '#64748b',
+                  color: sortKey === col.key ? 'var(--msp-bull)' : 'var(--msp-text-muted)',
                   fontWeight: 600,
                   fontSize: 11,
                   textTransform: 'uppercase',
@@ -331,7 +331,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
                     style={{
                       padding: '7px 8px',
                       textAlign: col.align ?? 'left',
-                      color: '#cbd5e1',
+                      color: 'var(--msp-text)',
                       whiteSpace: 'nowrap',
                     }}
                   >
