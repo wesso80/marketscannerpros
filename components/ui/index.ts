@@ -23,3 +23,7 @@ export { default as StatCard } from './StatCard';
 export type { StatCardProps } from './StatCard';
 export { default as DataTable } from './DataTable';
 export type { DataTableProps, DataColumn, DataColumnAlign } from './DataTable';
+export { default as MetricChip } from './MetricChip';
+export type { MetricChipProps, MetricChipTone } from './MetricChip';
+export { default as PageHero } from './PageHero';
+export type { PageHeroProps, PageHeroAction, PageHeroBadge } from './PageHero';
