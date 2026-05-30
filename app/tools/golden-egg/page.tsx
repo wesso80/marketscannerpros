@@ -101,7 +101,7 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
   );
 }
 
-function GoldenEggSubviewMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function GoldenEggSubviewMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -168,7 +168,7 @@ const GOLDEN_EGG_WORKFLOW_CHECKS = [
   'Next check',
 ] as const;
 
-function FlagshipMetric({ label, value, tone = '#94A3B8', ariaLabel }: { label: string; value: string; tone?: string; ariaLabel?: string }) {
+function FlagshipMetric({ label, value, tone = 'var(--msp-flat)', ariaLabel }: { label: string; value: string; tone?: string; ariaLabel?: string }) {
   return (
     <div aria-label={ariaLabel} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -195,7 +195,7 @@ function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: st
   return { alignment: 'neutral', factors };
 }
 
-const ALIGNMENT_COLOR: Record<string, string> = { supportive: '#10B981', neutral: '#F59E0B', headwind: '#EF4444' };
+const ALIGNMENT_COLOR: Record<string, string> = { supportive: 'var(--msp-bull)', neutral: 'var(--msp-warn)', headwind: 'var(--msp-bear)' };
 
 /* ─── Phase 6: Lifecycle State from GE data ─── */
 function deriveGELifecycle(assessment?: string, confidence?: number, gated?: boolean): LifecycleState {
@@ -218,24 +218,24 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
 }
 
 function verdictColor(v: string) {
-  if (v === 'ALIGNED') return '#10B981';
-  if (v === 'NOT_ALIGNED') return '#EF4444';
-  return '#F59E0B';
+  if (v === 'ALIGNED') return 'var(--msp-bull)';
+  if (v === 'NOT_ALIGNED') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 function dirColor(d?: string) {
-  if (!d) return '#94A3B8';
+  if (!d) return 'var(--msp-flat)';
   const l = d.toLowerCase();
-  if (l === 'bullish' || l === 'long' || l === 'bull') return '#10B981';
-  if (l === 'bearish' || l === 'short' || l === 'bear') return '#EF4444';
-  return '#F59E0B';
+  if (l === 'bullish' || l === 'long' || l === 'bull') return 'var(--msp-bull)';
+  if (l === 'bearish' || l === 'short' || l === 'bear') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 function gradeColor(g: string) {
-  if (g === 'A') return '#10B981';
-  if (g === 'B') return '#3B82F6';
-  if (g === 'C') return '#F59E0B';
-  return '#EF4444';
+  if (g === 'A') return 'var(--msp-bull)';
+  if (g === 'B') return 'var(--msp-info)';
+  if (g === 'C') return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
 /** Adaptive price formatter — keeps sub-dollar assets readable */
@@ -263,9 +263,9 @@ function getGEDataQuality(input: { price?: number | null; confluence?: number | 
 }
 
 function geDataQualityColor(label: string): string {
-  if (label === 'GOOD') return '#10B981';
-  if (label === 'DEGRADED') return '#F59E0B';
-  return '#EF4444';
+  if (label === 'GOOD') return 'var(--msp-bull)';
+  if (label === 'DEGRADED') return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
 function geMissingInputs(input: { price?: number | null; confluence?: number | null; assessment?: string | null; reference?: number | null; invalidation?: number | null }): string[] {
@@ -790,7 +790,7 @@ export default function GoldenEggPage() {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h2 className="text-2xl font-bold text-white">{ge.meta.symbol}</h2>
-                    {regime.data && <Badge label={`Regime: ${regime.data.regime}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || '#64748B'} small />}
+                    {regime.data && <Badge label={`Regime: ${regime.data.regime}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || 'var(--msp-text-muted)'} small />}
                     <span title="Directional research bias from the Golden Egg evidence stack"><Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} /></span>
                     <span title="Grade summarizes setup quality across the Golden Egg model"><Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small /></span>
                     {(() => { const lc = deriveGELifecycle(geAssessment, geConfluenceScore); return <span title="Lifecycle describes whether the setup is forming, ready, watching, or invalidated" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{lc.replace('_', ' ')}</span>; })()}
@@ -835,10 +835,10 @@ export default function GoldenEggPage() {
                   {[
                     ['Assessment', geAssessmentLabel, verdictColor(geAssessment || 'WATCH'), 'Scenario alignment for educational research only.'],
                     ['Data Trust', geDataQuality, geDataQualityColor(geDataQuality), geDataQualityTitle],
-                    ['Reference', formatLevel(geReferencePrice), '#10B981', geSafeScenario?.referenceTrigger || 'Reference unavailable.'],
-                    ['Invalidation', formatLevel(geInvalidationPrice), '#EF4444', geSafeScenario?.invalidationLevel?.logic || 'Invalidation unavailable.'],
-                    ['Next Check', geNextUsefulCheck, '#93C5FD', geNextUsefulCheck],
-                    ['Blocker', ge.layer1.primaryBlocker || 'None flagged', ge.layer1.primaryBlocker ? '#F59E0B' : '#10B981', ge.layer1.primaryBlocker || 'No primary blocker returned by the model.'],
+                    ['Reference', formatLevel(geReferencePrice), 'var(--msp-bull)', geSafeScenario?.referenceTrigger || 'Reference unavailable.'],
+                    ['Invalidation', formatLevel(geInvalidationPrice), 'var(--msp-bear)', geSafeScenario?.invalidationLevel?.logic || 'Invalidation unavailable.'],
+                    ['Next Check', geNextUsefulCheck, 'var(--msp-info)', geNextUsefulCheck],
+                    ['Blocker', ge.layer1.primaryBlocker || 'None flagged', ge.layer1.primaryBlocker ? 'var(--msp-warn)' : 'var(--msp-bull)', ge.layer1.primaryBlocker || 'No primary blocker returned by the model.'],
                   ].map(([label, value, color, title]) => (
                     <div key={label} title={title} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-2.5 py-2">
                       <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
@@ -950,7 +950,7 @@ export default function GoldenEggPage() {
                     const r = sig.regime?.toLowerCase() || '';
                     const isHeadwind = r === 'risk_off' || r === 'compression';
                     const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';
-                    const color = isHeadwind ? '#EF4444' : isTailwind ? '#10B981' : '#94A3B8';
+                    const color = isHeadwind ? 'var(--msp-bear)' : isTailwind ? 'var(--msp-bull)' : 'var(--msp-flat)';
                     return (
                       <div key={i} className="bg-[var(--msp-panel-2)] rounded-lg p-2.5">
                         <div className="flex items-center justify-between">
@@ -1033,7 +1033,7 @@ export default function GoldenEggPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 uppercase">Structure Verdict:</span>
-                  <Badge label={ge.layer3.structure.verdict} color={ge.layer3.structure.verdict === 'agree' ? '#10B981' : ge.layer3.structure.verdict === 'disagree' ? '#EF4444' : '#F59E0B'} small />
+                  <Badge label={ge.layer3.structure.verdict} color={ge.layer3.structure.verdict === 'agree' ? 'var(--msp-bull)' : ge.layer3.structure.verdict === 'disagree' ? 'var(--msp-bear)' : 'var(--msp-warn)'} small />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {['htf', 'mtf', 'ltf'].map((tf) => (
@@ -1060,7 +1060,7 @@ export default function GoldenEggPage() {
                     <div className="text-[11px] text-slate-500 uppercase">Momentum</div>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {ge.layer3.momentum.indicators.map((ind: any, i: number) => (
-                        <Badge key={i} label={`${ind.name}: ${ind.value}`} color={ind.state === 'bull' ? '#10B981' : ind.state === 'bear' ? '#EF4444' : '#94A3B8'} small />
+                        <Badge key={i} label={`${ind.name}: ${ind.value}`} color={ind.state === 'bull' ? 'var(--msp-bull)' : ind.state === 'bear' ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />
                       ))}
                     </div>
                   </div>
@@ -1091,17 +1091,17 @@ export default function GoldenEggPage() {
                 const groups: Record<string, typeof tc.closeSchedule> = { intraday: [], daily: [], weekly: [], monthly: [] };
                 for (const row of tc.closeSchedule || []) groups[row.category]?.push(row);
                 const catLabel: Record<string, string> = { intraday: 'Intraday', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
-                const catColor: Record<string, string> = { intraday: '#94A3B8', daily: '#3B82F6', weekly: '#F59E0B', monthly: '#EF4444' };
+                const catColor: Record<string, string> = { intraday: 'var(--msp-flat)', daily: 'var(--msp-info)', weekly: 'var(--msp-warn)', monthly: 'var(--msp-bear)' };
                 return (
                   <div className="space-y-3">
                     {/* Signal Strength + Direction + Banners */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge label={tc.verdict} color={tc.verdict === 'agree' ? '#10B981' : tc.verdict === 'disagree' ? '#EF4444' : '#F59E0B'} />
+                      <Badge label={tc.verdict} color={tc.verdict === 'agree' ? 'var(--msp-bull)' : tc.verdict === 'disagree' ? 'var(--msp-bear)' : 'var(--msp-warn)'} />
                       <Badge label={tc.signalStrength.replace('_', ' ')} color={
-                        tc.signalStrength === 'strong' ? '#10B981' : tc.signalStrength === 'moderate' ? '#F59E0B' : '#94A3B8'
+                        tc.signalStrength === 'strong' ? 'var(--msp-bull)' : tc.signalStrength === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-flat)'
                       } small />
                       <Badge label={tc.direction} color={
-                        tc.direction === 'bullish' ? '#10B981' : tc.direction === 'bearish' ? '#EF4444' : '#94A3B8'
+                        tc.direction === 'bullish' ? 'var(--msp-bull)' : tc.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-flat)'
                       } small />
                       {tc.banners.map((b: string, i: number) => (
                         <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">{b}</span>
@@ -1117,7 +1117,7 @@ export default function GoldenEggPage() {
                         <div className="text-[11px] text-slate-500 uppercase mb-1">Likely Decompression Level</div>
                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                           <span className="text-lg font-bold font-mono" style={{
-                            color: tc.decompressionTarget.direction === 'up' ? '#10B981' : tc.decompressionTarget.direction === 'down' ? '#EF4444' : '#E2E8F0',
+                            color: tc.decompressionTarget.direction === 'up' ? 'var(--msp-bull)' : tc.decompressionTarget.direction === 'down' ? 'var(--msp-bear)' : 'var(--msp-text)',
                           }}>
                             {tc.decompressionTarget.direction === 'up' ? 'Up to ' : tc.decompressionTarget.direction === 'down' ? 'Down to ' : ''}{fmtPrice(tc.decompressionTarget.price)}
                           </span>
@@ -1140,7 +1140,7 @@ export default function GoldenEggPage() {
                       </div>
                       <div className="bg-[var(--msp-panel-2)] rounded p-2">
                         <div className="text-[11px] text-slate-500">Direction</div>
-                        <div className="text-sm font-bold" style={{ color: tc.scoreBreakdown.directionScore > 15 ? '#10B981' : tc.scoreBreakdown.directionScore < -15 ? '#EF4444' : '#94A3B8' }}>
+                        <div className="text-sm font-bold" style={{ color: tc.scoreBreakdown.directionScore > 15 ? 'var(--msp-bull)' : tc.scoreBreakdown.directionScore < -15 ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>
                           {tc.scoreBreakdown.directionScore > 0 ? '+' : ''}{tc.scoreBreakdown.directionScore}
                         </div>
                       </div>
@@ -1204,9 +1204,9 @@ export default function GoldenEggPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-white">{tc.candleCloseConfluence.confluenceScore}/100</span>
                         <Badge label={tc.candleCloseConfluence.confluenceRating} color={
-                          tc.candleCloseConfluence.confluenceRating === 'extreme' ? '#EF4444' :
-                          tc.candleCloseConfluence.confluenceRating === 'high' ? '#F59E0B' :
-                          tc.candleCloseConfluence.confluenceRating === 'moderate' ? '#3B82F6' : '#94A3B8'
+                          tc.candleCloseConfluence.confluenceRating === 'extreme' ? 'var(--msp-bear)' :
+                          tc.candleCloseConfluence.confluenceRating === 'high' ? 'var(--msp-warn)' :
+                          tc.candleCloseConfluence.confluenceRating === 'moderate' ? 'var(--msp-info)' : 'var(--msp-flat)'
                         } small />
                         {tc.candleCloseConfluence.closingNowCount > 0 && (
                           <span className="text-[11px] text-yellow-400">Now: {tc.candleCloseConfluence.closingNowCount} TFs closing</span>
@@ -1248,7 +1248,7 @@ export default function GoldenEggPage() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Badge label={d.volatility.regime} color={
-                      d.volatility.regime === 'compression' ? '#06B6D4' : d.volatility.regime === 'expansion' ? '#F59E0B' : d.volatility.regime === 'climax' ? '#EF4444' : '#94A3B8'
+                      d.volatility.regime === 'compression' ? '#06B6D4' : d.volatility.regime === 'expansion' ? 'var(--msp-warn)' : d.volatility.regime === 'climax' ? 'var(--msp-bear)' : 'var(--msp-flat)'
                     } />
                     <span className="text-xs text-slate-400">Confluence: {d.volatility.regimeConfidence.toFixed(0)}%</span>
                   </div>
@@ -1261,10 +1261,10 @@ export default function GoldenEggPage() {
                         {(() => {
                           const bbwp = d.volatility.bbwp;
                           const zones = [
-                            { max: 15, color: '#1E3A5F', text: '#60A5FA' },
-                            { max: 70, color: '#475569', text: '#94A3B8' },
-                            { max: 90, color: '#D97706', text: '#FBBF24' },
-                            { max: 100, color: '#DC2626', text: '#F87171' },
+                            { max: 15, color: 'var(--msp-panel)', text: 'var(--msp-info)' },
+                            { max: 70, color: 'var(--msp-text-muted)', text: 'var(--msp-flat)' },
+                            { max: 90, color: 'var(--msp-warn)', text: 'var(--msp-warn)' },
+                            { max: 100, color: 'var(--msp-bear)', text: 'var(--msp-bear)' },
                           ];
                           const zone = zones.find(z => bbwp <= z.max) ?? zones[3];
                           const r = 50, sw = 7, cx = 60, cy = 58;
@@ -1333,7 +1333,7 @@ export default function GoldenEggPage() {
               </h3>
               {ge.layer3.options?.enabled ? (
                 <div className="space-y-2">
-                  <Badge label={ge.layer3.options.verdict} color={ge.layer3.options.verdict === 'agree' ? '#10B981' : ge.layer3.options.verdict === 'disagree' ? '#EF4444' : '#F59E0B'} />
+                  <Badge label={ge.layer3.options.verdict} color={ge.layer3.options.verdict === 'agree' ? 'var(--msp-bull)' : ge.layer3.options.verdict === 'disagree' ? 'var(--msp-bear)' : 'var(--msp-warn)'} />
                   <div className="space-y-1">
                     {ge.layer3.options.highlights.map((h: any, i: number) => (
                       <div key={i} className="flex justify-between text-xs">
