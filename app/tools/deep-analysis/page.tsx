@@ -920,7 +920,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   )}
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                     <div>
-                      <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Research Packet</div>
+                      <div className="text-[11px] font-medium text-[var(--msp-text-muted)]">Research packet</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-white">
                         <span>{result.symbol} · {result.assetType.toUpperCase()}</span>
                         <span className="font-mono text-slate-300">${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}</span>
@@ -942,7 +942,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                       ['Research Caution', summarizeDeepResearchCaution(result), 'var(--msp-warn)'],
                     ].map(([label, value, color]) => (
                       <div key={label} title={value} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-3 py-2">
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
+                        <div className="text-[11px] text-[var(--msp-text-muted)]">{label}</div>
                         <div className="mt-1 truncate text-xs font-bold" style={{ color }}>{value}</div>
                       </div>
                     ))}
