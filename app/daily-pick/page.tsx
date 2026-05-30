@@ -31,14 +31,23 @@ function formatFloat(n: number | null): string | null {
   return String(n);
 }
 
+function toDateString(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === 'string') return v.slice(0, 10);
+  return '';
+}
+
 async function loadLatest(): Promise<DayData | null> {
-  const latest = await q<{ scan_date: string }>(
+  const latest = await q<{ scan_date: unknown }>(
     `SELECT scan_date FROM daily_picks ORDER BY scan_date DESC LIMIT 1`,
   );
   if (latest.length === 0) return null;
-  const scan_date = latest[0].scan_date;
+  const scan_date = toDateString(latest[0].scan_date);
 
-  const rows = await q<{
+  // Try the enriched query first (requires migration 097). If shares_float /
+  // short_pct_float columns don't exist yet, fall back to the picks-only
+  // query so the page still renders during phased rollout.
+  let rows: Array<{
     asset_class: string;
     symbol: string;
     score: number;
@@ -48,17 +57,43 @@ async function loadLatest(): Promise<DayData | null> {
     sector: string | null;
     shares_float: string | null;
     short_pct_float: string | null;
-  }>(
-    `SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
-            dp.price, dp.change_percent,
-            co.sector, co.shares_float, co.short_pct_float
-       FROM daily_picks dp
-       LEFT JOIN company_overview co ON co.symbol = dp.symbol
-      WHERE dp.scan_date = $1
-      ORDER BY dp.score DESC
-      LIMIT 10`,
-    [scan_date],
-  );
+  }>;
+  try {
+    rows = await q(
+      `SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
+              dp.price, dp.change_percent,
+              co.sector, co.shares_float, co.short_pct_float
+         FROM daily_picks dp
+         LEFT JOIN company_overview co ON co.symbol = dp.symbol
+        WHERE dp.scan_date = $1
+        ORDER BY dp.score DESC
+        LIMIT 10`,
+      [scan_date],
+    );
+  } catch (err) {
+    console.warn('[daily-pick] enriched query failed, falling back:', err);
+    const fallback = await q<{
+      asset_class: string;
+      symbol: string;
+      score: number;
+      direction: string;
+      price: string | null;
+      change_percent: string | null;
+    }>(
+      `SELECT asset_class, symbol, score, direction, price, change_percent
+         FROM daily_picks
+        WHERE scan_date = $1
+        ORDER BY score DESC
+        LIMIT 10`,
+      [scan_date],
+    );
+    rows = fallback.map((r) => ({
+      ...r,
+      sector: null,
+      shares_float: null,
+      short_pct_float: null,
+    }));
+  }
 
   return {
     scan_date,

@@ -41,7 +41,7 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
     direction: string;
     price: string | null;
     change_percent: string | null;
-    scan_date: string;
+    scan_date: Date | string;
     asset_class: string;
   }>(
     `SELECT symbol, score, direction, price, change_percent, scan_date, asset_class
@@ -52,19 +52,33 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
     [symbol],
   );
 
-  // Fundamentals overlay (low-float context, sector)
-  const fund = await q<{
+  // Fundamentals overlay (low-float context, sector). Schema tolerant: if
+  // migration 097 hasn't been applied yet, shares_float / short_pct_float
+  // columns won't exist — the catch falls back to symbol-only metadata so
+  // the page still renders.
+  let fund: Array<{
     sector: string | null;
     shares_float: string | null;
     short_pct_float: string | null;
-    fetched_at: string | null;
+    fetched_at: Date | string | null;
     name: string | null;
-  }>(
-    `SELECT sector, shares_float, short_pct_float, fetched_at, name
-     FROM company_overview
-     WHERE symbol = $1`,
-    [symbol],
-  );
+  }> = [];
+  try {
+    fund = await q<{
+      sector: string | null;
+      shares_float: string | null;
+      short_pct_float: string | null;
+      fetched_at: Date | string | null;
+      name: string | null;
+    }>(
+      `SELECT sector, shares_float, short_pct_float, fetched_at, name
+         FROM company_overview
+        WHERE symbol = $1`,
+      [symbol],
+    );
+  } catch (err) {
+    console.warn(`[share/scan] company_overview lookup failed for ${symbol}:`, err);
+  }
 
   const pick = picks[0];
   const f = fund[0];
@@ -90,6 +104,12 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
     headline = `${f.name} — fundamentals snapshot`;
   }
 
+  const rawFetched = f?.fetched_at ?? pick?.scan_date ?? new Date();
+  const fetchedAt =
+    rawFetched instanceof Date
+      ? rawFetched.toISOString()
+      : String(rawFetched);
+
   return {
     symbol,
     side,
@@ -100,7 +120,7 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
     shortPct,
     sector: f?.sector ?? null,
     headline,
-    fetchedAt: f?.fetched_at ?? pick?.scan_date ?? new Date().toISOString(),
+    fetchedAt,
     source: pick ? 'daily_picks' : f ? 'company_overview' : 'symbol_only',
   };
 }
