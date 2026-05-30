@@ -19,21 +19,21 @@ function deriveRegime(state: OperatorState): Regime {
 }
 
 function toneForBias(value: OperatorState['bias']) {
-  if (value === 'BULLISH') return '#10b981';
-  if (value === 'BEARISH') return '#ef4444';
-  return '#fbbf24';
+  if (value === 'BULLISH') return 'var(--msp-bull)';
+  if (value === 'BEARISH') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 function toneForRisk(value: OperatorState['risk']) {
-  if (value === 'LOW') return '#10b981';
-  if (value === 'HIGH') return '#ef4444';
-  return '#fbbf24';
+  if (value === 'LOW') return 'var(--msp-bull)';
+  if (value === 'HIGH') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 function toneForAction(value: OperatorState['action']) {
-  if (value === 'EXECUTE') return '#10b981';
-  if (value === 'PREP') return '#fbbf24';
-  return '#94a3b8';
+  if (value === 'EXECUTE') return 'var(--msp-bull)';
+  if (value === 'PREP') return 'var(--msp-warn)';
+  return 'var(--msp-flat)';
 }
 
 function stageLabel(mode: OperatorFlowMode) {
@@ -58,12 +58,12 @@ interface CommandCenterStateBarProps {
 }
 
 function toneForHeartbeatMode(modeKey?: NonNullable<CommandCenterStateBarProps['heartbeat']>['modeKey']) {
-  if (modeKey === 'hunt') return '#10b981';
+  if (modeKey === 'hunt') return 'var(--msp-bull)';
   if (modeKey === 'focus') return '#38bdf8';
-  if (modeKey === 'risk_control') return '#f59e0b';
+  if (modeKey === 'risk_control') return 'var(--msp-warn)';
   if (modeKey === 'learning') return '#a78bfa';
   if (modeKey === 'passive_scan') return '#22d3ee';
-  return '#34d399';
+  return 'var(--msp-bull)';
 }
 
 export default function CommandCenterStateBar({ mode, actionableNow, nextStep, heartbeat }: CommandCenterStateBarProps) {
@@ -98,28 +98,28 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
       marginBottom: '16px',
       boxShadow: 'var(--msp-shadow)'
     }}>
-      <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+      <div style={{ color: 'var(--msp-flat)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
         Market Context
       </div>
 
       <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Regime</div>
-          <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{regime}</div>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Regime</div>
+          <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 700 }}>{regime}</div>
         </div>
 
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Risk</div>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Risk</div>
           <div style={{ color: toneForRisk(state.risk), fontSize: '14px', fontWeight: 700 }}>{state.risk}</div>
         </div>
 
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Market Bias</div>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Market Bias</div>
           <div style={{ color: toneForBias(state.bias), fontSize: '14px', fontWeight: 700 }}>{state.bias}</div>
         </div>
 
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Analysis Mode</div>
+          <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Analysis Mode</div>
           <div style={{ color: toneForAction(state.action), fontSize: '14px', fontWeight: 700 }}>{stageLabel(mode)}</div>
         </div>
       </div>
@@ -150,15 +150,15 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
               Live Pulse — scanning market rhythm
             </span>
           </div>
-          <span style={{ color: '#94a3b8', fontSize: '11px' }}>
+          <span style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>
             {heartbeat?.lastBeatAt ? new Date(heartbeat.lastBeatAt).toLocaleTimeString() : '—'}
           </span>
         </div>
-        <div style={{ color: '#34d399', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <div style={{ color: 'var(--msp-bull)', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Current Status
         </div>
         <div style={{ color: '#d1fae5', fontSize: '13px' }}>{actionableNow}</div>
-        <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+        <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
           Next: {nextStep || state.next}
         </div>
         {heartbeat?.monologue ? (
@@ -167,7 +167,7 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
           </div>
         ) : null}
         {heartbeat?.drift ? (
-          <div style={{ color: '#cbd5e1', fontSize: '11px' }}>
+          <div style={{ color: 'var(--msp-text)', fontSize: '11px' }}>
             {heartbeat.drift}
           </div>
         ) : null}
