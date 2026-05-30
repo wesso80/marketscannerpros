@@ -79,19 +79,19 @@ export default function MSPCopilot({
         const explainContent = [
           { label: 'Scan Type', value: `${scanType.toUpperCase()} · ${tf}`, highlight: true },
           { label: 'Results', value: `${totalResults} setups from ${totalScanned} scanned` },
-          { label: 'Bias', value: `${bullish} Bullish / ${bearish} Bearish`, color: bullish > bearish ? '#10B981' : bearish > bullish ? '#EF4444' : '#64748B' },
-          { label: 'Avg Confluence', value: `${avgConf}%`, color: avgConf >= 65 ? '#10B981' : avgConf >= 50 ? '#F59E0B' : '#EF4444' },
+          { label: 'Bias', value: `${bullish} Bullish / ${bearish} Bearish`, color: bullish > bearish ? 'var(--msp-bull)' : bearish > bullish ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
+          { label: 'Avg Confluence', value: `${avgConf}%`, color: avgConf >= 65 ? 'var(--msp-bull)' : avgConf >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
           ...top3.map((p, i) => ({
             label: `#${i + 1}`,
             value: `${p.symbol} · ${String(p.direction).toUpperCase()} · ${p.confidence}%`,
-            color: p.direction === 'long' ? '#10B981' : '#EF4444',
+            color: p.direction === 'long' ? 'var(--msp-bull)' : 'var(--msp-bear)',
           })),
         ];
 
         const planContent = [
-          { label: 'Top Confluence Setup', value: top3[0] ? `${top3[0].symbol} (${top3[0].confidence}%)` : 'N/A', color: '#10B981' },
+          { label: 'Top Confluence Setup', value: top3[0] ? `${top3[0].symbol} (${top3[0].confidence}%)` : 'N/A', color: 'var(--msp-bull)' },
           { label: 'Strategy', value: top3[0] ? String(top3[0].strategy || 'MOMENTUM_REVERSAL').replace(/_/g, ' ') : 'N/A' },
-          { label: 'Market Lean', value: bullish > bearish ? 'Bullish bias across scan' : bearish > bullish ? 'Bearish bias across scan' : 'Mixed / neutral', color: bullish > bearish ? '#10B981' : bearish > bullish ? '#EF4444' : '#64748B' },
+          { label: 'Market Lean', value: bullish > bearish ? 'Bullish bias across scan' : bearish > bullish ? 'Bearish bias across scan' : 'Mixed / neutral', color: bullish > bearish ? 'var(--msp-bull)' : bearish > bullish ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
           { label: 'Quality Filter', value: `${picks.filter((p: any) => p.quality === 'high').length} high quality setups` },
         ];
 
@@ -163,31 +163,31 @@ export default function MSPCopilot({
       const explainContent = isMarketsPage ? [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Verdict', value: verdict.toUpperCase(), color: verdict === 'tradable' ? '#10B981' : verdict === 'conditional' ? '#F59E0B' : verdict === 'blocked' ? '#EF4444' : '#64748B' },
-        { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? '#10B981' : alignment >= 50 ? '#F59E0B' : '#EF4444' },
-        { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444' },
-        { label: 'Research Status', value: authorization || 'N/A', color: authorization === 'ALIGNED' || authorization === 'ALLOW' ? '#10B981' : authorization === 'CONDITIONAL' || authorization === 'ALLOW_REDUCED' ? '#F59E0B' : '#EF4444' },
+        { label: 'Verdict', value: verdict.toUpperCase(), color: verdict === 'tradable' ? 'var(--msp-bull)' : verdict === 'conditional' ? 'var(--msp-warn)' : verdict === 'blocked' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
+        { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? 'var(--msp-bull)' : alignment >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
+        { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? 'var(--msp-bull)' : confidence >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
+        { label: 'Research Status', value: authorization || 'N/A', color: authorization === 'ALIGNED' || authorization === 'ALLOW' ? 'var(--msp-bull)' : authorization === 'CONDITIONAL' || authorization === 'ALLOW_REDUCED' ? 'var(--msp-warn)' : 'var(--msp-bear)' },
         { label: 'Vol State', value: volState || 'N/A' },
-        { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? '#EF4444' : eventRisk === 'medium' ? '#F59E0B' : '#10B981' },
+        { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? 'var(--msp-bear)' : eventRisk === 'medium' ? 'var(--msp-warn)' : 'var(--msp-bull)' },
       ] : [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#64748B' },
-        { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? '#10B981' : quality === 'B' ? '#F59E0B' : '#64748B' },
+        { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
+        { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? 'var(--msp-bull)' : quality === 'B' ? 'var(--msp-warn)' : 'var(--msp-text-muted)' },
         { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
         { label: 'Signal', value: signalStrength || 'N/A' },
       ];
 
       const planContent = isMarketsPage ? [
-        { label: 'Bull', value: bullScenario || 'N/A', color: '#10B981' },
-        { label: 'Bear', value: bearScenario || 'N/A', color: '#EF4444' },
-        { label: 'R-Multiple', value: rMultiple !== undefined ? `${rMultiple.toFixed(1)}R` : 'N/A', color: rMultiple >= 2 ? '#10B981' : rMultiple >= 1 ? '#F59E0B' : '#EF4444' },
+        { label: 'Bull', value: bullScenario || 'N/A', color: 'var(--msp-bull)' },
+        { label: 'Bear', value: bearScenario || 'N/A', color: 'var(--msp-bear)' },
+        { label: 'R-Multiple', value: rMultiple !== undefined ? `${rMultiple.toFixed(1)}R` : 'N/A', color: rMultiple >= 2 ? 'var(--msp-bull)' : rMultiple >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
         { label: 'R Budget', value: ruBudget || 'N/A' },
         { label: 'Exp. Move', value: expectedMove || 'N/A' },
-        ...(marketMode ? [{ label: 'Flow Mode', value: `${marketMode.toUpperCase()} / ${gammaState || '?'} gamma`, color: flowBias === 'bullish' ? '#10B981' : flowBias === 'bearish' ? '#EF4444' : '#64748B' }] : []),
-        ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: flowConviction >= 70 ? '#10B981' : flowConviction >= 40 ? '#F59E0B' : '#64748B' }] : []),
+        ...(marketMode ? [{ label: 'Flow Mode', value: `${marketMode.toUpperCase()} / ${gammaState || '?'} gamma`, color: flowBias === 'bullish' ? 'var(--msp-bull)' : flowBias === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' }] : []),
+        ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: flowConviction >= 70 ? 'var(--msp-bull)' : flowConviction >= 40 ? 'var(--msp-warn)' : 'var(--msp-text-muted)' }] : []),
       ] : direction ? [
-        { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
+        { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? 'var(--msp-bull)' : 'var(--msp-bear)' },
         { label: 'Reference', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
         { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for analysis' },
         { label: 'Invalidation', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Level: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your risk' },
@@ -481,7 +481,7 @@ export default function MSPCopilot({
             height: '1.75rem',
             background: 'rgba(30, 41, 59, 0.8)',
             border: '1px solid rgba(100, 116, 139, 0.4)',
-            color: '#94A3B8',
+            color: 'var(--msp-flat)',
             fontSize: '0.75rem',
             lineHeight: 1,
           }}
@@ -532,8 +532,8 @@ export default function MSPCopilot({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '2rem', width: '2rem', borderRadius: '4px', objectFit: 'cover' }} />
           <div>
-            <div style={{ fontWeight: '700', color: '#E2E8F0' }}>ARCA AI</div>
-            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{skillConfig.displayName}</div>
+            <div style={{ fontWeight: '700', color: 'var(--msp-text)' }}>ARCA AI</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--msp-text-muted)' }}>{skillConfig.displayName}</div>
           </div>
         </div>
         <button
@@ -544,7 +544,7 @@ export default function MSPCopilot({
             borderRadius: '8px',
             padding: '0.5rem',
             cursor: 'pointer',
-            color: '#94A3B8',
+            color: 'var(--msp-flat)',
           }}
         >
           ✕
@@ -568,7 +568,7 @@ export default function MSPCopilot({
               background: activeTab === tab ? 'rgba(20,184,166,0.16)' : 'transparent',
               border: 'none',
               borderBottom: activeTab === tab ? '2px solid var(--msp-accent)' : '2px solid transparent',
-              color: activeTab === tab ? 'var(--msp-accent)' : '#64748B',
+              color: activeTab === tab ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
               fontSize: '0.8rem',
               fontWeight: '600',
               cursor: 'pointer',
@@ -603,7 +603,7 @@ export default function MSPCopilot({
                 {/* EXPLAIN TAB */}
                 {activeTab === 'explain' && getTabContent.explain && (
                   <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--msp-text)', marginBottom: '1rem', fontSize: '0.95rem' }}>
                       {getTabContent.explain.title}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -614,12 +614,12 @@ export default function MSPCopilot({
                           borderRadius: '8px',
                           gridColumn: item.highlight ? '1 / -1' : undefined,
                         }}>
-                          <div style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase' }}>{item.label}</div>
-                          <div style={{ fontSize: '0.9rem', fontWeight: '600', color: item.color || '#E2E8F0' }}>{item.value}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--msp-text-muted)', textTransform: 'uppercase' }}>{item.label}</div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: '600', color: item.color || 'var(--msp-text)' }}>{item.value}</div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--msp-text-muted)', fontStyle: 'italic' }}>
                       {getTabContent.explain.footer}
                     </div>
                   </div>
@@ -628,7 +628,7 @@ export default function MSPCopilot({
                 {/* PLAN TAB */}
                 {activeTab === 'plan' && getTabContent.plan && (
                   <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--msp-text)', marginBottom: '1rem', fontSize: '0.95rem' }}>
                       {getTabContent.plan.title}
                     </div>
                     {getTabContent.plan.content.length > 0 ? (
@@ -641,15 +641,15 @@ export default function MSPCopilot({
                             background: 'rgba(51, 65, 85, 0.3)',
                             borderRadius: '6px',
                           }}>
-                            <span style={{ color: '#94A3B8', fontSize: '0.85rem' }}>{item.label}</span>
-                            <span style={{ color: item.color || '#E2E8F0', fontWeight: '600', fontSize: '0.85rem' }}>{item.value}</span>
+                            <span style={{ color: 'var(--msp-flat)', fontSize: '0.85rem' }}>{item.label}</span>
+                            <span style={{ color: item.color || 'var(--msp-text)', fontWeight: '600', fontSize: '0.85rem' }}>{item.value}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div style={{ color: '#64748B', fontSize: '0.85rem' }}>Run a scan to see analysis results.</div>
+                      <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.85rem' }}>Run a scan to see analysis results.</div>
                     )}
-                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--msp-text-muted)', fontStyle: 'italic' }}>
                       {getTabContent.plan.footer}
                     </div>
                   </div>
@@ -658,7 +658,7 @@ export default function MSPCopilot({
                 {/* ACT TAB */}
                 {activeTab === 'act' && getTabContent.act && (
                   <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(249, 115, 22, 0.2)' }}>
-                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--msp-text)', marginBottom: '1rem', fontSize: '0.95rem' }}>
                       {getTabContent.act.title}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -691,7 +691,7 @@ export default function MSPCopilot({
                         </button>
                       ))}
                     </div>
-                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--msp-text-muted)', fontStyle: 'italic' }}>
                       {getTabContent.act.footer}
                     </div>
                   </div>
@@ -700,7 +700,7 @@ export default function MSPCopilot({
                 {/* LEARN TAB */}
                 {activeTab === 'learn' && getTabContent.learn && (
                   <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
-                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--msp-text)', marginBottom: '1rem', fontSize: '0.95rem' }}>
                       {getTabContent.learn.title}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -733,7 +733,7 @@ export default function MSPCopilot({
                         </button>
                       ))}
                     </div>
-                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--msp-text-muted)', fontStyle: 'italic' }}>
                       {getTabContent.learn.footer}
                     </div>
                   </div>
@@ -743,10 +743,10 @@ export default function MSPCopilot({
               /* Default empty state when no page data */
               <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>👋</div>
-                <div style={{ color: '#E2E8F0', fontWeight: '600', marginBottom: '0.5rem' }}>
+                <div style={{ color: 'var(--msp-text)', fontWeight: '600', marginBottom: '0.5rem' }}>
                   How can I help?
                 </div>
-                <div style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                   Ask me anything about this page, your trades, or market analysis.
                 </div>
                 
@@ -764,7 +764,7 @@ export default function MSPCopilot({
                         background: 'rgba(59, 130, 246, 0.1)',
                         border: '1px solid rgba(59, 130, 246, 0.3)',
                         borderRadius: '10px',
-                        color: '#94A3B8',
+                        color: 'var(--msp-flat)',
                         fontSize: '0.85rem',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -772,11 +772,11 @@ export default function MSPCopilot({
                       }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
-                        e.currentTarget.style.color = '#E2E8F0';
+                        e.currentTarget.style.color = 'var(--msp-text)';
                       }}
                       onMouseOut={(e) => {
                         e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                        e.currentTarget.style.color = '#94A3B8';
+                        e.currentTarget.style.color = 'var(--msp-flat)';
                       }}
                     >
                       {prompt}
@@ -805,7 +805,7 @@ export default function MSPCopilot({
                 background: msg.role === 'user' 
                   ? 'var(--msp-accent)'
                   : 'rgba(30, 41, 59, 0.8)',
-                color: '#E2E8F0',
+                color: 'var(--msp-text)',
                 fontSize: '0.9rem',
                 lineHeight: '1.5',
                 border: msg.role === 'user' ? 'none' : '1px solid rgba(51, 65, 85, 0.5)',
@@ -815,7 +815,7 @@ export default function MSPCopilot({
               
               {/* Sources */}
               {msg.sources && msg.sources.length > 0 && (
-                <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#64748B' }}>
+                <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--msp-text-muted)' }}>
                   📚 Sources: {msg.sources.join(', ')}
                 </div>
               )}
@@ -834,7 +834,7 @@ export default function MSPCopilot({
                     padding: '0.25rem 0.5rem',
                     cursor: feedbackGiven[msg.id] ? 'default' : 'pointer',
                     fontSize: '0.75rem',
-                    color: feedbackGiven[msg.id] === 'up' ? '#10B981' : '#64748B',
+                    color: feedbackGiven[msg.id] === 'up' ? 'var(--msp-bull)' : 'var(--msp-text-muted)',
                   }}
                 >
                   👍
@@ -849,7 +849,7 @@ export default function MSPCopilot({
                     padding: '0.25rem 0.5rem',
                     cursor: feedbackGiven[msg.id] ? 'default' : 'pointer',
                     fontSize: '0.75rem',
-                    color: feedbackGiven[msg.id] === 'down' ? '#EF4444' : '#64748B',
+                    color: feedbackGiven[msg.id] === 'down' ? 'var(--msp-bear)' : 'var(--msp-text-muted)',
                   }}
                 >
                   👎
@@ -897,10 +897,10 @@ export default function MSPCopilot({
             borderTop: '1px solid rgba(245, 158, 11, 0.3)',
           }}
         >
-          <div style={{ fontSize: '0.85rem', color: '#F59E0B', marginBottom: '0.75rem' }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--msp-warn)', marginBottom: '0.75rem' }}>
             ⚡ Analysis Note:
           </div>
-          <div style={{ fontSize: '0.9rem', color: '#E2E8F0', marginBottom: '0.75rem' }}>
+          <div style={{ fontSize: '0.9rem', color: 'var(--msp-text)', marginBottom: '0.75rem' }}>
             {pendingAction.description}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -926,7 +926,7 @@ export default function MSPCopilot({
                 background: 'rgba(51, 65, 85, 0.5)',
                 border: 'none',
                 borderRadius: '8px',
-                color: '#94A3B8',
+                color: 'var(--msp-flat)',
                 cursor: 'pointer',
               }}
             >
@@ -957,7 +957,7 @@ export default function MSPCopilot({
               background: 'rgba(30, 41, 59, 0.8)',
               border: '1px solid rgba(51, 65, 85, 0.5)',
               borderRadius: '12px',
-              color: '#E2E8F0',
+              color: 'var(--msp-text)',
               fontSize: '0.9rem',
               outline: 'none',
             }}
@@ -982,7 +982,7 @@ export default function MSPCopilot({
         <div style={{ 
           marginTop: '0.5rem', 
           fontSize: '0.7rem', 
-          color: '#64748B',
+          color: 'var(--msp-text-muted)',
           textAlign: 'center',
         }}>
           Educational purposes only • Not financial advice
