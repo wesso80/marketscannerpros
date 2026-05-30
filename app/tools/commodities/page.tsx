@@ -830,14 +830,14 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
               <h3 className="mb-3 text-sm font-semibold text-white/90">Scenario Implications</h3>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 text-sm">
                 <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Long Scenario</div>
+                  <div className="mb-2 text-xs font-medium text-[var(--msp-text-muted)]">Long scenario</div>
                   <p className="text-white/75">
                     {derivedState.rotationLeader === 'Energy' ? 'Review Energy leaders.' : `Review ${derivedState.rotationLeader} leaders.`}{' '}
                     {derivedState.realRatesTrend === 'UP' ? 'Gold breakout evidence is weaker while real rates rise.' : 'Gold evidence improves if breadth confirms.'}
                   </p>
                 </div>
                 <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Short Scenario</div>
+                  <div className="mb-2 text-xs font-medium text-[var(--msp-text-muted)]">Short scenario</div>
                   <p className="text-white/75">
                     {derivedState.impulseType === 'DEFLATION'
                       ? 'Deflation pressure adds evidence for weakness in the weakest complex.'
@@ -845,7 +845,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
                   </p>
                 </div>
                 <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Portfolio Review</div>
+                  <div className="mb-2 text-xs font-medium text-[var(--msp-text-muted)]">Portfolio review</div>
                   <p className="text-white/75">
                     {derivedState.impulseType === 'INFLATION' && 'Inflation impulse building; review duration risk and real-asset evidence.'}
                     {derivedState.impulseType === 'GROWTH' && 'Growth impulse active; review cyclicals and copper-linked evidence.'}
