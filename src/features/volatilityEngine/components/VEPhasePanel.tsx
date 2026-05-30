@@ -3,9 +3,9 @@
 import type { PhasePersistence, ZoneDurationStats } from '@/src/features/volatilityEngine/types';
 
 function ageLabel(pct: number): { text: string; color: string } {
-  if (pct >= 80) return { text: 'STRETCHED', color: '#EF4444' };
-  if (pct >= 50) return { text: 'MATURE', color: '#D97706' };
-  return { text: 'YOUNG', color: '#10B981' };
+  if (pct >= 80) return { text: 'STRETCHED', color: 'var(--msp-bear)' };
+  if (pct >= 50) return { text: 'MATURE', color: 'var(--msp-warn)' };
+  return { text: 'YOUNG', color: 'var(--msp-bull)' };
 }
 
 function PhaseBlock({ label, active, prob, exitProb, stats }: {

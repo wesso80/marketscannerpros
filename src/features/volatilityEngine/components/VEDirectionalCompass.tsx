@@ -23,9 +23,9 @@ const LABELS: Record<string, string> = {
 };
 
 function biasColor(bias: string): string {
-  if (bias === 'bullish') return '#10B981';
-  if (bias === 'bearish') return '#EF4444';
-  return '#64748B';
+  if (bias === 'bullish') return 'var(--msp-bull)';
+  if (bias === 'bearish') return 'var(--msp-bear)';
+  return 'var(--msp-text-muted)';
 }
 
 // Map missing data sources to which component keys become N/A
@@ -105,7 +105,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
           const max = COMPONENT_MAX[key] || 20;
           const absVal = Math.abs(value);
           const pct = isNA ? 0 : Math.min(100, (absVal / max) * 100);
-          const barColor = isNA ? '#334155' : value > 0 ? '#10B981' : value < 0 ? '#EF4444' : '#475569';
+          const barColor = isNA ? '#334155' : value > 0 ? 'var(--msp-bull)' : value < 0 ? 'var(--msp-bear)' : 'var(--msp-text-muted)';
           return (
             <div key={key} className="space-y-0.5">
               <div className="flex items-center justify-between text-[11px]">

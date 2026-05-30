@@ -86,7 +86,7 @@ interface SignalCardProps {
 
 export default function VESignalCard({ signal, volatility, direction, exhaustion }: SignalCardProps) {
   const isActive = signal.type !== 'none' && signal.active;
-  const color = signal.type.includes('up') ? '#10B981' : signal.type.includes('down') ? '#EF4444' : '#64748B';
+  const color = signal.type.includes('up') ? 'var(--msp-bull)' : signal.type.includes('down') ? 'var(--msp-bear)' : 'var(--msp-text-muted)';
 
   const conditionGroups = (!isActive && signal.state !== 'armed' && volatility && direction)
     ? getIdleConditions(volatility, direction, exhaustion)
@@ -120,7 +120,7 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
               <div key={g.signalName} className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[0.7rem] font-bold text-white/70">{g.signalName}</span>
-                  <span className="text-[11px] font-semibold" style={{ color: pctMet >= 80 ? '#10B981' : pctMet >= 50 ? '#D97706' : '#64748B' }}>
+                  <span className="text-[11px] font-semibold" style={{ color: pctMet >= 80 ? 'var(--msp-bull)' : pctMet >= 50 ? 'var(--msp-warn)' : 'var(--msp-text-muted)' }}>
                     {metCount}/{total}
                   </span>
                 </div>

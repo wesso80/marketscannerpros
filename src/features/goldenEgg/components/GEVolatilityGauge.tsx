@@ -5,10 +5,10 @@ import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
 type VolatilityData = GoldenEggPayload['layer3']['structure']['volatility'];
 
 const ZONES = [
-  { max: 15, label: 'COMPRESSION', color: '#1E3A5F', text: '#60A5FA' },
-  { max: 70, label: 'NEUTRAL',     color: '#475569', text: '#94A3B8' },
-  { max: 90, label: 'EXPANSION',   color: '#D97706', text: '#FBBF24' },
-  { max: 100, label: 'CLIMAX',     color: '#DC2626', text: '#F87171' },
+  { max: 15, label: 'COMPRESSION', color: 'var(--msp-panel)', text: 'var(--msp-info)' },
+  { max: 70, label: 'NEUTRAL',     color: 'var(--msp-text-muted)', text: 'var(--msp-flat)' },
+  { max: 90, label: 'EXPANSION',   color: 'var(--msp-warn)', text: 'var(--msp-warn)' },
+  { max: 100, label: 'CLIMAX',     color: 'var(--msp-bear)', text: 'var(--msp-bear)' },
 ] as const;
 
 function getZone(bbwp: number) {
@@ -16,9 +16,9 @@ function getZone(bbwp: number) {
 }
 
 function directionArrow(bias?: 'bullish' | 'bearish' | 'neutral') {
-  if (bias === 'bullish') return { icon: '↑', color: '#10B981', label: 'Bullish' };
-  if (bias === 'bearish') return { icon: '↓', color: '#EF4444', label: 'Bearish' };
-  return { icon: '↔', color: '#94A3B8', label: 'Neutral' };
+  if (bias === 'bullish') return { icon: '↑', color: 'var(--msp-bull)', label: 'Bullish' };
+  if (bias === 'bearish') return { icon: '↓', color: 'var(--msp-bear)', label: 'Bearish' };
+  return { icon: '↔', color: 'var(--msp-flat)', label: 'Neutral' };
 }
 
 export default function GEVolatilityGauge({ volatility }: { volatility: VolatilityData }) {

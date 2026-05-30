@@ -3,7 +3,7 @@
 import type { DVEInvalidation } from '@/src/features/volatilityEngine/types';
 
 export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
-  const statusColor = inv.invalidated ? '#EF4444' : '#10B981';
+  const statusColor = inv.invalidated ? 'var(--msp-bear)' : 'var(--msp-bull)';
   const statusText = inv.invalidated ? 'INVALIDATED' : 'VALID';
 
   return (

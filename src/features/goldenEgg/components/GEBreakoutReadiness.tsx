@@ -5,9 +5,9 @@ import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
 type VolatilityData = GoldenEggPayload['layer3']['structure']['volatility'];
 
 function scoreLabel(score: number): { text: string; color: string } {
-  if (score >= 60) return { text: 'HIGH', color: '#10B981' };
-  if (score >= 40) return { text: 'MODERATE', color: '#D97706' };
-  return { text: 'LOW', color: '#EF4444' };
+  if (score >= 60) return { text: 'HIGH', color: 'var(--msp-bull)' };
+  if (score >= 40) return { text: 'MODERATE', color: 'var(--msp-warn)' };
+  return { text: 'LOW', color: 'var(--msp-bear)' };
 }
 
 interface BarProps {

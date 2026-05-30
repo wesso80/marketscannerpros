@@ -3,16 +3,16 @@
 import type { BreakoutReadiness } from '@/src/features/volatilityEngine/types';
 
 function scoreColor(score: number): string {
-  if (score >= 60) return '#10B981';
-  if (score >= 40) return '#D97706';
-  return '#EF4444';
+  if (score >= 60) return 'var(--msp-bull)';
+  if (score >= 40) return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
 const BARS: { key: keyof BreakoutReadiness['components']; label: string; max: number; color: string }[] = [
-  { key: 'volCompression', label: 'Vol Compression', max: 40, color: '#3B82F6' },
+  { key: 'volCompression', label: 'Vol Compression', max: 40, color: 'var(--msp-info)' },
   { key: 'timeAlignment', label: 'Time Alignment', max: 30, color: '#8B5CF6' },
-  { key: 'gammaWall', label: 'Gamma Wall', max: 20, color: '#F59E0B' },
-  { key: 'adxRising', label: 'ADX Rising', max: 10, color: '#10B981' },
+  { key: 'gammaWall', label: 'Gamma Wall', max: 20, color: 'var(--msp-warn)' },
+  { key: 'adxRising', label: 'ADX Rising', max: 10, color: 'var(--msp-bull)' },
 ];
 
 // Map missing data sources to which breakout component keys become N/A
@@ -28,7 +28,7 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
   // Breakout probability: sigmoid-based mapping from score
   // Score 0 → ~10%, Score 50 → ~50%, Score 100 → ~90%
   const probability = Math.min(95, Math.max(5, 10 + (total * 0.85)));
-  const probColor = probability >= 60 ? '#10B981' : probability >= 35 ? '#D97706' : '#EF4444';
+  const probColor = probability >= 60 ? 'var(--msp-bull)' : probability >= 35 ? 'var(--msp-warn)' : 'var(--msp-bear)';
 
   // Build set of component keys that are N/A due to missing inputs
   const naKeys = new Set<string>();

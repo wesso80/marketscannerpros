@@ -109,8 +109,8 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
   }
 
   const isUp = proj.signalType.includes('up');
-  const moveColor = isUp ? '#10B981' : '#EF4444';
-  const hitColor = proj.hitRate >= 60 ? '#10B981' : proj.hitRate >= 40 ? '#D97706' : '#EF4444';
+  const moveColor = isUp ? 'var(--msp-bull)' : 'var(--msp-bear)';
+  const hitColor = proj.hitRate >= 60 ? 'var(--msp-bull)' : proj.hitRate >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const qualityScore = proj.projectionQualityScore ?? 0;
   const dispersionPct = proj.dispersionPct ?? 0;
 

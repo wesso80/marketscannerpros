@@ -9,11 +9,11 @@ type Props = {
 
 function regimeColor(regime: string): string {
   switch (regime) {
-    case 'compression': return '#3B82F6';
+    case 'compression': return 'var(--msp-info)';
     case 'transition': return '#A78BFA';
-    case 'expansion': return '#D97706';
-    case 'climax': return '#EF4444';
-    default: return '#64748B';
+    case 'expansion': return 'var(--msp-warn)';
+    case 'climax': return 'var(--msp-bear)';
+    default: return 'var(--msp-text-muted)';
   }
 }
 
@@ -39,7 +39,7 @@ export default function GEDVEConditions({ volatility }: Props) {
 
   // Phase persistence
   if (volatility.phaseAge != null && volatility.phaseAgePercentile != null) {
-    const ageColor = volatility.phaseAgePercentile > 80 ? '#D97706' : '#64748B';
+    const ageColor = volatility.phaseAgePercentile > 80 ? 'var(--msp-warn)' : 'var(--msp-text-muted)';
     conditions.push({
       label: 'Phase Age',
       value: `${volatility.phaseAge} bars (${volatility.phaseAgePercentile.toFixed(0)}th pctl)`,
@@ -49,7 +49,7 @@ export default function GEDVEConditions({ volatility }: Props) {
 
   // Signal condition 
   if (signal && signal !== 'none') {
-    const sigColor = signal.includes('up') ? '#10B981' : '#EF4444';
+    const sigColor = signal.includes('up') ? 'var(--msp-bull)' : 'var(--msp-bear)';
     conditions.push({
       label: 'DVE Signal',
       value: signal.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
@@ -59,7 +59,7 @@ export default function GEDVEConditions({ volatility }: Props) {
 
   // Breakout readiness
   if (breakout > 0) {
-    const bColor = breakout >= 60 ? '#10B981' : breakout >= 40 ? '#D97706' : '#64748B';
+    const bColor = breakout >= 60 ? 'var(--msp-bull)' : breakout >= 40 ? 'var(--msp-warn)' : 'var(--msp-text-muted)';
     conditions.push({
       label: 'Breakout Ready',
       value: `${breakout.toFixed(0)}/100`,
@@ -69,7 +69,7 @@ export default function GEDVEConditions({ volatility }: Props) {
 
   // Exhaustion warning
   if (exhaustion >= 40) {
-    const eColor = exhaustion >= 70 ? '#EF4444' : '#D97706';
+    const eColor = exhaustion >= 70 ? 'var(--msp-bear)' : 'var(--msp-warn)';
     conditions.push({
       label: 'Exhaustion Risk',
       value: `${exhaustion.toFixed(0)}/100 — ${exhaustion >= 70 ? 'reduce size' : 'tighten stops'}`,
@@ -82,7 +82,7 @@ export default function GEDVEConditions({ volatility }: Props) {
     conditions.push({
       label: 'Trap Warning',
       value: `Score ${(volatility.trapScore ?? 0).toFixed(0)} — wait for confirmation`,
-      color: '#EF4444',
+      color: 'var(--msp-bear)',
     });
   }
 
@@ -91,7 +91,7 @@ export default function GEDVEConditions({ volatility }: Props) {
     conditions.push({
       label: 'Invalidation',
       value: 'BBWP returning below 15 after breakout invalidates move',
-      color: '#94A3B8',
+      color: 'var(--msp-flat)',
     });
   } else if (regime === 'transition') {
     conditions.push({
@@ -103,13 +103,13 @@ export default function GEDVEConditions({ volatility }: Props) {
     conditions.push({
       label: 'Watch',
       value: 'BBWP deceleration → tighten stops for regime shift',
-      color: '#94A3B8',
+      color: 'var(--msp-flat)',
     });
   } else if (regime === 'climax') {
     conditions.push({
       label: 'Caution',
       value: 'Extreme vol expansion — exhaustion likely, tighten stops aggressively',
-      color: '#EF4444',
+      color: 'var(--msp-bear)',
     });
   }
 

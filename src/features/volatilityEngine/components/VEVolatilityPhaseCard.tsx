@@ -23,11 +23,11 @@ type PhaseCardProps = {
 };
 
 function phaseTone(regime: string) {
-  if (regime === 'compression') return { border: 'border-blue-500/35', bg: 'bg-blue-500/10', text: 'text-blue-100', accent: '#60A5FA' };
-  if (regime === 'expansion') return { border: 'border-amber-500/35', bg: 'bg-amber-500/10', text: 'text-amber-100', accent: '#F59E0B' };
-  if (regime === 'climax') return { border: 'border-red-500/40', bg: 'bg-red-500/10', text: 'text-red-100', accent: '#EF4444' };
+  if (regime === 'compression') return { border: 'border-blue-500/35', bg: 'bg-blue-500/10', text: 'text-blue-100', accent: 'var(--msp-info)' };
+  if (regime === 'expansion') return { border: 'border-amber-500/35', bg: 'bg-amber-500/10', text: 'text-amber-100', accent: 'var(--msp-warn)' };
+  if (regime === 'climax') return { border: 'border-red-500/40', bg: 'bg-red-500/10', text: 'text-red-100', accent: 'var(--msp-bear)' };
   if (regime === 'transition') return { border: 'border-violet-500/35', bg: 'bg-violet-500/10', text: 'text-violet-100', accent: '#8B5CF6' };
-  return { border: 'border-slate-700', bg: 'bg-slate-900/40', text: 'text-slate-100', accent: '#94A3B8' };
+  return { border: 'border-slate-700', bg: 'bg-slate-900/40', text: 'text-slate-100', accent: 'var(--msp-flat)' };
 }
 
 function activePhase(phase: PhasePersistence) {

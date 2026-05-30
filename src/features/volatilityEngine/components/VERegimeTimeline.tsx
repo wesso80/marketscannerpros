@@ -4,11 +4,11 @@ import type { StateTransition, ExhaustionRisk, DVEFlag, VolatilityState, PhasePe
 
 function regimeColor(regime: string): string {
   switch (regime) {
-    case 'compression': return '#3B82F6';
-    case 'expansion': return '#D97706';
-    case 'climax': return '#DC2626';
+    case 'compression': return 'var(--msp-info)';
+    case 'expansion': return 'var(--msp-warn)';
+    case 'climax': return 'var(--msp-bear)';
     case 'transition': return '#8B5CF6';
-    default: return '#64748B';
+    default: return 'var(--msp-text-muted)';
   }
 }
 

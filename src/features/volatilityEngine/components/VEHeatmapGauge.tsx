@@ -3,10 +3,10 @@
 import type { VolatilityState } from '@/src/features/volatilityEngine/types';
 
 const ZONES = [
-  { max: 15, label: 'COMPRESSION', color: '#1E3A5F', text: '#60A5FA' },
-  { max: 70, label: 'NEUTRAL',     color: '#475569', text: '#94A3B8' },
-  { max: 90, label: 'EXPANSION',   color: '#D97706', text: '#FBBF24' },
-  { max: 100, label: 'CLIMAX',     color: '#DC2626', text: '#F87171' },
+  { max: 15, label: 'COMPRESSION', color: 'var(--msp-panel)', text: 'var(--msp-info)' },
+  { max: 70, label: 'NEUTRAL',     color: 'var(--msp-text-muted)', text: 'var(--msp-flat)' },
+  { max: 90, label: 'EXPANSION',   color: 'var(--msp-warn)', text: 'var(--msp-warn)' },
+  { max: 100, label: 'CLIMAX',     color: 'var(--msp-bear)', text: 'var(--msp-bear)' },
 ] as const;
 
 function getZone(bbwp: number) {
@@ -15,11 +15,11 @@ function getZone(bbwp: number) {
 
 function regimeColor(regime: string): string {
   switch (regime) {
-    case 'compression': return '#60A5FA';
-    case 'expansion': return '#FBBF24';
-    case 'climax': return '#F87171';
+    case 'compression': return 'var(--msp-info)';
+    case 'expansion': return 'var(--msp-warn)';
+    case 'climax': return 'var(--msp-bear)';
     case 'transition': return '#A78BFA';
-    default: return '#94A3B8';
+    default: return 'var(--msp-flat)';
   }
 }
 
