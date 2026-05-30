@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/contact',
     '/guide',
     '/guide/open-interest',
+    '/daily-pick',
     '/blog',
     '/terms',
     '/privacy',
