@@ -9,6 +9,7 @@ import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { PageHero } from '@/components/ui';
 
 interface CoinData {
   coin: {
@@ -471,13 +472,21 @@ function CryptoDetailPageContent() {
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
-        <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg"><img src="/assets/platform-tools/crypto-explorer.png" alt="Crypto Explorer" className="h-full w-full object-contain" /></div>
-            <h1 className="text-lg font-bold text-teal-300">Crypto Asset Explorer</h1>
-          </div>
-          <p className="text-xs text-slate-400">Decision-grade asset view: status, permission, context, then details.</p>
-        </header>
+        <PageHero
+          ariaLabel="Crypto Explorer command header"
+          eyebrow="Crypto asset explorer"
+          badges={[
+            { label: `Permission ${permissionLabel}` },
+            { label: `Bias ${decision.structureBias}` },
+          ]}
+          title="Crypto Asset Explorer"
+          subtitle="Decision-grade asset view: status, permission, context, then details."
+          actions={[
+            { label: 'Open Markets', variant: 'primary', href: '/tools/markets' },
+            { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner?asset=crypto' },
+            { label: 'Open Golden Egg', variant: 'ghost', href: '/tools/golden-egg' },
+          ]}
+        />
 
         <ComplianceDisclaimer compact />
 
@@ -583,7 +592,7 @@ function CryptoDetailPageContent() {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <p className="text-[11px] font-medium text-slate-400">Zone 2 · Action</p>
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
                   <button
@@ -660,7 +669,7 @@ function CryptoDetailPageContent() {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+                  <p className="text-[11px] font-medium text-slate-400">Zone 2 · Context</p>
                   <h2 className="text-xs font-bold">Trend / RS / Liquidity Context</h2>
                 </div>
 
