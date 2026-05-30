@@ -21,9 +21,9 @@ export const dynamic = 'force-dynamic';
  */
 
 const ACCENT = {
-  LONG: '#10B981',
-  SHORT: '#EF4444',
-  WATCH: '#F59E0B',
+  LONG: 'var(--msp-bull)',
+  SHORT: 'var(--msp-bear)',
+  WATCH: 'var(--msp-warn)',
 } as const;
 
 type Side = keyof typeof ACCENT;
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
               display: 'flex',
               alignItems: 'center',
               gap: '14px',
-              color: '#94A3B8',
+              color: 'var(--msp-flat)',
               fontSize: 22,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -156,7 +156,7 @@ export async function GET(req: NextRequest) {
             style={{
               fontSize: 38,
               fontWeight: 600,
-              color: '#E2E8F0',
+              color: 'var(--msp-text)',
               lineHeight: 1.25,
               display: 'flex',
               maxWidth: '1070px',
@@ -194,7 +194,7 @@ export async function GET(req: NextRequest) {
                   style={{
                     fontSize: 16,
                     letterSpacing: '0.12em',
-                    color: '#94A3B8',
+                    color: 'var(--msp-flat)',
                     textTransform: 'uppercase',
                     display: 'flex',
                   }}
@@ -225,7 +225,7 @@ export async function GET(req: NextRequest) {
             alignItems: 'center',
             paddingTop: '16px',
             borderTop: '1px solid rgba(255,255,255,0.08)',
-            color: '#94A3B8',
+            color: 'var(--msp-flat)',
             fontSize: 22,
           }}
         >

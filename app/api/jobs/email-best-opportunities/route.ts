@@ -412,7 +412,7 @@ function renderPickBlock(title: string, p: PickReasoning | null): string {
       <p style="color:#94A3B8;font-size:13px;margin:0;">No qualifying candidate — radar returned no permissioned setups. Observation only.</p>
     </section>`;
   }
-  const freshnessColor = p.freshness === 'fresh' ? '#10B981' : p.freshness === 'delayed' ? '#F59E0B' : '#EF4444';
+  const freshnessColor = p.freshness === 'fresh' ? 'var(--msp-bull)' : p.freshness === 'delayed' ? 'var(--msp-warn)' : 'var(--msp-bear)';
   return `<section style="background:#0B1220;border:1px solid #1E293B;border-radius:10px;padding:16px;margin-bottom:16px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
       <h2 style="color:#F1F5F9;font-size:16px;margin:0;">

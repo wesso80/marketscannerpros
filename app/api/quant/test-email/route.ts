@@ -90,13 +90,13 @@ export async function GET(req: NextRequest) {
   };
 
   // Build email (replicating alertMailer logic inline to avoid tier filter)
-  const dirColor = (d: string) => d === 'LONG' ? '#10b981' : d === 'SHORT' ? '#ef4444' : '#94a3b8';
+  const dirColor = (d: string) => d === 'LONG' ? 'var(--msp-bull)' : d === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-flat)';
   const tierEmoji = (t: string) => t === 'PRIORITY' ? '🔴' : t === 'ACTIONABLE' ? '🟠' : '🔵';
 
   const alertRows = mockAlerts.map(a => {
     const dimBars = a.topDimensions.map(d => {
       const barWidth = Math.max(4, Math.round(d.score * 1.5));
-      const barColor = d.score >= 70 ? '#10b981' : d.score >= 50 ? '#eab308' : '#ef4444';
+      const barColor = d.score >= 70 ? 'var(--msp-bull)' : d.score >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)';
       return `
         <div style="display:flex;align-items:center;margin:2px 0;font-size:12px;">
           <span style="width:90px;color:#94a3b8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">${d.name}</span>

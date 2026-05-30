@@ -5,16 +5,16 @@ import { q } from '@/lib/db';
 
 // Sector ETF mappings
 const SECTOR_ETFS = [
-  { symbol: 'XLK', name: 'Technology', color: '#3B82F6' },
-  { symbol: 'XLF', name: 'Financials', color: '#10B981' },
+  { symbol: 'XLK', name: 'Technology', color: 'var(--msp-info)' },
+  { symbol: 'XLF', name: 'Financials', color: 'var(--msp-bull)' },
   { symbol: 'XLV', name: 'Healthcare', color: '#EC4899' },
-  { symbol: 'XLE', name: 'Energy', color: '#F59E0B' },
+  { symbol: 'XLE', name: 'Energy', color: 'var(--msp-warn)' },
   { symbol: 'XLY', name: 'Consumer Discretionary', color: '#8B5CF6' },
   { symbol: 'XLP', name: 'Consumer Staples', color: '#06B6D4' },
   { symbol: 'XLI', name: 'Industrials', color: '#6366F1' },
-  { symbol: 'XLB', name: 'Materials', color: '#84CC16' },
+  { symbol: 'XLB', name: 'Materials', color: 'var(--msp-bull)' },
   { symbol: 'XLU', name: 'Utilities', color: '#F97316' },
-  { symbol: 'XLRE', name: 'Real Estate', color: '#EF4444' },
+  { symbol: 'XLRE', name: 'Real Estate', color: 'var(--msp-bear)' },
   { symbol: 'XLC', name: 'Communication Services', color: '#14B8A6' },
 ];
 
