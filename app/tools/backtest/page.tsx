@@ -692,18 +692,18 @@ function BacktestContent() {
   // Tier gate - Pro Trader only
   if (tierLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--msp-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div role="status" aria-label="Loading backtest">
           <div style={{
             width: '36px',
             height: '36px',
             border: '3px solid rgba(148,163,184,0.2)',
-            borderTopColor: '#10b981',
+            borderTopColor: 'var(--msp-bull)',
             borderRadius: '50%',
             animation: 'spin 0.8s linear infinite',
             margin: '0 auto 12px',
           }} />
-          <div style={{ color: '#94a3b8', fontSize: '14px' }}>Loading...</div>
+          <div style={{ color: 'var(--msp-flat)', fontSize: '14px' }}>Loading...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
@@ -712,7 +712,7 @@ function BacktestContent() {
 
   if (!canAccessBacktest(tier)) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--msp-bg)' }}>
         <ToolsPageHeader
           badge="ELITE STRATEGY LAB"
           title="Strategy Backtester"
@@ -721,7 +721,7 @@ function BacktestContent() {
           backHref="/dashboard"
         />
         <UpgradeGate requiredTier="pro_trader" feature="Elite Strategy Backtesting">
-          <ul style={{ textAlign: 'left', color: '#94a3b8', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
+          <ul style={{ textAlign: 'left', color: 'var(--msp-flat)', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
             <li>25+ historical strategy templates (MSP, scalping, swing)</li>
             <li>Multi-timeframe testing (15m, 30m, 1h, daily)</li>
             <li>Alpha Vantage market data with assumptions shown</li>
@@ -1261,7 +1261,7 @@ function BacktestContent() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: '#0f172a',
+      background: 'var(--msp-bg)',
       padding: 0
     }}>
       <ToolsPageHeader
@@ -1275,7 +1275,7 @@ function BacktestContent() {
         <div style={{ marginBottom: '12px' }}>
           <RegimeBanner />
         </div>
-        <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: '#cbd5e1', fontSize: '12px' }}>
+        <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: 'var(--msp-text)', fontSize: '12px' }}>
           Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
         </div>
         <ComplianceDisclaimer compact variant="backtest" />
@@ -1316,12 +1316,12 @@ function BacktestContent() {
                 }}>
                   Testing Options Scanner Setup
                 </div>
-                <div style={{ color: '#94A3B8', fontSize: '13px' }}>
-                  Symbol: <span style={{ color: '#E2E8F0', fontWeight: '500' }}>{symbol}</span>
+                <div style={{ color: 'var(--msp-flat)', fontSize: '13px' }}>
+                  Symbol: <span style={{ color: 'var(--msp-text)', fontWeight: '500' }}>{symbol}</span>
                   {urlDirection && (
                     <>
                       {' • '}Direction: <span style={{ 
-                        color: urlDirection === 'bullish' ? '#10B981' : urlDirection === 'bearish' ? '#EF4444' : '#F59E0B',
+                        color: urlDirection === 'bullish' ? 'var(--msp-bull)' : urlDirection === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)',
                         fontWeight: '500'
                       }}>
                         {urlDirection.toUpperCase()}
@@ -1361,7 +1361,7 @@ function BacktestContent() {
                   background: 'transparent',
                   border: '1px solid rgba(100,116,139,0.4)',
                   borderRadius: '8px',
-                  color: '#64748B',
+                  color: 'var(--msp-text-muted)',
                   fontSize: '12px',
                   cursor: 'pointer',
                 }}
@@ -1387,7 +1387,7 @@ function BacktestContent() {
 
           <Link href="/tools/workspace?tab=backtest" role="tab" aria-selected={true} aria-current="page" style={{
             padding: '10px 20px',
-            color: '#10b981',
+            color: 'var(--msp-bull)',
             textDecoration: 'none',
             fontSize: '14px',
             fontWeight: '500',
@@ -1420,7 +1420,7 @@ function BacktestContent() {
             boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
           }}>
           <h2 style={{ 
-            color: '#f1f5f9', 
+            color: 'var(--msp-text)', 
             fontSize: '15px', 
             fontWeight: '600', 
             marginBottom: '24px',
@@ -1441,7 +1441,7 @@ function BacktestContent() {
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Symbol
               </label>
               <input
@@ -1454,7 +1454,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
                 placeholder="e.g., SPY, AAPL"
@@ -1462,7 +1462,7 @@ function BacktestContent() {
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Universe Symbols (for symbol + timeframe scan)
               </label>
               <input
@@ -1475,18 +1475,18 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
                 placeholder="SPY, QQQ, AAPL, MSFT, NVDA"
               />
-              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--msp-text-muted)', marginTop: '4px' }}>
                 Comma-separated tickers. Scanner ranks best symbol + timeframe combo for this strategy.
               </p>
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Edge Type
               </label>
               <select
@@ -1499,7 +1499,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               >
@@ -1512,7 +1512,7 @@ function BacktestContent() {
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Strategy Variant
               </label>
               <select
@@ -1525,7 +1525,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               >
@@ -1539,13 +1539,13 @@ function BacktestContent() {
                   </optgroup>
                 ))}
               </select>
-              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--msp-text-muted)', marginTop: '4px' }}>
                 Institutional flow: choose edge type first, then test the strategy variant.
               </p>
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Timeframe
               </label>
               <input
@@ -1563,7 +1563,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
@@ -1578,7 +1578,7 @@ function BacktestContent() {
                   <option key={value} value={value} />
                 ))}
               </datalist>
-              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--msp-text-muted)', marginTop: '4px' }}>
                 Free input enabled. Use formats like 6m, 2h, 2hour, 1d/daily.
               </p>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -1595,7 +1595,7 @@ function BacktestContent() {
                       borderRadius: '999px',
                       border: timeframe === tf ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.35)',
                       background: timeframe === tf ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.5)',
-                      color: timeframe === tf ? '#6ee7b7' : '#cbd5e1',
+                      color: timeframe === tf ? '#6ee7b7' : 'var(--msp-text)',
                       fontSize: '11px',
                       fontWeight: 600,
                       cursor: 'pointer'
@@ -1606,14 +1606,14 @@ function BacktestContent() {
                 ))}
               </div>
               {timeframe !== 'daily' && (
-                <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--msp-bull)', marginTop: '4px' }}>
                   OK Custom intraday timeframes may be resampled from base bars.
                 </p>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Start Date
               </label>
               <input
@@ -1628,14 +1628,14 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 End Date
               </label>
               <input
@@ -1650,7 +1650,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
@@ -1665,7 +1665,7 @@ function BacktestContent() {
                 borderRadius: '999px',
                 border: '1px solid rgba(148,163,184,0.35)',
                 background: 'rgba(148,163,184,0.12)',
-                color: '#cbd5e1',
+                color: 'var(--msp-text)',
                 fontSize: '11px',
                 fontWeight: 600,
                 letterSpacing: '0.02em'
@@ -1679,24 +1679,24 @@ function BacktestContent() {
                     ? 'Coverage'
                     : 'Fallback'}
                 </span>
-                <span style={{ color: '#94a3b8' }}>•</span>
+                <span style={{ color: 'var(--msp-flat)' }}>•</span>
                 <span>
                   Earliest used: {dateAnchorInfo?.startDate || startDate}
                 </span>
-                <span style={{ color: '#94a3b8' }}>•</span>
+                <span style={{ color: 'var(--msp-flat)' }}>•</span>
                 <span>
                   Asset: {dateAnchorInfo?.assetType || 'unknown'}
                 </span>
               </div>
               {availableDateRange && (
-                <p style={{ fontSize: '11px', color: '#10b981', marginTop: '6px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--msp-bull)', marginTop: '6px' }}>
                   Max available range for selected timeframe: {availableDateRange.startDate} → {availableDateRange.endDate}
                 </p>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Initial Capital
               </label>
               <input
@@ -1709,7 +1709,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
                 placeholder="10000"
@@ -1717,7 +1717,7 @@ function BacktestContent() {
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+              <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                 Min Trades (Scan Leaderboards)
               </label>
               <input
@@ -1732,7 +1732,7 @@ function BacktestContent() {
                   background: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '6px',
-                  color: '#f1f5f9',
+                  color: 'var(--msp-text)',
                   fontSize: '14px'
                 }}
               />
@@ -1740,7 +1740,7 @@ function BacktestContent() {
 
             {isReplayStrategy && (
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '13px', marginBottom: '6px' }}>
                   Min Signal Score
                 </label>
                 <input
@@ -1756,7 +1756,7 @@ function BacktestContent() {
                     background: '#1e293b',
                     border: '1px solid #334155',
                     borderRadius: '6px',
-                    color: '#f1f5f9',
+                    color: 'var(--msp-text)',
                     fontSize: '14px'
                   }}
                 />
@@ -1902,7 +1902,7 @@ function BacktestContent() {
                 background: 'rgba(59,130,246,0.15)',
                 border: '1px solid rgba(59,130,246,0.35)',
                 borderRadius: '8px',
-                color: '#93c5fd',
+                color: 'var(--msp-info)',
                 fontSize: '12px',
                 fontWeight: 700,
                 cursor: isLoading || isScanningTimeframes || isScanningUniverse || universeScanResults.length === 0 ? 'not-allowed' : 'pointer',
@@ -1935,7 +1935,7 @@ function BacktestContent() {
               background: 'rgba(15,23,42,0.5)',
               padding: '10px'
             }}>
-              <div style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
+              <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
                 Timeframe Scan Leaderboard
               </div>
               <div style={{ display: 'grid', gap: '6px' }}>
@@ -1949,10 +1949,10 @@ function BacktestContent() {
                     border: idx === 0 ? '1px solid rgba(16,185,129,0.45)' : '1px solid rgba(51,65,85,0.6)',
                     background: idx === 0 ? 'rgba(16,185,129,0.1)' : 'rgba(30,41,59,0.45)'
                   }}>
-                    <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700 }}>
+                    <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 700 }}>
                       {idx + 1}. {row.timeframe}
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
                       Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {formatProfitFactor(row.profitFactor)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
                     </div>
                   </div>
@@ -1983,7 +1983,7 @@ function BacktestContent() {
               background: 'rgba(15,23,42,0.5)',
               padding: '10px'
             }}>
-              <div style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
+              <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
                 Universe Scan Leaderboard (Symbol + Timeframe)
               </div>
               <div style={{ display: 'grid', gap: '6px' }}>
@@ -1997,10 +1997,10 @@ function BacktestContent() {
                     border: idx === 0 ? '1px solid rgba(59,130,246,0.45)' : '1px solid rgba(51,65,85,0.6)',
                     background: idx === 0 ? 'rgba(59,130,246,0.1)' : 'rgba(30,41,59,0.45)'
                   }}>
-                    <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700 }}>
+                    <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 700 }}>
                       {idx + 1}. {row.symbol} · {row.timeframe}
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
                       Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {formatProfitFactor(row.profitFactor)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
                     </div>
                   </div>
@@ -2035,7 +2035,7 @@ function BacktestContent() {
                     borderRadius: '8px',
                     border: '1px solid rgba(16,185,129,0.45)',
                     background: 'rgba(16,185,129,0.12)',
-                    color: '#34d399',
+                    color: 'var(--msp-bull)',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer'
@@ -2072,7 +2072,7 @@ function BacktestContent() {
               boxShadow: 'var(--msp-shadow)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div style={{ color: 'var(--msp-flat)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Command Layer
                 </div>
                 <button
@@ -2097,26 +2097,26 @@ function BacktestContent() {
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
-                  <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 ? '#10b981' : scoreProfitFactor(results.profitFactor) >= 1 ? '#fbbf24' : '#ef4444', fontSize: '14px', fontWeight: 700 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
+                  <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 ? 'var(--msp-bull)' : scoreProfitFactor(results.profitFactor) >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: '14px', fontWeight: 700 }}>
                     {scoreProfitFactor(results.profitFactor) >= 1.25 ? 'Positive' : scoreProfitFactor(results.profitFactor) >= 1 ? 'Marginal' : 'Negative'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Risk State</div>
-                  <div style={{ color: results.maxDrawdown <= 10 ? '#10b981' : results.maxDrawdown <= 20 ? '#fbbf24' : '#ef4444', fontSize: '14px', fontWeight: 700 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Risk State</div>
+                  <div style={{ color: results.maxDrawdown <= 10 ? 'var(--msp-bull)' : results.maxDrawdown <= 20 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: '14px', fontWeight: 700 }}>
                     {results.maxDrawdown <= 10 ? 'Controlled' : results.maxDrawdown <= 20 ? 'Moderate' : 'Elevated'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Assessment</div>
-                  <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? '#10b981' : scoreProfitFactor(results.profitFactor) >= 1 ? '#fbbf24' : '#94a3b8', fontSize: '14px', fontWeight: 700 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Assessment</div>
+                  <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'var(--msp-bull)' : scoreProfitFactor(results.profitFactor) >= 1 ? 'var(--msp-warn)' : 'var(--msp-flat)', fontSize: '14px', fontWeight: 700 }}>
                     {scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'HIGH ALIGNMENT' : scoreProfitFactor(results.profitFactor) >= 1 ? 'NEEDS REVIEW' : 'LOW ALIGNMENT'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Bias</div>
-                  <div style={{ color: results.totalReturn > 2 ? '#10b981' : results.totalReturn < -2 ? '#ef4444' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Bias</div>
+                  <div style={{ color: results.totalReturn > 2 ? 'var(--msp-bull)' : results.totalReturn < -2 ? 'var(--msp-bear)' : 'var(--msp-text)', fontSize: '14px', fontWeight: 700 }}>
                     {results.totalReturn > 2 ? 'Bullish' : results.totalReturn < -2 ? 'Bearish' : 'Neutral'}
                   </div>
                 </div>
@@ -2138,29 +2138,29 @@ function BacktestContent() {
                   </div>
                   <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Return</div>
-                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.totalReturn >= 0 ? '+' : ''}{results.totalReturn.toFixed(2)}%</div>
+                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Return</div>
+                      <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {results.totalReturn >= 0 ? '+' : ''}{results.totalReturn.toFixed(2)}%</div>
                       <div style={{ color: inverseComparison.inverse.totalReturn >= 0 ? '#6ee7b7' : '#fca5a5', fontSize: '12px', fontWeight: 700 }}>
                         Inverse: {inverseComparison.inverse.totalReturn >= 0 ? '+' : ''}{inverseComparison.inverse.totalReturn.toFixed(2)}%
                       </div>
                     </div>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Win Rate</div>
-                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.winRate.toFixed(1)}%</div>
+                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Win Rate</div>
+                      <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {results.winRate.toFixed(1)}%</div>
                       <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
                         Inverse: {inverseComparison.inverse.winRate.toFixed(1)}%
                       </div>
                     </div>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Max Drawdown</div>
-                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.maxDrawdown.toFixed(2)}%</div>
+                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Max Drawdown</div>
+                      <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {results.maxDrawdown.toFixed(2)}%</div>
                       <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
                         Inverse: {inverseComparison.inverse.maxDrawdown.toFixed(2)}%
                       </div>
                     </div>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Profit Factor</div>
-                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {formatProfitFactor(results.profitFactor, results.profitFactorLabel)}</div>
+                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Profit Factor</div>
+                      <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {formatProfitFactor(results.profitFactor, results.profitFactorLabel)}</div>
                       <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
                         Inverse: {formatProfitFactor(inverseComparison.inverse.profitFactor)}
                       </div>
@@ -2184,10 +2184,10 @@ function BacktestContent() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                   <div>
-                    <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ color: 'var(--msp-text)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Historical Pattern Check
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>{results.validation.reason}</div>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>{results.validation.reason}</div>
                   </div>
                   <span style={{
                     padding: '6px 10px',
@@ -2217,7 +2217,7 @@ function BacktestContent() {
 
                 {results.validation.suggestedAlternatives && results.validation.suggestedAlternatives.length > 0 && (
                   <div style={{ marginTop: '10px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>
                       Suggested Alternatives
                     </div>
                     <div style={{ display: 'grid', gap: '6px' }}>
@@ -2232,7 +2232,7 @@ function BacktestContent() {
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                            <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
+                            <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                               <button
                                 type="button"
@@ -2243,7 +2243,7 @@ function BacktestContent() {
                                   borderRadius: '6px',
                                   border: '1px solid rgba(148,163,184,0.35)',
                                   background: 'rgba(148,163,184,0.12)',
-                                  color: '#cbd5e1',
+                                  color: 'var(--msp-text)',
                                   fontSize: '11px',
                                   fontWeight: 700,
                                   cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -2261,7 +2261,7 @@ function BacktestContent() {
                                   borderRadius: '6px',
                                   border: '1px solid rgba(16,185,129,0.35)',
                                   background: 'rgba(16,185,129,0.15)',
-                                  color: '#10b981',
+                                  color: 'var(--msp-bull)',
                                   fontSize: '11px',
                                   fontWeight: 700,
                                   cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -2272,7 +2272,7 @@ function BacktestContent() {
                               </button>
                             </div>
                           </div>
-                          <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{alternative.why}</div>
+                          <div style={{ color: 'var(--msp-flat)', fontSize: '12px', marginTop: '2px' }}>{alternative.why}</div>
                         </div>
                       ))}
                     </div>
@@ -2281,7 +2281,7 @@ function BacktestContent() {
 
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(51,65,85,0.6)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '11px', textTransform: 'uppercase' }}>
                       Scenario Runner (TradingView-style inputs)
                     </div>
                     <button
@@ -2292,7 +2292,7 @@ function BacktestContent() {
                         borderRadius: '999px',
                         border: '1px solid rgba(148,163,184,0.35)',
                         background: 'rgba(148,163,184,0.12)',
-                        color: '#cbd5e1',
+                        color: 'var(--msp-text)',
                         fontSize: '11px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -2311,10 +2311,10 @@ function BacktestContent() {
                       style={{
                         width: '100%',
                         padding: '8px 10px',
-                        background: '#0f172a',
+                        background: 'var(--msp-bg)',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#f1f5f9',
+                        color: 'var(--msp-text)',
                         fontSize: '12px'
                       }}
                     />
@@ -2326,10 +2326,10 @@ function BacktestContent() {
                       style={{
                         width: '100%',
                         padding: '8px 10px',
-                        background: '#0f172a',
+                        background: 'var(--msp-bg)',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#f1f5f9',
+                        color: 'var(--msp-text)',
                         fontSize: '12px'
                       }}
                     />
@@ -2340,10 +2340,10 @@ function BacktestContent() {
                       style={{
                         width: '100%',
                         padding: '8px 10px',
-                        background: '#0f172a',
+                        background: 'var(--msp-bg)',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#f1f5f9',
+                        color: 'var(--msp-text)',
                         fontSize: '12px'
                       }}
                     />
@@ -2354,10 +2354,10 @@ function BacktestContent() {
                       style={{
                         width: '100%',
                         padding: '8px 10px',
-                        background: '#0f172a',
+                        background: 'var(--msp-bg)',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#f1f5f9',
+                        color: 'var(--msp-text)',
                         fontSize: '12px'
                       }}
                     />
@@ -2371,10 +2371,10 @@ function BacktestContent() {
                       style={{
                         width: '100%',
                         padding: '8px 10px',
-                        background: '#0f172a',
+                        background: 'var(--msp-bg)',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#f1f5f9',
+                        color: 'var(--msp-text)',
                         fontSize: '12px'
                       }}
                     />
@@ -2388,7 +2388,7 @@ function BacktestContent() {
                         borderRadius: '6px',
                         border: '1px solid rgba(16,185,129,0.35)',
                         background: 'rgba(16,185,129,0.15)',
-                        color: '#10b981',
+                        color: 'var(--msp-bull)',
                         fontSize: '12px',
                         fontWeight: 700,
                         cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -2418,10 +2418,10 @@ function BacktestContent() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                   <div>
-                    <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ color: 'var(--msp-text)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Post-Backtest Coach
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>{results.diagnostics.summary}</div>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>{results.diagnostics.summary}</div>
                   </div>
                   <span style={{
                     padding: '6px 10px',
@@ -2455,17 +2455,17 @@ function BacktestContent() {
                   borderRadius: '10px',
                   border: '1px solid rgba(51,65,85,0.55)',
                   background: 'rgba(15,23,42,0.55)',
-                  color: '#cbd5e1',
+                  color: 'var(--msp-text)',
                   fontSize: '12px'
                 }}>
-                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Directional Invalidation</div>
-                  <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.diagnostics.invalidation?.rule ?? '—'}</div>
-                  <div style={{ color: '#cbd5e1', marginTop: '4px' }}>{results.diagnostics.invalidation?.reason ?? '—'}</div>
+                  <div style={{ color: 'var(--msp-flat)', marginBottom: '4px' }}>Directional Invalidation</div>
+                  <div style={{ color: 'var(--msp-text)', fontWeight: 600 }}>{results.diagnostics.invalidation?.rule ?? '—'}</div>
+                  <div style={{ color: 'var(--msp-text)', marginTop: '4px' }}>{results.diagnostics.invalidation?.reason ?? '—'}</div>
                 </div>
 
                 {results.diagnostics.adjustments.length > 0 && (
                   <div style={{ marginTop: '10px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    <div style={{ color: 'var(--msp-flat)', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>
                       What to Adjust Next
                     </div>
                     <div style={{ display: 'grid', gap: '6px' }}>
@@ -2479,8 +2479,8 @@ function BacktestContent() {
                             background: 'rgba(30,41,59,0.45)'
                           }}
                         >
-                          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{adjustment.title}</div>
-                          <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{adjustment.reason}</div>
+                          <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 600 }}>{adjustment.title}</div>
+                          <div style={{ color: 'var(--msp-flat)', fontSize: '12px', marginTop: '2px' }}>{adjustment.reason}</div>
                           <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <button
                               type="button"
@@ -2509,7 +2509,7 @@ function BacktestContent() {
                                 borderRadius: '8px',
                                 border: '1px solid rgba(59,130,246,0.45)',
                                 background: isLoading ? 'rgba(30,41,59,0.75)' : 'rgba(59,130,246,0.14)',
-                                color: isLoading ? '#94a3b8' : '#93c5fd',
+                                color: isLoading ? 'var(--msp-flat)' : 'var(--msp-info)',
                                 fontSize: '11px',
                                 fontWeight: 700,
                                 cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -2536,7 +2536,7 @@ function BacktestContent() {
                           borderRadius: '999px',
                           border: '1px solid rgba(148,163,184,0.3)',
                           background: 'rgba(148,163,184,0.12)',
-                          color: '#cbd5e1',
+                          color: 'var(--msp-text)',
                           fontSize: '10px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.04em'
@@ -2559,13 +2559,13 @@ function BacktestContent() {
                 marginBottom: '16px',
                 boxShadow: 'var(--msp-shadow)'
               }}>
-                <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                   Data Coverage
                 </div>
-                <div style={{ color: '#cbd5e1', fontSize: '12px' }}>
+                <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>
                   Coverage: {results.dataCoverage.minAvailable} → {results.dataCoverage.maxAvailable}
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px' }}>
+                <div style={{ color: 'var(--msp-flat)', fontSize: '11px', marginTop: '4px' }}>
                   Applied range: {results.dataCoverage.applied.startDate} → {results.dataCoverage.applied.endDate} · {results.dataCoverage.bars} bars
                   {results.dataCoverage.provider ? ` · Provider: ${results.dataCoverage.provider}` : ''}
                 </div>
@@ -2582,7 +2582,7 @@ function BacktestContent() {
                 boxShadow: 'var(--msp-shadow)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                  <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Execution Assumptions
                   </div>
                   <span style={{
@@ -2590,7 +2590,7 @@ function BacktestContent() {
                     borderRadius: '999px',
                     background: results.executionAssumptions.sampleQuality.label === 'adequate' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
                     border: results.executionAssumptions.sampleQuality.label === 'adequate' ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(245,158,11,0.35)',
-                    color: results.executionAssumptions.sampleQuality.label === 'adequate' ? '#6ee7b7' : '#fbbf24',
+                    color: results.executionAssumptions.sampleQuality.label === 'adequate' ? '#6ee7b7' : 'var(--msp-warn)',
                     fontSize: '11px',
                     fontWeight: 700,
                     textTransform: 'uppercase'
@@ -2599,20 +2599,20 @@ function BacktestContent() {
                   </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ color: '#cbd5e1', fontSize: '12px' }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>
                     Fill model: {results.executionAssumptions.fillModel.label.replaceAll('_', ' ')}
                   </div>
-                  <div style={{ color: '#cbd5e1', fontSize: '12px' }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>
                     Slippage: {results.executionAssumptions.costs.slippageApplied ? `${results.executionAssumptions.costs.slippageBps} bps applied` : 'not modeled'}
                   </div>
-                  <div style={{ color: '#cbd5e1', fontSize: '12px' }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>
                     Spread/fees: {results.executionAssumptions.costs.spreadModel.replaceAll('_', ' ')} / {results.executionAssumptions.costs.feeModel.replaceAll('_', ' ')}
                   </div>
-                  <div style={{ color: '#cbd5e1', fontSize: '12px' }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>
                     Liquidity: volume {results.executionAssumptions.liquidity.volumeData}, depth {results.executionAssumptions.liquidity.depthModel.replaceAll('_', ' ')}
                   </div>
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '11px', lineHeight: 1.5 }}>
+                <div style={{ color: 'var(--msp-flat)', fontSize: '11px', lineHeight: 1.5 }}>
                   {results.executionAssumptions.sampleQuality.warning} {results.executionAssumptions.fillModel.intrabarPriority} {results.executionAssumptions.fillModel.intrabarAmbiguity}
                 </div>
               </div>
@@ -2640,10 +2640,10 @@ function BacktestContent() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                   <div>
-                    <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ color: 'var(--msp-text)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Replay Diagnostics
                     </div>
-                    <div style={{ color: '#64748b', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '12px' }}>
                       {results.signalReplay.mode === 'brain_signal_replay'
                         ? 'Brain signals'
                         : results.signalReplay.mode === 'options_signal_replay'
@@ -2658,7 +2658,7 @@ function BacktestContent() {
                       borderRadius: '999px',
                       background: 'rgba(59,130,246,0.15)',
                       border: '1px solid rgba(59,130,246,0.35)',
-                      color: '#93c5fd',
+                      color: 'var(--msp-info)',
                       fontSize: '11px',
                       fontWeight: 700
                     }}>
@@ -2692,7 +2692,7 @@ function BacktestContent() {
                         borderRadius: '999px',
                         background: 'rgba(148,163,184,0.14)',
                         border: '1px solid rgba(148,163,184,0.35)',
-                        color: '#cbd5e1',
+                        color: 'var(--msp-text)',
                         fontSize: '11px',
                         fontWeight: 700,
                         textTransform: 'uppercase'
@@ -2727,33 +2727,33 @@ function BacktestContent() {
                     borderRadius: '10px',
                     border: '1px solid rgba(51,65,85,0.55)',
                     background: 'rgba(15,23,42,0.55)',
-                    color: '#cbd5e1',
+                    color: 'var(--msp-text)',
                     fontSize: '12px',
                     display: 'grid',
                     gap: '6px'
                   }}>
                     <div>
-                      <span style={{ color: '#94a3b8', marginRight: '6px' }}>Replay mode:</span>
-                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.signalReplay.mode}</span>
+                      <span style={{ color: 'var(--msp-flat)', marginRight: '6px' }}>Replay mode:</span>
+                      <span style={{ color: 'var(--msp-text)', fontWeight: 600 }}>{results.signalReplay.mode}</span>
                     </div>
                     <div>
-                      <span style={{ color: '#94a3b8', marginRight: '6px' }}>Source filter:</span>
-                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{sourceFilter}</span>
+                      <span style={{ color: 'var(--msp-flat)', marginRight: '6px' }}>Source filter:</span>
+                      <span style={{ color: 'var(--msp-text)', fontWeight: 600 }}>{sourceFilter}</span>
                     </div>
                     {Array.isArray(results.signalReplay.symbolCandidates) && results.signalReplay.symbolCandidates.length > 0 && (
                       <div>
-                        <span style={{ color: '#94a3b8', marginRight: '6px' }}>Symbol candidates:</span>
-                        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.signalReplay.symbolCandidates.join(', ')}</span>
+                        <span style={{ color: 'var(--msp-flat)', marginRight: '6px' }}>Symbol candidates:</span>
+                        <span style={{ color: 'var(--msp-text)', fontWeight: 600 }}>{results.signalReplay.symbolCandidates.join(', ')}</span>
                       </div>
                     )}
                     <div>
-                      <span style={{ color: '#94a3b8', marginRight: '6px' }}>Qualified / snapshots:</span>
-                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{qualified} / {snapshots}</span>
+                      <span style={{ color: 'var(--msp-flat)', marginRight: '6px' }}>Qualified / snapshots:</span>
+                      <span style={{ color: 'var(--msp-text)', fontWeight: 600 }}>{qualified} / {snapshots}</span>
                     </div>
                     {results.signalReplay.filterStats && (
                       <div>
-                        <span style={{ color: '#94a3b8', marginRight: '6px' }}>Rejected:</span>
-                        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--msp-flat)', marginRight: '6px' }}>Rejected:</span>
+                        <span style={{ color: 'var(--msp-text)', fontWeight: 600 }}>
                           score {results.signalReplay.filterStats.rejectedByScore}, neutral {results.signalReplay.filterStats.rejectedByNeutralBias}, range {results.signalReplay.filterStats.rejectedByOutOfRange}
                         </span>
                       </div>
@@ -2788,7 +2788,7 @@ function BacktestContent() {
               boxShadow: 'var(--msp-shadow)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div style={{ color: 'var(--msp-flat)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Narrative Layer
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -2844,10 +2844,10 @@ function BacktestContent() {
                     const hasPositiveExpectancy = results.totalReturn > 0 && scoreProfitFactor(results.profitFactor) > 1;
                     const hasNeutralExpectancy = results.totalReturn >= -5 && results.totalReturn <= 5;
                     const verdict = hasPositiveExpectancy
-                      ? { label: 'Positive Expectancy', color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
+                      ? { label: 'Positive Expectancy', color: 'var(--msp-bull)', bg: 'rgba(16,185,129,0.15)' }
                       : hasNeutralExpectancy
-                      ? { label: 'Marginal Edge', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' }
-                      : { label: 'Negative Expectancy', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
+                      ? { label: 'Marginal Edge', color: 'var(--msp-warn)', bg: 'rgba(251,191,36,0.15)' }
+                      : { label: 'Negative Expectancy', color: 'var(--msp-bear)', bg: 'rgba(239,68,68,0.15)' };
 
                     return (
                       <div style={{
@@ -2866,7 +2866,7 @@ function BacktestContent() {
                       </div>
                     );
                   })()}
-                  <div style={{ fontWeight: 700, marginBottom: '6px', color: '#34d399' }}>AI Insight</div>
+                  <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--msp-bull)' }}>AI Insight</div>
                   <div style={{ whiteSpace: 'pre-wrap' }}>{aiText}</div>
                 </div>
               ) : (
@@ -2875,7 +2875,7 @@ function BacktestContent() {
                   border: '1px solid rgba(51,65,85,0.45)',
                   borderRadius: '10px',
                   padding: '12px 14px',
-                  color: '#94a3b8',
+                  color: 'var(--msp-flat)',
                   fontSize: '13px'
                 }}>
                   Generate the AI brief to get an analysis summary before reviewing raw analytics.
@@ -2893,10 +2893,10 @@ function BacktestContent() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ color: 'var(--msp-text)', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Evidence Layer
                   </div>
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>Performance curve, metrics, and trade log</div>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '12px' }}>Performance curve, metrics, and trade log</div>
                 </div>
                 <button
                   type="button"
@@ -2907,7 +2907,7 @@ function BacktestContent() {
                     borderRadius: '8px',
                     border: '1px solid rgba(16,185,129,0.4)',
                     background: showEvidenceLayer ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.08)',
-                    color: '#10b981',
+                    color: 'var(--msp-bull)',
                     fontSize: '12px',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -2933,7 +2933,7 @@ function BacktestContent() {
               boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
               <h2 style={{ 
-                color: '#f1f5f9', 
+                color: 'var(--msp-text)', 
                 fontSize: '15px', 
                 fontWeight: '600', 
                 marginBottom: '24px',
@@ -3091,7 +3091,7 @@ function BacktestContent() {
                           const barY = trade.return >= 0 
                             ? tradeBarY + tradeBarHeight / 2 - barHeight
                             : tradeBarY + tradeBarHeight / 2;
-                          const color = trade.return >= 0 ? '#10b981' : '#ef4444';
+                          const color = trade.return >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
 
                           return (
                             <rect
@@ -3196,7 +3196,7 @@ function BacktestContent() {
           borderRadius: '8px',
           textAlign: 'center',
         }}>
-          <p style={{ fontSize: '12px', color: '#D97706', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--msp-warn)', margin: 0 }}>
             <strong>Important:</strong> Backtesting results are hypothetical and do not guarantee future performance.
             Past performance is not indicative of future results. This tool is for educational purposes only and does not constitute investment advice. 
             Trading involves substantial risk of loss.
@@ -3215,14 +3215,14 @@ export default function BacktestPage() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        background: '#0f172a'
+        background: 'var(--msp-bg)'
       }}>
         <div role="status" aria-label="Loading backtest">
           <div style={{
             width: '36px',
             height: '36px',
             border: '3px solid rgba(148,163,184,0.2)',
-            borderTopColor: '#10b981',
+            borderTopColor: 'var(--msp-bull)',
             borderRadius: '50%',
             animation: 'spin 0.8s linear infinite',
             margin: '0 auto 12px',
