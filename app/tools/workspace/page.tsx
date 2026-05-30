@@ -9,6 +9,7 @@ import { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Card, UpgradeGate } from '@/app/v2/_components/ui';
+import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 
@@ -35,10 +36,10 @@ const WORKSPACE_TAB_META: Record<WorkspaceTab, { eyebrow: string; description: s
 
 function WorkspaceMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
-    <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }} title={value}>{value}</div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, minHeight: '3.5rem' }}>
+      <div style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</div>
+      <div style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--msp-text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={detail}>{detail}</div>
     </div>
   );
 }
@@ -56,14 +57,17 @@ function WorkspaceTabRail({ activeTab, onSelectTab }: { activeTab: WorkspaceTab;
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectTab(t)}
-              className={`rounded-md border px-3 py-1.5 text-left transition ${
-                isActive
-                  ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
-                  : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
-              }`}
+              style={{
+                background: isActive ? 'var(--msp-accent-tint)' : 'var(--msp-card-2)',
+                borderLeft: isActive ? '2px solid var(--msp-accent)' : '2px solid transparent',
+                borderRadius: 'var(--msp-radius-control)',
+                padding: '6px 12px',
+                textAlign: 'left',
+              }}
+              className="transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
             >
-              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{meta.eyebrow}</div>
-              <div className={`mt-0.5 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{t}</div>
+              <div style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{meta.eyebrow}</div>
+              <div style={{ marginTop: 2, fontSize: 'var(--msp-text-body)', fontWeight: 500, color: isActive ? 'var(--msp-accent)' : 'var(--msp-text)' }}>{t}</div>
             </button>
           );
         })}
@@ -96,7 +100,7 @@ function WorkspaceContent() {
 
   const activeMeta = WORKSPACE_TAB_META[tab];
   const tierLabel = tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free';
-  const tierTone = tier === 'pro_trader' ? 'var(--msp-bull)' : tier === 'pro' ? '#38BDF8' : 'var(--msp-flat)';
+  const tierTone: 'bull' | 'info' | 'neutral' = tier === 'pro_trader' ? 'bull' : tier === 'pro' ? 'info' : 'neutral';
   const nextTab: WorkspaceTab = (() => {
     const idx = TABS.indexOf(tab);
     return TABS[(idx + 1) % TABS.length];
@@ -104,34 +108,27 @@ function WorkspaceContent() {
 
   return (
     <div className="space-y-3">
-      <section
-        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-        aria-label="Workspace command header"
-      >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-              <span className="text-emerald-300">Workflow memory</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{activeMeta.eyebrow}</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Tier {tierLabel}</span>
-            </div>
-            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Workspace</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => setTab('Watchlists')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Open Watchlists</button>
-              <button type="button" onClick={() => setTab(nextTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {nextTab}</button>
-              <a href="/tools/workflow" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Workflow</a>
-            </div>
-          </div>
-
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <WorkspaceMetric label="Active Tab" value={tab} tone="#10B981" detail={activeMeta.eyebrow} />
-            <WorkspaceMetric label="Tier" value={tierLabel} tone={tierTone} detail="Subscription level" />
-            <WorkspaceMetric label="Focus" value={activeMeta.eyebrow.replace(/^\d+\.\s*/, '')} tone="#A5B4FC" detail="Current workbench focus" />
-            <WorkspaceMetric label="Next Tab" value={nextTab} tone="#38BDF8" detail="Continue the workspace loop" />
-          </div>
-        </div>
-      </section>
+      <PageHero
+        ariaLabel="Workspace command header"
+        eyebrow="Workflow memory"
+        badges={[
+          { label: activeMeta.eyebrow },
+          { label: `Tier ${tierLabel}` },
+        ]}
+        title="Workspace"
+        subtitle="Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench."
+        actions={[
+          { label: 'Open watchlists', variant: 'primary', onClick: () => setTab('Watchlists') },
+          { label: `Open ${nextTab}`, variant: 'secondary', onClick: () => setTab(nextTab) },
+          { label: 'Open workflow', variant: 'ghost', href: '/tools/workflow' },
+        ]}
+        metrics={[
+          { label: 'Active tab', value: tab, tone: 'bull', detail: activeMeta.eyebrow },
+          { label: 'Tier', value: tierLabel, tone: tierTone, detail: 'Subscription level' },
+          { label: 'Focus', value: activeMeta.eyebrow.replace(/^\d+\.\s*/, ''), tone: 'info', detail: 'Current workbench focus' },
+          { label: 'Next tab', value: nextTab, tone: 'info', detail: 'Continue the workspace loop' },
+        ]}
+      />
 
       <WorkspaceTabRail activeTab={tab} onSelectTab={setTab} />
 
