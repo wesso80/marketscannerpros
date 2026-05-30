@@ -941,7 +941,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
       <main className={`mx-auto w-full max-w-none space-y-2 ${embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'}`}>
         {!embeddedInGoldenEgg && <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div>
-            <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
+            <div className="text-xs text-[var(--msp-text-muted)]">Intraday console</div>
           </div>
           <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 rounded">
             ← Dashboard
@@ -952,7 +952,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <div className="grid gap-2 lg:grid-cols-4">
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Indicator Review</div>
+                <div className="text-[11px] text-[var(--msp-text-muted)]">Indicator review</div>
                 <div className={`mt-1 text-lg font-semibold ${
                   reviewState === 'Clear' ? 'text-emerald-400' : reviewState === 'Blocked' ? 'text-rose-400' : 'text-amber-300'
                 }`}>
@@ -961,7 +961,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 <div className="mt-1 text-xs text-slate-400">{reviewReason}</div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Volatility</div>
+                <div className="text-[11px] text-[var(--msp-text-muted)]">Volatility</div>
                 <div className={`mt-1 text-lg font-semibold ${
                   volatilityState === 'Expansion' ? 'text-rose-300' : volatilityState === 'Compression' ? 'text-emerald-300' : 'text-slate-200'
                 }`}>
@@ -970,7 +970,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 <div className="mt-1 text-xs text-slate-400">Session range {rangePercent.toFixed(2)}%</div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Dealer Context</div>
+                <div className="text-[11px] text-[var(--msp-text-muted)]">Dealer context</div>
                 <div className={`mt-1 text-lg font-semibold ${
                   dealerState === 'Supportive' ? 'text-emerald-300' : dealerState === 'Hostile' ? 'text-rose-300' : 'text-slate-200'
                 }`}>
@@ -983,7 +983,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 </div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Scenario Notes</div>
+                <div className="text-[11px] text-[var(--msp-text-muted)]">Scenario notes</div>
                 <div className="mt-1 text-xs text-slate-100 leading-5">{scenarioNote}</div>
               </div>
             </div>
@@ -1092,7 +1092,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-slate-400">{data.symbol}</div>
+                    <div className="text-xs text-[var(--msp-text-muted)]">{data.symbol}</div>
                     <div className="flex items-center gap-3">
                       <h2 className="text-xl font-semibold">${formatPrice(stats.last.close)}</h2>
                       <span className={`text-sm ${stats.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -1330,7 +1330,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
 
             <div className="space-y-2 xl:sticky xl:top-20 self-start">
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Analysis Context</div>
+                <div className="text-[11px] text-[var(--msp-text-muted)]">Analysis context</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
                     <div className="text-slate-400">VWAP</div>
@@ -1392,7 +1392,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               </div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Analysis Actions</div>
+                <div className="text-[11px] text-[var(--msp-text-muted)]">Analysis actions</div>
                 <ExplorerActionGrid
                   assetType={assetType === 'crypto' ? 'crypto' : 'equity'}
                   symbol={symbol}
