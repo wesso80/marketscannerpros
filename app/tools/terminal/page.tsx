@@ -35,6 +35,7 @@ import {
   type ForwardCloseCalendar,
 } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
+import { PageHero } from '@/components/ui';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -447,34 +448,27 @@ export default function TerminalPage() {
     <div className="space-y-3">
       <ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
 
-      <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]" aria-label="Terminal command header">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
-          <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-emerald-300">Workflow step 3 · Market mechanics check</div>
-            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Use Terminal before Backtest.</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
-              Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">
-              Back to Golden Egg
-            </Link>
-            <Link href="/tools/workspace?tab=backtest" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">
-              Continue to Backtest
-            </Link>
-            <Link href="/tools/workflow" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">
-              Open Workflow
-            </Link>
-            </div>
-          </div>
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <TerminalMetric label="Symbol" value={sym} tone={asset === 'crypto' ? 'var(--msp-warn)' : '#818CF8'} detail={`${asset.toUpperCase()} mechanics path`} />
-            <TerminalMetric label="Active Lens" value={tab} tone="#10B981" detail={activeMeta.eyebrow} />
-            <TerminalMetric label="Data State" value={terminalDataState} tone={terminalDataTone} detail={calendar.error || 'No blocking route errors'} />
-            <TerminalMetric label="Next Check" value={nextTerminalAction} tone="#38BDF8" detail="Complete before historical testing" />
-          </div>
-        </div>
-      </section>
+      <PageHero
+        ariaLabel="Terminal command header"
+        eyebrow="Workflow step 3 · Market mechanics check"
+        badges={[
+          { label: activeMeta.eyebrow },
+          { label: `${asset.toUpperCase()} path` },
+        ]}
+        title="Use Terminal before Backtest."
+        subtitle="Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically."
+        actions={[
+          { label: 'Back to Golden Egg', variant: 'primary', href: '/tools/golden-egg' },
+          { label: 'Continue to Backtest', variant: 'secondary', href: '/tools/workspace?tab=backtest' },
+          { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
+        ]}
+        metrics={[
+          { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
+          { label: 'Active lens', value: tab, tone: 'bull', detail: activeMeta.eyebrow },
+          { label: 'Data state', value: terminalDataState, tone: terminalDataState.includes('issue') ? 'warn' : terminalDataState === 'Loading' ? 'info' : 'bull', detail: calendar.error || 'No blocking route errors' },
+          { label: 'Next check', value: nextTerminalAction, tone: 'info', detail: 'Complete before historical testing' },
+        ]}
+      />
 
       {/* Symbol Bar */}
       <Card>
