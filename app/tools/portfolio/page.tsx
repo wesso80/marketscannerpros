@@ -1281,11 +1281,23 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const deletePosition = (id: number) => {
     if (!confirm('Delete this position? This cannot be undone.')) return;
     setPositions((prev) => prev.filter((p) => p.id !== id));
+    // Hard-delete on the server too — the POST wipe-and-replace path skips
+    // journal-linked rows, so without this they'd reappear on next GET.
+    fetch('/api/portfolio', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, kind: 'active' }),
+    }).catch(() => { /* local state already updated; sync will retry */ });
   };
 
   const deleteClosedTrade = (id: number) => {
     if (!confirm('Delete this closed trade? This cannot be undone.')) return;
     setClosedPositions((prev) => prev.filter((p) => p.id !== id));
+    fetch('/api/portfolio', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, kind: 'closed' }),
+    }).catch(() => { /* local state already updated */ });
   };
 
   const applyCashFlow = () => {
@@ -2492,6 +2504,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     <tr className="border-b border-slate-700 text-slate-500">
                       <th scope="col" className="px-2 py-2 text-left">Symbol</th>
                       <th scope="col" className="px-2 py-2 text-left">Side</th>
+                      <th scope="col" className="px-2 py-2 text-right">Qty</th>
+                      <th scope="col" className="px-2 py-2 text-right">Value</th>
                       <th scope="col" className="px-2 py-2 text-right">Size %</th>
                       <th scope="col" className="px-2 py-2 text-right">Cost</th>
                       <th scope="col" className="px-2 py-2 text-right">Current</th>
@@ -2528,6 +2542,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2 font-semibold text-slate-100">{position.symbol}</td>
                           <td className="px-2 py-2">{position.side}</td>
+                          <td className="px-2 py-2 text-right tabular-nums">{position.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
+                          <td className="px-2 py-2 text-right tabular-nums text-slate-100">${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.currentPrice)}</td>
@@ -2549,7 +2565,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         </tr>
                       );
                     })}
-                    {positions.length === 0 && <tr><td colSpan={10} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
+                    {positions.length === 0 && <tr><td colSpan={12} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
                   </tbody>
                 </table>
               </div>

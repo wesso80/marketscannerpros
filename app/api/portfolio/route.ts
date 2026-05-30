@@ -325,3 +325,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to save portfolio" }, { status: 500 });
   }
 }
+
+// DELETE - Remove a single position (active or closed) by id.
+// Body: { id: number, kind?: 'active' | 'closed' }
+// Unlike the POST wipe-and-replace path, this hard-deletes the row even
+// when it carries a journal_entry_id (the journal entry itself is left
+// untouched — only the portfolio mirror row is removed).
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceId = session.workspaceId;
+
+    let body: { id?: number; kind?: string } = {};
+    try { body = await req.json(); } catch { /* no body */ }
+    const id = Number(body.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return NextResponse.json({ error: "Missing or invalid id" }, { status: 400 });
+    }
+    const kind = body.kind === 'closed' ? 'closed' : 'active';
+    const table = kind === 'closed' ? 'portfolio_closed' : 'portfolio_positions';
+
+    const result = await q(
+      `DELETE FROM ${table} WHERE workspace_id = $1 AND id = $2 RETURNING id`,
+      [workspaceId, id]
+    );
+    return NextResponse.json({ success: true, deleted: result.length });
+  } catch (error) {
+    console.error("Portfolio DELETE error:", error);
+    return NextResponse.json({ error: "Failed to delete position" }, { status: 500 });
+  }
+}
