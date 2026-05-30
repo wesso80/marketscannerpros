@@ -365,7 +365,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
               <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
                 <span className="text-emerald-300">Derivatives lens</span>
                 <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
-                  <span style={{ color: permission === 'Yes' ? '#10B981' : permission === 'Conditional' ? '#F59E0B' : '#EF4444' }}>Permission {permission}</span>
+                  <span style={{ color: permission === 'Yes' ? 'var(--msp-bull)' : permission === 'Conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>Permission {permission}</span>
                   <span className="text-slate-600">·</span>
                   <span className="text-slate-400">{rotation}</span>
                   <span className="text-slate-600">·</span>
@@ -393,22 +393,22 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
             <div className="grid self-start gap-1.5 sm:grid-cols-2">
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Bias</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: biasLabel.includes('Bullish') ? '#10B981' : biasLabel.includes('Bearish') ? '#EF4444' : '#94A3B8' }}>{biasLabel}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: biasLabel.includes('Bullish') ? 'var(--msp-bull)' : biasLabel.includes('Bearish') ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>{biasLabel}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">Confidence {marketBias.confidence}%</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Liquidity</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: liquidityState === 'Expanding' ? '#10B981' : liquidityState === 'Contracting' ? '#EF4444' : '#94A3B8' }}>{liquidityState}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: liquidityState === 'Expanding' ? 'var(--msp-bull)' : liquidityState === 'Contracting' ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>{liquidityState}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500" title={oiDriver}>{oiDriver}</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Funding</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? '#F59E0B' : data.fundingRates.avgRate < -0.01 ? '#10B981' : '#94A3B8') : '#94A3B8' }}>{data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Pending'}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? 'var(--msp-warn)' : data.fundingRates.avgRate < -0.01 ? 'var(--msp-bull)' : 'var(--msp-flat)') : 'var(--msp-flat)' }}>{data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Pending'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500" title={fundingDriver}>{fundingDriver}</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: permission === 'No' ? '#EF4444' : '#FBBF24' }}>{playbook}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: permission === 'No' ? 'var(--msp-bear)' : 'var(--msp-warn)' }}>{playbook}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500" title={liquidationDriver}>{liquidationDriver}</div>
               </div>
             </div>

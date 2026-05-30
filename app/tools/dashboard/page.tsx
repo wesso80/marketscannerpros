@@ -36,9 +36,9 @@ const DASH_TAB_PARAM_MAP: Record<string, DashTab> = {
 
 /* -- helpers -------------------------------------------------------------- */
 function directionColor(d?: string) {
-  if (d === 'bullish') return '#10B981';
-  if (d === 'bearish') return '#EF4444';
-  return '#F59E0B';
+  if (d === 'bullish') return 'var(--msp-bull)';
+  if (d === 'bearish') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 function pctColor(v: number) {
   if (v > 0) return 'text-emerald-400';
@@ -71,7 +71,7 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
-function DashboardMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function DashboardMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -150,12 +150,12 @@ export default function DashboardPage() {
   const highImpactEventCount = highImpactEvents.length;
   const headlineCount = articles.length;
   const dataHealthLabel = degradedFeeds.length ? `${degradedFeeds.length} issue${degradedFeeds.length === 1 ? '' : 's'}` : loadingFeeds ? `${loadingFeeds} loading` : 'Ready';
-  const dataHealthTone = degradedFeeds.length ? '#F59E0B' : loadingFeeds ? '#94A3B8' : '#10B981';
+  const dataHealthTone = degradedFeeds.length ? 'var(--msp-warn)' : loadingFeeds ? 'var(--msp-flat)' : 'var(--msp-bull)';
   const topQueueSymbol = scannerQueue[0]?.symbol || moverQueue[0]?.ticker || 'None';
   const hasQueue = researchQueueCount > 0;
   const nextCheckValue = hasQueue ? `Validate ${topQueueSymbol}` : loadingFeeds ? 'Loading feeds…' : 'Run Scanner first';
   const nextCheckDetail = hasQueue ? 'Open Golden Egg from queue below' : loadingFeeds ? 'Cached scanner data syncing' : 'No cached candidates yet';
-  const nextCheckTone = hasQueue ? '#FBBF24' : '#94A3B8';
+  const nextCheckTone = hasQueue ? 'var(--msp-warn)' : 'var(--msp-flat)';
   const topSymbolHref = hasQueue ? `/tools/golden-egg?symbol=${encodeURIComponent(topQueueSymbol)}` : '/tools/golden-egg';
 
   // Show sign-in prompt if all data hooks report auth errors
@@ -185,9 +185,9 @@ export default function DashboardPage() {
               <span className="text-emerald-300">Morning command dashboard</span>
               {regime.data && (
                 <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
-                  <span style={{ color: regime.data.regime.includes('UP') ? '#10B981' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? '#EF4444' : regime.data.regime.includes('EXPANSION') ? '#F59E0B' : '#A5B4FC' }}>{regime.data.regime.replace(/_/g, ' ')}</span>
+                  <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : '#A5B4FC' }}>{regime.data.regime.replace(/_/g, ' ')}</span>
                   <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">Risk <span style={{ color: regime.data.riskLevel === 'low' ? '#10B981' : regime.data.riskLevel === 'moderate' ? '#F59E0B' : '#EF4444' }}>{regime.data.riskLevel}</span></span>
+                  <span className="text-slate-400">Risk <span style={{ color: regime.data.riskLevel === 'low' ? 'var(--msp-bull)' : regime.data.riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{regime.data.riskLevel}</span></span>
                   <span className="text-slate-600">·</span>
                   <span className="text-slate-400">Sizing <span className="text-slate-200">{regime.data.sizing}</span></span>
                 </span>
@@ -205,9 +205,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? '#10B981' : '#94A3B8'} detail={hasQueue ? `Top focus: ${topQueueSymbol}` : 'Run Scanner to populate'} />
+            <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail={hasQueue ? `Top focus: ${topQueueSymbol}` : 'Run Scanner to populate'} />
             <DashboardMetric label="Data Health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : loadingFeeds ? 'Feeds syncing' : 'No feed errors reported'} />
-            <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? '#F59E0B' : '#94A3B8'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
+            <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? 'var(--msp-warn)' : 'var(--msp-flat)'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
             <DashboardMetric label="Next Check" value={nextCheckValue} tone={nextCheckTone} detail={nextCheckDetail} />
           </div>
         </div>
@@ -320,7 +320,7 @@ export default function DashboardPage() {
                 .slice(0, 4)
                 .map((r: CachedSymbol) => {
                   const phase = r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
-                  const phaseColor = r.adx >= 30 ? '#10B981' : r.adx >= 20 ? '#F59E0B' : '#A78BFA';
+                  const phaseColor = r.adx >= 30 ? 'var(--msp-bull)' : r.adx >= 20 ? 'var(--msp-warn)' : '#A78BFA';
                   return (
                     <button key={`vol-${r.symbol}`} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} onClick={() => openGoldenEgg(r.symbol)}
                       className="flex w-full items-center justify-between rounded-md border border-white/[0.06] bg-slate-900/30 px-2.5 py-1.5 hover:border-purple-400/20 hover:bg-purple-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/50">

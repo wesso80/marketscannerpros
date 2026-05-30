@@ -40,7 +40,7 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-function TerminalMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function TerminalMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -223,7 +223,7 @@ const TERMINAL_SUBVIEW_FOCUS: Record<Exclude<TerminalTab, 'Close Calendar'>, str
   'Time Confluence': 'Final Timing Check',
 };
 
-function TerminalSubviewMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function TerminalSubviewMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -253,7 +253,7 @@ function TerminalSubviewFrame({
   const idx = sequence.indexOf(tab);
   const adjacentTab: TerminalTab = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : sequence[0];
   const focusLabel = TERMINAL_SUBVIEW_FOCUS[tab];
-  const pathTone = marketPath === 'crypto' ? '#F59E0B' : marketPath === 'futures' ? '#22D3EE' : '#818CF8';
+  const pathTone = marketPath === 'crypto' ? 'var(--msp-warn)' : marketPath === 'futures' ? '#22D3EE' : '#818CF8';
 
   return (
     <div className="space-y-3">
@@ -432,7 +432,7 @@ export default function TerminalPage() {
             ? 'Ready'
             : 'Waiting'
       : 'Lens ready';
-  const terminalDataTone = terminalDataState.includes('issue') ? '#F59E0B' : terminalDataState === 'Loading' ? '#38BDF8' : '#10B981';
+  const terminalDataTone = terminalDataState.includes('issue') ? 'var(--msp-warn)' : terminalDataState === 'Loading' ? '#38BDF8' : 'var(--msp-bull)';
   const nextTerminalAction = marketPath === 'futures' && tab === 'Close Calendar'
     ? 'Review Phantom Time / Cash Bridge'
     : tab === 'Close Calendar'
@@ -468,7 +468,7 @@ export default function TerminalPage() {
             </div>
           </div>
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <TerminalMetric label="Symbol" value={sym} tone={asset === 'crypto' ? '#F59E0B' : '#818CF8'} detail={`${asset.toUpperCase()} mechanics path`} />
+            <TerminalMetric label="Symbol" value={sym} tone={asset === 'crypto' ? 'var(--msp-warn)' : '#818CF8'} detail={`${asset.toUpperCase()} mechanics path`} />
             <TerminalMetric label="Active Lens" value={tab} tone="#10B981" detail={activeMeta.eyebrow} />
             <TerminalMetric label="Data State" value={terminalDataState} tone={terminalDataTone} detail={calendar.error || 'No blocking route errors'} />
             <TerminalMetric label="Next Check" value={nextTerminalAction} tone="#38BDF8" detail="Complete before historical testing" />
@@ -491,7 +491,7 @@ export default function TerminalPage() {
               Load
             </button>
             <span className="text-xs text-slate-400 ml-1">{sym}</span>
-            <Badge label={marketPath.toUpperCase()} color={marketPath === 'crypto' ? '#F59E0B' : marketPath === 'futures' ? '#22D3EE' : '#6366F1'} small />
+            <Badge label={marketPath.toUpperCase()} color={marketPath === 'crypto' ? 'var(--msp-warn)' : marketPath === 'futures' ? '#22D3EE' : '#6366F1'} small />
             <div className="ml-auto rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-cyan-200">
               {marketPath === 'futures' ? 'FUTURES PATH' : marketPath === 'crypto' ? 'CRYPTO PATH' : 'EQUITY PATH'}
             </div>
@@ -1005,9 +1005,9 @@ export default function TerminalPage() {
                             <td className="py-2 px-2 font-mono text-white">${lv.level?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td className="py-2 px-2">
                               <Badge label={lv.label?.replace(/_/g, ' ')} color={
-                                lv.label?.includes('HIGH') || lv.label === 'ONH' || lv.label === 'PDH' || lv.label === 'EQH' ? '#EF4444'
-                                : lv.label?.includes('LOW') || lv.label === 'ONL' || lv.label === 'PDL' || lv.label === 'EQL' ? '#10B981'
-                                : '#94A3B8'
+                                lv.label?.includes('HIGH') || lv.label === 'ONH' || lv.label === 'PDH' || lv.label === 'EQH' ? 'var(--msp-bear)'
+                                : lv.label?.includes('LOW') || lv.label === 'ONL' || lv.label === 'PDL' || lv.label === 'EQL' ? 'var(--msp-bull)'
+                                : 'var(--msp-flat)'
                               } small />
                             </td>
                             <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}%` : '—'}</td>
@@ -1030,7 +1030,7 @@ export default function TerminalPage() {
                           <div key={i} className="flex justify-between text-xs py-1 border-b border-slate-800/30">
                             <span className="font-mono text-white">${ks.strike?.toLocaleString()}</span>
                             <span className="text-slate-400">Gravity: {ks.gravity?.toFixed(1)}</span>
-                            <Badge label={ks.type?.replace(/-/g, ' ')} color={ks.type === 'call-heavy' ? '#10B981' : ks.type === 'put-heavy' ? '#EF4444' : '#94A3B8'} small />
+                            <Badge label={ks.type?.replace(/-/g, ' ')} color={ks.type === 'call-heavy' ? 'var(--msp-bull)' : ks.type === 'put-heavy' ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />
                           </div>
                         ))}
                       </div>
@@ -1043,7 +1043,7 @@ export default function TerminalPage() {
                         {fd.flip_zones.map((fz: any, i: number) => (
                           <div key={i} className="flex justify-between text-xs py-1 border-b border-slate-800/30">
                             <span className="font-mono text-white">${fz.level?.toLocaleString()}</span>
-                            <Badge label={fz.direction?.replace(/_/g, ' ')} color={fz.direction?.includes('bullish') ? '#10B981' : '#EF4444'} small />
+                            <Badge label={fz.direction?.replace(/_/g, ' ')} color={fz.direction?.includes('bullish') ? 'var(--msp-bull)' : 'var(--msp-bear)'} small />
                           </div>
                         ))}
                       </div>

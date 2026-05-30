@@ -53,7 +53,7 @@ interface CashLedgerEntry {
 
 type SubTab = 'overview' | 'add' | 'holdings' | 'history';
 
-const ALLOC_COLORS = ['#10B981', '#F59E0B', '#3B82F6', '#EC4899', '#8B5CF6', '#06B6D4', '#EF4444', '#84CC16', '#F97316', '#6366F1'];
+const ALLOC_COLORS = ['var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-info)', '#EC4899', '#8B5CF6', '#06B6D4', 'var(--msp-bear)', 'var(--msp-bull)', '#F97316', '#6366F1'];
 
 const STRATEGIES = [
   { value: '', label: 'Strategy (optional)' },
@@ -628,7 +628,7 @@ export default function PortfolioV2() {
               value={side}
               onChange={e => setSide(e.target.value as 'LONG' | 'SHORT')}
               className="bg-emerald-500/15 border border-emerald-500/30 rounded-lg text-xs px-3 py-3 text-emerald-400 font-semibold focus:outline-none appearance-none cursor-pointer"
-              style={side === 'SHORT' ? { background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)', color: '#f87171' } : {}}
+              style={side === 'SHORT' ? { background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)', color: 'var(--msp-bear)' } : {}}
             >
               <option value="LONG">LONG</option>
               <option value="SHORT">SHORT</option>

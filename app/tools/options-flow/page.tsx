@@ -110,9 +110,9 @@ function patternCode(p: string): string {
 function tierBadge(tier: string): { bg: string; color: string } {
   switch (tier) {
     case 'whale': return { bg: 'rgba(139,92,246,0.15)', color: '#8b5cf6' };
-    case 'institutional': return { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' };
-    case 'large': return { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' };
-    default: return { bg: 'rgba(100,116,139,0.1)', color: '#64748b' };
+    case 'institutional': return { bg: 'rgba(59,130,246,0.15)', color: 'var(--msp-info)' };
+    case 'large': return { bg: 'rgba(245,158,11,0.15)', color: 'var(--msp-warn)' };
+    default: return { bg: 'rgba(100,116,139,0.1)', color: 'var(--msp-text-muted)' };
   }
 }
 
@@ -206,7 +206,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false }: { embedd
 
           {/* Error */}
           {error && (
-            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: '#ef4444' }}>
+            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: 'var(--msp-bear)' }}>
               {error}
             </div>
           )}
@@ -351,7 +351,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false }: { embedd
                       </span>
                     )}
                     {data.smartMoney.institutionalCount > 0 && (
-                      <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', fontWeight: 700 }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: 'var(--msp-info)', fontWeight: 700 }}>
                         {data.smartMoney.institutionalCount} institutional proxy
                       </span>
                     )}

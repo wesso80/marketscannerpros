@@ -51,10 +51,10 @@ function fmtPrice(n: number): string {
 
 function observationBadge(type: SweepResult['setupType']): { label: string; bg: string; color: string } {
   switch (type) {
-    case 'active_sweep': return { label: 'ACTIVE SWEEP', bg: 'rgba(239,68,68,0.12)', color: '#ef4444' };
-    case 'at_level': return { label: 'AT LEVEL', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' };
+    case 'active_sweep': return { label: 'ACTIVE SWEEP', bg: 'rgba(239,68,68,0.12)', color: 'var(--msp-bear)' };
+    case 'at_level': return { label: 'AT LEVEL', bg: 'rgba(245,158,11,0.12)', color: 'var(--msp-warn)' };
     case 'near_level': return { label: 'NEAR LEVEL', bg: 'rgba(249,115,22,0.12)', color: '#f97316' };
-    default: return { label: 'NO OBSERVATION', bg: 'rgba(100,116,139,0.1)', color: '#64748b' };
+    default: return { label: 'NO OBSERVATION', bg: 'rgba(100,116,139,0.1)', color: 'var(--msp-text-muted)' };
   }
 }
 
@@ -132,7 +132,7 @@ export default function LiquiditySweepPage() {
             <div className="grid self-start gap-1.5 sm:grid-cols-2">
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Mode</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: scanType === 'crypto' ? '#F59E0B' : '#818CF8' }}>{scanType === 'crypto' ? 'Crypto' : 'Equity'}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: scanType === 'crypto' ? 'var(--msp-warn)' : '#818CF8' }}>{scanType === 'crypto' ? 'Crypto' : 'Equity'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">Sweep detection</div>
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
@@ -215,7 +215,7 @@ export default function LiquiditySweepPage() {
           {error && (
             <div style={{
               background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: '#ef4444',
+              borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: 'var(--msp-bear)',
             }}>
               {error}
             </div>
@@ -322,7 +322,7 @@ export default function LiquiditySweepPage() {
                         </span>
                         <span style={{
                           fontWeight: 700,
-                          color: r.proximityPct < 0.5 ? '#ef4444' : r.proximityPct < 1 ? '#f59e0b' : 'var(--msp-text-muted)',
+                          color: r.proximityPct < 0.5 ? 'var(--msp-bear)' : r.proximityPct < 1 ? 'var(--msp-warn)' : 'var(--msp-text-muted)',
                         }}>
                           {r.proximityPct.toFixed(2)}% away
                         </span>

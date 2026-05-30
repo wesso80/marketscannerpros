@@ -206,7 +206,7 @@ function MiniChart({ data }: { data: Array<{ close: number }> }) {
   const max = Math.max(...prices);
   const range = max - min || 1;
   const isUp = prices[prices.length - 1] >= prices[0];
-  const color = isUp ? '#10B981' : '#EF4444';
+  const color = isUp ? 'var(--msp-bull)' : 'var(--msp-bear)';
   
   const width = 200;
   const height = 60;
@@ -319,11 +319,11 @@ function getAggregateSentiment(news: EquityData['news']): { score: number; label
 function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
   const total = analysts.totalRatings || 1;
   const segments = [
-    { label: 'Strong Buy', count: analysts.strongBuy, color: '#22c55e' },
-    { label: 'Buy', count: analysts.buy, color: '#84cc16' },
-    { label: 'Hold', count: analysts.hold, color: '#eab308' },
+    { label: 'Strong Buy', count: analysts.strongBuy, color: 'var(--msp-bull)' },
+    { label: 'Buy', count: analysts.buy, color: 'var(--msp-bull)' },
+    { label: 'Hold', count: analysts.hold, color: 'var(--msp-warn)' },
     { label: 'Sell', count: analysts.sell, color: '#f97316' },
-    { label: 'Strong Sell', count: analysts.strongSell, color: '#ef4444' },
+    { label: 'Strong Sell', count: analysts.strongSell, color: 'var(--msp-bear)' },
   ];
   
   return (

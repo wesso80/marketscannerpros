@@ -94,9 +94,9 @@ interface DerivedState {
 
 // Category codes and colors
 const CATEGORY_CONFIG = {
-  Energy: { icon: 'EN', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-  Metals: { icon: 'MT', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)' },
-  Agriculture: { icon: 'AG', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
+  Energy: { icon: 'EN', color: 'var(--msp-warn)', bgColor: 'rgba(245, 158, 11, 0.1)' },
+  Metals: { icon: 'MT', color: 'var(--msp-flat)', bgColor: 'rgba(148, 163, 184, 0.1)' },
+  Agriculture: { icon: 'AG', color: 'var(--msp-bull)', bgColor: 'rgba(34, 197, 94, 0.1)' },
 };
 
 // Commodity-specific codes (6 core commodities)
@@ -450,7 +450,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
   if (!canAccessPortfolioInsights(tier)) {
     if (embedded) return null;
     return (
-      <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: '#0f172a' }}>
+      <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: 'var(--msp-bg)' }}>
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 

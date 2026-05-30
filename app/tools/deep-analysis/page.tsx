@@ -193,9 +193,9 @@ function formatLargeNumber(num: number | null | undefined): string {
 }
 
 function getSignalColor(signal: string): string {
-  if (signal.includes('BULLISH') || signal.includes('BUY')) return '#10B981';
-  if (signal.includes('BEARISH') || signal.includes('SELL')) return '#EF4444';
-  return '#F59E0B';
+  if (signal.includes('BULLISH') || signal.includes('BUY')) return 'var(--msp-bull)';
+  if (signal.includes('BEARISH') || signal.includes('SELL')) return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 function scenarioLabel(signal: string | undefined): string {
@@ -218,9 +218,9 @@ function weightedScenarioLabel(bias: 'BUY' | 'SELL' | 'HOLD'): string {
 }
 
 function weightedToneColor(bias: 'BUY' | 'SELL' | 'HOLD'): string {
-  if (bias === 'BUY') return '#10B981';
-  if (bias === 'SELL') return '#EF4444';
-  return '#F59E0B';
+  if (bias === 'BUY') return 'var(--msp-bull)';
+  if (bias === 'SELL') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 function signalTone(result: 'bullish' | 'bearish' | 'neutral'): string {
@@ -248,9 +248,9 @@ function getDeepDataQuality(result: AnalysisResult): { label: 'GOOD' | 'DEGRADED
 }
 
 function deepDataQualityColor(label: string): string {
-  if (label === 'GOOD') return '#10B981';
-  if (label === 'DEGRADED') return '#F59E0B';
-  return '#EF4444';
+  if (label === 'GOOD') return 'var(--msp-bull)';
+  if (label === 'DEGRADED') return 'var(--msp-warn)';
+  return 'var(--msp-bear)';
 }
 
 function summarizeDeepNextCheck(result: AnalysisResult): string {
@@ -280,16 +280,16 @@ function summarizeDeepResearchCaution(result: AnalysisResult): string {
 
 function getSentimentColor(sentiment: string): string {
   const s = sentiment.toLowerCase();
-  if (s.includes('bullish')) return '#10B981';
-  if (s.includes('bearish')) return '#EF4444';
-  return '#94A3B8';
+  if (s.includes('bullish')) return 'var(--msp-bull)';
+  if (s.includes('bearish')) return 'var(--msp-bear)';
+  return 'var(--msp-flat)';
 }
 
 function getRSIColor(rsi: number | undefined): string {
-  if (rsi === undefined) return '#94A3B8';
-  if (rsi < 30) return '#10B981';
-  if (rsi > 70) return '#EF4444';
-  return '#F59E0B';
+  if (rsi === undefined) return 'var(--msp-flat)';
+  if (rsi < 30) return 'var(--msp-bull)';
+  if (rsi > 70) return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
 }
 
 // Cap extreme percentages for trust/UX
@@ -600,32 +600,32 @@ function getNewsImpact(title: string, summary: string): { tag: string; color: st
   
   // High impact (red)
   if (text.includes('earnings') || text.includes('quarterly report') || text.includes('guidance')) {
-    return { tag: 'Earnings', color: '#EF4444' };
+    return { tag: 'Earnings', color: 'var(--msp-bear)' };
   }
   if (text.includes('sec') || text.includes('lawsuit') || text.includes('investigation') || text.includes('regulatory')) {
-    return { tag: 'Regulatory', color: '#F59E0B' };
+    return { tag: 'Regulatory', color: 'var(--msp-warn)' };
   }
   if (text.includes('fed') || text.includes('interest rate') || text.includes('inflation') || text.includes('fomc')) {
-    return { tag: 'Macro', color: '#EF4444' };
+    return { tag: 'Macro', color: 'var(--msp-bear)' };
   }
   
   // Medium impact (yellow)
   if (text.includes('upgrade') || text.includes('downgrade') || text.includes('price target')) {
-    return { tag: 'Analyst', color: '#F59E0B' };
+    return { tag: 'Analyst', color: 'var(--msp-warn)' };
   }
   if (text.includes('acquisition') || text.includes('merger') || text.includes('buyout')) {
-    return { tag: 'M&A', color: '#F59E0B' };
+    return { tag: 'M&A', color: 'var(--msp-warn)' };
   }
   if (text.includes('partnership') || text.includes('contract') || text.includes('deal')) {
-    return { tag: 'Catalyst', color: '#10B981' };
+    return { tag: 'Catalyst', color: 'var(--msp-bull)' };
   }
   
   // Low impact (green/gray)
   if (text.includes('product') || text.includes('launch') || text.includes('release')) {
-    return { tag: 'Product', color: '#10B981' };
+    return { tag: 'Product', color: 'var(--msp-bull)' };
   }
   
-  return { tag: 'News', color: '#64748B' };
+  return { tag: 'News', color: 'var(--msp-text-muted)' };
 }
 
 export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: string } = {}) {
@@ -937,9 +937,9 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                     {[
                       ['Scenario', weightedScenarioLabel(weighted.bias), weightedColor],
                       ['Scenario Confidence', `${weighted.confidence.toFixed(0)}%`, weightedColor],
-                      ['Research Bias', biasLabel(weighted.bias), weighted.bias === 'BUY' ? '#10B981' : weighted.bias === 'SELL' ? '#EF4444' : '#F59E0B'],
-                      ['Next Check', summarizeDeepNextCheck(result), '#93C5FD'],
-                      ['Research Caution', summarizeDeepResearchCaution(result), '#F59E0B'],
+                      ['Research Bias', biasLabel(weighted.bias), weighted.bias === 'BUY' ? 'var(--msp-bull)' : weighted.bias === 'SELL' ? 'var(--msp-bear)' : 'var(--msp-warn)'],
+                      ['Next Check', summarizeDeepNextCheck(result), 'var(--msp-info)'],
+                      ['Research Caution', summarizeDeepResearchCaution(result), 'var(--msp-warn)'],
                     ].map(([label, value, color]) => (
                       <div key={label} title={value} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>

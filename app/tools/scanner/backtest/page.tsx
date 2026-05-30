@@ -147,7 +147,7 @@ function EquityCurveChart({ data }: { data: EquityPoint[] }) {
           x2={w} y2={h - ((startEquity - min) / range) * (h - 20) - 10}
           stroke="rgba(148,163,184,0.2)" strokeDasharray="6 4" strokeWidth={1} />
         {/* Equity line */}
-        <polyline fill="none" stroke={isProfit ? '#10B981' : '#EF4444'} strokeWidth={2} points={points} />
+        <polyline fill="none" stroke={isProfit ? 'var(--msp-bull)' : 'var(--msp-bear)'} strokeWidth={2} points={points} />
         {/* Fill */}
         <polygon
           fill={isProfit ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'}

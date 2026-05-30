@@ -148,7 +148,7 @@ function PercentBadge({ value }: { value: number | undefined }) {
   );
 }
 
-function MiniSparkline({ data, color = '#10B981' }: { data: number[]; color?: string }) {
+function MiniSparkline({ data, color = 'var(--msp-bull)' }: { data: number[]; color?: string }) {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -207,7 +207,7 @@ function OHLCChart({ data, height = 220 }: { data: [number, number, number, numb
           const [, open, high, low, close] = candle;
           const x = 45 + i * spacing;
           const isGreen = close >= open;
-          const color = isGreen ? '#10B981' : '#EF4444';
+          const color = isGreen ? 'var(--msp-bull)' : 'var(--msp-bear)';
           const bodyTop = getY(Math.max(open, close));
           const bodyBottom = getY(Math.min(open, close));
           const bodyHeight = Math.max(1, bodyBottom - bodyTop);
@@ -629,7 +629,7 @@ function CryptoDetailPageContent() {
                       )
                     ) : coinData.sparkline?.length ? (
                       <div className="rounded bg-slate-950 p-3">
-                        <MiniSparkline data={coinData.sparkline} color={(coinData.price_changes['7d'] ?? 0) >= 0 ? '#10B981' : '#EF4444'} />
+                        <MiniSparkline data={coinData.sparkline} color={(coinData.price_changes['7d'] ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
                       </div>
                     ) : (
                       <div className="rounded bg-slate-950 p-6 text-center text-xs text-slate-500">No sparkline data</div>

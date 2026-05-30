@@ -37,7 +37,7 @@ const RESEARCH_TAB_META: Record<ResearchTab, { eyebrow: string }> = {
   'Calendar Intelligence': { eyebrow: '6. Calendar intelligence' },
 };
 
-function ResearchMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function ResearchMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -87,18 +87,18 @@ function savedCaseMissingCount(item: SavedResearchCaseSummary): number {
 }
 
 function lifecycleColor(state: string | null | undefined): string {
-  if (state === 'ARMED' || state === 'MANAGE') return '#10B981';
-  if (state === 'STALK' || state === 'WATCH') return '#F59E0B';
-  if (state === 'BLOCKED' || state === 'COOLDOWN') return '#EF4444';
-  return '#64748B';
+  if (state === 'ARMED' || state === 'MANAGE') return 'var(--msp-bull)';
+  if (state === 'STALK' || state === 'WATCH') return 'var(--msp-warn)';
+  if (state === 'BLOCKED' || state === 'COOLDOWN') return 'var(--msp-bear)';
+  return 'var(--msp-text-muted)';
 }
 
 function outcomeColor(status: string | null | undefined): string {
-  if (status === 'confirmed') return '#10B981';
-  if (status === 'invalidated') return '#EF4444';
-  if (status === 'expired') return '#94A3B8';
-  if (status === 'reviewed') return '#3B82F6';
-  return '#F59E0B';
+  if (status === 'confirmed') return 'var(--msp-bull)';
+  if (status === 'invalidated') return 'var(--msp-bear)';
+  if (status === 'expired') return 'var(--msp-flat)';
+  if (status === 'reviewed') return 'var(--msp-info)';
+  return 'var(--msp-warn)';
 }
 
 const OUTCOME_ACTIONS: Array<{ label: string; status: SavedResearchCaseOutcome }> = [
@@ -255,7 +255,7 @@ export default function ResearchPage() {
             <ResearchMetric label="Active Lens" value={tab} tone="#10B981" detail={RESEARCH_TAB_META[tab].eyebrow} />
             <ResearchMetric label="News Items" value={String(articles.length)} tone="#A5B4FC" detail="Filtered articles in view" />
             <ResearchMetric label="Saved Cases" value={String(savedCases.length)} tone="#F59E0B" detail="Tracked research packets" />
-            <ResearchMetric label="Tier" value={tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'} tone={tier === 'pro_trader' ? '#10B981' : tier === 'pro' ? '#38BDF8' : '#94A3B8'} detail="Subscription level" />
+            <ResearchMetric label="Tier" value={tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'} tone={tier === 'pro_trader' ? 'var(--msp-bull)' : tier === 'pro' ? '#38BDF8' : 'var(--msp-flat)'} detail="Subscription level" />
           </div>
         </div>
       </section>
@@ -471,7 +471,7 @@ export default function ResearchPage() {
                     <div className="flex flex-col items-end gap-1">
                       <Badge
                         label={item.dataQuality}
-                        color={item.dataQuality === 'GOOD' || item.dataQuality === 'LIVE' ? '#10B981' : item.dataQuality === 'DEGRADED' || item.dataQuality === 'STALE' ? '#F59E0B' : '#EF4444'}
+                        color={item.dataQuality === 'GOOD' || item.dataQuality === 'LIVE' ? 'var(--msp-bull)' : item.dataQuality === 'DEGRADED' || item.dataQuality === 'STALE' ? 'var(--msp-warn)' : 'var(--msp-bear)'}
                         small
                       />
                       {item.lifecycleState && <Badge label={item.lifecycleState} color={lifecycleColor(item.lifecycleState)} small />}

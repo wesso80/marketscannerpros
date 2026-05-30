@@ -226,10 +226,10 @@ export default function AccountSection() {
   // ─── Derived values ──────────────────────────────────────────────────────
 
   const tierDisplay: Record<TierKey, { name: string; color: string }> = {
-    free: { name: 'Free', color: '#64748B' },
-    pro: { name: 'Pro', color: '#3B82F6' },
-    pro_trader: { name: 'Pro Trader', color: '#F59E0B' },
-    anonymous: { name: 'Not Signed In', color: '#64748B' },
+    free: { name: 'Free', color: 'var(--msp-text-muted)' },
+    pro: { name: 'Pro', color: 'var(--msp-info)' },
+    pro_trader: { name: 'Pro Trader', color: 'var(--msp-warn)' },
+    anonymous: { name: 'Not Signed In', color: 'var(--msp-text-muted)' },
   };
 
   const currentTier = tierDisplay[normalizedTier];
@@ -359,7 +359,7 @@ export default function AccountSection() {
                     <span className="text-slate-400">{m.label}</span>
                     <span className="text-slate-500">{m.used}/{m.limit}</span>
                   </div>
-                  <ScoreBar value={m.used} max={m.limit} color={m.used >= m.limit ? '#EF4444' : '#10B981'} />
+                  <ScoreBar value={m.used} max={m.limit} color={m.used >= m.limit ? 'var(--msp-bear)' : 'var(--msp-bull)'} />
                 </div>
               ))}
             </div>

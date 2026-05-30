@@ -50,7 +50,7 @@ function cleanWorkflowTitle(title: string) {
   return title.replace(/^\d+\.\s*/, '');
 }
 
-function WorkflowMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function WorkflowMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>

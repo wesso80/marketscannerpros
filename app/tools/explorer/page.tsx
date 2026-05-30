@@ -57,7 +57,7 @@ const EXPLORER_TAB_PARAM_MAP: Record<string, ExplorerTab> = {
   // Macro is owned by Dashboard -> Macro lens to avoid duplication.
 };
 
-function MarketsMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function MarketsMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -407,7 +407,7 @@ export default function ExplorerPage() {
                         <div className="text-sm font-bold text-white">{c.name}</div>
                         <div className="text-[11px] text-slate-500">{c.category} — {c.unit}</div>
                       </div>
-                      <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? '#10B981' : c.changePercent < 0 ? '#EF4444' : '#94A3B8'} small />
+                      <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? 'var(--msp-bull)' : c.changePercent < 0 ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />
                     </div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-lg font-bold text-white">${c.price.toFixed(2)}</span>
@@ -439,13 +439,13 @@ export default function ExplorerPage() {
                   const r = sig.regime?.toLowerCase() || '';
                   const isHeadwind = r === 'risk_off' || r === 'compression';
                   const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';
-                  const color = isHeadwind ? '#EF4444' : isTailwind ? '#10B981' : '#94A3B8';
+                  const color = isHeadwind ? 'var(--msp-bear)' : isTailwind ? 'var(--msp-bull)' : 'var(--msp-flat)';
                   return (
                     <div key={i} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-white">{sig.source}</span>
                         <div className="flex items-center gap-1">
-                          <Badge label={sig.regime} color={REGIME_COLORS[r as RegimePriority] || '#64748B'} small />
+                          <Badge label={sig.regime} color={REGIME_COLORS[r as RegimePriority] || 'var(--msp-text-muted)'} small />
                           {sig.stale && <span role="status" className="text-[11px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
                         </div>
                       </div>

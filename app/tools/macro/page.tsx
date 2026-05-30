@@ -335,9 +335,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 <span className="text-emerald-300">Macro lens</span>
                 {gate && (
                   <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
-                    <span style={{ color: gate.permission === 'yes' ? '#10B981' : gate.permission === 'conditional' ? '#F59E0B' : '#EF4444' }}>{gate.permission.toUpperCase()}</span>
+                    <span style={{ color: gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{gate.permission.toUpperCase()}</span>
                     <span className="text-slate-600">·</span>
-                    <span className="text-slate-400">Risk <span style={{ color: gate.riskState === 'risk_on' ? '#10B981' : gate.riskState === 'risk_off' ? '#EF4444' : '#F59E0B' }}>{gate.riskState.replace('_', '-')}</span></span>
+                    <span className="text-slate-400">Risk <span style={{ color: gate.riskState === 'risk_on' ? 'var(--msp-bull)' : gate.riskState === 'risk_off' ? 'var(--msp-bear)' : 'var(--msp-warn)' }}>{gate.riskState.replace('_', '-')}</span></span>
                     <span className="text-slate-600">·</span>
                     <span className="text-slate-400">Vol <span className="text-slate-200">{gate.volRegime}</span></span>
                   </span>
@@ -362,12 +362,12 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <div className="grid self-start gap-1.5 sm:grid-cols-2">
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Permission</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.permission === 'yes' ? '#10B981' : gate.permission === 'conditional' ? '#F59E0B' : '#EF4444') : '#94A3B8' }}>{gate ? gate.permission.toUpperCase() : 'Loading'}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)') : 'var(--msp-flat)' }}>{gate ? gate.permission.toUpperCase() : 'Loading'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">Macro gate state</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk State</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.riskState === 'risk_on' ? '#10B981' : gate.riskState === 'risk_off' ? '#EF4444' : '#F59E0B') : '#94A3B8' }}>{gate ? gate.riskState.replace('_', '-').toUpperCase() : 'Loading'}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.riskState === 'risk_on' ? 'var(--msp-bull)' : gate.riskState === 'risk_off' ? 'var(--msp-bear)' : 'var(--msp-warn)') : 'var(--msp-flat)' }}>{gate ? gate.riskState.replace('_', '-').toUpperCase() : 'Loading'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">USD {gate?.usdRegime ?? '—'} · Rates {gate?.ratesRegime ?? '—'}</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
@@ -377,7 +377,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: error ? '#EF4444' : loading ? '#94A3B8' : '#FBBF24' }}>{error ? 'Refresh feed' : loading ? 'Loading…' : 'Review Decision'}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: error ? 'var(--msp-bear)' : loading ? 'var(--msp-flat)' : 'var(--msp-warn)' }}>{error ? 'Refresh feed' : loading ? 'Loading…' : 'Review Decision'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{error ? 'Macro feed degraded' : 'Open the decision section below'}</div>
               </div>
             </div>
@@ -568,11 +568,11 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                           return <g key={frac}><line x1={pad.l} y1={y} x2={w - pad.r} y2={y} stroke="rgba(255,255,255,0.08)" /><text x={pad.l - 4} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="9">{val.toFixed(1)}%</text></g>;
                         })}
                         {/* curve line */}
-                        <path d={pathD} fill="none" stroke={inverted ? '#f87171' : '#60a5fa'} strokeWidth="2" />
+                        <path d={pathD} fill="none" stroke={inverted ? 'var(--msp-bear)' : 'var(--msp-info)'} strokeWidth="2" />
                         {/* dots + labels */}
                         {svgPoints.map(p => (
                           <g key={p.label}>
-                            <circle cx={p.x} cy={p.y} r="4" fill={inverted ? '#f87171' : '#60a5fa'} />
+                            <circle cx={p.x} cy={p.y} r="4" fill={inverted ? 'var(--msp-bear)' : 'var(--msp-info)'} />
                             <text x={p.x} y={p.y - 8} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">{p.value.toFixed(2)}%</text>
                             <text x={p.x} y={h - 5} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">{p.label}</text>
                           </g>

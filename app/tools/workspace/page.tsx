@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SURFACE 6: WORKSPACE — Watchlists, Journal, Portfolio, Settings
+/* ---------------------------------------------------------------------------
+   SURFACE 6: WORKSPACE � Watchlists, Journal, Portfolio, Settings
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
-   ═══════════════════════════════════════════════════════════════════════════ */
+   --------------------------------------------------------------------------- */
 
 import { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -33,7 +33,7 @@ const WORKSPACE_TAB_META: Record<WorkspaceTab, { eyebrow: string; description: s
   Settings: { eyebrow: '7. Account', description: 'Subscription, profile, billing, and preferences.' },
 };
 
-function WorkspaceMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+function WorkspaceMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
     <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
@@ -88,7 +88,7 @@ function WorkspaceContent() {
   const [tab, setTab] = useState<typeof TABS[number]>(initialTab);
 
   // Only re-sync from URL when the URL param itself changes (e.g. external nav).
-  // Do NOT depend on `tab` here — that would force user clicks back to the URL value.
+  // Do NOT depend on `tab` here � that would force user clicks back to the URL value.
   useEffect(() => {
     const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);
     if (requestedTab) setTab(requestedTab);
@@ -96,7 +96,7 @@ function WorkspaceContent() {
 
   const activeMeta = WORKSPACE_TAB_META[tab];
   const tierLabel = tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free';
-  const tierTone = tier === 'pro_trader' ? '#10B981' : tier === 'pro' ? '#38BDF8' : '#94A3B8';
+  const tierTone = tier === 'pro_trader' ? 'var(--msp-bull)' : tier === 'pro' ? '#38BDF8' : 'var(--msp-flat)';
   const nextTab: WorkspaceTab = (() => {
     const idx = TABS.indexOf(tab);
     return TABS[(idx + 1) % TABS.length];
@@ -135,37 +135,37 @@ function WorkspaceContent() {
 
       <WorkspaceTabRail activeTab={tab} onSelectTab={setTab} />
 
-      {/* ── WATCHLISTS ─────────────────────────────────────────────── */}
+      {/* -- WATCHLISTS ----------------------------------------------- */}
       {tab === 'Watchlists' && <RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider>}
 
-      {/* ── JOURNAL ────────────────────────────────────────────────── */}
+      {/* -- JOURNAL -------------------------------------------------- */}
       {tab === 'Journal' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Trade Journal">
           <JournalPageV1 tier={tier} embeddedInWorkspace />
         </UpgradeGate>
       )}
 
-      {/* ── PORTFOLIO ──────────────────────────────────────────────── */}
+      {/* -- PORTFOLIO ------------------------------------------------ */}
       {tab === 'Portfolio' && <RiskPermissionProvider><PortfolioV1 embeddedInWorkspace /></RiskPermissionProvider>}
 
-      {/* ── LEARNING ───────────────────────────────────────────────── */}
+      {/* -- LEARNING ------------------------------------------------- */}
       {tab === 'Learning' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Doctrine Learning">
           <LearningTab />
         </UpgradeGate>
       )}
 
-      {/* ── BACKTEST ───────────────────────────────────────────────── */}
+      {/* -- BACKTEST ------------------------------------------------- */}
       {tab === 'Backtest' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Backtest Engine">
           <BacktestPage embeddedInWorkspace />
         </UpgradeGate>
       )}
 
-      {/* ── ALERTS ─────────────────────────────────────────────────── */}
+      {/* -- ALERTS --------------------------------------------------- */}
       {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 embeddedInWorkspace /></RiskPermissionProvider>}
 
-      {/* ── SETTINGS / ACCOUNT ────────────────────────────────────── */}
+      {/* -- SETTINGS / ACCOUNT -------------------------------------- */}
       {tab === 'Settings' && <AccountSection />}
     </div>
   );

@@ -265,14 +265,14 @@ function CandlestickChart({
       key: 'call-wall',
       level: dealerOverlay.structure.callWall,
       label: 'Dealer Call Wall',
-      color: '#22c55e',
+      color: 'var(--msp-bull)',
       dashed: false,
     },
     {
       key: 'put-wall',
       level: dealerOverlay.structure.putWall,
       label: 'Dealer Put Wall',
-      color: '#ef4444',
+      color: 'var(--msp-bear)',
       dashed: false,
     },
     {
@@ -402,12 +402,12 @@ function CandlestickChart({
             <g key={`session-${i}`}>
               <line
                 x1={x} y1={padding.top} x2={x} y2={padding.top + chartHeight}
-                stroke={isOpen ? '#38bdf8' : '#f59e0b'}
+                stroke={isOpen ? '#38bdf8' : 'var(--msp-warn)'}
                 strokeWidth="1.5"
                 strokeDasharray="6,3"
                 opacity="0.6"
               />
-              <text x={x + 4} y={padding.top + 12} fill={isOpen ? '#38bdf8' : '#f59e0b'} fontSize="9" fontWeight="600">
+              <text x={x + 4} y={padding.top + 12} fill={isOpen ? '#38bdf8' : 'var(--msp-warn)'} fontSize="9" fontWeight="600">
                 {isOpen ? 'RTH Open' : 'RTH Close'}
               </text>
             </g>
@@ -428,8 +428,8 @@ function CandlestickChart({
           const y = scaleY(marker.price);
           const isEntry = marker.type === 'entry';
           const color = marker.side === 'LONG'
-            ? (isEntry ? '#22c55e' : '#86efac')
-            : (isEntry ? '#ef4444' : '#fca5a5');
+            ? (isEntry ? 'var(--msp-bull)' : '#86efac')
+            : (isEntry ? 'var(--msp-bear)' : '#fca5a5');
           return (
             <g key={`jm-${i}`}>
               {isEntry ? (
@@ -497,7 +497,7 @@ function CandlestickChart({
         {data.map((bar, i) => {
           const x = scaleX(i);
           const isUp = bar.close >= bar.open;
-          const color = isUp ? '#22c55e' : '#ef4444';
+          const color = isUp ? 'var(--msp-bull)' : 'var(--msp-bear)';
           const bodyTop = scaleY(Math.max(bar.open, bar.close));
           const bodyBottom = scaleY(Math.min(bar.open, bar.close));
           const bodyHeight = Math.max(1, bodyBottom - bodyTop);
@@ -663,7 +663,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
             y={padding.top + chartHeight - barHeight}
             width={barWidth}
             height={barHeight}
-            fill={isUp ? '#22c55e' : '#ef4444'}
+            fill={isUp ? 'var(--msp-bull)' : 'var(--msp-bear)'}
             opacity="0.6"
             rx="1"
           />

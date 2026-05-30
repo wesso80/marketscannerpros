@@ -477,12 +477,12 @@ function CryptoCommandCenterContent() {
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Dominance</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: '#F59E0B' }}>{(() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })()}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: 'var(--msp-warn)' }}>{(() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })()}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{marketData?.market?.totalMarketCapFormatted || 'Mkt cap loading'}</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: '#FBBF24' }}>{currentSection?.label || 'Pick a section'}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: 'var(--msp-warn)' }}>{currentSection?.label || 'Pick a section'}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{lastUpdate ? `Refreshed ${lastUpdate.toLocaleTimeString()}` : 'Awaiting first refresh'}</div>
               </div>
             </div>

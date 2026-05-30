@@ -162,13 +162,13 @@ const TOP_100_COMPANIES = [...TOP_25_COMPANIES, 'KO', 'ADBE', 'WMT', 'BAC', 'CRM
 function getMarketCapRank(symbol: string): { rank: 'top10' | 'top25' | 'top100' | null; label: string; color: string; bgColor: string } {
   const sym = symbol.toUpperCase();
   if (TOP_10_COMPANIES.includes(sym)) {
-    return { rank: 'top10', label: 'TOP 10', color: '#F59E0B', bgColor: 'rgba(245,158,11,0.2)' };
+    return { rank: 'top10', label: 'TOP 10', color: 'var(--msp-warn)', bgColor: 'rgba(245,158,11,0.2)' };
   }
   if (TOP_25_COMPANIES.includes(sym)) {
     return { rank: 'top25', label: 'TOP 25', color: 'var(--msp-accent)', bgColor: 'rgba(16,185,129,0.2)' };
   }
   if (TOP_100_COMPANIES.includes(sym)) {
-    return { rank: 'top100', label: 'TOP 100', color: '#94A3B8', bgColor: 'rgba(148,163,184,0.2)' };
+    return { rank: 'top100', label: 'TOP 100', color: 'var(--msp-flat)', bgColor: 'rgba(148,163,184,0.2)' };
   }
   return { rank: null, label: '', color: '', bgColor: '' };
 }
