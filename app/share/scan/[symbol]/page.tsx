@@ -174,19 +174,19 @@ export default async function ShareScanPage(
   if (!data) notFound();
 
   const sideColor =
-    data.side === 'LONG' ? '#10B981' : data.side === 'SHORT' ? '#EF4444' : '#F59E0B';
+    data.side === 'LONG' ? 'var(--msp-bull)' : data.side === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-warn)';
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0F172A', color: '#F8FAFC', padding: '48px 20px' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--msp-bg)', color: '#F8FAFC', padding: '48px 20px' }}>
       <div style={{ maxWidth: 880, margin: '0 auto' }}>
-        <div style={{ fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94A3B8' }}>
+        <div style={{ fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--msp-flat)' }}>
           MarketScanner Pros · shared snapshot
         </div>
         <h1 style={{ fontSize: 64, margin: '8px 0 4px', fontWeight: 800 }}>{data.symbol}</h1>
         <div style={{ display: 'inline-block', padding: '6px 14px', border: `2px solid ${sideColor}`, color: sideColor, borderRadius: 999, fontWeight: 700, letterSpacing: '0.12em' }}>
           {data.side}
         </div>
-        <p style={{ fontSize: 22, color: '#E2E8F0', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
+        <p style={{ fontSize: 22, color: 'var(--msp-text)', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginTop: 28 }}>
           {data.score != null && <Stat label="Opp Score" value={`${data.score}/100`} />}
@@ -198,8 +198,8 @@ export default async function ShareScanPage(
         </div>
 
         <div style={{ marginTop: 36, padding: '18px 22px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 14 }}>
-          <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 8 }}>What confirms · What invalidates</div>
-          <div style={{ fontSize: 16, color: '#E2E8F0' }}>
+          <div style={{ fontSize: 14, color: 'var(--msp-flat)', marginBottom: 8 }}>What confirms · What invalidates</div>
+          <div style={{ fontSize: 16, color: 'var(--msp-text)' }}>
             Rising RVOL with price holding above prior swing confirms. A float revision up (offering / unlock) or
             short-interest contraction invalidates. Low-float names cut both ways — same tightness that fuels
             squeezes fuels gaps down.
@@ -207,7 +207,7 @@ export default async function ShareScanPage(
         </div>
 
         <div style={{ marginTop: 36, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/pricing" style={{ padding: '14px 22px', background: '#10B981', color: '#0F172A', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/pricing" style={{ padding: '14px 22px', background: 'var(--msp-bull)', color: 'var(--msp-bg)', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
             Get the full scanner →
           </Link>
           <Link href={`/tools/scanner?symbol=${data.symbol}`} style={{ padding: '14px 22px', border: '1px solid rgba(255,255,255,0.18)', color: '#F8FAFC', borderRadius: 10, fontWeight: 600, textDecoration: 'none' }}>
@@ -215,7 +215,7 @@ export default async function ShareScanPage(
           </Link>
         </div>
 
-        <p style={{ marginTop: 32, fontSize: 12, color: '#64748B', lineHeight: 1.6 }}>
+        <p style={{ marginTop: 32, fontSize: 12, color: 'var(--msp-text-muted)', lineHeight: 1.6 }}>
           Source: {data.source.replace('_', ' ')} · snapshot from{' '}
           {new Date(data.fetchedAt).toISOString().slice(0, 10)}.
           Educational research only. Not investment advice. No order routing. Past performance does not predict future returns.
@@ -228,7 +228,7 @@ export default async function ShareScanPage(
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px' }}>
-      <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94A3B8' }}>{label}</div>
+      <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--msp-flat)' }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{value}</div>
     </div>
   );
