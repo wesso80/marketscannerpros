@@ -9,6 +9,7 @@ import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import RegimeBanner from '@/components/RegimeBanner';
+import { PageHero } from '@/components/ui';
 
 type AlertItem = {
   id: string;
@@ -250,10 +251,27 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   return (
     <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
       {embeddedInWorkspace && (
-        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
-          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Alerts review</div>
-          <div className="mt-1 text-xs text-slate-400">User-defined notifications, delivery status, triggered history, and alert cleanup.</div>
-        </div>
+        <PageHero
+          ariaLabel="Alerts command header"
+          eyebrow="Alerts review"
+          badges={[
+            { label: `${activeAlerts.length} active` },
+            { label: `${triggeredToday} today` },
+          ]}
+          title="Alert radar console"
+          subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
+          actions={[
+            { label: 'New alert', variant: 'primary', onClick: () => { setActiveZone4Tab('multi'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'Quick alert', variant: 'secondary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
+          ]}
+          metrics={[
+            { label: 'Active', value: `${activeAlerts.length}`, tone: 'bull', detail: 'Open notifications' },
+            { label: 'Triggered today', value: `${triggeredToday}`, tone: 'warn', detail: 'Fired in last 24h' },
+            { label: 'Smart %', value: `${smartPct}%`, tone: 'info', detail: 'Smart alert share' },
+            { label: 'Tracking', value: riskLocked ? 'Locked' : 'Open', tone: riskLocked ? 'bear' : 'bull', detail: riskLocked ? 'Rule guard active' : 'No guard active' },
+          ]}
+        />
       )}
       <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
         Alerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.
