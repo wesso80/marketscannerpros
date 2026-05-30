@@ -66,7 +66,7 @@ export default function PartnersPage() {
           }}>
             <p style={{ fontSize: 16, color: '#e5e7eb', lineHeight: 1.8, margin: 0 }}>
               You teach the <strong style={{ color: 'var(--msp-accent)' }}>why</strong>.<br/>
-              We provide the <strong style={{ color: '#22c55e' }}>infrastructure</strong>.
+              We provide the <strong style={{ color: 'var(--msp-bull)' }}>infrastructure</strong>.
             </p>
             <p style={{ fontSize: 15, color: '#9ca3af', marginTop: 12, fontStyle: 'italic' }}>
               Together, we give traders clarity — not noise.
@@ -84,7 +84,7 @@ export default function PartnersPage() {
             borderLeft: '4px solid var(--msp-accent)'
           }}>
             <p style={{ fontSize: 15, color: '#e5e7eb', margin: 0, lineHeight: 1.8 }}>
-              <strong style={{ color: '#60a5fa' }}>Example:</strong> A price-action educator maps their consolidation → expansion framework into MSP phases. Members receive consistent AI explanations aligned with the educator's logic — no more repeating the same context in Discord.
+              <strong style={{ color: 'var(--msp-info)' }}>Example:</strong> A price-action educator maps their consolidation → expansion framework into MSP phases. Members receive consistent AI explanations aligned with the educator's logic — no more repeating the same context in Discord.
             </p>
           </div>
 
@@ -150,7 +150,7 @@ export default function PartnersPage() {
               border: '1px solid rgba(34,197,94,0.2)',
               padding: '28px'
             }}>
-              <h3 style={{ fontSize: 20, fontWeight: 600, color: '#22c55e', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--msp-bull)', marginBottom: 20 }}>
                 ✔ Perfect For
               </h3>
               <ul style={{ 
@@ -175,7 +175,7 @@ export default function PartnersPage() {
               border: '1px solid rgba(239,68,68,0.2)',
               padding: '28px'
             }}>
-              <h3 style={{ fontSize: 20, fontWeight: 600, color: '#ef4444', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--msp-bear)', marginBottom: 20 }}>
                 ❌ Not For
               </h3>
               <ul style={{ 
@@ -236,7 +236,7 @@ export default function PartnersPage() {
             ))}
           </div>
 
-          <p style={{ fontSize: 18, color: '#f59e0b', fontWeight: 600, textAlign: 'center' }}>
+          <p style={{ fontSize: 18, color: 'var(--msp-warn)', fontWeight: 600, textAlign: 'center' }}>
             Your edge is knowledge — but delivery is the bottleneck.
           </p>
         </div>
@@ -310,7 +310,7 @@ export default function PartnersPage() {
               border: '1px solid rgba(34,197,94,0.3)',
               borderRadius: 12
             }}>
-              <h3 style={{ fontSize: 22, fontWeight: 600, color: '#22c55e', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 22, fontWeight: 600, color: 'var(--msp-bull)', marginBottom: 20 }}>
                 You Provide:
               </h3>
               <ul style={{ 
@@ -339,7 +339,7 @@ export default function PartnersPage() {
             borderRadius: 8,
             border: '1px solid rgba(34,197,94,0.2)'
           }}>
-            The result: <span style={{ color: '#22c55e' }}>education that scales</span> without burning out.
+            The result: <span style={{ color: 'var(--msp-bull)' }}>education that scales</span> without burning out.
           </p>
         </div>
       </section>
@@ -460,7 +460,7 @@ export default function PartnersPage() {
                 border: '1px solid rgba(34,197,94,0.2)',
                 borderRadius: 8
               }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#22c55e', marginBottom: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--msp-bull)', marginBottom: 12 }}>
                   Your Concepts:
                 </p>
                 <ul style={{ fontSize: 14, color: '#e5e7eb', lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
@@ -580,7 +580,7 @@ export default function PartnersPage() {
               border: '1px solid rgba(34,197,94,0.2)',
               borderRadius: 12
             }}>
-              <h3 style={{ fontSize: 20, fontWeight: 600, color: '#22c55e', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--msp-bull)', marginBottom: 20 }}>
                 Core Benefits
               </h3>
               <ul style={{ 
@@ -631,7 +631,7 @@ export default function PartnersPage() {
             borderRadius: 12,
             textAlign: 'center'
           }}>
-            <h3 style={{ fontSize: 22, fontWeight: 600, color: '#60a5fa', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 22, fontWeight: 600, color: 'var(--msp-info)', marginBottom: 16 }}>
               What Your Members Gain
             </h3>
             <div style={{
@@ -709,7 +709,7 @@ export default function PartnersPage() {
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>
             Partner Standards
           </h2>
-          <p style={{ fontSize: 16, color: '#f59e0b', marginBottom: 32, fontWeight: 600 }}>
+          <p style={{ fontSize: 16, color: 'var(--msp-warn)', marginBottom: 32, fontWeight: 600 }}>
             To protect quality and trust:
           </p>
 
@@ -749,7 +749,7 @@ export default function PartnersPage() {
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ 
             fontSize: 18, 
-            color: '#ef4444', 
+            color: 'var(--msp-bear)', 
             fontWeight: 700,
             marginBottom: 32,
             padding: '12px 24px',

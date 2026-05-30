@@ -16,7 +16,7 @@ export default function DisclaimerPage() {
     }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 16, color: '#f9fafb' }}>Disclaimer</h1>
-        <p style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}><strong style={{ color: '#cbd5e1' }}>Effective Date:</strong> {effective}</p>
+        <p style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}><strong style={{ color: 'var(--msp-text)' }}>Effective Date:</strong> {effective}</p>
         
         <nav style={{
           margin: '24px 0',
@@ -27,25 +27,25 @@ export default function DisclaimerPage() {
         }}>
           <strong style={{ display: 'block', marginBottom: 8, color: '#f9fafb', fontSize: 14 }}>On this page</strong>
           <div style={{ fontSize: 13, color: '#9ca3af', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <a href="#gaw" style={{ color: '#EAB308', textDecoration: 'none' }}>General Advice Warning</a>
+            <a href="#gaw" style={{ color: 'var(--msp-warn)', textDecoration: 'none' }}>General Advice Warning</a>
             <span>·</span>
-            <a href="#edu" style={{ color: '#22c55e', textDecoration: 'none' }}>Educational use</a>
+            <a href="#edu" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Educational use</a>
             <span>·</span>
-            <a href="#risk" style={{ color: '#22c55e', textDecoration: 'none' }}>Market risk</a>
+            <a href="#risk" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Market risk</a>
             <span>·</span>
-            <a href="#accuracy" style={{ color: '#22c55e', textDecoration: 'none' }}>Data & accuracy</a>
+            <a href="#accuracy" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Data & accuracy</a>
             <span>·</span>
-            <a href="#delay" style={{ color: '#22c55e', textDecoration: 'none' }}>Data delays</a>
+            <a href="#delay" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Data delays</a>
             <span>·</span>
-            <a href="#paper" style={{ color: '#22c55e', textDecoration: 'none' }}>Paper trade system</a>
+            <a href="#paper" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Paper trade system</a>
             <span>·</span>
-            <a href="#backtests" style={{ color: '#22c55e', textDecoration: 'none' }}>Backtests</a>
+            <a href="#backtests" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Backtests</a>
             <span>·</span>
-            <a href="#jurisdiction" style={{ color: '#22c55e', textDecoration: 'none' }}>Jurisdiction</a>
+            <a href="#jurisdiction" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Jurisdiction</a>
             <span>·</span>
-            <a href="#liability" style={{ color: '#22c55e', textDecoration: 'none' }}>Liability</a>
+            <a href="#liability" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Liability</a>
             <span>·</span>
-            <a href="#contact" style={{ color: '#22c55e', textDecoration: 'none' }}>Contact</a>
+            <a href="#contact" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Contact</a>
           </div>
         </nav>
 
@@ -56,8 +56,8 @@ export default function DisclaimerPage() {
           borderRadius: 10,
           padding: '16px 20px',
         }}>
-          <h2 id="gaw" style={{ fontSize: 18, fontWeight: 700, marginBottom: 10, marginTop: 0, color: '#EAB308' }}>General Advice Warning</h2>
-          <p style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.6, margin: 0 }}>
+          <h2 id="gaw" style={{ fontSize: 18, fontWeight: 700, marginBottom: 10, marginTop: 0, color: 'var(--msp-warn)' }}>General Advice Warning</h2>
+          <p style={{ fontSize: 14, color: 'var(--msp-text)', lineHeight: 1.6, margin: 0 }}>
             This platform provides general information only. It does not consider your personal objectives, financial situation, or needs.
             MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL) and is not a licensed financial adviser.
             Content is not financial advice — consult a licensed professional before making investment decisions.
@@ -72,7 +72,7 @@ export default function DisclaimerPage() {
             investment, or trading advice.
           </p>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6, marginTop: 12 }}>
-            <strong style={{ color: '#f59e0b' }}>MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth). 
+            <strong style={{ color: 'var(--msp-warn)' }}>MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth). 
             All scanner outputs, scores, signals, AI-generated insights, and analytics are general information only and do not take into account your personal objectives, financial situation, or needs. 
             You should obtain independent financial advice from a licensed adviser before making any investment decisions.
           </p>
@@ -144,7 +144,7 @@ export default function DisclaimerPage() {
         <section>
           <h2 id="liability" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Liability</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
-            Use the App at your own risk. See our <a href="/terms" style={{ color: '#22c55e', textDecoration: 'none' }}>Terms of Service</a> for limitations
+            Use the App at your own risk. See our <a href="/terms" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Terms of Service</a> for limitations
             of liability and other important terms.
           </p>
         </section>
@@ -152,7 +152,7 @@ export default function DisclaimerPage() {
         <section>
           <h2 id="contact" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Contact</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
-            Questions? Email <a href="mailto:support@marketscannerpros.app" style={{ color: '#22c55e', textDecoration: 'none' }}>support@marketscannerpros.app</a>.
+            Questions? Email <a href="mailto:support@marketscannerpros.app" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>support@marketscannerpros.app</a>.
           </p>
         </section>
       </div>

@@ -144,7 +144,7 @@ export default async function DailyPickPage() {
       <main style={pageStyle}>
         <div style={containerStyle}>
           <h1 style={h1Style}>Daily Picks</h1>
-          <p style={{ color: '#94A3B8' }}>
+          <p style={{ color: 'var(--msp-flat)' }}>
             No picks scored yet for the latest session — check back after the next scanner run.
           </p>
         </div>
@@ -171,11 +171,11 @@ export default async function DailyPickPage() {
     <main style={pageStyle}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div style={containerStyle}>
-        <div style={{ color: '#94A3B8', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+        <div style={{ color: 'var(--msp-flat)', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           MarketScanner Pros · Daily Picks
         </div>
         <h1 style={h1Style}>Top {data.picks.length} picks · {data.scan_date}</h1>
-        <p style={{ color: '#CBD5E1', fontSize: 17, lineHeight: 1.6, marginTop: 6, maxWidth: 760 }}>
+        <p style={{ color: 'var(--msp-text)', fontSize: 17, lineHeight: 1.6, marginTop: 6, maxWidth: 760 }}>
           Highest-scoring symbols across our equity and crypto scanners for the most recent session.
           Each row is a technical research snapshot — not a recommendation. Click any row for the full
           shareable card.
@@ -194,17 +194,17 @@ export default async function DailyPickPage() {
           </div>
           {data.picks.map((p) => {
             const side = p.direction === 'bullish' ? 'LONG' : p.direction === 'bearish' ? 'SHORT' : 'WATCH';
-            const sideColor = side === 'LONG' ? '#10B981' : side === 'SHORT' ? '#EF4444' : '#F59E0B';
+            const sideColor = side === 'LONG' ? 'var(--msp-bull)' : side === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-warn)';
             return (
               <Link
                 key={`${p.asset_class}-${p.symbol}`}
                 href={`/share/scan/${p.symbol}`}
                 style={{ ...rowStyle, textDecoration: 'none', color: 'inherit' }}
               >
-                <div style={{ ...cellStyle, width: 60, color: '#64748B' }}>{p.rank}</div>
+                <div style={{ ...cellStyle, width: 60, color: 'var(--msp-text-muted)' }}>{p.rank}</div>
                 <div style={{ ...cellStyle, flex: 1 }}>
                   <span style={{ fontWeight: 700, fontSize: 17 }}>{p.symbol}</span>
-                  {p.sector && <span style={{ color: '#64748B', marginLeft: 8, fontSize: 12 }}>{p.sector}</span>}
+                  {p.sector && <span style={{ color: 'var(--msp-text-muted)', marginLeft: 8, fontSize: 12 }}>{p.sector}</span>}
                 </div>
                 <div style={{ ...cellStyle, width: 90 }}>
                   <span style={{ color: sideColor, fontWeight: 700, fontSize: 12, letterSpacing: '0.1em' }}>{side}</span>
@@ -213,13 +213,13 @@ export default async function DailyPickPage() {
                 <div style={{ ...cellStyle, width: 110, textAlign: 'right' as const }}>
                   {p.price != null ? `$${p.price.toFixed(2)}` : '—'}
                 </div>
-                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: p.change_percent != null && p.change_percent >= 0 ? '#10B981' : '#EF4444' }}>
+                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: p.change_percent != null && p.change_percent >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                   {p.change_percent != null ? `${p.change_percent >= 0 ? '+' : ''}${p.change_percent.toFixed(2)}%` : '—'}
                 </div>
-                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: '#CBD5E1' }}>
+                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: 'var(--msp-text)' }}>
                   {formatFloat(p.shares_float) ?? '—'}
                 </div>
-                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: '#CBD5E1' }}>
+                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: 'var(--msp-text)' }}>
                   {p.short_pct_float != null ? `${p.short_pct_float.toFixed(1)}%` : '—'}
                 </div>
               </Link>
@@ -229,16 +229,16 @@ export default async function DailyPickPage() {
 
         <div style={{ marginTop: 32, padding: '20px 22px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 14 }}>
           <h2 style={{ margin: 0, fontSize: 22, color: '#F8FAFC' }}>Want the full scanner?</h2>
-          <p style={{ margin: '8px 0 16px', color: '#CBD5E1' }}>
+          <p style={{ margin: '8px 0 16px', color: 'var(--msp-text)' }}>
             Picks above are a daily snapshot. The full MSP scanner runs across thousands of symbols
             with custom filters (RVOL, low-float, regime, options flow), backtesting, and a trade journal.
           </p>
-          <Link href="/pricing" style={{ display: 'inline-block', padding: '12px 22px', background: '#10B981', color: '#0F172A', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/pricing" style={{ display: 'inline-block', padding: '12px 22px', background: 'var(--msp-bull)', color: 'var(--msp-bg)', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
             See pricing →
           </Link>
         </div>
 
-        <p style={{ marginTop: 24, fontSize: 12, color: '#64748B', lineHeight: 1.6 }}>
+        <p style={{ marginTop: 24, fontSize: 12, color: 'var(--msp-text-muted)', lineHeight: 1.6 }}>
           Educational research only. Not investment advice. No order routing. Past performance does not
           predict future returns. Float / short data sourced from Alpha Vantage OVERVIEW; price data is
           end-of-day from MSP's daily cache.
@@ -248,9 +248,9 @@ export default async function DailyPickPage() {
   );
 }
 
-const pageStyle = { minHeight: '100vh', background: '#0F172A', color: '#F8FAFC', padding: '48px 20px' };
+const pageStyle = { minHeight: '100vh', background: 'var(--msp-bg)', color: '#F8FAFC', padding: '48px 20px' };
 const containerStyle = { maxWidth: 1000, margin: '0 auto' };
 const h1Style = { fontSize: 40, margin: '6px 0 12px', fontWeight: 800, lineHeight: 1.15 };
 const cellStyle = { padding: '12px 14px', fontSize: 14, display: 'flex', alignItems: 'center' };
-const rowHeaderStyle = { display: 'flex', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#94A3B8', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase' as const };
+const rowHeaderStyle = { display: 'flex', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'var(--msp-flat)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase' as const };
 const rowStyle = { display: 'flex', borderTop: '1px solid rgba(255,255,255,0.04)', transition: 'background 120ms' };

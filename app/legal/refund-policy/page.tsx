@@ -42,7 +42,7 @@ export default function RefundPolicyPage() {
 
       <h2>Refund Policy</h2>
       
-      <p><strong style={{ color: '#10B981' }}>7-Day Money-Back Guarantee:</strong></p>
+      <p><strong style={{ color: 'var(--msp-bull)' }}>7-Day Money-Back Guarantee:</strong></p>
       <ul>
         <li>If you are not satisfied with your subscription, you may request a <strong>full refund within 7 days</strong> of your first payment.</li>
         <li>To request a refund, email <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a> with your account email and reason for cancellation.</li>
