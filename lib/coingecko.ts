@@ -402,6 +402,8 @@ export const COINGECKO_ID_MAP: Record<string, string> = {
   'JUPUSDT': 'jupiter-exchange-solana',
   'RENDER': 'render-token',
   'RENDERUSDT': 'render-token',
+  'RNDR': 'render-token',   // legacy ticker, still emitted by some upstream paths
+  'RNDRUSDT': 'render-token',
   'KAS': 'kaspa',
   'KASUSDT': 'kaspa',
   'SUI': 'sui',
