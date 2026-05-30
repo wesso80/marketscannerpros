@@ -9,6 +9,12 @@
         value: production
       - key: ALPHA_VANTAGE_RPM
         value: "400"
+      # Cap V8 old-space at 1536 MB on the 2 GB Standard instance so GC
+      # pressure kicks in before the container's cgroup OOM-killer or the
+      # native cppgc heap (used by ContextifyScript during SSR compilation)
+      # runs out of headroom and triggers SIGABRT (status 134).
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=1536"
 
   # ==========================================================================
   # Background Worker: Data Ingestion (Alpha Vantage)
