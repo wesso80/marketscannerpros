@@ -12,6 +12,7 @@ import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
 import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -71,12 +72,39 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
+// Design-system helpers: sentence-case labels, tabular numbers, magnitude bars.
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>
+      {children}
+    </div>
+  );
+}
+
+function MetricCol({ label, value, tone = 'var(--msp-text)', align = 'left' }: { label: string; value: React.ReactNode; tone?: string; align?: 'left' | 'right' }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', gap: 2 }}>
+      <span style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</span>
+      <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{value}</span>
+    </div>
+  );
+}
+
+function MagnitudeBar({ value, max = 100, color = 'var(--msp-flat)', height = 3 }: { value: number; max?: number; color?: string; height?: number }) {
+  const pct = Math.min(100, Math.max(0, (Math.abs(value) / max) * 100));
+  return (
+    <div style={{ width: '100%', height, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }} aria-hidden="true">
+      <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width 200ms ease' }} />
+    </div>
+  );
+}
+
 function DashboardMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
-    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-0.5 text-sm font-black" style={{ color: tone }}>{value}</div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, minHeight: '3.5rem' }}>
+      <span style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</span>
+      <span style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>{value}</span>
+      <span style={{ fontSize: 11, color: 'var(--msp-text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={detail}>{detail}</span>
     </div>
   );
 }
@@ -85,8 +113,8 @@ function PanelHeader({ title, eyebrow, action }: { title: string; eyebrow?: stri
   return (
     <div className="mb-2 flex items-start justify-between gap-3">
       <div>
-        {eyebrow ? <div className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-slate-500">{eyebrow}</div> : null}
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
+        <h3 style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: eyebrow ? 2 : 0 }}>{title}</h3>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -94,11 +122,25 @@ function PanelHeader({ title, eyebrow, action }: { title: string; eyebrow?: stri
 }
 
 function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up' | 'down'; onOpen: () => void; onKeyOpen: (event: React.KeyboardEvent) => void }) {
+  const pct = parseChangePct(mover.change_percentage);
+  const barColor = tone === 'up' ? 'var(--msp-bull)' : 'var(--msp-bear)';
+  const sign = pct >= 0 ? '+' : '';
   return (
-    <button type="button" aria-label={`Open Golden Egg for ${mover.ticker}`} className="grid w-full grid-cols-[4.5rem_1fr_5.5rem] items-center rounded-md px-2 py-1 text-xs hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" onClick={onOpen} onKeyDown={onKeyOpen}>
-      <span className="font-semibold text-white">{mover.ticker}</span>
-      <span className="text-right font-mono tabular-nums text-slate-300">{fmtPrice(parseFloat(mover.price))}</span>
-      <span className={`${tone === 'up' ? 'text-emerald-400' : 'text-red-400'} text-right font-mono tabular-nums`}>{tone === 'up' ? '+' : ''}{mover.change_percentage}</span>
+    <button
+      type="button"
+      aria-label={`Open Golden Egg for ${mover.ticker}`}
+      className="w-full rounded-md px-2 py-1.5 text-xs hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+      onClick={onOpen}
+      onKeyDown={onKeyOpen}
+    >
+      <div className="grid grid-cols-[4.5rem_1fr_5.5rem] items-center gap-2">
+        <span style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{mover.ticker}</span>
+        <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--msp-text-muted)' }}>{fmtPrice(parseFloat(mover.price))}</span>
+        <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: barColor, fontWeight: 500 }}>{sign}{mover.change_percentage}</span>
+      </div>
+      <div className="mt-1">
+        <MagnitudeBar value={pct} max={10} color={barColor} height={2} />
+      </div>
     </button>
   );
 }
@@ -178,37 +220,37 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]" aria-label="Dashboard command header">
+      <section style={{ background: 'var(--msp-panel)', borderRadius: 'var(--msp-radius-card)', padding: 16 }} aria-label="Dashboard command header">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
           <div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-              <span className="text-emerald-300">Morning command dashboard</span>
+            <div className="flex flex-wrap items-center gap-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>
+              <span>Morning command dashboard</span>
               {regime.data && (
-                <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
-                  <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : '#A5B4FC' }}>{regime.data.regime.replace(/_/g, ' ')}</span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">Risk <span style={{ color: regime.data.riskLevel === 'low' ? 'var(--msp-bull)' : regime.data.riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{regime.data.riskLevel}</span></span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">Sizing <span className="text-slate-200">{regime.data.sizing}</span></span>
+                <span className="inline-flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
+                  <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : 'var(--msp-info)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()}</span>
+                  <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                  <span>risk <span style={{ color: regime.data.riskLevel === 'low' ? 'var(--msp-bull)' : regime.data.riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{regime.data.riskLevel}</span></span>
+                  <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                  <span>sizing <span style={{ color: 'var(--msp-text)' }}>{regime.data.sizing}</span></span>
                 </span>
               )}
             </div>
-            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Open the research queue, then validate one symbol.</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
-              Scanner cache, movers, calendar risk, and headlines are compressed into a morning review path.
+            <h1 className="mt-1" style={{ fontSize: 'var(--msp-text-h1)', fontWeight: 500, color: 'var(--msp-text)', lineHeight: 1.25 }}>Open the research queue, then validate one symbol.</h1>
+            <p className="mt-1 max-w-3xl" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
+              Scanner cache, movers, calendar risk, and headlines compressed into a morning review path.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Start Scanner</a>
-              <a href={topSymbolHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">{hasQueue ? `Validate ${topQueueSymbol}` : 'Validate Symbol'}</a>
-              <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Journal</a>
+              <DSButton variant="primary" size="sm" onClick={() => navigateTo('scanner')}>Start scanner</DSButton>
+              <DSButton variant="secondary" size="sm" onClick={() => { window.location.href = topSymbolHref; }}>{hasQueue ? `Validate ${topQueueSymbol}` : 'Validate symbol'}</DSButton>
+              <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/workspace?tab=journal'; }}>Open journal</DSButton>
             </div>
           </div>
 
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
             <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail={hasQueue ? `Top focus: ${topQueueSymbol}` : 'Run Scanner to populate'} />
-            <DashboardMetric label="Data Health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : loadingFeeds ? 'Feeds syncing' : 'No feed errors reported'} />
-            <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? 'var(--msp-warn)' : 'var(--msp-flat)'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
-            <DashboardMetric label="Next Check" value={nextCheckValue} tone={nextCheckTone} detail={nextCheckDetail} />
+            <DashboardMetric label="Data health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : loadingFeeds ? 'Feeds syncing' : 'No feed errors reported'} />
+            <DashboardMetric label="High impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? 'var(--msp-warn)' : 'var(--msp-flat)'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
+            <DashboardMetric label="Next check" value={nextCheckValue} tone={nextCheckTone} detail={nextCheckDetail} />
           </div>
         </div>
       </section>
@@ -217,199 +259,262 @@ export default function DashboardPage() {
 
       {/* ─── Morning Research Start ----------------------------------- */}
       <section className="grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.72fr)]" aria-label="Morning research start">
-        <Card>
+        <DSCard>
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Today&apos;s Research Queue</div>
-              <h2 className="mt-1 text-lg font-black text-white">Highest-evidence symbols first.</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Click a symbol to open Golden Egg. Review context only; no trade instructions.</p>
+              <SectionEyebrow>Today&apos;s research queue</SectionEyebrow>
+              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Highest-evidence symbols first.</h2>
+              <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Golden Egg. Review context only; no trade instructions.</p>
             </div>
-            <button type="button" onClick={() => navigateTo('scanner')} className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-400/15">
-              Open Scanner
-            </button>
+            <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
           </div>
 
           {scannerQueue.length === 0 && moverQueue.length === 0 ? (
-            <div className="rounded-lg border border-slate-800 bg-slate-950/35 px-4 py-5 text-center text-xs text-slate-500">
+            <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '20px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>
               No queue yet. Run Scanner or review movers to create a research list.
             </div>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
-              {scannerQueue.map((row: CachedSymbol) => (
-                <button key={`queue-${row.symbol}`} type="button" aria-label={`Validate ${row.symbol} in Golden Egg`} onClick={() => openGoldenEgg(row.symbol)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-emerald-400/30 hover:bg-emerald-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-black text-white">{row.symbol}</span>
-                    <span className="text-xs font-bold" style={{ color: directionColor(row.direction) }}>{row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias'}</span>
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-slate-500">
-                    <span>Score <strong className="text-slate-200">{row.score}</strong></span>
-                    <span>Price <strong className="text-slate-200">{fmtPrice(row.price)}</strong></span>
-                    <span className={pctColor(row.changePct)}>Move {row.changePct >= 0 ? '+' : ''}{row.changePct.toFixed(2)}%</span>
-                  </div>
-                  <div className="mt-2 text-[11px] font-semibold text-emerald-300">Next: review in Golden Egg</div>
-                </button>
-              ))}
-              {moverQueue.map((m: Mover) => (
-                <button key={`mover-queue-${m.ticker}`} type="button" aria-label={`Validate ${m.ticker} in Golden Egg`} onClick={() => openGoldenEgg(m.ticker)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-sky-400/30 hover:bg-sky-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-black text-white">{m.ticker}</span>
-                    <span className="text-xs font-bold text-sky-300">Mover evidence</span>
-                  </div>
-                  <div className="mt-2 text-[11px] text-slate-400">{m.asset_class} · {m.change_percentage} · price {fmtPrice(parseFloat(m.price))}</div>
-                  <div className="mt-2 text-[11px] font-semibold text-emerald-300">Next: validate movement context</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
+          ) : (() => {
+            const combined: Array<{ kind: 'cached'; row: CachedSymbol } | { kind: 'mover'; row: Mover }> = [
+              ...scannerQueue.map(row => ({ kind: 'cached' as const, row })),
+              ...moverQueue.map(row => ({ kind: 'mover' as const, row })),
+            ];
+            return (
+              <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+                {combined.map((item, idx) => {
+                  const isFocal = idx === 0;
+                  if (item.kind === 'cached') {
+                    const row = item.row;
+                    const moveColor = row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
+                    const biasLabel = row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias';
+                    const biasTone: 'bull' | 'bear' | 'neutral' = row.direction === 'bullish' ? 'bull' : row.direction === 'bearish' ? 'bear' : 'neutral';
+                    return (
+                      <button
+                        key={`queue-${row.symbol}`}
+                        type="button"
+                        aria-label={`Validate ${row.symbol} in Golden Egg`}
+                        onClick={() => openGoldenEgg(row.symbol)}
+                        style={{
+                          textAlign: 'left',
+                          background: isFocal ? 'var(--msp-card-2)' : 'var(--msp-card)',
+                          borderRadius: 'var(--msp-radius-control)',
+                          borderLeft: isFocal ? '2px solid var(--msp-accent)' : '2px solid transparent',
+                          padding: 12,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                          transition: 'background 120ms ease',
+                        }}
+                        className="hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{row.symbol}</span>
+                          <DSBadge tone={biasTone}>{biasLabel}</DSBadge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <MetricCol label="Score" value={row.score} />
+                          <MetricCol label="Price" value={fmtPrice(row.price)} align="right" />
+                          <MetricCol label="Move" value={`${row.changePct >= 0 ? '+' : ''}${row.changePct.toFixed(2)}%`} tone={moveColor} align="right" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <MagnitudeBar value={row.score} max={100} color="var(--msp-accent-dim)" height={3} />
+                          <MagnitudeBar value={row.changePct} max={10} color={moveColor} height={2} />
+                        </div>
+                        <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Golden Egg</div>
+                      </button>
+                    );
+                  } else {
+                    const m = item.row;
+                    const movePct = parseChangePct(m.change_percentage);
+                    const moveColor = movePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
+                    return (
+                      <button
+                        key={`mover-queue-${m.ticker}`}
+                        type="button"
+                        aria-label={`Validate ${m.ticker} in Golden Egg`}
+                        onClick={() => openGoldenEgg(m.ticker)}
+                        style={{
+                          textAlign: 'left',
+                          background: isFocal ? 'var(--msp-card-2)' : 'var(--msp-card)',
+                          borderRadius: 'var(--msp-radius-control)',
+                          borderLeft: isFocal ? '2px solid var(--msp-accent)' : '2px solid transparent',
+                          padding: 12,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}
+                        className="hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{m.ticker}</span>
+                          <DSBadge tone="info">Mover evidence</DSBadge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <MetricCol label="Price" value={fmtPrice(parseFloat(m.price))} />
+                          <MetricCol label="Move" value={`${movePct >= 0 ? '+' : ''}${m.change_percentage}`} tone={moveColor} align="right" />
+                        </div>
+                        <MagnitudeBar value={movePct} max={10} color={moveColor} height={2} />
+                        <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: validate movement context</div>
+                      </button>
+                    );
+                  }
+                })}
+              </div>
+            );
+          })()}
+        </DSCard>
 
         <div className="grid gap-3">
-          <Card>
-            <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-sky-300">Data Health Strip</div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-                <div className="text-slate-500">Loading feeds</div>
-                <div className="mt-1 text-lg font-black text-white">{loadingFeeds}</div>
+          <DSCard>
+            <SectionEyebrow>Data health strip</SectionEyebrow>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: 12 }}>
+                <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Loading feeds</div>
+                <div style={{ marginTop: 4, fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', fontVariantNumeric: 'tabular-nums' }}>{loadingFeeds}</div>
               </div>
-              <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-                <div className="text-slate-500">Degraded feeds</div>
-                <div className={`mt-1 text-lg font-black ${degradedFeeds.length ? 'text-amber-300' : 'text-emerald-300'}`}>{degradedFeeds.length}</div>
+              <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: 12 }}>
+                <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Degraded feeds</div>
+                <div style={{ marginTop: 4, fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: degradedFeeds.length ? 'var(--msp-warn)' : 'var(--msp-bull)', fontVariantNumeric: 'tabular-nums' }}>{degradedFeeds.length}</div>
               </div>
             </div>
             {cacheAgeMinutes != null && !cached.error && (
-              <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${cacheStale ? 'text-amber-400' : 'text-slate-500'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${cacheStale ? 'bg-amber-400' : 'bg-emerald-400'}`} aria-hidden="true" />
+              <div className="mt-2 flex items-center gap-1.5" style={{ fontSize: 11, color: cacheStale ? 'var(--msp-warn)' : 'var(--msp-text-faint)' }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: cacheStale ? 'var(--msp-warn)' : 'var(--msp-bull)' }} aria-hidden="true" />
                 Scanner cache: {cacheAgeMinutes < 60 ? `${cacheAgeMinutes}m` : `${Math.round(cacheAgeMinutes / 60)}h`} old{cacheStale ? ' — stale' : ' — fresh'}
               </div>
             )}
-            <p className="mt-2 text-[11px] leading-5 text-slate-500">{degradedFeeds.length ? `Review feed issues: ${degradedFeeds.join(', ')}.` : 'Scanner, movers, news, and calendar feeds have no reported errors.'}</p>
-          </Card>
+            <p className="mt-2" style={{ fontSize: 11, color: 'var(--msp-text-faint)', lineHeight: 1.5 }}>{degradedFeeds.length ? `Review feed issues: ${degradedFeeds.join(', ')}.` : 'Scanner, movers, news, and calendar feeds have no reported errors.'}</p>
+          </DSCard>
 
-          <Card>
-            <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Continue Workflow</div>
-            <div className="mt-3 grid gap-2 text-xs">
-              <button type="button" onClick={() => navigateTo('scanner')} className={`rounded-lg border px-3 py-2 text-left no-underline ${hasQueue ? 'border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-200' : 'border-white/10 bg-white/[0.035] text-slate-200 hover:border-emerald-400/30'}`}>{hasQueue ? `✓ ${researchQueueCount} scenarios queued` : '1. Find scenarios in Scanner'}</button>
-              <a href={topSymbolHref} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-amber-400/30">{hasQueue ? `2. Validate ${topQueueSymbol} in Golden Egg` : '2. Validate one symbol in Golden Egg'}</a>
-              <a href="/tools/workspace?tab=backtest" className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-emerald-400/30">3. Test history in Backtest</a>
-              <a href="/tools/workspace?tab=journal" className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-emerald-400/30">4. Save notes in Journal</a>
+          <DSCard>
+            <SectionEyebrow>Continue workflow</SectionEyebrow>
+            <div className="mt-3 grid gap-2">
+              <button type="button" onClick={() => navigateTo('scanner')} style={{ background: hasQueue ? 'var(--msp-card-2)' : 'var(--msp-card)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: hasQueue ? 'var(--msp-bull)' : 'var(--msp-text-muted)', borderLeft: hasQueue ? '2px solid var(--msp-bull)' : '2px solid transparent' }}>{hasQueue ? `✓ ${researchQueueCount} scenarios queued` : '1. Find scenarios in Scanner'}</button>
+              <a href={topSymbolHref} style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>{hasQueue ? `2. Validate ${topQueueSymbol} in Golden Egg` : '2. Validate one symbol in Golden Egg'}</a>
+              <a href="/tools/workspace?tab=backtest" style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>3. Test history in Backtest</a>
+              <a href="/tools/workspace?tab=journal" style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>4. Save notes in Journal</a>
             </div>
-          </Card>
+          </DSCard>
         </div>
       </section>
 
       {/* ─── Volatility Watch + Time Confluence + ARCA Summary ─── */}
       <section className="grid gap-3 md:grid-cols-3" aria-label="Volatility and research context panels">
         {/* Volatility Watch */}
-        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+        <DSCard>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-purple-300">Volatility Watch</div>
-              <div className="mt-0.5 text-sm font-black text-white">Compression &amp; expansion signals</div>
+              <SectionEyebrow>Volatility watch</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Compression &amp; expansion signals</div>
             </div>
-            <a href="/tools/volatility-engine" aria-label="Open Dynamic Volatility Engine" className="rounded border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-300 no-underline hover:bg-purple-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60">DVE &#x203A;</a>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/volatility-engine'; }} aria-label="Open Dynamic Volatility Engine">DVE ›</DSButton>
           </div>
           {cached.loading ? (
             <div className="space-y-2">
-              {[1,2,3].map(i => <div key={i} className="h-6 animate-pulse rounded bg-slate-700/40" />)}
+              {[1,2,3].map(i => <div key={i} className="h-6 animate-pulse rounded" style={{ background: 'var(--msp-card-2)' }} />)}
             </div>
           ) : (
-            <div className="space-y-1.5 text-xs">
+            <div className="space-y-1.5">
               {/* High ADX = trending (expansion); low ADX = compression candidate */}
               {([...cached.equity.slice(0,3), ...cached.crypto.slice(0,2)] as CachedSymbol[])
                 .sort((a, b) => Math.abs(b.adx) - Math.abs(a.adx))
                 .slice(0, 4)
                 .map((r: CachedSymbol) => {
                   const phase = r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
-                  const phaseColor = r.adx >= 30 ? 'var(--msp-bull)' : r.adx >= 20 ? 'var(--msp-warn)' : '#A78BFA';
+                  const phaseTone: 'bull' | 'warn' | 'info' = r.adx >= 30 ? 'bull' : r.adx >= 20 ? 'warn' : 'info';
                   return (
-                    <button key={`vol-${r.symbol}`} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} onClick={() => openGoldenEgg(r.symbol)}
-                      className="flex w-full items-center justify-between rounded-md border border-white/[0.06] bg-slate-900/30 px-2.5 py-1.5 hover:border-purple-400/20 hover:bg-purple-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/50">
-                      <span className="font-bold text-white">{r.symbol}</span>
+                    <button
+                      key={`vol-${r.symbol}`}
+                      type="button"
+                      aria-label={`Open Golden Egg for ${r.symbol}`}
+                      onClick={() => openGoldenEgg(r.symbol)}
+                      style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '6px 10px', width: '100%' }}
+                      className="flex items-center justify-between hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                    >
+                      <span style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>{r.symbol}</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono tabular-nums text-slate-400">ADX {Math.round(r.adx)}</span>
-                        <span className="rounded border px-1.5 py-0 text-[10px] font-bold uppercase"
-                          style={{ color: phaseColor, borderColor: `${phaseColor}40`, background: `${phaseColor}12` }}>{phase}</span>
+                        <span style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', fontVariantNumeric: 'tabular-nums' }}>ADX {Math.round(r.adx)}</span>
+                        <DSBadge tone={phaseTone}>{phase}</DSBadge>
                       </div>
                     </button>
                   );
                 })}
               {[...cached.equity, ...cached.crypto].length === 0 && (
-                <div className="py-3 text-center text-slate-500">Run Scanner to populate volatility watch</div>
+                <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Run Scanner to populate volatility watch</div>
               )}
-              <div className="pt-1 text-[10px] text-slate-600">ADX ≥ 30 trending · 20–29 developing · &lt;20 compression. Heuristic only.</div>
+              <div className="pt-1" style={{ fontSize: 10, color: 'var(--msp-text-faint)' }}>ADX ≥ 30 trending · 20–29 developing · &lt;20 compression. Heuristic only.</div>
             </div>
           )}
-        </div>
+        </DSCard>
 
         {/* Time Confluence Watch */}
-        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+        <DSCard>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-sky-300">Time Confluence Watch</div>
-              <div className="mt-0.5 text-sm font-black text-white">Upcoming close clusters</div>
+              <SectionEyebrow>Time confluence watch</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Upcoming close clusters</div>
             </div>
-            <a href="/tools/time-scanner" aria-label="Open Time Scanner" className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-300 no-underline hover:bg-sky-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Time &#x203A;</a>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/time-scanner'; }} aria-label="Open Time Scanner">Time ›</DSButton>
           </div>
-          <div className="space-y-2 text-xs">
+          <div className="space-y-2">
             {regime.data ? (
               <>
-                <div className="rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-3 py-2">
-                  <div className="font-bold text-sky-200">Regime Context</div>
-                  <div className="mt-1 text-slate-400">{regime.data.regime.replace(/_/g, ' ')} · {regime.data.riskLevel} risk environment</div>
+                <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px' }}>
+                  <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>Regime context</div>
+                  <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()} · {regime.data.riskLevel} risk environment</div>
                 </div>
-                <div className="rounded-md border border-white/[0.06] bg-slate-900/30 px-3 py-2 text-slate-400">
-                  <div className="font-bold text-white mb-1">What to check</div>
+                <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>What to check</div>
                   <div>· Weekly/monthly closes within next 3 sessions</div>
                   <div>· High-impact calendar events ({highImpactEventCount} queued)</div>
                   <div>· Crypto: UTC Saturday close risk</div>
                 </div>
               </>
             ) : (
-              <div className="py-3 text-center text-slate-500">Regime loading…</div>
+              <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Regime loading…</div>
             )}
-            <a href="/tools/time-scanner" className="block rounded-md border border-sky-500/20 bg-sky-500/[0.06] px-3 py-1.5 text-center text-[11px] font-bold text-sky-300 no-underline hover:bg-sky-500/10">
-              Open Time Scanner for close calendar &#x203A;
+            <a href="/tools/time-scanner" style={{ display: 'block', background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-info)', textDecoration: 'none', fontWeight: 500 }}>
+              Open Time Scanner for close calendar ›
             </a>
           </div>
-        </div>
+        </DSCard>
 
         {/* ARCA Research Summary */}
-        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+        <DSCard>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-teal-300">ARCA Research Context</div>
-              <div className="mt-0.5 text-sm font-black text-white">AI analyst briefing</div>
+              <SectionEyebrow>ARCA research context</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>AI analyst briefing</div>
             </div>
-            <a href="/tools/ai-analyst" aria-label="Open MSP Analyst" className="rounded border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-300 no-underline hover:bg-teal-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60">Ask &#x203A;</a>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/ai-analyst'; }} aria-label="Open MSP Analyst">Ask ›</DSButton>
           </div>
-          <div className="space-y-2 text-xs">
-            <div className="rounded-md border border-teal-400/15 bg-teal-400/[0.06] px-3 py-2">
-              <div className="font-bold text-teal-200">MSP Analyst</div>
-              <div className="mt-1 text-slate-400">
+          <div className="space-y-2">
+            <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px' }}>
+              <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>MSP Analyst</div>
+              <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>
                 {regime.data
-                  ? `Regime is ${regime.data.regime.replace(/_/g, ' ')}. ${regime.data.riskLevel === 'high' ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}`
+                  ? `Regime is ${regime.data.regime.replace(/_/g, ' ').toLowerCase()}. ${regime.data.riskLevel === 'high' ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}`
                   : 'Loading regime context…'}
               </div>
             </div>
-            <div className="rounded-md border border-white/[0.06] bg-slate-900/30 px-3 py-2 text-slate-400">
-              <div className="font-bold text-white mb-1">Today&apos;s research questions</div>
+            <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
+              <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>Today&apos;s research questions</div>
               <div>· Which symbols have the most aligned evidence?</div>
               <div>· What invalidates the top setup?</div>
               <div>· What does the volatility phase suggest?</div>
             </div>
-            <a href="/tools/ai-analyst" className="block rounded-md border border-teal-500/20 bg-teal-500/[0.06] px-3 py-1.5 text-center text-[11px] font-bold text-teal-300 no-underline hover:bg-teal-500/10">
-              Open MSP Analyst &#x203A;
+            <a href="/tools/ai-analyst" style={{ display: 'block', background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-accent)', textDecoration: 'none', fontWeight: 500 }}>
+              Open MSP Analyst ›
             </a>
           </div>
-        </div>
+        </DSCard>
       </section>
 
       {/* ─── Dashboard Lens Rail ─── */}
-      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+      <div style={{ background: 'var(--msp-panel)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px' }}>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Dashboard lens</div>
-            <div className="text-[0.72rem] text-slate-500">Switch between saved pages, live market desk, derivatives, and macro context.</div>
+            <SectionEyebrow>Dashboard lens</SectionEyebrow>
+            <div style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>Switch between saved pages, live market desk, derivatives, and macro context.</div>
           </div>
         </div>
         <div role="tablist" aria-label="Dashboard lens" className="flex items-center gap-2 overflow-x-auto pb-0.5">
@@ -420,13 +525,21 @@ export default function DashboardPage() {
             role="tab"
             aria-selected={dashTab === t}
             onClick={() => setDashTab(t)}
-            className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
-              dashTab === t
-                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'
-            }`}
+            style={{
+              flexShrink: 0,
+              borderRadius: 'var(--msp-radius-pill)',
+              padding: '6px 12px',
+              fontSize: 'var(--msp-text-body-sm)',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              transition: 'background 120ms ease, color 120ms ease',
+              background: dashTab === t ? 'var(--msp-accent-tint)' : 'transparent',
+              color: dashTab === t ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
           >
-            {t}
+            {t.toLowerCase().replace(/^./, c => c.toUpperCase())}
           </button>
         ))}
         </div>
@@ -464,7 +577,7 @@ export default function DashboardPage() {
       {/* -- Best Setups (from worker cache) ------------------------------ */}
       {cached.loading ? <CardSkeleton rows={5} /> : (
       <Card>
-        <PanelHeader title="Top Confluence Now" eyebrow="Validated queue" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>} />
+        <PanelHeader title="Top confluence now" eyebrow="Validated queue" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full scanner ›</button>} />
         {[...cached.equity, ...cached.crypto].length === 0 ? (
           <div className="text-xs text-slate-500 py-4 text-center">
             No cached data yet — <button type="button" onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
@@ -472,14 +585,14 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
-              <button key={r.symbol} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md border border-white/10 bg-slate-950/30 px-2 py-1.5 text-xs text-left cursor-pointer hover:border-emerald-400/25 hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" onClick={() => openGoldenEgg(r.symbol)}>
+              <button key={r.symbol} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md bg-slate-950/30 px-2 py-1.5 text-xs text-left cursor-pointer hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" style={{ background: 'var(--msp-card-2)' }} onClick={() => openGoldenEgg(r.symbol)}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-white">{r.symbol}</span>
-                  <span className={`font-mono tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
+                  <span style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{r.symbol}</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', color: r.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 500 }}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
                 </div>
-                <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                <div className="mt-1 flex items-center justify-between gap-2" style={{ fontSize: 11, color: 'var(--msp-text-muted)' }}>
                   <span style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? 'Bullish' : r.direction === 'bearish' ? 'Bearish' : 'Neutral'} · {r.score}</span>
-                  <span className="font-mono tabular-nums text-slate-300">{fmtPrice(r.price)}</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtPrice(r.price)}</span>
                 </div>
               </button>
             ))}
@@ -493,13 +606,13 @@ export default function DashboardPage() {
         {/* -- Equity Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <PanelHeader title="Equity Movers" eyebrow="Live movement" />
+            <PanelHeader title="Equity movers" eyebrow="Live movement" />
             <div className="space-y-1">
-              <div className="mb-1 text-[11px] uppercase tracking-wider text-emerald-500">Gainers</div>
+              <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
               {eqGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`eg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
-              <div className="mb-1 mt-2 text-[11px] uppercase tracking-wider text-red-500">Losers</div>
+              <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
               {eqLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`el-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
@@ -510,13 +623,13 @@ export default function DashboardPage() {
         {/* -- Crypto Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <PanelHeader title="Crypto Movers" eyebrow="Live movement" />
+            <PanelHeader title="Crypto movers" eyebrow="Live movement" />
             <div className="space-y-1">
-              <div className="mb-1 text-[11px] uppercase tracking-wider text-emerald-500">Gainers</div>
+              <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
               {crGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`cg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
-              <div className="mb-1 mt-2 text-[11px] uppercase tracking-wider text-red-500">Losers</div>
+              <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
               {crLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`cl-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
@@ -527,7 +640,7 @@ export default function DashboardPage() {
         {/* -- Economic Calendar ---------------------------------------- */}
         {calendar.loading ? <CardSkeleton rows={4} /> : (
           <Card>
-            <PanelHeader title="Upcoming Events" eyebrow="Calendar risk" />
+            <PanelHeader title="Upcoming events" eyebrow="Calendar risk" />
             {highImpactEvents.length === 0 ? (
               <div className="text-xs text-slate-500 py-4 text-center">No high-impact events this period</div>
             ) : (
@@ -552,7 +665,7 @@ export default function DashboardPage() {
 
         {/* -- Cross-Market --------------------------------------------- */}
         <Card>
-          <PanelHeader title="Cross-Market Influence" eyebrow="Context map" />
+          <PanelHeader title="Cross-market influence" eyebrow="Context map" />
           <div className="space-y-2">
             {CROSS_MARKET.slice(0, 5).map(cm => (
               <div key={cm.from} className="flex items-center justify-between text-xs">
@@ -569,7 +682,7 @@ export default function DashboardPage() {
       {/* -- Latest News ------------------------------------------------ */}
       {news.loading ? <CardSkeleton rows={4} /> : (
         <Card>
-          <PanelHeader title="Latest Headlines" eyebrow="News context" action={<button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All News &#x203A;</button>} />
+          <PanelHeader title="Latest headlines" eyebrow="News context" action={<button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All news ›</button>} />
           {articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
           ) : (
