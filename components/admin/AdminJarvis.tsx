@@ -177,12 +177,36 @@ export default function AdminJarvis() {
     }
   };
 
-  const startListening = useCallback(() => {
-    if (!voiceSupported) return;
+  const startListening = useCallback(async () => {
+    if (!voiceSupported) {
+      setError("Voice input not supported in this browser. Try Chrome or Edge.");
+      return;
+    }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) {
+      setError("SpeechRecognition unavailable.");
+      return;
+    }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+    }
+    // Explicitly request mic permission first so denials surface clearly.
+    try {
+      if (navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Release immediately; SpeechRecognition opens its own stream.
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    } catch (e: any) {
+      const name = e?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError("Microphone blocked. Click the lock icon in the address bar and allow microphone access for this site.");
+      } else if (name === "NotFoundError") {
+        setError("No microphone found.");
+      } else {
+        setError(`Mic permission failed: ${e?.message || name}`);
+      }
+      return;
     }
     try {
       const rec = new SR();
@@ -206,7 +230,21 @@ export default function AdminJarvis() {
           setTimeout(() => sendRef.current?.(), 80);
         }
       };
-      rec.onerror = () => setListening(false);
+      rec.onerror = (ev: any) => {
+        setListening(false);
+        const code = ev?.error || "unknown";
+        if (code === "not-allowed" || code === "service-not-allowed") {
+          setError("Microphone permission denied. Allow it in the address-bar lock icon.");
+        } else if (code === "no-speech") {
+          setError("Didn't catch that. Try again.");
+        } else if (code === "audio-capture") {
+          setError("No microphone detected.");
+        } else if (code === "network") {
+          setError("Speech service network error.");
+        } else {
+          setError(`Voice error: ${code}`);
+        }
+      };
       recognitionRef.current = rec;
       rec.start();
       setListening(true);

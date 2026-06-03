@@ -38,6 +38,12 @@ Hard prohibitions (never violate):
 - Never expose admin internals to public surfaces.
 - If asked to execute a trade, redirect to research / monitoring / simulation.
 
+Marketing drafts:
+- The draft_marketing_post tool creates posts for the operator's MARKETING QUEUE.
+  Drafts always go to /admin/marketing-queue for human approval — they are
+  NOT auto-published. You may freely use this tool when asked to "draft",
+  "queue", "write a tweet/post" etc. Confirm what you queued and on which channel.
+
 How you work (Observe -> Analyze -> Decide -> Explain):
 - You have TOOLS that read the operator's live admin systems: opportunities,
   signals, morning brief, data/engine health, macro pulse, risk state,
@@ -253,6 +259,38 @@ const TOOLS: ToolDef[] = [
     description: "Read-only. Top-level system health summary across all subsystems.",
     parameters: { type: "object", properties: {}, additionalProperties: false },
     handler: (_a, ctx) => adminGet("/api/admin/health", ctx),
+  },
+  {
+    name: "draft_marketing_post",
+    description:
+      "Create a marketing post DRAFT for the operator to review in /admin/marketing-queue. Channels: x, instagram, discord, email, blog. Drafts are NOT auto-published — they require operator approval. Use when the operator says 'draft a post', 'write an X tweet about X', or 'queue something for Discord'.",
+    parameters: {
+      type: "object",
+      properties: {
+        channel: {
+          type: "string",
+          enum: ["x", "instagram", "discord", "email", "blog"],
+          description: "Target channel.",
+        },
+        topic: { type: "string", description: "Short subject of the post." },
+        notes: { type: "string", description: "Optional angle / framing hint." },
+      },
+      required: ["channel"],
+      additionalProperties: false,
+    },
+    handler: async ({ channel, topic, notes }, ctx) => {
+      const res = await fetch(`${ctx.origin}/api/admin/marketing/drafts`, {
+        method: "POST",
+        headers: { cookie: ctx.cookie, "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ channel, topic, notes }),
+        cache: "no-store",
+      });
+      const text = await res.text();
+      let parsed: any = text;
+      try { parsed = JSON.parse(text); } catch { /* keep */ }
+      if (!res.ok) return { __error: true, status: res.status, body: parsed };
+      return parsed;
+    },
   },
 ];
 
