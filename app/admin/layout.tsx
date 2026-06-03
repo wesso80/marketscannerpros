@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
 import AdminCommandPalette from "@/components/admin/AdminCommandPalette";
+import AdminJarvis from "@/components/admin/AdminJarvis";
 import { AdminModeProvider, AdminModeSwitcher } from "@/components/admin/AdminModeSwitcher";
 
 // Admin auth context
@@ -346,6 +347,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
       <AdminCommandPalette />
+      <AdminJarvis />
       </AdminModeProvider>
     </AdminContext.Provider>
   );
