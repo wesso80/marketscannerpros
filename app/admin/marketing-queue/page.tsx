@@ -36,6 +36,7 @@ export default function MarketingQueuePage() {
   const [composeTopic, setComposeTopic] = useState("");
   const [composeNotes, setComposeNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [xStatus, setXStatus] = useState<{ connected: boolean; envOk: boolean; handle: string | null } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,6 +55,14 @@ export default function MarketingQueuePage() {
   }, [filter]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadXStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/marketing/x/status", { credentials: "include", cache: "no-store" });
+      if (res.ok) setXStatus(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { loadXStatus(); }, [loadXStatus]);
 
   const updateStatus = async (id: number, status: Draft["status"]) => {
     setBusy(true);
@@ -195,7 +204,44 @@ export default function MarketingQueuePage() {
             Arca drafts posts from live admin signals. Nothing publishes without your approval.
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {/* X (Twitter) connection chip */}
+          {xStatus && (
+            xStatus.connected ? (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "6px 10px", borderRadius: 999,
+                background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.35)",
+                color: "#A7F3D0", fontSize: 12,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: 999, background: "#10B981" }} />
+                X linked {xStatus.handle ? `(${xStatus.handle})` : ""}
+                <button
+                  onClick={async () => {
+                    if (!confirm("Disconnect X?")) return;
+                    await fetch("/api/admin/marketing/x/status", { method: "DELETE", credentials: "include" });
+                    loadXStatus();
+                  }}
+                  style={{ background: "transparent", border: 0, color: "#94A3B8", cursor: "pointer", padding: 0, fontSize: 11 }}
+                >
+                  disconnect
+                </button>
+              </div>
+            ) : (
+              <a
+                href="/api/admin/marketing/x/connect"
+                title={xStatus.envOk ? "Authorize X account" : "Set X_CLIENT_ID / X_CLIENT_SECRET / X_REDIRECT_URI in Render first"}
+                style={{
+                  ...btn("ghost"),
+                  textDecoration: "none",
+                  opacity: xStatus.envOk ? 1 : 0.5,
+                  pointerEvents: xStatus.envOk ? "auto" : "none",
+                }}
+              >
+                Connect X
+              </a>
+            )
+          )}
           <button onClick={runSweep} disabled={busy} style={btn("ghost")}>
             Run sweep now
           </button>

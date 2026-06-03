@@ -5,6 +5,7 @@
 
 import OpenAI from 'openai';
 import { q } from '@/lib/db';
+import { xPostTweet } from '@/lib/arcaOAuth';
 
 export const MARKETING_CHANNELS = ['x', 'instagram', 'discord', 'email', 'blog'] as const;
 export type MarketingChannel = (typeof MARKETING_CHANNELS)[number];
@@ -259,9 +260,18 @@ export async function publishDraft(id: number): Promise<DraftRecord | null> {
   try {
     if (draft.channel === 'discord') {
       await publishDiscord(draft);
+    } else if (draft.channel === 'x') {
+      const text = draft.content.length > 280 ? draft.content.slice(0, 277) + '…' : draft.content;
+      const tweet = await xPostTweet(text);
+      await q(
+        `UPDATE arca_marketing_drafts
+            SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+          WHERE id = $1`,
+        [id, JSON.stringify({ x_tweet_id: tweet.id })],
+      );
     } else {
       throw new Error(
-        `Channel "${draft.channel}" publisher not configured. Channel APIs (X, Instagram, Email, Blog) require credentials — copy the content for now.`,
+        `Channel "${draft.channel}" publisher not configured. Channel APIs (Instagram, Email, Blog) require credentials — copy the content for now.`,
       );
     }
     return updateDraft(id, { status: 'published' as any }).then((r) =>
