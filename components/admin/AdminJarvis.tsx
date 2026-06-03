@@ -18,6 +18,18 @@ type Msg = { role: "user" | "assistant"; content: string; tools?: ToolUse[] };
 
 const ACCENT = "#10B981";
 
+// Strip markdown / code fences before TTS so it sounds natural
+function speakable(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, " code block omitted ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/[*_#>]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 1500);
+}
+
 export default function AdminJarvis() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -27,6 +39,59 @@ export default function AdminJarvis() {
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Voice state
+  const [voiceOn, setVoiceOn] = useState(false); // TTS enabled
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const autoSendRef = useRef(false);
+
+  // Detect speech support + restore voice pref
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    setVoiceSupported(!!SR && "speechSynthesis" in window);
+    try {
+      const v = localStorage.getItem("arca_voice_on");
+      if (v === "1") setVoiceOn(true);
+    } catch { /* noop */ }
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("arca_voice_on", voiceOn ? "1" : "0"); } catch { /* noop */ }
+    if (!voiceOn && typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [voiceOn]);
+
+  const speak = useCallback((text: string) => {
+    if (!voiceOn || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const clean = speakable(text);
+    if (!clean) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(clean);
+      u.rate = 1.05;
+      u.pitch = 1;
+      u.volume = 1;
+      // Prefer a crisp English voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const pick =
+        voices.find((v) => /en[-_]?(GB|AU)/i.test(v.lang) && /male|daniel|google uk/i.test(v.name)) ||
+        voices.find((v) => /en[-_]?(US|GB|AU)/i.test(v.lang)) ||
+        voices[0];
+      if (pick) u.voice = pick;
+      window.speechSynthesis.speak(u);
+    } catch { /* noop */ }
+  }, [voiceOn]);
+
+  const stopListening = useCallback(() => {
+    try { recognitionRef.current?.stop(); } catch { /* noop */ }
+    setListening(false);
+  }, []);
+
+  const sendRef = useRef<() => void>(() => {});
 
   // Cmd/Ctrl+J toggle
   useEffect(() => {
@@ -76,14 +141,16 @@ export default function AdminJarvis() {
       if (!res.ok) {
         setError(data?.error || `Request failed (${res.status})`);
       } else {
+        const reply = data.content || "(empty response)";
         setMessages((m) => [
           ...m,
           {
             role: "assistant",
-            content: data.content || "(empty response)",
+            content: reply,
             tools: Array.isArray(data.tools) ? data.tools : undefined,
           },
         ]);
+        speak(reply);
       }
     } catch (e: any) {
       setError(e?.message || "Network error");
@@ -99,10 +166,56 @@ export default function AdminJarvis() {
     }
   };
 
+  // Keep latest send in a ref so voice onend callback isn't stale
+  useEffect(() => { sendRef.current = send; }, [send]);
+
   const reset = () => {
     setMessages([]);
     setError(null);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
   };
+
+  const startListening = useCallback(() => {
+    if (!voiceSupported) return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    try {
+      const rec = new SR();
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.lang = navigator.language || "en-US";
+      autoSendRef.current = false;
+      let finalText = "";
+      rec.onresult = (e: any) => {
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        setInput((finalText + interim).trim());
+      };
+      rec.onend = () => {
+        setListening(false);
+        if (autoSendRef.current && finalText.trim()) {
+          setTimeout(() => sendRef.current?.(), 80);
+        }
+      };
+      rec.onerror = () => setListening(false);
+      recognitionRef.current = rec;
+      rec.start();
+      setListening(true);
+      autoSendRef.current = true;
+    } catch (e: any) {
+      setError(e?.message || "Microphone unavailable");
+      setListening(false);
+    }
+  }, [voiceSupported]);
 
   return (
     <>
@@ -174,6 +287,20 @@ export default function AdminJarvis() {
               </span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
+              {voiceSupported && (
+                <button
+                  type="button"
+                  onClick={() => setVoiceOn((v) => !v)}
+                  title={voiceOn ? "Voice replies on" : "Voice replies off"}
+                  style={{
+                    ...chipBtn(),
+                    color: voiceOn ? ACCENT : "#94A3B8",
+                    borderColor: voiceOn ? ACCENT + "66" : "rgba(148,163,184,0.25)",
+                  }}
+                >
+                  {voiceOn ? "Voice On" : "Voice Off"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={reset}
@@ -307,10 +434,29 @@ export default function AdminJarvis() {
                 outline: "none",
               }}
             />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-              <span style={{ color: "#475569", fontSize: 10 }}>
-                Evidence-aware · flags stale/missing data · no order routing
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 6 }}>
+              <span style={{ color: "#475569", fontSize: 10, flex: 1 }}>
+                {listening ? "Listening…" : "Evidence-aware · no order routing"}
               </span>
+              {voiceSupported && (
+                <button
+                  type="button"
+                  onClick={listening ? stopListening : startListening}
+                  title={listening ? "Stop listening" : "Speak to Arca"}
+                  style={{
+                    background: listening ? "#EF4444" : "transparent",
+                    color: listening ? "#0F172A" : ACCENT,
+                    border: `1px solid ${listening ? "#EF4444" : ACCENT}`,
+                    borderRadius: 7,
+                    padding: "0.4rem 0.7rem",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {listening ? "■ Stop" : "🎙 Speak"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={send}
