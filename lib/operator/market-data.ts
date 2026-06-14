@@ -128,11 +128,44 @@ function timeframeToCgDays(timeframe: string): 1 | 7 | 14 | 30 | 90 | 180 | 365 
   return 7;
 }
 
+/* ── CoinGecko bar cache ──────────────────────────────────────
+ * The operator radar runs server-side in the Next web process, so
+ * cgFetch's AbortController signal disables Next's fetch revalidate.
+ * Each scanned crypto symbol triggers getBars + getKeyLevels (two
+ * separate getOHLCWithVolume calls = 4 raw CoinGecko calls/symbol),
+ * and the four admin-radar-crypto-* crons share many symbols. This
+ * module-level TTL cache collapses those duplicate fetches so the
+ * radar stays research-fresh without burning the monthly quota.
+ * TTL is env-overridable via OPERATOR_CG_BARS_TTL_SECONDS (default 900s).
+ */
+const CG_BARS_CACHE = new Map<string, { bars: Bar[]; expiresAt: number }>();
+const CG_BARS_TTL_MS = (() => {
+  const raw = Number.parseInt(process.env.OPERATOR_CG_BARS_TTL_SECONDS || '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw * 1000 : 15 * 60 * 1000;
+})();
+
+/* ── Admin/operator CoinGecko kill-switch ─────────────────────
+ * Pauses ALL CoinGecko fetches from the operator radar path
+ * (admin-radar-crypto-* crons, /admin/live-scanner, etc.) to
+ * stop quota burn. Paused by default; re-enable by setting the
+ * env var OPERATOR_CG_FETCH_ENABLED=true on the web service.
+ * When paused, crypto symbols yield no bars and make zero CG calls.
+ */
+function operatorCgFetchEnabled(): boolean {
+  const raw = (process.env.OPERATOR_CG_FETCH_ENABLED || '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(raw);
+}
+
 async function fetchCGBars(
   symbol: string,
   market: Market,
   timeframe: string,
 ): Promise<Bar[]> {
+  // Kill-switch: admin/operator CoinGecko fetches are paused.
+  if (!operatorCgFetchEnabled()) {
+    return [];
+  }
+
   try {
     const clean = symbol.replace(/-?USD$/i, '').toUpperCase();
     const coinId = COINGECKO_ID_MAP[clean] || (await resolveSymbolToId(clean));
@@ -142,10 +175,21 @@ async function fetchCGBars(
     }
 
     const days = timeframeToCgDays(timeframe);
+
+    // Serve from cache when fresh — dedupes getBars/getKeyLevels and
+    // overlapping symbols across the crypto radar crons.
+    const cacheKey = `${coinId}:${days}`;
+    const cached = CG_BARS_CACHE.get(cacheKey);
+    const nowMs = Date.now();
+    if (cached && cached.expiresAt > nowMs) {
+      // Re-tag cached bars with the requesting symbol/timeframe label.
+      return cached.bars.map(b => ({ ...b, symbol, timeframe }));
+    }
+
     const candles = await getOHLCWithVolume(coinId, days);
     if (!candles || candles.length === 0) return [];
 
-    return candles
+    const bars = candles
       .filter(c => Number.isFinite(c.c) && c.c > 0)
       .map(c => ({
         symbol,
@@ -159,6 +203,9 @@ async function fetchCGBars(
         volume: Math.round(c.v || 0),
       }))
       .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+    CG_BARS_CACHE.set(cacheKey, { bars, expiresAt: nowMs + CG_BARS_TTL_MS });
+    return bars;
   } catch (err) {
     console.error(`[operator:market-data] CoinGecko fetch failed for ${symbol}:`, err);
     return [];

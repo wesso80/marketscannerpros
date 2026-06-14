@@ -1,5 +1,5 @@
 /**
- * Arca marketing helpers — shared by API, cron, and Jarvis tools.
+ * Arca marketing helpers — shared by API and cron tools.
  * Read-only signals + draft generation. Publishing is gated on approval.
  */
 
@@ -114,7 +114,7 @@ export async function generateDraft(input: DraftInput): Promise<{ content: strin
   if (!spec) throw new Error(`Unsupported channel: ${input.channel}`);
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const model = process.env.ADMIN_JARVIS_MODEL || 'gpt-4.1';
+  const model = process.env.ADMIN_MARKETING_MODEL || 'gpt-4.1';
 
   const dataBlock = input.data
     ? `\n\nGROUNDING DATA (do not invent beyond this):\n${JSON.stringify(input.data).slice(0, 6000)}`
