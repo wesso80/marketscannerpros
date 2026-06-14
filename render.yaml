@@ -145,7 +145,7 @@
   - type: cron
     name: admin-radar-crypto
     runtime: node
-    schedule: "*/15 * * * *"  # Crypto: every 15 minutes (24/7 markets)
+    schedule: "0 0 30 2 *"  # PAUSED 2026-06-14 — never fires (Feb 30). CoinGecko fetch disabled (OPERATOR_CG_FETCH_ENABLED off); produced no data. Original: */15 * * * *
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 60 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-majors","timeframe":"15m"}'
     envVars:
@@ -268,7 +268,7 @@
   - type: cron
     name: admin-radar-crypto-altcoins
     runtime: node
-    schedule: "*/20 * * * *"  # 24/7, every 20 min, offset from crypto-majors
+    schedule: "0 0 30 2 *"  # PAUSED 2026-06-14 — never fires (Feb 30). CoinGecko fetch disabled; produced no data. Original: */20 * * * *
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-altcoins","timeframe":"15m"}'
     envVars:
@@ -280,7 +280,7 @@
   - type: cron
     name: admin-radar-crypto-ai
     runtime: node
-    schedule: "7,37 * * * *"  # 24/7, offset minutes
+    schedule: "0 0 30 2 *"  # PAUSED 2026-06-14 — never fires (Feb 30). CoinGecko fetch disabled; produced no data. Original: 7,37 * * * *
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 90 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-ai-tokens","timeframe":"15m"}'
     envVars:
@@ -292,7 +292,7 @@
   - type: cron
     name: admin-radar-crypto-gaming
     runtime: node
-    schedule: "23,53 * * * *"
+    schedule: "0 0 30 2 *"  # PAUSED 2026-06-14 — never fires (Feb 30). CoinGecko fetch disabled; produced no data. Original: 23,53 * * * *
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 90 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-gaming-meta","timeframe":"15m"}'
     envVars:
@@ -548,7 +548,7 @@
   - type: cron
     name: persist-edge-packets-crypto
     runtime: node
-    schedule: "*/15 * * * *"  # Every 15m, 24/7 — crypto markets are 24/7
+    schedule: "0 0 30 2 *"  # PAUSED 2026-06-14 — never fires (Feb 30). CoinGecko fetch disabled; crypto edge packets empty. Original: */15 * * * *
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 540 -X POST "$WEB_URL/api/cron/persist-edge-packets" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"market":"CRYPTO","timeframe":"15m"}'
     envVars:
