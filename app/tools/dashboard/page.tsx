@@ -35,6 +35,33 @@ const DASH_TAB_PARAM_MAP: Record<string, DashTab> = {
   macro: 'Macro',
 };
 
+/* ─── Magnificent 7 ─── */
+const MAG7_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'] as const;
+interface Mag7Quote {
+  symbol: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  error?: string;
+}
+
+// TradingView-style heat color: intensity scales with magnitude of move (caps at ±5%).
+function heatColor(changePercent: number | null): string {
+  if (changePercent == null) return 'rgb(44, 49, 58)';
+  const intensity = Math.min(Math.abs(changePercent) / 5, 1);
+  if (changePercent > 0) {
+    const base = Math.round(30 + intensity * 25);
+    const green = Math.round(120 + intensity * 110);
+    return `rgb(${base}, ${green}, ${Math.round(base * 1.4)})`;
+  }
+  if (changePercent < 0) {
+    const base = Math.round(30 + intensity * 25);
+    const red = Math.round(120 + intensity * 110);
+    return `rgb(${red}, ${base}, ${Math.round(base * 1.4)})`;
+  }
+  return 'rgb(44, 49, 58)';
+}
+
 /* -- helpers -------------------------------------------------------------- */
 function directionColor(d?: string) {
   if (d === 'bullish') return 'var(--msp-bull)';
@@ -165,6 +192,33 @@ export default function DashboardPage() {
   const calendar = useEconomicCalendar();
   const cached = useCachedTopSymbols(5);
   const { stale: cacheStale, ageMinutes: cacheAgeMinutes } = cached;
+
+  /* -- Magnificent 7 live quotes ---------------------------------------- */
+  const [mag7, setMag7] = useState<Mag7Quote[]>([]);
+  const [mag7Loading, setMag7Loading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMag7() {
+      try {
+        const res = await fetch('/api/scanner/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols: [...MAG7_SYMBOLS] }),
+        });
+        if (!res.ok) throw new Error('quotes fetch failed');
+        const data = await res.json();
+        if (cancelled) return;
+        const bySymbol = new Map<string, Mag7Quote>((data.quotes || []).map((q: Mag7Quote) => [q.symbol, q]));
+        setMag7(MAG7_SYMBOLS.map(sym => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
+      } catch {
+        if (!cancelled) setMag7(MAG7_SYMBOLS.map(sym => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
+      } finally {
+        if (!cancelled) setMag7Loading(false);
+      }
+    }
+    loadMag7();
+    return () => { cancelled = true; };
+  }, []);
 
   /* -- Derived data ----------------------------------------------------- */
   const highImpactEvents = useMemo(
@@ -601,6 +655,43 @@ export default function DashboardPage() {
       </Card>
       )}
       </div>
+
+      {/* -- Magnificent 7 -------------------------------------------- */}
+      <Card>
+        <PanelHeader title="Magnificent 7" eyebrow="Mega-cap heatmap" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Scan all ›</button>} />
+        {mag7Loading ? (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+            {MAG7_SYMBOLS.map(sym => <Skeleton key={sym} h="h-[5.5rem]" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+            {mag7.map(q => {
+              const pct = q.changePercent;
+              const bg = heatColor(pct);
+              const noData = pct == null;
+              return (
+                <button
+                  key={q.symbol}
+                  type="button"
+                  aria-label={`Open Golden Egg for ${q.symbol}`}
+                  onClick={() => openGoldenEgg(q.symbol)}
+                  onKeyDown={(e) => onSymbolRowKey(e, q.symbol)}
+                  className="flex h-[5.5rem] flex-col items-center justify-center rounded-md px-1 text-center transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  style={{ background: bg, border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>{q.symbol}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#fff', marginTop: 2 }}>
+                    {noData ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
+                  </div>
+                  <div style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                    {noData ? 'No data' : q.price == null ? '' : fmtPrice(q.price)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* -- Equity Movers -------------------------------------------- */}
