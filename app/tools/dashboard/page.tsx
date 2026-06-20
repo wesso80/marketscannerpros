@@ -752,9 +752,7 @@ export default function DashboardPage() {
               const meta = INDEX_PROXIES.find((i) => i.etf === q.symbol);
               const pct = q.changePercent;
               const noData = pct == null;
-              // Volatility rises when markets fall — invert its heat color for trader intuition.
-              const isVol = meta?.index === 'VIX';
-              const bg = heatColor(noData ? null : isVol ? -pct : pct);
+              const bg = heatColor(pct);
               return (
                 <button
                   key={q.symbol}
