@@ -45,6 +45,25 @@ interface Mag7Quote {
   error?: string;
 }
 
+/* ─── Major Indices ─── */
+// Tradable ETF proxies for realtime index levels (Alpha Vantage GLOBAL_QUOTE realtime).
+// Alpha Vantage's INDEX_DATA endpoint is EOD-only, so we use liquid ETFs for live tiles.
+const INDEX_PROXIES = [
+  { etf: 'SPY', label: 'S&P 500', index: 'SPX' },
+  { etf: 'DIA', label: 'Dow Jones', index: 'DJI' },
+  { etf: 'QQQ', label: 'Nasdaq 100', index: 'NDX' },
+  { etf: 'IWM', label: 'Russell 2000', index: 'RUT' },
+  { etf: 'VIXY', label: 'Volatility', index: 'VIX' },
+] as const;
+const INDEX_SYMBOLS = INDEX_PROXIES.map((i) => i.etf);
+interface IndexQuote {
+  symbol: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  error?: string;
+}
+
 // TradingView-style heat color: intensity scales with magnitude of move (caps at ±5%).
 function heatColor(changePercent: number | null): string {
   if (changePercent == null) return 'rgb(44, 49, 58)';
@@ -217,6 +236,33 @@ export default function DashboardPage() {
       }
     }
     loadMag7();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* -- Major Indices live quotes ---------------------------------------- */
+  const [indices, setIndices] = useState<IndexQuote[]>([]);
+  const [indicesLoading, setIndicesLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadIndices() {
+      try {
+        const res = await fetch('/api/scanner/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols: [...INDEX_SYMBOLS] }),
+        });
+        if (!res.ok) throw new Error('quotes fetch failed');
+        const data = await res.json();
+        if (cancelled) return;
+        const bySymbol = new Map<string, IndexQuote>((data.quotes || []).map((q: IndexQuote) => [q.symbol, q]));
+        setIndices(INDEX_SYMBOLS.map((sym) => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
+      } catch {
+        if (!cancelled) setIndices(INDEX_SYMBOLS.map((sym) => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
+      } finally {
+        if (!cancelled) setIndicesLoading(false);
+      }
+    }
+    loadIndices();
     return () => { cancelled = true; };
   }, []);
 
@@ -691,6 +737,47 @@ export default function DashboardPage() {
             })}
           </div>
         )}
+      </Card>
+
+      {/* -- Major Indices -------------------------------------------- */}
+      <Card>
+        <PanelHeader title="Major indices" eyebrow="Index heatmap" action={<button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">Markets ›</button>} />
+        {indicesLoading ? (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+            {INDEX_PROXIES.map((i) => <Skeleton key={i.etf} h="h-[5.5rem]" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+            {indices.map((q) => {
+              const meta = INDEX_PROXIES.find((i) => i.etf === q.symbol);
+              const pct = q.changePercent;
+              const noData = pct == null;
+              // Volatility rises when markets fall — invert its heat color for trader intuition.
+              const isVol = meta?.index === 'VIX';
+              const bg = heatColor(noData ? null : isVol ? -pct : pct);
+              return (
+                <button
+                  key={q.symbol}
+                  type="button"
+                  aria-label={`Open Golden Egg for ${meta?.label || q.symbol}`}
+                  onClick={() => openGoldenEgg(q.symbol)}
+                  onKeyDown={(e) => onSymbolRowKey(e, q.symbol)}
+                  className="flex h-[5.5rem] flex-col items-center justify-center rounded-md px-1 text-center transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  style={{ background: bg, border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>{meta?.label || q.symbol}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#fff', marginTop: 2 }}>
+                    {noData ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
+                  </div>
+                  <div style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                    {noData ? 'No data' : `${q.symbol}${q.price == null ? '' : ` · ${fmtPrice(q.price)}`}`}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <p className="mt-2 text-[10px] text-slate-600">Live ETF proxies (SPY/DIA/QQQ/IWM/VIXY) — index levels are end-of-day via Alpha Vantage.</p>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
