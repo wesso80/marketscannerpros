@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CookieBanner from '@/components/CookieBanner';
+import PromoBanner from '@/components/PromoBanner';
 import AlertToast from '@/components/AlertToast';
 import BackToTop from '@/components/BackToTop';
 
@@ -21,6 +22,7 @@ export default function RouteChrome({ children }: RouteChromeProps) {
 
   return (
     <>
+      {!isAdminRoute && !isOperatorRoute && !isV2Route && <PromoBanner />}
       {!isAdminRoute && !isOperatorRoute && !isV2Route && <Header />}
       <main className="msp-main-shell">{children}</main>
       {!isAppRoute && !isV2Route ? <Footer /> : null}

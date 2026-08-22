@@ -46,6 +46,21 @@ export function isProductionAccessBypassAllowed(): boolean {
   return !isProductionRuntime() || process.env.ALLOW_PROD_ACCESS_BYPASS === 'true';
 }
 
+/**
+ * Public-safe status for the free-for-all promotion. Exposes only whether the
+ * promo is currently active and when it ends — no internal scores/watchlists.
+ */
+export function getFreeForAllPromo(nowMs: number = Date.now()): { active: boolean; endsAt: string | null } {
+  const active = isFreeForAllMode(nowMs);
+  const untilRaw = process.env.FREE_FOR_ALL_UNTIL;
+  let endsAt: string | null = null;
+  if (untilRaw) {
+    const untilMs = Date.parse(untilRaw);
+    if (Number.isFinite(untilMs)) endsAt = new Date(untilMs).toISOString();
+  }
+  return { active, endsAt };
+}
+
 export function normalizeTier(tier: string | null | undefined): AppTier {
   if (tier === "pro_trader") return "pro_trader";
   if (tier === "pro") return "pro";
