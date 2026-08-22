@@ -42,21 +42,30 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const c = cookieStore.get("ms_auth")?.value;
   if (!c) {
-    // DEV BYPASS: auto-authenticate as pro_trader for local testing
-    // Requires NODE_ENV=development AND DEV_AUTH_BYPASS=true (double gate — production runtime blocks it)
-    if (
-      (process.env.NODE_ENV === 'development' && !isProductionRuntime && process.env.DEV_AUTH_BYPASS === 'true') ||
-      isFreeForAllMode()
-    ) {
-      // Guard: this branch is unreachable in production because isProductionRuntime is true
-      if (isProductionRuntime) {
+    // Two distinct no-session bypasses:
+    //  • DEV_AUTH_BYPASS — local testing only, must NEVER run in production.
+    //  • FREE_FOR_ALL_MODE — time-boxed promo that MAY run in production, but only
+    //    because isFreeForAllMode() already requires ALLOW_PROD_ACCESS_BYPASS=true
+    //    there (an explicit operator opt-in), so it grants anonymous pro_trader.
+    const devBypass =
+      process.env.NODE_ENV === 'development' && !isProductionRuntime && process.env.DEV_AUTH_BYPASS === 'true';
+    const freeForAll = isFreeForAllMode();
+
+    if (devBypass || freeForAll) {
+      // The dev bypass is still hard-blocked in production; FFA is the only path
+      // permitted to grant an anonymous session in production.
+      if (isProductionRuntime && !freeForAll) {
         console.error('[auth] CRITICAL: dev bypass triggered in production runtime — request denied');
         return null;
       }
-      console.warn(
-        '[auth] ⚠️  DEV BYPASS ACTIVE — granting pro_trader tier automatically. ' +
-        'This must NEVER run in production. Set DEV_AUTH_BYPASS=false or unset it before deploying.',
-      );
+      if (freeForAll) {
+        console.warn('[auth] FREE_FOR_ALL_MODE active — granting anonymous pro_trader access');
+      } else {
+        console.warn(
+          '[auth] ⚠️  DEV BYPASS ACTIVE — granting pro_trader tier automatically. ' +
+          'This must NEVER run in production. Set DEV_AUTH_BYPASS=false or unset it before deploying.',
+        );
+      }
       // Use ms_anon cookie (set by middleware) so each browser gets its own workspace
       const anonId = cookieStore.get('ms_anon')?.value || 'anonymous';
       return {

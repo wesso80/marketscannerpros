@@ -17,11 +17,23 @@ export const AI_MODEL_BY_TIER: Record<AppTier, string> = {
 // Hardcoded fallbacks have been removed; configure via environment variable.
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
-export function isFreeForAllMode(): boolean {
+export function isFreeForAllMode(nowMs: number = Date.now()): boolean {
   if (process.env.FREE_FOR_ALL_MODE !== "true") return false;
   if (isProductionRuntime() && process.env.ALLOW_PROD_ACCESS_BYPASS !== "true") {
     console.error('[access] FREE_FOR_ALL_MODE ignored in production because ALLOW_PROD_ACCESS_BYPASS is not true');
     return false;
+  }
+  // Optional auto-expiry for time-boxed promotions (e.g. a 2-week free-for-all).
+  // If FREE_FOR_ALL_UNTIL is set to a valid timestamp, the mode disables itself
+  // once that time has passed so the platform can never stay free indefinitely.
+  const untilRaw = process.env.FREE_FOR_ALL_UNTIL;
+  if (untilRaw) {
+    const untilMs = Date.parse(untilRaw);
+    if (!Number.isFinite(untilMs)) {
+      console.error(`[access] FREE_FOR_ALL_MODE ignored because FREE_FOR_ALL_UNTIL is not a valid timestamp: ${untilRaw}`);
+      return false;
+    }
+    if (nowMs > untilMs) return false;
   }
   return true;
 }

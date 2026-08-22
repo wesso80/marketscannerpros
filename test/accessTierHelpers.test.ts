@@ -6,6 +6,7 @@ function resetAccessEnv() {
   vi.resetModules();
   process.env = { ...originalEnv };
   delete process.env.FREE_FOR_ALL_MODE;
+  delete process.env.FREE_FOR_ALL_UNTIL;
   delete process.env.ALLOW_PROD_ACCESS_BYPASS;
   delete process.env.PRO_TRADER_BYPASS_UNTIL;
   delete process.env.TEMP_PRO_TRADER_BYPASS_UNTIL;
@@ -83,6 +84,30 @@ describe('tier and role access helpers', () => {
     expect(allowed.isProductionRuntime()).toBe(true);
     expect(allowed.isProductionAccessBypassAllowed()).toBe(true);
     expect(allowed.isFreeForAllMode()).toBe(true);
+  });
+
+  it('auto-expires FREE_FOR_ALL_MODE once FREE_FOR_ALL_UNTIL has passed', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    process.env.NODE_ENV = 'production';
+    process.env.FREE_FOR_ALL_MODE = 'true';
+    process.env.ALLOW_PROD_ACCESS_BYPASS = 'true';
+    process.env.FREE_FOR_ALL_UNTIL = '2026-09-05T00:00:00.000Z';
+
+    const promo = await import('../lib/entitlements');
+
+    // Still within the promo window → free for all.
+    expect(promo.isFreeForAllMode(Date.parse('2026-08-25T00:00:00.000Z'))).toBe(true);
+    // After the window closes → self-disables.
+    expect(promo.isFreeForAllMode(Date.parse('2026-09-06T00:00:00.000Z'))).toBe(false);
+
+    resetAccessEnv();
+    process.env.NODE_ENV = 'production';
+    process.env.FREE_FOR_ALL_MODE = 'true';
+    process.env.ALLOW_PROD_ACCESS_BYPASS = 'true';
+    process.env.FREE_FOR_ALL_UNTIL = 'not-a-date';
+    const invalid = await import('../lib/entitlements');
+    expect(invalid.isFreeForAllMode()).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith('[access] FREE_FOR_ALL_MODE ignored because FREE_FOR_ALL_UNTIL is not a valid timestamp: not-a-date');
   });
 
   it('keeps temporary Pro Trader bypasses time-bound and production-guarded', async () => {
