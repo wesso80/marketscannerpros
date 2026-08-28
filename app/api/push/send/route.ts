@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import webpush from 'web-push';
+import { isValidAdminSecret } from '@/lib/adminAuth';
 
 /**
  * Push Notification Send API
@@ -37,9 +38,13 @@ export async function POST(req: NextRequest) {
   try {
     // Verify internal call (from alert system)
     const authHeader = req.headers.get('authorization');
-    const internalKey = authHeader?.replace('Bearer ', '');
-    
-    if (internalKey !== process.env.INTERNAL_API_KEY && internalKey !== process.env.ADMIN_SECRET) {
+    const internalKey = authHeader?.replace('Bearer ', '') ?? null;
+
+    // Timing-safe comparison against either accepted internal secret.
+    if (
+      !isValidAdminSecret(internalKey, process.env.INTERNAL_API_KEY) &&
+      !isValidAdminSecret(internalKey, process.env.ADMIN_SECRET)
+    ) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import GEHeaderBar from '@/src/features/goldenEgg/components/GEHeaderBar';
 import GESignalHero from '@/src/features/goldenEgg/components/GESignalHero';
@@ -19,6 +19,9 @@ import GEBreakoutReadiness from '@/src/features/goldenEgg/components/GEBreakoutR
 import GEVolTrapAlert from '@/src/features/goldenEgg/components/GEVolTrapAlert';
 import GECard from '@/src/features/goldenEgg/components/shared/GECard';
 import GEEmptyState from '@/src/features/goldenEgg/components/shared/GEEmptyState';
+import ConfluencePanel from '@/components/analysis/ConfluencePanel';
+import ScenarioAnalysisPanel from '@/components/analysis/ScenarioAnalysisPanel';
+import { buildGoldenEggConfluence, buildScenarioAnalysis, FACTOR_GROUP_LABEL } from '@/lib/analysis';
 import { isNoTrade } from '@/src/features/goldenEgg/selectors';
 import type { GoldenEggPayload, DeepAnalysisData } from '@/src/features/goldenEgg/types';
 
@@ -96,6 +99,54 @@ export default function GoldenEggPage() {
   };
 
   const noTrade = payload ? isNoTrade(payload) : false;
+
+  // Analytical confluence (independent factor groups) — computed once, reused by
+  // the confluence panel and the scenario analysis.
+  const confluence = useMemo(
+    () => payload ? buildGoldenEggConfluence({
+      direction: payload.layer1.direction,
+      confluenceScore: payload.layer1.confluenceScore,
+      confidence: payload.layer1.confidence,
+      asOfTs: payload.meta.asOfTs,
+      structureVerdict: payload.layer3.structure.verdict,
+      momentumVerdict: payload.layer3.momentum.verdict,
+      optionsVerdict: payload.layer3.options?.enabled ? payload.layer3.options.verdict : null,
+      internalsVerdict: payload.layer3.internals?.enabled ? payload.layer3.internals.verdict : null,
+      timeConfluenceDirection: payload.layer3.timeConfluence?.enabled ? payload.layer3.timeConfluence.direction : null,
+      volatilityBias: payload.layer3.structure.volatility.directionalBias,
+      volatilityCaution: Boolean(payload.layer3.structure.volatility.trapDetected) || (payload.layer3.structure.volatility.exhaustionRisk ?? 0) > 0.6,
+    }) : null,
+    [payload],
+  );
+
+  // Educational scenario analysis derived from the setup + confluence.
+  const scenario = useMemo(() => {
+    if (!payload || !confluence) return null;
+    const ref = confluence.referenceDirection;
+    const supporting = confluence.factors
+      .filter((f) => f.signal === ref)
+      .map((f) => FACTOR_GROUP_LABEL[f.group]);
+    const contradicting = confluence.factors
+      .filter((f) => (ref === 'bullish' && f.signal === 'bearish') || (ref === 'bearish' && f.signal === 'bullish'))
+      .map((f) => FACTOR_GROUP_LABEL[f.group]);
+    return buildScenarioAnalysis({
+      symbol: payload.meta.symbol,
+      direction: payload.layer1.direction,
+      setupType: payload.layer2.setup.setupType,
+      thesis: payload.layer2.setup.thesis,
+      primaryDriver: payload.layer1.primaryDriver,
+      primaryBlocker: payload.layer1.primaryBlocker,
+      referenceTrigger: payload.layer2.scenario.referenceTrigger,
+      referenceLevelPrice: payload.layer2.scenario.referenceLevel.price,
+      invalidationPrice: payload.layer2.scenario.invalidationLevel.price,
+      invalidationLogic: payload.layer2.scenario.invalidationLevel.logic,
+      keyLevels: payload.layer2.setup.keyLevels,
+      reactionZones: payload.layer2.scenario.reactionZones,
+      hypotheticalRr: payload.layer2.scenario.hypotheticalRr,
+      supportingFactors: supporting,
+      contradictingFactors: contradicting,
+    });
+  }, [payload, confluence]);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-slate-100">
@@ -221,6 +272,24 @@ export default function GoldenEggPage() {
                 confidence={payload.layer1.confidence}
               />
             </section>
+
+            {/* Analytical Confluence — probability-honest, independent factor groups */}
+            <section>
+              <SectionTitle icon="🧩" title="Analytical Confluence" />
+              <GECard title="Independent factor groups">
+                {confluence ? <ConfluencePanel result={confluence} /> : null}
+              </GECard>
+            </section>
+
+            {/* Educational Scenario Analysis */}
+            {scenario ? (
+              <section>
+                <SectionTitle icon="🧭" title="Scenario Analysis" />
+                <GECard title="Educational scenarios — not trade instructions">
+                  <ScenarioAnalysisPanel analysis={scenario} />
+                </GECard>
+              </section>
+            ) : null}
 
             {/* Decision Analysis */}
             <section>

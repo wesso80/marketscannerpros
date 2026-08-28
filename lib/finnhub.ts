@@ -5,32 +5,19 @@
  */
 
 import { validateFinnhubCandles } from './dataQuality';
+import { TokenBucket } from './rateLimiter';
 
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || '';
 const BASE_URL = 'https://finnhub.io/api/v1';
 
-// Rate limiting: 60 calls per minute
-let callCount = 0;
-let windowStart = Date.now();
+// Rate limiting: 60 calls/minute (Finnhub free tier). A TokenBucket is
+// race-safe in single-threaded JS — refill/check/decrement happen
+// synchronously within one tick, so concurrent callers cannot slip past the
+// limit the way the previous shared-counter implementation could (B16 fix).
+const finnhubBucket = new TokenBucket(55, 55 / 60); // ~55 RPM sustained, 55 burst (buffer under 60)
 
 async function rateLimitedFetch(url: string): Promise<Response> {
-  const now = Date.now();
-  if (now - windowStart > 60000) {
-    // Reset window
-    callCount = 0;
-    windowStart = now;
-  }
-  
-  if (callCount >= 55) { // Leave some buffer
-    const waitTime = 60000 - (now - windowStart);
-    if (waitTime > 0) {
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      callCount = 0;
-      windowStart = Date.now();
-    }
-  }
-  
-  callCount++;
+  await finnhubBucket.take();
   return fetch(url);
 }
 

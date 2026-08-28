@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { isFreeForAllMode } from '@/lib/entitlements';
+import { isValidAdminSecret } from '@/lib/adminAuth';
 
 export async function POST(req: NextRequest) {
   // Allow running migration with setup key or in FREE_FOR_ALL_MODE
@@ -8,12 +9,13 @@ export async function POST(req: NextRequest) {
   const setupKey = searchParams.get('key');
   const secret = process.env.CRON_SECRET || process.env.APP_SIGNING_SECRET;
   const freeForAll = isFreeForAllMode();
-  
-  // Allow if: FREE_FOR_ALL_MODE, valid key, or valid auth header
+
+  // Allow if: FREE_FOR_ALL_MODE, valid key, or valid auth header (timing-safe).
   const authHeader = req.headers.get('authorization');
-  const isAuthorized = freeForAll || 
-    setupKey === secret || 
-    authHeader === `Bearer ${secret}`;
+  const bearerToken = authHeader?.replace(/^Bearer\s+/i, '') ?? null;
+  const isAuthorized = freeForAll ||
+    isValidAdminSecret(setupKey, secret) ||
+    isValidAdminSecret(bearerToken, secret);
   
   if (process.env.NODE_ENV === 'production' && !isAuthorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

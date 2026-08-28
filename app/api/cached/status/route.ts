@@ -6,8 +6,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getRedis } from '@/lib/redis';
+import { requireAdmin } from '@/lib/adminAuth';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  // Worker diagnostics (run history, error messages, freshness) are operational
+  // internals — admin-only per no-public-leakage.md.
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     // 1. Get recent worker runs
     const recentRuns = await q<any>(`
@@ -80,9 +90,9 @@ export async function GET(req: NextRequest) {
 
   } catch (err: any) {
     console.error('[api/cached/status] error:', err?.message || err);
-    return NextResponse.json({ 
+    return NextResponse.json({
       status: 'error',
-      error: err?.message || 'Unknown error',
+      error: 'Internal error',
     }, { status: 500 });
   }
 }

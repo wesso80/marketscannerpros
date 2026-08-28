@@ -108,6 +108,8 @@ const nextConfig = {
       { source: '/v2', destination: '/tools/dashboard', permanent: true },
 
       // ── Old v1 standalone routes → unified surfaces ──
+      // Command Center (Stage 2) — legacy command-hub key resolves here
+      { source: '/tools/command-hub', destination: '/tools/command-center', permanent: true },
       // Terminal surface
       { source: '/tools/options-terminal', destination: '/tools/terminal?tab=options-terminal', permanent: true },
       { source: '/tools/crypto-terminal', destination: '/tools/terminal?tab=crypto-terminal', permanent: true },

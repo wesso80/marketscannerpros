@@ -8,6 +8,7 @@
  */
 
 import { q } from './db';
+import { computeSignalBucket } from './signals/signalBucket';
 
 const SCANNER_VERSION = 'v3.0';
 
@@ -71,24 +72,32 @@ export async function recordSignal(params: RecordSignalParams): Promise<number |
   
   // Validate score
   const validScore = Math.max(0, Math.min(100, Math.round(score)));
-  
+
+  // Compute signal bucket for deduplication (matches idx_signals_dedup)
+  const signalAt = new Date();
+  const signalBucket = computeSignalBucket(signalAt, timeframe);
+
   try {
     const result = await q<{ id: number }>(
       `INSERT INTO signals_fired (
         symbol, signal_type, direction, score,
         signal_at, price_at_signal,
-        timeframe, features_json, scanner_version
-      ) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8)
+        timeframe, features_json, scanner_version, signal_bucket
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT (symbol, signal_type, direction, timeframe, scanner_version, signal_bucket)
+      DO NOTHING
       RETURNING id`,
       [
         symbol,
         signalType,
         direction,
         validScore,
+        signalAt,
         priceAtSignal,
         timeframe,
         features ? JSON.stringify(features) : null,
-        SCANNER_VERSION
+        SCANNER_VERSION,
+        signalBucket
       ]
     );
     
@@ -114,19 +123,23 @@ export async function recordSignalsBatch(signals: RecordSignalParams[]): Promise
     const values: any[] = [];
     const placeholders: string[] = [];
     let paramIdx = 1;
+    const signalAt = new Date();
     
     for (const sig of signals) {
       const validScore = Math.max(0, Math.min(100, Math.round(sig.score)));
-      placeholders.push(`($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, NOW(), $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`);
+      const tf = sig.timeframe || 'daily';
+      placeholders.push(`($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`);
       values.push(
         sig.symbol,
         sig.signalType,
         sig.direction,
         validScore,
+        signalAt,
         sig.priceAtSignal,
-        sig.timeframe || 'daily',
+        tf,
         sig.features ? JSON.stringify(sig.features) : null,
-        SCANNER_VERSION
+        SCANNER_VERSION,
+        computeSignalBucket(signalAt, tf)
       );
     }
     
@@ -134,8 +147,10 @@ export async function recordSignalsBatch(signals: RecordSignalParams[]): Promise
       `INSERT INTO signals_fired (
         symbol, signal_type, direction, score,
         signal_at, price_at_signal,
-        timeframe, features_json, scanner_version
-      ) VALUES ${placeholders.join(', ')}`,
+        timeframe, features_json, scanner_version, signal_bucket
+      ) VALUES ${placeholders.join(', ')}
+      ON CONFLICT (symbol, signal_type, direction, timeframe, scanner_version, signal_bucket)
+      DO NOTHING`,
       values
     );
     

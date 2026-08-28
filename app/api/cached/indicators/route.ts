@@ -6,8 +6,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getIndicators } from '@/lib/onDemandFetch';
+import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 export async function GET(req: NextRequest) {
+  // Per-IP rate limit: getIndicators() can hit the paid Alpha Vantage quota
+  // on cache-miss, so this public endpoint is throttled.
+  const ip = getClientIP(req);
+  const rateCheck = apiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', hint: 'Try again shortly' },
+      { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfter ?? 60) } },
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const symbol = (searchParams.get('symbol') || '').toUpperCase().trim();
   const timeframe = searchParams.get('timeframe') || 'daily';

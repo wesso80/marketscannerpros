@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 import { logger } from "@/lib/logger";
+import { isValidAdminSecret } from "@/lib/adminAuth";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -19,8 +20,9 @@ export async function POST(req: Request) {
 
     const payload = await req.json();
     
-    // Verify secret
-    if (!payload.secret || payload.secret !== SECRET) {
+    // Verify secret with a timing-safe comparison (avoids leaking the secret
+    // via response-time differences on a public webhook endpoint).
+    if (!isValidAdminSecret(typeof payload.secret === 'string' ? payload.secret : null, SECRET)) {
       return NextResponse.json({ 
         error: "Unauthorized - invalid secret" 
       }, { status: 401 });

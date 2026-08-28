@@ -5,9 +5,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { requireAdmin } from '@/lib/adminAuth';
 
-// GET: List all tracked symbols
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// GET: List all tracked symbols (admin-only worker configuration)
 export async function GET(req: NextRequest) {
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const assetType = searchParams.get('asset_type'); // equity, crypto, forex
   const tier = searchParams.get('tier'); // 1, 2, 3
@@ -59,8 +67,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Add symbols to universe
+// POST: Add symbols to universe (admin-only)
 export async function POST(req: NextRequest) {
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { symbols } = body;
@@ -113,8 +125,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE: Remove or disable symbols
+// DELETE: Remove or disable symbols (admin-only)
 export async function DELETE(req: NextRequest) {
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { symbols, hard_delete = false } = body;

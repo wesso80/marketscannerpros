@@ -54,7 +54,7 @@ export const TOOL_CATALOG: ToolPage[] = [
   // ─── Advanced ───
   { key: 'volatility-engine',  href: '/tools/volatility-engine',  label: 'Volatility Engine',    description: 'Volatility analysis and VIX tracking',             icon: 'VE', category: 'Advanced', tier: 'pro' },
   { key: 'liquidity-sweep',    href: '/tools/liquidity-sweep',    label: 'Liquidity Sweep',      description: 'Detect liquidity grabs and sweeps',                icon: 'LS', category: 'Advanced', tier: 'pro' },
-  { key: 'command-hub',        href: '/tools/command-hub',        label: 'Command Hub',          description: 'Centralised command and control',                  icon: 'CH', category: 'Advanced' },
+  { key: 'command-hub',        href: '/tools/command-center',     label: 'Command Center',       description: '30-second market intelligence: regime, risk tone, strength/weakness, events', icon: 'CC', category: 'Advanced' },
 
   // ─── Portfolio & Journal ───
   { key: 'portfolio',          href: '/tools/workspace?tab=portfolio', label: 'Portfolio',       description: 'Review positions and exposure in Workspace',       icon: 'PF', category: 'Portfolio' },
