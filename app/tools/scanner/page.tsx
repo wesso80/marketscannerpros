@@ -86,6 +86,15 @@ function ScannerMetric({ label, value, tone = 'var(--msp-text)', detail }: { lab
 type ProviderStatus = NonNullable<NonNullable<ReturnType<typeof useScannerResults>['data']>['metadata']['dataQuality']>['providerStatus'];
 
 function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean, activeRegime: string): string {
+  // Prefer the real independent-factor evidence (Scanner rework) over the
+  // rank-vs-leader summary, which reads as self-referential ("N points behind
+  // the leader"). whyRanked names actual factors (trend, relative strength,
+  // participation, volatility) and the setup stage.
+  if (r.insight?.whyRanked && r.insight.whyRanked.length > 0) {
+    const stageRaw = r.insight.setupStage;
+    const stage = stageRaw.charAt(0) + stageRaw.slice(1).toLowerCase();
+    return `${stage}: ${r.insight.whyRanked.slice(0, 3).join(' · ')}`;
+  }
   if (r.rankExplanation?.summary) {
     return r.rankExplanation.summary.replace(/;\s*rank is reduced when evidence is missing, stale, or liquidity is thin\.?\s*$/i, '').trim();
   }
