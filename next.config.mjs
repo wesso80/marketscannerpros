@@ -67,6 +67,14 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // Signup route never existed; both homepage CTAs historically pointed here.
+      // Catch any cached/external /auth/signup links and send them to the real
+      // auth page (307 so it isn't permanently cached if a signup page is added).
+      {
+        source: '/auth/signup',
+        destination: '/auth',
+        permanent: false,
+      },
       // Fix old URLs that were in previous sitemaps
       {
         source: '/ai-analyst',
