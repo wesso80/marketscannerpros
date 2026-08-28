@@ -133,14 +133,14 @@ export default function DerivativesWidget({
   const [lsMeta, setLsMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
   const [fundingMeta, setFundingMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
-  const lsTooltipText = `Long/Short Ratio = Ratio of long vs short traders.
+  const lsTooltipText = `Long/Short (funding-implied) = estimated from aggregated funding rates, not observed exchange long/short account data.
 
-GREEN: Ratio > 1 means more longs than shorts (bullish positioning)
-RED: Ratio < 1 means more shorts than longs (bearish positioning)
+GREEN: Implied ratio > 1 — funding skews toward longs (bullish-leaning positioning)
+RED: Implied ratio < 1 — funding skews toward shorts (bearish-leaning positioning)
 
-Research context: Extreme ratios often precede reversals.
-Very high L/S → Crowded long trade → Vulnerable to long squeeze
-Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
+Research context: this is a derived proxy. Extreme readings often precede reversals.
+Very high → crowded-long context → vulnerable to a long squeeze
+Very low → crowded-short context → vulnerable to a short squeeze`;
 
   const fundingTooltipText = `Funding Rate = Fee paid between long/short traders every 8 hours.
 
@@ -219,7 +219,7 @@ Research context:
               <span className="text-[0.62rem] font-bold text-slate-400">{getSentimentCode(lsData.average.sentiment)}</span>
               <div>
                 <div className="text-xs text-slate-400 flex items-center gap-1">
-                  L/S Ratio
+                  L/S (implied)
                   <button
                     onClick={() => { setShowLsTooltip(!showLsTooltip); setShowFundingTooltip(false); }}
                     className="ml-1 w-4 h-4 rounded-full bg-slate-600 hover:bg-emerald-500 text-[10px] text-white font-bold flex items-center justify-center transition-colors"
@@ -353,7 +353,7 @@ Research context:
         {/* Long/Short Ratio */}
         {lsData && (
           <div className="bg-slate-900/50 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-2">Long/Short Ratio</div>
+            <div className="text-sm text-slate-400 mb-2" title="Estimated from aggregated funding rates, not observed exchange long/short account data.">Long/Short (funding-implied)</div>
             <div className="text-2xl font-bold text-white mb-1">
               {lsData.average.longShortRatio}
             </div>

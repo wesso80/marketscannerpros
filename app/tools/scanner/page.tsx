@@ -138,6 +138,34 @@ function rankedTrustDetail(r: ScanResult): string {
   return missing.length ? `Missing or weak: ${missing.join(', ')}.` : 'Price, score, confidence, and volatility context are available.';
 }
 
+/**
+ * Consistency rule (live-review H6): the panel-level "LIVE / Coverage" badge must
+ * reflect the WEAKEST row, not assert LIVE over degraded/stale rows. If any row in
+ * the asset class is DEGRADED/MISSING, downgrade the provider-status badge and
+ * explain why. Pure — returns a new object, never mutates.
+ */
+function downgradeProviderStatusForRows(
+  status: ProviderStatus | null | undefined,
+  rows: ScanResult[] | undefined,
+): ProviderStatus | null {
+  if (!status) return status ?? null;
+  if (!rows || rows.length === 0) return status;
+  const total = rows.length;
+  const degraded = rows.filter((r) => rankedTrustLabel(r) !== 'GOOD').length;
+  if (degraded === 0) return status;
+  return {
+    ...status,
+    live: false,
+    stale: true,
+    degraded: true,
+    alertLevel: status.alertLevel === 'critical' ? 'critical' : 'warning',
+    warnings: [
+      `${degraded} of ${total} rows degraded — panel reflects the weakest row (treat as delayed).`,
+      ...(status.warnings ?? []),
+    ],
+  };
+}
+
 function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAligned: boolean; momentumAligned: boolean; flowAligned: boolean; dataQuality: string; direction: string; regime?: string }) {
   if (args.dataQuality !== 'GOOD') return 'Refresh scanner inputs before relying on reference levels.';
   if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
@@ -1008,8 +1036,8 @@ export default function ScannerPage() {
 
   const rankedLocalDemo = Boolean(equity.data?.metadata?.localDemo || crypto.data?.metadata?.localDemo);
   const rankedProviderStatuses = useMemo(() => ([
-    { label: 'Equity', status: equity.data?.metadata?.dataQuality?.providerStatus ?? null, quality: equity.data?.metadata?.dataQuality ?? null },
-    { label: 'Crypto', status: crypto.data?.metadata?.dataQuality?.providerStatus ?? null, quality: crypto.data?.metadata?.dataQuality ?? null },
+    { label: 'Equity', status: downgradeProviderStatusForRows(equity.data?.metadata?.dataQuality?.providerStatus ?? null, equity.data?.results), quality: equity.data?.metadata?.dataQuality ?? null },
+    { label: 'Crypto', status: downgradeProviderStatusForRows(crypto.data?.metadata?.dataQuality?.providerStatus ?? null, crypto.data?.results), quality: crypto.data?.metadata?.dataQuality ?? null },
   ]), [equity.data, crypto.data]);
 
   const filtered = useMemo(() => {
