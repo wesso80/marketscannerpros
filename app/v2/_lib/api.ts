@@ -8,6 +8,7 @@
  * most endpoints return 401. We detect that and expose `isAuthError` so the
  * UI can show a friendly "Sign in" prompt instead of raw error text.
  */
+import type { ScannerInsight } from '@/lib/analysis';
 
 /* ------------------------------------------------------------------ */
 /*  Auth error class                                                   */
@@ -119,6 +120,7 @@ export interface ScanResult {
     longShortRatio?: number;
   };
   capitalFlow?: any;
+  insight?: ScannerInsight;
   scoreV2?: {
     regime: { label: string; confidence: number };
     regimeScore: { weightedScore: number; tradeBias: string; gated: boolean };

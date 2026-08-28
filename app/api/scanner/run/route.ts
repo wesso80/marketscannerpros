@@ -30,6 +30,7 @@ import { evaluateScannerFreshness } from "@/lib/scanner/dataQuality";
 import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
 import { buildScannerRankExplanation, type ScannerRankExplanation } from "@/lib/scanner/rankExplanation";
+import { buildScannerInsight, type ScannerInsight, type FreshnessLevel } from "@/lib/analysis";
 import { computeScannerDerivativesContribution, type ScannerDerivativesEvidenceStatus } from "@/lib/scanner/scoring";
 import { calculateScannerVwapSeries, scannerVwapModeFor } from "@/lib/scanner/vwap";
 
@@ -160,6 +161,7 @@ interface ScanResult {
   };
   rankWarnings?: string[];
   rankExplanation?: ScannerRankExplanation;
+  insight?: ScannerInsight;
   timeframe: string;
   type: string;
   price?: number;
@@ -2792,6 +2794,56 @@ export async function POST(req: NextRequest) {
         rankWarnings: result.rankWarnings,
         dveFlags: result.dveFlags,
       });
+
+      // ── Independent-factor insight (Scanner rework) ──
+      // Collapses correlated indicators into independent factor groups, adds a
+      // setup stage + extension state + relative strength, caps the composite by
+      // evidence quality, and explains why the row ranked. Additive — does not
+      // alter the existing score/direction math above.
+      const fsRaw = result.scoreQuality?.freshnessStatus as string | undefined;
+      const freshness: FreshnessLevel =
+        fsRaw === 'fresh' ? 'live'
+          : fsRaw === 'delayed' ? 'delayed'
+            : fsRaw === 'stale' ? 'stale'
+              : fsRaw === 'missing' ? 'missing'
+                : 'live';
+      const enh = (result as { enhancements?: { relativeStrength?: { rs?: number | null; symbolChangePct?: number }; emaStack?: { direction?: 'bullish' | 'bearish' | 'mixed' } } }).enhancements;
+      const vwapPct = Number.isFinite(result.vwap) && Number.isFinite(result.price) && (result.vwap as number) > 0
+        ? ((result.price! - result.vwap!) / result.vwap!) * 100
+        : undefined;
+      const atrPercent = Number.isFinite(result.atr) && Number.isFinite(result.price) && (result.price as number) > 0
+        ? (result.atr! / result.price!) * 100
+        : undefined;
+      try {
+        result.insight = buildScannerInsight({
+          direction: result.direction,
+          convictionScore: result.score,
+          changePct: enh?.relativeStrength?.symbolChangePct,
+          close: result.price,
+          ema200: result.ema200,
+          macdHist: result.macd_hist,
+          adx: result.adx,
+          aroonUp: result.aroon_up,
+          aroonDown: result.aroon_down,
+          emaStack: enh?.emaStack?.direction,
+          rsi: result.rsi,
+          stochK: result.stoch_k,
+          stochD: result.stoch_d,
+          cci: result.cci,
+          mfi: result.mfi,
+          vwapPct,
+          bbwp: result.dveBbwp,
+          dveBreakoutScore: result.dveBreakoutScore,
+          dveFlags: result.dveFlags,
+          atrPercent,
+          relativeStrengthRatio: enh?.relativeStrength?.rs ?? null,
+          fundingRate: result.derivatives?.fundingRate,
+          oiChangePercent: result.derivatives?.oiChangePercent,
+          freshness,
+        });
+      } catch (insightErr) {
+        console.warn('[scanner] insight computation failed for', result.symbol, (insightErr as Error)?.message);
+      }
     });
 
     // ── Risk Governor enforcement gate ──

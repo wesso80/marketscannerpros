@@ -15,6 +15,7 @@ import { REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
+import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -217,8 +218,10 @@ function isRegimeCompatibleForRegime(r: ScanResult, regime: string): boolean {
 function computeMspScore(r: ScanResult, regime: string): number {
   const regimeKey = normalizeRegimeKey(regime);
   const w = REGIME_WEIGHTS[regimeKey] || REGIME_WEIGHTS.trend;
-  // Normalize each component to 0-100 scale
-  const structure = Math.min(100, Math.max(0, Math.abs(r.score ?? 0) * 10));
+  // Normalize each component to 0-100 scale.
+  // NOTE: r.score is already the 0-100 conviction score. Using it directly here
+  // (previously `Math.abs(score) * 10`, which saturated to 100 for any score ≥ 10).
+  const structure = Math.min(100, Math.max(0, r.score ?? 0));
   const momentum = Math.min(100, Math.max(0, r.confidence ?? (Math.abs(r.score ?? 0) * 8)));
   const volatility = r.dveBbwp != null
     ? (r.dveBbwp < 20 ? 80 + (20 - r.dveBbwp) : r.dveBbwp > 80 ? 70 + (r.dveBbwp - 80) : 30 + r.dveBbwp * 0.3)
@@ -417,6 +420,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
             </div>
 
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
+            {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                 {lifecycleLabel(lifecycle)}
@@ -490,6 +494,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               )}
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
+            {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                 {lifecycleLabel(lifecycle)}
