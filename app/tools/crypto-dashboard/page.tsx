@@ -203,16 +203,22 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     }
 
     const totalSignals = bullishScore + bearishScore;
-    const confidence = totalSignals > 0 ? Math.round((Math.max(bullishScore, bearishScore) / totalSignals) * 100) : 0;
-    
+    const margin = bullishScore - bearishScore;
+    const hasOpposing = bullishScore > 0 && bearishScore > 0;
+    // Net-conviction confidence: reflects the MARGIN over total evidence, not
+    // max/total (which turned a thin 2-1 tally into a misleading 67%). A single
+    // opposing signal now visibly reduces conviction.
+    const confidence = totalSignals > 0 ? Math.round((Math.abs(margin) / totalSignals) * 100) : 0;
+
     let bias: string;
-    if (bullishScore > bearishScore + 1) bias = 'BULLISH';
-    else if (bearishScore > bullishScore + 1) bias = 'BEARISH';
-    else if (bullishScore > bearishScore) bias = 'LEAN BULLISH';
-    else if (bearishScore > bullishScore) bias = 'LEAN BEARISH';
+    if (margin >= 2) bias = 'BULLISH';
+    else if (margin <= -2) bias = 'BEARISH';
+    else if (hasOpposing) bias = 'MIXED'; // opposing evidence with a thin (≤1) margin → conflicting, not a lean
+    else if (margin === 1) bias = 'LEAN BULLISH';
+    else if (margin === -1) bias = 'LEAN BEARISH';
     else bias = 'NEUTRAL';
 
-    return { bias, confidence: confidence ?? 50, signals, bullishScore, bearishScore };
+    return { bias, confidence, signals, bullishScore, bearishScore };
   };
 
   const marketBias = getMarketBias();
@@ -253,7 +259,9 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         ? 'Bullish'
         : marketBias.bias === 'BEARISH'
           ? 'Bearish'
-          : 'Neutral';
+          : marketBias.bias === 'MIXED'
+            ? 'Mixed / Conflicting'
+            : 'Neutral';
 
   const permission = volRegime === 'Expansion' && liquidityState === 'Contracting' && marketBias.bearishScore >= marketBias.bullishScore
     ? 'No'
@@ -312,8 +320,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     {
       id: 'eth',
       symbol: 'ETH',
-      direction: permission === 'No' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : 'Long',
-      setupType: biasLabel.includes('Bearish') ? 'Breakdown-retest study' : 'Trend-continuation study',
+      direction: permission === 'No' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : biasLabel.includes('Bullish') ? 'Long' : 'Flat',
+      setupType: biasLabel.includes('Bearish') ? 'Breakdown-retest study' : biasLabel.includes('Bullish') ? 'Trend-continuation study' : 'No directional scenario',
       trigger: biasLabel.includes('Bearish')
         ? 'Breakdown-retest failure conditions with weak OI follow-through.'
         : 'Momentum-continuation conditions with supportive funding/OI alignment.',
@@ -323,8 +331,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     {
       id: 'sol',
       symbol: 'SOL',
-      direction: permission === 'No' ? 'Flat' : volRegime === 'Expansion' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : 'Long',
-      setupType: volRegime === 'Expansion' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Failed-rally study' : 'Trend-continuation study',
+      direction: permission === 'No' ? 'Flat' : volRegime === 'Expansion' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : biasLabel.includes('Bullish') ? 'Long' : 'Flat',
+      setupType: volRegime === 'Expansion' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Failed-rally study' : biasLabel.includes('Bullish') ? 'Trend-continuation study' : 'No directional scenario',
       trigger: volRegime === 'Expansion'
         ? 'Wait for volatility compression before directional scenario review.'
         : biasLabel.includes('Bearish')
