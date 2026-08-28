@@ -16,3 +16,4 @@ export * from './scenarioAnalysis';
 export * from './leverageState';
 export * from './crossAsset';
 export * from './scannerInsight';
+export * from './moverQuality';

@@ -35,6 +35,7 @@ import {
   classifyBuilding,
   rankBuilding,
   crossSectionalRelativeVolume,
+  filterMoversByFloor,
   classifyLeverageState,
   describeCrossAsset,
   parsePct,
@@ -112,7 +113,7 @@ export default function CommandCenterPage() {
   const sectorData = sectors.data?.sectors ?? [];
   const cryptoData = crypto.data?.data ?? null;
   const moverList: Mover[] = useMemo(
-    () => [...(movers.data?.topGainers ?? []), ...(movers.data?.topLosers ?? [])],
+    () => filterMoversByFloor([...(movers.data?.topGainers ?? []), ...(movers.data?.topLosers ?? [])]),
     [movers.data],
   );
 

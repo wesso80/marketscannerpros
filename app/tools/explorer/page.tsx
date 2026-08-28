@@ -16,6 +16,7 @@ import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
+import { filterMoversByFloor } from '@/lib/analysis';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
@@ -103,8 +104,10 @@ export default function ExplorerPage() {
 
   const sectorData = sectors.data?.sectors || [];
   const cryptoData = cryptoOverview.data?.data;
-  const allGainers = movers.data?.topGainers || [];
-  const allLosers = movers.data?.topLosers || [];
+  // Universe-quality floor (§M9): drop $0 / sub-dollar / nano-cap noise from the
+  // headline surfaces (falls back to the raw list if the floor empties it).
+  const allGainers = filterMoversByFloor(movers.data?.topGainers || []);
+  const allLosers = filterMoversByFloor(movers.data?.topLosers || []);
   const eqGainers = allGainers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 10);
   const eqLosers = allLosers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 10);
   const cryptoGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 10);
