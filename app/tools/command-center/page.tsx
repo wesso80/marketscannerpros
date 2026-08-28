@@ -39,13 +39,16 @@ import {
   classifyLeverageState,
   describeCrossAsset,
   parsePct,
+  buildSessionSnapshot,
+  diffSessionSnapshots,
   EDUCATIONAL_DISCLOSURE,
   type AnalyticalStance,
   type EvidenceQualityLevel,
   type BuildingAssessment,
+  type SessionSnapshot,
 } from '@/lib/analysis';
 
-const PREV_REGIME_KEY = 'msp:cc:prevRegime';
+const SNAPSHOT_KEY = 'msp:cc:snapshot';
 
 function stanceColor(stance: AnalyticalStance): string {
   switch (stance) {
@@ -78,6 +81,18 @@ function pctColor(v: number): string {
   return 'var(--msp-text-muted)';
 }
 
+function deltaColor(kind: 'regime' | 'risk' | 'sector' | 'crypto' | 'building' | 'event'): string {
+  switch (kind) {
+    case 'regime': return 'var(--msp-accent, #10B981)';
+    case 'risk': return 'var(--msp-warn)';
+    case 'sector': return 'var(--msp-bull)';
+    case 'crypto': return 'var(--msp-flat)';
+    case 'building': return 'var(--msp-bull)';
+    case 'event': return 'var(--msp-bear)';
+    default: return 'var(--msp-text-muted)';
+  }
+}
+
 function SectionTitle({ n, title, hint }: { n: string; title: string; hint?: string }) {
   return (
     <div className="mb-2 flex items-center gap-2">
@@ -96,19 +111,12 @@ export default function CommandCenterPage() {
   const calendar = useEconomicCalendar();
   const derivatives = useCryptoDerivatives('BTC');
 
-  // Track the previously observed regime (cross-session) to surface change.
-  const [prevRegime, setPrevRegime] = useState<string | null>(null);
-  useEffect(() => {
-    const current = regime.data?.regime;
-    if (!current) return;
-    try {
-      const stored = localStorage.getItem(PREV_REGIME_KEY);
-      if (stored && stored !== current) setPrevRegime(stored);
-      localStorage.setItem(PREV_REGIME_KEY, current);
-    } catch {
-      /* localStorage unavailable — change detection simply disabled */
-    }
-  }, [regime.data?.regime]);
+  // Snapshot the market environment on each visit so we can show the user what
+  // materially changed since they were last here (regime, risk tone, breadth,
+  // leadership, crypto participation, new building names, events).
+  const [priorSnapshot, setPriorSnapshot] = useState<SessionSnapshot | null>(null);
+  const [snapshotCaptured, setSnapshotCaptured] = useState(false);
+  const prevRegime = priorSnapshot?.regime ?? null;
 
   const sectorData = sectors.data?.sectors ?? [];
   const cryptoData = crypto.data?.data ?? null;
@@ -187,6 +195,47 @@ export default function CommandCenterPage() {
 
   const anyLoading = regime.loading || sectors.loading || crypto.loading || movers.loading;
 
+  // Build the current-visit snapshot from the derived environment.
+  const nextHighImpactEvent = eventClock.find((e) => e.importance === 'high')?.event;
+  const currentSnapshot = useMemo(
+    () =>
+      buildSessionSnapshot({
+        regime: regime.data?.regime ?? null,
+        riskTone: riskTone.tone,
+        greenRatio: strength.greenRatio,
+        cryptoCapChange: typeof cryptoData?.marketCapChange24h === 'number' ? cryptoData.marketCapChange24h : undefined,
+        strongestSector: strength.strongest[0]?.name,
+        weakestSector: strength.weakest[0]?.name,
+        cryptoParticipationLabel: flow.label,
+        buildingSymbols: [...buildingEquity, ...buildingCrypto].map((b) => b.symbol),
+        nextHighImpactEvent,
+      }),
+    [regime.data?.regime, riskTone.tone, strength, cryptoData?.marketCapChange24h, flow.label, buildingEquity, buildingCrypto, nextHighImpactEvent],
+  );
+
+  // Once the essential data is ready, read the prior snapshot, then persist the
+  // current one. Captured only once per mount so the diff is stable.
+  const dataReady = Boolean(regime.data?.regime) && !anyLoading;
+  useEffect(() => {
+    if (!dataReady || snapshotCaptured) return;
+    try {
+      const stored = localStorage.getItem(SNAPSHOT_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as SessionSnapshot;
+        if (parsed && typeof parsed.ts === 'number') setPriorSnapshot(parsed);
+      }
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(currentSnapshot));
+    } catch {
+      /* localStorage unavailable — session digest simply disabled */
+    }
+    setSnapshotCaptured(true);
+  }, [dataReady, snapshotCaptured, currentSnapshot]);
+
+  const sessionDelta = useMemo(
+    () => (priorSnapshot ? diffSessionSnapshots(priorSnapshot, currentSnapshot) : null),
+    [priorSnapshot, currentSnapshot],
+  );
+
   return (
     <div className="space-y-3">
       <PageHero
@@ -206,6 +255,26 @@ export default function CommandCenterPage() {
           { label: 'Open Markets', variant: 'ghost', href: '/tools/explorer' },
         ]}
       />
+
+      {/* WHAT CHANGED SINCE LAST SESSION */}
+      {sessionDelta ? (
+        <Card className="p-4" style={{ borderColor: 'var(--msp-accent, #10B981)', borderWidth: 1 }}>
+          <SectionTitle n="00" title="Since your last session" hint={sessionDelta.elapsedLabel} />
+          {sessionDelta.quiet ? (
+            <p className="text-sm text-slate-400">No material change in the market environment since you were last here.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {sessionDelta.items.map((item, i) => (
+                <li key={`${item.kind}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                  <Badge label={item.label} small color={deltaColor(item.kind)} />
+                  <span className="text-slate-300">{item.detail}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[11px] italic text-slate-500">Descriptive changes in the observed environment since your previous visit — not trade instructions or predictions.</p>
+        </Card>
+      ) : null}
 
       {/* LAYER 1 — MARKET REGIME (dominant) */}
       <Card className="p-4" style={{ borderColor: stanceColor(reg.stance), borderWidth: 1 }}>

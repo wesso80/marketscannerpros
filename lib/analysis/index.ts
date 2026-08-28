@@ -17,3 +17,4 @@ export * from './leverageState';
 export * from './crossAsset';
 export * from './scannerInsight';
 export * from './moverQuality';
+export * from './sessionDelta';
