@@ -6,6 +6,7 @@ const footerLinks = [
   { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/guide', label: 'Guide' },
+  { href: '/methodology', label: 'Methodology' },
   { href: '/disclaimer', label: 'Disclaimer' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },

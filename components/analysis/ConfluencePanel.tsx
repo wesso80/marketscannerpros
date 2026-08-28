@@ -68,7 +68,10 @@ export default function ConfluencePanel({ result }: { result: GoldenEggConfluenc
         </div>
         <ScoreTypeBadge type={scoreType} />
       </div>
-      <p className="text-[11px] leading-5 text-slate-500">{composite.note}</p>
+      <p className="text-[11px] leading-5 text-slate-500">
+        {composite.note}{' '}
+        <a href="/methodology" className="text-emerald-400/80 no-underline hover:underline">How scores work →</a>
+      </p>
 
       {/* Analytical confluence summary */}
       <div>
