@@ -23,6 +23,7 @@ import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
+import { deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, assessEvidenceQuality, type ScoreRegime } from '@/lib/analysis';
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
@@ -1824,11 +1825,93 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     }
   }
 
+  // Sector relative strength + SPY benchmark (one DB query, 0 API calls).
+  let benchmarkChange = 0;
+  try {
+    const sectorRows = await dbQuery<{ symbol: string; change_percent: string }>(
+      `SELECT symbol, change_percent FROM quotes_latest WHERE symbol = ANY($1)`,
+      [Array.from(SECTOR_ETFS)]
+    );
+    const sectorChanges = new Map<string, number>();
+    for (const r of sectorRows) sectorChanges.set(r.symbol.toUpperCase(), parseFloat(r.change_percent) || 0);
+    benchmarkChange = sectorChanges.get('SPY') ?? 0;
+    for (const item of scored) {
+      const etf = getSectorETF(item.symbol);
+      if (etf && sectorChanges.has(etf)) {
+        (item as any).indicators.sectorETF = etf;
+        (item as any).indicators.sectorRelStr = Math.round((item.change24h - sectorChanges.get(etf)!) * 100) / 100;
+      }
+    }
+  } catch { /* non-fatal — sector data may not be cached */ }
+
+  // ── MSP Composite v2 (cross-sectional, regime-conditional) for each equity ──
+  try {
+    const REGIME_TO_SCORE: Record<string, ScoreRegime> = {
+      trend: 'trending', range: 'ranging', expansion: 'expansion', contraction: 'compression', unknown: 'neutral',
+    };
+    const rsIndexRatios = scored
+      .map((s) => (1 + (s.change24h || 0) / 100) / (1 + benchmarkChange / 100))
+      .filter((v) => Number.isFinite(v));
+    const dollarVolumes = scored
+      .map((s) => {
+        const p = (s.indicators as any).price; const v = (s.indicators as any).volume;
+        return Number.isFinite(p) && Number.isFinite(v) ? p * v : Number.NaN;
+      })
+      .filter((v) => Number.isFinite(v));
+
+    const v2rows = scored.map((s) => {
+      const ind = s.indicators as any;
+      const vwapPct = Number.isFinite(ind.vwap) && Number.isFinite(ind.price) && ind.vwap > 0
+        ? ((ind.price - ind.vwap) / ind.vwap) * 100 : undefined;
+      const macdHist = Number.isFinite(ind.macd) && Number.isFinite(ind.macdSignal) ? ind.macd - ind.macdSignal : undefined;
+      const sectorChange = Number.isFinite(ind.sectorRelStr) ? (s.change24h || 0) - ind.sectorRelStr : undefined;
+      const rsSectorRatio = sectorChange != null ? (1 + (s.change24h || 0) / 100) / (1 + sectorChange / 100) : undefined;
+      const dollarVolume = Number.isFinite(ind.price) && Number.isFinite(ind.volume) ? ind.price * ind.volume : undefined;
+      const signals = deriveFactorSignals({
+        price: ind.price, ema200: ind.ema200, macdHist, adx: ind.adx,
+        aroonUp: ind.aroonUp, aroonDown: ind.aroonDown,
+        rsi: ind.rsi, stochK: ind.stochK, cci: ind.cci, mfi: ind.mfi, vwapPct,
+        rsIndexRatio: (1 + (s.change24h || 0) / 100) / (1 + benchmarkChange / 100),
+        rsSectorRatio,
+        derivativesExpected: false,
+        dollarVolume,
+      }, { rsIndexRatios, dollarVolumes });
+      const scoreRegime = REGIME_TO_SCORE[deriveRegime(
+        Number.isFinite(ind.adx) ? ind.adx : undefined,
+        Number.isFinite(ind.atr_percent) ? ind.atr_percent : undefined,
+      )] ?? 'neutral';
+      const availableFactors = signals.factors.filter((f) => f.available).length;
+      const evidence = assessEvidenceQuality({ availableFactors, totalFactors: 8, freshness: 'delayed' });
+      const composite = computeCompositeV2({
+        factors: signals.factors, regime: scoreRegime,
+        evidenceQuality: evidence.level, freshness: 'delayed', liquidityMultiplier: signals.liquidityMultiplier,
+      });
+      return { s, composite, scoreRegime, signals };
+    });
+    const pct = crossSectionalPercentiles(v2rows.map((r) => ({ composite: r.composite.composite })));
+    v2rows.forEach((r, idx) => {
+      (r.s as any).compositeV2 = {
+        composite: r.composite.composite,
+        direction: r.composite.direction,
+        percentileRank: pct[idx].percentileRank,
+        regime: r.scoreRegime,
+        liquidityMultiplier: r.signals.liquidityMultiplier,
+        catalyst: { earningsInDays: r.signals.catalyst.earningsInDays, imminent: r.signals.catalyst.imminent },
+        factorContributions: r.composite.contributions
+          .filter((c) => c.weight > 0)
+          .map((c) => ({ factor: c.factor, weight: Math.round(c.weight * 100) / 100, signed: Math.round(c.signed * 100) / 100 })),
+      };
+    });
+  } catch (v2err) {
+    console.warn('[bulk-scan] v2 composite failed (non-fatal):', v2err);
+  }
+
   // Fetch chartData from ohlcv_bars — ONLY for the top candidates (bounded I/O).
   // Scoring already ranks from the cached snapshot, so we enrich the leaders
   // rather than issuing a per-symbol bar query for the whole universe.
+  const enrichRank = (x: any) => x.compositeV2?.composite ?? Math.abs(x.score - 50);
   const enrichSet = new Set(
-    [...scored].sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50)).slice(0, 12).map((s) => s.symbol),
+    [...scored].sort((a, b) => enrichRank(b) - enrichRank(a)).slice(0, 12).map((s) => s.symbol),
   );
   for (const item of scored) {
     if (!enrichSet.has(item.symbol)) continue;
@@ -1926,25 +2009,9 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     } catch { /* non-fatal — chart will fall back on client */ }
   }
 
-  // Rank by conviction strength
-  // Enrich with sector relative strength (DB-backed, 0 API calls)
-  try {
-    const sectorRows = await dbQuery<{ symbol: string; change_percent: string }>(
-      `SELECT symbol, change_percent FROM quotes_latest WHERE symbol = ANY($1)`,
-      [Array.from(SECTOR_ETFS)]
-    );
-    const sectorChanges = new Map<string, number>();
-    for (const r of sectorRows) sectorChanges.set(r.symbol.toUpperCase(), parseFloat(r.change_percent) || 0);
-    for (const item of scored) {
-      const etf = getSectorETF(item.symbol);
-      if (etf && sectorChanges.has(etf)) {
-        (item as any).indicators.sectorETF = etf;
-        (item as any).indicators.sectorRelStr = Math.round((item.change24h - sectorChanges.get(etf)!) * 100) / 100;
-      }
-    }
-  } catch { /* non-fatal — sector data may not be cached */ }
-
-  const ranked = scored.sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
+  // Rank by the MSP Composite v2 (falls back to conviction distance).
+  const rankByComposite = (x: any) => x.compositeV2?.composite ?? Math.abs(x.score - 50);
+  const ranked = [...scored].sort((a, b) => rankByComposite(b) - rankByComposite(a));
 
   return {
     scanned: scored.length,
@@ -2237,7 +2304,10 @@ function applyInstitutionalFilterToTopPicks(
       target: enrichedTarget,
       rMultiple: enrichedRMultiple,
       setup: enrichedSetup,
-      confidence: enrichedConfidence,
+      // Display the MSP Composite v2 as the headline confidence when available
+      // (equity), so the number shown and the ranking below agree. Crypto keeps
+      // the institutional confidence.
+      confidence: Number.isFinite(pick?.compositeV2?.composite) ? Math.round(pick.compositeV2.composite) : enrichedConfidence,
     };
   });
 
@@ -2249,8 +2319,9 @@ function applyInstitutionalFilterToTopPicks(
     const aBlocked = a.institutionalFilter.noTrade || a.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
     const bBlocked = b.institutionalFilter.noTrade || b.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
     if (aBlocked !== bBlocked) return aBlocked - bBlocked;
-    const left = Number(a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
-    const right = Number(b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
+    // Prefer the MSP Composite v2 (equity); fall back to the institutional rank.
+    const left = Number(a?.compositeV2?.composite ?? a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
+    const right = Number(b?.compositeV2?.composite ?? b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
     return right - left;
   });
   return {
