@@ -91,13 +91,14 @@ export default function WatchlistWidget() {
   const [sortMode, setSortMode] = useState<SortMode>('confidence');
   const [compactView, setCompactView] = useState(false);
 
-  const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert', symbol: string) => {
+  const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert' | 'research', symbol: string) => {
     const encodedSymbol = encodeURIComponent(symbol);
     const routes = {
       scan: `/tools/scanner?symbol=${encodedSymbol}`,
       deep: `/tools/golden-egg?symbol=${encodedSymbol}`,
       flow: `/tools/terminal?tab=options-confluence&symbol=${encodedSymbol}`,
       alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`,
+      research: `/tools/research?tab=earnings&symbol=${encodedSymbol}`,
     };
     router.push(routes[tool]);
   };
@@ -745,6 +746,7 @@ export default function WatchlistWidget() {
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <button type="button" aria-label={`Open scanner cockpit for ${item.symbol}`} onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
+                        <button type="button" aria-label={`Research ${item.symbol}`} onClick={() => launchTool('research', item.symbol)} className="rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-cyan-300">Research</button>
                         <button type="button" aria-label={`Remove ${item.symbol} from watchlist`} onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
                       </div>
                     </div>

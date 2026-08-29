@@ -13,6 +13,7 @@ import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, ty
 import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { deleteSavedResearchCase, listSavedResearchCases, updateSavedResearchCaseOutcome, type SavedResearchCaseOutcome, type SavedResearchCaseSummary } from '@/lib/clientResearchCases';
+import { quickAddToWatchlist } from '@/lib/clientWatchlistQuickAdd';
 
 /* ─── Dynamic imports: v1 rich components ─── */
 const NewsIntelligence = dynamic(() => import('@/app/tools/news/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading News Intelligence…</div> });
@@ -148,6 +149,19 @@ export default function ResearchPage() {
     selectSymbol(symbol);
     navigateTo('golden-egg', symbol);
   }, [navigateTo, selectSymbol]);
+
+  // Research → Workspace: one-click add of an earnings symbol to the watchlist.
+  const [watchlistStatus, setWatchlistStatus] = useState<Record<string, 'adding' | 'added' | 'exists' | 'signin' | 'error'>>({});
+  const handleAddToWatchlist = useCallback(async (symbol: string) => {
+    setWatchlistStatus(prev => ({ ...prev, [symbol]: 'adding' }));
+    const result = await quickAddToWatchlist(symbol, { assetType: 'equity', note: 'Saved from Earnings research' });
+    setWatchlistStatus(prev => ({
+      ...prev,
+      [symbol]: result.ok
+        ? (result.alreadyPresent ? 'exists' : 'added')
+        : (result.status === 401 ? 'signin' : 'error'),
+    }));
+  }, []);
 
   const onSymbolRowKey = useCallback((event: KeyboardEvent, symbol: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -402,6 +416,7 @@ export default function ResearchPage() {
                             <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
                             <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>
                             <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Estimate</th>
+                            <th scope="col" className="text-right py-1.5 px-2 text-[10px] uppercase text-slate-500">Save</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -411,6 +426,30 @@ export default function ResearchPage() {
                               <td className="py-1.5 px-2 text-white">{e.name}</td>
                               <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
                               <td className="py-1.5 px-2 text-slate-300">{e.estimate != null ? `$${e.estimate.toFixed(2)}` : '—'}</td>
+                              <td className="py-1.5 px-2 text-right">
+                                {(() => {
+                                  const st = watchlistStatus[e.symbol];
+                                  const label = st === 'adding' ? 'Adding…'
+                                    : st === 'added' ? 'Added ✓'
+                                    : st === 'exists' ? 'On list ✓'
+                                    : st === 'signin' ? 'Sign in'
+                                    : st === 'error' ? 'Retry'
+                                    : '+ Watchlist';
+                                  const done = st === 'added' || st === 'exists';
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={(ev) => { ev.stopPropagation(); if (st !== 'adding' && !done) handleAddToWatchlist(e.symbol); }}
+                                      disabled={st === 'adding' || done}
+                                      className={`rounded border px-2 py-0.5 text-[10px] font-semibold transition ${done ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : 'border-white/15 bg-white/[0.04] text-slate-300 hover:border-emerald-400/40 hover:text-emerald-200'}`}
+                                      aria-label={`Add ${e.symbol} to watchlist`}
+                                      title={st === 'signin' ? 'Sign in to save to your workspace watchlist' : `Add ${e.symbol} to your workspace watchlist`}
+                                    >
+                                      {label}
+                                    </button>
+                                  );
+                                })()}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
