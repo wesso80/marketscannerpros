@@ -224,6 +224,27 @@ export function crossSectionalPercentiles<T extends { composite: number }>(
   return entries.map((e) => ({ ...e, percentileRank: Math.round(percentileRank(e.composite, composites)) }));
 }
 
+/** Map the app's richer regime taxonomies onto the coarse ScoreRegime the weight
+ *  table is keyed on. Prefers the scoring taxonomy; falls back to institutional. */
+export function resolveScoreRegime(scoring?: string, institutional?: string): ScoreRegime {
+  switch (scoring) {
+    case 'TREND_EXPANSION': return 'expansion';
+    case 'TREND_MATURE': return 'trending';
+    case 'RANGE_COMPRESSION': return 'compression';
+    case 'VOL_EXPANSION': return 'high_volatility';
+    case 'TRANSITION': return 'neutral';
+  }
+  switch (institutional) {
+    case 'trending': return 'trending';
+    case 'ranging': return 'ranging';
+    case 'high_volatility_chaos': return 'high_volatility';
+    case 'low_liquidity':
+    case 'news_shock':
+    case 'unknown': return 'neutral';
+  }
+  return 'neutral';
+}
+
 function clamp(v: number, lo: number, hi: number): number {
   if (!Number.isFinite(v)) return lo;
   return Math.max(lo, Math.min(hi, v));

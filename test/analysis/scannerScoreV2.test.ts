@@ -6,6 +6,7 @@ import {
   squashZ,
   computeCompositeV2,
   crossSectionalPercentiles,
+  resolveScoreRegime,
   REGIME_WEIGHTS_V2,
   type FactorInput,
 } from '@/lib/analysis/scannerScoreV2';
@@ -142,5 +143,25 @@ describe('crossSectionalPercentiles', () => {
     expect(ranked[0].percentileRank).toBe(83);
     expect(ranked[1].percentileRank).toBe(50);
     expect(ranked[2].percentileRank).toBe(17);
+  });
+});
+
+describe('resolveScoreRegime', () => {
+  it('maps the scoring taxonomy first', () => {
+    expect(resolveScoreRegime('TREND_EXPANSION')).toBe('expansion');
+    expect(resolveScoreRegime('TREND_MATURE')).toBe('trending');
+    expect(resolveScoreRegime('RANGE_COMPRESSION')).toBe('compression');
+    expect(resolveScoreRegime('VOL_EXPANSION')).toBe('high_volatility');
+    expect(resolveScoreRegime('TRANSITION')).toBe('neutral');
+  });
+  it('falls back to the institutional taxonomy', () => {
+    expect(resolveScoreRegime(undefined, 'trending')).toBe('trending');
+    expect(resolveScoreRegime(undefined, 'ranging')).toBe('ranging');
+    expect(resolveScoreRegime(undefined, 'high_volatility_chaos')).toBe('high_volatility');
+    expect(resolveScoreRegime(undefined, 'unknown')).toBe('neutral');
+  });
+  it('defaults to neutral for anything unrecognised', () => {
+    expect(resolveScoreRegime('WAT', 'nope')).toBe('neutral');
+    expect(resolveScoreRegime()).toBe('neutral');
   });
 });

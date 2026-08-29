@@ -30,7 +30,7 @@ import { evaluateScannerFreshness } from "@/lib/scanner/dataQuality";
 import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
 import { buildScannerRankExplanation, type ScannerRankExplanation } from "@/lib/scanner/rankExplanation";
-import { buildScannerInsight, type ScannerInsight, type FreshnessLevel } from "@/lib/analysis";
+import { buildScannerInsight, assessEvidenceQuality, deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, resolveScoreRegime, type ScannerInsight, type FreshnessLevel } from "@/lib/analysis";
 import { computeScannerDerivativesContribution, type ScannerDerivativesEvidenceStatus } from "@/lib/scanner/scoring";
 import { calculateScannerVwapSeries, scannerVwapModeFor } from "@/lib/scanner/vwap";
 
@@ -162,6 +162,15 @@ interface ScanResult {
   rankWarnings?: string[];
   rankExplanation?: ScannerRankExplanation;
   insight?: ScannerInsight;
+  // MSP Composite v2 — cross-sectional, regime-conditional score (additive).
+  compositeV2?: {
+    composite: number;
+    direction: 'bullish' | 'bearish' | 'neutral';
+    percentileRank: number;
+    regime: string;
+    liquidityMultiplier: number;
+    factorContributions: { factor: string; weight: number; signed: number }[];
+  };
   timeframe: string;
   type: string;
   price?: number;
@@ -2774,6 +2783,80 @@ export async function POST(req: NextRequest) {
       result.confidence = Math.max(0, Math.min(99,
         Math.round(result.score * evidenceFactor * freshnessFactor * liquidityFactor * directionFactor)
       ));
+    }
+
+    // ===== MSP Composite v2 (cross-sectional, regime-conditional) =====
+    // Additive observability pass: compute the v2 composite for ALL candidates
+    // (before the top-N slice) so a follow-up can rank by it. Does NOT change
+    // ordering yet. Non-fatal on any error.
+    try {
+      const rsIndexRatios = results
+        .map((r) => (r.enhancements as { relativeStrength?: { rs?: number } } | undefined)?.relativeStrength?.rs)
+        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+      const dollarVolumes = results
+        .map((r) => (Number.isFinite(r.price) && Number.isFinite(r.avgVolume) ? (r.price as number) * (r.avgVolume as number) : Number.NaN))
+        .filter((v) => Number.isFinite(v));
+
+      const v2Rows = results.map((r) => {
+        const rScoreV2 = (r as { scoreV2?: { regime?: { scoring?: string; institutional?: string } } }).scoreV2;
+        const scoreRegime = resolveScoreRegime(rScoreV2?.regime?.scoring, rScoreV2?.regime?.institutional);
+        const vwapPct = Number.isFinite(r.vwap) && Number.isFinite(r.price) && (r.vwap as number) > 0
+          ? ((r.price! - r.vwap!) / r.vwap!) * 100
+          : undefined;
+        const dollarVolume = Number.isFinite(r.price) && Number.isFinite(r.avgVolume)
+          ? (r.price as number) * (r.avgVolume as number)
+          : undefined;
+        const signals = deriveFactorSignals({
+          price: r.price,
+          ema200: r.ema200,
+          macdHist: r.macd_hist,
+          adx: r.adx,
+          aroonUp: r.aroon_up,
+          aroonDown: r.aroon_down,
+          rsi: r.rsi,
+          stochK: r.stoch_k,
+          cci: r.cci,
+          mfi: r.mfi,
+          vwapPct,
+          rsIndexRatio: (r.enhancements as { relativeStrength?: { rs?: number } } | undefined)?.relativeStrength?.rs,
+          bbwp: r.dveBbwp,
+          dveBreakoutScore: r.dveBreakoutScore,
+          dveFlags: r.dveFlags,
+          fundingRate: r.derivatives?.fundingRate,
+          oiChangePercent: (r.derivatives as { oiChangePercent?: number } | undefined)?.oiChangePercent,
+          derivativesExpected: type === 'crypto',
+          dollarVolume,
+        }, { rsIndexRatios, dollarVolumes });
+
+        const fsRaw = r.scoreQuality?.freshnessStatus as string | undefined;
+        const freshness: FreshnessLevel = fsRaw === 'stale' ? 'stale' : fsRaw === 'missing' ? 'missing' : 'live';
+        const availableFactors = signals.factors.filter((f) => f.available).length;
+        const evidence = assessEvidenceQuality({ availableFactors, totalFactors: 8, freshness });
+        const composite = computeCompositeV2({
+          factors: signals.factors,
+          regime: scoreRegime,
+          evidenceQuality: evidence.level,
+          freshness,
+          liquidityMultiplier: signals.liquidityMultiplier,
+        });
+        return { r, composite, scoreRegime, signals };
+      });
+
+      const ranked = crossSectionalPercentiles(v2Rows.map((row) => ({ composite: row.composite.composite })));
+      v2Rows.forEach((row, idx) => {
+        row.r.compositeV2 = {
+          composite: row.composite.composite,
+          direction: row.composite.direction,
+          percentileRank: ranked[idx].percentileRank,
+          regime: row.scoreRegime,
+          liquidityMultiplier: row.signals.liquidityMultiplier,
+          factorContributions: row.composite.contributions
+            .filter((c) => c.weight > 0)
+            .map((c) => ({ factor: c.factor, weight: Math.round(c.weight * 100) / 100, signed: Math.round(c.signed * 100) / 100 })),
+        };
+      });
+    } catch (v2Err) {
+      console.warn('[scanner] composite v2 pass failed (non-fatal):', v2Err);
     }
 
     // Return only the top 5 results by score
