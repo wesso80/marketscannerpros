@@ -127,6 +127,7 @@ export interface ScanResult {
     percentileRank: number;
     regime: string;
     liquidityMultiplier: number;
+    catalyst?: { earningsInDays: number | null; imminent: boolean };
     factorContributions: { factor: string; weight: number; signed: number }[];
   };
   scoreV2?: {

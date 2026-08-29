@@ -31,6 +31,7 @@ import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
 import { buildScannerRankExplanation, type ScannerRankExplanation } from "@/lib/scanner/rankExplanation";
 import { buildScannerInsight, assessEvidenceQuality, deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, resolveScoreRegime, type ScannerInsight, type FreshnessLevel } from "@/lib/analysis";
+import { getUpcomingEarningsMap, daysUntilEarnings } from "@/lib/scanner/earningsCalendar";
 import { computeScannerDerivativesContribution, type ScannerDerivativesEvidenceStatus } from "@/lib/scanner/scoring";
 import { calculateScannerVwapSeries, scannerVwapModeFor } from "@/lib/scanner/vwap";
 
@@ -169,6 +170,7 @@ interface ScanResult {
     percentileRank: number;
     regime: string;
     liquidityMultiplier: number;
+    catalyst?: { earningsInDays: number | null; imminent: boolean };
     factorContributions: { factor: string; weight: number; signed: number }[];
   };
   timeframe: string;
@@ -2790,6 +2792,10 @@ export async function POST(req: NextRequest) {
     // (before the top-N slice) so a follow-up can rank by it. Does NOT change
     // ordering yet. Non-fatal on any error.
     try {
+      let earningsMap: Map<string, string> = new Map();
+      if (type === 'equity') {
+        try { earningsMap = await getUpcomingEarningsMap(); } catch { /* best-effort — proceed without catalysts */ }
+      }
       const rsIndexRatios = results
         .map((r) => (r.enhancements as { relativeStrength?: { rs?: number } } | undefined)?.relativeStrength?.rs)
         .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
@@ -2825,6 +2831,7 @@ export async function POST(req: NextRequest) {
           fundingRate: r.derivatives?.fundingRate,
           oiChangePercent: (r.derivatives as { oiChangePercent?: number } | undefined)?.oiChangePercent,
           derivativesExpected: type === 'crypto',
+          earningsInDays: type === 'equity' ? daysUntilEarnings(earningsMap.get((r.symbol || '').toUpperCase())) : undefined,
           dollarVolume,
         }, { rsIndexRatios, dollarVolumes });
 
@@ -2850,6 +2857,7 @@ export async function POST(req: NextRequest) {
           percentileRank: ranked[idx].percentileRank,
           regime: row.scoreRegime,
           liquidityMultiplier: row.signals.liquidityMultiplier,
+          catalyst: { earningsInDays: row.signals.catalyst.earningsInDays, imminent: row.signals.catalyst.imminent },
           factorContributions: row.composite.contributions
             .filter((c) => c.weight > 0)
             .map((c) => ({ factor: c.factor, weight: Math.round(c.weight * 100) / 100, signed: Math.round(c.signed * 100) / 100 })),

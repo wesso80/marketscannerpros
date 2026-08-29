@@ -78,6 +78,14 @@ export default function CompositeBreakdown({ v2, compact = false }: { v2: Compos
             Liquidity ×{v2.liquidityMultiplier.toFixed(2)}
           </span>
         ) : null}
+        {v2.catalyst && v2.catalyst.earningsInDays != null && v2.catalyst.earningsInDays <= 5 ? (
+          <span
+            className="rounded border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-300"
+            title="Scheduled earnings within days — elevated event risk; outcome is not predicted"
+          >
+            {v2.catalyst.earningsInDays === 0 ? 'Earnings today' : v2.catalyst.earningsInDays === 1 ? 'Earnings tomorrow' : `Earnings in ${v2.catalyst.earningsInDays}d`}
+          </span>
+        ) : null}
         {!compact && contributions.length > 0 ? (
           <button
             type="button"
