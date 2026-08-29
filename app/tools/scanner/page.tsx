@@ -16,6 +16,7 @@ import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
 import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
+import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -465,6 +466,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
             </div>
 
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
+            {row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
             {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
@@ -539,6 +541,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               )}
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
+            {row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} /> : null}
             {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
