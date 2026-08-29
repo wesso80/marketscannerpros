@@ -529,3 +529,102 @@ export async function getFullSymbolData(symbol: string): Promise<{
 
   return { quote, indicators };
 }
+
+/** Map a quotes_latest row to QuoteData (shared by single + bulk readers). */
+function mapQuoteRow(row: any): QuoteData {
+  return {
+    symbol: row.symbol,
+    price: parseFloat(row.price),
+    open: parseFloat(row.open),
+    high: parseFloat(row.high),
+    low: parseFloat(row.low),
+    prevClose: parseFloat(row.prev_close),
+    volume: row.volume,
+    changeAmt: parseFloat(row.change_amount),
+    changePct: parseFloat(row.change_percent),
+    latestDay: row.latest_trading_day,
+    fetchedAt: row.fetched_at,
+    source: 'database',
+  };
+}
+
+/** Map an indicators_latest row to IndicatorData (shared by single + bulk readers). */
+function mapIndicatorRow(row: any): IndicatorData {
+  return {
+    symbol: row.symbol,
+    timeframe: row.timeframe,
+    rsi14: row.rsi14 != null ? parseFloat(row.rsi14) : undefined,
+    macdLine: row.macd_line != null ? parseFloat(row.macd_line) : undefined,
+    macdSignal: row.macd_signal != null ? parseFloat(row.macd_signal) : undefined,
+    macdHist: row.macd_hist != null ? parseFloat(row.macd_hist) : undefined,
+    ema9: row.ema9 != null ? parseFloat(row.ema9) : undefined,
+    ema20: row.ema20 != null ? parseFloat(row.ema20) : undefined,
+    ema50: row.ema50 != null ? parseFloat(row.ema50) : undefined,
+    ema200: row.ema200 != null ? parseFloat(row.ema200) : undefined,
+    sma20: row.sma20 != null ? parseFloat(row.sma20) : undefined,
+    sma50: row.sma50 != null ? parseFloat(row.sma50) : undefined,
+    sma200: row.sma200 != null ? parseFloat(row.sma200) : undefined,
+    atr14: row.atr14 != null ? parseFloat(row.atr14) : undefined,
+    adx14: row.adx14 != null ? parseFloat(row.adx14) : undefined,
+    plusDI: row.plus_di != null ? parseFloat(row.plus_di) : undefined,
+    minusDI: row.minus_di != null ? parseFloat(row.minus_di) : undefined,
+    stochK: row.stoch_k != null ? parseFloat(row.stoch_k) : undefined,
+    stochD: row.stoch_d != null ? parseFloat(row.stoch_d) : undefined,
+    cci20: row.cci20 != null ? parseFloat(row.cci20) : undefined,
+    bbUpper: row.bb_upper != null ? parseFloat(row.bb_upper) : undefined,
+    bbMiddle: row.bb_middle != null ? parseFloat(row.bb_middle) : undefined,
+    bbLower: row.bb_lower != null ? parseFloat(row.bb_lower) : undefined,
+    obv: row.obv,
+    vwap: row.vwap != null ? parseFloat(row.vwap) : undefined,
+    vwapIntraday: row.vwap_intraday != null ? parseFloat(row.vwap_intraday) : undefined,
+    mfi14: row.mfi14 != null ? parseFloat(row.mfi14) : undefined,
+    atrPercent14: row.atr_percent14 != null ? parseFloat(row.atr_percent14) : undefined,
+    bbWidthPercent20: row.bb_width_percent20 != null ? parseFloat(row.bb_width_percent20) : undefined,
+    inSqueeze: row.in_squeeze,
+    squeezeStrength: row.squeeze_strength,
+    willr14: row.willr14 != null ? parseFloat(row.willr14) : undefined,
+    natr14: row.natr14 != null ? parseFloat(row.natr14) : undefined,
+    ad: row.ad_line != null ? parseFloat(row.ad_line) : undefined,
+    roc12: row.roc12 != null ? parseFloat(row.roc12) : undefined,
+    bop: row.bop != null ? parseFloat(row.bop) : undefined,
+    warmup: row.warmup_json && typeof row.warmup_json === 'string'
+      ? JSON.parse(row.warmup_json)
+      : row.warmup_json || undefined,
+    computedAt: row.computed_at,
+    source: 'database',
+  };
+}
+
+/**
+ * Bulk DB-only reader: fetch quotes + indicators for MANY symbols in exactly
+ * TWO queries (no per-symbol Redis/DB round-trips, no live Alpha Vantage
+ * fallback). Built for the scanner's hot path so a whole universe reads from the
+ * worker-populated cache in one shot instead of hundreds of round-trips.
+ */
+export async function getBulkFullSymbolDataFromDB(
+  symbols: string[],
+  timeframe: string = 'daily',
+): Promise<Map<string, { quote: QuoteData | null; indicators: IndicatorData | null }>> {
+  const out = new Map<string, { quote: QuoteData | null; indicators: IndicatorData | null }>();
+  const syms = Array.from(new Set(symbols.map((s) => s.toUpperCase().trim()).filter(Boolean)));
+  if (syms.length === 0) return out;
+
+  try {
+    const [quoteRows, indRows] = await Promise.all([
+      q<any>(`SELECT * FROM quotes_latest WHERE symbol = ANY($1)`, [syms]),
+      q<any>(`SELECT * FROM indicators_latest WHERE symbol = ANY($1) AND timeframe = $2`, [syms, timeframe]),
+    ]);
+
+    const quoteMap = new Map<string, QuoteData>();
+    for (const row of quoteRows) quoteMap.set(String(row.symbol).toUpperCase(), mapQuoteRow(row));
+    const indMap = new Map<string, IndicatorData>();
+    for (const row of indRows) indMap.set(String(row.symbol).toUpperCase(), mapIndicatorRow(row));
+
+    for (const s of syms) {
+      out.set(s, { quote: quoteMap.get(s) ?? null, indicators: indMap.get(s) ?? null });
+    }
+  } catch (err) {
+    console.warn('[onDemandFetch] getBulkFullSymbolDataFromDB failed:', err);
+  }
+  return out;
+}

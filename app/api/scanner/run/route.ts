@@ -5,7 +5,7 @@ import { scannerLimiter, getClientIP } from "@/lib/rateLimit";
 import { avCircuit } from "@/lib/circuitBreaker";
 import { avTakeToken } from "@/lib/avRateGovernor";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
-import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
+import { getCachedScanData, getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from "@/lib/scannerCache";
 import { verifyCronAuth } from "@/lib/adminAuth";
 import { isFreeForAllMode, getEffectiveTier } from "@/lib/entitlements";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
@@ -1698,6 +1698,16 @@ export async function POST(req: NextRequest) {
       bulkPriceMap = await fetchBulkQuotes(equitySymbols);
     }
 
+    // Bulk-load cached indicators for ALL equities in TWO DB queries (no per-
+    // symbol Redis/DB round-trips, no live Alpha Vantage fallback). The scan
+    // then reads the worker-populated cache from memory instead of hundreds of
+    // round-trips — this is the main scan-latency fix.
+    let bulkEquityCache: Map<string, CachedScanData> = new Map();
+    if (type === 'equity' && shouldUseCache() && equitySymbols.length > 0) {
+      bulkEquityCache = await getBulkCachedScanDataFast(equitySymbols);
+      console.info(`[scanner] Bulk equity cache: ${bulkEquityCache.size}/${equitySymbols.length} symbols ready (2 queries)`);
+    }
+
     // PRE-FETCH: Benchmark change % for relative strength (non-blocking)
     let benchmarkChangePct = 0;
     const benchmarkName = type === 'crypto' ? 'BTC' : 'SPY';
@@ -2110,7 +2120,8 @@ export async function POST(req: NextRequest) {
           let cachedData: CachedScanData | null = null;
           
           if (useCache) {
-            cachedData = await getCachedScanData(sym);
+            // Read from the bulk-preloaded map (already fetched in 2 queries).
+            cachedData = bulkEquityCache.get(sym.toUpperCase()) ?? null;
           }
           
           if (cachedData) {
@@ -2221,10 +2232,11 @@ export async function POST(req: NextRequest) {
 
             results.push(item);
             
-          } else if (canFallbackToAV()) {
-            // Fallback to Alpha Vantage with ONE candle-series call, then compute indicators locally.
-            // This avoids per-indicator API fanout and dramatically reduces rate-limit failures.
-            console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage candles (${avInterval}) - ${getCacheMode()} mode`);
+          } else if (canFallbackToAV() && bulkEquityCache.size === 0) {
+            // Only hit live Alpha Vantage when the worker cache is entirely cold
+            // (worker down / cold start). When the cache is warm we rely on it
+            // and skip uncached symbols rather than issuing slow per-symbol AV
+            // fetches — this is what keeps the scan fast.
 
             const seriesUrl = avInterval === "daily"
               ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(sym)}&outputsize=full&entitlement=realtime&apikey=${ALPHA_KEY}`

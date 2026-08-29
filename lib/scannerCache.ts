@@ -12,7 +12,7 @@
 import { q } from '@/lib/db';
 import { getCached, CACHE_KEYS } from '@/lib/redis';
 import { shouldUseCache, canFallbackToAV, getCacheMode } from '@/lib/cacheMode';
-import { getQuote, getIndicators, getFullSymbolData } from '@/lib/onDemandFetch';
+import { getQuote, getIndicators, getFullSymbolData, getBulkFullSymbolDataFromDB } from '@/lib/onDemandFetch';
 
 export interface CachedScanData {
   price: number;
@@ -83,70 +83,89 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
     const q = data.quote;
     const ind = data.indicators;
 
-    // Check we have minimum required indicators
-    if (!ind?.rsi14 && !ind?.ema200) {
+    const result = buildCachedScanData(
+      q as any,
+      ind as unknown as Record<string, number | boolean | null | undefined> | null,
+    );
+    if (result) {
+      console.log(`[scannerCache] ${symbol} served from ${result.source} (${getCacheMode()} mode)`);
+    } else {
       console.log(`[scannerCache] Insufficient indicator data for ${symbol}`);
-      return null;
     }
-
-    // B10 FIX: Use 0 instead of NaN for missing indicators.
-    // NaN propagates through all arithmetic (NaN + 5 = NaN), corrupting composite scores.
-    const safeNum = (v: number | null | undefined): number =>
-      v != null && Number.isFinite(v) ? v : 0;
-
-    const result: CachedScanData = {
-      price: q.price,
-      rsi: safeNum(ind?.rsi14),
-      macdLine: safeNum(ind?.macdLine),
-      macdSignal: safeNum(ind?.macdSignal),
-      macdHist: safeNum(ind?.macdHist),
-      ema9: ind?.ema9 != null ? ind.ema9 : undefined,
-      ema20: ind?.ema20 != null ? ind.ema20 : undefined,
-      ema50: ind?.ema50 != null ? ind.ema50 : undefined,
-      ema200: safeNum(ind?.ema200),
-      sma20: ind?.sma20 != null ? ind.sma20 : undefined,
-      sma50: ind?.sma50 != null ? ind.sma50 : undefined,
-      sma200: ind?.sma200 != null ? ind.sma200 : undefined,
-      atr: safeNum(ind?.atr14),
-      adx: safeNum(ind?.adx14),
-      plusDI: ind?.plusDI != null ? ind.plusDI : undefined,
-      minusDI: ind?.minusDI != null ? ind.minusDI : undefined,
-      stochK: safeNum(ind?.stochK),
-      stochD: safeNum(ind?.stochD),
-      cci: safeNum(ind?.cci20),
-      aroonUp: safeNum((ind as unknown as Record<string, number | undefined>)?.aroonUp),
-      aroonDown: safeNum((ind as unknown as Record<string, number | undefined>)?.aroonDown),
-      bbUpper: ind?.bbUpper != null ? ind.bbUpper : undefined,
-      bbMiddle: ind?.bbMiddle != null ? ind.bbMiddle : undefined,
-      bbLower: ind?.bbLower != null ? ind.bbLower : undefined,
-      bbWidthPercent: ind?.bbWidthPercent20 != null ? ind.bbWidthPercent20 : undefined,
-      inSqueeze: ind?.inSqueeze != null ? ind.inSqueeze : undefined,
-      squeezeStrength: ind?.squeezeStrength != null ? ind.squeezeStrength : undefined,
-      volume: Number.isFinite(q.volume) && q.volume > 0 ? q.volume : undefined,
-      obv: ind?.obv != null ? ind.obv : undefined,
-      vwap: ind?.vwap != null ? ind.vwap : undefined,
-      mfi: ind?.mfi14 != null ? ind.mfi14 : undefined,
-      atrPercent: ind?.atrPercent14 != null ? ind.atrPercent14 : undefined,
-      willr: ind?.willr14 != null ? ind.willr14 : undefined,
-      natr: ind?.natr14 != null ? ind.natr14 : undefined,
-      ad: ind?.ad != null ? ind.ad : undefined,
-      roc: ind?.roc12 != null ? ind.roc12 : undefined,
-      bop: ind?.bop != null ? ind.bop : undefined,
-      changePct: q.changePct != null ? q.changePct : undefined,
-      open: q.open != null && q.open > 0 ? q.open : undefined,
-      high: q.high != null && q.high > 0 ? q.high : undefined,
-      low: q.low != null && q.low > 0 ? q.low : undefined,
-      prevClose: q.prevClose != null && q.prevClose > 0 ? q.prevClose : undefined,
-      source: q.source === 'live' ? 'database' : q.source,
-    };
-
-    console.log(`[scannerCache] ${symbol} served from ${result.source} (${getCacheMode()} mode)`);
     return result;
 
   } catch (err) {
     console.warn(`[scannerCache] Error fetching cached data for ${symbol}:`, err);
     return null;
   }
+}
+
+/**
+ * Assemble a CachedScanData from a raw quote + indicators pair. Pure — no I/O.
+ * Shared by the single-symbol and bulk cache readers so the mapping never drifts.
+ * Returns null when the quote price or minimum indicators are missing.
+ */
+export function buildCachedScanData(
+  q: { price?: number; volume?: number; changePct?: number; open?: number; high?: number; low?: number; prevClose?: number; source?: string } | null,
+  ind: Record<string, number | boolean | null | undefined> | null,
+): CachedScanData | null {
+  if (!q?.price) return null;
+  // Check we have minimum required indicators
+  if (!ind?.rsi14 && !ind?.ema200) return null;
+
+  // B10 FIX: Use 0 instead of NaN for missing indicators.
+  // NaN propagates through all arithmetic (NaN + 5 = NaN), corrupting composite scores.
+  const safeNum = (v: number | boolean | null | undefined): number =>
+    typeof v === 'number' && Number.isFinite(v) ? v : 0;
+  const optNum = (v: number | boolean | null | undefined): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+
+  const result: CachedScanData = {
+    price: q.price,
+    rsi: safeNum(ind?.rsi14),
+    macdLine: safeNum(ind?.macdLine),
+    macdSignal: safeNum(ind?.macdSignal),
+    macdHist: safeNum(ind?.macdHist),
+    ema9: optNum(ind?.ema9),
+    ema20: optNum(ind?.ema20),
+    ema50: optNum(ind?.ema50),
+    ema200: safeNum(ind?.ema200),
+    sma20: optNum(ind?.sma20),
+    sma50: optNum(ind?.sma50),
+    sma200: optNum(ind?.sma200),
+    atr: safeNum(ind?.atr14),
+    adx: safeNum(ind?.adx14),
+    plusDI: optNum(ind?.plusDI),
+    minusDI: optNum(ind?.minusDI),
+    stochK: safeNum(ind?.stochK),
+    stochD: safeNum(ind?.stochD),
+    cci: safeNum(ind?.cci20),
+    aroonUp: safeNum(ind?.aroonUp),
+    aroonDown: safeNum(ind?.aroonDown),
+    bbUpper: optNum(ind?.bbUpper),
+    bbMiddle: optNum(ind?.bbMiddle),
+    bbLower: optNum(ind?.bbLower),
+    bbWidthPercent: optNum(ind?.bbWidthPercent20),
+    inSqueeze: typeof ind?.inSqueeze === 'boolean' ? ind.inSqueeze : undefined,
+    squeezeStrength: optNum(ind?.squeezeStrength),
+    volume: typeof q.volume === 'number' && Number.isFinite(q.volume) && q.volume > 0 ? q.volume : undefined,
+    obv: optNum(ind?.obv),
+    vwap: optNum(ind?.vwap),
+    mfi: optNum(ind?.mfi14),
+    atrPercent: optNum(ind?.atrPercent14),
+    willr: optNum(ind?.willr14),
+    natr: optNum(ind?.natr14),
+    ad: optNum(ind?.ad),
+    roc: optNum(ind?.roc12),
+    bop: optNum(ind?.bop),
+    changePct: q.changePct != null ? q.changePct : undefined,
+    open: q.open != null && q.open > 0 ? q.open : undefined,
+    high: q.high != null && q.high > 0 ? q.high : undefined,
+    low: q.low != null && q.low > 0 ? q.low : undefined,
+    prevClose: q.prevClose != null && q.prevClose > 0 ? q.prevClose : undefined,
+    source: q.source === 'live' ? 'database' : ((q.source as CachedScanData['source']) ?? 'database'),
+  };
+  return result;
 }
 
 /**
@@ -174,5 +193,31 @@ export async function getBulkCachedScanData(symbols: string[]): Promise<Map<stri
   }
 
   console.log(`[scannerCache] Got cached data for ${results.size}/${symbols.length} symbols`);
+  return results;
+}
+
+/**
+ * FAST bulk read: assemble CachedScanData for many symbols using exactly TWO
+ * database queries (via getBulkFullSymbolDataFromDB) — no per-symbol Redis/DB
+ * round-trips and no live Alpha Vantage fallback. This is the scanner hot-path
+ * reader: a whole universe reads from the worker-populated cache in one shot.
+ * Symbols without cached data are simply absent from the returned map.
+ */
+export async function getBulkCachedScanDataFast(
+  symbols: string[],
+  timeframe: string = 'daily',
+): Promise<Map<string, CachedScanData>> {
+  const results = new Map<string, CachedScanData>();
+  if (!shouldUseCache() || symbols.length === 0) return results;
+
+  const raw = await getBulkFullSymbolDataFromDB(symbols, timeframe);
+  for (const [symbol, data] of raw) {
+    const built = buildCachedScanData(
+      data.quote as any,
+      data.indicators as unknown as Record<string, number | boolean | null | undefined> | null,
+    );
+    if (built) results.set(symbol.toUpperCase(), built);
+  }
+  console.log(`[scannerCache] FAST bulk read: ${results.size}/${symbols.length} symbols from DB in 2 queries`);
   return results;
 }
