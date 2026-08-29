@@ -74,8 +74,9 @@ export interface FactorInput {
 export const REGIME_WEIGHTS_V2: Record<ScoreRegime, Record<ScoreFactor, number>> = {
   // Trend: reward directional persistence, relative strength, participation.
   trending: { TREND: 0.28, MOMENTUM: 0.16, VOLUME: 0.12, RELATIVE_STRENGTH: 0.20, VOLATILITY: 0.06, POSITIONING: 0.06, QUALITY: 0.08, CATALYST: 0.04 },
-  // Range: reward mean-reversion oscillators + volatility-state, discount trend.
-  ranging: { TREND: 0.10, MOMENTUM: 0.24, VOLUME: 0.12, RELATIVE_STRENGTH: 0.12, VOLATILITY: 0.20, POSITIONING: 0.08, QUALITY: 0.10, CATALYST: 0.04 },
+  // Range: directional momentum is unreliable — prize volatility-state (squeeze/
+  // compression) and relative strength; discount raw trend + momentum.
+  ranging: { TREND: 0.12, MOMENTUM: 0.12, VOLUME: 0.14, RELATIVE_STRENGTH: 0.18, VOLATILITY: 0.22, POSITIONING: 0.08, QUALITY: 0.10, CATALYST: 0.04 },
   // Compression: the pre-expansion setup — volatility state and participation lead.
   compression: { TREND: 0.12, MOMENTUM: 0.12, VOLUME: 0.18, RELATIVE_STRENGTH: 0.14, VOLATILITY: 0.26, POSITIONING: 0.06, QUALITY: 0.08, CATALYST: 0.04 },
   // Expansion: trend + momentum + participation confirm the move.
