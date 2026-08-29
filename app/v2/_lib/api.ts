@@ -121,6 +121,14 @@ export interface ScanResult {
   };
   capitalFlow?: any;
   insight?: ScannerInsight;
+  compositeV2?: {
+    composite: number;
+    direction: 'bullish' | 'bearish' | 'neutral';
+    percentileRank: number;
+    regime: string;
+    liquidityMultiplier: number;
+    factorContributions: { factor: string; weight: number; signed: number }[];
+  };
   scoreV2?: {
     regime: { label: string; confidence: number };
     regimeScore: { weightedScore: number; tradeBias: string; gated: boolean };

@@ -253,6 +253,14 @@ function isRegimeCompatibleForRegime(r: ScanResult, regime: string): boolean {
 
 /* ─── Phase 2: Regime-Weighted MSP Score ─── */
 function computeMspScore(r: ScanResult, regime: string): number {
+  // MSP Composite v2 (cross-sectional, regime-conditional, evidence/freshness/
+  // liquidity-gated) is the ranking score when the route provides it. Regime
+  // gating still applies. Falls back to the legacy regime-weighted blend.
+  if (r.compositeV2 && Number.isFinite(r.compositeV2.composite)) {
+    const base = Math.min(100, Math.max(0, r.compositeV2.composite));
+    if (r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, base * 0.4));
+    return Math.round(base);
+  }
   const regimeKey = normalizeRegimeKey(regime);
   const w = REGIME_WEIGHTS[regimeKey] || REGIME_WEIGHTS.trend;
   // Normalize each component to 0-100 scale.

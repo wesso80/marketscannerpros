@@ -2859,18 +2859,26 @@ export async function POST(req: NextRequest) {
       console.warn('[scanner] composite v2 pass failed (non-fatal):', v2Err);
     }
 
-    // Return only the top 5 results by score
-    results.sort((a, b) => b.score - a.score);
-    if (results.length > 5) {
-      results.length = 5;
+    // Rank by the MSP Composite v2 (cross-sectional, regime-conditional,
+    // evidence/freshness/liquidity-gated) when available, falling back to the
+    // raw conviction score. Return the top 10.
+    results.sort((a, b) => {
+      const av = a.compositeV2?.composite ?? a.score;
+      const bv = b.compositeV2?.composite ?? b.score;
+      if (bv !== av) return bv - av;
+      return b.score - a.score;
+    });
+    if (results.length > 10) {
+      results.length = 10;
     }
 
-    const leaderScore = results[0]?.score ?? 0;
+    const rankValueOf = (r: ScanResult) => r.compositeV2?.composite ?? r.score;
+    const leaderScore = results[0] ? rankValueOf(results[0]) : 0;
     results.forEach((result, index) => {
       result.rankExplanation = buildScannerRankExplanation({
         rank: index + 1,
         symbol: result.symbol,
-        score: result.score,
+        score: rankValueOf(result),
         topScore: leaderScore,
         direction: result.direction,
         scoreQuality: result.scoreQuality,
