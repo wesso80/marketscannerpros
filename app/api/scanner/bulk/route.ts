@@ -22,7 +22,7 @@ import {
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { getBulkCachedScanData, CachedScanData } from '@/lib/scannerCache';
+import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
@@ -1762,6 +1762,8 @@ function computeFullScore(data: CachedScanData): {
       obv: data.obv != null && Number.isFinite(data.obv) ? data.obv : undefined,
       vwap: data.vwap != null && Number.isFinite(data.vwap) ? data.vwap : undefined,
       mfi: data.mfi != null && Number.isFinite(data.mfi) ? data.mfi : undefined,
+      squeeze: typeof data.inSqueeze === 'boolean' ? data.inSqueeze : undefined,
+      squeezeStrength: data.squeezeStrength != null && Number.isFinite(data.squeezeStrength) ? data.squeezeStrength : undefined,
     },
   };
 }
@@ -1772,7 +1774,9 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   // Read pre-cached indicators for the full equity universe (DB-backed)
   const equityUniverse = await getUniverseFromDB('equity');
   const symbolsToScan = equityUniverse.slice(0, Math.max(30, universeSize));
-  const cacheMap = await getBulkCachedScanData(symbolsToScan);
+  // FAST bulk read: whole universe from the worker cache in TWO DB queries
+  // (no per-symbol round-trips, no live AV fallback).
+  const cacheMap = await getBulkCachedScanDataFast(symbolsToScan);
 
   // Also grab AV top movers to enrich bias (1 API call — worth it for fresh context)
   const moverData = await fetchAlphaTopMovers();
@@ -1805,16 +1809,8 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   const scored: Array<ReturnType<typeof computeFullScore> & { symbol: string; change24h: number }> = [];
   for (const [symbol, cached] of cacheMap.entries()) {
     const result = computeFullScore(cached);
-    // Try to get daily change from quotes_latest
-    let change24h = 0;
-    try {
-      const rows = await dbQuery<{ change_percent: string }>(
-        `SELECT change_percent FROM quotes_latest WHERE symbol = $1`,
-        [symbol]
-      );
-      if (rows.length > 0) change24h = parseFloat(rows[0].change_percent) || 0;
-    } catch { /* non-fatal */ }
-
+    // Daily change comes straight from the cached quote (no extra query).
+    const change24h = typeof cached.changePct === 'number' && Number.isFinite(cached.changePct) ? cached.changePct : 0;
     scored.push({ ...result, symbol, change24h });
   }
 
@@ -1828,8 +1824,14 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     }
   }
 
-  // Fetch chartData from ohlcv_bars for each scored result
+  // Fetch chartData from ohlcv_bars — ONLY for the top candidates (bounded I/O).
+  // Scoring already ranks from the cached snapshot, so we enrich the leaders
+  // rather than issuing a per-symbol bar query for the whole universe.
+  const enrichSet = new Set(
+    [...scored].sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50)).slice(0, 12).map((s) => s.symbol),
+  );
   for (const item of scored) {
+    if (!enrichSet.has(item.symbol)) continue;
     try {
       const barRows = await dbQuery<{ ts: string; open: number; high: number; low: number; close: number; volume: number }>(
         `SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 50`,
@@ -1898,6 +1900,28 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
           rsi: rsiArr,
           macd: macdChartArr,
         };
+
+        // Squeeze, momentum acceleration, and volume from bars (top candidates
+        // only) so the displayed rows show these columns even when the cached
+        // snapshot lacks them.
+        const barsForSignals: OHLCVBar[] = sorted.map((r) => ({
+          timestamp: typeof r.ts === 'string' ? r.ts : new Date(r.ts).toISOString(),
+          open: Number(r.open), high: Number(r.high), low: Number(r.low), close: Number(r.close),
+          volume: Number(r.volume) || 0,
+        }));
+        const sqRes = detectSqueeze(barsForSignals);
+        if (sqRes) {
+          (item as any).indicators.squeeze = sqRes.inSqueeze;
+          (item as any).indicators.squeezeStrength = sqRes.squeezeStrength;
+        }
+        const accRes = detectMomentumAcceleration(barsForSignals);
+        if (accRes) {
+          (item as any).indicators.momentumAccel = accRes.accelerating;
+          (item as any).indicators.momentumAccelScore = accRes.score;
+          (item as any).indicators.momentumAccelDir = accRes.direction;
+        }
+        const lastBarVol = bVolumes[bVolumes.length - 1];
+        if (Number.isFinite(lastBarVol) && lastBarVol > 0) (item as any).indicators.volume = lastBarVol;
       }
     } catch { /* non-fatal — chart will fall back on client */ }
   }
