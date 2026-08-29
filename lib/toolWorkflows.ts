@@ -17,11 +17,9 @@ export type ToolWorkflow = {
 };
 
 export const primaryNavTools = [
-  { href: '/tools/dashboard', label: 'Dashboard' },
-  { href: '/tools', label: 'Workflow' },
+  { href: '/tools/command-center', label: 'Command Center' },
   { href: '/tools/scanner', label: 'Scanner' },
   { href: '/tools/golden-egg', label: 'Golden Egg' },
-  { href: '/tools/terminal', label: 'Terminal' },
   { href: '/tools/explorer', label: 'Markets' },
   { href: '/tools/research', label: 'Research' },
   { href: '/tools/workspace', label: 'Workspace' },

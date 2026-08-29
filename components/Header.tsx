@@ -9,18 +9,17 @@ import { primaryNavTools, secondaryToolLinks } from '@/lib/toolWorkflows';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MSP v2 Header — Matches Full Site Map
-   Always shows: 7 surface buttons + Pricing / Referrals / Account
+   Always shows: 6 surface buttons + All tools / Pricing / Account
    Right side changes: Sign In (logged out) vs Tier badge + Sign Out (logged in)
    Mobile: Hamburger → flat drawer with same links
-   ═══════════════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════════════════════════════════════ */
 
 const SURFACES = primaryNavTools;
 
 const MORE_TOOLS = [
-  ...secondaryToolLinks.map((tool) => ({ href: tool.href, label: tool.label })),
   { href: '/tools/terminal', label: 'Terminal' },
-  { href: '/tools/explorer', label: 'Explorer' },
-  { href: '/tools/research', label: 'Research' },
+  ...secondaryToolLinks.map((tool) => ({ href: tool.href, label: tool.label })),
+  { href: '/tools', label: 'All Tools' },
   { href: '/compliance-hub', label: 'Compliance Hub' },
 ];
 
@@ -77,7 +76,7 @@ export default function Header() {
       <div className={`mx-auto flex max-w-none items-center justify-between ${isAppRoute ? 'h-12 px-3' : 'h-14 px-4'}`}>
 
         {/* Logo */}
-        <Link href={isLoggedIn ? '/tools/dashboard' : '/'} className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-4">
+        <Link href={isLoggedIn ? '/tools/command-center' : '/'} className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-4">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
           <span className="msp-full-name">MarketScannerPros</span>
           <span className="msp-short-name">MSP</span>
@@ -85,7 +84,7 @@ export default function Header() {
 
         {/* ── Desktop Nav (md+) ── */}
         <nav className="msp-desktop-nav items-center gap-1 flex-1 text-sm">
-          {/* 7 Surface buttons — always visible */}
+          {/* 6 Surface buttons — always visible */}
           {SURFACES.map(s => (
             <Link
               key={s.href}
@@ -102,6 +101,7 @@ export default function Header() {
 
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
             <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
             {isLoggedIn && (
               <Link href="/tools/referrals" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
@@ -175,7 +175,7 @@ export default function Header() {
             <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
           </div>
 
-          {/* Drawer body — same 7 surfaces always shown */}
+          {/* Drawer body — same 6 surfaces always shown */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="flex flex-col gap-0.5">
               {SURFACES.map(s => (
