@@ -31,7 +31,7 @@ import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
 import { buildScannerRankExplanation, type ScannerRankExplanation } from "@/lib/scanner/rankExplanation";
 import { buildScannerInsight, assessEvidenceQuality, deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, resolveScoreRegime, type ScannerInsight, type FreshnessLevel } from "@/lib/analysis";
-import { getUpcomingEarningsMap, daysUntilEarnings } from "@/lib/scanner/earningsCalendar";
+import { peekEarningsMap, warmEarningsMap, daysUntilEarnings } from "@/lib/scanner/earningsCalendar";
 import { computeScannerDerivativesContribution, type ScannerDerivativesEvidenceStatus } from "@/lib/scanner/scoring";
 import { calculateScannerVwapSeries, scannerVwapModeFor } from "@/lib/scanner/vwap";
 
@@ -2794,7 +2794,12 @@ export async function POST(req: NextRequest) {
     try {
       let earningsMap: Map<string, string> = new Map();
       if (type === 'equity') {
-        try { earningsMap = await getUpcomingEarningsMap(); } catch { /* best-effort — proceed without catalysts */ }
+        // Non-blocking: use whatever is cached now and warm the cache in the
+        // background, so the scan never waits on the earnings-calendar fetch
+        // (which contends for an Alpha Vantage rate-limit token). Catalyst data
+        // appears from the next scan once the cache is warm.
+        warmEarningsMap();
+        earningsMap = peekEarningsMap();
       }
       const rsIndexRatios = results
         .map((r) => (r.enhancements as { relativeStrength?: { rs?: number } } | undefined)?.relativeStrength?.rs)

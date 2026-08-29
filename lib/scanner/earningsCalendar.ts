@@ -43,6 +43,21 @@ export async function getUpcomingEarningsMap(): Promise<Map<string, string>> {
   return inflight;
 }
 
+/** Return the currently-cached map immediately (empty if nothing cached yet).
+ *  Never blocks — safe to call inside the hot scan path. */
+export function peekEarningsMap(): Map<string, string> {
+  return cache?.map ?? new Map<string, string>();
+}
+
+/** Fire-and-forget: if the cache is missing or stale (and no fetch is already
+ *  running), kick off a refresh in the background. Never awaited by callers. */
+export function warmEarningsMap(): void {
+  const now = Date.now();
+  if (inflight) return;
+  if (cache && now - cache.ts < TTL_MS) return;
+  void getUpcomingEarningsMap();
+}
+
 /** Parse the AV EARNINGS_CALENDAR CSV into symbol → earliest report date. */
 export function parseEarningsCalendarCsv(csv: string): Map<string, string> {
   const map = new Map<string, string>();
