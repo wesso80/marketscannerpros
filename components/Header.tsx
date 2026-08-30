@@ -18,6 +18,7 @@ const SURFACES = primaryNavTools;
 
 const MORE_TOOLS = [
   { href: '/tools/terminal', label: 'Terminal' },
+  { href: '/intelligence', label: 'Intelligence' },
   ...secondaryToolLinks.map((tool) => ({ href: tool.href, label: tool.label })),
   { href: '/tools', label: 'All Tools' },
   { href: '/compliance-hub', label: 'Compliance Hub' },
@@ -102,6 +103,7 @@ export default function Header() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
+            <Link href="/intelligence" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Intelligence</Link>
             <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
             {isLoggedIn && (
               <Link href="/tools/referrals" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
