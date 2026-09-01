@@ -16,6 +16,7 @@ import { getFragilityResult as getMockFragility } from './mockData';
 import { computeFragility, type FragilityResult as EngineFragilityResult, FRAGILITY_SYMBOLS, type FragilitySymbol } from './engines/fragility';
 import { loadFragilityInput, PROVIDER_MAP, type DailySeriesResult } from './data/marketDataProvider';
 import type { FragilityDailyBar } from './engines/fragility';
+import { getMarketChartHistory } from '@/lib/coingecko';
 
 /** Representative instruments per rotation sector (display only). */
 const SECTOR_REPRESENTATIVE: Record<string, string> = {
@@ -188,11 +189,11 @@ async function fetchFredDaily(seriesId: string): Promise<DailySeriesResult> {
 }
 
 async function fetchCoinGeckoDaily(id: string): Promise<DailySeriesResult> {
-  const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=365&interval=daily`;
-  const r = await fetch(url, { cache: 'no-store' });
-  const j = (await r.json()) as { prices?: [number, number][] };
-  if (!j.prices) return { bars: null, provider: 'coingecko', error: 'no-prices' };
-  const bars: FragilityDailyBar[] = j.prices
+  // Reuse the licensed CoinGecko Pro client (pro-api endpoint, x-cg-pro-api-key
+  // header, circuit breaker + telemetry) rather than a second raw client.
+  const res = await getMarketChartHistory(id, 365);
+  if (!res?.prices?.length) return { bars: null, provider: 'coingecko', error: 'no-prices' };
+  const bars: FragilityDailyBar[] = res.prices
     .map(([ms, price]) => ({ date: new Date(ms).toISOString().slice(0, 10), close: price, high: price }))
     .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
   return { bars, provider: 'coingecko' };
