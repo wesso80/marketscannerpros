@@ -20,16 +20,20 @@ import { getMarketChartHistory } from '@/lib/coingecko';
 
 /** Representative instruments per rotation sector (display only). */
 const SECTOR_REPRESENTATIVE: Record<string, string> = {
-  Growth: 'QQQ / SOX / XLK',
-  'Small Caps': 'IWM',
-  Cyclicals: 'XLI / XLY / XLF',
+  GROWTH: 'QQQ / SOX / XLK',
+  'SMALL CAPS': 'IWM',
+  CYCLICALS: 'XLI / XLY / XLF',
   EM: 'EEM',
-  Crypto: 'BTC / ETH / TOTAL3',
-  Metals: 'GOLD / SILVER',
-  Commodities: 'COPPER / OIL',
-  Bonds: 'TLT',
-  Defensive: 'XLP / XLU',
+  CRYPTO: 'BTC / ETH / TOTAL3',
+  METALS: 'GOLD / SILVER',
+  COMMODITIES: 'COPPER / OIL',
+  BONDS: 'TLT',
+  DEFENSIVE: 'XLP / XLU',
 };
+
+function pct(v: number): string {
+  return Number.isFinite(v) ? `${v >= 0 ? '+' : ''}${v.toFixed(2)}%` : '—';
+}
 
 function healthLabel(v: number): string {
   if (v >= 65) return 'HEALTHY';
@@ -93,8 +97,8 @@ export function mapEngineToUi(e: EngineFragilityResult): UiFragilityResult {
     state: m.state,
     semantic: m.semantic,
     risk: 'OK',
-    detail: m.key,
-    trend: '—',
+    detail: m.detail,
+    trend: m.trend,
   }));
 
   const radar: RotationItem[] = e.radar.map((r) => ({
@@ -103,8 +107,8 @@ export function mapEngineToUi(e: EngineFragilityResult): UiFragilityResult {
     state: r.state,
     semantic: r.semantic,
     representative: SECTOR_REPRESENTATIVE[r.sector] ?? '—',
-    m20: '—',
-    relSpy: '—',
+    m20: pct(r.m20),
+    relSpy: r.relSpy == null ? 'ABS' : pct(r.relSpy),
   }));
 
   const [rot1, rot2, rot3] = e.rotationTop;
@@ -115,7 +119,7 @@ export function mapEngineToUi(e: EngineFragilityResult): UiFragilityResult {
     healthSemantic: scoreSemantic(e.health),
     fragility: e.fragility.toFixed(2),
     transition: e.transition.toFixed(2),
-    divergence: e.divergence.toFixed(0),
+    divergence: e.divergence.toFixed(2),
     rotation: e.rotationRegime,
     verdict: e.verdict,
     verdictSemantic: e.verdictSemantic,
@@ -163,9 +167,27 @@ export function mapEngineToUi(e: EngineFragilityResult): UiFragilityResult {
 
 async function fetchAlphaVantageDaily(symbol: string): Promise<DailySeriesResult> {
   const key = process.env.ALPHA_VANTAGE_API_KEY;
+  // Unadjusted ("as traded") daily closes. This matches TradingView's default
+  // (dividend-unadjusted) chart data: empirically, adjusted closes overshoot
+  // HYG-driven Credit and Trend, whereas raw closes track TV's component scores.
   const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=full&apikey=${key}`;
   const r = await fetch(url, { cache: 'no-store' });
-  const j = (await r.json()) as { 'Time Series (Daily)'?: Record<string, Record<string, string>>; Note?: string; Information?: string };
+  const j = (await r.json()) as AlphaVantageDailyResponse;
+  return parseAlphaVantageDaily(j);
+}
+
+interface AlphaVantageDailyResponse {
+  'Time Series (Daily)'?: Record<string, Record<string, string>>;
+  Note?: string;
+  Information?: string;
+}
+
+/**
+ * Parse an Alpha Vantage TIME_SERIES_DAILY payload into unadjusted daily bars.
+ * Uses the raw "4. close" (not an adjusted close) to match TradingView's default
+ * chart series conceptually.
+ */
+export function parseAlphaVantageDaily(j: AlphaVantageDailyResponse): DailySeriesResult {
   const ts = j['Time Series (Daily)'];
   if (!ts) return { bars: null, provider: 'alpha-vantage', error: j.Note ?? j.Information ?? 'no-series' };
   const bars: FragilityDailyBar[] = Object.entries(ts)
@@ -179,7 +201,20 @@ async function fetchFredDaily(seriesId: string): Promise<DailySeriesResult> {
   const key = process.env.FRED_API_KEY;
   const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${encodeURIComponent(seriesId)}&api_key=${key}&file_type=json`;
   const r = await fetch(url, { cache: 'no-store' });
-  const j = (await r.json()) as { observations?: { date: string; value: string }[] };
+  const j = (await r.json()) as FredObservationsResponse;
+  return parseFredObservations(j);
+}
+
+interface FredObservationsResponse {
+  observations?: { date: string; value: string }[];
+}
+
+/**
+ * Parse FRED observations into daily bars, dropping missing values (FRED encodes
+ * holidays/gaps as "."). The engine's [20] lookback therefore counts 20 VALID
+ * observations, matching Pine's bar-offset semantics rather than calendar days.
+ */
+export function parseFredObservations(j: FredObservationsResponse): DailySeriesResult {
   if (!j.observations) return { bars: null, provider: 'fred', error: 'no-observations' };
   const bars: FragilityDailyBar[] = j.observations
     .map((o) => ({ date: o.date, close: Number(o.value), high: Number(o.value) }))
@@ -212,6 +247,9 @@ const LIVE_FETCHERS = {
   coingecko: fetchCoinGeckoDaily,
   derivedTotal3: fetchTotal3Derived,
 };
+
+// Exposed for the dev/test-only raw parity diagnostic; not used by production UI.
+export const fragilityLiveFetchers = LIVE_FETCHERS;
 
 export interface ResolvedFragility {
   ui: UiFragilityResult;

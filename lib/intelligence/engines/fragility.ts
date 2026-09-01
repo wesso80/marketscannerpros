@@ -76,6 +76,10 @@ export interface FragilityInternalMetric {
   value: number;
   state: string;
   semantic: SemanticState;
+  /** Short source context (e.g. "RSP vs SPY 20D"). Display-only. */
+  detail: string;
+  /** Trend classification of the underlying series (BULL/BEAR/MIXED/…). */
+  trend: string;
 }
 
 export interface RotationRadarResult {
@@ -83,6 +87,10 @@ export interface RotationRadarResult {
   score: number;
   state: string;
   semantic: SemanticState;
+  /** Representative symbol's 20D ROC (%). NaN when the series is missing. */
+  m20: number;
+  /** Representative 20D ROC relative to SPY (pp); null for absolute-return sectors. */
+  relSpy: number | null;
 }
 
 export interface FragilityResult {
@@ -345,6 +353,7 @@ export function computeFragility(
 
   // Re-derive the full component set + everything else at the current index.
   const tr = (s: FragilitySymbol) => trendScore(packs[s].c, packs[s].e20, packs[s].e50, packs[s].e200);
+  const ttext = (s: FragilitySymbol) => trendText(packs[s].c, packs[s].e50, packs[s].e200);
   const m20 = (s: FragilitySymbol) => packs[s].m20;
   const m60 = (s: FragilitySymbol) => packs[s].m60;
 
@@ -498,17 +507,36 @@ export function computeFragility(
   const rotState = (s: number) => (s >= 70 ? 'STRONG' : s >= 58 ? 'BUILDING' : s >= 45 ? 'MIXED' : s >= 32 ? 'WEAK' : 'EXITING');
 
   const internals: FragilityInternalMetric[] = [
-    { key: 'rsp', label: 'Equal Weight / SPY', value: round2(relRSP), state: rel(relRSP), semantic: relSem(relRSP) },
-    { key: 'iwm', label: 'Small Caps / SPY', value: round2(relIWM), state: rel(relIWM), semantic: relSem(relIWM) },
-    { key: 'sox', label: 'Semis / Nasdaq', value: round2(relSOXQ), state: rel(relSOXQ), semantic: relSem(relSOXQ) },
-    { key: 'hyg', label: 'High Yield / IG', value: round2(relHYGLQD), state: relHYGLQD >= 0 ? 'CONFIRM' : 'DIVERGE', semantic: relHYGLQD >= 0 ? 'positive' : 'negative' },
-    { key: 'vix', label: 'VIX Term', value: round2(Number.isNaN(vixTermPct) ? 0 : vixTermPct), state: vixBackwardation ? 'BACKWARD' : 'CONTANGO', semantic: vixBackwardation ? 'negative' : 'positive' },
-    { key: 'dxy', label: 'Dollar', value: round2(Number.isNaN(dxyM20) ? 0 : dxyM20), state: dxyM20 <= 0 ? 'TAILWIND' : 'HEADWIND', semantic: dxyM20 <= 0 ? 'positive' : 'negative' },
-    { key: 'us10', label: 'US 10Y Shock', value: round2(Number.isNaN(us10RiseBp) ? 0 : us10RiseBp), state: us10RiseBp > W.yieldWarnBp ? 'TIGHTEN' : 'OK', semantic: us10RiseBp > W.yieldWarnBp ? 'negative' : 'strong-positive' },
-    { key: 'cyc', label: 'Cyclical / Defensive', value: round2(relXLYXLP), state: rel(relXLYXLP), semantic: relSem(relXLYXLP) },
+    { key: 'rsp', label: 'Equal Weight / SPY', value: round2(relRSP), state: rel(relRSP), semantic: relSem(relRSP), detail: 'RSP vs SPY 20D', trend: ttext('RSP') },
+    { key: 'iwm', label: 'Small Caps / SPY', value: round2(relIWM), state: rel(relIWM), semantic: relSem(relIWM), detail: 'IWM vs SPY 20D', trend: ttext('IWM') },
+    { key: 'sox', label: 'Semis / Nasdaq', value: round2(relSOXQ), state: rel(relSOXQ), semantic: relSem(relSOXQ), detail: 'SOX vs QQQ 20D', trend: ttext('SOX') },
+    { key: 'hyg', label: 'High Yield / IG', value: round2(relHYGLQD), state: relHYGLQD >= 0 ? 'CONFIRM' : 'DIVERGE', semantic: relHYGLQD >= 0 ? 'positive' : 'negative', detail: `HYG 20D ${round2(hygM20)}%`, trend: ttext('HYG') },
+    { key: 'vix', label: 'VIX Term', value: round2(Number.isNaN(vixTermPct) ? 0 : vixTermPct), state: vixBackwardation ? 'BACKWARD' : 'CONTANGO', semantic: vixBackwardation ? 'negative' : 'positive', detail: `VIX 5D ${round2(vixM5)}%`, trend: vixBackwardation ? 'BEAR' : 'BULL' },
+    { key: 'dxy', label: 'Dollar', value: round2(Number.isNaN(dxyM20) ? 0 : dxyM20), state: dxyM20 <= 0 ? 'TAILWIND' : 'HEADWIND', semantic: dxyM20 <= 0 ? 'positive' : 'negative', detail: 'DXY 20D', trend: dxyM20 <= 0 ? 'BULL' : 'BEAR' },
+    { key: 'us10', label: 'US 10Y Shock', value: round2(Number.isNaN(us10RiseBp) ? 0 : us10RiseBp), state: us10RiseBp > W.yieldWarnBp ? 'TIGHTEN' : 'OK', semantic: us10RiseBp > W.yieldWarnBp ? 'negative' : 'strong-positive', detail: `2s10s ${Number.isNaN(curve) ? 'NA' : round2(curve * 100)}bp`, trend: 'RATES' },
+    { key: 'cyc', label: 'Cyclical / Defensive', value: round2(relXLYXLP), state: rel(relXLYXLP), semantic: relSem(relXLYXLP), detail: 'XLY vs XLP 20D', trend: ttext('XLY') },
   ];
 
-  const radar: RotationRadarResult[] = rotEntries.map((e) => ({ sector: e.name, score: round2(e.score), state: rotState(e.score), semantic: rotSem(e.score) }));
+  const radarMeta: Record<string, { m20: number; relSpy: number | null }> = {
+    GROWTH: { m20: m20('QQQ'), relSpy: m20('QQQ') - m20('SPY') },
+    'SMALL CAPS': { m20: m20('IWM'), relSpy: relIWM },
+    CYCLICALS: { m20: m20('XLI'), relSpy: relXLI },
+    EM: { m20: m20('EEM'), relSpy: relEEM },
+    CRYPTO: { m20: m20('BTC'), relSpy: relBTC },
+    METALS: { m20: m20('GOLD'), relSpy: null },
+    COMMODITIES: { m20: m20('COPPER'), relSpy: null },
+    BONDS: { m20: m20('TLT'), relSpy: m20('TLT') - m20('SPY') },
+    DEFENSIVE: { m20: m20('XLP'), relSpy: m20('XLP') - m20('SPY') },
+  };
+
+  const radar: RotationRadarResult[] = rotEntries.map((e) => ({
+    sector: e.name,
+    score: round2(e.score),
+    state: rotState(e.score),
+    semantic: rotSem(e.score),
+    m20: radarMeta[e.name]?.m20 ?? NaN,
+    relSpy: radarMeta[e.name]?.relSpy ?? null,
+  }));
 
   const calculatedAt = timestamp;
   const dataAge = Date.parse(calculatedAt) - Date.parse(input.dataAsOf);
