@@ -41,7 +41,16 @@ export default function FragilityPage() {
 
       {data && (
         <>
-          <SectionHeader title="Structure" right={<LastUpdatedBadge timestamp={updatedAt ?? undefined} />} />
+          <SectionHeader
+            title="Structure"
+            right={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <DataSourceBadge meta={data.meta} />
+                <LastUpdatedBadge timestamp={updatedAt ?? undefined} />
+              </span>
+            }
+          />
+          <DataQualityRow meta={data.meta} />
           <CommandStrip
             items={[
               { label: 'Health', value: data.health, semantic: data.healthSemantic },
@@ -117,5 +126,115 @@ function Note({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 
     <div style={{ marginTop: 16, padding: '18px 16px', borderRadius: 'var(--msp-radius-card)', border: '1px solid var(--msp-border)', background: 'var(--msp-panel)', fontSize: '0.85rem', color: tone === 'error' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' }}>
       {children}
     </div>
+  );
+}
+
+function DataQualityRow({ meta }: { meta?: FragilityResult['meta'] }) {
+  const dq = meta?.dataQuality;
+  const isMock = (meta?.sourceStatus ?? 'MOCK') === 'MOCK';
+  const parity = dq?.parityStatus ?? 'FORMULA_VALIDATED';
+  const parityLabel =
+    parity === 'FULL_PARITY' ? 'FULL PARITY' : parity === 'DATA_PARITY_PENDING' ? 'DATA PARITY PENDING' : 'FORMULA VALIDATED';
+  const parityColor = parity === 'FULL_PARITY' ? 'var(--msp-bull)' : parity === 'DATA_PARITY_PENDING' ? 'var(--msp-warn)' : 'var(--msp-accent)';
+
+  const dataLabel = isMock
+    ? 'MOCK · development fixture'
+    : meta?.isStale
+      ? 'STALE'
+      : meta?.sourceStatus === 'PARTIAL'
+        ? 'LIVE · PARTIAL'
+        : 'LIVE';
+
+  const segments = isMock
+    ? [`DATA: ${dataLabel}`]
+    : [
+        `DATA: ${dataLabel}`,
+        `COVERAGE: ${dq?.coveragePercent ?? 0}%`,
+        `EXACT: ${dq?.exactSeriesCount ?? 0}`,
+        `PROXY: ${dq?.proxySeriesCount ?? 0}`,
+        `MISSING: ${dq?.missingSeriesCount ?? 0}`,
+      ];
+
+  const detailTitle =
+    [
+      dq?.proxySymbols?.length ? `Proxy series: ${dq.proxySymbols.join(', ')}` : null,
+      dq?.missingSymbols?.length ? `Missing series: ${dq.missingSymbols.join(', ')}` : null,
+      meta?.providersUsed?.length ? `Providers: ${meta.providersUsed.join(', ')}` : null,
+      meta ? `Data as of ${meta.dataAsOf} · calculated ${meta.calculatedAt}` : null,
+    ]
+      .filter(Boolean)
+      .join(' | ') || 'Development fixture — no live series fetched.';
+
+  return (
+    <div
+      title={detailTitle}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 10,
+        margin: '2px 0 10px',
+        padding: '4px 10px',
+        borderRadius: 'var(--msp-radius-card)',
+        border: '1px solid var(--msp-border)',
+        background: 'var(--msp-panel)',
+        fontSize: '0.68rem',
+        fontWeight: 600,
+        letterSpacing: '0.03em',
+        color: 'var(--msp-text-muted)',
+        fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+      }}
+    >
+      <span style={{ opacity: 0.9 }}>{segments.join('  |  ')}</span>
+      <span
+        style={{
+          padding: '1px 7px',
+          borderRadius: 999,
+          border: `1px solid ${parityColor}`,
+          color: parityColor,
+          fontSize: '0.62rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+        }}
+      >
+        {parityLabel}
+      </span>
+    </div>
+  );
+}
+
+function DataSourceBadge({ meta }: { meta?: FragilityResult['meta'] }) {
+  // Default to MOCK when meta is absent so we never imply live data.
+  const status = meta?.sourceStatus ?? 'MOCK';
+  const isStale = meta?.isStale ?? false;
+  const label = isStale ? 'STALE' : status === 'OK' ? 'LIVE' : status === 'PARTIAL' ? 'LIVE · PARTIAL' : status;
+  const color = isStale
+    ? 'var(--msp-warn)'
+    : status === 'OK' || status === 'PARTIAL'
+      ? 'var(--msp-bull)'
+      : 'var(--msp-text-muted)';
+  const title = meta
+    ? `Source: ${status}${meta.providersUsed.length ? ` · ${meta.providersUsed.join(', ')}` : ''} · data as of ${meta.dataAsOf}`
+    : 'Development fixture (mock data)';
+  return (
+    <span
+      title={title}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '2px 8px',
+        borderRadius: 999,
+        border: `1px solid ${color}`,
+        color,
+        fontSize: '0.7rem',
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: color }} />
+      {label}
+    </span>
   );
 }

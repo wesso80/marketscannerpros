@@ -172,8 +172,17 @@ const MASTER_BUCKETS: Record<string, { bucket: 'context' | 'execution'; gateRequ
 // The Master page is now computed by the ported fusion engine
 // (lib/intelligence/engines/master.ts). Engine readings remain mock; the fusion
 // is real and parity-tested against TradingView.
-export function getMasterResult(): MasterResult {
-  const timestamp = nowIso();
+
+/**
+ * Build the five Master fusion inputs plus the per-engine component map.
+ * Exposed so callers (e.g. the Master API route) can swap an individual input
+ * — such as replacing the Fragility reading with a native LIVE engine result —
+ * without duplicating the mapping logic. This keeps a single source of truth.
+ */
+export function buildMasterInputs(timestamp: string): {
+  inputs: MasterEngineInput[];
+  componentsByKey: Map<string, EngineResult['components']>;
+} {
   const source = buildEngines(timestamp);
   const inputs: MasterEngineInput[] = source.map((e) => {
     const meta = MASTER_BUCKETS[e.engine];
@@ -193,9 +202,14 @@ export function getMasterResult(): MasterResult {
       trend: e.trend,
     };
   });
-
-  const master = computeMaster(inputs, undefined, timestamp);
   const componentsByKey = new Map(source.map((e) => [e.engine, e.components] as const));
+  return { inputs, componentsByKey };
+}
+
+export function getMasterResult(): MasterResult {
+  const timestamp = nowIso();
+  const { inputs, componentsByKey } = buildMasterInputs(timestamp);
+  const master = computeMaster(inputs, undefined, timestamp);
   master.engines = master.engines.map((e) => ({ ...e, components: componentsByKey.get(e.engine) }));
   return master;
 }
@@ -428,6 +442,23 @@ export function getFragilityResult(): FragilityResult {
       { sector: 'Bonds', score: 43.92, state: 'WEAK', semantic: 'warning', representative: 'TLT', m20: '0.4%', relSpy: '-3.57%' },
       { sector: 'Defensive', score: 37.53, state: 'WEAK', semantic: 'warning', representative: 'XLP / XLU', m20: '-0.46%', relSpy: '-4.42%' },
     ],
+    meta: {
+      isLive: false,
+      sourceStatus: 'MOCK',
+      calculatedAt: timestamp,
+      dataAsOf: timestamp,
+      isStale: false,
+      providersUsed: [],
+      dataQuality: {
+        coveragePercent: 0,
+        exactSeriesCount: 0,
+        proxySeriesCount: 0,
+        missingSeriesCount: 0,
+        proxySymbols: [],
+        missingSymbols: [],
+        parityStatus: 'FORMULA_VALIDATED',
+      },
+    },
   };
 }
 

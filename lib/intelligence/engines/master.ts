@@ -44,41 +44,48 @@ export interface MasterEngineInput {
 }
 
 export interface MasterConfig {
-  moduleLong: number;      // orientation ≥ → module dir LONG
-  moduleShort: number;     // orientation ≤ → module dir SHORT
-  biasBands: { min: number; label: string; dir: 1 | 0 | -1; semantic: SemanticState }[];
-  readyEdge: number;
-  watchEdge: number;
-  minAgreement: number;
+  moduleLong: number;       // orientation ≥ → module dir LONG (agreement)
+  moduleShort: number;      // orientation ≤ → module dir SHORT (agreement)
+  readyEdge: number;        // raw edge ≥ → edge gate PASS
+  watchEdge: number;        // display edge ≥ → PRE-EDGE (else NO EDGE)
+  minAgreement: number;     // agreement ≥ → agreement gate PASS
   structureRequired: number;
-  conflictGap: number;     // context vs execution gap → DIVERGENT
-  hardGap: number;         // + opposite blocks → HARD CONFLICT
-  hardFragility: number;   // structure orientation ≤ → NO NEW TRADE
-  reducedFragility: number;
+  // Conflict ladder (context vs execution gap).
+  gapMildTension: number;   // ≥ → MILD TENSION
+  gapDivergent: number;     // ≥ → DIVERGENT
+  gapHardConflict: number;  // ≥ → HARD CONFLICT
+  // Risk mode.
+  hardFragility: number;    // structure orientation ≤ → NO NEW TRADE
+  hardGap: number;          // gap ≥ → NO NEW TRADE
+  reducedFragility: number; // structure orientation ≤ → REDUCED SIZE
+  reducedAgreement: number; // agreement < → REDUCED SIZE
+  reducedGap: number;       // gap ≥ → REDUCED SIZE
+  // Ready-gate directional-support thresholds.
+  leadLagRequired: number;
+  pressureRequired: number;
+  auctionRequired: number;
   ladderRequired: { structure: number; leadLag: number; pressure: number; auction: number; agreement: number; edge: number };
 }
 
-// Defaults calibrated to reproduce the deployed 5-engine Master dashboard.
+// Deployed Master Command Centre v1.2 "Watch Zones" thresholds.
 export const MASTER_CONFIG: MasterConfig = {
   moduleLong: 55,
   moduleShort: 45,
-  biasBands: [
-    { min: 68, label: 'STRONG LONG', dir: 1, semantic: 'strong-positive' },
-    { min: 62, label: 'LONG', dir: 1, semantic: 'positive' },
-    { min: 55, label: 'LEAN LONG', dir: 1, semantic: 'positive' },
-    { min: 45, label: 'NEUTRAL', dir: 0, semantic: 'neutral' },
-    { min: 38, label: 'LEAN SHORT', dir: -1, semantic: 'warning' },
-    { min: 32, label: 'SHORT', dir: -1, semantic: 'negative' },
-    { min: -Infinity, label: 'STRONG SHORT', dir: -1, semantic: 'critical' },
-  ],
   readyEdge: 70,
   watchEdge: 55,
   minAgreement: 75,
   structureRequired: 58,
-  conflictGap: 20,
-  hardGap: 35,
+  gapMildTension: 12,
+  gapDivergent: 20,
+  gapHardConflict: 30,
   hardFragility: 28,
+  hardGap: 30,
   reducedFragility: 40,
+  reducedAgreement: 60,
+  reducedGap: 20,
+  leadLagRequired: 65,
+  pressureRequired: 60,
+  auctionRequired: 62,
   ladderRequired: { structure: 58, leadLag: 65, pressure: 60, auction: 62, agreement: 75, edge: 70 },
 };
 
@@ -102,11 +109,30 @@ function moduleDir(orientation: number, cfg: MasterConfig): ModuleDir {
   return 'NEUTRAL';
 }
 
-const DIR_SEMANTIC: Record<ModuleDir, SemanticState> = {
-  LONG: 'positive',
-  SHORT: 'negative',
-  NEUTRAL: 'neutral',
-};
+interface BiasBand {
+  label: string;
+  dir: 1 | 0 | -1;
+  full: boolean; // true only for LONG / SHORT — the states that may go READY
+  semantic: SemanticState;
+}
+
+// v1.2 bias ladder — exactly LONG / LEAN LONG / NEUTRAL / LEAN SHORT / SHORT.
+function classifyBias(composite: number): BiasBand {
+  if (composite >= 58) return { label: 'LONG', dir: 1, full: true, semantic: 'positive' };
+  if (composite >= 55) return { label: 'LEAN LONG', dir: 1, full: false, semantic: 'positive' };
+  if (composite > 45) return { label: 'NEUTRAL', dir: 0, full: false, semantic: 'neutral' };
+  if (composite > 42) return { label: 'LEAN SHORT', dir: -1, full: false, semantic: 'warning' };
+  return { label: 'SHORT', dir: -1, full: true, semantic: 'negative' };
+}
+
+// Per-engine orientation → display state (its own strong/long/neutral bands).
+function classifyEngineState(o: number): { label: string; semantic: SemanticState } {
+  if (o >= 68) return { label: 'Strong Long', semantic: 'strong-positive' };
+  if (o >= 56) return { label: 'Long', semantic: 'positive' };
+  if (o > 44) return { label: 'Neutral', semantic: 'neutral' };
+  if (o >= 32) return { label: 'Short', semantic: 'negative' };
+  return { label: 'Strong Short', semantic: 'critical' };
+}
 
 export function computeMaster(
   inputs: MasterEngineInput[],
@@ -118,7 +144,7 @@ export function computeMaster(
   const execution = weightedMean(inputs.filter((i) => i.bucket === 'execution'));
   const gap = Math.abs(context - execution);
 
-  const band = cfg.biasBands.find((b) => composite >= b.min) ?? cfg.biasBands[cfg.biasBands.length - 1];
+  const band = classifyBias(composite);
   const biasDir = band.dir;
 
   // Agreement: share of directional engines aligned with the composite bias.
@@ -138,38 +164,55 @@ export function computeMaster(
   const contextSupport = weightedMean(inputs.filter((i) => i.bucket === 'context').map((i) => ({ orientation: support(i.orientation), weight: i.weight })));
   const executionSupport = weightedMean(inputs.filter((i) => i.bucket === 'execution').map((i) => ({ orientation: support(i.orientation), weight: i.weight })));
 
-  const compositeEdge = biasDir === 0 ? 0 : clamp(contextSupport * 0.35 + executionSupport * 0.4 + agreement * 0.25, 0, 100);
+  const rawEdge = biasDir === 0 ? 0 : clamp(contextSupport * 0.35 + executionSupport * 0.4 + agreement * 0.25, 0, 100);
+  // Watch behaviour: a full bias (LONG/SHORT) reports the raw edge; a lean bias
+  // reports a PRE-EDGE tempered toward the composite (never forced to zero);
+  // neutral has no edge.
+  const displayEdge = biasDir === 0 ? 0 : band.full ? rawEdge : (rawEdge + composite) / 2;
+  const edgeReady = band.full && rawEdge >= cfg.readyEdge;
+  const edgeState = edgeReady ? 'EDGE' : displayEdge >= cfg.watchEdge ? 'PRE-EDGE' : 'NO EDGE';
 
-  // Conflict.
-  const oppositeBlocks = (context >= 58 && execution <= 42) || (context <= 42 && execution >= 58);
-  let conflict = 'ALIGNED';
-  let conflictSemantic: SemanticState = 'strong-positive';
-  if (oppositeBlocks && gap >= cfg.hardGap) {
+  // Conflict ladder — four bands driven purely by the context/execution gap.
+  let conflict: string;
+  let conflictSemantic: SemanticState;
+  if (gap >= cfg.gapHardConflict) {
     conflict = 'HARD CONFLICT';
     conflictSemantic = 'critical';
-  } else if (gap >= cfg.conflictGap) {
+  } else if (gap >= cfg.gapDivergent) {
     conflict = 'DIVERGENT';
     conflictSemantic = 'warning';
+  } else if (gap >= cfg.gapMildTension) {
+    conflict = 'MILD TENSION';
+    conflictSemantic = 'warning';
+  } else {
+    conflict = 'ALIGNED';
+    conflictSemantic = 'strong-positive';
   }
 
   // Risk mode (structure engine = the fragility bucket member).
   const structureEngine = inputs.find((i) => i.key === 'fragility');
   const structureOrient = structureEngine?.orientation ?? context;
-  const hardRisk = structureOrient <= cfg.hardFragility || (oppositeBlocks && gap >= cfg.hardGap);
-  const reducedRisk = !hardRisk && (structureOrient <= cfg.reducedFragility || agreement < 60 || gap >= cfg.conflictGap);
+  const hardRisk = structureOrient <= cfg.hardFragility || gap >= cfg.hardGap;
+  const reducedRisk = !hardRisk && (structureOrient <= cfg.reducedFragility || agreement < cfg.reducedAgreement || gap >= cfg.reducedGap);
   const risk = hardRisk ? 'NO NEW TRADE' : reducedRisk ? 'REDUCED SIZE' : 'NORMAL';
   const riskSemantic: SemanticState = hardRisk ? 'critical' : reducedRisk ? 'warning' : 'strong-positive';
 
-  // Gate readiness.
+  // Gate readiness — directional-support based.
+  const macro = inputs.find((i) => i.key === 'macro');
   const pressure = inputs.find((i) => i.key === 'nq-pressure');
   const auction = inputs.find((i) => i.key === 'auction');
   const leadLag = inputs.find((i) => i.key === 'lead-lag');
-  const pressureReady = biasDir !== 0 && support(pressure?.orientation ?? 50) >= cfg.ladderRequired.pressure;
-  const auctionReady = biasDir !== 0 && support(auction?.orientation ?? 50) >= cfg.ladderRequired.auction;
-  const structureReady = biasDir !== 0 && contextSupport >= cfg.structureRequired;
-  const agreementReady = agreement >= cfg.minAgreement;
-  const leadLagReady = biasDir !== 0 && moduleDir(leadLag?.orientation ?? 50, cfg) === (biasDir > 0 ? 'LONG' : 'SHORT');
-  const edgeReady = compositeEdge >= cfg.readyEdge;
+  const leadLagSupport = support(leadLag?.orientation ?? 50);
+  const pressureSupport = support(pressure?.orientation ?? 50);
+  const auctionSupport = support(auction?.orientation ?? 50);
+  const structureGate = biasDir !== 0 && contextSupport >= cfg.structureRequired;
+  const leadLagGate = biasDir !== 0 && leadLagSupport >= cfg.leadLagRequired;
+  const pressureGate = biasDir !== 0 && pressureSupport >= cfg.pressureRequired;
+  const auctionGate = biasDir !== 0 && auctionSupport >= cfg.auctionRequired;
+  const agreementGate = agreement >= cfg.minAgreement;
+
+  // READY is reserved for a FULL directional bias with every execution gate met.
+  const ready = band.full && edgeReady && agreementGate && leadLagGate && pressureGate && auctionGate;
 
   // Playbook.
   let playbook: string;
@@ -180,25 +223,24 @@ export function computeMaster(
   } else if (biasDir === 0) {
     playbook = 'NEUTRAL — WAIT FOR CONFLUENCE';
     playbookSemantic = 'neutral';
-  } else if (edgeReady && agreementReady && pressureReady && auctionReady) {
+  } else if (ready) {
     playbook = `${band.label} READY — EXECUTION CONFIRMED`;
     playbookSemantic = 'strong-positive';
-  } else if (compositeEdge >= cfg.watchEdge && (!pressureReady || !auctionReady)) {
-    playbook = `${band.label} — WAIT FOR EXECUTION`;
-    playbookSemantic = 'warning';
-  } else if (compositeEdge >= cfg.watchEdge && !agreementReady) {
+  } else if (displayEdge >= cfg.watchEdge && !agreementGate && band.full) {
     playbook = `${band.label} — MODULES DISAGREE`;
+    playbookSemantic = 'warning';
+  } else if (displayEdge >= cfg.watchEdge) {
+    playbook = `${band.label} — WAIT FOR EXECUTION`;
     playbookSemantic = 'warning';
   } else {
     playbook = `${band.label} — NO ENTRY EDGE`;
     playbookSemantic = 'neutral';
   }
 
-  const edgeState = edgeReady ? 'EDGE' : compositeEdge >= cfg.watchEdge ? 'PRE-EDGE' : 'NO EDGE';
-
   // Per-engine result rows.
   const engines: EngineResult[] = inputs.map((i) => {
     const dir = moduleDir(i.orientation, cfg);
+    const st = classifyEngineState(i.orientation);
     const gate: GateState = i.orientation >= i.gateRequired && dir !== 'NEUTRAL' ? 'PASS' : 'WAIT';
     return {
       engine: i.key,
@@ -209,8 +251,8 @@ export function computeMaster(
       rawValue: i.raw,
       orientation: round2(i.orientation),
       score: round2(i.orientation),
-      state: dir === 'LONG' ? 'Strong Long' : dir === 'SHORT' ? 'Short' : 'Neutral',
-      semantic: DIR_SEMANTIC[dir],
+      state: st.label,
+      semantic: st.semantic,
       confidence: i.confidence,
       trend: i.trend ?? 'stable',
       gate,
@@ -223,16 +265,15 @@ export function computeMaster(
   });
 
   const gates: DecisionGate[] = [
-    { label: 'Structure', state: structureReady ? 'PASS' : 'WAIT' },
-    { label: 'Lead/Lag', state: leadLagReady ? 'PASS' : 'WAIT' },
-    { label: 'Pressure', state: pressureReady ? 'PASS' : 'WAIT' },
-    { label: 'Auction', state: auctionReady ? 'PASS' : 'WAIT' },
-    { label: 'Agreement', state: agreementReady ? 'PASS' : 'WAIT' },
-    { label: 'Edge', state: edgeReady ? 'PASS' : compositeEdge >= cfg.watchEdge ? 'PRE-EDGE' : 'WAIT' },
+    { label: 'Structure', state: structureGate ? 'PASS' : 'WAIT' },
+    { label: 'Lead/Lag', state: leadLagGate ? 'PASS' : 'WAIT' },
+    { label: 'Pressure', state: pressureGate ? 'PASS' : 'WAIT' },
+    { label: 'Auction', state: auctionGate ? 'PASS' : 'WAIT' },
+    { label: 'Agreement', state: agreementGate ? 'PASS' : 'WAIT' },
+    { label: 'Edge', state: edgeReady ? 'PASS' : displayEdge >= cfg.watchEdge ? 'PRE-EDGE' : 'WAIT' },
   ];
 
-  // Trigger ladder — how close each gate is to passing.
-  const macro = inputs.find((i) => i.key === 'macro');
+  // Trigger ladder — how close each gate is to passing (edge uses display edge).
   const structureCurrent = macro && structureEngine ? (macro.orientation + structureEngine.orientation) / 2 : context;
   const ladder = buildLadder(
     {
@@ -241,7 +282,7 @@ export function computeMaster(
       pressure: pressure?.orientation ?? 50,
       auction: auction?.orientation ?? 50,
       agreement,
-      edge: compositeEdge,
+      edge: displayEdge,
     },
     cfg.ladderRequired,
   );
@@ -251,8 +292,8 @@ export function computeMaster(
     composite: Math.round(composite),
     bias: band.label,
     biasSemantic: band.semantic,
-    edge: Math.round(compositeEdge),
-    edgeLabel: `${edgeState} ${Math.round(compositeEdge)}`,
+    edge: Math.round(displayEdge),
+    edgeLabel: `${edgeState} ${Math.round(displayEdge)}`,
     agreement: Math.round(agreement),
     risk,
     riskSemantic,
@@ -262,7 +303,7 @@ export function computeMaster(
     playbookSemantic,
     context: Math.round(context),
     execution: Math.round(execution),
-    gap: Math.round(gap),
+    gap: round2(gap),
     engines,
     gates,
     ladder,

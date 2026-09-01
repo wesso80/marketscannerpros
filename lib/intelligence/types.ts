@@ -335,4 +335,37 @@ export interface FragilityResult {
   rot3: string;
   internals: FragilityInternal[];
   radar: RotationItem[];
+  /** LIVE/MOCK + freshness metadata (present once the native engine is wired). */
+  meta?: EngineMeta;
+}
+
+export interface EngineMeta {
+  isLive: boolean;
+  sourceStatus: 'OK' | 'PARTIAL' | 'DATA_UNAVAILABLE' | 'MOCK';
+  calculatedAt: string;
+  dataAsOf: string;
+  isStale: boolean;
+  providersUsed: string[];
+  /** Dataset trustworthiness for the current result. */
+  dataQuality?: DataQuality;
+}
+
+/**
+ * parityStatus levels:
+ *  - FORMULA_VALIDATED   — engine math proven by unit tests; not fed by live data.
+ *  - DATA_PARITY_PENDING — live data flowing, but exact TradingView raw-series /
+ *                          timestamp parity has NOT yet been demonstrated.
+ *  - FULL_PARITY         — demonstrated raw-series + timestamp parity with TV.
+ *                          Never emitted programmatically until proven.
+ */
+export type ParityStatus = 'FORMULA_VALIDATED' | 'DATA_PARITY_PENDING' | 'FULL_PARITY';
+
+export interface DataQuality {
+  coveragePercent: number;
+  exactSeriesCount: number;
+  proxySeriesCount: number;
+  missingSeriesCount: number;
+  proxySymbols: string[];
+  missingSymbols: string[];
+  parityStatus: ParityStatus;
 }

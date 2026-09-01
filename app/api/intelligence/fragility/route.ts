@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getFragilityResult } from '@/lib/intelligence/mockData';
+import { resolveFragility } from '@/lib/intelligence/fragilityService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  return NextResponse.json({ data: getFragilityResult(), source: 'mock' });
+  const { ui, isLive } = await resolveFragility();
+  return NextResponse.json({ data: ui, source: isLive ? 'live' : 'mock' });
 }
