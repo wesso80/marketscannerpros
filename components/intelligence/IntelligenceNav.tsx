@@ -7,6 +7,7 @@ const TABS = [
   { href: '/intelligence', label: 'Overview' },
   { href: '/intelligence/master', label: 'Master' },
   { href: '/intelligence/liquidity', label: 'Liquidity' },
+  { href: '/intelligence/global-m2', label: 'Global M2' },
   { href: '/intelligence/fragility', label: 'Fragility' },
   { href: '/intelligence/lead-lag', label: 'Lead/Lag' },
   { href: '/intelligence/nq-pressure', label: 'NQ Pressure' },
