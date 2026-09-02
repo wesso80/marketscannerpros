@@ -24,12 +24,12 @@ export interface FxDeps {
   fetchJson?: (url: string) => Promise<AvFxResponse>;
 }
 
-/** Fetch a daily FX series for USD→`to` (e.g. to='CNY' gives USDCNY). */
-export async function fetchUsdFxDaily(to: string, deps: FxDeps = {}): Promise<ProviderFxRaw> {
+/** Fetch a daily FX series for `from`→`to` (e.g. from='EUR',to='USD' gives EURUSD). */
+export async function fetchFxDailyPair(from: string, to: string, deps: FxDeps = {}): Promise<ProviderFxRaw> {
   const retrievedAt = new Date().toISOString();
-  const pair = `USD${to}`;
+  const pair = `${from}${to}`;
   const key = process.env.ALPHA_VANTAGE_API_KEY;
-  const url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=USD&to_symbol=${encodeURIComponent(to)}&outputsize=full&apikey=${key}`;
+  const url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&outputsize=full&apikey=${key}`;
   const fj = deps.fetchJson ?? (async (u: string) => {
     const r = await fetch(u, { cache: 'no-store' });
     return (await r.json()) as AvFxResponse;
@@ -39,4 +39,9 @@ export async function fetchUsdFxDaily(to: string, deps: FxDeps = {}): Promise<Pr
   } catch (e) {
     return { ok: false, pair, daily: [], retrievedAt, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+/** Fetch a daily FX series for USD→`to` (e.g. to='CNY' gives USDCNY). */
+export async function fetchUsdFxDaily(to: string, deps: FxDeps = {}): Promise<ProviderFxRaw> {
+  return fetchFxDailyPair('USD', to, deps);
 }
