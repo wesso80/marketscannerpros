@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseEcbCsvData, fetchEuroM2 } from '@/lib/intelligence/data/providers/ecbM2';
 import { parseBoeCsv, fetchUkM2 } from '@/lib/intelligence/data/providers/boeM2';
-import { parseBojM2Csv, fetchJapanM2 } from '@/lib/intelligence/data/providers/bojM2';
+import { fetchJapanM2, validateBojM2Metadata, parseBojDataCode } from '@/lib/intelligence/data/providers/bojM2';
 import { convertM2ToUsd } from '@/lib/intelligence/data/globalM2Normalize';
 import { buildWave2Bundle, type Wave2Deps } from '@/lib/intelligence/data/globalM2Pipeline';
 import type { ProviderM2Raw, ProviderFxRaw } from '@/lib/intelligence/data/providers/globalM2ProviderTypes';
@@ -34,19 +34,15 @@ function boeCsv(n: number, base = 3_000_000, step = 5_000): string {
   });
   return ['DATE,LPMVWYH', ...rows].join('\n');
 }
-function bojCsv(n: number, code = 'MD02TEST', base = 12_000_000, step = 10_000): string {
-  const rows = genMonths(n).map((mo, i) => {
-    const [y, m] = mo.split('-');
-    return `"${y}/${m}",${base + i * step}`;
-  });
-  return [`"Series code","${code}"`, ...rows].join('\n');
-}
 function fxRaw(pair: string, rate: number): ProviderFxRaw {
   return { ok: true, pair, retrievedAt: 'now', daily: genMonths(18).map((mo) => ({ date: `${mo}-28`, rate })) };
 }
 function m2raw(id: string, provider: string, unit: string, base: number, step: number, n = 15): ProviderM2Raw {
   const m2 = genMonths(n).map((month, i) => ({ month, nativeM2: base + i * step }));
   return { ok: true, id, provider, sourceSeries: `${id}-M2`, sourceUrl: 'u', nativeCurrency: 'X', nativeUnit: unit, m2, latestObservationMonth: m2[m2.length - 1].month, retrievedAt: 'now' };
+}
+function fail(id: string, provider: string, error: string): ProviderM2Raw {
+  return { ok: false, id, provider, sourceSeries: `${id}-M2`, sourceUrl: 'u', nativeCurrency: 'X', nativeUnit: 'x', m2: [], latestObservationMonth: null, retrievedAt: 'now', error };
 }
 function sixDeps(over: Partial<Wave2Deps> = {}): Wave2Deps {
   return {
@@ -112,29 +108,75 @@ describe('BOE UK M2 provider (LPMVWYH)', () => {
   });
 });
 
-/* ── BOJ (Japan) — fail-closed pending source ────────────────────────────── */
-describe('BOJ Japan M2 provider', () => {
-  it('parses the BOJ wide CSV (series-code column + YYYY/MM dates)', () => {
-    const rows = parseBojM2Csv(bojCsv(3), 'MD02TEST');
+/* ── BOJ (Japan) — public no-auth API ────────────────────────────────────── */
+const CODE = 'MAM1NAM2M2MO';
+function bojMeta(over: Record<string, unknown> = {}) {
+  return {
+    STATUS: 200,
+    RESULTSET: [{
+      SERIES_CODE: CODE,
+      NAME_OF_TIME_SERIES: 'M2/Average Amounts Outstanding/Money Stock',
+      UNIT: '100 million yen', FREQUENCY: 'MONTHLY', CATEGORY: 'Money Stock',
+      START_OF_THE_TIME_SERIES: '200304', ...over,
+    }],
+  };
+}
+function bojData(n: number, base = 12_000_000, step = 10_000) {
+  const months = genMonths(n);
+  return {
+    STATUS: 200,
+    RESULTSET: [{
+      SERIES_CODE: CODE,
+      VALUES: {
+        SURVEY_DATES: months.map((mo) => Number(mo.replace('-', ''))),
+        VALUES: months.map((_, i) => base + i * step),
+      },
+    }],
+  };
+}
+describe('BOJ Japan M2 provider (public API)', () => {
+  it('requires no application id / API key (config uses default MD02/MAM1NAM2M2MO)', async () => {
+    const r = await fetchJapanM2({ fetchMeta: async () => bojMeta(), fetchData: async () => bojData(24) });
+    expect(r.ok).toBe(true);
+    expect(r.provider).toBe('BOJ');
+    expect(r.sourceSeries).toMatch(/MAM1NAM2M2MO/);
+  });
+  it('metadata validation identifies genuine M2 (Average Amounts Outstanding / Money Stock / monthly / 100 million yen)', () => {
+    expect(() => validateBojM2Metadata(bojMeta(), CODE)).not.toThrow();
+  });
+  it('fails closed when metadata is M3 (not M2) — no magnitude-only pass', () => {
+    const meta = bojMeta({ NAME_OF_TIME_SERIES: 'M3/Average Amounts Outstanding/Money Stock' });
+    expect(() => validateBojM2Metadata(meta, CODE)).toThrow(/not M2/);
+  });
+  it('fails closed when frequency is not MONTHLY', () => {
+    const meta = bojMeta({ FREQUENCY: 'QUARTERLY' });
+    expect(() => validateBojM2Metadata(meta, CODE)).toThrow(/MONTHLY/);
+  });
+  it('fails closed when unit is not 100 million yen', () => {
+    const meta = bojMeta({ UNIT: 'billion yen' });
+    expect(() => validateBojM2Metadata(meta, CODE)).toThrow(/100 million yen/);
+  });
+  it('parses SURVEY_DATES/VALUES parallel arrays into YYYY-MM rows', () => {
+    const rows = parseBojDataCode(bojData(3), CODE);
     expect(rows).toHaveLength(3);
     expect(rows[0].month).toMatch(/^\d{4}-\d{2}$/);
   });
-  it('USDJPY is applied by divide (JPY-per-USD)', () => {
-    expect(convertM2ToUsd(12_000_000 * 1e8, 150, 'divide')).toBeCloseTo((12_000_000 * 1e8) / 150, 2);
+  it('converts 100-million-yen to USD via USDJPY divide', () => {
+    expect(convertM2ToUsd(12_970_074 * 1e8, 157, 'divide')).toBeCloseTo((12_970_074 * 1e8) / 157, 2);
   });
-  it('parses a valid injected source when provided', async () => {
-    const r = await fetchJapanM2({ fetchCsv: async () => bojCsv(24), seriesCode: 'MD02TEST' });
+  it('returns adequate monthly history and marks native unit', async () => {
+    const r = await fetchJapanM2({ fetchMeta: async () => bojMeta(), fetchData: async () => bojData(24) });
     expect(r.ok).toBe(true);
     expect(r.nativeUnit).toBe('100-million-JPY');
+    expect(r.m2.length).toBeGreaterThanOrEqual(13);
   });
-  it('FAILS CLOSED (no app id / series code) and never substitutes broad money', async () => {
-    const r = await fetchJapanM2();
+  it('fails closed on malformed data payload (never substitutes broad money)', async () => {
+    const r = await fetchJapanM2({ fetchMeta: async () => bojMeta(), fetchData: async () => ({ STATUS: 200, RESULTSET: [] }) });
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/BOJ_API_APP_ID/);
     expect(r.m2).toHaveLength(0);
   });
-  it('fails closed on malformed payload', async () => {
-    const r = await fetchJapanM2({ fetchCsv: async () => 'no,dated,rows', seriesCode: 'X' });
+  it('fails closed when metadata identity is wrong even if data looks plausible', async () => {
+    const r = await fetchJapanM2({ fetchMeta: async () => bojMeta({ NAME_OF_TIME_SERIES: 'M3/Average Amounts Outstanding/Money Stock' }), fetchData: async () => bojData(24) });
     expect(r.ok).toBe(false);
   });
 });
@@ -150,11 +192,9 @@ describe('Wave-2 six-bloc partial integration', () => {
     expect(b.eligibility.calculationStatus).toBe('PARTIAL');
     expect(b.result.quality.parityStatus).toBe('DATA_PARITY_PENDING');
   });
-  it('live-shaped path with real BOJ default fails Japan closed → 5 valid blocs', async () => {
-    const deps = sixDeps();
-    const { japan, ...rest } = deps; // drop the Japan fixture → provider default fail-closed
-    void japan;
-    const b = await buildWave2Bundle(rest as Wave2Deps);
+  it('drops Japan when the BOJ provider fails closed → 5 valid blocs', async () => {
+    // Deterministic injected failure (no live BOJ network); Japan must be dropped, not substituted.
+    const b = await buildWave2Bundle(sixDeps({ japan: async () => fail('JP', 'BOJ', 'fetch failed for www.stat-search.boj.or.jp in 500ms') }));
     expect(b.result.validBlocCount).toBe(5);
     expect(b.providerStatus.find((p) => p.id === 'JP')?.ok).toBe(false);
     expect(b.missingBlocIds).toContain('JP');

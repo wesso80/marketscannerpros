@@ -31,7 +31,7 @@ function liveDeps(over: Record<string, () => Promise<ProviderM2Raw>> = {}) {
     brazil: async () => m2raw('BR', 'BCB', 'thousands-BRL', 7_000_000_000, 10_000_000),
     // Injected fails keep the test deterministic (no live RBA/BOJ/ECOS/RBI network).
     australia: async () => fail('AU', 'RBA', 'HTTP 403 (text/html) for www.rba.gov.au in 500ms'),
-    japan: async () => fail('JP', 'BOJ', 'BOJ M2 source unavailable: set BOJ_API_APP_ID'),
+    japan: async () => fail('JP', 'BOJ', 'fetch failed for www.stat-search.boj.or.jp in 500ms'),
     india: async () => fail('IN', 'RBI', 'India M2 DATA_UNAVAILABLE: RBI discontinued M2/M4 in 2017'),
     korea: async () => fail('KR', 'BOK-ECOS', 'BoK ECOS M2 unavailable: set ECOS_API_KEY'),
     usdcny: async () => fx('USDCNY', 7.1), usdchf: async () => fx('USDCHF', 0.81),
@@ -46,7 +46,7 @@ function liveDeps(over: Record<string, () => Promise<ProviderM2Raw>> = {}) {
 describe('Provider health classification', () => {
   it('maps failures to explicit health states (never flat "missing")', () => {
     expect(classifyProviderFailure('BoK ECOS M2 unavailable: set ECOS_API_KEY and confirmed codes')).toBe('CREDENTIAL_REQUIRED');
-    expect(classifyProviderFailure('BOJ M2 source unavailable: set BOJ_API_APP_ID and a confirmed series code')).toBe('CREDENTIAL_REQUIRED');
+    expect(classifyProviderFailure('BOJ metadata: "M3/Average Amounts Outstanding/Money Stock" is not M2')).toBe('DATA_UNAVAILABLE');
     expect(classifyProviderFailure('India M2 DATA_UNAVAILABLE: RBI discontinued M2/M4 in 2017')).toBe('DEFINITION_UNAVAILABLE');
     expect(classifyProviderFailure('HTTP 403 (text/html) for www.rba.gov.au in 812ms')).toBe('PROVIDER_UNREACHABLE');
     expect(classifyProviderFailure('PBOC: no year pages parsed (fetch failed; fetch failed)')).toBe('PROVIDER_UNREACHABLE');

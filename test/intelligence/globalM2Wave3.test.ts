@@ -21,6 +21,9 @@ function m2raw(id: string, provider: string, unit: string, base: number, step: n
   const m2 = ms.map((month, i) => ({ month, nativeM2: base + i * step }));
   return { ok: true, id, provider, sourceSeries: 'S', sourceUrl: 'u', nativeCurrency: 'X', nativeUnit: unit, m2, latestObservationMonth: ms[ms.length - 1], retrievedAt: 'now' };
 }
+function fail(id: string, provider: string, error: string): ProviderM2Raw {
+  return { ok: false, id, provider, sourceSeries: 'S', sourceUrl: 'u', nativeCurrency: 'X', nativeUnit: 'x', m2: [], latestObservationMonth: null, retrievedAt: 'now', error };
+}
 function fx(pair: string, rate: number, n = 20): ProviderFxRaw {
   const ms = months(n);
   return { ok: true, pair, daily: ms.map((mo) => ({ date: `${mo}-28`, rate })), retrievedAt: 'now' };
@@ -192,7 +195,12 @@ describe('Wave-3 integration', () => {
     expect(b.result.quality.parityStatus).toBe('DATA_PARITY_PENDING');
   });
   it('default JP/IN/KR fail closed → 8 valid, <95% PARTIAL', async () => {
-    const b = await buildWave3Bundle(fullDeps({ japan: undefined, india: undefined, korea: undefined }));
+    // Deterministic injected failures (no live BOJ/RBI/ECOS network); failed blocs must be dropped, not substituted.
+    const b = await buildWave3Bundle(fullDeps({
+      japan: async () => fail('JP', 'BOJ', 'fetch failed for www.stat-search.boj.or.jp in 500ms'),
+      india: async () => fail('IN', 'RBI', 'India M2 DATA_UNAVAILABLE: RBI discontinued M2/M4 in 2017'),
+      korea: async () => fail('KR', 'BOK-ECOS', 'BoK ECOS M2 unavailable: set ECOS_API_KEY'),
+    }));
     expect(b.result.validBlocCount).toBe(8);
     expect(b.missingBlocIds.sort()).toEqual(['IN', 'JP', 'KR']);
     expect(b.eligibility.interpretationEligible).toBe(false);
