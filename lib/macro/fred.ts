@@ -33,6 +33,7 @@ export const FRED_SERIES: Record<string, {
   CREDIT_HY_OAS:  { fredId: 'BAMLH0A0HYM2', description: 'ICE BofA US High Yield Index Option-Adjusted Spread', units: '%', cadence: 'daily', category: 'credit' },
   UNRATE:         { fredId: 'UNRATE', description: 'US Unemployment Rate', units: '%', cadence: 'monthly', category: 'sentiment' },
   CPI_YOY:        { fredId: 'CPIAUCSL', description: 'CPI All Urban Consumers (level — YoY computed downstream)', units: 'index', cadence: 'monthly', category: 'sentiment' },
+  US_M2:          { fredId: 'M2SL', description: 'M2 Money Stock (SA)', units: 'Bil. of $', cadence: 'monthly', category: 'liquidity' },
 };
 
 export type FredIngestSummary = {
@@ -46,6 +47,16 @@ export type FredIngestSummary = {
 interface FredObservation {
   date: string;
   value: string;     // FRED returns '.' for missing
+}
+
+/**
+ * Fetch a FRED series' observations without touching the database. Reuses the
+ * same request path as the ingest cron. Throws if FRED_API_KEY is absent.
+ */
+export async function fetchFredObservationsRaw(fredId: string, observationStart?: string): Promise<FredObservation[]> {
+  const apiKey = process.env.FRED_API_KEY;
+  if (!apiKey) throw new Error('FRED_API_KEY missing');
+  return fetchFredSeries(apiKey, fredId, observationStart);
 }
 
 async function fetchFredSeries(apiKey: string, fredId: string, observationStart?: string): Promise<FredObservation[]> {
