@@ -20,6 +20,8 @@ import { fetchKoreaM2 } from './providers/bokM2';
 import { fetchBrazilM2 } from './providers/bcbM2';
 import { fetchUsdFxDaily, fetchFxDailyPair } from './providers/alphaVantageFx';
 import type { ProviderM2Raw, ProviderFxRaw } from './providers/globalM2ProviderTypes';
+import { type ProviderHealth, classifyProviderFailure } from './globalM2Health';
+import { dbGlobalM2Store, blocFromPersisted, type PersistedM2Store } from './globalM2Store';
 
 export interface ProviderStalePolicy { maxAgeMonths: number }
 // Publication lag is normal; a monthly aggregate is NOT stale just because the
@@ -74,7 +76,7 @@ export interface Wave1Deps {
 export interface Wave1Bundle {
   result: GlobalM2Result;
   blocs: NormalizedM2Bloc[];              // normalized (present) blocs, full provenance
-  providerStatus: { id: string; ok: boolean; latestObservationMonth: string | null; stale: boolean; staleReason: string | null; error?: string }[];
+  providerStatus: { id: string; ok: boolean; latestObservationMonth: string | null; stale: boolean; staleReason: string | null; error?: string; health?: ProviderHealth }[];
   missingBlocIds: string[];
   eligibility: GlobalM2Eligibility;
   calculatedAt: string;
@@ -294,14 +296,23 @@ export interface Wave3Deps extends Wave2Deps {
   usdbrl?: () => Promise<ProviderFxRaw>;
 }
 
+export interface Wave3Options extends Wave1Options {
+  /** Persisted source-of-truth store (defaults to the DB-backed store). */
+  store?: PersistedM2Store;
+  /** When false, skip all persistence + STALE fallback (deterministic unit runs). */
+  persist?: boolean;
+}
+
 /**
  * Build the full (up to 11-bloc) live partial Global M2 bundle. Reuses the
  * frozen engine; live results carry DATA_PARITY_PENDING. Japan/India/Korea fail
  * closed until sources/credentials are configured; Australia uses M3 (PROXY, no
  * national M2). No aggregate is ever silently substituted.
  */
-export async function buildWave3Bundle(deps: Wave3Deps = {}, options: Wave1Options = {}): Promise<Wave1Bundle> {
+export async function buildWave3Bundle(deps: Wave3Deps = {}, options: Wave3Options = {}): Promise<Wave1Bundle> {
   const calculatedAt = new Date().toISOString();
+  const store = options.store ?? dbGlobalM2Store;
+  const persist = options.persist ?? true;
   const [us, china, swiss, euro, uk, japan, canada, australia, india, korea, brazil,
     usdcny, usdchf, eurusd, gbpusd, usdjpy, usdcad, audusd, usdinr, usdkrw, usdbrl] = await Promise.all([
     (deps.us ?? fetchUsM2)(),
@@ -343,28 +354,57 @@ export async function buildWave3Bundle(deps: Wave3Deps = {}, options: Wave1Optio
 
   const blocs: NormalizedM2Bloc[] = [];
   const providerStatus: Wave1Bundle['providerStatus'] = [];
+  const persistTasks: Promise<number>[] = [];
 
   for (const s of specs) {
     const fxOk = s.fx === null || s.fx.ok;
     if (s.raw.ok && fxOk) {
+      // LIVE: normalize, serve, and persist as last-known-good for future outages.
       const st = assessStaleWith(s.id, s.raw.latestObservationMonth, WAVE3_STALE_POLICY);
-      blocs.push(normalizeM2BlocFull({
+      const bloc = normalizeM2BlocFull({
         id: s.id, name: s.name, nativeCurrency: s.nativeCurrency, nativeUnit: s.raw.nativeUnit,
         classification: s.classification, provider: s.raw.provider, sourceSeries: s.raw.sourceSeries, sourceUrl: s.raw.sourceUrl,
         definitionBreakpoints: s.definitionBreakpoints, retrievedAt: s.raw.retrievedAt,
         nativeUnitScale: s.nativeUnitScale, fxDirection: s.fxDirection, fxPair: s.fxPair,
         dailyFx: s.fx ? (s.fx.daily as DailyFxPoint[]) : undefined,
         m2: s.raw.m2, stale: st.stale, staleReason: st.staleReason,
-      }));
-      providerStatus.push({ id: s.id, ok: true, latestObservationMonth: s.raw.latestObservationMonth, ...st });
-    } else {
-      providerStatus.push({
-        id: s.id, ok: false, latestObservationMonth: s.raw.latestObservationMonth, stale: true,
-        staleReason: s.raw.ok ? s.fxFailReason : `${s.raw.provider}-failed`,
-        error: s.raw.error ?? s.fx?.error,
       });
+      blocs.push(bloc);
+      providerStatus.push({ id: s.id, ok: true, latestObservationMonth: s.raw.latestObservationMonth, ...st, health: st.stale ? 'STALE' : 'LIVE' });
+      if (persist && bloc.observations.length > 0) {
+        persistTasks.push(store.write(
+          s.id,
+          bloc.observations.map((o) => ({ month: o.month, usdM2: o.usdM2 })),
+          { provider: s.raw.provider, classification: s.classification },
+        ));
+      }
+    } else {
+      // Live failed → serve persisted last-known-good (STALE) rather than MISSING,
+      // unless no valid persisted history exists. Never fabricates or substitutes.
+      const liveErr = s.raw.ok ? s.fxFailReason : s.raw.error;
+      const persisted = persist ? await store.read(s.id) : null;
+      if (persisted && persisted.observations.length >= 2) {
+        const bloc = blocFromPersisted(
+          { id: s.id, name: s.name, nativeCurrency: s.nativeCurrency, classification: s.classification, provider: s.raw.provider },
+          persisted,
+        );
+        blocs.push(bloc);
+        providerStatus.push({
+          id: s.id, ok: true, latestObservationMonth: bloc.observations[bloc.observations.length - 1].month,
+          stale: true, staleReason: `live failed (${liveErr ?? 'unavailable'}); serving persisted last-known-good @ ${persisted.latestFetchedAt}`,
+          health: 'STALE',
+        });
+      } else {
+        providerStatus.push({
+          id: s.id, ok: false, latestObservationMonth: s.raw.latestObservationMonth, stale: true,
+          staleReason: s.raw.ok ? s.fxFailReason : `${s.raw.provider}-failed`,
+          error: liveErr ?? undefined,
+          health: classifyProviderFailure(liveErr),
+        });
+      }
     }
   }
+  if (persistTasks.length) await Promise.allSettled(persistTasks);
 
   const result = computeGlobalM2({ blocs }, GLOBAL_M2_CONFIG, calculatedAt);
   result.quality.parityStatus = 'DATA_PARITY_PENDING';
@@ -381,4 +421,24 @@ export async function buildWave3Bundle(deps: Wave3Deps = {}, options: Wave1Optio
   const presentIds = new Set(blocs.map((b) => b.id));
   const missingBlocIds = ALL_IDS.filter((id) => !presentIds.has(id));
   return { result, blocs, providerStatus, missingBlocIds, eligibility, calculatedAt };
+}
+
+/**
+ * Monthly-ingest entry point (call from a cron in a network environment that can
+ * reach the central banks). Runs the live pipeline, which persists every
+ * successfully-normalized bloc to the source-of-truth store. Returns a per-bloc
+ * health summary. This is how the persisted last-known-good is seeded so that
+ * page-loads never depend on live central-bank reachability.
+ */
+export async function ingestGlobalM2(options: Wave3Options = {}): Promise<{
+  calculatedAt: string;
+  persistedBlocIds: string[];
+  providerHealth: { id: string; health: ProviderHealth | undefined; latest: string | null }[];
+}> {
+  const bundle = await buildWave3Bundle({}, { ...options, persist: true });
+  return {
+    calculatedAt: bundle.calculatedAt,
+    persistedBlocIds: bundle.providerStatus.filter((p) => p.health === 'LIVE').map((p) => p.id),
+    providerHealth: bundle.providerStatus.map((p) => ({ id: p.id, health: p.health, latest: p.latestObservationMonth })),
+  };
 }

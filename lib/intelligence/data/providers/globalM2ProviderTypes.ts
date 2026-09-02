@@ -55,17 +55,57 @@ export function validateM2Series(m2: { month: string; nativeM2: number }[], exp:
   }
 }
 
-/** Default fetch that returns decoded text, with an optional charset (e.g. gbk). */
+/** Realistic desktop browser UA — some official sites (e.g. RBA) reject the bare
+ *  "Mozilla/5.0" default with 403. Header changes cannot defeat IP-based blocks. */
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+function hostOf(url: string): string {
+  try { return new URL(url).host; } catch { return url.slice(0, 60); }
+}
+
+/** Default fetch that returns decoded text, with an optional charset (e.g. gbk).
+ *  Browser-like headers + a hard timeout; errors carry safe diagnostics (host,
+ *  HTTP status, content-type, elapsed) but never response bodies or secrets. */
 export async function fetchText(url: string, charset?: string): Promise<string> {
-  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'zh-CN,en' } });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const started = Date.now();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      cache: 'no-store',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20_000),
+      headers: {
+        'User-Agent': BROWSER_UA,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,text/csv,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8',
+      },
+    });
+  } catch (e) {
+    throw new Error(`fetch failed for ${hostOf(url)} after ${Date.now() - started}ms: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const elapsed = Date.now() - started;
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} (${res.headers.get('content-type') ?? '?'}) for ${hostOf(url)} in ${elapsed}ms`);
+  }
   if (!charset) return res.text();
   const buf = new Uint8Array(await res.arrayBuffer());
   return new TextDecoder(charset).decode(buf);
 }
 
 export async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const started = Date.now();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      cache: 'no-store',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20_000),
+      headers: { 'User-Agent': BROWSER_UA, Accept: 'application/json,*/*' },
+    });
+  } catch (e) {
+    throw new Error(`fetch failed for ${hostOf(url)} after ${Date.now() - started}ms: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${hostOf(url)} in ${Date.now() - started}ms`);
   return res.json() as Promise<T>;
 }

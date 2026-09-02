@@ -11,6 +11,7 @@ const pct = (n: number | null) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${n.
 const COLUMNS: IntelColumn[] = [
   { key: 'bloc', label: 'Bloc', align: 'left' },
   { key: 'class', label: 'Class', align: 'left', tooltip: 'EXACT = national M2; ALTERNATIVE = harmonised/estimate; PROXY = nearest aggregate.' },
+  { key: 'health', label: 'Source', align: 'left', tooltip: 'LIVE = fetched this run; STALE = persisted last-known-good (provider outage).' },
   { key: 'usd', label: 'USD M2', align: 'right' },
   { key: 'share', label: 'Share', align: 'right' },
   { key: 'r1', label: '1M', align: 'right' },
@@ -23,8 +24,9 @@ function blocRow(b: GlobalM2Dto['blocs'][number]): IntelRow {
   return {
     id: b.id,
     cells: [
-      <MetricCell key="b" align="left" strong>{b.name}{b.stale ? ' *' : ''}</MetricCell>,
+      <MetricCell key="b" align="left" strong>{b.name}</MetricCell>,
       <MetricCell key="c" align="left" muted>{b.classification}</MetricCell>,
+      <MetricCell key="h" align="left" muted>{b.health}</MetricCell>,
       <MetricCell key="u" align="right">{T(b.usdM2)}</MetricCell>,
       <MetricCell key="s" align="right" muted>{b.sharePct.toFixed(1)}%</MetricCell>,
       <MetricCell key="r1" align="right">{pct(b.r1)}</MetricCell>,
@@ -89,7 +91,7 @@ export default function GlobalM2Page() {
 
           <SectionHeader
             title="Bloc Breakdown"
-            subtitle="Lag-1 USD M2 per bloc (MONTH_END_LAST_VALID FX). * = provider flagged stale."
+            subtitle="Lag-1 USD M2 per bloc (MONTH_END_LAST_VALID FX). Source = LIVE or STALE (persisted last-known-good)."
             right={<LastUpdatedBadge timestamp={updatedAt ?? undefined} />}
           />
           <IntelligenceTable columns={COLUMNS} rows={data.blocs.map(blocRow)} />
@@ -99,7 +101,7 @@ export default function GlobalM2Page() {
               <SectionHeader title="Missing Blocs" subtitle="Fail-closed — no aggregate is ever silently substituted." />
               <ul style={{ margin: 0, padding: '4px 0 0 18px', fontSize: '0.78rem', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
                 {data.missing.map((m) => (
-                  <li key={m.id}><strong style={{ color: 'var(--msp-text)' }}>{m.id}</strong>: {m.reason}</li>
+                  <li key={m.id}><strong style={{ color: 'var(--msp-text)' }}>{m.id}</strong> <span style={{ color: 'var(--msp-text-faint)' }}>[{m.health}]</span>: {m.reason}</li>
                 ))}
               </ul>
             </div>

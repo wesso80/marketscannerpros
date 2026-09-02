@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export interface GlobalM2BlocDto {
   id: string; name: string; classification: string; provider: string;
   usdM2: number; sharePct: number; r1: number | null; r3: number | null; r12: number | null;
-  observationMonth: string; stale: boolean;
+  observationMonth: string; stale: boolean; health: string;
 }
 export interface GlobalM2Dto {
   enabled: boolean;
@@ -35,7 +35,7 @@ export interface GlobalM2Dto {
   liquidityCycle: string;
   turnState: string;
   blocs: GlobalM2BlocDto[];
-  missing: { id: string; reason: string }[];
+  missing: { id: string; reason: string; health: string }[];
 }
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6h — M2 is a monthly aggregate.
@@ -44,6 +44,7 @@ let cache: { at: number; dto: GlobalM2Dto } | null = null;
 async function computeDto(): Promise<GlobalM2Dto> {
   const b = await buildWave3Bundle();
   const q = b.result.quality;
+  const healthById = new Map(b.providerStatus.map((p) => [p.id, p.health ?? (p.ok ? 'LIVE' : 'DATA_UNAVAILABLE')]));
   return {
     enabled: true,
     calculatedAt: b.calculatedAt,
@@ -66,11 +67,11 @@ async function computeDto(): Promise<GlobalM2Dto> {
     blocs: b.result.blocs.map((bl) => ({
       id: bl.id, name: bl.name, classification: bl.classification, provider: bl.provider,
       usdM2: bl.usdM2, sharePct: bl.shareOfGlobal, r1: bl.r1, r3: bl.r3, r12: bl.r12,
-      observationMonth: bl.observationMonth, stale: bl.stale,
+      observationMonth: bl.observationMonth, stale: bl.stale, health: healthById.get(bl.id) ?? 'LIVE',
     })),
     missing: b.providerStatus
       .filter((p) => !p.ok)
-      .map((p) => ({ id: p.id, reason: p.error ?? p.staleReason ?? 'unavailable' })),
+      .map((p) => ({ id: p.id, reason: p.error ?? p.staleReason ?? 'unavailable', health: p.health ?? 'DATA_UNAVAILABLE' })),
   };
 }
 
