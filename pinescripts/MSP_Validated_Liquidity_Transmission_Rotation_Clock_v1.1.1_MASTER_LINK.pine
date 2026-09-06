@@ -1,0 +1,822 @@
+//@version=6
+indicator("MSP Validated Liquidity Transmission + Rotation Clock v1.1.1 MASTER LINK",
+     shorttitle="MSP Liquidity Rotation v1.1.1",
+     overlay=false, max_bars_back=5000, dynamic_requests=true)
+
+// ============================================================================
+// MSP VALIDATED LIQUIDITY TRANSMISSION + ROTATION CLOCK v1.1
+// ----------------------------------------------------------------------------
+// PURPOSE
+//   Converts the research findings from the M2 Walk-Forward Laboratory into a
+//   LIVE cross-asset transmission map.
+//
+// IMPORTANT ARCHITECTURE
+//   • This is NOT the statistical research engine.
+//   • The validated grades/hierarchy come from the separate v1.4 monthly
+//     walk-forward laboratory.
+//   • This script reads CURRENT confirmed monthly + daily market behaviour and
+//     asks whether those validated channels are confirming the present M2 regime.
+//   • It can run on NQ/MNQ 5-minute charts or other intraday charts.
+//   • All external market calculations use confirmed D/M bars.
+//
+// VALIDATED HIERARCHY FROM v1.4 RESEARCH
+//   Grade A: DXY, Copper, Emerging Markets, Europe
+//   Grade B: Gold, Silver, HYG, LQD, VIX
+//   Context : S&P 500, Nasdaq 100
+//   Crypto  : TOTAL2 = Grade B expansion-only delayed channel
+//             BTC direct M2 timing = rejected; BTC/ETH used only as downstream
+//             flow receivers, NOT as validated direct M2 predictors.
+//
+// TRANSMISSION CLOCK
+//   1. Liquidity ignition / drain
+//   2. USD release / squeeze
+//   3. Credit easing / stress
+//   4. Cyclical + global breadth
+//   5. US risk transmission
+//   6. Crypto majors
+//   7. Alt-market expansion / liquidation
+//   8. Late-cycle divergence / capitulation-turn warning
+//
+// REQUEST BUDGET
+//   11 Global M2 blocs
+//   14 assets × DAILY context
+//   14 assets × MONTHLY context
+//   = 39 unique symbol/timeframe contexts.
+//   This intentionally stays below the standard 40-context ceiling.
+//
+// Educational / research use only.
+// ============================================================================
+
+// ------------------------------- SETTINGS -----------------------------------
+string G_GENERAL = "General"
+string G_SYMBOLS = "Symbols"
+string G_VIS     = "Visuals"
+
+int m2LagMonths = input.int(1, "Confirmed M2 lag (months)", minval=1, maxval=3,
+     tooltip="1 = previous confirmed monthly M2 observation.", group=G_GENERAL)
+int topPadding = input.int(2, "Dashboard top padding", minval=1, maxval=5,
+     tooltip="Keeps TradingView's indicator legend clear of the first table row.", group=G_VIS)
+string tableText = input.string(size.small, "Dashboard text size",
+     options=[size.tiny, size.small, size.normal], group=G_VIS)
+bool showDashboard = input.bool(true, "Show Transmission Dashboard", group=G_VIS)
+bool showBg = input.bool(true, "Shade dominant transmission regime", group=G_VIS)
+bool showScores = input.bool(true, "Plot transmission + risk scores", group=G_VIS)
+
+// Grade-A / B validated drivers + downstream receivers.
+string sDXY    = input.symbol("TVC:DXY",          "DXY", group=G_SYMBOLS)
+string sCOPPER = input.symbol("COMEX:HG1!",       "Copper", group=G_SYMBOLS)
+string sEEM    = input.symbol("AMEX:EEM",         "Emerging Markets", group=G_SYMBOLS)
+string sVGK    = input.symbol("AMEX:VGK",         "Europe / VGK", group=G_SYMBOLS)
+
+string sHYG    = input.symbol("AMEX:HYG",         "High Yield Credit", group=G_SYMBOLS)
+string sLQD    = input.symbol("AMEX:LQD",         "Investment Grade Credit", group=G_SYMBOLS)
+string sGOLD   = input.symbol("OANDA:XAUUSD",     "Gold", group=G_SYMBOLS)
+string sSILVER = input.symbol("OANDA:XAGUSD",     "Silver", group=G_SYMBOLS)
+string sVIX    = input.symbol("CBOE:VIX",         "VIX", group=G_SYMBOLS)
+
+string sSPX    = input.symbol("SP:SPX",           "S&P 500", group=G_SYMBOLS)
+string sNDX    = input.symbol("NASDAQ:NDX",       "Nasdaq 100", group=G_SYMBOLS)
+
+string sBTC    = input.symbol("BITSTAMP:BTCUSD",  "Bitcoin", group=G_SYMBOLS)
+string sETH    = input.symbol("BITSTAMP:ETHUSD",  "Ethereum", group=G_SYMBOLS)
+string sTOTAL2 = input.symbol("CRYPTOCAP:TOTAL2", "Crypto TOTAL2 ex-BTC", group=G_SYMBOLS)
+
+// ------------------------------- HELPERS -------------------------------------
+f_clamp(float x, float lo, float hi) =>
+    math.max(lo, math.min(hi, x))
+
+f_fmt(float x) =>
+    na(x) ? "n/a" : str.tostring(x, "#.##")
+
+f_pct(float x) =>
+    na(x) ? "n/a" : str.tostring(x, "#.##") + "%"
+
+f_signed(float x) =>
+    na(x) ? "n/a" : (x > 0 ? "+" : "") + str.tostring(x, "#.##")
+
+f_headerBg() =>
+    color.rgb(38, 55, 78)
+
+f_sectionBg() =>
+    color.rgb(57, 45, 80)
+
+f_rowBg(int row) =>
+    row % 2 == 0 ? color.rgb(19, 24, 31) : color.rgb(26, 32, 41)
+
+f_scoreBg(float s) =>
+    na(s) ? color.rgb(63, 70, 82) :
+     s >= 70 ? color.rgb(0, 116, 67) :
+     s >= 58 ? color.rgb(31, 91, 62) :
+     s >= 45 ? color.rgb(77, 86, 99) :
+     s >= 32 ? color.rgb(171, 101, 8) :
+     color.rgb(143, 49, 54)
+
+f_state(float s) =>
+    na(s) ? "n/a" :
+     s >= 70 ? "CONFIRMED" :
+     s >= 58 ? "SUPPORTIVE" :
+     s >= 45 ? "MIXED" :
+     s >= 32 ? "WEAKENING" : "OPPOSING"
+
+f_stateBg(float s) =>
+    f_scoreBg(s)
+
+f_orientationLabel(float s) =>
+    na(s) ? "n/a" :
+     s >= 68 ? "RISK-ON" :
+     s >= 56 ? "LEAN RISK-ON" :
+     s > 44 ? "TRANSITION" :
+     s > 32 ? "LEAN RISK-OFF" : "RISK-OFF"
+
+f_orientationBg(float s) =>
+    na(s) ? color.rgb(63, 70, 82) :
+     s >= 68 ? color.rgb(0, 116, 67) :
+     s >= 56 ? color.rgb(31, 91, 62) :
+     s > 44 ? color.rgb(77, 86, 99) :
+     s > 32 ? color.rgb(171, 101, 8) :
+     color.rgb(143, 49, 54)
+
+
+// Stage-8 is a RISK score, so low is good and high is bad.
+f_warningBg(float s) =>
+    na(s) ? color.rgb(63, 70, 82) :
+     s < 30 ? color.rgb(0, 116, 67) :
+     s < 50 ? color.rgb(77, 86, 99) :
+     s < 70 ? color.rgb(171, 101, 8) :
+     color.rgb(143, 49, 54)
+
+f_warningState(float s) =>
+    na(s) ? "n/a" :
+     s < 30 ? "CLEAR" :
+     s < 50 ? "WATCH" :
+     s < 70 ? "ELEVATED" :
+     "WARNING"
+
+// Direction score:
+//   50 = neutral
+//   75+ = moving in expected direction
+//   25- = moving against expected direction
+f_directionComponent(float r, float expectedSign, float magnitudeScale) =>
+    if na(r)
+        50.0
+    else
+        float aligned = r * expectedSign
+        aligned > 0 ?
+             f_clamp(75.0 + math.abs(aligned) * magnitudeScale, 75.0, 100.0) :
+         aligned < 0 ?
+             f_clamp(25.0 - math.abs(aligned) * magnitudeScale, 0.0, 25.0) :
+             50.0
+
+// Confirmed month + 20D + 5D. This is intentionally DISPLAY/STATE logic.
+// It does not alter or retrain the historical validation model.
+f_liveScore(float m1, float r20, float r5, float expectedSign) =>
+    float sm = f_directionComponent(m1, expectedSign, 1.5)
+    float s20 = f_directionComponent(r20, expectedSign, 1.3)
+    float s5 = f_directionComponent(r5, expectedSign, 2.0)
+    sm * 0.25 + s20 * 0.50 + s5 * 0.25
+
+f_avg2(float a, float b) =>
+    (a + b) / 2.0
+
+f_avg3(float a, float b, float c) =>
+    (a + b + c) / 3.0
+
+f_avg4(float a, float b, float c, float d) =>
+    (a + b + c + d) / 4.0
+
+f_stageName(int stage, bool riskOn) =>
+    string result = "NO TRANSMISSION"
+    if riskOn
+        result := stage == 1 ? "LIQUIDITY IGNITION" :
+             stage == 2 ? "USD RELEASE" :
+             stage == 3 ? "CREDIT EASING" :
+             stage == 4 ? "CYCLICAL / GLOBAL BREADTH" :
+             stage == 5 ? "US RISK TRANSMISSION" :
+             stage == 6 ? "CRYPTO MAJORS" :
+             stage == 7 ? "ALT EXPANSION" :
+             stage == 8 ? "LATE-CYCLE / DIVERGENCE" : "NO TRANSMISSION"
+    else
+        result := stage == 1 ? "LIQUIDITY DRAIN" :
+             stage == 2 ? "USD SQUEEZE" :
+             stage == 3 ? "CREDIT STRESS" :
+             stage == 4 ? "CYCLICAL / GLOBAL DE-RISK" :
+             stage == 5 ? "US RISK-OFF" :
+             stage == 6 ? "CRYPTO UNWIND" :
+             stage == 7 ? "ALT LIQUIDATION" :
+             stage == 8 ? "CAPITULATION / TURN RISK" : "NO TRANSMISSION"
+    result
+
+f_roleText(int stage, bool riskOn) =>
+    string txt = ""
+    if riskOn
+        txt := stage == 1 ? "Liquidity impulse starts the chain" :
+             stage == 2 ? "Validated A: weaker USD confirms easing conditions" :
+             stage == 3 ? "Validated B: credit participates" :
+             stage == 4 ? "Validated A: copper + global equities broaden" :
+             stage == 5 ? "US equities receive transmission; contextual edge" :
+             stage == 6 ? "BTC/ETH receive flow; NOT direct validated M2 timing" :
+             stage == 7 ? "Validated B expansion-only TOTAL2 delay channel" :
+             "Early-warning risk: downstream stretch vs validated liquidity"
+    else
+        txt := stage == 1 ? "Liquidity contraction starts the chain" :
+             stage == 2 ? "Validated A: stronger USD confirms tightening" :
+             stage == 3 ? "Validated B: credit stress confirms drain" :
+             stage == 4 ? "Validated A channels weaken together" :
+             stage == 5 ? "US equities receive risk-off transmission" :
+             stage == 6 ? "Crypto majors unwind downstream" :
+             stage == 7 ? "TOTAL2 / alts become high-beta liquidation channel" :
+             "Early-warning risk: capitulation vs improving validated liquidity"
+    txt
+
+// ---------------------------- DATA REQUESTS ----------------------------------
+// Intraday-safe confirmed monthly M2 pack copied from the stable Global M2 core.
+f_m2PackUSD(string sym, int lag) =>
+    [mNow, r1, r2, r3, r4, r5, r12] = request.security(sym, "M",
+         [
+             lag == 1 ? close[1] : lag == 2 ? close[2] : close[3],
+             lag == 1 ? ta.roc(close, 1)[1]  : lag == 2 ? ta.roc(close, 1)[2]  : ta.roc(close, 1)[3],
+             lag == 1 ? ta.roc(close, 2)[1]  : lag == 2 ? ta.roc(close, 2)[2]  : ta.roc(close, 2)[3],
+             lag == 1 ? ta.roc(close, 3)[1]  : lag == 2 ? ta.roc(close, 3)[2]  : ta.roc(close, 3)[3],
+             lag == 1 ? ta.roc(close, 4)[1]  : lag == 2 ? ta.roc(close, 4)[2]  : ta.roc(close, 4)[3],
+             lag == 1 ? ta.roc(close, 5)[1]  : lag == 2 ? ta.roc(close, 5)[2]  : ta.roc(close, 5)[3],
+             lag == 1 ? ta.roc(close, 12)[1] : lag == 2 ? ta.roc(close, 12)[2] : ta.roc(close, 12)[3]
+         ],
+         gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on,
+         ignore_invalid_symbol=true, currency=currency.USD, calc_bars_count=20)
+
+    float m1Back  = not na(mNow) and not na(r1)  and (1.0 + r1  / 100.0) != 0 ? mNow / (1.0 + r1  / 100.0) : na
+    float m2Back  = not na(mNow) and not na(r2)  and (1.0 + r2  / 100.0) != 0 ? mNow / (1.0 + r2  / 100.0) : na
+    float m3Back  = not na(mNow) and not na(r3)  and (1.0 + r3  / 100.0) != 0 ? mNow / (1.0 + r3  / 100.0) : na
+    float m4Back  = not na(mNow) and not na(r4)  and (1.0 + r4  / 100.0) != 0 ? mNow / (1.0 + r4  / 100.0) : na
+    float m5Back  = not na(mNow) and not na(r5)  and (1.0 + r5  / 100.0) != 0 ? mNow / (1.0 + r5  / 100.0) : na
+    float m12Back = not na(mNow) and not na(r12) and (1.0 + r12 / 100.0) != 0 ? mNow / (1.0 + r12 / 100.0) : na
+
+    [mNow, m1Back, m2Back, m3Back, m4Back, m5Back, m12Back]
+
+// Confirmed daily state.
+// Returns are computed INSIDE each symbol's daily context.
+f_dailyPack(string sym) =>
+    request.security(sym, "D",
+         [
+             ta.roc(close, 5)[1],
+             ta.roc(close, 20)[1],
+             close[1],
+             ta.ema(close, 50)[1],
+             ta.ema(close, 200)[1]
+         ],
+         gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on,
+         ignore_invalid_symbol=true, calc_bars_count=240)
+
+// Confirmed completed monthly return.
+f_monthPack(string sym) =>
+    request.security(sym, "M",
+         [ta.roc(close, 1)[1], ta.roc(close, 3)[1]],
+         gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on,
+         ignore_invalid_symbol=true, calc_bars_count=8)
+
+f_trend(float px, float e50, float e200) =>
+    na(px) or na(e50) or na(e200) ? "n/a" :
+     px > e50 and e50 > e200 ? "BULL" :
+     px < e50 and e50 < e200 ? "BEAR" : "MIXED"
+
+f_trendBg(string t) =>
+    t == "BULL" ? color.rgb(0, 105, 63) :
+     t == "BEAR" ? color.rgb(143, 49, 54) :
+     color.rgb(77, 86, 99)
+
+// ------------------------------ GLOBAL M2 ------------------------------------
+var array<string> m2Symbols = array.from(
+     "ECONOMICS:USM2", "ECONOMICS:CNM2", "ECONOMICS:EUM2", "ECONOMICS:JPM2",
+     "ECONOMICS:GBM2", "ECONOMICS:CAM2", "ECONOMICS:AUM2", "ECONOMICS:INM2",
+     "ECONOMICS:CHM2", "ECONOMICS:KRM2", "ECONOMICS:BRM2")
+
+var array<string> m2Names = array.from(
+     "US", "CN", "EU", "JP", "UK", "CA", "AU", "IN", "CH", "KR", "BR")
+
+float globalM2USD = 0.0
+float validNowUSD = 0.0
+float validPrevUSD = 0.0
+float validPrevPrevUSD = 0.0
+float num1M = 0.0
+float num1MPrev = 0.0
+float num3M = 0.0
+float num3MPrev = 0.0
+float num3MPrevPrev = 0.0
+float num12M = 0.0
+int m2ValidCount = 0
+string missingM2 = ""
+
+for i = 0 to array.size(m2Symbols) - 1
+    string msym = array.get(m2Symbols, i)
+    [m2NowUSD, m2PrevUSD, m22BackUSD, m23BackUSD, m24BackUSD, m25BackUSD, m212BackUSD] =
+         f_m2PackUSD(msym, m2LagMonths)
+
+    float r1 = not na(m2NowUSD) and not na(m2PrevUSD) and m2PrevUSD != 0 ?
+         100.0 * (m2NowUSD / m2PrevUSD - 1.0) : na
+    float r1Prev = not na(m2PrevUSD) and not na(m22BackUSD) and m22BackUSD != 0 ?
+         100.0 * (m2PrevUSD / m22BackUSD - 1.0) : na
+    float r3 = not na(m2NowUSD) and not na(m23BackUSD) and m23BackUSD != 0 ?
+         100.0 * (m2NowUSD / m23BackUSD - 1.0) : na
+    float r3Prev = not na(m2PrevUSD) and not na(m24BackUSD) and m24BackUSD != 0 ?
+         100.0 * (m2PrevUSD / m24BackUSD - 1.0) : na
+    float r3PrevPrev = not na(m22BackUSD) and not na(m25BackUSD) and m25BackUSD != 0 ?
+         100.0 * (m22BackUSD / m25BackUSD - 1.0) : na
+    float r12 = not na(m2NowUSD) and not na(m212BackUSD) and m212BackUSD != 0 ?
+         100.0 * (m2NowUSD / m212BackUSD - 1.0) : na
+
+    if not na(m2NowUSD)
+        m2ValidCount += 1
+        globalM2USD += m2NowUSD
+        validNowUSD += m2NowUSD
+        if not na(r1)
+            num1M += m2NowUSD * r1
+        if not na(r3)
+            num3M += m2NowUSD * r3
+        if not na(r12)
+            num12M += m2NowUSD * r12
+    else
+        missingM2 := missingM2 + (str.length(missingM2) > 0 ? "," : "") + array.get(m2Names, i)
+
+    if not na(m2PrevUSD)
+        validPrevUSD += m2PrevUSD
+        if not na(r1Prev)
+            num1MPrev += m2PrevUSD * r1Prev
+        if not na(r3Prev)
+            num3MPrev += m2PrevUSD * r3Prev
+
+    if not na(m22BackUSD)
+        validPrevPrevUSD += m22BackUSD
+        if not na(r3PrevPrev)
+            num3MPrevPrev += m22BackUSD * r3PrevPrev
+
+float globalM2_1M = validNowUSD > 0 ? num1M / validNowUSD : na
+float globalM2_1M_prev = validPrevUSD > 0 ? num1MPrev / validPrevUSD : na
+float globalM2_3M = validNowUSD > 0 ? num3M / validNowUSD : na
+float globalM2_3M_prev = validPrevUSD > 0 ? num3MPrev / validPrevUSD : na
+float globalM2_3M_prevprev = validPrevPrevUSD > 0 ? num3MPrevPrev / validPrevPrevUSD : na
+float globalM2_YoY = validNowUSD > 0 ? num12M / validNowUSD : na
+float globalM2_3M_ann = globalM2_3M * 4.0
+float globalM2_3M_prev_ann = globalM2_3M_prev * 4.0
+float globalM2_3M_prevprev_ann = globalM2_3M_prevprev * 4.0
+float m2Accel1M = globalM2_1M - globalM2_1M_prev
+float m2Accel3M = globalM2_3M_ann - globalM2_3M_prev_ann
+
+int m2BullVotes = 0
+int m2BearVotes = 0
+
+if not na(globalM2_1M)
+    m2BullVotes += globalM2_1M >= 0 ? 1 : 0
+    m2BearVotes += globalM2_1M < 0 ? 1 : 0
+if not na(globalM2_3M_ann)
+    m2BullVotes += globalM2_3M_ann >= 0 ? 1 : 0
+    m2BearVotes += globalM2_3M_ann < 0 ? 1 : 0
+if not na(globalM2_YoY)
+    m2BullVotes += globalM2_YoY >= 0 ? 1 : 0
+    m2BearVotes += globalM2_YoY < 0 ? 1 : 0
+if not na(m2Accel3M)
+    m2BullVotes += m2Accel3M >= 0 ? 1 : 0
+    m2BearVotes += m2Accel3M < 0 ? 1 : 0
+
+float m2BiasScore = f_clamp(50.0 + 12.5 * (m2BullVotes - m2BearVotes), 0.0, 100.0)
+
+string liquidityCycle = "TRANSITION"
+if not na(globalM2_3M_ann) and not na(m2Accel3M)
+    if globalM2_3M_ann >= 0
+        if not na(globalM2_3M_prev_ann) and globalM2_3M_prev_ann < 0
+            liquidityCycle := "EARLY EXPANSION"
+        else if m2Accel3M > 0
+            liquidityCycle := "ACCELERATION"
+        else if globalM2_1M >= 0
+            liquidityCycle := "LATE EXPANSION"
+        else
+            liquidityCycle := "DECELERATION"
+    else
+        liquidityCycle := m2Accel3M > 0 ? "BOTTOMING" : "CONTRACTION"
+
+// --------------------------- CROSS-ASSET PACKS -------------------------------
+// Grade A
+[dxy5, dxy20, dxyPx, dxy50, dxy200] = f_dailyPack(sDXY)
+[dxyM1, dxyM3] = f_monthPack(sDXY)
+
+[cop5, cop20, copPx, cop50, cop200] = f_dailyPack(sCOPPER)
+[copM1, copM3] = f_monthPack(sCOPPER)
+
+[eem5, eem20, eemPx, eem50, eem200] = f_dailyPack(sEEM)
+[eemM1, eemM3] = f_monthPack(sEEM)
+
+[vgk5, vgk20, vgkPx, vgk50, vgk200] = f_dailyPack(sVGK)
+[vgkM1, vgkM3] = f_monthPack(sVGK)
+
+// Grade B
+[hyg5, hyg20, hygPx, hyg50, hyg200] = f_dailyPack(sHYG)
+[hygM1, hygM3] = f_monthPack(sHYG)
+
+[lqd5, lqd20, lqdPx, lqd50, lqd200] = f_dailyPack(sLQD)
+[lqdM1, lqdM3] = f_monthPack(sLQD)
+
+[gold5, gold20, goldPx, gold50, gold200] = f_dailyPack(sGOLD)
+[goldM1, goldM3] = f_monthPack(sGOLD)
+
+[silver5, silver20, silverPx, silver50, silver200] = f_dailyPack(sSILVER)
+[silverM1, silverM3] = f_monthPack(sSILVER)
+
+[vix5, vix20, vixPx, vix50, vix200] = f_dailyPack(sVIX)
+[vixM1, vixM3] = f_monthPack(sVIX)
+
+// Contextual US risk
+[spx5, spx20, spxPx, spx50, spx200] = f_dailyPack(sSPX)
+[spxM1, spxM3] = f_monthPack(sSPX)
+
+[ndx5, ndx20, ndxPx, ndx50, ndx200] = f_dailyPack(sNDX)
+[ndxM1, ndxM3] = f_monthPack(sNDX)
+
+// Downstream crypto receivers
+[btc5, btc20, btcPx, btc50, btc200] = f_dailyPack(sBTC)
+[btcM1, btcM3] = f_monthPack(sBTC)
+
+[eth5, eth20, ethPx, eth50, eth200] = f_dailyPack(sETH)
+[ethM1, ethM3] = f_monthPack(sETH)
+
+[t2_5, t2_20, t2Px, t2_50, t2_200] = f_dailyPack(sTOTAL2)
+[t2M1, t2M3] = f_monthPack(sTOTAL2)
+
+// ------------------------ LIVE RISK-ON ORIENTATION ---------------------------
+// These are ALWAYS expressed as risk-on orientation:
+//   100 = strongly risk-on behaviour
+//     0 = strongly risk-off behaviour.
+//
+// Validated inverse channels use expectedSign = -1 (DXY, VIX).
+float scDXY = f_liveScore(dxyM1, dxy20, dxy5, -1.0)
+float scCOP = f_liveScore(copM1, cop20, cop5, 1.0)
+float scEEM = f_liveScore(eemM1, eem20, eem5, 1.0)
+float scVGK = f_liveScore(vgkM1, vgk20, vgk5, 1.0)
+
+float scHYG = f_liveScore(hygM1, hyg20, hyg5, 1.0)
+float scLQD = f_liveScore(lqdM1, lqd20, lqd5, 1.0)
+float scGOLD = f_liveScore(goldM1, gold20, gold5, 1.0)
+float scSILVER = f_liveScore(silverM1, silver20, silver5, 1.0)
+float scVIX = f_liveScore(vixM1, vix20, vix5, -1.0)
+
+float scSPX = f_liveScore(spxM1, spx20, spx5, 1.0)
+float scNDX = f_liveScore(ndxM1, ndx20, ndx5, 1.0)
+
+float scBTC = f_liveScore(btcM1, btc20, btc5, 1.0)
+float scETH = f_liveScore(ethM1, eth20, eth5, 1.0)
+float scTOTAL2 = f_liveScore(t2M1, t2_20, t2_5, 1.0)
+
+// Research-derived validated risk-on confirmation.
+// Grade A receives 70% of the weight. Grade B receives 30%.
+float validatedRiskOn =
+     scDXY * 0.25 +
+     scCOP * 0.20 +
+     scEEM * 0.125 +
+     scVGK * 0.125 +
+     scHYG * 0.075 +
+     scLQD * 0.075 +
+     scGOLD * 0.05 +
+     scSILVER * 0.05 +
+     scVIX * 0.05
+
+// Overall macro transmission combines actual M2 direction with validated
+// cross-asset behaviour. This is a RISK-ON ORIENTATION score.
+float transmissionRiskOn = m2BiasScore * 0.35 + validatedRiskOn * 0.65
+
+// Downstream observed risk appetite is kept separate from validated drivers.
+float usRiskOn = f_avg2(scSPX, scNDX)
+float cryptoMajorsRiskOn = f_avg2(scBTC, scETH)
+
+// TOTAL2 gets a modest breadth/rotation bonus when it is outperforming BTC
+// over the same live 20D window.
+float altBonus = not na(t2_20) and not na(btc20) and t2_20 > btc20 and t2_20 > 0 ? 8.0 : 0.0
+float altRiskOn = f_clamp(scTOTAL2 + altBonus, 0.0, 100.0)
+
+float downstreamRiskOn = usRiskOn * 0.50 + cryptoMajorsRiskOn * 0.25 + altRiskOn * 0.25
+
+// -------------------------- TRANSMISSION STAGES ------------------------------
+float st1RiskOn = m2BiasScore
+float st2RiskOn = scDXY
+float st3RiskOn = f_avg2(scHYG, scLQD)
+float st4RiskOn = f_avg3(scCOP, scEEM, scVGK)
+float st5RiskOn = usRiskOn
+float st6RiskOn = cryptoMajorsRiskOn
+float st7RiskOn = altRiskOn
+
+bool dominantRiskOn = transmissionRiskOn >= 50.0
+
+f_domStrength(float riskOnOrientation) =>
+    dominantRiskOn ? riskOnOrientation : 100.0 - riskOnOrientation
+
+float st1 = f_domStrength(st1RiskOn)
+float st2 = f_domStrength(st2RiskOn)
+float st3 = f_domStrength(st3RiskOn)
+float st4 = f_domStrength(st4RiskOn)
+float st5 = f_domStrength(st5RiskOn)
+float st6 = f_domStrength(st6RiskOn)
+float st7 = f_domStrength(st7RiskOn)
+
+// Cumulative chain coherence prevents the clock jumping to stage 7 merely
+// because one downstream asset has moved.
+float cum1 = st1
+float cum2 = f_avg2(st1, st2)
+float cum3 = f_avg3(st1, st2, st3)
+float cum4 = f_avg4(st1, st2, st3, st4)
+float cum5 = (st1 + st2 + st3 + st4 + st5) / 5.0
+float cum6 = (st1 + st2 + st3 + st4 + st5 + st6) / 6.0
+float cum7 = (st1 + st2 + st3 + st4 + st5 + st6 + st7) / 7.0
+
+float riskLiquidityGap = downstreamRiskOn - transmissionRiskOn
+
+string divergenceState =
+     riskLiquidityGap >= 15 ? "RISK > VALIDATED LIQUIDITY" :
+     riskLiquidityGap <= -15 ? "LIQUIDITY > DOWNSTREAM RISK" :
+     "ALIGNED"
+
+bool m2Slowing = liquidityCycle == "LATE EXPANSION" or liquidityCycle == "DECELERATION"
+bool riskExtended = downstreamRiskOn >= 68
+bool riskWashed = downstreamRiskOn <= 32
+
+bool lateRiskOnWarning = dominantRiskOn and riskExtended and
+     (riskLiquidityGap >= 15 or m2Slowing) and validatedRiskOn < 62
+
+bool capitulationTurnWarning = not dominantRiskOn and riskWashed and
+     (riskLiquidityGap <= -15 or liquidityCycle == "BOTTOMING") and validatedRiskOn > 38
+
+bool stage8Active = lateRiskOnWarning or capitulationTurnWarning
+
+// Early-warning risk is intentionally continuous rather than binary.
+// It increases as:
+//   • downstream risk outruns validated liquidity,
+//   • M2 moves into late-expansion/deceleration,
+//   • validated drivers weaken,
+//   • or the mirror-image risk-off capitulation conditions appear.
+float gapRisk = f_clamp((math.abs(riskLiquidityGap) - 5.0) * 4.0, 0.0, 100.0)
+float cycleRisk = liquidityCycle == "DECELERATION" ? 70.0 :
+     liquidityCycle == "LATE EXPANSION" ? 45.0 :
+     liquidityCycle == "CONTRACTION" ? 55.0 :
+     liquidityCycle == "BOTTOMING" ? 35.0 : 10.0
+
+float validationMismatchRisk =
+     dominantRiskOn ? f_clamp((68.0 - validatedRiskOn) * 3.0, 0.0, 100.0) :
+     f_clamp((validatedRiskOn - 32.0) * 3.0, 0.0, 100.0)
+
+float downstreamStretchRisk =
+     dominantRiskOn ? f_clamp((downstreamRiskOn - 65.0) * 3.0, 0.0, 100.0) :
+     f_clamp((35.0 - downstreamRiskOn) * 3.0, 0.0, 100.0)
+
+float earlyWarningRisk = f_clamp(
+     gapRisk * 0.40 +
+     cycleRisk * 0.25 +
+     validationMismatchRisk * 0.20 +
+     downstreamStretchRisk * 0.15, 0.0, 100.0)
+
+float st8 = stage8Active ? math.max(70.0, earlyWarningRisk) : earlyWarningRisk
+
+int currentStage = 0
+if cum1 >= 55 and st1 >= 55
+    currentStage := 1
+if cum2 >= 56 and st2 >= 55
+    currentStage := 2
+if cum3 >= 57 and st3 >= 55
+    currentStage := 3
+if cum4 >= 58 and st4 >= 55
+    currentStage := 4
+if cum5 >= 58 and st5 >= 55
+    currentStage := 5
+if cum6 >= 59 and st6 >= 55
+    currentStage := 6
+if cum7 >= 60 and st7 >= 55
+    currentStage := 7
+if stage8Active
+    currentStage := 8
+
+string clockStage = f_stageName(currentStage, dominantRiskOn)
+string clockContext = str.tostring(currentStage) + "/8 " + clockStage + " · " + liquidityCycle
+
+// Crypto +2–3M delayed transmission window learned from the walk-forward lab.
+// This is a REGIME WINDOW, not a promise of future crypto performance.
+string cryptoDelayWindow =
+     m2BiasScore >= 62 and globalM2_3M_ann > 0 and m2Accel3M >= 0 ? "ACTIVE +2–3M" :
+     m2BiasScore >= 55 and globalM2_3M_ann > 0 ? "WATCH +2–3M" :
+     m2BiasScore <= 40 ? "OFF / LIQUIDITY DRAIN" : "NEUTRAL"
+
+// --------------------------- TABLE STAGE DATA --------------------------------
+f_stageDriver(int stage) =>
+    stage == 1 ? "GLOBAL M2" :
+     stage == 2 ? "DXY" :
+     stage == 3 ? "HYG / LQD" :
+     stage == 4 ? "COPPER / EEM / VGK" :
+     stage == 5 ? "SPX / NDX" :
+     stage == 6 ? "BTC / ETH" :
+     stage == 7 ? "TOTAL2 vs BTC" :
+     "RISK vs VALIDATED FLOW"
+
+f_stageGrade(int stage) =>
+    stage == 1 ? "CORE" :
+     stage == 2 ? "A" :
+     stage == 3 ? "B" :
+     stage == 4 ? "A" :
+     stage == 5 ? "C / CONTEXT" :
+     stage == 6 ? "DOWNSTREAM" :
+     stage == 7 ? "B EXPANSION" :
+     "MODEL"
+
+f_stageM1(int stage) =>
+    stage == 1 ? globalM2_1M :
+     stage == 2 ? dxyM1 :
+     stage == 3 ? f_avg2(hygM1, lqdM1) :
+     stage == 4 ? f_avg3(copM1, eemM1, vgkM1) :
+     stage == 5 ? f_avg2(spxM1, ndxM1) :
+     stage == 6 ? f_avg2(btcM1, ethM1) :
+     stage == 7 ? t2M1 :
+     na
+
+f_stage20(int stage) =>
+    stage == 1 ? na :
+     stage == 2 ? dxy20 :
+     stage == 3 ? f_avg2(hyg20, lqd20) :
+     stage == 4 ? f_avg3(cop20, eem20, vgk20) :
+     stage == 5 ? f_avg2(spx20, ndx20) :
+     stage == 6 ? f_avg2(btc20, eth20) :
+     stage == 7 ? t2_20 :
+     riskLiquidityGap
+
+f_stage5(int stage) =>
+    stage == 1 ? na :
+     stage == 2 ? dxy5 :
+     stage == 3 ? f_avg2(hyg5, lqd5) :
+     stage == 4 ? f_avg3(cop5, eem5, vgk5) :
+     stage == 5 ? f_avg2(spx5, ndx5) :
+     stage == 6 ? f_avg2(btc5, eth5) :
+     stage == 7 ? t2_5 :
+     transmissionRiskOn - transmissionRiskOn[1]
+
+f_stageScore(int stage) =>
+    stage == 1 ? st1 :
+     stage == 2 ? st2 :
+     stage == 3 ? st3 :
+     stage == 4 ? st4 :
+     stage == 5 ? st5 :
+     stage == 6 ? st6 :
+     stage == 7 ? st7 :
+     st8
+
+f_stageNext(int stage, bool riskOn) =>
+    stage == 1 ? (riskOn ? "Watch DXY for release" : "Watch DXY for squeeze") :
+     stage == 2 ? (riskOn ? "Credit should confirm" : "Credit stress should appear") :
+     stage == 3 ? "Copper/global breadth should follow" :
+     stage == 4 ? "Watch US equity transmission" :
+     stage == 5 ? "Watch crypto majors" :
+     stage == 6 ? "Watch TOTAL2 breadth" :
+     stage == 7 ? "Monitor late-cycle divergence" :
+     "Watch for reset / new cycle"
+
+// ------------------------------- DASHBOARD -----------------------------------
+const int COLS = 10
+const int ROWS = 18
+var table dash = table.new(position.top_left, COLS, ROWS,
+     frame_color=color.rgb(75, 92, 118), frame_width=2,
+     border_color=color.rgb(51, 63, 78), border_width=1)
+
+if showDashboard and barstate.islast
+    for rr = 0 to topPadding - 1
+        for cc = 0 to COLS - 1
+            table.cell(dash, cc, rr, "", bgcolor=color.new(color.black, 100))
+
+    int r0 = topPadding
+    color hdr = f_headerBg()
+
+    // Command center
+    table.cell(dash, 0, r0, "VALIDATED LIQUIDITY TRANSMISSION", text_color=color.white, bgcolor=hdr, text_size=size.normal, text_halign=text.align_left)
+    table.cell(dash, 1, r0, "FLOW", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 2, r0, f_orientationLabel(transmissionRiskOn), text_color=color.white, bgcolor=f_orientationBg(transmissionRiskOn), text_size=tableText)
+    table.cell(dash, 3, r0, "CLOCK", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 4, r0, clockContext, text_color=color.white,
+         bgcolor=currentStage == 8 ? f_warningBg(st8) : f_scoreBg(f_stageScore(math.max(currentStage, 1))), text_size=tableText)
+    table.cell(dash, 5, r0, "VALIDATED", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 6, r0, str.tostring(validatedRiskOn, "#") + "/100", text_color=color.white, bgcolor=f_orientationBg(validatedRiskOn), text_size=tableText)
+    table.cell(dash, 7, r0, "DOWNSTREAM", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 8, r0, str.tostring(downstreamRiskOn, "#") + "/100", text_color=color.white, bgcolor=f_orientationBg(downstreamRiskOn), text_size=tableText)
+    table.cell(dash, 9, r0,
+         "EARLY " + str.tostring(earlyWarningRisk, "#") + "/100 · " + f_warningState(earlyWarningRisk),
+         text_color=color.white, bgcolor=f_warningBg(earlyWarningRisk), text_size=size.tiny)
+
+    // Macro row
+    table.cell(dash, 0, r0 + 1, "GLOBAL M2", text_color=color.white, bgcolor=f_sectionBg(), text_size=tableText)
+    table.cell(dash, 1, r0 + 1, "$" + f_fmt(globalM2USD / 1e12) + "T", text_color=color.white, bgcolor=f_rowBg(1), text_size=tableText)
+    table.cell(dash, 2, r0 + 1, "1M " + f_pct(globalM2_1M), text_color=color.white, bgcolor=f_orientationBg(m2BiasScore), text_size=tableText)
+    table.cell(dash, 3, r0 + 1, "3M ANN " + f_pct(globalM2_3M_ann), text_color=color.white, bgcolor=f_orientationBg(m2BiasScore), text_size=tableText)
+    table.cell(dash, 4, r0 + 1, "YoY " + f_pct(globalM2_YoY), text_color=color.white, bgcolor=f_orientationBg(m2BiasScore), text_size=tableText)
+    table.cell(dash, 5, r0 + 1, "ACC " + f_signed(m2Accel3M) + "pp", text_color=color.white, bgcolor=m2Accel3M >= 0 ? color.rgb(0,105,63) : color.rgb(143,49,54), text_size=tableText)
+    table.cell(dash, 6, r0 + 1, liquidityCycle, text_color=color.white, bgcolor=f_orientationBg(m2BiasScore), text_size=tableText)
+    table.cell(dash, 7, r0 + 1, "M2 " + str.tostring(m2ValidCount) + "/11", text_color=color.white, bgcolor=m2ValidCount >= 9 ? color.rgb(0,105,63) : color.rgb(171,101,8), text_size=tableText)
+    table.cell(dash, 8, r0 + 1, str.length(missingM2) > 0 ? "MISS " + missingM2 : "ALL BLOCS", text_color=color.white, bgcolor=str.length(missingM2) > 0 ? color.rgb(171,101,8) : color.rgb(0,105,63), text_size=tableText)
+    table.cell(dash, 9, r0 + 1, "CRYPTO " + cryptoDelayWindow, text_color=color.white, bgcolor=str.contains(cryptoDelayWindow, "ACTIVE") ? color.rgb(0,105,63) : color.rgb(77,86,99), text_size=size.tiny)
+
+    // Explanation row
+    for cc = 0 to COLS - 1
+        table.cell(dash, cc, r0 + 2,
+             cc == 0 ? "CONF MTH = last completed month • 20D/5D = confirmed daily live windows • scores do NOT retrain v1.4 research" : "",
+             text_color=color.white, bgcolor=color.rgb(24,66,57), text_size=size.tiny, text_halign=text.align_left)
+
+    // Stage headers
+    table.cell(dash, 0, r0 + 3, "STAGE", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 1, r0 + 3, "DRIVER", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 2, r0 + 3, "GRADE", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 3, r0 + 3, "CONF MTH", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 4, r0 + 3, "LIVE 20D", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 5, r0 + 3, "LIVE 5D", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 6, r0 + 3, "SCORE", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 7, r0 + 3, "STATE", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 8, r0 + 3, "ROLE", text_color=color.white, bgcolor=hdr, text_size=tableText)
+    table.cell(dash, 9, r0 + 3, "NEXT", text_color=color.white, bgcolor=hdr, text_size=tableText)
+
+    for stage = 1 to 8
+        int rr = r0 + 3 + stage
+        float ss = f_stageScore(stage)
+        bool active = stage == currentStage
+
+        table.cell(dash, 0, rr, str.tostring(stage) + " " + f_stageName(stage, dominantRiskOn), text_color=color.white,
+             bgcolor=active ? color.rgb(57,45,80) : f_rowBg(stage), text_size=tableText, text_halign=text.align_left)
+        table.cell(dash, 1, rr, f_stageDriver(stage), text_color=color.white, bgcolor=f_rowBg(stage), text_size=tableText)
+        table.cell(dash, 2, rr, f_stageGrade(stage), text_color=color.white,
+             bgcolor=(stage == 2 or stage == 4) ? color.rgb(0,105,63) :
+                 (stage == 3 or stage == 7) ? color.rgb(31,91,62) :
+                 color.rgb(77,86,99), text_size=tableText)
+        table.cell(dash, 3, rr, f_pct(f_stageM1(stage)), text_color=color.white, bgcolor=f_rowBg(stage), text_size=tableText)
+        table.cell(dash, 4, rr, stage == 8 ? f_signed(riskLiquidityGap) + " gap" : f_pct(f_stage20(stage)), text_color=color.white, bgcolor=f_rowBg(stage), text_size=tableText)
+        table.cell(dash, 5, rr, stage == 8 ? f_signed(f_stage5(stage)) + " Δ" : f_pct(f_stage5(stage)), text_color=color.white, bgcolor=f_rowBg(stage), text_size=tableText)
+        table.cell(dash, 6, rr, str.tostring(ss, "#") + "/100", text_color=color.white,
+             bgcolor=stage == 8 ? f_warningBg(ss) : f_scoreBg(ss), text_size=tableText)
+        table.cell(dash, 7, rr, stage == 8 ? f_warningState(ss) : f_state(ss), text_color=color.white,
+             bgcolor=stage == 8 ? f_warningBg(ss) : f_stateBg(ss), text_size=tableText)
+        table.cell(dash, 8, rr, f_roleText(stage, dominantRiskOn), text_color=color.white, bgcolor=f_rowBg(stage), text_size=size.tiny, text_halign=text.align_left)
+        table.cell(dash, 9, rr, f_stageNext(stage, dominantRiskOn), text_color=color.white, bgcolor=f_rowBg(stage), text_size=size.tiny, text_halign=text.align_left)
+
+    // Compact validated driver strip
+    int vr = r0 + 12
+    for cc = 0 to COLS - 1
+        table.cell(dash, cc, vr, cc == 0 ? "VALIDATED DRIVER MONITOR" : "", text_color=color.white, bgcolor=f_sectionBg(), text_size=size.tiny, text_halign=text.align_left)
+
+    table.cell(dash, 0, vr + 1, "DXY A", text_color=color.white, bgcolor=f_rowBg(1), text_size=tableText)
+    table.cell(dash, 1, vr + 1, f_pct(dxyM1) + " | " + f_pct(dxy20) + " | " + f_pct(dxy5), text_color=color.white, bgcolor=f_scoreBg(scDXY), text_size=tableText)
+    table.cell(dash, 2, vr + 1, "COPPER A", text_color=color.white, bgcolor=f_rowBg(1), text_size=tableText)
+    table.cell(dash, 3, vr + 1, f_pct(copM1) + " | " + f_pct(cop20) + " | " + f_pct(cop5), text_color=color.white, bgcolor=f_scoreBg(scCOP), text_size=tableText)
+    table.cell(dash, 4, vr + 1, "EEM A", text_color=color.white, bgcolor=f_rowBg(1), text_size=tableText)
+    table.cell(dash, 5, vr + 1, f_pct(eemM1) + " | " + f_pct(eem20) + " | " + f_pct(eem5), text_color=color.white, bgcolor=f_scoreBg(scEEM), text_size=tableText)
+    table.cell(dash, 6, vr + 1, "EUROPE A", text_color=color.white, bgcolor=f_rowBg(1), text_size=tableText)
+    table.cell(dash, 7, vr + 1, f_pct(vgkM1) + " | " + f_pct(vgk20) + " | " + f_pct(vgk5), text_color=color.white, bgcolor=f_scoreBg(scVGK), text_size=tableText)
+    table.cell(dash, 8, vr + 1, "A AVG", text_color=color.white, bgcolor=f_rowBg(1), text_size=tableText)
+    table.cell(dash, 9, vr + 1, str.tostring((scDXY + scCOP + scEEM + scVGK) / 4.0, "#") + "/100", text_color=color.white, bgcolor=f_scoreBg((scDXY + scCOP + scEEM + scVGK) / 4.0), text_size=tableText)
+
+    table.cell(dash, 0, vr + 2, "CREDIT B", text_color=color.white, bgcolor=f_rowBg(2), text_size=tableText)
+    table.cell(dash, 1, vr + 2, str.tostring(st3RiskOn, "#") + "/100", text_color=color.white, bgcolor=f_scoreBg(st3RiskOn), text_size=tableText)
+    table.cell(dash, 2, vr + 2, "METALS B", text_color=color.white, bgcolor=f_rowBg(2), text_size=tableText)
+    table.cell(dash, 3, vr + 2, str.tostring(f_avg2(scGOLD, scSILVER), "#") + "/100", text_color=color.white, bgcolor=f_scoreBg(f_avg2(scGOLD, scSILVER)), text_size=tableText)
+    table.cell(dash, 4, vr + 2, "VIX B", text_color=color.white, bgcolor=f_rowBg(2), text_size=tableText)
+    table.cell(dash, 5, vr + 2, str.tostring(scVIX, "#") + "/100", text_color=color.white, bgcolor=f_scoreBg(scVIX), text_size=tableText)
+    table.cell(dash, 6, vr + 2, "US RISK", text_color=color.white, bgcolor=f_rowBg(2), text_size=tableText)
+    table.cell(dash, 7, vr + 2, str.tostring(usRiskOn, "#") + "/100", text_color=color.white, bgcolor=f_orientationBg(usRiskOn), text_size=tableText)
+    table.cell(dash, 8, vr + 2, "TOTAL2 B", text_color=color.white, bgcolor=f_rowBg(2), text_size=tableText)
+    table.cell(dash, 9, vr + 2, str.tostring(altRiskOn, "#") + "/100", text_color=color.white, bgcolor=f_scoreBg(altRiskOn), text_size=tableText)
+
+// ------------------------------- VISUALS -------------------------------------
+color bg = transmissionRiskOn >= 60 ? color.new(color.green, 93) :
+     transmissionRiskOn <= 40 ? color.new(color.red, 93) :
+     color.new(color.gray, 96)
+
+bgcolor(showBg ? bg : na)
+
+plot(showScores ? transmissionRiskOn : na, "Validated Transmission Risk-On Score",
+     color=color.white, linewidth=2)
+plot(transmissionRiskOn, "MASTER LINK — LIQUIDITY", display=display.data_window)
+plot(showScores ? downstreamRiskOn : na, "Downstream Risk Appetite",
+     color=downstreamRiskOn >= 50 ? color.lime : color.red, linewidth=2)
+plot(showScores ? validatedRiskOn : na, "Validated Drivers",
+     color=color.aqua, linewidth=2)
+hline(50, "Neutral", color=color.new(color.gray, 65))
+
+// Data-window diagnostics.
+plot(globalM2USD / 1e12, "Global M2 USD Trillions", display=display.data_window)
+plot(globalM2_1M, "Global M2 1M %", display=display.data_window)
+plot(globalM2_3M_ann, "Global M2 3M Annualized %", display=display.data_window)
+plot(globalM2_YoY, "Global M2 YoY %", display=display.data_window)
+plot(riskLiquidityGap, "Risk minus Validated Liquidity Gap", display=display.data_window)
+plot(earlyWarningRisk, "Liquidity Divergence Early-Warning Risk", display=display.data_window)
+
+// ------------------------------- ALERTS --------------------------------------
+bool broadRiskOn = transmissionRiskOn >= 68 and validatedRiskOn >= 65 and downstreamRiskOn >= 58
+bool broadRiskOff = transmissionRiskOn <= 32 and validatedRiskOn <= 35 and downstreamRiskOn <= 42
+bool cryptoWindowActive = str.contains(cryptoDelayWindow, "ACTIVE")
+
+alertcondition(ta.crossover(transmissionRiskOn, 68), "Validated Broad Risk-On",
+     "MSP Liquidity Transmission: validated macro transmission crossed into broad risk-on.")
+alertcondition(ta.crossunder(transmissionRiskOn, 32), "Validated Broad Risk-Off",
+     "MSP Liquidity Transmission: validated macro transmission crossed into broad risk-off.")
+alertcondition(stage8Active, "Liquidity Divergence Warning",
+     "MSP Liquidity Transmission: downstream risk and validated liquidity conditions are materially diverging.")
+alertcondition(ta.crossover(earlyWarningRisk, 50), "Liquidity Divergence Elevated",
+     "MSP Liquidity Transmission: early-warning divergence risk crossed above 50/100.")
+alertcondition(ta.crossover(earlyWarningRisk, 70), "Liquidity Divergence High Risk",
+     "MSP Liquidity Transmission: early-warning divergence risk crossed above 70/100.")
+alertcondition(cryptoWindowActive and not cryptoWindowActive[1], "Crypto Delay Window Active",
+     "MSP Liquidity Transmission: M2 expansion/acceleration has activated the research-derived +2–3M crypto transmission window.")
