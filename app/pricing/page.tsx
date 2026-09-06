@@ -1,45 +1,42 @@
 "use client";
 
+// 2026 pricing simplification: exactly two customer-facing plans, Free and Pro.
+// Legacy Pro Trader has been retired from the pricing page. Existing subscribers
+// on any legacy paid plan retain their access — the entitlement layer treats
+// them as fully Pro. This page never renders "Pro Trader".
+
 import React from "react";
+import { PLAN_PRICES } from "@/lib/planPrices";
 
 type BillingCycle = "monthly" | "yearly";
 
+type PlanId = "free" | "pro";
+
 type Plan = {
-  id: "free" | "pro" | "pro_trader";
+  id: PlanId;
   name: string;
   tagline: string;
-  priceMonthly: number;
-  priceYearly: number;
+  priceMonthlyRaw: number;
+  priceYearlyRaw: number;
+  priceMonthlyLabel: string;
+  priceYearlyLabel: string;
   cta: string;
   subCta?: string;
   highlight?: boolean;
   badge?: string;
-  includes: string[];
-  excludes?: string[];
+  benefits: { group: string; lines: string[] }[];
 };
 
 type FAQ = { q: string; a: string };
 
-const featureMatrix = [
-  { feature: 'Daily market scans', free: '5/day', pro: 'Unlimited', trader: 'Unlimited' },
-  { feature: 'AI analyst questions', free: '10/day', pro: '50/day', trader: '50/day + deeper model' },
-  { feature: 'Scanner + research dashboard', free: 'Basic', pro: 'Full', trader: 'Full' },
-  { feature: 'Trade journal + analytics', free: '—', pro: 'Included', trader: 'Included' },
-  { feature: 'Portfolio insights + CSV export', free: 'Limited', pro: 'Included', trader: 'Included' },
-  { feature: 'Backtesting engine', free: '—', pro: '—', trader: 'Included' },
-  { feature: 'Options terminal + confluence', free: '—', pro: 'Flow only', trader: 'Included' },
-  { feature: 'Golden Egg + Deep Analysis', free: '—', pro: '—', trader: 'Included' },
-  { feature: 'Time scanner + volatility engine', free: '—', pro: '—', trader: 'Included' },
-  { feature: 'Educational risk disclaimers', free: 'Included', pro: 'Included', trader: 'Included' },
-];
-
 export default function PricingPage() {
   const [cycle, setCycle] = React.useState<BillingCycle>("monthly");
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
-  const [loadingPlan, setLoadingPlan] = React.useState<Plan["id"] | null>(null);
+  const [loadingPlan, setLoadingPlan] = React.useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [currentTier, setCurrentTier] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const refFromQuery = new URLSearchParams(window.location.search).get("ref");
@@ -53,25 +50,29 @@ export default function PricingPage() {
     if (saved) setReferralCode(saved);
   }, []);
 
-  // Track referral click for analytics
   React.useEffect(() => {
     if (referralCode) {
-      fetch('/api/referral/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/referral/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ referralCode }),
       }).catch(() => {});
     }
   }, [referralCode]);
 
-  // Pre-fetch logged-in user's email for Stripe checkout pre-fill
   React.useEffect(() => {
-    fetch("/api/me").then(r => (r.ok ? r.json() : null)).then(d => {
-      if (d?.email) setUserEmail(d.email);
-    }).catch(() => {});
+    fetch("/api/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.email) setUserEmail(d.email);
+        if (d?.tier) setCurrentTier(d.tier);
+      })
+      .catch(() => {});
   }, []);
 
-  const handleCheckout = async (planId: Plan["id"]) => {
+  const isPaidUser = currentTier === "pro" || currentTier === "pro_trader";
+
+  const handleCheckout = async (planId: PlanId) => {
     if (planId === "free") {
       window.location.href = "/auth";
       return;
@@ -96,7 +97,6 @@ export default function PricingPage() {
       if (!res.ok || !data?.url) {
         throw new Error(data?.error || "Failed to start checkout");
       }
-
       window.location.href = data.url;
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "Failed to start checkout");
@@ -108,72 +108,92 @@ export default function PricingPage() {
     {
       id: "free",
       name: "Free",
-      tagline: "Explore the platform with core tools. No credit card required.",
-      priceMonthly: 0,
-      priceYearly: 0,
-      cta: "Get Started Free",
-      subCta: "Email verification required",
-      includes: [
-        "Market Scanner — 5 scans/day",
-        "Portfolio tracker — up to 3 positions",
-        "Watchlists + Macro + Markets dashboards",
-        "MSP AI Analyst — 10 questions/day",
-        "No credit card required",
+      tagline: "Explore the platform and see how MarketScannerPros analyses market conditions.",
+      priceMonthlyRaw: 0,
+      priceYearlyRaw: 0,
+      priceMonthlyLabel: "$0",
+      priceYearlyLabel: "$0",
+      cta: "Start Free",
+      subCta: "No credit card required",
+      benefits: [
+        {
+          group: "Scan",
+          lines: ["Core Market Scanner (limited daily runs)"],
+        },
+        {
+          group: "Research",
+          lines: [
+            "Watchlists, markets and macro dashboards",
+            "Selected delayed / basic intelligence views",
+            "Educational content and platform guides",
+          ],
+        },
+        {
+          group: "Track",
+          lines: ["Portfolio tracker (limited positions)", "Trade journal (basic)"],
+        },
       ],
     },
     {
       id: "pro",
       name: "Pro",
-      tagline: "Full scanning, market intelligence, and portfolio analytics for structured research.",
-      priceMonthly: 25,
-      priceYearly: 225,
-      cta: "Upgrade to Pro",
-      subCta: "Cancel anytime",
+      tagline: "Full access to MarketScannerPros — scanners, intelligence, research, backtesting, portfolio tools and advanced market context.",
+      priceMonthlyRaw: PLAN_PRICES.pro.monthlyRaw,
+      priceYearlyRaw: PLAN_PRICES.pro.yearlyRaw,
+      priceMonthlyLabel: PLAN_PRICES.pro.monthly,
+      priceYearlyLabel: PLAN_PRICES.pro.yearly,
+      cta: "Go Pro",
+      subCta: "Cancel anytime · 7-day money-back guarantee",
       highlight: true,
-      badge: "Most Popular",
-      includes: [
-        "Everything in Free, plus:",
-        "Unlimited market scanning",
-        "MSP AI Analyst — 50 questions/day",
-        "Trade journal + unlimited portfolio + CSV export",
-        "Explorers, heatmaps, news, calendars, options flow",
-        "Crypto Command Center + Terminal + Derivatives",
-        "Priority support",
-      ],
-    },
-    {
-      id: "pro_trader",
-      name: "Pro Trader",
-      tagline: "Advanced workflow with backtesting, derivatives, and scenario analysis.",
-      priceMonthly: 50,
-      priceYearly: 550,
-      cta: "Start Pro Trader",
-      subCta: "7-day money-back guarantee",
-      badge: "Best Value",
-      includes: [
-        "Everything in Pro, plus:",
-        "ARCA AI Analyst — GPT-4.1 (deeper model)",
-        "Strategy backtesting engine",
-        "Options Terminal + Options Confluence",
-        "Golden Egg + Deep Analysis reports",
-        "Time Confluence + Volatility Engine",
-        "Premium support",
+      badge: "Full platform",
+      benefits: [
+        {
+          group: "Scan",
+          lines: [
+            "Unlimited Market Scanner with full filters and alerts",
+            "Golden Egg symbol validation workflow",
+          ],
+        },
+        {
+          group: "Validate",
+          lines: [
+            "Full Intelligence suite — Global M2, Liquidity, Fragility, Lead/Lag, NQ Pressure, Auction, Master / Command Centre",
+            "Deep Analysis, Options Terminal, Options Confluence",
+            "Time Confluence Scanner and Volatility Engine",
+          ],
+        },
+        {
+          group: "Research",
+          lines: [
+            "Every research and intelligence dashboard, unrestricted",
+            "Crypto Command Centre + derivatives tools",
+            "Priority ARCA AI Analyst",
+          ],
+        },
+        {
+          group: "Test",
+          lines: ["Full backtesting engine (scanner, options, symbol range, time scanner)"],
+        },
+        {
+          group: "Track",
+          lines: [
+            "Unlimited portfolio and trade journal with advanced analytics",
+            "Alerts, exports and workspace premium features",
+            "Priority support",
+          ],
+        },
       ],
     },
   ];
 
   const faqs: FAQ[] = [
     {
-      q: "What is ARCA AI Analyst?",
-      a: "ARCA AI Analyst is your analytical copilot. It turns scans and context into structured bias, rotation, volatility warnings, and educational scenario analysis. Free gets 10 questions/day (GPT-4o-mini), Pro gets 50/day (GPT-4o-mini), Pro Trader gets 50/day powered by GPT-4.1 for deeper analysis.",
+      q: "What does Free include?",
+      a: "Free gives you the core scanner (limited daily runs), watchlists, macro/markets dashboards, selected delayed/basic intelligence views, portfolio tracker and journal in their basic forms, plus the educational content and platform guides. It is enough to genuinely experience the product before deciding to upgrade.",
     },
     {
-      q: "What's the difference between Pro and Pro Trader?",
-      a: "Pro gives you unlimited scanning, market explorers, heatmaps, intraday charts, news intelligence, trade journal, economic & earnings calendars, crypto command center & terminal, liquidity sweep, options flow, portfolio insights with CSV export, and priority support. Pro Trader adds the backtesting engine, options terminal, options confluence, Golden Egg deep analysis, time confluence scanner, confluence scanner, volatility engine, journal intelligence dock, catalyst studies, and upgrades ARCA AI to GPT-4.1.",
-    },
-    {
-      q: "What does the Free tier include?",
-      a: "Free gives you the market scanner (5 scans/day), portfolio tracker (up to 3 positions), watchlists, macro dashboard, markets dashboard, and MSP AI Analyst (10 questions/day). No credit card required.",
+      q: "What does Pro include?",
+      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the entire Intelligence suite (Global M2, Liquidity, Fragility, Lead/Lag, NQ Pressure, Auction, Master / Command Centre), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support.",
     },
     {
       q: "Can I cancel anytime?",
@@ -185,55 +205,51 @@ export default function PricingPage() {
     },
     {
       q: "Do you provide financial advice?",
-      a: "No. MarketScanner Pros is an educational and informational tool. Nothing is investment advice. Always manage risk and consult a licensed professional if needed.",
+      a: "No. MarketScannerPros is an educational and informational tool. Nothing here is investment advice. Always manage risk and consult a licensed professional if needed.",
     },
   ];
 
   const annualSavingsText = (plan: Plan) => {
-    if (plan.priceMonthly === 0) return "";
-    const yearlyEquivalent = plan.priceMonthly * 12;
-    const savings = Math.max(0, yearlyEquivalent - plan.priceYearly);
-    const savingsPct = yearlyEquivalent > 0 ? Math.round((savings / yearlyEquivalent) * 100) : 0;
-    return savings > 0 ? `Save ${savingsPct}% yearly` : "";
+    if (plan.priceMonthlyRaw === 0) return "";
+    const yearlyEquivalent = plan.priceMonthlyRaw * 12;
+    const savings = Math.max(0, yearlyEquivalent - plan.priceYearlyRaw);
+    if (savings <= 0) return "";
+    const monthsFree = Math.round((savings / plan.priceMonthlyRaw) * 10) / 10;
+    return `~${monthsFree} months free`;
   };
 
-  const annualSavingsLine = (plan: Plan) => {
-    if (plan.priceMonthly === 0) return "";
-    const yearlyEquivalent = plan.priceMonthly * 12;
-    const savings = Math.max(0, yearlyEquivalent - plan.priceYearly);
-    if (savings <= 0) return `or $${formatPrice(plan.priceYearly)}/year`;
-    return `or $${formatPrice(plan.priceYearly)}/year (save $${formatPrice(savings)})`;
+  const annualEquivalent = (plan: Plan) => {
+    if (plan.priceMonthlyRaw === 0) return "";
+    return `equivalent to $${(plan.priceYearlyRaw / 12).toFixed(2)}/month`;
   };
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <div className="mx-auto max-w-6xl px-4 pb-16">
-
-        {/* Referral banner */}
-        {referralCode && (
+      <div className="mx-auto max-w-5xl px-4 pb-16">
+        {referralCode ? (
           <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-300">
-            Referral applied: get <strong>$5 off Pro or $10 off Pro Trader</strong> when you subscribe.
+            Referral applied: get <strong>$5 off Pro</strong> when you subscribe.
           </div>
-        )}
+        ) : null}
 
         <header className="pt-10 text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
             <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-            Simple pricing. Upgrade any time.
+            Start free. Upgrade to Pro for the full platform.
           </div>
 
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight">Simple, Transparent Pricing</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight">Simple, transparent pricing</h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-white/60">
-            Start free. Upgrade when you’re ready for advanced scanning, intelligence, and research workflows.
+            One free plan to explore. One Pro plan to unlock everything. That&apos;s it.
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-3">
             <span className={`text-xs ${cycle === "monthly" ? "text-white" : "text-white/50"}`}>Monthly</span>
             <BillingSwitch cycle={cycle} onToggle={() => setCycle((c) => (c === "monthly" ? "yearly" : "monthly"))} />
             <span className={`text-xs ${cycle === "yearly" ? "text-white" : "text-white/50"}`}>
-              Yearly{" "}
+              Annual{" "}
               <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">
-                Save more yearly
+                ~2 months free
               </span>
             </span>
           </div>
@@ -249,21 +265,20 @@ export default function PricingPage() {
               <span className="inline-flex items-center gap-1.5">
                 <span className="text-emerald-300">✓</span> Secure Stripe checkout
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-emerald-300">✓</span> Priority support on paid tiers
-              </span>
             </div>
           </div>
         </header>
 
-        <section className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
           {plans.map((p) => (
             <PlanCard
               key={p.id}
               plan={p}
               cycle={cycle}
               savingsText={annualSavingsText(p)}
-              savingsLine={annualSavingsLine(p)}
+              equivalentLine={annualEquivalent(p)}
+              currentTier={currentTier}
+              isPaidUser={isPaidUser}
               onCheckout={() => handleCheckout(p.id)}
               loading={loadingPlan === p.id}
             />
@@ -276,46 +291,8 @@ export default function PricingPage() {
           </div>
         ) : null}
 
-        <section className="mt-14 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]" id="compare">
-          <div className="border-b border-white/10 px-5 py-4">
-            <h2 className="text-lg font-semibold text-white">Compare plans by workflow</h2>
-            <p className="mt-1 text-sm text-white/60">
-              See exactly when to move from exploration to full research to Pro Trader scenario testing.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table role="table" className="w-full min-w-[720px] text-left text-sm">
-              <thead className="bg-slate-950/50 text-xs uppercase tracking-[0.08em] text-white/50">
-                <tr>
-                  <th scope="col" className="px-5 py-3">Feature</th>
-                  <th scope="col" className="px-5 py-3">Free</th>
-                  <th scope="col" className="px-5 py-3">Pro</th>
-                  <th scope="col" className="px-5 py-3">Pro Trader</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {featureMatrix.map((row) => (
-                  <tr key={row.feature} className="text-white/75">
-                    <td className="px-5 py-3 font-semibold text-white/90">{row.feature}</td>
-                    <td className="px-5 py-3">{row.free}</td>
-                    <td className="px-5 py-3 text-emerald-200">{row.pro}</td>
-                    <td className="px-5 py-3 text-amber-200">{row.trader}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="border-t border-white/10 px-5 py-3 text-xs text-white/50">
-            All plans are educational/informational only. No broker execution, no personal advice, and no guarantee of market outcomes.
-          </div>
-        </section>
-
         <section className="mt-14">
-          <h2 className="text-center text-lg font-semibold">Frequently Asked Questions</h2>
-          <p className="mt-2 text-center text-sm text-white/60">
-            Quick answers so users can convert without doubt.
-          </p>
-
+          <h2 className="text-center text-lg font-semibold">Frequently asked questions</h2>
           <div className="mx-auto mt-6 max-w-3xl space-y-3">
             {faqs.map((f, idx) => (
               <FaqItem
@@ -331,7 +308,7 @@ export default function PricingPage() {
         <div className="mx-auto mt-10 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] p-4">
           <div className="text-xs text-white/60">Disclaimer</div>
           <p className="mt-2 text-xs text-white/70">
-            MarketScanner Pros is an educational and informational tool. It is not investment advice and should not be
+            MarketScannerPros is an educational and informational tool. It is not investment advice and should not be
             construed as such. Past performance does not guarantee future results. Market participation involves risk.
             Consult a licensed financial advisor before making investment decisions.
           </p>
@@ -345,27 +322,34 @@ function PlanCard({
   plan,
   cycle,
   savingsText,
-  savingsLine,
+  equivalentLine,
+  currentTier,
+  isPaidUser,
   onCheckout,
   loading,
 }: {
   plan: Plan;
   cycle: BillingCycle;
   savingsText: string;
-  savingsLine: string;
+  equivalentLine: string;
+  currentTier: string | null;
+  isPaidUser: boolean;
   onCheckout: () => void;
   loading: boolean;
 }) {
-  const price = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
+  const priceLabel = cycle === "monthly" ? plan.priceMonthlyLabel : plan.priceYearlyLabel;
   const cadence = cycle === "monthly" ? "/ month" : "/ year";
+
+  // "Current Plan" state — Pro subscribers on the Pro card, Free/anon on Free card.
+  const isCurrentPlan =
+    (plan.id === "pro" && isPaidUser) ||
+    (plan.id === "free" && currentTier === "free");
 
   return (
     <div
       className={[
         "relative rounded-lg border p-5",
-        plan.id === "pro_trader"
-          ? "border-amber-400/35 bg-amber-400/[0.055] shadow-[0_0_0_1px_rgba(251,191,36,0.08)]"
-          : plan.highlight
+        plan.highlight
           ? "border-emerald-500/35 bg-emerald-500/[0.06] shadow-[0_0_0_1px_rgba(16,185,129,0.08)]"
           : "border-white/10 bg-white/[0.04]",
       ].join(" ")}
@@ -378,87 +362,53 @@ function PlanCard({
         </div>
       ) : null}
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold">{plan.name}</div>
-          <div className="mt-1 text-xs text-white/60">{plan.tagline}</div>
+      <div>
+        <div className="text-sm font-semibold">{plan.name}</div>
+        <div className="mt-1 text-xs text-white/60">{plan.tagline}</div>
+      </div>
+
+      <div className="mt-5">
+        <div className="flex items-end gap-2">
+          <div className="text-3xl font-semibold">{priceLabel}</div>
+          <div className="pb-1 text-xs text-white/60">{plan.priceMonthlyRaw === 0 ? "forever" : cadence}</div>
         </div>
-
-        {savingsText && cycle === "yearly" ? (
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/70">
-            {savingsText}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-5">
-        {price === 0 ? (
-          <div className="flex items-end gap-2">
-            <div className="text-3xl font-semibold">$0</div>
-            <div className="pb-1 text-xs text-white/60">forever</div>
-          </div>
-        ) : (
-          <div className="flex items-end gap-2">
-            <div className="text-3xl font-semibold">${formatPrice(price)}</div>
-            <div className="pb-1 text-xs text-white/60">{cadence}</div>
-          </div>
-        )}
-
-        {plan.priceMonthly > 0 ? (
+        {plan.priceMonthlyRaw > 0 ? (
           <div className="mt-1 text-xs text-white/50">
-            {cycle === "monthly"
-              ? savingsLine
-              : `equivalent to $${formatPrice(plan.priceYearly / 12)}/month`}
+            {cycle === "yearly" ? equivalentLine : (savingsText ? `Annual: ${savingsText}` : "")}
           </div>
         ) : null}
       </div>
 
-      <div className="mt-5">
-        <div className="text-xs font-semibold text-white/80">What’s included</div>
-        <ul className="mt-3 space-y-2">
-          {plan.includes.map((f) => (
-            <li key={f} className="flex items-start gap-2 text-xs text-white/75">
-              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/50" />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-
-        {plan.excludes?.length ? (
-          <>
-            <div className="mt-4 text-xs font-semibold text-white/60">Not included</div>
-            <ul className="mt-2 space-y-2">
-              {plan.excludes.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-xs text-white/45">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/25" />
-                  <span>{f}</span>
+      <div className="mt-5 space-y-4">
+        {plan.benefits.map((section) => (
+          <div key={section.group}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">{section.group}</div>
+            <ul className="mt-2 space-y-1.5">
+              {section.lines.map((line) => (
+                <li key={line} className="flex items-start gap-2 text-xs text-white/75">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/50" />
+                  <span>{line}</span>
                 </li>
               ))}
             </ul>
-          </>
-        ) : null}
-
-        <a href="#compare" className="mt-4 inline-block text-xs font-semibold text-white/60 hover:text-white">
-          See full comparison ↓
-        </a>
+          </div>
+        ))}
       </div>
 
       <div className="mt-6">
         <button
           type="button"
           onClick={onCheckout}
-          disabled={loading}
+          disabled={loading || isCurrentPlan}
           className={[
             "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
-            plan.id === "pro_trader"
-              ? "border border-amber-400/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25"
-              : plan.highlight
+            plan.highlight
               ? "border border-emerald-400/40 bg-emerald-400/15 text-emerald-50 hover:bg-emerald-400/25"
               : "border border-white/10 bg-white/10 hover:bg-white/20",
-            loading ? "opacity-60 cursor-not-allowed" : "",
+            (loading || isCurrentPlan) ? "opacity-60 cursor-not-allowed" : "",
           ].join(" ")}
         >
-          {loading ? "Redirecting..." : plan.cta}
+          {isCurrentPlan ? "Current Plan" : loading ? "Redirecting…" : plan.cta}
         </button>
         {plan.subCta ? <div className="mt-2 text-center text-xs text-white/55">{plan.subCta}</div> : null}
       </div>
@@ -499,14 +449,8 @@ function FaqItem({ faq, open, onToggle }: { faq: FAQ; open: boolean; onToggle: (
         <span className="text-xs text-white/60" aria-hidden="true">{open ? "—" : "+"}</span>
       </button>
       {open ? (
-        <div className="border-t border-white/10 px-4 py-4 text-sm text-white/70">
-          {faq.a}
-        </div>
+        <div className="border-t border-white/10 px-4 py-4 text-sm text-white/70">{faq.a}</div>
       ) : null}
     </div>
   );
-}
-
-function formatPrice(n: number) {
-  return n.toFixed(2);
 }

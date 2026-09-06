@@ -99,8 +99,8 @@ function WorkspaceContent() {
   }, [urlTabParam]);
 
   const activeMeta = WORKSPACE_TAB_META[tab];
-  const tierLabel = tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free';
-  const tierTone: 'bull' | 'info' | 'neutral' = tier === 'pro_trader' ? 'bull' : tier === 'pro' ? 'info' : 'neutral';
+  const tierLabel = tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free';
+  const tierTone: 'bull' | 'info' | 'neutral' = tier === 'pro' || tier === 'pro_trader' ? 'bull' : 'neutral';
   const nextTab: WorkspaceTab = (() => {
     const idx = TABS.indexOf(tab);
     return TABS[(idx + 1) % TABS.length];

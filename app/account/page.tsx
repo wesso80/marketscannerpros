@@ -168,52 +168,46 @@ export default function AccountPage() {
     }
   };
 
+  // 2026 pricing simplification: legacy pro_trader tier is displayed as "Pro"
+  // to match the single-Pro-plan customer-facing model; entitlements remain full.
   const tierDisplay: Record<TierKey, { name: string; statusTone: string; active: boolean }> = {
     free: { name: "Free", statusTone: "bg-white/10 border-white/20 text-white/80", active: true },
     pro: { name: "Pro", statusTone: "bg-emerald-500/15 border-emerald-400/30 text-emerald-200", active: true },
-    pro_trader: { name: "Pro Trader", statusTone: "bg-emerald-500/15 border-emerald-400/30 text-emerald-200", active: true },
+    pro_trader: { name: "Pro", statusTone: "bg-emerald-500/15 border-emerald-400/30 text-emerald-200", active: true },
     anonymous: { name: "Not Signed In", statusTone: "bg-white/10 border-white/20 text-white/80", active: false },
   };
 
   const normalizedTier: TierKey = (tier as TierKey) || "anonymous";
   const currentTier = tierDisplay[normalizedTier] ?? tierDisplay.anonymous;
+  const isPaid = normalizedTier === "pro" || normalizedTier === "pro_trader";
 
-  const aiLimit = normalizedTier === "pro_trader" ? 50 : normalizedTier === "pro" ? 50 : 10;
+  const aiLimit = isPaid ? 50 : 10;
   const aiUsed = realUsage?.aiUsed ?? 0;
 
   const usage: UsageMetric[] = [
     { label: "MSP AI Analyst", used: aiUsed, limit: aiLimit },
-    { label: "Saved Alerts", used: realUsage?.alertCount ?? 0, limit: normalizedTier === "pro_trader" ? 25 : 10 },
-    { label: "Watchlist Symbols", used: realUsage?.watchlistCount ?? 0, limit: normalizedTier === "pro_trader" ? 100 : normalizedTier === "pro" ? 50 : 20 },
+    { label: "Saved Alerts", used: realUsage?.alertCount ?? 0, limit: isPaid ? 25 : 10 },
+    { label: "Watchlist Symbols", used: realUsage?.watchlistCount ?? 0, limit: isPaid ? 100 : 20 },
   ];
 
   const planFeatures = useMemo(() => {
-    if (normalizedTier === "pro_trader") {
+    if (isPaid) {
       return [
-        "Everything in Pro",
-        "ARCA AI Analyst — GPT-4.1 (50/day)",
-        "Research risk framework",
-        "AI + Derivatives Intelligence",
-        "Golden Egg Deep Analysis",
-      ];
-    }
-    if (normalizedTier === "pro") {
-      return [
-        "Everything in Free",
-        "Unlimited symbol scanning",
-        "MSP AI Analyst (50/day)",
-        "Market Movers + Intelligence",
-        "Portfolio / Journal insights",
+        "Unlimited scanning + Golden Egg",
+        "Full Intelligence suite (Global M2, Liquidity, Fragility, Lead/Lag, NQ Pressure, Auction, Master)",
+        "Backtesting, options and derivatives tools",
+        "Unlimited portfolio and trade journal",
+        "Alerts, exports, priority support",
       ];
     }
     return [
-      "Top 10 equities + Top 10 crypto",
-      "MSP AI Analyst (10/day)",
-      "Basic portfolio tracker",
-      "Basic journal logging",
-      "Community support",
+      "Core scanner (limited daily runs)",
+      "Watchlists, markets and macro dashboards",
+      "Selected delayed / basic intelligence views",
+      "Basic portfolio tracker and journal",
+      "Educational content and platform guides",
     ];
-  }, [normalizedTier]);
+  }, [isPaid]);
 
   const aiRemaining = Math.max(0, aiLimit - aiUsed);
 
@@ -260,7 +254,7 @@ export default function AccountPage() {
             >
               {billingLoading ? "Opening..." : "Manage Billing"}
             </button>
-            {normalizedTier !== "pro_trader" ? (
+            {!isPaid ? (
               <Link href="/pricing" className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold hover:bg-emerald-500/30">
                 Upgrade Plan
               </Link>
@@ -385,13 +379,13 @@ export default function AccountPage() {
                 <li>• Higher AI daily limits</li>
               </ul>
 
-              {normalizedTier !== "pro_trader" ? (
+              {!isPaid ? (
                 <Link href="/pricing" className="mt-6 block w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold hover:bg-emerald-500/30 text-center">
-                  Upgrade to Pro Trader
+                  Upgrade to Pro
                 </Link>
               ) : (
                 <div className="mt-6 w-full px-4 py-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-sm text-center text-emerald-200">
-                  You have full Pro Trader access
+                  You have full Pro access
                 </div>
               )}
             </section>
@@ -402,7 +396,7 @@ export default function AccountPage() {
                 <h3 className="text-sm font-semibold text-emerald-400">Refer &amp; Earn</h3>
               </div>
               <p className="text-xs text-white/70">
-                Share your referral link — your friend gets <strong className="text-emerald-300">$5 off Pro or $10 off Pro Trader</strong> and you earn <strong className="text-emerald-300">matching credit</strong>.
+                Share your referral link — your friend gets <strong className="text-emerald-300">$5 off Pro</strong> and you earn <strong className="text-emerald-300">matching credit</strong>.
               </p>
               <Link
                 href="/tools/referrals"

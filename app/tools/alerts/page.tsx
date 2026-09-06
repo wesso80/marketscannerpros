@@ -466,12 +466,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
                   <div className="text-slate-400">Free</div>
                   <div className="font-semibold text-slate-100">3</div>
                 </div>
-                <div className={`rounded-lg p-2 ${tier === 'pro' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
+                <div className={`rounded-lg p-2 ${tier === 'pro' || tier === 'pro_trader' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
                   <div className="text-slate-400">Pro</div>
-                  <div className="font-semibold text-slate-100">25</div>
-                </div>
-                <div className={`rounded-lg p-2 ${tier === 'pro_trader' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
-                  <div className="text-slate-400">Pro Trader</div>
                   <div className="font-semibold text-slate-100">∞</div>
                 </div>
               </div>

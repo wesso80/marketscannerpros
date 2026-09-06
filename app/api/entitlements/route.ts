@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
   try {
     const freeForAll = isFreeForAllMode();
     if (freeForAll) {
+      // Legacy tier label kept for backward-compatible clients; internal
+      // access model treats pro and pro_trader identically.
       return NextResponse.json({ 
         tier: "pro_trader", 
         status: "active", 

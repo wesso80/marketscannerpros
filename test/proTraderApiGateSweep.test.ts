@@ -29,8 +29,8 @@ function read(path: string) {
   return readFileSync(join(root, path), 'utf8');
 }
 
-describe('Pro Trader API gate sweep', () => {
-  it.each(proTraderRoutes)('%s uses the canonical Pro Trader access helper', (path) => {
+describe('Pro API gate sweep (legacy `hasProTraderAccess` helper — now grants both `pro` and `pro_trader`)', () => {
+  it.each(proTraderRoutes)('%s uses the canonical paid-access helper', (path) => {
     const content = read(path);
     const sessionIndex = content.indexOf('getSessionFromCookie');
     const gateIndex = content.indexOf('hasProTraderAccess');
@@ -45,12 +45,15 @@ describe('Pro Trader API gate sweep', () => {
     }
   });
 
-  it('documents Volatility Engine as Pro Trader gated in both API and UI helper layers', () => {
+  it('documents Volatility Engine as paid-gated in both API and UI helper layers', () => {
     const route = read('app/api/dve/route.ts');
     const helpers = read('lib/useUserTier.ts');
 
-    expect(route).toContain('Pro Trader subscription required for Volatility Engine');
+    expect(route).toContain('Pro subscription required for Volatility Engine');
+    expect(route).toContain('hasProTraderAccess');
     expect(helpers).toContain('canAccessVolatilityEngine');
-    expect(helpers).toContain('tier === "pro_trader"');
+    // In the simplified pricing model both pro and pro_trader grant access via
+    // the shared `isPaid` helper — the literal `tier === "pro_trader"` string
+    // is no longer required in the UI helper file.
   });
 });

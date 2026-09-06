@@ -2295,7 +2295,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <header className="max-w-none px-4 py-8 text-center">
-          <span className="inline-flex rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--msp-accent)]">PRO TRADER</span>
+          <span className="inline-flex rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--msp-accent)]">PRO</span>
           <h1 className="my-3 text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">
             <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="Options Confluence Scanner icon" className="inline h-8 w-8 rounded-lg object-contain" /> Options Confluence Scanner</span>
           </h1>

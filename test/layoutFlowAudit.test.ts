@@ -316,7 +316,7 @@ describe('layout and flow audit regressions', () => {
     expect(toolsNavBar).toContain('["Options", "/tools/terminal?tab=options-terminal"]');
     expect(toolsNavBar).toContain('["Crypto", "/tools/explorer?tab=crypto-command"]');
     expect(toolsNavBar).toContain('["Derivatives", "/tools/terminal?tab=crypto"]');
-    expect(toolsNavBar).toContain("tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'");
+    expect(toolsNavBar).toContain("tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'");
     expect(toolsNavBar).not.toContain('⭐ Pro Trader');
     expect(toolsNavBar).not.toContain('✨ Pro');
     expect(onboardingChecklist).toContain("href: '/tools/workspace?tab=journal'");
@@ -325,9 +325,9 @@ describe('layout and flow audit regressions', () => {
     expect(onboardingChecklist).toContain("done ? 'OK' : step.code");
     expect(onboardingChecklist).not.toContain("icon: '🔍'");
     expect(onboardingChecklist).not.toContain("done ? '✅'");
-    expect(pricing).toContain('ARCA AI (50/day)');
-    expect(pricing).toContain('Market Movers & News');
     expect(pricing).toContain('Full backtesting engine');
+    expect(pricing).toContain('Full Intelligence suite');
+    expect(pricing).toContain('$24.99');
     expect(pricing).not.toContain('🤖');
     expect(pricing).not.toContain('📊');
     expect(pricing).not.toContain('📈');

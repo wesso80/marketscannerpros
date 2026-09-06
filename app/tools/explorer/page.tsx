@@ -122,7 +122,7 @@ export default function ExplorerPage() {
         eyebrow="Cross-market map"
         badges={[
           { label: `${TABS.length} lenses` },
-          { label: `Tier ${tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}` },
+          { label: `Tier ${tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}` },
           ...(regime.data?.regime ? [{ label: `Regime ${String(regime.data.regime).toUpperCase()}` }] : []),
         ]}
         title="Markets."

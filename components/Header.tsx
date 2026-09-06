@@ -115,7 +115,7 @@ export default function Header() {
             )}
             {!tierLoading && isLoggedIn && (
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
-                {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
+                {tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}
               </span>
             )}
             {isLoggedIn ? (
@@ -138,7 +138,7 @@ export default function Header() {
         <div className="msp-mobile-nav items-center gap-2 ml-auto">
           {isLoggedIn && !tierLoading && (
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
-              {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
+              {tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}
             </span>
           )}
           <button

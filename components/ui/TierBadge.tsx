@@ -6,11 +6,13 @@ type TierBadgeProps = {
 };
 
 const TIER_META: Record<string, { label: string; bg: string; border: string; text: string }> = {
+  // Legacy pro_trader still exists internally for existing subscribers but is
+  // labelled "Pro" for consistency with the simplified 2-plan pricing.
   pro_trader: {
-    label: 'Pro Trader',
-    bg: 'bg-amber-500/15',
-    border: 'border-amber-500/40',
-    text: 'text-amber-300',
+    label: 'Pro',
+    bg: 'bg-emerald-500/12',
+    border: 'border-emerald-500/35',
+    text: 'text-emerald-300',
   },
   pro: {
     label: 'Pro',

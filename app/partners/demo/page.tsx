@@ -1,19 +1,19 @@
-"use client";
+﻿"use client";
 import Link from "next/link";
 
-/* ─── Platform capabilities for broker pitch ─── */
+/* â”€â”€â”€ Platform capabilities for broker pitch â”€â”€â”€ */
 const capabilities = [
   {
     icon: "SCAN",
     title: "Multi-Asset Scanner",
-    description: "Scan 10,000+ equities, crypto, options, and commodities with 15+ technical indicators. Returns structured alignment labels — never buy/sell directives.",
+    description: "Scan 10,000+ equities, crypto, options, and commodities with 15+ technical indicators. Returns structured alignment labels â€” never buy/sell directives.",
     tier: "All tiers",
   },
   {
     icon: "GE",
     title: "Golden Egg Analysis",
     description: "Single-symbol deep analysis combining technicals, macro regime, options flow, time confluence, and AI commentary into a structured scenario report.",
-    tier: "Pro Trader",
+    tier: "Pro",
   },
   {
     icon: "AI",
@@ -25,19 +25,19 @@ const capabilities = [
     icon: "TIME",
     title: "Time Confluence Engine",
     description: "Multi-timeframe candle close analysis with 50% retracement levels and weighted decompression targets. Unique analytical edge.",
-    tier: "Pro Trader",
+    tier: "Pro",
   },
   {
     icon: "OPT",
     title: "Options Flow & Confluence",
     description: "Put/call ratios, IV rank, max pain, unusual activity detection, and open interest distribution. Full options analytics dashboard.",
-    tier: "Pro Trader",
+    tier: "Pro",
   },
   {
     icon: "BT",
     title: "Strategy Backtesting",
     description: "User-defined strategy backtester against historical data. Returns win rate, profit factor, max drawdown, and equity curves with mandatory limitations disclaimer.",
-    tier: "Pro Trader",
+    tier: "Pro",
   },
   {
     icon: "JRNL",
@@ -48,14 +48,14 @@ const capabilities = [
   {
     icon: "MACRO",
     title: "Macro Intelligence",
-    description: "Fear/greed indices, sector heatmaps, market breadth, economic calendar, earnings calendar, news sentiment — all in one dashboard.",
+    description: "Fear/greed indices, sector heatmaps, market breadth, economic calendar, earnings calendar, news sentiment â€” all in one dashboard.",
     tier: "Pro+",
   },
   {
     icon: "RISK",
     title: "Risk Metrics Engine",
     description: "Rule-based risk evaluation for simulated positions: daily loss limits, portfolio heat caps, R:R minimums, position count limits.",
-    tier: "Pro Trader",
+    tier: "Pro",
   },
   {
     icon: "CRYP",
@@ -65,7 +65,7 @@ const capabilities = [
   },
 ];
 
-/* ─── Integration options ─── */
+/* â”€â”€â”€ Integration options â”€â”€â”€ */
 const integrations = [
   {
     model: "White-Label Embed",
@@ -82,13 +82,13 @@ const integrations = [
   },
   {
     model: "Authorised Rep Model",
-    description: "MSP operates under your AFSL as an authorised representative. Your licence, our technology — fully covered by your existing compliance framework.",
+    description: "MSP operates under your AFSL as an authorised representative. Your licence, our technology â€” fully covered by your existing compliance framework.",
     icon: "LEGAL",
     effort: "Legal review",
   },
 ];
 
-/* ─── Revenue models ─── */
+/* â”€â”€â”€ Revenue models â”€â”€â”€ */
 const revenueModels = [
   { model: "SaaS Fee", description: "Fixed monthly/annual fee for platform access", icon: "SaaS" },
   { model: "Per-Seat Pricing", description: "Pay per active user accessing MSP tools", icon: "SEAT" },
@@ -105,7 +105,7 @@ export default function PartnerDemoPage() {
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
     }}>
 
-      {/* ─── Hero ─── */}
+      {/* â”€â”€â”€ Hero â”€â”€â”€ */}
       <section style={{
         padding: "80px 20px 60px",
         borderBottom: "1px solid #1f2933",
@@ -139,7 +139,7 @@ export default function PartnerDemoPage() {
             margin: "0 auto 32px",
             lineHeight: 1.7,
           }}>
-            A ready-built AI analytics suite covering equities, crypto, options, and commodities — 
+            A ready-built AI analytics suite covering equities, crypto, options, and commodities â€” 
             A ready-built AI analytics suite your clients can use under your existing licence. 
             White-label it, embed it, or co-brand it. No development cost on your side.
           </p>
@@ -173,13 +173,13 @@ export default function PartnerDemoPage() {
               fontWeight: 600,
               textDecoration: "none",
             }}>
-              See Full Capabilities ↓
+              See Full Capabilities â†“
             </a>
           </div>
         </div>
       </section>
 
-      {/* ─── Value Proposition ─── */}
+      {/* â”€â”€â”€ Value Proposition â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -201,7 +201,7 @@ export default function PartnerDemoPage() {
               {
                 stat: "10,000+",
                 label: "Assets Scanned",
-                detail: "Equities, crypto, options, commodities — all from licensed data providers (Nasdaq, Alpha Vantage, CoinGecko)",
+                detail: "Equities, crypto, options, commodities â€” all from licensed data providers (Nasdaq, Alpha Vantage, CoinGecko)",
               },
               {
                 stat: "15+",
@@ -211,17 +211,17 @@ export default function PartnerDemoPage() {
               {
                 stat: "GPT-4.1",
                 label: "AI Engine",
-                detail: "ARCA AI analyst provides market commentary, scenario analysis, and Pine Script development — with mandatory disclaimers",
+                detail: "ARCA AI analyst provides market commentary, scenario analysis, and Pine Script development â€” with mandatory disclaimers",
               },
               {
                 stat: "0",
                 label: "Broker Integration",
-                detail: "No trades executed, no funds held, no broker connections. Pure analytics — your compliance team will appreciate this",
+                detail: "No trades executed, no funds held, no broker connections. Pure analytics â€” your compliance team will appreciate this",
               },
               {
                 stat: "3",
                 label: "Subscription Tiers",
-                detail: "Free, Pro ($25/mo), Pro Trader ($50/mo) — ready for your pricing structure or bundled into your existing plans",
+                detail: "Free, Pro ($24.99/mo) â€” ready for your pricing structure or bundled into your existing plans",
               },
               {
                 stat: "100%",
@@ -250,7 +250,7 @@ export default function PartnerDemoPage() {
         </div>
       </section>
 
-      {/* ─── Platform Capabilities ─── */}
+      {/* â”€â”€â”€ Platform Capabilities â”€â”€â”€ */}
       <section id="capabilities" style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -260,7 +260,7 @@ export default function PartnerDemoPage() {
             Platform Capabilities
           </h2>
           <p style={{ fontSize: 16, color: "#94a3b8", textAlign: "center", marginBottom: 40 }}>
-            Everything your clients need for market analysis — built, tested, and ready to deploy.
+            Everything your clients need for market analysis â€” built, tested, and ready to deploy.
           </p>
 
           <div style={{
@@ -304,7 +304,7 @@ export default function PartnerDemoPage() {
         </div>
       </section>
 
-      {/* ─── Integration Models ─── */}
+      {/* â”€â”€â”€ Integration Models â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -354,7 +354,7 @@ export default function PartnerDemoPage() {
         </div>
       </section>
 
-      {/* ─── Revenue Models ─── */}
+      {/* â”€â”€â”€ Revenue Models â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -393,7 +393,7 @@ export default function PartnerDemoPage() {
         </div>
       </section>
 
-      {/* ─── Compliance Section ─── */}
+      {/* â”€â”€â”€ Compliance Section â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -439,18 +439,18 @@ export default function PartnerDemoPage() {
               Available Documentation
             </h3>
             <ul style={{ fontSize: 14, color: "#cbd5e1", lineHeight: 2, margin: 0, padding: 0, listStyle: "none" }}>
-              <li>📄 MSP Legal / Compliance Briefing Pack (v1.3, 800+ lines)</li>
-              <li>📄 Entitlement Policy Map — tier-by-tier feature access matrix</li>
-              <li>📄 Terms of Service with Paper Trade &amp; AI disclosure sections</li>
-              <li>📄 Privacy Policy (GDPR/CCPA compliant)</li>
-              <li>📄 Full disclaimer page with AFSL disclosure</li>
-              <li>📄 Data licence documentation (Nasdaq, Alpha Vantage, CoinGecko)</li>
+              <li>ðŸ“„ MSP Legal / Compliance Briefing Pack (v1.3, 800+ lines)</li>
+              <li>ðŸ“„ Entitlement Policy Map â€” tier-by-tier feature access matrix</li>
+              <li>ðŸ“„ Terms of Service with Paper Trade &amp; AI disclosure sections</li>
+              <li>ðŸ“„ Privacy Policy (GDPR/CCPA compliant)</li>
+              <li>ðŸ“„ Full disclaimer page with AFSL disclosure</li>
+              <li>ðŸ“„ Data licence documentation (Nasdaq, Alpha Vantage, CoinGecko)</li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* ─── Data Sources ─── */}
+      {/* â”€â”€â”€ Data Sources â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -492,7 +492,7 @@ export default function PartnerDemoPage() {
         </div>
       </section>
 
-      {/* ─── Live Platform Link ─── */}
+      {/* â”€â”€â”€ Live Platform Link â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
         borderBottom: "1px solid #1f2933",
@@ -539,7 +539,7 @@ export default function PartnerDemoPage() {
         </div>
       </section>
 
-      {/* ─── CTA ─── */}
+      {/* â”€â”€â”€ CTA â”€â”€â”€ */}
       <section style={{
         padding: "80px 20px",
         textAlign: "center",
@@ -591,3 +591,4 @@ export default function PartnerDemoPage() {
     </main>
   );
 }
+

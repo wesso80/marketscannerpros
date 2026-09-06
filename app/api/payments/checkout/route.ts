@@ -7,18 +7,28 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
 });
 
-// Price IDs from environment variables (set in .env.local and Render)
+// 2026 pricing simplification: only the single Pro plan is sold here.
+// The operator has repriced the legacy Pro Trader Stripe price IDs to the new
+// $24.99/mo and $249/yr Pro plan, so `STRIPE_PRICE_PRO_TRADER_*` is now the
+// live source of truth for new subscriptions. `STRIPE_PRO_*_PRICE_ID` (new
+// env-var names) is preferred if set, and the old Pro price IDs remain as a
+// last-resort fallback for continuity — they are unused in Stripe today.
 const PRICE_IDS = {
-  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || "",
-  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY || "",
-  pro_trader_monthly: process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY || "",
-  pro_trader_yearly: process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "",
+  pro_monthly:
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID ||
+    process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY ||
+    process.env.STRIPE_PRICE_PRO_MONTHLY ||
+    '',
+  pro_yearly:
+    process.env.STRIPE_PRO_ANNUAL_PRICE_ID ||
+    process.env.STRIPE_PRICE_PRO_TRADER_YEARLY ||
+    process.env.STRIPE_PRICE_PRO_YEARLY ||
+    '',
 };
 
-// Plan-based referral discounts: $5 off Pro, $10 off Pro Trader
+// Referral discount for the single Pro plan (only path new subscribers take).
 const REFERRAL_DISCOUNTS: Record<string, { cents: number; couponId: string; label: string }> = {
-  pro:        { cents: 500,  couponId: 'referral_5_off',  label: 'Referral $5 Off' },
-  pro_trader: { cents: 1000, couponId: 'referral_10_off', label: 'Referral $10 Off' },
+  pro: { cents: 500, couponId: 'referral_5_off', label: 'Referral $5 Off' },
 };
 
 /** Get or create a plan-specific referral coupon */
@@ -59,15 +69,16 @@ export async function POST(req: NextRequest) {
   try {
     const { plan, billing, email, referralCode } = await req.json();
 
-    // Validate plan
-    if (!plan || !["pro", "pro_trader"].includes(plan)) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    // Only the Pro plan is sold. Anything else is rejected (legacy sub renewals
+    // do not go through this endpoint).
+    if (plan !== 'pro') {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
     // Validate billing period
-    const billingPeriod = billing || "monthly";
-    if (!["monthly", "yearly"].includes(billingPeriod)) {
-      return NextResponse.json({ error: "Invalid billing period" }, { status: 400 });
+    const billingPeriod = billing || 'monthly';
+    if (!['monthly', 'yearly'].includes(billingPeriod)) {
+      return NextResponse.json({ error: 'Invalid billing period' }, { status: 400 });
     }
 
     // Get the correct price ID

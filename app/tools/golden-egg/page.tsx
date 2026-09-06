@@ -694,7 +694,7 @@ export default function GoldenEggPage() {
             <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
             <h2 className="text-xl font-bold text-white">Unlock Golden Egg confluence analysis</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-              Golden Egg is a Pro Trader workflow for reviewing one symbol across regime, confluence, volatility, and educational scenario context.
+              Golden Egg is a Pro workflow for reviewing one symbol across regime, confluence, volatility, and educational scenario context.
             </p>
             <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Regime and bias context</div>

@@ -255,7 +255,7 @@ export default function ResearchPage() {
             <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
               <span className="text-emerald-300">Evidence layer</span>
               <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{RESEARCH_TAB_META[tab].eyebrow}</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Tier {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Tier {tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}</span>
             </div>
             <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Research</h1>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">News, events, catalysts, earnings, and saved evidence for validating the morning research queue.</p>
@@ -269,7 +269,7 @@ export default function ResearchPage() {
             <ResearchMetric label="Active Lens" value={tab} tone="#10B981" detail={RESEARCH_TAB_META[tab].eyebrow} />
             <ResearchMetric label="News Items" value={String(articles.length)} tone="#A5B4FC" detail="Filtered articles in view" />
             <ResearchMetric label="Saved Cases" value={String(savedCases.length)} tone="#F59E0B" detail="Tracked research packets" />
-            <ResearchMetric label="Tier" value={tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'} tone={tier === 'pro_trader' ? 'var(--msp-bull)' : tier === 'pro' ? '#38BDF8' : 'var(--msp-flat)'} detail="Subscription level" />
+            <ResearchMetric label="Tier" value={tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'} tone={tier === 'pro' || tier === 'pro_trader' ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail="Subscription level" />
           </div>
         </div>
       </section>

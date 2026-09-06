@@ -4,20 +4,23 @@ import Link from "next/link";
 import { PLAN_PRICES } from '@/lib/planPrices';
 
 interface UpgradeGateProps {
+  // Both values are accepted for backward compatibility with existing call sites.
+  // In the simplified 2-plan pricing there is only one upgrade path: Pro.
   requiredTier: "pro" | "pro_trader";
   feature: string;
   children?: React.ReactNode;
 }
 
-export default function UpgradeGate({ requiredTier, feature, children }: UpgradeGateProps) {
-  const tierName = requiredTier === "pro_trader" ? "Pro Trader" : "Pro";
-  const price = requiredTier === "pro_trader" ? PLAN_PRICES.pro_trader.monthly : PLAN_PRICES.pro.monthly;
-  
+export default function UpgradeGate({ requiredTier: _requiredTier, feature, children }: UpgradeGateProps) {
+  void _requiredTier;
+  const tierName = "Pro";
+  const price = PLAN_PRICES.pro.monthly;
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-5 py-10">
       <div className="msp-card w-full max-w-[480px] rounded-lg px-5 py-8 text-center sm:px-10 sm:py-12">
         <div className="mx-auto mb-5 h-12 w-12 rounded-full border border-msp-borderStrong bg-msp-panel" aria-hidden="true" />
-        
+
         <h2 style={{
           fontSize: "26px",
           fontWeight: "700",
@@ -26,7 +29,7 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
         }}>
           {tierName} Feature
         </h2>
-        
+
         <p style={{
           color: "var(--msp-text-muted)",
           fontSize: "16px",
@@ -41,7 +44,7 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
 
         <div className="mb-6 rounded-panel border border-msp-borderStrong bg-msp-panel p-4">
           <div style={{ color: "var(--msp-accent)", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
-            Unlock {requiredTier === "pro_trader" ? "Pro Trader" : "Pro"}
+            Unlock {tierName}
           </div>
           <div style={{ color: "var(--msp-text)", fontSize: "24px", fontWeight: "700" }}>
             {price}<span style={{ fontSize: "14px", fontWeight: "400" }}>/month</span>

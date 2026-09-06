@@ -52,8 +52,13 @@ function logBypassStatusOnce(): void {
   }
 }
 
+// 2026 pricing simplification: there is now exactly ONE paid plan (Pro).
+// Old Pro and old Pro Trader access have been consolidated. This function
+// keeps its historical name because ~20 API routes still import it, but it
+// now returns true for BOTH `pro` and `pro_trader` (legacy) tiers. New code
+// should prefer `hasProAccess()` from `lib/entitlements`.
 export function hasProTraderAccess(tier: string | null | undefined): boolean {
   logBypassStatusOnce();
-  if (tier === 'pro_trader') return true;
+  if (tier === 'pro' || tier === 'pro_trader') return true;
   return isTemporaryProTraderBypassActive();
 }

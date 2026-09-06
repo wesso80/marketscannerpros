@@ -17,8 +17,10 @@ function isAdminEmail(email: string): boolean {
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
 
-// Price IDs from env vars — no hardcoded fallbacks (stale IDs cause tier mismatch)
+// Price IDs from env vars — new + legacy accepted for continuity.
 const PRO_PRICE_IDS = [
+  process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+  process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
   process.env.STRIPE_PRICE_PRO_MONTHLY,
   process.env.STRIPE_PRICE_PRO_YEARLY,
 ].filter(Boolean) as string[];
@@ -29,10 +31,11 @@ const PRO_TRADER_PRICE_IDS = [
 
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
-  // Check Pro Trader first (higher tier)
+  // Legacy Pro Trader IDs keep the "pro_trader" DB label so existing subs
+  // are not force-migrated; both `pro` and `pro_trader` grant full paid access.
   if (arr.some(id => PRO_TRADER_PRICE_IDS.includes(id))) return "pro_trader";
   if (arr.some(id => PRO_PRICE_IDS.includes(id))) return "pro";
-  // Legacy fallback
+  // Legacy NEXT_PUBLIC_* fallback
   if (PRICE_PRO_TRADER && arr.includes(PRICE_PRO_TRADER)) return "pro_trader";
   if (PRICE_PRO && arr.includes(PRICE_PRO)) return "pro";
   return "free";

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
     }
     if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Volatility Engine' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Pro subscription required for Volatility Engine' }, { status: 403 });
     }
 
     // 2. Parse symbol + timeframe

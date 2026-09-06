@@ -5,7 +5,7 @@ const GUIDE = [
   {
     title: "Plans & Upgrades",
     bullets: ["Choose a plan", "Unlock tools", "Confirm access"],
-    tip: "Pro tip: Start with Pro, move to Pro Trader once you use Derivatives + Alerts.",
+    tip: "Pro tip: Start free. Upgrade to Pro when you need unlimited scanning, backtesting, or derivatives + alerts.",
     cta: { label: "Open Pricing", href: "/pricing" },
   },
   {

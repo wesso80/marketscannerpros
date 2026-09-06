@@ -157,8 +157,8 @@ export default function ScalperPage() {
         <div className="text-center bg-[#1E293B] border border-slate-700/50 rounded-xl p-8 max-w-md">
           <div className="text-3xl mb-3">🔒</div>
           <h2 className="text-xl font-bold text-white mb-2">Scalping Scanner</h2>
-          <p className="text-slate-400 text-sm mb-4">This tool requires the <strong className="text-amber-400">Pro Trader</strong> plan.</p>
-          <a href="/pricing" className="inline-block px-5 py-2 rounded-lg text-sm font-semibold transition-colors" style={{ backgroundColor: '#F59E0B22', color: 'var(--msp-warn)', border: '1px solid #F59E0B44' }}>Upgrade to Pro Trader →</a>
+          <p className="text-slate-400 text-sm mb-4">This tool requires the <strong className="text-emerald-300">Pro</strong> plan.</p>
+          <a href="/pricing" className="inline-block px-5 py-2 rounded-lg text-sm font-semibold transition-colors" style={{ backgroundColor: '#10B98122', color: 'var(--msp-bull)', border: '1px solid #10B98144' }}>Upgrade to Pro →</a>
         </div>
       </div>
     );

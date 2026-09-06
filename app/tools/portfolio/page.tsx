@@ -1695,7 +1695,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             if (canExportCSV(tier)) {
               exportPositionsToCSV();
             } else {
-              alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+              alert('CSV export is a Pro feature. Upgrade to Pro to export your data.');
             }
           }}
           className={`rounded-md border px-3 py-1.5 text-[12px] font-medium transition ${canExportCSV(tier) ? 'border-emerald-500 text-emerald-500 opacity-100' : 'border-slate-600 text-slate-500 opacity-60'}`}
@@ -1710,7 +1710,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             if (canExportCSV(tier)) {
               exportHistoryToCSV();
             } else {
-              alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+              alert('CSV export is a Pro feature. Upgrade to Pro to export your data.');
             }
           }}
           className={`rounded-md border border-[var(--msp-border)] px-3 py-1.5 text-[12px] font-medium transition ${canExportCSV(tier) ? 'text-[var(--msp-text-muted)]' : 'text-slate-500'}`}

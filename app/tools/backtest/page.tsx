@@ -716,7 +716,7 @@ function BacktestContent() {
         <ToolsPageHeader
           badge="ELITE STRATEGY LAB"
           title="Strategy Backtester"
-          subtitle="Pro Trader exclusive: Test and iterate trading ideas with historical data."
+          subtitle="Pro plan: Test and iterate trading ideas with historical data."
           icon="BT"
           backHref="/dashboard"
         />

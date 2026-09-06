@@ -86,8 +86,8 @@ export default function SignalAccuracyPage() {
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
-          <h2 className="text-xl font-bold text-white mb-2">Pro Trader Feature</h2>
-          <p className="text-slate-400 text-sm">Historical observation analytics require a Pro Trader subscription to review AI research outcomes over time.</p>
+          <h2 className="text-xl font-bold text-white mb-2">Pro Feature</h2>
+          <p className="text-slate-400 text-sm">Historical observation analytics require a Pro subscription to review AI research outcomes over time.</p>
         </div>
       </div>
     );

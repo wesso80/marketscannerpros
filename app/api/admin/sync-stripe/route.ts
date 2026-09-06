@@ -14,8 +14,10 @@ import type Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 
-// Price ID mappings (same as webhook)
+// Price ID mappings (same as webhook — new + legacy env vars).
 const PRO_PRICE_IDS = [
+  process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
+  process.env.STRIPE_PRO_ANNUAL_PRICE_ID || '',
   process.env.STRIPE_PRICE_PRO_MONTHLY || '',
   process.env.STRIPE_PRICE_PRO_YEARLY || '',
 ].filter(Boolean);

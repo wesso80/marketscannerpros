@@ -16,8 +16,16 @@ export async function GET() {
   return NextResponse.json({ status: 'ok' });
 }
 
-// Price ID mappings - read from environment variables
+// Price ID mappings — read from environment variables.
+// New (2026 pricing simplification): STRIPE_PRO_MONTHLY_PRICE_ID / STRIPE_PRO_ANNUAL_PRICE_ID.
+// Legacy: STRIPE_PRICE_PRO_MONTHLY / STRIPE_PRICE_PRO_YEARLY (retained for existing Pro subs).
+// Legacy Pro Trader: STRIPE_PRICE_PRO_TRADER_MONTHLY / STRIPE_PRICE_PRO_TRADER_YEARLY.
+// All new subscriptions map to tier "pro". Existing pro_trader subscriptions keep their
+// "pro_trader" DB label (which the app treats as fully-paid Pro) so we do not force any
+// legacy subscriber to re-subscribe.
 const PRO_PRICE_IDS = [
+  process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "",
+  process.env.STRIPE_PRO_ANNUAL_PRICE_ID || "",
   process.env.STRIPE_PRICE_PRO_MONTHLY || "",
   process.env.STRIPE_PRICE_PRO_YEARLY || "",
 ].filter(Boolean);
@@ -27,18 +35,19 @@ const PRO_TRADER_PRICE_IDS = [
 ].filter(Boolean);
 
 function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
+  // Legacy Pro Trader IDs continue to record tier="pro_trader" so existing
+  // subscribers keep their historical label. Everything else that matches a
+  // known Pro price ID (new or legacy) is recorded as "pro".
   if (PRO_TRADER_PRICE_IDS.includes(priceId)) return 'pro_trader';
   if (PRO_PRICE_IDS.includes(priceId)) return 'pro';
   return 'free';
 }
 
-// Process referral reward when someone subscribes
-// Plan-based referral credits: $5 for Pro, $10 for Pro Trader
-// Non-trial: referee gets discount via Stripe coupon at checkout (already applied), referrer gets matching balance credit.
-// Trial conversion: both referee and referrer get balance credit.
+// Referral credit — a single Pro plan is sold, but legacy Pro Trader
+// renewals may still trigger webhook events, so the map keeps both keys.
 const REFERRAL_CREDIT_BY_TIER: Record<string, number> = {
-  pro: 500,        // $5
-  pro_trader: 1000, // $10
+  pro: 500,         // $5
+  pro_trader: 1000, // $10 — legacy only
 };
 const REFERRAL_MONTHLY_CAP = 20;
 

@@ -225,28 +225,29 @@ export default function AccountSection() {
 
   // ─── Derived values ──────────────────────────────────────────────────────
 
+  // 2026 pricing simplification: legacy pro_trader is displayed as "Pro".
   const tierDisplay: Record<TierKey, { name: string; color: string }> = {
     free: { name: 'Free', color: 'var(--msp-text-muted)' },
     pro: { name: 'Pro', color: 'var(--msp-info)' },
-    pro_trader: { name: 'Pro Trader', color: 'var(--msp-warn)' },
+    pro_trader: { name: 'Pro', color: 'var(--msp-info)' },
     anonymous: { name: 'Not Signed In', color: 'var(--msp-text-muted)' },
   };
 
   const currentTier = tierDisplay[normalizedTier];
-  const aiLimit = normalizedTier === 'pro_trader' ? 50 : normalizedTier === 'pro' ? 50 : 10;
+  const isPaid = normalizedTier === 'pro' || normalizedTier === 'pro_trader';
+  const aiLimit = isPaid ? 50 : 10;
   const aiUsed = realUsage?.aiUsed ?? 0;
 
   const usage = [
     { label: 'MSP AI Analyst', used: aiUsed, limit: aiLimit },
-    { label: 'Saved Alerts', used: realUsage?.alertCount ?? 0, limit: normalizedTier === 'pro_trader' ? 25 : 10 },
-    { label: 'Watchlist Symbols', used: realUsage?.watchlistCount ?? 0, limit: normalizedTier === 'pro_trader' ? 100 : normalizedTier === 'pro' ? 50 : 20 },
+    { label: 'Saved Alerts', used: realUsage?.alertCount ?? 0, limit: isPaid ? 25 : 10 },
+    { label: 'Watchlist Symbols', used: realUsage?.watchlistCount ?? 0, limit: isPaid ? 100 : 20 },
   ];
 
   const planFeatures = useMemo(() => {
-    if (normalizedTier === 'pro_trader') return ['Everything in Pro', 'ARCA AI Analyst — GPT-4.1 (50/day)', 'Research risk framework', 'AI + Derivatives Intelligence', 'Golden Egg Deep Analysis'];
-    if (normalizedTier === 'pro') return ['Everything in Free', 'Unlimited symbol scanning', 'MSP AI Analyst (50/day)', 'Market Movers + Intelligence', 'Portfolio / Journal insights'];
-    return ['Top 10 equities + Top 10 crypto', 'MSP AI Analyst (10/day)', 'Basic portfolio tracker', 'Basic journal logging', 'Community support'];
-  }, [normalizedTier]);
+    if (isPaid) return ['Unlimited scanning + Golden Egg', 'Full Intelligence suite (Global M2, Liquidity, Fragility, Master)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
+    return ['Core scanner (limited daily runs)', 'Watchlists, markets and macro dashboards', 'Selected delayed / basic intelligence views', 'Basic portfolio tracker and journal', 'Educational content and platform guides'];
+  }, [isPaid]);
 
   // ─── Loading / Auth guard ────────────────────────────────────────────────
 
@@ -300,7 +301,7 @@ export default function AccountSection() {
             >
               {billingLoading ? 'Opening...' : 'Manage Billing'}
             </button>
-            {normalizedTier !== 'pro_trader' && (
+            {!isPaid && (
               <Link href="/pricing" className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-colors">
                 Upgrade
               </Link>
@@ -469,7 +470,7 @@ export default function AccountSection() {
                   </button>
                 </div>
                 <p className="mt-2 text-[11px] text-slate-500">
-                  Friends get $5 off Pro or $10 off Pro Trader at checkout. You earn matching credit per conversion.
+                  Friends get $5 off Pro at checkout. You earn matching credit per conversion.
                 </p>
               </Card>
 
@@ -589,7 +590,7 @@ export default function AccountSection() {
                 <div className="grid gap-3 md:grid-cols-3">
                   {[
                     { n: 1, title: 'Share Your Link', desc: 'Send your unique referral link to friends or post on social media.' },
-                    { n: 2, title: 'Friend Subscribes', desc: 'They get $5 off Pro or $10 off Pro Trader. You earn matching credit.' },
+                    { n: 2, title: 'Friend Subscribes', desc: 'They get $5 off Pro. You earn matching credit.' },
                     { n: 3, title: 'Enter the Draw', desc: 'Every 5 qualifying referrals = 1 entry in the monthly $500 cash draw.' },
                   ].map(s => (
                     <div key={s.n} className="flex items-start gap-3">

@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pricing — MarketScanner Pros',
+  title: 'Pricing — MarketScannerPros',
   description:
-    'Free, Pro ($25/mo), and Pro Trader ($50/mo) plans for educational market scanning, journaling, backtesting, and AI-assisted research. 7-day money-back guarantee.',
+    'Two simple plans: Free to explore, and Pro ($24.99/month or $249/year) for the full platform — scanners, intelligence, research, backtesting and portfolio tools. 7-day money-back guarantee.',
   alternates: { canonical: 'https://marketscannerpros.app/pricing' },
   openGraph: {
-    title: 'Pricing — MarketScanner Pros',
+    title: 'Pricing — MarketScannerPros',
     description:
-      'Start free. Upgrade for unlimited scanning, AI analyst, backtesting, and Pro Trader research workflows.',
+      'Start free. Upgrade to Pro for the full MarketScannerPros platform — scanners, intelligence, research, backtesting and portfolio tools.',
     url: 'https://marketscannerpros.app/pricing',
     type: 'website',
     images: [
@@ -16,14 +16,14 @@ export const metadata: Metadata = {
         url: '/scan-banner.png',
         width: 1200,
         height: 630,
-        alt: 'MarketScanner Pros pricing plans',
+        alt: 'MarketScannerPros pricing plans',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pricing — MarketScanner Pros',
-    description: 'Free, Pro, and Pro Trader plans for educational market research.',
+    title: 'Pricing — MarketScannerPros',
+    description: 'Two plans: Free and Pro. One paid plan, full access.',
     images: ['/scan-banner.png'],
   },
 };

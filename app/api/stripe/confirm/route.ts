@@ -4,6 +4,8 @@ import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 
 const PRO_PRICE_IDS = [
+  process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+  process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
   process.env.STRIPE_PRICE_PRO_MONTHLY,
   process.env.STRIPE_PRICE_PRO_YEARLY,
 ].filter(Boolean) as string[];

@@ -42,10 +42,11 @@ describe('tier and role access helpers', () => {
     expect(hasProAccess('pro_trader')).toBe(true);
   });
 
-  it('keeps Pro Trader-only UI helpers strict while allowing intended free scanner access', async () => {
+  it('promotes every paid feature to any paid tier (single-Pro pricing model)', async () => {
     const tierHelpers = await import('../lib/useUserTier');
 
-    for (const tier of ['anonymous', 'free', 'pro'] as const) {
+    // Free / anonymous never access paid features but can still use the scanner.
+    for (const tier of ['anonymous', 'free'] as const) {
       expect(tierHelpers.canAccessBacktest(tier)).toBe(false);
       expect(tierHelpers.canAccessOptionsTerminal(tier)).toBe(false);
       expect(tierHelpers.canAccessTimeScanner(tier)).toBe(false);
@@ -54,14 +55,24 @@ describe('tier and role access helpers', () => {
       expect(tierHelpers.canAccessScanner(tier)).toBe(true);
     }
 
-    expect(tierHelpers.canAccessBacktest('pro_trader')).toBe(true);
-    expect(tierHelpers.canAccessOptionsTerminal('pro_trader')).toBe(true);
-    expect(tierHelpers.canAccessTimeScanner('pro_trader')).toBe(true);
-    expect(tierHelpers.canAccessGoldenEgg('pro_trader')).toBe(true);
-    expect(tierHelpers.canAccessVolatilityEngine('pro_trader')).toBe(true);
+    // Legacy pro_trader and new pro grant identical full access.
+    for (const tier of ['pro', 'pro_trader'] as const) {
+      expect(tierHelpers.canAccessBacktest(tier)).toBe(true);
+      expect(tierHelpers.canAccessOptionsTerminal(tier)).toBe(true);
+      expect(tierHelpers.canAccessTimeScanner(tier)).toBe(true);
+      expect(tierHelpers.canAccessGoldenEgg(tier)).toBe(true);
+      expect(tierHelpers.canAccessVolatilityEngine(tier)).toBe(true);
+      expect(tierHelpers.canAccessJournalIntelligence(tier)).toBe(true);
+      expect(tierHelpers.canAccessDeepAnalysis(tier)).toBe(true);
+      expect(tierHelpers.canAccessConfluenceScanner(tier)).toBe(true);
+      expect(tierHelpers.canAccessScalper(tier)).toBe(true);
+      expect(tierHelpers.canExportCSV(tier)).toBe(true);
+    }
+
     expect(tierHelpers.getPortfolioLimit('anonymous')).toBe(3);
     expect(tierHelpers.getPortfolioLimit('free')).toBe(3);
     expect(tierHelpers.getPortfolioLimit('pro')).toBe(Infinity);
+    expect(tierHelpers.getPortfolioLimit('pro_trader')).toBe(Infinity);
   });
 
   it('ignores FREE_FOR_ALL_MODE in production unless production bypasses are explicitly allowed', async () => {
