@@ -1,0 +1,628 @@
+//@version=6
+indicator("MSP Cross-Asset Lead/Lag Discovery Engine v1.1.2 MASTER LINK", shorttitle="MSP LeadLag v1.1.2", overlay=false, max_bars_back=4000, dynamic_requests=true)
+
+// ============================================================================
+// MARKETSCANNERPROS CROSS-ASSET LEAD/LAG DISCOVERY ENGINE v1.1
+// TRUE LEAD / CONFIRMATION SPLIT
+// ----------------------------------------------------------------------------
+// Purpose:
+//   • Separate synchronous confirmation from genuine predictive lead.
+//   • Test 5 / 10 / 15 / 30 / 60 minute NQ lead windows.
+//   • Require lagged correlation to beat synchronous correlation.
+//   • Rank only genuine non-zero lead relationships.
+//   • Use session-aware research: cash-market instruments are studied on NY RTH.
+//   • Create a predictive NQ impulse from current moves in valid leaders.
+//
+// IMPORTANT:
+//   • Correlation is not causation.
+//   • This is a research / market-structure model, not DOM/order-flow.
+//   • Use on NQ1! or MNQ1! on a 5-minute chart.
+// ============================================================================
+
+// ------------------------------- SETTINGS -----------------------------------
+string G_GEN = "General"
+string G_SYM = "Leader Symbols"
+string G_VIS = "Visuals"
+
+int corrLen       = input.int(144, "Primary lookback (5m bars)", minval=48, maxval=500, group=G_GEN)
+int shortLen      = input.int(60, "Short reliability lookback", minval=24, maxval=250, group=G_GEN)
+int longLen       = input.int(288, "Long reliability lookback", minval=100, maxval=1000, group=G_GEN)
+int zLen          = input.int(60, "Current-move Z-score lookback", minval=20, maxval=250, group=G_GEN)
+float minLeadAdv  = input.float(0.05, "Minimum lead advantage vs SYNC", minval=0.00, maxval=0.50, step=0.01, group=G_GEN)
+float minLeadCorr = input.float(0.20, "Minimum absolute lead correlation", minval=0.05, maxval=0.80, step=0.05, group=G_GEN)
+bool confirmed    = input.bool(false, "Use confirmed 5m bars", tooltip="Off = live bar updates. On = one-bar delayed but fully confirmed.", group=G_GEN)
+
+int topPadding    = input.int(1, "Dashboard top padding", minval=0, maxval=4, group=G_VIS)
+string txtSize    = input.string(size.normal, "Dashboard text size", options=[size.small, size.normal, size.large], group=G_VIS)
+bool shadeBg      = input.bool(true, "Shade predictive regime", group=G_VIS)
+
+string sES      = input.symbol("CME_MINI:ES1!",      "ES futures", group=G_SYM)
+string sSOX     = input.symbol("NASDAQ:SOX",         "SOX semiconductors", group=G_SYM)
+string sQQQ     = input.symbol("NASDAQ:QQQ",         "QQQ", group=G_SYM)
+string sNVDA    = input.symbol("NASDAQ:NVDA",        "NVDA", group=G_SYM)
+string sVIX     = input.symbol("CBOE:VIX",           "VIX", group=G_SYM)
+string sDXY     = input.symbol("TVC:DXY",            "DXY", group=G_SYM)
+string sUS10Y   = input.symbol("TVC:US10Y",          "US 10Y yield", group=G_SYM)
+string sHYG     = input.symbol("AMEX:HYG",           "HYG", group=G_SYM)
+string sBTC     = input.symbol("BITSTAMP:BTCUSD",    "Bitcoin", group=G_SYM)
+string sGOLD    = input.symbol("OANDA:XAUUSD",       "Gold", group=G_SYM)
+string sCOPPER  = input.symbol("COMEX:HG1!",         "Copper", group=G_SYM)
+
+const int N = 11
+
+// ------------------------------- HELPERS ------------------------------------
+f_clamp(float x, float lo, float hi) =>
+    math.max(lo, math.min(hi, x))
+
+f_fmt(float x) =>
+    na(x) ? "n/a" : str.tostring(x, "#.##")
+
+f_signed(float x) =>
+    na(x) ? "n/a" : (x >= 0 ? "+" : "") + str.tostring(x, "#.##")
+
+f_ret5(string sym) =>
+    request.security(sym, "5", confirmed ? math.log(close[1] / close[2]) * 100.0 : math.log(close / close[1]) * 100.0, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off, ignore_invalid_symbol=true)
+
+f_z(float x, int len) =>
+    float m = ta.sma(x, len)
+    float s = ta.stdev(x, len)
+    not na(x) and not na(m) and not na(s) and s != 0 ? (x - m) / s : na
+
+// Returns:
+// sync correlation,
+// strongest NON-ZERO lag correlation,
+// lag in 5m bars,
+// short correlation at selected lag,
+// long correlation at selected lag,
+// short sync correlation,
+// long sync correlation.
+f_pack(float x, float y, int mainLen, int sLen, int lLen) =>
+    float c0  = ta.correlation(x,     y, mainLen)
+    float c1  = ta.correlation(x[1],  y, mainLen)
+    float c2  = ta.correlation(x[2],  y, mainLen)
+    float c3  = ta.correlation(x[3],  y, mainLen)
+    float c6  = ta.correlation(x[6],  y, mainLen)
+    float c12 = ta.correlation(x[12], y, mainLen)
+
+    float lead = c1
+    int lag = 1
+    if not na(c2) and (na(lead) or math.abs(c2) > math.abs(lead))
+        lead := c2
+        lag := 2
+    if not na(c3) and (na(lead) or math.abs(c3) > math.abs(lead))
+        lead := c3
+        lag := 3
+    if not na(c6) and (na(lead) or math.abs(c6) > math.abs(lead))
+        lead := c6
+        lag := 6
+    if not na(c12) and (na(lead) or math.abs(c12) > math.abs(lead))
+        lead := c12
+        lag := 12
+
+    float s0  = ta.correlation(x,     y, sLen)
+    float s1  = ta.correlation(x[1],  y, sLen)
+    float s2  = ta.correlation(x[2],  y, sLen)
+    float s3  = ta.correlation(x[3],  y, sLen)
+    float s6  = ta.correlation(x[6],  y, sLen)
+    float s12 = ta.correlation(x[12], y, sLen)
+
+    float l0  = ta.correlation(x,     y, lLen)
+    float l1  = ta.correlation(x[1],  y, lLen)
+    float l2  = ta.correlation(x[2],  y, lLen)
+    float l3  = ta.correlation(x[3],  y, lLen)
+    float l6  = ta.correlation(x[6],  y, lLen)
+    float l12 = ta.correlation(x[12], y, lLen)
+
+    float sc = s1
+    float lc = l1
+    if lag == 2
+        sc := s2
+        lc := l2
+    else if lag == 3
+        sc := s3
+        lc := l3
+    else if lag == 6
+        sc := s6
+        lc := l6
+    else if lag == 12
+        sc := s12
+        lc := l12
+
+    [c0, lead, lag, sc, lc, s0, l0]
+
+f_relScore(float corr, float sc, float lc) =>
+    float mag = na(corr) ? 0.0 : f_clamp(math.abs(corr) / 0.75, 0.0, 1.0) * 50.0
+    float signPts = 0.0
+    if not na(corr) and not na(sc) and math.sign(corr) == math.sign(sc)
+        signPts += 12.5
+    if not na(corr) and not na(lc) and math.sign(corr) == math.sign(lc)
+        signPts += 12.5
+    float diff = not na(sc) and not na(lc) ? math.abs(math.abs(sc) - math.abs(lc)) : 1.0
+    float stablePts = diff <= 0.10 ? 25.0 : diff <= 0.20 ? 15.0 : 5.0
+    f_clamp(mag + signPts + stablePts, 0.0, 100.0)
+
+f_relLabel(float r) =>
+    r >= 75 ? "HIGH" : r >= 50 ? "MED" : "LOW"
+
+f_status(float corr, float sc, float lc) =>
+    string out = "WEAK"
+    if not na(corr) and math.abs(corr) >= 0.20
+        if not na(sc) and not na(lc) and math.sign(sc) != math.sign(lc)
+            out := "BREAKING"
+        else if not na(sc) and not na(lc) and math.abs(sc) > math.abs(lc) + 0.10
+            out := "STRENGTHENING"
+        else if not na(sc) and not na(lc) and math.abs(sc) < math.abs(lc) - 0.10
+            out := "WEAKENING"
+        else
+            out := "STABLE"
+    out
+
+f_leadText(int lag) =>
+    "+" + str.tostring(lag * 5) + "m"
+
+f_corrText(float c) =>
+    string strength = "V.WEAK"
+    float a = math.abs(c)
+    if a >= 0.80
+        strength := "V.STRONG"
+    else if a >= 0.60
+        strength := "STRONG"
+    else if a >= 0.40
+        strength := "MOD"
+    else if a >= 0.20
+        strength := "WEAK"
+    na(c) ? "n/a" : f_signed(c) + (c >= 0 ? " ↑ " : " ↓ ") + strength
+
+f_edgeLabel(float adv, float leadCorr, float rel) =>
+    string out = "NO EDGE"
+    if not na(leadCorr) and math.abs(leadCorr) >= minLeadCorr and adv >= minLeadAdv
+        out := "WEAK EDGE"
+        if adv >= 0.10 and rel >= 55
+            out := "VALID"
+        if adv >= 0.20 and math.abs(leadCorr) >= 0.40 and rel >= 70
+            out := "STRONG"
+    out
+
+f_edgeScore(float adv, float leadCorr, float rel, float active) =>
+    float advFactor = f_clamp((adv - minLeadAdv) / 0.25, 0.0, 1.0)
+    bool valid = not na(leadCorr) and math.abs(leadCorr) >= minLeadCorr and adv >= minLeadAdv
+    valid ? 100.0 * math.abs(leadCorr) * (rel / 100.0) * advFactor * active : 0.0
+
+f_leadContrib(float z, float leadCorr, float rel, float adv, float active) =>
+    float advFactor = f_clamp((adv - minLeadAdv) / 0.25, 0.0, 1.0)
+    bool valid = not na(z) and not na(leadCorr) and math.abs(leadCorr) >= minLeadCorr and adv >= minLeadAdv
+    valid ? f_clamp(z / 2.0, -1.0, 1.0) * leadCorr * (rel / 100.0) * advFactor * active : 0.0
+
+f_leadQuality(float leadCorr, float rel, float adv, float active) =>
+    float advFactor = f_clamp((adv - minLeadAdv) / 0.25, 0.0, 1.0)
+    bool valid = not na(leadCorr) and math.abs(leadCorr) >= minLeadCorr and adv >= minLeadAdv
+    valid ? math.abs(leadCorr) * (rel / 100.0) * advFactor * active : 0.0
+
+f_confirmContrib(float z, float syncCorr, float rel, float active) =>
+    na(z) or na(syncCorr) ? 0.0 : f_clamp(z / 2.0, -1.0, 1.0) * syncCorr * (rel / 100.0) * active
+
+f_confirmQuality(float syncCorr, float rel, float active) =>
+    na(syncCorr) ? 0.0 : math.abs(syncCorr) * (rel / 100.0) * active
+
+f_rowBg(int r) =>
+    r % 2 == 0 ? color.rgb(19, 24, 31) : color.rgb(26, 32, 41)
+
+f_header() =>
+    color.rgb(38, 55, 78)
+
+f_corrBg(float c) =>
+    color out = color.rgb(56, 63, 74)
+    if not na(c)
+        if c >= 0.60
+            out := color.rgb(0, 115, 67)
+        else if c >= 0.30
+            out := color.rgb(27, 92, 61)
+        else if c <= -0.60
+            out := color.rgb(145, 42, 49)
+        else if c <= -0.30
+            out := color.rgb(166, 98, 8)
+    out
+
+f_relBg(float r) =>
+    r >= 75 ? color.rgb(0, 116, 67) : r >= 50 ? color.rgb(174, 103, 8) : color.rgb(139, 43, 49)
+
+f_statusBg(string s) =>
+    s == "STRENGTHENING" ? color.rgb(0, 116, 67) : s == "STABLE" ? color.rgb(37, 84, 65) : s == "WEAKENING" ? color.rgb(174, 103, 8) : s == "BREAKING" ? color.rgb(139, 43, 49) : color.rgb(63, 69, 80)
+
+f_edgeBg(string s) =>
+    s == "STRONG" ? color.rgb(0, 116, 67) : s == "VALID" ? color.rgb(36, 93, 63) : s == "WEAK EDGE" ? color.rgb(174, 103, 8) : color.rgb(92, 49, 53)
+
+f_impBg(float x) =>
+    na(x) ? color.rgb(63, 69, 80) : x >= 0.25 ? color.rgb(0, 116, 67) : x > 0 ? color.rgb(29, 89, 60) : x <= -0.25 ? color.rgb(139, 43, 49) : color.rgb(153, 87, 10)
+
+// ---------------------------- CHART / TARGET --------------------------------
+bool symbolOK = str.contains(str.upper(syminfo.ticker), "NQ")
+bool tfOK = timeframe.isminutes and timeframe.multiplier == 5
+bool engineOK = symbolOK and tfOK
+
+bool inRTH = not na(time(timeframe.period, "0930-1600", "America/New_York"))
+float nqRet = confirmed ? math.log(close[1] / close[2]) * 100.0 : math.log(close / close[1]) * 100.0
+float nqRTH = inRTH ? nqRet : na
+
+// ---------------------------- LEADER RETURNS --------------------------------
+float rES     = f_ret5(sES)
+float rSOX    = f_ret5(sSOX)
+float rQQQ    = f_ret5(sQQQ)
+float rNVDA   = f_ret5(sNVDA)
+float rVIX    = f_ret5(sVIX)
+float rDXY    = f_ret5(sDXY)
+float rUS10Y  = f_ret5(sUS10Y)
+float rHYG    = f_ret5(sHYG)
+float rBTC    = f_ret5(sBTC)
+float rGOLD   = f_ret5(sGOLD)
+float rCOPPER = f_ret5(sCOPPER)
+
+// Cash-market research series are masked outside NY RTH.
+// Continuous/global markets remain available across the full session.
+float xES     = rES
+float xSOX    = inRTH ? rSOX : na
+float xQQQ    = inRTH ? rQQQ : na
+float xNVDA   = inRTH ? rNVDA : na
+float xVIX    = inRTH ? rVIX : na
+float xDXY    = rDXY
+float xUS10Y  = rUS10Y
+float xHYG    = inRTH ? rHYG : na
+float xBTC    = rBTC
+float xGOLD   = rGOLD
+float xCOPPER = rCOPPER
+
+float yES     = nqRet
+float ySOX    = nqRTH
+float yQQQ    = nqRTH
+float yNVDA   = nqRTH
+float yVIX    = nqRTH
+float yDXY    = nqRet
+float yUS10Y  = nqRet
+float yHYG    = nqRTH
+float yBTC    = nqRet
+float yGOLD   = nqRet
+float yCOPPER = nqRet
+
+// ------------------------- RELATIONSHIP DISCOVERY ----------------------------
+[sESc, cES, lES, shES, lgES, shSyncES, lgSyncES]             = f_pack(xES, yES, corrLen, shortLen, longLen)
+[sSOXc, cSOX, lSOX, shSOX, lgSOX, shSyncSOX, lgSyncSOX]      = f_pack(xSOX, ySOX, corrLen, shortLen, longLen)
+[sQQQc, cQQQ, lQQQ, shQQQ, lgQQQ, shSyncQQQ, lgSyncQQQ]      = f_pack(xQQQ, yQQQ, corrLen, shortLen, longLen)
+[sNVDAc, cNVDA, lNVDA, shNVDA, lgNVDA, shSyncNVDA, lgSyncNVDA] = f_pack(xNVDA, yNVDA, corrLen, shortLen, longLen)
+[sVIXc, cVIX, lVIX, shVIX, lgVIX, shSyncVIX, lgSyncVIX]      = f_pack(xVIX, yVIX, corrLen, shortLen, longLen)
+[sDXYc, cDXY, lDXY, shDXY, lgDXY, shSyncDXY, lgSyncDXY]      = f_pack(xDXY, yDXY, corrLen, shortLen, longLen)
+[sUS10Yc, cUS10Y, lUS10Y, shUS10Y, lgUS10Y, shSyncUS10Y, lgSyncUS10Y] = f_pack(xUS10Y, yUS10Y, corrLen, shortLen, longLen)
+[sHYGc, cHYG, lHYG, shHYG, lgHYG, shSyncHYG, lgSyncHYG]      = f_pack(xHYG, yHYG, corrLen, shortLen, longLen)
+[sBTCc, cBTC, lBTC, shBTC, lgBTC, shSyncBTC, lgSyncBTC]      = f_pack(xBTC, yBTC, corrLen, shortLen, longLen)
+[sGOLDc, cGOLD, lGOLD, shGOLD, lgGOLD, shSyncGOLD, lgSyncGOLD] = f_pack(xGOLD, yGOLD, corrLen, shortLen, longLen)
+[sCOPc, cCOP, lCOP, shCOP, lgCOP, shSyncCOP, lgSyncCOP]      = f_pack(xCOPPER, yCOPPER, corrLen, shortLen, longLen)
+
+// Reliability: predictive lead and synchronous confirmation are scored separately.
+float relES    = f_relScore(cES, shES, lgES)
+float relSOX   = f_relScore(cSOX, shSOX, lgSOX)
+float relQQQ   = f_relScore(cQQQ, shQQQ, lgQQQ)
+float relNVDA  = f_relScore(cNVDA, shNVDA, lgNVDA)
+float relVIX   = f_relScore(cVIX, shVIX, lgVIX)
+float relDXY   = f_relScore(cDXY, shDXY, lgDXY)
+float relUS10Y = f_relScore(cUS10Y, shUS10Y, lgUS10Y)
+float relHYG   = f_relScore(cHYG, shHYG, lgHYG)
+float relBTC   = f_relScore(cBTC, shBTC, lgBTC)
+float relGOLD  = f_relScore(cGOLD, shGOLD, lgGOLD)
+float relCOP   = f_relScore(cCOP, shCOP, lgCOP)
+
+float relSyncES    = f_relScore(sESc, shSyncES, lgSyncES)
+float relSyncSOX   = f_relScore(sSOXc, shSyncSOX, lgSyncSOX)
+float relSyncQQQ   = f_relScore(sQQQc, shSyncQQQ, lgSyncQQQ)
+float relSyncNVDA  = f_relScore(sNVDAc, shSyncNVDA, lgSyncNVDA)
+float relSyncVIX   = f_relScore(sVIXc, shSyncVIX, lgSyncVIX)
+float relSyncDXY   = f_relScore(sDXYc, shSyncDXY, lgSyncDXY)
+float relSyncUS10Y = f_relScore(sUS10Yc, shSyncUS10Y, lgSyncUS10Y)
+float relSyncHYG   = f_relScore(sHYGc, shSyncHYG, lgSyncHYG)
+float relSyncBTC   = f_relScore(sBTCc, shSyncBTC, lgSyncBTC)
+float relSyncGOLD  = f_relScore(sGOLDc, shSyncGOLD, lgSyncGOLD)
+float relSyncCOP   = f_relScore(sCOPc, shSyncCOP, lgSyncCOP)
+
+float advES    = math.abs(cES) - math.abs(sESc)
+float advSOX   = math.abs(cSOX) - math.abs(sSOXc)
+float advQQQ   = math.abs(cQQQ) - math.abs(sQQQc)
+float advNVDA  = math.abs(cNVDA) - math.abs(sNVDAc)
+float advVIX   = math.abs(cVIX) - math.abs(sVIXc)
+float advDXY   = math.abs(cDXY) - math.abs(sDXYc)
+float advUS10Y = math.abs(cUS10Y) - math.abs(sUS10Yc)
+float advHYG   = math.abs(cHYG) - math.abs(sHYGc)
+float advBTC   = math.abs(cBTC) - math.abs(sBTCc)
+float advGOLD  = math.abs(cGOLD) - math.abs(sGOLDc)
+float advCOP   = math.abs(cCOP) - math.abs(sCOPc)
+
+string stES    = f_status(cES, shES, lgES)
+string stSOX   = f_status(cSOX, shSOX, lgSOX)
+string stQQQ   = f_status(cQQQ, shQQQ, lgQQQ)
+string stNVDA  = f_status(cNVDA, shNVDA, lgNVDA)
+string stVIX   = f_status(cVIX, shVIX, lgVIX)
+string stDXY   = f_status(cDXY, shDXY, lgDXY)
+string stUS10Y = f_status(cUS10Y, shUS10Y, lgUS10Y)
+string stHYG   = f_status(cHYG, shHYG, lgHYG)
+string stBTC   = f_status(cBTC, shBTC, lgBTC)
+string stGOLD  = f_status(cGOLD, shGOLD, lgGOLD)
+string stCOP   = f_status(cCOP, shCOP, lgCOP)
+
+string edgeES    = f_edgeLabel(advES, cES, relES)
+string edgeSOX   = f_edgeLabel(advSOX, cSOX, relSOX)
+string edgeQQQ   = f_edgeLabel(advQQQ, cQQQ, relQQQ)
+string edgeNVDA  = f_edgeLabel(advNVDA, cNVDA, relNVDA)
+string edgeVIX   = f_edgeLabel(advVIX, cVIX, relVIX)
+string edgeDXY   = f_edgeLabel(advDXY, cDXY, relDXY)
+string edgeUS10Y = f_edgeLabel(advUS10Y, cUS10Y, relUS10Y)
+string edgeHYG   = f_edgeLabel(advHYG, cHYG, relHYG)
+string edgeBTC   = f_edgeLabel(advBTC, cBTC, relBTC)
+string edgeGOLD  = f_edgeLabel(advGOLD, cGOLD, relGOLD)
+string edgeCOP   = f_edgeLabel(advCOP, cCOP, relCOP)
+
+// -------------------------- SESSION ACTIVE WEIGHTS ---------------------------
+float aES    = 1.00
+float aSOX   = inRTH ? 1.00 : 0.00
+float aQQQ   = inRTH ? 1.00 : 0.00
+float aNVDA  = inRTH ? 1.00 : 0.00
+float aVIX   = inRTH ? 1.00 : 0.00
+float aDXY   = 1.00
+float aUS10Y = 1.00
+float aHYG   = inRTH ? 1.00 : 0.00
+float aBTC   = 1.00
+float aGOLD  = 1.00
+float aCOP   = 1.00
+
+// --------------------------- CURRENT MOVE Z-SCORES ---------------------------
+float zES    = f_z(rES, zLen)
+float zSOX   = f_z(rSOX, zLen)
+float zQQQ   = f_z(rQQQ, zLen)
+float zNVDA  = f_z(rNVDA, zLen)
+float zVIX   = f_z(rVIX, zLen)
+float zDXY   = f_z(rDXY, zLen)
+float zUS10Y = f_z(rUS10Y, zLen)
+float zHYG   = f_z(rHYG, zLen)
+float zBTC   = f_z(rBTC, zLen)
+float zGOLD  = f_z(rGOLD, zLen)
+float zCOP   = f_z(rCOPPER, zLen)
+
+// ------------------------ PREDICTIVE LEAD FORECAST ---------------------------
+float kES    = f_leadContrib(zES, cES, relES, advES, aES)
+float kSOX   = f_leadContrib(zSOX, cSOX, relSOX, advSOX, aSOX)
+float kQQQ   = f_leadContrib(zQQQ, cQQQ, relQQQ, advQQQ, aQQQ)
+float kNVDA  = f_leadContrib(zNVDA, cNVDA, relNVDA, advNVDA, aNVDA)
+float kVIX   = f_leadContrib(zVIX, cVIX, relVIX, advVIX, aVIX)
+float kDXY   = f_leadContrib(zDXY, cDXY, relDXY, advDXY, aDXY)
+float kUS10Y = f_leadContrib(zUS10Y, cUS10Y, relUS10Y, advUS10Y, aUS10Y)
+float kHYG   = f_leadContrib(zHYG, cHYG, relHYG, advHYG, aHYG)
+float kBTC   = f_leadContrib(zBTC, cBTC, relBTC, advBTC, aBTC)
+float kGOLD  = f_leadContrib(zGOLD, cGOLD, relGOLD, advGOLD, aGOLD)
+float kCOP   = f_leadContrib(zCOP, cCOP, relCOP, advCOP, aCOP)
+
+float qES    = f_leadQuality(cES, relES, advES, aES)
+float qSOX   = f_leadQuality(cSOX, relSOX, advSOX, aSOX)
+float qQQQ   = f_leadQuality(cQQQ, relQQQ, advQQQ, aQQQ)
+float qNVDA  = f_leadQuality(cNVDA, relNVDA, advNVDA, aNVDA)
+float qVIX   = f_leadQuality(cVIX, relVIX, advVIX, aVIX)
+float qDXY   = f_leadQuality(cDXY, relDXY, advDXY, aDXY)
+float qUS10Y = f_leadQuality(cUS10Y, relUS10Y, advUS10Y, aUS10Y)
+float qHYG   = f_leadQuality(cHYG, relHYG, advHYG, aHYG)
+float qBTC   = f_leadQuality(cBTC, relBTC, advBTC, aBTC)
+float qGOLD  = f_leadQuality(cGOLD, relGOLD, advGOLD, aGOLD)
+float qCOP   = f_leadQuality(cCOP, relCOP, advCOP, aCOP)
+
+float leadNum = kES + kSOX + kQQQ + kNVDA + kVIX + kDXY + kUS10Y + kHYG + kBTC + kGOLD + kCOP
+float leadDen = qES + qSOX + qQQQ + qNVDA + qVIX + qDXY + qUS10Y + qHYG + qBTC + qGOLD + qCOP
+float predictive = engineOK and leadDen > 0 ? f_clamp(100.0 * leadNum / leadDen, -100.0, 100.0) : na
+
+// -------------------------- SYNCHRONOUS CONFIRMATION -------------------------
+float ckES    = f_confirmContrib(zES, sESc, relSyncES, aES)
+float ckSOX   = f_confirmContrib(zSOX, sSOXc, relSyncSOX, aSOX)
+float ckQQQ   = f_confirmContrib(zQQQ, sQQQc, relSyncQQQ, aQQQ)
+float ckNVDA  = f_confirmContrib(zNVDA, sNVDAc, relSyncNVDA, aNVDA)
+float ckVIX   = f_confirmContrib(zVIX, sVIXc, relSyncVIX, aVIX)
+float ckDXY   = f_confirmContrib(zDXY, sDXYc, relSyncDXY, aDXY)
+float ckUS10Y = f_confirmContrib(zUS10Y, sUS10Yc, relSyncUS10Y, aUS10Y)
+float ckHYG   = f_confirmContrib(zHYG, sHYGc, relSyncHYG, aHYG)
+float ckBTC   = f_confirmContrib(zBTC, sBTCc, relSyncBTC, aBTC)
+float ckGOLD  = f_confirmContrib(zGOLD, sGOLDc, relSyncGOLD, aGOLD)
+float ckCOP   = f_confirmContrib(zCOP, sCOPc, relSyncCOP, aCOP)
+
+float cqES    = f_confirmQuality(sESc, relSyncES, aES)
+float cqSOX   = f_confirmQuality(sSOXc, relSyncSOX, aSOX)
+float cqQQQ   = f_confirmQuality(sQQQc, relSyncQQQ, aQQQ)
+float cqNVDA  = f_confirmQuality(sNVDAc, relSyncNVDA, aNVDA)
+float cqVIX   = f_confirmQuality(sVIXc, relSyncVIX, aVIX)
+float cqDXY   = f_confirmQuality(sDXYc, relSyncDXY, aDXY)
+float cqUS10Y = f_confirmQuality(sUS10Yc, relSyncUS10Y, aUS10Y)
+float cqHYG   = f_confirmQuality(sHYGc, relSyncHYG, aHYG)
+float cqBTC   = f_confirmQuality(sBTCc, relSyncBTC, aBTC)
+float cqGOLD  = f_confirmQuality(sGOLDc, relSyncGOLD, aGOLD)
+float cqCOP   = f_confirmQuality(sCOPc, relSyncCOP, aCOP)
+
+float confNum = ckES + ckSOX + ckQQQ + ckNVDA + ckVIX + ckDXY + ckUS10Y + ckHYG + ckBTC + ckGOLD + ckCOP
+float confDen = cqES + cqSOX + cqQQQ + cqNVDA + cqVIX + cqDXY + cqUS10Y + cqHYG + cqBTC + cqGOLD + cqCOP
+float confirmation = engineOK and confDen > 0 ? f_clamp(100.0 * confNum / confDen, -100.0, 100.0) : na
+
+float predictiveSignal = ta.ema(predictive, 9)
+
+f_regime(float x) =>
+    string out = "NEUTRAL"
+    if not na(x)
+        if x >= 65
+            out := "STRONG BULL"
+        else if x >= 35
+            out := "BULL"
+        else if x <= -65
+            out := "STRONG BEAR"
+        else if x <= -35
+            out := "BEAR"
+    out
+
+string predRegime = f_regime(predictive)
+string confRegime = f_regime(confirmation)
+
+// ---------------------------- ARRAYS / RANKING -------------------------------
+var array<string> names = array.from("ES", "SOX", "QQQ", "NVDA", "VIX", "DXY", "US10Y", "HYG", "BTC", "GOLD", "COPPER")
+array<float> syncs = array.from(sESc, sSOXc, sQQQc, sNVDAc, sVIXc, sDXYc, sUS10Yc, sHYGc, sBTCc, sGOLDc, sCOPc)
+array<float> leads = array.from(cES, cSOX, cQQQ, cNVDA, cVIX, cDXY, cUS10Y, cHYG, cBTC, cGOLD, cCOP)
+array<int> lagBars = array.from(lES, lSOX, lQQQ, lNVDA, lVIX, lDXY, lUS10Y, lHYG, lBTC, lGOLD, lCOP)
+array<float> advs = array.from(advES, advSOX, advQQQ, advNVDA, advVIX, advDXY, advUS10Y, advHYG, advBTC, advGOLD, advCOP)
+array<float> rels = array.from(relES, relSOX, relQQQ, relNVDA, relVIX, relDXY, relUS10Y, relHYG, relBTC, relGOLD, relCOP)
+array<string> stats = array.from(stES, stSOX, stQQQ, stNVDA, stVIX, stDXY, stUS10Y, stHYG, stBTC, stGOLD, stCOP)
+array<string> edges = array.from(edgeES, edgeSOX, edgeQQQ, edgeNVDA, edgeVIX, edgeDXY, edgeUS10Y, edgeHYG, edgeBTC, edgeGOLD, edgeCOP)
+array<float> zs = array.from(zES, zSOX, zQQQ, zNVDA, zVIX, zDXY, zUS10Y, zHYG, zBTC, zGOLD, zCOP)
+array<float> ks = array.from(kES, kSOX, kQQQ, kNVDA, kVIX, kDXY, kUS10Y, kHYG, kBTC, kGOLD, kCOP)
+array<float> actives = array.from(aES, aSOX, aQQQ, aNVDA, aVIX, aDXY, aUS10Y, aHYG, aBTC, aGOLD, aCOP)
+
+array<float> edgeScores = array.new<float>(N, 0.0)
+for i = 0 to N - 1
+    float es = f_edgeScore(array.get(advs, i), array.get(leads, i), array.get(rels, i), array.get(actives, i))
+    array.set(edgeScores, i, es)
+
+int top1 = -1
+int top2 = -1
+int top3 = -1
+float tv1 = 0.0
+float tv2 = 0.0
+float tv3 = 0.0
+for i = 0 to N - 1
+    float v = array.get(edgeScores, i)
+    if v > tv1
+        tv3 := tv2
+        top3 := top2
+        tv2 := tv1
+        top2 := top1
+        tv1 := v
+        top1 := i
+    else if v > tv2
+        tv3 := tv2
+        top3 := top2
+        tv2 := v
+        top2 := i
+    else if v > tv3
+        tv3 := v
+        top3 := i
+
+f_leaderSummary(int idx) =>
+    string out = "NO VALID LEAD"
+    if idx >= 0 and array.get(edgeScores, idx) > 0
+        string nm = array.get(names, idx)
+        int lb = array.get(lagBars, idx)
+        float lc = array.get(leads, idx)
+        float ad = array.get(advs, idx)
+        float rr = array.get(rels, idx)
+        out := nm + " " + f_leadText(lb) + " " + f_signed(lc) + " A" + f_signed(ad) + " " + f_relLabel(rr)
+    out
+
+string d1 = f_leaderSummary(top1)
+string d2 = f_leaderSummary(top2)
+string d3 = f_leaderSummary(top3)
+
+// Directional agreement uses ONLY valid predictive contributions.
+int bullAgree = 0
+int bearAgree = 0
+for i = 0 to N - 1
+    float kk = array.get(ks, i)
+    if kk > 0.02
+        bullAgree += 1
+    else if kk < -0.02
+        bearAgree += 1
+
+// ------------------------------- DASHBOARD ----------------------------------
+int rows = 18 + topPadding
+var table t = table.new(position.top_left, 8, rows, frame_color=color.rgb(74, 92, 119), frame_width=2, border_color=color.rgb(52, 64, 79), border_width=1)
+
+if barstate.islast
+    for pr = 0 to topPadding - 1
+        for pc = 0 to 7
+            table.cell(t, pc, pr, "", bgcolor=color.new(color.black, 100))
+
+    int r0 = topPadding
+    color hdr = f_header()
+
+    table.cell(t, 0, r0, "TRUE LEAD / LAG", text_color=color.white, bgcolor=hdr, text_size=size.large, text_halign=text.align_left)
+    table.cell(t, 1, r0, "PRED EDGE", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 2, r0, engineOK ? f_signed(predictive) + " " + predRegime : "LOCKED", text_color=color.white, bgcolor=f_impBg(predictive / 100.0), text_size=txtSize)
+    table.cell(t, 3, r0, "CONFIRM", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 4, r0, engineOK ? f_signed(confirmation) + " " + confRegime : "LOCKED", text_color=color.white, bgcolor=f_impBg(confirmation / 100.0), text_size=txtSize)
+    table.cell(t, 5, r0, "SESSION", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 6, r0, inRTH ? "NY RTH" : "OVERNIGHT", text_color=color.white, bgcolor=f_rowBg(0), text_size=txtSize)
+    table.cell(t, 7, r0, str.tostring(bullAgree) + "↑/" + str.tostring(bearAgree) + "↓", text_color=color.white, bgcolor=f_rowBg(0), text_size=txtSize)
+
+    table.cell(t, 0, r0 + 1, "TRUE LEADER #1", text_color=color.white, bgcolor=color.rgb(55, 44, 78), text_size=txtSize)
+    table.cell(t, 1, r0 + 1, d1, text_color=color.white, bgcolor=f_rowBg(1), text_size=txtSize)
+    table.cell(t, 2, r0 + 1, "#2", text_color=color.white, bgcolor=color.rgb(55, 44, 78), text_size=txtSize)
+    table.cell(t, 3, r0 + 1, d2, text_color=color.white, bgcolor=f_rowBg(1), text_size=txtSize)
+    table.cell(t, 4, r0 + 1, "#3", text_color=color.white, bgcolor=color.rgb(55, 44, 78), text_size=txtSize)
+    table.cell(t, 5, r0 + 1, d3, text_color=color.white, bgcolor=f_rowBg(1), text_size=txtSize)
+    table.cell(t, 6, r0 + 1, confirmed ? "CONFIRMED" : "LIVE", text_color=color.white, bgcolor=f_rowBg(1), text_size=txtSize)
+    table.cell(t, 7, r0 + 1, "A=Lead Adv", text_color=color.white, bgcolor=f_rowBg(1), text_size=size.small)
+
+    string guard = engineOK ? "5m NQ/MNQ • TRUE LEAD excludes SYNC • cash research = NY RTH only" : not symbolOK ? "⚠ USE NQ1! OR MNQ1!" : "⚠ USE 5-MINUTE CHART"
+    for c = 0 to 7
+        table.cell(t, c, r0 + 2, c == 0 ? guard : "", text_color=color.white, bgcolor=engineOK ? color.rgb(24, 66, 57) : color.rgb(139, 43, 49), text_size=size.small, text_halign=text.align_left)
+
+    table.cell(t, 0, r0 + 3, "MARKET", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 1, r0 + 3, "SYNC", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 2, r0 + 3, "TRUE LEAD", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 3, r0 + 3, "ADV", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 4, r0 + 3, "REL", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 5, r0 + 3, "EDGE / STATUS", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 6, r0 + 3, "MOVE Z", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+    table.cell(t, 7, r0 + 3, "PRED IMP", text_color=color.white, bgcolor=hdr, text_size=txtSize)
+
+    for i = 0 to N - 1
+        int rr = r0 + 4 + i
+        float sy = array.get(syncs, i)
+        float ld = array.get(leads, i)
+        int lb = array.get(lagBars, i)
+        float ad = array.get(advs, i)
+        float rel = array.get(rels, i)
+        string st = array.get(stats, i)
+        string ed = array.get(edges, i)
+        float zz = array.get(zs, i)
+        float kk = array.get(ks, i)
+        float active = array.get(actives, i)
+        color base = f_rowBg(i)
+        string leadCell = f_leadText(lb) + " " + f_corrText(ld)
+        string statusCell = ed + " • " + st
+        if active == 0
+            statusCell := "RTH ONLY • " + ed
+
+        table.cell(t, 0, rr, array.get(names, i), text_color=color.white, bgcolor=base, text_size=txtSize, text_halign=text.align_left)
+        table.cell(t, 1, rr, f_corrText(sy), text_color=color.white, bgcolor=f_corrBg(sy), text_size=txtSize)
+        table.cell(t, 2, rr, leadCell, text_color=color.white, bgcolor=f_corrBg(ld), text_size=txtSize)
+        table.cell(t, 3, rr, f_signed(ad), text_color=color.white, bgcolor=ad >= 0.20 ? color.rgb(0, 116, 67) : ad >= minLeadAdv ? color.rgb(174, 103, 8) : color.rgb(92, 49, 53), text_size=txtSize)
+        table.cell(t, 4, rr, f_relLabel(rel) + " " + f_fmt(rel), text_color=color.white, bgcolor=f_relBg(rel), text_size=txtSize)
+        table.cell(t, 5, rr, statusCell, text_color=color.white, bgcolor=f_edgeBg(ed), text_size=txtSize)
+        table.cell(t, 6, rr, f_signed(zz), text_color=color.white, bgcolor=base, text_size=txtSize)
+        table.cell(t, 7, rr, active == 0 ? "OFF" : f_signed(kk * 100.0), text_color=color.white, bgcolor=active == 0 ? color.rgb(63, 69, 80) : f_impBg(kk), text_size=txtSize)
+
+// -------------------------------- PLOTS -------------------------------------
+hline(0, "Zero", color=color.new(color.gray, 70))
+hline(35, "Bull threshold", color=color.new(color.green, 70), linestyle=hline.style_dashed)
+hline(65, "Strong bull", color=color.new(color.green, 45), linestyle=hline.style_dashed)
+hline(-35, "Bear threshold", color=color.new(color.red, 70), linestyle=hline.style_dashed)
+hline(-65, "Strong bear", color=color.new(color.red, 45), linestyle=hline.style_dashed)
+
+color pcol = na(predictive) ? color.gray : predictive >= 0 ? color.lime : color.red
+plot(predictive, "Predictive Lead Edge", style=plot.style_histogram, color=pcol, linewidth=3)
+// MASTER LINK contract:
+//   • Valid 5m NQ/MNQ + active predictive leaders -> signed predictive edge.
+//   • Valid 5m NQ/MNQ + no qualified leader      -> 0 = NEUTRAL.
+//   • Wrong symbol/timeframe                     -> na, so Master can still flag setup error.
+float masterLeadLag = engineOK ? nz(predictive, 0.0) : na
+plot(masterLeadLag, "MASTER LINK — LEAD/LAG", display=display.data_window)
+plot(predictiveSignal, "Predictive Signal", color=color.white, linewidth=2)
+plot(engineOK and na(predictive) ? 1 : 0, "MASTER LINK LeadLag Neutral Fallback Active", display=display.data_window)
+plot(confirmation, "Synchronous Confirmation", color=color.aqua, linewidth=1, display=display.data_window)
+
+color bg = na(predictive) ? na : predictive >= 35 ? color.new(color.green, 94) : predictive <= -35 ? color.new(color.red, 94) : color.new(color.gray, 97)
+bgcolor(shadeBg ? bg : na)
+
+// -------------------------------- ALERTS ------------------------------------
+bool anyBreaking = stES == "BREAKING" or stSOX == "BREAKING" or stQQQ == "BREAKING" or stNVDA == "BREAKING" or stVIX == "BREAKING" or stDXY == "BREAKING" or stUS10Y == "BREAKING" or stHYG == "BREAKING" or stBTC == "BREAKING" or stGOLD == "BREAKING" or stCOP == "BREAKING"
+
+alertcondition(engineOK and ta.crossover(predictive, 35), "Predictive Edge Bullish", "MSP True Lead/Lag predictive edge crossed bullish.")
+alertcondition(engineOK and ta.crossunder(predictive, -35), "Predictive Edge Bearish", "MSP True Lead/Lag predictive edge crossed bearish.")
+alertcondition(engineOK and ta.crossover(predictive, 65), "Predictive Edge Strong Bull", "MSP True Lead/Lag predictive edge crossed strong bullish.")
+alertcondition(engineOK and ta.crossunder(predictive, -65), "Predictive Edge Strong Bear", "MSP True Lead/Lag predictive edge crossed strong bearish.")
+alertcondition(engineOK and anyBreaking, "Lead Relationship Breaking", "One or more tracked predictive relationships is breaking.")
