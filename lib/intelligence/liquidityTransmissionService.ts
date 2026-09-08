@@ -151,13 +151,24 @@ export async function resolveLiquidityTransmission(
     : load.missingKeys.length < 14 ? 'PARTIAL'
     : 'DATA_UNAVAILABLE';
 
+  // Attach upstream weighted coverage (diagnostic only — never changes stage
+  // math). The engine input already carries bloc-count `coveragePercent` and
+  // the m2Meta interface already declares `estimatedWeightedCoveragePercent` as
+  // optional; the input builder cannot see it because LiquidityM2Input is a
+  // frozen engine contract. Setting it here at the service surface keeps both
+  // coverage concepts available for the UI without touching the engine.
+  const m2MetaWithWeighted = {
+    ...built.m2Meta,
+    estimatedWeightedCoveragePercent: m2Result?.quality.estimatedWeightedCoveragePercent,
+  };
+
   const resolved: LiquidityTransmissionResolved = {
     status: overallStatus,
     environmentLabel: deps.environmentLabel ?? inferEnvironmentLabel(),
     calculatedAt: nowIso,
     result,
     packs: built.packs,
-    m2Meta: built.m2Meta,
+    m2Meta: m2MetaWithWeighted,
     previousMasterLink: previous ? { observedOn: previous.observedOn, masterLink: previous.masterLink } : null,
     masterLinkDelta,
     providersUsed: load.providersUsed,
