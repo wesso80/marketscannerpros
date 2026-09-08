@@ -3,15 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const TABS = [
+type Tab = { href: string; label: string; underConstruction?: boolean };
+
+const TABS: Tab[] = [
   { href: '/intelligence', label: 'Overview' },
-  { href: '/intelligence/master', label: 'Master' },
-  { href: '/intelligence/liquidity', label: 'Liquidity' },
   { href: '/intelligence/global-m2', label: 'Global M2' },
   { href: '/intelligence/fragility', label: 'Fragility' },
-  { href: '/intelligence/lead-lag', label: 'Lead/Lag' },
-  { href: '/intelligence/nq-pressure', label: 'NQ Pressure' },
-  { href: '/intelligence/auction', label: 'Auction' },
+  { href: '/intelligence/liquidity', label: 'Liquidity' },
+  { href: '/intelligence/lead-lag', label: 'Lead/Lag', underConstruction: true },
+  { href: '/intelligence/nq-pressure', label: 'NQ Pressure', underConstruction: true },
+  { href: '/intelligence/auction', label: 'Auction', underConstruction: true },
+  { href: '/intelligence/master', label: 'Master', underConstruction: true },
   { href: '/intelligence/history', label: 'History' },
 ];
 
@@ -30,11 +32,15 @@ export default function IntelligenceNav() {
       }}
     >
       {TABS.map((tab) => {
-        const active = tab.href === '/intelligence' ? pathname === tab.href : pathname.startsWith(tab.href);
+        const active = tab.href === '/intelligence'
+          ? pathname === tab.href
+          : pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}
             href={tab.href}
+            data-nav-tab={tab.href}
+            data-nav-status={tab.underConstruction ? 'UNDER_CONSTRUCTION' : 'LIVE'}
             style={{
               padding: '6px 12px',
               borderRadius: 8,
@@ -45,9 +51,30 @@ export default function IntelligenceNav() {
               color: active ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
               background: active ? 'var(--msp-accent-tint)' : 'transparent',
               border: active ? '1px solid var(--msp-accent)' : '1px solid transparent',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
             {tab.label}
+            {tab.underConstruction && (
+              <span
+                title="Under construction — native engine in progress"
+                style={{
+                  padding: '1px 6px',
+                  borderRadius: 5,
+                  fontSize: '0.6rem',
+                  letterSpacing: '0.04em',
+                  fontWeight: 700,
+                  color: '#F5B14C',
+                  background: 'rgba(245,177,76,0.15)',
+                  border: '1px solid rgba(245,177,76,0.32)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Soon
+              </span>
+            )}
           </Link>
         );
       })}

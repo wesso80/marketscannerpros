@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getPressureResult } from '@/lib/intelligence/mockData';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Launch plan §10 — unfinished public engines return a typed UNDER_CONSTRUCTION
+// response instead of mock values.
 export async function GET() {
-  return NextResponse.json({ data: getPressureResult(), source: 'mock' });
+  return NextResponse.json(
+    {
+      status: 'UNDER_CONSTRUCTION',
+      available: false,
+      module: 'nq-pressure',
+      message: 'NQ Institutional Pressure is being converted to the native engine. Live output paused during validation.',
+    },
+    { status: 503 },
+  );
 }
