@@ -129,9 +129,7 @@ export function isStale(resolved: LiquidityTransmissionResolved): boolean {
 function buildLiveComponents(resolved: LiquidityTransmissionResolved): EngineResult['components'] {
   const result = resolved.result!;
   const m = resolved.m2Meta;
-  const upstream = m.interpretationEligible === true
-    ? 'LIVE'
-    : 'LIVE · PARTIAL UPSTREAM';
+  const upstream = buildUpstreamM2Label(m);
 
   const packs = resolved.packs;
   const exactCount = packs.filter((p) => !p.missing && p.classification === 'EXACT').length;
@@ -140,6 +138,8 @@ function buildLiveComponents(resolved: LiquidityTransmissionResolved): EngineRes
   const derivedCount = packs.filter((p) => !p.missing && p.classification === 'DERIVED').length;
   const missingCount = packs.filter((p) => p.missing).length;
   const staleCount = packs.filter((p) => p.stale).length;
+  const stale = isStale(resolved);
+  const freshness = buildFreshnessComponent(m, staleCount, stale);
 
   const components: NonNullable<EngineResult['components']> = [
     {
@@ -189,13 +189,14 @@ function buildLiveComponents(resolved: LiquidityTransmissionResolved): EngineRes
     {
       label: 'Upstream M2',
       value: upstream,
-      state: m.interpretationEligible ? 'positive' : 'warning',
+      state: upstreamSemantic(m),
       detail: `${m.validBlocCount}/11 blocs · est. weighted ${
         m.estimatedWeightedCoveragePercent != null
           ? `${m.estimatedWeightedCoveragePercent.toFixed(1)}%`
           : '—'
       }`,
     },
+    freshness,
     {
       label: 'Confidence',
       value: `${result.confidence} ${result.confidenceLabel}`,
@@ -246,6 +247,98 @@ function buildUnavailableComponents(resolved: LiquidityTransmissionResolved): En
       state: 'negative',
     },
   ];
+}
+
+/* ── Cleanup A — Upstream M2 label + Freshness explainer ─────────────────── */
+
+type M2Meta = LiquidityTransmissionResolved['m2Meta'];
+
+/**
+ * Cleanup A: STALE-aware Upstream M2 label. Combines interpretation eligibility
+ * (partial vs full) with staleness so the operator never sees "0 stale asset
+ * packs" alongside a STALE Liquidity row without an explanation.
+ */
+export function buildUpstreamM2Label(m: M2Meta): string {
+  const eligible = m.interpretationEligible === true;
+  const stale = m.stale === true;
+  if (eligible && stale) return 'STALE';
+  if (eligible) return 'LIVE';
+  if (stale) return 'STALE · PARTIAL';
+  return 'LIVE · PARTIAL';
+}
+
+function upstreamSemantic(m: M2Meta): SemanticState {
+  if (m.stale === true) return 'warning';
+  if (m.interpretationEligible === true) return 'positive';
+  return 'warning';
+}
+
+/**
+ * Cleanup A: emits a Freshness component that explains WHY the macro row is
+ * STALE. Common case is 0 stale asset packs but upstream M2 has a stale bloc —
+ * without this note the UI looks contradictory.
+ */
+function buildFreshnessComponent(
+  m: M2Meta,
+  staleCount: number,
+  overallStale: boolean,
+): NonNullable<EngineResult['components']>[number] {
+  if (!overallStale) {
+    return { label: 'Freshness', value: 'FRESH', state: 'positive' };
+  }
+  const reasons: string[] = [];
+  if (m.stale === true) reasons.push('upstream Global M2 has stale bloc(s)');
+  if (staleCount > 0) reasons.push(`${staleCount} asset pack(s) stale`);
+  const detail = reasons.length > 0
+    ? reasons.join('; ')
+    : 'source flagged stale (see providers)';
+  return { label: 'Freshness', value: 'STALE', state: 'warning', detail };
+}
+
+/* ── Cleanup B — hard-failure integration builder ─────────────────────────── */
+
+/**
+ * Build an UNAVAILABLE integration when `resolveLiquidityTransmission()` itself
+ * throws (network / dependency failure). Prevents any fallback to the old
+ * mock macro fixture in the live-native path. `error` is surfaced as reason.
+ */
+export function buildUnavailableIntegration(
+  inputs: MasterEngineInput[],
+  error: unknown,
+  nowIso: string = new Date().toISOString(),
+): MasterLiquidityIntegration {
+  const reason = error instanceof Error ? error.message : String(error ?? 'liquidity-error');
+  return {
+    inputs: inputs.map((i) =>
+      i.key === 'macro'
+        ? { ...i, raw: 0, orientation: 50, status: 'UNAVAILABLE', confidence: undefined }
+        : i,
+    ),
+    macroComponents: [
+      {
+        label: 'Source',
+        value: 'NATIVE (UNAVAILABLE)',
+        state: 'negative',
+        detail: `Native Liquidity resolver threw — ${reason}. No mock fallback.`,
+      },
+      {
+        label: 'Master Link',
+        value: '—',
+        state: 'negative',
+        detail: 'Orientation forced to neutral 50; no stale substitution, no old TradingView number.',
+      },
+      { label: 'Parity', value: 'DATA_PARITY_PENDING', state: 'warning' },
+      { label: 'Upstream M2', value: 'UNAVAILABLE', state: 'negative' },
+      { label: 'Freshness', value: 'UNAVAILABLE', state: 'negative' },
+    ],
+    source: 'native-unavailable',
+    status: 'UNAVAILABLE',
+    applied: false,
+    reason,
+    masterLink: null,
+    calculatedAt: nowIso,
+    parityStatus: 'DATA_PARITY_PENDING',
+  };
 }
 
 /* ── Semantic helpers (local — duplicated intentionally to keep the file pure) ─ */

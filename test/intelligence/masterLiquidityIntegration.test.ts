@@ -18,6 +18,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   applyNativeLiquidityToMasterInputs,
+  buildUnavailableIntegration,
+  buildUpstreamM2Label,
   isStale,
 } from '@/lib/intelligence/masterLiquidityIntegration';
 import { computeMaster, type MasterEngineInput } from '@/lib/intelligence/engines/master';
@@ -206,8 +208,9 @@ describe('applyNativeLiquidityToMasterInputs — component metadata', () => {
     const byLabel = new Map(components.map((c) => [c.label, c]));
     // DATA_PARITY_PENDING everywhere.
     expect(byLabel.get('Parity')!.value).toBe('DATA_PARITY_PENDING');
-    // LIVE · PARTIAL UPSTREAM because interpretationEligible=false.
-    expect(byLabel.get('Upstream M2')!.value).toBe('LIVE · PARTIAL UPSTREAM');
+    // Cleanup A: partial-upstream label is `LIVE · PARTIAL` (STALE prefix
+    // only when m2Meta.stale is true — see cleanup-A tests below).
+    expect(byLabel.get('Upstream M2')!.value).toBe('LIVE · PARTIAL');
     expect(byLabel.get('Upstream M2')!.detail).toContain('9/11');
     expect(byLabel.get('Upstream M2')!.detail).toContain('94.4%');
     // Native source marker.
@@ -374,5 +377,127 @@ describe('applyNativeLiquidityToMasterInputs — Master formulas unchanged', () 
     expect(withNative.context).not.toBe(withMock.context);
     // Execution block does not include macro → identical.
     expect(withNative.execution).toBe(withMock.execution);
+  });
+});
+
+/* ── Phase 4E Cleanup A — STALE-aware Upstream M2 label + Freshness ──────── */
+
+describe('cleanup A — Upstream M2 label reflects staleness + partial-upstream', () => {
+  it('LIVE when eligible and not stale', () => {
+    expect(buildUpstreamM2Label({
+      status: 'LIVE', interpretationEligible: true, parityStatus: 'DATA_PARITY_PENDING',
+      validBlocCount: 11, missingBlocs: [], stale: false, providersUsed: [],
+      calculatedAt: '2026-09-07T00:00:00Z',
+    })).toBe('LIVE');
+  });
+
+  it('LIVE · PARTIAL when interpretation ineligible and not stale', () => {
+    expect(buildUpstreamM2Label({
+      status: 'LIVE/PARTIAL UPSTREAM', interpretationEligible: false, parityStatus: 'DATA_PARITY_PENDING',
+      validBlocCount: 9, missingBlocs: [], stale: false, providersUsed: [],
+      calculatedAt: '2026-09-07T00:00:00Z',
+    })).toBe('LIVE · PARTIAL');
+  });
+
+  it('STALE · PARTIAL when ineligible and stale', () => {
+    expect(buildUpstreamM2Label({
+      status: 'LIVE/PARTIAL UPSTREAM', interpretationEligible: false, parityStatus: 'DATA_PARITY_PENDING',
+      validBlocCount: 9, missingBlocs: [], stale: true, providersUsed: [],
+      calculatedAt: '2026-09-07T00:00:00Z',
+    })).toBe('STALE · PARTIAL');
+  });
+
+  it('STALE when eligible but stale', () => {
+    expect(buildUpstreamM2Label({
+      status: 'LIVE', interpretationEligible: true, parityStatus: 'DATA_PARITY_PENDING',
+      validBlocCount: 11, missingBlocs: [], stale: true, providersUsed: [],
+      calculatedAt: '2026-09-07T00:00:00Z',
+    })).toBe('STALE');
+  });
+
+  it('emits Freshness=STALE with M2-stale explanation when 0 packs stale but M2 stale', () => {
+    const resolved = makeResolved();
+    resolved.m2Meta.stale = true; // upstream M2 stale
+    // packs remain fresh
+    expect(resolved.packs.filter((p) => p.stale).length).toBe(0);
+    const out = applyNativeLiquidityToMasterInputs(baseInputs(), resolved);
+    expect(out.status).toBe('STALE');
+    const byLabel = new Map(out.macroComponents!.map((c) => [c.label, c]));
+    const freshness = byLabel.get('Freshness')!;
+    expect(freshness.value).toBe('STALE');
+    // Must NOT look contradictory to "0 stale asset packs".
+    expect(freshness.detail).toContain('upstream Global M2');
+    // Upstream M2 label reflects both partial + stale.
+    expect(byLabel.get('Upstream M2')!.value).toBe('STALE · PARTIAL');
+  });
+
+  it('emits Freshness=STALE listing pack count when packs are stale', () => {
+    const resolved = makeResolved();
+    resolved.packs[2].stale = true;
+    resolved.packs[5].stale = true;
+    const out = applyNativeLiquidityToMasterInputs(baseInputs(), resolved);
+    const freshness = out.macroComponents!.find((c) => c.label === 'Freshness')!;
+    expect(freshness.value).toBe('STALE');
+    expect(freshness.detail).toContain('2 asset pack(s) stale');
+  });
+
+  it('emits Freshness=FRESH when nothing is stale', () => {
+    const out = applyNativeLiquidityToMasterInputs(baseInputs(), makeResolved());
+    const freshness = out.macroComponents!.find((c) => c.label === 'Freshness')!;
+    expect(freshness.value).toBe('FRESH');
+  });
+});
+
+/* ── Phase 4E Cleanup B — hard failure never falls back to mock ───────────── */
+
+describe('cleanup B — buildUnavailableIntegration on native resolver throw', () => {
+  it('does NOT restore mock macro 72.44 when native resolver throws', () => {
+    const inputs = baseInputs();
+    const mockMacro = inputs.find((i) => i.key === 'macro')!;
+    expect(mockMacro.orientation).toBe(72.44);
+    const err = new Error('coingecko: 502');
+    const out = buildUnavailableIntegration(inputs, err, '2026-09-08T00:00:00Z');
+    const macro = out.inputs.find((i) => i.key === 'macro')!;
+    // Explicit: mock 72.44 is NEVER used in the live-native path after a failure.
+    expect(macro.orientation).not.toBe(72.44);
+    expect(macro.orientation).toBe(50);
+    expect(macro.raw).toBe(0);
+    expect(macro.status).toBe('UNAVAILABLE');
+    expect(out.applied).toBe(false);
+    expect(out.source).toBe('native-unavailable');
+    expect(out.reason).toBe('coingecko: 502');
+    expect(out.parityStatus).toBe('DATA_PARITY_PENDING');
+  });
+
+  it('surfaces failure metadata verbatim in components', () => {
+    const err = new Error('resolveLiquidityTransmission timeout after 30s');
+    const out = buildUnavailableIntegration(baseInputs(), err);
+    const byLabel = new Map(out.macroComponents!.map((c) => [c.label, c]));
+    expect(byLabel.get('Source')!.value).toBe('NATIVE (UNAVAILABLE)');
+    expect(String(byLabel.get('Source')!.detail)).toContain('timeout');
+    expect(String(byLabel.get('Source')!.detail)).toContain('No mock fallback');
+    expect(byLabel.get('Master Link')!.value).toBe('—');
+    expect(byLabel.get('Master Link')!.detail).toContain('no old TradingView number');
+    expect(byLabel.get('Parity')!.value).toBe('DATA_PARITY_PENDING');
+    expect(byLabel.get('Upstream M2')!.value).toBe('UNAVAILABLE');
+    expect(byLabel.get('Freshness')!.value).toBe('UNAVAILABLE');
+  });
+
+  it('handles non-Error throws gracefully', () => {
+    const out = buildUnavailableIntegration(baseInputs(), 'boom');
+    expect(out.reason).toBe('boom');
+    expect(out.status).toBe('UNAVAILABLE');
+    // Still no mock restoration.
+    expect(out.inputs.find((i) => i.key === 'macro')!.orientation).toBe(50);
+  });
+
+  it('leaves every non-macro input untouched', () => {
+    const inputs = baseInputs();
+    const out = buildUnavailableIntegration(inputs, new Error('x'));
+    for (const key of ['fragility', 'lead-lag', 'nq-pressure', 'auction'] as const) {
+      const before = inputs.find((i) => i.key === key)!;
+      const after = out.inputs.find((i) => i.key === key)!;
+      expect(after).toEqual(before);
+    }
   });
 });

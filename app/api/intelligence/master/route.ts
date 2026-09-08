@@ -5,6 +5,7 @@ import { resolveFragility } from '@/lib/intelligence/fragilityService';
 import { resolveLiquidityTransmission } from '@/lib/intelligence/liquidityTransmissionService';
 import {
   applyNativeLiquidityToMasterInputs,
+  buildUnavailableIntegration,
   type MasterLiquiditySource,
 } from '@/lib/intelligence/masterLiquidityIntegration';
 
@@ -22,9 +23,11 @@ export async function GET() {
   const { inputs, componentsByKey } = buildMasterInputs(timestamp);
 
   let finalInputs = inputs;
-  const flags: { fragility: 'live' | 'mock'; liquidity: MasterLiquiditySource | 'mock' } = {
+  const flags: { fragility: 'live' | 'mock'; liquidity: MasterLiquiditySource } = {
     fragility: 'mock',
-    liquidity: 'mock',
+    // Cleanup B: liquidity always resolves through a native integration path.
+    // A mock fallback is never restored — even on hard resolver throws.
+    liquidity: 'native-unavailable',
   };
 
   // 1) Native Fragility (Phase 3 — unchanged).
@@ -43,20 +46,27 @@ export async function GET() {
   }
 
   // 2) Native Liquidity Transmission (Phase 4E — validated masterLink).
+  // Cleanup B: hard failure never falls back to the mock macro fixture. The
+  // resolver either produces an integration (native LIVE / STALE / UNAVAILABLE)
+  // or throws — in which case we synthesise an UNAVAILABLE integration here.
   let liquidityComponents: ReturnType<typeof componentsByKey.get> | undefined;
   let liquidityStatus: string | undefined;
+  let liquidityReason: string | undefined;
   try {
     const resolvedLiquidity = await resolveLiquidityTransmission();
     const integration = applyNativeLiquidityToMasterInputs(finalInputs, resolvedLiquidity);
     finalInputs = integration.inputs;
     liquidityComponents = integration.macroComponents;
     liquidityStatus = integration.status;
+    liquidityReason = integration.reason;
     flags.liquidity = integration.source;
   } catch (e) {
-    // Preserve the mock macro input on hard failure — the aggregate stays
-    // deterministic and the source label stays 'mock' for macro.
-    flags.liquidity = 'mock';
-    liquidityStatus = e instanceof Error ? e.message : 'liquidity-error';
+    const integration = buildUnavailableIntegration(finalInputs, e, timestamp);
+    finalInputs = integration.inputs;
+    liquidityComponents = integration.macroComponents;
+    liquidityStatus = integration.status;
+    liquidityReason = integration.reason;
+    flags.liquidity = integration.source;
   }
 
   const master = computeMaster(finalInputs, undefined, timestamp);
@@ -68,12 +78,18 @@ export async function GET() {
     return { ...e, components: componentsByKey.get(e.engine) };
   });
 
-  const source = flags.fragility === 'live' || flags.liquidity !== 'mock'
+  const nativeLiquidityApplied = flags.liquidity !== 'native-unavailable';
+  const source = flags.fragility === 'live' || nativeLiquidityApplied
     ? 'partial-live' : 'mock';
   return NextResponse.json({
     data: master,
     source,
-    provenance: { fragility: flags.fragility, liquidity: flags.liquidity, liquidityStatus },
+    provenance: {
+      fragility: flags.fragility,
+      liquidity: flags.liquidity,
+      liquidityStatus,
+      liquidityReason,
+    },
   });
 }
 
