@@ -30,6 +30,13 @@ const envSchema = z.object({
   
   // Alpha Vantage API (optional)
   ALPHA_VANTAGE_API_KEY: z.string().optional(),
+
+  // Economic calendar providers (optional; the calendar falls back to the curated schedule).
+  // Commercial terms for both providers are unverified — no plan level is assumed in code.
+  TRADING_ECONOMICS_API_KEY: z.string().optional(),
+  EODHD_API_KEY: z.string().optional(),
+  // Comma-separated live provider precedence, e.g. "trading-economics,eodhd".
+  CALENDAR_PROVIDER_ORDER: z.string().optional(),
   
   // CoinGecko API (commercial plan - 500K calls/month)
   COINGECKO_API_KEY: z.string().startsWith('CG-', 'COINGECKO_API_KEY must start with CG-').optional(),

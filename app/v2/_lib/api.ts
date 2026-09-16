@@ -272,8 +272,17 @@ export interface EconomicEvent {
   impact: string;
   category: string;
   forecast?: string;
-  previous?: string;
-  actual?: string;
+  /** Normalized payload: numeric (null when missing). Use `display` for rendering. */
+  previous?: number | string | null;
+  actual?: number | string | null;
+  consensus?: number | null;
+  countryCode?: string;
+  currency?: string;
+  releaseTimeUtc?: string;
+  releaseTimeLocal?: string;
+  dataStatus?: 'LIVE' | 'DELAYED' | 'STALE' | 'MISSING' | 'UNCONFIRMED';
+  timingConfirmed?: boolean;
+  display?: { actual: string; previous: string; consensus: string; surprise: string };
 }
 
 export interface EconomicCalendarResponse {

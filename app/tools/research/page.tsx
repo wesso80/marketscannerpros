@@ -375,9 +375,9 @@ export default function ResearchPage() {
                       <td className="py-2 px-2 text-slate-400">{e.time || '—'}</td>
                       <td className="py-2 px-2"><ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />{e.impact}</td>
                       <td className="py-2 px-2 text-white font-medium">{e.event}</td>
-                      <td className="py-2 px-2 text-slate-400">{e.forecast || '—'}</td>
-                      <td className="py-2 px-2 text-slate-400">{e.previous || '—'}</td>
-                      <td className="py-2 px-2 text-white font-semibold">{e.actual || '—'}</td>
+                      <td className="py-2 px-2 text-slate-400">{e.display?.consensus && e.display.consensus !== '--' ? e.display.consensus : e.forecast || '—'}</td>
+                      <td className="py-2 px-2 text-slate-400">{e.display?.previous && e.display.previous !== '--' ? e.display.previous : e.previous ?? '—'}</td>
+                      <td className="py-2 px-2 text-white font-semibold">{e.display?.actual && e.display.actual !== '--' ? e.display.actual : e.actual ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
