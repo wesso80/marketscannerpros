@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackPageView } from "@/lib/analytics";
+import { initializePostHog } from "@/lib/posthog-browser";
 
 const CONSENT_KEY = "msp-consent";
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
@@ -86,6 +87,7 @@ export default function AnalyticsLoader() {
       loadPlausible();
       loadGa();
       loadClarity();
+      initializePostHog();
       setEnabled(true);
     };
 

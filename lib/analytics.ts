@@ -1,5 +1,7 @@
 "use client";
 
+import { capturePostHogEvent, capturePostHogPageView } from "@/lib/posthog-browser";
+
 type AnalyticsEvent =
   | "cta_get_started"
   | "open_pricing"
@@ -41,6 +43,7 @@ export const trackEvent = (name: AnalyticsEvent, props?: EventProps) => {
   trackWithGa(name, props);
   trackWithClarity(name);
   trackWithPlausible(name, props);
+  capturePostHogEvent(name, props);
 };
 
 export const trackPageView = (path: string) => {
@@ -55,4 +58,5 @@ export const trackPageView = (path: string) => {
   if (typeof window.clarity === "function") {
     window.clarity("event", "page_view");
   }
+  capturePostHogPageView(path, title);
 };
