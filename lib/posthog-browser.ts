@@ -131,11 +131,17 @@ export function capturePostHogEvent(name: string, properties?: Record<string, un
   window.posthog?.capture?.(name, properties);
 }
 
-export function capturePostHogPageView(path: string, title?: string) {
+export function capturePostHogPageView(
+  path: string,
+  title?: string,
+  properties?: Record<string, unknown>,
+) {
   if (typeof window === "undefined") return;
   window.posthog?.capture?.("$pageview", {
     $current_url: window.location.href,
-    $pathname: path,
+    $pathname: window.location.pathname,
     $title: title,
+    tracked_path: path,
+    ...properties,
   });
 }
