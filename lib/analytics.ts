@@ -11,6 +11,7 @@ type AnalyticsEvent =
   | "open_scanner"
   | "checkout_started"
   | "checkout_failed"
+  | "checkout_cancelled"
   | "subscription_started"
   | "upgrade_pro"
   | "upgrade_pro_trader"
