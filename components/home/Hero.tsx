@@ -1,5 +1,8 @@
+"use client";
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { trackEvent } from '@/lib/analytics';
 
 export default function Hero() {
   return (
@@ -37,6 +40,7 @@ export default function Hero() {
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
           <Link
             href="/auth"
+            onClick={() => trackEvent('cta_get_started', { location: 'home_hero', destination: '/auth' })}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-400 active:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
           >
             Start Free — No Card
@@ -46,6 +50,7 @@ export default function Hero() {
           </Link>
           <Link
             href="/tools/scanner"
+            onClick={() => trackEvent('open_scanner', { location: 'home_hero', destination: '/tools/scanner' })}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/50 px-6 py-3.5 text-base font-semibold text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-800 hover:text-white"
           >
             Open Scanner Preview
