@@ -27,6 +27,7 @@ import { deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, ass
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
+import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -77,7 +78,9 @@ async function getUniverseFromDB(assetType: 'equity' | 'crypto' | 'forex'): Prom
       [assetType]
     );
     if (rows && rows.length > 0) {
-      const symbols = rows.map(r => r.symbol.toUpperCase());
+      const symbols = rows
+        .map(r => r.symbol.toUpperCase())
+        .filter(s => assetType !== 'crypto' || isAsciiCryptoTicker(s.replace(/[-]?(USD|USDT)$/i, '')));
       console.log(`[bulk-scan] Loaded ${symbols.length} ${assetType} symbols from symbol_universe`);
       return symbols;
     }
@@ -1378,12 +1381,20 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
   }
 
   const dedupedBySymbol = new Map<string, any>();
+  let droppedNonAscii = 0;
   for (const coin of markets) {
     const symbol = String(coin.symbol || '').toUpperCase();
     if (!symbol || STABLECOINS.has(symbol)) continue;
+    if (!isAsciiCryptoTicker(symbol)) {
+      droppedNonAscii += 1;
+      continue;
+    }
     if (!dedupedBySymbol.has(symbol)) {
       dedupedBySymbol.set(symbol, coin);
     }
+  }
+  if (droppedNonAscii > 0) {
+    console.info(`[bulk-scan/light] dropped ${droppedNonAscii} non-ASCII ticker(s) from CoinGecko universe`);
   }
 
   const ranked = Array.from(dedupedBySymbol.values())

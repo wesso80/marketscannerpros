@@ -26,6 +26,7 @@ import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
 import { normalizeSide } from "@/lib/intelligence/edgeProfile";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
+import { isAsciiCryptoTicker } from "@/lib/scanner/cryptoTicker";
 import { evaluateScannerFreshness } from "@/lib/scanner/dataQuality";
 import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
@@ -656,15 +657,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Normalize crypto symbols and exclude stablecoins from scan universe.
+    // Normalize crypto symbols and exclude stablecoins / non-ASCII tickers from scan universe.
     if (type === "crypto") {
       const originalCount = symbolsToScan.length;
       symbolsToScan = symbolsToScan
         .map((s) => normalizeCryptoSymbol(s))
-        .filter((s) => !!s && !isStablecoinSymbol(s));
+        .filter((s) => !!s && isAsciiCryptoTicker(s) && !isStablecoinSymbol(s));
 
       if (symbolsToScan.length !== originalCount) {
-        console.info(`[scanner] filtered ${originalCount - symbolsToScan.length} stablecoin symbol(s) from request`);
+        console.info(`[scanner] filtered ${originalCount - symbolsToScan.length} stablecoin/non-ASCII symbol(s) from request`);
       }
 
       if (symbolsToScan.length === 0) {
