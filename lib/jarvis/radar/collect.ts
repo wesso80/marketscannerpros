@@ -233,11 +233,22 @@ export async function fetchOverview(symbol: string) {
  * Sector/industry for equities via a persisted AV OVERVIEW cache (30-day TTL), topped up with a
  * bounded number of new fetches per run so the whole universe gets covered over a few nights.
  */
-export async function loadOverviewCache(symbols: string[], nowMs: number, fetchBudget: number, log: (m: string) => void): Promise<{ cache: OverviewCache; fetched: number; missing: number }> {
+export async function loadOverviewCache(symbols: string[], nowMs: number, fetchBudget: number, log: (m: string) => void): Promise<{ cache: OverviewCache; fetched: number; missing: number; fromDb: number }> {
   const cache = (await kvGet<OverviewCache>(OVERVIEW_CACHE_KEY)) ?? {};
-  const need = symbols.filter((s) => { const e = cache[s]; return !e || nowMs - Date.parse(e.fetchedAt) > OVERVIEW_TTL_MS; });
+  const stale = (s: string) => { const e = cache[s]; return !e || nowMs - Date.parse(e.fetchedAt) > OVERVIEW_TTL_MS; };
+  // Free first source: production company_overview (filled by the refresh-fundamentals cron when it runs).
+  let fromDb = 0;
+  try {
+    const want = symbols.filter(stale);
+    if (want.length) {
+      budget.db++;
+      const rows = await q<any>(`SELECT symbol, name, sector, industry, market_cap, beta, high_52w, low_52w, fetched_at FROM company_overview WHERE symbol = ANY($1) AND fetched_at > NOW() - INTERVAL '30 days'`, [want]);
+      for (const r of rows) { cache[r.symbol] = { sector: r.sector, industry: r.industry, marketCap: r.market_cap === null ? null : +r.market_cap, beta: r.beta === null ? null : +r.beta, high52w: r.high_52w === null ? null : +r.high_52w, low52w: r.low_52w === null ? null : +r.low_52w, name: r.name, fetchedAt: new Date(r.fetched_at).toISOString() }; fromDb++; }
+    }
+  } catch { budget.errors++; }
+  const need = symbols.filter(stale);
   const todo = need.slice(0, fetchBudget);
-  log(`overview cache: ${symbols.length - need.length}/${symbols.length} cached; fetching ${todo.length} of ${need.length} missing (budget ${fetchBudget})`);
+  log(`overview cache: ${symbols.length - need.length}/${symbols.length} cached (${fromDb} seeded from company_overview); fetching ${todo.length} of ${need.length} missing (budget ${fetchBudget})`);
   let fetched = 0;
   await pool(todo, 6, async (s) => {
     const o = await fetchOverview(s);
@@ -245,8 +256,8 @@ export async function loadOverviewCache(symbols: string[], nowMs: number, fetchB
     cache[s] = { sector: o?.sector ?? null, industry: o?.industry ?? null, marketCap: o?.marketCap ?? null, beta: o?.beta ?? null, high52w: o?.high52w ?? null, low52w: o?.low52w ?? null, name: o?.name ?? null, fetchedAt: new Date(nowMs).toISOString() };
     if (o) fetched++;
   });
-  if (todo.length) await kvSet(OVERVIEW_CACHE_KEY, cache);
-  return { cache, fetched, missing: need.length - todo.length };
+  if (todo.length || fromDb) await kvSet(OVERVIEW_CACHE_KEY, cache);
+  return { cache, fetched, missing: need.length - todo.length, fromDb };
 }
 
 export async function fetchNews48h(symbol: string, nowMs: number, name: string | null) {

@@ -94,7 +94,7 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
     if (!u.name && o?.name) u.name = o.name;
     if (u.assetClass === 'equity' && u.sector) withSector++;
   }
-  providers.push({ name: 'AV OVERVIEW sector cache (jarvis_kv)', status: ov.missing ? 'PARTIAL' : 'OK', detail: `${withSector}/${eqSyms.length} equities have sector (${ov.fetched} fetched tonight, ${ov.missing} still uncached — filled over coming nights at ${ovBudget}/night)` });
+  providers.push({ name: 'Sector/industry cache (company_overview + AV OVERVIEW → jarvis_kv)', status: ov.missing ? 'PARTIAL' : 'OK', detail: `${withSector}/${eqSyms.length} equities have sector (${ov.fromDb} seeded from company_overview, ${ov.fetched} fetched tonight, ${ov.missing} still uncached — filled over coming nights at ${ovBudget}/night)` });
   if (ov.missing) gaps.push(`${ov.missing} equities still lack sector/industry — theme clustering for them unavailable until cached`);
 
   // ── 5. Context: derivatives, categories, catalysts, earnings, CRCS ───────
@@ -272,7 +272,7 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
   gaps.push('News: per-ticker AV NEWS_SENTIMENT only at Stage 3; headlines must name the company (13F/insider boilerplate filtered)');
   gaps.push('Options only for equity finalists. Golden Egg decision logic is route-local and not importable; its fetchers are reused');
   if (calendar.data?.meta.provider === 'curated') gaps.push('Macro calendar is the curated fallback — timings mostly ESTIMATED');
-  gaps.push('Empty production tables: company_overview (refresh-fundamentals cron 22:00 UTC weekdays should fill it, 0 rows → broken, check Render logs); news_events / earnings_calendar are lazy admin caches never triggered (intentionally unused)');
+  gaps.push('company_overview: route + write path verified in production on 2026-09-18 (220 rows written via admin trigger); the Render cron service refresh-fundamentals had never populated it — confirm that cron service exists and has CRON_SECRET. news_events / earnings_calendar are lazy admin caches never triggered (intentionally unused)');
 
   const runtimeMs = Date.now() - budget.startedAt;
   const report: MorningReport = {
@@ -280,7 +280,7 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
     sessionBasis: { equities: `last completed US session ${sessionDate} vs prior close (Alpha Vantage adjusted daily)`, crypto: `rolling 24h to ${new Date(nowMs).toISOString().slice(11, 16)}Z (CoinGecko live)` },
     environment: 'LOCAL_LIVE providers (Alpha Vantage, CoinGecko) + PRODUCTION_DB tables (catalyst_events, crcs_hourly_base, indicators_latest, symbol_universe) + private store (jarvis_runs / jarvis_watchlist / jarvis_kv)',
     thirtySeconds: thirty,
-    counts: { universe: feats.length, equities: feats.filter((f) => f.assetClass === 'equity').length, crypto: feats.filter((f) => f.assetClass === 'crypto').length, other: feats.filter((f) => f.assetClass === 'etf').length, stage1Listed: s1c.listed, stage1Quoted: s1c.quoted, stage1Liquid: s1c.liquid, meaningfulMovers: meaningful.length, unusual: unusual.length, newStrength: newStrength.length, newWeakness: newWeakness.length, initialCandidates: initialCandidates.length, deepDives: deep.length, finalShortlist: shortlist.length, rejected: rejectedAll.length, settingUp: settingUpRaw.length },
+    counts: { universe: feats.length, equities: feats.filter((f) => f.assetClass === 'equity').length, crypto: feats.filter((f) => f.assetClass === 'crypto').length, other: feats.filter((f) => f.assetClass === 'etf').length, stage1Listed: s1c.listed, stage1Quoted: s1c.quoted, stage1Liquid: s1c.liquid, stage2Selected: equityUniverse.length, stage2Live: avOk, stage2Fallback: dbFb, stage2Missing: none.length, meaningfulMovers: meaningful.length, unusual: unusual.length, newStrength: newStrength.length, newWeakness: newWeakness.length, initialCandidates: initialCandidates.length, deepDives: deep.length, finalShortlist: shortlist.length, rejected: rejectedAll.length, settingUp: settingUpRaw.length },
     whatMoved,
     biggestChanges: [...scored].filter((s) => single(s.f) && s.f.dataQuality.fresh && s.bigMove).sort((a, b) => b.score - a.score).slice(0, 8),
     newStrength: newStrength.slice(0, 12), newWeakness: newWeakness.slice(0, 12), unusual: unusual.slice(0, 15),

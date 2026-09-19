@@ -55,11 +55,26 @@ export async function loadLatestRun(): Promise<RunRecord | null> {
   if (hasDb()) {
     try {
       const rows = await q<any>(`SELECT * FROM jarvis_runs WHERE kind = 'overnight' ORDER BY session_date DESC, generated_at DESC LIMIT 1`);
-      if (rows[0]) { const r = rows[0]; return { runKey: r.run_key, generatedAt: new Date(r.generated_at).toISOString(), sessionDate: dateStr(r.session_date), kind: r.kind, report: r.report, markdown: r.markdown, snapshot: r.snapshot, apiUsage: r.api_usage, runtimeMs: r.runtime_ms }; }
+      if (rows[0]) return runFromPg(rows[0]);
     } catch { /* fall back */ }
   }
   const runs = await loadRecentRuns(1);
   return runs[0] ? readFileMirror<RunRecord>(`runs/${fileSafe(runs[0].runKey)}.json`) : null;
+}
+
+export async function loadRunBySession(sessionDate: string): Promise<RunRecord | null> {
+  if (hasDb()) {
+    try {
+      const rows = await q<any>(`SELECT * FROM jarvis_runs WHERE kind = 'overnight' AND session_date = $1 ORDER BY generated_at DESC LIMIT 1`, [sessionDate]);
+      if (rows[0]) return runFromPg(rows[0]);
+      return null;
+    } catch { /* fall back */ }
+  }
+  return readFileMirror<RunRecord>(`runs/${fileSafe(sessionDate)}.json`);
+}
+
+function runFromPg(r: any): RunRecord {
+  return { runKey: r.run_key, generatedAt: new Date(r.generated_at).toISOString(), sessionDate: dateStr(r.session_date), kind: r.kind, report: r.report, markdown: r.markdown, snapshot: r.snapshot, apiUsage: r.api_usage, runtimeMs: r.runtime_ms };
 }
 
 // ───────────────────────────── Watchlist ─────────────────────────────

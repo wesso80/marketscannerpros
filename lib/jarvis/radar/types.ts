@@ -125,7 +125,7 @@ export interface MorningReport {
   sessionBasis: { equities: string; crypto: string };
   environment: string;
   thirtySeconds: { whatMoved: string; rotation: string; bestNewStrength: string[]; bestEarlySetups: string[]; ignore: string[]; watchToday: string[]; macro: string | null };
-  counts: { universe: number; equities: number; crypto: number; other: number; stage1Listed: number; stage1Quoted: number; stage1Liquid: number; meaningfulMovers: number; unusual: number; newStrength: number; newWeakness: number; initialCandidates: number; deepDives: number; finalShortlist: number; rejected: number; settingUp: number };
+  counts: { universe: number; equities: number; crypto: number; other: number; stage1Listed: number; stage1Quoted: number; stage1Liquid: number; stage2Selected?: number; stage2Live?: number; stage2Fallback?: number; stage2Missing?: number; meaningfulMovers: number; unusual: number; newStrength: number; newWeakness: number; initialCandidates: number; deepDives: number; finalShortlist: number; rejected: number; settingUp: number };
   whatMoved: { equities: string[]; crypto: string[]; sectors: string[]; commodities: string[]; fx: string[]; rates: string[] };
   biggestChanges: Scored[];
   newStrength: Scored[];
