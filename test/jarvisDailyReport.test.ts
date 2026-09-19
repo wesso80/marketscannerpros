@@ -1,5 +1,5 @@
 /**
- * Jarvis Daily Market Intelligence Report — builder, health gate, persistence idempotency, one-send email, API shape.
+ * MSP Radar — Daily Market Intelligence Report — builder, health gate, persistence idempotency, one-send email, API shape.
  * No DB, no providers: everything runs against fixtures + the in-memory store.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -128,7 +128,7 @@ describe('report builder', () => {
   it('marks a degraded run DEGRADED with a warning headline but still renders market content', () => {
     const rep = buildDailyReport(inputs(makeRun({ stage2: { selected: 2000, live: 1500, fallback: 100, missing: 400 } })));
     expect(rep.status).toBe('DEGRADED');
-    expect(rep.headline).toMatch(/^JARVIS DATA HEALTH WARNING/);
+    expect(rep.headline).toMatch(/^MSP RADAR DATA HEALTH WARNING/);
     expect(rep.candidates.length).toBe(3);
     const md = renderReportMarkdown(rep);
     expect(md).toMatch(/DATA HEALTH WARNING/);
@@ -151,9 +151,9 @@ describe('report builder', () => {
 describe('formatting', () => {
   it('email subject follows the spec for normal and warning states', () => {
     const ok = buildDailyReport(inputs());
-    expect(emailSubject(ok)).toBe('Jarvis Daily Market Intelligence — Sep 17, 2026');
+    expect(emailSubject(ok)).toBe('MSP Radar — Daily Market Intelligence — Sep 17, 2026');
     const warn = buildDailyReport(inputs(makeRun({ stage2: { selected: 2000, live: 1500, fallback: 100, missing: 400 } })));
-    expect(emailSubject(warn)).toBe('⚠ Jarvis Data Health Warning — Sep 17, 2026');
+    expect(emailSubject(warn)).toBe('⚠ MSP Radar Data Health Warning — Sep 17, 2026');
   });
   it('email html is a short briefing with link, top 5 only, and disclaimer', () => {
     const rep = buildDailyReport(inputs());
@@ -255,7 +255,7 @@ describe('persistence + one-send email', () => {
     const degraded = await generateDailyReport(SESSION, { sendEmail: true }, { store: store2, loadRun: async () => ({ runKey: SESSION, generatedAt: 'x', sessionDate: SESSION, kind: 'overnight', report: makeRun({ stage2: { selected: 2000, live: 1500, fallback: 100, missing: 400 } }), markdown: '', snapshot: {}, apiUsage: {}, runtimeMs: 1 }), loadWatch: async () => [], sendEmail: sendEmail as any, env, log: () => undefined });
     expect(degraded.report.status).toBe('DEGRADED');
     expect(degraded.email?.status).toBe('SENT');
-    expect((sendEmail.mock.calls[0] as any)[0].subject).toMatch(/^⚠ Jarvis Data Health Warning/);
+    expect((sendEmail.mock.calls[0] as any)[0].subject).toMatch(/^⚠ MSP Radar Data Health Warning/);
   });
   it('archive lists metadata newest-first with neighbours', async () => {
     await gen({ sendEmail: false });

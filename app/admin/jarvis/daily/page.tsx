@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * JARVIS DAILY MARKET INTELLIGENCE — private owner archive page.
+ * MSP RADAR — DAILY MARKET INTELLIGENCE — private owner archive page.
  * Lives under /admin (middleware-gated, admin session / secret) rather than /jarvis so it can never be reached publicly.
  * Every figure comes from the persisted jarvis_daily_reports row for the selected session; nothing is recomputed client-side.
  */
@@ -68,7 +68,7 @@ export default function JarvisDailyPage() {
     <div style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
         <div>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, letterSpacing: 0.5 }}>JARVIS DAILY MARKET INTELLIGENCE</h1>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, letterSpacing: 0.5 }}>MSP RADAR — DAILY MARKET INTELLIGENCE</h1>
           <p style={{ ...muted, margin: "0.25rem 0 0" }}>Private owner archive · built from the persisted overnight run · educational research only, not financial advice.</p>
         </div>
         <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
@@ -125,7 +125,7 @@ export default function JarvisDailyPage() {
                 <NextTable rows={r.whatMayMoveNext} />
               </Section>
 
-              <Section title="Lifecycle Changes" subtitle="Persisted watchlist (jarvis_watchlist) transitions recorded this session">
+              <Section title="Lifecycle Changes" subtitle="Persisted watchlist transitions recorded this session">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
                   {Object.entries(r.lifecycle.counts).filter(([, v]) => v > 0).map(([k, v]) => <StatusPill key={k} label={`${k} ${v}`} tone={k === "CONFIRMED_MOVE" ? "green" : k === "NEAR_TRIGGER" ? "blue" : k === "FAILED" || k === "DETERIORATING" ? "red" : k === "EXPIRED" ? "neutral" : "purple"} />)}
                 </div>

@@ -96,6 +96,8 @@ export interface PersistedReportRow {
 }
 export type ArchiveRow = Pick<PersistedReportRow, 'sessionDate' | 'headline' | 'healthStatus' | 'status' | 'generatedAt' | 'emailStatus'>;
 
-export const DISCLAIMER = 'Educational research only — not financial advice. Jarvis surfaces what changed and what deserves research; it does not issue trade instructions.';
+export const DISCLAIMER = 'Educational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.';
+export const BRAND = 'MSP Radar';
+export const REPORT_TITLE = 'MSP Radar — Daily Market Intelligence';
 export const REPORT_VERSION = 1;
 export const MIN_REQUIRED_SECTIONS = ['marketIn30Seconds', 'whatMoved', 'candidates', 'whatMayMoveNext', 'lifecycle', 'themes', 'rejected', 'lookAtFirst', 'dataHealth'] as const;

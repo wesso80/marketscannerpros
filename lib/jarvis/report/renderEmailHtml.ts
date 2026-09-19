@@ -3,6 +3,7 @@
  * Inline styles match lib/email.ts branding (dark #0f172a, accent #10b981).
  */
 import type { DailyReport } from './types';
+import { BRAND, REPORT_TITLE } from './types';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const fmtDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -11,7 +12,7 @@ const lvl = (v: number | null) => (v === null ? 'n/a' : v >= 1 ? v.toFixed(2) : 
 const MUTED = '#94a3b8', TEXT = '#e2e8f0', ACCENT = '#10b981', CARD = '#0f172a', WARN = '#f59e0b';
 
 export function emailSubject(r: DailyReport): string {
-  return r.health.status === 'NORMAL' ? `Jarvis Daily Market Intelligence — ${fmtDate(r.sessionDate)}` : `⚠ Jarvis Data Health Warning — ${fmtDate(r.sessionDate)}`;
+  return r.health.status === 'NORMAL' ? `${REPORT_TITLE} — ${fmtDate(r.sessionDate)}` : `⚠ ${BRAND} Data Health Warning — ${fmtDate(r.sessionDate)}`;
 }
 
 function section(title: string, body: string): string {
@@ -38,8 +39,8 @@ export function renderEmailHtml(r: DailyReport, fullReportUrl: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#0f172a;color:${TEXT};padding:20px;margin:0;">
 <div style="max-width:640px;margin:0 auto;background:#1e293b;border-radius:16px;padding:24px;border:1px solid #334155;">
-  <div style="text-align:center;margin-bottom:16px;"><span style="display:inline-block;font-size:13px;font-weight:800;color:${ACCENT};border:1px solid ${ACCENT};border-radius:999px;padding:8px 14px;letter-spacing:1px;">JARVIS</span></div>
-  <h1 style="color:${warn ? WARN : ACCENT};margin:0 0 4px;font-size:20px;text-align:center;">${warn ? '⚠ Jarvis Data Health Warning' : 'Daily Market Intelligence'}</h1>
+  <div style="text-align:center;margin-bottom:16px;"><span style="display:inline-block;font-size:13px;font-weight:800;color:${ACCENT};border:1px solid ${ACCENT};border-radius:999px;padding:8px 14px;letter-spacing:1px;">${BRAND.toUpperCase()}</span></div>
+  <h1 style="color:${warn ? WARN : ACCENT};margin:0 0 4px;font-size:20px;text-align:center;">${warn ? `⚠ ${BRAND} Data Health Warning` : 'Daily Market Intelligence'}</h1>
   <p style="color:${MUTED};text-align:center;margin:0 0 6px;font-size:13px;">US session ${esc(fmtDate(r.sessionDate))} · run ${esc(r.run.generatedAt.slice(0, 16))}Z</p>
   <p style="color:#f1f5f9;text-align:center;margin:0 0 18px;font-size:14px;font-weight:600;">${esc(r.headline)}</p>
   ${parts.join('')}

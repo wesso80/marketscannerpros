@@ -160,7 +160,7 @@ export function buildDailyReport(inp: BuildInputs): DailyReport {
   const b = r.rotation.breadth.equities;
   const headline = health.status === 'NORMAL'
     ? `${b.up}/${b.total} equities up, ${r.counts.finalShortlist} research candidates${genuine.length ? `, ${genuine.length} genuine group move${genuine.length > 1 ? 's' : ''} (${genuine.slice(0, 2).map((t) => t.name).join(', ')})` : ''}, ${next.filter((n) => n.stage === 'NEAR_TRIGGER').length} setups near trigger`
-    : `JARVIS DATA HEALTH WARNING — ${health.summary}`;
+    : `MSP RADAR DATA HEALTH WARNING — ${health.summary}`;
   const sectorCache = r.providers.find((p) => /Sector\/industry cache|OVERVIEW sector cache/.test(p.name))?.detail ?? null;
   const api = r.apiUsage;
   return {
@@ -181,9 +181,9 @@ export function buildFailedReport(sessionDate: string, runKey: string | null, re
   health.checks[0].detail = reason;
   const empty: LifecycleSection = { counts: Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<WatchStatus, number>, transitions: [], highlights: [], source: 'jarvis_watchlist' };
   return {
-    version: REPORT_VERSION, sessionDate, generatedAt: new Date().toISOString(), headline: `JARVIS DATA HEALTH WARNING — run for ${sessionDate} failed: ${reason}`, status: 'FAILED', health,
+    version: REPORT_VERSION, sessionDate, generatedAt: new Date().toISOString(), headline: `MSP RADAR DATA HEALTH WARNING — run for ${sessionDate} failed: ${reason}`, status: 'FAILED', health,
     run: { runKey: runKey ?? 'n/a', sessionDate, generatedAt: new Date().toISOString(), runtimeMs: 0, apiUsage: { alphaVantage: 0, coingecko: 0, dbQueries: 0, errors: 0, peakRssMb: null, equityCap: null } },
-    marketIn30Seconds: [{ label: 'Status', value: `No completed Jarvis run for ${sessionDate}: ${reason}` }], whatMoved: { equities: { strength: [], weakness: [], unusualVolume: [], gaps: [], breakouts: [], breakdowns: [], breadth: 'unavailable' }, crypto: { context: 'unavailable', altBreadth: 'unavailable', movers: [], unusual: [] }, crossAsset: [] },
+    marketIn30Seconds: [{ label: 'Status', value: `No completed MSP Radar run for ${sessionDate}: ${reason}` }], whatMoved: { equities: { strength: [], weakness: [], unusualVolume: [], gaps: [], breakouts: [], breakdowns: [], breadth: 'unavailable' }, crypto: { context: 'unavailable', altBreadth: 'unavailable', movers: [], unusual: [] }, crossAsset: [] },
     candidates: [], whatMayMoveNext: [], lifecycle: empty, themes: { equity: { leading: [], improving: [], deteriorating: [], groups: [] }, crypto: { context: 'unavailable', groups: [] } }, rejected: [], lookAtFirst: [], probablyNoise: [],
     dataHealth: { universe: 0, equities: 0, crypto: 0, etfs: 0, stage1Listed: 0, stage1Quoted: 0, liquid: 0, stage2Selected: null, stage2Live: null, stage2Fallback: null, stage2Missing: null, coveragePct: null, deepDives: 0, alphaVantageCalls: 0, coingeckoCalls: 0, dbQueries: 0, providerErrors: 0, runtimeMs: 0, peakRssMb: null, sectorCacheCoverage: null, providers: [], gaps: [reason] },
     disclaimer: DISCLAIMER,
