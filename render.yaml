@@ -641,13 +641,22 @@
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: DATABASE_URL
       - key: ALPHA_VANTAGE_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: ALPHA_VANTAGE_API_KEY
       - key: ALPHA_VANTAGE_RPM
         value: "120"
       - key: COINGECKO_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: COINGECKO_API_KEY
       - key: JARVIS_EQUITY_MAX
         value: "2000"
       - key: JARVIS_OVERVIEW_BUDGET
@@ -672,13 +681,22 @@
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: DATABASE_URL
       - key: ALPHA_VANTAGE_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: ALPHA_VANTAGE_API_KEY
       - key: ALPHA_VANTAGE_RPM
         value: "120"
       - key: COINGECKO_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: COINGECKO_API_KEY
       - key: JARVIS_EQUITY_MAX
         value: "2000"
       - key: JARVIS_OVERVIEW_BUDGET
@@ -705,6 +723,12 @@
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: DATABASE_URL
       - key: COINGECKO_API_KEY
-        sync: false
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: COINGECKO_API_KEY
