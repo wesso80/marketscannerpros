@@ -43,6 +43,7 @@ export function updateWatchlist(args: {
     if (e.lastSeen === sessionDate) { seen.add(e.key); continue; }
     const pm = premove.get(e.key);
     const wasActive = ['NEW', 'DEVELOPING', 'NEAR_TRIGGER'].includes(e.status);
+    e.sessionsSeen += 1; e.lastSeen = sessionDate;
     e.state.metrics = metrics(f, pm);
     if (wasActive) {
       const trig = e.state.triggerLevel, inval = e.state.invalidationLevel;
