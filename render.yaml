@@ -607,5 +607,104 @@
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.app"
+      # Was `sync: false` and never set in the dashboard -> every run since 2026-05-30 got 401.
       - key: CRON_SECRET
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: CRON_SECRET
+
+  # -----------------------------------------------------------------
+  # PRIVATE JARVIS — overnight opportunity radar (owner-only research).
+  # Runs the scan script directly (no HTTP route, nothing public).
+  # Two UTC schedules straddle US DST: the script itself only proceeds when
+  # America/New_York time is 16:45–18:30 on a weekday and no run exists for
+  # that NY date (jarvis_kv marker), so exactly one executes per session.
+  #   EDT: 21:15Z = 17:15 ET (runs)   22:15Z = 18:15 ET (marker → skip)
+  #   EST: 21:15Z = 16:15 ET (skip)   22:15Z = 17:15 ET (runs)
+  # ALPHA_VANTAGE_RPM 120 keeps web (400) + worker (200) + jarvis under the
+  # 600 RPM contract even if they overlap. Validated 2026-09-18/19: two 2000-cap
+  # runs, 2374/2364 AV calls, 18.6/18.4 min, 198/195 MB peak RSS, 0 errors,
+  # Stage 2 coverage 99.7%. Start unattended at 2000; raise to 3500 only after
+  # two clean unattended runs (coverage >=95%, <35 min, <500 MB, no dup emails).
+  # After a completed run the script builds the daily report and sends ONE
+  # email via Resend to JARVIS_DAILY_REPORT_TO (claim-then-send; cron B cannot
+  # double-send). Missing recipient -> report persisted, status NO_RECIPIENT.
+  # -----------------------------------------------------------------
+  - type: cron
+    name: jarvis-overnight-radar-a
+    runtime: node
+    schedule: "15 21 * * 1-5"
+    buildCommand: npm install
+    startCommand: npm run jarvis:scan -- --scheduled
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_RPM
+        value: "120"
+      - key: COINGECKO_API_KEY
+        sync: false
+      - key: JARVIS_EQUITY_MAX
+        value: "2000"
+      - key: JARVIS_OVERVIEW_BUDGET
+        value: "200"
+      - key: RESEND_API_KEY
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: RESEND_API_KEY
+      - key: JARVIS_DAILY_REPORT_TO
+        sync: false
+      - key: JARVIS_REPORT_BASE_URL
+        value: "https://marketscannerpros.app"
+
+  - type: cron
+    name: jarvis-overnight-radar-b
+    runtime: node
+    schedule: "15 22 * * 1-5"
+    buildCommand: npm install
+    startCommand: npm run jarvis:scan -- --scheduled
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_RPM
+        value: "120"
+      - key: COINGECKO_API_KEY
+        sync: false
+      - key: JARVIS_EQUITY_MAX
+        value: "2000"
+      - key: JARVIS_OVERVIEW_BUDGET
+        value: "200"
+      - key: RESEND_API_KEY
+        fromService:
+          type: web
+          name: marketscannerpros
+          envVarKey: RESEND_API_KEY
+      - key: JARVIS_DAILY_REPORT_TO
+        sync: false
+      - key: JARVIS_REPORT_BASE_URL
+        value: "https://marketscannerpros.app"
+
+  # Pre-morning crypto-only refresh of the latest persisted run (no AV calls).
+  # 20:00Z = 06:00 AEST / 07:00 AEDT — shortly before the owner reads it.
+  - type: cron
+    name: jarvis-crypto-refresh
+    runtime: node
+    schedule: "0 20 * * *"
+    buildCommand: npm install
+    startCommand: npm run jarvis:scan -- --refresh-crypto
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: COINGECKO_API_KEY
         sync: false
