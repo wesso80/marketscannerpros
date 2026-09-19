@@ -7,6 +7,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { humanizeEnum } from '@/lib/presentation/labels';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_components/ui';
@@ -359,7 +361,12 @@ export default function GoldenEggPage() {
   const [symbolInput, setSymbolInput] = useState('');
   const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
   const [activeTab, setActiveTab] = useState<GETab>('Verdict');
-  const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>('auto');
+  const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>(() => {
+    // Deep links (MSP Radar, Scanner) pass ?type= so crypto vs equity is never guessed from the ticker alone.
+    if (typeof window === 'undefined') return 'auto';
+    const t = new URLSearchParams(window.location.search).get('type');
+    return t === 'crypto' || t === 'equity' ? t : 'auto';
+  });
   const [savingCase, setSavingCase] = useState(false);
   const [saveCaseMsg, setSaveCaseMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -596,7 +603,7 @@ export default function GoldenEggPage() {
         ariaLabel="Golden Egg command header"
         eyebrow="Golden Egg validation workbench"
         badges={[
-          ...(regime.data?.regime ? [{ label: `Regime ${String(regime.data.regime).toUpperCase()}` }] : []),
+          ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
           ...(ge ? [{ label: `Confluence ${geConfluenceScore}%` }] : []),
           { label: `Data ${geDataQuality}` },
           ...GOLDEN_EGG_WORKFLOW_CHECKS.map((c) => ({ label: c })),
@@ -727,7 +734,37 @@ export default function GoldenEggPage() {
       )}
       {!isAuthBlocked && activeTab === 'Fundamentals' && (
         <GoldenEggSubviewFrame tab="Fundamentals" symbol={sym} onSelectTab={setActiveTab}>
-          <CompanyOverview symbol={sym} />
+          {quoteType === 'crypto' ? (
+            // Company fundamentals do not exist for crypto; reuse the derivatives/quote evidence Golden Egg already fetched.
+            <Card>
+              <h3 className="text-xs font-semibold text-emerald-400 mb-1">Network & derivatives context — {sym.replace(/[-/]?(USDT|USD)$/, '')}</h3>
+              <p className="text-[11px] text-slate-500 mb-3">Crypto assets have no company filings. This view uses the derivatives and market evidence already in the verdict packet.</p>
+              {ge?.layer3?.options?.enabled ? (
+                <div className="space-y-2">
+                  <Badge label={humanizeEnum(ge.layer3.options.verdict)} color={ge.layer3.options.verdict === 'agree' ? 'var(--msp-bull)' : ge.layer3.options.verdict === 'disagree' ? 'var(--msp-bear)' : 'var(--msp-warn)'} />
+                  <div className="grid gap-1 sm:grid-cols-2">
+                    {ge.layer3.options.highlights.map((h: any, i: number) => (
+                      <div key={i} className="flex justify-between text-xs rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><span className="text-slate-400">{h.label}</span><span className="text-white font-mono">{h.value}</span></div>
+                    ))}
+                  </div>
+                  {ge.layer3.options.notes?.map((n: any, i: number) => <div key={i} className="text-[11px] text-slate-500">• {n}</div>)}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500 py-3">Derivatives evidence is not available for this asset right now. Price, regime and volatility context remain in the Verdict and Deep Analysis tabs.</div>
+              )}
+              <div className="mt-3 grid gap-1 sm:grid-cols-3 text-xs">
+                <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Price</div><div className="text-white font-mono">{isUsableNumber(quote.data?.price ?? ge?.meta?.price) ? formatLevel((quote.data?.price ?? ge?.meta?.price) as number) : '—'}</div></div>
+                <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Volatility regime</div><div className="text-white">{humanizeEnum(d?.volatility?.regime)}</div></div>
+                <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Regime</div><div className="text-white">{humanizeEnum(regime.data?.regime)}</div></div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href={`/tools/explorer?tab=crypto-command`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Command ›</Link>
+                <Link href={`/tools/dashboard?tab=crypto`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Derivatives lens ›</Link>
+              </div>
+            </Card>
+          ) : (
+            <CompanyOverview symbol={sym} />
+          )}
         </GoldenEggSubviewFrame>
       )}
       {/* ─── Verdict Tab (main GE analysis) ─── */}
@@ -778,7 +815,7 @@ export default function GoldenEggPage() {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h2 className="text-2xl font-bold text-white">{ge.meta.symbol}</h2>
-                    {regime.data && <Badge label={`Regime: ${regime.data.regime}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || 'var(--msp-text-muted)'} small />}
+                    {regime.data && <Badge label={`Regime: ${humanizeEnum(regime.data.regime)}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || 'var(--msp-text-muted)'} small />}
                     <span title="Directional research bias from the Golden Egg evidence stack"><Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} /></span>
                     <span title="Grade summarizes setup quality across the Golden Egg model"><Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small /></span>
                     {(() => { const lc = deriveGELifecycle(geAssessment, geConfluenceScore); return <span title="Lifecycle describes whether the setup is forming, ready, watching, or invalidated" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{lc.replace('_', ' ')}</span>; })()}
@@ -841,9 +878,14 @@ export default function GoldenEggPage() {
               <MarketStatusStrip items={geMarketStatusItems} className="md:grid-cols-5" />
 
               {/* Level of Interest / Invalidation / Key Levels row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-800/50">
+              <div className="pt-3 border-t border-slate-800/50">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">Validated scenario levels</div>
+                  <div className="text-[11px] text-slate-500">Live quote + structure-anchored invalidation. Scanner shows a faster preliminary ATR estimate; these supersede it.</div>
+                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[11px] text-slate-500 uppercase">Level of Interest</div>
+                  <div className="text-[11px] text-slate-500 uppercase">Level of Interest (validated)</div>
                   <div className="text-sm text-emerald-400 font-semibold">{geSafeScenario?.referenceTrigger}</div>
                   {geSafeScenario?.referenceLevel.price && (
                     <div className="text-xs font-mono text-white mt-0.5">{formatLevel(geSafeScenario.referenceLevel.price)} ({geSafeScenario.referenceLevel.type})</div>
@@ -865,6 +907,7 @@ export default function GoldenEggPage() {
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">Scenario R:R example {isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'} — hypothetical illustration only, not a trading instruction</div>
                 </div>
+              </div>
               </div>
 
               <RiskFlagPanel title="Research Case Invalidates If" flags={geRiskFlags} />

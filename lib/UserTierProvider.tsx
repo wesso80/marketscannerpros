@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { UserTier } from "./useUserTier";
 
 interface TierInfo {
@@ -81,9 +82,17 @@ export function UserTierProvider({ children }: { children: ReactNode }) {
       .finally(() => clearTimeout(timeout));
   };
 
+  const pathname = usePathname();
+  // One shared request per navigation (login/logout redirect client-side, so a mount-only fetch would go stale).
   useEffect(() => {
     fetchTier();
     return () => abortRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+  useEffect(() => {
+    const onAuth = () => fetchTier();
+    window.addEventListener("msp:auth-changed", onAuth);
+    return () => window.removeEventListener("msp:auth-changed", onAuth);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

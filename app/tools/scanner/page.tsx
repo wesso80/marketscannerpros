@@ -12,6 +12,8 @@ import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
+import { computeMspScore, deriveLifecycleState, isRegimeCompatibleForRegime, normalizeRegimeKey, setupTypeForRegime } from '@/lib/scanner/rankedQueue';
+import { humanizeEnum } from '@/lib/presentation/labels';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
@@ -212,85 +214,8 @@ const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
 type SortDir = 'asc' | 'desc';
 
-const REGIME_SETUP_MAP: Record<string, string[]> = {
-  trend: ['breakout', 'trend_continuation', 'pullback', 'expansion_continuation'],
-  range: ['mean_reversion', 'range_fade', 'liquidity_sweep'],
-  compression: ['volatility_expansion', 'squeeze', 'gamma_trap', 'compression_release'],
-  transition: ['breakout', 'gamma_squeeze', 'volatility_expansion', 'compression_release'],
-  expansion: ['breakout', 'trend_continuation', 'gamma_squeeze', 'expansion_continuation'],
-  risk_off: ['mean_reversion', 'hedge', 'range_fade'],
-  risk_on: ['breakout', 'trend_continuation', 'pullback', 'expansion_continuation'],
-};
+// Ranking helpers live in lib/scanner/rankedQueue so Scanner and Command Center share ONE research queue.
 
-function normalizeRegimeKey(regime?: string | null): RegimePriority {
-  const value = String(regime || '').toLowerCase();
-  if (value.includes('risk_off') || value.includes('risk-off') || value.includes('defensive')) return 'risk_off';
-  if (value.includes('risk_on') || value.includes('risk-on')) return 'risk_on';
-  if (value.includes('compress') || value.includes('squeeze')) return 'compression';
-  if (value.includes('transition') || value.includes('neutral')) return value.includes('range') ? 'range' : 'transition';
-  if (value.includes('expand')) return 'expansion';
-  if (value.includes('range')) return 'range';
-  if (value.includes('trend')) return 'trend';
-  return 'trend';
-}
-
-function setupTypeForRegime(r: ScanResult): string {
-  const dveSignal = r.dveSignalType && r.dveSignalType !== 'none' ? r.dveSignalType : '';
-  const setup = String(r.setup || '').replace(/^Local demo:\s*/i, '');
-  return String(dveSignal || setup).toLowerCase().replace(/\s+/g, '_');
-}
-
-function isRegimeCompatibleForRegime(r: ScanResult, regime: string): boolean {
-  const regimeKey = normalizeRegimeKey(regime);
-  const setupType = setupTypeForRegime(r);
-  const compatible = REGIME_SETUP_MAP[regimeKey] || [];
-  if (!setupType || setupType === 'none') {
-    if (regimeKey === 'risk_off') return r.direction === 'bearish';
-    if (regimeKey === 'risk_on' || regimeKey === 'trend' || regimeKey === 'expansion') return r.direction === 'bullish';
-    return true;
-  }
-  return compatible.some(c => setupType.includes(c));
-}
-
-/* ─── Phase 2: Regime-Weighted MSP Score ─── */
-function computeMspScore(r: ScanResult, regime: string): number {
-  // MSP Composite v2 (cross-sectional, regime-conditional, evidence/freshness/
-  // liquidity-gated) is the ranking score when the route provides it. Regime
-  // gating still applies. Falls back to the legacy regime-weighted blend.
-  if (r.compositeV2 && Number.isFinite(r.compositeV2.composite)) {
-    const base = Math.min(100, Math.max(0, r.compositeV2.composite));
-    if (r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, base * 0.4));
-    return Math.round(base);
-  }
-  const regimeKey = normalizeRegimeKey(regime);
-  const w = REGIME_WEIGHTS[regimeKey] || REGIME_WEIGHTS.trend;
-  // Normalize each component to 0-100 scale.
-  // NOTE: r.score is already the 0-100 conviction score. Using it directly here
-  // (previously `Math.abs(score) * 10`, which saturated to 100 for any score ≥ 10).
-  const structure = Math.min(100, Math.max(0, r.score ?? 0));
-  const momentum = Math.min(100, Math.max(0, r.confidence ?? (Math.abs(r.score ?? 0) * 8)));
-  const volatility = r.dveBbwp != null
-    ? (r.dveBbwp < 20 ? 80 + (20 - r.dveBbwp) : r.dveBbwp > 80 ? 70 + (r.dveBbwp - 80) : 30 + r.dveBbwp * 0.3)
-    : 40;
-  const options = r.derivatives ? Math.min(100, 50 + Math.abs(r.derivatives.fundingRate ?? 0) * 500) : 30;
-  const time = r.scoreV2?.acl?.confidence ?? 50;
-  const raw = (structure * w.structure + momentum * w.momentum + volatility * w.volatility + options * w.options + time * w.time) / 100;
-  // Apply regime gating penalty
-  if (r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, raw * 0.4));
-  return Math.round(Math.min(100, Math.max(0, raw)));
-}
-
-/* ─── Phase 6: Trade Lifecycle State ─── */
-function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
-  const msp = computeMspScore(r, regime);
-  const conf = r.confidence ?? 0;
-  const gated = r.scoreV2?.regimeScore?.gated;
-  if (gated) return 'INVALIDATED';
-  if (msp >= 75 && conf >= 65) return 'READY';
-  if (msp >= 55 && conf >= 45) return 'SETTING_UP';
-  if (msp >= 35) return 'WATCHING';
-  return 'DISCOVERED';
-}
 type ScannerMode = 'ranked' | 'pro';
 type ScannerStage = ScannerMode | 'analysis';
 type AssetClass = 'crypto' | 'equity' | 'forex';
@@ -943,16 +868,17 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
 
         {/* Execution Plan */}
         <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
-          <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Reference Levels</div>
+          <div className="mb-1 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Preliminary Research Levels</div>
+          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}). Golden Egg recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
-              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest</div>
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest (preliminary)</div>
               <div>Reference: <span className="font-bold text-white">{formatLevel(entry)}</span></div>
               <div>Condition: <span className="font-bold text-white">{direction === 'bullish' ? 'Close above level' : direction === 'bearish' ? 'Close below level' : 'Awaiting directional structure'}</span></div>
               <div>Confirmation: <span className="font-bold text-white">{hasScenarioLevels ? 'Volume expansion' : 'Awaiting valid levels'}</span></div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
-              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (Educational)</div>
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (preliminary · educational)</div>
               {!isUsableNumber(stop) && !isUsableNumber(target1) && !isUsableNumber(target2) && (rr == null || !hasScenarioLevels) ? (
                 <div className="text-slate-500">All four levels unavailable — refresh scanner inputs.</div>
               ) : (
@@ -1484,7 +1410,7 @@ export default function ScannerPage() {
                   className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300"
                   title={weightTooltip ? `Regime weights — ${weightTooltip}` : undefined}
                 >
-                  <span style={{ color: regimeColor }}>{String(regime.data?.regime || '').replace(/_/g, ' ')}</span>
+                  <span style={{ color: regimeColor }}>{humanizeEnum(regime.data?.regime)}</span>
                   <span className="text-slate-600">·</span>
                   <span className="text-slate-400">Risk <span style={{ color: riskColor }}>{riskLevel}</span></span>
                   <span className="text-slate-600">·</span>

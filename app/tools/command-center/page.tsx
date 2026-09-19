@@ -252,7 +252,7 @@ export default function CommandCenterPage() {
         actions={[
           { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
           { label: 'Open Golden Egg', variant: 'secondary', href: '/tools/golden-egg' },
-          { label: 'Open Markets', variant: 'ghost', href: '/tools/explorer' },
+          { label: 'Research Dashboard', variant: 'ghost', href: '/tools/dashboard' },
         ]}
       />
 

@@ -10,6 +10,7 @@ import { Badge } from './ui';
 import { REGIME_COLORS } from '../_lib/constants';
 import { useRegime } from '../_lib/api';
 import type { RegimePriority } from '../_lib/types';
+import { humanizeEnum } from '@/lib/presentation/labels';
 
 export default function RegimeBar() {
   const { data: regime, loading } = useRegime();
@@ -25,14 +26,14 @@ export default function RegimeBar() {
         <span className="text-[10px] text-slate-600 animate-pulse">Loading...</span>
       ) : (
         <>
-          <Badge label={regimeLabel} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
+          <Badge label={humanizeEnum(regimeLabel)} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
           {nonStaleSignals.length > 0 && (
             <>
               <div className="h-3 w-px bg-slate-700" />
               {nonStaleSignals.map(s => (
                 <span key={s.source} className="text-[10px] text-slate-500 whitespace-nowrap">
                   <span style={{ color: REGIME_COLORS[s.regime as RegimePriority] || 'var(--msp-text-muted)' }}>{s.source}</span>
-                  <span className="text-slate-600 ml-1">{s.regime}</span>
+                  <span className="text-slate-600 ml-1">{humanizeEnum(s.regime)}</span>
                 </span>
               ))}
             </>

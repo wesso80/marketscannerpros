@@ -17,6 +17,7 @@ import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { filterMoversByFloor } from '@/lib/analysis';
+import { humanizeEnum } from '@/lib/presentation/labels';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
@@ -123,7 +124,7 @@ export default function ExplorerPage() {
         badges={[
           { label: `${TABS.length} lenses` },
           { label: `Tier ${tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}` },
-          ...(regime.data?.regime ? [{ label: `Regime ${String(regime.data.regime).toUpperCase()}` }] : []),
+          ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
         ]}
         title="Markets."
         subtitle="Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens."

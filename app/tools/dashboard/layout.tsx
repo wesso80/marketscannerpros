@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Command Center | MarketScanner Pros',
-  description: 'Command Center dashboard with market regime, scanner highlights, movers, macro events, news, and educational workflow context.',
+  title: 'Research Dashboard | MarketScanner Pros',
+  description: 'Research Dashboard: the canonical ranked research queue, movers, macro events, news, and educational workflow context.',
   robots: { index: false, follow: false },
   openGraph: {
-    title: 'Command Center | MarketScanner Pros',
-    description: 'Command Center dashboard with market regime, scanner highlights, movers, macro events, and news context.',
+    title: 'Research Dashboard | MarketScanner Pros',
+    description: 'Research Dashboard with the ranked research queue, movers, macro events, and news context.',
     url: 'https://marketscannerpros.app/tools/dashboard',
     type: 'website',
     images: [

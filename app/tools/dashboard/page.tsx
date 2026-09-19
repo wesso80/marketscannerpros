@@ -14,7 +14,8 @@ import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
 import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
-import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymbols';
+import { useRankedQueue } from '@/hooks/useRankedQueue';
+import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
@@ -209,7 +210,20 @@ export default function DashboardPage() {
   const movers = useMarketMovers();
   const news = useNews();
   const calendar = useEconomicCalendar();
-  const cached = useCachedTopSymbols(5);
+  // Canonical research queue — identical source, score and order to Scanner's ranked mode.
+  const ranked = useRankedQueue('daily');
+  // Adapter kept so the existing panels below read the same shape they always did.
+  type CachedSymbol = { symbol: string; score: number; direction: string; price: number; changePct: number; rsi: number; adx: number; type: string };
+  const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price ?? 0, changePct: r.changePct ?? 0, rsi: 0, adx: 0, type: r.assetClass });
+  const cached = useMemo(() => ({
+    equity: ranked.equity.map(toCached),
+    crypto: ranked.crypto.map(toCached),
+    all: ranked.rows.map(toCached),
+    loading: ranked.loading,
+    error: ranked.error,
+    stale: ranked.stale,
+    ageMinutes: ranked.ageMinutes,
+  }), [ranked.equity, ranked.crypto, ranked.rows, ranked.loading, ranked.error, ranked.stale, ranked.ageMinutes]);
   const { stale: cacheStale, ageMinutes: cacheAgeMinutes } = cached;
 
   /* -- Magnificent 7 live quotes ---------------------------------------- */
@@ -278,11 +292,12 @@ export default function DashboardPage() {
   const crGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const articles = (news.data?.articles || []).slice(0, 6);
-  const scannerQueue = [...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)];
-  const moverQueue = [...eqGainers.slice(0, 2), ...crGainers.slice(0, 2)];
+  // Top 5 of the canonical ranked queue — same order a user sees on Scanner. Movers are context, not the queue.
+  const scannerQueue = cached.all.slice(0, 5);
+  const moverQueue: Mover[] = [];
   const degradedFeeds = [
-    cached.error ? 'Scanner cache' : null,
-    cacheStale ? `Scanner cache stale (${cacheAgeMinutes != null ? `${cacheAgeMinutes}m old` : 'age unknown'})` : null,
+    cached.error ? 'Scanner queue' : null,
+    cacheStale ? `Scanner data stale (${cacheAgeMinutes != null ? `${cacheAgeMinutes}m old` : 'age unknown'})` : null,
     movers.error ? 'Movers' : null,
     news.error ? 'News' : null,
     calendar.error ? 'Calendar' : null,
@@ -324,7 +339,7 @@ export default function DashboardPage() {
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
           <div>
             <div className="flex flex-wrap items-center gap-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>
-              <span>Morning command dashboard</span>
+              <span>Research dashboard · <a href="/tools/command-center" style={{ color: 'var(--msp-accent)' }}>market overview in Command Center</a></span>
               {regime.data && (
                 <span className="inline-flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
                   <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : 'var(--msp-info)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()}</span>
@@ -337,7 +352,7 @@ export default function DashboardPage() {
             </div>
             <h1 className="mt-1" style={{ fontSize: 'var(--msp-text-h1)', fontWeight: 500, color: 'var(--msp-text)', lineHeight: 1.25 }}>Open the research queue, then validate one symbol.</h1>
             <p className="mt-1 max-w-3xl" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
-              Scanner cache, movers, calendar risk, and headlines compressed into a morning review path.
+              Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <DSButton variant="primary" size="sm" onClick={() => navigateTo('scanner')}>Start scanner</DSButton>
@@ -479,7 +494,7 @@ export default function DashboardPage() {
             {cacheAgeMinutes != null && !cached.error && (
               <div className="mt-2 flex items-center gap-1.5" style={{ fontSize: 11, color: cacheStale ? 'var(--msp-warn)' : 'var(--msp-text-faint)' }}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: cacheStale ? 'var(--msp-warn)' : 'var(--msp-bull)' }} aria-hidden="true" />
-                Scanner cache: {cacheAgeMinutes < 60 ? `${cacheAgeMinutes}m` : `${Math.round(cacheAgeMinutes / 60)}h`} old{cacheStale ? ' — stale' : ' — fresh'}
+                Scanner data: {cacheAgeMinutes < 60 ? `${cacheAgeMinutes}m` : `${Math.round(cacheAgeMinutes / 60)}h`} old{cacheStale ? ' — stale' : ' — fresh'}
               </div>
             )}
             <p className="mt-2" style={{ fontSize: 11, color: 'var(--msp-text-faint)', lineHeight: 1.5 }}>{degradedFeeds.length ? `Review feed issues: ${degradedFeeds.join(', ')}.` : 'Scanner, movers, news, and calendar feeds have no reported errors.'}</p>
@@ -515,7 +530,7 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-1.5">
               {/* High ADX = trending (expansion); low ADX = compression candidate */}
-              {([...cached.equity.slice(0,3), ...cached.crypto.slice(0,2)] as CachedSymbol[])
+              {(cached.all.slice(0, 5) as CachedSymbol[])
                 .sort((a, b) => Math.abs(b.adx) - Math.abs(a.adx))
                 .slice(0, 4)
                 .map((r: CachedSymbol) => {
@@ -538,7 +553,7 @@ export default function DashboardPage() {
                     </button>
                   );
                 })}
-              {[...cached.equity, ...cached.crypto].length === 0 && (
+              {cached.all.length === 0 && (
                 <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Run Scanner to populate volatility watch</div>
               )}
               <div className="pt-1" style={{ fontSize: 10, color: 'var(--msp-text-faint)' }}>ADX ≥ 30 trending · 20–29 developing · &lt;20 compression. Heuristic only.</div>
@@ -678,13 +693,13 @@ export default function DashboardPage() {
       {cached.loading ? <CardSkeleton rows={5} /> : (
       <Card>
         <PanelHeader title="Top confluence now" eyebrow="Validated queue" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full scanner ›</button>} />
-        {[...cached.equity, ...cached.crypto].length === 0 ? (
+        {cached.all.length === 0 ? (
           <div className="text-xs text-slate-500 py-4 text-center">
             No cached data yet — <button type="button" onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
           </div>
         ) : (
           <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-            {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
+            {cached.all.slice(0, 5).map((r: CachedSymbol) => (
               <button key={r.symbol} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md bg-slate-950/30 px-2 py-1.5 text-xs text-left cursor-pointer hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" style={{ background: 'var(--msp-card-2)' }} onClick={() => openGoldenEgg(r.symbol)}>
                 <div className="flex items-center justify-between gap-2">
                   <span style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{r.symbol}</span>
@@ -890,7 +905,7 @@ export default function DashboardPage() {
       {/* -- Error / debug (collapsed) -------------------------------- */}
       {(() => {
         const errs = [
-          cached.error && `Scanner cache: ${cached.error}`,
+          cached.error && `Scanner queue: ${cached.error}`,
           movers.error && `Movers: ${movers.error}`,
           news.error && `News: ${news.error}`,
           calendar.error && `Calendar: ${calendar.error}`,

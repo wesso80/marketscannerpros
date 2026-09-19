@@ -85,7 +85,7 @@ export default function WorkspacePage() {
 }
 
 function WorkspaceContent() {
-  const { tier } = useUserTier();
+  const { tier, isLoggedIn, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const urlTabParam = searchParams.get('tab')?.toLowerCase() ?? null;
   const initialTab = TABS.find(t => t.toLowerCase() === urlTabParam) || 'Watchlists';
@@ -97,6 +97,22 @@ function WorkspaceContent() {
     const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);
     if (requestedTab) setTab(requestedTab);
   }, [urlTabParam]);
+
+  // Workspace is per-account memory: without a session there is nothing to show, so say so rather than render a "Free" shell.
+  if (!tierLoading && !isLoggedIn) {
+    const next = `/tools/workspace${urlTabParam ? `?tab=${encodeURIComponent(urlTabParam)}` : ''}`;
+    return (
+      <div className="mx-auto max-w-lg rounded-xl border border-white/10 bg-[var(--msp-panel)] p-8 text-center">
+        <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
+        <h1 className="text-xl font-bold text-white">Your Workspace is tied to your account</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Watchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.</p>
+        <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
+          <a href={`/auth?next=${encodeURIComponent(next)}`} className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30">Sign In</a>
+          <a href="/pricing" className="inline-flex rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/20 hover:text-white">See Pricing</a>
+        </div>
+      </div>
+    );
+  }
 
   const activeMeta = WORKSPACE_TAB_META[tab];
   const tierLabel = tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free';

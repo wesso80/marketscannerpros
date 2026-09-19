@@ -6,10 +6,22 @@
  * Every figure comes from the persisted jarvis_daily_reports row for the selected session; nothing is recomputed client-side.
  */
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import AdminCard from "@/components/admin/shared/AdminCard";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import StatusPill from "@/components/admin/shared/StatusPill";
+import { humanizeEnum, humanizeText } from "@/lib/presentation/labels";
 import type { ArchiveRow, CandidateRow, DailyReport, EmailStatus, HealthStatus, LifecycleTransition, MoverLine, NextMoveRow, ThemeRow } from "@/lib/jarvis/report/types";
+
+/** Next research step for a Radar symbol: Golden Egg validation, with asset class carried so quotes/derivatives resolve correctly. */
+function researchHref(symbol: string, assetClass: string, from: string): string {
+  const type = assetClass === "crypto" ? "crypto" : "equity";
+  return `/tools/golden-egg?symbol=${encodeURIComponent(symbol)}&type=${type}&from=msp-radar&ctx=${from}`;
+}
+const symLink: React.CSSProperties = { color: "#E5E7EB", textDecoration: "none", borderBottom: "1px dotted rgba(16,185,129,0.6)" };
+function SymbolLink({ symbol, assetClass, from }: { symbol: string; assetClass: string; from: string }) {
+  return <Link href={researchHref(symbol, assetClass, from)} style={symLink} title={`Validate ${symbol} in Golden Egg`}>{symbol}</Link>;
+}
 
 type Payload = { sessionDate: string; runId: string | null; reportVersion: number; status: string; healthStatus: HealthStatus; headline: string; generatedAt: string; emailStatus: EmailStatus; emailSentAt: string | null; report: DailyReport; nav: { previous: string | null; next: string | null } };
 
@@ -93,7 +105,7 @@ export default function JarvisDailyPage() {
               <StatusPill label={`Email ${data.emailStatus}`} tone={emailTone(data.emailStatus)} />
               <span style={muted}>run {data.runId ?? "—"} · generated {data.generatedAt.slice(0, 16).replace("T", " ")}Z · report v{data.reportVersion}</span>
             </div>
-            <p style={{ margin: "0.6rem 0 0", fontSize: "0.95rem", fontWeight: 600 }}>{r.headline}</p>
+            <p style={{ margin: "0.6rem 0 0", fontSize: "0.95rem", fontWeight: 600 }}>{humanizeText(r.headline)}</p>
             {r.health.status !== "NORMAL" && (
               <div style={{ marginTop: "0.6rem", padding: "0.6rem 0.8rem", borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.35)", color: "#FCD34D", fontSize: "0.8rem" }}>
                 <b>DATA HEALTH WARNING:</b> {r.health.summary} · Stage 2 coverage {r.health.stage2CoveragePct ?? "unknown"}% · shortlist may be incomplete: {r.health.shortlistMayBeIncomplete ? "YES" : "no"}
@@ -112,7 +124,7 @@ export default function JarvisDailyPage() {
 
               <Section title="Look At First Today" subtitle="Where research time is best spent — not trade instructions" primary>
                 <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.85rem", lineHeight: 1.5 }}>
-                  {r.lookAtFirst.map((a, i) => <li key={i} style={{ marginBottom: "0.3rem" }}><StatusPill label={a.kind} tone={a.kind === "risk" ? "red" : a.kind === "trigger" ? "blue" : a.kind === "crypto" ? "purple" : "green"} /> <b style={{ marginLeft: 6 }}>{a.title}</b> — <span style={{ color: "#CBD5E1" }}>{a.why}</span></li>)}
+                  {r.lookAtFirst.map((a, i) => <li key={i} style={{ marginBottom: "0.3rem" }}><StatusPill label={a.kind} tone={a.kind === "risk" ? "red" : a.kind === "trigger" ? "blue" : a.kind === "crypto" ? "purple" : "green"} /> <b style={{ marginLeft: 6 }}>{humanizeText(a.title)}</b> — <span style={{ color: "#CBD5E1" }}>{humanizeText(a.why)}</span></li>)}
                   {!r.lookAtFirst.length && <li style={muted}>No priority items surfaced.</li>}
                 </ol>
               </Section>
@@ -127,7 +139,7 @@ export default function JarvisDailyPage() {
 
               <Section title="Lifecycle Changes" subtitle="Persisted watchlist transitions recorded this session" count={r.lifecycle.transitions.length}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
-                  {Object.entries(r.lifecycle.counts).filter(([, v]) => v > 0).map(([k, v]) => <StatusPill key={k} label={`${k} ${v}`} tone={k === "CONFIRMED_MOVE" ? "green" : k === "NEAR_TRIGGER" ? "blue" : k === "FAILED" || k === "DETERIORATING" ? "red" : k === "EXPIRED" ? "neutral" : "purple"} />)}
+                  {Object.entries(r.lifecycle.counts).filter(([, v]) => v > 0).map(([k, v]) => <StatusPill key={k} label={`${humanizeEnum(k)} ${v}`} tone={k === "CONFIRMED_MOVE" ? "green" : k === "NEAR_TRIGGER" ? "blue" : k === "FAILED" || k === "DETERIORATING" ? "red" : k === "EXPIRED" ? "neutral" : "purple"} />)}
                 </div>
                 <LifecycleList rows={r.lifecycle.transitions} />
               </Section>
@@ -161,7 +173,7 @@ export default function JarvisDailyPage() {
               <Section title="Rejected Noise" subtitle="Big moves that did not qualify — and why" defaultOpen={false} count={r.rejected.length}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr><th style={th}>Symbol</th><th style={th}>Class</th><th style={th}>Move</th><th style={th}>Why rejected</th></tr></thead>
-                  <tbody>{r.rejected.map((x) => <tr key={x.symbol}><td style={{ ...td, fontWeight: 700 }}>{x.symbol}</td><td style={{ ...td, color: "#94A3B8" }}>{x.assetClass}</td><td style={td}>{x.change}</td><td style={{ ...td, color: "#CBD5E1" }}>{x.detail}</td></tr>)}</tbody>
+                  <tbody>{r.rejected.map((x) => <tr key={x.symbol}><td style={{ ...td, fontWeight: 700 }}>{x.symbol}</td><td style={{ ...td, color: "#94A3B8" }}>{x.assetClass}</td><td style={td}>{x.change}</td><td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(x.detail)}</td></tr>)}</tbody>
                 </table>
                 {!r.rejected.length && <div style={muted}>None.</div>}
               </Section>
@@ -240,12 +252,12 @@ function CandidatesTable({ rows }: { rows: CandidateRow[] }) {
         <tbody>{rows.map((c) => (
           <tr key={c.symbol}>
             <td style={td}>{c.rank}</td>
-            <td style={{ ...td, fontWeight: 700 }}>{c.symbol}<div style={{ ...muted, fontWeight: 400 }}>{c.name ?? c.assetClass}{c.lifecycle ? ` · ${c.lifecycle}` : ""}</div></td>
-            <td style={td}>{c.setupType}</td>
+            <td style={{ ...td, fontWeight: 700 }}><SymbolLink symbol={c.symbol} assetClass={c.assetClass} from="candidates" /><div style={{ ...muted, fontWeight: 400 }}>{c.name ?? c.assetClass}{c.lifecycle ? ` · ${humanizeEnum(c.lifecycle)}` : ""}</div></td>
+            <td style={td}>{humanizeEnum(c.setupType)}</td>
             <td style={{ ...td, color: "#10B981", fontWeight: 700 }}>{c.score}</td>
             <td style={td}><StatusPill label={c.extension} tone={extTone(c.extension)} /></td>
             <td style={td}>{pct(c.ret1)} / {pct(c.ret5)}<div style={muted}>{c.velocity}</div></td>
-            <td style={{ ...td, color: "#CBD5E1" }}>{c.whySurfaced}{c.caveat && <div style={{ color: "#FCD34D" }}>Caveat: {c.caveat}</div>}{c.catalyst && <div style={muted}>Catalyst: {c.catalyst}</div>}</td>
+            <td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(c.whySurfaced)}{c.caveat && <div style={{ color: "#FCD34D" }}>Caveat: {humanizeText(c.caveat)}</div>}{c.catalyst && <div style={muted}>Catalyst: {c.catalyst}</div>}</td>
           </tr>))}</tbody>
       </table>
     </div>);
@@ -259,11 +271,11 @@ function NextTable({ rows }: { rows: NextMoveRow[] }) {
         <thead><tr><th style={th}>Symbol</th><th style={th}>Stage</th><th style={th}>Score</th><th style={th}>Trigger</th><th style={th}>Why</th><th style={th}>Confirms / invalidates</th></tr></thead>
         <tbody>{rows.map((n) => (
           <tr key={n.symbol}>
-            <td style={{ ...td, fontWeight: 700 }}>{n.symbol}<div style={{ ...muted, fontWeight: 400 }}>{n.assetClass}{n.lifecycle ? ` · ${n.lifecycle}` : ""}</div></td>
-            <td style={td}>{n.stage}</td>
+            <td style={{ ...td, fontWeight: 700 }}><SymbolLink symbol={n.symbol} assetClass={n.assetClass} from="what-may-move-next" /><div style={{ ...muted, fontWeight: 400 }}>{n.assetClass}{n.lifecycle ? ` · ${humanizeEnum(n.lifecycle)}` : ""}</div></td>
+            <td style={td}>{humanizeEnum(n.stage)}</td>
             <td style={{ ...td, color: "#10B981", fontWeight: 700 }}>{n.score}</td>
             <td style={td}>{lvl(n.triggerLevel)}{n.distanceToTriggerPct !== null && <div style={muted}>{n.distanceToTriggerPct > 0 ? `${n.distanceToTriggerPct.toFixed(1)}% below` : `${Math.abs(n.distanceToTriggerPct).toFixed(1)}% above`}</div>}</td>
-            <td style={{ ...td, color: "#CBD5E1" }}>{n.reasons.join("; ")}</td>
+            <td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(n.reasons.join("; "))}</td>
             <td style={{ ...td, color: "#CBD5E1" }}><div><span style={{ color: "#6EE7B7" }}>✓</span> {n.confirmation}</div><div><span style={{ color: "#FCA5A5" }}>✗</span> {n.invalidation}</div></td>
           </tr>))}</tbody>
       </table>
@@ -274,7 +286,7 @@ function LifecycleList({ rows }: { rows: LifecycleTransition[] }) {
   if (!rows.length) return <div style={muted}>No lifecycle transitions recorded for this session.</div>;
   return (
     <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem", lineHeight: 1.55 }}>
-      {rows.map((t, i) => <li key={`${t.symbol}-${i}`}><b>{t.symbol}</b> <span style={muted}>({t.assetClass})</span>: {t.from ?? "new"} → <b style={{ color: t.to === "CONFIRMED_MOVE" ? "#6EE7B7" : t.to === "FAILED" || t.to === "DETERIORATING" ? "#FCA5A5" : "#E5E7EB" }}>{t.to}</b> <span style={{ color: "#CBD5E1" }}>— {t.note}</span></li>)}
+      {rows.map((t, i) => <li key={`${t.symbol}-${i}`}><b><SymbolLink symbol={t.symbol} assetClass={t.assetClass} from="lifecycle" /></b> <span style={muted}>({t.assetClass})</span>: {humanizeEnum(t.from ?? "NEW")} → <b style={{ color: t.to === "CONFIRMED_MOVE" ? "#6EE7B7" : t.to === "FAILED" || t.to === "DETERIORATING" ? "#FCA5A5" : "#E5E7EB" }}>{humanizeEnum(t.to)}</b> <span style={{ color: "#CBD5E1" }}>— {humanizeText(t.note)}</span></li>)}
     </ul>);
 }
 
@@ -285,7 +297,7 @@ function ThemesTable({ title, rows }: { title: string; rows: ThemeRow[] }) {
       <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.3rem" }}>{title}</div>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
         <thead><tr><th style={th}>Theme</th><th style={th}>Up</th><th style={th}>Median</th><th style={th}>Verdict</th><th style={th}>Early</th><th style={th}>Extended</th></tr></thead>
-        <tbody>{rows.map((g) => <tr key={g.name}><td style={{ ...td, fontWeight: 600 }}>{g.name}</td><td style={td}>{g.up}/{g.members} ({g.pctUp}%)</td><td style={td}>{g.medianMove}</td><td style={td}><StatusPill label={g.verdict.replace(/_/g, " ").toLowerCase()} tone={g.verdict === "GENUINE_GROUP_MOVE" ? "green" : g.verdict === "MIXED" ? "yellow" : "neutral"} /><div style={muted}>{g.confirmation}</div></td><td style={{ ...td, color: "#6EE7B7" }}>{g.early.join(", ") || "—"}</td><td style={{ ...td, color: "#FCD34D" }}>{g.extended.join(", ") || "—"}</td></tr>)}</tbody>
+        <tbody>{rows.map((g) => <tr key={g.name}><td style={{ ...td, fontWeight: 600 }}>{g.name}</td><td style={td}>{g.up}/{g.members} ({g.pctUp}%)</td><td style={td}>{g.medianMove}</td><td style={td}><StatusPill label={humanizeEnum(g.verdict)} tone={g.verdict === "GENUINE_GROUP_MOVE" ? "green" : g.verdict === "MIXED" ? "yellow" : "neutral"} /><div style={muted}>{humanizeText(g.confirmation)}</div></td><td style={{ ...td, color: "#6EE7B7" }}>{g.early.join(", ") || "—"}</td><td style={{ ...td, color: "#FCD34D" }}>{g.extended.join(", ") || "—"}</td></tr>)}</tbody>
       </table>
     </div>);
 }
@@ -294,6 +306,6 @@ function Movers({ title, rows }: { title: string; rows: MoverLine[] }) {
   return (
     <div>
       <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.3rem" }}>{title}</div>
-      {rows.length ? <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.8rem", lineHeight: 1.5 }}>{rows.map((m) => <li key={m.symbol}><b>{m.symbol}</b> {m.change} <span style={{ color: "#94A3B8" }}>{m.detail}</span></li>)}</ul> : <div style={muted}>none</div>}
+      {rows.length ? <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.8rem", lineHeight: 1.5 }}>{rows.map((m) => <li key={m.symbol}><b>{m.symbol}</b> {m.change} <span style={{ color: "#94A3B8" }}>{humanizeText(m.detail)}</span></li>)}</ul> : <div style={muted}>none</div>}
     </div>);
 }

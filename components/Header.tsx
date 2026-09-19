@@ -15,10 +15,12 @@ import { primaryNavTools, secondaryToolLinks } from '@/lib/toolWorkflows';
    ════════════════════════════════════════════════════════════════════════════════════ */
 
 const SURFACES = primaryNavTools;
+// MSP Radar lives under /admin today (owner-only report); shown only to admins until a customer-facing route exists.
+const RADAR_SURFACE = { href: '/admin/jarvis/daily', label: 'MSP Radar' };
 
 const MORE_TOOLS = [
   { href: '/tools/terminal', label: 'Terminal' },
-  { href: '/intelligence', label: 'Intelligence' },
+  { href: '/intelligence', label: 'Intelligence (preview)' },
   ...secondaryToolLinks.map((tool) => ({ href: tool.href, label: tool.label })),
   { href: '/tools', label: 'All Tools' },
   { href: '/compliance-hub', label: 'Compliance Hub' },
@@ -29,8 +31,9 @@ export default function Header() {
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const pathname = usePathname();
-  const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
+  const { isLoggedIn, isLoading: tierLoading, tier, isAdmin } = useUserTier();
   const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
+  const surfaces = isAdmin ? [RADAR_SURFACE, ...SURFACES] : SURFACES;
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : '';
@@ -85,8 +88,8 @@ export default function Header() {
 
         {/* ── Desktop Nav (md+) ── */}
         <nav className="msp-desktop-nav items-center gap-1 flex-1 text-sm">
-          {/* 6 Surface buttons — always visible */}
-          {SURFACES.map(s => (
+          {/* Surface buttons — always visible */}
+          {surfaces.map(s => (
             <Link
               key={s.href}
               href={s.href}
@@ -103,7 +106,6 @@ export default function Header() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
-            <Link href="/intelligence" className="msp-nav-secondary text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Intelligence</Link>
             <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
             {isLoggedIn && (
               <Link href="/tools/referrals" className="msp-nav-secondary text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
@@ -177,10 +179,10 @@ export default function Header() {
             <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
           </div>
 
-          {/* Drawer body — same 6 surfaces always shown */}
+          {/* Drawer body — same surfaces always shown */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="flex flex-col gap-0.5">
-              {SURFACES.map(s => (
+              {surfaces.map(s => (
                 <Link
                   key={s.href}
                   href={s.href}
