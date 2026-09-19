@@ -182,7 +182,7 @@ function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up'
       <div className="grid grid-cols-[4.5rem_1fr_5.5rem] items-center gap-2">
         <span style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{mover.ticker}</span>
         <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--msp-text-muted)' }}>{fmtPrice(parseFloat(mover.price))}</span>
-        <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: barColor, fontWeight: 500 }}>{sign}{mover.change_percentage}</span>
+        <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: barColor, fontWeight: 500 }}>{sign}{Number.isFinite(pct) ? `${pct.toFixed(2)}%` : mover.change_percentage}</span>
       </div>
       <div className="mt-1">
         <MagnitudeBar value={pct} max={10} color={barColor} height={2} />
@@ -450,7 +450,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <MetricCol label="Price" value={fmtPrice(parseFloat(m.price))} />
-                          <MetricCol label="Move" value={`${movePct >= 0 ? '+' : ''}${m.change_percentage}`} tone={moveColor} align="right" />
+                          <MetricCol label="Move" value={`${movePct >= 0 ? '+' : ''}${Number.isFinite(movePct) ? movePct.toFixed(2) + '%' : m.change_percentage}`} tone={moveColor} align="right" />
                         </div>
                         <MagnitudeBar value={movePct} max={10} color={moveColor} height={2} />
                         <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: validate movement context</div>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ADMIN_SESSION_COOKIE } from '@/lib/adminAuth';
 
 /**
  * POST /api/auth/logout
@@ -18,19 +19,22 @@ export async function POST(req: NextRequest) {
   // Build the "expired" cookie strings manually so we can send BOTH variants.
   const past = 'Thu, 01 Jan 1970 00:00:00 GMT';
 
-  // 1) Production cookie — matches the domain used by login
-  if (!isLocalhost) {
+  // Admin login issues ms_admin alongside ms_auth; sign-out must revoke both or /admin stays open.
+  for (const name of ['ms_auth', ADMIN_SESSION_COOKIE]) {
+    // 1) Production cookie — matches the domain used by login
+    if (!isLocalhost) {
+      res.headers.append(
+        'Set-Cookie',
+        `${name}=; Path=/; Domain=.marketscannerpros.app; Max-Age=0; Expires=${past}; HttpOnly; Secure; SameSite=None`
+      );
+    }
+
+    // 2) Domainless cookie — covers localhost and any edge-case cookies set without a domain
     res.headers.append(
       'Set-Cookie',
-      `ms_auth=; Path=/; Domain=.marketscannerpros.app; Max-Age=0; Expires=${past}; HttpOnly; Secure; SameSite=None`
+      `${name}=; Path=/; Max-Age=0; Expires=${past}; HttpOnly; SameSite=Lax`
     );
   }
-
-  // 2) Domainless cookie — covers localhost and any edge-case cookies set without a domain
-  res.headers.append(
-    'Set-Cookie',
-    `ms_auth=; Path=/; Max-Age=0; Expires=${past}; HttpOnly; SameSite=Lax`
-  );
 
   return res;
 }

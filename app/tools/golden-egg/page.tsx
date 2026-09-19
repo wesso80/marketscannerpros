@@ -375,7 +375,8 @@ export default function GoldenEggPage() {
 
   // Resolve asset type: 'auto' uses detectAssetClass, otherwise user override
   const resolvedType = assetType === 'auto' ? undefined : assetType;
-  const isCryptoSymbol = CRYPTO_SET.has(sym.toUpperCase());
+  // Scanner hands over crypto as e.g. NEAR-USD; match on the base ticker too.
+  const isCryptoSymbol = CRYPTO_SET.has(sym.toUpperCase()) || CRYPTO_SET.has(sym.toUpperCase().replace(/[-/]?(USDT|USD)$/, ''));
   const quoteType: 'stock' | 'crypto' = assetType === 'crypto' ? 'crypto' : assetType === 'equity' ? 'stock' : isCryptoSymbol ? 'crypto' : 'stock';
 
   // Ensure V2Context always reflects the resolved symbol so embedded tabs sync

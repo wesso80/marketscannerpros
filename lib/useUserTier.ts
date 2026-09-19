@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useUserTierContext } from "./UserTierProvider";
 
 export type UserTier = "free" | "pro" | "pro_trader" | "anonymous";
 
@@ -12,65 +12,12 @@ interface TierInfo {
   email: string | null;
 }
 
+/**
+ * Tier info for the current user. Delegates to the app-wide UserTierProvider so the
+ * whole page shares ONE /api/me request instead of one per consuming component.
+ */
 export function useUserTier(): TierInfo {
-  const [tier, setTier] = useState<UserTier>("anonymous");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    async function checkTier() {
-      try {
-        const res = await fetch("/api/me", {
-          credentials: "include",
-          signal: controller.signal,
-        });
-        
-        if (controller.signal.aborted) return;
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated) {
-            setTier(data.tier || "free");
-            setIsLoggedIn(true);
-            setIsAdmin(data.isAdmin || false);
-            setEmail(data.email || null);
-          } else {
-            setTier("anonymous");
-            setIsLoggedIn(false);
-            setIsAdmin(false);
-            setEmail(null);
-          }
-        } else {
-          setTier("anonymous");
-          setIsLoggedIn(false);
-          setIsAdmin(false);
-          setEmail(null);
-        }
-      } catch {
-        if (controller.signal.aborted) return;
-        setTier("anonymous");
-        setIsLoggedIn(false);
-        setIsAdmin(false);
-        setEmail(null);
-      } finally {
-        clearTimeout(timeout);
-        if (!controller.signal.aborted) setIsLoading(false);
-      }
-    }
-    
-    checkTier();
-
-    return () => {
-      controller.abort();
-      clearTimeout(timeout);
-    };
-  }, []);
-
+  const { tier, isLoading, isLoggedIn, isAdmin, email } = useUserTierContext();
   return { tier, isLoading, isLoggedIn, isAdmin, email };
 }
 

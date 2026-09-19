@@ -79,7 +79,7 @@ function buildThirty(r: MorningReport): MarketLine[] {
     { label: 'Equities', value: `SPY ${spyLine} · ${b.up}/${b.total} up · ${b.newHi20} new 20d highs vs ${b.newLo20} lows · ${b.volSurge} names ≥2× volume` },
     { label: 'Crypto', value: `BTC ${sp(c.btc24h, 1)} / ETH ${sp(c.eth24h, 1)} · alt median ${sp(c.altMedian24h, 1)} · ${f1(c.breadth24h, 0)}% up 24h, ${f1(c.breadth7d, 0)}% up 7d · ${c.leader24h} leading` },
     { label: 'Sectors', value: `5d RS leaders ${r.rotation.strongToday.join(', ')}${r.rotation.newlyStrengthened.length ? ` · newly strengthening ${r.rotation.newlyStrengthened.join('/')}` : ''}${r.rotation.lostLeadership.length ? ` · losing ${r.rotation.lostLeadership.join('/')}` : ''}` },
-    { label: 'Growth vs defensive', value: `growth vs broad: ${pairVal('Growth vs broad')} · defensive vs growth: ${pairVal('Defensive vs growth')} · small vs large: ${pairVal('Small vs large caps')}` },
+    { label: 'Growth vs defensive', value: `${pairVal('Growth vs broad')} vs broad market · ${pairVal('Defensive vs growth')} vs defensives · ${pairVal('Small vs large caps')} small vs large` },
     { label: 'Rates / duration', value: `TLT ${find('TLT')} · IEF ${find('IEF')} · HY ${find('HYG')} vs IG ${find('LQD')}` },
     { label: 'Volatility', value: `VXX ${find('VXX')} · ${r.counts.meaningfulMovers} meaningful movers, ${r.counts.unusual} unusual` },
     { label: 'Dollar', value: `UUP ${find('UUP')} · JPY ${find('FXY')} · EUR ${find('FXE')}` },

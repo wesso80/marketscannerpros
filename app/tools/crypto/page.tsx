@@ -443,9 +443,9 @@ function CryptoCommandCenterContent() {
           ariaLabel="Crypto Command Center command header"
           eyebrow="Crypto command"
           badges={[
-            { label: `Verdict ${reviewLabel(morningDecision.verdict)}` },
-            { label: `Risk ${morningDecision.riskState}` },
-            { label: `Vol ${morningDecision.volatility}` },
+            { label: marketData ? `Verdict ${reviewLabel(morningDecision.verdict)}` : 'Verdict pending' },
+            { label: marketData ? `Risk ${morningDecision.riskState}` : 'Risk pending' },
+            { label: marketData ? `Vol ${morningDecision.volatility}` : 'Vol pending' },
             { label: marketData ? 'CoinGecko live' : 'Loading' },
           ]}
           title="Crypto Command Center."
@@ -456,8 +456,9 @@ function CryptoCommandCenterContent() {
             { label: 'Open Macro Lens', variant: 'ghost', href: '/tools/dashboard?tab=macro' },
           ]}
           metrics={[
-            { label: 'Verdict', value: reviewLabel(morningDecision.verdict), tone: morningDecision.verdict === 'ALIGNED' ? 'bull' : morningDecision.verdict === 'CONDITIONAL' ? 'warn' : 'bear', detail: `Confluence ${morningDecision.adaptiveConfidence}%` },
-            { label: 'Breadth', value: morningDecision.breadthLabel, tone: 'info', detail: `Score ${morningDecision.breadthScore}%` },
+            // Until the first CoinGecko payload lands, the decision engine only has defaults — show that honestly.
+            { label: 'Verdict', value: marketData ? reviewLabel(morningDecision.verdict) : 'Loading', tone: !marketData ? 'info' : morningDecision.verdict === 'ALIGNED' ? 'bull' : morningDecision.verdict === 'CONDITIONAL' ? 'warn' : 'bear', detail: marketData ? `Confluence ${morningDecision.adaptiveConfidence}%` : 'Awaiting market data' },
+            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? `Score ${morningDecision.breadthScore}%` : 'Awaiting market data' },
             { label: 'Dominance', value: (() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })(), tone: 'warn', detail: marketData?.market?.totalMarketCapFormatted || 'Mkt cap loading' },
             { label: 'Next check', value: currentSection?.label || 'Pick a section', tone: 'info', detail: lastUpdate ? `Refreshed ${lastUpdate.toLocaleTimeString()}` : 'Awaiting first refresh' },
           ]}

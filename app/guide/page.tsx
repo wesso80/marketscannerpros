@@ -19,7 +19,7 @@ export default function UserGuidePage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           {TOOL_GUIDES.map((guide) => (
-            <article key={guide.route} className="rounded-panel border border-msp-border bg-msp-card p-5 shadow-msp">
+            <article key={`${guide.route}-${guide.title}`} className="rounded-panel border border-msp-border bg-msp-card p-5 shadow-msp">
               <div className="mb-2 inline-flex rounded-full border border-msp-borderStrong bg-msp-panel px-2.5 py-0.5 text-[11px] font-semibold text-msp-accent">
                 {guide.badge}
               </div>

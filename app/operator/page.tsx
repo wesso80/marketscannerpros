@@ -485,18 +485,7 @@ function layerToneLabel(score: number, yellowFloor = 60): { tone: Tone; label: s
 }
 
 export default function OperatorDashboardPage() {
-  const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
-  const router = useRouter();
-  const canUseBrain = canAccessBrain(tier);
-
-  // Defense-in-depth: redirect non-admin users even if middleware is bypassed.
-  // Primary protection is in middleware.ts (operator route guard).
-  useEffect(() => {
-    if (!tierLoading && !isAdmin) {
-      router.replace('/auth?next=/operator');
-    }
-  }, [tierLoading, isAdmin, router]);
-
+  const { tierLoading, isAdmin } = useOperatorGate();
   if (tierLoading || !isAdmin) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
@@ -504,6 +493,27 @@ export default function OperatorDashboardPage() {
       </div>
     );
   }
+  return <OperatorDashboard />;
+}
+
+// Gate lives in its own hook/component so the dashboard's many hooks never sit after an early return.
+function useOperatorGate() {
+  const { isLoading: tierLoading, isAdmin } = useUserTier();
+  const router = useRouter();
+  // Defense-in-depth: redirect non-admin users even if middleware is bypassed.
+  // Primary protection is in middleware.ts (operator route guard).
+  useEffect(() => {
+    if (!tierLoading && !isAdmin) {
+      router.replace('/auth?next=/operator');
+    }
+  }, [tierLoading, isAdmin, router]);
+  return { tierLoading, isAdmin };
+}
+
+function OperatorDashboard() {
+  const { tier, isLoading: tierLoading } = useUserTier();
+  const router = useRouter();
+  const canUseBrain = canAccessBrain(tier);
   const lastSignalEventKeyRef = useRef('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);

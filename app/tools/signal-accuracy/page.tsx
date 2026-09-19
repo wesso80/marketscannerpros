@@ -80,6 +80,26 @@ export default function SignalAccuracyPage() {
     }
   }
 
+  const overall = data?.overall;
+  const stats = data?.stats ?? [];
+  const recentSignals = data?.recentSignals ?? [];
+  const thresholds = data?.thresholds ?? [];
+
+  // Group stats by scanner type (declared before any early return so hook order is stable)
+  const grouped = useMemo(() => {
+    const map: Record<string, Stat[]> = {};
+    for (const s of stats) {
+      const key = s.signal_type || 'unknown';
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    }
+    return Object.entries(map).sort((a, b) => {
+      const aTotal = a[1].reduce((sum, s) => sum + s.labeled_signals, 0);
+      const bTotal = b[1].reduce((sum, s) => sum + s.labeled_signals, 0);
+      return bTotal - aTotal;
+    });
+  }, [stats]);
+
   // Gate: Pro Trader only
   if (!tierLoading && isLoggedIn && tier !== 'pro_trader') {
     return (
@@ -104,26 +124,6 @@ export default function SignalAccuracyPage() {
       </div>
     );
   }
-
-  const overall = data?.overall;
-  const stats = data?.stats ?? [];
-  const recentSignals = data?.recentSignals ?? [];
-  const thresholds = data?.thresholds ?? [];
-
-  // Group stats by scanner type
-  const grouped = useMemo(() => {
-    const map: Record<string, Stat[]> = {};
-    for (const s of stats) {
-      const key = s.signal_type || 'unknown';
-      if (!map[key]) map[key] = [];
-      map[key].push(s);
-    }
-    return Object.entries(map).sort((a, b) => {
-      const aTotal = a[1].reduce((sum, s) => sum + s.labeled_signals, 0);
-      const bTotal = b[1].reduce((sum, s) => sum + s.labeled_signals, 0);
-      return bTotal - aTotal;
-    });
-  }, [stats]);
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-4 sm:p-6 max-w-7xl mx-auto space-y-6">

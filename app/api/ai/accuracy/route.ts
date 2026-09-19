@@ -62,12 +62,13 @@ export async function GET(req: NextRequest) {
     
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
-    // Get accuracy stats with rolling windows
-    const stats = await q(`
+    // Get accuracy stats with rolling windows.
+    // Some deployments still have the pre-versioning table (no scanner_version column) — fall back rather than 500.
+    const statsSql = (withVersion: boolean) => `
       SELECT 
         sas.signal_type,
         sas.direction,
-        sas.scanner_version,
+        ${withVersion ? 'sas.scanner_version' : "'unknown'::text AS scanner_version"},
         ot.horizon_label,
         sas.horizon_minutes,
         sas.total_signals,
@@ -91,14 +92,30 @@ export async function GET(req: NextRequest) {
       FROM signal_accuracy_stats sas
       LEFT JOIN outcome_thresholds ot ON sas.horizon_minutes = ot.horizon_minutes
       ${where}
-      ORDER BY sas.scanner_version DESC, sas.total_signals DESC, sas.signal_type, sas.horizon_minutes
-    `, params);
+      ORDER BY ${withVersion ? 'sas.scanner_version DESC, ' : ''}sas.total_signals DESC, sas.signal_type, sas.horizon_minutes
+    `;
+    let stats: any[];
+    let schemaNote: string | null = null;
+    try {
+      stats = await q(statsSql(true), params);
+    } catch (e: any) {
+      // 42703 = undefined_column: the deployed table predates migration 003's extra columns. Return an honest
+      // empty result (page shows its empty state) instead of a 500; the real fix is applying the migration.
+      if (e?.code !== '42703' && !/does not exist/.test(String(e?.message))) throw e;
+      stats = [];
+      schemaNote = 'Accuracy statistics table is on an older schema; historical stats are unavailable until it is upgraded.';
+    }
     
     // Get recent signals with their outcomes
     const recentSignals = await getRecentSignals(25);
     
-    // Get overall summary
-    const overall = await getOverallStats();
+    // Get overall summary, normalised to the shape the page renders ({ total, labeled, correct, wrong, win_rate }).
+    const raw: any = await getOverallStats();
+    const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0);
+    const labeled = num(raw.correct_outcomes) + num(raw.wrong_outcomes);
+    const overall = raw && Object.keys(raw).length
+      ? { total: num(raw.total_signals), labeled: num(raw.signals_with_outcomes), correct: num(raw.correct_outcomes), wrong: num(raw.wrong_outcomes), win_rate: labeled > 0 ? (num(raw.correct_outcomes) / labeled) * 100 : null }
+      : null;
     
     // Get threshold configuration
     const thresholds = await q(`
@@ -149,6 +166,7 @@ export async function GET(req: NextRequest) {
         horizonMinutes: horizonMinutes || 'all',
         scannerType: scannerType || 'all',
         minSamples,
+        schemaNote,
         note: `Win rates only shown for signal types with >= ${minSamples} labeled samples. Unknown outcomes excluded from accuracy calculations.`
       }
     });

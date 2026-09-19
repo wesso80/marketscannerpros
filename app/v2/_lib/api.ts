@@ -545,8 +545,14 @@ export interface OptionsScanResponse {
 /* ------------------------------------------------------------------ */
 
 // --- Regime ---
+// Several independent widgets on every page call this; share one in-flight request for a few seconds.
+let regimeInflight: { at: number; promise: Promise<RegimeResponse> } | null = null;
 export function fetchRegime(): Promise<RegimeResponse> {
-  return apiFetch('/api/regime');
+  const now = Date.now();
+  if (regimeInflight && now - regimeInflight.at < 5000) return regimeInflight.promise;
+  const promise = apiFetch<RegimeResponse>('/api/regime').catch((err) => { regimeInflight = null; throw err; });
+  regimeInflight = { at: now, promise };
+  return promise;
 }
 
 // --- Scanner ---

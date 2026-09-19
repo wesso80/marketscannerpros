@@ -18,7 +18,9 @@ const CRYPTO_SYMBOLS = new Set([
 ]);
 
 function isCryptoSymbol(symbol: string): boolean {
-  return CRYPTO_SYMBOLS.has(symbol.toUpperCase());
+  const upper = symbol.toUpperCase();
+  const base = upper.replace(/[-/]?(USDT|USD)$/, '');
+  return CRYPTO_SYMBOLS.has(upper) || CRYPTO_SYMBOLS.has(base);
 }
 
 interface IntradayBar {
@@ -112,7 +114,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (isCrypto) {
-      const normalized = symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
+      const normalized = symbol.toUpperCase().replace(/[-/]?(USDT|USD)$/, '');
       const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[normalized] || await resolveSymbolToId(normalized);
 
       if (!coinId) {
@@ -193,10 +195,10 @@ export async function GET(req: NextRequest) {
 
     const data = await response.json();
 
-    // Check for API errors
+    // Check for API errors (never surface raw provider text to users)
     if (data['Error Message']) {
       return NextResponse.json({ 
-        error: data['Error Message'],
+        error: `No intraday data available for ${symbol}. Check the symbol or try the daily timeframe.`,
         symbol 
       }, { status: 404 });
     }

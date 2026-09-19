@@ -54,7 +54,10 @@ async function verify(token: string) {
     false,
     ['verify'],
   );
-  const valid = await crypto.subtle.verify('HMAC', cryptoKey, sigBytes.buffer as ArrayBuffer, encoder.encode(body));
+  // Copy into a fresh ArrayBuffer-backed view: a cross-realm/pooled buffer fails SubtleCrypto's brand check under the Node proxy runtime.
+  const sigView = new Uint8Array(new ArrayBuffer(sigBytes.byteLength));
+  sigView.set(sigBytes);
+  const valid = await crypto.subtle.verify('HMAC', cryptoKey, sigView, encoder.encode(body));
   if (!valid) return null;
 
   const json = atob(body.replace(/-/g, '+').replace(/_/g, '/'));

@@ -390,7 +390,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             </div>
             <div className="text-xl font-bold text-white">{data.btc.formatted}</div>
             <div className="text-xs text-slate-400">
-              {data.btc.contracts.toLocaleString()} contracts
+              {(data.btc.contracts ?? 0).toLocaleString()} contracts
             </div>
           </div>
         )}
@@ -406,7 +406,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             </div>
             <div className="text-xl font-bold text-white">{data.eth.formatted}</div>
             <div className="text-xs text-slate-400">
-              {data.eth.contracts.toLocaleString()} contracts
+              {(data.eth.contracts ?? 0).toLocaleString()} contracts
             </div>
           </div>
         )}
@@ -443,7 +443,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
                       {formatCompact(coin.openInterest)}
                     </div>
                     <div className="text-xs text-slate-500">
-                      ${coin.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      {coin.price === undefined || coin.price === null ? '—' : `$${coin.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
                     </div>
                   </div>
                 </div>

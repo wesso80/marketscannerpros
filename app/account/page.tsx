@@ -50,14 +50,14 @@ export default function AccountPage() {
   useEffect(() => {
     if (!isLoggedIn) return;
     Promise.all([
-      fetch("/api/msp-analyst", { method: "HEAD", credentials: "include" }).then(async () => {
-        // Try to get AI usage from the entitlements / usage endpoint
+      (async () => {
+        // AI usage comes from the entitlements endpoint (the analyst route is POST-only; probing it produced a 405).
         try {
           const res = await fetch("/api/entitlements", { credentials: "include" });
           if (res.ok) { const d = await res.json(); return d?.aiUsedToday ?? 0; }
         } catch {}
         return 0;
-      }),
+      })(),
       fetch("/api/alerts", { credentials: "include" }).then(async (res) => {
         if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.length : 0; }
         return 0;

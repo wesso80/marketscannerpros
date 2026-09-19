@@ -43,11 +43,13 @@ const VALID_EQ_TICKER = /^[A-Z]{1,6}$/;
 const VALID_CRYPTO_TICKER = /^[A-Z0-9]{1,12}$/;
 
 function normalizeAVMover(item: any) {
+  // AV returns "143.1034%"; crypto rows are already 2dp — keep both consistent.
+  const pct = parseFloat(String(item.change_percentage ?? '0').replace('%', ''));
   return {
     ticker: String(item.ticker || '').toUpperCase(),
     price: String(item.price ?? 0),
     change_amount: String(item.change_amount ?? 0),
-    change_percentage: String(item.change_percentage ?? '0%'),
+    change_percentage: Number.isFinite(pct) ? `${pct.toFixed(2)}%` : '0.00%',
     volume: String(item.volume ?? 0),
     market_cap: '',
     market_cap_rank: '',

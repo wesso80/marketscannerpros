@@ -110,29 +110,29 @@ export default function JarvisDailyPage() {
                 </dl>
               </Section>
 
-              <Section title="Look At First Today" subtitle="Where research time is best spent — not trade instructions">
+              <Section title="Look At First Today" subtitle="Where research time is best spent — not trade instructions" primary>
                 <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.85rem", lineHeight: 1.5 }}>
                   {r.lookAtFirst.map((a, i) => <li key={i} style={{ marginBottom: "0.3rem" }}><StatusPill label={a.kind} tone={a.kind === "risk" ? "red" : a.kind === "trigger" ? "blue" : a.kind === "crypto" ? "purple" : "green"} /> <b style={{ marginLeft: 6 }}>{a.title}</b> — <span style={{ color: "#CBD5E1" }}>{a.why}</span></li>)}
                   {!r.lookAtFirst.length && <li style={muted}>No priority items surfaced.</li>}
                 </ol>
               </Section>
 
-              <Section title="Top Research Candidates" subtitle="Ranked by setup quality, not by move size. Largest mover ≠ best candidate.">
+              <Section title="Top Research Candidates" subtitle="Ranked by setup quality, not by move size. Largest mover ≠ best candidate." primary>
                 <CandidatesTable rows={r.candidates} />
               </Section>
 
-              <Section title="What May Move Next" subtitle="Pre-move setups — require confirmation; may never trigger">
+              <Section title="What May Move Next" subtitle="Pre-move setups — require confirmation; may never trigger" primary>
                 <NextTable rows={r.whatMayMoveNext} />
               </Section>
 
-              <Section title="Lifecycle Changes" subtitle="Persisted watchlist transitions recorded this session">
+              <Section title="Lifecycle Changes" subtitle="Persisted watchlist transitions recorded this session" count={r.lifecycle.transitions.length}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
                   {Object.entries(r.lifecycle.counts).filter(([, v]) => v > 0).map(([k, v]) => <StatusPill key={k} label={`${k} ${v}`} tone={k === "CONFIRMED_MOVE" ? "green" : k === "NEAR_TRIGGER" ? "blue" : k === "FAILED" || k === "DETERIORATING" ? "red" : k === "EXPIRED" ? "neutral" : "purple"} />)}
                 </div>
                 <LifecycleList rows={r.lifecycle.transitions} />
               </Section>
 
-              <Section title="Themes & Rotation" subtitle="Genuine group moves vs single-name noise">
+              <Section title="Themes & Rotation" subtitle="Genuine group moves vs single-name noise" count={r.themes.equity.groups.length + r.themes.crypto.groups.length}>
                 <div style={{ fontSize: "0.85rem", lineHeight: 1.6 }}>
                   <div><b>Leading:</b> {r.themes.equity.leading.join(", ") || "n/a"}</div>
                   <div><b>Improving:</b> <span style={{ color: "#6EE7B7" }}>{r.themes.equity.improving.join(", ") || "none"}</span></div>
@@ -143,7 +143,7 @@ export default function JarvisDailyPage() {
                 <ThemesTable title="Crypto groups" rows={r.themes.crypto.groups} />
               </Section>
 
-              <Section title="What Moved" subtitle="Session context — magnitude, not quality">
+              <Section title="What Moved" subtitle="Session context — magnitude, not quality" defaultOpen={false}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "0.75rem" }}>
                   <Movers title="Equity strength" rows={r.whatMoved.equities.strength} />
                   <Movers title="Equity weakness" rows={r.whatMoved.equities.weakness} />
@@ -158,7 +158,7 @@ export default function JarvisDailyPage() {
                 <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.1rem", fontSize: "0.8rem", color: "#CBD5E1" }}>{r.whatMoved.crossAsset.map((l) => <li key={l.label}><b>{l.label}:</b> {l.value}</li>)}</ul>
               </Section>
 
-              <Section title="Rejected Noise" subtitle="Big moves that did not qualify — and why">
+              <Section title="Rejected Noise" subtitle="Big moves that did not qualify — and why" defaultOpen={false} count={r.rejected.length}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr><th style={th}>Symbol</th><th style={th}>Class</th><th style={th}>Move</th><th style={th}>Why rejected</th></tr></thead>
                   <tbody>{r.rejected.map((x) => <tr key={x.symbol}><td style={{ ...td, fontWeight: 700 }}>{x.symbol}</td><td style={{ ...td, color: "#94A3B8" }}>{x.assetClass}</td><td style={td}>{x.change}</td><td style={{ ...td, color: "#CBD5E1" }}>{x.detail}</td></tr>)}</tbody>
@@ -166,7 +166,7 @@ export default function JarvisDailyPage() {
                 {!r.rejected.length && <div style={muted}>None.</div>}
               </Section>
 
-              <Section title="Probably Noise" subtitle="Ignore unless something changes">
+              <Section title="Probably Noise" subtitle="Ignore unless something changes" defaultOpen={false} count={r.probablyNoise.length}>
                 <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem", color: "#CBD5E1", lineHeight: 1.5 }}>{r.probablyNoise.map((x, i) => <li key={i}>{x}</li>)}</ul>
                 {!r.probablyNoise.length && <div style={muted}>None.</div>}
               </Section>
@@ -215,8 +215,20 @@ function Fragment2({ label, value }: { label: string; value: string }) {
   return (<><dt style={{ color: "#94A3B8", fontWeight: 600 }}>{label}</dt><dd style={{ margin: 0, color: "#E5E7EB" }}>{value}</dd></>);
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
-  return (<AdminCard className="mb-4"><SectionTitle title={title} subtitle={subtitle} /><div style={{ marginTop: "0.6rem" }}>{children}</div></AdminCard>);
+function Section({ title, subtitle, children, primary = false, defaultOpen = true, count }: { title: string; subtitle: string; children: React.ReactNode; primary?: boolean; defaultOpen?: boolean; count?: number }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <AdminCard className="mb-4">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
+        <div>
+          {primary ? <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.3 }}>{title}</h2> : <SectionTitle title={`${title}${count !== undefined ? ` (${count})` : ""}`} subtitle={subtitle} />}
+          {primary && <div style={{ ...muted, marginTop: "0.2rem" }}>{subtitle}</div>}
+        </div>
+        {!primary && <button type="button" style={btn} aria-expanded={open} onClick={() => setOpen((o) => !o)}>{open ? "Collapse" : "Expand"}</button>}
+      </div>
+      {(primary || open) && <div style={{ marginTop: "0.6rem" }}>{children}</div>}
+    </AdminCard>
+  );
 }
 
 function CandidatesTable({ rows }: { rows: CandidateRow[] }) {

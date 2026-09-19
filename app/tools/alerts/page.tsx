@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
 import AlertsWidget from "@/components/AlertsWidget";
 import { useUserTier } from "@/lib/useUserTier";
@@ -191,6 +191,15 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     return filtered.slice(0, 12);
   }, [activeAlerts, consoleTab]);
 
+  // If every alert is smart/strategy, an empty "Basic" default contradicts the "N active" header — open the tab that has rows.
+  const autoTabbedRef = useRef(false);
+  useEffect(() => {
+    if (autoTabbedRef.current || activeAlerts.length === 0) return;
+    autoTabbedRef.current = true;
+    const hasBasic = activeAlerts.some((a) => !a.is_smart_alert && !a.is_multi_condition && !(a.condition_type ?? '').startsWith('strategy_') && !(a.condition_type ?? '').startsWith('scanner_'));
+    if (!hasBasic) setConsoleTab('smart');
+  }, [activeAlerts]);
+
   const toggleAlert = async (alert: AlertItem) => {
     await fetch('/api/alerts', {
       method: 'PUT',
@@ -345,7 +354,13 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           <div className="rounded-xl border border-slate-800 bg-slate-950/25">
             <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-100">Active Alerts Console</div>
             {alertRows.length === 0 ? (
-              <div className="px-4 py-5 text-sm text-slate-400">No active alerts. Use Quick Alert or New Alert to arm your radar.</div>
+              <div className="px-4 py-5 text-sm text-slate-400">
+                {activeAlerts.length === 0
+                  ? 'No active alerts. Use Quick Alert or New Alert to arm your radar.'
+                  : consoleTab === 'triggered'
+                    ? 'No alerts have triggered yet.'
+                    : `No ${consoleTab} alerts — ${activeAlerts.length} active alert${activeAlerts.length === 1 ? '' : 's'} are under the other filters.`}
+              </div>
             ) : (
               <div className="max-h-[520px] overflow-auto">
                 {alertRows.map((alert) => {
