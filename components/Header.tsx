@@ -14,9 +14,8 @@ import { primaryNavTools, secondaryToolLinks } from '@/lib/toolWorkflows';
    Mobile: Hamburger → flat drawer with same links
    ════════════════════════════════════════════════════════════════════════════════════ */
 
+// MSP Radar is a paid surface at /tools/msp-radar; like Golden Egg it is listed for everyone and gates inside the page.
 const SURFACES = primaryNavTools;
-// MSP Radar lives under /admin today (owner-only report); shown only to admins until a customer-facing route exists.
-const RADAR_SURFACE = { href: '/admin/jarvis/daily', label: 'MSP Radar' };
 
 const MORE_TOOLS = [
   { href: '/tools/terminal', label: 'Terminal' },
@@ -31,9 +30,9 @@ export default function Header() {
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const pathname = usePathname();
-  const { isLoggedIn, isLoading: tierLoading, tier, isAdmin } = useUserTier();
+  const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
   const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
-  const surfaces = isAdmin ? [RADAR_SURFACE, ...SURFACES] : SURFACES;
+  const surfaces = SURFACES;
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : '';
@@ -87,13 +86,13 @@ export default function Header() {
         </Link>
 
         {/* ── Desktop Nav (md+) ── */}
-        <nav className="msp-desktop-nav items-center gap-1 flex-1 text-sm">
+        <nav className="msp-desktop-nav items-center gap-0.5 flex-1 text-sm">
           {/* Surface buttons — always visible */}
           {surfaces.map(s => (
             <Link
               key={s.href}
               href={s.href}
-              className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
+              className={`px-2 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
                 isActive(s.href)
                   ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
                   : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'

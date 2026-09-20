@@ -157,11 +157,11 @@ describe('formatting', () => {
   });
   it('email html is a short briefing with link, top 5 only, and disclaimer', () => {
     const rep = buildDailyReport(inputs());
-    const html = renderEmailHtml(rep, 'https://marketscannerpros.app/admin/jarvis/daily?date=2026-09-17');
+    const html = renderEmailHtml(rep, 'https://marketscannerpros.app/tools/msp-radar?date=2026-09-17');
     expect(html).toContain('Market in 30 seconds');
     expect(html).toContain('Look at first today');
     expect(html).toContain('Open full report');
-    expect(html).toContain('/admin/jarvis/daily?date=2026-09-17');
+    expect(html).toContain('/tools/msp-radar?date=2026-09-17');
     expect(html).toContain('Educational research only');
     expect(html).not.toContain('Rejected');
   });

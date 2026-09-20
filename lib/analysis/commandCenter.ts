@@ -99,11 +99,13 @@ export interface RegimeDescription {
   summary: string;
 }
 
+// Derived from the regime engine (stress / vol-expansion / stale-signal state), NOT from breadth. Named so it cannot be
+// read as contradicting the breadth-based "Risk tone" panel (e.g. "Low risk environment" beside "Risk-off conditions").
 const RISK_LEVEL_LABEL: Record<string, string> = {
-  low: 'Low risk environment',
-  moderate: 'Moderate risk environment',
-  elevated: 'Elevated risk environment',
-  extreme: 'Extreme risk environment',
+  low: 'Low volatility stress',
+  moderate: 'Moderate volatility stress',
+  elevated: 'Elevated volatility stress',
+  extreme: 'Extreme volatility stress',
 };
 
 export function describeRegime(current: RegimeLike | null, previousRegime?: string | null): RegimeDescription {
@@ -111,7 +113,7 @@ export function describeRegime(current: RegimeLike | null, previousRegime?: stri
     return {
       regimeLabel: 'Unknown',
       stance: 'unknown',
-      riskLabel: 'Risk environment unavailable',
+      riskLabel: 'Volatility stress unavailable',
       changed: false,
       previousLabel: null,
       stale: true,
@@ -120,7 +122,7 @@ export function describeRegime(current: RegimeLike | null, previousRegime?: stri
   }
   const regimeLabel = REGIME_LABEL[current.regime] ?? current.regime;
   const stance = regimeToStance(current.regime);
-  const riskLabel = RISK_LEVEL_LABEL[(current.riskLevel ?? '').toLowerCase()] ?? 'Risk environment unclassified';
+  const riskLabel = RISK_LEVEL_LABEL[(current.riskLevel ?? '').toLowerCase()] ?? 'Volatility stress unclassified';
   const changed = Boolean(previousRegime && previousRegime !== current.regime);
   const previousLabel = previousRegime ? (REGIME_LABEL[previousRegime] ?? previousRegime) : null;
   const stale = Boolean(current.signals?.some((s) => s.stale));

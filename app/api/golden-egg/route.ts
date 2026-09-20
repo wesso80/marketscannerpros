@@ -290,7 +290,7 @@ function buildPayload(
   if (permission !== 'TRADE') {
     if (timeConfluenceHardConflict) flipConditions.push({ id: 'f6', text: `Time confluence is ${tcData!.direction} while the setup is ${direction.toLowerCase()} — wait for timing to agree or for the conflict to clear`, severity: 'must' });
     if (macroRegime?.riskState === 'risk_off') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
-    if (structureScore < 60) flipConditions.push({ id: 'f1', text: `Price needs to reclaim ${direction === 'SHORT' ? 'below' : 'above'} key moving averages`, severity: 'must' });
+    if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options flow needs to confirm direction (P/C currently ${opts.putCallRatio.toFixed(2)})`, severity: 'should' });
     if (flowScore < 50 && cryptoDerivs) flipConditions.push({ id: 'f7', text: `Crypto derivatives are crowded (funding ${cryptoDerivs.fundingRatePercent.toFixed(4)}%) — wait for positioning to cool or confirm with price`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
@@ -498,8 +498,8 @@ function buildPayload(
       enabled: true,
       verdict: derivVerdict,
       highlights: [
-        { label: 'Funding Rate', value: `${cryptoDerivs.fundingRatePercent >= 0 ? '+' : ''}${cryptoDerivs.fundingRatePercent.toFixed(4)}%` },
-        { label: 'Annualized', value: `${cryptoDerivs.annualizedFunding >= 0 ? '+' : ''}${cryptoDerivs.annualizedFunding.toFixed(1)}%` },
+        { label: 'Funding Rate (median venue, per ~8h interval)', value: `${cryptoDerivs.fundingRatePercent >= 0 ? '+' : ''}${cryptoDerivs.fundingRatePercent.toFixed(4)}%` },
+        { label: 'Annualized (×3×365)', value: `${cryptoDerivs.annualizedFunding >= 0 ? '+' : ''}${cryptoDerivs.annualizedFunding.toFixed(1)}%` },
         { label: 'Open Interest', value: fmtOI },
         { label: 'Perp Volume 24h', value: fmtVol },
         { label: 'Exchanges', value: `${cryptoDerivs.exchanges}` },
@@ -583,7 +583,8 @@ function buildPayload(
     }
   }
   if (dveReading?.trap.detected) narrativeRisks.push('DVE trap detected — false breakout risk elevated.');
-  if (dveReading && dveReading.exhaustion.level > 0.6) narrativeRisks.push(`Exhaustion risk ${(dveReading.exhaustion.level * 100).toFixed(0)}% — momentum may be fading.`);
+  // DVE exhaustion.level is a 0–100 score (label HIGH ≥ 60); previously treated as 0–1 → "Exhaustion risk 7000%".
+  if (dveReading && dveReading.exhaustion.level >= 60) narrativeRisks.push(`Exhaustion risk ${dveReading.exhaustion.label} (${dveReading.exhaustion.level}/100) — momentum may be fading.`);
   if (tcData?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
   if (cryptoDerivs && cryptoDerivs.fundingRatePercent > 0.05) narrativeRisks.push('Extreme positive funding — long squeeze risk if price drops.');
   if (cryptoDerivs && cryptoDerivs.fundingRatePercent < -0.03) narrativeRisks.push('Negative funding — short squeeze risk if price rises.');
@@ -955,14 +956,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch core data in parallel — time confluence first, then MPE uses its data
+    // Fetch core data in parallel — time confluence first, then MPE uses its data.
+    // The confluence agent infers asset class from the symbol string alone (ARB/NEAR/INJ read as equities), so pass an
+    // explicit crypto hint; otherwise decompression targets came from the wrong instrument (ARB → $29.74 vs $0.20 price).
+    const tcSymbol = assetClass === 'crypto' ? `${symbol.replace(/[-/]?(USDT|USD)$/i, '')}USD` : symbol;
     const [priceData, tcData, macroRegime] = await Promise.all([
       fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval }),
-      fetchTimeConfluence(symbol),
+      fetchTimeConfluence(tcSymbol),
       fetchMacroRegime(),
     ]);
 
-    // MPE uses tcData to avoid duplicate scanHierarchical call
+    // MPE uses tcData to avoid duplicate scanHierarchical call (it also fetches indicators by the plain symbol)
     const mpeData = await fetchMPE(symbol, assetClass, tcData);
 
     if (!priceData) {

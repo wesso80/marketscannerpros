@@ -213,8 +213,9 @@ export default function DashboardPage() {
   // Canonical research queue — identical source, score and order to Scanner's ranked mode.
   const ranked = useRankedQueue('daily');
   // Adapter kept so the existing panels below read the same shape they always did.
-  type CachedSymbol = { symbol: string; score: number; direction: string; price: number; changePct: number; rsi: number; adx: number; type: string };
-  const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price ?? 0, changePct: r.changePct ?? 0, rsi: 0, adx: 0, type: r.assetClass });
+type CachedSymbol = { symbol: string; score: number; direction: string; price: number; changePct: number | null; rsi: number | null; adx: number | null; type: string };
+const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price ?? 0, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
+const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
   const cached = useMemo(() => ({
     equity: ranked.equity.map(toCached),
     crypto: ranked.crypto.map(toCached),
@@ -399,7 +400,7 @@ export default function DashboardPage() {
                   const isFocal = idx === 0;
                   if (item.kind === 'cached') {
                     const row = item.row;
-                    const moveColor = row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
+                    const moveColor = row.changePct === null ? 'var(--msp-text-muted)' : row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
                     const biasLabel = row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias';
                     const biasTone: 'bull' | 'bear' | 'neutral' = row.direction === 'bullish' ? 'bull' : row.direction === 'bearish' ? 'bear' : 'neutral';
                     return (
@@ -428,11 +429,11 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-3 gap-2">
                           <MetricCol label="Score" value={row.score} />
                           <MetricCol label="Price" value={fmtPrice(row.price)} align="right" />
-                          <MetricCol label="Move" value={`${row.changePct >= 0 ? '+' : ''}${row.changePct.toFixed(2)}%`} tone={moveColor} align="right" />
+                          <MetricCol label="Last bar" value={fmtMove(row.changePct)} tone={moveColor} align="right" />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <MagnitudeBar value={row.score} max={100} color="var(--msp-accent-dim)" height={3} />
-                          <MagnitudeBar value={row.changePct} max={10} color={moveColor} height={2} />
+                          <MagnitudeBar value={row.changePct ?? 0} max={10} color={moveColor} height={2} />
                         </div>
                         <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Golden Egg</div>
                       </button>
@@ -531,11 +532,11 @@ export default function DashboardPage() {
             <div className="space-y-1.5">
               {/* High ADX = trending (expansion); low ADX = compression candidate */}
               {(cached.all.slice(0, 5) as CachedSymbol[])
-                .sort((a, b) => Math.abs(b.adx) - Math.abs(a.adx))
+                .sort((a, b) => Math.abs(b.adx ?? -1) - Math.abs(a.adx ?? -1))
                 .slice(0, 4)
                 .map((r: CachedSymbol) => {
-                  const phase = r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
-                  const phaseTone: 'bull' | 'warn' | 'info' = r.adx >= 30 ? 'bull' : r.adx >= 20 ? 'warn' : 'info';
+                  const phase = r.adx === null ? 'ADX unavailable' : r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
+                  const phaseTone: 'bull' | 'warn' | 'info' = r.adx !== null && r.adx >= 30 ? 'bull' : r.adx !== null && r.adx >= 20 ? 'warn' : 'info';
                   return (
                     <button
                       key={`vol-${r.symbol}`}
@@ -547,7 +548,7 @@ export default function DashboardPage() {
                     >
                       <span style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>{r.symbol}</span>
                       <div className="flex items-center gap-2">
-                        <span style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', fontVariantNumeric: 'tabular-nums' }}>ADX {Math.round(r.adx)}</span>
+                        <span style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', fontVariantNumeric: 'tabular-nums' }}>ADX {r.adx === null ? 'n/a' : Math.round(r.adx)}</span>
                         <DSBadge tone={phaseTone}>{phase}</DSBadge>
                       </div>
                     </button>
@@ -575,7 +576,7 @@ export default function DashboardPage() {
               <>
                 <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px' }}>
                   <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>Regime context</div>
-                  <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()} · {regime.data.riskLevel} risk environment</div>
+                  <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()} · {regime.data.riskLevel} volatility stress</div>
                 </div>
                 <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
                   <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>What to check</div>
@@ -703,7 +704,7 @@ export default function DashboardPage() {
               <button key={r.symbol} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md bg-slate-950/30 px-2 py-1.5 text-xs text-left cursor-pointer hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" style={{ background: 'var(--msp-card-2)' }} onClick={() => openGoldenEgg(r.symbol)}>
                 <div className="flex items-center justify-between gap-2">
                   <span style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{r.symbol}</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums', color: r.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 500 }}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', color: r.changePct === null ? 'var(--msp-text-muted)' : r.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', fontWeight: 500 }}>{fmtMove(r.changePct)}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2" style={{ fontSize: 11, color: 'var(--msp-text-muted)' }}>
                   <span style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? 'Bullish' : r.direction === 'bearish' ? 'Bearish' : 'Neutral'} · {r.score}</span>

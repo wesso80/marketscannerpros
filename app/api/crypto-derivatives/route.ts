@@ -29,7 +29,8 @@ function normRow(t: DerivativeTicker) {
     basis: t.basis ?? 0,
     spread: t.spread ?? 0,
     fundingRate: t.funding_rate ?? 0,
-    fundingPct: (t.funding_rate ?? 0) * 100,
+    // CoinGecko funding_rate is already percent per interval (BTC median ≈ 0.005%); do not multiply by 100.
+    fundingPct: t.funding_rate ?? 0,
     openInterest: t.open_interest ?? 0,
     volume24h: t.volume_24h ?? 0,
     lastTradedAt: t.last_traded_at ?? 0,
@@ -37,8 +38,10 @@ function normRow(t: DerivativeTicker) {
 }
 
 function aggregateFunding(rows: ReturnType<typeof normRow>[]) {
-  const rates = rows.map(r => r.fundingPct).filter(r => !isNaN(r));
-  const avg = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+  // Median across venues — a few illiquid venues report outliers (e.g. 9.5%/interval) that made the mean impossible.
+  const rates = rows.map(r => r.fundingPct).filter(r => !isNaN(r)).sort((a, b) => a - b);
+  const n = rates.length;
+  const avg = n ? (n % 2 ? rates[(n - 1) / 2] : (rates[n / 2 - 1] + rates[n / 2]) / 2) : 0;
   const ann = avg * 3 * 365;
   const min = rates.length ? Math.min(...rates) : 0;
   const max = rates.length ? Math.max(...rates) : 0;

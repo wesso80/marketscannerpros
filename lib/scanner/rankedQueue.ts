@@ -88,7 +88,10 @@ export interface RankedQueueRow {
   mspScore: number;
   direction: string;
   price: number | null;
+  /** Last-bar % change (bar = the interval the row was scanned on). Null when unavailable — never a fabricated 0. */
   changePct: number | null;
+  adx: number | null;
+  rsi: number | null;
   lifecycle: LifecycleState;
   confidence: number | null;
   setup: string | null;
@@ -101,6 +104,19 @@ export function mergeScanResults(equity: ScanResult[] | undefined, crypto: ScanR
   return [...eq, ...cr];
 }
 
+/** Explicit change field when the API provides one; otherwise the last-bar close-to-close change from chartData; else null. */
+function lastBarChangePct(r: RankedResult): number | null {
+  const explicit = (r as any).changePct ?? (r as any).changePercent;
+  if (typeof explicit === 'number' && Number.isFinite(explicit)) return explicit;
+  const candles = (r as any).chartData?.candles as Array<{ c: number }> | undefined;
+  if (Array.isArray(candles) && candles.length >= 2) {
+    const last = Number(candles[candles.length - 1]?.c);
+    const prev = Number(candles[candles.length - 2]?.c);
+    if (Number.isFinite(last) && Number.isFinite(prev) && prev > 0) return ((last - prev) / prev) * 100;
+  }
+  return null;
+}
+
 /** Scanner's default ranked view: all results, sorted by MSP score desc. Deterministic tiebreak on symbol. */
 export function buildRankedQueue(results: RankedResult[], regime: string): RankedQueueRow[] {
   return results
@@ -111,7 +127,9 @@ export function buildRankedQueue(results: RankedResult[], regime: string): Ranke
       mspScore: computeMspScore(r, regime),
       direction: r.direction ?? 'neutral',
       price: typeof r.price === 'number' ? r.price : null,
-      changePct: typeof (r as any).changePct === 'number' ? (r as any).changePct : typeof (r as any).changePercent === 'number' ? (r as any).changePercent : null,
+      changePct: lastBarChangePct(r),
+      adx: typeof r.adx === 'number' && Number.isFinite(r.adx) ? r.adx : null,
+      rsi: typeof r.rsi === 'number' && Number.isFinite(r.rsi) ? r.rsi : null,
       lifecycle: deriveLifecycleState(r, regime),
       confidence: typeof r.confidence === 'number' ? r.confidence : null,
       setup: r.setup ?? null,

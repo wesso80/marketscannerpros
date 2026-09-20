@@ -128,7 +128,17 @@ function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
   if ((r.scoreQuality?.missingEvidencePenalty ?? 0) > 0 || (r.scoreQuality?.staleDataPenalty ?? 0) > 0 || (r.scoreQuality?.liquidityPenalty ?? 0) > 0 || r.rankWarnings?.length) return 'DEGRADED';
   if (r.confidence == null || r.score == null) return 'DEGRADED';
   if (r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length) return 'DEGRADED';
+  if (barIntervalMismatch(r)) return 'DEGRADED';
   return 'GOOD';
+}
+
+/** Crypto 'daily' rows are computed on 4h CoinGecko bars; flag it so RSI/ATR are not read as daily-bar values. */
+function barIntervalMismatch(r: ScanResult): string | null {
+  const iv = r.barInterval;
+  if (!iv) return null;
+  const tf = String(r.timeframe || '').toLowerCase();
+  const same = iv === tf || (iv === '1d' && (tf === 'daily' || tf === '1d')) || (iv === '7d' && tf === 'weekly');
+  return same ? null : `indicators computed on ${iv} bars (not ${tf})`;
 }
 
 function rankedTrustDetail(r: ScanResult): string {
@@ -139,6 +149,7 @@ function rankedTrustDetail(r: ScanResult): string {
     (r.scoreQuality?.missingEvidencePenalty ?? 0) > 0 ? `missing evidence penalty ${r.scoreQuality?.missingEvidencePenalty}` : null,
     (r.scoreQuality?.staleDataPenalty ?? 0) > 0 ? `stale data penalty ${r.scoreQuality?.staleDataPenalty}` : null,
     (r.scoreQuality?.liquidityPenalty ?? 0) > 0 ? `liquidity penalty ${r.scoreQuality?.liquidityPenalty}` : null,
+    barIntervalMismatch(r),
     ...(r.rankWarnings ?? []),
   ].filter(Boolean) as string[];
   if (qualityWarnings.length) return qualityWarnings.join(' · ');

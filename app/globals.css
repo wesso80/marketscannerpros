@@ -262,11 +262,11 @@ a:hover {
 }
 
 /* Explicit responsive nav — immune to Tailwind layer ordering issues.
-   The logged-in desktop nav needs ~1300px; below that the drawer is used so no link is clipped. */
+   The logged-in desktop nav (7 surfaces + account controls) needs ~1400px; below that the drawer is used so no link is clipped. */
 .msp-desktop-nav {
   display: none !important;
 }
-@media (min-width: 1366px) {
+@media (min-width: 1440px) {
   .msp-desktop-nav {
     display: flex !important;
   }
@@ -274,7 +274,7 @@ a:hover {
 .msp-mobile-nav {
   display: flex !important;
 }
-@media (min-width: 1366px) {
+@media (min-width: 1440px) {
   .msp-mobile-nav {
     display: none !important;
   }

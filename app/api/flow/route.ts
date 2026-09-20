@@ -274,7 +274,8 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
     : null;
 
   const openInterestUsd = Number(best?.open_interest || 0) || undefined;
-  const fundingRate = Number.isFinite(best?.funding_rate) ? Number(best!.funding_rate) * 100 : undefined;
+  // CoinGecko funding_rate is already percent per interval — no ×100.
+  const fundingRate = Number.isFinite(best?.funding_rate) ? Number(best!.funding_rate) : undefined;
   const basisPercent = Number.isFinite(best?.basis) && Number.isFinite(best?.index) && Number(best!.index) > 0
     ? (Number(best!.basis) / Number(best!.index)) * 100
     : undefined;

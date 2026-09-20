@@ -1019,7 +1019,8 @@ export interface DerivativeTicker {
   index: number;            // Underlying asset price
   basis: number;            // Difference between derivative and index
   spread: number;           // Bid-ask spread
-  funding_rate: number;     // Funding rate (as decimal, e.g. 0.0001 = 0.01%)
+  funding_rate: number;     // Funding rate in PERCENT per funding interval (e.g. 0.01 = 0.01%/8h). Verified against live
+                            // /derivatives payloads: BTC median ≈ 0.005, single outlier venues report values like 9.5.
   open_interest: number;    // Open interest in USD
   volume_24h: number;       // 24h volume in USD
   last_traded_at: number;   // Unix timestamp
@@ -1127,11 +1128,12 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
   }
 
   return Object.entries(grouped).map(([symbol, exchanges]) => {
-    // Average funding rate across exchanges
-    const rates = exchanges.map(e => e.funding_rate).filter(r => r !== null && !isNaN(r));
+    // MEDIAN funding across venues. CoinGecko's funding_rate is already percent per interval, and a handful of illiquid
+    // venues report absurd values (e.g. 9.5), so mean×100 produced impossible readings (BTC "+8.66%", annualised +9486%).
+    const rates = exchanges.map(e => e.funding_rate).filter((r): r is number => typeof r === 'number' && !isNaN(r)).sort((a, b) => a - b);
     const fundingRateMissing = rates.length === 0;
-    const avgRate = fundingRateMissing ? 0 : rates.reduce((a, b) => a + b, 0) / rates.length;
-    const ratePercent = avgRate * 100;
+    const ratePercent = fundingRateMissing ? 0 : rates.length % 2 ? rates[(rates.length - 1) / 2] : (rates[rates.length / 2 - 1] + rates[rates.length / 2]) / 2;
+    const avgRate = ratePercent / 100; // decimal form for legacy consumers
     const annualized = ratePercent * 3 * 365; // 3 funding periods per day
 
     let sentiment: 'Bullish' | 'Bearish' | 'Neutral';

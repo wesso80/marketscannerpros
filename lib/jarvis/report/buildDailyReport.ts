@@ -7,7 +7,7 @@ import type { MorningReport, Scored } from '../radar/types';
 import type { WatchEntry, WatchStatus } from '../radar/store';
 import { evaluateHealth, stage2Coverage } from './reportHealth';
 import type { AttentionItem, BuildInputs, CandidateRow, DailyReport, Extension, LifecycleSection, LifecycleTransition, MarketLine, MoverLine, NextMoveRow, RejectedRow, ThemeRow, ThemesSection, WhatMoved } from './types';
-import { DISCLAIMER, REPORT_VERSION } from './types';
+import { CONDITIONAL_CAVEAT_PREFIX, DISCLAIMER, REPORT_VERSION } from './types';
 
 const sp = (n: number | null | undefined, d = 1) => (n === null || n === undefined || !Number.isFinite(n) ? 'n/a' : `${n > 0 ? '+' : ''}${n.toFixed(d)}%`);
 const f1 = (n: number | null | undefined, d = 1) => (n === null || n === undefined || !Number.isFinite(n) ? 'n/a' : n.toFixed(d));
@@ -84,14 +84,17 @@ function buildThirty(r: MorningReport): MarketLine[] {
     { label: 'Volatility', value: `VXX ${find('VXX')} · ${r.counts.meaningfulMovers} meaningful movers, ${r.counts.unusual} unusual` },
     { label: 'Dollar', value: `UUP ${find('UUP')} · JPY ${find('FXY')} · EUR ${find('FXE')}` },
     { label: 'Metals / commodities', value: `Gold ${find('GLD')} · Silver ${find('SLV')} · Copper ${find('CPER')} · Oil ${find('USO')}` },
-    { label: 'Themes', value: r.themes.filter((t) => t.verdict === 'GENUINE_GROUP_MOVE').slice(0, 4).map((t) => `${t.name} ${t.members > 0 ? `${Math.round((t.pctUp / 100) * t.members)}/${t.members}` : ''} ${sp(t.medianRet1, 1)}`).join('; ') || 'no genuine group move' },
+    { label: 'Themes', value: r.themes.filter((t) => t.verdict === 'GENUINE_GROUP_MOVE').slice(0, 4).map((t) => `${t.name} ${t.members > 0 ? `${Math.round((t.pctUp / 100) * t.members)}/${t.members} up` : ''} median ${sp(t.medianRet1, 1)}`).join('; ') || 'no genuine group move' },
   ];
 }
 
 function buildCandidates(r: MorningReport, wl: Map<string, WatchEntry>): CandidateRow[] {
   return r.shortlist.slice(0, 10).map((c) => ({
     rank: c.rank, symbol: c.symbol, name: c.name, assetClass: c.assetClass, setupType: c.opportunityType ?? c.status, score: c.score, extension: extensionOf(c.earlyOrExtended),
-    ret1: c.ret1, ret5: c.ret5, velocity: c.velocity.slice(0, 2).join(' '), whySurfaced: c.whyFlagged, caveat: c.conflicting[0] ?? c.whatWouldReduceInterest.split(';')[0], catalyst: c.catalyst.startsWith('none') ? 'none identified' : c.catalyst.split(' | ')[0],
+    ret1: c.ret1, ret5: c.ret5, velocity: c.velocity.slice(0, 2).join(' '), whySurfaced: c.whyFlagged,
+    // Observed conflicting factor when one exists; otherwise the forward-looking condition, prefixed so it cannot read as an observation.
+    caveat: c.conflicting[0] ?? `${CONDITIONAL_CAVEAT_PREFIX}${c.whatWouldReduceInterest.split(';')[0]}`,
+    catalyst: c.catalyst.startsWith('none') ? 'none identified' : c.catalyst.split(' | ')[0],
     lifecycle: wl.get(`${c.assetClass === 'crypto' ? 'crypto' : 'equity'}:${c.symbol}`)?.status ?? null,
   }));
 }
@@ -103,17 +106,26 @@ function buildNext(r: MorningReport, wl: Map<string, WatchEntry>): NextMoveRow[]
     const price = e?.state?.metrics?.price as number | undefined;
     const dist = s.triggerLevel !== null && price ? ((s.triggerLevel - price) / price) * 100 : (typeof s.distToHi20Pct === 'number' ? -s.distToHi20Pct : null);
     const inval = e?.state?.invalidationLevel ?? null;
-    return { symbol: s.symbol, assetClass: s.assetClass, score: s.score, stage: s.stage, lifecycle: e?.status ?? null, triggerLevel: s.triggerLevel, distanceToTriggerPct: dist === null ? null : Math.round(dist * 10) / 10, reasons: s.signals.slice(0, 4), confirmation: `Requires a close above ${lvl(s.triggerLevel)} with volume ≥1.5× 20d average${s.assetClass === 'crypto' ? ' and funding staying neutral' : ''}.`, invalidation: inval !== null ? `Setup weakens on a close below ${lvl(inval)} (EMA50 / 20d low reference).${s.penalties.length ? ' Caveat: ' + s.penalties.join('; ') : ''}` : s.penalties.length ? `Caveat: ${s.penalties.join('; ')}` : 'No penalty flags recorded.' };
+    const penalties = s.penalties.length ? ` Caveat: ${s.penalties.join('; ')}` : '';
+    const alreadyConfirmed = e?.status === 'CONFIRMED_MOVE';
+    const confirmation = alreadyConfirmed
+      ? `Already CONFIRMED_MOVE in the persisted watchlist — treat as follow-through, not a pre-move setup. Continuation needs a hold above ${lvl(s.triggerLevel)} on volume ≥1.5× 20d average.`
+      : `Requires a close above ${lvl(s.triggerLevel)} with volume ≥1.5× 20d average${s.assetClass === 'crypto' ? ' and funding staying neutral' : ''}.`;
+    const invalidation = inval !== null
+      ? `Setup weakens on a close below ${lvl(inval)} (EMA50 / 20d low reference).${penalties}`
+      : `Invalidation reference not available — ${e ? 'no EMA50 / 20d low recorded for this entry' : 'symbol not yet on the persisted watchlist'}.${penalties}`;
+    return { symbol: s.symbol, assetClass: s.assetClass, score: s.score, stage: s.stage, lifecycle: e?.status ?? null, triggerLevel: s.triggerLevel, distanceToTriggerPct: dist === null ? null : Math.round(dist * 10) / 10, reasons: s.signals.slice(0, 4), confirmation, invalidation };
   });
 }
 
 function buildThemes(r: MorningReport): ThemesSection {
-  const row = (t: MorningReport['themes'][number]): ThemeRow => ({ name: t.name, members: t.members, up: Math.round((t.pctUp / 100) * t.members), pctUp: t.pctUp, medianMove: sp(t.medianRet1, 1), verdict: t.verdict, confirmation: t.confirmation, early: t.early, extended: t.extended });
+  const uniq = (xs: string[]) => [...new Set(xs)];
+  const row = (t: MorningReport['themes'][number]): ThemeRow => ({ name: t.name, members: t.members, up: Math.round((t.pctUp / 100) * t.members), pctUp: t.pctUp, medianMove: sp(t.medianRet1, 1), verdict: t.verdict, confirmation: t.confirmation, early: uniq(t.early), extended: uniq(t.extended) });
   const eqRows = r.themes.filter((t) => t.assetClass === 'equity').map(row), crRows = r.themes.filter((t) => t.assetClass === 'crypto').map(row);
   const sectors = r.rotation.sectors;
   return {
     equity: { leading: sectors.slice(0, 3).map((s) => `${s.ticker} ${s.label} (RS5 ${sp(s.rs5)})`), improving: r.rotation.newlyStrengthened.map((t) => { const s = sectors.find((x) => x.ticker === t); return s ? `${t} ${s.label} (rank ${s.rank20Prev} → ${s.rank5})` : t; }), deteriorating: r.rotation.lostLeadership.map((t) => { const s = sectors.find((x) => x.ticker === t); return s ? `${t} ${s.label} (rank ${s.rank20Prev} → ${s.rank5})` : t; }), groups: eqRows },
-    crypto: { context: `${r.rotation.crypto.leader24h} leading 24h; categories up: ${r.rotation.crypto.categoriesUp.slice(0, 4).map((c) => `${c.name} ${sp(c.change24h)}`).join(', ')}; down: ${r.rotation.crypto.categoriesDown.slice(0, 3).map((c) => `${c.name} ${sp(c.change24h)}`).join(', ')}`, groups: crRows },
+    crypto: { context: `${r.rotation.crypto.leader24h} leading 24h; CoinGecko categories by 24h market-cap change — up: ${r.rotation.crypto.categoriesUp.slice(0, 4).map((c) => `${c.name} ${sp(c.change24h)}`).join(', ')}; down: ${r.rotation.crypto.categoriesDown.slice(0, 3).map((c) => `${c.name} ${sp(c.change24h)}`).join(', ')}`, groups: crRows },
   };
 }
 

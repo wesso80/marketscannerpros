@@ -17,6 +17,7 @@ export type ToolWorkflow = {
 };
 
 export const primaryNavTools = [
+  { href: '/tools/msp-radar', label: 'MSP Radar' },
   { href: '/tools/command-center', label: 'Command Center' },
   { href: '/tools/scanner', label: 'Scanner' },
   { href: '/tools/golden-egg', label: 'Golden Egg' },
@@ -32,6 +33,7 @@ export const toolWorkflows: ToolWorkflow[] = [
     subtitle: 'Start with broad scans and market context.',
     outcome: 'A short list of symbols or markets worth researching further.',
     tools: [
+      { href: '/tools/msp-radar', label: 'MSP Radar', description: 'Daily Market Intelligence: regime, ranked research candidates, pre-move setups, and rotation — published once per US session.', tier: 'pro', role: 'primary' },
       { href: '/tools/scanner', label: 'Market Scanner', description: 'Ranked multi-factor scan for educational research scenarios.', tier: 'free', role: 'primary' },
       { href: '/tools/explorer', label: 'Markets', description: 'Macro, sector, breadth, and market-state context.', tier: 'free', role: 'primary' },
       { href: '/tools/explorer?tab=macro', label: 'Macro', description: 'Rates, economic calendar, and broad-risk backdrop.', tier: 'pro', role: 'advanced' },

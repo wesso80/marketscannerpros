@@ -33,7 +33,7 @@ export async function sendDailyReport(sessionDate: string, report: DailyReport, 
   const now = deps.now?.() ?? new Date();
   const log = deps.log ?? (() => undefined);
   const base = deps.baseUrl ?? env.JARVIS_REPORT_BASE_URL ?? 'https://marketscannerpros.app';
-  const url = `${base}/admin/jarvis/daily?date=${sessionDate}`;
+  const url = `${base}/tools/msp-radar?date=${sessionDate}`;
 
   if (report.status === 'FAILED') {
     await deps.store.markEmail(sessionDate, { status: 'SUPPRESSED_HEALTH', error: report.health.summary });

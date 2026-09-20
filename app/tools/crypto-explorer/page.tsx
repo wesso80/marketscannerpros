@@ -697,7 +697,7 @@ function CryptoDetailPageContent() {
                   {coinData.derivatives && (
                     <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                       <p className="text-[11px] uppercase text-slate-500">Derivatives Overlay</p>
-                      <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${(coinData.derivatives.funding_rate * 100).toFixed(4)}%` : 'N/A'}</p>
+                      <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${coinData.derivatives.funding_rate.toFixed(4)}% / interval` : 'N/A'}</p>
                       <p className="text-[11px] text-slate-300">Sentiment: {coinData.derivatives.funding_sentiment?.toUpperCase() || 'N/A'}</p>
                       <p className="text-[11px] text-slate-300">Open Interest: {formatNumber(coinData.derivatives.open_interest)}</p>
                     </div>

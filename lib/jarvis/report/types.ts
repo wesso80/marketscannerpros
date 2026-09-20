@@ -11,6 +11,19 @@ export type HealthStatus = 'NORMAL' | 'DEGRADED' | 'FAILED';
 export type EmailStatus = 'NOT_REQUESTED' | 'NO_RECIPIENT' | 'PENDING' | 'SENT' | 'FAILED' | 'SUPPRESSED_HEALTH';
 export type Extension = 'EARLY' | 'MID' | 'EXTENDED' | 'n/a';
 
+/**
+ * Candidate `caveat` is either an OBSERVED conflicting factor or a CONDITIONAL "what would reduce interest" clause.
+ * Conditional caveats are prefixed so they can never read as an observation (e.g. "volume fading" next to "volume 2.5×").
+ * Legacy persisted reports carry the unprefixed fallback phrases; `classifyCaveat` recognises them.
+ */
+export const CONDITIONAL_CAVEAT_PREFIX = 'Would reduce interest: ';
+const LEGACY_CONDITIONAL_CAVEAT = /^(Volume fading below 1× avg on continuation|Reclaim of EMA20 )/;
+export function classifyCaveat(caveat: string): { kind: 'observed' | 'conditional'; text: string } {
+  if (caveat.startsWith(CONDITIONAL_CAVEAT_PREFIX)) return { kind: 'conditional', text: caveat.slice(CONDITIONAL_CAVEAT_PREFIX.length) };
+  if (LEGACY_CONDITIONAL_CAVEAT.test(caveat)) return { kind: 'conditional', text: caveat };
+  return { kind: 'observed', text: caveat };
+}
+
 export interface HealthCheck { name: string; ok: boolean; detail: string; fatal: boolean }
 export interface ReportHealth {
   status: HealthStatus;

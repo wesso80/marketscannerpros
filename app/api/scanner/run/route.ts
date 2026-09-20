@@ -192,6 +192,8 @@ interface ScanResult {
   vwap?: number;
   avgVolume?: number;
   lastCandleTime?: string;
+  /** Actual bar interval the indicators were computed on (may differ from the requested timeframe label, e.g. crypto 'daily' → 4h CoinGecko bars). */
+  barInterval?: string;
   // Computed trade setup fields (populated by both cached and AV paths)
   confidence?: number;
   setup?: string;
@@ -332,7 +334,8 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
     const markPrice = Number(best.price || 0);
     const openInterestUsd = Number(best.open_interest || 0);
     const openInterestCoin = markPrice > 0 ? openInterestUsd / markPrice : 0;
-    const fundingRate = Number.isFinite(best.funding_rate) ? best.funding_rate * 100 : undefined;
+    // CoinGecko funding_rate is already percent per interval (BTC ≈ 0.005%/8h) — no ×100.
+    const fundingRate = Number.isFinite(best.funding_rate) ? best.funding_rate : undefined;
     const basisPercent = Number.isFinite(best.basis) && Number.isFinite(best.index) && best.index > 0
       ? (best.basis / best.index) * 100
       : undefined;
@@ -913,6 +916,17 @@ export async function POST(req: NextRequest) {
     }
 
     // CoinGecko OHLC candles (commercial plan)
+    /** Detect the actual bar spacing (median gap) so the response can state what interval the indicators used. */
+    function cryptoBarInterval(candles: Candle[]): string | undefined {
+      if (candles.length < 3) return undefined;
+      const gaps = candles.slice(1).map((c, i) => Date.parse(c.t) - Date.parse(candles[i].t)).filter((g) => Number.isFinite(g) && g > 0).sort((a, b) => a - b);
+      if (!gaps.length) return undefined;
+      const mins = Math.round(gaps[Math.floor(gaps.length / 2)] / 60000);
+      if (mins >= 1440) return `${Math.round(mins / 1440)}d`;
+      if (mins >= 60) return `${Math.round(mins / 60)}h`;
+      return `${mins}m`;
+    }
+
     async function fetchCryptoCoinGecko(symbol: string, timeframe: string): Promise<Candle[]> {
       console.info(`[scanner] fetchCryptoCoinGecko called with symbol=${symbol}, timeframe=${timeframe}`);
       
@@ -1293,9 +1307,10 @@ export async function POST(req: NextRequest) {
         return isBull ? 'Volatility Expansion Long' : isBear ? 'Volatility Expansion Short' : 'Volatility Expansion';
       }
 
-      // DVE exhaustion
+      // DVE exhaustion — label must agree with the row's direction and its entry/stop/target geometry.
+      // (Previously "Exhaustion Reversal Short" was attached to bullish rows whose levels were long.)
       if (flags.includes('EXHAUSTION_RISK')) {
-        return isBull ? 'Exhaustion Reversal Short' : isBear ? 'Exhaustion Reversal Long' : 'Exhaustion Risk';
+        return isBull ? 'Extended Long — Exhaustion Risk' : isBear ? 'Extended Short — Exhaustion Risk' : 'Exhaustion Risk';
       }
 
       // Momentum extremes with volume confirmation (MFI)
@@ -1919,6 +1934,7 @@ export async function POST(req: NextRequest) {
             vwap: vwapVal,
             avgVolume: volumes.slice(-20).reduce((sum, volume) => sum + volume, 0) / Math.max(1, volumes.slice(-20).length),
             lastCandleTime,
+            barInterval: cryptoBarInterval(candles),
             chartData: {
               candles: chartCandles,
               ema200: chartEma200,
@@ -3120,6 +3136,11 @@ export async function POST(req: NextRequest) {
     // Return results with cache-prevention headers
     const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';
     const providerWarnings = errors.slice(0, 5);
+    // Crypto 'daily' rows are computed on CoinGecko OHLC (30d window → 4h bars); say so rather than imply daily bars.
+    const cryptoIntervals = [...new Set(results.map((r) => r.barInterval).filter((x): x is string => Boolean(x)))];
+    if (type === 'crypto' && cryptoIntervals.length && cryptoIntervals.some((iv) => iv !== timeframe && iv !== '1d')) {
+      providerWarnings.push(`crypto_indicators_computed_on_${cryptoIntervals.join('_')}_bars_for_${timeframe}_timeframe`);
+    }
     const isStale = results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing');
     return NextResponse.json({
       success: true,

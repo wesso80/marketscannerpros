@@ -96,6 +96,8 @@ export interface ScanResult {
     warnings: string[];
   };
   timeframe: string;
+  /** Actual bar interval indicators were computed on when it differs from `timeframe` (e.g. crypto daily → '4h'). */
+  barInterval?: string;
   type: string;
   price?: number;
   confidence?: number;

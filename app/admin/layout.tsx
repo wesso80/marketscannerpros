@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       label: "Command",
       items: [
         { href: "/admin", label: "Command Center", code: "CC" },
-        { href: "/admin/jarvis/daily", label: "MSP Radar — Daily", code: "MR" },
+        { href: "/tools/msp-radar", label: "MSP Radar — Daily", code: "MR" },
         { href: "/admin/commander", label: "Commander", code: "CM" },
         { href: "/admin/morning-brief", label: "Morning Brief", code: "MB" },
         { href: "/admin/operator-terminal", label: "Operator Terminal", code: "OT" },
