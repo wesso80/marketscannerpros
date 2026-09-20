@@ -105,6 +105,7 @@ export default function Header() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
+            <Link href="/intelligence" className={`msp-nav-secondary text-xs px-2 py-1 rounded-lg transition-colors whitespace-nowrap ${isActive('/intelligence') ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'}`}>Intelligence</Link>
             <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
             {isLoggedIn && (
               <Link href="/tools/referrals" className="msp-nav-secondary text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
