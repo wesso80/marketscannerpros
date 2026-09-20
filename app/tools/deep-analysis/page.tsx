@@ -73,6 +73,34 @@ interface NewsItem {
   sentimentScore: number;
   url: string;
   publishedAt: string;
+  relevance?: number;
+  catalyst?: 'POSITIVE' | 'NEGATIVE' | 'MIXED' | 'NEUTRAL' | 'EVENT_RISK';
+  catalystReason?: string;
+}
+
+interface GoldenEggSummary {
+  cached?: boolean;
+  verdict: { assessment: 'ALIGNED' | 'NOT_ALIGNED' | 'WATCH'; direction: 'LONG' | 'SHORT' | 'NEUTRAL'; confluence: number; grade: string; primaryDriver: string; primaryBlocker: string | null; setupType: string; setupNote: string };
+  dataTrust: { level: string; label: string; reasons: string[]; freshness: string };
+  scores: { structure: number; flow: number; momentum: number; riskQuality: number; notes: { structure: string[]; risk: string[]; flow: string[]; momentum: string[] } };
+  timing: { relation: string; valid: boolean; eligibleForHardGate: boolean; direction: string; signalStrength: string; confidence: number | null; sessionState: string; reasons: string[] };
+  levels: { reference: { price: number | null; basis: string; label: string }; invalidation: { price: number; basis: string; label: string; distanceAtr: number | null }; zones: Array<{ price: number; basis: string; label: string; rMultiple: number | null }>; illustrativeR: number | null };
+  confirmation: string[];
+  invalidation: string[];
+  extension: { label: string; rsiExtended: boolean; stochExtended: boolean; dveExhaustion: number | null };
+  crossMarket: { alignment: string; summary: string; items: Array<{ symbol: string; label: string; trend: string; detail: string; relation: string }> };
+  priceTs: string;
+  lastCompletedBarAt: string | null;
+  barInterval: string | null;
+  timeframe: string;
+}
+
+interface AnalystOutput {
+  sections: { thesis: string; supports: string[]; against: string[]; primaryBlocker: string; confirms: string[]; invalidates: string[]; catalysts: string[]; changesView: string[]; reading: string };
+  narrative: string | null;
+  narrativeSource: string;
+  removedLines: number;
+  grounding: string;
 }
 
 interface CryptoData {
@@ -140,6 +168,12 @@ interface OptionsStrike {
 interface OptionsData {
   expiryDate: string;
   expiryFormatted: string;
+  daysToExpiry?: number;
+  snapshotTs?: string;
+  expectedMovePct?: number | null;
+  quality?: { level: 'GOOD' | 'DEGRADED' | 'UNUSABLE'; reasons: string[] };
+  notes?: string[];
+  dealerGamma?: string;
   currentPrice: number;
   highestOICall: OptionsStrike | null;
   highestOIPut: OptionsStrike | null;
@@ -176,6 +210,9 @@ interface AnalysisResult {
   optionsData: OptionsData | null;
   signals: Signals;
   aiAnalysis: string | null;
+  goldenEgg?: GoldenEggSummary;
+  analyst?: AnalystOutput;
+  newsMeta?: { considered: number; relevant: number; provider: string; headline: string; positive: number; negative: number; eventRisk: number };
   error?: string;
 }
 
@@ -904,8 +941,24 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
           <div className={embeddedInGoldenEgg ? 'grid gap-4' : 'grid gap-6'}>
             {(() => {
               const dataQuality = getDeepDataQuality(result);
-              const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
-              const weightedColor = weightedToneColor(weighted.bias);
+              const ge = result.goldenEgg;
+              const weighted = ge ? null : calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
+              const geColor = ge ? (ge.verdict.assessment === 'ALIGNED' ? 'var(--msp-bull)' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'var(--msp-bear)' : 'var(--msp-warn)') : weightedToneColor(weighted!.bias);
+              const geDirColor = ge ? (ge.verdict.direction === 'LONG' ? 'var(--msp-bull)' : ge.verdict.direction === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-warn)') : geColor;
+              const trustColor = ge ? (ge.dataTrust.level === 'GOOD' ? 'var(--msp-bull)' : ge.dataTrust.level === 'DEGRADED' ? 'var(--msp-warn)' : 'var(--msp-bear)') : deepDataQualityColor(dataQuality.label);
+              const cards: Array<[string, string, string]> = ge ? [
+                ['Golden Egg verdict', `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${ge.verdict.direction}`, geColor],
+                ['Confluence (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor],
+                ['Bias & setup', `${ge.verdict.direction === 'LONG' ? 'Bullish' : ge.verdict.direction === 'SHORT' ? 'Bearish' : 'Neutral'} · ${ge.verdict.setupType.replace('_', ' ')}`, geDirColor],
+                ['Primary blocker', ge.verdict.primaryBlocker ?? 'None flagged', ge.verdict.primaryBlocker ? 'var(--msp-warn)' : 'var(--msp-bull)'],
+                ['What confirms next', ge.confirmation[0] ?? 'n/a', 'var(--msp-info)'],
+              ] : [
+                ['Scenario', weightedScenarioLabel(weighted!.bias), geColor],
+                ['Scenario Confidence', `${weighted!.confidence.toFixed(0)}%`, geColor],
+                ['Research Bias', biasLabel(weighted!.bias), weighted!.bias === 'BUY' ? 'var(--msp-bull)' : weighted!.bias === 'SELL' ? 'var(--msp-bear)' : 'var(--msp-warn)'],
+                ['Next Check', summarizeDeepNextCheck(result), 'var(--msp-info)'],
+                ['Research Caution', summarizeDeepResearchCaution(result), 'var(--msp-warn)'],
+              ];
               return (
                 <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4">
                   {result.localDemo && (
@@ -920,33 +973,33 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   )}
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                     <div>
-                      <div className="text-[11px] font-medium text-[var(--msp-text-muted)]">Research packet</div>
+                      <div className="text-[11px] font-medium text-[var(--msp-text-muted)]">{ge ? `Deep Analyst · interprets the Golden Egg canonical packet (${ge.timeframe}, ${ge.barInterval ?? 'n/a'} bars)` : 'Research packet'}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-white">
                         <span>{result.symbol} · {result.assetType.toUpperCase()}</span>
                         <span className="font-mono text-slate-300">${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}</span>
                         <span className={result.price.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                          {result.price.changePercent >= 0 ? '+' : ''}{formatNumber(result.price.changePercent)}% 24h
+                          {result.price.changePercent >= 0 ? '+' : ''}{formatNumber(result.price.changePercent)}% {ge ? 'vs prior close' : '24h'}
                         </span>
+                        {ge && <span className="text-[11px] font-normal text-slate-500" title={`Price as of ${ge.priceTs}`}>last completed bar {ge.lastCompletedBarAt ? String(ge.lastCompletedBarAt).slice(0, 16).replace('T', ' ') : 'n/a'}</span>}
                       </div>
                     </div>
-                    <span title={dataQuality.detail} className="rounded border px-2 py-1 text-[11px] font-bold" style={{ color: deepDataQualityColor(dataQuality.label), borderColor: `${deepDataQualityColor(dataQuality.label)}66`, background: `${deepDataQualityColor(dataQuality.label)}15` }}>
-                      Data {dataQuality.label}
+                    <span title={ge ? `${ge.dataTrust.label}${ge.dataTrust.reasons.length ? ': ' + ge.dataTrust.reasons.join('; ') : ''}` : dataQuality.detail} className="rounded border px-2 py-1 text-[11px] font-bold" style={{ color: trustColor, borderColor: `${trustColor}66`, background: `${trustColor}15` }}>
+                      Data {ge ? ge.dataTrust.label : dataQuality.label}
                     </span>
                   </div>
                   <div className="grid gap-2 md:grid-cols-5">
-                    {[
-                      ['Scenario', weightedScenarioLabel(weighted.bias), weightedColor],
-                      ['Scenario Confidence', `${weighted.confidence.toFixed(0)}%`, weightedColor],
-                      ['Research Bias', biasLabel(weighted.bias), weighted.bias === 'BUY' ? 'var(--msp-bull)' : weighted.bias === 'SELL' ? 'var(--msp-bear)' : 'var(--msp-warn)'],
-                      ['Next Check', summarizeDeepNextCheck(result), 'var(--msp-info)'],
-                      ['Research Caution', summarizeDeepResearchCaution(result), 'var(--msp-warn)'],
-                    ].map(([label, value, color]) => (
+                    {cards.map(([label, value, color]) => (
                       <div key={label} title={value} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-3 py-2">
                         <div className="text-[11px] text-[var(--msp-text-muted)]">{label}</div>
                         <div className="mt-1 truncate text-xs font-bold" style={{ color }}>{value}</div>
                       </div>
                     ))}
                   </div>
+                  {ge && (
+                    <div className="mt-2 text-[11px] text-slate-500">
+                      Golden Egg verdict is canonical. Deep Analyst does not compute a competing bias; it interprets the same numbers. {ge.cached ? 'Packet served from the shared 3-minute cache.' : ''}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1285,11 +1338,40 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  Signal Breakdown
+                  {result.goldenEgg ? 'Golden Egg evidence (canonical)' : 'Signal Breakdown'}
                 </h3>
+
+                {result.goldenEgg && (() => {
+                  const ge = result.goldenEgg;
+                  const rows: Array<[string, number, string, string[]]> = [
+                    ['Structure', ge.scores.structure, 'Trend alignment quality (20/50-bar means, EMA200 anchor, extension, liquidity)', ge.scores.notes.structure],
+                    ['Flow', ge.scores.flow, result.assetType === 'crypto' ? 'Funding, open interest, perp turnover, venue breadth' : 'Options positioning on the canonical expiry', ge.scores.notes.flow],
+                    ['Momentum', ge.scores.momentum, 'RSI / MACD / stochastic with extension credit reduced', ge.scores.notes.momentum],
+                    ['Risk quality', ge.scores.riskQuality, '100 = clean conditions. Never bullish evidence.', ge.scores.notes.risk],
+                  ];
+                  return (
+                    <div style={{ display: 'grid', gap: '0.6rem' }}>
+                      {rows.map(([name, score, desc, notes]) => (
+                        <div key={name} style={{ padding: '0.6rem 0.75rem', background: 'rgba(30,41,59,0.35)', borderRadius: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#E2E8F0', fontWeight: 600 }}>{name}</span>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: score >= 65 ? '#10B981' : score >= 45 ? '#F59E0B' : '#EF4444' }}>{score}/100</span>
+                          </div>
+                          <div style={{ height: 4, background: 'rgba(148,163,184,0.15)', borderRadius: 2, marginTop: 6 }}><div style={{ width: `${Math.max(0, Math.min(100, score))}%`, height: 4, borderRadius: 2, background: score >= 65 ? '#10B981' : score >= 45 ? '#F59E0B' : '#EF4444' }} /></div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: 4 }}>{desc}</div>
+                          {notes.slice(0, 3).map((n) => <div key={n} style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: 2 }}>• {n}</div>)}
+                        </div>
+                      ))}
+                      <div style={{ padding: '0.75rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, fontSize: '0.8rem', color: '#FCD34D' }}>
+                        Time confluence: <strong>{ge.timing.relation}</strong> ({ge.timing.direction}, {ge.timing.signalStrength}{ge.timing.confidence != null ? `, ${ge.timing.confidence}%` : ''}; session {ge.timing.sessionState}; {ge.timing.eligibleForHardGate ? 'gates the verdict' : 'not gating'}). {ge.timing.reasons.join(' · ')}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Extension: {ge.extension.label}{ge.extension.dveExhaustion != null ? ` · DVE exhaustion ${Math.round(ge.extension.dveExhaustion)}/100` : ''} · Cross-market: {ge.crossMarket.alignment} — {ge.crossMarket.summary}</div>
+                    </div>
+                  );
+                })()}
                 
-                {/* Confidence Meter */}
-                {(() => {
+                {/* Confidence Meter (legacy engine — standalone use without a Golden Egg packet only) */}
+                {!result.goldenEgg && (() => {
                   const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
                   return (
                     <>
@@ -1402,29 +1484,25 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   );
                 })()}
 
-                {/* Original Signal Reasons */}
+                {/* Supports / against (canonical) or original signal reasons */}
                 {result.signals.reasons.length > 0 && (
                   <div style={{ marginTop: "1rem" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#64748B", marginBottom: "0.5rem", textTransform: "uppercase" }}>Additional Signals</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748B", marginBottom: "0.5rem", textTransform: "uppercase" }}>{result.goldenEgg ? 'What supports / argues against (from the packet)' : 'Additional Signals'}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                      {result.signals.reasons.slice(0, 5).map((reason, idx) => (
-                        <div key={idx} style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          gap: "0.5rem",
-                          padding: "0.4rem 0.6rem",
-                          background: "rgba(30,41,59,0.3)",
-                          borderRadius: "6px",
-                          fontSize: "0.8rem"
-                        }}>
-                          <span style={{ color: reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "#10B981" : 
-                                              reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "#EF4444" : "#F59E0B" }}>
-                             {reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "Bull" : 
-                              reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "Bear" : "Mix"}
-                          </span>
-                          <span style={{ color: "#CBD5E1" }}>{reason}</span>
-                        </div>
-                      ))}
+                      {result.signals.reasons.slice(0, result.goldenEgg ? 12 : 5).map((reason, idx) => {
+                        const isPlus = reason.startsWith('+ ');
+                        const isMinus = reason.startsWith('− ') || reason.startsWith('- ');
+                        const legacyBull = !isPlus && !isMinus && (reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold'));
+                        const legacyBear = !isPlus && !isMinus && (reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought'));
+                        const color = isPlus || legacyBull ? '#10B981' : isMinus || legacyBear ? '#EF4444' : '#F59E0B';
+                        const tag = isPlus || legacyBull ? 'For' : isMinus || legacyBear ? 'Against' : 'Mix';
+                        return (
+                          <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.4rem 0.6rem", background: "rgba(30,41,59,0.3)", borderRadius: "6px", fontSize: "0.8rem" }}>
+                            <span style={{ color, minWidth: 48 }}>{tag}</span>
+                            <span style={{ color: "#CBD5E1" }}>{isPlus || isMinus ? reason.slice(2) : reason}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1631,10 +1709,22 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 border: "1px solid var(--msp-border)",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  Options Flow (Weekly Expiry)
-                  <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>DATA AVAILABLE</span>
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  Options positioning · expiry {result.optionsData.expiryDate}{result.optionsData.daysToExpiry != null ? ` (${result.optionsData.daysToExpiry} DTE)` : ''}
+                  {result.optionsData.quality ? (
+                    <span style={{ marginLeft: "auto", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "10px", background: result.optionsData.quality.level === 'GOOD' ? 'rgba(16,185,129,0.2)' : result.optionsData.quality.level === 'DEGRADED' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', color: result.optionsData.quality.level === 'GOOD' ? '#10B981' : result.optionsData.quality.level === 'DEGRADED' ? '#F59E0B' : '#EF4444' }} title={result.optionsData.quality.reasons.join('; ')}>CHAIN {result.optionsData.quality.level}</span>
+                  ) : (
+                    <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>DATA AVAILABLE</span>
+                  )}
                 </h3>
+                {(result.optionsData.snapshotTs || result.optionsData.notes?.length) && (
+                  <div style={{ color: "#64748B", fontSize: "0.72rem", marginBottom: "1rem" }}>
+                    {result.optionsData.snapshotTs ? `Snapshot ${String(result.optionsData.snapshotTs).slice(0, 16).replace('T', ' ')} UTC. ` : ''}
+                    {result.optionsData.quality && result.optionsData.quality.level !== 'GOOD' ? `Not used as flow evidence: ${result.optionsData.quality.reasons.join('; ')}. ` : ''}
+                    {(result.optionsData.notes ?? []).slice(0, 2).join(' ')}
+                    {' IV rank unavailable (no IV history); avg IV is the chain average.'}
+                  </div>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 100%), 1fr))", gap: "1rem" }}>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Put/Call Ratio</div>
@@ -1758,7 +1848,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 overflow: "hidden"
               }}>
                 <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  Options Flow (Weekly Expiry)
+                  Options positioning
                 </h3>
                 
                 {/* Unavailable options data state */}
@@ -1930,7 +2020,14 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               </div>
             )}
 
-            {/* News Sentiment */}
+            {/* News Sentiment — symbol-specific only */}
+            {result.newsMeta && (!result.news || result.news.length === 0) && (
+              <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-borderStrong)", padding: "1.25rem" }}>
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "0.5rem" }}>Symbol-specific news</h3>
+                <div style={{ color: "#E2E8F0", fontSize: "0.9rem" }}>No material symbol-specific news identified.</div>
+                <div style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 4 }}>{result.newsMeta.considered} provider articles considered; none referenced {result.symbol} above the relevance threshold. Topic-feed noise is not shown.</div>
+              </div>
+            )}
             {result.news && result.news.length > 0 && (
               <div style={{ 
                 background: "var(--msp-card)",
@@ -1938,9 +2035,12 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 border: "1px solid var(--msp-borderStrong)",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  Latest News & Sentiment
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  {result.newsMeta ? 'Symbol-specific news & catalysts' : 'Latest News & Sentiment'}
                 </h3>
+                {result.newsMeta && (
+                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "1rem" }}>{result.newsMeta.headline} {result.newsMeta.considered} articles considered, {result.newsMeta.relevant} reference {result.symbol} (relevance ≥ 0.35). Catalyst class is rule-based; sentiment is the provider's ticker-level label.</div>
+                )}
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   {result.news.map((item, idx) => (
@@ -1974,8 +2074,12 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                               </>
                             )}
                           </div>
-                          {/* Impact Tag */}
-                          {(() => {
+                          {/* Catalyst class (rule-based) or legacy impact tag */}
+                          {item.catalyst ? (
+                            <span title={item.catalystReason} style={{ padding: "0.25rem 0.6rem", borderRadius: "6px", fontSize: "0.65rem", fontWeight: "700", background: item.catalyst === 'POSITIVE' ? 'rgba(16,185,129,0.15)' : item.catalyst === 'NEGATIVE' ? 'rgba(239,68,68,0.15)' : item.catalyst === 'EVENT_RISK' ? 'rgba(245,158,11,0.18)' : 'rgba(148,163,184,0.15)', color: item.catalyst === 'POSITIVE' ? '#10B981' : item.catalyst === 'NEGATIVE' ? '#EF4444' : item.catalyst === 'EVENT_RISK' ? '#F59E0B' : '#94A3B8' }}>
+                              {item.catalyst.replace('_', ' ')}{item.catalystReason && item.catalyst !== 'NEUTRAL' ? ` · ${item.catalystReason}` : ''}
+                            </span>
+                          ) : (() => {
                             const impact = getNewsImpact(item.title, item.summary || '');
                             return (
                               <span style={{ 
@@ -1994,6 +2098,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                               </span>
                             );
                           })()}
+                          {item.relevance != null && <span style={{ fontSize: "0.65rem", color: "#64748B" }}>relevance {item.relevance.toFixed(2)}</span>}
                           {/* Sentiment Badge */}
                           <span style={{ 
                             padding: "0.25rem 0.75rem", 
@@ -2029,7 +2134,33 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               </div>
             )}
 
-            {/* AI Analysis */}
+            {/* Deep Analyst — structured sections from the packet, plus the packet-constrained narrative */}
+            {result.analyst && (
+              <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(245,158,11,0.35)", padding: "1.5rem" }}>
+                <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "0.25rem" }}>Deep Analyst — research read</h3>
+                <div style={{ color: "#64748B", fontSize: "0.72rem", marginBottom: "1rem" }}>{result.analyst.grounding}</div>
+                <div style={{ display: "grid", gap: "0.75rem" }}>
+                  {([
+                    ['Thesis', [result.analyst.sections.thesis]],
+                    ['What supports it', result.analyst.sections.supports],
+                    ['What argues against it', result.analyst.sections.against],
+                    ['Primary blocker', [result.analyst.sections.primaryBlocker]],
+                    ['What confirms', result.analyst.sections.confirms],
+                    ['What invalidates', result.analyst.sections.invalidates],
+                    ['Catalysts / event risk', result.analyst.sections.catalysts],
+                    ['What would change the view', result.analyst.sections.changesView],
+                  ] as Array<[string, string[]]>).map(([title, lines]) => (
+                    <div key={title} style={{ padding: "0.6rem 0.75rem", background: "rgba(30,41,59,0.35)", borderRadius: 8 }}>
+                      <div style={{ fontSize: "0.7rem", color: "#F59E0B", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{title}</div>
+                      {lines.length === 0 ? <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>Nothing recorded.</div> : lines.map((l, i) => <div key={i} style={{ fontSize: "0.82rem", color: "#E2E8F0", lineHeight: 1.5 }}>{lines.length > 1 ? '• ' : ''}{l}</div>)}
+                    </div>
+                  ))}
+                  <div style={{ fontSize: "0.8rem", color: "#CBD5E1", fontStyle: "italic" }}>{result.analyst.sections.reading}</div>
+                </div>
+              </div>
+            )}
+
+            {/* AI narrative */}
             {result.aiAnalysis && (
               <div style={{ 
                 background: "var(--msp-warn-tint)",
@@ -2037,9 +2168,10 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 border: "2px solid rgba(245,158,11,0.3)",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  AI Deep Analysis
+                <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  {result.analyst ? 'Deep Analyst narrative (packet-constrained)' : 'AI Deep Analysis'}
                 </h3>
+                {result.analyst && <div style={{ color: "#64748B", fontSize: "0.72rem", marginBottom: "0.75rem" }}>Source {result.analyst.narrativeSource}. Conditional research language only — no probabilities, no instructions.{result.analyst.removedLines > 0 ? ` ${result.analyst.removedLines} line(s) removed by the language guard.` : ''}</div>}
                 
                 <div style={{ 
                   color: "#E2E8F0", 

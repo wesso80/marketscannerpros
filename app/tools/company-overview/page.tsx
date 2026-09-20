@@ -38,6 +38,26 @@ interface CompanyData {
   currentPrice: string | null;
   changePercent: string | null;
   fetchedAt?: string | null;
+  forwardPE?: string | null;
+  // Period basis / earnings / analyst context (shared helper)
+  latestQuarter?: string | null;
+  fiscalYearEnd?: string | null;
+  periodBasis?: Array<{ metric: string; period: string }>;
+  periodSummary?: string;
+  multiple?: { label: string; detail: string; rule: string };
+  nextEarningsDate?: string | null;
+  nextEarningsEstimate?: number | null;
+  daysToEarnings?: number | null;
+  lastReportedQuarter?: string | null;
+  lastReportedDate?: string | null;
+  lastReportedEPS?: number | null;
+  lastEstimatedEPS?: number | null;
+  lastEpsBeat?: boolean | null;
+  beatRate?: number | null;
+  recentQuarters?: Array<{ fiscalDateEnding: string; reportedDate: string | null; reportedEPS: number | null; estimatedEPS: number | null; surprisePercent: number | null; beat: boolean | null }>;
+  analystCount?: number | null;
+  analystRatings?: { strongBuy: number; buy: number; hold: number; sell: number; strongSell: number } | null;
+  priceAsOf?: string | null;
   dataSource?: string | null;
 }
 
@@ -523,46 +543,77 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
 
             {/* Valuation Metrics */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "12px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", margin: 0 }}>Valuation</h3>
-                {valuation && (
-                  <span style={{ 
-                    padding: "6px 14px", 
-                    background: valuation.bg,
-                    borderRadius: "20px", 
-                    color: valuation.color, 
-                    fontSize: "13px", 
-                    fontWeight: "600",
-                    border: `1px solid ${valuation.border}`
-                  }}>
+                {data.multiple ? (
+                  <span title={data.multiple.rule} style={{ padding: "6px 14px", background: "var(--msp-panel-2)", borderRadius: "20px", color: "var(--msp-text)", fontSize: "13px", fontWeight: "600", border: "1px solid var(--msp-border)" }}>
+                    {data.multiple.label}
+                  </span>
+                ) : valuation && (
+                  <span style={{ padding: "6px 14px", background: valuation.bg, borderRadius: "20px", color: valuation.color, fontSize: "13px", fontWeight: "600", border: `1px solid ${valuation.border}` }}>
                     {valuation.level} Valuation
                   </span>
                 )}
               </div>
+              {data.multiple && (
+                <p style={{ color: "var(--msp-text-muted)", fontSize: "12px", margin: "0 0 16px 0" }}>{data.multiple.detail} <span style={{ color: "var(--msp-text-faint)" }}>{data.multiple.rule}</span></p>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Market Cap" value={formatMarketCap(data.marketCap)} />
-                <MetricCard label="P/E Ratio" value={formatValue(data.pe)} />
+                <MetricCard label="P/E (trailing)" value={formatValue(data.pe)} />
+                <MetricCard label="Forward P/E" value={formatValue(data.forwardPE)} />
                 <MetricCard label="PEG Ratio" value={formatValue(data.peg)} />
                 <MetricCard label="Book Value" value={`$${formatValue(data.bookValue)}`} />
-                <MetricCard 
-                  label="Analyst Target" 
-                  value={`$${formatValue(data.analystTargetPrice)}`}
-                  subValue={analystContext ? (
-                    <span style={{ color: analystContext.isUpside ? "var(--msp-bull)" : "var(--msp-bear)", fontSize: "12px" }}>
-                      {analystContext.isUpside ? "+" : ""}{analystContext.diff}% {analystContext.label}
-                    </span>
-                  ) : undefined}
-                />
                 <MetricCard label="Beta" value={formatValue(data.beta)} />
               </div>
-              <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
-                Analyst targets and valuation comparisons are third-party data points for educational research only. They are not MarketScanner Pros recommendations or price forecasts.
-              </p>
-              {data.fetchedAt && (
-                <p style={{ color: "var(--msp-text-faint)", fontSize: "11px", marginTop: "6px" }}>
-                  Data retrieved {new Date(data.fetchedAt).toLocaleString()} · Source: Alpha Vantage
+              {data.periodSummary && (
+                <p style={{ color: "var(--msp-text-muted)", fontSize: "12px", marginTop: "12px" }}>
+                  <strong style={{ color: "var(--msp-text)" }}>Period basis:</strong> {data.periodSummary}
                 </p>
               )}
+              {data.periodBasis && (
+                <div style={{ display: "grid", gap: "2px", marginTop: "6px" }}>
+                  {data.periodBasis.map((b) => <div key={b.metric} style={{ color: "var(--msp-text-faint)", fontSize: "11px" }}>{b.metric}: <span style={{ color: "var(--msp-text-muted)" }}>{b.period}</span></div>)}
+                </div>
+              )}
+              {data.fetchedAt && (
+                <p style={{ color: "var(--msp-text-faint)", fontSize: "11px", marginTop: "6px" }}>
+                  Snapshot retrieved {new Date(data.fetchedAt).toLocaleString()} (retrieval time, not the reporting period) · Source: Alpha Vantage
+                </p>
+              )}
+            </div>
+
+            {/* Earnings & analyst context */}
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "16px" }}>Earnings & analyst context</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
+                <MetricCard
+                  label="Next earnings"
+                  value={data.nextEarningsDate ?? 'Not scheduled (3-month horizon)'}
+                  valueColor={data.daysToEarnings != null && data.daysToEarnings >= 0 && data.daysToEarnings <= 14 ? 'var(--msp-warn)' : undefined}
+                  subValue={data.daysToEarnings != null ? <span style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>in {data.daysToEarnings} day{data.daysToEarnings === 1 ? '' : 's'}{data.nextEarningsEstimate != null ? ` · est. EPS $${data.nextEarningsEstimate.toFixed(2)}` : ''} — event risk</span> : undefined}
+                />
+                <MetricCard
+                  label="Last reported quarter"
+                  value={data.lastReportedQuarter ?? '—'}
+                  subValue={data.lastReportedEPS != null ? <span style={{ fontSize: 12, color: data.lastEpsBeat ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>EPS ${data.lastReportedEPS.toFixed(2)} vs est {data.lastEstimatedEPS != null ? `$${data.lastEstimatedEPS.toFixed(2)}` : 'n/a'} · {data.lastEpsBeat ? 'beat' : 'miss'}{data.lastReportedDate ? ` · reported ${data.lastReportedDate}` : ''}</span> : undefined}
+                />
+                <MetricCard label="Beat rate (last 4Q)" value={data.beatRate != null ? `${data.beatRate.toFixed(0)}%` : '—'} />
+                <MetricCard
+                  label="Analyst target"
+                  value={`$${formatValue(data.analystTargetPrice)}`}
+                  subValue={<span style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>{data.analystCount ? `${data.analystCount} analysts` : 'analyst count n/a'}{analystContext ? <span style={{ color: analystContext.isUpside ? 'var(--msp-bull)' : 'var(--msp-bear)' }}> · {analystContext.isUpside ? '+' : ''}{analystContext.diff}% {analystContext.label} vs current</span> : ''}</span>}
+                />
+                {data.analystRatings && (
+                  <MetricCard
+                    label="Rating distribution"
+                    value={`SB ${data.analystRatings.strongBuy} · B ${data.analystRatings.buy} · H ${data.analystRatings.hold} · S ${data.analystRatings.sell} · SS ${data.analystRatings.strongSell}`}
+                  />
+                )}
+              </div>
+              <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
+                Analyst targets and ratings are third-party consensus context, not signals or forecasts. Earnings dates come from the provider calendar and can move.
+              </p>
             </div>
 
             {/* Profitability */}
@@ -584,12 +635,12 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
                 <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.grossProfit)} />
                 <MetricCard 
-                  label="Earnings Growth" 
+                  label={`Earnings Growth (latest quarter${data.latestQuarter ? ` ${data.latestQuarter}` : ''} YoY)`} 
                   value={formatPercent(data.quarterlyEarningsGrowth)}
                   valueColor={parseFloat(data.quarterlyEarningsGrowth) >= 0 ? "var(--msp-bull)" : "var(--msp-bear)"}
                 />
                 <MetricCard 
-                  label="Revenue Growth" 
+                  label={`Revenue Growth (latest quarter${data.latestQuarter ? ` ${data.latestQuarter}` : ''} YoY)`} 
                   value={formatPercent(data.quarterlyRevenueGrowth)}
                   valueColor={parseFloat(data.quarterlyRevenueGrowth) >= 0 ? "var(--msp-bull)" : "var(--msp-bear)"}
                 />

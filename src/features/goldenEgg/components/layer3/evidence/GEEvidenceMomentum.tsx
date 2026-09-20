@@ -1,13 +1,14 @@
 import GECollapsible from '@/src/features/goldenEgg/components/shared/GECollapsible';
 import GETag from '@/src/features/goldenEgg/components/shared/GETag';
-import { GoldenEggPayload } from '@/src/features/goldenEgg/types';
+import { GoldenEggPayload, type IndicatorState } from '@/src/features/goldenEgg/types';
 
 type GEEvidenceMomentumProps = {
   momentum: GoldenEggPayload['layer3']['momentum'];
 };
 
-function tone(state: 'bull' | 'bear' | 'neutral') {
-  return state === 'bull' ? 'green' : state === 'bear' ? 'red' : 'amber';
+// 'strength' (ADX) is direction-agnostic; 'extended' flags an oscillator extreme — neither is bullish or bearish.
+function tone(state: IndicatorState) {
+  return state === 'bull' ? 'green' : state === 'bear' ? 'red' : state === 'strength' ? 'slate' : 'amber';
 }
 
 function verdictTone(v: GoldenEggPayload['layer3']['momentum']['verdict']) {

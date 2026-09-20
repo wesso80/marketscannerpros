@@ -16,7 +16,10 @@ import {
   type OptionsPressureInput,
 } from '@/lib/marketPressureEngine';
 import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/confluence-learning-agent';
-import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, getOHLC, getMarketChartHistory, getOHLCWithVolume, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
+import * as scannerMath from '@/lib/scanner/indicatorMath';
+import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -56,6 +59,16 @@ export interface PriceData {
   historicalCloses: number[];
   historicalHighs?: number[];
   historicalLows?: number[];
+  /** Provenance — the bar interval indicators are computed on and the last COMPLETED bar time. */
+  barInterval?: string;
+  lastCompletedBarAt?: string | null;
+  historicalDates?: string[];
+  priceTs?: string;
+  source?: string;
+  volumeBasis?: string;
+  /** CoinGecko coin detail (market cap, supply, ATH…) when the symbol is crypto. */
+  coinDetail?: any | null;
+  coinId?: string;
 }
 
 export interface Indicators {
@@ -64,6 +77,10 @@ export interface Indicators {
   bbUpper: number | null; bbMiddle: number | null; bbLower: number | null;
   stochK: number | null; stochD: number | null;
   inSqueeze?: boolean; squeezeStrength?: number;
+  ema20?: number | null; ema50?: number | null; ema200?: number | null;
+  /** Where the numbers came from: local computation on canonical bars, or the worker indicator cache. */
+  source?: 'local_canonical_bars' | 'worker_cache';
+  barsUsed?: number;
 }
 
 export interface OptionsSnapshot {
@@ -72,6 +89,8 @@ export interface OptionsSnapshot {
   highestOICallStrike: number | null; highestOIPutStrike: number | null;
   totalCallOI: number; totalPutOI: number;
   dealerGamma: string;
+  /** Canonical, expiry-scoped snapshot with quality flags — the ONLY options object Deep Analyst may read. */
+  canonical: CanonicalOptionsSnapshot;
 }
 
 export interface MPEData {
@@ -95,8 +114,9 @@ function buildLocalBars(
       return {
         timestamp: String(index),
         open: prevClose,
-        high: Math.max(high, close, prevClose),
-        low: Math.min(low, close, prevClose),
+        // Use provider highs/lows as-is (true range already accounts for gaps via prevClose); only guard against bad data.
+        high: Math.max(high, close),
+        low: Math.min(low, close),
         close,
         volume: 0,
       };
@@ -115,22 +135,39 @@ function mapLocalIndicators(
   const ind = calculateAllIndicators(bars);
   const squeeze = detectSqueeze(bars);
 
+  // Market statistics use the Scanner's exact functions on the same bars (parity rule); Bollinger/squeeze stay on lib/indicators.
+  const c = bars.map((b) => b.close), h = bars.map((b) => b.high), l = bars.map((b) => b.low);
+  const last = (arr: number[]) => { const v = arr[arr.length - 1]; return Number.isFinite(v) ? v : null; };
+  const rsiArr = scannerMath.rsi(c, 14);
+  const atrArr = scannerMath.atr(h, l, c, 14);
+  const adxObj = scannerMath.adx(h, l, c, 14);
+  const macdObj = scannerMath.macd(c);
+  const stochObj = scannerMath.stochastic(h, l, c);
+  const emaLast = (n: number) => (c.length >= n ? last(scannerMath.ema(c, n)) : null);
+  const finite = (v: number | null | undefined) => (v != null && Number.isFinite(v) ? v : null);
+
   return {
-    rsi: ind.rsi14 ?? null,
-    macd: ind.macdLine ?? null,
-    macdHist: ind.macdHist ?? null,
-    macdSignal: ind.macdSignal ?? null,
+    rsi: last(rsiArr) ?? ind.rsi14 ?? null,
+    macd: last(macdObj.macdLine) ?? ind.macdLine ?? null,
+    macdHist: last(macdObj.hist) ?? ind.macdHist ?? null,
+    macdSignal: last(macdObj.signalLine) ?? ind.macdSignal ?? null,
     sma20: ind.sma20 ?? null,
     sma50: ind.sma50 ?? null,
-    adx: ind.adx14 ?? null,
-    atr: ind.atr14 ?? null,
+    adx: finite(adxObj.adx) ?? ind.adx14 ?? null,
+    atr: last(atrArr) ?? ind.atr14 ?? null,
     bbUpper: ind.bbUpper ?? null,
     bbMiddle: ind.bbMiddle ?? null,
     bbLower: ind.bbLower ?? null,
-    stochK: ind.stochK ?? null,
-    stochD: ind.stochD ?? null,
+    stochK: finite(stochObj.k) ?? ind.stochK ?? null,
+    stochD: finite(stochObj.d) ?? ind.stochD ?? null,
     inSqueeze: squeeze?.inSqueeze ?? (ind.bbWidthPercent20 != null ? ind.bbWidthPercent20 < 6 : false),
     squeezeStrength: squeeze?.squeezeStrength ?? (ind.bbWidthPercent20 != null && ind.bbWidthPercent20 < 6 ? Math.max(0, (6 - ind.bbWidthPercent20) / 6) : 0),
+    // EMA200 only when 200 bars exist; never substitute 0.
+    ema20: emaLast(20),
+    ema50: emaLast(50),
+    ema200: bars.length >= 200 ? emaLast(200) : null,
+    source: 'local_canonical_bars',
+    barsUsed: bars.length,
   };
 }
 
@@ -145,159 +182,50 @@ export async function fetchPrice(
     const isIntraday = interval !== 'daily' && interval !== 'weekly';
 
     if (assetClass === 'crypto') {
-      if (isIntraday) {
-        // Primary: CoinGecko (days=1 gives ~5-min candles).
-        try {
-          const base = symbol.replace(/-?USD$/i, '').toUpperCase();
-          const coinId = COINGECKO_ID_MAP[base] || (await resolveSymbolToId(base));
-          if (coinId) {
-            const ohlcv = await getOHLCWithVolume(coinId, 1);
-            if (ohlcv && ohlcv.length >= 2) {
-              const sorted = ohlcv
-                .filter(c => Number.isFinite(c.c) && c.c > 0)
-                .sort((a, b) => a.t - b.t);
-              if (sorted.length >= 2) {
-                const latest = sorted[sorted.length - 1];
-                const prev = sorted[sorted.length - 2];
-                const histLen = opts?.requireHistoricals ? 300 : 50;
-                const tail = sorted.slice(-histLen);
-                return {
-                  price: latest.c,
-                  change: latest.c - prev.c,
-                  changePct: prev.c !== 0 ? ((latest.c - prev.c) / prev.c) * 100 : 0,
-                  high: latest.h,
-                  low: latest.l,
-                  volume: latest.v || 0,
-                  historicalCloses: tail.map(c => c.c),
-                  historicalHighs: tail.map(c => c.h),
-                  historicalLows: tail.map(c => c.l),
-                };
-              }
-            }
-          }
-        } catch (cgErr) {
-          console.warn(`[goldenEgg] CoinGecko intraday fallback for ${symbol}:`, cgErr);
-        }
-
-        // Fallback: Alpha Vantage CRYPTO_INTRADAY.
-        const avSym = symbol.replace(/-?USD$/, '');
-        const url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(avSym)}&market=USD&interval=${interval}&outputsize=full&apikey=${AV_KEY}`;
-        const data = await avFetch<Record<string, any>>(url, `CRYPTO_INTRADAY ${avSym} ${interval}`);
-        if (data) {
-          const tsKey = Object.keys(data).find(k => k.includes('Time Series'));
-          if (tsKey) {
-            const ts = data[tsKey];
-            const dates = Object.keys(ts).sort().reverse();
-            if (dates.length >= 2) {
-              const latest = ts[dates[0]];
-              const prev = ts[dates[1]];
-              const price = parseFloat(latest['4. close']);
-              const prevClose = parseFloat(prev['4. close']);
-              const histLen = opts?.requireHistoricals ? 300 : 50;
-              const histDates = dates.slice(0, histLen).reverse();
-              return {
-                price,
-                change: price - prevClose,
-                changePct: ((price - prevClose) / prevClose) * 100,
-                high: parseFloat(latest['2. high']),
-                low: parseFloat(latest['3. low']),
-                volume: parseFloat(latest['5. volume'] || '0'),
-                historicalCloses: histDates.map(d => parseFloat(ts[d]['4. close'])),
-                historicalHighs: histDates.map(d => parseFloat(ts[d]['2. high'])),
-                historicalLows: histDates.map(d => parseFloat(ts[d]['3. low'])),
-              };
-            }
-          }
-        }
-        // Fall through to CoinGecko daily if AV intraday fails
-      }
-
-      // CoinGecko for crypto daily/weekly
-      const coinId = await resolveSymbolToId(symbol);
+      // Canonical crypto bars (lib/scanner/cryptoBars): the SAME completed-bar series the Scanner uses — true daily /
+      // hourly OHLC from CoinGecko, Monday-anchored weekly aggregates, 5-minute samples for 15m. The old path built
+      // "daily" bars from 4-day OHLC candles with interpolated highs/lows, inflating ATR ~2–2.6× and every level built on it.
+      const tfMap: Record<string, CryptoScanTimeframe> = { '15min': '15m', '30min': '30m', '60min': '1h', daily: 'daily', weekly: 'weekly' };
+      const seriesTf = tfMap[interval] ?? 'daily';
+      const base = symbol.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase();
+      const coinId = COINGECKO_ID_MAP[base] || (await resolveSymbolToId(base));
       if (!coinId) return null;
-
-      const ohlcDays = opts?.requireHistoricals ? 365 : 90;
-      const [detail, marketChart, ohlc] = await Promise.all([
-        getCoinDetail(coinId),
-        getMarketChartHistory(coinId, ohlcDays),
-        getOHLC(coinId, ohlcDays as 90 | 365),
+      const [series, detail] = await Promise.all([
+        fetchCryptoSeries(base, seriesTf, Date.now(), { coinId }),
+        getCoinDetail(coinId).catch(() => null),
       ]);
-
+      const bars = series.bars;
+      if (bars.length < 2) return null;
+      const last = bars[bars.length - 1];
+      const prev = bars[bars.length - 2];
       const md = detail?.market_data;
-      if (!md?.current_price?.usd) return null;
-
-      const price = md.current_price.usd;
-      const change = md.price_change_24h ?? 0;
-      const changePct = md.price_change_percentage_24h ?? 0;
-      const high = md.high_24h?.usd ?? price;
-      const low = md.low_24h?.usd ?? price;
-      const volume = md.total_volume?.usd ?? 0;
-
-      // market_chart returns ~365 daily closes; OHLC returns ~90 sparse OHLC candles
-      const dailyPrices = marketChart?.prices ?? [];
-      const ohlcCandles = ohlc ?? [];
-
-      if (dailyPrices.length > ohlcCandles.length && dailyPrices.length > 0) {
-        // Use market_chart for daily closes (365 data points for robust BBWP)
-        // Interpolate H/L from sparse OHLC by finding nearest candle per daily timestamp
-        const ohlcByTs = ohlcCandles.map((c: number[]) => ({ ts: c[0], h: c[2], l: c[3] }));
-        ohlcByTs.sort((a, b) => a.ts - b.ts);
-
-        const historicalCloses: number[] = [];
-        const historicalHighs: number[] = [];
-        const historicalLows: number[] = [];
-
-        for (const [ts, closePrice] of dailyPrices) {
-          historicalCloses.push(closePrice);
-          if (ohlcByTs.length === 0) {
-            historicalHighs.push(closePrice);
-            historicalLows.push(closePrice);
-            continue;
-          }
-          // Binary search for nearest OHLC candle
-          let lo = 0, hi = ohlcByTs.length - 1;
-          while (lo < hi) {
-            const mid = (lo + hi) >> 1;
-            if (ohlcByTs[mid].ts < ts) lo = mid + 1;
-            else hi = mid;
-          }
-          let bestIdx = lo;
-          if (lo > 0 && Math.abs(ohlcByTs[lo - 1].ts - ts) < Math.abs(ohlcByTs[lo].ts - ts)) {
-            bestIdx = lo - 1;
-          }
-          historicalHighs.push(Math.max(ohlcByTs[bestIdx].h, closePrice));
-          historicalLows.push(Math.min(ohlcByTs[bestIdx].l, closePrice));
-        }
-
-        return {
-          price,
-          change,
-          changePct,
-          high,
-          low,
-          volume,
-          historicalCloses,
-          historicalHighs,
-          historicalLows,
-          avgVolume: volume, // Use current 24h volume as baseline
-        };
-      }
-
-      // Fallback: sparse OHLC only
-      const candles = ohlcCandles;
+      const livePrice = series.currentPrice ?? md?.current_price?.usd ?? last.close;
+      const changeBase = seriesTf === 'daily' || seriesTf === 'weekly' ? last.close : prev.close;
+      const histLen = opts?.requireHistoricals ? 360 : 60;
+      const tail = bars.slice(-histLen);
+      const vols = tail.slice(-20).map((b) => b.volume).filter((v): v is number => v != null && v > 0);
       return {
-        price,
-        change,
-        changePct,
-        high,
-        low,
-        volume,
-        historicalCloses: candles.map((c: number[]) => c[4]),
-        historicalHighs: candles.map((c: number[]) => c[2]),
-        historicalLows: candles.map((c: number[]) => c[3]),
-        avgVolume: volume,
+        price: livePrice,
+        change: livePrice - changeBase,
+        changePct: changeBase > 0 ? ((livePrice - changeBase) / changeBase) * 100 : 0,
+        high: series.partialBar?.high ?? last.high,
+        low: series.partialBar?.low ?? last.low,
+        volume: last.volume ?? md?.total_volume?.usd ?? 0,
+        avgVolume: vols.length >= 5 ? vols.reduce((a, b) => a + b, 0) / vols.length : undefined,
+        historicalCloses: tail.map((b) => b.close),
+        historicalHighs: tail.map((b) => b.high),
+        historicalLows: tail.map((b) => b.low),
+        historicalDates: tail.map((b) => b.t),
+        barInterval: series.barInterval,
+        lastCompletedBarAt: series.lastCompletedBarAt,
+        priceTs: new Date().toISOString(),
+        source: series.source,
+        volumeBasis: series.volumeBasis,
+        coinDetail: detail ?? null,
+        coinId: series.coinId,
       };
     }
+
 
     // Equity: try getQuote cache cascade first (skip if historicals required)
     const cached = await getQuote(symbol);
@@ -350,6 +278,22 @@ export async function fetchPrice(
     // DVE needs 252+ bars oldest-first for BBWP; take up to 300 when historicals required
     const histLen = opts?.requireHistoricals ? 300 : 50;
     const histDates = dates.slice(0, histLen).reverse(); // oldest-first
+    const barInterval = isIntraday ? (interval === '60min' ? '1h' : interval.replace('min', 'm')) : interval === 'weekly' ? '1w' : '1d';
+    // AV *_ADJUSTED only adjusts '5. adjusted close'; raw O/H/L/C keep pre-split prices. Walk newest→oldest and divide
+    // older bars by the cumulative '8. split coefficient' so highs/lows/closes are on today's share basis (NFLX 10:1 etc.).
+    const splitFactor = new Map<string, number>();
+    let splitsApplied = 0;
+    if (!isIntraday) {
+      let f = 1;
+      for (const d of dates) {
+        splitFactor.set(d, f);
+        const coef = parseFloat(ts[d]['8. split coefficient'] ?? '1');
+        if (Number.isFinite(coef) && coef > 0 && Math.abs(coef - 1) > 1e-9) { f *= coef; splitsApplied++; }
+      }
+    }
+    const adj = (d: string, field: string) => { const v = parseFloat(ts[d][field]); const f = splitFactor.get(d) ?? 1; return f !== 1 ? v / f : v; };
+    // Intraday keys are 'YYYY-MM-DD HH:MM:SS' in US/Eastern; daily/weekly keys are session dates.
+    const lastKey = dates[0];
     return {
       price,
       change: price - prevClose,
@@ -358,9 +302,15 @@ export async function fetchPrice(
       low: parseFloat(latest['3. low']),
       volume: latestVol,
       avgVolume: avgVol,
-      historicalCloses: histDates.map(d => parseFloat(ts[d]['4. close'])),
-      historicalHighs: histDates.map(d => parseFloat(ts[d]['2. high'])),
-      historicalLows: histDates.map(d => parseFloat(ts[d]['3. low'])),
+      historicalCloses: histDates.map(d => adj(d, '4. close')),
+      historicalHighs: histDates.map(d => adj(d, '2. high')),
+      historicalLows: histDates.map(d => adj(d, '3. low')),
+      historicalDates: histDates,
+      barInterval,
+      lastCompletedBarAt: lastKey ?? null,
+      priceTs: new Date().toISOString(),
+      source: isIntraday ? `alpha_vantage TIME_SERIES_INTRADAY ${interval}` : `alpha_vantage TIME_SERIES_${interval === 'weekly' ? 'WEEKLY' : 'DAILY'}_ADJUSTED (O/H/L/C split-adjusted via coefficients${splitsApplied ? `, ${splitsApplied} split${splitsApplied === 1 ? '' : 's'} applied` : ''})`,
+      volumeBasis: avgVol && avgVol > 0 ? 'exchange_volume_20_bars' : 'unavailable',
     };
   } catch { return null; }
 }
@@ -379,7 +329,11 @@ export async function fetchIndicators(
 
     const local = mapLocalIndicators(closes, highs, lows);
 
-    // Crypto and intraday paths already fetched OHLC. Use local computation to avoid separate AV technical calls.
+    // Canonical rule: indicators are computed locally on the SAME bars the packet reports (crypto canonical series,
+    // AV split-adjusted daily/weekly, AV intraday). The worker cache is only a fallback when bars are too short.
+    if (local && local.barsUsed && local.barsUsed >= 50) {
+      return local;
+    }
     if (local && (assetClass === 'crypto' || isIntraday || avInterval === 'weekly')) {
       return local;
     }
@@ -404,6 +358,10 @@ export async function fetchIndicators(
           stochD: ind.stochD ?? null,
           inSqueeze: ind.inSqueeze ?? false,
           squeezeStrength: ind.squeezeStrength ?? 0,
+          ema20: (ind as any).ema20 ?? null,
+          ema50: (ind as any).ema50 ?? null,
+          ema200: typeof ind.ema200 === 'number' && ind.ema200 > 0 ? ind.ema200 : null,
+          source: 'worker_cache',
         };
       }
     }
@@ -413,71 +371,52 @@ export async function fetchIndicators(
 }
 
 // ── Helper: fetch options data (equities only) ──────────────────────────
-export async function fetchOptionsSnapshot(symbol: string, price: number): Promise<OptionsSnapshot | null> {
+export async function fetchOptionsSnapshot(
+  symbol: string,
+  price: number,
+  ctx: { recentCloses?: number[]; recentDates?: string[] } = {},
+): Promise<OptionsSnapshot | null> {
   if (!AV_KEY) return null;
   try {
     const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
     let optData = await avFetch<any>(realtimeUrl, `OPTIONS_FMV ${symbol}`);
+    let provider = 'alpha_vantage REALTIME_OPTIONS_FMV';
     if (!optData?.data?.length) {
       const documentedRealtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
       optData = await avFetch<any>(documentedRealtimeUrl, `REALTIME_OPTIONS ${symbol}`);
+      provider = 'alpha_vantage REALTIME_OPTIONS';
     }
     if (!optData?.data?.length) {
       const histUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
       optData = await avFetch<any>(histUrl, `HISTORICAL_OPTIONS ${symbol}`);
+      provider = 'alpha_vantage HISTORICAL_OPTIONS (previous session)';
     }
-    const rawData = optData?.data;
+    const rawData: RawContract[] | undefined = optData?.data;
     if (!rawData?.length) return null;
 
-    const calls = rawData.filter((o: any) => o.type === 'call');
-    const puts = rawData.filter((o: any) => o.type === 'put');
-    const totalCallOI = calls.reduce((s: number, c: any) => s + (parseInt(c.open_interest || '0', 10)), 0);
-    const totalPutOI = puts.reduce((s: number, p: any) => s + (parseInt(p.open_interest || '0', 10)), 0);
-    const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 1;
-
-    const totalCallVol = calls.reduce((s: number, c: any) => s + (parseInt(c.volume || '0', 10)), 0);
-    const totalPutVol = puts.reduce((s: number, p: any) => s + (parseInt(p.volume || '0', 10)), 0);
-    const totalVol = totalCallVol + totalPutVol;
-    const totalOI = totalCallOI + totalPutOI;
-    const volOIRatio = totalOI > 0 ? totalVol / totalOI : 0;
-    const unusualActivity = volOIRatio > 1 ? 'Very High' : volOIRatio > 0.5 ? 'Elevated' : 'Normal';
-
-    const allIVs = rawData.map((o: any) => parseFloat(o.implied_volatility || '0')).filter((iv: number) => iv > 0 && iv < 5);
-    const avgIV = allIVs.length > 0 ? allIVs.reduce((a: number, b: number) => a + b, 0) / allIVs.length : 0;
-    const minIV = allIVs.length > 0 ? Math.min(...allIVs) : 0;
-    const maxIV = allIVs.length > 0 ? Math.max(...allIVs) : 0;
-    const ivRank = maxIV > minIV ? ((avgIV - minIV) / (maxIV - minIV)) * 100 : 50;
-
-    // Max pain
-    const strikes: number[] = [...new Set(rawData.map((o: any) => parseFloat(o.strike)) as Iterable<number>)].sort((a, b) => a - b);
-    let minPain = Infinity; let maxPainStrike = price;
-    for (const strike of strikes) {
-      const callPain = calls.reduce((s: number, c: any) => { const k = parseFloat(c.strike); return s + Math.max(0, strike - k) * parseInt(c.open_interest || '0', 10); }, 0);
-      const putPain = puts.reduce((s: number, p: any) => { const k = parseFloat(p.strike); return s + Math.max(0, k - strike) * parseInt(p.open_interest || '0', 10); }, 0);
-      if (callPain + putPain < minPain) { minPain = callPain + putPain; maxPainStrike = strike; }
-    }
-
-    const callsByOI = [...calls].sort((a: any, b: any) => parseInt(b.open_interest || '0') - parseInt(a.open_interest || '0'));
-    const putsByOI = [...puts].sort((a: any, b: any) => parseInt(b.open_interest || '0') - parseInt(a.open_interest || '0'));
-
-    // Net gamma estimate
-    const netGamma = calls.reduce((s: number, c: any) => s + parseFloat(c.gamma || '0') * parseInt(c.open_interest || '0', 10), 0)
-      - puts.reduce((s: number, p: any) => s + parseFloat(p.gamma || '0') * parseInt(p.open_interest || '0', 10), 0);
-    const dealerGamma = netGamma > 0 ? 'Long gamma (stabilizing)' : netGamma < 0 ? 'Short gamma (amplifying)' : 'Neutral';
+    // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.
+    const snapshotTs = rawData[0]?.date ? `${String(rawData[0].date).slice(0, 10)}T20:00:00Z` : new Date().toISOString();
+    const canonical = summarizeChain(rawData, price, { snapshotTs, recentCloses: ctx.recentCloses, recentDates: ctx.recentDates });
+    if (!canonical) return null;
+    canonical.notes.push(`Source: ${provider}.`);
 
     return {
-      putCallRatio,
-      ivRank,
-      maxPain: maxPainStrike,
-      unusualActivity,
-      sentiment: putCallRatio > 1.2 ? 'Bearish' : putCallRatio < 0.8 ? 'Bullish' : 'Neutral',
-      highestOICallStrike: callsByOI[0] ? parseFloat(callsByOI[0].strike) : null,
-      highestOIPutStrike: putsByOI[0] ? parseFloat(putsByOI[0].strike) : null,
-      totalCallOI, totalPutOI,
-      dealerGamma,
+      putCallRatio: canonical.putCallOi,
+      // No IV history is available from the chain alone; ivRank is intentionally not fabricated (50 = "unknown" placeholder for legacy math).
+      ivRank: 50,
+      maxPain: canonical.maxPain ?? price,
+      unusualActivity: canonical.unusualActivity,
+      sentiment: canonical.sentiment,
+      highestOICallStrike: canonical.callWall?.strike ?? null,
+      highestOIPutStrike: canonical.putWall?.strike ?? null,
+      totalCallOI: canonical.totalCallOi,
+      totalPutOI: canonical.totalPutOi,
+      dealerGamma: canonical.dealerGamma,
+      canonical,
     };
   } catch { return null; }
 }
+
 
 // ── Helper: fetch crypto derivatives (funding rates + OI via CoinGecko) ─
 export interface CryptoDerivatives {

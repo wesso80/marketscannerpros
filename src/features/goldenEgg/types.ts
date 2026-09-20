@@ -1,6 +1,62 @@
 export type PublicAssessment = 'ALIGNED' | 'NOT_ALIGNED' | 'WATCH';
 export type Direction = 'LONG' | 'SHORT' | 'NEUTRAL';
 export type Verdict = 'agree' | 'disagree' | 'neutral' | 'unknown';
+export type IndicatorState = 'bull' | 'bear' | 'neutral' | 'strength' | 'extended';
+
+/* ── Canonical packet: the single source of truth every Golden Egg surface and the Deep Analyst read ── */
+export interface GoldenEggCanonical {
+  symbol: string;
+  assetClass: 'equity' | 'crypto' | 'forex';
+  timeframe: string;
+  barInterval: string | null;
+  price: number;
+  /** Change vs the previous completed bar close (daily/weekly) or previous bar (intraday), in percent. */
+  changePct: number;
+  priceTs: string;
+  lastCompletedBarAt: string | null;
+  historyBars: number;
+  source: string | null;
+  indicators: {
+    rsi: number | null; adx: number | null; atr: number | null; atrPct: number | null;
+    ema20: number | null; ema50: number | null; ema200: number | null;
+    sma20: number | null; sma50: number | null; macdHist: number | null; macd: number | null; macdSignal: number | null; stochK: number | null;
+    computedOn: string;
+  };
+  liquidity: { volume: number | null; avgVolume: number | null; advUsd: number | null; volumeBasis: string | null };
+  dataTrust: { level: 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA'; label: string; reasons: string[]; freshness: string; priceDiscontinuity: { date: string | null; ratio: number } | null };
+  scores: { structure: number; flow: number; momentum: number; riskQuality: number; notes: { structure: string[]; risk: string[]; flow: string[]; momentum: string[] } };
+  timing: { relation: 'supportive' | 'conflict' | 'neutral' | 'unavailable'; valid: boolean; eligibleForHardGate: boolean; direction: 'bullish' | 'bearish' | 'neutral'; signalStrength: string; confidence: number | null; sessionState: 'open' | 'closed' | 'always_open' | 'unknown'; reasons: string[] };
+  extension: { rsiExtended: boolean; stochExtended: boolean; dveExhaustion: number | null; dveSignal: string | null; dveSignalStrength: string | null; label: string };
+  derivatives: { fundingRatePercent: number; fundingInterval: string; annualizedPct: number; openInterestUsd: number; perpVolume24hUsd: number; exchanges: number; crowding: 'neutral' | 'long_crowded' | 'short_crowded'; note: string } | null;
+  options: {
+    expiry: string; daysToExpiry: number; snapshotTs: string; putCallOi: number; avgIvPct: number | null; ivRank: null; expectedMovePct: number | null; maxPain: number | null;
+    callWall: { strike: number; relation: string } | null; putWall: { strike: number; relation: string } | null; dealerGamma: string; unusualActivity: string;
+    topCall: { strike: number; oi: number; volume: number; iv: number | null; delta: number | null; gamma: number | null; theta: number | null; vega: number | null } | null;
+    topPut: { strike: number; oi: number; volume: number; iv: number | null; delta: number | null; gamma: number | null; theta: number | null; vega: number | null } | null;
+    totalCallOi: number; totalPutOi: number;
+    quality: { level: 'GOOD' | 'DEGRADED' | 'UNUSABLE'; reasons: string[] }; notes: string[];
+  } | null;
+  fundamentals: {
+    name: string | null; sector: string | null; industry: string | null; marketCap: number | null; pe: number | null; forwardPe: number | null; peg: number | null;
+    revenueGrowthYoy: number | null; earningsGrowthYoy: number | null; profitMargin: number | null; multipleLabel: string; periodSummary: string;
+    analystTarget: number | null; analystCount: number | null; nextEarningsDate: string | null; daysToEarnings: number | null; lastReportedQuarter: string | null; lastEpsBeat: boolean | null;
+  } | null;
+  network: {
+    marketCap: number | null; marketCapRank: number | null; circulatingSupply: number | null; maxSupply: number | null; totalSupply: number | null; fdv: number | null; fdvBasis: string; supplyIssuedPct: number | null;
+    spotVolume24h: number | null; volumeToMcap: number | null; ath: number | null; athDate: string | null; distanceFromAthPct: number | null; change7dPct: number | null; change30dPct: number | null;
+    categories: string[]; relative: Array<{ benchmark: string; ratio: number; symbolPct: number; benchmarkPct: number; window: string; label: string }>; notes: string[];
+  } | null;
+  crossMarket: { alignment: 'supportive' | 'neutral' | 'headwind' | 'unknown'; summary: string; items: Array<{ symbol: string; label: string; price: number | null; changePct: number | null; trend: string; detail: string; relation: string }> };
+  levels: {
+    reference: { price: number | null; basis: 'structural' | 'mechanical'; label: string };
+    invalidation: { price: number; basis: 'structural' | 'mechanical'; label: string; distanceAtr: number | null };
+    zones: Array<{ price: number; basis: 'structural' | 'mechanical'; label: string; rMultiple: number | null }>;
+    illustrativeR: number | null;
+  };
+  verdict: { assessment: PublicAssessment; direction: Direction; confluence: number; grade: string; primaryDriver: string; primaryBlocker: string | null; setupType: string; setupNote: string };
+  confirmation: string[];
+  invalidation: string[];
+}
 
 /* ── Deep Analysis types (from /api/deep-analysis) ───────────────────── */
 export interface DeepAnalysisData {
@@ -172,7 +228,7 @@ export interface GoldenEggPayload {
     };
     momentum: {
       verdict: Verdict;
-      indicators: Array<{ name: string; value: string; state: 'bull' | 'bear' | 'neutral' }>;
+      indicators: Array<{ name: string; value: string; state: IndicatorState }>;
     };
     internals?: {
       enabled: boolean;
@@ -243,8 +299,14 @@ export interface GoldenEggPayload {
         totalWeight: number;
         contributingTFs: string[];
       } | null;
+      sessionState?: 'open' | 'closed' | 'always_open';
+      displayNote?: string;
+      /** Whether this read was allowed to gate the verdict, and why. */
+      gating?: { relation: string; valid: boolean; eligibleForHardGate: boolean; reasons: string[] };
     };
   };
+  /** Canonical facts (Part C). Present on every live packet. */
+  canonical?: GoldenEggCanonical;
   doctrine?: {
     id: string;
     label: string;

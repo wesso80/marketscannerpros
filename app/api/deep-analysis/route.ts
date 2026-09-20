@@ -1,1318 +1,371 @@
-import { NextRequest, NextResponse } from "next/server";
+/**
+ * Golden Egg Deep Analyst
+ *
+ * GET /api/deep-analysis?symbol=META[&type=equity|crypto][&timeframe=daily]
+ *
+ * Consumes the canonical Golden Egg packet (lib/goldenEgg/engine) — it does NOT refetch price, indicators or options.
+ * It enriches the packet with symbol-relevant news, earnings and fundamentals context, and asks the model to
+ * INTERPRET the packet in a fixed research format. The Golden Egg verdict stays canonical; there is no second
+ * directional engine.
+ */
+import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { estimateGreeks } from '@/lib/options-confluence-analyzer';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
-import { getCoinDetail, getGlobalData, resolveSymbolToId } from '@/lib/coingecko';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 import { avFetch } from '@/lib/avRateGovernor';
-import { getIndicators } from '@/lib/onDemandFetch';
-import {
-  calculateEMA as calcEMA,
-  calculateRSI as calcRSI,
-  calculateStochastic as calcStochastic,
-  calculateATR as calcATR,
-} from '@/lib/yahoo-finance';
+import { getGlobalData } from '@/lib/coingecko';
+import { detectAssetClass } from '@/lib/goldenEggFetchers';
+import { computeGoldenEgg } from '@/lib/goldenEgg/engine';
+import { getEarningsHistory, getFundamentalsSummary, type EarningsHistory, type FundamentalsSummary } from '@/lib/goldenEgg/companyOverview';
+import { filterRelevantNews, summarizeNews, avTickerKey, type RelevantArticle } from '@/lib/goldenEgg/newsRelevance';
+import { formatUsdShort } from '@/lib/goldenEgg/semantics';
+import type { GoldenEggPayload, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
-
-// NOTE: Using HISTORICAL_OPTIONS / REALTIME_OPTIONS_FMV - available with 600 RPM premium plan
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 function isLocalDeepAnalysisDemoAllowed(): boolean {
   return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
 }
 
-// Get the Friday of the current week (or next week if past Friday)
-function getThisWeekFriday(): number {
-  const now = new Date();
-  const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 5 = Friday
-  let daysUntilFriday = 5 - dayOfWeek;
-  
-  // If it's Friday after market close or Saturday/Sunday, get next Friday
-  if (daysUntilFriday < 0 || (daysUntilFriday === 0 && now.getUTCHours() >= 21)) {
-    daysUntilFriday += 7;
-  }
-  
-  const friday = new Date(now);
-  friday.setUTCDate(friday.getUTCDate() + daysUntilFriday);
-  friday.setUTCHours(0, 0, 0, 0);
-  
-  return Math.floor(friday.getTime() / 1000);
+// ── News (ticker-relevant only) ─────────────────────────────────────────
+async function fetchRelevantNews(symbol: string, assetClass: 'equity' | 'crypto' | 'forex'): Promise<{ items: RelevantArticle[]; considered: number; provider: string }> {
+  if (!ALPHA_VANTAGE_API_KEY) return { items: [], considered: 0, provider: 'unavailable' };
+  const key = avTickerKey(symbol, assetClass);
+  const data = await avFetch<any>(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(key)}&limit=50&sort=LATEST&apikey=${ALPHA_VANTAGE_API_KEY}`, `NEWS ${key}`);
+  const feed = Array.isArray(data?.feed) ? data.feed : [];
+  return { items: filterRelevantNews(feed, symbol, assetClass), considered: feed.length, provider: 'alpha_vantage NEWS_SENTIMENT (ticker-filtered, relevance ≥ 0.35)' };
 }
 
-// Fetch options chain from Alpha Vantage (legally compliant, already paid for)
-async function fetchOptionsData(symbol: string) {
-  console.log(`🔄 fetchOptionsData() called for ${symbol}`);
-  
-  // HISTORICAL_OPTIONS - end-of-day data, available with 75 req/min premium plan
-  if (!ALPHA_VANTAGE_API_KEY) {
-    console.warn('⚠️ ALPHA_VANTAGE_API_KEY not set - options data unavailable');
-    return null;
-  }
-  
-  console.log(`✅ API key exists (length: ${ALPHA_VANTAGE_API_KEY.length})`);
-  
+// ── Crypto market sentiment proxy (unchanged formula, labelled as a proxy) ─
+async function fetchCryptoSentiment() {
   try {
-    // Get current price first for reference — rate governed
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    console.log(`[deep-analysis] Fetching quote for ${symbol}...`);
-    const quoteData = await avFetch(quoteUrl, `QUOTE ${symbol}`);
-    console.log(`[deep-analysis] Quote response keys:`, quoteData ? Object.keys(quoteData).join(', ') : 'null');
-    
-    // Handle both realtime and delayed response formats
-    const globalQuote = quoteData?.['Global Quote'] || quoteData?.['Global Quote - DATA DELAYED BY 15 MINUTES'];
-    const currentPrice = parseFloat(globalQuote?.['05. price'] || '0');
-    
-    if (!currentPrice) {
-      console.log(`[deep-analysis] No price data for ${symbol}, skipping options.`);
-      return null;
-    }
-    console.log(`[deep-analysis] Got price for ${symbol}: $${currentPrice}`);
-
-    // Alpha Vantage options endpoint — REALTIME_OPTIONS_FMV (FMV) preferred, HISTORICAL_OPTIONS fallback
-    // Rate governed to protect 600 RPM quota
-    let optionsData: any = null;
-    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${symbol}&require_greeks=true&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    optionsData = await avFetch(realtimeUrl, `REALTIME_OPTIONS_FMV ${symbol}`);
-    if (!optionsData?.data?.length) {
-      const historicalUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      optionsData = await avFetch(historicalUrl, `HISTORICAL_OPTIONS ${symbol}`);
-    }
-    
-    const rawData = optionsData?.data;
-    
-    if (!rawData || rawData.length === 0) {
-      console.log(`❌ No options data available for ${symbol}`);
-      return null;
-    }
-    
-    console.log(`✅ ${symbol} - Retrieved ${rawData.length} option contracts from Alpha Vantage`);
-    
-    // Separate calls and puts
-    const calls = rawData.filter((opt: any) => opt.type === 'call');
-    const puts = rawData.filter((opt: any) => opt.type === 'put');
-    
-    if (calls.length === 0 && puts.length === 0) {
-      console.log(`${symbol} - No valid calls or puts found`);
-      return null;
-    }
-    
-    // Find the most common expiry date (weekly options closest to Friday)
-    const expiryMap: Record<string, number> = {};
-    rawData.forEach((opt: any) => {
-      if (opt.expiration) {
-        expiryMap[opt.expiration] = (expiryMap[opt.expiration] || 0) + 1;
-      }
-    });
-    
-    const targetFriday = getThisWeekFriday();
-    const targetDate = new Date(targetFriday * 1000).toISOString().split('T')[0];
-    
-    // Use the date with most contracts, or closest to target Friday
-    let bestExpiry = Object.keys(expiryMap)[0];
-    let maxContracts = 0;
-    
-    for (const [expiry, count] of Object.entries(expiryMap)) {
-      if (count > maxContracts || (count === maxContracts && Math.abs(new Date(expiry).getTime() - new Date(targetDate).getTime()) < Math.abs(new Date(bestExpiry).getTime() - new Date(targetDate).getTime()))) {
-        bestExpiry = expiry;
-        maxContracts = count;
-      }
-    }
-    
-    // Filter to use only the best expiry
-    const callsFiltered = calls.filter((c: any) => c.expiration === bestExpiry);
-    const putsFiltered = puts.filter((p: any) => p.expiration === bestExpiry);
-    
-    console.log(`${symbol} - Using expiry: ${bestExpiry}, Calls: ${callsFiltered.length}, Puts: ${putsFiltered.length}`);
-    
-    // Calculate DTE for Greeks fallback
-    const expiryDateObj = new Date(bestExpiry);
-    const today = new Date();
-    const daysToExpiry = Math.max(1, Math.ceil((expiryDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
-    
-    // Convert Alpha Vantage format to our internal format (including Greeks with Black-Scholes fallback)
-    const formatOption = (opt: any, isCall: boolean) => {
-      const strike = parseFloat(opt.strike);
-      const iv = parseFloat(opt.implied_volatility || '0') || 0.25;  // Default 25% IV
-      
-      // Parse API Greeks
-      const apiDelta = parseFloat(opt.delta || '0');
-      const apiGamma = parseFloat(opt.gamma || '0');
-      const apiTheta = parseFloat(opt.theta || '0');
-      const apiVega = parseFloat(opt.vega || '0');
-      
-      // Use Black-Scholes fallback when API doesn't provide Greeks (returns 0)
-      let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
-      if (apiDelta === 0 && apiGamma === 0 && apiTheta === 0) {
-        const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, isCall);
-        delta = estimated.delta;
-        gamma = estimated.gamma;
-        theta = estimated.theta;
-        vega = estimated.vega;
-      }
-      
-      return {
-        strike,
-        openInterest: parseInt(opt.open_interest || '0', 10),
-        volume: parseInt(opt.volume || '0', 10),
-        impliedVolatility: iv,
-        lastPrice: parseFloat(opt.last_price || opt.mark || '0'),
-        delta,
-        gamma,
-        theta,
-        vega,
-        rho: parseFloat(opt.rho || '0')
-      };
-    };
-    
-    const formattedCalls = callsFiltered.map((opt: any) => formatOption(opt, true));
-    const formattedPuts = putsFiltered.map((opt: any) => formatOption(opt, false));
-    
-    // Calculate IV statistics across all options
-    const allIVs = [...formattedCalls, ...formattedPuts]
-      .map(o => o.impliedVolatility)
-      .filter(iv => iv > 0 && iv < 5); // Filter reasonable IVs (0-500%)
-    
-    const avgIV = allIVs.length > 0 ? allIVs.reduce((a: number, b: number) => a + b, 0) / allIVs.length : 0;
-    const minIV = allIVs.length > 0 ? Math.min(...allIVs) : 0;
-    const maxIV = allIVs.length > 0 ? Math.max(...allIVs) : 0;
-    // IV Rank: where current IV sits in its range (simplified - ideally use 52-week data)
-    const ivRank = maxIV > minIV ? ((avgIV - minIV) / (maxIV - minIV)) * 100 : 50;
-    
-    // Calculate total volume and Volume/OI ratio for unusual activity detection
-    const totalCallVolume = formattedCalls.reduce((sum: number, c: { volume: number }) => sum + c.volume, 0);
-    const totalPutVolume = formattedPuts.reduce((sum: number, p: { volume: number }) => sum + p.volume, 0);
-    const totalVolume = totalCallVolume + totalPutVolume;
-    
-    // Sort by OI to find highest
-    const callsByOI = [...formattedCalls].sort((a, b) => b.openInterest - a.openInterest);
-    const putsByOI = [...formattedPuts].sort((a, b) => b.openInterest - a.openInterest);
-    
-    console.log(`${symbol} TOP 5 CALLS by OI:`, callsByOI.slice(0, 5).map(c => `$${c.strike}=${c.openInterest}`).join(', '));
-    console.log(`${symbol} TOP 5 PUTS by OI:`, putsByOI.slice(0, 5).map(p => `$${p.strike}=${p.openInterest}`).join(', '));
-    
-    const highestOICall = callsByOI.length > 0 && callsByOI[0].openInterest > 0 ? callsByOI[0] : null;
-    const highestOIPut = putsByOI.length > 0 && putsByOI[0].openInterest > 0 ? putsByOI[0] : null;
-    
-    // Log Greeks for debugging
-    if (highestOICall) {
-      console.log(`${symbol} Highest OI Call Greeks: strike=$${highestOICall.strike}, delta=${highestOICall.delta}, gamma=${highestOICall.gamma}, theta=${highestOICall.theta}, vega=${highestOICall.vega}`);
-    }
-    if (highestOIPut) {
-      console.log(`${symbol} Highest OI Put Greeks: strike=$${highestOIPut.strike}, delta=${highestOIPut.delta}, gamma=${highestOIPut.gamma}, theta=${highestOIPut.theta}, vega=${highestOIPut.vega}`);
-    }
-    
-    // Calculate totals
-    const totalCallOI = formattedCalls.reduce((sum: number, c: { openInterest: number }) => sum + c.openInterest, 0);
-    const totalPutOI = formattedPuts.reduce((sum: number, p: { openInterest: number }) => sum + p.openInterest, 0);
-    const totalOI = totalCallOI + totalPutOI;
-    const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
-    
-    // Volume/OI ratio - values > 1 indicate unusual activity
-    const volumeOIRatio = totalOI > 0 ? totalVolume / totalOI : 0;
-    const callVolumeOIRatio = totalCallOI > 0 ? totalCallVolume / totalCallOI : 0;
-    const putVolumeOIRatio = totalPutOI > 0 ? totalPutVolume / totalPutOI : 0;
-    
-    // Detect unusual activity (Volume/OI > 0.5 is notable, > 1 is very unusual)
-    const unusualActivity = volumeOIRatio > 1 ? 'Very High' : volumeOIRatio > 0.5 ? 'Elevated' : 'Normal';
-    
-    console.log(`${symbol} total OI - Calls: ${totalCallOI}, Puts: ${totalPutOI}, P/C: ${putCallRatio.toFixed(2)}, Vol/OI: ${volumeOIRatio.toFixed(2)}`);
-    
-    // Calculate max pain
-    const maxPain = calculateMaxPain(formattedCalls, formattedPuts, currentPrice);
-    
-    // Find key levels
-    const keyLevels = findKeyOptionsLevels(formattedCalls, formattedPuts, currentPrice);
-    
-    const expiryDate = new Date(bestExpiry);
-    
-    return {
-      expiryDate: bestExpiry,
-      expiryFormatted: expiryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      currentPrice,
-      highestOICall,
-      highestOIPut,
-      totalCallOI,
-      totalPutOI,
-      totalVolume,
-      putCallRatio,
-      maxPain,
-      keyLevels,
-      // New fields
-      avgIV: avgIV * 100, // Convert to percentage
-      ivRank,
-      volumeOIRatio,
-      callVolumeOIRatio,
-      putVolumeOIRatio,
-      unusualActivity,
-      sentiment: putCallRatio > 1.2 ? 'Bearish' as const : putCallRatio < 0.8 ? 'Bullish' as const : 'Neutral' as const
-    };
-  } catch (err) {
-    console.error('Alpha Vantage options fetch error:', err);
-    return null;
-  }
-}
-
-// Calculate Max Pain (price where most options expire worthless)
-function calculateMaxPain(calls: any[], puts: any[], currentPrice: number): number {
-  if (!calls.length && !puts.length) return currentPrice;
-  
-  // Get all unique strikes
-  const allStrikes = [...new Set([
-    ...calls.map((c: any) => c.strike),
-    ...puts.map((p: any) => p.strike)
-  ])].sort((a, b) => a - b);
-  
-  let minPain = Infinity;
-  let maxPainStrike = currentPrice;
-  
-  for (const testPrice of allStrikes) {
-    let totalPain = 0;
-    
-    // Call pain: if price < strike, call is worthless, no pain
-    // If price > strike, pain = (price - strike) * OI * 100
-    for (const call of calls) {
-      if (testPrice > call.strike) {
-        totalPain += (testPrice - call.strike) * (call.openInterest || 0) * 100;
-      }
-    }
-    
-    // Put pain: if price > strike, put is worthless, no pain
-    // If price < strike, pain = (strike - price) * OI * 100
-    for (const put of puts) {
-      if (testPrice < put.strike) {
-        totalPain += (put.strike - testPrice) * (put.openInterest || 0) * 100;
-      }
-    }
-    
-    if (totalPain < minPain) {
-      minPain = totalPain;
-      maxPainStrike = testPrice;
-    }
-  }
-  
-  return maxPainStrike;
-}
-
-// Find key support/resistance levels from high OI strikes
-function findKeyOptionsLevels(calls: any[], puts: any[], currentPrice: number): { support: number[]; resistance: number[] } {
-  // High OI puts below current price = support
-  // High OI calls above current price = resistance
-  
-  const sortedPuts = [...puts]
-    .filter((p: any) => p.strike < currentPrice && p.openInterest > 0)
-    .sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-  
-  const sortedCalls = [...calls]
-    .filter((c: any) => c.strike > currentPrice && c.openInterest > 0)
-    .sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-  
-  return {
-    support: sortedPuts.slice(0, 3).map((p: any) => p.strike),
-    resistance: sortedCalls.slice(0, 3).map((c: any) => c.strike)
-  };
-}
-
-// Detect asset type from symbol
-function detectAssetType(symbol: string): 'crypto' | 'forex' | 'commodity' | 'stock' {
-  const s = symbol.toUpperCase();
-  
-  // Comprehensive crypto list - top 150+ by market cap on major exchanges
-  const cryptoSymbols = [
-    // Top 50
-    'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'AVAX', 'LINK', 'DOT',
-    'MATIC', 'SHIB', 'LTC', 'BCH', 'NEAR', 'UNI', 'ATOM', 'XLM', 'ICP', 'HBAR',
-    'FIL', 'VET', 'IMX', 'APT', 'GRT', 'INJ', 'OP', 'THETA', 'FTM', 'RUNE',
-    'LDO', 'ALGO', 'XMR', 'AAVE', 'MKR', 'STX', 'EGLD', 'FLOW', 'AXS', 'SAND',
-    'EOS', 'XTZ', 'NEO', 'KAVA', 'CFX', 'MINA', 'SNX', 'CRV', 'DYDX', 'BLUR',
-    // 51-100
-    'AR', 'SUI', 'SEI', 'TIA', 'JUP', 'WIF', 'PEPE', 'BONK', 'FLOKI', 'MEME',
-    'ORDI', 'SATS', '1000SATS', 'PYTH', 'STRK', 'WLD', 'FET', 'RNDR', 'AGIX', 'OCEAN',
-    'TAO', 'ROSE', 'ZIL', 'IOTA', 'ZEC', 'DASH', 'BAT', 'ZRX', 'ENJ', 'MANA',
-    'GALA', 'APE', 'GMT', 'ARB', 'MAGIC', 'GMX', 'COMP', 'YFI', 'SUSHI', '1INCH',
-    'LRC', 'MASK', 'SKL', 'ENS', 'ANKR', 'STORJ', 'CELO', 'CHZ', 'HOT', 'ONE',
-    // 101-150+
-    'QTUM', 'ZEN', 'IOST', 'ICX', 'ONT', 'RVN', 'WAVES', 'AUDIO', 'BAND', 'CELR',
-    'CTSI', 'DENT', 'DGB', 'FLUX', 'GLMR', 'JASMY', 'JOE', 'KDA', 'KSM', 'LINA',
-    'LOOM', 'MTL', 'NKN', 'NTRN', 'OGN', 'OMG', 'PAXG', 'PEOPLE', 'PERP', 'POLS',
-    'POND', 'QNT', 'REEF', 'RSR', 'RLC', 'SC', 'SFP', 'SLP', 'SNT', 'SXP',
-    'T', 'TWT', 'UMA', 'UNFI', 'VGX', 'VOXEL', 'WIN', 'WOO', 'XEC', 'XEM', 'XVS', 'YGG'
-  ];
-  if (cryptoSymbols.includes(s) || s.endsWith('USDT') || s.endsWith('USD') && cryptoSymbols.some(c => s.startsWith(c))) {
-    return 'crypto';
-  }
-  
-  // Forex patterns
-  const forexPairs = ['EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD', 'CNY', 'HKD', 'SGD', 'SEK', 'NOK', 'MXN', 'ZAR', 'TRY', 'INR', 'BRL', 'KRW'];
-  if (s.length === 6 && forexPairs.some(f => s.includes(f))) {
-    return 'forex';
-  }
-  
-  // Commodities
-  const commodities = ['GOLD', 'SILVER', 'OIL', 'GAS', 'WHEAT', 'CORN', 'COPPER', 'PLATINUM', 'PALLADIUM', 'XAU', 'XAG', 'WTI', 'BRENT', 'NG'];
-  if (commodities.some(c => s.includes(c))) {
-    return 'commodity';
-  }
-  
-  return 'stock';
-}
-
-// Fetch price data from appropriate source
-async function fetchPriceData(symbol: string, assetType: string) {
-  try {
-    if (assetType === 'crypto') {
-      // Use Binance for crypto
-      const cleanSymbol = symbol.toUpperCase().replace(/[-\/]/g, '');
-      const pair = cleanSymbol.endsWith('USDT') ? cleanSymbol : `${cleanSymbol}USDT`;
-      
-      const [tickerRes, klineRes] = await Promise.all([
-        fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`),
-        fetch(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=1d&limit=30`)
-      ]);
-      
-      if (!tickerRes.ok) throw new Error('Binance API error');
-      
-      const ticker = await tickerRes.json();
-      const klines = klineRes.ok ? await klineRes.json() : [];
-      
-      return {
-        price: parseFloat(ticker.lastPrice),
-        change: parseFloat(ticker.priceChange),
-        changePercent: parseFloat(ticker.priceChangePercent),
-        high24h: parseFloat(ticker.highPrice),
-        low24h: parseFloat(ticker.lowPrice),
-        volume: parseFloat(ticker.volume),
-        quoteVolume: parseFloat(ticker.quoteVolume),
-        historicalPrices: klines.map((k: any) => ({
-          date: new Date(k[0]).toISOString().split('T')[0],
-          open: parseFloat(k[1]),
-          high: parseFloat(k[2]),
-          low: parseFloat(k[3]),
-          close: parseFloat(k[4]),
-          volume: parseFloat(k[5])
-        }))
-      };
-    } else {
-      // Use Alpha Vantage for stocks/forex/commodities — rate governed
-      const func = assetType === 'forex' ? 'FX_DAILY' : 'TIME_SERIES_DAILY_ADJUSTED';
-      const symbolParam = assetType === 'forex' 
-        ? `from_symbol=${symbol.slice(0,3)}&to_symbol=${symbol.slice(3,6)}`
-        : `symbol=${symbol}`;
-      
-      const url = `https://www.alphavantage.co/query?function=${func}&${symbolParam}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const data = await avFetch(url, `${func} ${symbol}`);
-      if (!data) throw new Error('No data from AV');
-      
-      const timeSeriesKey = Object.keys(data).find(k => k.includes('Time Series'));
-      if (!timeSeriesKey) throw new Error('No time series data');
-      
-      const timeSeries = data[timeSeriesKey];
-      const dates = Object.keys(timeSeries).sort().reverse();
-      const latest = timeSeries[dates[0]];
-      const previous = timeSeries[dates[1]];
-      
-      const price = parseFloat(latest['4. close']);
-      const prevClose = parseFloat(previous['4. close']);
-      
-      return {
-        price,
-        change: price - prevClose,
-        changePercent: ((price - prevClose) / prevClose) * 100,
-        high24h: parseFloat(latest['2. high']),
-        low24h: parseFloat(latest['3. low']),
-        volume: parseFloat(latest['5. volume'] || '0'),
-        historicalPrices: dates.slice(0, 30).map(d => ({
-          date: d,
-          open: parseFloat(timeSeries[d]['1. open']),
-          high: parseFloat(timeSeries[d]['2. high']),
-          low: parseFloat(timeSeries[d]['3. low']),
-          close: parseFloat(timeSeries[d]['4. close']),
-          volume: parseFloat(timeSeries[d]['5. volume'] || '0')
-        }))
-      };
-    }
-  } catch (err) {
-    console.error('Price fetch error:', err);
-    return null;
-  }
-}
-
-// Fetch technical indicators
-async function fetchTechnicalIndicators(symbol: string, assetType: string) {
-  try {
-    if (assetType === 'crypto') {
-      // Calculate from Binance klines
-      const pair = symbol.toUpperCase().replace(/[-\/]/g, '');
-      const binanceSymbol = pair.endsWith('USDT') ? pair : `${pair}USDT`;
-      
-      const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=1d&limit=50`);
-      if (!res.ok) return null;
-      
-      const klines = await res.json();
-      const closes = klines.map((k: any) => parseFloat(k[4]));
-      const highs = klines.map((k: any) => parseFloat(k[2]));
-      const lows = klines.map((k: any) => parseFloat(k[3]));
-      const volumes = klines.map((k: any) => parseFloat(k[5]));
-      
-      // Calculate indicators
-      const sma20 = closes.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20;
-      const sma50 = closes.length >= 50 ? closes.slice(-50).reduce((a: number, b: number) => a + b, 0) / 50 : null;
-      const ema12 = calcEMA(closes, 12);
-      const ema26 = calcEMA(closes, 26);
-      const macd = ema12 - ema26;
-      const rsi = calcRSI(closes, 14);
-      const { k: stochK, d: stochD } = calcStochastic(highs, lows, closes, 14, 3);
-      const atr = calcATR(highs, lows, closes, 14);
-      const avgVolume = volumes.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20;
-      const volumeRatio = volumes[volumes.length - 1] / avgVolume;
-      
-      return {
-        sma20,
-        sma50,
-        ema12,
-        ema26,
-        macd,
-        rsi,
-        stochK,
-        stochD,
-        atr,
-        volumeRatio,
-        priceVsSma20: ((closes[closes.length - 1] - sma20) / sma20) * 100,
-        priceVsSma50: sma50 ? ((closes[closes.length - 1] - sma50) / sma50) * 100 : null,
-      };
-    } else {
-      // STOCK indicators: Try worker-populated cache first (Redis → DB),
-      // saving up to 6 AV calls. Fallback to rate-governed AV if cache miss.
-      const cachedInd = await getIndicators(symbol, 'daily');
-      if (cachedInd) {
-        console.log(`[deep-analysis] ${symbol} indicators from ${cachedInd.source} — saved 6 AV calls`);
-        return {
-          rsi: cachedInd.rsi14 ?? null,
-          macd: cachedInd.macdLine ?? null,
-          macdSignal: cachedInd.macdSignal ?? null,
-          macdHist: cachedInd.macdHist ?? null,
-          sma20: cachedInd.sma20 ?? null,
-          sma50: cachedInd.sma50 ?? null,
-          bbUpper: cachedInd.bbUpper ?? null,
-          bbMiddle: cachedInd.bbMiddle ?? null,
-          bbLower: cachedInd.bbLower ?? null,
-          adx: cachedInd.adx14 ?? null,
-        };
-      }
-
-      // Cache miss — rate-governed AV fallback (6 calls)
-      console.log(`[deep-analysis] ${symbol} indicators not cached, falling back to AV`);
-      // Batch 1: Core indicators (4 calls, rate governed)
-      const settled1 = await Promise.allSettled([
-        avFetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `RSI ${symbol}`),
-        avFetch(`https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `MACD ${symbol}`),
-        avFetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `SMA20 ${symbol}`),
-        avFetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `SMA50 ${symbol}`),
-      ]);
-      const [rsiData, macdData, smaData, sma50Data] = settled1.map(r => r.status === 'fulfilled' ? r.value : null);
-      
-      // Batch 2: Additional indicators (2 calls, rate governed)
-      const settled2 = await Promise.allSettled([
-        avFetch(`https://www.alphavantage.co/query?function=BBANDS&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `BBANDS ${symbol}`),
-        avFetch(`https://www.alphavantage.co/query?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${ALPHA_VANTAGE_API_KEY}`, `ADX ${symbol}`),
-      ]);
-      const [bbandsData, adxData] = settled2.map(r => r.status === 'fulfilled' ? r.value : null);
-      
-      const rsiValues = rsiData?.['Technical Analysis: RSI'];
-      const macdValues = macdData?.['Technical Analysis: MACD'];
-      const smaValues = smaData?.['Technical Analysis: SMA'];
-      const sma50Values = sma50Data?.['Technical Analysis: SMA'];
-      const bbandsValues = bbandsData?.['Technical Analysis: BBANDS'];
-      const adxValues = adxData?.['Technical Analysis: ADX'];
-      
-      const latestRsi = rsiValues ? parseFloat((Object.values(rsiValues)[0] as any)?.RSI) || null : null;
-      const latestMacd = macdValues ? Object.values(macdValues)[0] as any : null;
-      const latestSma = smaValues ? parseFloat((Object.values(smaValues)[0] as any)?.SMA) || null : null;
-      const latestSma50 = sma50Values ? parseFloat((Object.values(sma50Values)[0] as any)?.SMA) || null : null;
-      const latestBbands = bbandsValues ? Object.values(bbandsValues)[0] as any : null;
-      const latestAdx = adxValues ? parseFloat((Object.values(adxValues)[0] as any)?.ADX) || null : null;
-      
-      return {
-        rsi: latestRsi,
-        macd: latestMacd?.MACD ? parseFloat(latestMacd.MACD) : null,
-        macdSignal: latestMacd?.MACD_Signal ? parseFloat(latestMacd.MACD_Signal) : null,
-        macdHist: latestMacd?.MACD_Hist ? parseFloat(latestMacd.MACD_Hist) : null,
-        sma20: latestSma,
-        sma50: latestSma50,
-        bbUpper: latestBbands?.['Real Upper Band'] ? parseFloat(latestBbands['Real Upper Band']) : null,
-        bbMiddle: latestBbands?.['Real Middle Band'] ? parseFloat(latestBbands['Real Middle Band']) : null,
-        bbLower: latestBbands?.['Real Lower Band'] ? parseFloat(latestBbands['Real Lower Band']) : null,
-        adx: latestAdx,
-      };
-    }
-  } catch (err) {
-    console.error('Indicators fetch error:', err);
-    return null;
-  }
-}
-
-// Fetch company overview (for stocks) — rate governed
-async function fetchCompanyOverview(symbol: string) {
-  try {
-    const data = await avFetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`, `OVERVIEW ${symbol}`);
-    
-    if (!data.Symbol) return null;
-    
-    return {
-      name: data.Name,
-      description: data.Description,
-      sector: data.Sector,
-      industry: data.Industry,
-      marketCap: data.MarketCapitalization,
-      peRatio: data.PERatio !== 'None' ? parseFloat(data.PERatio) : null,
-      forwardPE: data.ForwardPE !== 'None' ? parseFloat(data.ForwardPE) : null,
-      eps: data.EPS !== 'None' ? parseFloat(data.EPS) : null,
-      dividendYield: data.DividendYield !== 'None' ? parseFloat(data.DividendYield) * 100 : null,
-      week52High: data['52WeekHigh'] !== 'None' ? parseFloat(data['52WeekHigh']) : null,
-      week52Low: data['52WeekLow'] !== 'None' ? parseFloat(data['52WeekLow']) : null,
-      targetPrice: data.AnalystTargetPrice !== 'None' ? parseFloat(data.AnalystTargetPrice) : null,
-      strongBuy: parseInt(data.AnalystRatingStrongBuy) || 0,
-      buy: parseInt(data.AnalystRatingBuy) || 0,
-      hold: parseInt(data.AnalystRatingHold) || 0,
-      sell: parseInt(data.AnalystRatingSell) || 0,
-      strongSell: parseInt(data.AnalystRatingStrongSell) || 0,
-    };
-  } catch (err) {
-    return null;
-  }
-}
-
-// Fetch news sentiment
-async function fetchNewsSentiment(symbol: string, assetType: string) {
-  try {
-    if (assetType === 'crypto') {
-      // Use CryptoCompare for crypto news
-      return await fetchCryptoNews(symbol);
-    }
-    
-    // Use Alpha Vantage for stocks — rate governed
-    const data = await avFetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol}&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`, `NEWS ${symbol}`);
-    
-    if (!data?.feed) return null;
-    
-    return data.feed.slice(0, 5).map((article: any) => ({
-      title: article.title,
-      summary: article.summary,
-      source: article.source,
-      sentiment: article.overall_sentiment_label,
-      sentimentScore: parseFloat(article.overall_sentiment_score),
-      url: article.url,
-      publishedAt: article.time_published
-    }));
-  } catch (err) {
-    return null;
-  }
-}
-
-// Fetch crypto news from multiple sources
-async function fetchCryptoNews(symbol: string) {
-  const cleanSymbol = symbol.toUpperCase().replace('USDT', '').replace('USD', '');
-  
-  try {
-    // Try CryptoCompare News API (free, no key required for basic)
-    const ccRes = await fetch(`https://min-api.cryptocompare.com/data/v2/news/?categories=${cleanSymbol}&excludeCategories=Sponsored`);
-    const ccData = await ccRes.json();
-    
-    if (ccData.Data && ccData.Data.length > 0) {
-      return ccData.Data.slice(0, 5).map((article: any) => {
-        // Simple sentiment analysis based on keywords
-        const text = (article.title + ' ' + article.body).toLowerCase();
-        let sentiment = 'Neutral';
-        let sentimentScore = 0;
-        
-        const bullishWords = ['bullish', 'surge', 'rally', 'soar', 'gain', 'rise', 'up', 'high', 'record', 'breakout', 'buy', 'positive', 'growth'];
-        const bearishWords = ['bearish', 'crash', 'drop', 'fall', 'plunge', 'decline', 'down', 'low', 'sell', 'negative', 'fear', 'dump', 'loss'];
-        
-        let bullCount = bullishWords.filter(w => text.includes(w)).length;
-        let bearCount = bearishWords.filter(w => text.includes(w)).length;
-        
-        if (bullCount > bearCount + 1) {
-          sentiment = 'Bullish';
-          sentimentScore = Math.min(0.5, bullCount * 0.1);
-        } else if (bearCount > bullCount + 1) {
-          sentiment = 'Bearish';
-          sentimentScore = Math.max(-0.5, -bearCount * 0.1);
-        }
-        
-        return {
-          title: article.title,
-          summary: article.body?.slice(0, 200) || '',
-          source: article.source_info?.name || article.source || 'CryptoCompare',
-          sentiment,
-          sentimentScore,
-          url: article.url || article.guid,
-          publishedAt: new Date(article.published_on * 1000).toISOString()
-        };
-      });
-    }
-    
-    // Fallback: Try Alpha Vantage with crypto topic — rate governed
-    const avData = await avFetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=blockchain,cryptocurrency&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`, `NEWS crypto`);
-    
-    if (avData?.feed) {
-      return avData.feed.slice(0, 5).map((article: any) => ({
-        title: article.title,
-        summary: article.summary,
-        source: article.source,
-        sentiment: article.overall_sentiment_label,
-        sentimentScore: parseFloat(article.overall_sentiment_score),
-        url: article.url,
-        publishedAt: article.time_published
-      }));
-    }
-    
-    return null;
-  } catch (err) {
-    console.error('Crypto news fetch error:', err);
-    return null;
-  }
-}
-
-// Fetch crypto-specific data
-async function fetchCryptoData(symbol: string) {
-  try {
-    // CoinGecko-derived fear/greed proxy
     const global = await getGlobalData();
     const mcapChange = Number(global?.market_cap_change_percentage_24h_usd || 0);
     const stableDom = Number(global?.market_cap_percentage?.usdt || 0) + Number(global?.market_cap_percentage?.usdc || 0);
-    const fgValue = Math.max(0, Math.min(100, Math.round(50 + mcapChange * 4 - Math.max(0, stableDom - 7.5) * 6)));
-    const fgClassification = fgValue < 20 ? 'Extreme Fear' : fgValue < 40 ? 'Fear' : fgValue < 60 ? 'Neutral' : fgValue < 80 ? 'Greed' : 'Extreme Greed';
-    
-    // Try to get market data from CoinGecko (commercial key via shared client)
-    const cgSymbol = symbol.toLowerCase().replace('usdt', '').replace('usd', '');
-    let marketData = null;
-    const cgId = await resolveSymbolToId(cgSymbol);
-    if (cgId) {
-      try {
-        const cgData = await getCoinDetail(cgId);
-        if (cgData) {
-          marketData = {
-            marketCapRank: cgData.market_cap_rank,
-            marketCap: cgData.market_data?.market_cap?.usd,
-            totalVolume: cgData.market_data?.total_volume?.usd,
-            circulatingSupply: cgData.market_data?.circulating_supply,
-            maxSupply: cgData.market_data?.max_supply,
-            ath: cgData.market_data?.ath?.usd,
-            athChangePercent: cgData.market_data?.ath_change_percentage?.usd,
-            atl: cgData.market_data?.atl?.usd,
-          };
-        }
-      } catch (cgErr) {
-        console.warn(`[deep-analysis] CoinGecko detail fetch failed for ${cgId}:`, cgErr instanceof Error ? cgErr.message : cgErr);
-      }
-    }
-    
-    return {
-      fearGreed: {
-        value: fgValue,
-        classification: fgClassification,
-      },
-      marketData
-    };
-  } catch (err) {
-    return null;
-  }
+    const value = Math.max(0, Math.min(100, Math.round(50 + mcapChange * 4 - Math.max(0, stableDom - 7.5) * 6)));
+    const classification = value < 20 ? 'Extreme Fear' : value < 40 ? 'Fear' : value < 60 ? 'Neutral' : value < 80 ? 'Greed' : 'Extreme Greed';
+    return { value, classification, basis: 'MSP proxy from 24h total-cap change and stablecoin dominance (not the alternative.me index)' };
+  } catch { return null; }
 }
 
-// Fetch earnings data for stocks — rate governed
-async function fetchEarningsData(symbol: string) {
-  try {
-    const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const data = await avFetch(url, `EARNINGS ${symbol}`);
-    
-    if (!data?.annualEarnings && !data?.quarterlyEarnings) {
-      return null;
-    }
-    
-    // Get upcoming and recent earnings
-    const quarterly = data.quarterlyEarnings || [];
-    const annual = data.annualEarnings || [];
-    
-    // Find the next upcoming report (estimated dates)
-    const now = new Date();
-    const upcoming = quarterly.find((e: any) => {
-      const reportDate = new Date(e.reportedDate || e.fiscalDateEnding);
-      return reportDate > now;
-    });
-    
-    // Get most recent 4 quarters for history
-    const recentQuarters = quarterly.slice(0, 4).map((q: any) => ({
-      fiscalDateEnding: q.fiscalDateEnding,
-      reportedDate: q.reportedDate,
-      reportedEPS: parseFloat(q.reportedEPS) || null,
-      estimatedEPS: parseFloat(q.estimatedEPS) || null,
-      surprise: q.reportedEPS && q.estimatedEPS 
-        ? parseFloat(q.reportedEPS) - parseFloat(q.estimatedEPS) 
-        : null,
-      surprisePercent: q.surprisePercentage ? parseFloat(q.surprisePercentage) : null,
-      beat: q.reportedEPS && q.estimatedEPS 
-        ? parseFloat(q.reportedEPS) > parseFloat(q.estimatedEPS) 
-        : null
-    }));
-    
-    // Calculate beat rate
-    const beatsCount = recentQuarters.filter((q: any) => q.beat === true).length;
-    const beatRate = recentQuarters.length > 0 ? (beatsCount / recentQuarters.length) * 100 : null;
-    
-    // Get last reported
-    const lastReported = recentQuarters[0];
-    
-    return {
-      nextEarningsDate: upcoming?.fiscalDateEnding || null,
-      lastReportedDate: lastReported?.reportedDate || null,
-      lastReportedEPS: lastReported?.reportedEPS || null,
-      lastEstimatedEPS: lastReported?.estimatedEPS || null,
-      lastSurprise: lastReported?.surprise || null,
-      lastSurprisePercent: lastReported?.surprisePercent || null,
-      lastBeat: lastReported?.beat || null,
-      beatRate,
-      recentQuarters,
-      annualEPS: annual.slice(0, 3).map((a: any) => ({
-        fiscalYear: a.fiscalDateEnding?.split('-')[0],
-        eps: parseFloat(a.reportedEPS) || null
-      }))
-    };
-  } catch (err) {
-    console.error('Earnings fetch error:', err);
-    return null;
-  }
+// ── Analyst structured output ───────────────────────────────────────────
+interface AnalystSections {
+  thesis: string;
+  supports: string[];
+  against: string[];
+  primaryBlocker: string;
+  confirms: string[];
+  invalidates: string[];
+  catalysts: string[];
+  changesView: string[];
+  reading: string; // 1–2 sentence conditional summary
 }
 
-// Generate AI analysis
-async function generateAIAnalysis(data: any) {
+function fmtNum(v: number | null | undefined, d = 2): string { return v == null || !Number.isFinite(v) ? 'n/a' : v.toFixed(d); }
+function fmtPx(v: number | null | undefined): string { if (v == null || !Number.isFinite(v)) return 'n/a'; return Math.abs(v) >= 1 ? `$${v.toFixed(2)}` : `$${v.toPrecision(4)}`; }
+
+/** Deterministic fallback analyst (no LLM) built only from the packet — also used as the grounding contract for the model. */
+function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, news: RelevantArticle[], fundamentals: FundamentalsSummary | null): AnalystSections {
+  const dir = c.verdict.direction;
+  const dirWord = dir === 'LONG' ? 'bullish' : dir === 'SHORT' ? 'bearish' : 'neutral';
+  const supports: string[] = [];
+  const against: string[] = [];
+  if (c.scores.structure >= 65) supports.push(`Structure ${c.scores.structure}/100 — ${c.scores.notes.structure[0] ?? 'price aligned with the 20/50-bar means'}`);
+  else against.push(`Structure ${c.scores.structure}/100 — ${c.scores.notes.structure[0] ?? 'alignment mixed'}`);
+  if (c.scores.momentum >= 65) supports.push(`Momentum ${c.scores.momentum}/100 — RSI ${fmtNum(c.indicators.rsi, 1)}, MACD hist ${fmtNum(c.indicators.macdHist, 3)}`);
+  else if (c.scores.momentum < 45) against.push(`Momentum ${c.scores.momentum}/100 — RSI ${fmtNum(c.indicators.rsi, 1)}`);
+  if (c.scores.flow >= 60) supports.push(`Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning supportive'}`);
+  else if (c.scores.flow < 50) against.push(`Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning not supportive'}`);
+  if (c.indicators.ema200 != null) (c.price > c.indicators.ema200 === (dir !== 'SHORT') ? supports : against).push(`Price ${c.price > c.indicators.ema200 ? 'above' : 'below'} EMA200 ${fmtPx(c.indicators.ema200)}`);
+  if (c.extension.label !== 'normal') against.push(`Extension ${c.extension.label} — RSI ${fmtNum(c.indicators.rsi, 1)}, stochastic ${fmtNum(c.indicators.stochK, 0)}${c.extension.dveExhaustion != null && c.extension.dveExhaustion >= 60 ? `, DVE exhaustion ${Math.round(c.extension.dveExhaustion)}/100` : ''}`);
+  if (c.timing.relation === 'conflict') against.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read${c.timing.eligibleForHardGate ? ' and gates the verdict' : ' — below hard-gate thresholds'}`);
+  if (c.timing.relation === 'supportive') supports.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) agrees`);
+  if (c.crossMarket.alignment === 'supportive') supports.push(`Cross-market supportive — ${c.crossMarket.summary}`);
+  if (c.crossMarket.alignment === 'headwind') against.push(`Cross-market headwind — ${c.crossMarket.summary}`);
+  if (c.dataTrust.level !== 'GOOD') against.push(`Data trust ${c.dataTrust.label}: ${c.dataTrust.reasons.join('; ')}`);
+  for (const r of c.scores.notes.risk) if (!/no material risk flags/.test(r)) against.push(`Risk: ${r}`);
+  if (c.derivatives && c.derivatives.crowding !== 'neutral') against.push(`Derivatives ${c.derivatives.crowding.replace('_', ' ')} — funding ${c.derivatives.fundingRatePercent >= 0 ? '+' : ''}${c.derivatives.fundingRatePercent.toFixed(4)}% per ~8h`);
+  if (c.options && c.options.quality.level !== 'GOOD') against.push(`Options chain ${c.options.quality.level.toLowerCase()} on ${c.options.expiry}: ${c.options.quality.reasons[0]}`);
+  if (fundamentals) {
+    if (fundamentals.earningsGrowthYoy != null && fundamentals.earningsGrowthYoy < 0) against.push(`Earnings −${Math.abs(fundamentals.earningsGrowthYoy * 100).toFixed(1)}% YoY (latest quarter) — fundamental headwind for a ${dirWord} read`);
+    if (fundamentals.revenueGrowthYoy != null && fundamentals.revenueGrowthYoy > 0.1) supports.push(`Revenue +${(fundamentals.revenueGrowthYoy * 100).toFixed(1)}% YoY (latest quarter)`);
+    if (fundamentals.daysToEarnings != null && fundamentals.daysToEarnings >= 0 && fundamentals.daysToEarnings <= 14) against.push(`Earnings ${fundamentals.nextEarningsDate} in ${fundamentals.daysToEarnings} days — event risk`);
+  }
+  const catalysts: string[] = news.length
+    ? news.slice(0, 5).map((n) => `[${n.catalyst}] ${n.title} — ${n.catalystReason} (${n.source}, relevance ${n.relevance.toFixed(2)})`)
+    : ['No material symbol-specific news identified.'];
+  if (fundamentals?.nextEarningsDate) catalysts.push(`[EVENT_RISK] Next earnings ${fundamentals.nextEarningsDate}${fundamentals.daysToEarnings != null ? ` (${fundamentals.daysToEarnings} days)` : ''}`);
+  const changesView = [
+    ...c.invalidation.map((t) => `Weakens: ${t}`),
+    ...(c.timing.relation === 'conflict' ? ['Strengthens: time confluence flipping to agree or falling below gate thresholds'] : []),
+    ...(c.scores.flow < 60 ? ['Strengthens: positioning turning supportive (P/C or funding moving with the direction)'] : []),
+    ...(c.dataTrust.level !== 'GOOD' ? ['Strengthens: data trust returning to GOOD'] : []),
+  ];
+  const assess = c.verdict.assessment === 'ALIGNED' ? 'aligned' : c.verdict.assessment === 'NOT_ALIGNED' ? 'not aligned' : 'in watch mode';
+  return {
+    thesis: `${c.symbol} (${c.assetClass}, ${c.timeframe}) is ${assess} with a ${dirWord} bias: ${c.verdict.setupType.replace('_', ' ')} setup — ${c.verdict.setupNote}. Confluence ${c.verdict.confluence}/100 (evidence alignment, not a probability).`,
+    supports: supports.length ? supports : ['No component clears the supportive threshold.'],
+    against: against.length ? against : ['No material evidence against the read at current inputs.'],
+    primaryBlocker: c.verdict.primaryBlocker ?? 'None flagged by the Golden Egg engine.',
+    confirms: c.confirmation,
+    invalidates: c.invalidation,
+    catalysts,
+    changesView,
+    reading: `If ${c.confirmation[0] ? c.confirmation[0].charAt(0).toLowerCase() + c.confirmation[0].slice(1).replace(/\.$/, '') : 'the reference condition prints'}, the ${dirWord} scenario would gain support; if ${c.invalidation[0] ? c.invalidation[0].charAt(0).toLowerCase() + c.invalidation[0].slice(1).replace(/\.$/, '') : 'invalidation prints'}, it is off the table. Educational research only.`,
+  };
+}
+
+function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: RelevantArticle[], fundamentals: FundamentalsSummary | null, earnings: EarningsHistory | null, cryptoSentiment: { value: number; classification: string; basis: string } | null): string {
+  const L: string[] = [];
+  L.push(`GOLDEN EGG CANONICAL PACKET — ${c.symbol} (${c.assetClass}, timeframe ${c.timeframe}, bars ${c.barInterval ?? 'n/a'})`);
+  L.push(`Price ${fmtPx(c.price)} as of ${c.priceTs}; last completed bar ${c.lastCompletedBarAt ?? 'n/a'}; history ${c.historyBars} bars; source ${c.source ?? 'n/a'}.`);
+  L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · confluence ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
+  L.push(`Setup: ${c.verdict.setupType} — ${c.verdict.setupNote}`);
+  L.push(`Primary driver: ${c.verdict.primaryDriver}`);
+  L.push(`Primary blocker: ${c.verdict.primaryBlocker ?? 'none flagged'}`);
+  L.push(`Scores: structure ${c.scores.structure}, flow ${c.scores.flow}, momentum ${c.scores.momentum}, risk quality ${c.scores.riskQuality} (100 = clean; risk is never bullish evidence).`);
+  L.push(`  structure notes: ${c.scores.notes.structure.join('; ') || 'none'}`);
+  L.push(`  flow notes: ${c.scores.notes.flow.join('; ') || 'none'}`);
+  L.push(`  momentum notes: ${c.scores.notes.momentum.join('; ') || 'none'}`);
+  L.push(`  risk notes: ${c.scores.notes.risk.join('; ')}`);
+  L.push(`Indicators (computed on ${c.indicators.computedOn}): RSI ${fmtNum(c.indicators.rsi, 1)}, ADX ${fmtNum(c.indicators.adx, 1)} (trend STRENGTH only, not direction), ATR ${fmtNum(c.indicators.atr, 4)} (${fmtNum(c.indicators.atrPct, 2)}%), EMA20 ${fmtPx(c.indicators.ema20)}, EMA50 ${fmtPx(c.indicators.ema50)}, EMA200 ${fmtPx(c.indicators.ema200)}, SMA20 ${fmtPx(c.indicators.sma20)}, SMA50 ${fmtPx(c.indicators.sma50)}, MACD hist ${fmtNum(c.indicators.macdHist, 4)}, stochastic ${fmtNum(c.indicators.stochK, 0)}.`);
+  L.push(`Extension: ${c.extension.label}; RSI extended ${c.extension.rsiExtended}; stochastic extended ${c.extension.stochExtended}; DVE exhaustion ${c.extension.dveExhaustion ?? 'n/a'}/100; DVE signal ${c.extension.dveSignal ?? 'none'}${c.extension.dveSignalStrength ? ` (strength ${c.extension.dveSignalStrength})` : ''}.`);
+  L.push(`Data trust: ${c.dataTrust.label}${c.dataTrust.reasons.length ? ` — ${c.dataTrust.reasons.join('; ')}` : ''}; freshness ${c.dataTrust.freshness}.`);
+  L.push(`Liquidity: avg dollar volume ${c.liquidity.advUsd != null ? formatUsdShort(c.liquidity.advUsd) : 'n/a'} (${c.liquidity.volumeBasis ?? 'n/a'}).`);
+  L.push(`Time confluence: relation ${c.timing.relation}, valid ${c.timing.valid}, hard-gate eligible ${c.timing.eligibleForHardGate}, direction ${c.timing.direction}, strength ${c.timing.signalStrength}, session ${c.timing.sessionState}. ${c.timing.reasons.join('; ')}`);
+  L.push(`Cross-market (${c.crossMarket.alignment}): ${c.crossMarket.summary}`);
+  for (const i of c.crossMarket.items) L.push(`  ${i.symbol} ${i.label}: ${i.trend} — ${i.detail} → ${i.relation}`);
+  if (c.derivatives) L.push(`Derivatives: funding ${c.derivatives.fundingRatePercent >= 0 ? '+' : ''}${c.derivatives.fundingRatePercent.toFixed(4)}% per ${c.derivatives.fundingInterval} (annualised ${c.derivatives.annualizedPct.toFixed(1)}%), OI ${formatUsdShort(c.derivatives.openInterestUsd)}, perp volume ${formatUsdShort(c.derivatives.perpVolume24hUsd)}, ${c.derivatives.exchanges} venues, crowding ${c.derivatives.crowding}. ${c.derivatives.note}`);
+  if (c.options) L.push(`Options (expiry ${c.options.expiry}, ${c.options.daysToExpiry} DTE, snapshot ${c.options.snapshotTs}): P/C OI ${c.options.putCallOi}, avg IV ${c.options.avgIvPct ?? 'n/a'}%, expected move ±${c.options.expectedMovePct ?? 'n/a'}%, max pain ${c.options.maxPain ?? 'n/a'}, call wall ${c.options.callWall ? `${c.options.callWall.strike} (${c.options.callWall.relation} spot)` : 'n/a'}, put wall ${c.options.putWall ? `${c.options.putWall.strike} (${c.options.putWall.relation} spot)` : 'n/a'}, dealer gamma ${c.options.dealerGamma}, unusual activity ${c.options.unusualActivity}, chain quality ${c.options.quality.level}${c.options.quality.reasons.length ? ` (${c.options.quality.reasons.join('; ')})` : ''}. IV rank unavailable (no IV history).`);
+  L.push(`Levels: reference ${fmtPx(c.levels.reference.price)} [${c.levels.reference.basis}] — ${c.levels.reference.label}`);
+  L.push(`  invalidation ${fmtPx(c.levels.invalidation.price)} [${c.levels.invalidation.basis}, ${c.levels.invalidation.distanceAtr ?? 'n/a'} ATR] — ${c.levels.invalidation.label}`);
+  L.push(`  reaction zones: ${c.levels.zones.map((z) => `${fmtPx(z.price)} [${z.basis}${z.rMultiple != null ? `, ${z.rMultiple}R` : ''}: ${z.label}]`).join(' · ')}; illustrative R ${c.levels.illustrativeR ?? 'n/a'}`);
+  L.push(`Confirmation (engine): ${c.confirmation.join(' | ')}`);
+  L.push(`Invalidation (engine): ${c.invalidation.join(' | ')}`);
+  L.push(`Flip conditions: ${ge.layer1.flipConditions.map((f) => `[${f.severity}] ${f.text}`).join(' | ') || 'none (aligned)'}`);
+  if (fundamentals) {
+    L.push(`FUNDAMENTALS (${fundamentals.period.summary}): ${fundamentals.name ?? c.symbol}, ${fundamentals.sector ?? 'n/a'} / ${fundamentals.industry ?? 'n/a'}; market cap ${fundamentals.marketCap != null ? formatUsdShort(fundamentals.marketCap) : 'n/a'}; ${fundamentals.multiple.label} — ${fundamentals.multiple.detail}; profit margin ${fundamentals.profitMargin != null ? (fundamentals.profitMargin * 100).toFixed(1) + '%' : 'n/a'} TTM; revenue growth ${fundamentals.revenueGrowthYoy != null ? (fundamentals.revenueGrowthYoy * 100).toFixed(1) + '% YoY' : 'n/a'}; earnings growth ${fundamentals.earningsGrowthYoy != null ? (fundamentals.earningsGrowthYoy * 100).toFixed(1) + '% YoY' : 'n/a'} (latest quarter).`);
+    L.push(`  Analyst consensus (context only, NOT a signal): target ${fmtPx(fundamentals.analystTarget)} from ${fundamentals.analystCount ?? 'n/a'} analysts${fundamentals.ratings ? ` (SB ${fundamentals.ratings.strongBuy} / B ${fundamentals.ratings.buy} / H ${fundamentals.ratings.hold} / S ${fundamentals.ratings.sell} / SS ${fundamentals.ratings.strongSell})` : ''}.`);
+    L.push(`  Earnings: next ${fundamentals.nextEarningsDate ?? 'not scheduled within 3 months'}${fundamentals.daysToEarnings != null ? ` (${fundamentals.daysToEarnings} days)` : ''}; last reported quarter ${fundamentals.lastReportedQuarter ?? 'n/a'}${earnings?.lastReported ? ` — EPS ${fmtNum(earnings.lastReported.reportedEPS)} vs est ${fmtNum(earnings.lastReported.estimatedEPS)} (${earnings.lastReported.beat ? 'beat' : 'miss'}); beat rate ${earnings.beatRate?.toFixed(0) ?? 'n/a'}% over ${earnings.recentQuarters.length} quarters` : ''}.`);
+  }
+  if (c.network) {
+    L.push(`NETWORK / MARKET STRUCTURE: market cap ${c.network.marketCap != null ? formatUsdShort(c.network.marketCap) : 'n/a'} (rank #${c.network.marketCapRank ?? 'n/a'}); circulating ${c.network.circulatingSupply?.toLocaleString() ?? 'n/a'} / max ${c.network.maxSupply?.toLocaleString() ?? 'uncapped or unknown'}; FDV ${c.network.fdv != null ? formatUsdShort(c.network.fdv) : 'n/a'} (${c.network.fdvBasis}); spot volume 24h ${c.network.spotVolume24h != null ? formatUsdShort(c.network.spotVolume24h) : 'n/a'}; distance from ATH ${c.network.distanceFromAthPct ?? 'n/a'}%; 7d ${c.network.change7dPct?.toFixed(1) ?? 'n/a'}%, 30d ${c.network.change30dPct?.toFixed(1) ?? 'n/a'}%. Relative strength: ${c.network.relative.map((r) => `${r.benchmark} ${r.ratio} (${r.label}, ${r.window})`).join(', ') || 'n/a'}. ${c.network.notes.join(' ')}`);
+    if (cryptoSentiment) L.push(`Crypto market sentiment proxy: ${cryptoSentiment.value} (${cryptoSentiment.classification}) — ${cryptoSentiment.basis}. Treat as context, not a contrarian signal.`);
+  }
+  const ns = summarizeNews(news);
+  L.push(`NEWS (symbol-specific only): ${ns.headline}`);
+  for (const n of news.slice(0, 6)) L.push(`  [${n.catalyst}: ${n.catalystReason}] ${n.title} — ${n.source}, ${n.publishedAt ?? 'n/a'}, ticker sentiment ${n.sentiment} (relevance ${n.relevance.toFixed(2)}). ${n.summary.slice(0, 160)}`);
+  return L.join('\n');
+}
+
+const ANALYST_SYSTEM = `You are the Golden Egg Deep Analyst for MarketScanner Pros. You INTERPRET a canonical research packet; you never replace its facts.
+
+HARD RULES
+- Use ONLY the numbers and statements in the packet. Do not invent catalysts, earnings facts, institutional activity, support/resistance, analyst views, probabilities or news. If something is not in the packet, say it is not available.
+- The Golden Egg verdict, direction, blocker and levels are canonical. You may add nuance, but if you disagree you must say exactly which packet fact drives the disagreement.
+- ADX measures trend STRENGTH, never direction. RSI/stochastic extremes mean strong momentum AND extension risk at the same time.
+- Confluence is evidence alignment, not a probability. Never use "high probability", "likely to rally", "should break out", "expected to rise", "strong chance" or any win-rate language.
+- No trade instructions, no BUY/SELL/HOLD, no "traders should". Conditional research language only ("if X prints, the read strengthens").
+- Analyst targets and consensus are context, not signals. Catalysts keep the class given in the packet (POSITIVE / NEGATIVE / MIXED / NEUTRAL / EVENT_RISK); a capital raise is not bullish because it is news.
+- When the packet says data trust is not GOOD, say so in the thesis and keep every conclusion tentative.
+
+OUTPUT — exactly these headings, in this order, plain text, ≤ 420 words total:
+THESIS
+WHAT SUPPORTS IT
+WHAT ARGUES AGAINST IT
+PRIMARY BLOCKER
+WHAT CONFIRMS
+WHAT INVALIDATES
+CATALYSTS / EVENT RISK
+WHAT WOULD CHANGE THE VIEW
+Use short bullet lines ("- ") under each heading except THESIS and PRIMARY BLOCKER (one or two sentences each). Quote the packet numbers you rely on inline; do not append source tags such as "(Packet)".`;
+
+async function generateAnalyst(prompt: string): Promise<string | null> {
   if (!OPENAI_API_KEY) return null;
-  
   try {
-    const prompt = buildAnalysisPrompt(data);
-    
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o',  // Premium model for Golden Egg deep analysis
-        messages: [
-          {
-            role: 'system',
-            content: `You are the Golden Egg Analyst - a financial data synthesizer that describes current market conditions for an asset by combining ALL available data including price action, technicals, fundamentals, news sentiment, and market conditions.
-
-Your analysis MUST consider and integrate:
-- Price action and momentum (current price, 24h change, volume)
-- Technical indicators (RSI, MACD, moving averages, stochastics)
-- Company fundamentals (if stock: P/E, EPS, analyst targets, sector)
-- News sentiment (summarize the overall sentiment from recent news)
-- Market conditions (Fear & Greed for crypto, analyst consensus for stocks)
-- Upcoming catalysts (earnings dates, significant events from news)
-
-Format your analysis with these sections:
-📊 MARKET CONTEXT - Big picture: what data points are most relevant right now?
-📈 TECHNICAL OUTLOOK - Indicator confluence and what the chart data shows
-📰 SENTIMENT ANALYSIS - What the news flow and sentiment data indicate
-🎯 KEY LEVELS - Observed support/resistance levels and analyst-cited price targets
-⚠️ RISK FACTORS - Notable risks present in the current data
-💡 GOLDEN EGG READING - Summarize the overall data picture as Bullish / Mixed / Bearish with a Data Confidence tag (High / Medium / Low) and 1-2 sentences describing what the data shows. Do NOT use the words BUY, SELL, HOLD, or recommend any action. Do NOT tell the reader what to do or what they "should" do. Describe conditions only.
-
-IMPORTANT COMPLIANCE RULES — you MUST follow all of these:
-- NEVER use BUY, SELL, HOLD, WAIT, ACCUMULATE, AVOID, or any action verb directed at the reader.
-- NEVER say "investors should", "traders should", "consider buying/selling", "wait for", "add to positions", or any directive language.
-- NEVER say "we recommend", "our recommendation", or "suggested action".
-- Describe observed conditions and data only. Let the reader draw their own conclusions.
-- You are a data describer, not an adviser.
-Max 500 words. Be concise but comprehensive.`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
+        model: 'gpt-4o',
+        messages: [{ role: 'system', content: ANALYST_SYSTEM }, { role: 'user', content: prompt }],
         max_tokens: 800,
-        temperature: 0.7
-      })
+        temperature: 0.2,
+      }),
     });
-    
     const result = await res.json();
     return result.choices?.[0]?.message?.content || null;
   } catch (err) {
-    console.error('AI analysis error:', err);
+    console.error('[deep-analysis] analyst generation failed:', err);
     return null;
   }
 }
 
-function buildAnalysisPrompt(data: any): string {
-  let prompt = `Analyze ${data.symbol} (${data.assetType.toUpperCase()}):\n\n`;
-  
-  if (data.price) {
-    prompt += `PRICE DATA:\n`;
-    prompt += `- Current: $${data.price.price?.toFixed(data.assetType === 'crypto' ? 4 : 2)}\n`;
-    prompt += `- 24h Change: ${data.price.changePercent?.toFixed(2)}%\n`;
-    prompt += `- 24h High: $${data.price.high24h?.toFixed(2)}\n`;
-    prompt += `- 24h Low: $${data.price.low24h?.toFixed(2)}\n\n`;
-  }
-  
-  if (data.indicators) {
-    prompt += `TECHNICAL INDICATORS:\n`;
-    if (data.indicators.rsi) prompt += `- RSI(14): ${data.indicators.rsi.toFixed(1)}\n`;
-    if (data.indicators.macd) prompt += `- MACD: ${data.indicators.macd.toFixed(4)}\n`;
-    if (data.indicators.sma20) prompt += `- SMA20: $${data.indicators.sma20.toFixed(2)}\n`;
-    if (data.indicators.priceVsSma20) prompt += `- Price vs SMA20: ${data.indicators.priceVsSma20.toFixed(2)}%\n`;
-    if (data.indicators.stochK) prompt += `- Stochastic: K=${data.indicators.stochK.toFixed(1)}, D=${data.indicators.stochD?.toFixed(1)}\n`;
-    if (data.indicators.volumeRatio) prompt += `- Volume Ratio (vs 20d avg): ${data.indicators.volumeRatio.toFixed(2)}x\n`;
-    prompt += '\n';
-  }
-  
-  if (data.company) {
-    prompt += `COMPANY DATA:\n`;
-    prompt += `- Name: ${data.company.name}\n`;
-    prompt += `- Sector: ${data.company.sector}\n`;
-    if (data.company.peRatio) prompt += `- P/E: ${data.company.peRatio}\n`;
-    if (data.company.eps) prompt += `- EPS: $${data.company.eps}\n`;
-    if (data.company.targetPrice) prompt += `- Analyst Target: $${data.company.targetPrice}\n`;
-    if (data.company.week52High) prompt += `- 52W Range: $${data.company.week52Low} - $${data.company.week52High}\n`;
-    prompt += '\n';
-  }
-  
-  if (data.cryptoData?.fearGreed) {
-    prompt += `CRYPTO MARKET:\n`;
-    prompt += `- Fear & Greed: ${data.cryptoData.fearGreed.value} (${data.cryptoData.fearGreed.classification})\n`;
-    if (data.cryptoData.marketData?.marketCapRank) {
-      prompt += `- Market Cap Rank: #${data.cryptoData.marketData.marketCapRank}\n`;
-    }
-    prompt += '\n';
-  }
-  
-  if (data.earnings) {
-    prompt += `EARNINGS DATA:\n`;
-    if (data.earnings.nextEarningsDate) {
-      prompt += `- Next Earnings: ${data.earnings.nextEarningsDate}\n`;
-    }
-    if (data.earnings.lastReportedEPS !== null) {
-      prompt += `- Last EPS: $${data.earnings.lastReportedEPS?.toFixed(2)} (Est: $${data.earnings.lastEstimatedEPS?.toFixed(2)})\n`;
-      prompt += `- Last Surprise: ${data.earnings.lastBeat ? '✅ BEAT' : '❌ MISS'} by ${data.earnings.lastSurprisePercent?.toFixed(1)}%\n`;
-    }
-    if (data.earnings.beatRate !== null) {
-      prompt += `- Beat Rate (last 4Q): ${data.earnings.beatRate.toFixed(0)}%\n`;
-    }
-    prompt += '\n';
-  }
-  
-  if (data.news?.length > 0) {
-    prompt += `RECENT NEWS & SENTIMENT:\n`;
-    // Calculate overall sentiment
-    const sentiments = data.news.map((n: any) => n.sentiment?.toLowerCase() || 'neutral');
-    const bullishCount = sentiments.filter((s: string) => s.includes('bullish')).length;
-    const bearishCount = sentiments.filter((s: string) => s.includes('bearish')).length;
-    const neutralCount = sentiments.filter((s: string) => !s.includes('bullish') && !s.includes('bearish')).length;
-    
-    prompt += `- Overall Sentiment: ${bullishCount} Bullish, ${bearishCount} Bearish, ${neutralCount} Neutral\n`;
-    prompt += `- Headlines:\n`;
-    data.news.slice(0, 5).forEach((n: any, i: number) => {
-      prompt += `  ${i+1}. [${n.sentiment || 'Neutral'}] "${n.title}" (${n.source})\n`;
-      if (n.summary) {
-        prompt += `     Summary: ${n.summary.slice(0, 100)}...\n`;
-      }
-    });
-    prompt += '\n';
-  }
-  
-  prompt += `Based on ALL the data above, provide a comprehensive Golden Egg analysis with a clear educational reading. Do not include trade instructions or action directives.`;
-  
-  return prompt;
+/** Post-check: the model must not introduce probability/instruction language; strip offending lines rather than trust them. */
+const FORBIDDEN = /\b(high probability|likely to (rally|rise|fall|break)|should (break|rise|fall|rally|move)|expected to (rise|fall|rally|break)|strong chance|will (rally|rise|fall|break)|buy|sell|hold|accumulate|traders should|investors should|we recommend)\b/i;
+function sanitizeAnalyst(text: string | null): { text: string | null; removedLines: number } {
+  if (!text) return { text: null, removedLines: 0 };
+  const lines = text.split('\n');
+  const kept = lines.filter((l) => !FORBIDDEN.test(l));
+  return { text: kept.join('\n'), removedLines: lines.length - kept.length };
 }
 
-// Technical indicators imported from lib/yahoo-finance.ts
-
-// Generate trading signals
-function generateSignals(data: any): { signal: string; score: number; reasons: string[]; bullishCount: number; bearishCount: number } {
-  const reasons: string[] = [];
-  let bullish = 0;
-  let bearish = 0;
-  
-  if (data.indicators) {
-    const ind = data.indicators;
-    
-    // RSI signals - always show RSI status
-    if (ind.rsi !== null && ind.rsi !== undefined) {
-      if (ind.rsi < 30) { bullish += 2; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Oversold (bullish reversal potential)`); }
-      else if (ind.rsi < 40) { bullish += 1; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Approaching oversold`); }
-      else if (ind.rsi > 70) { bearish += 2; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Overbought (bearish reversal potential)`); }
-      else if (ind.rsi > 60) { bearish += 1; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Elevated`); }
-      else if (ind.rsi >= 45 && ind.rsi <= 55) { reasons.push(`RSI ${ind.rsi.toFixed(1)} - Neutral zone (consolidating)`); }
-      else if (ind.rsi > 55) { reasons.push(`RSI ${ind.rsi.toFixed(1)} - Slightly bullish momentum`); }
-      else { reasons.push(`RSI ${ind.rsi.toFixed(1)} - Slightly bearish momentum`); }
-    }
-    
-    // MACD signals
-    if (ind.macd !== null && ind.macd !== undefined) {
-      const macdHist = ind.macdHist;
-      if (ind.macd > 0 && macdHist && macdHist > 0) { bullish += 2; reasons.push('MACD bullish crossover confirmed'); }
-      else if (ind.macd > 0) { bullish += 1; reasons.push('MACD positive (bullish momentum)'); }
-      else if (ind.macd < 0 && macdHist && macdHist < 0) { bearish += 2; reasons.push('MACD bearish crossover confirmed'); }
-      else { bearish += 1; reasons.push('MACD negative (bearish momentum)'); }
-    }
-    
-    // Price vs SMA - always show relative position
-    if (ind.priceVsSma20 !== null && ind.priceVsSma20 !== undefined) {
-      const pct = ind.priceVsSma20;
-      if (pct > 10) { bullish += 2; reasons.push(`Price ${pct.toFixed(1)}% above SMA20 - Strong uptrend`); }
-      else if (pct > 5) { bullish += 1; reasons.push(`Price ${pct.toFixed(1)}% above SMA20 - Uptrend`); }
-      else if (pct > 0) { reasons.push(`Price ${pct.toFixed(1)}% above SMA20 - Mild uptrend`); }
-      else if (pct < -10) { bearish += 2; reasons.push(`Price ${Math.abs(pct).toFixed(1)}% below SMA20 - Strong downtrend`); }
-      else if (pct < -5) { bearish += 1; reasons.push(`Price ${Math.abs(pct).toFixed(1)}% below SMA20 - Downtrend`); }
-      else { reasons.push(`Price ${Math.abs(pct).toFixed(1)}% below SMA20 - Mild downtrend`); }
-    }
-    
-    // Bollinger Bands signals
-    if (ind.bbUpper && ind.bbLower && ind.bbMiddle && data.price?.price) {
-      const price = data.price.price;
-      const bandWidth = ((ind.bbUpper - ind.bbLower) / ind.bbMiddle) * 100;
-      
-      if (price >= ind.bbUpper) { bearish += 1; reasons.push(`Price at upper Bollinger Band - Overbought`); }
-      else if (price <= ind.bbLower) { bullish += 1; reasons.push(`Price at lower Bollinger Band - Oversold`); }
-      else if (price > ind.bbMiddle) { reasons.push(`Price above BB middle - Bullish bias`); }
-      else { reasons.push(`Price below BB middle - Bearish bias`); }
-      
-      if (bandWidth < 10) { reasons.push(`Tight Bollinger Bands (${bandWidth.toFixed(1)}%) - Breakout imminent`); }
-      else if (bandWidth > 30) { reasons.push(`Wide Bollinger Bands (${bandWidth.toFixed(1)}%) - High volatility`); }
-    }
-    
-    // ADX trend strength
-    if (ind.adx !== null && ind.adx !== undefined) {
-      if (ind.adx > 50) { reasons.push(`ADX ${ind.adx.toFixed(0)} - Very strong trend`); }
-      else if (ind.adx > 25) { reasons.push(`ADX ${ind.adx.toFixed(0)} - Trending market`); }
-      else { reasons.push(`ADX ${ind.adx.toFixed(0)} - Weak/no trend (ranging)`); }
-    }
-    
-    // Volume
-    if (ind.volumeRatio !== null && ind.volumeRatio !== undefined) {
-      if (ind.volumeRatio > 2) { reasons.push(`Volume ${ind.volumeRatio.toFixed(1)}x average - Very high activity`); }
-      else if (ind.volumeRatio > 1.5) { reasons.push(`Volume ${ind.volumeRatio.toFixed(1)}x average - High activity`); }
-      else if (ind.volumeRatio < 0.5) { reasons.push(`Volume ${ind.volumeRatio.toFixed(1)}x average - Low activity`); }
-    }
-    
-    // Stochastic
-    if (ind.stochK !== null && ind.stochK !== undefined) {
-      if (ind.stochK < 20) { bullish += 1; reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Oversold zone`); }
-      else if (ind.stochK > 80) { bearish += 1; reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Overbought zone`); }
-      else if (ind.stochK > ind.stochD) { reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Bullish crossover`); }
-      else if (ind.stochK < ind.stochD) { reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Bearish crossover`); }
-    }
-    
-    // ATR volatility context
-    if (ind.atr !== null && ind.atr !== undefined && data.price?.price) {
-      const atrPercent = (ind.atr / data.price.price) * 100;
-      if (atrPercent > 5) { reasons.push(`High volatility (${atrPercent.toFixed(1)}% ATR)`); }
-      else if (atrPercent < 1) { reasons.push(`Low volatility (${atrPercent.toFixed(1)}% ATR)`); }
-    }
-  }
-  
-  // Price momentum
-  if (data.price?.changePercent !== null && data.price?.changePercent !== undefined) {
-    const pct = data.price.changePercent;
-    if (pct > 5) { bullish += 1; reasons.push(`Strong upward momentum (+${pct.toFixed(1)}% today)`); }
-    else if (pct > 2) { reasons.push(`Positive momentum (+${pct.toFixed(1)}% today)`); }
-    else if (pct < -5) { bearish += 1; reasons.push(`Strong downward momentum (${pct.toFixed(1)}% today)`); }
-    else if (pct < -2) { reasons.push(`Negative momentum (${pct.toFixed(1)}% today)`); }
-  }
-  
-  // Crypto fear/greed
-  if (data.cryptoData?.fearGreed) {
-    const fg = data.cryptoData.fearGreed.value;
-    if (fg < 25) { bullish += 1; reasons.push(`Extreme Fear index (${fg}) - Contrarian bullish`); }
-    else if (fg < 40) { reasons.push(`Fear index (${fg}) - Market cautious`); }
-    else if (fg > 75) { bearish += 1; reasons.push(`Extreme Greed index (${fg}) - Contrarian bearish`); }
-    else if (fg > 60) { reasons.push(`Greed index (${fg}) - Market optimistic`); }
-  }
-  
-  // 52-week position (stocks)
-  if (data.company && data.price?.price) {
-    const price = data.price.price;
-    const low52 = data.company.week52Low;
-    const high52 = data.company.week52High;
-    
-    if (low52 && high52 && high52 > low52) {
-      const range = high52 - low52;
-      const position = ((price - low52) / range) * 100;
-      
-      if (position > 95) { bearish += 1; reasons.push(`Near 52W high (${position.toFixed(0)}% of range) - Resistance ahead`); }
-      else if (position > 80) { reasons.push(`Strong 52W position (${position.toFixed(0)}% of range)`); }
-      else if (position < 10) { bullish += 1; reasons.push(`Near 52W low (${position.toFixed(0)}% of range) - Potential support`); }
-      else if (position < 25) { reasons.push(`Weak 52W position (${position.toFixed(0)}% of range)`); }
-    }
-    
-    // Price vs analyst target
-    if (data.company.targetPrice && price) {
-      const upside = ((data.company.targetPrice - price) / price) * 100;
-      if (upside > 30) { bullish += 1; reasons.push(`${upside.toFixed(0)}% upside to analyst target ($${data.company.targetPrice.toFixed(0)})`); }
-      else if (upside > 15) { reasons.push(`${upside.toFixed(0)}% upside to analyst target ($${data.company.targetPrice.toFixed(0)})`); }
-      else if (upside < -10) { bearish += 1; reasons.push(`${Math.abs(upside).toFixed(0)}% above analyst target ($${data.company.targetPrice.toFixed(0)})`); }
-      else if (upside < 0) { reasons.push(`${Math.abs(upside).toFixed(0)}% above analyst target - Fairly valued`); }
-    }
-  }
-  
-  // Analyst consensus (stocks)
-  if (data.company) {
-    const totalAnalysts = (data.company.strongBuy || 0) + (data.company.buy || 0) + 
-                          (data.company.hold || 0) + (data.company.sell || 0) + (data.company.strongSell || 0);
-    if (totalAnalysts > 0) {
-      const buyPercent = ((data.company.strongBuy || 0) + (data.company.buy || 0)) / totalAnalysts;
-      if (buyPercent > 0.7) { bullish += 1; reasons.push(`${(buyPercent*100).toFixed(0)}% analyst buy consensus (${totalAnalysts} analysts)`); }
-      else if (buyPercent > 0.5) { reasons.push(`${(buyPercent*100).toFixed(0)}% analyst buy ratings (${totalAnalysts} analysts)`); }
-      else if (buyPercent < 0.3) { bearish += 1; reasons.push(`Only ${(buyPercent*100).toFixed(0)}% buy ratings - Analyst caution`); }
-    }
-  }
-  
-  // Options flow signals
-  if (data.optionsData) {
-    const opts = data.optionsData;
-    
-    // Put/Call ratio sentiment
-    if (opts.putCallRatio < 0.7) { 
-      bullish += 1; 
-      reasons.push(`Options P/C ratio ${opts.putCallRatio.toFixed(2)} - Call heavy (bullish)`); 
-    } else if (opts.putCallRatio > 1.3) { 
-      bearish += 1; 
-      reasons.push(`Options P/C ratio ${opts.putCallRatio.toFixed(2)} - Put heavy (bearish)`); 
-    } else {
-      reasons.push(`Options P/C ratio ${opts.putCallRatio.toFixed(2)} - Neutral positioning`);
-    }
-    
-    // Max pain vs current price
-    if (opts.maxPain && opts.currentPrice) {
-      const distFromMaxPain = ((opts.maxPain - opts.currentPrice) / opts.currentPrice) * 100;
-      if (Math.abs(distFromMaxPain) > 5) {
-        if (distFromMaxPain > 0) {
-          reasons.push(`Max pain $${opts.maxPain.toFixed(0)} is ${distFromMaxPain.toFixed(1)}% above - Potential magnet`);
-        } else {
-          reasons.push(`Max pain $${opts.maxPain.toFixed(0)} is ${Math.abs(distFromMaxPain).toFixed(1)}% below - Potential drag`);
-        }
-      }
-    }
-  }
-  
-  const score = bullish - bearish;
-  let signal = 'NEUTRAL';
-  if (score >= 4) signal = 'STRONGLY BULLISH';
-  else if (score >= 2) signal = 'BULLISH';
-  else if (score >= 1) signal = 'LEAN BULLISH';
-  else if (score <= -4) signal = 'STRONGLY BEARISH';
-  else if (score <= -2) signal = 'BEARISH';
-  else if (score <= -1) signal = 'LEAN BEARISH';
-  
-  return { signal, score, reasons, bullishCount: bullish, bearishCount: bearish };
+// ── Legacy-shaped mirrors so the existing Deep Analysis UI renders from canonical values ───────────
+function legacyPrice(c: GoldenEggCanonical) {
+  const prev = c.price / (1 + c.changePct / 100);
+  return { price: c.price, change: c.price - prev, changePercent: c.changePct, high24h: c.price, low24h: c.price, volume: c.liquidity.volume ?? 0, source: 'golden_egg_canonical', priceTs: c.priceTs, lastCompletedBarAt: c.lastCompletedBarAt, barInterval: c.barInterval };
 }
-
-function buildLocalDemoDeepAnalysisResponse(symbol: string, assetType: 'crypto' | 'forex' | 'commodity' | 'stock', reason: string, startTime: number) {
-  const key = symbol.toUpperCase();
-  const demoPrices: Record<string, number> = {
-    AAPL: 520,
-    MSFT: 473,
-    NVDA: 426,
-    GOOGL: 379,
-    AMZN: 332,
-    META: 510,
-    AVGO: 1280,
-    TSLA: 285,
-    EURUSD: 1.08,
-    GBPUSD: 1.27,
-    USDJPY: 156.4,
-    GOLD: 2325,
-  };
-  const priceNow = demoPrices[key] ?? (assetType === 'forex' ? 1.1 : assetType === 'commodity' ? 2300 : 420);
-  const changePercent = 1.35;
-  const change = priceNow * (changePercent / 100);
-  const indicators = {
-    rsi: 58,
-    macd: 1.25,
-    macdSignal: 0.82,
-    macdHist: 0.43,
-    sma20: priceNow * 0.98,
-    sma50: priceNow * 0.94,
-    ema12: priceNow * 0.99,
-    ema26: priceNow * 0.96,
-    stochK: 63,
-    stochD: 56,
-    atr: priceNow * 0.025,
-    volumeRatio: assetType === 'forex' ? undefined : 1.2,
-    priceVsSma20: 2.04,
-    priceVsSma50: 6.38,
-    bbUpper: priceNow * 1.03,
-    bbMiddle: priceNow,
-    bbLower: priceNow * 0.97,
-    adx: 24,
-  };
-  const price = {
-    price: priceNow,
-    change,
-    changePercent,
-    high24h: priceNow * 1.015,
-    low24h: priceNow * 0.985,
-    volume: assetType === 'forex' ? 0 : 1_800_000,
-    quoteVolume: assetType === 'crypto' ? priceNow * 1_800_000 : undefined,
-  };
-  const company = assetType === 'stock' ? {
-    name: `${key} Demo Corp`,
-    description: 'Development-only sample company profile for local workflow testing when live market data is unavailable.',
-    sector: 'Technology',
-    industry: 'Sample Data',
-    marketCap: String(priceNow * 1_000_000_000),
-    peRatio: 28.4,
-    forwardPE: 24.8,
-    eps: 6.25,
-    dividendYield: 0.5,
-    week52High: priceNow * 1.12,
-    week52Low: priceNow * 0.72,
-    targetPrice: priceNow * 1.08,
-    strongBuy: 8,
-    buy: 14,
-    hold: 9,
-    sell: 1,
-    strongSell: 0,
-  } : null;
-  const news = [{
-    title: `${key} local demo research context`,
-    summary: 'Live news is unavailable locally; this sample headline exists only to exercise the Deep Analysis UI.',
-    source: 'MarketScanner Pros Local Demo',
-    sentiment: 'Neutral',
-    sentimentScore: 0,
-    url: '',
-    publishedAt: new Date().toISOString(),
-  }];
-  const demoData = { symbol: key, assetType, price, indicators, company, news, cryptoData: null, earnings: null, optionsData: null };
-  const signals = generateSignals(demoData);
+function legacyIndicators(c: GoldenEggCanonical) {
+  const i = c.indicators;
   return {
-    success: true,
-    localDemo: true,
-    warnings: [
-      'Development-only Deep Analysis payload for workflow testing. Not live market data.',
-      reason,
-    ],
-    symbol: key,
-    assetType,
-    timestamp: new Date().toISOString(),
-    responseTime: `${Date.now() - startTime}ms`,
-    price,
-    indicators,
-    company,
-    news,
-    cryptoData: null,
-    earnings: null,
-    optionsData: null,
-    signals,
-    aiAnalysis: null,
+    rsi: i.rsi, macd: i.macd, macdSignal: i.macdSignal, macdHist: i.macdHist, sma20: i.sma20, sma50: i.sma50, ema20: i.ema20, ema50: i.ema50, ema200: i.ema200,
+    bbUpper: null, bbMiddle: null, bbLower: null, adx: i.adx, stochK: i.stochK, stochD: null, atr: i.atr, atrPct: i.atrPct,
+    volumeRatio: c.liquidity.volume != null && c.liquidity.avgVolume ? c.liquidity.volume / c.liquidity.avgVolume : null,
+    priceVsSma20: i.sma20 ? ((c.price - i.sma20) / i.sma20) * 100 : null,
+    priceVsSma50: i.sma50 ? ((c.price - i.sma50) / i.sma50) * 100 : null,
+    source: 'golden_egg_canonical', computedOn: i.computedOn,
+  };
+}
+function legacyOptions(c: GoldenEggCanonical) {
+  if (!c.options) return null;
+  const o = c.options;
+  const top = (t: NonNullable<typeof o.topCall> | null, relation: string | undefined) => t ? { strike: t.strike, openInterest: t.oi, volume: t.volume, impliedVolatility: t.iv, delta: t.delta, gamma: t.gamma, theta: t.theta, vega: t.vega, relation } : null;
+  return {
+    expiryDate: o.expiry, expiryFormatted: o.expiry, daysToExpiry: o.daysToExpiry, snapshotTs: o.snapshotTs, currentPrice: c.price,
+    highestOICall: top(o.topCall, o.callWall?.relation),
+    highestOIPut: top(o.topPut, o.putWall?.relation),
+    totalCallOI: o.totalCallOi, totalPutOI: o.totalPutOi, putCallRatio: o.putCallOi, maxPain: o.maxPain,
+    // avgIV stays DECIMAL (0.35 = 35%) for the legacy renderer, which multiplies by 100.
+    avgIV: o.avgIvPct != null ? o.avgIvPct / 100 : null, ivRank: null, expectedMovePct: o.expectedMovePct, unusualActivity: o.unusualActivity, dealerGamma: o.dealerGamma,
+    sentiment: o.putCallOi > 1.2 ? 'Bearish' : o.putCallOi < 0.8 ? 'Bullish' : 'Neutral', quality: o.quality, notes: o.notes, source: 'golden_egg_canonical',
   };
 }
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
   try {
-    // Rate limit: 5 per minute per IP (expensive route - multiple AV calls)
     const ip = getClientIP(request);
     const rl = deepAnalysisLimiter.check(ip);
     if (!rl.allowed) {
-      return NextResponse.json(
-        { success: false, error: `Rate limit exceeded. Try again in ${rl.retryAfter}s` },
-        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
-      );
+      return NextResponse.json({ success: false, error: `Rate limit exceeded. Try again in ${rl.retryAfter}s` }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     }
-
-    // Pro Trader tier required
     const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
-      return NextResponse.json({ success: false, error: 'Please log in to use Golden Egg Deep Analysis' }, { status: 401 });
-    }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Golden Egg Deep Analysis' }, { status: 403 });
-    }
+    if (!session?.workspaceId) return NextResponse.json({ success: false, error: 'Please log in to use Golden Egg Deep Analysis' }, { status: 401 });
+    if (!hasProTraderAccess(session.tier)) return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Golden Egg Deep Analysis' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
-    const symbol = searchParams.get("symbol")?.toUpperCase().trim();
-    
-    if (!symbol) {
-      return NextResponse.json({ success: false, error: "Symbol is required" });
+    const symbol = searchParams.get('symbol')?.toUpperCase().trim();
+    if (!symbol) return NextResponse.json({ success: false, error: 'Symbol is required' });
+    const timeframe = (searchParams.get('timeframe') || 'daily').toLowerCase();
+    const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
+    const assetType: 'crypto' | 'forex' | 'stock' = assetClass === 'crypto' ? 'crypto' : assetClass === 'forex' ? 'forex' : 'stock';
+
+    // 1) Canonical packet (shared with /api/golden-egg — same cache, same numbers).
+    let ge: GoldenEggPayload;
+    let geMeta: { cached: boolean; localDemo: boolean; warnings: string[] };
+    try {
+      const r = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session.workspaceId });
+      ge = r.payload; geMeta = { cached: r.cached, localDemo: r.localDemo, warnings: r.warnings };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Golden Egg unavailable';
+      if (isLocalDeepAnalysisDemoAllowed()) return NextResponse.json({ success: false, localDemo: true, error: `Golden Egg packet unavailable locally: ${msg}` });
+      return NextResponse.json({ success: false, error: `Unable to build the Golden Egg packet for ${symbol}: ${msg}` });
     }
-    
-    const assetType = detectAssetType(symbol);
-    
-    // Fetch core data in parallel (but NOT options - to avoid rate limit)
-    // Alpha Vantage enforces max 5 requests/second burst limit
-    const [price, indicators, company, news, cryptoData, earnings] = await Promise.all([
-      fetchPriceData(symbol, assetType),
-      fetchTechnicalIndicators(symbol, assetType),
-      assetType === 'stock' ? fetchCompanyOverview(symbol) : null,
-      fetchNewsSentiment(symbol, assetType),
-      assetType === 'crypto' ? fetchCryptoData(symbol) : null,
-      assetType === 'stock' ? fetchEarningsData(symbol) : null,
+    const c = ge.canonical;
+    if (!c) return NextResponse.json({ success: false, error: 'Golden Egg packet has no canonical block (demo payload) — Deep Analyst requires live data.' , localDemo: geMeta.localDemo });
+
+    // 2) Enrichment only: relevant news, earnings, fundamentals, crypto sentiment proxy.
+    const [newsRes, fundamentals, earnings, cryptoSentiment] = await Promise.all([
+      fetchRelevantNews(symbol, assetClass).catch(() => ({ items: [] as RelevantArticle[], considered: 0, provider: 'unavailable' })),
+      assetClass === 'equity' ? getFundamentalsSummary(symbol).catch(() => null) : Promise.resolve(null),
+      assetClass === 'equity' ? getEarningsHistory(symbol).catch(() => null) : Promise.resolve(null),
+      assetClass === 'crypto' ? fetchCryptoSentiment() : Promise.resolve(null),
     ]);
-    
-    // Fetch options data AFTER other fetches to avoid burst rate limit
-    // Wait 1500ms before fetching options to ensure rate limit window fully resets
-    // (Alpha Vantage enforces 5 requests/second and we made ~10 calls above)
-    let optionsData = null;
-    if (assetType === 'stock') {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      optionsData = await fetchOptionsData(symbol);
-      console.log(`📊 Options data fetch complete, result: ${optionsData ? 'SUCCESS' : 'NULL'}`);
-    }
-    
-    if (!price) {
-      if (isLocalDeepAnalysisDemoAllowed()) {
-        return NextResponse.json(buildLocalDemoDeepAnalysisResponse(symbol, assetType, `Unable to fetch live data for ${symbol}`, startTime));
-      }
-      return NextResponse.json({ 
-        success: false, 
-        error: `Unable to fetch data for ${symbol}. Please check the symbol and try again.` 
-      });
-    }
-    
-    const analysisData = {
-      symbol,
-      assetType,
-      price,
-      indicators,
-      company,
-      news,
-      cryptoData,
-      earnings,
-      optionsData
-    };
-    
-    // Generate signals
-    const signals = generateSignals(analysisData);
-    
-    // Generate AI analysis
-    const aiAnalysis = await generateAIAnalysis(analysisData);
-    
+    const news = newsRes.items;
+
+    // 3) Analyst: deterministic sections from the packet + model interpretation constrained to the packet.
+    const deterministic = buildDeterministicAnalyst(c, ge, news, fundamentals);
+    const prompt = buildPacketPrompt(c, ge, news, fundamentals, earnings, cryptoSentiment);
+    const raw = await generateAnalyst(prompt);
+    const sanitized = sanitizeAnalyst(raw);
+
+    const newsSummary = summarizeNews(news);
     const responseTime = Date.now() - startTime;
-    
     return NextResponse.json({
       success: true,
       symbol,
       assetType,
       timestamp: new Date().toISOString(),
       responseTime: `${responseTime}ms`,
-      price,
-      indicators,
-      company,
-      news,
-      cryptoData,
-      earnings,
-      optionsData,
-      signals,
-      aiAnalysis
+      localDemo: geMeta.localDemo || undefined,
+      warnings: geMeta.warnings.length ? geMeta.warnings : undefined,
+      // Canonical facts — the ONLY technical source for this response.
+      goldenEgg: {
+        cached: geMeta.cached,
+        verdict: c.verdict,
+        dataTrust: c.dataTrust,
+        scores: c.scores,
+        timing: c.timing,
+        levels: c.levels,
+        confirmation: c.confirmation,
+        invalidation: c.invalidation,
+        extension: c.extension,
+        crossMarket: c.crossMarket,
+        derivatives: c.derivatives,
+        options: c.options,
+        fundamentals: c.fundamentals,
+        network: c.network,
+        priceTs: c.priceTs,
+        lastCompletedBarAt: c.lastCompletedBarAt,
+        barInterval: c.barInterval,
+        timeframe: c.timeframe,
+        flipConditions: ge.layer1.flipConditions,
+      },
+      analyst: {
+        sections: deterministic,
+        narrative: sanitized.text,
+        narrativeSource: sanitized.text ? 'gpt-4o (packet-constrained)' : 'unavailable',
+        removedLines: sanitized.removedLines,
+        grounding: 'Every technical number comes from the Golden Egg canonical packet; news is ticker-filtered (relevance ≥ 0.35); fundamentals are the shared Alpha Vantage OVERVIEW snapshot.',
+      },
+      // Legacy-shaped mirrors of canonical values so the existing UI renders without a second pipeline.
+      price: legacyPrice(c),
+      indicators: legacyIndicators(c),
+      company: fundamentals ? {
+        name: fundamentals.name, description: '', sector: fundamentals.sector, industry: fundamentals.industry, marketCap: fundamentals.marketCap != null ? String(fundamentals.marketCap) : null,
+        peRatio: fundamentals.pe, forwardPE: fundamentals.forwardPe, peg: fundamentals.peg, eps: fundamentals.eps, dividendYield: null, week52High: null, week52Low: null,
+        targetPrice: fundamentals.analystTarget, analystCount: fundamentals.analystCount,
+        strongBuy: fundamentals.ratings?.strongBuy ?? 0, buy: fundamentals.ratings?.buy ?? 0, hold: fundamentals.ratings?.hold ?? 0, sell: fundamentals.ratings?.sell ?? 0, strongSell: fundamentals.ratings?.strongSell ?? 0,
+        multiple: fundamentals.multiple, period: fundamentals.period, revenueGrowthYoy: fundamentals.revenueGrowthYoy, earningsGrowthYoy: fundamentals.earningsGrowthYoy, profitMargin: fundamentals.profitMargin,
+      } : null,
+      news: news.map((n) => ({ title: n.title, summary: n.summary, source: n.source, sentiment: n.sentiment, sentimentScore: n.sentimentScore, url: n.url, publishedAt: n.publishedAt, relevance: n.relevance, catalyst: n.catalyst, catalystReason: n.catalystReason })),
+      newsMeta: { considered: newsRes.considered, relevant: news.length, provider: newsRes.provider, headline: newsSummary.headline, positive: newsSummary.positive, negative: newsSummary.negative, eventRisk: newsSummary.eventRisk },
+      cryptoData: assetClass === 'crypto' ? { fearGreed: cryptoSentiment ? { value: cryptoSentiment.value, classification: cryptoSentiment.classification, basis: cryptoSentiment.basis } : null, marketData: c.network ? { marketCapRank: c.network.marketCapRank, marketCap: c.network.marketCap, totalVolume: c.network.spotVolume24h, circulatingSupply: c.network.circulatingSupply, maxSupply: c.network.maxSupply, fdv: c.network.fdv, ath: c.network.ath, athChangePercent: c.network.distanceFromAthPct } : null } : null,
+      earnings: earnings ? {
+        nextEarningsDate: fundamentals?.nextEarningsDate ?? null, daysToEarnings: fundamentals?.daysToEarnings ?? null,
+        lastReportedDate: earnings.lastReported?.reportedDate ?? null, lastReportedQuarter: earnings.lastReported?.fiscalDateEnding ?? null,
+        lastReportedEPS: earnings.lastReported?.reportedEPS ?? null, lastEstimatedEPS: earnings.lastReported?.estimatedEPS ?? null,
+        lastSurprise: earnings.lastReported?.surprise ?? null, lastSurprisePercent: earnings.lastReported?.surprisePercent ?? null, lastBeat: earnings.lastReported?.beat ?? null,
+        beatRate: earnings.beatRate, recentQuarters: earnings.recentQuarters, annualEPS: earnings.annualEPS,
+      } : null,
+      optionsData: legacyOptions(c),
+      // Subordinate to Golden Egg: mirrors the canonical verdict, never a competing engine.
+      signals: {
+        signal: `${c.verdict.assessment} · ${c.verdict.direction === 'LONG' ? 'BULLISH BIAS' : c.verdict.direction === 'SHORT' ? 'BEARISH BIAS' : 'NEUTRAL'}`,
+        score: c.verdict.confluence,
+        reasons: [...deterministic.supports.map((s) => `+ ${s}`), ...deterministic.against.map((s) => `− ${s}`)],
+        bullishCount: deterministic.supports.length,
+        bearishCount: deterministic.against.length,
+        source: 'golden_egg_canonical',
+      },
+      aiAnalysis: sanitized.text,
     });
   } catch (error) {
-    console.error("Deep analysis error:", error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Analysis failed"
-    }, { status: 500 });
+    console.error('Deep analysis error:', error);
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Analysis failed' }, { status: 500 });
   }
 }
