@@ -747,7 +747,9 @@ export async function getOHLCRange(
   requestOptions?: {
     retries?: number;
     timeoutMs?: number;
-  }
+  },
+  // Pro plan: 'daily' allows ≤180 days per call, 'hourly' ≤31 days per call.
+  interval: 'daily' | 'hourly' = 'daily',
 ): Promise<number[][] | null> {
   try {
     const from = Math.floor(fromUnixSeconds);
@@ -761,7 +763,7 @@ export async function getOHLCRange(
       vs_currency: 'usd',
       from: String(from),
       to: String(to),
-      interval: 'daily',
+      interval,
     });
 
     return await cgFetch<number[][]>(`/coins/${coinId}/ohlc/range`, {

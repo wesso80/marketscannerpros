@@ -14,6 +14,16 @@ export interface ScanTemplate {
     volatilityState: string;   // 'all' | 'low' | 'moderate' | 'high'
     direction?: string;        // 'all' | 'long' | 'short'
     quality?: string;          // 'all' | 'high' | 'medium'
+    /** Row must be in a Bollinger-inside-Keltner squeeze. */
+    squeeze?: boolean;
+    /** Row must carry a positive sector/benchmark relative-strength reading (rows without RS data are excluded and counted). */
+    requireRelativeStrength?: boolean;
+    /** RSI band the row must sit in (inclusive). */
+    rsiBand?: [number, number];
+    /** Minimum ADX (trend strength). */
+    minAdx?: number;
+    /** Maximum ADX (range / chop). */
+    maxAdx?: number;
   };
   color: string;
 }
@@ -23,12 +33,14 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
     id: 'momentum',
     label: 'Momentum',
     icon: 'MOM',
-    description: 'Strong trend + high ADX + RSI 55–70 zone',
+    description: 'ADX ≥ 25 with RSI in the 55–70 (long) / 30–45 (short) zone; 3/4+ alignment, match ≥ 65',
     config: {
       minConfidence: 65,
       mtfAlignment: 3,
-      volatilityState: 'moderate',
-      quality: 'high',
+      volatilityState: 'all',
+      quality: 'all',
+      minAdx: 25,
+      rsiBand: [30, 70],
     },
     color: 'var(--msp-bull)',
   },
@@ -36,7 +48,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
     id: 'breakout',
     label: 'Breakout',
     icon: 'BRK',
-    description: 'Volatility expansion from compression zones',
+    description: 'High volatility state (ATR ≥ 3% of price) with 2/4+ alignment — expansion candidates',
     config: {
       minConfidence: 60,
       mtfAlignment: 2,
@@ -49,12 +61,14 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
     id: 'mean_reversion',
     label: 'Mean Reversion',
     icon: 'REV',
-    description: 'Oversold/overbought RSI + low ADX choppy markets',
+    description: 'RSI ≤ 35 or ≥ 65 with ADX < 20 (choppy) and low volatility state',
     config: {
       minConfidence: 55,
       mtfAlignment: 2,
       volatilityState: 'low',
       quality: 'all',
+      maxAdx: 20,
+      rsiBand: [0, 100],
     },
     color: '#8B5CF6',
   },
@@ -62,12 +76,13 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
     id: 'squeeze',
     label: 'Squeeze Play',
     icon: 'SQZ',
-    description: 'Bollinger inside Keltner compression — imminent expansion',
+    description: 'Rows currently in a Bollinger-inside-Keltner squeeze (Squeeze filter = In squeeze)',
     config: {
       minConfidence: 50,
       mtfAlignment: 2,
-      volatilityState: 'low',
+      volatilityState: 'all',
       quality: 'all',
+      squeeze: true,
     },
     color: '#EC4899',
   },
@@ -75,13 +90,14 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
     id: 'relative_strength',
     label: 'Relative Strength',
     icon: 'RS',
-    description: 'Outperforming benchmark (BTC for crypto, SPY for equities)',
+    description: 'Long rows with a positive sector RS reading (stock % − sector ETF %); rows without RS data are excluded',
     config: {
       minConfidence: 60,
       mtfAlignment: 3,
       volatilityState: 'all',
       direction: 'long',
-      quality: 'high',
+      quality: 'all',
+      requireRelativeStrength: true,
     },
     color: '#06B6D4',
   },
@@ -102,19 +118,22 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
 
 interface ScanTemplatesBarProps {
   onSelect: (template: ScanTemplate) => void;
+  onClear?: () => void;
   activeId?: string;
 }
 
-export default function ScanTemplatesBar({ onSelect, activeId }: ScanTemplatesBarProps) {
+export default function ScanTemplatesBar({ onSelect, onClear, activeId }: ScanTemplatesBarProps) {
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '4px 0' }}>
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '4px 0', alignItems: 'center' }}>
       {SCAN_TEMPLATES.map((tmpl) => {
         const isActive = activeId === tmpl.id;
         return (
           <button
             key={tmpl.id}
-            onClick={() => onSelect(tmpl)}
-            title={tmpl.description}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => (isActive && onClear ? onClear() : onSelect(tmpl))}
+            title={`${tmpl.description}${isActive ? ' — click again to clear preset' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -136,6 +155,11 @@ export default function ScanTemplatesBar({ onSelect, activeId }: ScanTemplatesBa
           </button>
         );
       })}
+      {activeId && (
+        <span style={{ fontSize: 11, color: 'var(--msp-flat)' }}>
+          Preset active — it sets the filters above plus its own condition; changing any filter clears the preset.
+        </span>
+      )}
     </div>
   );
 }

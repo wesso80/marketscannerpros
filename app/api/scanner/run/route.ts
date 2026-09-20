@@ -16,6 +16,9 @@ import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
 import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
+import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
+import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
+import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustResult } from "@/lib/scanner/dataTrust";
 import { classifyRegime } from "@/lib/regime-classifier";
 import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
@@ -194,6 +197,24 @@ interface ScanResult {
   lastCandleTime?: string;
   /** Actual bar interval the indicators were computed on (may differ from the requested timeframe label, e.g. crypto 'daily' → 4h CoinGecko bars). */
   barInterval?: string;
+  /** Truthful data basis for the Analysis panel: what interval, which bar, how much history, where from. */
+  dataBasis?: {
+    barInterval: string;
+    lastCompletedBarAt: string | null;
+    currentBarPartial: boolean;
+    historyBars: number;
+    hlBasis: 'exchange_ohlc' | 'price_samples';
+    volumeBasis: string;
+    source: string;
+    computedAt: string;
+    notes: string[];
+    /** Split-like close jump in the stored series (unadjusted corporate action); null when the series is continuous. */
+    priceDiscontinuity?: { date: string | null; ratio: number } | null;
+  };
+  /** Derived liquidity evidence (never fabricated: null when the provider gave no volume). */
+  liquidity?: { avgVolume20: number | null; adv20: number | null; volumeRatio: number | null; lastVolume: number | null };
+  /** Shared data-trust verdict (lib/scanner/dataTrust) — the one vocabulary used by Ranked, Analysis and Pro. */
+  dataTrust?: DataTrustResult;
   // Computed trade setup fields (populated by both cached and AV paths)
   confidence?: number;
   setup?: string;
@@ -713,6 +734,8 @@ export async function POST(req: NextRequest) {
       "weekly": "weekly"
     };
     const avInterval = intervalMap[timeframe] || "daily";
+    const cryptoTimeframe: CryptoScanTimeframe = timeframe === 'weekly' ? 'weekly' : timeframe === '1h' ? '1h' : timeframe === '15m' ? '15m' : 'daily';
+    const isIntradayTimeframe = timeframe === '1h' || timeframe === '15m' || timeframe === '30m';
     console.info("[scanner] Using interval:", avInterval, "for timeframe:", timeframe);
 
     // Note: Equity and Forex use Alpha Vantage (admin-only testing)
@@ -1724,46 +1747,52 @@ export async function POST(req: NextRequest) {
       console.info(`[scanner] Bulk equity cache: ${bulkEquityCache.size}/${equitySymbols.length} symbols ready (2 queries)`);
     }
 
-    // PRE-FETCH: Benchmark change % for relative strength (non-blocking)
+    // PRE-FETCH: Benchmark series for relative strength. RS = 20-bar return of the symbol vs the 20-bar return of the
+    // benchmark on the SAME bar interval (previously BTC used a 1-day window against a 30-day symbol window).
     let benchmarkChangePct = 0;
+    let benchmarkCloses: number[] | null = null;
     const benchmarkName = type === 'crypto' ? 'BTC' : 'SPY';
+    const RS_BARS = 20;
+    const nBarReturn = (closes: number[], n = RS_BARS): number | null => {
+      if (closes.length < n + 1) return null;
+      const a = closes[closes.length - 1 - n]; const b = closes[closes.length - 1];
+      return Number.isFinite(a) && a > 0 && Number.isFinite(b) ? ((b - a) / a) * 100 : null;
+    };
     try {
       if (type === 'crypto') {
-        const btcId = await resolveSymbolToId('BTC');
-        if (btcId) {
-          const btcOhlc = await getOHLC(btcId, 1);
-          if (btcOhlc && btcOhlc.length >= 2) {
-            const firstClose = Number(btcOhlc[0][4]);
-            const lastClose = Number(btcOhlc[btcOhlc.length - 1][4]);
-            if (Number.isFinite(firstClose) && firstClose > 0) {
-              benchmarkChangePct = ((lastClose - firstClose) / firstClose) * 100;
-            }
-          }
-        }
-      } else if (type === 'equity' && ALPHA_KEY) {
-        // SPY 20-day relative-strength baseline. One extra AV call per scan
-        // (not per symbol) — cheap and rate-limit-safe. Per
-        // alpha-vantage-usage rules: explicit failure mode, no silent
-        // fabrication if quota / data missing.
+        const btcSeries = await fetchCryptoSeries('BTC', cryptoTimeframe);
+        benchmarkCloses = btcSeries.bars.map((b) => b.close);
+        benchmarkChangePct = nBarReturn(benchmarkCloses) ?? 0;
+      } else if (type === 'equity') {
+        // SPY from the worker bar store first (0 AV calls); AV daily as fallback.
         try {
-          const spyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
-          const spyJson = await fetchAlphaJson(spyUrl, 'SPY_BENCHMARK');
-          const spyKey = Object.keys(spyJson).find((k) => k.startsWith('Time Series ('));
-          const spyTs = spyKey ? spyJson[spyKey] : null;
-          if (spyTs) {
-            const spyCloses = Object.entries(spyTs)
-              .sort(([a], [b]) => (a < b ? 1 : -1)) // newest first
-              .slice(0, 21) // last 21 sessions → 20 returns
-              .map(([, v]: any) => Number(v['4. close'] ?? v['5. adjusted close'] ?? NaN))
-              .filter((n) => Number.isFinite(n) && n > 0);
-            if (spyCloses.length >= 2) {
-              const last = spyCloses[0];
-              const first = spyCloses[spyCloses.length - 1];
-              benchmarkChangePct = ((last - first) / first) * 100;
-            }
+          const spyRows = await dbQuery<{ ts: string; close: string }>(`SELECT ts, close FROM ohlcv_bars WHERE symbol = 'SPY' AND timeframe = 'daily' ORDER BY ts DESC LIMIT 120`);
+          if (spyRows.length >= RS_BARS + 1) {
+            let closes = spyRows.reverse().map((r) => Number(r.close));
+            if (timeframe === 'weekly') closes = aggregateBars(spyRows.map((r) => ({ t: new Date(r.ts).toISOString(), open: Number(r.close), high: Number(r.close), low: Number(r.close), close: Number(r.close), volume: null })), '1w').map((b) => b.close);
+            benchmarkCloses = closes;
+            benchmarkChangePct = nBarReturn(closes) ?? 0;
           }
-        } catch (spyErr) {
-          console.warn('[scanner] SPY benchmark fetch failed, RS baseline=0:', (spyErr as any)?.message);
+        } catch (spyDbErr) {
+          console.warn('[scanner] SPY bars unavailable from DB:', (spyDbErr as any)?.message);
+        }
+        if (!benchmarkCloses && ALPHA_KEY) {
+          try {
+            const spyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
+            const spyJson = await fetchAlphaJson(spyUrl, 'SPY_BENCHMARK');
+            const spyKey = Object.keys(spyJson).find((k) => k.startsWith('Time Series ('));
+            const spyTs = spyKey ? spyJson[spyKey] : null;
+            if (spyTs) {
+              const closes = Object.entries(spyTs)
+                .sort(([a], [b]) => (a < b ? -1 : 1))
+                .map(([, v]: any) => Number(v['4. close'] ?? v['5. adjusted close'] ?? NaN))
+                .filter((n) => Number.isFinite(n) && n > 0);
+              benchmarkCloses = closes;
+              benchmarkChangePct = nBarReturn(closes) ?? 0;
+            }
+          } catch (spyErr) {
+            console.warn('[scanner] SPY benchmark fetch failed, RS baseline=0:', (spyErr as any)?.message);
+          }
         }
       }
     } catch (bmErr) {
@@ -1774,36 +1803,21 @@ export async function POST(req: NextRequest) {
       try {
         if (type === "crypto") {
           const baseSym = sym;
-          
-          // CoinGecko is the canonical crypto provider. AV is fallback only
-          // (its crypto endpoints are flaky and often return empty on our plan).
-          const isWeekly = timeframe === 'weekly';
-          let candles: Candle[];
+
+          // Genuine-timeframe bars (lib/scanner/cryptoBars): completed bars drive indicators; the open bar supplies price.
+          let series: CryptoSeries;
           try {
-            try {
-              candles = await fetchCryptoCoinGecko(baseSym, timeframe);
-            } catch (cgErr: any) {
-              if (ALPHA_KEY) {
-                console.warn(`[scanner] CoinGecko miss for ${baseSym}, falling back to AV:`, cgErr?.message);
-                candles = await fetchCryptoAV(baseSym, timeframe);
-              } else {
-                throw cgErr;
-              }
-            }
-            // Empty result → try AV as secondary
-            if ((!candles || candles.length === 0) && ALPHA_KEY && isWeekly) {
-              candles = await fetchCryptoAV(baseSym, timeframe);
-            }
+            series = await fetchCryptoSeries(baseSym, cryptoTimeframe);
           } catch (cgErr: any) {
             errors.push(`${baseSym}: ${cgErr.message}`);
             continue;
           }
-          
-          if (!candles.length) throw new Error("No crypto candles returned");
-          
-          // Log the latest candle time for debugging
-          const lastCandleTime = candles[candles.length - 1]?.t;
-          console.info(`[scanner] Crypto ${baseSym}: Got ${candles.length} candles, latest: ${lastCandleTime}`);
+          if (series.bars.length < 30) { errors.push(`${baseSym}: insufficient_history (${series.bars.length} completed ${series.barInterval} bars)`); continue; }
+
+          const volumeAvailable = series.volumeBasis !== 'unavailable' && series.bars.slice(-20).every((b) => b.volume !== null);
+          const candles: Candle[] = series.bars.map((b) => ({ t: b.t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
+          const lastCandleTime = series.lastCompletedBarAt ?? candles[candles.length - 1]?.t;
+          console.info(`[scanner] Crypto ${baseSym}: ${candles.length} completed ${series.barInterval} bars, last completed ${lastCandleTime}, partial=${Boolean(series.partialBar)}`);
           
           const closes = candles.map(c => c.close);
           const highs = candles.map(c => c.high);
@@ -1828,14 +1842,21 @@ export async function POST(req: NextRequest) {
           const macHist = macObj.hist[last];
           const macLine = macObj.macdLine[last];
           const sigLine = macObj.signalLine[last];
-          const ema200Val = emaArr[last];
+          // The local ema() seeds from bar 0 and always returns a number; a 200-period EMA is only real with ≥200 bars.
+          const ema200Val = closes.length >= 200 ? emaArr[last] : NaN;
           const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
           const close = closes[last];
-          const price = close;
-          const obvCurrent = obvArr[last];
-          const obvPrev = obvArr[last - 1];
-          const mfiVal = mfiArr[last];
-          const vwapVal = vwapArr[last];
+          // Price = live (open bar) when available; indicators describe the last COMPLETED bar.
+          const price = series.currentPrice ?? close;
+          const obvCurrent = volumeAvailable ? obvArr[last] : NaN;
+          const obvPrev = volumeAvailable ? obvArr[last - 1] : NaN;
+          const mfiVal = volumeAvailable ? mfiArr[last] : NaN;
+          const vwapVal = volumeAvailable ? vwapArr[last] : NaN;
+          const vol20 = volumeAvailable ? volumes.slice(-20) : [];
+          const avgVolume20 = vol20.length ? vol20.reduce((s, v) => s + v, 0) / vol20.length : undefined;
+          const lastVolume = volumeAvailable ? volumes[last] : undefined;
+          const volumeRatio = avgVolume20 && lastVolume !== undefined && avgVolume20 > 0 ? lastVolume / avgVolume20 : null;
+          const adv20 = avgVolume20 !== undefined ? avgVolume20 : undefined; // CoinGecko volume is already USD notional
           
           // Prepare chart data (last 50 candles for visualization)
           const chartLength = Math.min(50, candles.length);
@@ -1932,9 +1953,26 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             mfi: mfiVal,
             vwap: vwapVal,
-            avgVolume: volumes.slice(-20).reduce((sum, volume) => sum + volume, 0) / Math.max(1, volumes.slice(-20).length),
+            avgVolume: avgVolume20,
             lastCandleTime,
-            barInterval: cryptoBarInterval(candles),
+            barInterval: series.barInterval,
+            dataBasis: {
+              barInterval: series.barInterval,
+              lastCompletedBarAt: series.lastCompletedBarAt,
+              currentBarPartial: Boolean(series.partialBar),
+              historyBars: candles.length,
+              hlBasis: series.hlBasis,
+              volumeBasis: series.volumeBasis,
+              source: series.source,
+              computedAt: new Date().toISOString(),
+              notes: series.warnings,
+            },
+            liquidity: {
+              avgVolume20: avgVolume20 ?? null,
+              adv20: adv20 ?? null,
+              volumeRatio,
+              lastVolume: lastVolume ?? null,
+            },
             chartData: {
               candles: chartCandles,
               ema200: chartEma200,
@@ -1947,17 +1985,16 @@ export async function POST(req: NextRequest) {
           if (cryptoDerivatives) item.derivatives = cryptoDerivatives;
           if (dveCrypto) Object.assign(item, dveCrypto);
           
-          // Compute enhancements: EMA stack, squeeze, relative strength
+          // Compute enhancements: EMA stack, squeeze, relative strength (20-bar return vs BTC 20-bar return, same interval)
           try {
-            const changePct = closes.length >= 2
-              ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
-              : 0;
+            const changePct = nBarReturn(closes) ?? (closes.length >= 2 ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100 : 0);
             item.enhancements = computeScanEnhancements({
               closes, highs, lows, price,
               changePct,
               benchmarkChangePct,
               benchmarkName,
             });
+            (item.enhancements as any).relativeStrength.window = `${RS_BARS} ${series.barInterval} bars`;
           } catch (enhErr) {
             console.warn('[scanner] Enhancement computation failed for', baseSym, enhErr);
           }
@@ -2130,161 +2167,94 @@ export async function POST(req: NextRequest) {
 
           results.push(item);
         } else {
-          // EQUITIES: Try cached data first, fall back to Alpha Vantage
-          // v3.0: Cache mode support - reduces AV calls by ~90%
-          
+          // EQUITIES — one candle-based computation for every source, so cached rows carry the same evidence as live rows.
+          //   daily/weekly : worker bar store (ohlcv_bars, 250 daily bars → EMA200, volume, ADV; weekly = Monday-anchored aggregate)
+          //                  with the worker quote as price; Alpha Vantage only when the bar store is empty.
+          //   intraday     : Alpha Vantage TIME_SERIES_INTRADAY (the bar store is daily-only) — never relabelled daily data.
           const useCache = shouldUseCache();
-          let cachedData: CachedScanData | null = null;
-          
-          if (useCache) {
-            // Read from the bulk-preloaded map (already fetched in 2 queries).
-            cachedData = bulkEquityCache.get(sym.toUpperCase()) ?? null;
-          }
-          
-          if (cachedData) {
-            // Use cached data - no AV calls needed!
-            console.info(`[scanner] EQUITY ${sym} served from ${cachedData.source} (${getCacheMode()} mode) - 0 AV calls`);
-            
-            const price = cachedData.price;
-            const rsiVal = cachedData.rsi;
-            const macHist = cachedData.macdHist;
-            const macLine = cachedData.macdLine;
-            const sigLine = cachedData.macdSignal;
-            const ema200Val = cachedData.ema200;
-            const atrVal = cachedData.atr;
-            const adxVal = cachedData.adx;
-            const stochK = cachedData.stochK;
-            const stochD = cachedData.stochD;
-            const cciVal = cachedData.cci;
-            
-            // Aroon from cache (added to cache pipeline) — fall back to computed estimate
-            const aroonUp = cachedData.aroonUp ?? NaN;
-            const aroonDown = cachedData.aroonDown ?? NaN;
-            
-            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonUp, aroonDown, cciVal, 0, 0,
-              undefined, undefined, stochD, undefined, undefined,
-              undefined, undefined, undefined,
-            );
+          const cachedData: CachedScanData | null = useCache ? (bulkEquityCache.get(sym.toUpperCase()) ?? null) : null;
 
-            // Compute trade setup fields from cached data (same logic as useTickerData fallbacks, but server-side)
-            const dirLabel = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
-            const atrSafe = Number.isFinite(atrVal) ? atrVal : price * 0.02; // Fallback: 2% of price if ATR missing
-            const entryPrice = price;
-            const stopPrice = dirLabel === 'LONG' ? price - atrSafe * 1.5 : price + atrSafe * 1.5;
-            const targetPrice = dirLabel === 'LONG' ? price + atrSafe * 3 : price - atrSafe * 3;
-            const riskPerUnit = Math.abs(entryPrice - stopPrice);
-            const rMultipleCalc = riskPerUnit > 0 ? Math.abs(targetPrice - entryPrice) / riskPerUnit : 0;
-            const confidenceCalc = Math.min(99, Math.abs(scoreResult.score));
-            const setupLabel = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxVal, stochK, stochD, macdHist: macHist, close: price, ema200: ema200Val });
+          let candles: Candle[] = [];
+          let equitySource = '';
+          let equityWeekPartial = false;
+          let latestTradingDay: string | null = cachedData?.latestTradingDay ?? null;
+          let quotePrice: number | undefined = cachedData?.price;
 
-            const item: ScanResult & { direction?: string; signals?: any } = {
-              symbol: sym,
-              score: scoreResult.score,
-              direction: scoreResult.direction,
-              signals: scoreResult.signals,
-              scoreQuality: scoreResult.scoreQuality,
-              confidence: confidenceCalc,
-              setup: setupLabel,
-              entry: entryPrice,
-              stop: Math.max(0, stopPrice),
-              target: Math.max(0, targetPrice),
-              rMultiple: Math.round(rMultipleCalc * 10) / 10,
-              timeframe,
-              type,
-              price,
-              rsi: rsiVal,
-              macd_hist: macHist,
-              ema200: ema200Val,
-              atr: atrVal,
-              avgVolume: cachedData.volume,
-              adx: adxVal,
-              stoch_k: stochK,
-              stoch_d: stochD,
-              cci: cciVal,
-              aroon_up: aroonUp,
-              aroon_down: aroonDown,
-              obv: NaN,
-              lastCandleTime: new Date().toISOString(),
-            };
-            // Mark as cache-sourced so the post-pass can apply the cached
-            // missing-features / freshness floor (cache cannot be treated as
-            // truly real-time even when it just landed).
-            (item as any)._fromCache = true;
-            (item as any)._cacheSource = cachedData.source;
-
-            // Fetch chartData from ohlcv_bars (populated by worker alongside the cache)
+          if (!isIntradayTimeframe) {
             try {
-              const barRows = await dbQuery<{ ts: string; open: number; high: number; low: number; close: number; volume: number }>(
-                `SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 50`,
+              const barRows = await dbQuery<{ ts: string; open: string; high: string; low: string; close: string; volume: string | null }>(
+                `SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 260`,
                 [sym]
               );
-              if (barRows && barRows.length > 0) {
-                const sorted = barRows.reverse();
-                const bCloses = sorted.map(r => Number(r.close));
-                const bHighs = sorted.map(r => Number(r.high));
-                const bLows = sorted.map(r => Number(r.low));
-                const emaArr = ema(bCloses, 200);
-                const rsiArr = rsi(bCloses, 14);
-                const macObj = macd(bCloses, 12, 26, 9);
-                (item as any).chartData = {
-                  candles: sorted.map(r => ({
-                    t: typeof r.ts === 'string' ? r.ts.slice(0, 10) : new Date(r.ts).toISOString().slice(0, 10),
-                    o: Number(r.open), h: Number(r.high), l: Number(r.low), c: Number(r.close),
-                  })),
-                  ema200: emaArr,
-                  rsi: rsiArr,
-                  macd: macObj.macdLine.map((m, i) => ({ macd: m, signal: macObj.signalLine[i], hist: macObj.hist[i] })),
-                };
-
-                // DVE flags for equity (cached path — uses bar data)
-                const dveCached = computeScannerDVE(bCloses, bHighs, bLows, price, sym, {
-                  adx: adxVal, atr: atrVal, stochK, stochD,
-                });
-                if (dveCached) Object.assign(item, dveCached);
+              if (barRows.length >= 60) {
+                const dailyBars: ScanBar[] = barRows.reverse().map((r) => ({
+                  t: new Date(r.ts).toISOString(),
+                  open: Number(r.open), high: Number(r.high), low: Number(r.low), close: Number(r.close),
+                  volume: r.volume != null && Number.isFinite(Number(r.volume)) && Number(r.volume) > 0 ? Number(r.volume) : null,
+                })).filter((b) => Number.isFinite(b.close));
+                let bars = timeframe === 'weekly' ? aggregateBars(dailyBars, '1w') : dailyBars;
+                // A weekly equity bar is complete once that week's Friday session has closed; otherwise it is the
+                // forming bar and is excluded from indicators (same partial-bar policy as crypto).
+                if (timeframe === 'weekly' && bars.length) {
+                  const lastWeekStart = Date.parse(bars[bars.length - 1].t);
+                  const fridayOfWeek = new Date(lastWeekStart + 4 * 86_400_000).toISOString().slice(0, 10);
+                  if (lastCompletedEquitySession(Date.now()) < fridayOfWeek) { bars = bars.slice(0, -1); equityWeekPartial = true; }
+                }
+                candles = bars.map((b) => ({ t: b.t.slice(0, 10), open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
+                equitySource = timeframe === 'weekly' ? 'ohlcv_bars (daily → Monday-anchored weekly) + quotes_latest' : 'ohlcv_bars + quotes_latest';
+                if (!latestTradingDay) latestTradingDay = dailyBars[dailyBars.length - 1]?.t.slice(0, 10) ?? null;
               }
-            } catch (chartErr) {
-              // Non-fatal — chart will fall back to /api/bars on client
-              console.warn(`[scanner] chartData fetch failed for ${sym}:`, (chartErr as any)?.message);
+            } catch (barErr) {
+              console.warn(`[scanner] ohlcv_bars read failed for ${sym}:`, (barErr as any)?.message);
             }
+          }
 
-            results.push(item);
-            
-          } else if (canFallbackToAV() && bulkEquityCache.size === 0) {
-            // Only hit live Alpha Vantage when the worker cache is entirely cold
-            // (worker down / cold start). When the cache is warm we rely on it
-            // and skip uncached symbols rather than issuing slow per-symbol AV
-            // fetches — this is what keeps the scan fast.
-
+          if (!candles.length) {
+            if (!canFallbackToAV() || !ALPHA_KEY) {
+              errors.push(isIntradayTimeframe
+                ? `${sym}: intraday equity bars need the live provider (bar store is daily-only)`
+                : `${sym}: no bar history in the worker store yet. Try again later.`);
+              continue;
+            }
             const seriesUrl = avInterval === "daily"
               ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(sym)}&outputsize=full&entitlement=realtime&apikey=${ALPHA_KEY}`
-              : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_KEY}`;
+              : avInterval === "weekly"
+                ? `https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=${encodeURIComponent(sym)}&apikey=${ALPHA_KEY}`
+                : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_KEY}`;
 
             const seriesJson = await fetchAlphaJson(seriesUrl, `EQUITY_SERIES ${sym}`);
-            const expectedTsKey = avInterval === "daily" ? "Time Series (Daily)" : `Time Series (${avInterval})`;
-            const foundTsKey = Object.keys(seriesJson).find((k) =>
-              k === expectedTsKey ||
-              k.startsWith("Time Series (")
-            );
+            const foundTsKey = Object.keys(seriesJson).find((k) => k.startsWith("Time Series") || k.startsWith("Weekly"));
             const ts = (foundTsKey ? seriesJson[foundTsKey] : undefined) || {};
 
-            const candles: Candle[] = Object.entries(ts)
+            candles = Object.entries(ts)
               .map(([date, v]: any) => ({
                 t: String(date),
                 open: Number(v["1. open"] ?? NaN),
                 high: Number(v["2. high"] ?? NaN),
                 low: Number(v["3. low"] ?? NaN),
                 close: Number(v["4. close"] ?? NaN),
-                volume: Number(v["5. volume"] ?? 0),
+                volume: Number(v["6. volume"] ?? v["5. volume"] ?? 0),
               }))
               .filter((c) => Number.isFinite(c.close))
               .sort((a, b) => a.t.localeCompare(b.t));
+            equitySource = `alpha_vantage ${avInterval}`;
+            quotePrice = bulkPriceMap.get(sym.toUpperCase()) ?? undefined;
+            if (!isIntradayTimeframe) latestTradingDay = candles[candles.length - 1]?.t.slice(0, 10) ?? null;
+          }
 
+          {
             if (!candles.length) throw new Error(`No equity candles returned for ${sym}`);
 
             const closes = candles.map((c) => c.close);
             const highs = candles.map((c) => c.high);
             const lows = candles.map((c) => c.low);
-            const volumes = candles.map((c) => (Number.isFinite(c.volume) && c.volume > 0 ? c.volume : 1000));
+            // The worker bar store only started persisting volume recently, so a full 20-bar volume history may not
+            // exist yet. Use what is real: positive-volume bars within the last 20 (min 5) for the average, the worker
+            // quote's session volume for the latest bar, and label the basis. Never a fabricated placeholder.
+            const positiveVolumeBars = candles.slice(-20).filter((c) => Number.isFinite(c.volume) && c.volume > 0);
+            const quoteSessionVolume = cachedData?.volume && Number.isFinite(cachedData.volume) && cachedData.volume > 0 ? cachedData.volume : undefined;
+            const volumeAvailable = positiveVolumeBars.length >= 5;
+            const volumes = candles.map((c) => (Number.isFinite(c.volume) && c.volume > 0 ? c.volume : 0));
             const timestamps = candles.map((c) => c.t);
 
             const rsiArr = rsi(closes, 14);
@@ -2300,8 +2270,9 @@ export async function POST(req: NextRequest) {
             const vwapArr = vwap(highs, lows, closes, volumes, timestamps, 'equity');
 
             const last = closes.length - 1;
+            // Price: worker quote / bulk quote when present (same as last close outside market hours), else last bar close.
             let price = closes[last];
-            const bulkPrice = bulkPriceMap.get(sym.toUpperCase());
+            const bulkPrice = quotePrice ?? bulkPriceMap.get(sym.toUpperCase());
             if (Number.isFinite(bulkPrice)) {
               price = bulkPrice as number;
             }
@@ -2310,13 +2281,32 @@ export async function POST(req: NextRequest) {
             const macHist = macObj.hist[last];
             const macLine = macObj.macdLine[last];
             const sigLine = macObj.signalLine[last];
-            const ema200Val = emaArr[last];
+            // EMA200 is only real with ≥200 bars; otherwise NaN (never 0 — 0 used to read as "price far above trend").
+            const ema200Val = closes.length >= 200 ? emaArr[last] : NaN;
             const atrVal = atrArr[last - 1];
-            const obvCurrent = obvArr[last];
-            const obvPrev = obvArr[last - 1];
-            const mfiValEq = mfiArr.length ? mfiArr[mfiArr.length - 1] : undefined;
-            const vwapValEq = vwapArr.length ? vwapArr[vwapArr.length - 1] : undefined;
+            const obvCurrent = volumeAvailable ? obvArr[last] : NaN;
+            const obvPrev = volumeAvailable ? obvArr[last - 1] : NaN;
+            const mfiValEq = volumeAvailable && mfiArr.length ? mfiArr[mfiArr.length - 1] : undefined;
+            const vwapValEq = volumeAvailable && vwapArr.length ? vwapArr[vwapArr.length - 1] : undefined;
+            // Market-candle time, never request time. Daily bars carry their session date; intraday carry the bar stamp.
             const lastCandleTime = candles[last]?.t;
+            const vol20 = volumeAvailable ? positiveVolumeBars.map((c) => c.volume) : [];
+            const avgVolume20 = vol20.length ? vol20.reduce((s, v) => s + v, 0) / vol20.length : undefined;
+            const lastBarVolume = Number.isFinite(volumes[last]) && volumes[last] > 0 ? volumes[last] : undefined;
+            const lastVolume = (!isIntradayTimeframe && timeframe !== 'weekly' ? quoteSessionVolume : undefined) ?? lastBarVolume;
+            const volumeRatio = avgVolume20 && lastVolume !== undefined && avgVolume20 > 0 ? lastVolume / avgVolume20 : null;
+            const adv20 = avgVolume20 !== undefined
+              ? positiveVolumeBars.reduce((s, c) => s + c.close * c.volume, 0) / positiveVolumeBars.length
+              : lastVolume !== undefined ? price * lastVolume : undefined;
+            const volumeBasisLabel = volumeAvailable
+              ? (positiveVolumeBars.length >= 20 ? 'exchange_volume_20_bars' : `exchange_volume_${positiveVolumeBars.length}_bars`)
+              : lastVolume !== undefined ? 'session_volume_only' : 'unavailable';
+            const equityBarInterval = isIntradayTimeframe ? (avInterval === '60min' ? '1h' : avInterval.replace('min', 'm')) : timeframe === 'weekly' ? '1w' : '1d';
+      // Unadjusted split guard: a one-bar close jump ≤0.6× / ≥1.6× means the stored series is not split-adjusted and every
+      // long-lookback indicator is contaminated. Detected on daily/weekly bars only (intraday gaps are legitimate).
+      const equityDiscontinuity = !isIntradayTimeframe
+        ? detectPriceDiscontinuity(candles.map((c) => c.close), candles.map((c) => String(c.t ?? '')))
+        : null;
 
             // Compute DVE BEFORE scoring for equity AV path
             const dveAV = computeScannerDVE(closes, highs, lows, price, sym, {
@@ -2388,9 +2378,33 @@ export async function POST(req: NextRequest) {
               obv: obvCurrent,
               mfi: mfiValEq,
               vwap: vwapValEq,
-              avgVolume: volumes.slice(-20).reduce((sum, volume) => sum + volume, 0) / Math.max(1, volumes.slice(-20).length),
+              avgVolume: avgVolume20 ?? lastVolume,
               lastCandleTime,
-              // Chart data (last 50 candles) for equity AV path
+              barInterval: equityBarInterval,
+              dataBasis: {
+                barInterval: equityBarInterval,
+                lastCompletedBarAt: lastCandleTime ?? null,
+                currentBarPartial: equityWeekPartial,
+                historyBars: candles.length,
+                hlBasis: 'exchange_ohlc',
+                volumeBasis: volumeBasisLabel,
+                source: equitySource,
+                computedAt: new Date().toISOString(),
+                priceDiscontinuity: equityDiscontinuity ? { date: equityDiscontinuity.date, ratio: equityDiscontinuity.ratio } : null,
+                notes: [
+                  ...(latestTradingDay ? [`latest session ${latestTradingDay}`] : []),
+                  ...(closes.length < 200 ? [`EMA200 unavailable: ${closes.length} bars`] : []),
+                  ...(volumeAvailable && positiveVolumeBars.length < 20 ? [`volume average uses ${positiveVolumeBars.length} bars (bar store volume history is short)`] : []),
+                  ...(equityDiscontinuity ? [`unadjusted corporate action suspected: close jumped ×${equityDiscontinuity.ratio.toFixed(2)}${equityDiscontinuity.date ? ` on ${equityDiscontinuity.date.slice(0, 10)}` : ''}; EMA200 and other long-lookback indicators are unreliable`] : []),
+                ],
+              },
+              liquidity: {
+                avgVolume20: avgVolume20 ?? null,
+                adv20: adv20 ?? null,
+                volumeRatio,
+                lastVolume: lastVolume ?? null,
+              },
+              // Chart data (last 50 candles)
               chartData: (() => {
                 const chartLen = Math.min(50, candles.length);
                 const chartOff = candles.length - chartLen;
@@ -2407,29 +2421,25 @@ export async function POST(req: NextRequest) {
               })(),
             };
 
-            // Compute enhancements for equity (AV path)
+            // Enhancements: EMA stack, squeeze, relative strength (20-bar return vs SPY 20-bar return, same interval)
             try {
-              const changePct = closes.length >= 2
-                ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
-                : 0;
+              const changePct = nBarReturn(closes) ?? (closes.length >= 2 ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100 : 0);
               item.enhancements = computeScanEnhancements({
                 closes, highs, lows, price,
                 changePct,
-                benchmarkChangePct: 0,
+                benchmarkChangePct: benchmarkCloses ? benchmarkChangePct : 0,
                 benchmarkName: 'SPY',
               });
+              (item.enhancements as any).relativeStrength.window = `${RS_BARS} ${equityBarInterval} bars`;
+              if (!benchmarkCloses) (item.enhancements as any).relativeStrength.benchmarkMissing = true;
             } catch (enhErr) {
               console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
             }
 
-            // DVE flags for equity (AV path — already computed before scoring)
             if (dveAV) Object.assign(item, dveAV);
+            if (cachedData) { (item as any)._fromCache = true; (item as any)._cacheSource = equitySource; }
 
             results.push(item);
-          } else {
-            // cache_only mode but no cached data
-            console.warn(`[scanner] ${sym} not in cache (cache_only mode)`);
-            errors.push(`${sym}: Data not cached yet. Try again later.`);
           }
         }
       } catch (err: any) {
@@ -2464,11 +2474,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Institutional Filter Engine: downgrade/block low-quality environments before trader sees setup
+    // Volatility thresholds inside the regime classifier / institutional filter are calibrated on DAILY bars, so ATR%
+    // from other intervals is rescaled to a daily equivalent (√time) before classification — otherwise every weekly
+    // row reads "extreme" and every hourly row reads "compressed" purely because of the bar size.
+    const barsPerDayFor = (interval: string | undefined): number => {
+      const iv = String(interval ?? '1d').toLowerCase();
+      const crypto = type === 'crypto';
+      if (iv === '1w') return crypto ? 1 / 7 : 1 / 5;
+      if (iv === '4h') return crypto ? 6 : 1.6;
+      if (iv === '1h' || iv === '60m') return crypto ? 24 : 6.5;
+      if (iv === '30m') return crypto ? 48 : 13;
+      if (iv === '15m') return crypto ? 96 : 26;
+      return 1;
+    };
     const enriched = results.map((result) => {
       const adxValue = Number(result.adx ?? Number.NaN);
-      const atrPct = Number.isFinite(result.atr) && Number.isFinite(result.price) && result.price && result.price > 0
+      const rawAtrPct = Number.isFinite(result.atr) && Number.isFinite(result.price) && result.price && result.price > 0
         ? (result.atr! / result.price) * 100
         : undefined;
+      const atrPct = rawAtrPct !== undefined ? rawAtrPct * Math.sqrt(barsPerDayFor(result.barInterval)) : undefined;
+      if (rawAtrPct !== undefined && result.dataBasis) (result.dataBasis as any).atrPercentDailyEquivalent = Math.round(atrPct! * 100) / 100;
 
       // === UNIFIED REGIME CLASSIFICATION (single source of truth) ===
       const unifiedRegime = classifyRegime({
@@ -2756,27 +2781,32 @@ export async function POST(req: NextRequest) {
     }
 
     for (const result of results) {
-      const freshness = evaluateScannerFreshness(result.lastCandleTime, timeframe);
+      // ONE trust verdict (lib/scanner/dataTrust): session-aware freshness from the actual bar time, interval
+      // integrity, critical-indicator coverage, history depth, volume availability. Reused by Analysis and Pro.
+      const trust = evaluateDataTrust({
+        assetClass: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity',
+        timeframe,
+        lastBarAt: result.lastCandleTime ?? null,
+        barInterval: result.barInterval ?? null,
+        historyBars: result.dataBasis?.historyBars ?? null,
+        price: result.price ?? null,
+        indicators: {
+          atr: Number.isFinite(result.atr), rsi: Number.isFinite(result.rsi), adx: Number.isFinite(result.adx),
+          ema200: Number.isFinite(result.ema200), macd: Number.isFinite(result.macd_hist),
+        },
+        volumeAvailable: type === 'forex' ? null : Number.isFinite(result.avgVolume) && (result.avgVolume as number) > 0,
+        priceDiscontinuity: (result.dataBasis as any)?.priceDiscontinuity ?? null,
+      });
+      result.dataTrust = trust;
+      // Legacy freshness fields kept for consumers; penalties now come from bar-time freshness, never request time.
+      const freshness = {
+        status: (trust.freshness === 'fresh' ? 'fresh' : trust.freshness === 'delayed' ? 'delayed' : trust.freshness === 'stale' ? 'stale' : 'missing') as 'fresh' | 'stale' | 'missing' | 'delayed',
+        penalty: trust.freshness === 'fresh' ? 0 : trust.freshness === 'delayed' ? 4 : trust.freshness === 'stale' ? 12 : 18,
+        warnings: trust.reasons.filter((r) => /behind|bar time|stale/.test(r)),
+      };
       const liquidity = evaluateScannerLiquidity({ type, averageVolume: result.avgVolume });
-
-      // ── Cached-source freshness floor ──
-      // Cached data cannot be presented as 'fresh' even when it just landed,
-      // because we don't know the cache producer's age. Force at least 'delayed'
-      // and add a small evidence penalty so cached confidence never matches
-      // truly real-time confidence.
+      // Cached rows are no longer floored to "delayed": their bar date is known, so freshness is judged like any other row.
       const fromCache = Boolean((result as any)._fromCache);
-      let cachedSourcePenalty = 0;
-      if (fromCache) {
-        if (freshness.status === 'fresh') {
-          freshness.status = 'delayed' as any;
-          freshness.warnings = [
-            ...(freshness.warnings ?? []),
-            'Source: cached indicators (treat as delayed, not real-time).',
-          ];
-        }
-        cachedSourcePenalty = 4;
-        result.score = Math.max(0, result.score - cachedSourcePenalty);
-      }
 
       if (freshness.penalty > 0) {
         result.score = Math.max(0, result.score - freshness.penalty);
@@ -2790,20 +2820,19 @@ export async function POST(req: NextRequest) {
         freshnessStatus: freshness.status,
         liquidityPenalty: liquidity.penalty,
         liquidityStatus: liquidity.status,
-        ...(fromCache ? { cachedSourcePenalty, source: 'cache' } : {}),
+        ...(fromCache ? { cachedSourcePenalty: 0, source: 'cache' } : {}),
       } as any;
-      const rankWarnings = [...freshness.warnings, ...liquidity.warnings];
+      const rankWarnings = [...freshness.warnings, ...liquidity.warnings, ...(trust.intervalMismatch ? [`interval_mismatch_${result.barInterval}_for_${timeframe}`] : [])];
       if (rankWarnings.length) {
         result.rankWarnings = [...(result.rankWarnings ?? []), ...rankWarnings];
       }
 
       // ── Recompute confidence as evidence- and freshness-aware (ai-output-standards rule) ──
-      // Previous logic was confidence = |score|, which is a no-op since score is already 0-100.
-      // Now: confidence = score × evidenceFactor × freshnessFactor × liquidityFactor.
-      // This makes confidence honest about data coverage and staleness instead of mirroring score.
+      // confidence = score × evidenceFactor × freshnessFactor × liquidityFactor × directionFactor.
       const evidenceLayers = result.scoreQuality?.evidenceLayers ?? 0;
       const evidenceFactor = Math.max(0.4, Math.min(1, evidenceLayers / 10)); // 10+ layers = full confidence
       const freshnessFactor = freshness.status === 'fresh' ? 1
+        : freshness.status === 'delayed' ? 0.9
         : freshness.status === 'stale' ? 0.7
         : 0.4;
       const liquidityFactor = liquidity.status === 'sufficient' ? 1
@@ -2811,9 +2840,16 @@ export async function POST(req: NextRequest) {
         : liquidity.status === 'not_applicable' ? 1
         : 0.6;
       const directionFactor = result.direction === 'neutral' ? 0.5 : 1;
-      result.confidence = Math.max(0, Math.min(99,
+      // Trust cap (same caps as Pro): a row whose inputs are stale or structurally unreliable cannot report high
+      // confidence, however aligned the indicators look.
+      const TRUST_CAP: Record<string, number> = { GOOD: 99, DEGRADED: 80, STALE: 60, INSUFFICIENT_DATA: 40 };
+      result.confidence = Math.max(0, Math.min(TRUST_CAP[trust.level] ?? 99,
         Math.round(result.score * evidenceFactor * freshnessFactor * liquidityFactor * directionFactor)
       ));
+      if (trust.level === 'INSUFFICIENT_DATA') {
+        result.score = Math.min(result.score, 40);
+        result.rankWarnings = [...(result.rankWarnings ?? []), ...trust.reasons.map((r) => `insufficient_data: ${r}`)];
+      }
     }
 
     // ===== MSP Composite v2 (cross-sectional, regime-conditional) =====
@@ -2992,11 +3028,9 @@ export async function POST(req: NextRequest) {
         if (typeof raw === 'number') result.score = raw;
         (result as any).riskGovernorBlocked = true;
         (result as any).riskGovernorReason =
-          'Risk governor LOCKED — informational only, no auto-log, no learning record.';
-        result.rankWarnings = [
-          ...(result.rankWarnings ?? []),
-          'Risk governor LOCKED — signal is informational only.',
-        ];
+          'Execution gate: risk governor locked — research view only (no auto-log, no learning record).';
+        // Deliberately NOT added to rankWarnings: this is an execution-layer state, not a data-quality defect.
+        (result as any).executionGate = { blocked: true, reason: 'risk_governor_locked' };
       }
     }
 
@@ -3136,10 +3170,10 @@ export async function POST(req: NextRequest) {
     // Return results with cache-prevention headers
     const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';
     const providerWarnings = errors.slice(0, 5);
-    // Crypto 'daily' rows are computed on CoinGecko OHLC (30d window → 4h bars); say so rather than imply daily bars.
-    const cryptoIntervals = [...new Set(results.map((r) => r.barInterval).filter((x): x is string => Boolean(x)))];
-    if (type === 'crypto' && cryptoIntervals.length && cryptoIntervals.some((iv) => iv !== timeframe && iv !== '1d')) {
-      providerWarnings.push(`crypto_indicators_computed_on_${cryptoIntervals.join('_')}_bars_for_${timeframe}_timeframe`);
+    // Any row whose real bar interval differs from the requested timeframe is disclosed at response level too.
+    const mismatched = [...new Set(results.filter((r) => r.dataTrust?.intervalMismatch).map((r) => r.barInterval).filter((x): x is string => Boolean(x)))];
+    if (mismatched.length) {
+      providerWarnings.push(`indicators_computed_on_${mismatched.join('_')}_bars_for_${timeframe}_timeframe`);
     }
     const isStale = results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing');
     return NextResponse.json({

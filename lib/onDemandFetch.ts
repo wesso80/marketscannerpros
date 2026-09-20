@@ -532,6 +532,8 @@ export async function getFullSymbolData(symbol: string): Promise<{
 
 /** Map a quotes_latest row to QuoteData (shared by single + bulk readers). */
 function mapQuoteRow(row: any): QuoteData {
+  // pg returns bigint/numeric columns as strings; a string volume used to fail `typeof === 'number'` downstream.
+  const num = (v: unknown) => (v == null ? NaN : Number(String(v).replace(/,/g, '')));
   return {
     symbol: row.symbol,
     price: parseFloat(row.price),
@@ -539,10 +541,13 @@ function mapQuoteRow(row: any): QuoteData {
     high: parseFloat(row.high),
     low: parseFloat(row.low),
     prevClose: parseFloat(row.prev_close),
-    volume: row.volume,
+    volume: num(row.volume),
     changeAmt: parseFloat(row.change_amount),
     changePct: parseFloat(row.change_percent),
-    latestDay: row.latest_trading_day,
+    // pg maps DATE columns to a JS Date at LOCAL midnight; toISOString() would shift it a day west of UTC.
+    latestDay: row.latest_trading_day instanceof Date
+      ? `${row.latest_trading_day.getFullYear()}-${String(row.latest_trading_day.getMonth() + 1).padStart(2, '0')}-${String(row.latest_trading_day.getDate()).padStart(2, '0')}`
+      : String(row.latest_trading_day ?? '').slice(0, 10),
     fetchedAt: row.fetched_at,
     source: 'database',
   };

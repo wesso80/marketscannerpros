@@ -6,7 +6,7 @@
    Click any symbol for inline analysis with Backtest / Alert / Watchlist.
    --------------------------------------------------------------------------- */
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
@@ -14,6 +14,8 @@ import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
 import { computeMspScore, deriveLifecycleState, isRegimeCompatibleForRegime, normalizeRegimeKey, setupTypeForRegime } from '@/lib/scanner/rankedQueue';
 import { humanizeEnum } from '@/lib/presentation/labels';
+import { buildAnalysisNarrative, classifySetupFamily } from '@/lib/scanner/analysisNarrative';
+import { DATA_TRUST_LABEL } from '@/lib/scanner/dataTrust';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
@@ -121,28 +123,36 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
   return 'Mixed evidence';
 }
 
-function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
+type RankedTrust = 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT DATA';
+/** Shared verdict (lib/scanner/dataTrust via the API) first; the legacy heuristic only when a row predates it. */
+function rankedTrustLabel(r: ScanResult): RankedTrust {
   if (String(r.setup || '').startsWith('Local demo:')) return 'DEGRADED';
-  if (!isUsableNumber(r.price)) return 'MISSING';
-  if (r.scoreQuality?.freshnessStatus === 'missing') return 'MISSING';
-  if ((r.scoreQuality?.missingEvidencePenalty ?? 0) > 0 || (r.scoreQuality?.staleDataPenalty ?? 0) > 0 || (r.scoreQuality?.liquidityPenalty ?? 0) > 0 || r.rankWarnings?.length) return 'DEGRADED';
+  if (r.dataTrust) return DATA_TRUST_LABEL[r.dataTrust.level] as RankedTrust;
+  if (!isUsableNumber(r.price)) return 'INSUFFICIENT DATA';
+  if (r.scoreQuality?.freshnessStatus === 'missing') return 'INSUFFICIENT DATA';
+  if (r.scoreQuality?.freshnessStatus === 'stale') return 'STALE';
+  if ((r.scoreQuality?.missingEvidencePenalty ?? 0) > 0 || (r.scoreQuality?.liquidityPenalty ?? 0) > 0 || r.rankWarnings?.length) return 'DEGRADED';
   if (r.confidence == null || r.score == null) return 'DEGRADED';
-  if (r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length) return 'DEGRADED';
   if (barIntervalMismatch(r)) return 'DEGRADED';
   return 'GOOD';
 }
 
 /** Crypto 'daily' rows are computed on 4h CoinGecko bars; flag it so RSI/ATR are not read as daily-bar values. */
 function barIntervalMismatch(r: ScanResult): string | null {
+  if (r.dataTrust) return r.dataTrust.intervalMismatch ? `indicators computed on ${r.barInterval} bars (not ${String(r.timeframe).toLowerCase()})` : null;
   const iv = r.barInterval;
   if (!iv) return null;
   const tf = String(r.timeframe || '').toLowerCase();
-  const same = iv === tf || (iv === '1d' && (tf === 'daily' || tf === '1d')) || (iv === '7d' && tf === 'weekly');
+  const same = iv === tf || (iv === '1d' && (tf === 'daily' || tf === '1d')) || (iv === '1w' && tf === 'weekly');
   return same ? null : `indicators computed on ${iv} bars (not ${tf})`;
 }
 
 function rankedTrustDetail(r: ScanResult): string {
   if (String(r.setup || '').startsWith('Local demo:')) return 'Development-only sample row. Not live market data.';
+  if (r.dataTrust) {
+    const basis = r.dataBasis ? ` · ${r.dataBasis.barInterval} bars, last completed ${String(r.dataBasis.lastCompletedBarAt ?? 'n/a').slice(0, 16).replace('T', ' ')}` : '';
+    return (r.dataTrust.reasons.length ? r.dataTrust.reasons.join(' · ') : 'Fresh completed bar; price, ATR, RSI, ADX and EMA200 available.') + basis;
+  }
   if (!isUsableNumber(r.price)) return 'Missing usable price.';
   const qualityWarnings = [
     r.scoreQuality?.freshnessStatus && r.scoreQuality.freshnessStatus !== 'fresh' ? `freshness ${r.scoreQuality.freshnessStatus}` : null,
@@ -174,16 +184,24 @@ function downgradeProviderStatusForRows(
   if (!status) return status ?? null;
   if (!rows || rows.length === 0) return status;
   const total = rows.length;
-  const degraded = rows.filter((r) => rankedTrustLabel(r) !== 'GOOD').length;
-  if (degraded === 0) return status;
+  // Only genuinely stale / insufficient rows make the feed panel STALE. DEGRADED rows (e.g. EMA200 missing on a
+  // 50-bar weekly series) are disclosed per row and counted here, not presented as a stale feed.
+  const staleRows = rows.filter((r) => { const t = rankedTrustLabel(r); return t === 'STALE' || t === 'INSUFFICIENT DATA'; }).length;
+  const degradedRows = rows.filter((r) => rankedTrustLabel(r) === 'DEGRADED').length;
+  const bars = rows.map((r) => r.dataBasis?.lastCompletedBarAt).filter((x): x is string => Boolean(x)).sort();
+  const newestBar = bars[bars.length - 1];
+  const barNote = newestBar ? `last completed bar ${/^\d{4}-\d{2}-\d{2}$/.test(newestBar) ? newestBar : newestBar.slice(0, 16).replace('T', ' ') + ' UTC'}` : null;
+  if (staleRows === 0 && degradedRows === 0) return barNote ? { ...status, warnings: [barNote, ...(status.warnings ?? [])] } : status;
   return {
     ...status,
-    live: false,
-    stale: true,
+    live: staleRows === 0 ? status.live : false,
+    stale: staleRows > 0,
     degraded: true,
-    alertLevel: status.alertLevel === 'critical' ? 'critical' : 'warning',
+    alertLevel: status.alertLevel === 'critical' ? 'critical' : staleRows > 0 ? 'warning' : status.alertLevel,
     warnings: [
-      `${degraded} of ${total} rows degraded — panel reflects the weakest row (treat as delayed).`,
+      ...(staleRows > 0 ? [`${staleRows} of ${total} rows stale or insufficient — panel reflects the weakest row.`] : []),
+      ...(degradedRows > 0 ? [`${degradedRows} of ${total} rows degraded (see row Trust for the reason).`] : []),
+      ...(barNote ? [barNote] : []),
       ...(status.warnings ?? []),
     ],
   };
@@ -555,6 +573,16 @@ interface SymbolDetail {
   scoreQuality?: ScanResult['scoreQuality'];
   rankWarnings?: string[];
   rankExplanation?: ScanResult['rankExplanation'];
+  dataBasis?: ScanResult['dataBasis'];
+  liquidity?: ScanResult['liquidity'];
+  dataTrust?: ScanResult['dataTrust'];
+  enhancements?: ScanResult['enhancements'];
+  insight?: ScanResult['insight'];
+  dveFlags?: string[];
+  dveBbwp?: number;
+  /** Position in the Ranked queue the user opened this from (not the 1-of-1 rank of a single-symbol re-scan). */
+  queueRank?: { rank: number; total: number; label: string } | null;
+  lifecycle?: string;
   providerStatus?: ProviderStatus | null;
   institutionalFilter?: {
     recommendation?: string;
@@ -621,8 +649,16 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
       ? (detail.signals?.bearish ?? 0) >= (detail.signals?.neutral ?? 0)
       : false;
   const tfAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
-  const dataQuality = getDataQualityLabel({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
+  // ONE trust vocabulary: prefer the shared server verdict; fall back to the local input check only when absent.
+  const localQuality = getDataQualityLabel({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
+  const dataQuality = detail.dataTrust ? (detail.dataTrust.level === 'INSUFFICIENT_DATA' ? 'MISSING' : detail.dataTrust.level === 'GOOD' ? 'GOOD' : 'DEGRADED') : localQuality;
+  const dataTrustLabel = detail.dataTrust ? DATA_TRUST_LABEL[detail.dataTrust.level] : dataQuality;
   const missingInputs = getMissingInputs({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
+  const narrative = buildAnalysisNarrative({
+    symbol: detail.symbol, direction, setup: detail.setup, price: detail.price, rsi: detail.rsi, adx: detail.adx, atr: detail.atr,
+    ema200: detail.ema200 ?? null, macdHist: detail.macd_hist, dveFlags: detail.dveFlags, dveBbwp: detail.dveBbwp, liquidity: detail.liquidity,
+    enhancements: detail.enhancements, insight: detail.insight, dataTrust: detail.dataTrust, dataBasis: detail.dataBasis, lifecycle: detail.lifecycle, scoreQuality: detail.scoreQuality,
+  });
   const scoreQualityWarnings = [
     detail.scoreQuality?.freshnessStatus && detail.scoreQuality.freshnessStatus !== 'fresh' ? `Freshness: ${detail.scoreQuality.freshnessStatus}` : null,
     (detail.scoreQuality?.missingEvidencePenalty ?? 0) > 0 ? `Missing evidence penalty: ${detail.scoreQuality?.missingEvidencePenalty}` : null,
@@ -630,7 +666,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
     (detail.scoreQuality?.liquidityPenalty ?? 0) > 0 ? `Liquidity penalty: ${detail.scoreQuality?.liquidityPenalty}` : null,
     ...(detail.rankWarnings ?? []),
   ].filter(Boolean) as string[];
-  const dataQualityTitle = scoreQualityWarnings.length ? scoreQualityWarnings.join(' · ') : dataQualityDetail(dataQuality, missingInputs);
+  const dataQualityTitle = detail.dataTrust?.reasons?.length ? detail.dataTrust.reasons.join(' · ') : scoreQualityWarnings.length ? scoreQualityWarnings.join(' · ') : dataQualityDetail(dataQuality, missingInputs);
   const hasScenarioLevels = isUsableNumber(detail.price) && isUsableNumber(detail.atr) && direction !== 'neutral';
 
   const entry = hasScenarioLevels
@@ -643,11 +679,13 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
     ? (direction === 'bullish' ? detail.price! + detail.atr! * 2.7 : detail.price! - detail.atr! * 2.7) : null;
   const rr = hasScenarioLevels && entry != null && stop != null && target1 != null
     ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - stop))) : null;
-  const nextUsefulCheck = summarizeDetailNextCheck({ hasScenarioLevels, trendAligned, momentumAligned, flowAligned, dataQuality, direction, regime });
+  const nextUsefulCheck = narrative.confirmation.confirms;
 
   const recommendation = detail.institutionalFilter?.recommendation;
   const alignedInputs = tfAlignment >= 3 && dataQuality === 'GOOD' && hasScenarioLevels && direction !== 'neutral';
-  const rangeBreakNeedsConfirmation = regime === 'Range' && trendAligned;
+  const setupFamily = classifySetupFamily(detail.setup);
+  // "Range break confirmation" only applies to setups that are actually range/breakout structures in a range regime.
+  const rangeBreakNeedsConfirmation = regime === 'Range' && trendAligned && (setupFamily === 'range' || setupFamily === 'breakout');
   const highAlignment = (recommendation === LEGACY_MULTI_FACTOR_STATUS || alignedInputs) && quality !== 'LOW' && !rangeBreakNeedsConfirmation;
   const needsConfirmation = alignedInputs && rangeBreakNeedsConfirmation;
   const researchStatus = !hasScenarioLevels
@@ -666,7 +704,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
 
   const blockReasons = highAlignment
     ? ['Structure aligned', biasLabel(direction)]
-    : [dataQuality !== 'GOOD' ? `Data quality: ${dataQuality.toLowerCase()}` : null, !hasScenarioLevels ? 'Reference levels unavailable' : null, quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, rangeBreakNeedsConfirmation ? 'Range regime needs breakout confirmation' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
+    : [dataQuality !== 'GOOD' ? `Data trust: ${dataTrustLabel.toLowerCase()}` : null, !hasScenarioLevels ? 'Reference levels unavailable' : null, quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, rangeBreakNeedsConfirmation ? 'Range regime needs breakout confirmation' : null].filter(Boolean) as string[];
 
   const agreementNote = highAlignment
     ? 'Multi-factor indicator agreement'
@@ -675,13 +713,15 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
       : alignedInputs
         ? 'High observational alignment'
         : 'Mixed indicator observations';
-  const structureNote = highAlignment
-    ? 'Indicators aligned'
-    : needsConfirmation
-      ? 'Await range break confirmation'
-      : alignedInputs
-        ? 'Aligned but not fully confirmed'
-        : 'Review indicator alignment';
+  const structureNote = `${narrative.confirmation.setupFamily} · stage ${narrative.stageLabel} · extension ${narrative.extensionLabel}`;
+  const basis = detail.dataBasis;
+  const barIntervalLabel = basis?.barInterval ?? (timeframeLabel === 'D' ? '1d' : timeframeLabel === 'W' ? '1w' : timeframeLabel.toLowerCase());
+  const fmtBarTime = (v: string | null | undefined) => {
+    if (!v) return 'n/a';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? v : `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+  };
 
   const handleAddToWatchlist = async () => {
     try {
@@ -782,23 +822,28 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
       <div className="grid gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:grid-cols-12 md:p-4">
         <div className="md:col-span-6">
           <div className="text-[1.05rem] font-black tracking-tight text-white md:text-[1.25rem]">{detail.symbol} — {timeframeLabel}</div>
+          {detail.queueRank && (
+            <div className="mt-1 inline-flex rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-emerald-300">
+              Ranked #{detail.queueRank.rank} of {detail.queueRank.total} · {detail.queueRank.label}
+            </div>
+          )}
           <div className="mt-1 text-xs leading-relaxed text-slate-300">
-            {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'} structure, {quality.toLowerCase()} setup quality. {nextUsefulCheck}
+            {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'} bias, {quality.toLowerCase()} setup quality · {narrative.confirmation.setupFamily}.
           </div>
           <div className={`mt-1 text-[0.82rem] font-extrabold uppercase ${direction === 'bullish' ? 'text-emerald-400' : direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}`}>
             Bias: {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'}
           </div>
           <div className="mt-1 text-[0.76rem] font-bold uppercase tracking-[0.06em] text-slate-400">
-            Pattern: {direction === 'bullish' ? 'Trend Continuation Structure' : direction === 'bearish' ? 'Trend Reversal Structure' : 'Structure Developing'}
+            Setup: {detail.setup ?? 'Unclassified'} · Stage: {narrative.stageLabel} · Extension: {narrative.extensionLabel}
           </div>
           <div className="mt-2 text-[0.74rem] text-slate-400">
-            Regime: <span className="font-bold text-white">{regime}</span> · Timeframe Alignment: <span className="font-bold text-white">{tfAlignment} / 4</span>
+            Regime: <span className="font-bold text-white">{regime}</span> · Evidence Alignment: <span className="font-bold text-white" title="Share of the four evidence checks (trend, momentum, flow, direction) that agree with the bias — not a probability.">{tfAlignment} / 4</span>
           </div>
         </div>
         <div className="md:col-span-3">
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Quality</div>
           <div className="mt-1 text-[1.25rem] font-black text-white md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
-          <div className="text-[0.72rem] font-semibold text-slate-400">{confidence}% · {quality}</div>
+          <div className="text-[0.72rem] font-semibold text-slate-400" title="Evidence-weighted confidence: score × evidence coverage × freshness × liquidity. Not a probability of profit.">{confidence} / 100 · {quality}</div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={confidence} aria-valuemin={0} aria-valuemax={100} aria-label={`Setup confidence: ${confidence}%`}>
             <div style={{ width: `${confidence}%`, background: confBarColor, height: '100%' }} />
           </div>
@@ -807,8 +852,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
             <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Alignment</div>
             <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{researchStatus}</div>
-            <div title={dataQualityTitle} aria-label={`Data quality: ${dataQuality}${scoreQualityWarnings.length ? '. ' + scoreQualityWarnings.join('. ') : ''}`} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
-              Data {dataQuality}
+            <div title={dataQualityTitle} aria-label={`Data trust: ${dataTrustLabel}${detail.dataTrust?.reasons?.length ? '. ' + detail.dataTrust.reasons.join('. ') : ''}`} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
+              Data {dataTrustLabel}
             </div>
             {detail.providerStatus && (
               <DataFreshnessBadge status={detail.providerStatus} label={`${detail.providerStatus.provider}`} className="ml-2 mt-2" />
@@ -833,11 +878,12 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Structure Analysis</div>
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
-              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Trend Alignment</div>
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Evidence Alignment</div>
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
-                <div>Higher TF: <span className={`font-bold ${trendAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{trendAligned ? direction.toUpperCase() : 'NEUTRAL'}</span></div>
-                <div>Mid TF: <span className={`font-bold ${momentumAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{momentumAligned ? direction.toUpperCase() : 'NEUTRAL'}</span></div>
-                <div>Lower TF: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? direction.toUpperCase() : 'MIXED'}</span></div>
+                <div>Trend vs bias: <span className={`font-bold ${trendAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{trendAligned ? 'AGREES' : 'MIXED'}</span></div>
+                <div>Momentum vs bias: <span className={`font-bold ${momentumAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{momentumAligned ? 'AGREES' : 'MIXED'}</span></div>
+                <div>Flow vs bias: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? 'AGREES' : 'MIXED'}</span></div>
+                {detail.enhancements?.emaStack?.direction && <div>EMA stack: <span className="font-bold text-white">{String(detail.enhancements.emaStack.direction).toUpperCase()}</span></div>}
               </div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
@@ -845,48 +891,61 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
                 <div>RSI: <span className="font-bold text-white">{detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'}</span></div>
                 <div>ADX: <span className={`font-bold ${adx >= 25 ? 'text-emerald-400' : adx >= 20 ? 'text-amber-400' : 'text-red-400'}`}>{detail.adx != null ? adx.toFixed(1) : 'N/A'}</span></div>
-                <div>Flow: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? 'Aligned' : 'Divergent'}</span></div>
+                <div>MACD hist: <span className="font-bold text-white">{detail.macd_hist != null && Number.isFinite(detail.macd_hist) ? `${detail.macd_hist > 0 ? '+' : ''}${formatLevel(Math.abs(detail.macd_hist)) === 'Unavailable' ? detail.macd_hist.toFixed(3) : detail.macd_hist.toFixed(3)}` : 'N/A'}</span></div>
               </div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
-              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Volatility &amp; Liquidity</div>
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Volatility, Volume &amp; Liquidity</div>
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
-                <div>Volatility: <span className={`font-bold ${atrPercent >= 3 ? 'text-red-400' : atrPercent >= 1.5 ? 'text-amber-400' : 'text-emerald-400'}`}>{atrPercent >= 3 ? 'High' : atrPercent >= 1.5 ? 'Medium' : 'Controlled'}</span></div>
-                <div>Range Compression: <span className={`font-bold ${atrPercent <= 1.5 ? 'text-emerald-400' : 'text-amber-400'}`}>{atrPercent <= 1.5 ? 'Yes' : 'No'}</span></div>
-                <div>Liquidity: <span className="font-bold text-white">{detail.volume ? 'Building' : 'Normal'}</span></div>
+                <div>ATR: <span className="font-bold text-white">{formatLevel(detail.atr)} ({atrPercent.toFixed(2)}% of price{basis?.atrPercentDailyEquivalent != null && basis.barInterval && basis.barInterval !== '1d' ? ` · ≈${basis.atrPercentDailyEquivalent}% daily-equivalent` : ''})</span></div>
+                <div>Volume vs 20-bar avg: <span className="font-bold text-white">{detail.liquidity?.volumeRatio != null ? `${detail.liquidity.volumeRatio.toFixed(2)}×` : 'N/A'}</span></div>
+                <div>Avg dollar volume: <span className="font-bold text-white">{detail.liquidity?.adv20 != null ? (detail.liquidity.adv20 >= 1e9 ? `$${(detail.liquidity.adv20 / 1e9).toFixed(1)}B` : `$${(detail.liquidity.adv20 / 1e6).toFixed(0)}M`) : 'N/A'}</span></div>
+                <div>Relative strength: <span className="font-bold text-white">{detail.enhancements?.relativeStrength?.rs != null ? `${detail.enhancements.relativeStrength.rs.toFixed(3)} vs ${detail.enhancements.relativeStrength.benchmark ?? 'benchmark'}${detail.enhancements.relativeStrength.window ? ` (${detail.enhancements.relativeStrength.window})` : ''}` : 'N/A'}</span></div>
               </div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
-              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Structure Integrity</div>
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Data Basis</div>
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
-                <div>Break Level: <span className="font-bold text-white">{formatLevel(entry)}</span></div>
-                <div>Pullback Depth: <span className="font-bold text-white">{detail.atr != null && detail.price ? `${Math.min(99, Math.round((detail.atr / detail.price) * 100 * 18))}%` : 'N/A'}</span></div>
-                <div>Pattern: <span className="font-bold text-white">{trendAligned ? 'Trend continuation' : 'Structure forming'}</span></div>
+                <div>Timeframe: <span className="font-bold text-white">{timeframeLabel}</span> · Bar interval: <span className={`font-bold ${detail.dataTrust?.intervalMismatch ? 'text-amber-400' : 'text-white'}`}>{barIntervalLabel}</span></div>
+                <div>Last completed bar: <span className="font-bold text-white">{fmtBarTime(basis?.lastCompletedBarAt)}</span>{basis?.currentBarPartial ? <span className="text-slate-500"> · open bar excluded from indicators</span> : null}</div>
+                <div>History: <span className="font-bold text-white">{basis?.historyBars != null ? `${basis.historyBars} bars` : 'n/a'}</span> · Computed: <span className="font-bold text-white">{fmtBarTime(basis?.computedAt)}</span></div>
+                <div>Data trust: <span className="font-bold" style={{ color: dataQualityColor(dataQuality) }}>{dataTrustLabel}</span>{detail.dataTrust?.reasons?.length ? <span className="text-slate-500"> — {detail.dataTrust.reasons.join('; ')}</span> : null}</div>
+                {basis?.source && <div className="text-slate-500">Source: {basis.source}{basis.volumeBasis ? ` · volume: ${basis.volumeBasis.replace(/_/g, ' ')}` : ''}</div>}
               </div>
             </div>
-            {detail.rankExplanation && (
-              <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2.5">
-                <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-emerald-300">Why This Rank</div>
-                <div className="text-[0.74rem] leading-relaxed text-emerald-50">{detail.rankExplanation.summary}</div>
-                <div className="mt-2 grid gap-1 text-[0.7rem] text-emerald-100/80">
-                  {detail.rankExplanation.strengths.slice(0, 3).map((item) => <div key={item}>+ {item}</div>)}
-                  {detail.rankExplanation.penalties.slice(0, 3).map((item) => <div key={item}>- {item}</div>)}
-                </div>
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2.5">
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-emerald-300">Why This Rank</div>
+              <div className="text-[0.74rem] leading-relaxed text-emerald-50">
+                {detail.queueRank ? `${detail.symbol} is #${detail.queueRank.rank} of ${detail.queueRank.total} in the ${detail.queueRank.label} queue.` : `${detail.symbol} — single-symbol analysis (rank context is only defined inside a queue).`}
               </div>
-            )}
+              <div className="mt-2 grid gap-1 text-[0.7rem]">
+                <div className="text-[0.64rem] font-extrabold uppercase tracking-[0.06em] text-emerald-300/80">Supports</div>
+                {narrative.supports.length ? narrative.supports.slice(0, 6).map((item) => <div key={item} className="text-emerald-100/90">+ {item}</div>) : <div className="text-emerald-100/60">No supporting evidence recorded.</div>}
+                <div className="mt-1 text-[0.64rem] font-extrabold uppercase tracking-[0.06em] text-amber-300/80">Holding it back</div>
+                {narrative.blockers.length ? narrative.blockers.slice(0, 6).map((item) => <div key={item} className="text-amber-100/90">− {item}</div>) : <div className="text-amber-100/60">Nothing flagged against this row.</div>}
+                {detail.rankExplanation && (detail.rankExplanation.penalties.length > 0 || detail.rankExplanation.strengths.length > 0) && (
+                  <>
+                    <div className="mt-1 text-[0.64rem] font-extrabold uppercase tracking-[0.06em] text-slate-400">Scorer adjustments (server)</div>
+                    {detail.rankExplanation.strengths.slice(0, 3).map((item) => <div key={`s-${item}`} className="text-slate-300/90">+ {item}</div>)}
+                    {detail.rankExplanation.penalties.slice(0, 4).map((item) => <div key={`p-${item}`} className="text-slate-300/90">− {item}</div>)}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Execution Plan */}
         <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
           <div className="mb-1 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Preliminary Research Levels</div>
-          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}). Golden Egg recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
+          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}) on {barIntervalLabel} bars (ATR {formatLevel(detail.atr)}). Golden Egg recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest (preliminary)</div>
               <div>Reference: <span className="font-bold text-white">{formatLevel(entry)}</span></div>
               <div>Condition: <span className="font-bold text-white">{direction === 'bullish' ? 'Close above level' : direction === 'bearish' ? 'Close below level' : 'Awaiting directional structure'}</span></div>
-              <div>Confirmation: <span className="font-bold text-white">{hasScenarioLevels ? 'Volume expansion' : 'Awaiting valid levels'}</span></div>
+              <div>Confirms: <span className="font-bold text-white">{hasScenarioLevels ? narrative.confirmation.confirms : 'Awaiting valid levels'}</span></div>
+              <div>Invalidates: <span className="font-bold text-red-300">{hasScenarioLevels ? narrative.confirmation.invalidates : 'n/a'}</span></div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (preliminary · educational)</div>
@@ -902,7 +961,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
               )}
             </div>
             <div className="rounded-lg border border-blue-500/25 bg-blue-500/10 p-2.5 text-[0.74rem] text-blue-100">
-              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-blue-300">Next Useful Check</div>
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-blue-300">Next Useful Check · {narrative.confirmation.setupFamily}</div>
               <div>{nextUsefulCheck}</div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
@@ -1128,7 +1187,7 @@ export default function ScannerPage() {
   }
 
   /* ─── Fetch single symbol detail ─── */
-  const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string) => {
+  const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string, context?: { queueRank?: SymbolDetail['queueRank']; lifecycle?: string }) => {
     setSelectedSymbol(symbol);
     setDetailLoading(true);
     setSymbolDetail(null);
@@ -1140,12 +1199,12 @@ export default function ScannerPage() {
       });
       const data = await res.json();
       if (data.success && data.results?.length > 0) {
-        setSymbolDetail({ ...data.results[0], providerStatus: data.metadata?.dataQuality?.providerStatus ?? null });
+        setSymbolDetail({ ...data.results[0], providerStatus: data.metadata?.dataQuality?.providerStatus ?? null, queueRank: context?.queueRank ?? null, lifecycle: context?.lifecycle });
       } else {
-        setSymbolDetail({ symbol, score: 0, direction: 'neutral' });
+        setSymbolDetail({ symbol, score: 0, direction: 'neutral', queueRank: context?.queueRank ?? null });
       }
     } catch {
-      setSymbolDetail({ symbol, score: 0, direction: 'neutral' });
+      setSymbolDetail({ symbol, score: 0, direction: 'neutral', queueRank: context?.queueRank ?? null });
     } finally {
       setDetailLoading(false);
     }
@@ -1154,9 +1213,15 @@ export default function ScannerPage() {
   /* ─── V2 row click ─── */
   const handleV2RowClick = useCallback((r: ScanResult) => {
     const asset = (r as any)._assetClass === 'crypto' ? 'crypto' : 'equity';
-    const tfMap: Record<string, string> = { daily: '1d', weekly: '1d', '1h': '1h', '15m': '15m' };
-    loadSymbolDetail(r.symbol, tfMap[v2Timeframe] || '1d', asset);
-  }, [v2Timeframe, loadSymbolDetail]);
+    // Re-scan on the SAME timeframe the queue is showing (weekly stays weekly).
+    const tfMap: Record<string, string> = { daily: 'daily', weekly: 'weekly', '1h': '1h', '15m': '15m' };
+    const idx = rankedRows.findIndex((row) => row.symbol === r.symbol);
+    const tfLabel = v2Timeframe === 'daily' ? 'Daily' : v2Timeframe === 'weekly' ? 'Weekly' : v2Timeframe.toUpperCase();
+    loadSymbolDetail(r.symbol, tfMap[v2Timeframe] || 'daily', asset, {
+      queueRank: idx >= 0 ? { rank: idx + 1, total: rankedRows.length, label: `${activeTab} · ${tfLabel}` } : null,
+      lifecycle: deriveLifecycleState(r, currentRegime),
+    });
+  }, [v2Timeframe, loadSymbolDetail, rankedRows, activeTab, currentRegime]);
 
   /* ─── Pro Scan: run bulk scan ─── */
   const runProScan = useCallback(async () => {
@@ -1194,22 +1259,40 @@ export default function ScannerPage() {
 
   /* ─── Pro Scan: template apply ─── */
   const applyTemplate = useCallback((tmpl: ScanTemplate) => {
+    presetFilterSnapshot.current = null;
     setActiveTemplateId(tmpl.id);
     setProMinConfidence(tmpl.config.minConfidence);
     setProMtfAlignment(tmpl.config.mtfAlignment);
     setProVolState(tmpl.config.volatilityState);
-    if (tmpl.config.direction) setProDirection(tmpl.config.direction as 'all' | 'long' | 'short');
-    if (tmpl.config.quality) setProQuality(tmpl.config.quality as 'all' | 'high' | 'medium');
+    setProDirection((tmpl.config.direction as 'all' | 'long' | 'short') ?? 'all');
+    setProQuality((tmpl.config.quality as 'all' | 'high' | 'medium') ?? 'all');
+    setProSqueeze(tmpl.config.squeeze ? 'squeeze' : 'all');
+    setProPresetConditions({ requireRelativeStrength: tmpl.config.requireRelativeStrength, rsiBand: tmpl.config.rsiBand, minAdx: tmpl.config.minAdx, maxAdx: tmpl.config.maxAdx, id: tmpl.id });
   }, []);
+  const [proPresetConditions, setProPresetConditions] = useState<{ id?: string; requireRelativeStrength?: boolean; rsiBand?: [number, number]; minAdx?: number; maxAdx?: number }>({});
+  const clearTemplate = useCallback(() => { setActiveTemplateId(undefined); setProPresetConditions({}); }, []);
+  // Preset-only conditions (RS / ADX / RSI zone) are invisible in the filter controls, so any manual filter edit
+  // drops the preset rather than silently keeping hidden conditions active.
+  const presetFilterSnapshot = useRef<string | null>(null);
+  const filterSnapshot = JSON.stringify([proMinConfidence, proMtfAlignment, proVolState, proDirection, proQuality, proSqueeze]);
+  useEffect(() => {
+    if (!activeTemplateId) { presetFilterSnapshot.current = null; return; }
+    if (presetFilterSnapshot.current == null) { presetFilterSnapshot.current = filterSnapshot; return; }
+    if (presetFilterSnapshot.current !== filterSnapshot) { setActiveTemplateId(undefined); setProPresetConditions({}); }
+  }, [activeTemplateId, filterSnapshot]);
 
-  /* ─── Pro scan filtered results → ScreenerRow[] ─── */
+  /* ─── Pro scan filtered results → ScreenerRow[] (+ per-filter drop accounting so an empty table is never silent) ─── */
+  const [proFilterDrops, setProFilterDrops] = useState<Record<string, number>>({});
   const proScreenerRows: ScreenerRow[] = useMemo(() => {
     if (!proScanResults?.topPicks) return [];
-    return proScanResults.topPicks
+    const drops: Record<string, number> = {};
+    const rows = proScanResults.topPicks
       .map((pick: any, idx: number) => {
         const ind = pick.indicators || {};
         const scoreV2 = pick.scoreV2;
-        const conf = scoreV2?.final?.confidence ?? pick.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
+        // Headline = trust-capped condition match from the API (Part J). Legacy fallbacks only for older payloads.
+        const conf = pick.confidence ?? scoreV2?.final?.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
+        const matchConf = pick.matchConfidence ?? conf;
         const dir = (pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL') as 'LONG' | 'SHORT' | 'NEUTRAL';
         const qual = scoreV2?.final?.qualityTier ?? (conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low');
         const pickRsi = pick.rsi ?? ind.rsi;
@@ -1223,9 +1306,10 @@ export default function ScannerPage() {
         const tfA = [trendOk, momOk, flowOk, dir !== 'NEUTRAL'].filter(Boolean).length;
         const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
         const rec = pick.institutionalFilter?.recommendation;
-        const dataQuality = getDataQualityLabel({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
+        const localQuality = getDataQualityLabel({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
+        const dataQuality = pick.dataTrust ? (pick.dataTrust.level === 'INSUFFICIENT_DATA' ? 'MISSING' : pick.dataTrust.level === 'GOOD' ? 'GOOD' : 'DEGRADED') : localQuality;
         const missingInputs = getMissingInputs({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
-        const dataQualityDetailText = dataQualityDetail(dataQuality, missingInputs);
+        const dataQualityDetailText = pick.dataTrust?.reasons?.length ? pick.dataTrust.reasons.join(' · ') : dataQualityDetail(dataQuality, missingInputs);
         const blockReasons = scoreV2?.execution?.blockReasons || [];
         const strategyKey = String(strat).toLowerCase();
         const rangeConfirmationNeeded = currentRegime === 'range'
@@ -1253,55 +1337,58 @@ export default function ScannerPage() {
               ? 'COMPLIANT'
               : 'TIGHT';
         return {
-          rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
+          rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
-          volume24h: pick.volume ?? ind.volume, price: priceVal, permission: perm,
+          volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,
           momentumAccel: ind.momentumAccel ?? false, momentumAccelScore: ind.momentumAccelScore ?? 0,
           sectorRelStr: ind.sectorRelStr, reason, dataQuality, dataQualityDetail: dataQualityDetailText,
+          dataTrustLevel: pick.dataTrust ? DATA_TRUST_LABEL[pick.dataTrust.level as keyof typeof DATA_TRUST_LABEL] : undefined,
+          barInterval: pick.dataBasis?.barInterval, lastCompletedBarAt: pick.dataBasis?.lastCompletedBarAt ?? null,
         } as ScreenerRow;
       })
       .filter((row: ScreenerRow) => {
-        if (proDirection !== 'all' && ((proDirection === 'long' && row.direction !== 'LONG') || (proDirection === 'short' && row.direction !== 'SHORT'))) return false;
-        if (proQuality !== 'all' && row.quality !== proQuality) return false;
-        if (row.confidence < proMinConfidence) return false;
-        if (row.tfAlignment != null && row.tfAlignment < proMtfAlignment) return false;
+        const drop = (k: string) => { drops[k] = (drops[k] ?? 0) + 1; return false; };
+        if (proDirection !== 'all' && ((proDirection === 'long' && row.direction !== 'LONG') || (proDirection === 'short' && row.direction !== 'SHORT'))) return drop('Bias');
+        if (proQuality !== 'all' && row.quality !== proQuality) return drop('Quality');
+        if (row.confidence < proMinConfidence) return drop(`Min confidence ${proMinConfidence}`);
+        if (row.tfAlignment != null && row.tfAlignment < proMtfAlignment) return drop(`Alignment ${proMtfAlignment}/4+`);
         if (proVolState !== 'all') {
           const atr = row.atrPct ?? 0;
-          if (proVolState === 'low' && atr > 1.5) return false;
-          if (proVolState === 'moderate' && (atr < 1.5 || atr > 3)) return false;
-          if (proVolState === 'high' && atr < 3) return false;
+          if (proVolState === 'low' && atr > 1.5) return drop('Vol state: Low');
+          if (proVolState === 'moderate' && (atr < 1.5 || atr > 3)) return drop('Vol state: Moderate');
+          if (proVolState === 'high' && atr < 3) return drop('Vol state: High');
         }
-        if (proSqueeze === 'squeeze' && !row.squeeze) return false;
+        if (proSqueeze === 'squeeze' && !row.squeeze) return drop('Squeeze: In squeeze');
+        if (proPresetConditions.requireRelativeStrength) {
+          if (row.sectorRelStr == null) return drop('Relative strength: no RS data for row');
+          if (row.sectorRelStr <= 0) return drop('Relative strength: not outperforming');
+        }
+        if (proPresetConditions.minAdx != null && !(row.adx != null && row.adx >= proPresetConditions.minAdx)) return drop(`ADX ≥ ${proPresetConditions.minAdx}`);
+        if (proPresetConditions.maxAdx != null && !(row.adx != null && row.adx < proPresetConditions.maxAdx)) return drop(`ADX < ${proPresetConditions.maxAdx}`);
+        if (proPresetConditions.id === 'momentum' && row.rsi != null) {
+          const ok = row.direction === 'LONG' ? row.rsi >= 55 && row.rsi <= 70 : row.direction === 'SHORT' ? row.rsi >= 30 && row.rsi <= 45 : false;
+          if (!ok) return drop('RSI momentum zone (55–70 long / 30–45 short)');
+        }
+        if (proPresetConditions.id === 'mean_reversion' && row.rsi != null && !(row.rsi <= 35 || row.rsi >= 65)) return drop('RSI extreme (≤ 35 or ≥ 65)');
         return true;
       })
       .map((row: ScreenerRow, index: number) => ({ ...row, rank: index + 1 }));
-  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, currentRegime]);
+    // Report drops for the empty/partial state (rendered next to the counts).
+    queueMicrotask(() => setProFilterDrops(drops));
+    return rows;
+  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions, currentRegime]);
 
   /* ─── Pro scan row click ─── */
   const handleProRowClick = useCallback((row: ScreenerRow) => {
-    const direction = row.direction === 'LONG' ? 'bullish' : row.direction === 'SHORT' ? 'bearish' : 'neutral';
-    const atr = row.price && row.atrPct != null ? row.price * (row.atrPct / 100) : undefined;
-    const signalCount = Math.max(1, row.tfAlignment ?? 0);
-    setSelectedSymbol(row.symbol);
-    setDetailLoading(false);
-    setSymbolDetail({
-      symbol: row.symbol,
-      score: row.confidence,
-      direction,
-      price: row.price,
-      rsi: row.rsi,
-      adx: row.adx,
-      atr,
-      confidence: row.confidence,
-      setup: row.strategy,
-      signals: direction === 'bullish'
-        ? { bullish: signalCount, bearish: 1, neutral: 1 }
-        : direction === 'bearish'
-          ? { bullish: 1, bearish: signalCount, neutral: 1 }
-          : { bullish: 1, bearish: 1, neutral: signalCount },
+    // Real analysis (same /api/scanner/run evidence + shared trust) instead of a synthetic detail built from the row.
+    const tf = proTimeframe === '1d' ? 'daily' : proTimeframe;
+    const idx = proScreenerRows.findIndex((r) => r.symbol === row.symbol);
+    loadSymbolDetail(row.symbol, tf, proAsset, {
+      queueRank: idx >= 0 ? { rank: idx + 1, total: proScreenerRows.length, label: `Pro · ${proAsset} · ${proTimeframe}` } : null,
     });
-  }, []);
+  }, [proTimeframe, proAsset, proScreenerRows, loadSymbolDetail]);
+
 
   /* ─── Detail section (shared between both modes) ─── */
   const detailTimeframeLabel = mode === 'ranked'
@@ -1326,14 +1413,14 @@ export default function ScannerPage() {
     if (firstResult) handleProRowClick(firstResult);
   }, [selectedSymbol, mode, rankedRows, proScreenerRows, handleV2RowClick, handleProRowClick]);
 
-  function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
+  function SortHeader({ k, label, w, title }: { k: SortKey; label: string; w: string; title?: string }) {
     return (
-      <th scope="col" className={`${w} text-left py-2 px-2 whitespace-nowrap`}>
+      <th scope="col" className={`${w} text-left py-2 px-2 whitespace-nowrap`} title={title}>
         <button
           type="button"
           onClick={() => toggleSort(k)}
           className="text-left text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 rounded"
-          aria-label={`Sort scanner table by ${label}`}
+          aria-label={`Sort scanner table by ${label}${title ? `. ${title}` : ''}`}
         >
           {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
         </button>
@@ -1347,9 +1434,9 @@ export default function ScannerPage() {
   const headerStage: ScannerStage = activeScannerStage;
   const modeLabel = headerStage === 'ranked' ? 'Ranked queue' : headerStage === 'pro' ? 'Pro scan' : 'Symbol analysis';
   const modeDetail = headerStage === 'ranked'
-    ? 'Auto-ranked market queue'
+    ? 'System-ranked research opportunities'
     : headerStage === 'pro'
-      ? 'Manual scan filters'
+      ? 'Your exact conditions'
       : selectedSymbol ? `Reviewing ${selectedSymbol}` : 'Reviewing case';
   const queueValue = headerStage === 'analysis' && selectedSymbol
     ? selectedSymbol
@@ -1400,9 +1487,10 @@ export default function ScannerPage() {
         : '#A5B4FC';
   const riskLevel = regime.data?.riskLevel || 'moderate';
   const riskColor = riskLevel === 'low' ? 'var(--msp-bull)' : riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)';
-  const permission = regime.data?.permission || 'full';
-  const permissionLabel = permission === 'full' ? 'Allowed' : permission === 'reduced' ? 'Reduced' : 'Blocked';
-  const permissionColor = permission === 'full' ? 'var(--msp-bull)' : permission === 'reduced' ? 'var(--msp-warn)' : 'var(--msp-bear)';
+  const permission = regime.data?.permission || 'YES';
+  // /api/regime returns YES | CONDITIONAL | NO — this is the EXECUTION gate derived from the regime, not a data state.
+  const permissionLabel = permission === 'YES' || permission === 'full' ? 'Allowed' : permission === 'CONDITIONAL' || permission === 'reduced' ? 'Conditional' : 'Blocked';
+  const permissionColor = permission === 'YES' || permission === 'full' ? 'var(--msp-bull)' : permission === 'CONDITIONAL' || permission === 'reduced' ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const weightTooltip = Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
 
   /* ═══════════════════════════════════════════════════════════════════════ */
@@ -1425,12 +1513,18 @@ export default function ScannerPage() {
                   <span className="text-slate-600">·</span>
                   <span className="text-slate-400">Risk <span style={{ color: riskColor }}>{riskLevel}</span></span>
                   <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">Regime <span style={{ color: permissionColor }}>{permissionLabel}</span></span>
+                  <span className="text-slate-400" title="Execution gate derived from the market regime. Scanner rows are research candidates regardless.">Execution gate <span style={{ color: permissionColor }}>{permissionLabel}</span></span>
                 </span>
               )}
             </div>
-            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Find the highest-evidence research queue.</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Ranked auto-triages the market. Pro lets you configure conditions. Analysis sends one symbol into Golden Egg.</p>
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{headerStage === 'pro' ? 'Build your own scan.' : headerStage === 'analysis' ? 'Inspect one candidate.' : 'What deserves your attention right now.'}</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+              {headerStage === 'pro'
+                ? 'Pro: choose the exact technical and market conditions you want and scan the universe for matches.'
+                : headerStage === 'analysis'
+                  ? 'Analysis: the evidence behind one row — then validate it in Golden Egg.'
+                  : 'Ranked: system-ranked research opportunities based on MarketScannerPros evidence and risk filters. Switch to Pro to define your own conditions.'}
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {headerStage === 'analysis' ? (
                 <button type="button" onClick={() => { setSelectedSymbol(null); setSymbolDetail(null); }} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Back to {mode === 'ranked' ? 'Ranked' : 'Pro'}</button>
@@ -1553,15 +1647,15 @@ export default function ScannerPage() {
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
-                      <SortHeader k="mspScore" label="MSP" w="w-14" />
+                      <SortHeader k="mspScore" label="MSP" w="w-14" title="MSP research score (0–100): system ranking of research quality under the current regime. Not a probability." />
                       <SortHeader k="price" label="Price" w="w-20" />
                       <SortHeader k="direction" label="Bias" w="w-16" />
-                      <SortHeader k="confidence" label="Alignment" w="w-16" />
-                      <th scope="col" className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Reason</th>
-                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Trust</th>
-                      <th scope="col" className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
-                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
-                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
+                      <SortHeader k="confidence" label="Evidence" w="w-16" title="Evidence-weighted confidence (0–100): conviction × evidence coverage × freshness × liquidity. Not a probability." />
+                      <th scope="col" className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Setup stage (where the structure is) and the factors supporting the bias">Setup · Reason</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Data trust: freshness of the last completed bar, interval integrity, indicator coverage, history depth">Trust</th>
+                      <th scope="col" className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Extension / volatility state (DVE): where price is in the move — independent of setup and lifecycle">Extension</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Whether the setup type is compatible with the current market regime">Regime fit</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Research lifecycle: how far this candidate has progressed through validation (discovered → watching → setting up → ready). Describes the research process, not price maturity.">Research stage</th>
                       <th scope="col" className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Review</th>
                     </tr>
                   </thead>
@@ -1588,14 +1682,14 @@ export default function ScannerPage() {
                             }
                           }}
                         >
-                          <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600">{regimeLabel}</div></td>
+                          <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600" title="Setup / regime label from the scoring engine">{r.setup ?? regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(r.direction)} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}` : '—'}</td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
-                            <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }}>
+                            <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap" style={{ color: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust), borderColor: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust) + '55', backgroundColor: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust) + '15' }}>
                               {trust}
                             </span>
                           </td>
@@ -1636,9 +1730,15 @@ export default function ScannerPage() {
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
               <div className="flex items-center gap-3 text-[11px] text-slate-500">
                 <span>{rankedRows.length} symbols</span>
+                {(() => {
+                  const bars = rankedRows.map((r) => r.dataBasis?.lastCompletedBarAt).filter((x): x is string => Boolean(x)).sort();
+                  const newest = bars[bars.length - 1];
+                  const iv = [...new Set(rankedRows.map((r) => r.barInterval).filter(Boolean))].join('/');
+                  return newest ? <span className="text-slate-600" title="Market time of the most recent completed bar in this queue — distinct from when the scan was computed">· Last completed bar: {/^\d{4}-\d{2}-\d{2}$/.test(newest) ? newest : `${newest.slice(0, 16).replace('T', ' ')} UTC`}{iv ? ` (${iv} bars)` : ''}</span> : null;
+                })()}
                 {lastScanAt && (
                   <span className="text-slate-600">
-                    · Last scan: {lastScanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    · Computed: {lastScanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                 )}
               </div>
@@ -1719,7 +1819,7 @@ export default function ScannerPage() {
                     <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Confidence</label>
                     <select id="pro-min-confidence" value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
-                      <option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>
+                      <option value={0}>Any</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>
                     </select>
                   </div>
                   <div>
@@ -1780,7 +1880,7 @@ export default function ScannerPage() {
           </div>
 
           {/* Strategy Templates */}
-          <ScanTemplatesBar onSelect={applyTemplate} activeId={activeTemplateId} />
+          <ScanTemplatesBar onSelect={applyTemplate} onClear={clearTemplate} activeId={activeTemplateId} />
 
           {/* Filters bar */}
           {proScanResults && (
@@ -1841,17 +1941,24 @@ export default function ScannerPage() {
                   </div>
                 ))}
               </div>
-              <div className="mb-2 flex items-center gap-3 text-[11px] text-slate-500">
+              <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                 <span>Scanned: {proScanResults.scanned ?? '—'}</span>
+                <span>Returned: {proScanResults.topPicks?.length ?? 0}</span>
                 <span>Duration: {proScanResults.duration ?? '—'}</span>
                 <span>Mode: {proScanResults.mode ?? proDepth}</span>
-                {proScanResults.effectiveUniverseSize && <span>Universe: {proScanResults.effectiveUniverseSize}</span>}
+                {proScanResults.universe?.input != null && <span title={proScanResults.universe.note ?? ''}>Universe: {proScanResults.universe.input} in → {proScanResults.universe.valid} valid{proScanResults.universe.providerMisses ? ` · ${proScanResults.universe.providerMisses} provider misses` : ''}{proScanResults.universe.excludedCounts ? ` · excluded ${Object.entries(proScanResults.universe.excludedCounts as Record<string, number>).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join(', ')}` : ''}</span>}
+                {proScanResults.universe?.excluded?.length ? <span title={(proScanResults.universe.excluded as Array<{ symbol: string; reason: string }>).map((x) => `${x.symbol}: ${x.reason}`).join('\n')}>Excluded: {(proScanResults.universe.excluded as Array<{ symbol: string; reason: string }>).slice(0, 6).map((x) => `${x.symbol} (${x.reason.replace(/_/g, ' ')})`).join(', ')}{proScanResults.universe.excluded.length > 6 ? ` +${proScanResults.universe.excluded.length - 6}` : ''}</span> : null}
               </div>
+              {Object.keys(proFilterDrops).length > 0 && (
+                <div className="mb-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+                  {proScanResults.topPicks?.length ?? 0} returned · {proScreenerRows.length} shown · removed by your filters: {Object.entries(proFilterDrops).map(([k, n]) => `${k} (${n})`).join(', ')}. Loosen a filter to see them.
+                </div>
+              )}
               {proBulkViewMode === 'cards'
                 ? <ProScannerCards rows={proScreenerRows} onRowClick={handleProRowClick} />
                 : <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
               <div className="mt-2 text-[11px] text-slate-600">
-                Market Bias Context · Regime: {currentRegime.toUpperCase()} · Most observations: {proScreenerRows.filter(r => r.direction === 'LONG').length > proScreenerRows.filter(r => r.direction === 'SHORT').length ? 'Bullish bias' : 'Bearish bias'}
+                Bias within these {proScreenerRows.length} Pro matches (from {proScanResults.scanned ?? '—'} {proAsset} symbols scanned) · Regime: {currentRegime.toUpperCase()} · {proScreenerRows.filter(r => r.direction === 'LONG').length} long / {proScreenerRows.filter(r => r.direction === 'SHORT').length} short / {proScreenerRows.filter(r => r.direction === 'NEUTRAL').length} neutral. This describes your filtered universe, not the whole market.
               </div>
             </div>
           )}

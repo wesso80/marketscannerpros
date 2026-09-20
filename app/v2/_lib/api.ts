@@ -98,6 +98,29 @@ export interface ScanResult {
   timeframe: string;
   /** Actual bar interval indicators were computed on when it differs from `timeframe` (e.g. crypto daily → '4h'). */
   barInterval?: string;
+  lastCandleTime?: string;
+  ema200?: number | null;
+  macd_hist?: number;
+  avgVolume?: number;
+  dataBasis?: {
+    barInterval: string;
+    lastCompletedBarAt: string | null;
+    currentBarPartial: boolean;
+    historyBars: number;
+    hlBasis: 'exchange_ohlc' | 'price_samples';
+    volumeBasis: string;
+    source: string;
+    computedAt: string;
+    notes: string[];
+    atrPercentDailyEquivalent?: number;
+  };
+  liquidity?: { avgVolume20: number | null; adv20: number | null; volumeRatio: number | null; lastVolume: number | null };
+  dataTrust?: { level: 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA'; reasons: string[]; factor: number; freshness: 'fresh' | 'delayed' | 'stale' | 'unknown'; intervalMismatch: boolean };
+  enhancements?: {
+    relativeStrength?: { rs?: number | null; label?: string; benchmark?: string; window?: string; benchmarkMissing?: boolean; symbolChangePct?: number; benchmarkChangePct?: number } | null;
+    emaStack?: { direction?: string; label?: string } | null;
+    squeeze?: { squeeze?: boolean; squeezeIntensity?: number } | null;
+  };
   type: string;
   price?: number;
   confidence?: number;

@@ -15,6 +15,8 @@ export interface ScreenerRow {
   atrPct?: number;
   tfAlignment?: number;
   volume24h?: number;
+  /** 'usd' for CoinGecko 24h turnover, 'shares' for equity session volume. Drives the Volume column's unit label. */
+  volumeUnit?: 'usd' | 'shares';
   price?: number;
   change24h?: number;
   permission?: 'COMPLIANT' | 'TIGHT' | 'BLOCKED';
@@ -26,6 +28,12 @@ export interface ScreenerRow {
   reason?: string;
   dataQuality?: 'GOOD' | 'DEGRADED' | 'MISSING' | string;
   dataQualityDetail?: string;
+  /** Shared verdict label from lib/scanner/dataTrust (GOOD / DEGRADED / STALE / INSUFFICIENT DATA). */
+  dataTrustLevel?: string;
+  /** Uncapped condition-match score; `confidence` is this capped by data trust. */
+  matchConfidence?: number;
+  barInterval?: string;
+  lastCompletedBarAt?: string | null;
   // extra fields from bulk scan
   liquidityState?: string;
   volatilityState?: string;
@@ -122,10 +130,10 @@ const COLUMNS: Column[] = [
     ),
   },
   {
-    key: 'confidence', label: 'Conf', width: '70px', align: 'center',
+    key: 'confidence', label: 'Match', width: '70px', align: 'center',
     render: (r) => (
-      <span style={{ fontWeight: 700, color: confColor(r.confidence) }}>
-        {r.confidence}%
+      <span title={`Condition match ${r.matchConfidence ?? r.confidence}/100${r.matchConfidence != null && r.matchConfidence !== r.confidence ? ` — capped to ${r.confidence} by data trust` : ''}. Strength of match to the selected conditions; not a probability.`} style={{ fontWeight: 700, color: confColor(r.confidence) }}>
+        {r.confidence}{r.matchConfidence != null && r.matchConfidence !== r.confidence ? <span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}> /{r.matchConfidence}</span> : null}
       </span>
     ),
   },
@@ -148,10 +156,11 @@ const COLUMNS: Column[] = [
   {
     key: 'dataQuality', label: 'Trust', width: '80px', align: 'center',
     render: (r) => {
-      const label = r.dataQuality || 'DEGRADED';
-      const color = dataQualityColor(label);
+      const label = r.dataTrustLevel || r.dataQuality || 'DEGRADED';
+      const color = dataQualityColor(label === 'INSUFFICIENT DATA' ? 'MISSING' : label === 'STALE' ? 'DEGRADED' : label);
+      const basis = r.barInterval ? ` · ${r.barInterval} bars${r.lastCompletedBarAt ? `, last completed ${String(r.lastCompletedBarAt).slice(0, 16).replace('T', ' ')}` : ''}` : '';
       return (
-        <span title={r.dataQualityDetail || `${label} scanner inputs`} style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px' }}>
+        <span title={(r.dataQualityDetail || `${label} scanner inputs`) + basis} style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
           {label}
         </span>
       );
@@ -175,12 +184,14 @@ const COLUMNS: Column[] = [
   },
   {
     key: 'volume24h', label: 'Volume', width: '90px', align: 'right',
-    render: (r) => <span>{formatVol(r.volume24h)}</span>,
+    render: (r) => r.volume24h != null && r.volume24h > 0
+      ? <span title={r.volumeUnit === 'shares' ? 'Last session volume in shares (equity feeds report shares, not dollars)' : '24h turnover in USD'}>{r.volumeUnit === 'shares' ? formatVol(r.volume24h).replace('$', '') + ' sh' : formatVol(r.volume24h)}</span>
+      : <span title="Provider gave no volume for this interval" style={{ color: 'var(--msp-text-muted)' }}>n/a</span>,
   },
   {
     key: 'sectorRelStr', label: 'Sec RS', width: '70px', align: 'right',
     render: (r) => {
-      if (r.sectorRelStr == null) return <span style={{ color: 'var(--msp-text-muted)' }}>{"\u2014"}</span>;
+      if (r.sectorRelStr == null) return <span title="Sector benchmark not available for this symbol (no sector mapping or sector ETF quote)" style={{ color: 'var(--msp-text-muted)' }}>n/a</span>;
       const color = r.sectorRelStr > 0 ? 'var(--msp-bull)' : r.sectorRelStr < 0 ? 'var(--msp-bear)' : 'var(--msp-flat)';
       return <span style={{ fontSize: 11, fontWeight: 600, color }}>{r.sectorRelStr > 0 ? '+' : ''}{r.sectorRelStr.toFixed(1)}%</span>;
     },
@@ -189,10 +200,12 @@ const COLUMNS: Column[] = [
     key: 'momentumAccelScore', label: 'Accel', width: '65px', align: 'center',
     render: (r) => (
       r.momentumAccel
-        ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--msp-bull)', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+        ? <span title="Momentum acceleration: MACD histogram slope + RSI rate of change, 0–100" style={{ fontSize: 11, fontWeight: 700, color: 'var(--msp-bull)', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
             {r.momentumAccelScore ?? 0}
           </span>
-        : <span style={{ color: 'var(--msp-text-muted)' }}>{"\u2014"}</span>
+        : r.momentumAccelScore != null && r.momentumAccelScore > 0
+          ? <span title="Not accelerating" style={{ fontSize: 11, color: 'var(--msp-text-muted)' }}>{r.momentumAccelScore}</span>
+          : <span title="Acceleration needs bar history (computed for enriched rows only)" style={{ color: 'var(--msp-text-muted)' }}>n/a</span>
     ),
   },
   {

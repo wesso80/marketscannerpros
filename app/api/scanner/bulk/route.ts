@@ -10,7 +10,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP, resolveSymbolToId } from '@/lib/coingecko';
+import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
+import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
+import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
 import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze, detectMomentumAcceleration } from '@/lib/indicators';
 import { getSectorETF, SECTOR_ETFS } from '@/lib/sectorMap';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -454,41 +457,28 @@ async function fetchAVCryptoIndicators(symbol: string, timeframe: string) {
   return fetchAVIndicators(symbol, timeframe, 'crypto');
 }
 
-// Fetch crypto OHLCV data from CoinGecko (Commercial licensed - 500 calls/min)
-async function fetchCoinGeckoData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+// Fetch crypto OHLCV data from CoinGecko (Commercial licensed - 500 calls/min).
+// Genuine-timeframe bars via lib/scanner/cryptoBars (1d = daily OHLC, 1h = hourly OHLC, 30m/15m = fine candles);
+// completed bars only. Unknown symbols resolve dynamically instead of relying on the hardcoded map.
+const PRO_TF_TO_SERIES: Record<string, CryptoScanTimeframe> = { '1d': 'daily', '1h': '1h', '30m': '30m', '15m': '15m' };
+type CryptoFetchOutcome = { ohlcv: OHLCV[] | null; excludedReason?: 'stablecoin' | 'no_provider_mapping' | 'provider_no_data' | 'insufficient_history'; basis?: { barInterval: string; lastCompletedBarAt: string | null; historyBars: number; volumeBasis: string; coinId: string } };
+async function fetchCoinGeckoSeries(symbol: string, timeframe: string = '1d'): Promise<CryptoFetchOutcome> {
+  const upper = symbol.toUpperCase();
+  if (STABLECOINS.has(upper)) return { ohlcv: null, excludedReason: 'stablecoin' };
+  const coinId = SYMBOL_TO_COINGECKO[upper] ?? (await resolveSymbolToId(upper));
+  if (!coinId) return { ohlcv: null, excludedReason: 'no_provider_mapping' };
   try {
-    // Skip stablecoins
-    if (STABLECOINS.has(symbol.toUpperCase())) return null;
-    
-    // Get CoinGecko ID from symbol
-    const coinId = SYMBOL_TO_COINGECKO[symbol.toUpperCase()];
-    if (!coinId) {
-      console.warn(`[bulk-scan] No CoinGecko mapping for ${symbol}`);
-      return null;
-    }
-    
-    const days = COINGECKO_DAYS_MAP[timeframe] || 30;
-    const ohlcData = await getOHLC(coinId, days);
-    
-    if (!ohlcData || !Array.isArray(ohlcData) || ohlcData.length < 20) {
-      return null;
-    }
-    
-    // CoinGecko OHLC format: [[timestamp, open, high, low, close], ...]
-    const ohlcv: OHLCV[] = ohlcData.map((candle: number[]) => ({
-      date: new Date(candle[0]).toISOString(),
-      open: candle[1],
-      high: candle[2],
-      low: candle[3],
-      close: candle[4],
-      volume: 0 // CoinGecko OHLC doesn't include volume
-    })).filter((c: OHLCV) => Number.isFinite(c.close));
-    
-    return ohlcv.length >= 20 ? ohlcv : null;
+    const series = await fetchCryptoSeries(upper, PRO_TF_TO_SERIES[timeframe] ?? 'daily', Date.now(), { coinId });
+    if (series.bars.length < 20) return { ohlcv: null, excludedReason: 'insufficient_history' };
+    const ohlcv: OHLCV[] = series.bars.map((b) => ({ date: b.t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
+    return { ohlcv, basis: { barInterval: series.barInterval, lastCompletedBarAt: series.lastCompletedBarAt, historyBars: series.bars.length, volumeBasis: series.volumeBasis, coinId: series.coinId } };
   } catch (err) {
-    console.error(`[bulk-scan] CoinGecko fetch error for ${symbol}:`, err);
-    return null;
+    console.warn(`[bulk-scan] CoinGecko series error for ${symbol}:`, (err as any)?.message);
+    return { ohlcv: null, excludedReason: 'provider_no_data' };
   }
+}
+async function fetchCoinGeckoData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+  return (await fetchCoinGeckoSeries(symbol, timeframe)).ohlcv;
 }
 
 // Fetch equity OHLCV data from Alpha Vantage (Premium licensed - 300 calls/min)
@@ -1382,9 +1372,11 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
 
   const dedupedBySymbol = new Map<string, any>();
   let droppedNonAscii = 0;
+  let droppedStable = 0;
   for (const coin of markets) {
     const symbol = String(coin.symbol || '').toUpperCase();
-    if (!symbol || STABLECOINS.has(symbol)) continue;
+    if (!symbol) continue;
+    if (STABLECOINS.has(symbol)) { droppedStable += 1; continue; }
     if (!isAsciiCryptoTicker(symbol)) {
       droppedNonAscii += 1;
       continue;
@@ -1420,13 +1412,15 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
     const batch = top10.slice(i, i + ENRICH_BATCH);
     const batchResults = await Promise.all(batch.map(async (pick) => {
       try {
-        // ── Strategy 1: CoinGecko OHLC → full local indicator computation ──
-        const ohlcv = await fetchCoinGeckoData(pick.symbol, timeframe);
+        // ── Strategy 1: CoinGecko genuine-timeframe bars → full local indicator computation ──
+        const outcome = await fetchCoinGeckoSeries(pick.symbol, timeframe);
+        const ohlcv = outcome.ohlcv;
         if (ohlcv && ohlcv.length >= 20) {
           apiCallsUsed += 1;
           const enriched = analyzeAssetByTimeframe(pick.symbol, ohlcv, timeframe);
           if (enriched) {
             const result = enrichCryptoPick(pick, enriched);
+            if (outcome.basis) result.dataBasis = outcome.basis;
             // CoinGecko OHLC has no volume data → MFI/OBV/VWAP are empty.
             // Supplement with AV MFI call to fill the gap.
             if (!result.indicators?.mfi) {
@@ -1472,6 +1466,14 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
     apiCallsUsed,
     apiCallsCap: LIGHT_SCAN_MAX_API_CALLS,
     effectiveUniverseSize: cappedCoins,
+    universe: {
+      mode: 'light' as const,
+      source: 'coingecko /coins/markets (top by market cap)',
+      input: markets.length,
+      valid: ranked.length,
+      excludedCounts: { stablecoin: droppedStable, nonAsciiTicker: droppedNonAscii, duplicateSymbol: markets.length - droppedStable - droppedNonAscii - dedupedBySymbol.size, unscorable: dedupedBySymbol.size - ranked.length },
+      note: 'Fast ranks the whole market-cap universe on market data (price change, turnover, rank) and enriches the top 10 with genuine-timeframe indicators. Deep scans the curated symbol_universe list with full indicators for every symbol.',
+    },
   };
 }
 
@@ -1817,13 +1819,60 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     return null; // Caller will use runLightEquityScan
   }
 
+  // EMA200 + volume history from the worker bar store in ONE query (the indicators_latest row stores EMA200 = null).
+  // Never 0 for a missing EMA200: symbols with < 200 bars keep NaN and are labelled DEGRADED downstream.
+  const barStats = new Map<string, { ema200: number; bars: number; lastBar: string; avgVol: number | null; lastVol: number | null; discontinuity: { date: string | null; ratio: number } | null }>();
+  try {
+    const cachedSymbols = Array.from(cacheMap.keys());
+    const rows = await dbQuery<{ symbol: string; ts: string; close: string; volume: string | null }>(
+      `SELECT symbol, ts, close, volume FROM ohlcv_bars WHERE symbol = ANY($1) AND timeframe = 'daily' AND ts >= NOW() - INTERVAL '400 days' ORDER BY symbol, ts ASC`,
+      [cachedSymbols],
+    );
+    const bySymbol = new Map<string, Array<{ ts: string; close: number; volume: number | null }>>();
+    for (const r of rows) {
+      const arr = bySymbol.get(r.symbol.toUpperCase()) ?? [];
+      arr.push({ ts: typeof r.ts === 'string' ? r.ts : new Date(r.ts).toISOString(), close: Number(r.close), volume: r.volume != null && Number(r.volume) > 0 ? Number(r.volume) : null });
+      bySymbol.set(r.symbol.toUpperCase(), arr);
+    }
+    for (const [sym, arr] of bySymbol) {
+      const closes = arr.map((b) => b.close).filter((c) => Number.isFinite(c));
+      const emaVal = closes.length >= 200 ? ema(closes, 200) : null;
+      const vols = arr.slice(-20).map((b) => b.volume).filter((v): v is number => v !== null);
+      const disc = detectPriceDiscontinuity(arr.map((b) => b.close), arr.map((b) => b.ts));
+      barStats.set(sym, {
+        ema200: typeof emaVal === 'number' && Number.isFinite(emaVal) && !disc ? emaVal : NaN,
+        bars: closes.length,
+        lastBar: arr[arr.length - 1].ts.slice(0, 10),
+        avgVol: vols.length >= 5 ? vols.reduce((s, v) => s + v, 0) / vols.length : null,
+        lastVol: arr[arr.length - 1].volume,
+        discontinuity: disc ? { date: disc.date, ratio: disc.ratio } : null,
+      });
+    }
+  } catch (barErr) {
+    console.warn('[bulk-scan/cached] ohlcv_bars EMA200 pass failed (non-fatal):', (barErr as any)?.message);
+  }
+
   // Score every cached symbol with full 9-signal scoring
-  const scored: Array<ReturnType<typeof computeFullScore> & { symbol: string; change24h: number }> = [];
+  const scored: Array<ReturnType<typeof computeFullScore> & { symbol: string; change24h: number; dataBasis?: Record<string, unknown> }> = [];
   for (const [symbol, cached] of cacheMap.entries()) {
-    const result = computeFullScore(cached);
+    const stats = barStats.get(symbol.toUpperCase());
+    // A split-contaminated series must not lend its EMA200 (from either store) to the score.
+    const withEma = stats?.discontinuity
+      ? { ...cached, ema200: NaN }
+      : stats && Number.isFinite(stats.ema200) && !Number.isFinite(cached.ema200) ? { ...cached, ema200: stats.ema200 } : cached;
+    const result = computeFullScore(withEma);
     // Daily change comes straight from the cached quote (no extra query).
     const change24h = typeof cached.changePct === 'number' && Number.isFinite(cached.changePct) ? cached.changePct : 0;
-    scored.push({ ...result, symbol, change24h });
+    const dataBasis = {
+      barInterval: '1d',
+      lastCompletedBarAt: cached.latestTradingDay ?? stats?.lastBar ?? null,
+      historyBars: stats?.bars ?? null,
+      volumeBasis: stats?.avgVol ? `exchange_volume_${Math.min(20, stats.bars)}_bars` : cached.volume ? 'session_volume_only' : 'unavailable',
+      volumeRatio: stats?.avgVol && cached.volume ? Math.round((cached.volume / stats.avgVol) * 100) / 100 : null,
+      source: 'ohlcv_bars + quotes_latest + indicators_latest',
+      priceDiscontinuity: stats?.discontinuity ?? null,
+    };
+    scored.push({ ...result, symbol, change24h, dataBasis });
   }
 
   // Also score movers that weren't in cache using bulk quotes fallback
@@ -2305,6 +2354,32 @@ function applyInstitutionalFilterToTopPicks(
       enrichedConfidence = scoreV2.final.confidence;
     }
 
+    // ── Condition match vs data trust (Part J decision: B + cap) ──
+    // `matchConfidence` = how strongly the available conditions match (uncapped). `dataTrust` = the shared verdict on
+    // the inputs. The headline `confidence` is the match confidence CAPPED by trust so a row with missing ATR/RSI/ADX
+    // (e.g. ticker "I": 69% match, ATR missing) can no longer out-rank a fully evidenced row. Nothing is hidden.
+    const matchConfidence = Number.isFinite(pick?.compositeV2?.composite) ? Math.round(pick.compositeV2.composite) : enrichedConfidence;
+    const basis = (pick as any)?.dataBasis as { barInterval?: string; lastCompletedBarAt?: string | null; historyBars?: number; volumeBasis?: string } | undefined;
+    const dataTrust = evaluateDataTrust({
+      assetClass: params.type,
+      timeframe: params.timeframe,
+      lastBarAt: basis?.lastCompletedBarAt ?? null,
+      barInterval: basis?.barInterval ?? null,
+      historyBars: basis?.historyBars ?? null,
+      price: pickPrice > 0 ? pickPrice : null,
+      indicators: {
+        atr: Number.isFinite(pick?.indicators?.atr) && pick.indicators.atr > 0,
+        rsi: Number.isFinite(pick?.indicators?.rsi),
+        adx: Number.isFinite(pick?.indicators?.adx),
+        ema200: Number.isFinite(pick?.indicators?.ema200) && pick.indicators.ema200 > 0,
+        macd: Number.isFinite(pick?.indicators?.macd),
+      },
+      volumeAvailable: Number.isFinite(pick?.indicators?.volume) && pick.indicators.volume > 0,
+      priceDiscontinuity: pick?.dataBasis?.priceDiscontinuity ?? null,
+    });
+    const TRUST_CAP: Record<string, number> = { GOOD: 99, DEGRADED: 80, STALE: 60, INSUFFICIENT_DATA: 40 };
+    const confidence = Math.min(Number(matchConfidence) || 0, TRUST_CAP[dataTrust.level]);
+
     return {
       ...pick,
       scoreV2,
@@ -2315,10 +2390,9 @@ function applyInstitutionalFilterToTopPicks(
       target: enrichedTarget,
       rMultiple: enrichedRMultiple,
       setup: enrichedSetup,
-      // Display the MSP Composite v2 as the headline confidence when available
-      // (equity), so the number shown and the ranking below agree. Crypto keeps
-      // the institutional confidence.
-      confidence: Number.isFinite(pick?.compositeV2?.composite) ? Math.round(pick.compositeV2.composite) : enrichedConfidence,
+      matchConfidence,
+      dataTrust,
+      confidence,
     };
   });
 
@@ -2330,7 +2404,9 @@ function applyInstitutionalFilterToTopPicks(
     const aBlocked = a.institutionalFilter.noTrade || a.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
     const bBlocked = b.institutionalFilter.noTrade || b.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
     if (aBlocked !== bBlocked) return aBlocked - bBlocked;
-    // Prefer the MSP Composite v2 (equity); fall back to the institutional rank.
+    // Rank by the trust-capped headline confidence so the number shown IS the ordering; tiebreak on composite/rank score.
+    const confDiff = Number(b?.confidence ?? 0) - Number(a?.confidence ?? 0);
+    if (confDiff !== 0) return confDiff;
     const left = Number(a?.compositeV2?.composite ?? a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
     const right = Number(b?.compositeV2?.composite ?? b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
     return right - left;
@@ -2353,11 +2429,13 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
     const openInterestCoin = avgIndex > 0 ? openInterestUsd / avgIndex : 0;
     if (!Number.isFinite(openInterestCoin) || openInterestCoin <= 0) return null;
 
+    // CoinGecko funding_rate is already percent per interval — median across venues, no ×100.
     const fundingRates = tickers
       .map((t) => Number(t.funding_rate))
-      .filter((v) => Number.isFinite(v));
+      .filter((v) => Number.isFinite(v))
+      .sort((a, b) => a - b);
     const fundingRate = fundingRates.length
-      ? (fundingRates.reduce((sum, v) => sum + v, 0) / fundingRates.length) * 100
+      ? (fundingRates.length % 2 ? fundingRates[(fundingRates.length - 1) / 2] : (fundingRates[fundingRates.length / 2 - 1] + fundingRates[fundingRates.length / 2]) / 2)
       : undefined;
 
     const longShortRatio = typeof fundingRate === 'number'
@@ -2456,6 +2534,7 @@ export async function POST(req: NextRequest) {
         apiCallsUsed: lightResult.apiCallsUsed,
         apiCallsCap: lightResult.apiCallsCap,
         effectiveUniverseSize: lightResult.effectiveUniverseSize,
+        universe: lightResult.universe,
         dataQuality: scannerDataQualityMetadata({
           source: 'coingecko_market_data',
           computedAt: new Date(),
@@ -2494,6 +2573,16 @@ export async function POST(req: NextRequest) {
         apiCallsCap: equityResult.apiCallsCap,
         effectiveUniverseSize: equityResult.effectiveUniverseSize,
         cacheHitRate: (equityResult as any).cacheHitRate,
+        universe: {
+          mode: cachedResult ? 'cached' : 'light',
+          source: cachedResult ? 'worker cache (quotes_latest + indicators_latest + ohlcv_bars)' : 'alpha_vantage light scan',
+          input: equityResult.effectiveUniverseSize,
+          valid: equityResult.scanned,
+          excludedCounts: { noCachedRow: Math.max(0, equityResult.effectiveUniverseSize - equityResult.scanned) },
+          note: cachedResult
+            ? 'Rows come from the worker cache; symbols without a cached quote/indicator row are excluded and counted, not scored.'
+            : 'Light scan enriched a capped slice of the universe with Alpha Vantage calls.',
+        },
         dataQuality: scannerDataQualityMetadata({
           source: cachedResult ? 'worker_cache' : 'alpha_vantage_light_scan',
           computedAt: new Date(),
@@ -2581,6 +2670,9 @@ export async function POST(req: NextRequest) {
     // Equity: Alpha Vantage (licensed, rate limited - 5 per batch)
     const BATCH_SIZE = type === 'crypto' ? 10 : 5;
     const DELAY = type === 'crypto' ? 200 : 250; // More delay to respect rate limits
+    // Universe accounting: every input symbol ends up either scanned or excluded WITH a reason.
+    const excluded: Array<{ symbol: string; reason: string }> = [];
+    let scannedCount = 0;
     
     for (let i = 0; i < universe.length; i += BATCH_SIZE) {
       const batch = universe.slice(i, i + BATCH_SIZE);
@@ -2588,16 +2680,21 @@ export async function POST(req: NextRequest) {
       const batchPromises = batch.map(async (id) => {
         try {
           // Crypto uses CoinGecko (licensed), Equity uses Alpha Vantage (licensed)
-          const ohlcv = type === 'crypto' 
-            ? await fetchCoinGeckoData(id, selectedTimeframe)
-            : await fetchAlphaVantageData(id, selectedTimeframe);
-          
-          if (!ohlcv) {
-            errors.push(`${id}: No data`);
-            return null;
+          let ohlcv: OHLCV[] | null;
+          let basis: CryptoFetchOutcome['basis'] | undefined;
+          if (type === 'crypto') {
+            const outcome = await fetchCoinGeckoSeries(id, selectedTimeframe);
+            ohlcv = outcome.ohlcv; basis = outcome.basis;
+            if (!ohlcv) { excluded.push({ symbol: id, reason: outcome.excludedReason ?? 'provider_no_data' }); return null; }
+          } else {
+            ohlcv = await fetchAlphaVantageData(id, selectedTimeframe);
+            if (!ohlcv) { excluded.push({ symbol: id, reason: 'provider_no_data' }); errors.push(`${id}: No data`); return null; }
           }
+          scannedCount += 1;
           
           const result = analyzeAssetByTimeframe(id, ohlcv, selectedTimeframe);
+          if (!result) { excluded.push({ symbol: id, reason: 'indicator_warmup_incomplete' }); return null; }
+          if (basis) (result as any).dataBasis = basis;
           if (result && type === 'crypto') {
             // Inject 24h volume from market data (CoinGecko OHLC lacks volume)
             const mktVol = marketVolumeMap.get(id.toUpperCase());
@@ -2618,6 +2715,7 @@ export async function POST(req: NextRequest) {
           return result;
         } catch (e: any) {
           errors.push(`${id}: ${e.message}`);
+          excluded.push({ symbol: id, reason: `error: ${String(e?.message ?? 'unknown').slice(0, 80)}` });
           return null;
         }
       });
@@ -2660,6 +2758,16 @@ export async function POST(req: NextRequest) {
       duration: `${duration}s`,
       topPicks: institutional.topPicks,
       blockedByInstitutionalFilter: institutional.blockedCount,
+      effectiveUniverseSize: universe.length,
+      universe: {
+        mode: 'deep',
+        source: type === 'crypto' ? 'symbol_universe (curated crypto list)' : 'symbol_universe (equity list)',
+        input: universe.length,
+        valid: results.length,
+        providerMisses: excluded.filter((x) => x.reason === 'provider_no_data').length,
+        excluded,
+        note: type === 'crypto' ? 'Deep scans the curated symbol_universe list with full OHLC indicators; Fast ranks the CoinGecko top-N by market data. Different universes by design.' : undefined,
+      },
       dataQuality: scannerDataQualityMetadata({
         source: type === 'crypto' ? 'coingecko_ohlc' : 'alpha_vantage',
         computedAt: new Date(),

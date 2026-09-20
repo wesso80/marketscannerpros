@@ -57,6 +57,8 @@ export interface CachedScanData {
   high?: number;
   low?: number;
   prevClose?: number;
+  /** Session date (YYYY-MM-DD) of the quote — the market time of the data, distinct from when it was fetched. */
+  latestTradingDay?: string;
   source: 'cache' | 'database' | 'unavailable';
 }
 
@@ -106,7 +108,7 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
  * Returns null when the quote price or minimum indicators are missing.
  */
 export function buildCachedScanData(
-  q: { price?: number; volume?: number; changePct?: number; open?: number; high?: number; low?: number; prevClose?: number; source?: string } | null,
+  q: { price?: number; volume?: number | string; changePct?: number; open?: number; high?: number; low?: number; prevClose?: number; latestDay?: string; source?: string } | null,
   ind: Record<string, number | boolean | null | undefined> | null,
 ): CachedScanData | null {
   if (!q?.price) return null;
@@ -119,6 +121,7 @@ export function buildCachedScanData(
     typeof v === 'number' && Number.isFinite(v) ? v : 0;
   const optNum = (v: number | boolean | null | undefined): number | undefined =>
     typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+  const volume = typeof q.volume === 'string' ? Number(q.volume) : q.volume;
 
   const result: CachedScanData = {
     price: q.price,
@@ -129,7 +132,9 @@ export function buildCachedScanData(
     ema9: optNum(ind?.ema9),
     ema20: optNum(ind?.ema20),
     ema50: optNum(ind?.ema50),
-    ema200: safeNum(ind?.ema200),
+    // EMA200 must never be 0 when missing: 0 reads as "price infinitely above trend" in every consumer. NaN is
+    // rejected by Number.isFinite() checks everywhere EMA200 is used.
+    ema200: typeof ind?.ema200 === 'number' && Number.isFinite(ind.ema200) && ind.ema200 > 0 ? ind.ema200 : NaN,
     sma20: optNum(ind?.sma20),
     sma50: optNum(ind?.sma50),
     sma200: optNum(ind?.sma200),
@@ -148,7 +153,7 @@ export function buildCachedScanData(
     bbWidthPercent: optNum(ind?.bbWidthPercent20),
     inSqueeze: typeof ind?.inSqueeze === 'boolean' ? ind.inSqueeze : undefined,
     squeezeStrength: optNum(ind?.squeezeStrength),
-    volume: typeof q.volume === 'number' && Number.isFinite(q.volume) && q.volume > 0 ? q.volume : undefined,
+    volume: typeof volume === 'number' && Number.isFinite(volume) && volume > 0 ? volume : undefined,
     obv: optNum(ind?.obv),
     vwap: optNum(ind?.vwap),
     mfi: optNum(ind?.mfi14),
@@ -163,6 +168,7 @@ export function buildCachedScanData(
     high: q.high != null && q.high > 0 ? q.high : undefined,
     low: q.low != null && q.low > 0 ? q.low : undefined,
     prevClose: q.prevClose != null && q.prevClose > 0 ? q.prevClose : undefined,
+    latestTradingDay: q.latestDay && /^\d{4}-\d{2}-\d{2}/.test(String(q.latestDay)) ? String(q.latestDay).slice(0, 10) : undefined,
     source: q.source === 'live' ? 'database' : ((q.source as CachedScanData['source']) ?? 'database'),
   };
   return result;
