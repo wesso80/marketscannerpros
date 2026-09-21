@@ -97,6 +97,8 @@ export interface DiamondHunterPayload {
     createdAt: string | null;
     reasons: string[];
     components: ReturnType<typeof scoreDiamondPool>['components'];
+    scoreDelta: number;
+    firstDetectedAt: string | null;
     history: DiamondHistoryState;
   }>;
   stats: {
@@ -274,9 +276,12 @@ export async function runDiamondHunterScan(options: { forceRefresh?: boolean } =
 
   const visible = visibleBase.map((candidate) => {
     const historyInput = persistable.find((item) => item.id === candidate.id)!;
+    const historyState = history.get(candidate.id) ?? fallbackHistory(historyInput, now);
     return {
       ...candidate,
-      history: history.get(candidate.id) ?? fallbackHistory(historyInput, now),
+      scoreDelta: historyState.scoreDelta5m,
+      firstDetectedAt: historyState.firstDetectedAt,
+      history: historyState,
     };
   });
 
