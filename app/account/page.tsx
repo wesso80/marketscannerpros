@@ -194,7 +194,7 @@ export default function AccountPage() {
     if (isPaid) {
       return [
         "Unlimited scanning + Golden Egg",
-        "Full Intelligence suite (Global M2, Liquidity, Fragility, Lead/Lag, NQ Pressure, Auction, Master)",
+        "Production Intelligence (Global M2, Liquidity Transmission, Fragility)",
         "Backtesting, options and derivatives tools",
         "Unlimited portfolio and trade journal",
         "Alerts, exports, priority support",
