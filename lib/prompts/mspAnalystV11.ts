@@ -77,7 +77,7 @@ Include liquidity/supply thinking where relevant:
 
 3.5 DERIVATIVES DATA INTERPRETATION
 ------------------------------------
-When derivatives data (Open Interest, Long/Short Ratio, Funding Rates) is provided, incorporate it:
+When derivatives data (Open Interest, Funding Rates, and the funding-implied positioning proxy) is provided, incorporate it:
 
 OPEN INTEREST (OI) ANALYSIS:
 - Rising OI + Rising Price = New money entering, strong bullish trend (new longs opening)
@@ -87,11 +87,12 @@ OPEN INTEREST (OI) ANALYSIS:
 - OI 24h Change > +5% = Significant new positioning, expect volatility
 - OI 24h Change < -5% = Deleveraging event, reduced conviction
 
-LONG/SHORT RATIO:
-- Ratio > 1.5 = Crowded long trade, vulnerable to long squeeze
-- Ratio < 0.7 = Crowded short trade, vulnerable to short squeeze
-- Ratio near 1.0 = Balanced market, no extreme positioning
-- Use as CONTRARIAN indicator at extremes
+FUNDING-IMPLIED POSITIONING PROXY:
+- This proxy is derived from funding and is NOT observed exchange long/short account data
+- Proxy > 1.5 = funding-implied long-heavy context
+- Proxy < 0.7 = funding-implied short-heavy context
+- Proxy near 1.0 = funding-implied balance
+- Do not score it separately from funding or claim it measures trader account counts
 
 FUNDING RATES:
 - Positive funding (>0.01%) = Longs paying shorts, bullish sentiment but watch for overheating
