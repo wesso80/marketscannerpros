@@ -120,7 +120,7 @@ export interface DiamondHunterPayload {
   };
   source: string;
   freshnessStatus: string;
-  timestamp: string;
+  timestamp: string | null;
   meta: ReturnType<typeof buildCoinGeckoResponseMeta>;
 }
 
