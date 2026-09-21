@@ -218,7 +218,7 @@ export async function GET() {
         candidatesShown: visible.length,
         watchOrBetter: visible.filter((c) => c.stage !== 'REJECT').length,
         diamondOrBetter: visible.filter((c) => c.stage === 'DIAMOND' || c.stage === 'RARE_DIAMOND').length,
-        deepChecked: deepMap.size,
+        deepChecked: Array.from(deepMap.values()).filter(Boolean).length,
         pagesScanned: PAGE_COUNT,
         refreshSeconds: SCAN_CACHE_TTL_MS / 1000,
       },
