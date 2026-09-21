@@ -40,10 +40,10 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 /* ─────────────────────────────────────────────────────────────────
    Main Component
    ───────────────────────────────────────────────────────────────── */
-export default function OptionsTerminalView() {
+export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: string } = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialSymbol = searchParams.get('symbol')?.toUpperCase() || '';
+  const initialSymbol = propSymbol?.toUpperCase() || searchParams.get('symbol')?.toUpperCase() || '';
 
   /* ── Live data ─────────────────────────────────────────────── */
   const chain = useOptionsChain();
@@ -60,6 +60,16 @@ export default function OptionsTerminalView() {
   const [selected, setSelected] = useState<{ side: 'CALL' | 'PUT'; strike: number } | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [watchlistMsg, setWatchlistMsg] = useState('');
+
+  useEffect(() => {
+    if (!propSymbol) return;
+    const next = propSymbol.toUpperCase();
+    if (next !== ticker) {
+      setTicker(next);
+      setSelectedExpiry('');
+      setSelected(null);
+    }
+  }, [propSymbol, ticker]);
 
   /* ── Auto-fetch on ticker/expiry change ────────────────────── */
   useEffect(() => {
