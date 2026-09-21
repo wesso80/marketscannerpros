@@ -95,8 +95,11 @@ export async function GET(req: NextRequest) {
       },
       coins: ratios.sort((a, b) => b.longShortRatio - a.longShortRatio),
       source: meta.provider,
-      exchange: 'CoinGecko Derivatives Aggregate',
+      exchange: 'CoinGecko Derivatives (funding-derived)',
       model: 'funding-rate-positioning-proxy',
+      metricLabel: 'Funding-Implied Positioning Proxy',
+      observedAccountPositioning: false,
+      methodology: 'Derived from aggregated perpetual funding rates. This is not exchange-reported long/short account positioning.',
       timestamp: meta.lastUpdated,
       freshnessStatus: meta.freshnessStatus,
       meta,
@@ -105,7 +108,7 @@ export async function GET(req: NextRequest) {
     cache = { data: result, timestamp: Date.now() };
     return NextResponse.json(result);
   } catch (error) {
-    console.error('[L/S Ratio API] Error:', error);
+    console.error('[Positioning Proxy API] Error:', error);
 
     if (cache) {
       const meta = buildCoinGeckoResponseMeta({
@@ -124,6 +127,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: 'Failed to fetch L/S ratio' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch funding-implied positioning proxy' }, { status: 500 });
   }
 }
