@@ -42,7 +42,7 @@ export async function GET() {
         priceChange24h: parseFloat(attrs.price_change_percentage?.h24) || 0,
         volume1h: parseFloat(attrs.volume_usd?.h1) || 0,
         volume24h: parseFloat(attrs.volume_usd?.h24) || 0,
-        liquidity: parseFloat(attrs.reserve_in_usd) || 0,
+        liquidity: parseFloat(attrs.reserve_in_usd || '0') || 0,
         buys24h: attrs.transactions?.h24?.buys || 0,
         sells24h: attrs.transactions?.h24?.sells || 0,
       };
