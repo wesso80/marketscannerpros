@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDerivativesTickers, getGlobalData, getMarketData } from '@/lib/coingecko';
+import { getAggregatedFundingRates, getAggregatedOpenInterest, getGlobalData, getMarketData } from '@/lib/coingecko';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,6 @@ interface MarketData {
   btcOI?: number;              // BTC OI
   btcOIChange?: number;        // 24h OI change %
   btcFundingRate?: number;     // Funding rate
-  btcLongShortRatio?: number;  // L/S ratio
   btcPriceChange24h?: number;  // Price change %
   
   // Stock metrics  
@@ -47,54 +46,38 @@ async function fetchCryptoFG(): Promise<number | null> {
   }
 }
 
-// Fetch BTC derivatives data from CoinGecko
+// Fetch BTC derivatives data from the shared CoinGecko aggregation helpers.
+// These helpers use the canonical median funding calculation and the shared
+// derivatives cache, avoiding the legacy mean × 100 scaling defect.
 async function fetchBTCDerivatives(): Promise<Partial<MarketData>> {
   const result: Partial<MarketData> = {};
-  
+
   try {
-    // Fetch from CoinGecko (funding rate, OI, price change)
-    const [derivativesTickers, marketData] = await Promise.all([
-      getDerivativesTickers(),
+    const [fundingRows, oiRows, marketData] = await Promise.all([
+      getAggregatedFundingRates(['BTC']),
+      getAggregatedOpenInterest(['BTC']),
       getMarketData({ ids: ['bitcoin'], per_page: 1 }),
     ]);
-    
-    // Extract BTC data from CoinGecko derivatives
-    if (derivativesTickers) {
-      const btcDerivatives = derivativesTickers.filter(t => 
-        t.symbol?.toUpperCase().includes('BTC') && t.index_id?.toUpperCase() === 'BTC'
-      );
-      
-      if (btcDerivatives.length > 0) {
-        // Get average funding rate across exchanges
-        const fundingRates = btcDerivatives
-          .map(t => t.funding_rate)
-          .filter((r): r is number => r !== undefined && r !== null);
-        if (fundingRates.length > 0) {
-          result.btcFundingRate = (fundingRates.reduce((a, b) => a + b, 0) / fundingRates.length) * 100;
-        }
-        
-        // Get total OI across exchanges
-        const oiValues = btcDerivatives
-          .map(t => t.open_interest)
-          .filter((oi): oi is number => oi !== undefined && oi !== null);
-        if (oiValues.length > 0) {
-          result.btcOI = oiValues.reduce((a, b) => a + b, 0);
-        }
-      }
+
+    const btcFunding = fundingRows.find((row) => row.symbol === 'BTC');
+    if (btcFunding && !btcFunding.fundingRateMissing) {
+      result.btcFundingRate = btcFunding.fundingRatePercent;
     }
-    
-    // Get price change from market data
+
+    const btcOi = oiRows.find((row) => row.symbol === 'BTC');
+    if (btcOi) {
+      result.btcOI = btcOi.totalOpenInterest;
+    }
+
     if (marketData && marketData.length > 0) {
       result.btcPriceChange24h = marketData[0].price_change_percentage_24h;
     }
-    
-  } catch (e) {
-    console.error('BTC derivatives fetch error:', e);
+  } catch (error) {
+    console.error('BTC derivatives fetch error:', error);
   }
-  
+
   return result;
 }
-
 // Fetch VIX (fear index) from Yahoo Finance
 async function fetchVIX(): Promise<number | null> {
   try {
@@ -183,26 +166,12 @@ function calculateCustomCryptoFG(data: MarketData): FGResult {
     totalWeight += weight;
   }
   
-  // 3. Long/Short Ratio (20% weight) - positioning sentiment
-  // High L/S = more longs = greedy, Low L/S = more shorts = fearful
-  if (data.btcLongShortRatio !== undefined) {
-    const weight = 20;
-    // Map L/S ratio: 0.5 = 0, 1.0 = 50, 2.0 = 100
-    let fgValue = ((data.btcLongShortRatio - 0.5) / 1.5) * 100;
-    fgValue = Math.max(0, Math.min(100, fgValue));
-    
-    components.push({
-      name: 'Long/Short Ratio',
-      value: fgValue,
-      weight,
-      contribution: fgValue * (weight / 100),
-      interpretation: data.btcLongShortRatio > 1.5 ? 'Heavily long' : data.btcLongShortRatio < 0.8 ? 'Heavily short' : 'Balanced'
-    });
-    weightedSum += fgValue * weight;
-    totalWeight += weight;
-  }
-  
-  // 4. Price Momentum (25% weight) - recent performance
+  // No separate long/short component is included here. MarketScannerPros does
+  // not currently ingest an independent observed account-positioning feed; the
+  // displayed positioning proxy is derived from funding and would double-count
+  // the same evidence if weighted again in this composite.
+
+  // 3. Price Momentum (25% weight) - recent performance
   if (data.btcPriceChange24h !== undefined) {
     const weight = 25;
     // Map 24h change: -10% = 0, 0% = 50, +10% = 100
@@ -316,11 +285,10 @@ export async function GET(req: NextRequest) {
         raw: {
           cryptoFG: marketData.cryptoFG,
           btcFundingRate: marketData.btcFundingRate,
-          btcLongShortRatio: marketData.btcLongShortRatio,
           btcPriceChange24h: marketData.btcPriceChange24h
         },
         source: 'MSP Proprietary Index',
-        methodology: 'Composite of market sentiment (35%), funding rates (20%), positioning (20%), and momentum (25%)',
+        methodology: 'Composite of market sentiment (35%), funding rates (20%), and momentum (25%), renormalized across available independent inputs. No separate L/S component is used because the displayed positioning proxy is funding-derived.',
         cachedAt: new Date().toISOString()
       };
       
