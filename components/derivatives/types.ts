@@ -54,7 +54,7 @@ export interface MarketStripItem {
   symbol: string;
   price?: number;
   change24h?: number;
-  oiDelta: number;
-  fundingSkew: number;
+  oiDelta: number | null;
+  fundingSkew: number | null;
   volLabel: string;
 }
