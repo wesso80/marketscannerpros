@@ -676,18 +676,29 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
   );
 }
 
-export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: string } = {}) {
+function intervalFromOuterTimeframe(timeframe?: string): Interval {
+  if (timeframe === '15m') return '15min';
+  if (timeframe === '30m') return '30min';
+  if (timeframe === '1h') return '60min';
+  return '5min';
+}
+
+export default function IntradayChartsPage({
+  symbol: propSymbol,
+  timeframe: outerTimeframe,
+  assetType: propAssetType,
+}: { symbol?: string; timeframe?: string; assetType?: AssetType } = {}) {
   const embeddedInGoldenEgg = Boolean(propSymbol);
   const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [interval, setInterval] = useState<Interval>('5min');
+  const [interval, setInterval] = useState<Interval>(() => intervalFromOuterTimeframe(outerTimeframe));
   const [data, setData] = useState<IntradayData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoveredBar, setHoveredBar] = useState<IntradayBar | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [assetType, setAssetType] = useState<AssetType>('stocks');
+  const [assetType, setAssetType] = useState<AssetType>(propAssetType || 'stocks');
   const [isCrypto, setIsCrypto] = useState(false);
   const [indicators, setIndicators] = useState<IndicatorType[]>([]);
   const [dealerOverlay, setDealerOverlay] = useState<DealerOverlayData | null>(null);
@@ -700,6 +711,11 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
   // Journal trade overlay
   const [journalMarkers, setJournalMarkers] = useState<JournalMarker[]>([]);
   const [showJournalOverlay, setShowJournalOverlay] = useState(false);
+
+  useEffect(() => {
+    if (outerTimeframe) setInterval(intervalFromOuterTimeframe(outerTimeframe));
+    if (propAssetType) setAssetType(propAssetType);
+  }, [outerTimeframe, propAssetType]);
 
   const toggleIndicator = (ind: IndicatorType) => {
     setIndicators(prev => 

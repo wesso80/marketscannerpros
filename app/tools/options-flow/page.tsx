@@ -124,9 +124,13 @@ function skewLabel(signal: string): { label: string; color: string } {
 
 /* ── Page ── */
 
-export default function OptionsFlowPage({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
+export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: propSymbol }: { embeddedInTerminal?: boolean; symbol?: string } = {}) {
   const { tier } = useUserTier();
-  const [symbol, setSymbol] = useState('SPY');
+  const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || 'SPY');
+
+  React.useEffect(() => {
+    if (propSymbol) setSymbol(propSymbol.toUpperCase());
+  }, [propSymbol]);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FlowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);

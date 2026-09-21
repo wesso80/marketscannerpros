@@ -581,7 +581,7 @@ export function fetchRegime(): Promise<RegimeResponse> {
 }
 
 // --- Scanner ---
-export type ScanTimeframe = '15m' | '1h' | 'daily' | 'weekly';
+export type ScanTimeframe = '15m' | '30m' | '1h' | 'daily' | 'weekly';
 export const SCAN_TIMEFRAMES: { value: ScanTimeframe; label: string }[] = [
   { value: '15m', label: '15m' },
   { value: '1h', label: '1H' },

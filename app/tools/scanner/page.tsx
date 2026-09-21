@@ -1033,6 +1033,7 @@ export default function ScannerPage() {
 
   /* ─── Shared detail state ─── */
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [selectedAssetClass, setSelectedAssetClass] = useState<'equity' | 'crypto' | null>(null);
   const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -1189,6 +1190,7 @@ export default function ScannerPage() {
   /* ─── Fetch single symbol detail ─── */
   const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string, context?: { queueRank?: SymbolDetail['queueRank']; lifecycle?: string }) => {
     setSelectedSymbol(symbol);
+    setSelectedAssetClass(asset === 'crypto' ? 'crypto' : 'equity');
     setDetailLoading(true);
     setSymbolDetail(null);
     try {
@@ -1229,6 +1231,7 @@ export default function ScannerPage() {
     setProScanError(null);
     setProScanResults(null);
     setSelectedSymbol(null);
+    setSelectedAssetClass(null);
     setSymbolDetail(null);
     try {
       const payload: any = { type: proAsset, timeframe: proTimeframe };
@@ -1394,11 +1397,12 @@ export default function ScannerPage() {
   const detailTimeframeLabel = mode === 'ranked'
     ? (v2Timeframe === '15m' ? '15M' : v2Timeframe === '1h' ? '1H' : v2Timeframe === 'weekly' ? 'W' : 'D')
     : proTimeframe.toUpperCase();
-  const detailAssetType = mode === 'ranked' ? 'crypto' : proAsset;
+  const detailAssetType = selectedAssetClass ?? (mode === 'ranked' ? 'equity' : proAsset);
   const activeScannerStage: ScannerStage = selectedSymbol ? 'analysis' : mode;
   const selectScannerMode = useCallback((nextMode: ScannerMode) => {
     setMode(nextMode);
     setSelectedSymbol(null);
+    setSelectedAssetClass(null);
     setSymbolDetail(null);
   }, []);
   const canOpenAnalysis = Boolean(selectedSymbol) || (mode === 'ranked' ? rankedRows.length > 0 : proScreenerRows.length > 0);
@@ -1476,7 +1480,16 @@ export default function ScannerPage() {
       ? proScanResults ? 'Click a row to inspect a candidate' : 'Configure filters then run scan'
       : topRankedSymbol ? 'Top-ranked candidate' : 'Cached scanner data syncing';
   const nextCheckTone = (headerStage === 'analysis' || headerTopSymbol) ? 'var(--msp-warn)' : 'var(--msp-flat)';
-  const goldenEggHref = headerTopSymbol ? `/tools/golden-egg?symbol=${encodeURIComponent(headerTopSymbol)}` : '/tools/golden-egg';
+  const topRankedAsset = rankedRows[0] ? (((rankedRows[0] as any)._assetClass === 'crypto' ? 'crypto' : 'equity') as 'crypto' | 'equity') : null;
+  const handoffAsset = selectedAssetClass ?? (mode === 'ranked' ? topRankedAsset : proAsset === 'crypto' ? 'crypto' : 'equity');
+  const handoffTimeframe = mode === 'ranked'
+    ? v2Timeframe
+    : proTimeframe === '1d' ? 'daily' : proTimeframe === '30m' ? '30m' : proTimeframe;
+  const handoffQuery = headerTopSymbol && handoffAsset
+    ? `symbol=${encodeURIComponent(headerTopSymbol)}&type=${handoffAsset}&timeframe=${encodeURIComponent(handoffTimeframe)}`
+    : '';
+  const goldenEggHref = handoffQuery ? `/tools/golden-egg?${handoffQuery}` : '/tools/golden-egg';
+  const terminalHref = handoffQuery ? `/tools/terminal?${handoffQuery}` : '/tools/terminal';
   const showRegimeChip = Boolean(regime.data);
   const regimeColor = currentRegime === 'trend' || currentRegime === 'risk_on' || currentRegime === 'expansion'
     ? 'var(--msp-bull)'
@@ -1527,12 +1540,12 @@ export default function ScannerPage() {
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {headerStage === 'analysis' ? (
-                <button type="button" onClick={() => { setSelectedSymbol(null); setSymbolDetail(null); }} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Back to {mode === 'ranked' ? 'Ranked' : 'Pro'}</button>
+                <button type="button" onClick={() => { setSelectedSymbol(null); setSelectedAssetClass(null); setSymbolDetail(null); }} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Back to {mode === 'ranked' ? 'Ranked' : 'Pro'}</button>
               ) : (
                 <button type="button" onClick={() => selectScannerMode(mode === 'pro' ? 'pro' : 'ranked')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">{mode === 'pro' ? 'Configure Pro Scan' : 'Refresh Ranked Queue'}</button>
               )}
               <Link href={goldenEggHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">{headerTopSymbol ? `Validate ${headerTopSymbol}` : 'Open Golden Egg'}</Link>
-              <Link href="/tools/terminal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</Link>
+              <Link href={terminalHref} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</Link>
             </div>
           </div>
 
@@ -1984,7 +1997,7 @@ export default function ScannerPage() {
             <SymbolDetailPanel
               detail={symbolDetail}
               timeframeLabel={detailTimeframeLabel}
-              onClose={() => { setSelectedSymbol(null); setSymbolDetail(null); }}
+              onClose={() => { setSelectedSymbol(null); setSelectedAssetClass(null); setSymbolDetail(null); }}
               assetType={detailAssetType}
               activeRegime={currentRegime}
               returnLabel={mode === 'ranked' ? 'Back to Ranked' : 'Back to Pro Scanner'}

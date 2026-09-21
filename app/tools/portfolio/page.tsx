@@ -43,6 +43,19 @@ interface PerformanceSnapshot {
   timestamp: string;
   totalValue: number;
   totalPL: number;
+  basis?: 'account_equity_v2' | 'legacy_position_value';
+}
+
+function portfolioSnapshotSignature(positions: Position[], closedPositions: ClosedPosition[]): string {
+  const open = positions
+    .map((p) => [p.id, p.symbol, p.quantity, p.currentPrice, p.pl].join(':'))
+    .sort()
+    .join('|');
+  const closed = closedPositions
+    .map((p) => [p.id, p.symbol, p.realizedPL, p.closePrice].join(':'))
+    .sort()
+    .join('|');
+  return `${open}::${closed}`;
 }
 
 interface CashLedgerEntry {
@@ -518,7 +531,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [riskAnalytics, setRiskAnalytics] = useState<{
     dailySharpe: number; annualizedSharpe: number; var95: number;
-    maxDrawdown: number; avgDailyReturn: number; dailyVolatility: number;
+    maxDrawdown: number; currentDrawdown: number; avgDailyReturn: number; dailyVolatility: number;
+  } | null>(null);
+  const [riskAnalyticsMeta, setRiskAnalyticsMeta] = useState<{
+    basis: string; cleanSnapshots: number; requiredSnapshots: number;
+    status: 'READY' | 'INSUFFICIENT_CLEAN_HISTORY'; note: string;
   } | null>(null);
   const [startingCapitalInput, setStartingCapitalInput] = useState<string>('10000');
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
@@ -562,6 +579,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiAnalysis, setShowAiAnalysis] = useState(true);
   const [aiAutoRequested, setAiAutoRequested] = useState(false);
+  const [aiSnapshotKey, setAiSnapshotKey] = useState<string | null>(null);
+  const [aiGeneratedAt, setAiGeneratedAt] = useState<string | null>(null);
 
   // Price update helpers
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -629,6 +648,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       }
       
       setAiAnalysis(data.analysis);
+      setAiSnapshotKey(portfolioSnapshotSignature(positions, closedPositions));
+      setAiGeneratedAt(new Date().toISOString());
     } catch (err: any) {
       setAiError(err.message || 'Analysis failed');
     } finally {
@@ -639,10 +660,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   useEffect(() => {
     if (!canAccessPortfolioInsights(tier)) return;
     if (positions.length === 0 && closedPositions.length === 0) return;
+    if (refreshingAll) return;
     if (aiAnalysis || aiLoading || aiAutoRequested) return;
     setAiAutoRequested(true);
     void runAiAnalysis();
-  }, [tier, positions.length, closedPositions.length, aiAnalysis, aiLoading, aiAutoRequested]);
+  }, [tier, positions.length, closedPositions.length, aiAnalysis, aiLoading, aiAutoRequested, refreshingAll]);
 
   // Normalize ticker symbols to clean format
   function normalizeSymbol(raw: string): string {
@@ -868,7 +890,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             setPositions(loadedPositions);
             setClosedPositions(data.closedPositions || []);
             setPerformanceHistory(data.performanceHistory || []);
-            if (data.riskAnalytics) setRiskAnalytics(data.riskAnalytics);
+            setRiskAnalytics(data.riskAnalytics || null);
+            setRiskAnalyticsMeta(data.riskAnalyticsMeta || null);
             if (data.cashState) {
               setStartingCapitalInput(String(Number(data.cashState.startingCapital || 10000)));
               setCashLedger(Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : []);
@@ -975,29 +998,40 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   useEffect(() => {
     if (!dataLoaded) return;
     if (positions.length > 0 || closedPositions.length > 0) {
-      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+      const positionMarketValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
       const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
       const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
       const totalPL = unrealizedPL + realizedPL;
+      const startingCapitalForSnapshot = Number(startingCapitalInput || 0);
+      const netDepositsForSnapshot = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
+      const investedNotionalForSnapshot = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
+      const cashForSnapshot = startingCapitalForSnapshot + netDepositsForSnapshot + realizedPL - investedNotionalForSnapshot;
+      const totalValue = cashForSnapshot + positionMarketValue;
 
-      // Add snapshot once per day max
+      // Add one full account-equity snapshot per day. Legacy position-value
+      // snapshots are replaced for today but retained on prior dates.
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       const lastSnapshot = performanceHistory[performanceHistory.length - 1];
       const lastDate = lastSnapshot ? new Date(lastSnapshot.timestamp).toISOString().split('T')[0] : null;
 
+      const newSnapshot: PerformanceSnapshot = {
+        timestamp: now.toISOString(),
+        totalValue,
+        totalPL,
+        basis: 'account_equity_v2',
+      };
       if (lastDate !== today) {
-        const newSnapshot: PerformanceSnapshot = {
-          timestamp: now.toISOString(),
-          totalValue,
-          totalPL
-        };
         const updated = [...performanceHistory, newSnapshot];
+        setPerformanceHistory(updated);
+        localStorage.setItem('portfolio_performance', JSON.stringify(updated));
+      } else if (lastSnapshot?.basis !== 'account_equity_v2') {
+        const updated = [...performanceHistory.slice(0, -1), newSnapshot];
         setPerformanceHistory(updated);
         localStorage.setItem('portfolio_performance', JSON.stringify(updated));
       }
     }
-  }, [positions, closedPositions, dataLoaded]);
+  }, [positions, closedPositions, cashLedger, startingCapitalInput, dataLoaded]);
 
   const addPosition = () => {
     // Check portfolio limit for free tier
@@ -1499,7 +1533,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const grossExposureValue = longExposureValue + shortExposureValue;
-  const capitalBase = Math.max(accountEquity, totalCost, totalValue, 1000);
+  const capitalBase = accountEquity > 0 ? accountEquity : Math.max(totalValue, 1000);
   const deploymentPct = capitalBase > 0 ? (grossExposureValue / capitalBase) * 100 : 0;
   const availableCash = accountCash;
   const largestPositionPct = totalValue > 0
@@ -1534,7 +1568,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     ),
   );
 
-  const currentDrawdownPct = Math.max(0, -totalReturn);
+  const currentDrawdownPct = riskAnalytics?.currentDrawdown ?? 0;
   const isRiskEvent = currentDrawdownPct > riskSettings.maxDrawdownThreshold || correlationRiskPct > riskSettings.maxCorrelatedExposure || deploymentPct > 90;
   const isRiskElevated = !isRiskEvent && (currentDrawdownPct > (riskSettings.maxDrawdownThreshold * 0.6) || correlationRiskPct > (riskSettings.maxCorrelatedExposure * 0.75) || deploymentPct > 75);
   const riskStateLabel = isRiskEvent ? 'RISK EVENT' : isRiskElevated ? 'ELEVATED' : 'STABLE';
@@ -1569,34 +1603,24 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     return acc;
   }, [] as Array<{ timestamp: string; equity: number }>);
 
-  const maxDrawdownFromSnapshots = (() => {
-    if (performanceHistory.length === 0) return currentDrawdownPct;
-    let peak = -Infinity;
-    let maxDrawdown = 0;
-    performanceHistory.forEach((point) => {
-      peak = Math.max(peak, point.totalValue);
-      if (peak > 0) {
-        const dd = ((peak - point.totalValue) / peak) * 100;
-        maxDrawdown = Math.max(maxDrawdown, dd);
-      }
-    });
-    return maxDrawdown;
-  })();
+  const cleanPerformanceHistory = performanceHistory.filter((point) => point.basis === 'account_equity_v2' && point.totalValue > 0);
+  const cleanRiskReady = cleanPerformanceHistory.length >= 5 && Boolean(riskAnalytics);
+  const maxDrawdownFromSnapshots = riskAnalytics?.maxDrawdown ?? 0;
 
   const cagrApprox = (() => {
-    if (performanceHistory.length < 2) return 0;
-    const first = performanceHistory[0];
-    const last = performanceHistory[performanceHistory.length - 1];
+    if (cleanPerformanceHistory.length < 2) return null;
+    const first = cleanPerformanceHistory[0];
+    const last = cleanPerformanceHistory[cleanPerformanceHistory.length - 1];
     const days = Math.max(1, (new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 86_400_000);
     const years = days / 365;
-    if (years <= 0 || first.totalValue <= 0 || last.totalValue <= 0) return 0;
+    if (years <= 0 || first.totalValue <= 0 || last.totalValue <= 0) return null;
     return (Math.pow(last.totalValue / first.totalValue, 1 / years) - 1) * 100;
   })();
 
-  const returnsSeries = performanceHistory
+  const returnsSeries = cleanPerformanceHistory
     .slice(1)
     .map((point, index) => {
-      const prev = performanceHistory[index];
+      const prev = cleanPerformanceHistory[index];
       if (!prev || prev.totalValue === 0) return 0;
       return ((point.totalValue - prev.totalValue) / prev.totalValue) * 100;
     });
@@ -1604,7 +1628,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const returnStd = returnsSeries.length > 1
     ? Math.sqrt(returnsSeries.reduce((sum, value) => sum + Math.pow(value - avgReturn, 2), 0) / returnsSeries.length)
     : 0;
-  const sharpeApprox = returnStd > 0 ? (avgReturn / returnStd) * Math.sqrt(252) : 0;
+  const sharpeApprox = cleanRiskReady ? riskAnalytics!.annualizedSharpe : null;
+  const aiSummaryStale = Boolean(aiSnapshotKey && aiSnapshotKey !== portfolioSnapshotSignature(positions, closedPositions));
 
   const riskContributors = [...positions]
     .map((position) => {
@@ -1872,7 +1897,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             { label: 'Closed', value: `${closedPositions.length}`, tone: 'neutral' },
             { label: 'Unrealized', value: formatRiskPairText(unrealizedPL), tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
             { label: 'Realized', value: formatRiskPairText(realizedPL), tone: realizedPL >= 0 ? 'bull' : 'bear' },
-            { label: 'Drawdown', value: `${Math.max(0, -totalReturn).toFixed(1)}%`, tone: totalReturn < -20 ? 'bear' : 'warn' },
+            { label: 'Drawdown', value: cleanRiskReady ? `${currentDrawdownPct.toFixed(1)}%` : 'N/A', tone: cleanRiskReady && currentDrawdownPct > 10 ? 'bear' : 'warn' },
             { label: 'Limit', value: `${positions.length}/${getPortfolioLimit(tier)}`, tone: positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
           ]}
         />
@@ -1926,7 +1951,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Value</div>
               <div className="text-2xl font-black text-slate-100">{formatMoney(totalValue)}</div>
               <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {totalPL >= 0 ? '+' : '-'}{formatMoney(totalPL)}</div>
-              <div className="text-xs text-slate-400">Drawdown {currentDrawdownPct.toFixed(2)}%</div>
+              <div className="text-xs text-slate-400">Current drawdown {cleanRiskReady ? `${currentDrawdownPct.toFixed(2)}%` : 'N/A — clean equity history building'}</div>
             </div>
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-center">
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Risk State</div>
@@ -1935,7 +1960,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               <div className="text-xs text-slate-300">{portfolioRiskProfile}</div>
             </div>
             <div className="text-right">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Capital Exposure</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Gross Exposure / Equity</div>
               <div className="text-2xl font-black text-slate-100">{deploymentPct.toFixed(1)}%</div>
               <div className={`text-sm ${availableCash >= 0 ? 'text-slate-300' : 'text-red-300'}`}>Available Cash {formatSignedMoney(availableCash)}</div>
               <div className="text-xs text-slate-400">Account Equity {formatMoney(accountEquity)}</div>
@@ -2036,8 +2061,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     </button>
                   </div>
                   {(() => {
-                    // Build full equity curve anchored to cost basis
-                    const costBasis = positions.reduce((s, p) => s + p.entryPrice * p.quantity, 0);
+                    // Build equity curve from account-equity-v2 snapshots only.
+                    const costBasis = 0;
                     const earliestEntry = positions.length
                       ? positions.reduce((earliest, p) => {
                           const d = new Date(p.entryDate).getTime();
@@ -2045,12 +2070,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         }, Infinity)
                       : Date.now();
                     // Prepend cost basis as the starting point
-                    const entryPoint: PerformanceSnapshot = { timestamp: new Date(earliestEntry).toISOString(), totalValue: costBasis, totalPL: 0 };
-                    const rawPts = performanceHistory.length ? performanceHistory.slice(-30) : [];
+                    const entryPoint: PerformanceSnapshot = { timestamp: new Date(earliestEntry).toISOString(), totalValue: accountEquity, totalPL, basis: 'account_equity_v2' };
+                    const rawPts = cleanPerformanceHistory.length ? cleanPerformanceHistory.slice(-30) : [];
                     // Only prepend if cost basis point is before or at the first snapshot
                     const pts = costBasis > 0 && (rawPts.length === 0 || new Date(entryPoint.timestamp) <= new Date(rawPts[0].timestamp))
                       ? [entryPoint, ...rawPts]
-                      : rawPts.length > 0 ? rawPts : [{ totalValue, timestamp: new Date().toISOString(), totalPL: 0 } as PerformanceSnapshot];
+                      : rawPts.length > 0 ? rawPts : [{ totalValue: accountEquity, timestamp: new Date().toISOString(), totalPL, basis: 'account_equity_v2' } as PerformanceSnapshot];
                     const values = pts.map((p: any) => p.totalValue || totalValue);
                     // Make sure y-range includes cost basis
                     const dataMin = Math.min(...values);
@@ -2170,10 +2195,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
               <div className="grid gap-2 md:grid-cols-5">
                 {[
-                  { label: 'CAGR', value: `${cagrApprox.toFixed(2)}%` },
-                  { label: 'Sharpe', value: `${sharpeApprox.toFixed(2)}` },
+                  { label: 'CAGR', value: cagrApprox == null ? 'N/A' : `${cagrApprox.toFixed(2)}%` },
+                  { label: 'Sharpe', value: sharpeApprox == null ? 'N/A' : `${sharpeApprox.toFixed(2)}` },
                   { label: 'Profit Factor', value: `${profitFactor.toFixed(2)}` },
-                  { label: 'Max DD', value: `${maxDrawdownFromSnapshots.toFixed(2)}%` },
+                  { label: 'Max DD', value: cleanRiskReady ? `${maxDrawdownFromSnapshots.toFixed(2)}%` : 'N/A' },
                   { label: 'Win Rate', value: `${winRatePct.toFixed(1)}%` },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
@@ -2183,7 +2208,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 ))}
               </div>
 
-              {riskAnalytics && (
+              {riskAnalytics ? (
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
                   <div className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Analytics</div>
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -2193,31 +2218,44 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">VaR (95%)</div>
-                      <div className="text-sm font-bold text-red-400">{(riskAnalytics.var95 * 100).toFixed(2)}%</div>
+                      <div className="text-sm font-bold text-red-400">{riskAnalytics.var95.toFixed(2)}%</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Max Drawdown</div>
-                      <div className="text-sm font-bold text-red-400">{(riskAnalytics.maxDrawdown * 100).toFixed(2)}%</div>
+                      <div className="text-sm font-bold text-red-400">{riskAnalytics.maxDrawdown.toFixed(2)}%</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Daily Vol</div>
-                      <div className="text-sm font-bold text-slate-100">{(riskAnalytics.dailyVolatility * 100).toFixed(2)}%</div>
+                      <div className="text-sm font-bold text-slate-100">{riskAnalytics.dailyVolatility.toFixed(2)}%</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Ann. Vol</div>
-                      <div className="text-sm font-bold text-slate-100">{(riskAnalytics.dailyVolatility * Math.sqrt(252) * 100).toFixed(2)}%</div>
+                      <div className="text-sm font-bold text-slate-100">{(riskAnalytics.dailyVolatility * Math.sqrt(252)).toFixed(2)}%</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Avg Daily</div>
-                      <div className={`text-sm font-bold ${riskAnalytics.avgDailyReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{(riskAnalytics.avgDailyReturn * 100).toFixed(3)}%</div>
+                      <div className={`text-sm font-bold ${riskAnalytics.avgDailyReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{riskAnalytics.avgDailyReturn.toFixed(3)}%</div>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-amber-200">
+                  <div className="font-semibold">Risk analytics unavailable — clean equity history is still building.</div>
+                  <div className="mt-1 text-amber-100/70">{riskAnalyticsMeta?.note || 'At least 5 account-equity snapshots are required. Legacy position-value snapshots are excluded.'}</div>
+                  <div className="mt-1 text-amber-100/60">Clean snapshots: {riskAnalyticsMeta?.cleanSnapshots ?? cleanPerformanceHistory.length}/{riskAnalyticsMeta?.requiredSnapshots ?? 5}</div>
                 </div>
               )}
 
               <details className="rounded-lg border border-slate-700 bg-slate-900/40 p-3" open={showAiAnalysis}>
                 <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">AI Portfolio Summary (Descriptive Only)</summary>
-                <div className="mt-1 mb-2 text-[10px] text-slate-500">This summary is a factual restatement of recorded simulation data only.</div>
+                <div className="mt-1 mb-2 text-[10px] text-slate-500">
+                  This summary is a factual restatement of one recorded snapshot only.
+                  {aiGeneratedAt ? ` Generated ${new Date(aiGeneratedAt).toLocaleString()}.` : ''}
+                  {aiSummaryStale ? ' STALE: portfolio prices or positions have changed since this summary was generated.' : ''}
+                </div>
+                <button type="button" onClick={() => void runAiAnalysis()} disabled={aiLoading || refreshingAll} className="mb-2 rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-300 disabled:opacity-40">
+                  {aiLoading ? 'Refreshing summary…' : 'Refresh summary from current snapshot'}
+                </button>
                 <div className="mt-2 text-sm text-slate-300">
                   {aiLoading ? 'Generating descriptive summary...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate a descriptive data summary.'}
                 </div>

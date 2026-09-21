@@ -665,7 +665,11 @@ function getNewsImpact(title: string, summary: string): { tag: string; color: st
   return { tag: 'News', color: 'var(--msp-text-muted)' };
 }
 
-export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: string } = {}) {
+export default function DeepAnalysisPage({
+  symbol: propSymbol,
+  timeframe: propTimeframe = 'daily',
+  assetType: propAssetType,
+}: { symbol?: string; timeframe?: string; assetType?: 'equity' | 'crypto' } = {}) {
   const { tier } = useUserTier();
   const pathname = usePathname();
   const embeddedInGoldenEgg = pathname?.startsWith('/tools/golden-egg') ?? false;
@@ -716,13 +720,13 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
       setLoading(true);
       setError('');
       setResult(null);
-      fetch(`/api/deep-analysis?symbol=${encodeURIComponent(target)}`)
+      fetch(`/api/deep-analysis?symbol=${encodeURIComponent(target)}&timeframe=${encodeURIComponent(propTimeframe)}${propAssetType ? `&type=${encodeURIComponent(propAssetType)}` : ''}`)
         .then(r => r.json())
         .then(d => { if (d.success) setResult(d); else setError(d.error || 'Analysis failed'); })
         .catch(() => setError('Network error'))
         .finally(() => setLoading(false));
     }
-  }, [propSymbol, v2Symbol]);
+  }, [propSymbol, v2Symbol, propTimeframe, propAssetType]);
 
   useEffect(() => {
     if (!result) return;
@@ -790,7 +794,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
     setResult(null);
 
     try {
-      const response = await fetch(`/api/deep-analysis?symbol=${encodeURIComponent(symbol.trim())}`);
+      const response = await fetch(`/api/deep-analysis?symbol=${encodeURIComponent(symbol.trim())}&timeframe=${encodeURIComponent(propTimeframe)}${propAssetType ? `&type=${encodeURIComponent(propAssetType)}` : ''}`);
       const data = await response.json();
 
       if (!data.success) {
