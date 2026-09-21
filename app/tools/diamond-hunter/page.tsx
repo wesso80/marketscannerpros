@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import DiamondV2Status, { type DiamondHistoryView } from '@/components/diamond/DiamondV2Status';
 
 type Stage = 'REJECT' | 'WATCH' | 'EMERGING' | 'DIAMOND' | 'RARE_DIAMOND';
 
@@ -22,6 +23,7 @@ interface Candidate {
   attention: 'EARLY' | 'POOL_TRENDING' | 'COINGECKO_TRENDING' | 'QUIET';
   scoreDelta: number;
   firstDetectedAt: string | null;
+  history: DiamondHistoryView;
   createdAt: string | null;
   reasons: string[];
   riskFlags: string[];
@@ -55,9 +57,12 @@ interface DiamondResponse {
     candidatesShown: number;
     watchOrBetter: number;
     diamondOrBetter: number;
+    provisionalDiamonds: number;
+    confirmedDiamonds: number;
     deepChecked: number;
     pagesScanned: number;
     refreshSeconds: number;
+    historyPersisted: boolean;
   };
   timestamp: string;
   freshnessStatus: string;
@@ -145,11 +150,11 @@ export default function DiamondHunterPage() {
         <section className="mb-5 rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-slate-950 via-slate-950 to-cyan-950/20 p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.24em] text-cyan-300">CoinGecko Onchain Discovery</div>
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.24em] text-cyan-300">CoinGecko Onchain Discovery · V2</div>
               <h1 className="text-2xl font-bold text-white md:text-3xl">Diamond Hunter</h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-400">
-                Ranks brand-new DEX pools by acceleration, buyer quality, liquidity, price structure, valuation and early attention.
-                The strongest candidates are automatically deep-checked for holder concentration and token security.
+                Finds brand-new DEX pools early, then validates them over repeated scans. An 80+ score begins as a Provisional Diamond;
+                confirmation requires repeated evidence, deep security checks, known honeypot status and stable liquidity.
               </p>
             </div>
             <button
@@ -161,11 +166,12 @@ export default function DiamondHunterPage() {
             </button>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-5">
+          <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
             {[
               ['Pools scanned', data?.stats.poolsScanned ?? 0],
               ['Watch+', data?.stats.watchOrBetter ?? 0],
-              ['Diamond+', data?.stats.diamondOrBetter ?? 0],
+              ['Provisional', data?.stats.provisionalDiamonds ?? 0],
+              ['Confirmed', data?.stats.confirmedDiamonds ?? 0],
               ['Deep checked', data?.stats.deepChecked ?? 0],
               ['Refresh', data ? `${data.stats.refreshSeconds}s` : '—'],
             ].map(([label, value]) => (
@@ -199,6 +205,11 @@ export default function DiamondHunterPage() {
         </section>
 
         {error && <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{error}</div>}
+        {data && !data.stats.historyPersisted && (
+          <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+            Live scoring is available, but history storage is degraded. Confirmed Diamond status is suppressed until persistence recovers.
+          </div>
+        )}
 
         <div className="space-y-3">
           {filtered.map((candidate) => (
@@ -209,7 +220,7 @@ export default function DiamondHunterPage() {
                     <h2 className="truncate text-lg font-bold text-white">{candidate.symbol}</h2>
                     <span className="text-sm text-slate-400">{candidate.name}</span>
                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${scoreClass(candidate.score)}`}>
-                      {STAGE_LABEL[candidate.stage]} · {candidate.score}
+                      Raw {STAGE_LABEL[candidate.stage]} · {candidate.score}
                     </span>
                     {candidate.attention === 'EARLY' && (
                       <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-200">EARLY ATTENTION</span>
@@ -256,6 +267,8 @@ export default function DiamondHunterPage() {
                 </div>
               )}
 
+              <DiamondV2Status history={candidate.history} score={candidate.score} attention={candidate.attention} />
+
               <div className="mt-3 grid gap-3 lg:grid-cols-2">
                 <div>
                   <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-400">Why it surfaced</div>
@@ -285,7 +298,7 @@ export default function DiamondHunterPage() {
         </div>
 
         <p className="mt-5 text-[10px] leading-relaxed text-slate-600">
-          Educational research only. New DEX pools can be manipulated, illiquid or malicious. CoinGecko holder-distribution data is beta where available. Diamond Hunter is a discovery/risk-ranking engine, not a recommendation or execution signal.
+          Educational research only. New DEX pools can be manipulated, illiquid or malicious. CoinGecko holder-distribution data is beta where available. Diamond Hunter records forward outcomes to validate its own ranking model; neither a score nor Confirmed Diamond status is a recommendation or execution signal.
         </p>
       </div>
     </main>

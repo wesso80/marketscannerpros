@@ -21,6 +21,7 @@ export const primaryNavTools = [
   { href: '/tools/command-center', label: 'Command Center' },
   { href: '/tools/scanner', label: 'Scanner' },
   { href: '/tools/golden-egg', label: 'Golden Egg' },
+  { href: '/tools/diamond-hunter', label: 'Diamonds' },
   { href: '/tools/explorer', label: 'Markets' },
   { href: '/tools/research', label: 'Research' },
   { href: '/tools/workspace', label: 'Workspace' },
@@ -35,6 +36,7 @@ export const toolWorkflows: ToolWorkflow[] = [
     tools: [
       { href: '/tools/msp-radar', label: 'MSP Radar', description: 'Daily Market Intelligence: regime, ranked research candidates, pre-move setups, and rotation — published once per US session.', tier: 'pro', role: 'primary' },
       { href: '/tools/scanner', label: 'Market Scanner', description: 'Ranked multi-factor scan for educational research scenarios.', tier: 'free', role: 'primary' },
+      { href: '/tools/diamond-hunter', label: 'Diamond Hunter', description: 'Early on-chain discovery with persistent validation and forward outcome tracking.', tier: 'free', role: 'primary' },
       { href: '/tools/explorer', label: 'Markets', description: 'Macro, sector, breadth, and market-state context.', tier: 'free', role: 'primary' },
       { href: '/tools/explorer?tab=macro', label: 'Macro', description: 'Rates, economic calendar, and broad-risk backdrop.', tier: 'pro', role: 'advanced' },
       { href: '/tools/crypto-intel', label: 'Crypto Intel', description: 'Crypto market context, narratives, and flows.', tier: 'pro', role: 'specialist' },
