@@ -205,6 +205,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<string>('');
   const [commodities, setCommodities] = useState<any[] | null>(null);
+  const [commodityHealth, setCommodityHealth] = useState<{ gateReady: boolean; eligibleCount: number; totalCount: number; staleSymbols: string[]; sourceAsOf?: string | null } | null>(null);
   const [correlationRegime, setCorrelationRegime] = useState<any | null>(null);
   const [spyPCRatio, setSpyPCRatio] = useState<{ ratio: number; signal: string; totalCalls: number; totalPuts: number } | null>(null);
   const [commoditiesError, setCommoditiesError] = useState<string | null>(null);
@@ -244,6 +245,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
         if (!res.ok) { setCommoditiesError(`Commodities feed unavailable (${res.status})`); return; }
         const json = await res.json();
         setCommodities(json.commodities || json.data || []);
+        if (json.dataHealth) {
+          setCommodityHealth({ ...json.dataHealth, sourceAsOf: json.sourceAsOf ?? null });
+        }
       } catch (e: unknown) {
         setCommoditiesError(String(e));
       }
@@ -595,19 +599,32 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <section id="commodities" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Commodities Monitor</div>
               <div className="mt-1 text-xs text-white/50">Oil, metals, agriculture — growth proxy and inflation signals</div>
-              <div className="mt-0.5 text-[11px] text-white/30">Market data · delayed snapshot · educational context only</div>
+              <div className="mt-0.5 text-[11px] text-white/30">Market data · source dates shown per row · educational context only</div>
+              {commodityHealth && (
+                <div className={`mt-2 rounded-md border px-2.5 py-2 text-[11px] ${commodityHealth.staleSymbols.length ? 'border-amber-500/25 bg-amber-500/5 text-amber-200' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-200'}`}>
+                  Eligible {commodityHealth.eligibleCount}/{commodityHealth.totalCount}.
+                  {commodityHealth.staleSymbols.length ? ` Stale and excluded from live commodity context: ${commodityHealth.staleSymbols.join(', ')}.` : ' No stale rows excluded.'}
+                  {commodityHealth.sourceAsOf ? ` Latest eligible source date: ${commodityHealth.sourceAsOf}.` : ''}
+                </div>
+              )}
               {commodities && commodities.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
                   {commodities.map((c: any) => (
-                    <div key={c.symbol || c.name} className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">{c.name || c.symbol}</div>
+                    <div key={c.symbol || c.name} className={`rounded-lg border p-2 ${c.eligibleForGate === false ? 'border-rose-500/25 bg-rose-500/5' : 'border-white/10 bg-black/20'}`}>
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-white/50">
+                        <span>{c.name || c.symbol}</span>
+                        <span className={c.freshnessStatus === 'STALE' ? 'text-rose-300' : c.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>{c.freshnessStatus || 'UNKNOWN'}</span>
+                      </div>
                       <div className="mt-1 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">${typeof c.price === 'number' ? c.price.toFixed(2) : 'N/A'}</span>
+                        <span className="text-sm font-semibold text-white">{typeof c.price === 'number' ? `${c.price.toFixed(2)}` : 'N/A'}</span>
                         <span className={`text-xs font-semibold ${(c.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {(c.changePercent ?? 0) >= 0 ? '+' : ''}{typeof c.changePercent === 'number' ? c.changePercent.toFixed(1) : '0.0'}%
                         </span>
                       </div>
-                      <div className="text-[11px] text-white/40">{c.category}</div>
+                      <div className="text-[11px] text-white/40">{c.category} · {c.unit || 'unit unavailable'}</div>
+                      <div className="mt-1 text-[10px] text-white/35">
+                        Source date {c.date || 'unknown'}{Number.isFinite(c.dataAgeDays) ? ` · age ${c.dataAgeDays}d` : ''}{c.sourceSymbol ? ` · proxy ${c.sourceSymbol}` : ''}
+                      </div>
                     </div>
                   ))}
                 </div>
