@@ -604,14 +604,22 @@ type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 type OperatorViewMode = 'guided' | 'advanced';
 type TrapDoorKey = 'evidence' | 'contracts' | 'narrative' | 'logs';
 
-export default function OptionsConfluenceScanner({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
+function scanModeFromOuterTimeframe(timeframe?: string): ScanModeType {
+  if (timeframe === '15m') return 'intraday_30m';
+  if (timeframe === '30m') return 'intraday_30m';
+  if (timeframe === '1h') return 'intraday_1h';
+  if (timeframe === 'weekly') return 'swing_1w';
+  return 'swing_1d';
+}
+
+export default function OptionsConfluenceScanner({ embeddedInTerminal = false, symbol: propSymbol, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; timeframe?: string } = {}) {
   const { tier, isLoading: isTierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
-  const [symbol, setSymbol] = useState("");
+  const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<OptionsSetup | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTF, setSelectedTF] = useState<ScanModeType>('intraday_1h');
+  const [selectedTF, setSelectedTF] = useState<ScanModeType>(() => scanModeFromOuterTimeframe(timeframe));
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isCached, setIsCached] = useState(false);
   
@@ -644,6 +652,11 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
   });
   const scannerSurfaceRef = useRef<HTMLDivElement | null>(null);
   const lastWorkflowEventKeyRef = useRef('');
+
+  useEffect(() => {
+    if (propSymbol) setSymbol(propSymbol.toUpperCase());
+    if (timeframe) setSelectedTF(scanModeFromOuterTimeframe(timeframe));
+  }, [propSymbol, timeframe]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
