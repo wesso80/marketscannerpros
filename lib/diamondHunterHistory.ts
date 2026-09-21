@@ -1,4 +1,4 @@
-import { pool, tx } from '@/lib/db';
+import { pool, q, tx } from '@/lib/db';
 import { evaluateDiamondConfirmation, type DiamondConfirmationResult } from '@/lib/diamondHunterValidation';
 import type { DiamondAttention, DiamondConfidence, DiamondStage } from '@/lib/diamondHunter';
 
@@ -366,7 +366,7 @@ export async function getDueDiamondOutcomes(limit = 6): Promise<DueDiamondOutcom
   if (!process.env.DATABASE_URL) return [];
   await ensureDiamondHunterSchema();
 
-  const result = await pool.query<{
+  const rows = await q<{
     pool_id: string;
     network: string;
     pool_address: string;
@@ -397,7 +397,7 @@ export async function getDueDiamondOutcomes(limit = 6): Promise<DueDiamondOutcom
     [limit],
   );
 
-  return result.rows.map((row) => ({
+  return rows.map((row) => ({
     poolId: row.pool_id,
     network: row.network,
     poolAddress: row.pool_address,
@@ -412,15 +412,15 @@ export async function getDueDiamondOutcomes(limit = 6): Promise<DueDiamondOutcom
 
 export async function getDiamondPriceExtremes(poolId: string, since: Date): Promise<{ max: number; min: number }> {
   if (!process.env.DATABASE_URL) return { max: 0, min: 0 };
-  const result = await pool.query<{ max_price: string | null; min_price: string | null }>(
+  const rows = await q<{ max_price: string | null; min_price: string | null }>(
     `SELECT MAX(price_usd) AS max_price, MIN(price_usd) AS min_price
      FROM diamond_hunter_snapshots
      WHERE pool_id = $1 AND scanned_at >= $2 AND price_usd > 0`,
     [poolId, since],
   );
   return {
-    max: num(result.rows[0]?.max_price),
-    min: num(result.rows[0]?.min_price),
+    max: num(rows[0]?.max_price),
+    min: num(rows[0]?.min_price),
   };
 }
 
