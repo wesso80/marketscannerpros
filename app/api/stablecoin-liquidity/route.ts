@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasValidInternalServiceSecret } from '@/lib/internalServiceAuth';
 import { getCached, setCached } from '@/lib/redis';
 import { getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { q } from '@/lib/db';
@@ -13,9 +14,12 @@ import { q } from '@/lib/db';
  * ?history=true&days=30 — include historical data
  */
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const internalAuthorized = hasValidInternalServiceSecret(req);
+  if (!internalAuthorized) {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const includeHistory = req.nextUrl.searchParams.get('history') === 'true';
