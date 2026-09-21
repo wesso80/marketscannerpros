@@ -106,15 +106,37 @@ export async function GET(req: NextRequest) {
       schemaNote = 'Accuracy statistics table is on an older schema; historical stats are unavailable until it is upgraded.';
     }
     
-    // Get recent signals with their outcomes
-    const recentSignals = await getRecentSignals(25);
-    
-    // Get overall summary, normalised to the shape the page renders ({ total, labeled, correct, wrong, win_rate }).
+    // Normalise recent signal rows to the shape rendered by the page.
+    // signalRecorder stores one signal with multiple horizon outcomes; display the
+    // latest resolved horizon so each row has one coherent outcome/date.
+    const rawRecentSignals: any[] = await getRecentSignals(25);
+    const recentSignals = rawRecentSignals.map((signal: any) => {
+      const outcomes = Array.isArray(signal.outcomes) ? signal.outcomes : [];
+      const latestOutcome = outcomes.length ? outcomes[outcomes.length - 1] : null;
+      return {
+        symbol: signal.symbol,
+        direction: signal.direction,
+        scanner_type: signal.signal_type,
+        score: Number(signal.score) || 0,
+        outcome: latestOutcome?.outcome || 'pending',
+        created_at: signal.signal_at,
+        pct_move: latestOutcome?.pct_move == null ? null : Number(latestOutcome.pct_move),
+      };
+    });
+
+    // Overall statistics are signal-level: one latest resolved outcome per signal.
     const raw: any = await getOverallStats();
     const num = (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0);
-    const labeled = num(raw.correct_outcomes) + num(raw.wrong_outcomes);
+    const decisive = num(raw.correct_outcomes) + num(raw.wrong_outcomes);
     const overall = raw && Object.keys(raw).length
-      ? { total: num(raw.total_signals), labeled: num(raw.signals_with_outcomes), correct: num(raw.correct_outcomes), wrong: num(raw.wrong_outcomes), win_rate: labeled > 0 ? (num(raw.correct_outcomes) / labeled) * 100 : null }
+      ? {
+          total: num(raw.total_signals),
+          labeled: num(raw.signals_with_outcomes),
+          correct: num(raw.correct_outcomes),
+          wrong: num(raw.wrong_outcomes),
+          neutral: num(raw.neutral_outcomes),
+          win_rate: decisive > 0 ? (num(raw.correct_outcomes) / decisive) * 100 : null,
+        }
       : null;
     
     // Get threshold configuration
@@ -133,7 +155,7 @@ export async function GET(req: NextRequest) {
         const winPct = parseFloat(s.win_rate) / 100;
         const avgWin = parseFloat(s.avg_win);
         const avgLoss = parseFloat(s.avg_loss); // Already negative for losses
-        expectancy = (winPct * avgWin + (1 - winPct) * Math.abs(avgLoss)).toFixed(2);
+        expectancy = (winPct * avgWin - (1 - winPct) * Math.abs(avgLoss)).toFixed(2);
       }
       return {
         ...s,
