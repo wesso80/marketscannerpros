@@ -19,7 +19,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
       <div className="rounded-xl border border-white/10 bg-white/5">
         <div className="px-3 py-3 md:px-4">
           <div className="text-sm font-semibold text-white">Positioning</div>
-          <div className="text-xs text-white/50">Funding + Long/Short + Open Interest</div>
+          <div className="text-xs text-white/50">Funding + funding-implied positioning + Open Interest</div>
         </div>
         <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
           <div className="rounded-xl border border-white/10 bg-black/10 p-3">
@@ -35,13 +35,14 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
           </div>
 
           <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <div className="text-xs font-semibold text-white/80 mb-2">Long / Short Ratio</div>
+            <div className="text-xs font-semibold text-white/80 mb-2">Funding-Implied Positioning Proxy</div>
+            <div className="mb-2 text-[10px] text-white/40">Derived from funding; not exchange-reported account positioning.</div>
             <div className="grid gap-2">
               {(data.longShort?.coins || []).slice(0, 6).map((ls) => (
                 <div key={ls.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-white">{ls.symbol}</span>
-                    <span className="text-white/60">{Number.isFinite(ls.longAccount) && Number.isFinite(ls.shortAccount) ? ls.longAccount.toFixed(1) + ' / ' + ls.shortAccount.toFixed(1) : 'Unavailable'}</span>
+                    <span className="text-white/60">{Number.isFinite(ls.longAccount) && Number.isFinite(ls.shortAccount) ? ls.longAccount.toFixed(1) + '% implied long / ' + ls.shortAccount.toFixed(1) + '% implied short' : 'Unavailable'}</span>
                   </div>
                   <div className="mt-2 h-2 w-full rounded bg-black/30 overflow-hidden">
                     <div className="h-2 rounded bg-emerald-500/60" style={{ width: `${ls.longAccount}%` }} />
