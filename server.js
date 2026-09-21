@@ -8,5 +8,9 @@ if (!/^\d+$/.test(port)) {
   process.exit(1);
 }
 
+// Complete the additive disclosure schema migration before serving requests.
+// A failure stops this release before it can report acceptance as saved.
+execFileSync(process.execPath, [require.resolve('./scripts/run_migration_058.js')], { stdio: 'inherit' });
+
 console.log(`Starting Next.js on port ${port}...`);
 execFileSync('npx', ['next', 'start', '-p', port, '-H', '0.0.0.0'], { stdio: 'inherit' });

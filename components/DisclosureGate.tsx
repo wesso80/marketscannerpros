@@ -1,54 +1,55 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-const LOCAL_KEY = 'msp-disclosure-accepted';
-const DISCLOSURE_VERSION = '1'; // bump to force re-acceptance
+import { useCallback, useEffect, useState } from 'react';
+import { DISCLOSURE_VERSION } from '@/lib/disclosure';
 
 export default function DisclosureGate({ children }: { children: React.ReactNode }) {
   const [accepted, setAccepted] = useState<boolean | null>(null);
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Check localStorage first for instant UI
+  const checkStatus = useCallback(async () => {
+    setError(null);
     try {
-      const stored = localStorage.getItem(LOCAL_KEY);
-      if (stored === DISCLOSURE_VERSION) {
-        setAccepted(true);
-        return;
-      }
-    } catch {}
-
-    // Check database (covers cross-device)
-    fetch('/api/disclosure/status')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.accepted) {
-          try { localStorage.setItem(LOCAL_KEY, DISCLOSURE_VERSION); } catch {}
-          setAccepted(true);
-        } else {
-          setAccepted(false);
-        }
-      })
-      .catch(() => setAccepted(false));
+      // The authenticated server record is authoritative. A shared browser's
+      // unscoped localStorage entry must not stand in for another user's consent.
+      const response = await fetch('/api/disclosure/status', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Status unavailable');
+      const data = await response.json();
+      setAccepted(data.accepted === true && data.version === DISCLOSURE_VERSION);
+    } catch {
+      setError('We could not check your disclosure acknowledgement. Please retry.');
+    }
   }, []);
 
+  useEffect(() => { void checkStatus(); }, [checkStatus]);
+
   const handleAccept = async () => {
+    if (!checked || saving) return;
     setSaving(true);
+    setError(null);
     try {
-      await fetch('/api/disclosure/accept', { method: 'POST' });
-      localStorage.setItem(LOCAL_KEY, DISCLOSURE_VERSION);
-    } catch {}
-    setAccepted(true);
-    setSaving(false);
+      const response = await fetch('/api/disclosure/accept', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: DISCLOSURE_VERSION }),
+      });
+      if (!response.ok) throw new Error('Save failed');
+      setAccepted(true);
+    } catch {
+      setError('Your acknowledgement was not saved. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Still loading — show minimal spinner rather than blank page
   if (accepted === null) return (
     <div style={{ minHeight: '100vh', background: 'var(--msp-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {error ? <div role="alert"><p>{error}</p><button onClick={() => void checkStatus()}>Retry check</button></div> : <>
       <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #10B981', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </>}
     </div>
   );
 
@@ -156,6 +157,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
           </span>
         </label>
 
+        {error && <p role="alert" style={{ color: 'var(--msp-warn)' }}>{error}</p>}
         <button
           onClick={handleAccept}
           disabled={!checked || saving}

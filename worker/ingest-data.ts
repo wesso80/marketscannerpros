@@ -23,11 +23,11 @@ import { recordSignalsBatch } from '../lib/signalService';
 import { getCandleProcessor } from '../lib/candleProcessor';
 import {
   COINGECKO_ID_MAP,
-  getOHLC as getCoinGeckoOHLC,
-  getOHLCRange as getCoinGeckoOHLCRange,
-  getMarketChartHistory as getCoinGeckoMarketChartHistory,
+  getSimplePrices,
   resolveSymbolToId,
 } from '../lib/coingecko';
+import { fetchCryptoSeries } from '../lib/scanner/cryptoBars';
+import { buildObservedCryptoQuote } from '../lib/worker/cryptoQuote';
 
 // ============================================================================
 // Signal Detection Types
@@ -570,7 +570,7 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
 
 /**
  * Fetch crypto OHLC from CoinGecko (preferred - no rate limit issues)
- * Returns multi-year daily candles when range endpoint is available
+ * Returns up to 360 genuine daily candles in two bounded history windows
  * 
  * Worker-level in-memory cache prevents redundant CoinGecko HTTP calls
  * when fallback chains fire or when the worker cycle is faster than
@@ -591,8 +591,6 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   const allowDynamicResolve = getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false);
   const ohlcRetries = getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1);
   const ohlcTimeoutMs = getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000);
-  const requestedHistoryDays = getPositiveIntFromEnv('WORKER_CG_HISTORY_DAYS', 3650);
-  const historyDays = Math.max(30, Math.min(3650, requestedHistoryDays));
   const mappedId =
     COINGECKO_ID_MAP[normalized] ||
     COINGECKO_ID_MAP[normalized.replace('USDT', '')];
@@ -610,81 +608,17 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   }
 
   try {
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const fromSeconds = nowSeconds - (historyDays * 24 * 60 * 60);
-
-    let ohlcData = await getCoinGeckoOHLCRange(coinId, fromSeconds, nowSeconds, {
-      retries: ohlcRetries,
-      timeoutMs: ohlcTimeoutMs,
+    // Shared scanner adapter: two <=180-day daily windows + daily USD volume.
+    // Do not manufacture OHLC from close samples or relabel 4-day candles as daily.
+    const series = await fetchCryptoSeries(symbol, 'daily', Date.now(), {
+      coinId,
+      requestOptions: { retries: ohlcRetries, timeoutMs: ohlcTimeoutMs },
     });
-
-    let bars: AVBar[] = [];
-
-    if (ohlcData && ohlcData.length > 0) {
-      bars = ohlcData.map(candle => ({
-        timestamp: new Date(candle[0]).toISOString().slice(0, 10),
-        open: candle[1],
-        high: candle[2],
-        low: candle[3],
-        close: candle[4],
-        volume: 0,
-      }));
-    } else {
-      const marketChart = await getCoinGeckoMarketChartHistory(coinId, 'max', {
-        retries: ohlcRetries,
-        timeoutMs: ohlcTimeoutMs,
-      });
-
-      const prices = marketChart?.prices || [];
-
-      if (prices.length > 0) {
-        const byDate = new Map<string, number[]>();
-        for (const point of prices) {
-          if (!Array.isArray(point) || point.length < 2) continue;
-          const ts = Number(point[0]);
-          const px = Number(point[1]);
-          if (!Number.isFinite(ts) || !Number.isFinite(px) || px <= 0) continue;
-          const day = new Date(ts).toISOString().slice(0, 10);
-          if (!byDate.has(day)) byDate.set(day, []);
-          byDate.get(day)!.push(px);
-        }
-
-        bars = Array.from(byDate.entries())
-          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-          .map(([day, dayPrices]) => {
-            const open = dayPrices[0];
-            const close = dayPrices[dayPrices.length - 1];
-            const high = Math.max(...dayPrices);
-            const low = Math.min(...dayPrices);
-            return {
-              timestamp: day,
-              open,
-              high,
-              low,
-              close,
-              volume: 0,
-            };
-          });
-      }
-
-      if (bars.length === 0) {
-        const fallbackOhlc = await getCoinGeckoOHLC(coinId, 365, {
-          retries: ohlcRetries,
-          timeoutMs: ohlcTimeoutMs,
-        });
-
-        if (fallbackOhlc && fallbackOhlc.length > 0) {
-          bars = fallbackOhlc.map(candle => ({
-            timestamp: new Date(candle[0]).toISOString().slice(0, 10),
-            open: candle[1],
-            high: candle[2],
-            low: candle[3],
-            close: candle[4],
-            volume: 0,
-          }));
-        }
-      }
-    }
+    const bars: AVBar[] = series.bars.map(bar => ({
+      timestamp: bar.t.slice(0, 10), open: bar.open, high: bar.high,
+      low: bar.low, close: bar.close, volume: bar.volume ?? Number.NaN,
+    }));
+    if (series.warnings.length) console.warn(`[worker] ${symbol}: ${series.warnings.join('; ')}`);
 
     if (bars.length === 0) {
       console.warn(`[worker] No CoinGecko history data for ${symbol} (${coinId})`);
@@ -700,7 +634,7 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
       expiresAt: Date.now() + WORKER_CG_CACHE_TTL_MS,
     });
 
-    console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol} (requested ${historyDays}d)`);
+    console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol} (genuine daily OHLC, maximum 360d)`);
     return bars;
 
   } catch (err: any) {
@@ -786,7 +720,7 @@ async function upsertQuote(symbol: string, quote: any): Promise<void> {
   const db = getPool();
   await db.query(`
     INSERT INTO quotes_latest (symbol, price, open, high, low, prev_close, volume, change_amount, change_percent, latest_trading_day, fetched_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE($11::timestamptz, NOW()))
     ON CONFLICT (symbol) DO UPDATE SET
       price = EXCLUDED.price,
       open = EXCLUDED.open,
@@ -797,7 +731,7 @@ async function upsertQuote(symbol: string, quote: any): Promise<void> {
       change_amount = EXCLUDED.change_amount,
       change_percent = EXCLUDED.change_percent,
       latest_trading_day = EXCLUDED.latest_trading_day,
-      fetched_at = NOW()
+      fetched_at = EXCLUDED.fetched_at
   `, [
     symbol.toUpperCase(),
     quote.price,
@@ -805,10 +739,11 @@ async function upsertQuote(symbol: string, quote: any): Promise<void> {
     quote.high,
     quote.low,
     quote.prevClose,
-    Math.round(Number(quote.volume) || 0), // Ensure integer for BIGINT
+    quote.volume != null && Number.isFinite(Number(quote.volume)) ? Math.round(Number(quote.volume)) : null,
     quote.changeAmt,
     quote.changePct,
     quote.latestDay,
+    quote.updatedAt ?? null,
   ]);
 }
 
@@ -1412,26 +1347,19 @@ async function processCryptoSymbol(symbol: string): Promise<{
     if (bars.length > 0) {
       await upsertBars(symbol, 'daily', bars);
 
-      // Latest bar as quote
+      // Keep completed-bar evidence separate from the provider's spot quote.
       const latest = bars[bars.length - 1];
-      const prev = bars.length > 1 ? bars[bars.length - 2] : latest;
-      const changeAmt = latest.close - prev.close;
-      const changePct = prev.close > 0 ? (changeAmt / prev.close) * 100 : 0;
-
-      const quote = {
-        price: latest.close,
-        open: latest.open,
-        high: latest.high,
-        low: latest.low,
-        prevClose: prev.close,
-        volume: latest.volume,
-        changeAmt,
-        changePct,
-        latestDay: latest.timestamp.slice(0, 10),
-      };
-
-      await upsertQuote(symbol, quote);
-      await cacheQuote(symbol, quote);
+      const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[symbol.toUpperCase().replace('USDT', '')] ||
+        (getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false) ? await resolveSymbolToId(symbol) : null);
+      if (coinId) {
+        apiCalls += 1;
+        const spot = await getSimplePrices([coinId], { include_24h_change: true, include_24h_vol: true });
+        const quote = buildObservedCryptoQuote(spot?.[coinId]);
+        if (quote) {
+          await upsertQuote(symbol, quote);
+          await cacheQuote(symbol, quote);
+        } else console.warn(`[worker] ${symbol}: fresh spot quote unavailable; retaining previous observation`);
+      }
 
       // ── Store midpoints for Time Gravity Map ──
       try {
@@ -1472,11 +1400,20 @@ async function processCryptoSymbol(symbol: string): Promise<{
       }));
 
       const indicators = calculateAllIndicators(ohlcvBars);
+      const volumeAvailable = ohlcvBars.every(b => Number.isFinite(b.volume) && b.volume >= 0);
+      if (!volumeAvailable) {
+        delete indicators.obv;
+        delete indicators.ad;
+        delete indicators.mfi14;
+        delete indicators.vwap;
+        delete indicators.vwapIntraday;
+      }
       const squeeze = detectSqueeze(ohlcvBars);
       const warmup = getIndicatorWarmupStatus(ohlcvBars.length, 'daily');
       
       const fullIndicators = {
         ...indicators,
+        volumeAvailable,
         inSqueeze: squeeze?.inSqueeze ?? false,
         squeezeStrength: squeeze?.squeezeStrength ?? 0,
         warmup,

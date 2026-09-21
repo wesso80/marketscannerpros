@@ -239,8 +239,8 @@ async function fetchDerivativesData(req: NextRequest): Promise<{ data: Derivativ
 
   const currentOi = (coin: any): number => Number(coin?.aggregatedOI?.totalOI) || 0;
   const fundingPct = (coin: any): number | null => {
-    const value = Number(coin?.aggregatedFunding?.fundingRatePct);
-    return Number.isFinite(value) ? value : null;
+    const value = coin?.aggregatedFunding?.fundingRatePct;
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
   };
 
   let comparableCurrentOi = 0;

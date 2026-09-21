@@ -9,6 +9,7 @@ import {
   buildSignals,
 } from '@/hooks/useCryptoDerivatives';
 import type { DerivativeRow, DerivedSignal, FundingHeatmapCell } from '@/types/cryptoTerminal';
+import { formatCryptoNumber as fmt, formatCryptoUsd as fmtUsd, formatCryptoPercent as fmtPct, formatCryptoFunding as fmtFunding } from '@/lib/cryptoTerminalFormatting';
 
 /* ═══ TYPES FOR NEW FEATURES ═══ */
 interface FundingSnapshot {
@@ -93,16 +94,6 @@ function Chip({ children, active, onClick }: { children: React.ReactNode; active
 }
 
 /* ── formatters ───────────────────────────────── */
-const fmt = (n: number, d = 2) => isNaN(n) ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-const fmtUsd = (n: number) => {
-  if (isNaN(n) || n === 0) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
-  return `$${n.toFixed(2)}`;
-};
-const fmtPct = (n: number) => isNaN(n) ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
-const fmtFunding = (n: number) => isNaN(n) ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(4)}%`;
 const pctColor = (n: number) => n > 0 ? 'text-emerald-400' : n < 0 ? 'text-red-400' : 'text-zinc-400';
 const fundingColor = (pct: number) => {
   if (pct > 0.03) return 'text-emerald-400';
@@ -444,7 +435,7 @@ export default function CryptoTerminalView({
     if (!multi.data?.coins) return [];
     const opps: ArbitrageOpportunity[] = [];
     for (const coin of multi.data.coins) {
-      const rows = coin.exchanges;
+      const rows = coin.exchanges.filter(row => Number.isFinite(row.fundingPct));
       if (rows.length < 2) continue;
       // Find max and min funding exchange for this coin
       const sorted = [...rows].sort((a, b) => b.fundingPct - a.fundingPct);
@@ -642,7 +633,7 @@ export default function CryptoTerminalView({
               <Card title={`${selectedRow.market.replace(' (Futures)', '').replace(' (Derivatives)', '')}`} right={<Badge>{selectedRow.symbol}</Badge>}>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <MiniStat label="Funding Rate" value={fmtFunding(selectedRow.fundingPct)} sub={`Ann: ${fmt(selectedRow.fundingPct * 3 * 365, 1)}%`} />
+                    <MiniStat label="Funding Rate" value={fmtFunding(selectedRow.fundingPct)} sub={`Ann (8h assumption): ${fmt(Number.isFinite(selectedRow.fundingPct) ? selectedRow.fundingPct * 3 * 365 : Number.NaN, 1)}%`} />
                     <MiniStat label="Open Interest" value={fmtUsd(selectedRow.openInterest)} />
                     <MiniStat label="24h Volume" value={fmtUsd(selectedRow.volume24h)} />
                     <MiniStat label="Basis" value={fmt(selectedRow.basis, 4)} />
@@ -672,7 +663,7 @@ export default function CryptoTerminalView({
                         <span className="text-zinc-600">|</span>
                         <span className={fundingColor(aggFunding.fundingRatePct)}>Avg: {fmtFunding(aggFunding.fundingRatePct)}</span>
                       </div>
-                      {Math.abs(selectedRow.fundingPct - aggFunding.fundingRatePct) > 0.01 && (
+                      {Number.isFinite(selectedRow.fundingPct) && Number.isFinite(aggFunding.fundingRatePct) && Math.abs(selectedRow.fundingPct - aggFunding.fundingRatePct) > 0.01 && (
                         <p className="mt-1 text-[11px] text-amber-400">
                           ⚠ {Math.abs(selectedRow.fundingPct - aggFunding.fundingRatePct).toFixed(4)}% deviation from average
                         </p>

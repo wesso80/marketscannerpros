@@ -1447,7 +1447,7 @@ export default function ScannerPage() {
   const modeDetail = headerStage === 'ranked'
     ? 'System-ranked research opportunities'
     : headerStage === 'pro'
-      ? 'Filters on the returned shortlist'
+      ? 'Filters applied before the result limit'
       : selectedSymbol ? `Reviewing ${selectedSymbol}` : 'Reviewing case';
   const queueValue = headerStage === 'analysis' && selectedSymbol
     ? selectedSymbol

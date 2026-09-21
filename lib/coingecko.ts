@@ -40,6 +40,8 @@ const getHeaders = (): HeadersInit => {
 };
 
 const DERIVATIVES_CACHE_TTL_MS = 300_000; // share one multi-venue snapshot for five minutes
+const DERIVATIVES_FAILURE_COOLDOWN_MS = 60_000;
+const DERIVATIVES_MAX_AGE_MS = 15 * 60_000;
 const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ERROR_COOLDOWN_TTL_MS = 5 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_TTL_MS = 60 * 1000;
@@ -48,6 +50,7 @@ const RATE_LIMIT_COOLDOWN_TTL_MS = 60 * 1000;
 
 let derivativesCache: { value: DerivativeTicker[]; fetchedAt: number } | null = null;
 let derivativesInFlight: Promise<DerivativeTicker[] | null> | null = null;
+let derivativesRetryAt = 0;
 
 const symbolResolutionCache = new Map<string, { id: string | null; expiresAt: number }>();
 const symbolResolutionInFlight = new Map<string, Promise<string | null>>();
@@ -759,6 +762,13 @@ export async function getOHLCRange(
       return null;
     }
 
+    // This endpoint does not chunk history automatically. Reject oversized
+    // requests locally so a worker cannot send ten years in one daily request.
+    if (to - from > (interval === 'daily' ? 180 : 31) * 86_400) {
+      console.warn(`[CoinGecko] OHLC range exceeds ${interval} request limit for ${coinId}`);
+      return null;
+    }
+
     const params = new URLSearchParams({
       vs_currency: 'usd',
       from: String(from),
@@ -1037,7 +1047,47 @@ interface DerivativesExchangeSummary {
 
 interface DerivativesExchangeDetail {
   name: string;
-  tickers?: DerivativeTicker[];
+  tickers?: Record<string, unknown>[];
+}
+
+/** Exchange-detail tickers have a different schema from /derivatives.
+ * https://docs.coingecko.com/reference/derivatives-exchanges-id
+ * Missing numeric evidence remains NaN internally (JSON null), never zero.
+ */
+export function normalizeDerivativeExchangeTicker(
+  raw: Record<string, unknown>, market: string, nowMs = Date.now(),
+): DerivativeTicker | null {
+  const numeric = (value: unknown): number =>
+    (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) && Number.isFinite(Number(value))
+      ? Number(value) : Number.NaN;
+  const text = (value: unknown): string => typeof value === 'string' ? value.trim() : '';
+  const symbol = text(raw.symbol);
+  const base = text(raw.base);
+  const contract = text(raw.contract_type);
+  const lastTraded = numeric(raw.last_traded);
+  if (!market || !symbol || !base || !contract || !Number.isFinite(lastTraded) ||
+      lastTraded * 1000 < nowMs - DERIVATIVES_MAX_AGE_MS || lastTraded * 1000 > nowMs + 60_000) return null;
+  const expiry = raw.expired_at == null ? null : numeric(raw.expired_at);
+  if (expiry !== null && (!Number.isFinite(expiry) || expiry * 1000 <= nowMs)) return null;
+  const convertedVolume = raw.converted_volume as Record<string, unknown> | undefined;
+  const convertedLast = raw.converted_last as Record<string, unknown> | undefined;
+  const usdPrice = numeric(convertedLast?.usd);
+  return {
+    market, symbol, index_id: base.toUpperCase(), contract_type: contract,
+    price: Number.isFinite(usdPrice) && usdPrice > 0 ? String(usdPrice) : '',
+    price_percentage_change_24h: numeric(raw.h24_percentage_change),
+    index: numeric(raw.index), basis: numeric(raw.index_basis_percentage), spread: numeric(raw.bid_ask_spread),
+    funding_rate: numeric(raw.funding_rate), open_interest: numeric(raw.open_interest_usd),
+    // h24_volume is contract/base volume; only converted_volume.usd has USD units.
+    volume_24h: numeric(convertedVolume?.usd), last_traded_at: lastTraded,
+    expired_at: expiry === null ? null : new Date(expiry * 1000).toISOString(),
+  };
+}
+
+function usableDerivativesCache(nowMs: number): DerivativeTicker[] | null {
+  if (!derivativesCache || nowMs - derivativesCache.fetchedAt >= DERIVATIVES_MAX_AGE_MS) return null;
+  const tickers = derivativesCache.value.filter(t => nowMs - t.last_traded_at * 1000 <= DERIVATIVES_MAX_AGE_MS);
+  return tickers.length ? tickers : null;
 }
 
 /**
@@ -1094,9 +1144,10 @@ async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> 
       continue;
     }
 
-    for (const ticker of result.value.tickers) {
-      if (!ticker?.index_id || !ticker?.symbol) continue;
-      tickers.push(ticker);
+    for (const raw of result.value.tickers) {
+      if (!raw || typeof raw !== 'object') continue;
+      const ticker = normalizeDerivativeExchangeTicker(raw, result.value.name || top[i].name);
+      if (ticker) tickers.push(ticker);
     }
   }
 
@@ -1121,8 +1172,10 @@ async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> 
 export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null> {
   const now = Date.now();
   if (derivativesCache && now - derivativesCache.fetchedAt < DERIVATIVES_CACHE_TTL_MS) {
-    return derivativesCache.value;
+    return usableDerivativesCache(now);
   }
+
+  if (now < derivativesRetryAt) return usableDerivativesCache(now);
 
   if (derivativesInFlight) {
     return derivativesInFlight;
@@ -1136,11 +1189,13 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
         value: data,
         fetchedAt: Date.now(),
       };
+      derivativesRetryAt = 0;
 
       return data;
     } catch (error) {
       console.error('[CoinGecko] Major-exchange derivatives fetch error:', error);
-      return derivativesCache?.value ?? null;
+      derivativesRetryAt = Date.now() + DERIVATIVES_FAILURE_COOLDOWN_MS;
+      return usableDerivativesCache(Date.now());
     } finally {
       derivativesInFlight = null;
     }
@@ -1160,6 +1215,7 @@ export async function warmDerivativesCache(): Promise<void> {
 
 export function invalidateDerivativesCache(): void {
   derivativesCache = null;
+  derivativesRetryAt = 0;
 }
 
 /**
@@ -1800,7 +1856,8 @@ export async function getCoinHistory(
 export async function getMarketChartRange(
   coinId: string,
   fromUnixSeconds: number,
-  toUnixSeconds: number
+  toUnixSeconds: number,
+  requestOptions?: { retries?: number; timeoutMs?: number },
 ): Promise<{
   prices: [number, number][];
   market_caps: [number, number][];
@@ -1819,6 +1876,8 @@ export async function getMarketChartRange(
     }>(`/coins/${coinId}/market_chart/range`, {
       params,
       init: { next: { revalidate: 900 } },
+      retries: requestOptions?.retries,
+      timeoutMs: requestOptions?.timeoutMs,
     });
   } catch (error) {
     console.error('[CoinGecko] Market chart range error:', error);

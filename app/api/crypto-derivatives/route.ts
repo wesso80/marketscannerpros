@@ -19,7 +19,7 @@ const TOP_SYMBOLS = [
 ];
 
 function normRow(t: DerivativeTicker) {
-  const price = parseFloat(t.price) || 0;
+  const price = parseFloat(t.price);
   return {
     market: t.market,
     symbol: t.symbol,
@@ -40,23 +40,27 @@ function normRow(t: DerivativeTicker) {
 
 function aggregateFunding(rows: ReturnType<typeof normRow>[]) {
   // Median across venues — a few illiquid venues report outliers (e.g. 9.5%/interval) that made the mean impossible.
-  const rates = rows.map(r => r.fundingPct).filter(r => !isNaN(r)).sort((a, b) => a - b);
+  const rates = rows.map(r => r.fundingPct).filter(Number.isFinite).sort((a, b) => a - b);
   const n = rates.length;
-  const avg = n ? (n % 2 ? rates[(n - 1) / 2] : (rates[n / 2 - 1] + rates[n / 2]) / 2) : 0;
+  const avg = n ? (n % 2 ? rates[(n - 1) / 2] : (rates[n / 2 - 1] + rates[n / 2]) / 2) : Number.NaN;
   const ann = avg * 3 * 365;
-  const min = rates.length ? Math.min(...rates) : 0;
-  const max = rates.length ? Math.max(...rates) : 0;
+  const min = rates.length ? Math.min(...rates) : Number.NaN;
+  const max = rates.length ? Math.max(...rates) : Number.NaN;
   let sentiment: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
   if (avg > 0.03) sentiment = 'Bullish';
   else if (avg < -0.01) sentiment = 'Bearish';
-  return { avgFundingRate: avg / 100, fundingRatePct: avg, annualised: ann, exchangeCount: rows.length, sentiment, min, max };
+  return { avgFundingRate: avg / 100, fundingRatePct: avg, annualised: ann, exchangeCount: new Set(rows.map(r => r.market)).size, sentiment, min, max, fundingRateMissing: n === 0 };
 }
 
 function aggregateOI(rows: ReturnType<typeof normRow>[]) {
+  const total = (values: number[]) => {
+    const observed = values.filter(Number.isFinite);
+    return observed.length ? observed.reduce((a, b) => a + b, 0) : Number.NaN;
+  };
   return {
-    totalOI: rows.reduce((s, r) => s + r.openInterest, 0),
-    totalVolume24h: rows.reduce((s, r) => s + r.volume24h, 0),
-    exchangeCount: rows.length,
+    totalOI: total(rows.map(r => r.openInterest)),
+    totalVolume24h: total(rows.map(r => r.volume24h)),
+    exchangeCount: new Set(rows.map(r => r.market)).size,
   };
 }
 
