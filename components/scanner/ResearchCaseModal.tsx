@@ -457,7 +457,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {pick.derivatives.openInterest != null && <KV label="Open Interest" value={pick.derivatives.openInterest >= 1e9 ? `$${(pick.derivatives.openInterest / 1e9).toFixed(2)}B` : `$${(pick.derivatives.openInterest / 1e6).toFixed(1)}M`} />}
                 {pick.derivatives.fundingRate != null && <KV label="Funding Rate" value={`${pick.derivatives.fundingRate.toFixed(4)}%`} accent={pick.derivatives.fundingRate > 0.03 ? 'var(--msp-bear)' : pick.derivatives.fundingRate < -0.03 ? 'var(--msp-bull)' : undefined} />}
-                {pick.derivatives.longShortRatio != null && <KV label="Long/Short Ratio" value={pick.derivatives.longShortRatio.toFixed(2)} />}
+                {pick.derivatives.longShortRatio != null && <KV label="Funding-Implied Positioning Proxy" value={`${pick.derivatives.longShortRatio.toFixed(2)} (derived; not account data)`} />}
                 {pick.derivatives.basisPercent != null && <KV label="Basis" value={`${pick.derivatives.basisPercent.toFixed(3)}%`} />}
               </div>
             </Section>
