@@ -27,6 +27,7 @@ export interface DiamondHistoryCandidate {
   security: {
     isHoneypot: boolean | 'unknown' | null;
   } | null;
+  featureData?: unknown;
 }
 
 export interface DiamondHistoryState {
@@ -113,8 +114,11 @@ export function ensureDiamondHunterSchema(): Promise<void> {
         score_delta_5m NUMERIC,
         liquidity_change_pct NUMERIC,
         hard_reject BOOLEAN NOT NULL DEFAULT FALSE,
-        risk_flags JSONB NOT NULL DEFAULT '[]'::jsonb
+        risk_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+        feature_data JSONB NOT NULL DEFAULT '{}'::jsonb
       );
+      ALTER TABLE diamond_hunter_snapshots
+        ADD COLUMN IF NOT EXISTS feature_data JSONB NOT NULL DEFAULT '{}'::jsonb;
       CREATE INDEX IF NOT EXISTS idx_diamond_snapshots_pool_time
         ON diamond_hunter_snapshots (pool_id, scanned_at DESC);
       CREATE INDEX IF NOT EXISTS idx_diamond_snapshots_time
@@ -297,11 +301,11 @@ export async function recordDiamondScan(
         `INSERT INTO diamond_hunter_snapshots (
            pool_id, scanned_at, score, stage, validation_stage, confidence, attention,
            price_usd, liquidity_usd, fdv_usd, volume_5m_usd, buyers_5m, sellers_5m,
-           score_delta_5m, liquidity_change_pct, hard_reject, risk_flags
+           score_delta_5m, liquidity_change_pct, hard_reject, risk_flags, feature_data
          ) VALUES (
            $1,$2,$3,$4,$5,$6,$7,
            $8,$9,$10,$11,$12,$13,
-           $14,$15,$16,$17::jsonb
+           $14,$15,$16,$17::jsonb,$18::jsonb
          )`,
         [
           candidate.id,
@@ -321,6 +325,7 @@ export async function recordDiamondScan(
           liquidityChangePct,
           candidate.hardReject,
           JSON.stringify(candidate.riskFlags),
+          JSON.stringify(candidate.featureData ?? {}),
         ],
       );
 
