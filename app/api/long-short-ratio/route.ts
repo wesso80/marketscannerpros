@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasProAccess } from '@/lib/entitlements';
+import { hasValidInternalServiceSecret } from '@/lib/internalServiceAuth';
 import { buildCoinGeckoResponseMeta, getAggregatedFundingRates } from '@/lib/coingecko';
 
 const CACHE_DURATION = 600;
@@ -21,12 +22,15 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (!hasProAccess(session.tier)) {
-    return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
+  const internalAuthorized = hasValidInternalServiceSecret(req);
+  if (!internalAuthorized) {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasProAccess(session.tier)) {
+      return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
+    }
   }
 
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
