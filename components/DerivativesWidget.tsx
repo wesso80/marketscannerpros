@@ -40,87 +40,61 @@ interface DerivativesWidgetProps {
 }
 
 // Crowding Risk Meter calculation
-function getCrowdingRisk(lsRatio: number, fundingRate: number): {
+function getCrowdingRisk(fundingRate: number): {
   level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
   color: string;
   bgColor: string;
   description: string;
 } {
-  let score = 0;
-  
-  // L/S ratio scoring (1.0 = neutral)
-  const lsDeviation = Math.abs(lsRatio - 1);
-  if (lsDeviation > 0.3) score += 3; // Very skewed
-  else if (lsDeviation > 0.15) score += 2; // Moderately skewed
-  else if (lsDeviation > 0.05) score += 1; // Slightly skewed
-  
-  // Funding rate scoring
+  // The displayed positioning proxy is derived from this same funding rate.
+  // Score the independent funding observation once, never both funding + proxy.
   const absRate = Math.abs(fundingRate);
-  if (absRate > 0.05) score += 3; // Extreme funding
-  else if (absRate > 0.02) score += 2; // Elevated funding
-  else if (absRate > 0.01) score += 1; // Noticeable funding
-  
-  // Combined leverage signal (high L/S + high funding = very crowded)
-  if (lsDeviation > 0.2 && absRate > 0.03) score += 2;
-  
-  if (score >= 6) return { 
-    level: 'EXTREME', 
-    color: 'text-red-400', 
+
+  if (absRate > 0.05) return {
+    level: 'EXTREME',
+    color: 'text-red-400',
     bgColor: 'bg-red-500',
-    description: 'High squeeze risk'
+    description: 'Extreme funding crowding'
   };
-  if (score >= 4) return { 
-    level: 'HIGH', 
-    color: 'text-orange-400', 
+  if (absRate > 0.03) return {
+    level: 'HIGH',
+    color: 'text-orange-400',
     bgColor: 'bg-orange-500',
-    description: 'Position crowding'
+    description: 'Elevated funding crowding'
   };
-  if (score >= 2) return { 
-    level: 'MODERATE', 
-    color: 'text-yellow-400', 
+  if (absRate > 0.01) return {
+    level: 'MODERATE',
+    color: 'text-yellow-400',
     bgColor: 'bg-yellow-500',
-    description: 'Some imbalance'
+    description: 'Funding imbalance'
   };
-  return { 
-    level: 'LOW', 
-    color: 'text-green-400', 
+  return {
+    level: 'LOW',
+    color: 'text-green-400',
     bgColor: 'bg-green-500',
-    description: 'Balanced market'
+    description: 'Funding near neutral'
   };
 }
-
 // Get directional insight based on positioning
-function getPositioningInsight(lsRatio: number, fundingRate: number): {
+function getPositioningInsight(fundingRate: number): {
   code: string;
   text: string;
   color: string;
 } {
-  const isLongCrowded = lsRatio > 1.15;
-  const isShortCrowded = lsRatio < 0.85;
-  const highPositiveFunding = fundingRate > 0.03;
-  const highNegativeFunding = fundingRate < -0.03;
-  
-  if (isLongCrowded && highPositiveFunding) {
-    return { code: 'RISK', text: 'Longs crowded — squeeze down risk', color: 'text-red-400' };
+  if (fundingRate > 0.03) {
+    return { code: 'RISK', text: 'Positive funding implies long-heavy crowding; squeeze-down risk to review', color: 'text-red-400' };
   }
-  if (isShortCrowded && highNegativeFunding) {
-    return { code: 'RISK', text: 'Shorts crowded — squeeze up risk', color: 'text-green-400' };
+  if (fundingRate < -0.03) {
+    return { code: 'RISK', text: 'Negative funding implies short-heavy crowding; squeeze-up risk to review', color: 'text-green-400' };
   }
-  if (isLongCrowded) {
-    return { code: 'LONG', text: 'Long bias — watching for exhaustion', color: 'text-yellow-400' };
+  if (fundingRate > 0.01) {
+    return { code: 'FUND', text: 'Funding modestly positive; positioning proxy leans long', color: 'text-yellow-400' };
   }
-  if (isShortCrowded) {
-    return { code: 'SHORT', text: 'Short bias — elevated short positioning', color: 'text-yellow-400' };
+  if (fundingRate < -0.01) {
+    return { code: 'FUND', text: 'Funding modestly negative; positioning proxy leans short', color: 'text-yellow-400' };
   }
-  if (highPositiveFunding) {
-    return { code: 'FUND', text: 'Longs paying premium — bullish sentiment', color: 'text-green-400' };
-  }
-  if (highNegativeFunding) {
-    return { code: 'FUND', text: 'Shorts paying premium — bearish sentiment', color: 'text-red-400' };
-  }
-  return { code: 'NEUT', text: 'Neutral positioning — no crowding', color: 'text-slate-400' };
+  return { code: 'NEUT', text: 'Funding near neutral; positioning proxy near balanced', color: 'text-slate-400' };
 }
-
 export default function DerivativesWidget({
   compact = false,
   className = ''
@@ -213,13 +187,13 @@ Research context:
           />
         </div>
         <div className="flex items-center justify-between gap-4">
-          {/* Long/Short Ratio */}
+          {/* Funding-implied positioning proxy */}
           {lsData && (
             <div className="flex items-center gap-2 flex-1 relative">
               <span className="text-[0.62rem] font-bold text-slate-400">{getSentimentCode(lsData.average.sentiment)}</span>
               <div>
                 <div className="text-xs text-slate-400 flex items-center gap-1">
-                  L/S (implied)
+                  Positioning proxy
                   <button
                     onClick={() => { setShowLsTooltip(!showLsTooltip); setShowFundingTooltip(false); }}
                     className="ml-1 w-4 h-4 rounded-full bg-slate-600 hover:bg-emerald-500 text-[10px] text-white font-bold flex items-center justify-center transition-colors"
@@ -318,8 +292,8 @@ Research context:
       {lsData && fundingData && (() => {
         const lsRatio = parseFloat(lsData.average.longShortRatio);
         const fundingRate = parseFloat(fundingData.average.fundingRatePercent);
-        const crowding = getCrowdingRisk(lsRatio, fundingRate);
-        const insight = getPositioningInsight(lsRatio, fundingRate);
+        const crowding = getCrowdingRisk(fundingRate);
+        const insight = getPositioningInsight(fundingRate);
         
         return (
           <div className="mb-4 p-4 bg-slate-900/70 rounded-lg border border-slate-600">
@@ -353,14 +327,14 @@ Research context:
         {/* Long/Short Ratio */}
         {lsData && (
           <div className="bg-slate-900/50 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-2" title="Estimated from aggregated funding rates, not observed exchange long/short account data.">Long/Short (funding-implied)</div>
+            <div className="text-sm text-slate-400 mb-2" title="Estimated from aggregated funding rates, not observed exchange long/short account data.">Funding-Implied Positioning Proxy</div>
             <div className="text-2xl font-bold text-white mb-1">
               {lsData.average.longShortRatio}
             </div>
             <div className="flex gap-2 text-sm">
-              <span className="text-green-400">{lsData.average.longPercent}% Long</span>
+              <span className="text-green-400">{lsData.average.longPercent}% Implied Long</span>
               <span className="text-slate-500">|</span>
-              <span className="text-red-400">{lsData.average.shortPercent}% Short</span>
+              <span className="text-red-400">{lsData.average.shortPercent}% Implied Short</span>
             </div>
             {/* Visual bar */}
             <div className="flex h-2 rounded-full overflow-hidden mt-2 bg-slate-700">
@@ -412,7 +386,7 @@ Research context:
                   <span className="font-medium text-white">{coin.symbol}</span>
                   <div className="flex gap-3 text-xs">
                     <span className="text-slate-400">
-                      L/S: <span className={lsColor}>{lsArrow}{coin.longShortRatio.toFixed(2)}</span>
+                      Proxy: <span className={lsColor}>{lsArrow}{coin.longShortRatio.toFixed(2)}</span>
                     </span>
                     {funding && (
                       <span className={funding.fundingRatePercent >= 0 ? 'text-green-400' : 'text-red-400'}>
@@ -430,8 +404,8 @@ Research context:
       {/* Interpretation */}
       <div className="mt-4 p-3 bg-slate-900/50 rounded-lg">
         <p className="text-xs text-slate-400">
-          <strong className="text-slate-300">L/S &gt; 1.2</strong> = Crowded longs, squeeze risk down.
-          <strong className="text-slate-300"> Positive funding</strong> = Longs pay shorts (bullish bias).
+          <strong className="text-slate-300">Positioning proxy</strong> is derived from funding and is not independent account-positioning evidence.
+          <strong className="text-slate-300"> Positive funding</strong> = longs pay shorts; negative funding = shorts pay longs.
         </p>
       </div>
     </div>
