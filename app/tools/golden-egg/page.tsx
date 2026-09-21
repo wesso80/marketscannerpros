@@ -362,7 +362,11 @@ export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
   const { tier } = useUserTier();
   const [symbolInput, setSymbolInput] = useState('');
-  const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
+  const [timeframe, setTimeframe] = useState<ScanTimeframe>(() => {
+    if (typeof window === 'undefined') return 'daily';
+    const raw = new URLSearchParams(window.location.search).get('timeframe');
+    return raw === '15m' || raw === '30m' || raw === '1h' || raw === 'weekly' || raw === 'daily' ? raw : 'daily';
+  });
   const [activeTab, setActiveTab] = useState<GETab>('Verdict');
   const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>(() => {
     // Deep links (MSP Radar, Scanner) pass ?type= so crypto vs equity is never guessed from the ticker alone.
@@ -622,7 +626,7 @@ export default function GoldenEggPage() {
         title="Validate one symbol before testing history."
         subtitle="Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet."
         actions={[
-          { label: 'Open Terminal', variant: 'primary', href: `/tools/terminal?symbol=${encodeURIComponent(sym)}` },
+          { label: 'Open Terminal', variant: 'primary', href: `/tools/terminal?symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}` },
           { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner' },
           { label: 'Open Backtest', variant: 'ghost', href: '/tools/workspace?tab=backtest' },
         ]}
@@ -735,12 +739,12 @@ export default function GoldenEggPage() {
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {!isAuthBlocked && activeTab === 'Chart' && (
         <GoldenEggSubviewFrame tab="Chart" symbol={sym} onSelectTab={setActiveTab}>
-          <IntradayCharts symbol={sym} />
+          <IntradayCharts symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'stocks'} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Deep Analysis' && (
         <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} onSelectTab={setActiveTab}>
-          <DeepAnalysis symbol={sym} />
+          <DeepAnalysis symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'equity'} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Fundamentals' && (
