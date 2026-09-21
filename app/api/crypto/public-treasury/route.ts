@@ -40,10 +40,13 @@ export async function GET(req: NextRequest) {
     entryValueUsd: c.total_entry_value_usd,
     currentValueUsd: c.total_current_value_usd,
     percentOfSupply: c.percentage_of_total_supply,
-    profitLossUsd: c.total_current_value_usd - c.total_entry_value_usd,
-    profitLossPercent: c.total_entry_value_usd > 0
+    hasCostBasis: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0,
+    profitLossUsd: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0
+      ? c.total_current_value_usd - c.total_entry_value_usd
+      : null,
+    profitLossPercent: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0
       ? ((c.total_current_value_usd - c.total_entry_value_usd) / c.total_entry_value_usd) * 100
-      : 0,
+      : null,
   }));
 
   const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
