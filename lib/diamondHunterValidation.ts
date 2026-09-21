@@ -36,7 +36,8 @@ const BLOCKING_RISK_PATTERNS = [
   /freeze authority/i,
   /developer holding/i,
   /top 10 holders/i,
-  /suspicious community/i,
+  /community suspicious|suspicious community/i,
+  /low geckoterminal trust score/i,
   /liquidity below \$10k/i,
 ];
 
