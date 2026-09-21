@@ -120,11 +120,13 @@ function GoldenEggSubviewMetric({ label, value, tone = 'var(--msp-text)', detail
 function GoldenEggSubviewFrame({
   tab,
   symbol,
+  terminalHref,
   onSelectTab,
   children,
 }: {
   tab: Exclude<GETab, 'Verdict'>;
   symbol: string;
+  terminalHref: string;
   onSelectTab: (tab: GETab) => void;
   children: React.ReactNode;
 }) {
@@ -149,7 +151,7 @@ function GoldenEggSubviewFrame({
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={() => onSelectTab('Verdict')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Review Verdict</button>
               <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open {adjacentTab}</button>
-              <a href={`/tools/terminal?symbol=${encodeURIComponent(symbol)}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</a>
+              <a href={terminalHref} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</a>
             </div>
           </div>
 
@@ -392,6 +394,7 @@ export default function GoldenEggPage() {
   // Scanner hands over crypto as e.g. NEAR-USD; match on the base ticker too.
   const isCryptoSymbol = CRYPTO_SET.has(sym.toUpperCase()) || CRYPTO_SET.has(sym.toUpperCase().replace(/[-/]?(USDT|USD)$/, ''));
   const quoteType: 'stock' | 'crypto' = assetType === 'crypto' ? 'crypto' : assetType === 'equity' ? 'stock' : isCryptoSymbol ? 'crypto' : 'stock';
+  const canonicalTerminalHref = `/tools/terminal?symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}`;
 
   // Ensure V2Context always reflects the resolved symbol so embedded tabs sync
   useEffect(() => {
@@ -738,17 +741,17 @@ export default function GoldenEggPage() {
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {!isAuthBlocked && activeTab === 'Chart' && (
-        <GoldenEggSubviewFrame tab="Chart" symbol={sym} onSelectTab={setActiveTab}>
+        <GoldenEggSubviewFrame tab="Chart" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
           <IntradayCharts symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'stocks'} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Deep Analysis' && (
-        <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} onSelectTab={setActiveTab}>
+        <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
           <DeepAnalysis symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'equity'} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Fundamentals' && (
-        <GoldenEggSubviewFrame tab="Fundamentals" symbol={sym} onSelectTab={setActiveTab}>
+        <GoldenEggSubviewFrame tab="Fundamentals" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
           {quoteType === 'crypto' ? (
             // Company fundamentals do not exist for crypto; reuse the derivatives/quote evidence Golden Egg already fetched.
             <Card>
@@ -991,7 +994,7 @@ export default function GoldenEggPage() {
                 >
                   {savingCase ? 'Saving...' : 'Save Case'}
                 </button>
-                <a href={`/tools/terminal?symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}`} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 no-underline">
+                <a href={canonicalTerminalHref} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 no-underline">
                   Open Terminal
                 </a>
               </div>
@@ -1479,11 +1482,11 @@ export default function GoldenEggPage() {
                   ))}
                   {ge.meta.assetClass !== 'crypto' && (
                     <a
-                      href={`/tools/terminal?symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}`}
+                      href={canonicalTerminalHref}
                       className="mt-2 inline-block text-[11px] text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded"
                     >
-                        Open Options Terminal
-                    </button>
+                      Open Options Terminal
+                    </a>
                   )}
                 </div>
               ) : (
@@ -1526,9 +1529,9 @@ export default function GoldenEggPage() {
                 <span className="text-[11px] text-slate-500">Hypothetical R:R</span>
                 <span className="text-sm font-bold text-white ml-2">{isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? `${geSafeScenario.hypotheticalRr.expectedR.toFixed(1)}R` : 'Unavailable'}</span>
               </div>
-              <button type="button" onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">
+              <a href={canonicalTerminalHref} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 no-underline">
                 Open in Terminal
-              </button>
+              </a>
             </div>
             <div className="mt-2 text-[11px] text-slate-600">Levels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.</div>
           </Card>
