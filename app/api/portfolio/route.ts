@@ -158,6 +158,7 @@ export async function GET(req: NextRequest) {
       annualizedSharpe: number;
       var95: number;
       maxDrawdown: number;
+      currentDrawdown: number;
       avgDailyReturn: number;
       dailyVolatility: number;
     } | null = null;
@@ -186,11 +187,14 @@ export async function GET(req: NextRequest) {
           const dd = peak > 0 ? ((peak - snap.totalValue) / peak) * 100 : 0;
           if (dd > maxDD) maxDD = dd;
         }
+        const latestEquity = riskHistory[riskHistory.length - 1].totalValue;
+        const currentDrawdown = peak > 0 ? ((peak - latestEquity) / peak) * 100 : 0;
         riskAnalytics = {
           dailySharpe: stdDev > 0 ? avgReturn / stdDev : 0,
           annualizedSharpe: stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0,
           var95: Math.abs(var95),
           maxDrawdown: maxDD,
+          currentDrawdown,
           avgDailyReturn: avgReturn,
           dailyVolatility: stdDev,
         };
