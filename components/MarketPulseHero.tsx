@@ -21,11 +21,11 @@ interface OpenInterestData {
   total: string;
   btcDominance: string;
   ethDominance: string;
-  change24h: number;
+  change24h: number | null;
 }
 
 interface DerivativesData {
-  longShortRatio: number;
+  longShortRatio: number | null;
   fundingRate: number;
 }
 
@@ -80,7 +80,7 @@ export default function MarketPulseHero() {
             total: oiRes.total.formatted,
             btcDominance: oiRes.total.btcDominance,
             ethDominance: oiRes.total.ethDominance,
-            change24h: oiRes.total.change24h || 0,
+            change24h: Number.isFinite(oiRes.total.change24h) ? oiRes.total.change24h : null,
           });
           setOiMeta({
             source: oiRes.source ?? oiRes.meta?.provider,
@@ -94,7 +94,7 @@ export default function MarketPulseHero() {
           const btcLs = lsRes.coins.find((c: { symbol: string }) => c.symbol === 'BTC');
           if (btcFunding || btcLs) {
             setDerivatives({
-              longShortRatio: Number(btcLs?.longShortRatio ?? lsRes?.average?.longShortRatio ?? 0),
+              longShortRatio: Number.isFinite(btcLs?.longShortRatio) ? btcLs.longShortRatio : null,
               fundingRate: Number(btcFunding?.fundingRatePercent ?? fundingRes?.average?.fundingRatePercent ?? 0) / 100,
             });
             setDerivativesMeta({
@@ -265,8 +265,8 @@ export default function MarketPulseHero() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-white">{openInterest.total}</span>
-                  <span className={`text-sm font-medium ${openInterest.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {openInterest.change24h >= 0 ? '▲' : '▼'} {Math.abs(openInterest.change24h).toFixed(1)}%
+                  <span className={`text-sm font-medium ${(openInterest.change24h != null && openInterest.change24h >= 0) ? 'text-green-400' : 'text-red-400'}`}>
+                    {openInterest.change24h == null ? '24h change unavailable' : `${openInterest.change24h >= 0 ? '▲' : '▼'} ${Math.abs(openInterest.change24h).toFixed(1)}%`}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 mb-2">Crypto Futures</div>
@@ -303,6 +303,7 @@ export default function MarketPulseHero() {
               <div className="space-y-3">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Long/Short Ratio</div>
+                  {derivatives.longShortRatio == null ? <p className="text-sm text-slate-400">Unavailable — observed account ratios are not connected.</p> : <>
                   <div className="flex items-baseline gap-2">
                     <span className={`text-2xl font-bold ${derivatives.longShortRatio > 1 ? 'text-green-400' : 'text-red-400'}`}>
                       {derivatives.longShortRatio.toFixed(2)}
@@ -321,6 +322,8 @@ export default function MarketPulseHero() {
                       className="h-full bg-red-500 flex-1" 
                     />
                   </div>
+                  </>}
+
                 </div>
                 <div className="pt-2 border-t border-slate-700">
                   <div className="text-xs text-gray-500 mb-1">Funding Rate</div>

@@ -25,8 +25,8 @@ export default function DerivativesDecisionRow({
             ['Condition', permission],
             ['Bias', biasLabel],
             ['Rotation', rotation],
-            ['Vol Regime', volRegime],
-            ['Liquidity', liquidityState],
+            ['24h move', volRegime],
+            ['OI trend', liquidityState],
             ['Framework', playbook],
           ].map(([label, value]) => (
             <div key={label} className="h-12 rounded-lg border border-white/10 bg-black/20 px-3 py-2">

@@ -16,7 +16,7 @@ export interface OpenInterestCoin {
   symbol: string;
   openInterestValue: number;
   openInterestFormatted?: string;
-  change24h: number;
+  change24h: number | null;
   signal: string;
   exchanges?: number;
 }

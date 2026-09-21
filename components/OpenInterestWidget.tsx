@@ -8,7 +8,7 @@ interface CoinOI {
   openInterest: number;
   openInterestCoin: number;
   price: number;
-  change24h?: number;
+  change24h?: number | null;
 }
 
 interface OIData {
@@ -18,24 +18,26 @@ interface OIData {
     btcDominance: string;
     ethDominance: string;
     altDominance: string;
-    change24h?: number;
+    change24h?: number | null;
   };
   btc: {
     openInterest: number;
     formatted: string;
     price: number;
     contracts: number;
-    change24h?: number;
+    change24h?: number | null;
   } | null;
   eth: {
     openInterest: number;
     formatted: string;
     price: number;
     contracts: number;
-    change24h?: number;
+    change24h?: number | null;
   } | null;
   coins: CoinOI[];
   exchange: string;
+  comparisonReason?: string | null;
+  coverage?: string;
   stale?: boolean;
 }
 
@@ -111,27 +113,27 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
     return `$${(value / 1e3).toFixed(0)}K`;
   };
 
-  const formatChange = (change: number | undefined): string => {
-    if (change === undefined) return '';
+  const formatChange = (change: number | null | undefined): string => {
+    if (change == null || !Number.isFinite(change)) return 'Unavailable';
     const sign = change >= 0 ? '+' : '';
     return `${sign}${change.toFixed(2)}%`;
   };
 
-  const getChangeColor = (change: number | undefined): string => {
-    if (change === undefined) return 'text-slate-400';
+  const getChangeColor = (change: number | null | undefined): string => {
+    if (change == null || !Number.isFinite(change)) return 'text-slate-400';
     if (change > 0) return 'text-green-400';
     if (change < 0) return 'text-red-400';
     return 'text-slate-400';
   };
 
   // Get OI directional interpretation based on OI change
-  const getOIInterpretation = (oiChange: number | undefined): {
+  const getOIInterpretation = (oiChange: number | null | undefined): {
     label: string;
     icon: string;
     color: string;
     description: string;
   } | null => {
-    if (oiChange === undefined) return null;
+    if (oiChange == null || !Number.isFinite(oiChange)) return null;
     
     if (oiChange > 3) {
       return {
@@ -231,7 +233,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
                 <span className="font-bold text-white">
                   {data.total.formatted}
                 </span>
-                {data.total.change24h !== undefined && (
+                {data.total.change24h != null && (
                   <span className={`text-xs font-medium ${getChangeColor(data.total.change24h)}`}>
                     {formatChange(data.total.change24h)}
                   </span>
@@ -242,7 +244,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           <div className="text-right text-xs">
             <div className="flex items-center justify-end gap-1">
               <span className="text-amber-400">BTC: {data.total.btcDominance}%</span>
-              {data.btc?.change24h !== undefined && (
+              {data.btc?.change24h != null && (
                 <span className={`${getChangeColor(data.btc.change24h)}`}>
                   ({formatChange(data.btc.change24h)})
                 </span>
@@ -250,7 +252,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             </div>
             <div className="flex items-center justify-end gap-1">
               <span className="text-blue-400">ETH: {data.total.ethDominance}%</span>
-              {data.eth?.change24h !== undefined && (
+              {data.eth?.change24h != null && (
                 <span className={`${getChangeColor(data.eth.change24h)}`}>
                   ({formatChange(data.eth.change24h)})
                 </span>
@@ -306,7 +308,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           <span className="text-4xl font-bold text-white">
             {data.total.formatted}
           </span>
-          {data.total.change24h !== undefined && (
+          {data.total.change24h != null && (
             <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium ${
               data.total.change24h >= 0 
                 ? 'bg-green-500/20 text-green-400' 
@@ -319,9 +321,11 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           )}
         </div>
         <div className="text-sm text-slate-400 mb-3">
-          Total Open Interest (Top 20 Coins)
+          Open Interest — available major venues
         </div>
 
+        {data.coverage && <p className="mb-2 text-xs text-slate-400">{data.coverage}</p>}
+        {data.comparisonReason && <p className="mb-3 text-xs text-amber-200">{data.comparisonReason}</p>}
         {/* OI Directional Interpretation */}
         {(() => {
           const interpretation = getOIInterpretation(data.total.change24h);
@@ -382,7 +386,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           <div className="bg-slate-900/50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-amber-400 font-semibold">₿ BTC</span>
-              {data.btc.change24h !== undefined && (
+              {data.btc.change24h != null && (
                 <span className={`text-xs font-medium ${getChangeColor(data.btc.change24h)}`}>
                   {formatChange(data.btc.change24h)}
                 </span>
@@ -390,7 +394,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             </div>
             <div className="text-xl font-bold text-white">{data.btc.formatted}</div>
             <div className="text-xs text-slate-400">
-              {(data.btc.contracts ?? 0).toLocaleString()} contracts
+              {Number.isFinite(data.btc.contracts) ? `${data.btc.contracts.toLocaleString()} contracts` : 'Contract count unavailable'}
             </div>
           </div>
         )}
@@ -398,7 +402,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           <div className="bg-slate-900/50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-blue-400 font-semibold">Ξ ETH</span>
-              {data.eth.change24h !== undefined && (
+              {data.eth.change24h != null && (
                 <span className={`text-xs font-medium ${getChangeColor(data.eth.change24h)}`}>
                   {formatChange(data.eth.change24h)}
                 </span>
@@ -406,7 +410,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             </div>
             <div className="text-xl font-bold text-white">{data.eth.formatted}</div>
             <div className="text-xs text-slate-400">
-              {(data.eth.contracts ?? 0).toLocaleString()} contracts
+              {Number.isFinite(data.eth.contracts) ? `${data.eth.contracts.toLocaleString()} contracts` : 'Contract count unavailable'}
             </div>
           </div>
         )}
@@ -424,13 +428,13 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
                   <div className="flex items-center gap-2">
                     <span className="text-slate-500 w-5 text-right text-xs">{i + 1}</span>
                     <span className="font-medium text-white">{coin.symbol}</span>
-                    {coin.change24h !== undefined && (
+                    {coin.change24h != null && (
                       <span className={`text-xs flex items-center gap-1 ${getChangeColor(coin.change24h)}`}>
                         <span>{coin.change24h > 0 ? '↑' : coin.change24h < 0 ? '↓' : '–'}</span>
                         {formatChange(coin.change24h)}
                       </span>
                     )}
-                    {coinInterpretation && coin.change24h !== undefined && Math.abs(coin.change24h) > 3 && (
+                    {coinInterpretation && coin.change24h != null && Math.abs(coin.change24h) > 3 && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                         coin.change24h > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                       }`}>

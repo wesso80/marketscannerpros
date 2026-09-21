@@ -10,6 +10,7 @@ export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
       <div className="text-sm font-semibold text-white">Research Scenario Watchlist</div>
       <div className="text-xs text-white/50">Educational scenarios aligned to current regime — observations only, not trade instructions.</div>
 
+      {ideas.length === 0 && <p className="mt-3 text-sm text-amber-200">Scenarios withheld until the required evidence is complete.</p>}
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
         {ideas.map((idea) => (
           <div key={idea.id} className="rounded-xl border border-white/10 bg-black/10 p-3">

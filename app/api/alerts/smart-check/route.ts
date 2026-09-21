@@ -1,3 +1,5 @@
+import { buildOiObservation, totalOiChange } from '@/lib/crypto/oiComparisons';
+import { trackOiHistory } from '@/lib/crypto/oiHistory';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
@@ -45,7 +47,7 @@ interface SmartAlert {
 
 interface DerivativesData {
   oi: {
-    total: { value: number; change24h: number; formatted: string };
+    total: { value: number; change24h: number | null; formatted: string };
     btc: { value: number; change24h: number };
     eth: { value: number; change24h: number };
   } | null;
@@ -209,55 +211,26 @@ async function fetchDerivativesData(req: NextRequest): Promise<{ data: Derivativ
   ]);
 
   const coins: any[] = Array.isArray(multiRes?.coins) ? multiRes.coins : [];
-  const symbols = coins.map((coin) => String(coin.symbol || '').toUpperCase()).filter(Boolean);
-
-  // Compare against the nearest stored snapshot at least 20h old. Unlike the
-  // legacy in-memory anchor this survives deploys/restarts and is explicit.
-  const previousRows = symbols.length > 0
-    ? await q<{ symbol: string; total_oi: number }>(
-        `SELECT DISTINCT ON (symbol) symbol, total_oi
-         FROM derivatives_snapshots
-         WHERE symbol = ANY($1::text[])
-           AND captured_at < NOW() - INTERVAL '20 hours'
-           AND total_oi IS NOT NULL
-         ORDER BY symbol, captured_at DESC`,
-        [symbols],
-      ).catch(() => [])
-    : [];
-
-  const previousOi = new Map<string, number>(
-    previousRows.map((row) => [String(row.symbol).toUpperCase(), Number(row.total_oi) || 0]),
-  );
-
-  const oiChange = (symbol: string, current: number): number => {
-    const previous = previousOi.get(symbol) || 0;
-    return previous > 0 && current > 0 ? ((current - previous) / previous) * 100 : 0;
-  };
+  const observations = coins.flatMap(coin => {
+    const observation = buildOiObservation(String(coin.symbol).toUpperCase(), (coin.exchanges ?? []).map((row: any) => ({
+      market: row.market, symbol: row.symbol, openInterest: row.openInterest, lastTradedAt: row.lastTradedAt,
+    })));
+    return observation ? [observation] : [];
+  });
+  const oiComparisons = await trackOiHistory(observations);
+  const comparisonBySymbol = new Map(oiComparisons.map(coin => [coin.symbol, coin]));
+  const oiChange = (symbol: string): number | null => comparisonBySymbol.get(symbol)?.change24h ?? null;
 
   const btcCoin = coins.find((coin) => String(coin.symbol).toUpperCase() === 'BTC');
   const ethCoin = coins.find((coin) => String(coin.symbol).toUpperCase() === 'ETH');
 
-  const currentOi = (coin: any): number => Number(coin?.aggregatedOI?.totalOI) || 0;
   const fundingPct = (coin: any): number | null => {
     const value = coin?.aggregatedFunding?.fundingRatePct;
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
   };
 
-  let comparableCurrentOi = 0;
-  let comparablePreviousOi = 0;
-  for (const coin of coins) {
-    const symbol = String(coin.symbol || '').toUpperCase();
-    const current = currentOi(coin);
-    const previous = previousOi.get(symbol) || 0;
-    if (current > 0 && previous > 0) {
-      comparableCurrentOi += current;
-      comparablePreviousOi += previous;
-    }
-  }
-  const aggregateOiChange = comparablePreviousOi > 0
-    ? ((comparableCurrentOi - comparablePreviousOi) / comparablePreviousOi) * 100
-    : 0;
-  const totalOi = coins.reduce((sum, coin) => sum + currentOi(coin), 0);
+  const aggregateOiChange = totalOiChange(oiComparisons);
+  const totalOi = oiComparisons.reduce((sum, coin) => sum + coin.value, 0);
 
   const availableFunding = coins
     .map((coin) => fundingPct(coin))
@@ -269,16 +242,6 @@ async function fetchDerivativesData(req: NextRequest): Promise<{ data: Derivativ
   const fundingSentiment = (rate: number): 'Bullish' | 'Bearish' | 'Neutral' =>
     rate > 0.03 ? 'Bullish' : rate < -0.01 ? 'Bearish' : 'Neutral';
 
-  // Legacy compatibility only. This is a funding-implied positioning proxy,
-  // not exchange-reported long/short account positioning.
-  const positioningProxy = (rate: number): number =>
-    Math.max(0.5, Math.min(1.5, 1 + rate / 0.05));
-  const proxyValues = availableFunding.map(positioningProxy);
-  const avgProxy = proxyValues.length
-    ? proxyValues.reduce((sum, value) => sum + value, 0) / proxyValues.length
-    : 1;
-  const longPct = (avgProxy / (1 + avgProxy)) * 100;
-
   const makeFunding = (coin: any) => {
     const rate = fundingPct(coin);
     return rate === null ? null : { fundingRatePercent: rate };
@@ -286,17 +249,19 @@ async function fetchDerivativesData(req: NextRequest): Promise<{ data: Derivativ
   const makeOi = (coin: any) => {
     if (!coin) return null;
     const symbol = String(coin.symbol || '').toUpperCase();
-    const value = currentOi(coin);
+    const observation = comparisonBySymbol.get(symbol);
+    if (!observation) return null;
+    const value = observation.value;
     return {
       value,
       openInterest: value,
-      change24h: oiChange(symbol, value),
+      change24h: oiChange(symbol),
       formatted: formatUsd(value),
     };
   };
 
   const data: DerivativesData = {
-    oi: coins.length ? {
+    oi: oiComparisons.length ? {
       total: {
         value: totalOi,
         openInterest: totalOi,
@@ -306,7 +271,7 @@ async function fetchDerivativesData(req: NextRequest): Promise<{ data: Derivativ
       btc: makeOi(btcCoin) as any,
       eth: makeOi(ethCoin) as any,
     } : null,
-    funding: coins.length ? {
+    funding: availableFunding.length ? {
       btc: makeFunding(btcCoin) as any,
       eth: makeFunding(ethCoin) as any,
       average: {
@@ -314,16 +279,8 @@ async function fetchDerivativesData(req: NextRequest): Promise<{ data: Derivativ
         sentiment: fundingSentiment(avgFunding),
       } as any,
     } : null,
-    longShort: coins.length ? {
-      btc: btcCoin ? { longShortRatio: positioningProxy(fundingPct(btcCoin) ?? 0) } as any : null as any,
-      eth: ethCoin ? { longShortRatio: positioningProxy(fundingPct(ethCoin) ?? 0) } as any : null as any,
-      average: {
-        longShortRatio: avgProxy,
-        longPercent: longPct,
-        shortPercent: 100 - longPct,
-        sentiment: avgProxy > 1.2 ? 'Bullish' : avgProxy < 0.8 ? 'Bearish' : 'Neutral',
-      } as any,
-    } : null,
+    // No observed account ratios are supplied by this provider.
+    longShort: null,
     fearGreed: fgRes?.current ? {
       value: fgRes.current.value,
       classification: fgRes.current.classification,
@@ -358,7 +315,8 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
   
   switch (condition_type) {
     case 'oi_surge': {
-      const change = data.oi?.total?.change24h ?? 0;
+      const change = data.oi?.total?.change24h;
+      if (typeof change !== 'number' || !Number.isFinite(change)) break;
       if (change >= condition_value) {
         return {
           triggered: true,
@@ -372,7 +330,8 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'oi_drop': {
-      const change = data.oi?.total?.change24h ?? 0;
+      const change = data.oi?.total?.change24h;
+      if (typeof change !== 'number' || !Number.isFinite(change)) break;
       if (change <= -condition_value) {
         return {
           triggered: true,
@@ -418,7 +377,8 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'ls_ratio_high': {
-      const ratio = data.longShort?.average?.longShortRatio ?? 1;
+      const ratio = data.longShort?.average?.longShortRatio;
+      if (typeof ratio !== 'number' || !Number.isFinite(ratio)) break;
       if (ratio >= condition_value) {
         return {
           triggered: true,
@@ -432,7 +392,8 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'ls_ratio_low': {
-      const ratio = data.longShort?.average?.longShortRatio ?? 1;
+      const ratio = data.longShort?.average?.longShortRatio;
+      if (typeof ratio !== 'number' || !Number.isFinite(ratio)) break;
       if (ratio <= condition_value) {
         return {
           triggered: true,
@@ -446,7 +407,8 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'fear_extreme': {
-      const value = data.fearGreed?.value ?? 50;
+      const value = data.fearGreed?.value;
+      if (typeof value !== 'number' || !Number.isFinite(value)) break;
       if (value <= condition_value) {
         return {
           triggered: true,
@@ -460,7 +422,8 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'greed_extreme': {
-      const value = data.fearGreed?.value ?? 50;
+      const value = data.fearGreed?.value;
+      if (typeof value !== 'number' || !Number.isFinite(value)) break;
       if (value >= condition_value) {
         return {
           triggered: true,

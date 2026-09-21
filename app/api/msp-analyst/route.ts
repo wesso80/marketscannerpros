@@ -738,17 +738,19 @@ Instruction:
           fearGreed: fearGreedRes !== null,
         };
 
-        let derivativesContext = '\n📊 DERIVATIVES & SENTIMENT DATA (Live from Binance Futures):\n';
+        let derivativesContext = '\n📊 DERIVATIVES & SENTIMENT DATA (available CoinGecko major-venue sample):\n';
         
         if (oiRes && oiRes.total) {
           derivativesContext += `
 OPEN INTEREST:
 - Total OI: ${oiRes.total.formatted}
-- 24h Change: ${oiRes.total.change24h !== undefined ? (oiRes.total.change24h >= 0 ? '+' : '') + oiRes.total.change24h.toFixed(2) + '%' : 'N/A'}
+- Coverage: ${oiRes.coverage || 'Not supplied'}
+- Baseline status: ${oiRes.comparisonReason || 'Comparable observations available'}
+- 24h Change: ${Number.isFinite(oiRes.total.change24h) ? (oiRes.total.change24h >= 0 ? '+' : '') + oiRes.total.change24h.toFixed(2) + '%' : 'N/A'}
 - BTC Dominance: ${oiRes.total.btcDominance}%
 - ETH Dominance: ${oiRes.total.ethDominance}%
-- BTC OI: ${oiRes.btc?.formatted || 'N/A'} (${oiRes.btc?.change24h !== undefined ? (oiRes.btc.change24h >= 0 ? '+' : '') + oiRes.btc.change24h.toFixed(2) + '%' : 'N/A'} 24h)
-- ETH OI: ${oiRes.eth?.formatted || 'N/A'} (${oiRes.eth?.change24h !== undefined ? (oiRes.eth.change24h >= 0 ? '+' : '') + oiRes.eth.change24h.toFixed(2) + '%' : 'N/A'} 24h)
+- BTC OI: ${oiRes.btc?.formatted || 'N/A'} (${Number.isFinite(oiRes.btc?.change24h) ? (oiRes.btc.change24h >= 0 ? '+' : '') + oiRes.btc.change24h.toFixed(2) + '%' : 'N/A'} 24h)
+- ETH OI: ${oiRes.eth?.formatted || 'N/A'} (${Number.isFinite(oiRes.eth?.change24h) ? (oiRes.eth.change24h >= 0 ? '+' : '') + oiRes.eth.change24h.toFixed(2) + '%' : 'N/A'} 24h)
 `;
         }
 

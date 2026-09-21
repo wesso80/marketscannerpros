@@ -6,7 +6,7 @@ import {
   getMarketData,
 } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
-import { q } from '@/lib/db';
+import { getOiEvidence } from '@/lib/crypto/oiHistory';
 
 // Crypto sector categorization
 const CRYPTO_SECTORS: Record<string, string> = {
@@ -107,56 +107,19 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Enrich with derivatives data from DB (latest snapshots)
+    // Use the same versioned, venue-comparable observations as the derivatives desk.
     try {
-      const symbols = cryptos.map(c => c.symbol);
-      const placeholders = symbols.map((_, i) => `$${i + 1}`).join(',');
-
-      // Get latest derivatives snapshot per symbol
-      const derivRows = await q(
-        `SELECT DISTINCT ON (symbol) symbol, funding_rate_pct, sentiment, total_oi, total_volume_24h, captured_at
-         FROM derivatives_snapshots
-         WHERE symbol IN (${placeholders})
-         ORDER BY symbol, captured_at DESC`,
-        symbols
-      );
-
-      // Get previous snapshot for OI change calculation (24h ago)
-      const prevRows = await q(
-        `SELECT DISTINCT ON (symbol) symbol, total_oi, captured_at
-         FROM derivatives_snapshots
-         WHERE symbol IN (${placeholders})
-           AND captured_at <= NOW() - INTERVAL '23 hours'
-           AND captured_at >= NOW() - INTERVAL '25 hours'
-         ORDER BY symbol, captured_at DESC`,
-        symbols
-      );
-
-      const derivMap = new Map<string, Record<string, unknown>>();
-      for (const r of derivRows) derivMap.set(r.symbol, r);
-      const prevMap = new Map<string, { value: number; time: number }>();
-      for (const r of prevRows) prevMap.set(r.symbol, { value: Number(r.total_oi), time: new Date(r.captured_at).getTime() });
-
-      for (const c of cryptos) {
-        const d = derivMap.get(c.symbol);
-        if (d) {
-          // Legacy snapshots contain no funding interval or formula version. Do not
-          // present potentially incompatible historical values as comparable rates.
-          c.fundingRate = null;
-          c.fundingSentiment = null;
-          const capturedAt = new Date(String(d.captured_at)).getTime();
-          const age = Date.now() - capturedAt;
-          if (!Number.isFinite(age) || age < 0 || age > 3_600_000) continue;
-          c.openInterest = d.total_oi != null ? parseFloat(String(d.total_oi)) : null;
-          // OI change %
-          const prevOI = prevMap.get(c.symbol);
-          if (prevOI && prevOI.value > 0 && capturedAt - prevOI.time >= 23 * 3_600_000 && capturedAt - prevOI.time <= 25 * 3_600_000 && c.openInterest && c.openInterest > 0) {
-            c.oiChange24h = Math.round(((c.openInterest - prevOI.value) / prevOI.value) * 10000) / 100;
-          }
-        }
+      const evidence = await getOiEvidence();
+      const bySymbol = new Map(evidence.coins.map(coin => [coin.symbol, coin]));
+      for (const coin of cryptos) {
+        const observation = bySymbol.get(coin.symbol);
+        coin.fundingRate = null;
+        coin.fundingSentiment = null;
+        coin.openInterest = observation?.value ?? null;
+        coin.oiChange24h = observation?.change24h ?? null;
       }
-    } catch (err) {
-      console.error('Crypto heatmap derivatives enrichment (non-fatal):', err);
+    } catch {
+      // Price heatmap remains useful when derivatives evidence is unavailable.
     }
 
     // Sort by weight (market cap proxy)
