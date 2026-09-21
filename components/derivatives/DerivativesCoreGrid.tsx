@@ -92,22 +92,28 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
                 <div className="mt-1 text-sm font-semibold text-white">
                   {data.liquidations?.summary?.totalLongValue == null
                     ? 'Unavailable'
-                    : `${(data.liquidations.summary.totalLongValue / 1e6).toFixed(1)}M`}
+                    : '$' + (data.liquidations.summary.totalLongValue / 1e6).toFixed(1) + 'M'}
                 </div>
+              </div>
               <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                 <div className="text-[11px] text-white/50">Shorts</div>
                 <div className="mt-1 text-sm font-semibold text-white">
                   {data.liquidations?.summary?.totalShortValue == null
                     ? 'Unavailable'
-                    : `${(data.liquidations.summary.totalShortValue / 1e6).toFixed(1)}M`}
+                    : '$' + (data.liquidations.summary.totalShortValue / 1e6).toFixed(1) + 'M'}
                 </div>
+              </div>
             </div>
             <div className="mt-3 grid gap-2">
               {(data.liquidations?.coins || []).slice(0, 5).map((coin) => (
                 <div key={coin.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-white">{coin.symbol}</span>
-                    <span className="text-white/60">L ${((coin.longValue || 0) / 1e6).toFixed(1)}M • S ${((coin.shortValue || 0) / 1e6).toFixed(1)}M</span>
+                    <span className="text-white/60">
+                      L {coin.longValue == null ? 'Unavailable' : '$' + (coin.longValue / 1e6).toFixed(1) + 'M'}
+                      {' • '}
+                      S {coin.shortValue == null ? 'Unavailable' : '$' + (coin.shortValue / 1e6).toFixed(1) + 'M'}
+                    </span>
                   </div>
                 </div>
               ))}
