@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import DiamondV2Status, { type DiamondHistoryView } from '@/components/diamond/DiamondV2Status';
 
 type Stage = 'REJECT' | 'WATCH' | 'EMERGING' | 'DIAMOND' | 'RARE_DIAMOND';
@@ -102,7 +102,7 @@ function scoreClass(score: number) {
 export default function DiamondHunterPage() {
   const [data, setData] = useState<DiamondResponse | null>(null);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState<'ALL' | Stage>('ALL');
   const [network, setNetwork] = useState('ALL');
   const [minScore, setMinScore] = useState(60);
@@ -120,17 +120,11 @@ export default function DiamondHunterPage() {
       setData(await res.json());
     } catch (e) {
       console.error(e);
-      setError('Diamond Hunter could not refresh. Existing results are left on screen.');
+      setError('Diamond Hunter could not run the manual scan. Existing results are left on screen.');
     } finally {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    load();
-    const timer = window.setInterval(load, 120_000);
-    return () => window.clearInterval(timer);
-  }, [load]);
 
   const networks = useMemo(
     () => Array.from(new Set((data?.candidates ?? []).map((c) => c.network))).sort(),
@@ -162,7 +156,7 @@ export default function DiamondHunterPage() {
               disabled={loading}
               className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
             >
-              {loading ? 'Scanning…' : 'Refresh scan'}
+              {loading ? 'Scanning…' : 'Run scan'}
             </button>
           </div>
 
@@ -173,7 +167,7 @@ export default function DiamondHunterPage() {
               ['Provisional', data?.stats.provisionalDiamonds ?? 0],
               ['Confirmed', data?.stats.confirmedDiamonds ?? 0],
               ['Deep checked', data?.stats.deepChecked ?? 0],
-              ['Refresh', data ? `${data.stats.refreshSeconds}s` : '—'],
+              ['Mode', 'Manual'],
             ].map(([label, value]) => (
               <div key={String(label)} className="rounded-xl border border-slate-800 bg-black/20 p-3">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
@@ -212,6 +206,15 @@ export default function DiamondHunterPage() {
         )}
 
         <div className="space-y-3">
+          {!data && !loading && (
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-10 text-center">
+              <div className="text-base font-semibold text-slate-200">Manual scan mode</div>
+              <div className="mt-2 text-sm text-slate-500">
+                Diamond Hunter will not call CoinGecko until you press Run scan.
+              </div>
+            </div>
+          )}
+
           {filtered.map((candidate) => (
             <article key={candidate.id} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,7 +293,7 @@ export default function DiamondHunterPage() {
             </article>
           ))}
 
-          {!loading && filtered.length === 0 && (
+          {data && !loading && filtered.length === 0 && (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-10 text-center text-sm text-slate-500">
               No pools currently meet these filters. That is a valid result — Diamond Hunter does not force a candidate.
             </div>
