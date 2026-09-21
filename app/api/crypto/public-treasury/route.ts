@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { buildCoinGeckoResponseMeta, getPublicTreasury } from '@/lib/coingecko';
+import { treasuryValueVsCost } from '@/lib/crypto/treasuryValuation';
 
 /**
  * /api/crypto/public-treasury?coin=bitcoin   (or ?coin=ethereum)
@@ -40,16 +41,11 @@ export async function GET(req: NextRequest) {
     entryValueUsd: c.total_entry_value_usd,
     currentValueUsd: c.total_current_value_usd,
     percentOfSupply: c.percentage_of_total_supply,
-    hasCostBasis: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0,
-    profitLossUsd: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0
-      ? c.total_current_value_usd - c.total_entry_value_usd
-      : null,
-    profitLossPercent: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0
-      ? ((c.total_current_value_usd - c.total_entry_value_usd) / c.total_entry_value_usd) * 100
-      : null,
+    ...treasuryValueVsCost(c.total_holdings, c.total_entry_value_usd, c.total_current_value_usd),
   }));
 
-  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+  // This endpoint supplies no observation date. Fetch time is not valuation time.
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: null, maxAgeMs: 300_000 });
 
   return NextResponse.json({
     coin: coinParam,
@@ -63,6 +59,7 @@ export async function GET(req: NextRequest) {
     source: meta.provider,
     freshnessStatus: meta.freshnessStatus,
     timestamp: meta.lastUpdated,
+    retrievedAt: new Date().toISOString(),
     meta,
   });
 }

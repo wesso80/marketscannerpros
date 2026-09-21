@@ -2022,7 +2022,7 @@ export interface CryptoNewsItem {
   image: string;
   author: string;
   posted_at: string;
-  type: 'news' | 'guides';
+  type: 'news' | 'guide';
   source_name: string;
   related_coin_ids: string[];
 }

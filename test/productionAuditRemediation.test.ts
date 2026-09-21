@@ -26,7 +26,7 @@ describe('2026-09-21 production audit remediations', () => {
 
     expect(widget).toContain("per_page: '20'");
     expect(widget).not.toContain("per_page: '25'");
-    expect(route).toContain("Math.min(parseInt(searchParams.get('per_page') || '20', 10), 20)");
+    expect(route).toContain("Math.max(1, Math.min(parseInt(searchParams.get('per_page') || '20', 10) || 20, 20))");
   });
 
   it('renders backtest average trade P&L as dollars instead of percentages', () => {

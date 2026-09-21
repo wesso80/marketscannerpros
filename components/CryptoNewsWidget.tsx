@@ -8,7 +8,7 @@ interface NewsArticle {
   image: string;
   author: string;
   posted_at: string;
-  type: 'news' | 'guides';
+  type: 'news' | 'guide';
   source_name: string;
   related_coin_ids: string[];
 }
@@ -33,6 +33,8 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'news' | 'guides'>('all');
+  const [guideCoinId, setGuideCoinId] = useState('bitcoin');
+  const effectiveCoinId = coinId || (filter === 'guides' ? guideCoinId : undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +44,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
       setError(null);
       try {
         const params = new URLSearchParams({ per_page: '20' });
-        if (coinId) params.set('coin_id', coinId);
+        if (effectiveCoinId) params.set('coin_id', effectiveCoinId);
         if (filter !== 'all') params.set('type', filter);
 
         const res = await fetch(`/api/crypto/cg-news?${params}`);
@@ -61,7 +63,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
 
     fetchNews();
     return () => { cancelled = true; };
-  }, [coinId, filter]);
+  }, [effectiveCoinId, filter]);
 
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
@@ -89,6 +91,17 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
           ))}
         </div>
       </div>
+
+      {filter === 'guides' && !coinId && (
+        <label className="mb-3 flex items-center gap-2 text-xs text-slate-300">
+          Guides for
+          <select aria-label="Guide coin" value={guideCoinId} onChange={event => setGuideCoinId(event.target.value)} className="rounded border border-slate-700 bg-slate-950 p-1">
+            <option value="bitcoin">Bitcoin</option>
+            <option value="ethereum">Ethereum</option>
+            <option value="solana">Solana</option>
+          </select>
+        </label>
+      )}
 
       {loading && (
         <div className="animate-pulse space-y-3">
@@ -142,7 +155,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
                     <span className="text-[10px] text-slate-600">by {article.author}</span>
                   )}
                   <span className="text-[10px] text-slate-600">· {timeAgo(article.posted_at)}</span>
-                  {article.type === 'guides' && (
+                  {article.type === 'guide' && (
                     <span className="rounded border border-indigo-400/30 bg-indigo-500/15 px-1.5 py-px text-[9px] font-bold text-indigo-300">
                       GUIDE
                     </span>

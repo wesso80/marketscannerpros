@@ -961,8 +961,8 @@ export default function GoldenEggPage() {
                   <div className="text-[11px] text-slate-500 mt-0.5">
                     {geCanonical
                       ? (geCanonical.levels.zones.some((z) => z.basis === 'structural')
-                        ? `S = structural level, M = model zone (multiple of stop distance). Illustrative R to the primary zone ≈ ${geCanonical.levels.illustrativeR ?? 'n/a'} — not a forecast.`
-                        : 'All zones are model zones (multiples of the stop distance) — no structural targets within range; R is mechanical by construction and is not shown as discovery.')
+                        ? `S = structural level, M = model zone (reference-to-invalidation risk multiple, with price caps labelled). Illustrative R to the primary zone ≈ ${geCanonical.levels.illustrativeR ?? 'n/a'} — not a forecast.`
+                        : 'All zones are model zones based on reference-to-invalidation risk; price caps are labelled. No structural targets were found within range. R is a mechanical calculation, not a forecast.')
                       : `Scenario R:R example ${isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'} — hypothetical illustration only, not a trading instruction`}
                   </div>
                 </div>

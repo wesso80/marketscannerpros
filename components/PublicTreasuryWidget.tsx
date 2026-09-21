@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { formatTreasuryUsd as formatUsd } from '@/lib/crypto/treasuryValuation';
 
 interface TreasuryCompany {
   name: string;
@@ -13,6 +14,7 @@ interface TreasuryCompany {
   hasCostBasis: boolean;
   profitLossUsd: number | null;
   profitLossPercent: number | null;
+  unavailableReason?: string | null;
 }
 
 interface TreasurySummary {
@@ -33,13 +35,6 @@ const COINS = [
   { id: 'ethereum', label: 'Ethereum', symbol: 'ETH' },
 ];
 
-function formatUsd(val: number): string {
-  if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
-  if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
-  if (val >= 1e3) return `$${(val / 1e3).toFixed(0)}K`;
-  return `$${val.toFixed(0)}`;
-}
-
 function formatPct(val: number | null): string {
   if (val == null || !Number.isFinite(val)) return 'Unavailable';
   return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
@@ -51,11 +46,13 @@ export default function PublicTreasuryWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<'holdings' | 'currentValueUsd' | 'profitLossUsd' | 'profitLossPercent'>('currentValueUsd');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setPage(1);
 
     fetch(`/api/crypto/public-treasury?coin=${coin}`)
       .then(r => r.json())
@@ -76,6 +73,8 @@ export default function PublicTreasuryWidget() {
     : [];
 
   const coinSymbol = COINS.find(c => c.id === coin)?.symbol || 'BTC';
+  const pageCount = Math.max(1, Math.ceil(sorted.length / 20));
+  const visibleRows = sorted.slice((page - 1) * 20, page * 20);
 
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
@@ -154,14 +153,14 @@ export default function PublicTreasuryWidget() {
             {([
               { key: 'currentValueUsd', label: 'Value' },
               { key: 'holdings', label: 'Holdings' },
-              { key: 'profitLossUsd', label: 'P&L $' },
-              { key: 'profitLossPercent', label: 'P&L %' },
+              { key: 'profitLossUsd', label: 'Value vs cost $' },
+              { key: 'profitLossPercent', label: 'Value vs cost %' },
             ] as const).map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
                 aria-pressed={sortCol === key}
-                onClick={() => setSortCol(key)}
+                onClick={() => { setSortCol(key); setPage(1); }}
                 className={`rounded border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
                   sortCol === key
                     ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300'
@@ -181,12 +180,12 @@ export default function PublicTreasuryWidget() {
                   <th scope="col" className="px-2 py-2 text-left text-[10px] font-semibold text-slate-500">Entity</th>
                   <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">Holdings</th>
                   <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">Value</th>
-                  <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">P&L</th>
+                  <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">Value vs cost</th>
                   <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">% Supply</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {sorted.map((co, i) => {
+                {visibleRows.map((co, i) => {
                   const hasPnl = co.hasCostBasis && co.profitLossUsd != null && co.profitLossPercent != null;
                   const isProfit = hasPnl && co.profitLossUsd! >= 0;
                   const countryCode = (co.country || '--').toUpperCase().slice(0, 2);
@@ -214,7 +213,7 @@ export default function PublicTreasuryWidget() {
                         ) : (
                           <>
                             <p className="font-semibold text-slate-500">Unavailable</p>
-                            <p className="text-[10px] text-slate-600">Cost basis not supplied</p>
+                            <p className="text-[10px] text-slate-600">{co.unavailableReason || 'Cost basis not supplied'}</p>
                           </>
                         )}
                       </td>
@@ -226,6 +225,12 @@ export default function PublicTreasuryWidget() {
             </table>
           </div>
 
+          <nav aria-label="Treasury pages" className="mt-3 flex items-center justify-between text-xs text-slate-300">
+            <button disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="rounded border border-slate-700 px-3 py-1 disabled:opacity-40">Previous</button>
+            <span aria-live="polite">Page {page} of {pageCount} · {sorted.length} entities</span>
+            <button disabled={page >= pageCount} onClick={() => setPage(value => value + 1)} className="rounded border border-slate-700 px-3 py-1 disabled:opacity-40">Next</button>
+          </nav>
+          <p className="mt-3 text-[11px] text-slate-400">Observation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.</p>
           <p className="mt-2 text-right text-[10px] text-slate-600">Source: CoinGecko Public Treasury</p>
         </>
       )}

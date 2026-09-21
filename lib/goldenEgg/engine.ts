@@ -21,6 +21,7 @@ import {
   type PriceData,
 } from '@/lib/goldenEggFetchers';
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
+import { buildMechanicalZones } from '@/lib/goldenEgg/mechanicalZones';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
 import { recordSignal } from '@/lib/signalRecorder';
@@ -448,7 +449,6 @@ function buildPayload(
       : 'Monitor whether flip conditions are met.';
 
   const maxTargetPct = 0.30;
-  const capTarget = (raw: number) => isLong ? Math.min(raw, p * (1 + maxTargetPct)) : Math.max(raw, p * (1 - maxTargetPct));
   const zoneStart = referencePrice ?? p;
   const structuralZones = beyond
     .filter((l) => (isLong ? l.price > zoneStart + atr * 0.5 : l.price < zoneStart - atr * 0.5))
@@ -457,7 +457,7 @@ function buildPayload(
     .map((l) => ({ price: l.price, basis: 'structural' as const, label: l.label }));
   const decompTarget = tcRaw?.decompressionTarget;
   const decompAligned = Boolean(decompTarget && decompTarget.price > 0 && ((isLong && decompTarget.direction === 'up' && decompTarget.price > p) || (!isLong && decompTarget.direction === 'down' && decompTarget.price < p)));
-  const mechanicalZones = [1.0, 1.5, 2.5].map((m) => ({ price: capTarget(isLong ? zoneStart + stopDistance * m : zoneStart - stopDistance * m), basis: 'mechanical' as const, label: `${m.toFixed(1)}× stop distance` }));
+  const mechanicalZones = buildMechanicalZones(zoneStart, stopPrice, p, isLong);
   const zones: Array<{ price: number; basis: 'structural' | 'mechanical'; label: string }> = [];
   const pushZone = (z: { price: number; basis: 'structural' | 'mechanical'; label: string }) => {
     if (zones.length >= 3) return;
@@ -1062,4 +1062,3 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   cache.set(cacheKey, { data: payload, ts: Date.now() });
   return { payload, cached: false, localDemo: false, warnings: [], dataQuality: goldenEggLiveDataQuality(assetClass) };
 }
-
