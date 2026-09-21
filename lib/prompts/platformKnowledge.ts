@@ -65,8 +65,8 @@ MARKETS & DATA (Research & Monitoring)
    Funding rates, liquidations, market cap data via CoinGecko API.
 
 10. /tools/dashboard?tab=crypto — Crypto Derivatives Dashboard
-    Real-time crypto derivatives: funding rates, long/short ratios, open interest, liquidations.
-    Binance Futures data for derivatives analysis.
+    Crypto derivatives context: multi-venue funding rates, funding-implied positioning proxy, open interest, and liquidations.
+    Derivatives data is aggregated through CoinGecko across major derivatives venues. The positioning proxy is derived from funding and is not exchange-reported long/short account data.
 
 11. /tools/explorer?tab=macro — Macro Monitor
     Macroeconomic data: treasury yields, Fed funds rate, inflation (CPI), employment, GDP.
