@@ -156,7 +156,8 @@ async function checkSmartAlerts(req: NextRequest) {
       dataSnapshot: {
         oi24hChange: derivativesData.oi?.total?.change24h,
         avgFunding: derivativesData.funding?.average?.fundingRatePercent,
-        avgLS: derivativesData.longShort?.average?.longShortRatio,
+        avgPositioningProxy: derivativesData.longShort?.average?.longShortRatio,
+        avgLS: derivativesData.longShort?.average?.longShortRatio, // legacy response field
         fearGreed: derivativesData.fearGreed?.value,
       },
       timestamp: new Date().toISOString(),
@@ -424,7 +425,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value: ratio,
           threshold: condition_value,
-          message: `⚠️ HIGH L/S RATIO: ${ratio.toFixed(2)} (crowded longs - squeeze risk)`,
+          message: `Funding-implied positioning proxy: ${ratio.toFixed(2)} (long-heavy). Derived from funding; not observed account positioning.`,
           context: { btcLS: data.longShort?.btc?.longShortRatio },
         };
       }
@@ -438,7 +439,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value: ratio,
           threshold: condition_value,
-          message: `⚠️ LOW L/S RATIO: ${ratio.toFixed(2)} (crowded shorts - squeeze up risk)`,
+          message: `Funding-implied positioning proxy: ${ratio.toFixed(2)} (short-heavy). Derived from funding; not observed account positioning.`,
           context: { btcLS: data.longShort?.btc?.longShortRatio },
         };
       }
