@@ -102,6 +102,11 @@ const nextConfig = {
         destination: '/tools/workspace',
         permanent: true,
       },
+      {
+        source: '/referrals',
+        destination: '/tools/referrals',
+        permanent: true,
+      },
 
       // ── V2 routes → consolidated /tools/* surfaces ──
       { source: '/v2/dashboard', destination: '/tools/dashboard', permanent: true },
