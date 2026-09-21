@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://marketscannerpros.app/tools/workspace?tab=portfolio' },
   title: 'Portfolio Tracker',
   description:
     'Track open positions, performance, risk, and hypothetical exposure with an educational portfolio workflow in real-time.',

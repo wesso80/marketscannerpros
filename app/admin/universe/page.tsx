@@ -161,7 +161,7 @@ export default function UniversePage() {
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#E5E7EB' }}>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 28, color: '#F9FAFB' }}>Personal Universe & Kill Switch</h1>
+        <h1 style={{ margin: 0, fontSize: 28, color: '#F9FAFB' }}>Personal Universe & Research Controls</h1>
         <p style={{ margin: '8px 0 0', color: '#9CA3AF', fontSize: 14, maxWidth: 760 }}>
           Curate the symbols you actively track and set personal exposure caps. Use the kill switch
           to suspend alerts and outbound notifications when stepping away or during periods of

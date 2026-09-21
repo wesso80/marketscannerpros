@@ -12,7 +12,7 @@ import { q } from "../db";
 import {
   ADMIN_LIFECYCLE_STATES,
   isValidTransition,
-  TERMINAL_STATES,
+  INACTIVE_QUEUE_STATES,
   type AdminLifecycleState,
 } from "./lifecycle";
 import type { AdminEdgePacket, ThesisStatus } from "./edgePacket";
@@ -177,7 +177,7 @@ export async function loadActiveQueue(input: {
   if (input.market) { params.push(input.market); where += ` AND market = $${params.length}`; }
   if (input.timeframe) { params.push(input.timeframe); where += ` AND timeframe = $${params.length}`; }
   if (!input.includeTerminal) {
-    const terminal = [...TERMINAL_STATES];
+    const terminal = [...INACTIVE_QUEUE_STATES];
     params.push(terminal); where += ` AND admin_state <> ALL($${params.length}::varchar[])`;
   }
   params.push(Math.min(500, input.limit ?? 200));

@@ -26,7 +26,7 @@ import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
 type PersonalExposureFlag = AdminEdgePacket["personalExposureFlag"];
 import type { AdminLifecycleState } from "@/lib/admin/lifecycle";
 import type { ChangeTapeEvent } from "@/lib/admin/changeTape";
-import { TERMINAL_STATES } from "@/lib/admin/lifecycle";
+import { INACTIVE_QUEUE_STATES } from "@/lib/admin/lifecycle";
 import DriftCard from "./DriftCard";
 
 /* ─────────────────── Truth badge ─────────────────── */
@@ -166,7 +166,7 @@ function BestAsymmetryCard({ packets }: { packets: AdminEdgePacket[] }) {
   const best = useMemo(
     () =>
       [...packets]
-        .filter((p) => !TERMINAL_STATES.has(p.adminState))
+        .filter((p) => !INACTIVE_QUEUE_STATES.has(p.adminState))
         .sort(
           (a, b) =>
             (b.opportunityRankScore ?? 0) - (a.opportunityRankScore ?? 0)
@@ -388,7 +388,7 @@ function AdminCommandQueue({
   const ranked = useMemo(
     () =>
       [...packets]
-        .filter((p) => !TERMINAL_STATES.has(p.adminState))
+        .filter((p) => !INACTIVE_QUEUE_STATES.has(p.adminState))
         .sort(
           (a, b) =>
             (b.opportunityRankScore ?? 0) - (a.opportunityRankScore ?? 0)

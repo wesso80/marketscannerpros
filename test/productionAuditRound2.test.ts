@@ -28,7 +28,7 @@ describe('post-remediation audit round 2 regressions', () => {
     expect(chain).toContain('function isCurrentOrFutureExpiry');
     expect(chain).toContain('eligibleCachedContracts = cached.contracts.filter((c) => isCurrentOrFutureExpiry(c.expiration))');
     expect(chain).toContain('if (!isCurrentOrFutureExpiry(c.expiration)) continue');
-    expect(flow).toContain(".filter((expiration) => /^\\\\d{4}-\\\\d{2}-\\\\d{2}$/.test(expiration) && expiration >= todayKey)");
+    expect(flow).toContain(".filter((expiration) => /^\\d{4}-\\d{2}-\\d{2}$/.test(expiration) && expiration >= todayKey)");
     expect(flow).toContain("code: 'INSUFFICIENT_QUOTE_COVERAGE'");
     expect(terminal).toContain('chain.expirations.find((e) => e.dte > 0');
   });
