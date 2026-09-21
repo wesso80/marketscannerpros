@@ -96,14 +96,17 @@ async function checkSmartAlerts(req: NextRequest) {
         AND (expires_at IS NULL OR expires_at > NOW())
     `);
 
-    // Fetch all derivatives data once (always — snapshot even with 0 alerts)
-    const derivativesData = await fetchDerivativesData(req);
+    // Fetch the CoinGecko derivatives aggregate once and derive every smart-alert
+    // derivative metric from that single payload. This avoids fan-out to three
+    // routes that all depend on the same large /derivatives response.
+    const derivativesBundle = await fetchDerivativesData(req);
+    const derivativesData = derivativesBundle.data;
     
     // Save snapshot for historical analysis
     await saveSnapshot(derivativesData);
 
-    // Save per-coin derivatives snapshots for historical charting
-    await savePerCoinSnapshots(req);
+    // Persist the exact same per-coin payload — no second provider fetch.
+    await savePerCoinSnapshots(derivativesBundle.multi);
 
     // Save stablecoin supply snapshot
     await saveStablecoinSnapshot(req);
@@ -195,39 +198,147 @@ async function fetchInternalJson(url: string): Promise<any | null> {
   }
 }
 
-async function fetchDerivativesData(req: NextRequest): Promise<DerivativesData> {
+async function fetchDerivativesData(req: NextRequest): Promise<{ data: DerivativesData; multi: any | null }> {
   const host = req.headers.get('host') || 'localhost:5000';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
-  const [oiRes, fundingRes, lsRes, fgRes] = await Promise.all([
-    fetchInternalJson(`${baseUrl}/api/open-interest`),
-    fetchInternalJson(`${baseUrl}/api/funding-rates`),
-    fetchInternalJson(`${baseUrl}/api/long-short-ratio`),
+  const [multiRes, fgRes] = await Promise.all([
+    fetchInternalJson(`${baseUrl}/api/crypto-derivatives?mode=multi`),
     fetchInternalJson(`${baseUrl}/api/fear-greed`),
   ]);
 
-  return {
-    oi: oiRes ? {
-      total: oiRes.total,
-      btc: oiRes.btc,
-      eth: oiRes.eth,
+  const coins: any[] = Array.isArray(multiRes?.coins) ? multiRes.coins : [];
+  const symbols = coins.map((coin) => String(coin.symbol || '').toUpperCase()).filter(Boolean);
+
+  // Compare against the nearest stored snapshot at least 20h old. Unlike the
+  // legacy in-memory anchor this survives deploys/restarts and is explicit.
+  const previousRows = symbols.length > 0
+    ? await q<{ symbol: string; total_oi: number }>(
+        `SELECT DISTINCT ON (symbol) symbol, total_oi
+         FROM derivatives_snapshots
+         WHERE symbol = ANY($1::text[])
+           AND captured_at < NOW() - INTERVAL '20 hours'
+           AND total_oi IS NOT NULL
+         ORDER BY symbol, captured_at DESC`,
+        [symbols],
+      ).catch(() => [])
+    : [];
+
+  const previousOi = new Map<string, number>(
+    previousRows.map((row) => [String(row.symbol).toUpperCase(), Number(row.total_oi) || 0]),
+  );
+
+  const oiChange = (symbol: string, current: number): number => {
+    const previous = previousOi.get(symbol) || 0;
+    return previous > 0 && current > 0 ? ((current - previous) / previous) * 100 : 0;
+  };
+
+  const btcCoin = coins.find((coin) => String(coin.symbol).toUpperCase() === 'BTC');
+  const ethCoin = coins.find((coin) => String(coin.symbol).toUpperCase() === 'ETH');
+
+  const currentOi = (coin: any): number => Number(coin?.aggregatedOI?.totalOI) || 0;
+  const fundingPct = (coin: any): number | null => {
+    const value = Number(coin?.aggregatedFunding?.fundingRatePct);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  let comparableCurrentOi = 0;
+  let comparablePreviousOi = 0;
+  for (const coin of coins) {
+    const symbol = String(coin.symbol || '').toUpperCase();
+    const current = currentOi(coin);
+    const previous = previousOi.get(symbol) || 0;
+    if (current > 0 && previous > 0) {
+      comparableCurrentOi += current;
+      comparablePreviousOi += previous;
+    }
+  }
+  const aggregateOiChange = comparablePreviousOi > 0
+    ? ((comparableCurrentOi - comparablePreviousOi) / comparablePreviousOi) * 100
+    : 0;
+  const totalOi = coins.reduce((sum, coin) => sum + currentOi(coin), 0);
+
+  const availableFunding = coins
+    .map((coin) => fundingPct(coin))
+    .filter((value): value is number => value !== null);
+  const avgFunding = availableFunding.length
+    ? availableFunding.reduce((sum, value) => sum + value, 0) / availableFunding.length
+    : 0;
+
+  const fundingSentiment = (rate: number): 'Bullish' | 'Bearish' | 'Neutral' =>
+    rate > 0.03 ? 'Bullish' : rate < -0.01 ? 'Bearish' : 'Neutral';
+
+  // Legacy compatibility only. This is a funding-implied positioning proxy,
+  // not exchange-reported long/short account positioning.
+  const positioningProxy = (rate: number): number =>
+    Math.max(0.5, Math.min(1.5, 1 + rate / 0.05));
+  const proxyValues = availableFunding.map(positioningProxy);
+  const avgProxy = proxyValues.length
+    ? proxyValues.reduce((sum, value) => sum + value, 0) / proxyValues.length
+    : 1;
+  const longPct = (avgProxy / (1 + avgProxy)) * 100;
+
+  const makeFunding = (coin: any) => {
+    const rate = fundingPct(coin);
+    return rate === null ? null : { fundingRatePercent: rate };
+  };
+  const makeOi = (coin: any) => {
+    if (!coin) return null;
+    const symbol = String(coin.symbol || '').toUpperCase();
+    const value = currentOi(coin);
+    return {
+      value,
+      openInterest: value,
+      change24h: oiChange(symbol, value),
+      formatted: formatUsd(value),
+    };
+  };
+
+  const data: DerivativesData = {
+    oi: coins.length ? {
+      total: {
+        value: totalOi,
+        openInterest: totalOi,
+        change24h: aggregateOiChange,
+        formatted: formatUsd(totalOi),
+      } as any,
+      btc: makeOi(btcCoin) as any,
+      eth: makeOi(ethCoin) as any,
     } : null,
-    funding: fundingRes ? {
-      btc: fundingRes.btc,
-      eth: fundingRes.eth,
-      average: fundingRes.average,
+    funding: coins.length ? {
+      btc: makeFunding(btcCoin) as any,
+      eth: makeFunding(ethCoin) as any,
+      average: {
+        fundingRatePercent: avgFunding,
+        sentiment: fundingSentiment(avgFunding),
+      } as any,
     } : null,
-    longShort: lsRes ? {
-      btc: lsRes.btc,
-      eth: lsRes.eth,
-      average: lsRes.average,
+    longShort: coins.length ? {
+      btc: btcCoin ? { longShortRatio: positioningProxy(fundingPct(btcCoin) ?? 0) } as any : null as any,
+      eth: ethCoin ? { longShortRatio: positioningProxy(fundingPct(ethCoin) ?? 0) } as any : null as any,
+      average: {
+        longShortRatio: avgProxy,
+        longPercent: longPct,
+        shortPercent: 100 - longPct,
+        sentiment: avgProxy > 1.2 ? 'Bullish' : avgProxy < 0.8 ? 'Bearish' : 'Neutral',
+      } as any,
     } : null,
     fearGreed: fgRes?.current ? {
       value: fgRes.current.value,
       classification: fgRes.current.classification,
     } : null,
   };
+
+  return { data, multi: multiRes };
+}
+
+function formatUsd(value: number): string {
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+  return `$${value.toFixed(0)}`;
 }
 
 interface CheckResult {
@@ -638,20 +749,12 @@ async function saveSnapshot(data: DerivativesData) {
 }
 
 /** Snapshot top-20 coin derivatives for historical funding rate / OI charting */
-async function savePerCoinSnapshots(req: NextRequest) {
+async function savePerCoinSnapshots(data: any | null) {
   try {
-    const host = req.headers.get('host') || 'localhost:5000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const baseUrl = `${protocol}://${host}`;
-
-    const res = await fetch(`${baseUrl}/api/crypto-derivatives?mode=multi`, {
-      cache: 'no-store',
-      headers: internalRequestHeaders(),
-      signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS),
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data?.coins?.length) return;
+    if (!data?.coins?.length) {
+      console.warn('[smart-check] Per-coin derivatives snapshot skipped: aggregate unavailable');
+      return;
+    }
 
     const values: any[][] = [];
     for (const coin of data.coins) {
