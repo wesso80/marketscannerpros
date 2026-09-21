@@ -1417,26 +1417,58 @@ export interface TrendingPool {
     address: string;
     base_token_price_usd: string;
     quote_token_price_usd: string;
-    base_token_price_native_currency: string;
+    base_token_price_native_currency: string | null;
+    pool_created_at?: string;
+    fdv_usd?: string | null;
+    market_cap_usd?: string | null;
     price_change_percentage: {
+      m5?: string;
+      m15?: string;
+      m30?: string;
       h1: string;
+      h6?: string;
       h24: string;
     };
     transactions: {
-      h1: { buys: number; sells: number };
-      h24: { buys: number; sells: number };
+      m5?: { buys: number; sells: number; buyers?: number; sellers?: number };
+      m15?: { buys: number; sells: number; buyers?: number; sellers?: number };
+      m30?: { buys: number; sells: number; buyers?: number; sellers?: number };
+      h1: { buys: number; sells: number; buyers?: number; sellers?: number };
+      h6?: { buys: number; sells: number; buyers?: number; sellers?: number };
+      h24: { buys: number; sells: number; buyers?: number; sellers?: number };
     };
     volume_usd: {
+      m5?: string;
+      m15?: string;
+      m30?: string;
       h1: string;
+      h6?: string;
       h24: string;
     };
-    reserve_in_usd: string;
+    reserve_in_usd: string | null;
+    sentiment_vote_positive_percentage?: number;
+    sentiment_vote_negative_percentage?: number;
+    community_sus_report?: number;
   };
   relationships: {
     base_token: { data: { id: string } };
     quote_token: { data: { id: string } };
     network: { data: { id: string } };
     dex: { data: { id: string } };
+  };
+}
+
+export interface CoinGeckoIncludedResource {
+  id: string;
+  type: 'token' | 'dex' | 'network' | string;
+  attributes: {
+    address?: string;
+    name?: string;
+    symbol?: string;
+    decimals?: number;
+    image_url?: string | null;
+    coingecko_coin_id?: string | null;
+    [key: string]: unknown;
   };
 }
 
@@ -1461,11 +1493,24 @@ export async function getTrendingPools(): Promise<{ data: TrendingPool[] } | nul
  * Endpoint: /onchain/networks/new_pools
  * FREE
  */
-export async function getNewPools(): Promise<{ data: TrendingPool[] } | null> {
+export async function getNewPools(options?: {
+  page?: number;
+  includeCommunityData?: boolean;
+  include?: Array<'base_token' | 'quote_token' | 'dex' | 'network'>;
+}): Promise<{ data: TrendingPool[]; included?: CoinGeckoIncludedResource[] } | null> {
   try {
-    return await cgFetch<{ data: TrendingPool[] }>('/onchain/networks/new_pools', {
-      init: { next: { revalidate: 300 } },
-    });
+    const params = new URLSearchParams();
+    if (options?.page) params.set('page', String(options.page));
+    if (options?.includeCommunityData) params.set('include_gt_community_data', 'true');
+    if (options?.include?.length) params.set('include', options.include.join(','));
+
+    return await cgFetch<{ data: TrendingPool[]; included?: CoinGeckoIncludedResource[] }>(
+      '/onchain/networks/new_pools',
+      {
+        params,
+        init: { next: { revalidate: 120 } },
+      }
+    );
   } catch (error) {
     console.error('[CoinGecko] New pools fetch error:', error);
     return null;
@@ -1920,7 +1965,9 @@ export interface TokenInfo {
     } | null;
     mint_authority: string | null;
     freeze_authority: string | null;
-    is_honeypot: boolean | null;
+    is_honeypot: boolean | 'unknown' | null;
+    developer_address?: string | null;
+    developer_holding_percentage?: string | null;
   };
 }
 

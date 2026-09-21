@@ -10,7 +10,7 @@ const NAV_LINKS: [string, string][] = [
   ["Scanner", "/tools/scanner"],
   ["Options", "/tools/terminal?tab=options-terminal"],
   ["Derivatives", "/tools/terminal?tab=crypto"],
-  ["Crypto", "/tools/explorer?tab=crypto-command"],
+  ["Crypto", "/tools/explorer?tab=crypto-command"],\n  ["Diamonds", "/tools/diamond-hunter"],
   ["Portfolio", "/tools/workspace?tab=portfolio"],
   ["Journal", "/tools/workspace?tab=journal"],
   ["Volatility", "/tools/volatility-engine"],
