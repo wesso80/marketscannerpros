@@ -263,6 +263,7 @@ export async function runDiamondHunterScan(options: { forceRefresh?: boolean } =
       sellers5m: candidate.metrics.sellers5m,
     },
     security: candidate.security ? { isHoneypot: candidate.security.isHoneypot } : null,
+    featureData: { components: candidate.components, metrics: candidate.metrics },
   }));
 
   let historyPersisted = false;
