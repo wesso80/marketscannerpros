@@ -31,11 +31,11 @@ export default function DerivativesMarketStrip({ items }: DerivativesMarketStrip
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
                   <div className="text-[11px] text-white/50">OI Δ</div>
-                  <div className="text-xs font-semibold text-white/80">{item.oiDelta >= 0 ? '+' : ''}{item.oiDelta.toFixed(2)}%</div>
+                  <div className="text-xs font-semibold text-white/80">{item.oiDelta == null ? 'Unavailable' : (item.oiDelta >= 0 ? '+' : '') + item.oiDelta.toFixed(2) + '%'}</div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
                   <div className="text-[11px] text-white/50">Funding</div>
-                  <div className="text-xs font-semibold text-white/80">{item.fundingSkew >= 0 ? '+' : ''}{item.fundingSkew.toFixed(3)}%</div>
+                  <div className="text-xs font-semibold text-white/80">{item.fundingSkew == null ? 'Unavailable' : (item.fundingSkew >= 0 ? '+' : '') + item.fundingSkew.toFixed(3) + '%'}</div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
                   <div className="text-[11px] text-white/50">Vol</div>
