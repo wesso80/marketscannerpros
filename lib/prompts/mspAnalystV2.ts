@@ -134,10 +134,11 @@ When derivatives data is provided, integrate it into Layer 5 (FD component):
   - OI↓ + Price↓ = Capitulation (long liquidations)
   - OI 24h change >5% = High confluence move
 
-  LONG/SHORT RATIO:
-  - >1.5 = Crowded longs (squeeze risk DOWN)
-  - <0.7 = Crowded shorts (squeeze risk UP)
-  - Use as CONTRARIAN at extremes, confirming at moderation
+  FUNDING-IMPLIED POSITIONING PROXY:
+  - The displayed proxy is mathematically derived from funding; it is NOT exchange-reported long/short account positioning
+  - >1.5 = funding-implied long-heavy context
+  - <0.7 = funding-implied short-heavy context
+  - NEVER count this as independent evidence in addition to funding; use it only as a readable restatement of funding skew
 
   FUNDING RATES:
   - >0.05% = Overleveraged longs (bearish pressure building)
