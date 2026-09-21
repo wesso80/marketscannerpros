@@ -13,13 +13,13 @@ function LoadingSpinner({ embeddedInTerminal = false }: { embeddedInTerminal?: b
   );
 }
 
-export default function Page({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
+export default function Page({ embeddedInTerminal = false, symbol, assetType, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; assetType?: 'equity' | 'crypto'; timeframe?: string } = {}) {
   const { tier, isLoading } = useUserTier();
   if (isLoading) return <LoadingSpinner embeddedInTerminal={embeddedInTerminal} />;
   if (!canAccessConfluenceScanner(tier)) return <UpgradeGate requiredTier="pro_trader" feature="Time Confluence Scanner" />;
   return (
     <Suspense fallback={<LoadingSpinner embeddedInTerminal={embeddedInTerminal} />}>
-      <TimeScannerPage embeddedInTerminal={embeddedInTerminal} />
+      <TimeScannerPage symbol={symbol} assetType={assetType} timeframe={timeframe} embeddedInTerminal={embeddedInTerminal} />
     </Suspense>
   );
 }

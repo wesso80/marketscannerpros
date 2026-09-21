@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
-import { primaryNavTools, secondaryToolLinks } from '@/lib/toolWorkflows';
+import { researchHref, parseResearchAsset, parseResearchTimeframe } from '@/lib/researchContext';
+import { primaryNavTools, workflowArea } from '@/lib/toolWorkflows';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MSP v2 Header — Matches Full Site Map
@@ -17,22 +18,23 @@ import { primaryNavTools, secondaryToolLinks } from '@/lib/toolWorkflows';
 // MSP Radar is a paid surface at /tools/msp-radar; like Golden Egg it is listed for everyone and gates inside the page.
 const SURFACES = primaryNavTools;
 
-const MORE_TOOLS = [
-  { href: '/tools/terminal', label: 'Terminal' },
-  { href: '/intelligence', label: 'Intelligence (preview)' },
-  ...secondaryToolLinks.map((tool) => ({ href: tool.href, label: tool.label })),
-  { href: '/tools', label: 'All Tools' },
-  { href: '/compliance-hub', label: 'Compliance Hub' },
-];
+const MORE_TOOLS = [{ href: '/tools', label: 'All tools' }, { href: '/compliance-hub', label: 'Compliance Hub' }];
 
 export default function Header() {
+  return <Suspense fallback={<header className="h-14 border-b border-slate-700 bg-slate-950" aria-label="Loading navigation" />}><HeaderContent /></Suspense>;
+}
+
+function HeaderContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeArea = workflowArea(pathname, searchParams.get('tab') || '');
   const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
   const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
-  const surfaces = SURFACES;
+  const surfaces = SURFACES.map(s => ({ ...s, href: searchParams.get('symbol') && (s.id === 'research' || s.id === 'backtest')
+    ? researchHref(s.href, searchParams.get('symbol')!, { assetType: parseResearchAsset(searchParams.get('type')), timeframe: parseResearchTimeframe(searchParams.get('timeframe')) }) : s.href }));
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : '';
@@ -92,8 +94,9 @@ export default function Header() {
             <Link
               key={s.href}
               href={s.href}
+              aria-current={activeArea === s.id ? 'page' : undefined}
               className={`px-2 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
-                isActive(s.href)
+                activeArea === s.id
                   ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
                   : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'
               }`}
@@ -105,12 +108,10 @@ export default function Header() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
-            <Link href="/intelligence" className={`msp-nav-secondary text-xs px-2 py-1 rounded-lg transition-colors whitespace-nowrap ${isActive('/intelligence') ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30' : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'}`}>Intelligence</Link>
             <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
             {isLoggedIn && (
               <Link href="/tools/referrals" className="msp-nav-secondary text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
             )}
-            <Link href="/compliance-hub" className="msp-nav-secondary text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Compliance</Link>
             <NotificationBell compact={isAppRoute} />
             {isLoggedIn && (
               <Link href="/account" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Account</Link>
@@ -188,7 +189,7 @@ export default function Header() {
                   href={s.href}
                   onClick={() => setDrawerOpen(false)}
                   className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                    isActive(s.href)
+                    activeArea === s.id
                       ? 'bg-teal-500/15 text-teal-300'
                       : 'text-white hover:bg-teal-500/10 hover:text-teal-300'
                   }`}

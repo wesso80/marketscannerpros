@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPostBySlug, blogPosts } from "../posts-data";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type ParamsInput = { slug: string } | Promise<{ slug: string }>;
 
@@ -67,7 +68,7 @@ export default async function BlogPost({ params }: { params: ParamsInput }) {
       </div>
 
       <article className="prose prose-invert prose-emerald max-w-none">
-        <ReactMarkdown
+        <ReactMarkdown remarkPlugins={[remarkGfm]}
           components={{
             h1: ({ children }) => <h1 className="text-3xl font-bold mt-8 mb-4">{children}</h1>,
             h2: ({ children }) => <h2 className="text-2xl font-bold mt-8 mb-3">{children}</h2>,

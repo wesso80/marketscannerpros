@@ -9,6 +9,7 @@
  * UI can show a friendly "Sign in" prompt instead of raw error text.
  */
 import type { ScannerInsight } from '@/lib/analysis';
+import { boundedJsonFetch } from '@/lib/boundedFetch';
 
 /* ------------------------------------------------------------------ */
 /*  Auth error class                                                   */
@@ -26,18 +27,17 @@ export class AuthError extends Error {
 /* ------------------------------------------------------------------ */
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const { response: res, body } = await boundedJsonFetch<T & { error?: string; message?: string }>(url, {
     credentials: 'same-origin',          // ensure cookies are sent
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   });
   if (res.status === 401 || res.status === 403) throw new AuthError(url);
   if (!res.ok) {
-    let detail = '';
-    try { const body = await res.json(); detail = body?.error || body?.message || ''; } catch {}
+    const detail = body?.error || body?.message || '';
     throw new Error(detail ? `${detail}` : `API ${res.status}: ${url}`);
   }
-  return res.json();
+  return body;
 }
 
 /* ------------------------------------------------------------------ */
@@ -892,6 +892,8 @@ export interface UseApiResult<T> {
 }
 
 function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T> {
+  const requestKey = JSON.stringify(deps);
+  const [settledKey, setSettledKey] = useState<string | null>(null);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
@@ -903,22 +905,26 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setData(null);
+    setSettledKey(null);
     setError(null);
     setIsAuthError(false);
     fetcher()
-      .then(res => { if (!cancelled) { setData(res); setLoading(false); } })
+      .then(res => { if (!cancelled) { setData(res); setSettledKey(requestKey); setLoading(false); } })
       .catch(err => {
         if (cancelled) return;
         const isAuth = err instanceof AuthError;
         setIsAuthError(isAuth);
         setError(isAuth ? null : err.message);   // don't show auth as "error"
+        setSettledKey(requestKey);
         setLoading(false);
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger, ...deps]);
 
-  return { data, error, loading, isAuthError, refetch };
+  const matchesRequest = settledKey === requestKey;
+  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, refetch };
 }
 
 // --- Typed hooks ---

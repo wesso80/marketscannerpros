@@ -183,7 +183,7 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
             label: 'Gap',
             value: `${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(2)}`,
             semantic: riskToSemantic(Math.abs(h.riskLiquidityGap) + 30),
-            tooltip: 'Downstream − Validated. Positive = risk appetite ahead of validated liquidity.',
+            tooltip: 'Downstream − Master Link (0.35 × M2 bias + 0.65 × validated). Positive = risk appetite ahead of transmission.',
           },
         ]}
       />
@@ -343,9 +343,9 @@ function DownstreamVsValidatedPanel({ data }: { data: LiquidityTransmissionPageD
   const h = data.headline!;
   return (
     <>
-      <SectionHeader title="Downstream vs Validated" />
+      <SectionHeader title="Downstream vs Master Link" subtitle="Gap = Downstream − Master Link; the validated component is shown separately in the headline." />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-        <Metric label="Validated" value={h.validated.toFixed(2)} tone={orientationToSemantic(h.validated)} />
+        <Metric label="Master Link" value={h.masterLink.toFixed(2)} tone={orientationToSemantic(h.masterLink)} />
         <Metric label="Downstream" value={h.downstream.toFixed(2)} tone={orientationToSemantic(h.downstream)} />
         <Metric
           label="Risk–Liquidity Gap"

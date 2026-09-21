@@ -5,7 +5,7 @@ import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 
-export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal = false }: { symbol?: string; embeddedInTerminal?: boolean } = {}) {
+export default function TimeScannerPage({ symbol: propSymbol, assetType, embeddedInTerminal = false }: { symbol?: string; assetType?: 'equity' | 'crypto'; embeddedInTerminal?: boolean } = {}) {
   const { tier, isLoading } = useUserTier();
   const [symbol, setSymbol] = useState(propSymbol || 'BTCUSD');
   const [currentPrice, setCurrentPrice] = useState(0);
@@ -21,10 +21,11 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
   // Fetch live price on mount and when symbol changes
   useEffect(() => {
     let cancelled = false;
+    setCurrentPrice(0);
     const fetchPrice = async () => {
       try {
         const isCrypto = symbol.endsWith('USD') && !['AUDUSD','EURUSD','NZDUSD','GBPUSD'].includes(symbol);
-        const type = isCrypto ? 'crypto' : 'stock';
+        const type = assetType ? (assetType === 'crypto' ? 'crypto' : 'stock') : isCrypto ? 'crypto' : 'stock';
         const res = await fetch(`/api/quote?symbol=${encodeURIComponent(symbol)}&type=${type}`);
         const data = await res.json();
         if (!cancelled && data.price) setCurrentPrice(data.price);
@@ -32,7 +33,7 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
     };
     fetchPrice();
     return () => { cancelled = true; };
-  }, [symbol]);
+  }, [symbol, assetType]);
 
   const handleSubmit = () => {
     const s = symInput.trim().toUpperCase();

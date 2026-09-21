@@ -307,7 +307,7 @@ export async function runDiamondHunterScan(options: { forceRefresh?: boolean } =
       historyPersisted,
     },
     methodology: {
-      version: 'diamond-v2.0',
+      version: 'diamond-v2.1-observed-baseline',
       scoreBands: { watch: 60, emerging: 70, diamond: 80, rareDiamond: 90 },
       note: 'Research ranking only. Diamond scores identify early candidates; confirmation requires repeated scans, known security status and stable liquidity.',
     },

@@ -45,6 +45,7 @@ type SortDir = 'asc' | 'desc';
 
 interface ScreenerTableProps {
   rows: ScreenerRow[];
+  emptyMessage?: string;
   onRowClick?: (row: ScreenerRow) => void;
   selectedSymbol?: string;
 }
@@ -179,7 +180,7 @@ const COLUMNS: Column[] = [
     render: (r) => <span>{r.atrPct != null ? `${formatNum(r.atrPct)}%` : '—'}</span>,
   },
   {
-    key: 'tfAlignment', label: 'MTF', width: '50px', align: 'center',
+    key: 'tfAlignment', label: 'Factors', width: '50px', align: 'center',
     render: (r) => <span>{r.tfAlignment != null ? `${r.tfAlignment}/4` : '—'}</span>,
   },
   {
@@ -232,7 +233,7 @@ const COLUMNS: Column[] = [
 ];
 
 /* ─── Component ─── */
-export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: ScreenerTableProps) {
+export default function ScreenerTable({ rows, onRowClick, selectedSymbol, emptyMessage = 'No scan results yet. Run a scan to see candidates.' }: ScreenerTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -266,7 +267,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
   if (!rows.length) {
     return (
       <div style={{ padding: 32, textAlign: 'center', color: 'var(--msp-text-muted)', fontSize: 14 }}>
-        No scan results yet. Run a scan to see candidates.
+        {emptyMessage}
       </div>
     );
   }

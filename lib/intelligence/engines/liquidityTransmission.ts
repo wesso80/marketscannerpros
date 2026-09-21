@@ -456,7 +456,7 @@ export function computeLiquidityTransmission(
 
   const riskLiquidityGap = downstreamRiskOn - transmissionRiskOn;
   const divergenceState =
-    riskLiquidityGap >= 15 ? 'RISK > VALIDATED LIQUIDITY'
+    riskLiquidityGap >= 15 ? 'RISK > MASTER LINK LIQUIDITY'
     : riskLiquidityGap <= -15 ? 'LIQUIDITY > DOWNSTREAM RISK'
     : 'ALIGNED';
 

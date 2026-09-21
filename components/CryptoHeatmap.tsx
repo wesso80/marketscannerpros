@@ -466,7 +466,7 @@ export default function CryptoHeatmap() {
                     ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-500">Funding data populates from derivatives cron</p>
+                <p className="text-[11px] text-slate-500">Comparable funding unavailable: cached snapshots do not identify the funding interval and calculation version.</p>
               )}
             </div>
 
@@ -529,9 +529,9 @@ export default function CryptoHeatmap() {
               </div>
             </div>
 
-            {/* DeFi TVL Overview */}
+            {/* DeFi Market Capitalization Overview */}
             <div className="bg-slate-800/50 rounded-lg p-3">
-              <h5 className="text-xs font-semibold text-slate-300 mb-2">DeFi TVL</h5>
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">DeFi Market Capitalization</h5>
               {defi ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">

@@ -25,11 +25,6 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
   const total = breakout.score;
   const color = scoreColor(total);
 
-  // Breakout probability: sigmoid-based mapping from score
-  // Score 0 → ~10%, Score 50 → ~50%, Score 100 → ~90%
-  const probability = Math.min(95, Math.max(5, 10 + (total * 0.85)));
-  const probColor = probability >= 60 ? 'var(--msp-bull)' : probability >= 35 ? 'var(--msp-warn)' : 'var(--msp-bear)';
-
   // Build set of component keys that are N/A due to missing inputs
   const naKeys = new Set<string>();
   for (const m of missingInputs) {
@@ -53,9 +48,7 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
             <span className="rounded-full px-2 py-0.5 text-[11px] font-bold uppercase" style={{ background: color + '22', color }}>
               {breakout.label}
             </span>
-            <span className="mt-0.5 text-[11px] font-semibold" style={{ color: probColor }}>
-              {probability.toFixed(0)}% prob
-            </span>
+            <span className="mt-0.5 text-[11px] text-white/40">Heuristic score · not a probability</span>
           </div>
         </div>
       </div>

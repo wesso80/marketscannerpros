@@ -1,25 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useUserTier } from "@/lib/useUserTier";
 
-const NAV_LINKS: [string, string][] = [
-  ["Home", "/tools"],
-  ["Markets", "/tools/explorer"],
-  ["Scanner", "/tools/scanner"],
-  ["Options", "/tools/terminal?tab=options-terminal"],
-  ["Derivatives", "/tools/terminal?tab=crypto"],
-  ["Crypto", "/tools/explorer?tab=crypto-command"],
-  ["Diamonds", "/tools/diamond-hunter"],
-  ["Portfolio", "/tools/workspace?tab=portfolio"],
-  ["Journal", "/tools/workspace?tab=journal"],
-  ["Volatility", "/tools/volatility-engine"],
-  ["Referrals", "/tools/referrals"],
-];
+import { primaryNavTools, workflowArea } from '@/lib/toolWorkflows';
+const NAV_LINKS = primaryNavTools;
 
 export default function ToolsNavBar() {
   const pathname = usePathname();
+  const params = useSearchParams();
+  const activeArea = workflowArea(pathname, params.get('tab') || '');
   const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
 
   function isActive(href: string) {
@@ -37,12 +28,12 @@ export default function ToolsNavBar() {
 
       {/* Tool links — scrollable */}
       <div className="flex items-center gap-1 overflow-x-auto flex-1 text-[11px] font-semibold">
-        {NAV_LINKS.map(([label, href]) => (
+        {NAV_LINKS.map(({ label, href, id }) => (
           <Link
             key={href}
             href={href}
             className={`whitespace-nowrap rounded-full border px-2.5 py-1 transition-colors ${
-              isActive(href)
+              activeArea === id
                 ? "border-[rgba(16,185,129,0.4)] bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)]"
                 : "border-transparent text-[var(--msp-text-muted)] hover:text-[var(--msp-text)]"
             }`}

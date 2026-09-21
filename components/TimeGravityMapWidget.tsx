@@ -306,7 +306,7 @@ function AOITargetBox({ zones }: { zones: GravityZone[] }) {
 /**
  * Midpoint Ladder
  */
-function MidpointLadder({ points }: { points: GravityPoint[] }) {
+function MidpointLadder({ points, currentPrice }: { points: GravityPoint[]; currentPrice: number }) {
   // Group by timeframe
   const byTF = points.reduce((acc, point) => {
     if (!acc[point.timeframe]) acc[point.timeframe] = [];
@@ -356,14 +356,14 @@ function MidpointLadder({ points }: { points: GravityPoint[] }) {
             
             return (
               <div key={`${tf}-${i}`} className="flex items-center gap-2">
-                <span className="w-8 text-gray-300">{tf}</span>
+                <span className="min-w-8 text-gray-300" title={point.candleCloseTime ? `Candle close: ${point.candleCloseTime}` : "Candle close unavailable"}>{tf}{point.candleCloseTime && <small className="block text-[9px] text-slate-500">{new Date(point.candleCloseTime).toISOString().slice(5, 16).replace("T", " ")} UTC</small>}</span>
                 <span aria-hidden="true" className={iconColor}>{icon}</span>
                 <span className="text-white">{point.midpoint.toFixed(2)}</span>
                 <span className="text-gray-600 text-[10px]">
                   ({point.zoneLow.toFixed(0)}–{point.zoneHigh.toFixed(0)})
                 </span>
                 <span className="text-gray-500">
-                  {point.distance > 0 ? '+' : ''}{point.distance.toFixed(2)}%
+                  {point.midpoint >= currentPrice ? '+' : '−'}{point.distance.toFixed(2)}%
                 </span>
                 <div className="flex-1 bg-gray-900/50 h-1 rounded-full overflow-hidden">
                   <div
@@ -876,7 +876,7 @@ export default function TimeGravityMapWidget({
   currentPrice,
   midpoints: externalMidpoints,
   assetType,
-  autoRefresh = true,
+  autoRefresh = false,
   refreshInterval = 120_000,
   variant = 'full',
   className = '',
@@ -911,6 +911,7 @@ export default function TimeGravityMapWidget({
         body: JSON.stringify({
           symbol,
           mode: 'calendar',
+          assetType: assetType === 'stock' ? 'equity' : assetType,
           anchor: 'TODAY',
           horizonDays: 1,
         }),
@@ -1251,7 +1252,7 @@ export default function TimeGravityMapWidget({
         
         {/* Right Column */}
         <div className="space-y-4">
-          <MidpointLadder points={tgm.allPoints} />
+          <MidpointLadder currentPrice={tgm.currentPrice} points={tgm.allPoints} />
           <DecompressionTimers points={tgm.allPoints} />
           <MidpointDebtTracker tgm={tgm} />
         </div>

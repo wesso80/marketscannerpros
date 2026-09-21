@@ -9,7 +9,7 @@ export function useJournalState() {
   const [sort, setSort] = useState<SortModel>({ key: 'entry_ts', dir: 'desc' });
 
   const onQueryChange = (patch: Partial<JournalQueryState>) => {
-    setQuery((prev) => ({ ...prev, ...patch, page: patch.page ?? (patch.pageSize ? 1 : prev.page) }));
+    setQuery((prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }));
   };
 
   const onSort = (sortModel: SortModel) => {

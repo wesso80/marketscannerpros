@@ -1,3 +1,4 @@
+import { directionalRiskReward } from '@/lib/scanner/researchValidity';
 /**
  * Confluence Learning Agent v2
  * 
@@ -667,8 +668,8 @@ export class ConfluenceLearningAgent {
   /**
    * Fetch LIVE real-time price using GLOBAL_QUOTE or Crypto Exchange Rate
    */
-  async fetchLivePrice(symbol: string): Promise<number | null> {
-    const isCrypto = this.detectAssetClass(symbol) === 'crypto';
+  async fetchLivePrice(symbol: string, assetType?: 'equity' | 'crypto'): Promise<number | null> {
+    const isCrypto = (assetType || this.detectAssetClass(symbol)) === 'crypto';
     
     try {
       if (isCrypto) {
@@ -697,8 +698,8 @@ export class ConfluenceLearningAgent {
     return null;
   }
 
-  async fetchHistoricalData(symbol: string, interval: string = '30min'): Promise<OHLCV[]> {
-    const isCrypto = this.detectAssetClass(symbol) === 'crypto';
+  async fetchHistoricalData(symbol: string, interval: string = '30min', assetType?: 'equity' | 'crypto'): Promise<OHLCV[]> {
+    const isCrypto = (assetType || this.detectAssetClass(symbol)) === 'crypto';
     
     if (isCrypto) {
       const base = normalizeCryptoBase(symbol);
@@ -2616,18 +2617,18 @@ export class ConfluenceLearningAgent {
   // HIERARCHICAL SCAN - Scan with all TFs below the selected mode
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async scanHierarchical(symbol: string, scanMode: ScanMode, sessionMode: SessionMode = 'extended'): Promise<HierarchicalScanResult> {
+  async scanHierarchical(symbol: string, scanMode: ScanMode, sessionMode: SessionMode = 'extended', assetType?: 'equity' | 'crypto'): Promise<HierarchicalScanResult> {
     const modeConfig = SCAN_MODES.find(m => m.mode === scanMode);
     if (!modeConfig) throw new Error(`Unknown scan mode: ${scanMode}`);
     
     // Get historical price data for analysis
-    const baseBars = await this.fetchHistoricalData(symbol, '30min');
+    const baseBars = await this.fetchHistoricalData(symbol, '30min', assetType);
     if (!baseBars || baseBars.length === 0) {
       throw new Error(`No price data for ${symbol}. The symbol may not be supported or data is temporarily unavailable — please check the ticker and try again.`);
     }
     
     // Fetch LIVE real-time price (fallback to last bar close if unavailable)
-    const livePrice = await this.fetchLivePrice(symbol);
+    const livePrice = await this.fetchLivePrice(symbol, assetType);
     const currentPrice = livePrice ?? baseBars[baseBars.length - 1].close;
     const isLivePrice = livePrice !== null;
     const currentTime = Date.now();
@@ -2645,7 +2646,7 @@ export class ConfluenceLearningAgent {
     const resampledBarsByTf: Record<string, OHLCV[]> = {};
     
     // Detect asset class from symbol
-    const assetClass = this.detectAssetClass(symbol);
+    const assetClass = assetType || this.detectAssetClass(symbol);
     
     // Detect if this is likely a stock (not crypto)
     const isCrypto = assetClass === 'crypto';
@@ -3434,6 +3435,13 @@ export class ConfluenceLearningAgent {
       structureScore,
     };
     
+    const validatedRR = directionalRiskReward(direction, tradeSetup.entryPrice, tradeSetup.stopLoss, tradeSetup.takeProfit);
+    if (validatedRR == null) {
+      tradeSetup.riskRewardRatio = 0;
+      reasoningParts.push('Scenario levels unavailable: invalid directional ordering. No conventional R:R can be stated.');
+    } else {
+      tradeSetup.riskRewardRatio = Math.round(validatedRR * 100) / 100;
+    }
     return {
       mode: scanMode,
       modeLabel: modeConfig.label,

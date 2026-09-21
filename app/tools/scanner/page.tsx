@@ -7,6 +7,8 @@
    --------------------------------------------------------------------------- */
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { boundedJsonFetch } from '@/lib/boundedFetch';
+import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
@@ -237,7 +239,7 @@ function lifecycleLabel(lifecycle: LifecycleState): string {
   return lifecycle.replace('_', ' ');
 }
 
-const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
+const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score ≥70', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
 const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
 const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
@@ -354,7 +356,7 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
                 <div className="mt-1 text-xs font-black text-white">{row.confidence}%</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MTF</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factors</div>
                 <div className="mt-1 text-xs font-black text-white">{row.tfAlignment ?? '—'}/4</div>
               </div>
             </div>
@@ -1017,13 +1019,23 @@ export default function ScannerPage() {
   const [proTimeframe, setProTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
   const [proDepth, setProDepth] = useState<ScanDepth>('light');
   const [proUniverseSize, setProUniverseSize] = useState(500);
-  const [proMinConfidence, setProMinConfidence] = useState<number>(50);
+  const [proMinConfidence, setProMinConfidence] = useState<number>(0);
   const [proMtfAlignment, setProMtfAlignment] = useState<number>(2);
   const [proVolState, setProVolState] = useState<string>('all');
   const [proSqueeze, setProSqueeze] = useState<'all' | 'squeeze'>('all');
   const [proIntent, setProIntent] = useState<'observe' | 'review'>('observe');
   const [proScanLoading, setProScanLoading] = useState(false);
-  const [proScanResults, setProScanResults] = useState<any>(null);
+  const proRequestKey = JSON.stringify([proAsset, proTimeframe, proDepth, proUniverseSize]);
+  const [proResponse, setProScanResults] = useState<any>(null);
+  const proScanResults = proResponse?.requestKey === proRequestKey ? proResponse : null;
+  const proAbortRef = useRef<AbortController | null>(null);
+  const detailRequestRef = useRef(0);
+  useEffect(() => {
+    proAbortRef.current?.abort();
+    setProScanLoading(false);
+    setProScanError(null);
+    return () => proAbortRef.current?.abort();
+  }, [proRequestKey]);
   const [proScanError, setProScanError] = useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | undefined>(undefined);
   const [proDirection, setProDirection] = useState<'all' | 'long' | 'short'>('all');
@@ -1033,7 +1045,7 @@ export default function ScannerPage() {
 
   /* ─── Shared detail state ─── */
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
-  const [selectedAssetClass, setSelectedAssetClass] = useState<'equity' | 'crypto' | null>(null);
+  const [selectedAssetClass, setSelectedAssetClass] = useState<'equity' | 'crypto' | 'forex' | null>(null);
   const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -1058,13 +1070,13 @@ export default function ScannerPage() {
   ]), [equity.data, crypto.data]);
 
   const filtered = useMemo(() => {
-    let items = allResults;
+    let items = [...allResults];
     switch (activeTab) {
       case 'Equities': items = items.filter(r => (r as any)._assetClass === 'equity'); break;
       case 'Crypto': items = items.filter(r => (r as any)._assetClass === 'crypto'); break;
       case 'Bullish': items = items.filter(r => r.direction === 'bullish'); break;
       case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
-      case 'High Score': items = items.filter(r => Math.abs(r.score) >= 5); break;
+      case 'High Score ≥70': items = items.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE); break;
       case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
       case 'Squeeze': items = items.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')); break;
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
@@ -1083,10 +1095,10 @@ export default function ScannerPage() {
         default: av = 0; bv = 0;
       }
       if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-      return sortDir === 'asc' ? av - bv : bv - av;
+      return (sortDir === 'asc' ? av - bv : bv - av) || a.symbol.localeCompare(b.symbol) || String((a as any)._assetClass).localeCompare(String((b as any)._assetClass));
     });
     return items;
-  }, [allResults, activeTab, sortKey, sortDir]);
+  }, [allResults, activeTab, sortKey, sortDir, currentRegime]);
 
   const rankedRows = useMemo(
     () => filtered.filter((r): r is ScanResult => Boolean(r && typeof r === 'object' && typeof r.symbol === 'string' && r.symbol.trim().length > 0)),
@@ -1099,7 +1111,7 @@ export default function ScannerPage() {
     Crypto: allResults.filter(r => (r as any)._assetClass === 'crypto').length,
     Bullish: allResults.filter(r => r.direction === 'bullish').length,
     Bearish: allResults.filter(r => r.direction === 'bearish').length,
-    'High Score': allResults.filter(r => Math.abs(r.score) >= 5).length,
+    'High Score ≥70': allResults.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE).length,
     'DVE Signals': allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length,
     Squeeze: allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length,
     'Regime Match': allResults.filter(r => isRegimeCompatible(r)).length,
@@ -1189,26 +1201,28 @@ export default function ScannerPage() {
 
   /* ─── Fetch single symbol detail ─── */
   const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string, context?: { queueRank?: SymbolDetail['queueRank']; lifecycle?: string }) => {
+    const requestId = ++detailRequestRef.current;
     setSelectedSymbol(symbol);
-    setSelectedAssetClass(asset === 'crypto' ? 'crypto' : 'equity');
+    setSelectedAssetClass(asset === 'crypto' ? 'crypto' : asset === 'forex' ? 'forex' : 'equity');
     setDetailLoading(true);
     setSymbolDetail(null);
     try {
-      const res = await fetch('/api/scanner/run', {
+      const { response: res, body: data } = await boundedJsonFetch<any>('/api/scanner/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: asset, timeframe: tf, minScore: 0, symbols: [symbol] }),
       });
-      const data = await res.json();
-      if (data.success && data.results?.length > 0) {
+      if (requestId !== detailRequestRef.current) return;
+      if (res.ok && data.success && data.results?.length > 0) {
         setSymbolDetail({ ...data.results[0], providerStatus: data.metadata?.dataQuality?.providerStatus ?? null, queueRank: context?.queueRank ?? null, lifecycle: context?.lifecycle });
       } else {
-        setSymbolDetail({ symbol, score: 0, direction: 'neutral', queueRank: context?.queueRank ?? null });
+        setProScanError(data?.error || `Analysis unavailable for ${symbol}. Retry manually.`);
       }
-    } catch {
-      setSymbolDetail({ symbol, score: 0, direction: 'neutral', queueRank: context?.queueRank ?? null });
+    } catch (error) {
+      if (requestId !== detailRequestRef.current) return;
+      setProScanError(error instanceof Error ? error.message : 'Analysis unavailable. Retry manually.');
     } finally {
-      setDetailLoading(false);
+      if (requestId === detailRequestRef.current) setDetailLoading(false);
     }
   }, []);
 
@@ -1227,6 +1241,9 @@ export default function ScannerPage() {
 
   /* ─── Pro Scan: run bulk scan ─── */
   const runProScan = useCallback(async () => {
+    proAbortRef.current?.abort();
+    const controller = new AbortController();
+    proAbortRef.current = controller;
     setProScanLoading(true);
     setProScanError(null);
     setProScanResults(null);
@@ -1241,24 +1258,25 @@ export default function ScannerPage() {
       } else {
         payload.mode = 'hybrid';
       }
-      const res = await fetch('/api/scanner/bulk', {
+      const { response: res, body: data } = await boundedJsonFetch<any>('/api/scanner/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
-      const data = await res.json();
+        signal: controller.signal,
+      }, 60_000);
+      if (controller.signal.aborted) return;
       if (!res.ok) {
         if (res.status === 401) { setProScanError('Please log in to use the scanner'); return; }
         setProScanError(data?.error || `Server returned ${res.status}`);
         return;
       }
-      setProScanResults(data);
+      setProScanResults({ ...data, requestKey: proRequestKey, requestedType: proAsset, requestedTimeframe: proTimeframe, requestedDepth: proDepth });
     } catch (e: any) {
-      setProScanError(e?.message || 'Network error');
+      if (!controller.signal.aborted) setProScanError(e?.message || 'Network error');
     } finally {
-      setProScanLoading(false);
+      if (!controller.signal.aborted) setProScanLoading(false);
     }
-  }, [proAsset, proTimeframe, proDepth, proUniverseSize]);
+  }, [proAsset, proTimeframe, proDepth, proUniverseSize, proRequestKey]);
 
   /* ─── Pro Scan: template apply ─── */
   const applyTemplate = useCallback((tmpl: ScanTemplate) => {
@@ -1285,16 +1303,21 @@ export default function ScannerPage() {
   }, [activeTemplateId, filterSnapshot]);
 
   /* ─── Pro scan filtered results → ScreenerRow[] (+ per-filter drop accounting so an empty table is never silent) ─── */
-  const [proFilterDrops, setProFilterDrops] = useState<Record<string, number>>({});
-  const proScreenerRows: ScreenerRow[] = useMemo(() => {
-    if (!proScanResults?.topPicks) return [];
+  const { rows: proScreenerRows, drops: proFilterDrops } = useMemo((): { rows: ScreenerRow[]; drops: Record<string, number> } => {
+    if (!proScanResults?.topPicks) return { rows: [], drops: {} };
     const drops: Record<string, number> = {};
     const rows = proScanResults.topPicks
+      .filter((pick: any) => {
+        const score = pick.confidence ?? pick.scoreV2?.final?.confidence ?? pick.score;
+        if (typeof score === 'number' && Number.isFinite(score)) return true;
+        drops['Score unavailable'] = (drops['Score unavailable'] ?? 0) + 1;
+        return false;
+      })
       .map((pick: any, idx: number) => {
         const ind = pick.indicators || {};
         const scoreV2 = pick.scoreV2;
         // Headline = trust-capped condition match from the API (Part J). Legacy fallbacks only for older payloads.
-        const conf = pick.confidence ?? scoreV2?.final?.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
+        const conf = pick.confidence ?? scoreV2?.final?.confidence ?? pick.score;
         const matchConf = pick.matchConfidence ?? conf;
         const dir = (pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL') as 'LONG' | 'SHORT' | 'NEUTRAL';
         const qual = scoreV2?.final?.qualityTier ?? (conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low');
@@ -1324,7 +1347,7 @@ export default function ScannerPage() {
           : blockReasons.includes('tf_alignment_low') ? 'Alignment below threshold'
           : strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
           : rangeConfirmationNeeded ? 'Directional setup inside range — confirm break/fade'
-          : tfA >= 4 && qual !== 'low' ? 'Multi-timeframe agreement'
+          : tfA >= 4 && qual !== 'low' ? 'Four-factor agreement'
           : atrPct < 1.5 ? 'Compression setup'
           : ind.momentumAccel ? 'Momentum acceleration'
           : trendOk ? 'Trend alignment'
@@ -1376,11 +1399,15 @@ export default function ScannerPage() {
         if (proPresetConditions.id === 'mean_reversion' && row.rsi != null && !(row.rsi <= 35 || row.rsi >= 65)) return drop('RSI extreme (≤ 35 or ≥ 65)');
         return true;
       })
+      .sort((a: ScreenerRow, b: ScreenerRow) => {
+        const delta = proSort === 'confidence' ? b.confidence - a.confidence
+          : proSort === 'volatility' ? (b.atrPct ?? -Infinity) - (a.atrPct ?? -Infinity)
+          : proSort === 'trend' ? (b.adx ?? -Infinity) - (a.adx ?? -Infinity) : a.rank - b.rank;
+        return (Number.isFinite(delta) ? delta : 0) || a.symbol.localeCompare(b.symbol);
+      })
       .map((row: ScreenerRow, index: number) => ({ ...row, rank: index + 1 }));
-    // Report drops for the empty/partial state (rendered next to the counts).
-    queueMicrotask(() => setProFilterDrops(drops));
-    return rows;
-  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions, currentRegime]);
+    return { rows, drops };
+  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions, currentRegime, proSort]);
 
   /* ─── Pro scan row click ─── */
   const handleProRowClick = useCallback((row: ScreenerRow) => {
@@ -1440,7 +1467,7 @@ export default function ScannerPage() {
   const modeDetail = headerStage === 'ranked'
     ? 'System-ranked research opportunities'
     : headerStage === 'pro'
-      ? 'Your exact conditions'
+      ? 'Filters on the returned shortlist'
       : selectedSymbol ? `Reviewing ${selectedSymbol}` : 'Reviewing case';
   const queueValue = headerStage === 'analysis' && selectedSymbol
     ? selectedSymbol
@@ -1453,15 +1480,20 @@ export default function ScannerPage() {
     : headerStage === 'pro'
       ? universeCount != null ? `Scanned ${universeCount} symbols` : 'Run Educational Scan to populate'
       : v2Loading ? 'Loading market data…' : queueCount > 0 ? 'Sorted by MSP score' : 'Awaiting scan results';
-  const dataIssues = [
+  const weakProRows = (proScanResults?.topPicks ?? []).filter(rowHasWeakData).length;
+  const dataIssues = (mode === 'ranked' ? [
     rankedLocalDemo ? 'Local demo rows' : null,
-    proScanResults?.dataQuality?.source === 'local_demo' ? 'Pro demo rows' : null,
     equity.error ? 'Equity feed' : null,
     crypto.error ? 'Crypto feed' : null,
+    ...rankedProviderStatuses.filter((p) => !p.status || p.status.degraded || p.status.stale).map((p) => `${p.label} data incomplete`),
+  ] : [
+    proScanResults?.dataQuality?.source === 'local_demo' ? 'Pro demo rows' : null,
     proScanError ? 'Pro scan error' : null,
-  ].filter(Boolean) as string[];
-  const dataLoadingCount = [equity.loading, crypto.loading, proScanLoading, detailLoading].filter(Boolean).length;
-  const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : 'Ready';
+    weakProRows ? `${weakProRows} returned rows have weak data` : null,
+    proScanResults?.universe?.valid < proScanResults?.universe?.input ? 'Partial universe coverage' : null,
+  ]).filter(Boolean) as string[];
+  const dataLoadingCount = (mode === 'ranked' ? [equity.loading, crypto.loading, detailLoading] : [proScanLoading, detailLoading]).filter(Boolean).length;
+  const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : mode === 'pro' && !proScanResults ? 'Not scanned' : 'Ready';
   const dataHealthTone = dataIssues.length ? 'var(--msp-warn)' : dataLoadingCount ? 'var(--msp-flat)' : 'var(--msp-bull)';
   const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
   const topRankedSymbol = rankedRows[0]?.symbol;
@@ -1471,7 +1503,7 @@ export default function ScannerPage() {
     ? 'Validate in Golden Egg'
     : headerStage === 'pro'
       ? proScanResults
-        ? topProSymbol ? `Review ${topProSymbol}` : 'Tighten filters'
+        ? topProSymbol ? `Review ${topProSymbol}` : 'Review filter exclusions'
         : 'Run Educational Scan'
       : topRankedSymbol ? `Review ${topRankedSymbol}` : v2Loading ? 'Loading queue…' : 'Awaiting ranked data';
   const nextCheckDetail = headerStage === 'analysis'
@@ -1822,14 +1854,14 @@ export default function ScannerPage() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="pro-mtf-alignment" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">MTF Alignment</label>
+                    <label htmlFor="pro-mtf-alignment" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Factor agreement</label>
                     <select id="pro-mtf-alignment" value={proMtfAlignment} onChange={e => setProMtfAlignment(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={2}>2/4+</option><option value={3}>3/4+</option><option value={4}>4/4</option>
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Confidence</label>
+                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Evidence Score</label>
                     <select id="pro-min-confidence" value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={0}>Any</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>
@@ -1956,9 +1988,10 @@ export default function ScannerPage() {
               </div>
               <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                 <span>Scanned: {proScanResults.scanned ?? '—'}</span>
-                <span>Returned: {proScanResults.topPicks?.length ?? 0}</span>
+                <span>Returned shortlist: {proScanResults.topPicks?.length ?? 0} · display filters apply to these candidates only</span>
                 <span>Duration: {proScanResults.duration ?? '—'}</span>
-                <span>Mode: {proScanResults.mode ?? proDepth}</span>
+                <span>Requested: {proScanResults.requestedType} · {proScanResults.requestedTimeframe} · {proScanResults.requestedDepth}</span>
+                <span>Executed: {proScanResults.mode ?? 'Unavailable'}</span>
                 {proScanResults.universe?.input != null && <span title={proScanResults.universe.note ?? ''}>Universe: {proScanResults.universe.input} in → {proScanResults.universe.valid} valid{proScanResults.universe.providerMisses ? ` · ${proScanResults.universe.providerMisses} provider misses` : ''}{proScanResults.universe.excludedCounts ? ` · excluded ${Object.entries(proScanResults.universe.excludedCounts as Record<string, number>).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join(', ')}` : ''}</span>}
                 {proScanResults.universe?.excluded?.length ? <span title={(proScanResults.universe.excluded as Array<{ symbol: string; reason: string }>).map((x) => `${x.symbol}: ${x.reason}`).join('\n')}>Excluded: {(proScanResults.universe.excluded as Array<{ symbol: string; reason: string }>).slice(0, 6).map((x) => `${x.symbol} (${x.reason.replace(/_/g, ' ')})`).join(', ')}{proScanResults.universe.excluded.length > 6 ? ` +${proScanResults.universe.excluded.length - 6}` : ''}</span> : null}
               </div>
@@ -1969,7 +2002,7 @@ export default function ScannerPage() {
               )}
               {proBulkViewMode === 'cards'
                 ? <ProScannerCards rows={proScreenerRows} onRowClick={handleProRowClick} />
-                : <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
+                : <ScreenerTable rows={proScreenerRows} emptyMessage={proScanResults.topPicks?.length ? 'Scan completed. Your filters excluded every returned candidate; review the exclusions above.' : 'Scan completed with no returned candidates. Review universe coverage and data availability.'} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
               <div className="mt-2 text-[11px] text-slate-600">
                 Bias within these {proScreenerRows.length} Pro matches (from {proScanResults.scanned ?? '—'} {proAsset} symbols scanned) · Regime: {currentRegime.toUpperCase()} · {proScreenerRows.filter(r => r.direction === 'LONG').length} long / {proScreenerRows.filter(r => r.direction === 'SHORT').length} short / {proScreenerRows.filter(r => r.direction === 'NEUTRAL').length} neutral. This describes your filtered universe, not the whole market.
               </div>

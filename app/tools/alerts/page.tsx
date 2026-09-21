@@ -8,6 +8,7 @@ import UpgradeGate from "@/components/UpgradeGate";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
+import { alertConditionLabel, alertThreshold } from '@/lib/alertPresentation';
 import RegimeBanner from '@/components/RegimeBanner';
 import { PageHero } from '@/components/ui';
 
@@ -68,8 +69,9 @@ function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
   return 'Basic';
 }
 
-function deriveStatus(alert: AlertItem): 'Armed' | 'Cooldown' | 'Disabled' {
+function deriveStatus(alert: AlertItem): 'Armed' | 'Cooldown' | 'Disabled' | 'Incomplete' {
   if (!alert.is_active) return 'Disabled';
+  if (alert.condition_type.startsWith('price_') && (alertThreshold(alert.condition_value) ?? 0) <= 0) return 'Incomplete';
   if (!alert.triggered_at || !alert.cooldown_minutes) return 'Armed';
   const ms = Date.now() - new Date(alert.triggered_at).getTime();
   return ms < alert.cooldown_minutes * 60_000 ? 'Cooldown' : 'Armed';
@@ -395,7 +397,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
                       <div className="flex h-full flex-col justify-center gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                         <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
                           <span className="min-w-[56px] rounded-md border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
-                          <span className="truncate text-sm font-semibold text-slate-100">{(alert.condition_type ?? '').replaceAll('_', ' ')} {Number.isFinite(alert.condition_value) ? alert.condition_value : '—'}</span>
+                          <span className="truncate text-sm font-semibold text-slate-100">{alertConditionLabel(alert.condition_type ?? '', alert.condition_value)}</span>
                           <span className="hidden rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400 sm:inline">{type}</span>
                         </div>
 

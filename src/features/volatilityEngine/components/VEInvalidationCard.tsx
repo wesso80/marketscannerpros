@@ -3,8 +3,9 @@
 import type { DVEInvalidation } from '@/src/features/volatilityEngine/types';
 
 export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
-  const statusColor = inv.invalidated ? 'var(--msp-bear)' : 'var(--msp-bull)';
-  const statusText = inv.invalidated ? 'INVALIDATED' : 'VALID';
+  const hasLevels = [inv.priceInvalidation, inv.phaseInvalidation, inv.smoothedPhaseInvalidation].some(v => v != null && Number.isFinite(v));
+  const statusColor = !hasLevels ? 'var(--msp-text-muted)' : inv.invalidated ? 'var(--msp-bear)' : 'var(--msp-bull)';
+  const statusText = !hasLevels ? 'UNAVAILABLE' : inv.invalidated ? 'INVALIDATED' : 'VALID';
 
   return (
     <div className={`rounded-xl border p-5 ${inv.invalidated ? 'border-red-500/30 bg-red-500/5' : 'border-white/10 bg-white/5'}`}>

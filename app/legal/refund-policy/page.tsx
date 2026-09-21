@@ -27,7 +27,7 @@ export default function RefundPolicyPage() {
       <h2>Free Trial Period</h2>
       <ul>
         <li><strong>Pro Plan:</strong> 7-day free trial</li>
-        <li><strong>Pro Trader Plan:</strong> 5-day free trial</li>
+        <li>Trial eligibility and duration are confirmed at checkout.</li>
         <li>You will not be charged during the trial period.</li>
         <li>Cancel anytime during the trial to avoid charges.</li>
         <li>One trial per email address per plan (see Trial Abuse Prevention below).</li>
@@ -35,8 +35,8 @@ export default function RefundPolicyPage() {
 
       <h2>Subscription Billing</h2>
       <ul>
-        <li>After your trial ends, you will be charged the monthly subscription fee automatically.</li>
-        <li>Subscriptions renew monthly until cancelled.</li>
+        <li>After your trial ends, you will be charged the subscription fee for your selected monthly or annual billing interval automatically.</li>
+        <li>Subscriptions renew at your selected monthly or annual interval until cancelled.</li>
         <li>Cancellations take effect at the end of the current billing period.</li>
       </ul>
 
@@ -52,7 +52,7 @@ export default function RefundPolicyPage() {
       
       <p><strong>After 7 Days - No Pro-Rated Refunds:</strong></p>
       <ul>
-        <li>After the 7-day guarantee period, we do <strong>not</strong> provide refunds or credits for partial months of service.</li>
+        <li>After the 7-day guarantee period, we do <strong>not</strong> provide refunds or credits for partial billing periods of service.</li>
         <li>When you cancel, you retain access until the end of your current billing period.</li>
         <li>No refunds are given for unused time after cancellation.</li>
       </ul>

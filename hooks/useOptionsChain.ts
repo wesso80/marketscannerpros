@@ -61,6 +61,7 @@ function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGr
 }
 
 function buildBestStrikes(contracts: OptionsContract[], spot: number): BestStrike[] {
+  contracts = contracts.filter(c => Number.isFinite(c.bid) && Number.isFinite(c.ask) && c.bid > 0 && c.ask >= c.bid);
   const calls = contracts.filter((c) => c.type === 'call');
   const puts = contracts.filter((c) => c.type === 'put');
 
