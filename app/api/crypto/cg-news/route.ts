@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const type = (searchParams.get('type') || undefined) as 'news' | 'guides' | undefined;
   const language = searchParams.get('language') || 'en';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const per_page = Math.min(parseInt(searchParams.get('per_page') || '20', 10), 50);
+  const per_page = Math.min(parseInt(searchParams.get('per_page') || '20', 10), 20);
 
   const articles = await getCryptoNews({ coin_id, type, language, page, per_page });
 
