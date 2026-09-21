@@ -290,7 +290,6 @@ Research context:
 
       {/* Crowding Risk Meter */}
       {lsData && fundingData && (() => {
-        const lsRatio = parseFloat(lsData.average.longShortRatio);
         const fundingRate = parseFloat(fundingData.average.fundingRatePercent);
         const crowding = getCrowdingRisk(fundingRate);
         const insight = getPositioningInsight(fundingRate);
