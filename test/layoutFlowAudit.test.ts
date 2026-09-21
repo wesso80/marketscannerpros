@@ -264,7 +264,7 @@ describe('layout and flow audit regressions', () => {
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=movers'");
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=heatmap'");
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=crypto'");
-    expect(toolCatalog).toContain("href: '/tools/explorer?tab=macro'");
+    expect(toolCatalog).toContain("href: '/tools/dashboard?tab=macro'");
     expect(toolCatalog).toContain("href: '/tools/dashboard?tab=crypto'");
     expect(toolCatalog).toContain("href: '/tools/research?tab=calendar'");
     expect(watchlistsPage).toContain("redirect('/tools/workspace?tab=watchlists')");
@@ -326,7 +326,8 @@ describe('layout and flow audit regressions', () => {
     expect(onboardingChecklist).not.toContain("icon: '🔍'");
     expect(onboardingChecklist).not.toContain("done ? '✅'");
     expect(pricing).toContain('Full backtesting engine');
-    expect(pricing).toContain('Full Intelligence suite');
+    expect(pricing).toContain('Production Intelligence');
+    expect(pricing).toContain('roadmap modules');
     expect(pricing).toContain('$24.99');
     expect(pricing).not.toContain('🤖');
     expect(pricing).not.toContain('📊');
