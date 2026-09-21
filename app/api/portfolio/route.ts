@@ -26,6 +26,7 @@ interface PerformanceSnapshot {
   timestamp: string;
   totalValue: number;
   totalPL: number;
+  basis: 'account_equity_v2' | 'legacy_position_value';
 }
 
 interface CashLedgerEntry {
@@ -80,9 +81,16 @@ export async function GET(req: NextRequest) {
       [workspaceId]
     );
 
+    // Snapshot basis was introduced after legacy rows had already been written as
+    // open-position market value. Keep those rows for recordkeeping but never mix
+    // them into account-equity risk analytics.
+    try {
+      await q(`ALTER TABLE portfolio_performance ADD COLUMN IF NOT EXISTS snapshot_basis TEXT`);
+    } catch { /* column may already exist */ }
+
     // Fetch performance history
     const performanceRaw = await q(
-      `SELECT snapshot_date, total_value, total_pl 
+      `SELECT snapshot_date, total_value, total_pl, snapshot_basis
        FROM portfolio_performance 
        WHERE workspace_id = $1 
        ORDER BY snapshot_date ASC`,
@@ -140,7 +148,8 @@ export async function GET(req: NextRequest) {
     const performanceHistory: PerformanceSnapshot[] = performanceRaw.map((p: any) => ({
       timestamp: p.snapshot_date,
       totalValue: parseFloat(p.total_value),
-      totalPL: parseFloat(p.total_pl)
+      totalPL: parseFloat(p.total_pl),
+      basis: p.snapshot_basis === 'account_equity_v2' ? 'account_equity_v2' : 'legacy_position_value',
     }));
 
     // Compute portfolio risk analytics from daily snapshots
@@ -153,11 +162,14 @@ export async function GET(req: NextRequest) {
       dailyVolatility: number;
     } | null = null;
 
-    if (performanceHistory.length >= 5) {
+    const riskHistory = performanceHistory
+      .filter((snapshot) => snapshot.basis === 'account_equity_v2' && Number.isFinite(snapshot.totalValue) && snapshot.totalValue > 0);
+
+    if (riskHistory.length >= 5) {
       const dailyReturns: number[] = [];
-      for (let i = 1; i < performanceHistory.length; i++) {
-        const prev = performanceHistory[i - 1].totalValue;
-        const curr = performanceHistory[i].totalValue;
+      for (let i = 1; i < riskHistory.length; i++) {
+        const prev = riskHistory[i - 1].totalValue;
+        const curr = riskHistory[i].totalValue;
         if (prev > 0) dailyReturns.push(((curr - prev) / prev) * 100);
       }
       if (dailyReturns.length >= 3) {
@@ -167,9 +179,9 @@ export async function GET(req: NextRequest) {
         );
         const sortedReturns = [...dailyReturns].sort((a, b) => a - b);
         const var95 = sortedReturns[Math.floor(sortedReturns.length * 0.05)] ?? 0;
-        let peak = performanceHistory[0].totalValue;
+        let peak = riskHistory[0].totalValue;
         let maxDD = 0;
-        for (const snap of performanceHistory) {
+        for (const snap of riskHistory) {
           if (snap.totalValue > peak) peak = snap.totalValue;
           const dd = peak > 0 ? ((peak - snap.totalValue) / peak) * 100 : 0;
           if (dd > maxDD) maxDD = dd;
@@ -213,7 +225,22 @@ export async function GET(req: NextRequest) {
       console.warn('portfolio_cash_ledger table not available yet; continuing without persisted cash state');
     }
 
-    return NextResponse.json({ positions, closedPositions, performanceHistory, cashState, riskAnalytics });
+    return NextResponse.json({
+      positions,
+      closedPositions,
+      performanceHistory,
+      cashState,
+      riskAnalytics,
+      riskAnalyticsMeta: {
+        basis: 'account_equity_v2',
+        cleanSnapshots: riskHistory.length,
+        requiredSnapshots: 5,
+        status: riskAnalytics ? 'READY' : 'INSUFFICIENT_CLEAN_HISTORY',
+        note: riskAnalytics
+          ? 'Risk statistics use full account-equity snapshots only.'
+          : 'Risk statistics are withheld until at least 5 account-equity snapshots exist; legacy position-value rows are excluded.',
+      },
+    });
   } catch (error) {
     console.error("Portfolio GET error:", error);
     return NextResponse.json({ error: "Failed to load portfolio" }, { status: 500 });
@@ -284,14 +311,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert performance snapshots
+    // Insert performance snapshots. Only rows explicitly produced by the new
+    // account-equity model are eligible for risk analytics.
+    try {
+      await q(`ALTER TABLE portfolio_performance ADD COLUMN IF NOT EXISTS snapshot_basis TEXT`);
+    } catch { /* column may already exist */ }
     for (const p of performanceHistory || []) {
       const date = new Date(p.timestamp).toISOString().split('T')[0];
+      const basis = p.basis === 'account_equity_v2' ? 'account_equity_v2' : 'legacy_position_value';
       await q(
-        `INSERT INTO portfolio_performance (workspace_id, snapshot_date, total_value, total_pl)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (workspace_id, snapshot_date) DO UPDATE SET total_value = $3, total_pl = $4`,
-        [workspaceId, date, p.totalValue, p.totalPL]
+        `INSERT INTO portfolio_performance (workspace_id, snapshot_date, total_value, total_pl, snapshot_basis)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id, snapshot_date) DO UPDATE
+         SET total_value = $3, total_pl = $4, snapshot_basis = $5`,
+        [workspaceId, date, p.totalValue, p.totalPL, basis]
       );
     }
 
