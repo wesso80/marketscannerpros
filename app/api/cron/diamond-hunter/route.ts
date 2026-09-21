@@ -17,11 +17,13 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 function authorised(req: NextRequest): boolean {
+  const diamondSecret = process.env.DIAMOND_CRON_SECRET || '';
   const cronSecret = process.env.CRON_SECRET || '';
   const adminSecret = process.env.ADMIN_SECRET || '';
   const cronHeader = req.headers.get('x-cron-secret') || '';
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
-  return (!!cronSecret && safeEqual(cronHeader, cronSecret))
+  return (!!diamondSecret && safeEqual(cronHeader, diamondSecret))
+    || (!!cronSecret && safeEqual(cronHeader, cronSecret))
     || (!!adminSecret && safeEqual(bearer, adminSecret));
 }
 
