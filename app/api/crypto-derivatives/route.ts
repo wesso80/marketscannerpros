@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
     });
 
     const body = { coins, fetchedAt: new Date().toISOString() };
-    await setCached(cacheKey, body, 60);
+    await setCached(cacheKey, body, 300);
     return NextResponse.json(body);
   }
 
@@ -191,6 +191,6 @@ export async function GET(req: NextRequest) {
     fetchedAt: new Date().toISOString(),
   };
 
-  await setCached(cacheKey, body, 60);
+  await setCached(cacheKey, body, 300);
   return NextResponse.json(body);
 }

@@ -1050,7 +1050,7 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
     try {
       const data = await cgFetch<DerivativeTicker[]>('/derivatives', {
         init: { cache: 'no-store' },
-        retries: 1,
+        retries: 0,
         timeoutMs: 30_000,
       });
 
