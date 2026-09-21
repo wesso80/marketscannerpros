@@ -286,6 +286,9 @@ export function scoreDiamondPool(pool: TrendingPool, context: DiamondScoreContex
       penalty += 60;
       riskFlags.push('Honeypot flag');
       hardReject = true;
+    } else if (honeypot === 'unknown' || honeypot == null) {
+      penalty += 4;
+      riskFlags.push('Honeypot status unknown');
     }
     if (t.mint_authority && t.mint_authority.toLowerCase() !== 'no') {
       penalty += 12;
