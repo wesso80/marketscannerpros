@@ -10,8 +10,9 @@ interface TreasuryCompany {
   entryValueUsd: number;
   currentValueUsd: number;
   percentOfSupply: number;
-  profitLossUsd: number;
-  profitLossPercent: number;
+  hasCostBasis: boolean;
+  profitLossUsd: number | null;
+  profitLossPercent: number | null;
 }
 
 interface TreasurySummary {
@@ -39,7 +40,8 @@ function formatUsd(val: number): string {
   return `$${val.toFixed(0)}`;
 }
 
-function formatPct(val: number): string {
+function formatPct(val: number | null): string {
+  if (val == null || !Number.isFinite(val)) return 'Unavailable';
   return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
 }
 
@@ -70,7 +72,7 @@ export default function PublicTreasuryWidget() {
   }, [coin]);
 
   const sorted = data?.companies
-    ? [...data.companies].sort((a, b) => b[sortCol] - a[sortCol])
+    ? [...data.companies].sort((a, b) => Number(b[sortCol] ?? Number.NEGATIVE_INFINITY) - Number(a[sortCol] ?? Number.NEGATIVE_INFINITY))
     : [];
 
   const coinSymbol = COINS.find(c => c.id === coin)?.symbol || 'BTC';
@@ -185,7 +187,8 @@ export default function PublicTreasuryWidget() {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {sorted.map((co, i) => {
-                  const isProfit = co.profitLossUsd >= 0;
+                  const hasPnl = co.hasCostBasis && co.profitLossUsd != null && co.profitLossPercent != null;
+                  const isProfit = hasPnl && co.profitLossUsd! >= 0;
                   const countryCode = (co.country || '--').toUpperCase().slice(0, 2);
                   return (
                     <tr key={`${co.name}-${i}`} className="hover:bg-slate-800/30">
@@ -203,8 +206,17 @@ export default function PublicTreasuryWidget() {
                       <td className="px-2 py-2 text-right text-slate-200">{co.holdings.toLocaleString()}</td>
                       <td className="px-2 py-2 text-right text-slate-200">{formatUsd(co.currentValueUsd)}</td>
                       <td className="px-2 py-2 text-right">
-                        <p className={`font-semibold ${isProfit ? 'text-emerald-300' : 'text-rose-300'}`}>{formatUsd(co.profitLossUsd)}</p>
-                        <p className={`text-[10px] ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPct(co.profitLossPercent)}</p>
+                        {hasPnl ? (
+                          <>
+                            <p className={`font-semibold ${isProfit ? 'text-emerald-300' : 'text-rose-300'}`}>{formatUsd(co.profitLossUsd!)}</p>
+                            <p className={`text-[10px] ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPct(co.profitLossPercent)}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-slate-500">Unavailable</p>
+                            <p className="text-[10px] text-slate-600">Cost basis not supplied</p>
+                          </>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-right text-slate-400">{co.percentOfSupply?.toFixed(3)}%</td>
                     </tr>
