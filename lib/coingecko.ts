@@ -39,7 +39,7 @@ const getHeaders = (): HeadersInit => {
   return headers;
 };
 
-const DERIVATIVES_CACHE_TTL_MS = 180_000; // large ~9MB payload; reuse for 3 minutes to reduce quota/load
+const DERIVATIVES_CACHE_TTL_MS = 300_000; // share one multi-venue snapshot for five minutes
 const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ERROR_COOLDOWN_TTL_MS = 5 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_TTL_MS = 60 * 1000;
@@ -1029,12 +1029,94 @@ export interface DerivativeTicker {
   expired_at: string | null;
 }
 
+interface DerivativesExchangeSummary {
+  id: string;
+  name: string;
+  open_interest_btc?: number;
+}
+
+interface DerivativesExchangeDetail {
+  name: string;
+  tickers?: DerivativeTicker[];
+}
+
 /**
- * Get all derivatives tickers across exchanges
- * Endpoint: /derivatives
- * Returns funding rates, open interest, volume for all perpetual contracts
- * Note: This endpoint returns ~9MB of data, so we use cache: 'no-store' to skip Next.js data cache
- * and rely on our own in-memory caching in the API routes
+ * Fetch a bounded multi-venue derivatives universe.
+ *
+ * CoinGecko's all-tickers /derivatives payload is very large and has repeatedly
+ * exceeded the production request budget. Instead, rank derivatives exchanges
+ * by open interest and fetch ticker sets for the top three venues in parallel.
+ * This preserves independent multi-venue funding/OI evidence while keeping the
+ * response size and latency bounded.
+ */
+async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> {
+  const exchangeParams = new URLSearchParams({
+    order: 'open_interest_btc_desc',
+    per_page: '3',
+    page: '1',
+  });
+
+  const exchanges = await cgFetch<DerivativesExchangeSummary[]>('/derivatives/exchanges', {
+    params: exchangeParams,
+    init: { cache: 'no-store' },
+    retries: 0,
+    timeoutMs: 10_000,
+  });
+
+  const top = (exchanges || []).filter((exchange) => exchange?.id).slice(0, 3);
+  if (top.length === 0) {
+    throw new Error('[CoinGecko] No ranked derivatives exchanges returned');
+  }
+
+  const results = await Promise.allSettled(
+    top.map((exchange) => {
+      const params = new URLSearchParams({ include_tickers: 'all' });
+      return cgFetch<DerivativesExchangeDetail>(
+        `/derivatives/exchanges/${encodeURIComponent(exchange.id)}`,
+        {
+          params,
+          init: { cache: 'no-store' },
+          retries: 0,
+          timeoutMs: 12_000,
+        },
+      );
+    }),
+  );
+
+  const tickers: DerivativeTicker[] = [];
+  for (let i = 0; i < results.length; i += 1) {
+    const result = results[i];
+    if (result.status !== 'fulfilled' || !Array.isArray(result.value?.tickers)) {
+      console.warn(
+        `[CoinGecko] Derivatives exchange detail unavailable: ${top[i]?.id || 'unknown'}`,
+        result.status === 'rejected' ? result.reason : 'no tickers',
+      );
+      continue;
+    }
+
+    for (const ticker of result.value.tickers) {
+      if (!ticker?.index_id || !ticker?.symbol) continue;
+      tickers.push(ticker);
+    }
+  }
+
+  if (tickers.length === 0) {
+    throw new Error('[CoinGecko] Major derivatives exchanges returned no usable tickers');
+  }
+
+  // Defensive de-duplication in case the provider repeats a ticker.
+  const unique = new Map<string, DerivativeTicker>();
+  for (const ticker of tickers) {
+    unique.set(`${ticker.market}|${ticker.symbol}|${ticker.contract_type}`, ticker);
+  }
+  return [...unique.values()];
+}
+
+/**
+ * Get bounded derivatives tickers across major exchanges
+ * Endpoints: /derivatives/exchanges + /derivatives/exchanges/{id}?include_tickers=all
+ * Returns funding rates, open interest and volume from the top three exchanges by OI.
+ * The bounded exchange-specific route replaces the oversized all-tickers payload.
  */
 export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null> {
   const now = Date.now();
@@ -1048,11 +1130,7 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
 
   derivativesInFlight = (async () => {
     try {
-      const data = await cgFetch<DerivativeTicker[]>('/derivatives', {
-        init: { cache: 'no-store' },
-        retries: 0,
-        timeoutMs: 30_000,
-      });
+      const data = await getMajorDerivativeExchangeTickers();
 
       derivativesCache = {
         value: data,
@@ -1061,7 +1139,7 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
 
       return data;
     } catch (error) {
-      console.error('[CoinGecko] Derivatives fetch error:', error);
+      console.error('[CoinGecko] Major-exchange derivatives fetch error:', error);
       return derivativesCache?.value ?? null;
     } finally {
       derivativesInFlight = null;
