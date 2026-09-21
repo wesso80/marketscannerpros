@@ -763,9 +763,9 @@ describe('layout and flow audit regressions', () => {
     expect(favoritesPanel).toContain('label="Coverage"');
     expect(favoritesPanel).toContain('label="Next Check"');
     expect(cryptoDashboard).toContain("ariaLabel=\"Crypto Derivatives command header\"");
-    expect(cryptoDashboard).toContain('Bias, rotation, and volatility for the morning derivatives review.');
+    expect(cryptoDashboard).toContain('Funding, open interest, and evidence coverage.');
     expect(cryptoDashboard).toContain("label: 'Bias'");
-    expect(cryptoDashboard).toContain("label: 'Liquidity'");
+    expect(cryptoDashboard).toContain("label: 'OI trend'");
     expect(cryptoDashboard).toContain("label: 'Funding'");
     expect(cryptoDashboard).toContain("label: 'Next check'");
     expect(cryptoDashboard).not.toContain("h1 className={`${embeddedInDashboard ? 'mt-1 text-base'");

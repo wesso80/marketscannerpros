@@ -2426,9 +2426,8 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
       ? (fundingRates.length % 2 ? fundingRates[(fundingRates.length - 1) / 2] : (fundingRates[fundingRates.length / 2 - 1] + fundingRates[fundingRates.length / 2]) / 2)
       : undefined;
 
-    const longShortRatio = typeof fundingRate === 'number'
-      ? Math.max(0.5, Math.min(1.5, 1 + fundingRate / 0.05))
-      : undefined;
+    // Funding payments do not identify observed account positioning.
+    const longShortRatio = undefined;
 
     return {
       openInterest: openInterestUsd,

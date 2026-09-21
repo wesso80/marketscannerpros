@@ -754,8 +754,8 @@ export default function CryptoTerminalView({
                 <FundingHistoryChart data={fundingHistory} />
               ) : (
                 <div className="py-8 text-center text-sm text-zinc-500">
-                  <p>No historical data yet</p>
-                  <p className="text-[11px] text-zinc-600 mt-1">Snapshots are captured periodically by the cron job. Data will appear after the first few runs.</p>
+                  <p>Comparable history unavailable</p>
+                  <p className="text-[11px] text-zinc-600 mt-1">Historical funding observations need verified units, intervals and venue coverage before they can be compared.</p>
                 </div>
               )}
             </Card>

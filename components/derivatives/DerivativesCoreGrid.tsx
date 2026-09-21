@@ -37,6 +37,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
           <div className="rounded-xl border border-white/10 bg-black/10 p-3">
             <div className="text-xs font-semibold text-white/80 mb-2">Long / Short Ratio</div>
             <div className="grid gap-2">
+              {!data.longShort && <p className="text-xs text-white/50">Unavailable — exchange-reported account ratios are not connected. Funding is not an account-positioning measurement.</p>}
               {(data.longShort?.coins || []).slice(0, 6).map((ls) => (
                 <div key={ls.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="flex items-center justify-between text-xs">
@@ -58,17 +59,19 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
                 <div className="text-xs text-emerald-400 font-mono">{data.openInterest.summary.totalOpenInterestFormatted} total</div>
               )}
             </div>
+            <p className="mb-2 text-[11px] text-white/50">{data.openInterest?.summary?.coverage}</p>
+            {data.openInterest?.summary?.comparisonReason && <p className="mb-2 text-xs text-amber-200">{data.openInterest.summary.comparisonReason}</p>}
             <div className="grid gap-2">
               {(data.openInterest?.coins || []).slice(0, 6).map((coin) => {
-                const chg = coin.change24h ?? 0;
-                const colorCls = chg > 0 ? 'text-emerald-400' : chg < 0 ? 'text-red-400' : 'text-white/50';
+                const chg = coin.change24h;
+                const colorCls = chg != null && chg > 0 ? 'text-emerald-400' : chg != null && chg < 0 ? 'text-red-400' : 'text-white/50';
                 return (
                   <div key={coin.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-white">{coin.symbol}</span>
                       <span className="text-[11px] text-white/40 font-mono">{coin.openInterestFormatted || formatOI(coin.openInterestValue)}</span>
                     </div>
-                    <div className={`text-xs font-semibold font-mono ${colorCls}`}>{chg >= 0 ? '+' : ''}{chg.toFixed(2)}%</div>
+                    <div className={`text-xs font-semibold font-mono ${colorCls}`}>{chg == null || !Number.isFinite(chg) ? 'Unavailable' : `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`}</div>
                   </div>
                 );
               })}
@@ -84,8 +87,9 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
         </div>
         <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
           <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <div className="text-xs font-semibold text-white/80">Liquidations (24h)</div>
-            <div className="text-[11px] text-white/50">Directional stress + confirmation</div>
+            <div className="text-xs font-semibold text-white/80">Verified liquidations</div>
+            <div className="text-[11px] text-white/50">Complete window and notional coverage required</div>
+            {!data.liquidations && <p className="mt-2 text-xs text-white/50">Unavailable — the previous recent OKX sample did not establish a complete 24-hour USD total.</p>}
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                 <div className="text-[11px] text-white/50">Longs</div>
@@ -122,17 +126,17 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="text-xs font-semibold text-white/80">Volatility Regime</div>
+              <div className="text-xs font-semibold text-white/80">24h Price Move</div>
               <div className="mt-1 text-sm font-semibold text-white">{volRegime}</div>
               <div className="mt-1 text-xs text-white/50">
-                {volRegime === 'Unavailable' ? 'Volatility context unavailable because required market inputs did not load.' : volRegime === 'Expansion' ? 'Observed price volatility is elevated.' : 'Observed price volatility is not in the expansion bucket.'}
+                {volRegime === 'Unavailable' ? 'Price-move context unavailable.' : 'Largest absolute BTC/ETH/SOL 24h return: large ≥3%, moderate ≥1.5%, small <1.5%. This is not measured volatility.'}
               </div>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="text-xs font-semibold text-white/80">Liquidity</div>
+              <div className="text-xs font-semibold text-white/80">Open-Interest Trend</div>
               <div className="mt-1 text-sm font-semibold text-white">{liquidityState}</div>
               <div className="mt-1 text-xs text-white/50">
-                {liquidityState === 'Unavailable' ? 'Liquidity state unavailable because open-interest evidence did not load.' : liquidityState === 'Contracting' ? 'Observed open interest is contracting.' : liquidityState === 'Expanding' ? 'Observed open interest is expanding.' : 'Observed open-interest state is mixed.'}
+                {liquidityState === 'Unavailable' ? 'A comparable 24-hour open-interest baseline is unavailable.' : liquidityState === 'Contracting' ? 'Observed open interest is contracting.' : liquidityState === 'Expanding' ? 'Observed open interest is expanding.' : 'Observed open-interest state is mixed.'}
               </div>
             </div>
           </div>

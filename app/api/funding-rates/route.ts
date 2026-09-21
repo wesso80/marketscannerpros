@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildCoinGeckoResponseMeta, getAggregatedFundingRates } from '@/lib/coingecko';
 
-const CACHE_DURATION = 900; // 15 minute cache (funding rates update every 8 hours)
+const CACHE_DURATION = 300; // cache age is separate from each venue's funding interval
 let cache: { data: any; timestamp: number } | null = null;
 
 const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       throw new Error('No funding rate data from CoinGecko');
     }
 
-    const rates: FundingRate[] = fundingData.map(data => ({
+    const rates: FundingRate[] = fundingData.filter(data => !data.fundingRateMissing && Number.isFinite(data.fundingRatePercent)).map(data => ({
       symbol: data.symbol,
       fundingRate: data.avgFundingRate,
       fundingRatePercent: data.fundingRatePercent,
@@ -52,6 +52,8 @@ export async function GET(req: NextRequest) {
       sentiment: data.sentiment,
       exchanges: data.exchanges,
     }));
+
+    if (!rates.length) throw new Error('No observed funding rates');
 
     const avgRate = rates.reduce((sum, r) => sum + r.fundingRatePercent, 0) / rates.length;
     const avgAnnualized = rates.reduce((sum, r) => sum + r.annualized, 0) / rates.length;
@@ -61,7 +63,7 @@ export async function GET(req: NextRequest) {
     else if (avgRate < -0.01) overallSentiment = 'Bearish';
     else overallSentiment = 'Neutral';
 
-    const fetchedAt = new Date().toISOString();
+    const fetchedAt = new Date(Math.min(...fundingData.filter(d => !d.fundingRateMissing).map(d => new Date(d.observedAt).getTime()))).toISOString();
     const meta = buildCoinGeckoResponseMeta({
       endpointFamily: 'DERIVATIVES',
       lastUpdated: fetchedAt,
@@ -70,8 +72,8 @@ export async function GET(req: NextRequest) {
 
     const result = {
       average: {
-        fundingRatePercent: avgRate.toFixed(4),
-        annualized: avgAnnualized.toFixed(2),
+        fundingRatePercent: Number(avgRate.toFixed(4)),
+        annualized: Number(avgAnnualized.toFixed(2)),
         sentiment: overallSentiment,
       },
       nextFunding: {
@@ -81,7 +83,8 @@ export async function GET(req: NextRequest) {
       },
       coins: rates.sort((a, b) => b.fundingRatePercent - a.fundingRatePercent),
       source: meta.provider,
-      exchange: 'Multiple Exchanges',
+      exchange: 'Available top three derivatives venues',
+      annualizationAssumption: '8-hour intervals; actual funding intervals vary by venue and contract',
       timestamp: meta.lastUpdated,
       freshnessStatus: meta.freshnessStatus,
       meta,

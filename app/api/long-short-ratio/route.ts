@@ -2,128 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasProAccess } from '@/lib/entitlements';
 import { hasValidInternalServiceSecret } from '@/lib/internalServiceAuth';
-import { buildCoinGeckoResponseMeta, getAggregatedFundingRates } from '@/lib/coingecko';
-
-const CACHE_DURATION = 600;
-let cache: { data: any; timestamp: number } | null = null;
-
-const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];
-
-interface LSRatio {
-  symbol: string;
-  longShortRatio: number;
-  longAccount: number;
-  shortAccount: number;
-  timestamp: number;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
 
 export async function GET(req: NextRequest) {
-  const internalAuthorized = hasValidInternalServiceSecret(req);
-  if (!internalAuthorized) {
+  if (!hasValidInternalServiceSecret(req)) {
     const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (!hasProAccess(session.tier)) {
-      return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
-    }
+    if (!session?.workspaceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!hasProAccess(session.tier)) return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
-
-  if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
-    const meta = buildCoinGeckoResponseMeta({
-      endpointFamily: 'DERIVATIVES',
-      lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
-      maxAgeMs: CACHE_DURATION * 1000,
-      fallbackUsed: Boolean(cache.data?.meta?.fallbackUsed),
-    });
-    return NextResponse.json({
-      ...cache.data,
-      source: meta.provider,
-      freshnessStatus: meta.freshnessStatus,
-      timestamp: meta.lastUpdated,
-      meta,
-    });
-  }
-
-  try {
-    const funding = await getAggregatedFundingRates(SYMBOLS);
-    if (!funding || !funding.length) {
-      throw new Error('No derivatives data from CoinGecko');
-    }
-
-    const now = Date.now();
-    const ratios: LSRatio[] = funding.map((item) => {
-      const ratio = clamp(1 + item.fundingRatePercent / 0.05, 0.5, 1.5);
-      const longPct = (ratio / (1 + ratio)) * 100;
-      const shortPct = 100 - longPct;
-
-      return {
-        symbol: item.symbol,
-        longShortRatio: Number(ratio.toFixed(3)),
-        longAccount: Number(longPct.toFixed(2)),
-        shortAccount: Number(shortPct.toFixed(2)),
-        timestamp: now,
-      };
-    });
-
-    const avgRatio = ratios.reduce((sum, r) => sum + r.longShortRatio, 0) / ratios.length;
-    const avgLong = ratios.reduce((sum, r) => sum + r.longAccount, 0) / ratios.length;
-    const avgShort = ratios.reduce((sum, r) => sum + r.shortAccount, 0) / ratios.length;
-
-    let sentiment: 'Bullish' | 'Bearish' | 'Neutral';
-    if (avgRatio > 1.2) sentiment = 'Bullish';
-    else if (avgRatio < 0.8) sentiment = 'Bearish';
-    else sentiment = 'Neutral';
-
-    const fetchedAt = new Date().toISOString();
-    const meta = buildCoinGeckoResponseMeta({
-      endpointFamily: 'DERIVATIVES',
-      lastUpdated: fetchedAt,
-      maxAgeMs: CACHE_DURATION * 1000,
-    });
-
-    const result = {
-      average: {
-        longShortRatio: avgRatio.toFixed(2),
-        longPercent: avgLong.toFixed(1),
-        shortPercent: avgShort.toFixed(1),
-        sentiment,
-      },
-      coins: ratios.sort((a, b) => b.longShortRatio - a.longShortRatio),
-      source: meta.provider,
-      exchange: 'CoinGecko Derivatives Aggregate',
-      model: 'funding-rate-positioning-proxy',
-      timestamp: meta.lastUpdated,
-      freshnessStatus: meta.freshnessStatus,
-      meta,
-    };
-
-    cache = { data: result, timestamp: Date.now() };
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('[L/S Ratio API] Error:', error);
-
-    if (cache) {
-      const meta = buildCoinGeckoResponseMeta({
-        endpointFamily: 'DERIVATIVES',
-        lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
-        maxAgeMs: CACHE_DURATION * 1000,
-        fallbackUsed: true,
-      });
-      return NextResponse.json({
-        ...cache.data,
-        stale: true,
-        source: meta.provider,
-        freshnessStatus: meta.freshnessStatus,
-        timestamp: meta.lastUpdated,
-        meta,
-      });
-    }
-
-    return NextResponse.json({ error: 'Failed to fetch L/S ratio' }, { status: 500 });
-  }
+  // Funding is a payment rate, not an observation of account/position counts.
+  return NextResponse.json({
+    available: false, average: null, coins: [], source: null, timestamp: null,
+    freshnessStatus: 'unavailable', model: null,
+    error: 'Exchange-reported long/short positioning is not connected. Funding rates cannot substitute for account ratios.',
+  }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
 }

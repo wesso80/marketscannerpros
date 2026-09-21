@@ -32,7 +32,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   const fetchData = useCallback(async () => {
     const get = async (url: string) => {
       const { response, body } = await boundedJsonFetch<any>(url);
-      if (!response.ok) throw new Error(`${url}: ${response.status}`);
+      if (!response.ok) throw new Error(body?.error || `A derivatives feed is unavailable (${response.status})`);
       return body;
     };
     setLoading(true);
@@ -57,7 +57,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       }
 
       const newData: DashboardData = {
-        fundingRates: fundingRes?.coins?.length && fundingRes?.average?.fundingRatePercent != null && Number.isFinite(Number(fundingRes.average.fundingRatePercent)) ? {
+        fundingRates: fundingRes?.meta?.freshnessStatus === 'fresh' && !fundingRes?.stale && fundingRes?.coins?.length && fundingRes?.average?.fundingRatePercent != null && Number.isFinite(Number(fundingRes.average.fundingRatePercent)) ? {
           coins: fundingRes.coins,
           avgRate: parseFloat(fundingRes.average?.fundingRatePercent || '0'),
           sentiment: fundingRes.average?.sentiment || 'Neutral'
@@ -68,7 +68,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
           avgLong: parseFloat(lsRes.average?.longPercent || '50'),
           avgShort: parseFloat(lsRes.average?.shortPercent || '50'),
         } : null,
-        openInterest: oiRes?.summary ? oiRes : null,
+        openInterest: oiRes?.meta?.freshnessStatus === 'fresh' && oiRes?.summary ? oiRes : null,
         liquidations: liqRes?.summary ? liqRes : null,
         prices,
       };
@@ -136,6 +136,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     );
   }
 
+  const oiTrendAvailable = typeof data.openInterest?.summary?.change24h === 'number' && Number.isFinite(data.openInterest.summary.change24h);
+
   const getMarketBias = (): { bias: string; confidence: number; signals: string[]; bullishScore: number; bearishScore: number } => {
     const signals: string[] = [];
     let bullishScore = 0;
@@ -161,11 +163,11 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       }
     }
 
-    if (data.openInterest?.summary) {
-      if (data.openInterest.summary.marketSignal === 'risk_on') {
+    if (oiTrendAvailable && data.openInterest?.summary) {
+      if (data.openInterest?.summary?.marketSignal === 'expanding') {
         bullishScore += 1;
         signals.push('BULL OI building - risk-on mode');
-      } else if (data.openInterest.summary.marketSignal === 'risk_off') {
+      } else if (data.openInterest?.summary?.marketSignal === 'contracting') {
         bearishScore += 1;
         signals.push('BEAR OI declining - deleveraging');
       }
@@ -187,7 +189,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     // Net-conviction confidence: reflects the MARGIN over total evidence, not
     // max/total (which turned a thin 2-1 tally into a misleading 67%). A single
     // opposing signal now visibly reduces conviction.
-    const availableInputs = [data.fundingRates, data.longShort, data.openInterest, data.liquidations].filter(Boolean).length;
+    const availableInputs = [data.fundingRates, data.longShort, oiTrendAvailable, data.liquidations].filter(Boolean).length;
     const confidence = totalSignals > 0 ? Math.round((Math.abs(margin) / totalSignals) * 100 * availableInputs / 4) : 0;
 
     let bias: string;
@@ -202,7 +204,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   };
 
   const marketBias = getMarketBias();
-  const availableInputs = [data.fundingRates, data.longShort, data.openInterest, data.liquidations].filter(Boolean).length;
+  const availableInputs = [data.fundingRates, data.longShort, oiTrendAvailable, data.liquidations].filter(Boolean).length;
   const derivativeDataComplete = availableInputs === 4 && fetchErrors.length === 0;
 
   const primarySymbols = ['BTC', 'ETH', 'SOL'];
@@ -215,10 +217,10 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     0
   );
 
-  const volRegime = Object.keys(data.prices).length === 0 ? 'Unavailable' : volatilityProxy >= 3 ? 'Expansion' : volatilityProxy >= 1.5 ? 'Normal' : 'Compression';
-  const liquidityState = !data.openInterest?.summary ? 'Unavailable' : data.openInterest.summary.marketSignal === 'risk_on'
+  const volRegime = Object.keys(data.prices).length === 0 ? 'Unavailable' : volatilityProxy >= 3 ? 'Large' : volatilityProxy >= 1.5 ? 'Moderate' : 'Small';
+  const liquidityState = !oiTrendAvailable ? 'Unavailable' : data.openInterest?.summary?.marketSignal === 'expanding'
     ? 'Expanding'
-    : data.openInterest?.summary?.marketSignal === 'risk_off'
+    : data.openInterest?.summary?.marketSignal === 'contracting'
       ? 'Contracting'
       : 'Stable';
 
@@ -227,8 +229,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     const eth = data.prices.ETH?.change24h || 0;
     const sol = data.prices.SOL?.change24h || 0;
     if (btc >= eth && btc >= sol && btc > 0.4) return 'BTC-led';
-    if (sol >= btc && sol >= eth && sol > 1.2) return 'Meme-led';
-    if (eth >= btc && eth >= sol && eth > 0.4) return 'DeFi-led';
+    if (sol >= btc && sol >= eth && sol > 1.2) return 'SOL-led';
+    if (eth >= btc && eth >= sol && eth > 0.4) return 'ETH-led';
     if (eth > btc || sol > btc) return 'Alts-led';
     return 'Mixed';
   })();
@@ -245,7 +247,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
             ? 'Mixed / Conflicting'
             : 'Neutral';
 
-  const permission = !derivativeDataComplete ? 'Unavailable' : volRegime === 'Expansion' && liquidityState === 'Contracting' && marketBias.bearishScore >= marketBias.bullishScore
+  const permission = !derivativeDataComplete ? 'Unavailable' : volRegime === 'Large' && liquidityState === 'Contracting' && marketBias.bearishScore >= marketBias.bullishScore
     ? 'No'
     : marketBias.confidence >= 67
       ? 'Yes'
@@ -255,7 +257,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     ? 'No scenario'
     : biasLabel.includes('Bearish')
       ? 'Fade pumps'
-      : biasLabel.includes('Bullish') && volRegime === 'Expansion'
+      : biasLabel.includes('Bullish') && volRegime === 'Large'
         ? 'Trend follow'
         : biasLabel.includes('Bullish')
           ? 'Mean reversion'
@@ -269,13 +271,13 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         : 'Funding neutral across majors'
     : 'Funding data pending';
 
-  const oiDriver = data.openInterest?.summary
-    ? data.openInterest.summary.marketSignal === 'risk_on'
+  const oiDriver = oiTrendAvailable
+    ? data.openInterest?.summary?.marketSignal === 'expanding'
       ? 'OI building (leverage increasing)'
-      : data.openInterest.summary.marketSignal === 'risk_off'
+      : data.openInterest?.summary?.marketSignal === 'contracting'
         ? 'OI unwinding (deleveraging)'
-        : 'OI mixed across exchanges'
-    : 'OI trend pending';
+        : 'OI broadly stable across comparable contracts'
+    : 'Comparable 24-hour OI baseline unavailable';
 
   const liquidationDriver = data.liquidations?.summary
     ? data.liquidations.summary.marketBias === 'longs_liquidated'
@@ -313,14 +315,14 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     {
       id: 'sol',
       symbol: 'SOL',
-      direction: permission === 'No' ? 'Flat' : volRegime === 'Expansion' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : biasLabel.includes('Bullish') ? 'Long' : 'Flat',
-      setupType: volRegime === 'Expansion' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Failed-rally study' : biasLabel.includes('Bullish') ? 'Trend-continuation study' : 'No directional scenario',
-      trigger: volRegime === 'Expansion'
+      direction: permission === 'No' ? 'Flat' : volRegime === 'Large' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : biasLabel.includes('Bullish') ? 'Long' : 'Flat',
+      setupType: volRegime === 'Large' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Failed-rally study' : biasLabel.includes('Bullish') ? 'Trend-continuation study' : 'No directional scenario',
+      trigger: volRegime === 'Large'
         ? 'Wait for volatility compression before directional scenario review.'
         : biasLabel.includes('Bearish')
           ? 'Failed-breakout conditions with rising leverage.'
           : 'Breakout conditions with OI confirmation.',
-      invalidation: volRegime === 'Expansion' ? 'N/A' : 'Reverse through setup origin level.',
+      invalidation: volRegime === 'Large' ? 'N/A' : 'Reverse through setup origin level.',
       riskMode: permission === 'No' ? 'High scenario risk' : permission === 'Conditional' ? 'Conditional scenario' : 'Normal scenario risk',
     },
   ];
@@ -329,7 +331,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     const priceData = data.prices[coin];
     const oiDelta = oiBySymbol.get(coin) ?? null;
     const fundingSkew = fundingBySymbol.get(coin) ?? null;
-    const volLabel = priceData?.change24h == null ? 'Unavailable' : Math.abs(priceData?.change24h || 0) >= 3 ? 'Expansion' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Normal' : 'Compression';
+    const volLabel = priceData?.change24h == null ? 'Unavailable' : Math.abs(priceData?.change24h || 0) >= 3 ? 'Large' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Moderate' : 'Small';
 
     return {
       symbol: coin,
@@ -354,10 +356,10 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
           badges={[
             { label: `Permission ${permission}`, tone: permission === 'Yes' ? 'bull' : permission === 'Conditional' ? 'warn' : 'bear' },
             { label: rotation },
-            { label: `Vol ${volRegime}` },
+            { label: `24h move ${volRegime}` },
           ]}
-          title="Bias, rotation, and volatility for the morning derivatives review."
-          subtitle="Funding, open interest, and liquidations compressed into a single bias gate. Educational only; not a trade signal."
+          title="Funding, open interest, and evidence coverage."
+          subtitle="Review the observed venue sample and its data gaps before comparing derivatives conditions."
           actions={[
             { label: loading ? 'Refreshing…' : 'Refresh data', variant: 'primary', onClick: () => fetchData(), disabled: loading },
             { label: 'Open Options', variant: 'secondary', href: '/tools/options' },
@@ -365,13 +367,13 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
           ]}
           metrics={[
             { label: 'Bias', value: biasLabel, tone: biasLabel.includes('Bullish') ? 'bull' : biasLabel.includes('Bearish') ? 'bear' : 'neutral', detail: availableInputs ? `Evidence score ${marketBias.confidence}/100 · ${availableInputs}/4 inputs` : 'Evidence unavailable · 0/4 inputs' },
-            { label: 'Liquidity', value: liquidityState, tone: liquidityState === 'Expanding' ? 'bull' : liquidityState === 'Contracting' ? 'bear' : 'neutral', detail: oiDriver, title: oiDriver },
+            { label: 'OI trend', value: liquidityState, tone: liquidityState === 'Expanding' ? 'bull' : liquidityState === 'Contracting' ? 'bear' : 'neutral', detail: oiDriver, title: oiDriver },
             { label: 'Funding', value: data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Unavailable', tone: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? 'warn' : data.fundingRates.avgRate < -0.01 ? 'bull' : 'neutral') : 'neutral', detail: fundingDriver, title: fundingDriver },
             { label: 'Next check', value: playbook, tone: permission === 'No' ? 'bear' : 'warn', detail: liquidationDriver, title: liquidationDriver },
           ]}
         />
         {lastUpdate && (
-          <p className="mt-2 text-[11px] text-slate-500">Last updated {lastUpdate.toLocaleTimeString()}</p>
+          <p className="mt-2 text-[11px] text-slate-500">Last retrieved {lastUpdate.toLocaleTimeString()}</p>
         )}
         </div>
       ) : (
@@ -408,7 +410,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
             </div>
           </div>
           {lastUpdate && (
-            <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdate.toLocaleTimeString()}</p>
+            <p className="text-xs text-gray-500 mt-2">Last retrieved: {lastUpdate.toLocaleTimeString()}</p>
           )}
         </div>
       )}

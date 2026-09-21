@@ -1251,6 +1251,7 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
   exchanges: number;
   sentiment: 'Bullish' | 'Bearish' | 'Neutral';
   fundingRateMissing?: boolean;
+  observedAt: string;
 }[]> {
   const tickers = await getDerivativesForSymbols(symbols);
   if (!tickers.length) return [];
@@ -1268,7 +1269,7 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
     // venues report absurd values (e.g. 9.5), so mean×100 produced impossible readings (BTC "+8.66%", annualised +9486%).
     const rates = exchanges.map(e => e.funding_rate).filter((r): r is number => typeof r === 'number' && !isNaN(r)).sort((a, b) => a - b);
     const fundingRateMissing = rates.length === 0;
-    const ratePercent = fundingRateMissing ? 0 : rates.length % 2 ? rates[(rates.length - 1) / 2] : (rates[rates.length / 2 - 1] + rates[rates.length / 2]) / 2;
+    const ratePercent = fundingRateMissing ? Number.NaN : rates.length % 2 ? rates[(rates.length - 1) / 2] : (rates[rates.length / 2 - 1] + rates[rates.length / 2]) / 2;
     const avgRate = ratePercent / 100; // decimal form for legacy consumers
     const annualized = ratePercent * 3 * 365; // 3 funding periods per day
 
@@ -1283,7 +1284,8 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
       avgFundingRate: avgRate,
       fundingRatePercent: ratePercent,
       annualized,
-      exchanges: exchanges.length,
+      exchanges: new Set(exchanges.map(e => e.market)).size,
+      observedAt: new Date(Math.min(...exchanges.map(e => e.last_traded_at)) * 1000).toISOString(),
       sentiment,
       fundingRateMissing: fundingRateMissing || undefined,
     };
@@ -1311,13 +1313,15 @@ export async function getAggregatedOpenInterest(symbols: string[]): Promise<{
   }
 
   return Object.entries(grouped).map(([symbol, exchanges]) => {
-    const totalOI = exchanges.reduce((sum, e) => sum + (e.open_interest || 0), 0);
-    const totalVolume = exchanges.reduce((sum, e) => sum + (e.volume_24h || 0), 0);
+    const observedOI = exchanges.map(e => e.open_interest).filter(v => Number.isFinite(v) && v >= 0);
+    const totalOI = observedOI.length ? observedOI.reduce((sum, value) => sum + value, 0) : Number.NaN;
+    const observedVolume = exchanges.map(e => e.volume_24h).filter(v => Number.isFinite(v) && v >= 0);
+    const totalVolume = observedVolume.length ? observedVolume.reduce((sum, value) => sum + value, 0) : Number.NaN;
 
     return {
       symbol,
       totalOpenInterest: totalOI,
-      exchanges: exchanges.length,
+      exchanges: new Set(exchanges.map(e => e.market)).size,
       avgVolume24h: totalVolume,
     };
   });
