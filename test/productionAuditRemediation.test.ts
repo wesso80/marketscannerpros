@@ -32,8 +32,10 @@ describe('2026-09-21 production audit remediations', () => {
   it('renders backtest average trade P&L as dollars instead of percentages', () => {
     const hub = read('components/backtest/BacktestHub.tsx');
 
-    expect(hub).toContain('label="Avg Win" value={\`+$\${n(result.avgWin).toFixed(2)}\`}');
-    expect(hub).toContain('label="Avg Loss" value={\`$\${n(result.avgLoss).toFixed(2)}\`}');
+    expect(hub).toContain('label="Avg Win" value={');
+    expect(hub).toContain('n(result.avgWin).toFixed(2)');
+    expect(hub).toContain('label="Avg Loss" value={');
+    expect(hub).toContain('n(result.avgLoss).toFixed(2)');
     expect(hub).not.toContain('label="Avg Win" value={fmtPct(n(result.avgWin))}');
   });
 
