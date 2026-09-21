@@ -5,7 +5,7 @@ import type { TickerContext } from '../types';
 /**
  * Options / Derivatives Tab
  * Equities: IV, IV Rank, expected move, GEX, put/call ratio, top strikes.
- * Crypto: Funding rate, OI, L/S ratio, liquidations, top perpetual contracts.
+ * Crypto: Funding rate, OI, funding-implied positioning proxy, liquidations, top perpetual contracts.
  */
 export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
   const { symbol, assetClass, options, cryptoDerivatives, loading } = ctx;
@@ -53,9 +53,9 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
             sub="Aggregate OI (USD)"
           />
           <MetricCard
-            label="Long/Short"
+            label="Positioning Proxy"
             value={lsr > 0 ? lsr.toFixed(2) : '—'}
-            sub={cryptoDerivatives.sentiment ?? 'Ratio'}
+            sub="Funding-implied; not account data"
             color={lsColor}
           />
           <MetricCard
