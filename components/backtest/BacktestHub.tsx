@@ -437,8 +437,8 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     <MetricRow label="Total Trades" value={n(result.totalTrades).toString()} />
                     <MetricRow label="Winners" value={n(result.winningTrades).toString()} color="text-emerald-400" />
                     <MetricRow label="Losers" value={n(result.losingTrades).toString()} color="text-red-400" />
-                    <MetricRow label="Avg Win" value={fmtPct(n(result.avgWin))} color="text-emerald-400" />
-                    <MetricRow label="Avg Loss" value={fmtPct(n(result.avgLoss))} color="text-red-400" />
+                    <MetricRow label="Avg Win" value={`+${n(result.avgWin).toFixed(2)}`} color="text-emerald-400" />
+                    <MetricRow label="Avg Loss" value={`${n(result.avgLoss).toFixed(2)}`} color="text-red-400" />
                     <MetricRow label="Sortino" value={n(result.sortinoRatio).toFixed(2)} />
                     <MetricRow label="Calmar" value={n(result.calmarRatio).toFixed(2)} />
                     <MetricRow label="Volatility" value={fmtPct(n(result.volatility))} />
