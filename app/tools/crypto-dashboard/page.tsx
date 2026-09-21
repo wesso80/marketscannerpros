@@ -35,7 +35,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     try {
       const [fundingRes, lsRes, oiRes, liqRes, heatmapRes] = await Promise.all([
         fetch('/api/funding-rates').then(r => r.ok ? r.json() : Promise.reject(`Funding ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
-        fetch('/api/long-short-ratio').then(r => r.ok ? r.json() : Promise.reject(`Long/Short ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        fetch('/api/long-short-ratio').then(r => r.ok ? r.json() : Promise.reject(`Positioning proxy ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
         fetch('/api/crypto/open-interest').then(r => r.ok ? r.json() : Promise.reject(`OI ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
         fetch('/api/crypto/liquidations').then(r => r.ok ? r.json() : Promise.reject(`Liquidations ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
         fetch('/api/crypto/heatmap').then(r => r.ok ? r.json() : Promise.reject(`Heatmap ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
@@ -134,15 +134,16 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
             sentiment: data.fundingRates.sentiment,
             topCoins: data.fundingRates.coins.slice(0, 5),
           } : null,
-          longShort: data.longShort ? {
+          positioningProxy: data.longShort ? {
             overall: data.longShort.overall,
-            avgLong: data.longShort.avgLong,
-            avgShort: data.longShort.avgShort,
+            impliedLong: data.longShort.avgLong,
+            impliedShort: data.longShort.avgShort,
+            observedAccountPositioning: false,
           } : null,
           openInterest: data.openInterest?.summary || null,
           prices: data.prices,
         },
-        summary: `Crypto Derivatives: Funding ${data.fundingRates?.sentiment || 'N/A'}, L/S ${data.longShort?.overall || 'N/A'}, OI ${data.openInterest?.summary?.marketSignal || 'N/A'}`,
+        summary: `Crypto Derivatives: Funding ${data.fundingRates?.sentiment || 'N/A'}, funding-implied positioning ${data.longShort?.overall || 'N/A'} (proxy, not observed accounts), OI ${data.openInterest?.summary?.marketSignal || 'N/A'}`,
       });
     }
   }, [data, setPageData]);
@@ -173,12 +174,12 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     }
 
     if (data.longShort) {
+      // Context only: this proxy is mathematically derived from funding, so it
+      // must not receive a second directional vote on top of funding.
       if (data.longShort.overall === 'Bullish') {
-        bullishScore += 1;
-        signals.push('BULL L/S ratio favors bulls');
+        signals.push('INFO Funding-implied positioning proxy leans long');
       } else if (data.longShort.overall === 'Bearish') {
-        bearishScore += 1;
-        signals.push('BEAR L/S ratio favors bears');
+        signals.push('INFO Funding-implied positioning proxy leans short');
       }
     }
 
