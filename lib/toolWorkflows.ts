@@ -38,7 +38,7 @@ export const toolWorkflows: ToolWorkflow[] = [
       { href: '/tools/scanner', label: 'Market Scanner', description: 'Ranked multi-factor scan for educational research scenarios.', tier: 'free', role: 'primary' },
       { href: '/tools/diamond-hunter', label: 'Diamond Hunter', description: 'Early on-chain discovery with persistent validation and forward outcome tracking.', tier: 'free', role: 'primary' },
       { href: '/tools/explorer', label: 'Markets', description: 'Macro, sector, breadth, and market-state context.', tier: 'free', role: 'primary' },
-      { href: '/tools/explorer?tab=macro', label: 'Macro', description: 'Rates, economic calendar, and broad-risk backdrop.', tier: 'pro', role: 'advanced' },
+      { href: '/tools/dashboard?tab=macro', label: 'Macro', description: 'Rates, economic calendar, and broad-risk backdrop.', tier: 'pro', role: 'advanced' },
       { href: '/tools/crypto-intel', label: 'Crypto Intel', description: 'Crypto market context, narratives, and flows.', tier: 'pro', role: 'specialist' },
     ],
   },
