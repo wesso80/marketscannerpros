@@ -543,9 +543,10 @@ export default function GoldenEggPage() {
   }), [sym, timeframe, ge, geAssessment, geConfluenceScore, geSafeScenario, d, quote.data]);
 
   const geAiSummary = useMemo(() => {
+    if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
     if (!ge) return `Golden Egg: Loading ${sym}...`;
     return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Confluence: ${geConfluenceScore}%`;
-  }, [sym, ge, geAssessment, geConfluenceScore]);
+  }, [sym, ge, geAssessment, geConfluenceScore, goldenEgg.error]);
 
   useRegisterPageData('deep_analysis', geAiData, [sym], geAiSummary);
 
@@ -627,8 +628,8 @@ export default function GoldenEggPage() {
         ]}
         metrics={[
           { label: 'Symbol', value: sym, tone: 'warn', detail: 'Single-symbol validation' },
-          { label: 'Assessment', value: ge ? geAssessmentLabel : loading ? 'Loading' : 'Awaiting data', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' ? 'bear' : 'warn', detail: 'Verdict packet' },
-          { label: 'Confluence', value: ge ? `${geConfluenceScore}%` : 'Pending', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' ? 'bear' : 'warn', detail: 'Evidence alignment' },
+          { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : 'Verdict packet' },
+          { label: 'Confluence', value: ge ? `${geConfluenceScore}%` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : 'Evidence alignment' },
           { label: 'Data trust', value: geDataQuality, tone: geDataQuality === 'GOOD' ? 'bull' : geDataQuality === 'DEGRADED' ? 'warn' : 'bear', detail: geDataQualityTitle, title: geDataQualityTitle },
         ]}
       />
@@ -699,7 +700,7 @@ export default function GoldenEggPage() {
             </div>
 
             <div className="mt-2 rounded-md border border-slate-800 bg-slate-950/35 px-3 py-1.5 text-xs leading-5 text-slate-400">
-              <span className="font-bold text-slate-200">Next useful check:</span> {ge ? geNextUsefulCheck : 'Choose a symbol to build the verdict packet.'}
+              <span className="font-bold text-slate-200">Next useful check:</span> {ge ? geNextUsefulCheck : goldenEgg.error ? 'Retry the selected symbol. Do not treat a timed-out or failed provider request as a completed verdict.' : loading ? `Building ${sym} verdict packet…` : 'Choose a symbol to build the verdict packet.'}
             </div>
           </div>
         )}

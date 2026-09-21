@@ -106,6 +106,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [history, setHistory] = useState<AlertHistoryItem[]>([]);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [zone3Open, setZone3Open] = useState(true);
   const [zone4Open, setZone4Open] = useState(false);
@@ -118,24 +119,41 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
   const fetchAll = async () => {
     setLoadingData(true);
+    setLoadWarning(null);
+
+    const fetchJson = async (url: string) => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+        return await res.json().catch(() => ({}));
+      } finally {
+        window.clearTimeout(timer);
+      }
+    };
+
     try {
-      const [alertsRes, historyRes, prefsRes] = await Promise.all([
-        fetch('/api/alerts', { cache: 'no-store' }),
-        fetch('/api/alerts/history?limit=30', { cache: 'no-store' }),
-        fetch('/api/notifications/prefs', { cache: 'no-store' }),
+      const results = await Promise.allSettled([
+        fetchJson('/api/alerts'),
+        fetchJson('/api/alerts/history?limit=30'),
+        fetchJson('/api/notifications/prefs'),
       ]);
 
-      const alertsJson = await alertsRes.json().catch(() => ({}));
-      const historyJson = await historyRes.json().catch(() => ({}));
-      const prefsJson = await prefsRes.json().catch(() => ({}));
+      const alertsJson = results[0].status === 'fulfilled' ? results[0].value : {};
+      const historyJson = results[1].status === 'fulfilled' ? results[1].value : {};
+      const prefsJson = results[2].status === 'fulfilled' ? results[2].value : {};
 
       setAlerts(Array.isArray(alertsJson?.alerts) ? alertsJson.alerts : []);
       setHistory(Array.isArray(historyJson?.history) ? historyJson.history : []);
       setPrefs(prefsJson?.prefs || null);
-    } catch {
-      setAlerts([]);
-      setHistory([]);
-      setPrefs(null);
+
+      const failed = results
+        .map((result, index) => result.status === 'rejected' ? ['alerts', 'history', 'delivery settings'][index] : null)
+        .filter(Boolean);
+      if (failed.length) {
+        setLoadWarning(`Partial alert data: ${failed.join(', ')} could not be loaded. Retry before relying on this view.`);
+      }
     } finally {
       setLoadingData(false);
     }
@@ -281,6 +299,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
             { label: 'Tracking', value: riskLocked ? 'Locked' : 'Open', tone: riskLocked ? 'bear' : 'bull', detail: riskLocked ? 'Rule guard active' : 'No guard active' },
           ]}
         />
+      )}
+      {loadWarning && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
+          {loadWarning}
+          <button type="button" onClick={() => void fetchAll()} className="ml-2 underline underline-offset-2">Retry</button>
+        </div>
       )}
       <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
         Alerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.

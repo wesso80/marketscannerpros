@@ -47,6 +47,9 @@ const COMMODITIES = {
 const cache: Map<string, { data: any; timestamp: number }> = new Map();
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
+type CommodityFreshness = 'LIVE' | 'DELAYED' | 'STALE';
+type CommoditySource = 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY';
+
 interface CommodityData {
   symbol: string;
   name: string;
@@ -57,6 +60,40 @@ interface CommodityData {
   category: string;
   date: string;
   history: { date: string; value: number }[];
+  source: CommoditySource;
+  sourceSymbol?: string;
+  freshnessStatus: CommodityFreshness;
+  dataAgeDays: number;
+  eligibleForGate: boolean;
+}
+
+function dataAgeDays(date: string): number {
+  const parsed = Date.parse(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Math.floor((Date.now() - parsed) / 86_400_000));
+}
+
+function withFreshness(
+  data: Omit<CommodityData, 'source' | 'freshnessStatus' | 'dataAgeDays' | 'eligibleForGate'>,
+  source: CommoditySource,
+  maxAgeDays: number,
+  sourceSymbol?: string,
+): CommodityData {
+  const age = dataAgeDays(data.date);
+  const stale = !Number.isFinite(age) || age > maxAgeDays;
+  const freshnessStatus: CommodityFreshness = stale
+    ? 'STALE'
+    : source === 'ETF_PROXY' || source === 'SPOT'
+      ? 'LIVE'
+      : 'DELAYED';
+  return {
+    ...data,
+    source,
+    sourceSymbol,
+    freshnessStatus,
+    dataAgeDays: Number.isFinite(age) ? age : 9999,
+    eligibleForGate: freshnessStatus !== 'STALE',
+  };
 }
 
 async function fetchETFQuote(etfSymbol: string): Promise<{ price: number; change: number; changePercent: number; date: string } | null> {
@@ -99,17 +136,17 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       const etfQuote = await fetchETFQuote(proxy.etf);
       if (etfQuote && etfQuote.price > 0) {
         console.log(`[Commodities] ✓ ETF proxy ${proxy.etf} → $${etfQuote.price} (${etfQuote.changePercent}%)`);
-        const result: CommodityData = {
+        const result = withFreshness({
           symbol,
           name: config.name,
           price: etfQuote.price,
           change: etfQuote.change,
           changePercent: etfQuote.changePercent,
-          unit: config.unit,
+          unit: `$/${proxy.etf} share (proxy)`,
           category: config.category,
           date: etfQuote.date,
           history: [{ date: etfQuote.date, value: etfQuote.price }],
-        };
+        }, 'ETF_PROXY', 7, proxy.etf);
         cache.set(cacheKey, { data: result, timestamp: Date.now() });
         return result;
       }
@@ -191,7 +228,11 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     const change = currentPrice - previousPrice;
     const changePercent = previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
 
-    const result: CommodityData = {
+    const isSpot = 'isPreciousMetal' in config && config.isPreciousMetal;
+    const interval = !isSpot && 'interval' in config ? config.interval : 'monthly';
+    const source: CommoditySource = isSpot ? 'SPOT' : interval === 'daily' ? 'LEGACY_DAILY' : 'LEGACY_MONTHLY';
+    const maxAgeDays = source === 'SPOT' ? 2 : source === 'LEGACY_DAILY' ? 10 : 45;
+    const result = withFreshness({
       symbol,
       name: config.name,
       price: currentPrice,
@@ -201,7 +242,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       category: config.category,
       date: latestDate,
       history,
-    };
+    }, source, maxAgeDays);
 
     cache.set(cacheKey, { data: result, timestamp: Date.now() });
     return result;
@@ -266,34 +307,58 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
     
-    // Group by category
+    // Preserve all returned rows for transparency, but only fresh-enough rows may
+    // participate in the live analysis gate.
     const byCategory = {
       Energy: commodities.filter(c => c.category === 'Energy'),
       Metals: commodities.filter(c => c.category === 'Metals'),
       Agriculture: commodities.filter(c => c.category === 'Agriculture'),
     };
+    const gateCommodities = commodities.filter(c => c.eligibleForGate);
+    const staleSymbols = commodities.filter(c => !c.eligibleForGate).map(c => c.symbol);
+    const gateCategories = new Set(gateCommodities.map(c => c.category));
+    const gateReady = gateCommodities.length >= 6
+      && gateCategories.has('Energy')
+      && gateCategories.has('Metals')
+      && gateCategories.has('Agriculture');
 
-    // Calculate summary stats
     const summary = {
-      totalCommodities: commodities.length,
-      gainers: commodities.filter(c => c.changePercent > 0).length,
-      losers: commodities.filter(c => c.changePercent < 0).length,
-      avgChange: commodities.length > 0 
-        ? commodities.reduce((sum, c) => sum + c.changePercent, 0) / commodities.length 
+      totalCommodities: gateCommodities.length,
+      availableCommodities: commodities.length,
+      staleExcluded: staleSymbols.length,
+      gainers: gateCommodities.filter(c => c.changePercent > 0).length,
+      losers: gateCommodities.filter(c => c.changePercent < 0).length,
+      avgChange: gateCommodities.length > 0
+        ? gateCommodities.reduce((sum, c) => sum + c.changePercent, 0) / gateCommodities.length
         : 0,
-      topGainer: commodities.length > 0 
-        ? commodities.reduce((max, c) => c.changePercent > max.changePercent ? c : max)
+      topGainer: gateCommodities.length > 0
+        ? gateCommodities.reduce((max, c) => c.changePercent > max.changePercent ? c : max)
         : null,
-      topLoser: commodities.length > 0 
-        ? commodities.reduce((min, c) => c.changePercent < min.changePercent ? c : min)
+      topLoser: gateCommodities.length > 0
+        ? gateCommodities.reduce((min, c) => c.changePercent < min.changePercent ? c : min)
         : null,
     };
+
+    const sourceAsOf = gateCommodities
+      .map(c => c.date)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null;
+
+    console.log(`[Commodities] Gate eligible ${gateCommodities.length}/${commodities.length}; stale excluded: ${staleSymbols.join(', ') || 'none'}`);
 
     return NextResponse.json({
       success: true,
       commodities,
       byCategory,
       summary,
+      dataHealth: {
+        gateReady,
+        eligibleCount: gateCommodities.length,
+        totalCount: commodities.length,
+        staleSymbols,
+      },
+      sourceAsOf,
       lastUpdate: new Date().toISOString(),
     });
   } catch (err) {

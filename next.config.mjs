@@ -102,6 +102,11 @@ const nextConfig = {
         destination: '/tools/workspace',
         permanent: true,
       },
+      {
+        source: '/referrals',
+        destination: '/tools/referrals',
+        permanent: true,
+      },
 
       // ── V2 routes → consolidated /tools/* surfaces ──
       { source: '/v2/dashboard', destination: '/tools/dashboard', permanent: true },
@@ -143,8 +148,7 @@ const nextConfig = {
       // Dashboard surface
       { source: '/tools/crypto-dashboard', destination: '/tools/dashboard?tab=crypto', permanent: true },
       { source: '/tools/crypto', destination: '/tools/explorer?tab=crypto-command', permanent: true },
-      { source: '/tools/macro', destination: '/tools/explorer?tab=macro', permanent: true },
-      { source: '/tools/volatility-engine', destination: '/tools/golden-egg', permanent: true },
+      { source: '/tools/macro', destination: '/tools/dashboard?tab=macro', permanent: true },
 
       // Scanner surface
       { source: '/tools/ai-analyst', destination: '/tools/scanner', permanent: true },
@@ -165,7 +169,6 @@ const nextConfig = {
 
       // Orphan pages → correct surfaces
       { source: '/tools/company-overview', destination: '/tools/golden-egg', permanent: true },
-      { source: '/tools/liquidity-sweep', destination: '/tools/golden-egg', permanent: true },
       { source: '/tools/scanner/backtest', destination: '/tools/workspace?tab=Backtest', permanent: true },
     ];
   },

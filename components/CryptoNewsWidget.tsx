@@ -41,7 +41,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ per_page: '25' });
+        const params = new URLSearchParams({ per_page: '20' });
         if (coinId) params.set('coin_id', coinId);
         if (filter !== 'all') params.set('type', filter);
 

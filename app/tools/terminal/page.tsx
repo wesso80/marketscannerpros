@@ -367,12 +367,19 @@ export default function TerminalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  /* Keep current tab aligned with active market path */
+  /* Keep current tab aligned with active market path.
+     Deep links to options tabs must not be silently reset by a stale crypto symbol. */
   useEffect(() => {
+    const optionsTab = tab === 'Options Terminal' || tab === 'Options Confluence' || tab === 'Options Flow';
+    if (optionsTab && marketPath !== 'equity') {
+      setSymInput('AAPL');
+      selectSymbol('AAPL');
+      return;
+    }
     if (!visibleTabs.includes(tab)) {
       setTab(visibleTabs[0]);
     }
-  }, [tab, visibleTabs]);
+  }, [tab, marketPath, visibleTabs, selectSymbol]);
 
   const handleSymSubmit = () => {
     const s = symInput.trim().toUpperCase();

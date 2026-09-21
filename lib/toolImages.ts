@@ -20,7 +20,7 @@ export const TOOL_IMAGES: Record<string, string> = {
   '/tools/crypto-heatmap': '/assets/platform-tools/crypto-heatmap.png',
   '/tools/dashboard?tab=crypto': '/assets/platform-tools/crypto-derivatives.png',
   '/tools/explorer?tab=commodities': '/assets/platform-tools/commodities.png',
-  '/tools/explorer?tab=macro': '/assets/platform-tools/macro-dashboard.png',
+  '/tools/dashboard?tab=macro': '/assets/platform-tools/macro-dashboard.png',
   '/tools/explorer?tab=crypto': '/assets/platform-tools/crypto-explorer.png',
   '/tools/explorer?tab=equity': '/assets/platform-tools/equity-explorer.png',
   '/tools/terminal?tab=options-terminal': '/assets/platform-tools/options-terminal.png',

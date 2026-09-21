@@ -241,9 +241,10 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
     const highImpactCountNext24h = nextHigh.length;
     const highImpactWithinNext120m = closestHighMinutes <= 120;
 
-    let reviewState: ReviewState = 'CLEAR';
+    const liveProviderUnavailable = data?.meta?.providerStatus === 'NOT_CONFIGURED';
+    let reviewState: ReviewState = liveProviderUnavailable ? 'CAUTION' : 'CLEAR';
     if (closestHighMinutes <= HIGH_IMPACT_DANGER_WINDOW.beforeMin || insidePostWindow) reviewState = 'BLOCKED';
-    else if (highImpactCountNext24h >= 2 || isCentralBankDay) reviewState = 'CAUTION';
+    else if (highImpactCountNext24h >= 2 || isCentralBankDay || liveProviderUnavailable) reviewState = 'CAUTION';
 
     const volRegime = closestHighMinutes <= 60 || isCentralBankDay
       ? 'Event Shock'
@@ -286,13 +287,15 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
       relevantCountdown,
       dangerWindow: HIGH_IMPACT_DANGER_WINDOW.label,
       reason:
-        reviewState === 'BLOCKED'
-          ? 'High-impact print is inside the immediate shock window; treat this as observation context.'
-          : reviewState === 'CAUTION'
-            ? 'Catalyst density is elevated; require stronger evidence before using the scenario.'
-            : 'No immediate high-impact shock window is detected in the selected horizon.',
+        liveProviderUnavailable
+          ? 'Live calendar provider is not configured. Curated schedule context may be useful, but the macro gate cannot be treated as fully validated.'
+          : reviewState === 'BLOCKED'
+            ? 'High-impact print is inside the immediate shock window; treat this as observation context.'
+            : reviewState === 'CAUTION'
+              ? 'Catalyst density is elevated; require stronger evidence before using the scenario.'
+              : 'No immediate high-impact shock window is detected in the selected horizon.',
     };
-  }, [enrichedEvents, nowMs, focusAssets]);
+  }, [enrichedEvents, nowMs, focusAssets, data?.meta?.providerStatus]);
 
   const todayEvents = useMemo(() => {
     const todayEt = zonedDateKey(nowMs, ET_ZONE);

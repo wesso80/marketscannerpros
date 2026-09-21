@@ -254,15 +254,20 @@ export async function getRecentSignals(limit: number = 50) {
 export async function getOverallStats() {
   try {
     const result = await q(`
-      SELECT 
-        COUNT(DISTINCT sf.id) as total_signals,
-        COUNT(DISTINCT sf.id) FILTER (WHERE EXISTS (
-          SELECT 1 FROM signal_outcomes so WHERE so.signal_id = sf.id
-        )) as signals_with_outcomes,
-        (SELECT COUNT(*) FROM signal_outcomes) as total_outcomes,
-        (SELECT COUNT(*) FROM signal_outcomes WHERE outcome = 'correct') as correct_outcomes,
-        (SELECT COUNT(*) FROM signal_outcomes WHERE outcome = 'wrong') as wrong_outcomes
+      SELECT
+        COUNT(sf.id) as total_signals,
+        COUNT(latest.outcome) as signals_with_outcomes,
+        COUNT(latest.outcome) FILTER (WHERE latest.outcome = 'correct') as correct_outcomes,
+        COUNT(latest.outcome) FILTER (WHERE latest.outcome = 'wrong') as wrong_outcomes,
+        COUNT(latest.outcome) FILTER (WHERE latest.outcome = 'neutral') as neutral_outcomes
       FROM signals_fired sf
+      LEFT JOIN LATERAL (
+        SELECT so.outcome
+        FROM signal_outcomes so
+        WHERE so.signal_id = sf.id
+        ORDER BY so.horizon_minutes DESC
+        LIMIT 1
+      ) latest ON TRUE
       WHERE sf.signal_at > NOW() - INTERVAL '90 days'
     `);
     

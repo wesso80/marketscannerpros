@@ -245,7 +245,7 @@ export default function AccountSection() {
   ];
 
   const planFeatures = useMemo(() => {
-    if (isPaid) return ['Unlimited scanning + Golden Egg', 'Full Intelligence suite (Global M2, Liquidity, Fragility, Master)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
+    if (isPaid) return ['Unlimited scanning + Golden Egg', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
     return ['Core scanner (limited daily runs)', 'Watchlists, markets and macro dashboards', 'Selected delayed / basic intelligence views', 'Basic portfolio tracker and journal', 'Educational content and platform guides'];
   }, [isPaid]);
 

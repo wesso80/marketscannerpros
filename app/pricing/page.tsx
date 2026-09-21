@@ -157,7 +157,8 @@ export default function PricingPage() {
         {
           group: "Validate",
           lines: [
-            "Full Intelligence suite — Global M2, Liquidity, Fragility, Lead/Lag, NQ Pressure, Auction, Master / Command Centre",
+            "Production Intelligence — Global M2, Liquidity Transmission and Fragility",
+            "Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not included as live features today",
             "Deep Analysis, Options Terminal, Options Confluence",
             "Time Confluence Scanner and Volatility Engine",
           ],
