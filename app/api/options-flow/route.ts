@@ -110,8 +110,18 @@ export async function GET(req: NextRequest) {
       byExpiry.set(c.expiration, arr);
     }
 
-    // Sort expirations by date
-    const expirations = [...byExpiry.keys()].sort();
+    // Only current/future expirations can be treated as current flow evidence.
+    const todayParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const getPart = (type: string) => todayParts.find((part) => part.type === type)?.value || '';
+    const todayKey = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
+    const expirations = [...byExpiry.keys()]
+      .filter((expiration) => /^\d{4}-\d{2}-\d{2}$/.test(expiration) && expiration >= todayKey)
+      .sort();
     if (expirations.length === 0) {
       return NextResponse.json({ error: 'No expirations found' }, { status: 404 });
     }
@@ -127,6 +137,20 @@ export async function GET(req: NextRequest) {
     }
 
     const expiryContracts = byExpiry.get(selectedExpiry) || [];
+    const quotedContracts = expiryContracts.filter((contract) => {
+      const bid = Number.parseFloat(contract.bid || '0');
+      const ask = Number.parseFloat(contract.ask || '0');
+      return bid > 0 && ask > 0 && ask >= bid;
+    });
+    const quoteCoverage = expiryContracts.length ? quotedContracts.length / expiryContracts.length : 0;
+    if (quoteCoverage < 0.25) {
+      return NextResponse.json({
+        error: `Options flow unavailable: only ${Math.round(quoteCoverage * 100)}% of ${selectedExpiry} contracts have usable bid/ask quotes`,
+        code: 'INSUFFICIENT_QUOTE_COVERAGE',
+        expiration: selectedExpiry,
+        quoteCoveragePct: Math.round(quoteCoverage * 100),
+      }, { status: 422 });
+    }
     const calls = expiryContracts.filter(c => c.type?.toLowerCase() === 'call');
     const puts = expiryContracts.filter(c => c.type?.toLowerCase() === 'put');
 
