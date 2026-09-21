@@ -70,6 +70,30 @@ function directionLabel(direction: ScalpResult['direction']) {
   return 'Neutral';
 }
 
+function barAgeMinutes(lastBar: string): number | null {
+  if (!lastBar) return null;
+  const normalized = /Z$|[+-]\d{2}:?\d{2}$/.test(lastBar) ? lastBar : lastBar.replace(' ', 'T') + 'Z';
+  const ts = Date.parse(normalized);
+  if (!Number.isFinite(ts)) return null;
+  return Math.max(0, (Date.now() - ts) / 60_000);
+}
+
+function staleThresholdMinutes(timeframe: ScalpTimeframe): number {
+  return timeframe === '5min' ? 15 : 45;
+}
+
+function isStaleScalpBar(result: ScalpResult): boolean {
+  const age = barAgeMinutes(result.lastBar);
+  return age != null && age > staleThresholdMinutes(result.timeframe);
+}
+
+function formatBarAge(lastBar: string): string {
+  const age = barAgeMinutes(lastBar);
+  if (age == null) return 'age unknown';
+  if (age < 60) return `${Math.round(age)}m old`;
+  return `${(age / 60).toFixed(1)}h old`;
+}
+
 /* ─── Component ─── */
 export default function ScalperPage() {
   const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
@@ -343,9 +367,16 @@ export default function ScalperPage() {
                       >
                         <td className="py-2.5 px-2 font-bold text-white">{r.symbol}</td>
                         <td className="py-2.5 px-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
-                            {directionLabel(r.direction)}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
+                              {directionLabel(r.direction)}
+                            </span>
+                            {isStaleScalpBar(r) && (
+                              <span className="rounded border border-rose-400/35 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">
+                                STALE INPUT · {formatBarAge(r.lastBar)}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-2.5 px-2 text-right">
                           <StrengthBar value={r.strength} />
@@ -469,9 +500,11 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
       </div>
 
       {/* Meta */}
-      <div className="px-4 py-2 border-t border-slate-700/30 flex items-center justify-between text-[10px] text-slate-500">
+      <div className="px-4 py-2 border-t border-slate-700/30 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
         <span>{r.barCount} bars</span>
-        <span>Last: {r.lastBar}</span>
+        <span className={isStaleScalpBar(r) ? 'font-bold text-rose-300' : ''}>
+          Last source bar: {r.lastBar} · {formatBarAge(r.lastBar)}{isStaleScalpBar(r) ? ' · STALE FOR THIS CADENCE' : ''}
+        </span>
       </div>
     </div>
   );
