@@ -143,7 +143,7 @@ export function buildPublicAIDataBindingGuardrail(input: PublicAIDataBindingInpu
 
   if (CRYPTO_DERIVATIVES_QUERY_PATTERN.test(query) && !hasCryptoDerivativesEvidence(pageData, scannerData)) {
     missing.push('crypto derivatives evidence was not supplied');
-    limits.push('Do not invent funding rates, open interest, long/short ratio, liquidations, basis, or futures positioning.');
+    limits.push('Do not invent funding rates, open interest, funding-implied positioning proxy, liquidations, basis, or futures positioning. Never describe the funding-implied proxy as observed exchange long/short account data.');
   }
 
   const scoreQuality = nestedRecord(pageData, 'scoreQuality') ?? nestedRecord(scannerData, 'scoreQuality');
