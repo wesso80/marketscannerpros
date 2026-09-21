@@ -244,8 +244,8 @@ export default function AlertsWidget({
       case 'oi_drop': return '📉 OI Drop';
       case 'funding_extreme_pos': return '🔴 High Funding';
       case 'funding_extreme_neg': return '🟢 Neg Funding';
-      case 'ls_ratio_high': return '⚠️ Crowded Long';
-      case 'ls_ratio_low': return '⚠️ Crowded Short';
+      case 'ls_ratio_high': return '⚠️ Funding-Implied Long';
+      case 'ls_ratio_low': return '⚠️ Funding-Implied Short';
       case 'fear_extreme': return '😱 Extreme Fear';
       case 'greed_extreme': return '🤑 Extreme Greed';
       case 'oi_divergence_bull': return '🐂 Bull Divergence';
@@ -272,8 +272,8 @@ export default function AlertsWidget({
       case 'oi_drop': return 'Open Interest drops below threshold (mass liquidations/closures)';
       case 'funding_extreme_pos': return 'Funding rate too high (overleveraged longs - bearish signal)';
       case 'funding_extreme_neg': return 'Funding rate too negative (overleveraged shorts - bullish signal)';
-      case 'ls_ratio_high': return 'Long/Short ratio too high (crowded longs - squeeze risk)';
-      case 'ls_ratio_low': return 'Long/Short ratio too low (crowded shorts - squeeze up risk)';
+      case 'ls_ratio_high': return 'Funding-implied positioning proxy is long-heavy. Derived from funding; not observed account positioning.';
+      case 'ls_ratio_low': return 'Funding-implied positioning proxy is short-heavy. Derived from funding; not observed account positioning.';
       case 'fear_extreme': return 'Fear & Greed below threshold (extreme fear detected)';
       case 'greed_extreme': return 'Fear & Greed above threshold (extreme greed detected)';
       case 'oi_divergence_bull': return 'OI rising while price declining (bullish divergence)';
@@ -300,8 +300,8 @@ export default function AlertsWidget({
       case 'oi_drop': return '5'; // 5% OI decrease
       case 'funding_extreme_pos': return '0.05'; // 0.05% funding
       case 'funding_extreme_neg': return '0.05'; // -0.05% funding
-      case 'ls_ratio_high': return '1.5'; // 1.5 L/S ratio
-      case 'ls_ratio_low': return '0.7'; // 0.7 L/S ratio
+      case 'ls_ratio_high': return '1.5'; // legacy proxy threshold
+      case 'ls_ratio_low': return '0.7'; // legacy proxy threshold
       case 'fear_extreme': return '25'; // F&G < 25
       case 'greed_extreme': return '75'; // F&G > 75
       case 'oi_divergence_bull': return '3'; // 3% OI increase
@@ -873,9 +873,9 @@ export default function AlertsWidget({
                             <option value="funding_extreme_pos">🔴 High Funding (Bearish)</option>
                             <option value="funding_extreme_neg">🟢 Negative Funding (Bullish)</option>
                           </optgroup>
-                          <optgroup label="Long/Short Ratio">
-                            <option value="ls_ratio_high">⚠️ Crowded Longs</option>
-                            <option value="ls_ratio_low">⚠️ Crowded Shorts</option>
+                          <optgroup label="Funding-Implied Positioning Proxy">
+                            <option value="ls_ratio_high">Long-heavy proxy</option>
+                            <option value="ls_ratio_low">Short-heavy proxy</option>
                           </optgroup>
                           <optgroup label="Fear & Greed">
                             <option value="fear_extreme">😱 Extreme Fear</option>
