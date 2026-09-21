@@ -205,9 +205,12 @@ function FundingHeatmapInline({ cells, topExchanges }: { cells: FundingHeatmapCe
    SIGNALS CARD (inline)
    ══════════════════════════════════════════════════ */
 
-function SignalsInline({ signals }: { signals: DerivedSignal[] }) {
+function SignalsInline({ signals, unavailable = false }: { signals: DerivedSignal[]; unavailable?: boolean }) {
+  if (unavailable) {
+    return <p className="text-sm text-amber-300 italic">Signals unavailable because the derivatives feed did not return a validated dataset.</p>;
+  }
   if (!signals.length) {
-    return <p className="text-sm text-zinc-500 italic">No significant signals detected for current data.</p>;
+    return <p className="text-sm text-zinc-500 italic">No significant signals detected in the loaded derivatives dataset.</p>;
   }
   const icon = (s: DerivedSignal['severity']) => s === 'bullish' ? '🟢' : s === 'bearish' ? '🔴' : '🟡';
   return (
@@ -322,9 +325,17 @@ function FundingHistoryChart({ data }: { data: FundingSnapshot[] }) {
    MAIN VIEW
    ══════════════════════════════════════════════════ */
 
-export default function CryptoTerminalView() {
+export default function CryptoTerminalView({
+  symbol: propSymbol,
+  onSymbolChange,
+  onDataStateChange,
+}: {
+  symbol?: string;
+  onSymbolChange?: (symbol: string) => void;
+  onDataStateChange?: (state: 'loading' | 'ready' | 'unavailable') => void;
+} = {}) {
   const searchParams = useSearchParams();
-  const [selectedSymbol, setSelectedSymbol] = useState(searchParams.get('symbol')?.toUpperCase() || 'BTC');
+  const [selectedSymbol, setSelectedSymbol] = useState(propSymbol?.toUpperCase() || searchParams.get('symbol')?.toUpperCase() || 'BTC');
   const [selectedRow, setSelectedRow] = useState<DerivativeRow | null>(null);
   const [sortCol, setSortCol] = useState<'oi' | 'funding' | 'volume' | 'basis' | 'spread'>('oi');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -337,6 +348,23 @@ export default function CryptoTerminalView() {
   const [fundingHistory, setFundingHistory] = useState<FundingSnapshot[]>([]);
   const [fundingHistoryLoading, setFundingHistoryLoading] = useState(false);
   const [stablecoinData, setStablecoinData] = useState<StablecoinData | null>(null);
+
+  useEffect(() => {
+    if (!propSymbol) return;
+    const next = propSymbol.toUpperCase().replace(/[-/]?USD(T)?$/i, '');
+    if (next && next !== selectedSymbol) {
+      setSelectedSymbol(next);
+      setSelectedRow(null);
+      single.fetch(next);
+    }
+  }, [propSymbol, selectedSymbol, single]);
+
+  useEffect(() => {
+    if (!onDataStateChange) return;
+    if (single.loading) onDataStateChange('loading');
+    else if (single.error || !single.data) onDataStateChange('unavailable');
+    else onDataStateChange('ready');
+  }, [single.loading, single.error, single.data, onDataStateChange]);
 
   // Fetch funding rate history when symbol changes
   useEffect(() => {
@@ -364,8 +392,9 @@ export default function CryptoTerminalView() {
   const switchCoin = useCallback((sym: string) => {
     setSelectedSymbol(sym);
     setSelectedRow(null);
+    onSymbolChange?.(sym);
     single.fetch(sym);
-  }, [single]);
+  }, [single, onSymbolChange]);
 
   // Sort handler
   const toggleSort = (col: typeof sortCol) => {
@@ -664,7 +693,7 @@ export default function CryptoTerminalView() {
 
             {/* Signals */}
             <Card title="Positioning Signals" right={<Badge color={signals.length > 0 ? 'amber' : 'zinc'}>{signals.length}</Badge>}>
-              <SignalsInline signals={signals} />
+              <SignalsInline signals={signals} unavailable={Boolean(single.error || !single.data)} />
             </Card>
           </div>
         </div>
