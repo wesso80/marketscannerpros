@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS diamond_hunter_snapshots (
   score_delta_5m NUMERIC,
   liquidity_change_pct NUMERIC,
   hard_reject BOOLEAN NOT NULL DEFAULT FALSE,
-  risk_flags JSONB NOT NULL DEFAULT '[]'::jsonb
+  risk_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  feature_data JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE INDEX IF NOT EXISTS idx_diamond_snapshots_pool_time
