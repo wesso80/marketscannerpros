@@ -286,7 +286,7 @@ export default function MarketPulseHero() {
             )}
           </div>
 
-          {/* Box 4: Derivatives (L/S Ratio + Funding) */}
+          {/* Box 4: Derivatives (funding + funding-implied positioning proxy) */}
           <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-xl p-5 border border-slate-700/50 hover:border-green-500/30 transition-all">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xl">⚖️</span>
@@ -302,13 +302,13 @@ export default function MarketPulseHero() {
             {derivatives ? (
               <div className="space-y-3">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Long/Short Ratio</div>
+                  <div className="text-xs text-gray-500 mb-1">Funding-Implied Positioning Proxy</div>
                   <div className="flex items-baseline gap-2">
                     <span className={`text-2xl font-bold ${derivatives.longShortRatio > 1 ? 'text-green-400' : 'text-red-400'}`}>
                       {derivatives.longShortRatio.toFixed(2)}
                     </span>
                     <span className={`text-sm ${derivatives.longShortRatio > 1 ? 'text-green-400' : 'text-red-400'}`}>
-                      {derivatives.longShortRatio > 1 ? '↑ Longs' : '↓ Shorts'}
+                      {derivatives.longShortRatio > 1 ? '↑ Implied long' : '↓ Implied short'}
                     </span>
                   </div>
                   {/* Visual bar */}
@@ -321,6 +321,7 @@ export default function MarketPulseHero() {
                       className="h-full bg-red-500 flex-1" 
                     />
                   </div>
+                  <div className="mt-1 text-[10px] text-gray-500">Derived from funding; not exchange-reported long/short accounts.</div>
                 </div>
                 <div className="pt-2 border-t border-slate-700">
                   <div className="text-xs text-gray-500 mb-1">Funding Rate</div>
