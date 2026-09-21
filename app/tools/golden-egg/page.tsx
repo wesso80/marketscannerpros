@@ -687,7 +687,7 @@ export default function GoldenEggPage() {
                       className={`px-2.5 py-1.5 text-[11px] font-bold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${assetType === type ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:bg-slate-800/60'}`}
                     >
                       {type}
-                    </a>
+                    </button>
                   ))}
                 </div>
                 <div className="flex flex-wrap items-center gap-1">
