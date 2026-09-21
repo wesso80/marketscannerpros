@@ -89,12 +89,18 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                 <div className="text-[11px] text-white/50">Longs</div>
-                <div className="mt-1 text-sm font-semibold text-white">{data.liquidations?.summary?.totalLongValue == null ? 'Unavailable' : '
-              </div>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {data.liquidations?.summary?.totalLongValue == null
+                    ? 'Unavailable'
+                    : `${(data.liquidations.summary.totalLongValue / 1e6).toFixed(1)}M`}
+                </div>
               <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                 <div className="text-[11px] text-white/50">Shorts</div>
-                <div className="mt-1 text-sm font-semibold text-white">{data.liquidations?.summary?.totalShortValue == null ? 'Unavailable' : '
-              </div>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {data.liquidations?.summary?.totalShortValue == null
+                    ? 'Unavailable'
+                    : `${(data.liquidations.summary.totalShortValue / 1e6).toFixed(1)}M`}
+                </div>
             </div>
             <div className="mt-3 grid gap-2">
               {(data.liquidations?.coins || []).slice(0, 5).map((coin) => (
