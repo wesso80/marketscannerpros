@@ -8,6 +8,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { useState, useMemo, useCallback } from 'react';
+import { sampledMetric, sampledProfitFactor } from '@/lib/backtest/displayMetric';
 import { Card, SectionHeader, Badge, ScoreBar, TabBar, EmptyState } from '@/app/v2/_components/ui';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 import { useV2 } from '@/app/v2/_lib/V2Context';
@@ -423,10 +424,10 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 {/* Key metrics grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   <MetricCard label="Total Return" value={fmtPct(n(result.totalReturn))} color={pctColor(n(result.totalReturn))} />
-                  <MetricCard label="Win Rate" value={`${n(result.winRate).toFixed(1)}%`} color={n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'} />
-                  <MetricCard label="Profit Factor" value={n(result.profitFactor).toFixed(2)} color={n(result.profitFactor) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
+                  <MetricCard label="Win Rate" value={sampledMetric(result.winRate, n(result.totalTrades), 1, '%')} color={n(result.totalTrades) === 0 ? 'text-slate-400' : n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'} />
+                  <MetricCard label="Profit Factor" value={sampledProfitFactor(result.profitFactor, n(result.totalTrades), n(result.winningTrades), n(result.losingTrades))} color={n(result.totalTrades) === 0 ? 'text-slate-400' : n(result.profitFactor) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
                   <MetricCard label="Max Drawdown" value={fmtPct(n(result.maxDrawdown))} color="text-red-400" />
-                  <MetricCard label="Sharpe" value={n(result.sharpeRatio).toFixed(2)} />
+                  <MetricCard label="Sharpe" value={sampledMetric(result.sharpeRatio, n(result.totalTrades))} />
                   <MetricCard label="CAGR" value={fmtPct(n(result.cagr))} color={pctColor(n(result.cagr))} />
                 </div>
 
@@ -437,10 +438,10 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     <MetricRow label="Total Trades" value={n(result.totalTrades).toString()} />
                     <MetricRow label="Winners" value={n(result.winningTrades).toString()} color="text-emerald-400" />
                     <MetricRow label="Losers" value={n(result.losingTrades).toString()} color="text-red-400" />
-                    <MetricRow label="Avg Win" value={`+${n(result.avgWin).toFixed(2)}`} color="text-emerald-400" />
-                    <MetricRow label="Avg Loss" value={`${n(result.avgLoss).toFixed(2)}`} color="text-red-400" />
-                    <MetricRow label="Sortino" value={n(result.sortinoRatio).toFixed(2)} />
-                    <MetricRow label="Calmar" value={n(result.calmarRatio).toFixed(2)} />
+                    <MetricRow label="Avg Win (USD)" value={sampledMetric(result.avgWin, n(result.winningTrades))} color="text-emerald-400" />
+                    <MetricRow label="Avg Loss (USD)" value={sampledMetric(result.avgLoss, n(result.losingTrades))} color="text-red-400" />
+                    <MetricRow label="Sortino" value={sampledMetric(result.sortinoRatio, n(result.totalTrades))} />
+                    <MetricRow label="Calmar" value={sampledMetric(result.calmarRatio, n(result.totalTrades))} />
                     <MetricRow label="Volatility" value={fmtPct(n(result.volatility))} />
                     <MetricRow label="Time in Market" value={`${n(result.timeInMarket).toFixed(1)}%`} />
                     {result.bestTrade && <MetricRow label="Largest Gain" value={fmtPct(n(result.bestTrade.returnPercent))} color="text-emerald-400" />}

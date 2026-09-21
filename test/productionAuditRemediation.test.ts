@@ -32,11 +32,11 @@ describe('2026-09-21 production audit remediations', () => {
   it('renders backtest average trade P&L as dollars instead of percentages', () => {
     const hub = read('components/backtest/BacktestHub.tsx');
 
-    expect(hub).toContain('label="Avg Win" value={');
-    expect(hub).toContain('n(result.avgWin).toFixed(2)');
-    expect(hub).toContain('label="Avg Loss" value={');
-    expect(hub).toContain('n(result.avgLoss).toFixed(2)');
-    expect(hub).not.toContain('label="Avg Win" value={fmtPct(n(result.avgWin))}');
+    expect(hub).toContain('label="Avg Win (USD)" value={');
+    expect(hub).toContain('sampledMetric(result.avgWin');
+    expect(hub).toContain('label="Avg Loss (USD)" value={');
+    expect(hub).toContain('sampledMetric(result.avgLoss');
+    expect(hub).not.toContain('label="Avg Win (USD)" value={fmtPct(n(result.avgWin))}');
   });
 
   it('normalizes historical accuracy rows and subtracts losses in expectancy', () => {
@@ -73,8 +73,8 @@ describe('2026-09-21 production audit remediations', () => {
     const terminal = read('app/tools/terminal/page.tsx');
 
     expect(terminal).toContain("const optionsTab = tab === 'Options Terminal' || tab === 'Options Confluence' || tab === 'Options Flow'");
-    expect(terminal).toContain("setSymInput('AAPL')");
-    expect(terminal).toContain("selectSymbol('AAPL')");
+    expect(terminal).not.toContain("setSymInput('AAPL')");
+    expect(terminal).not.toContain("selectSymbol('AAPL')");
   });
 
   it('bounds Golden Egg and Alerts provider waits and exposes retryable failure states', () => {

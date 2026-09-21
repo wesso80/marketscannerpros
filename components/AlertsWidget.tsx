@@ -1,5 +1,6 @@
 'use client';
 
+import { alertConditionLabel } from '@/lib/alertPresentation';
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import { readOperatorState } from '@/lib/operatorState';
@@ -506,7 +507,7 @@ export default function AlertsWidget({
               <div key={alert.id} className="flex items-center justify-between text-xs">
                 <span className="font-mono text-emerald-400">{alert.symbol}</span>
                 <span className="text-slate-400">
-                  {getConditionLabel(alert.condition_type)} ${formatPrice(alert.condition_value)}
+                  {alertConditionLabel(alert.condition_type, alert.condition_value)}
                 </span>
               </div>
             ))}
@@ -727,10 +728,7 @@ export default function AlertsWidget({
                         {alert.symbol}
                       </span>
                       <span className="text-sm text-slate-400">
-                        {getConditionLabel(alert.condition_type)}
-                      </span>
-                      <span className="font-mono text-white">
-                        ${formatPrice(alert.condition_value)}
+                        {alertConditionLabel(alert.condition_type, alert.condition_value)}
                       </span>
                       {alert.is_recurring && (
                         <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">

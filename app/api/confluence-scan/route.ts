@@ -20,6 +20,7 @@ export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
 interface ScanRequest {
   symbol: string;
+  assetType?: 'equity' | 'crypto';
   mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast' | 'hierarchical' | 'calendar';
   scanMode?: ScanMode;  // For hierarchical scans
   sessionMode?: SessionMode; // regular | extended | full (equity session hours)
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
 
     // Normalize symbol — strip leading slash from CME-style futures tickers (e.g. /ES → ES, /NQ → NQ)
     const normalizedSymbol = symbol.toUpperCase().trim().replace(/^\//, '');
+    if (body.assetType != null && body.assetType !== 'equity' && body.assetType !== 'crypto') return NextResponse.json({ success: false, error: 'Unsupported asset type' }, { status: 400 });
 
     // Calendar mode is pure computation (no API calls) — skip cache entirely
     // so anchor / horizon / date changes always return fresh data
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       const scanSuffix = mode === 'hierarchical'
         ? `-${body.scanMode || 'intraday_1h'}-${body.sessionMode || 'extended'}`
         : '';
-      const cacheKey = `${normalizedSymbol}-${mode}${scanSuffix}`;
+      const cacheKey = `${body.assetType || "auto"}-${normalizedSymbol}-${mode}${scanSuffix}`;
 
       // Check cache (except for learn mode or force refresh)
       if (mode !== 'learn' && !forceRefresh) {
@@ -126,7 +128,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         const scanMode = (body as any).scanMode || 'intraday_1h';
         const sessionModeParam: SessionMode = (['regular', 'extended', 'full'].includes(body.sessionMode || '') ? body.sessionMode : 'extended') as SessionMode;
         console.log(`📊 Hierarchical ${scanMode} scan for ${normalizedSymbol} (session: ${sessionModeParam})...`);
-        result = await confluenceLearningAgent.scanHierarchical(normalizedSymbol, scanMode, sessionModeParam);
+        result = await confluenceLearningAgent.scanHierarchical(normalizedSymbol, scanMode, sessionModeParam, body.assetType);
         break;
 
       case 'calendar':
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         const horizonDays = Math.max(1, Math.min(30, Number(body.horizonDays) || 7));
         const anchorTime = body.anchorTime || undefined;
         // Detect asset class from symbol (default crypto for calendar)
-        const calendarAsset = confluenceLearningAgent.detectAssetClass(normalizedSymbol);
+        const calendarAsset = body.assetType || confluenceLearningAgent.detectAssetClass(normalizedSymbol);
         const calendarSession: SessionMode = (['regular', 'extended', 'full'].includes(body.sessionMode || '') ? body.sessionMode : 'extended') as SessionMode;
         console.log(`📅 Close Calendar: anchor=${anchor}, horizon=${horizonDays}d, asset=${calendarAsset}, session=${calendarSession}`);
         result = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, anchorTime, calendarAsset, calendarSession);
@@ -196,7 +198,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       const scanSuffix = mode === 'hierarchical'
         ? `-${body.scanMode || 'intraday_1h'}-${body.sessionMode || 'extended'}`
         : '';
-      const cacheKey = `${normalizedSymbol}-${mode}${scanSuffix}`;
+      const cacheKey = `${body.assetType || "auto"}-${normalizedSymbol}-${mode}${scanSuffix}`;
       setCache(cacheKey, result);
     }
 

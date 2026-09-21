@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
-import { fireAutoLog } from '@/lib/autoLog';
+import { boundedJsonFetch } from '@/lib/boundedFetch';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -30,15 +30,20 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   const [fetchErrors, setFetchErrors] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
+    const get = async (url: string) => {
+      const { response, body } = await boundedJsonFetch<any>(url);
+      if (!response.ok) throw new Error(`${url}: ${response.status}`);
+      return body;
+    };
     setLoading(true);
     setFetchErrors([]);
     try {
       const [fundingRes, lsRes, oiRes, liqRes, heatmapRes] = await Promise.all([
-        fetch('/api/funding-rates').then(r => r.ok ? r.json() : Promise.reject(`Funding ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
-        fetch('/api/long-short-ratio').then(r => r.ok ? r.json() : Promise.reject(`Long/Short ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
-        fetch('/api/crypto/open-interest').then(r => r.ok ? r.json() : Promise.reject(`OI ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
-        fetch('/api/crypto/liquidations').then(r => r.ok ? r.json() : Promise.reject(`Liquidations ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
-        fetch('/api/crypto/heatmap').then(r => r.ok ? r.json() : Promise.reject(`Heatmap ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        get('/api/funding-rates').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        get('/api/long-short-ratio').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        get('/api/crypto/open-interest').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        get('/api/crypto/liquidations').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        get('/api/crypto/heatmap').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
       ]);
 
       // Extract BTC, ETH, SOL prices from heatmap (uses CoinGecko)
@@ -52,13 +57,13 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       }
 
       const newData: DashboardData = {
-        fundingRates: fundingRes?.coins ? { 
-          coins: fundingRes.coins, 
-          avgRate: parseFloat(fundingRes.average?.fundingRatePercent || '0'), 
-          sentiment: fundingRes.average?.sentiment || 'Neutral' 
+        fundingRates: fundingRes?.coins?.length && fundingRes?.average?.fundingRatePercent != null && Number.isFinite(Number(fundingRes.average.fundingRatePercent)) ? {
+          coins: fundingRes.coins,
+          avgRate: parseFloat(fundingRes.average?.fundingRatePercent || '0'),
+          sentiment: fundingRes.average?.sentiment || 'Neutral'
         } : null,
-        longShort: lsRes?.coins ? { 
-          coins: lsRes.coins, 
+        longShort: lsRes?.coins?.length && lsRes?.average?.longPercent != null && lsRes?.average?.shortPercent != null ? {
+          coins: lsRes.coins,
           overall: lsRes.average?.sentiment || 'Neutral',
           avgLong: parseFloat(lsRes.average?.longPercent || '50'),
           avgShort: parseFloat(lsRes.average?.shortPercent || '50'),
@@ -88,32 +93,6 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       if (interval) clearInterval(interval);
     };
   }, [fetchData, autoRefresh]);
-
-  // ── Auto-log crypto research observations to the paper-trade journal context ──
-  const cryptoAutoLogRef = useRef<string>('');
-  useEffect(() => {
-    if (!data.prices.BTC) return; // data not loaded yet
-    // Only log when 24h move is meaningful (≥ 1%) to avoid noise from sub-tick moves
-    const ideas = [
-      { sym: 'BTC', dir: (data.prices.BTC?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.BTC?.price, change: data.prices.BTC?.change24h || 0 },
-      { sym: 'ETH', dir: (data.prices.ETH?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.ETH?.price, change: data.prices.ETH?.change24h || 0 },
-      { sym: 'SOL', dir: (data.prices.SOL?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.SOL?.price, change: data.prices.SOL?.change24h || 0 },
-    ].filter(i => i.price && i.price > 0 && Math.abs(i.change) >= 1.0);
-    for (const idea of ideas) {
-      const key = `${idea.sym}:${idea.dir}`;
-      if (cryptoAutoLogRef.current.includes(key)) continue;
-      cryptoAutoLogRef.current += key + ',';
-      fireAutoLog({
-        symbol: `${idea.sym}-USD`,
-          conditionType: 'crypto_derivatives_observation',
-        conditionMet: `${idea.dir.toUpperCase()}_DERIVATIVES`,
-        triggerPrice: idea.price!,
-        source: 'crypto_dashboard',
-        assetClass: 'crypto',
-        atr: null,
-      }).catch(() => {});
-    }
-  }, [data.prices]);
 
   // AI Page Context - share derivatives data with copilot
   const { setPageData } = useAIPageContext();
@@ -146,7 +125,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       });
     }
   }, [data, setPageData]);
-  
+
   // Gate for Pro+ users
   // Must be after ALL hooks to comply with React rules
   if (!canAccessCryptoCommandCenter(tier)) {
@@ -208,7 +187,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     // Net-conviction confidence: reflects the MARGIN over total evidence, not
     // max/total (which turned a thin 2-1 tally into a misleading 67%). A single
     // opposing signal now visibly reduces conviction.
-    const confidence = totalSignals > 0 ? Math.round((Math.abs(margin) / totalSignals) * 100) : 0;
+    const availableInputs = [data.fundingRates, data.longShort, data.openInterest, data.liquidations].filter(Boolean).length;
+    const confidence = totalSignals > 0 ? Math.round((Math.abs(margin) / totalSignals) * 100 * availableInputs / 4) : 0;
 
     let bias: string;
     if (margin >= 2) bias = 'BULLISH';
@@ -222,6 +202,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   };
 
   const marketBias = getMarketBias();
+  const availableInputs = [data.fundingRates, data.longShort, data.openInterest, data.liquidations].filter(Boolean).length;
+  const derivativeDataComplete = availableInputs === 4 && fetchErrors.length === 0;
 
   const primarySymbols = ['BTC', 'ETH', 'SOL'];
 
@@ -233,8 +215,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     0
   );
 
-  const volRegime = volatilityProxy >= 3 ? 'Expansion' : volatilityProxy >= 1.5 ? 'Normal' : 'Compression';
-  const liquidityState = data.openInterest?.summary?.marketSignal === 'risk_on'
+  const volRegime = Object.keys(data.prices).length === 0 ? 'Unavailable' : volatilityProxy >= 3 ? 'Expansion' : volatilityProxy >= 1.5 ? 'Normal' : 'Compression';
+  const liquidityState = !data.openInterest?.summary ? 'Unavailable' : data.openInterest.summary.marketSignal === 'risk_on'
     ? 'Expanding'
     : data.openInterest?.summary?.marketSignal === 'risk_off'
       ? 'Contracting'
@@ -251,7 +233,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     return 'Mixed';
   })();
 
-  const biasLabel = marketBias.bias === 'LEAN BULLISH'
+  const biasLabel = availableInputs === 0 ? 'Unavailable' : marketBias.bias === 'LEAN BULLISH'
     ? 'Lean Bullish'
     : marketBias.bias === 'LEAN BEARISH'
       ? 'Lean Bearish'
@@ -263,13 +245,13 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
             ? 'Mixed / Conflicting'
             : 'Neutral';
 
-  const permission = volRegime === 'Expansion' && liquidityState === 'Contracting' && marketBias.bearishScore >= marketBias.bullishScore
+  const permission = !derivativeDataComplete ? 'Unavailable' : volRegime === 'Expansion' && liquidityState === 'Contracting' && marketBias.bearishScore >= marketBias.bullishScore
     ? 'No'
     : marketBias.confidence >= 67
       ? 'Yes'
       : 'Conditional';
 
-  const playbook = permission === 'No'
+  const playbook = !derivativeDataComplete ? 'Wait for complete data' : permission === 'No'
     ? 'No scenario'
     : biasLabel.includes('Bearish')
       ? 'Fade pumps'
@@ -345,9 +327,9 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
 
   const marketStripItems = primarySymbols.map((coin) => {
     const priceData = data.prices[coin];
-    const oiDelta = oiBySymbol.get(coin) ?? 0;
-    const fundingSkew = fundingBySymbol.get(coin) ?? 0;
-    const volLabel = Math.abs(priceData?.change24h || 0) >= 3 ? 'Expansion' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Normal' : 'Compression';
+    const oiDelta = oiBySymbol.get(coin) ?? null;
+    const fundingSkew = fundingBySymbol.get(coin) ?? null;
+    const volLabel = priceData?.change24h == null ? 'Unavailable' : Math.abs(priceData?.change24h || 0) >= 3 ? 'Expansion' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Normal' : 'Compression';
 
     return {
       symbol: coin,
@@ -382,9 +364,9 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
             { label: 'Open Scanner', variant: 'ghost', href: '/tools/scanner' },
           ]}
           metrics={[
-            { label: 'Bias', value: biasLabel, tone: biasLabel.includes('Bullish') ? 'bull' : biasLabel.includes('Bearish') ? 'bear' : 'neutral', detail: `Confidence ${marketBias.confidence}%` },
+            { label: 'Bias', value: biasLabel, tone: biasLabel.includes('Bullish') ? 'bull' : biasLabel.includes('Bearish') ? 'bear' : 'neutral', detail: availableInputs ? `Evidence score ${marketBias.confidence}/100 · ${availableInputs}/4 inputs` : 'Evidence unavailable · 0/4 inputs' },
             { label: 'Liquidity', value: liquidityState, tone: liquidityState === 'Expanding' ? 'bull' : liquidityState === 'Contracting' ? 'bear' : 'neutral', detail: oiDriver, title: oiDriver },
-            { label: 'Funding', value: data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Pending', tone: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? 'warn' : data.fundingRates.avgRate < -0.01 ? 'bull' : 'neutral') : 'neutral', detail: fundingDriver, title: fundingDriver },
+            { label: 'Funding', value: data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Unavailable', tone: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? 'warn' : data.fundingRates.avgRate < -0.01 ? 'bull' : 'neutral') : 'neutral', detail: fundingDriver, title: fundingDriver },
             { label: 'Next check', value: playbook, tone: permission === 'No' ? 'bear' : 'warn', detail: liquidationDriver, title: liquidationDriver },
           ]}
         />
@@ -465,7 +447,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         liquidityState={liquidityState}
       />
 
-      <TradeIdeasSection ideas={tradeIdeas} />
+      <TradeIdeasSection ideas={derivativeDataComplete ? tradeIdeas : []} />
 
       <DerivativesContextSection />
     </div>

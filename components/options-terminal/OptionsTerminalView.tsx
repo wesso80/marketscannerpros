@@ -103,7 +103,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     // liquidity filters
     if (minOI > 0) groups = groups.filter((g) => (g.call?.openInterest ?? 0) >= minOI || (g.put?.openInterest ?? 0) >= minOI);
     if (minVol > 0) groups = groups.filter((g) => (g.call?.volume ?? 0) >= minVol || (g.put?.volume ?? 0) >= minVol);
-    if (maxSpreadPct < 100) groups = groups.filter((g) => (g.call?.spreadPct ?? 0) <= maxSpreadPct || (g.put?.spreadPct ?? 0) <= maxSpreadPct);
+    if (maxSpreadPct < 100) groups = groups.filter((g) => [g.call, g.put].some((contract) => contract && contract.bid > 0 && contract.ask >= contract.bid && Number.isFinite(contract.spreadPct) && contract.spreadPct <= maxSpreadPct));
 
     return groups;
   }, [chain.strikeGroups, chain.underlyingPrice, rangePct, minOI, minVol, maxSpreadPct]);
@@ -244,6 +244,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     },
   ];
   const optionsRiskFlags = [
+    chain.contracts.some((contract) => !(contract.bid > 0 && contract.ask >= contract.bid)) ? `${chain.contracts.filter((contract) => !(contract.bid > 0 && contract.ask >= contract.bid)).length}/${chain.contracts.length} contracts lack valid two-sided quotes. Spread and liquidity assessment are incomplete.` : null,
     chain.error ? `Options chain error: ${chain.error}` : null,
     chain.contracts.length === 0 && ticker ? 'No contracts loaded for selected ticker.' : null,
     chain.provider === 'HISTORICAL_OPTIONS' ? 'Delayed provider context.' : null,

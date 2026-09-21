@@ -372,7 +372,6 @@ export default function TerminalPage() {
     const urlSymbol = searchParams.get('symbol')?.trim().toUpperCase();
     if (urlSymbol) {
       setSymInput(urlSymbol);
-      selectSymbol(urlSymbol);
     }
     const urlType = searchParams.get('type')?.toLowerCase();
     const requestedTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
@@ -387,11 +386,7 @@ export default function TerminalPage() {
      Deep links to options tabs must not be silently reset by a stale crypto symbol. */
   useEffect(() => {
     const optionsTab = tab === 'Options Terminal' || tab === 'Options Confluence' || tab === 'Options Flow';
-    if (optionsTab && marketPath !== 'equity') {
-      setSymInput('AAPL');
-      selectSymbol('AAPL');
-      return;
-    }
+    // A tab can change; an explicitly selected instrument must never be replaced.
     if (!visibleTabs.includes(tab)) {
       setTab(visibleTabs[0]);
     }
@@ -399,7 +394,7 @@ export default function TerminalPage() {
 
   const handleSymSubmit = () => {
     const s = symInput.trim().toUpperCase();
-    if (s) { selectSymbol(s); }
+    if (s) { selectSymbol(s, { assetType: marketPath }); }
   };
 
   /* Quick symbols */
@@ -518,7 +513,7 @@ export default function TerminalPage() {
             <div className="flex flex-wrap items-center gap-1">
               <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-300">Futures</span>
               {FUTURES_QUICK.map((s) => (
-                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'futures' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
                   {s}
                 </button>
               ))}
@@ -526,7 +521,7 @@ export default function TerminalPage() {
             <div className="flex flex-wrap items-center gap-1">
               <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-300">Crypto</span>
               {quickCrypto.map((s) => (
-                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-amber-500/20 text-amber-200 border-amber-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'crypto' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-amber-500/20 text-amber-200 border-amber-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
                   {s}
                 </button>
               ))}
@@ -534,7 +529,7 @@ export default function TerminalPage() {
             <div className="flex flex-wrap items-center gap-1">
               <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-indigo-300">Equity</span>
               {quickEquity.map((s) => (
-                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'equity' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
                   {s}
                 </button>
               ))}
@@ -772,7 +767,7 @@ export default function TerminalPage() {
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
           <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
-              <CryptoTerminalView symbol={sym} onSymbolChange={(next) => { setSymInput(next); selectSymbol(next); }} onDataStateChange={setCryptoTerminalState} />
+              <CryptoTerminalView key={sym} symbol={sym} onSymbolChange={(next) => { setSymInput(next); selectSymbol(next, { assetType: 'crypto' }); }} onDataStateChange={setCryptoTerminalState} />
             </Suspense>
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -812,6 +807,7 @@ export default function TerminalPage() {
                     </button>
                   </div>
                 </div>
+                <p className="mb-3 text-xs text-amber-200">{!perm ? 'Permission unavailable.' : perm.blocked ? `Blocked: ${perm.noTradeMode?.reason || 'permission conditions not met'}` : 'Permission conditions met.'} Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.</p>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Bias</div>
@@ -826,8 +822,8 @@ export default function TerminalPage() {
                     <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state || '—'}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-[11px] text-slate-500 uppercase">Conviction</div>
-                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? '—'}%</div>
+                    <div className="text-[11px] text-slate-500 uppercase">Directional score</div>
+                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? '—'}/100</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Spot</div>
@@ -839,19 +835,19 @@ export default function TerminalPage() {
               {/* Probability Matrix */}
               {pm && (
                 <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Probability Matrix</h3>
+                  <h3 className="text-sm font-semibold text-white mb-3">Scenario weights · heuristic</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[11px] text-slate-500 uppercase">Continuation</div>
-                      <div className="text-base font-bold text-white">{pm.continuation.toFixed(0)}%</div>
+                      <div className="text-base font-bold text-white">{pm.continuation.toFixed(0)}/100</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[11px] text-slate-500 uppercase">Pin / Reversion</div>
-                      <div className="text-base font-bold text-white">{pm.pinReversion.toFixed(0)}%</div>
+                      <div className="text-base font-bold text-white">{pm.pinReversion.toFixed(0)}/100</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[11px] text-slate-500 uppercase">Expansion</div>
-                      <div className="text-base font-bold text-white">{pm.expansion.toFixed(0)}%</div>
+                      <div className="text-base font-bold text-white">{pm.expansion.toFixed(0)}/100</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[11px] text-slate-500 uppercase">Regime</div>
@@ -1013,7 +1009,7 @@ export default function TerminalPage() {
                         <tr className="border-b border-[var(--msp-border)]">
                           <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Level</th>
                           <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Label</th>
-                          <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Probability</th>
+                          <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Heuristic weight</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1027,7 +1023,7 @@ export default function TerminalPage() {
                                 : 'var(--msp-flat)'
                               } small />
                             </td>
-                            <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}%` : '—'}</td>
+                            <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}/100` : '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1124,7 +1120,7 @@ export default function TerminalPage() {
       {tab === 'Time Gravity' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
           <TerminalSubviewFrame tab="Time Gravity" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
-            <TimeScanner symbol={sym} embeddedInTerminal />
+            <TimeScanner key={`${asset}:${sym}`} symbol={sym} assetType={asset} embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
@@ -1133,7 +1129,7 @@ export default function TerminalPage() {
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
           <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
-            <ConfluenceScanner embeddedInTerminal />
+            <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
             <div className="mt-6">
               <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
             </div>

@@ -46,8 +46,8 @@ export interface DiamondScoreResult {
     volume5mUsd: number;
     volume15mUsd: number;
     volume1hUsd: number;
-    volumeVelocity5m: number;
-    buyerVelocity5m: number;
+    volumeVelocity5m: number | null;
+    buyerVelocity5m: number | null;
     buyers5m: number;
     sellers5m: number;
     buySellRatio5m: number;
@@ -87,10 +87,17 @@ function activityPointScore(change: number, low: number, high: number, max: numb
   return max * ((change - low) / Math.max(0.0001, high - low));
 }
 
+function observedNumber(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function holderScore(tokenInfo: TokenInfo | null | undefined): number | null {
   const holders = tokenInfo?.attributes?.holders;
   if (!holders) return null;
-  const top10 = n(holders.distribution_percentage?.top_10);
+  const top10 = observedNumber(holders.distribution_percentage?.top_10);
+  if (top10 == null || top10 < 0 || top10 > 100 || !holders.count) return null;
   const count = holders.count ?? 0;
 
   let concentration = 0;
@@ -132,8 +139,9 @@ export function scoreDiamondPool(pool: TrendingPool, context: DiamondScoreContex
   const volume1h = n(a.volume_usd?.h1);
   const expected5mVolume = Math.max(volume1h / 12, 1);
   const expected15mVolume = Math.max(volume1h / 4, 1);
-  const velocity5 = volume5m / expected5mVolume;
-  const velocity15 = volume15m / expected15mVolume;
+  const fullBaseline = ageMinutes != null && ageMinutes >= 60 && volume1h > 0;
+  const velocity5 = fullBaseline ? volume5m / expected5mVolume : 0;
+  const velocity15 = fullBaseline ? volume15m / expected15mVolume : 0;
   const volumeScore = clamp((Math.min(velocity5, 3) / 3) * 12 + (Math.min(velocity15, 2.5) / 2.5) * 8, 0, 20);
 
   const tx5 = a.transactions?.m5;
@@ -142,7 +150,7 @@ export function scoreDiamondPool(pool: TrendingPool, context: DiamondScoreContex
   const sellers5 = tx5?.sellers ?? tx5?.sells ?? 0;
   const buyers1h = tx1h?.buyers ?? tx1h?.buys ?? 0;
   const expected5mBuyers = Math.max(buyers1h / 12, 1);
-  const buyerVelocity = buyers5 / expected5mBuyers;
+  const buyerVelocity = fullBaseline && buyers1h > 0 ? buyers5 / expected5mBuyers : 0;
   const buySellRatio = buyers5 / Math.max(sellers5, 1);
   const buyerScore = clamp((Math.min(buyerVelocity, 3) / 3) * 12 + (Math.min(buySellRatio, 3) / 3) * 6, 0, 18);
 
@@ -229,6 +237,8 @@ export function scoreDiamondPool(pool: TrendingPool, context: DiamondScoreContex
   const prePenaltyScore = availableMax > 0 ? (earned / availableMax) * 100 : 0;
 
   const riskFlags: string[] = [];
+  if (!fullBaseline) riskFlags.push('Acceleration unavailable: pool has no complete 1h baseline');
+  if (hScore == null) riskFlags.push('Holder concentration/breadth unavailable');
   const reasons: string[] = [];
   let penalty = 0;
   let hardReject = false;
@@ -298,7 +308,7 @@ export function scoreDiamondPool(pool: TrendingPool, context: DiamondScoreContex
       penalty += 12;
       riskFlags.push('Freeze authority active/unclear');
     }
-    const top10 = t.holders ? n(t.holders.distribution_percentage?.top_10) : null;
+    const top10 = observedNumber(t.holders?.distribution_percentage?.top_10);
     if (top10 != null) {
       if (top10 > 75) {
         penalty += 15;
@@ -364,18 +374,18 @@ export function scoreDiamondPool(pool: TrendingPool, context: DiamondScoreContex
       volume5mUsd: volume5m,
       volume15mUsd: volume15m,
       volume1hUsd: volume1h,
-      volumeVelocity5m: rounded(velocity5),
-      buyerVelocity5m: rounded(buyerVelocity),
+      volumeVelocity5m: fullBaseline ? rounded(velocity5) : null,
+      buyerVelocity5m: fullBaseline && buyers1h > 0 ? rounded(buyerVelocity) : null,
       buyers5m: buyers5,
       sellers5m: sellers5,
       buySellRatio5m: rounded(buySellRatio),
       change5m: change5,
       change15m: change15,
       change1h,
-      top10HolderPct: t?.holders ? rounded(n(t.holders.distribution_percentage?.top_10)) : null,
+      top10HolderPct: observedNumber(t?.holders?.distribution_percentage?.top_10),
       holderCount: t?.holders?.count ?? null,
       gtScore: t?.gt_score ?? null,
-      developerHoldingPct: t?.developer_holding_percentage == null ? null : rounded(n(t.developer_holding_percentage)),
+      developerHoldingPct: observedNumber(t?.developer_holding_percentage),
     },
   };
 }

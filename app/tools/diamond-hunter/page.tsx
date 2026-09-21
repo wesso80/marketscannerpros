@@ -35,7 +35,7 @@ interface Candidate {
     volume5mUsd: number;
     volume15mUsd: number;
     volume1hUsd: number;
-    volumeVelocity5m: number;
+    volumeVelocity5m: number | null;
     buyerVelocity5m: number;
     buyers5m: number;
     sellers5m: number;
@@ -248,7 +248,7 @@ export default function DiamondHunterPage() {
                   ['Liquidity', money(candidate.metrics.liquidityUsd)],
                   ['FDV', money(candidate.metrics.fdvUsd)],
                   ['Vol 5m', money(candidate.metrics.volume5mUsd)],
-                  ['Vol velocity', `${candidate.metrics.volumeVelocity5m.toFixed(1)}x`],
+                  ['Vol velocity', candidate.metrics.volumeVelocity5m == null ? 'Awaiting 1h baseline' : `${candidate.metrics.volumeVelocity5m.toFixed(1)}x`],
                   ['Buyers 5m', candidate.metrics.buyers5m],
                   ['B/S ratio', `${candidate.metrics.buySellRatio5m.toFixed(1)}x`],
                   ['15m', `${candidate.metrics.change15m >= 0 ? '+' : ''}${candidate.metrics.change15m.toFixed(1)}%`],

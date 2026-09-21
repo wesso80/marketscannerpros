@@ -1,4 +1,5 @@
 'use client';
+import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 
 /* ---------------------------------------------------------------------------
    COMMAND CENTER — 30-second market intelligence overview (Stage 2)
@@ -129,7 +130,8 @@ export default function CommandCenterPage() {
   const strength = rankSectorStrength(sectorData);
   const riskTone = deriveRiskTone(strength.greenRatio, cryptoData?.marketCapChange24h);
   const flow = interpretCryptoParticipation(cryptoData);
-  const eventClock = summarizeEventClock(calendar.data?.events ?? []);
+  const calendarWarning = calendarDataWarning(calendar.data?.events);
+  const eventClock = summarizeEventClock(upcomingConfirmedEvents(calendar.data?.events ?? []));
 
   // Cross-asset: crypto total cap vs. equity sector breadth (association only).
   const meanSectorChange = sectorData.length
@@ -180,7 +182,7 @@ export default function CommandCenterPage() {
     sectorData.length > 0,
     Boolean(cryptoData),
     moverList.length > 0,
-    (calendar.data?.events?.length ?? 0) > 0,
+    !calendarWarning,
   ].filter(Boolean).length;
   const evidence = assessEvidenceQuality({
     availableFactors,
@@ -190,6 +192,7 @@ export default function CommandCenterPage() {
       !sectorData.length ? 'sectors' : null,
       !cryptoData ? 'crypto' : null,
       !moverList.length ? 'movers' : null,
+      calendarWarning,
     ].filter(Boolean) as string[],
   });
 

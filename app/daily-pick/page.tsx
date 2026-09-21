@@ -1,9 +1,11 @@
+import { cache } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { q } from '@/lib/db';
 
 export const runtime = 'nodejs';
-export const revalidate = 3600; // ISR — hourly
+// Database-backed observations are resolved at request time, not during builds.
+export const dynamic = 'force-dynamic';
 
 interface Pick {
   rank: number;
@@ -112,11 +114,19 @@ async function loadLatest(): Promise<DayData | null> {
   };
 }
 
+const latestPickState = cache(async () => {
+  try { return { data: await loadLatest(), unavailable: false }; }
+  catch (error) {
+    console.error('[daily-pick] Latest snapshot unavailable:', error);
+    return { data: null, unavailable: true };
+  }
+});
+
 export async function generateMetadata(): Promise<Metadata> {
-  const data = await loadLatest();
+  const { data, unavailable } = await latestPickState();
   const dateStr = data?.scan_date ?? new Date().toISOString().slice(0, 10);
   const topSymbols = (data?.picks ?? []).slice(0, 3).map((p) => p.symbol).join(', ') || 'today';
-  const title = `Daily Picks ${dateStr} · ${topSymbols} · MarketScanner Pros`;
+  const title = unavailable ? 'Daily Picks unavailable · MarketScanner Pros' : `Daily Picks ${dateStr} · ${topSymbols} · MarketScanner Pros`;
   const description = `Top scanner-ranked stocks and crypto for ${dateStr}: ${topSymbols}. Educational technical-analysis snapshots updated daily.`;
   const url = 'https://marketscannerpros.app/daily-pick';
   const og = `https://marketscannerpros.app/api/og/scan?symbol=DAILY&side=WATCH&headline=${encodeURIComponent('Top picks for ' + dateStr)}&sub=${encodeURIComponent(topSymbols)}`;
@@ -137,7 +147,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DailyPickPage() {
-  const data = await loadLatest();
+  const { data, unavailable } = await latestPickState();
 
   if (!data || data.picks.length === 0) {
     return (
@@ -145,7 +155,7 @@ export default async function DailyPickPage() {
         <div style={containerStyle}>
           <h1 style={h1Style}>Daily Picks</h1>
           <p style={{ color: 'var(--msp-flat)' }}>
-            No picks scored yet for the latest session — check back after the next scanner run.
+            {unavailable ? 'Daily picks are unavailable because the latest scanner snapshot could not be loaded. Refresh to retry.' : 'No picks scored yet for the latest session — check back after the next scanner run.'}
           </p>
         </div>
       </main>

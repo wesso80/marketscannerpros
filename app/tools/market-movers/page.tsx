@@ -768,7 +768,7 @@ export default function MarketMoversPage() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
                           <div className="text-slate-400">Cluster</div><div className="text-slate-200">{toTitleCluster(mover.cluster)}</div>
                           <div className="text-slate-400">Asset</div><div className="text-slate-200">{mover.asset_class === 'equity' ? 'EQ Equity' : 'CR Crypto'}</div>
-                          <div className="text-slate-400">RelVol</div><div className="text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</div>
+                          <div className="text-slate-400" title="Volume relative to the current asset cohort; not historical relative volume">Cohort volume</div><div className="text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</div>
                           <div className="text-slate-400">Structure</div><div className="text-slate-300">{mover.structureBias}</div>
                           <div className="text-slate-400">RSI</div><div className={mover.rsi14 != null ? (mover.rsi14 > 70 ? 'text-rose-300' : mover.rsi14 < 30 ? 'text-emerald-300' : 'text-slate-200') : 'text-slate-500'}>{mover.rsi14 != null ? mover.rsi14.toFixed(1) : '—'}</div>
                           <div className="text-slate-400">EMA200 Dist</div><div className="text-slate-200">{mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : '—'}</div>
@@ -801,7 +801,7 @@ export default function MarketMoversPage() {
                       <tr className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
                         <th scope="col" className="px-2.5 py-2 text-left">Symbol</th>
                         <th scope="col" className="px-2.5 py-2 text-right">%Chg</th>
-                        <th scope="col" className="px-2.5 py-2 text-right">RelVol</th>
+                        <th scope="col" className="px-2.5 py-2 text-right" title="Volume relative to the current asset cohort; not historical relative volume">Cohort volume</th>
                         <th scope="col" className="px-2.5 py-2 text-left">Structure</th>
                         <th scope="col" className="px-2.5 py-2 text-right">RSI</th>
                         <th scope="col" className="px-2.5 py-2 text-right">EMA200</th>

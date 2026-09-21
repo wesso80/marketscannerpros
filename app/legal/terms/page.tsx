@@ -1,3 +1,4 @@
+import { PLAN_PRICES } from "@/lib/planPrices";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -63,14 +64,12 @@ export default function TermsPage() {
 
       <h2 id="billing">3. Subscriptions &amp; Billing</h2>
       <ul>
-        <li>The App offers Free, Pro ($25/mo or $225/yr), and Pro Trader ($50/mo or $550/yr) plans.</li>
+        <li>The App offers Free and Pro ({PLAN_PRICES.pro.monthly}/month or {PLAN_PRICES.pro.yearly}/year) plans. Pro Trader is a legacy plan identifier mapped to Pro.</li>
         <li>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
-        <li><strong>Free Plan:</strong> Limited to Top 10 equities and Top 10 crypto symbols. Includes 5 AI questions per day with ARCA AI.</li>
-        <li><strong>Pro Plan ($25/mo or $225/yr):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
-        <li><strong>Pro Trader Plan ($50/mo or $550/yr):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
+        <li><strong>Plan features:</strong> See the <a href="/pricing">pricing page</a> for current features and usage limits. Checkout confirms your selected billing interval and any trial eligibility.</li>
         <li><strong>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>
         <li><strong>One Trial Per Email:</strong> Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.</li>
-        <li>After your trial period ends, you will be automatically charged the monthly subscription fee unless you cancel before the trial expires.</li>
+        <li>After your trial period ends, you will be automatically charged the subscription fee for your selected monthly or annual billing interval unless you cancel before the trial expires.</li>
         <li>Subscriptions renew automatically until cancelled through your account, Stripe Customer Portal, or app store settings.</li>
         <li><strong>Refunds:</strong> We offer a 7-day money-back guarantee. See our <a href="/refund-policy">Refund Policy</a> for details.</li>
         <li><strong>Trial Abuse Prevention:</strong> We track trial usage by email address and device to prevent abuse. Attempting to circumvent trial limitations may result in immediate subscription termination without refund.</li>

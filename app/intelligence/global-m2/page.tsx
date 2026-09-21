@@ -80,7 +80,7 @@ export default function GlobalM2Page() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
             <Metric label="Total M2 (USD)" value={T(data.totalUsd)} />
-            <Metric label="Blocs" value={`${data.validBlocCount} live · ${data.missingBlocCount} missing`} />
+            <Metric label="Blocs" value={`${data.validBlocCount} available · ${data.missingBlocCount} missing`} />
             <Metric label="Est. weighted coverage" value={`${data.estimatedWeightedCoveragePercent.toFixed(1)}%`} />
             <Metric label="1M" value={pct(data.oneMonthPct)} />
             <Metric label="3M annualised" value={pct(data.threeMonthAnnualizedPct)} />

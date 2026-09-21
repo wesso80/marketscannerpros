@@ -6,7 +6,7 @@
 import type {
   LiquidityTransmissionInput, LiquidityM2Input, AssetPack,
 } from '../engines/liquidityTransmission';
-import type { GlobalM2Result } from '../engines/globalM2';
+import { GLOBAL_M2_BLOCS, type GlobalM2Result } from '../engines/globalM2';
 import { buildConfirmedAssetPack, type ConfirmedAssetPack } from './liquidityConfirmedBars';
 import {
   LIQUIDITY_PROVIDER_MAP, type LiquidityAssetKey, type LiquidityAssetSeriesLoad,
@@ -66,7 +66,7 @@ export function mapGlobalM2ToInput(
     return {
       globalM2USD: null, oneMonthPct: null, oneMonthPctPrev: null,
       threeMonthAnnPct: null, threeMonthAnnPctPrev: null, yoyPct: null,
-      validBlocCount: 0, missingBlocs: [],
+      validBlocCount: 0, missingBlocs: GLOBAL_M2_BLOCS.map(b => b.id),
       status: meta.status, coveragePercent: undefined,
       stale: meta.stale ?? false, interpretationEligible: meta.interpretationEligible,
       providersUsed: meta.providersUsed ?? [],
@@ -76,9 +76,8 @@ export function mapGlobalM2ToInput(
     ? m2.oneMonthPct - m2.accel1M : null;
   const threeMonthAnnPctPrev = m2.threeMonthAnnualizedPct != null && m2.accel3M != null
     ? m2.threeMonthAnnualizedPct - m2.accel3M : null;
-  const missingBlocs = m2.blocs
-    .filter((b) => b.stale === true)
-    .map((b) => b.id);
+  const presentIds = new Set(m2.blocs.map(b => b.id));
+  const missingBlocs = GLOBAL_M2_BLOCS.filter(b => !presentIds.has(b.id)).map(b => b.id);
   return {
     globalM2USD: m2.totalUsd,
     oneMonthPct: m2.oneMonthPct,

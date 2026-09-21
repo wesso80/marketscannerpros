@@ -218,7 +218,7 @@ describe('Liquidity Transmission — full pipeline', () => {
     expect(r.downstream).toBe(100);
     expect(r.validated).toBe(50);
     expect(r.riskLiquidityGap).toBe(50);
-    expect(r.divergenceState).toBe('RISK > VALIDATED LIQUIDITY');
+    expect(r.divergenceState).toBe('RISK > MASTER LINK LIQUIDITY');
     expect(r.stage8Active).toBe(true);
     expect(r.clockStage).toBe(8);
     expect(r.clockName).toBe('LATE-CYCLE / DIVERGENCE');

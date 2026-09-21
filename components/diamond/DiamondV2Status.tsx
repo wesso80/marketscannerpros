@@ -90,11 +90,11 @@ export default function DiamondV2Status(props: {
       <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
         <div className="rounded-lg border border-slate-800 p-2">
           <div className="text-[9px] uppercase text-slate-600">Score Δ</div>
-          <div className="text-xs font-semibold text-slate-200">{signed(history.scoreDelta5m, '/5m')}</div>
+          <div className="text-xs font-semibold text-slate-200">{history.scanCount < 2 ? 'Awaiting repeat scan' : signed(history.scoreDelta5m, '/5m')}</div>
         </div>
         <div className="rounded-lg border border-slate-800 p-2">
           <div className="text-[9px] uppercase text-slate-600">Liquidity Δ</div>
-          <div className="text-xs font-semibold text-slate-200">{signed(history.liquidityChangePct, '%')}</div>
+          <div className="text-xs font-semibold text-slate-200">{history.scanCount < 2 ? 'Awaiting repeat scan' : signed(history.liquidityChangePct, '%')}</div>
         </div>
         <div className="rounded-lg border border-slate-800 p-2">
           <div className="text-[9px] uppercase text-slate-600">Diamond+ scans</div>

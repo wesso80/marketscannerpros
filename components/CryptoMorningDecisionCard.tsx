@@ -1,5 +1,7 @@
 'use client';
 
+import { cryptoReviewMissing, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type ConditionVerdict = 'ALIGNED' | 'CONDITIONAL' | 'NOT ALIGNED';
@@ -47,28 +49,11 @@ export default function CryptoMorningDecisionCard() {
 
   const fetchGateData = useCallback(async () => {
     try {
-      const [marketRes, trendingRes, fundingRes, oiRes] = await Promise.all([
-        fetch('/api/crypto/market-overview').then((r) => r.json()).catch(() => null),
-        fetch('/api/crypto/trending').then((r) => r.json()).catch(() => null),
-        fetch('/api/funding-rates').then((r) => r.json()).catch(() => null),
-        fetch('/api/open-interest').then((r) => r.json()).catch(() => null),
-      ]);
-
-      setMarketData({
-        market: marketRes?.data,
-        marketMeta: marketRes?.meta,
-        trending: trendingRes,
-        trendingMeta: trendingRes?.meta,
-        funding: fundingRes,
-        fundingMeta: fundingRes?.meta,
-        oi: oiRes,
-        oiMeta: oiRes?.meta,
-      });
-      const timestamps = [marketRes?.meta?.lastUpdated, trendingRes?.meta?.lastUpdated, fundingRes?.meta?.lastUpdated, oiRes?.meta?.lastUpdated]
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-        .map((value) => new Date(value).getTime())
-        .filter((value) => Number.isFinite(value));
-      setLastUpdate(timestamps.length ? new Date(Math.max(...timestamps)) : new Date());
+      const data = await fetchCryptoReviewData();
+      setMarketData(data);
+      const times = [data.marketMeta, data.trendingMeta, data.fundingMeta, data.oiMeta]
+        .map(meta => Date.parse(meta?.lastUpdated ?? '')).filter(Number.isFinite);
+      setLastUpdate(times.length === 4 ? new Date(Math.min(...times)) : null);
     } catch (error) {
       console.error('Failed to fetch crypto gate data:', error);
     }
@@ -76,11 +61,19 @@ export default function CryptoMorningDecisionCard() {
 
   useEffect(() => {
     fetchGateData();
-    const interval = setInterval(fetchGateData, 300000);
-    return () => clearInterval(interval);
+
   }, [fetchGateData]);
 
   const decision = useMemo(() => {
+    const missing = cryptoReviewMissing(marketData);
+    if (missing.length) return {
+      dataComplete: false, verdict: 'CONDITIONAL' as const, adaptiveConfidence: null,
+      hardBlocks: missing, longsAllowed: false, shortsAllowed: false,
+      riskContext: 'Data unavailable — refresh to reassess', riskState: 'Unavailable', leadership: 'Unavailable',
+      liquidity: 'Unavailable', volatility: 'Unavailable', breadthScore: null, breadthLabel: 'Unavailable',
+      subClusters: [] as Array<{ name: string; condition: string }>, explanation: missing.join('; '),
+    };
+
     const market = marketData?.market;
     const trendingCoins = marketData?.trending?.coins || [];
     const trendingCategories = marketData?.trending?.categories || [];
@@ -204,6 +197,7 @@ export default function CryptoMorningDecisionCard() {
     ];
 
     return {
+      dataComplete: true,
       verdict,
       adaptiveConfidence,
       hardBlocks: [...hardBlocksLong, ...hardBlocksShort],
@@ -239,7 +233,8 @@ export default function CryptoMorningDecisionCard() {
         <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Review Gate</p>
-            <span className="text-[11px] text-slate-500">{lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading'}</span>
+            <span className="text-[11px] text-slate-500">{lastUpdate ? `Oldest feed: ${lastUpdate.toLocaleTimeString()}` : 'Feed time unavailable'}</span>
+            <button type="button" onClick={() => void fetchGateData()} className="text-xs text-cyan-300">Refresh evidence</button>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
             {freshnessBadges.map((badge) => (
@@ -253,7 +248,7 @@ export default function CryptoMorningDecisionCard() {
             <h2 className={`text-base font-extrabold ${conditionColor(decision.verdict)}`}>REVIEW: {decision.verdict}</h2>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Confluence Score: {decision.adaptiveConfidence}%</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Confluence Score: {decision.adaptiveConfidence == null ? "Unavailable" : `${decision.adaptiveConfidence}/100`}</span>
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk Context: {decision.riskContext}</span>
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Long Evidence: {decision.longsAllowed ? 'Clear' : 'Limited'}</span>
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Short Evidence: {decision.shortsAllowed ? 'Clear' : 'Limited'}</span>
@@ -289,7 +284,7 @@ export default function CryptoMorningDecisionCard() {
             </div>
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
               <span className="text-slate-500">Breadth</span>
-              <p className="font-semibold text-slate-200">{decision.breadthLabel} ({decision.breadthScore}%)</p>
+              <p className="font-semibold text-slate-200">{decision.breadthLabel} ({decision.breadthScore == null ? "Unavailable" : `${decision.breadthScore}%`})</p>
             </div>
           </div>
           <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">

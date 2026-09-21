@@ -6,6 +6,8 @@
    --------------------------------------------------------------------------- */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { parseResearchTimeframe } from '@/lib/researchContext';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { humanizeEnum } from '@/lib/presentation/labels';
@@ -362,20 +364,18 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 
 export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol } = useV2();
+  const searchParams = useSearchParams();
+  const requestedTimeframe = parseResearchTimeframe(searchParams.get('timeframe'));
+  const requestedAsset = searchParams.get('type');
   const { tier } = useUserTier();
   const [symbolInput, setSymbolInput] = useState('');
-  const [timeframe, setTimeframe] = useState<ScanTimeframe>(() => {
-    if (typeof window === 'undefined') return 'daily';
-    const raw = new URLSearchParams(window.location.search).get('timeframe');
-    return raw === '15m' || raw === '30m' || raw === '1h' || raw === 'weekly' || raw === 'daily' ? raw : 'daily';
-  });
+  const [timeframe, setTimeframe] = useState<ScanTimeframe>(requestedTimeframe ?? 'daily');
   const [activeTab, setActiveTab] = useState<GETab>('Verdict');
-  const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>(() => {
-    // Deep links (MSP Radar, Scanner) pass ?type= so crypto vs equity is never guessed from the ticker alone.
-    if (typeof window === 'undefined') return 'auto';
-    const t = new URLSearchParams(window.location.search).get('type');
-    return t === 'crypto' || t === 'equity' ? t : 'auto';
-  });
+  const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>(requestedAsset === 'crypto' || requestedAsset === 'equity' ? requestedAsset : 'auto');
+  useEffect(() => {
+    setTimeframe(requestedTimeframe ?? 'daily');
+    setAssetType(requestedAsset === 'crypto' || requestedAsset === 'equity' ? requestedAsset : 'auto');
+  }, [requestedTimeframe, requestedAsset]);
   const [savingCase, setSavingCase] = useState(false);
   const [saveCaseMsg, setSaveCaseMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -523,7 +523,7 @@ export default function GoldenEggPage() {
 
   function handleSymbolSubmit() {
     if (symbolInput.trim()) {
-      selectSymbol(symbolInput.trim().toUpperCase());
+      selectSymbol(symbolInput.trim().toUpperCase(), { timeframe, assetType: assetType === 'auto' ? (CRYPTO_SET.has(symbolInput.trim().toUpperCase()) ? 'crypto' : 'equity') : assetType });
       setSymbolInput('');
     }
   }
@@ -666,7 +666,7 @@ export default function GoldenEggPage() {
                     key={symbol}
                     type="button"
                     aria-pressed={symbol === sym}
-                    onClick={() => selectSymbol(symbol)}
+                    onClick={() => selectSymbol(symbol, { assetType: cached.crypto.some(c => c.symbol === symbol) || CRYPTO_SET.has(symbol) ? 'crypto' : 'equity', timeframe })}
                     className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 ${
                       symbol === sym ? 'border-amber-400/40 bg-amber-400/10 text-amber-200' : 'border-white/10 bg-white/[0.025] text-slate-400 hover:border-slate-600 hover:text-slate-200'
                     }`}
@@ -683,7 +683,7 @@ export default function GoldenEggPage() {
                       key={type}
                       type="button"
                       aria-pressed={assetType === type}
-                      onClick={() => setAssetType(type)}
+                      onClick={() => { setAssetType(type); selectSymbol(sym, { assetType: type === 'auto' ? (isCryptoSymbol ? 'crypto' : 'equity') : type, timeframe }); }}
                       className={`px-2.5 py-1.5 text-[11px] font-bold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${assetType === type ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:bg-slate-800/60'}`}
                     >
                       {type}
@@ -696,7 +696,7 @@ export default function GoldenEggPage() {
                       key={timeframeOption.value}
                       type="button"
                       aria-pressed={timeframe === timeframeOption.value}
-                      onClick={() => setTimeframe(timeframeOption.value)}
+                      onClick={() => { setTimeframe(timeframeOption.value); selectSymbol(sym, { timeframe: timeframeOption.value, assetType: quoteType === 'crypto' ? 'crypto' : 'equity' }); }}
                       className={`rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${timeframe === timeframeOption.value ? 'border-emerald-500/35 bg-emerald-500/15 text-emerald-300' : 'border-[var(--msp-border)] text-slate-400 hover:bg-slate-800/60'}`}
                     >
                       {timeframeOption.label}

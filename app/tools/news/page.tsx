@@ -1,5 +1,6 @@
 "use client";
 
+import { isRecentNews, newsTopicFlags } from '@/lib/newsEvidence';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
@@ -605,12 +606,13 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       const sourceText = `${article.title} ${article.summary} ${(article.aiTags || []).join(' ')}`.toLowerCase();
       const mentions = article.tickerSentiments?.length || 0;
       const maxRelevance = article.tickerSentiments?.reduce((max, entry) => Math.max(max, entry.relevance || 0), 0) || 0;
-      const macroMentions = /(fomc|cpi|nfp|payroll|rates|fed|inflation|yield|treasury)/i.test(sourceText);
-      const cryptoMentions = /(btc|bitcoin|eth|ethereum|crypto|solana|altcoin)/i.test(sourceText);
-      const aiMentions = /(ai|semiconductor|gpu|nvidia|openai|model)/i.test(sourceText);
-      const earningsMentions = /(earnings|guidance|eps|revenue|beat|miss)/i.test(sourceText);
-      const geoMentions = /(war|geopolitic|sanction|taiwan|middle east|opec|oil shock)/i.test(sourceText);
-      const commoditiesMentions = /(oil|gold|silver|copper|wti|commodity)/i.test(sourceText);
+      const topic = newsTopicFlags(sourceText);
+      const macroMentions = topic.macro;
+      const cryptoMentions = topic.crypto;
+      const aiMentions = topic.ai;
+      const earningsMentions = topic.earnings;
+      const geoMentions = topic.geo;
+      const commoditiesMentions = topic.commodities;
       const volatilityKeywords = /(crash|shock|liquidation|downgrade|panic|volatility spike|whipsaw)/i.test(sourceText);
 
       const tags = [
@@ -696,7 +698,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
   const groupedNarratives = useMemo<NarrativeGroup[]>(() => {
     const groups: Record<string, typeof filteredNews> = {};
-    filteredNews.forEach((item) => {
+    filteredNews.filter(item => isRecentNews(item.raw.timePublished)).forEach((item) => {
       if (!groups[item.narrative]) groups[item.narrative] = [];
       groups[item.narrative].push(item);
     });
@@ -712,13 +714,20 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
   }, [filteredNews]);
 
   const newsGate = useMemo<NewsGateModel>(() => {
-    const highImpactCount24h = filteredNews.filter((item) => item.impact === 'HIGH').length;
-    const macroMentionsCount = filteredNews.filter((item) => item.macroMentions).length;
-    const volatilityKeywordsScore = filteredNews.filter((item) => item.volatilityKeywords).length;
-    const bullish = filteredNews.filter((item) => item.sentiment === 'BULLISH').length;
-    const bearish = filteredNews.filter((item) => item.sentiment === 'BEARISH').length;
+    const recent = filteredNews.filter(item => isRecentNews(item.raw.timePublished));
+    if (!recent.length) return {
+      permission: 'NO', riskState: 'Unavailable', volRegime: 'Unavailable', catalystDensity: 'Unavailable',
+      narrativeStrength: 'Unavailable', executionMode: 'Observation', topNarrative: 'No news from the last 24 hours',
+      confidencePct: 0, rotationLeaders: [], warnings: ['No current news evidence. Older articles remain in the archive below.'],
+      briefAllowed: ['Refresh current sources'], briefAvoid: ['Inferring current conditions from archived headlines'], sentimentPct: 0, eventRiskLabel: macroEventCard?.event || 'Calendar coverage unverified', eventRiskCountdown: 'Unavailable',
+    };
+    const highImpactCount24h = recent.filter((item) => item.impact === 'HIGH').length;
+    const macroMentionsCount = recent.filter((item) => item.macroMentions).length;
+    const volatilityKeywordsScore = recent.filter((item) => item.volatilityKeywords).length;
+    const bullish = recent.filter((item) => item.sentiment === 'BULLISH').length;
+    const bearish = recent.filter((item) => item.sentiment === 'BEARISH').length;
     const topNarrative = groupedNarratives[0];
-    const topNarrativeShare = topNarrative ? topNarrative.items.length / Math.max(1, filteredNews.length) : 0;
+    const topNarrativeShare = topNarrative ? topNarrative.items.length / Math.max(1, recent.length) : 0;
 
     const riskState = bearish > bullish + 3 ? 'Risk-Off' : bullish > bearish + 3 ? 'Risk-On' : 'Neutral';
     const volRegime = volatilityKeywordsScore >= 3 ? 'Event Shock' : highImpactCount24h >= 4 ? 'Expansion' : 'Compression';
@@ -818,7 +827,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
             metrics={[
               { label: 'Active lens', value: activeTab === 'news' ? 'News' : 'Earnings', tone: 'bull', detail: 'Current focus' },
               { label: 'Top narrative', value: newsGate.topNarrative, tone: 'info', detail: 'Lead story' },
-              { label: 'Confluence', value: `${newsGate.confidencePct}%`, tone: 'warn', detail: 'Signal alignment' },
+              { label: 'Confluence', value: newsGate.riskState === "Unavailable" ? "Unavailable" : `${newsGate.confidencePct}/100`, tone: 'warn', detail: 'Signal alignment' },
               { label: 'Mode', value: 'Intelligence', tone: 'bull', detail: 'Workspace mode' },
             ]}
           />
@@ -893,7 +902,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
                 <div className="mt-1 text-base font-semibold text-white/90">{newsGate.topNarrative}</div>
                 <div className="mt-3 flex items-center justify-between text-xs text-white/60">
                   <span>Confluence</span>
-                  <span>{newsGate.confidencePct}%</span>
+                  <span>{newsGate.riskState === "Unavailable" ? "Unavailable" : `${newsGate.confidencePct}/100`}</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-white/10">
                   <div className="h-2 rounded-full bg-white/35" style={{ width: `${newsGate.confidencePct}%` }} />
@@ -910,7 +919,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
               <article className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="text-xs text-white/60">Sentiment</div>
                 <div className="mt-1 text-sm font-semibold text-white/90">{newsGate.riskState}</div>
-                <div className="mt-1 text-xs text-white/60">{newsGate.sentimentPct}% bullish balance</div>
+                <div className="mt-1 text-xs text-white/60">{newsGate.riskState === "Unavailable" ? "Sentiment unavailable" : `${newsGate.sentimentPct}% bullish balance`}</div>
               </article>
               <article className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="text-xs text-white/60">Vol Warning</div>

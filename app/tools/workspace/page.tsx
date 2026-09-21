@@ -7,7 +7,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, UpgradeGate } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
@@ -85,6 +85,7 @@ export default function WorkspacePage() {
 }
 
 function WorkspaceContent() {
+  const router = useRouter();
   const { tier, isLoggedIn, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const urlTabParam = searchParams.get('tab')?.toLowerCase() ?? null;
@@ -97,6 +98,13 @@ function WorkspaceContent() {
     const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);
     if (requestedTab) setTab(requestedTab);
   }, [urlTabParam]);
+
+  const selectWorkspaceTab = (nextTab: WorkspaceTab) => {
+    setTab(nextTab);
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('tab', nextTab.toLowerCase());
+    router.replace(`/tools/workspace?${query}`, { scroll: false });
+  };
 
   // Workspace is per-account memory: without a session there is nothing to show, so say so rather than render a "Free" shell.
   if (!tierLoading && !isLoggedIn) {
@@ -134,8 +142,8 @@ function WorkspaceContent() {
         title="Workspace"
         subtitle="Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench."
         actions={[
-          { label: 'Open watchlists', variant: 'primary', onClick: () => setTab('Watchlists') },
-          { label: `Open ${nextTab}`, variant: 'secondary', onClick: () => setTab(nextTab) },
+          { label: 'Open watchlists', variant: 'primary', onClick: () => selectWorkspaceTab('Watchlists') },
+          { label: `Open ${nextTab}`, variant: 'secondary', onClick: () => selectWorkspaceTab(nextTab) },
           { label: 'Open workflow', variant: 'ghost', href: '/tools/workflow' },
         ]}
         metrics={[
@@ -146,7 +154,7 @@ function WorkspaceContent() {
         ]}
       />
 
-      <WorkspaceTabRail activeTab={tab} onSelectTab={setTab} />
+      <WorkspaceTabRail activeTab={tab} onSelectTab={selectWorkspaceTab} />
 
       {/* -- WATCHLISTS ----------------------------------------------- */}
       {tab === 'Watchlists' && <RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider>}

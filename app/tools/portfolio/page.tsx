@@ -1635,19 +1635,18 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     .map((position) => {
       const value = position.currentPrice * position.quantity;
       const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
-      const stopPrice = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
-      const riskPerUnit = position.side === 'LONG'
+      const stopPrice = positionStopMap[position.id];
+      const riskPerUnit = stopPrice == null ? null : position.side === 'LONG'
         ? Math.max(0, position.currentPrice - stopPrice)
         : Math.max(0, stopPrice - position.currentPrice);
-      const dollarRisk = riskPerUnit * position.quantity;
+      const dollarRisk = riskPerUnit == null ? null : riskPerUnit * position.quantity;
       return {
         ...position,
         concentrationPct,
         dollarRisk,
       };
     })
-    .sort((a, b) => b.dollarRisk - a.dollarRisk)
-    .slice(0, 3);
+    .sort((a, b) => (b.dollarRisk ?? -1) - (a.dollarRisk ?? -1));
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
@@ -2164,7 +2163,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                     <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Allocation & Exposure</div>
                     <div className="space-y-1.5 text-sm text-slate-300">
-                      {allocationData.slice(0, 4).map((item) => (
+                      {allocationData.map((item) => (
                         <div key={item.symbol} className="flex items-center justify-between">
                           <span>{item.symbol}</span>
                           <span className="font-bold text-slate-100">{item.percentage.toFixed(1)}%</span>
@@ -2179,10 +2178,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
                     <div className="font-semibold uppercase tracking-[0.06em] text-slate-400">Exposure by Position</div>
                     <div className="mt-2 space-y-1 text-slate-300">
-                      {riskContributors.map((risk) => (
-                        <div key={risk.id} className="flex justify-between">
-                          <span>{risk.symbol}</span>
-                          <span className="font-bold text-red-300">{formatMoney(risk.dollarRisk)}</span>
+                      {positions.map((position) => (
+                        <div key={position.id} className="flex justify-between">
+                          <span>{position.symbol}</span>
+                          <span className="font-bold text-slate-200">{formatMoney(position.currentPrice * position.quantity)}</span>
                         </div>
                       ))}
                       {riskContributors.length === 0 && <div className="text-slate-500">No contributors yet</div>}
@@ -2462,7 +2461,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         <tr key={risk.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-1.5 font-semibold text-slate-100">{risk.symbol}</td>
                           <td className="px-2 py-1.5 text-right">{risk.concentrationPct.toFixed(1)}%</td>
-                          <td className="px-2 py-1.5 text-right">{formatMoney(risk.dollarRisk)}</td>
+                          <td className="px-2 py-1.5 text-right">{risk.dollarRisk == null ? 'Stop unavailable' : formatMoney(risk.dollarRisk)}</td>
                           <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? 'Concentration warning' : 'Normal'}</td>
                         </tr>
                       ))}

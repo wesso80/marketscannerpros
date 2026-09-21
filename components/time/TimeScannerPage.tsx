@@ -7,7 +7,8 @@ import DebugDrawer from '@/components/time/DebugDrawer';
 import TimeScannerShell from '@/components/time/TimeScannerShell';
 import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
-import { fireAutoLog } from '@/lib/autoLog';
+import { boundedJsonFetch } from '@/lib/boundedFetch';
+import { directionalRiskReward } from '@/lib/scanner/researchValidity';
 import { formatPrice } from '@/lib/formatPrice';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 import MarketPressureWidget from '@/components/MarketPressureWidget';
@@ -59,9 +60,9 @@ const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
     trendStrength: 0.5,
     dataIntegrity: {
       provider: 'Alpha Vantage',
-      freshnessSec: 300,
-      coveragePct: 0.9,
-      gapsPct: 0.05,
+      freshnessSec: 0,
+      coveragePct: 0,
+      gapsPct: 0,
     },
     extremeConditions: [],
   },
@@ -84,7 +85,7 @@ const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
     closeConfirmation: 'PENDING',
     closeStrength: 0,
     entryWindowQuality: 0,
-    liquidityOK: true,
+    liquidityOK: false,
     riskState: 'elevated',
     notes: ['Run scan to load live confluence data.'],
   },
@@ -367,19 +368,19 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
 /** Adaptive price formatting: 2 decimals for > $1, up to 8 for sub-cent */
 // formatPrice imported from shared lib/formatPrice.ts
 
-export default function TimeScannerPage({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
+export default function TimeScannerPage({ embeddedInTerminal = false, symbol: propSymbol, assetType, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; assetType?: 'equity' | 'crypto'; timeframe?: string } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
-  const [symbol, setSymbol] = useState('BTCUSD');
+  const requestedSymbol = propSymbol || searchParams.get('symbol') || 'BTCUSD';
+  const requestedAsset = assetType || (searchParams.get('type') === 'crypto' ? 'crypto' : searchParams.get('type') === 'equity' ? 'equity' : undefined);
+  const [symbol, setSymbol] = useState(requestedSymbol);
   const [scanMode, setScanMode] = useState<ScanModeType>('intraday_1h');
   const [sessionMode, setSessionMode] = useState<'regular' | 'extended' | 'full'>('extended');
   const [input, setInput] = useState<TimeConfluenceV2Inputs>(FALLBACK_INPUT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [initialScanDone, setInitialScanDone] = useState(false);
   const [isMarketOpen, setIsMarketOpen] = useState<boolean>(true);
-  const [scanTrigger, setScanTrigger] = useState(0);
-  const timeAutoLogRef = useRef<string>('');
+  const requestRef = useRef<AbortController | null>(null);
   const [selectedClusterTFs, setSelectedClusterTFs] = useState<string[] | null>(null);
   const [activeClusterLabel, setActiveClusterLabel] = useState<string | null>(null);
   const [selectedMid50TF, setSelectedMid50TF] = useState<string>('all');
@@ -407,13 +408,17 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
     const effectiveMode = overrides?.scanMode ?? scanMode;
     if (!effectiveSymbol) return;
 
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     setError(null);
+    setScanData(null);
     setSelectedClusterTFs(null);
     setActiveClusterLabel(null);
     setSelectedMid50TF('all');
     try {
-      const response = await fetch('/api/confluence-scan', {
+      const { response, body: json } = await boundedJsonFetch<any>('/api/confluence-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -421,16 +426,18 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
           mode: 'hierarchical',
           scanMode: effectiveMode,
           sessionMode,
+          assetType: requestedAsset,
         }),
-      });
-
-      const json = await response.json();
+        signal: controller.signal,
+      }, 60_000);
+      if (controller.signal.aborted) return;
       if (!response.ok || !json?.success) {
         setError(json?.error || 'Time scan failed');
         return;
       }
 
       const mapped = mapScanToInput(effectiveSymbol, effectiveMode, json.data);
+      mapped.context.assetClass = requestedAsset || mapped.context.assetClass;
       setInput(mapped);
       setIsMarketOpen(json.data?.candleCloseConfluence?.isMarketOpen !== false);
 
@@ -476,75 +483,37 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
         })(),
       });
 
-      // ── Auto-log to execution engine (paper trade) ──
-      // Use the engine's post-floor direction (NEUTRAL if evidence floor failed)
-      // and the raw, unmodified timeConfluenceScore. We additionally require a
-      // coverage/freshness-aware confidence ≥ 50 so we never auto-log a high
-      // raw score that was actually computed on thin or stale evidence.
-      const tOut = computeTimeConfluenceV2(mapped);
-      const dir = tOut.direction;
-      const conf = typeof tOut.confidence === 'number' ? tOut.confidence : tOut.timeConfluenceScore;
-      if (
-        tOut.permission === 'ALLOW' &&
-        dir !== 'neutral' &&
-        tOut.timeConfluenceScore >= 60 &&
-        conf >= 50
-      ) {
-        const key = `${effectiveSymbol}:${dir}:${Math.round(tOut.timeConfluenceScore)}`;
-        if (timeAutoLogRef.current !== key) {
-          timeAutoLogRef.current = key;
-          const isCrypto = detectAssetClass(effectiveSymbol) === 'crypto';
-          fireAutoLog({
-            symbol: effectiveSymbol,
-            conditionType: 'time_scanner',
-            conditionMet: `${dir.toUpperCase()}_SCORE_${Math.round(tOut.timeConfluenceScore)}`,
-            triggerPrice: json.data?.currentPrice || json.data?.price || 0,
-            source: 'time_scanner',
-            assetClass: isCrypto ? 'crypto' : 'equity',
-            atr: json.data?.indicators?.atr ?? null,
-          }).catch(() => {});
-        }
-      }
+      // Research scans do not create paper trades; saving belongs to an explicit user action.
     } catch (scanError) {
-      setError(scanError instanceof Error ? scanError.message : 'Network error');
+      if (!controller.signal.aborted) setError(scanError instanceof Error ? scanError.message : 'Network error');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
-  // Initial scan from URL params
+  const requestedTf = timeframe || searchParams.get('timeframe') || searchParams.get('tf') || '';
   useEffect(() => {
-    if (initialScanDone || loading) return;
-    setInitialScanDone(true);
+    const modes: Record<string, ScanModeType> = { '15m': 'scalping', '30m': 'intraday_30m', '1h': 'intraday_1h', daily: 'swing_1d', '1d': 'swing_1d', weekly: 'swing_1w' };
+    setSymbol(requestedSymbol.trim().toUpperCase());
+    setScanMode(modes[requestedTf] || (TIMEFRAME_OPTIONS.includes(requestedTf as ScanModeType) ? requestedTf as ScanModeType : 'intraday_1h'));
+  }, [requestedSymbol, requestedTf]);
 
-    const symbolParam = (searchParams.get('symbol') || '').trim().toUpperCase();
-    const tfParam = String(searchParams.get('tf') || '').trim() as ScanModeType;
-    const validTf = TIMEFRAME_OPTIONS.includes(tfParam);
-
-    const initialSymbol = symbolParam || 'BTCUSD';
-    const initialTf = validTf ? tfParam : 'intraday_1h';
-
-    setSymbol(initialSymbol);
-    setScanMode(initialTf);
-    void runScan({ symbol: initialSymbol, scanMode: initialTf });
-  }, [initialScanDone, loading, searchParams]);
-
-  // Re-scan whenever scanMode or sessionMode changes via dropdown
   useEffect(() => {
-    if (!initialScanDone || scanTrigger === 0) return;
-    void runScan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanTrigger]);
+    requestRef.current?.abort();
+    setLoading(false);
+    setError(null);
+    setScanData(null);
+    setInput({ ...FALLBACK_INPUT, context: { ...FALLBACK_INPUT.context, symbol, assetClass: requestedAsset || detectAssetClass(symbol), primaryTfMinutes: TF_TO_MINUTES[scanMode] } });
+    return () => requestRef.current?.abort();
+  }, [symbol, scanMode, sessionMode, requestedAsset]);
 
-  const isCrypto = useMemo(() => detectAssetClass(symbol) === 'crypto', [symbol]);
+  const isCrypto = (requestedAsset || detectAssetClass(symbol)) === 'crypto';
 
   const out = computeTimeConfluenceV2(input);
   const displaySymbol = useMemo(() => input.context.symbol || symbol, [input.context.symbol, symbol]);
   const tone = permissionTone(out.permission);
-  // Use real R:R from scan when available, otherwise fall back to estimate
-  const rrDisplay = scanData && scanData.riskReward > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01
-    ? scanData.riskReward.toFixed(1)
-    : out.executionScore >= 70 ? '2.3' : out.executionScore >= 45 ? '1.7' : '—';
+  const validRR = scanData ? directionalRiskReward(scanData.direction, scanData.entry, scanData.stopLoss, scanData.takeProfit) : null;
+  const rrDisplay = validRR == null ? 'Unavailable' : validRR.toFixed(1);
   const confluenceRows = [
     { label: 'Trend Alignment', score: out.contextScore },
     { label: 'Flow Strength', score: out.setupScore },
@@ -585,6 +554,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
               <div className="flex items-center gap-2">
                 <input
                   value={symbol}
+                  readOnly={embeddedInTerminal}
                   onChange={(event) => setSymbol(event.target.value.toUpperCase())}
                   placeholder="SYMBOL"
                   className="w-24 rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-sm font-semibold text-slate-100"
@@ -593,7 +563,6 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
                   value={scanMode}
                   onChange={(event) => {
                     setScanMode(event.target.value as ScanModeType);
-                    setScanTrigger((n) => n + 1);
                   }}
                   className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                 >
@@ -607,8 +576,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
                     value={sessionMode}
                     onChange={(event) => {
                       setSessionMode(event.target.value as 'regular' | 'extended' | 'full');
-                      setScanTrigger((n) => n + 1);
-                    }}
+                      }}
                     className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                     title="Session hours — affects intraday candle close anchors"
                   >
@@ -636,14 +604,14 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
             <div className="flex justify-start lg:justify-center">
               <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
                 <div className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
-                <div className="text-sm font-semibold tracking-wide text-slate-100">{tone.label}</div>
+                <div className="text-sm font-semibold tracking-wide text-slate-100">{scanData ? tone.label : 'Run scan to assess'}</div>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-2 lg:justify-end">
               <div className="grid grid-cols-3 gap-2">
-                <MetricPill label="Confluence" value={`${Math.round(out.timeConfluenceScore)}%`} />
-                <MetricPill label="Risk" value={riskLabel(out.permission)} />
+                <MetricPill label="Confluence" value={scanData ? `${Math.round(out.timeConfluenceScore)} / 100` : 'Unavailable'} />
+                <MetricPill label="Risk" value={scanData ? riskLabel(out.permission) : 'Unavailable'} />
                 <MetricPill label="R:R" value={rrDisplay} />
               </div>
             </div>
@@ -715,11 +683,11 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
                   </div>
                 )}
 
-                {scanData.riskReward > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01 && (
+                {validRR != null && (
                   <div className="flex items-center gap-2 text-xs text-slate-400">
                     R:R Ratio: <span className={`font-bold ${
-                      scanData.riskReward >= 2 ? 'text-emerald-400' : scanData.riskReward >= 1.5 ? 'text-amber-400' : 'text-rose-400'
-                    }`}>{scanData.riskReward.toFixed(2)}</span>
+                      validRR >= 2 ? 'text-emerald-400' : validRR >= 1.5 ? 'text-amber-400' : 'text-rose-400'
+                    }`}>{validRR.toFixed(2)}</span>
                     {scanData.expectedMoveTime && !scanData.expectedMoveTime.startsWith('-') && (
                       <span className="text-slate-500">· Expected: {scanData.expectedMoveTime}</span>
                     )}
@@ -1081,7 +1049,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
 
                   <div className="grid grid-cols-3 gap-2 pt-1">
                     <MetricPill label="Gate" value={`${Math.round(out.gateScore)}%`} />
-                    <MetricPill label="Time" value={`${Math.round(out.timeConfluenceScore)}%`} />
+                    <MetricPill label="Time" value={scanData ? `${Math.round(out.timeConfluenceScore)} / 100` : 'Unavailable'} />
                     <MetricPill label="Window" value={`${Math.round(input.execution.entryWindowQuality * 100)}%`} />
                   </div>
 

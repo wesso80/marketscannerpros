@@ -168,6 +168,14 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
   const ddColor = maxDrawdown <= 10 ? 'var(--msp-bull)' : maxDrawdown <= 20 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const ddBorder = maxDrawdown <= 10 ? 'rgba(16,185,129,0.55)' : maxDrawdown <= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
 
+  if (totalTrades === 0) return (
+    <section className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-5">
+      <h3 className="font-semibold text-amber-200">No completed trades</h3>
+      <p className="mt-2 text-sm text-slate-300">Win rate, profit factor, Sharpe, Sortino and trade-return statistics are unavailable because this run produced no completed trades. Review the strategy conditions and data coverage.</p>
+      <BacktestAssumptionsPanel totalTrades={0} />
+    </section>
+  );
+
   return (
     <div className="mb-6 rounded-2xl border border-slate-700/80 bg-[var(--msp-card)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
       <h2 className="mb-6 flex items-center gap-2.5 text-[15px] font-semibold uppercase tracking-wider text-slate-100">

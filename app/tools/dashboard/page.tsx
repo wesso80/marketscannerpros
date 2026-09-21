@@ -1,4 +1,5 @@
 'use client';
+import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 
 /* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
@@ -283,7 +284,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
 
   /* -- Derived data ----------------------------------------------------- */
   const highImpactEvents = useMemo(
-    () => (calendar.data?.events || []).filter((e: EconomicEvent) => e.impact === 'high').slice(0, 5),
+    () => upcomingConfirmedEvents(calendar.data?.events || []).filter((e: EconomicEvent) => e.impact === 'high').slice(0, 5),
     [calendar.data]
   );
   const allGainers = movers.data?.topGainers || [];
@@ -297,11 +298,13 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
   const scannerQueue = cached.all.slice(0, 5);
   const moverQueue: Mover[] = [];
   const degradedFeeds = [
+    ...ranked.qualityWarnings,
     cached.error ? 'Scanner queue' : null,
     cacheStale ? `Scanner data stale (${cacheAgeMinutes != null ? `${cacheAgeMinutes}m old` : 'age unknown'})` : null,
     movers.error ? 'Movers' : null,
     news.error ? 'News' : null,
     calendar.error ? 'Calendar' : null,
+    !calendar.loading ? calendarDataWarning(calendar.data?.events) : null,
   ].filter(Boolean);
   const loadingFeeds = [cached.loading, movers.loading, news.loading, calendar.loading].filter(Boolean).length;
   const researchQueueCount = scannerQueue.length + moverQueue.length;

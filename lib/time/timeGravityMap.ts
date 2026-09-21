@@ -43,6 +43,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface GravityPoint {
+  candleCloseTime?: string;
   timeframe: string;
   midpoint: number;              // 50% level (target — strongest pull)
   retrace30High: number;         // 30% from high — shallow entry zone top
@@ -428,6 +429,7 @@ export function calculateGravityPoint(
   const label = `${midpoint.timeframe} ${decompressionState.visualIndicator} ${midpoint.midpoint.toFixed(2)}`;
   
   return {
+    candleCloseTime: midpoint.candleCloseTime?.toISOString(),
     timeframe: midpoint.timeframe,
     midpoint: midpoint.midpoint,
     retrace30High: midpoint.retrace30High,

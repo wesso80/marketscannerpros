@@ -9,11 +9,13 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { Surface } from './types';
+import { parseResearchAsset, parseResearchTimeframe, researchHref, type ResearchSelection } from '@/lib/researchContext';
 
 interface V2ContextValue {
   selectedSymbol: string | null;
-  selectSymbol: (sym: string) => void;
-  navigateTo: (surface: Surface, symbol?: string) => void;
+  selectSymbol: (sym: string, selection?: ResearchSelection) => void;
+  navigateTo: (surface: Surface, symbol?: string, selection?: ResearchSelection) => void;
+  selectedContext: ResearchSelection;
   activeSurface: Surface;
 }
 
@@ -55,18 +57,21 @@ export function V2Provider({ children }: { children: ReactNode }) {
   const urlSymbol = searchParams.get('symbol');
   const [internalSymbol, setInternalSymbol] = useState<string | null>(null);
   const selectedSymbol = urlSymbol || internalSymbol;
+  const selectedContext: ResearchSelection = {
+    assetType: parseResearchAsset(searchParams.get('type')),
+    timeframe: parseResearchTimeframe(searchParams.get('timeframe')),
+  };
 
   const activeSurface: Surface = SURFACE_MAP[pathname] || 'dashboard';
 
-  const selectSymbol = useCallback((sym: string) => {
-    setInternalSymbol(sym);
-    // Clear URL ?symbol= param so internalSymbol takes priority
-    if (searchParams.get('symbol')) {
-      router.replace(pathname, { scroll: false });
-    }
+  const selectSymbol = useCallback((sym: string, selection: ResearchSelection = {}) => {
+    const normalized = sym.trim().toUpperCase();
+    setInternalSymbol(normalized);
+    const href = researchHref(`${pathname}?${searchParams}`, normalized, selection);
+    if (href !== `${pathname}?${searchParams}`) router.replace(href, { scroll: false });
   }, [searchParams, router, pathname]);
 
-  const navigateTo = useCallback((surface: Surface, symbol?: string) => {
+  const navigateTo = useCallback((surface: Surface, symbol?: string, selection: ResearchSelection = {}) => {
     const surfaceRoutes: Record<Surface, string> = {
       dashboard: '/tools/dashboard',
       scanner: '/tools/scanner',
@@ -75,24 +80,28 @@ export function V2Provider({ children }: { children: ReactNode }) {
       explorer: '/tools/explorer',
       research: '/tools/research',
       workspace: '/tools/workspace',
-      backtest: '/tools/workspace',
+      backtest: '/tools/workspace?tab=backtest',
     };
 
     const route = surfaceRoutes[surface];
-    if (symbol) {
-      setInternalSymbol(symbol);
-      router.push(`${route}?symbol=${encodeURIComponent(symbol)}`);
-    } else if (internalSymbol && (surface === 'golden-egg' || surface === 'terminal')) {
-      router.push(`${route}?symbol=${encodeURIComponent(internalSymbol)}`);
+    const target = symbol || selectedSymbol;
+    if (target && (symbol || ['golden-egg', 'terminal', 'backtest', 'research'].includes(surface))) {
+      setInternalSymbol(target);
+      router.push(researchHref(route, target, {
+        assetType: parseResearchAsset(searchParams.get('type')),
+        timeframe: parseResearchTimeframe(searchParams.get('timeframe')),
+        ...selection,
+      }));
     } else {
       router.push(route);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [router, internalSymbol]);
+  }, [router, selectedSymbol, searchParams]);
 
   return (
     <V2Context.Provider value={{
       selectedSymbol,
+      selectedContext,
       selectSymbol,
       navigateTo,
       activeSurface,

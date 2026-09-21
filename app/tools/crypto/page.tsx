@@ -1,5 +1,7 @@
 'use client';
 
+import { cryptoReviewMissing, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { usePolling } from '@/hooks/usePolling';
@@ -165,26 +167,32 @@ function CryptoCommandCenterContent() {
 
   const fetchOverview = useCallback(async () => {
     try {
-      const [marketRes, trendingRes, fundingRes, oiRes] = await Promise.all([
-        fetch('/api/crypto/market-overview').then((r) => r.json()).catch(() => null),
-        fetch('/api/crypto/trending').then((r) => r.json()).catch(() => null),
-        fetch('/api/funding-rates').then((r) => r.json()).catch(() => null),
-        fetch('/api/open-interest').then((r) => r.json()).catch(() => null),
-      ]);
-      setMarketData({ market: marketRes?.data, trending: trendingRes, funding: fundingRes, oi: oiRes });
-      setLastUpdate(new Date());
+      const data = await fetchCryptoReviewData();
+      setMarketData(data);
+      const times = [data.marketMeta, data.trendingMeta, data.fundingMeta, data.oiMeta]
+        .map(meta => Date.parse(meta?.lastUpdated ?? '')).filter(Number.isFinite);
+      setLastUpdate(times.length === 4 ? new Date(Math.min(...times)) : null);
       setFetchError(null);
     } catch (e) {
       console.error('Overview fetch failed:', e);
-      setFetchError('Failed to load crypto market data — retrying shortly');
+      setFetchError('Failed to load crypto market data — refresh to retry');
     }
   }, []);
 
-  usePolling(fetchOverview, 300_000, { immediate: true });
+  useEffect(() => { void fetchOverview(); }, [fetchOverview]);
 
   const { setPageData } = useAIPageContext();
 
   const morningDecision = useMemo(() => {
+    const missing = cryptoReviewMissing(marketData);
+    if (missing.length) return {
+      dataComplete: false, verdict: 'CONDITIONAL' as const, adaptiveConfidence: null,
+      hardBlocks: missing, longsAllowed: false, shortsAllowed: false,
+      riskContext: 'Data unavailable — refresh to reassess', riskState: 'Unavailable', leadership: 'Unavailable',
+      liquidity: 'Unavailable', volatility: 'Unavailable', breadthScore: null, breadthLabel: 'Unavailable',
+      subClusters: [] as Array<{ name: string; review: string }>, explanation: missing.join('; '),
+    };
+
     const market = marketData?.market;
     const trendingCoins = marketData?.trending?.coins || [];
     const trendingCategories = marketData?.trending?.categories || [];
@@ -313,6 +321,7 @@ function CryptoCommandCenterContent() {
       `${verdict === 'ALIGNED' ? 'Indicators are broadly aligned.' : verdict === 'CONDITIONAL' ? 'Partial alignment — review more evidence before relying on the scenario.' : 'Indicators suggest caution — prioritize observation.'}`;
 
     return {
+      dataComplete: true,
       verdict,
       adaptiveConfidence,
       hardBlocks: [...hardBlocksLong, ...hardBlocksShort],
@@ -363,8 +372,9 @@ function CryptoCommandCenterContent() {
         dominance: marketData.market?.dominance,
         reviewState: morningDecision.verdict,
         confidence: morningDecision.adaptiveConfidence,
+        dataComplete: morningDecision.dataComplete,
       },
-      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence}% confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
+      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`} confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
     });
   }, [marketData, morningDecision.adaptiveConfidence, morningDecision.verdict, setPageData]);
 
@@ -392,7 +402,7 @@ function CryptoCommandCenterContent() {
       ] : [],
       notrade: [],
       data: [
-        { t: dataTime, e: 'Feed status', d: marketData ? 'CoinGecko feed active. Data fresh.' : 'Waiting for CoinGecko response...' },
+        { t: dataTime, e: 'Feed status', d: cryptoReviewMissing(marketData).length === 0 ? 'Required feeds present and fresh.' : 'Waiting for CoinGecko response...' },
       ],
     } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
   }, [marketData]);
@@ -446,27 +456,28 @@ function CryptoCommandCenterContent() {
             { label: marketData ? `Verdict ${reviewLabel(morningDecision.verdict)}` : 'Verdict pending' },
             { label: marketData ? `Risk ${morningDecision.riskState}` : 'Risk pending' },
             { label: marketData ? `Vol ${morningDecision.volatility}` : 'Vol pending' },
-            { label: marketData ? 'CoinGecko live' : 'Loading' },
+            { label: morningDecision.dataComplete ? 'Feeds fresh' : marketData ? 'Data incomplete' : 'Loading' },
           ]}
           title="Crypto Command Center."
           subtitle="Permission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear."
           actions={[
-            { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner?asset=crypto' },
+            { label: 'Refresh evidence', variant: 'primary', onClick: () => void fetchOverview() },
+            { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner?asset=crypto' },
             { label: 'Open Crypto Derivatives', variant: 'secondary', href: '/tools/dashboard?tab=crypto' },
             { label: 'Open Macro Lens', variant: 'ghost', href: '/tools/dashboard?tab=macro' },
           ]}
           metrics={[
             // Until the first CoinGecko payload lands, the decision engine only has defaults — show that honestly.
-            { label: 'Verdict', value: marketData ? reviewLabel(morningDecision.verdict) : 'Loading', tone: !marketData ? 'info' : morningDecision.verdict === 'ALIGNED' ? 'bull' : morningDecision.verdict === 'CONDITIONAL' ? 'warn' : 'bear', detail: marketData ? `Confluence ${morningDecision.adaptiveConfidence}%` : 'Awaiting market data' },
-            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? `Score ${morningDecision.breadthScore}%` : 'Awaiting market data' },
+            { label: 'Verdict', value: marketData ? reviewLabel(morningDecision.verdict) : 'Loading', tone: !marketData ? 'info' : morningDecision.verdict === 'ALIGNED' ? 'bull' : morningDecision.verdict === 'CONDITIONAL' ? 'warn' : 'bear', detail: marketData ? `Confluence ${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`}` : 'Awaiting market data' },
+            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? `Score ${morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`}` : 'Awaiting market data' },
             { label: 'Dominance', value: (() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })(), tone: 'warn', detail: marketData?.market?.totalMarketCapFormatted || 'Mkt cap loading' },
             { label: 'Next check', value: currentSection?.label || 'Pick a section', tone: 'info', detail: lastUpdate ? `Refreshed ${lastUpdate.toLocaleTimeString()}` : 'Awaiting first refresh' },
           ]}
         />
         <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
           {[
-            ['Regime', morningDecision.riskState === 'Risk-On' ? 'Crypto Risk-On' : morningDecision.riskState === 'Risk-Off' ? 'Crypto Risk-Off' : 'Crypto Neutral'],
-            ['Risk', morningDecision.riskState === 'Risk-On' ? 'Low' : morningDecision.riskState === 'Risk-Off' ? 'Elevated' : 'Moderate'],
+            ['Regime', !morningDecision.dataComplete ? 'Unavailable' : morningDecision.riskState === 'Risk-On' ? 'Crypto Risk-On' : morningDecision.riskState === 'Risk-Off' ? 'Crypto Risk-Off' : 'Crypto Neutral'],
+            ['Risk', !morningDecision.dataComplete ? 'Unavailable' : morningDecision.riskState === 'Risk-On' ? 'Low' : morningDecision.riskState === 'Risk-Off' ? 'Elevated' : 'Moderate'],
             ['Dominance', (() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : 'N/A'; })()],
             ['Mkt Cap', marketData?.market?.totalMarketCapFormatted || 'N/A'],
             [
@@ -482,7 +493,7 @@ function CryptoCommandCenterContent() {
               <span className="font-semibold text-slate-100">{k}</span> · {v}
             </div>
           ))}
-          {marketData && <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">LIVE</span>}
+          {morningDecision.dataComplete && <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">LIVE</span>}
         </section>
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
@@ -495,7 +506,7 @@ function CryptoCommandCenterContent() {
                 </h2>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confluence: {morningDecision.adaptiveConfidence}%</span>
+                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confluence: {morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk Context: {morningDecision.riskContext}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Long Evidence: {morningDecision.longsAllowed ? 'Clear' : 'Limited'}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Short Evidence: {morningDecision.shortsAllowed ? 'Clear' : 'Limited'}</span>
@@ -532,7 +543,7 @@ function CryptoCommandCenterContent() {
                 </div>
                 <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
                   <span className="text-slate-500">Breadth</span>
-                  <p className="font-semibold text-slate-200">{morningDecision.breadthLabel} ({morningDecision.breadthScore}%)</p>
+                  <p className="font-semibold text-slate-200">{morningDecision.breadthLabel} ({morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`})</p>
                 </div>
               </div>
               <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">

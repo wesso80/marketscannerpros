@@ -104,3 +104,20 @@ describe('Diamond Hunter scoring', () => {
     expect(result.stage).toBe('REJECT');
   });
 });
+
+
+describe('Diamond Hunter incomplete observations', () => {
+  it('does not infer 12x acceleration from a two-minute-old pool', () => {
+    const result = scoreDiamondPool(pool({ pool_created_at: new Date(Date.now() - 2 * 60_000).toISOString(), volume_usd: { m5: '1000', m15: '1000', h1: '1000', h6: '1000', h24: '1000' } }), { tokenInfo: safeTokenInfo() });
+    expect(result.metrics.volumeVelocity5m).toBeNull();
+    expect(result.metrics.buyerVelocity5m).toBeNull();
+    expect(result.components.volumeAcceleration.score).toBe(0);
+    expect(result.riskFlags.some(f => f.includes('complete 1h baseline'))).toBe(true);
+  });
+  it('does not award concentration points for an absent top-10 percentage', () => {
+    const result = scoreDiamondPool(pool(), { tokenInfo: safeTokenInfo({ holders: { count: 500, distribution_percentage: {} } as any }) });
+    expect(result.metrics.top10HolderPct).toBeNull();
+    expect(result.components.holderQuality.score).toBeNull();
+    expect(result.reasons).not.toContain('Holder distribution/breadth passes the deep check');
+  });
+});

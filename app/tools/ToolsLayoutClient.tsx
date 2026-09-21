@@ -13,6 +13,7 @@ import { RegimeProvider } from '@/lib/useRegime';
 import FavoriteButton from '@/components/FavoriteButton';
 import DisclosureGate from '@/components/DisclosureGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import WorkflowNavigation from '@/components/WorkflowNavigation';
 
 const GLOBAL_COMPLIANCE_ROUTES = new Set([
   '/tools/company-overview',
@@ -79,6 +80,7 @@ export default function ToolsLayoutClient({
     <RiskPermissionProvider>
     <V2Provider>
       <AIPageProvider>
+        <WorkflowNavigation />
         <ErrorBoundary fallback={null}>
           <RegimeBar />
         </ErrorBoundary>
