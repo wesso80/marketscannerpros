@@ -103,6 +103,7 @@ export default function DiamondHunterPage() {
   const [minScore, setMinScore] = useState(60);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       setError('');
       const res = await fetch('/api/crypto/diamond-hunter', { cache: 'no-store' });
@@ -267,7 +268,7 @@ export default function DiamondHunterPage() {
                 <div>
                   <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-rose-400">Risk flags</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {(candidate.riskFlags.length ? candidate.riskFlags : ['No automatic risk flag triggered']).map((flag) => (
+                    {(candidate.riskFlags.length ? candidate.riskFlags : ['No configured rule triggered — unknown risks remain']).map((flag) => (
                       <span key={flag} className="rounded-md border border-rose-500/15 bg-rose-500/5 px-2 py-1 text-[10px] text-rose-200/80">{flag}</span>
                     ))}
                   </div>
@@ -284,7 +285,7 @@ export default function DiamondHunterPage() {
         </div>
 
         <p className="mt-5 text-[10px] leading-relaxed text-slate-600">
-          Educational research only. New DEX pools can be manipulated, illiquid or malicious. Diamond Hunter is a discovery/risk-ranking engine, not a recommendation or execution signal.
+          Educational research only. New DEX pools can be manipulated, illiquid or malicious. CoinGecko holder-distribution data is beta where available. Diamond Hunter is a discovery/risk-ranking engine, not a recommendation or execution signal.
         </p>
       </div>
     </main>
