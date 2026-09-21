@@ -10,7 +10,7 @@ import { primaryNavTools, workflowArea } from '@/lib/toolWorkflows';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MSP v2 Header — Matches Full Site Map
-   Always shows: 6 surface buttons + All tools / Pricing / Account
+   Always shows: 5 workflow areas + All tools / Pricing / Account
    Right side changes: Sign In (logged out) vs Tier badge + Sign Out (logged in)
    Mobile: Hamburger → flat drawer with same links
    ════════════════════════════════════════════════════════════════════════════════════ */
@@ -38,7 +38,14 @@ function HeaderContent() {
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    const desktop = window.matchMedia('(min-width: 1440px)');
+    const closeOnDesktop = () => { if (desktop.matches) setDrawerOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    closeOnDesktop();
+    return () => {
+      document.body.style.overflow = '';
+      desktop.removeEventListener('change', closeOnDesktop);
+    };
   }, [drawerOpen]);
 
   useEffect(() => {
@@ -137,7 +144,7 @@ function HeaderContent() {
           </div>
         </nav>
 
-        {/* ── Mobile Hamburger (below md) ── */}
+        {/* ── Drawer navigation (below the shared 1440px breakpoint) ── */}
         <div className="msp-mobile-nav items-center gap-2 ml-auto">
           {isLoggedIn && !tierLoading && (
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
@@ -161,7 +168,7 @@ function HeaderContent() {
 
       {/* ── Mobile Overlay ── */}
       {drawerOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[200] md:hidden backdrop-blur-sm" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/60 z-[200] min-[1440px]:hidden backdrop-blur-sm" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
       )}
 
       {/* ── Mobile Drawer ── */}
@@ -170,8 +177,10 @@ function HeaderContent() {
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
+        aria-hidden={!drawerOpen}
+        inert={!drawerOpen}
         aria-label="Site navigation"
-        className={`fixed top-0 right-0 h-[100dvh] w-[min(300px,85vw)] bg-[#111C2D] z-[201] transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-[100dvh] w-[min(300px,85vw)] bg-[#111C2D] z-[201] transform transition-transform duration-300 ease-in-out min-[1440px]:hidden border-l border-slate-700/90 shadow-2xl ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
           {/* Drawer header */}
