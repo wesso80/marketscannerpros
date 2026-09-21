@@ -45,7 +45,7 @@ export const TOOL_CATALOG: ToolPage[] = [
   { key: 'explorer',           href: '/tools/explorer',           label: 'Explorer',             description: 'Market structure explorer',                        icon: 'EX', category: 'Research' },
 
   // ─── Macro & Earnings ───
-  { key: 'macro',              href: '/tools/explorer?tab=macro', label: 'Macro Dashboard',      description: 'Economic indicators and macro trends',             icon: 'MA', category: 'Macro', tier: 'pro' },
+  { key: 'macro',              href: '/tools/dashboard?tab=macro', label: 'Macro Dashboard',      description: 'Economic indicators and macro trends',             icon: 'MA', category: 'Macro', tier: 'pro' },
   { key: 'commodities',        href: '/tools/explorer?tab=commodities', label: 'Commodities',    description: 'Commodity prices and trends',                      icon: 'CM', category: 'Macro' },
   { key: 'earnings',           href: '/tools/research?tab=earnings', label: 'Earnings',          description: 'Company earnings catalysts in Research',           icon: 'ER', category: 'Macro' },
   { key: 'earnings-calendar',  href: '/tools/research?tab=earnings', label: 'Earnings Calendar', description: 'Upcoming earnings schedule in Research',           icon: 'EC', category: 'Macro' },
