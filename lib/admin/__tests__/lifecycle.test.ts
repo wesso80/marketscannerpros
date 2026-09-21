@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_LIFECYCLE_STATES,
   TERMINAL_STATES,
+  INACTIVE_QUEUE_STATES,
   isValidTransition,
   mapResearchLifecycleToAdminState,
   type AdminLifecycleState,
@@ -15,6 +16,13 @@ describe("admin lifecycle transitions", () => {
         expect(isValidTransition(t as AdminLifecycleState, next)).toBe(false);
       }
     }
+  });
+
+  it("ignored research stays out of the active queue but can return to WATCH", () => {
+    expect(TERMINAL_STATES.has("IGNORE")).toBe(false);
+    expect(INACTIVE_QUEUE_STATES.has("IGNORE")).toBe(true);
+    expect(isValidTransition("IGNORE", "WATCH")).toBe(true);
+    expect(isValidTransition("IGNORE", "TRIGGERED")).toBe(false);
   });
 
   it("WATCH cannot jump straight to TRIGGERED", () => {

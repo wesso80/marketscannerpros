@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://marketscannerpros.app/tools/workspace?tab=alerts' },
   title: 'Alert Intelligence',
   description:
     'Smart price alerts with multi-condition logic, strategy-linked triggers, cooldown intelligence, and live trigger logging. Never miss a market event.',

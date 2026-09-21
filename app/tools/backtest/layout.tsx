@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://marketscannerpros.app/tools/workspace?tab=backtest' },
   title: 'Strategy Backtester',
   description:
     'Educational strategy backtesting with historical data, multi-timeframe testing, equity curves, assumptions, and performance metrics.',

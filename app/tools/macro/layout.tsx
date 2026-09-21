@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description:
     'Comprehensive macro economic dashboard showing indices, rates, commodities, crypto, forex, and volatility in real-time.',
   robots: { index: false, follow: false },
-  alternates: { canonical: 'https://marketscannerpros.app/tools/macro' },
+  alternates: { canonical: 'https://marketscannerpros.app/tools/dashboard?tab=macro' },
 };
 
 export default function MacroLayout({ children }: { children: React.ReactNode }) {

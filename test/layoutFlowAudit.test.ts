@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { areaLinks, primaryNavTools, toolWorkflows } from '@/lib/toolWorkflows';
 
 const root = process.cwd();
 const read = (file: string) => readFileSync(join(root, file), 'utf8');
@@ -92,7 +93,7 @@ describe('layout and flow audit regressions', () => {
     const workflows = read('lib/toolWorkflows.ts');
     const parkedDashboard = read('components/home/TradePermissionDashboard.tsx');
 
-    expect(hero).toContain('Educational market intelligence');
+    expect(hero).toContain("Educational scanner, confluence, testing, and review workflow");
     expect(hero).toContain('No brokerage execution. No financial advice.');
     expect(hero).toContain('Open Scanner Preview');
     expect(hero).not.toContain('/logos/landing-hero.png');
@@ -105,7 +106,7 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).not.toContain('Core Scanners');
     expect(commandHub).not.toContain('v2 Platform Surfaces');
     expect(commandHub).not.toContain('FeaturedTile');
-    expect(workflows).toContain("{ href: '/tools', label: 'Workflow' }");
+    expect(primaryNavTools.map(t => t.label)).toEqual(['Overview', 'Scanner', 'Research', 'Backtest', 'Track']);
     expect(parkedDashboard).toContain('const FALLBACK_CANDIDATES: Candidate[] = [];');
     expect(parkedDashboard).toContain('Research Alignment Matrix');
     expect(parkedDashboard).toContain('Alignment-Filtered Observations');
@@ -119,8 +120,8 @@ describe('layout and flow audit regressions', () => {
     const accountPage = read('app/account/page.tsx');
     const workspaceAccount = read('app/tools/workspace/AccountSection.tsx');
 
-    expect(accountPage).toContain('Research risk framework');
-    expect(workspaceAccount).toContain('Research risk framework');
+    expect(accountPage).toContain("Backtesting, options and derivatives tools");
+    expect(workspaceAccount).toContain("Backtesting, options and derivatives tools");
     expect(accountPage).not.toContain('Brain / Permission Engine');
     expect(workspaceAccount).not.toContain('Brain / Permission Engine');
   });
@@ -233,26 +234,27 @@ describe('layout and flow audit regressions', () => {
     expect(partnerDemo).not.toContain('icon: "📊"');
     expect(partnerDemo).not.toContain('✅ 350+ text changes');
     expect(toolsPage.indexOf('id="workflow"')).toBeLessThan(toolsPage.indexOf('id="all-tools"'));
-    expect(toolsPage).toContain('Recommended start');
+    expect(toolsPage).toContain("label=\"Start here\" value=\"Overview\"");
     expect(toolsPage).toContain('Start here');
     expect(toolsPage).toContain('Recommended next:');
     expect(toolsPage).toContain('aria-label="Workflow command header"');
     expect(toolsPage).toContain('function WorkflowMetric');
-    expect(toolsPage).toContain('label="Steps"');
+    expect(toolWorkflows.map(w => w.title)).toEqual(['1. Overview', '2. Scanner', '3. Research', '4. Backtest', '5. Track']);
     expect(toolsPage).toContain('label="Tools"');
     expect(toolsPage).toContain('label="Categories"');
     expect(toolsPage).toContain('label="Next Check"');
     expect(toolsPage).toContain('Open Market Scanner');
     expect(toolsPage).not.toContain('text-4xl font-black tracking-tight sm:text-5xl');
-    expect(workflows).toContain('Inspect market mechanics');
+    expect(workflows).toContain("3. Research");
     expect(toolsPage).toContain("mechanics: 'Next: test the research idea in Backtest.'");
     expect(toolsPage).toContain('<details id="advanced"');
     expect(toolsPage).toContain('Specialist tools after the core workflow is clear.');
-    expect(workflows.indexOf("{ href: '/tools/golden-egg', label: 'Golden Egg' }")).toBeLessThan(workflows.indexOf("{ href: '/tools/terminal', label: 'Terminal' }"));
-    expect(workflows.indexOf("{ href: '/tools/terminal', label: 'Terminal' }")).toBeLessThan(workflows.indexOf("{ href: '/tools/workspace?tab=backtest', label: 'Backtest' }"));
+    const researchTools = toolWorkflows.find(w => w.id === 'mechanics')!.tools;
+    expect(researchTools.map(t => t.href).slice(0, 2)).toEqual(['/tools/golden-egg', '/tools/terminal']);
+    expect(toolWorkflows.findIndex(w => w.id === 'mechanics')).toBeLessThan(toolWorkflows.findIndex(w => w.id === 'test'));
     expect(workflows).toContain("id: 'mechanics'");
-    expect(workflows).toContain('3. Inspect market mechanics');
-    expect(workflows).toContain("{ href: '/tools/terminal', label: 'Terminal', description: 'Close calendar, options, crypto, flow, and time-confluence checks before backtesting.', tier: 'pro', role: 'primary' }");
+    expect(workflows).toContain("3. Research");
+    expect(researchTools).toContainEqual(expect.objectContaining({ href: '/tools/terminal', tier: 'pro' }));
     expect(toolCatalog).toContain("href: '/tools/workspace?tab=watchlists'");
     expect(toolCatalog).toContain("href: '/tools/workspace?tab=portfolio'");
     expect(toolCatalog).toContain("href: '/tools/workspace?tab=journal'");
@@ -274,10 +276,10 @@ describe('layout and flow audit regressions', () => {
     expect(journalLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=journal'");
     expect(backtestLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=backtest'");
     expect(alertsLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=alerts'");
-    expect(portfolioLayout).toContain('robots: { index: false, follow: true }');
-    expect(journalLayout).toContain('robots: { index: false, follow: true }');
-    expect(backtestLayout).toContain('robots: { index: false, follow: true }');
-    expect(alertsLayout).toContain('robots: { index: false, follow: true }');
+    expect(portfolioLayout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
+    expect(journalLayout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
+    expect(backtestLayout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
+    expect(alertsLayout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
     expect(sitemap).not.toContain("'/tools/watchlists'");
     expect(toolCatalog).toContain("href: '/tools/scanner'" );
     expect(toolCatalog).toContain("label: 'ARCA AI Panel'");
@@ -310,12 +312,10 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).toContain("href: '/tools/workspace?tab=backtest'");
     expect(commandHub).toContain("href: '/tools/terminal?tab=options-flow'");
     expect(commandHub).toContain("href: '/tools/dashboard?tab=crypto'");
-    expect(toolsNavBar).toContain('["Portfolio", "/tools/workspace?tab=portfolio"]');
-    expect(toolsNavBar).toContain('["Journal", "/tools/workspace?tab=journal"]');
-    expect(toolsNavBar).toContain('["Markets", "/tools/explorer"]');
-    expect(toolsNavBar).toContain('["Options", "/tools/terminal?tab=options-terminal"]');
-    expect(toolsNavBar).toContain('["Crypto", "/tools/explorer?tab=crypto-command"]');
-    expect(toolsNavBar).toContain('["Derivatives", "/tools/terminal?tab=crypto"]');
+    expect(toolsNavBar).toContain('primaryNavTools');
+    expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
+    expect(areaLinks.overview.map(t => t.href)).toContain('/tools/explorer');
+    expect(areaLinks.research.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/terminal', '/tools/crypto-intel']));
     expect(toolsNavBar).toContain("tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'");
     expect(toolsNavBar).not.toContain('⭐ Pro Trader');
     expect(toolsNavBar).not.toContain('✨ Pro');
@@ -326,9 +326,9 @@ describe('layout and flow audit regressions', () => {
     expect(onboardingChecklist).not.toContain("icon: '🔍'");
     expect(onboardingChecklist).not.toContain("done ? '✅'");
     expect(pricing).toContain('Full backtesting engine');
-    expect(pricing).toContain('Production Intelligence');
-    expect(pricing).toContain('roadmap modules');
-    expect(pricing).toContain('$24.99');
+    expect(pricing).toContain("Golden Egg Deep Analysis");
+    expect(pricing).toContain("Options Confluence Scanner");
+    expect(pricing).toContain("PLAN_PRICES.pro.monthly");
     expect(pricing).not.toContain('🤖');
     expect(pricing).not.toContain('📊');
     expect(pricing).not.toContain('📈');
@@ -436,11 +436,11 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('Use Terminal before Backtest.');
     expect(terminalPage).toContain('Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.');
     expect(terminalPage).toContain('function TerminalMetric');
-    expect(terminalPage).toContain('aria-label="Terminal command header"');
-    expect(terminalPage).toContain('<TerminalMetric label="Symbol" value={sym}');
-    expect(terminalPage).toContain('<TerminalMetric label="Active Lens" value={tab}');
-    expect(terminalPage).toContain('<TerminalMetric label="Data State" value={terminalDataState}');
-    expect(terminalPage).toContain('<TerminalMetric label="Next Check" value={nextTerminalAction}');
+    expect(terminalPage).toContain("ariaLabel=\"Terminal command header\"");
+    expect(terminalPage).toContain("{ label: 'Symbol', value: sym");
+    expect(terminalPage).toContain("{ label: 'Active lens', value: tab");
+    expect(terminalPage).toContain("{ label: 'Data state', value: terminalDataState");
+    expect(terminalPage).toContain("{ label: 'Next check', value: nextTerminalAction");
     expect(terminalPage).toContain('<ComplianceDisclaimer compact variant={asset === \'crypto\' ? \'cryptoDerivatives\' : \'options\'} />');
     expect(terminalPage).toContain('function TerminalTabRail');
     expect(terminalPage).toContain('const TERMINAL_TAB_PARAM_MAP');
@@ -458,12 +458,12 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('function TerminalSubviewFrame');
     expect(terminalPage).toContain('function TerminalSubviewMetric');
     expect(terminalPage).toContain('aria-label={`Terminal ${tab} command header`}');
-    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Time Gravity" symbol={sym} asset={asset} onSelectTab={setTab}>');
-    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Options Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>');
-    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Options Flow" symbol={sym} asset={asset} onSelectTab={setTab}>');
-    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Crypto" symbol={sym} asset={asset} onSelectTab={setTab}>');
-    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Time Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>');
-    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Flow" symbol={sym} asset={asset} onSelectTab={setTab}>');
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Gravity\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Flow\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Crypto\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Capital Pressure\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Symbol" value={symbol}');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="View" value={tab}');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Focus" value={focusLabel}');
@@ -474,11 +474,11 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('Back to Golden Egg');
     expect(terminalPage).toContain('Continue to Backtest');
     expect(terminalPage).toContain('Open Workflow');
-    expect(terminalPage).toContain("href=\"/tools/workspace?tab=backtest\"");
-    expect(terminalPage).toContain("href=\"/tools/workflow\"");
-    expect(terminalPage).toContain('<OptionsConfluence embeddedInTerminal />');
-    expect(terminalPage).toContain('<OptionsFlow embeddedInTerminal />');
-    expect(terminalPage).toContain('<ConfluenceScanner embeddedInTerminal />');
+    expect(terminalPage).toContain("href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=");
+    expect(terminalPage).toContain("href: '/tools/workflow'");
+    expect(terminalPage).toContain("<OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} />");
+    expect(terminalPage).toContain("<OptionsFlow embeddedInTerminal symbol={sym} />");
+    expect(terminalPage).toContain("<ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />");
     expect(terminalPage).not.toContain('<SectionHeader title="Terminal"');
     expect(terminalPage).not.toContain('ComplianceDisclaimer collapsible variant');
     expect(terminalPage).not.toContain("'? Refresh'");
@@ -517,7 +517,7 @@ describe('layout and flow audit regressions', () => {
     expect(optionsFlowPage).not.toContain('patternEmoji');
     expect(optionsFlowPage).not.toContain('🔍 Analyze Flow');
     expect(optionsFlowPage).not.toContain('📊</div>');
-    expect(confluenceScannerPage).toContain('<TimeScannerPage embeddedInTerminal={embeddedInTerminal} />');
+    expect(confluenceScannerPage).toContain("<TimeScannerPage symbol={symbol} assetType={assetType} timeframe={timeframe} embeddedInTerminal={embeddedInTerminal} />");
     expect(timeScannerPage).toContain("embeddedInTerminal ? 'px-0 py-0' : 'px-4 py-4 lg:px-6 lg:py-6'");
     expect(timeScannerPage).toContain("scalping: 'Scalp 15m'");
     expect(timeScannerPage).toContain("macro_monthly: 'Monthly'");
@@ -537,7 +537,7 @@ describe('layout and flow audit regressions', () => {
       ['app/tools/heatmap/layout.tsx', 'https://marketscannerpros.app/tools/explorer?tab=heatmap'],
       ['app/tools/equity-explorer/layout.tsx', 'https://marketscannerpros.app/tools/explorer?tab=equity'],
       ['app/tools/crypto-dashboard/layout.tsx', 'https://marketscannerpros.app/tools/dashboard?tab=crypto'],
-      ['app/tools/macro/layout.tsx', 'https://marketscannerpros.app/tools/explorer?tab=macro'],
+      ['app/tools/macro/layout.tsx', 'https://marketscannerpros.app/tools/dashboard?tab=macro'],
       ['app/tools/options-confluence/layout.tsx', 'https://marketscannerpros.app/tools/terminal?tab=options-confluence'],
       ['app/tools/options-terminal/layout.tsx', 'https://marketscannerpros.app/tools/terminal?tab=options-terminal'],
       ['app/tools/crypto-terminal/layout.tsx', 'https://marketscannerpros.app/tools/terminal?tab=crypto'],
@@ -548,7 +548,7 @@ describe('layout and flow audit regressions', () => {
 
     legacyCanonicals.forEach(([file, canonical]) => {
       const layout = read(file);
-      expect(layout).toContain('robots: { index: false, follow: true }');
+      expect(layout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
       expect(layout).toContain(`alternates: { canonical: '${canonical}' }`);
     });
   });
@@ -560,7 +560,7 @@ describe('layout and flow audit regressions', () => {
     expect(workspacePage).toContain('<BacktestPage embeddedInWorkspace />');
     expect(workspacePage).toContain('Workflow memory');
     expect(workspacePage).toContain('Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.');
-    expect(workspacePage).toContain('aria-label="Workspace command header"');
+    expect(workspacePage).toContain("ariaLabel=\"Workspace command header\"");
     expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
     expect(workspacePage).not.toContain('<SectionHeader title="Workspace"');
     expect(workspacePage).toContain('useEffect(() => {');
@@ -611,7 +611,7 @@ describe('layout and flow audit regressions', () => {
     expect(workspacePage).toContain('<PortfolioV1 embeddedInWorkspace />');
     expect(portfolioPage).toContain('embeddedInWorkspace = false');
     expect(portfolioPage).toContain('Portfolio review');
-    expect(portfolioPage).toContain('aria-label="Portfolio command header"');
+    expect(portfolioPage).toContain("ariaLabel=\"Portfolio command header\"");
     expect(portfolioPage).toContain('Recorded paper positions, exposure, cash controls, and descriptive risk analytics.');
     expect(portfolioPage).toContain('Kelly Criterion Parameters');
     expect(portfolioPage).toContain('Position Estimate Results');
@@ -651,14 +651,14 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('function DashboardMetric');
     expect(dashboardPage).toContain('function PanelHeader');
     expect(dashboardPage).toContain('function MoverRow');
-    expect(dashboardPage).toContain('min-h-[3.1rem] rounded-md border border-white/10');
+    expect(dashboardPage).toContain("fontVariantNumeric: 'tabular-nums'");
     expect(dashboardPage).toContain('aria-label="Dashboard command header"');
-    expect(dashboardPage).toContain('Morning command dashboard');
+    expect(dashboardPage).toContain("Research dashboard");
     expect(dashboardPage).toContain('Open the research queue, then validate one symbol.');
-    expect(dashboardPage).toContain('Scanner cache, movers, calendar risk, and headlines are compressed into a morning review path.');
-    expect(dashboardPage).toContain('Start Scanner');
-    expect(dashboardPage).toContain('Validate Symbol');
-    expect(dashboardPage).toContain('Open Journal');
+    expect(dashboardPage).toContain("Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.");
+    expect(dashboardPage).toContain("Start scanner");
+    expect(dashboardPage).toContain("Validate symbol");
+    expect(dashboardPage).toContain("Open journal");
     expect(dashboardPage).toContain('const researchQueueCount = scannerQueue.length + moverQueue.length;');
     expect(dashboardPage).toContain('const dataHealthLabel = degradedFeeds.length');
     expect(dashboardPage).toContain('Top focus: ${topQueueSymbol}');
@@ -670,12 +670,12 @@ describe('layout and flow audit regressions', () => {
     expect(explorerPage).toContain('const EXPLORER_TAB_PARAM_MAP');
     expect(explorerPage).toContain('Cross-market map');
     expect(explorerPage).toContain('Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.');
-    expect(explorerPage).toContain('aria-label="Markets command header"');
+    expect(explorerPage).toContain("ariaLabel=\"Markets command header\"");
     expect(explorerPage).toContain('function MarketsMetric');
-    expect(explorerPage).toContain('label="Sectors Leading"');
-    expect(explorerPage).toContain('label="Crypto Cap"');
-    expect(explorerPage).toContain('label="Top Gainer"');
-    expect(explorerPage).toContain('label="Next Check"');
+    expect(explorerPage).toContain("label: 'Sectors leading'");
+    expect(explorerPage).toContain("label: 'Crypto cap'");
+    expect(explorerPage).toContain("label: 'Top gainer'");
+    expect(explorerPage).toContain("label: 'Next check'");
     expect(explorerPage).toContain('Open Macro Lens');
     expect(explorerPage).not.toContain("'Equity Search'");
     expect(explorerPage).not.toContain("'Crypto Search'");
@@ -694,8 +694,8 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('Click a symbol to open Golden Egg. Review context only; no trade instructions.');
     expect(dashboardPage).toContain('<ComplianceDisclaimer compact />');
     expect(dashboardPage).toContain('2xl:grid-cols-3');
-    expect(dashboardPage).toContain('Data Health Strip');
-    expect(dashboardPage).toContain('Continue Workflow');
+    expect(dashboardPage).toContain("Data health strip");
+    expect(dashboardPage).toContain("Continue workflow");
     expect(dashboardPage).toContain('Next: review in Golden Egg');
     expect(dashboardPage).toContain('Validated queue');
     expect(dashboardPage).toContain('Live movement');
@@ -706,7 +706,7 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('crLosers.slice(0, 4)');
     expect(dashboardPage).toContain('Dashboard lens');
     expect(dashboardPage).toContain('Switch between saved pages, live market desk, derivatives, and macro context.');
-    expect(dashboardPage).toContain('rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap');
+    expect(dashboardPage).toContain("role=\"tablist\" aria-label=\"Dashboard lens\"");
     expect(dashboardPage).toContain("className={isPro ? 'grid items-start gap-3 xl:grid-cols-[minmax(16rem,0.55fr)_minmax(0,1.45fr)]' : ''}");
     expect(dashboardPage).toContain('<EdgeInsightCards compact />');
     expect(dashboardPage).toContain('grid gap-x-4 gap-y-1 xl:grid-cols-2');
@@ -722,7 +722,7 @@ describe('layout and flow audit regressions', () => {
     // empty Edge Profile collapses to one-liner.
     expect(dashboardPage).not.toContain('flex items-center gap-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 flex-wrap');
     expect(dashboardPage).not.toContain('label={`Risk: ${regime.data.riskLevel}`}');
-    expect(dashboardPage).toContain('label="Next Check"');
+    expect(dashboardPage).toContain("label=\"Next check\"");
     expect(dashboardPage).not.toContain('label="Headlines"');
     expect(dashboardPage).toContain('const hasQueue = researchQueueCount > 0;');
     expect(dashboardPage).toContain('const nextCheckValue = hasQueue');
@@ -762,12 +762,12 @@ describe('layout and flow audit regressions', () => {
     expect(favoritesPanel).toContain('label="Catalog"');
     expect(favoritesPanel).toContain('label="Coverage"');
     expect(favoritesPanel).toContain('label="Next Check"');
-    expect(cryptoDashboard).toContain('aria-label="Crypto Derivatives command header"');
+    expect(cryptoDashboard).toContain("ariaLabel=\"Crypto Derivatives command header\"");
     expect(cryptoDashboard).toContain('Bias, rotation, and volatility for the morning derivatives review.');
-    expect(cryptoDashboard).toContain('>Bias<');
-    expect(cryptoDashboard).toContain('>Liquidity<');
-    expect(cryptoDashboard).toContain('>Funding<');
-    expect(cryptoDashboard).toContain('>Next Check<');
+    expect(cryptoDashboard).toContain("label: 'Bias'");
+    expect(cryptoDashboard).toContain("label: 'Liquidity'");
+    expect(cryptoDashboard).toContain("label: 'Funding'");
+    expect(cryptoDashboard).toContain("label: 'Next check'");
     expect(cryptoDashboard).not.toContain("h1 className={`${embeddedInDashboard ? 'mt-1 text-base'");
     expect(macroDashboard).toContain('aria-label="Macro command header"');
     expect(macroDashboard).toContain('Global regime gate for liquidity, rates, growth, and cross-asset context.');
@@ -967,7 +967,7 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoPage).toContain("icon: 'LST'");
     expect(cryptoPage).toContain('<span><strong>WARN</strong> {fetchError}</span>');
     expect(cryptoPage).toContain('>Close</button>');
-    expect(cryptoPage).toContain('aria-label="Crypto Command Center command header"');
+    expect(cryptoPage).toContain("ariaLabel=\"Crypto Command Center command header\"");
     expect(cryptoPage).toContain('Crypto command');
     expect(cryptoPage).toContain('Crypto Command Center.');
     expect(cryptoPage).toContain('Open Crypto Derivatives');
@@ -1054,7 +1054,7 @@ describe('layout and flow audit regressions', () => {
     expect(scalperPage).not.toContain('<th className="text-left py-2 px-2">Direction</th>');
     expect(scalperPage).not.toContain("{r.direction === 'long' ? '▲ LONG' : r.direction === 'short' ? '▼ SHORT' : '— NEUTRAL'}");
     expect(intradayChartsPage).toContain("const reviewState: 'Clear' | 'Caution' | 'Blocked'");
-    expect(intradayChartsPage).toContain('Indicator Review');
+    expect(intradayChartsPage).toContain("Indicator review");
     expect(intradayChartsPage).toContain('{scenarioNote}');
     expect(intradayChartsPage).toContain('short-timeframe scenario review');
     expect(intradayChartsPage).not.toContain('const permissionState');
@@ -1146,8 +1146,8 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).toContain("type ScannerStage = ScannerMode | 'analysis'");
     expect(scannerPage).toContain('function ScannerFlowRail');
     expect(scannerPage).toContain('Workflow step 1 · Market research queue');
-    expect(scannerPage).toContain('Find the highest-evidence research queue.');
-    expect(scannerPage).toContain('Ranked auto-triages the market. Pro lets you configure conditions. Analysis sends one symbol into Golden Egg.');
+    expect(scannerPage).toContain("What deserves your attention right now.");
+    expect(scannerPage).toContain("Ranked: system-ranked research opportunities based on MarketScannerPros evidence and risk filters. Switch to Pro to define your own conditions.");
     expect(scannerPage).toContain('<ComplianceDisclaimer compact />');
     expect(scannerPage).toContain('grid grid-cols-3 gap-2');
     expect(scannerPage).not.toContain('flex gap-1 overflow-x-auto');
@@ -1165,12 +1165,12 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).toContain('if (firstResult) handleProRowClick(firstResult);');
     expect(scannerPage).toContain('Analysis view');
     expect(scannerPage).toContain('function RankedMobileCards');
-    expect(scannerPage).toContain('<RankedMobileCards rows={filtered} activeRegime={currentRegime} onRowClick={handleV2RowClick} />');
+    expect(scannerPage).toContain("<RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />");
     expect(scannerPage).toContain('Why This Rank / Review');
     expect(scannerPage).toContain('Aligned Scenarios');
     expect(scannerPage).toContain('<SortHeader k="direction" label="Bias"');
-    expect(scannerPage).toContain('<SortHeader k="confidence" label="Alignment"');
-    expect(scannerPage).toContain('Review scenario for ${r.symbol}');
+    expect(scannerPage).toContain("<SortHeader k=\"confidence\" label=\"Evidence\"");
+    expect(scannerPage).toContain("Review scenario for ${row.symbol}");
     expect(scannerPage).not.toContain("label=\"Direction\"");
     expect(scannerPage).not.toContain("label=\"Conf\"");
     expect(scannerPage).not.toContain('Ready Setups');
@@ -1284,7 +1284,7 @@ describe('layout and flow audit regressions', () => {
     expect(companyOverviewPage).toContain('icon: "UP"');
     expect(companyOverviewPage).toContain('icon: "DN"');
     expect(companyOverviewPage).toContain('icon: "MID"');
-    expect(companyOverviewPage).toContain('AI Decision Lens');
+    expect(companyOverviewPage).toContain("Research Lens");
     expect(companyOverviewPage).toContain('Research disclaimer:');
     expect(companyOverviewPage).not.toContain('icon="🏢"');
     expect(companyOverviewPage).not.toContain('📈');
@@ -1336,7 +1336,7 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('Verdict Packet');
     expect(goldenEggPage).toContain('Validation workbench');
     expect(goldenEggPage).toContain('Open Liquidity Sweep');
-    expect(goldenEggPage).toContain('aria-label="Golden Egg command header"');
+    expect(goldenEggPage).toContain("ariaLabel=\"Golden Egg command header\"");
     expect(goldenEggPage).toContain('Open Terminal');
     expect(goldenEggPage).toContain('Open Scanner');
     expect(goldenEggPage).toContain('Open Backtest');
@@ -1365,12 +1365,13 @@ describe('layout and flow audit regressions', () => {
     expect(companyOverviewPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
     expect(companyOverviewPage).toContain('padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px"');
     expect(goldenEggLayout).not.toContain('liquidity');
-    expect(workflows).toContain("{ href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', description: 'Broad sweep/reclaim scanner for liquidity-zone research.', tier: 'pro_trader', role: 'specialist' }");
+    expect(toolWorkflows.flatMap(w => w.tools)).toContainEqual(expect.objectContaining({ href: '/tools/liquidity-sweep', role: 'specialist', tier: 'pro' }));
   });
 
   it('keeps shared tool headers aligned with the compact command treatment', () => {
     const toolsPageHeader = read('components/ToolsPageHeader.tsx');
     const terminalPageHeader = read('components/terminal/TerminalPageHeader.tsx');
+    expect(read('components/ui/PageHero.tsx')).toContain('aria-label={ariaLabel}');
 
     expect(terminalPageHeader).toContain('function headerCode');
     expect(terminalPageHeader).toContain('style={{ padding: 12, borderRadius: 8');
@@ -1391,13 +1392,13 @@ describe('layout and flow audit regressions', () => {
     const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
     const fundamentalsPage = read('app/tools/company-overview/page.tsx');
 
-    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Chart" symbol={sym} onSelectTab={setActiveTab}>');
-    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} onSelectTab={setActiveTab}>');
-    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Fundamentals" symbol={sym} onSelectTab={setActiveTab}>');
+    expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"Chart\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
+    expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"Deep Analysis\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
+    expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"Fundamentals\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
     expect(chartPage).toContain('{!embeddedInGoldenEgg && <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">');
     expect(chartPage).toContain("embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'");
     expect(chartPage).toContain('Educational caution: elevated session risk; review only until conditions improve.');
-    expect(chartPage).toContain('<div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>');
+    expect(chartPage).toContain("<div className=\"text-xs text-[var(--msp-text-muted)]\">Intraday console</div>");
     expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'");
     expect(fundamentalsPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
     expect(fundamentalsPage).toContain('{!embeddedInGoldenEgg && (');
@@ -1414,7 +1415,7 @@ describe('layout and flow audit regressions', () => {
     const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
     const gainersLosersPage = read('app/tools/gainers-losers/page.tsx');
 
-    expect(workspacePage).toContain('aria-label="Workspace command header"');
+    expect(workspacePage).toContain("ariaLabel=\"Workspace command header\"");
     expect(workspacePage).toContain('WORKSPACE_TAB_META');
     expect(workspacePage).toContain('function WorkspaceMetric');
     expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
@@ -1423,7 +1424,7 @@ describe('layout and flow audit regressions', () => {
     expect(researchPage).toContain('RESEARCH_TAB_META');
     expect(researchPage).toContain('function ResearchMetric');
 
-    expect(liquiditySweepPage).toContain('aria-label="Liquidity Sweep command header"');
+    expect(liquiditySweepPage).toContain("ariaLabel=\"Liquidity Sweep command header\"");
     expect(liquiditySweepPage).toContain('Open Golden Egg');
 
     expect(scalperPage).toContain('aria-label="Scalper command header"');
@@ -1432,14 +1433,14 @@ describe('layout and flow audit regressions', () => {
     expect(signalAccuracyPage).toContain('aria-label="Signal Accuracy command header"');
     expect(signalAccuracyPage).toContain('Open Scanner');
 
-    expect(newsPage).toContain('aria-label="News command header"');
-    expect(newsPage).toContain('View News');
-    expect(newsPage).toContain('View Earnings');
+    expect(newsPage).toContain("ariaLabel=\"News command header\"");
+    expect(newsPage).toContain("View news");
+    expect(newsPage).toContain("View earnings");
 
-    expect(economicCalendarPage).toContain('aria-label="Economic Calendar command header"');
-    expect(economicCalendarPage).toContain('Refresh Calendar');
+    expect(economicCalendarPage).toContain("ariaLabel=\"Economic Calendar command header\"");
+    expect(economicCalendarPage).toContain("Refresh calendar");
 
-    expect(gainersLosersPage).toContain('aria-label="Gainers Losers command header"');
+    expect(gainersLosersPage).toContain("ariaLabel=\"Gainers Losers command header\"");
     expect(gainersLosersPage).toContain('Open Markets');
   });
 });

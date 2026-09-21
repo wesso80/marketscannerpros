@@ -7,6 +7,7 @@
    --------------------------------------------------------------------------- */
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
 import Link from 'next/link';
@@ -1021,11 +1022,22 @@ export default function ScannerPage() {
   const [proUniverseSize, setProUniverseSize] = useState(500);
   const [proMinConfidence, setProMinConfidence] = useState<number>(0);
   const [proMtfAlignment, setProMtfAlignment] = useState<number>(2);
-  const [proVolState, setProVolState] = useState<string>('all');
+  const [proVolState, setProVolState] = useState<ProScanFilters['volatility']>('all');
   const [proSqueeze, setProSqueeze] = useState<'all' | 'squeeze'>('all');
   const [proIntent, setProIntent] = useState<'observe' | 'review'>('observe');
   const [proScanLoading, setProScanLoading] = useState(false);
-  const proRequestKey = JSON.stringify([proAsset, proTimeframe, proDepth, proUniverseSize]);
+  const [proDirection, setProDirection] = useState<'all' | 'long' | 'short'>('all');
+  const [proQuality, setProQuality] = useState<'all' | 'high' | 'medium'>('all');
+  const [proSort, setProSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend'>('rank');
+  const [proPresetConditions, setProPresetConditions] = useState<{ id?: string; requireRelativeStrength?: boolean; rsiBand?: [number, number]; minAdx?: number; maxAdx?: number }>({});
+  const proFilters = useMemo<ProScanFilters>(() => ({
+    direction: proDirection, quality: proQuality, minConfidence: proMinConfidence,
+    minAlignment: proMtfAlignment, volatility: proVolState, squeeze: proSqueeze === 'squeeze',
+    requireRelativeStrength: proPresetConditions.requireRelativeStrength ?? false,
+    minAdx: proPresetConditions.minAdx, maxAdx: proPresetConditions.maxAdx, rsiBand: proPresetConditions.rsiBand,
+    preset: proPresetConditions.id === 'momentum' || proPresetConditions.id === 'mean_reversion' ? proPresetConditions.id : undefined,
+  }), [proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions]);
+  const proRequestKey = JSON.stringify([proAsset, proTimeframe, proDepth, proUniverseSize, proFilters, proSort]);
   const [proResponse, setProScanResults] = useState<any>(null);
   const proScanResults = proResponse?.requestKey === proRequestKey ? proResponse : null;
   const proAbortRef = useRef<AbortController | null>(null);
@@ -1038,9 +1050,9 @@ export default function ScannerPage() {
   }, [proRequestKey]);
   const [proScanError, setProScanError] = useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | undefined>(undefined);
-  const [proDirection, setProDirection] = useState<'all' | 'long' | 'short'>('all');
-  const [proQuality, setProQuality] = useState<'all' | 'high' | 'medium'>('all');
-  const [proSort, setProSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend'>('rank');
+
+
+
   const [proBulkViewMode, setProBulkViewMode] = useState<'table' | 'cards'>('table');
 
   /* ─── Shared detail state ─── */
@@ -1251,10 +1263,9 @@ export default function ScannerPage() {
     setSelectedAssetClass(null);
     setSymbolDetail(null);
     try {
-      const payload: any = { type: proAsset, timeframe: proTimeframe };
+      const payload: any = { type: proAsset, timeframe: proTimeframe, universeSize: proUniverseSize, filters: proFilters, sort: proSort };
       if (proAsset === 'crypto') {
         payload.mode = proDepth;
-        if (proDepth === 'light') payload.universeSize = proUniverseSize;
       } else {
         payload.mode = 'hybrid';
       }
@@ -1276,7 +1287,7 @@ export default function ScannerPage() {
     } finally {
       if (!controller.signal.aborted) setProScanLoading(false);
     }
-  }, [proAsset, proTimeframe, proDepth, proUniverseSize, proRequestKey]);
+  }, [proAsset, proTimeframe, proDepth, proUniverseSize, proRequestKey, proFilters, proSort]);
 
   /* ─── Pro Scan: template apply ─── */
   const applyTemplate = useCallback((tmpl: ScanTemplate) => {
@@ -1284,13 +1295,13 @@ export default function ScannerPage() {
     setActiveTemplateId(tmpl.id);
     setProMinConfidence(tmpl.config.minConfidence);
     setProMtfAlignment(tmpl.config.mtfAlignment);
-    setProVolState(tmpl.config.volatilityState);
+    setProVolState(tmpl.config.volatilityState as ProScanFilters['volatility']);
     setProDirection((tmpl.config.direction as 'all' | 'long' | 'short') ?? 'all');
     setProQuality((tmpl.config.quality as 'all' | 'high' | 'medium') ?? 'all');
     setProSqueeze(tmpl.config.squeeze ? 'squeeze' : 'all');
     setProPresetConditions({ requireRelativeStrength: tmpl.config.requireRelativeStrength, rsiBand: tmpl.config.rsiBand, minAdx: tmpl.config.minAdx, maxAdx: tmpl.config.maxAdx, id: tmpl.id });
   }, []);
-  const [proPresetConditions, setProPresetConditions] = useState<{ id?: string; requireRelativeStrength?: boolean; rsiBand?: [number, number]; minAdx?: number; maxAdx?: number }>({});
+
   const clearTemplate = useCallback(() => { setActiveTemplateId(undefined); setProPresetConditions({}); }, []);
   // Preset-only conditions (RS / ADX / RSI zone) are invisible in the filter controls, so any manual filter edit
   // drops the preset rather than silently keeping hidden conditions active.
@@ -1305,7 +1316,7 @@ export default function ScannerPage() {
   /* ─── Pro scan filtered results → ScreenerRow[] (+ per-filter drop accounting so an empty table is never silent) ─── */
   const { rows: proScreenerRows, drops: proFilterDrops } = useMemo((): { rows: ScreenerRow[]; drops: Record<string, number> } => {
     if (!proScanResults?.topPicks) return { rows: [], drops: {} };
-    const drops: Record<string, number> = {};
+    const drops: Record<string, number> = { ...proScanResults.selection?.exclusions };
     const rows = proScanResults.topPicks
       .filter((pick: any) => {
         const score = pick.confidence ?? pick.scoreV2?.final?.confidence ?? pick.score;
@@ -1317,20 +1328,21 @@ export default function ScannerPage() {
         const ind = pick.indicators || {};
         const scoreV2 = pick.scoreV2;
         // Headline = trust-capped condition match from the API (Part J). Legacy fallbacks only for older payloads.
-        const conf = pick.confidence ?? scoreV2?.final?.confidence ?? pick.score;
+        const metrics = proCandidateMetrics(pick);
+        const conf = metrics.confidence!;
         const matchConf = pick.matchConfidence ?? conf;
-        const dir = (pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL') as 'LONG' | 'SHORT' | 'NEUTRAL';
-        const qual = scoreV2?.final?.qualityTier ?? (conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low');
-        const pickRsi = pick.rsi ?? ind.rsi;
-        const adxVal = pick.adx ?? ind.adx ?? 0;
-        const atr = pick.atr ?? ind.atr ?? 0;
-        const priceVal = pick.price ?? ind.price ?? 0;
-        const atrPct = priceVal > 0 ? (atr / priceVal) * 100 : (ind.atr_percent ?? 0);
+        const dir = metrics.direction as 'LONG' | 'SHORT' | 'NEUTRAL';
+        const qual = metrics.quality;
+        const pickRsi = metrics.rsi ?? undefined;
+        const adxVal = metrics.adx ?? undefined;
+        const atr = pick.atr ?? ind.atr;
+        const priceVal = metrics.price ?? undefined;
+        const atrPct = metrics.atrPct ?? undefined;
         const trendOk = dir === 'LONG' ? (pick.signals?.bullish ?? 0) > (pick.signals?.bearish ?? 0) : dir === 'SHORT' ? (pick.signals?.bearish ?? 0) > (pick.signals?.bullish ?? 0) : false;
         const momOk = pickRsi != null && ((dir === 'LONG' && pickRsi > 45) || (dir === 'SHORT' && pickRsi < 55));
         const flowOk = dir === 'LONG' ? (pick.signals?.bullish ?? 0) >= (pick.signals?.neutral ?? 0) : dir === 'SHORT' ? (pick.signals?.bearish ?? 0) >= (pick.signals?.neutral ?? 0) : false;
-        const tfA = [trendOk, momOk, flowOk, dir !== 'NEUTRAL'].filter(Boolean).length;
-        const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
+        const tfA = metrics.alignmentAvailable ? metrics.alignment : undefined;
+        const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct != null && atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
         const rec = pick.institutionalFilter?.recommendation;
         const localQuality = getDataQualityLabel({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
         const dataQuality = pick.dataTrust ? (pick.dataTrust.level === 'INSUFFICIENT_DATA' ? 'MISSING' : pick.dataTrust.level === 'GOOD' ? 'GOOD' : 'DEGRADED') : localQuality;
@@ -1347,8 +1359,8 @@ export default function ScannerPage() {
           : blockReasons.includes('tf_alignment_low') ? 'Alignment below threshold'
           : strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
           : rangeConfirmationNeeded ? 'Directional setup inside range — confirm break/fade'
-          : tfA >= 4 && qual !== 'low' ? 'Four-factor agreement'
-          : atrPct < 1.5 ? 'Compression setup'
+          : tfA != null && tfA >= 4 && qual !== 'low' ? 'Four-factor agreement'
+          : atrPct != null && atrPct < 1.5 ? 'Compression setup'
           : ind.momentumAccel ? 'Momentum acceleration'
           : trendOk ? 'Trend alignment'
           : 'Mixed evidence';
@@ -1373,41 +1385,9 @@ export default function ScannerPage() {
           barInterval: pick.dataBasis?.barInterval, lastCompletedBarAt: pick.dataBasis?.lastCompletedBarAt ?? null,
         } as ScreenerRow;
       })
-      .filter((row: ScreenerRow) => {
-        const drop = (k: string) => { drops[k] = (drops[k] ?? 0) + 1; return false; };
-        if (proDirection !== 'all' && ((proDirection === 'long' && row.direction !== 'LONG') || (proDirection === 'short' && row.direction !== 'SHORT'))) return drop('Bias');
-        if (proQuality !== 'all' && row.quality !== proQuality) return drop('Quality');
-        if (row.confidence < proMinConfidence) return drop(`Min confidence ${proMinConfidence}`);
-        if (row.tfAlignment != null && row.tfAlignment < proMtfAlignment) return drop(`Alignment ${proMtfAlignment}/4+`);
-        if (proVolState !== 'all') {
-          const atr = row.atrPct ?? 0;
-          if (proVolState === 'low' && atr > 1.5) return drop('Vol state: Low');
-          if (proVolState === 'moderate' && (atr < 1.5 || atr > 3)) return drop('Vol state: Moderate');
-          if (proVolState === 'high' && atr < 3) return drop('Vol state: High');
-        }
-        if (proSqueeze === 'squeeze' && !row.squeeze) return drop('Squeeze: In squeeze');
-        if (proPresetConditions.requireRelativeStrength) {
-          if (row.sectorRelStr == null) return drop('Relative strength: no RS data for row');
-          if (row.sectorRelStr <= 0) return drop('Relative strength: not outperforming');
-        }
-        if (proPresetConditions.minAdx != null && !(row.adx != null && row.adx >= proPresetConditions.minAdx)) return drop(`ADX ≥ ${proPresetConditions.minAdx}`);
-        if (proPresetConditions.maxAdx != null && !(row.adx != null && row.adx < proPresetConditions.maxAdx)) return drop(`ADX < ${proPresetConditions.maxAdx}`);
-        if (proPresetConditions.id === 'momentum' && row.rsi != null) {
-          const ok = row.direction === 'LONG' ? row.rsi >= 55 && row.rsi <= 70 : row.direction === 'SHORT' ? row.rsi >= 30 && row.rsi <= 45 : false;
-          if (!ok) return drop('RSI momentum zone (55–70 long / 30–45 short)');
-        }
-        if (proPresetConditions.id === 'mean_reversion' && row.rsi != null && !(row.rsi <= 35 || row.rsi >= 65)) return drop('RSI extreme (≤ 35 or ≥ 65)');
-        return true;
-      })
-      .sort((a: ScreenerRow, b: ScreenerRow) => {
-        const delta = proSort === 'confidence' ? b.confidence - a.confidence
-          : proSort === 'volatility' ? (b.atrPct ?? -Infinity) - (a.atrPct ?? -Infinity)
-          : proSort === 'trend' ? (b.adx ?? -Infinity) - (a.adx ?? -Infinity) : a.rank - b.rank;
-        return (Number.isFinite(delta) ? delta : 0) || a.symbol.localeCompare(b.symbol);
-      })
       .map((row: ScreenerRow, index: number) => ({ ...row, rank: index + 1 }));
     return { rows, drops };
-  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions, currentRegime, proSort]);
+  }, [proScanResults, currentRegime, proAsset]);
 
   /* ─── Pro scan row click ─── */
   const handleProRowClick = useCallback((row: ScreenerRow) => {
@@ -1684,10 +1664,14 @@ export default function ScannerPage() {
             ) : rankedRows.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : v2PartialLoading ? (
-              <RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+              <>
+                <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+                <div className="hidden md:block"><RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} /></div>
+              </>
             ) : (
               <>
-              <div className="overflow-x-auto -mx-1">
+              <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+              <div className="hidden overflow-x-auto -mx-1 md:block">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
@@ -1869,7 +1853,7 @@ export default function ScannerPage() {
                   </div>
                   <div>
                     <label htmlFor="pro-vol-state" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Vol State</label>
-                    <select id="pro-vol-state" value={proVolState} onChange={e => setProVolState(e.target.value)}
+                    <select id="pro-vol-state" value={proVolState} onChange={e => setProVolState(e.target.value as ProScanFilters['volatility'])}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value="all">All</option><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option>
                     </select>
@@ -1927,8 +1911,7 @@ export default function ScannerPage() {
           {/* Strategy Templates */}
           <ScanTemplatesBar onSelect={applyTemplate} onClear={clearTemplate} activeId={activeTemplateId} />
 
-          {/* Filters bar */}
-          {proScanResults && (
+          {/* Filters apply to the next manual scan, before the result limit. */}
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
               <div className="flex items-center gap-2">
                 <label htmlFor="pro-filter-bias" className="text-[11px] uppercase text-slate-500">Bias:</label>
@@ -1956,7 +1939,7 @@ export default function ScannerPage() {
                 <button type="button" onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
               </div>
             </div>
-          )}
+          <p className="text-xs text-slate-400">Run Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Fast mode enriches up to 10 leaders; candidates missing a required input are counted as unavailable.</p>
 
           {/* Pro Scan Error */}
           {proScanError && (
@@ -1988,7 +1971,9 @@ export default function ScannerPage() {
               </div>
               <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                 <span>Scanned: {proScanResults.scanned ?? '—'}</span>
-                <span>Returned shortlist: {proScanResults.topPicks?.length ?? 0} · display filters apply to these candidates only</span>
+                <span>Evaluated: {proScanResults.selection?.evaluated ?? '—'} · Matched: {proScanResults.selection?.matched ?? '—'} · Returned: {proScreenerRows.length}</span>
+                {proScanResults.selection?.beyondLimit > 0 && <span>{proScanResults.selection.beyondLimit} additional matches beyond the {proScanResults.selection.limit}-result limit</span>}
+                {proScanResults.selection?.unavailable > 0 && <span>{proScanResults.selection.unavailable} candidates lack data required by these filters</span>}
                 <span>Duration: {proScanResults.duration ?? '—'}</span>
                 <span>Requested: {proScanResults.requestedType} · {proScanResults.requestedTimeframe} · {proScanResults.requestedDepth}</span>
                 <span>Executed: {proScanResults.mode ?? 'Unavailable'}</span>
@@ -1997,12 +1982,12 @@ export default function ScannerPage() {
               </div>
               {Object.keys(proFilterDrops).length > 0 && (
                 <div className="mb-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-                  {proScanResults.topPicks?.length ?? 0} returned · {proScreenerRows.length} shown · removed by your filters: {Object.entries(proFilterDrops).map(([k, n]) => `${k} (${n})`).join(', ')}. Loosen a filter to see them.
+                  {proScanResults.selection?.excluded ?? 0} excluded before ranking limit · first exclusion reason per candidate: {Object.entries(proFilterDrops).map(([k, n]) => `${k} (${n})`).join(', ')}. Adjust filters and run again; unavailable inputs need a deeper scan or provider recovery.
                 </div>
               )}
               {proBulkViewMode === 'cards'
                 ? <ProScannerCards rows={proScreenerRows} onRowClick={handleProRowClick} />
-                : <ScreenerTable rows={proScreenerRows} emptyMessage={proScanResults.topPicks?.length ? 'Scan completed. Your filters excluded every returned candidate; review the exclusions above.' : 'Scan completed with no returned candidates. Review universe coverage and data availability.'} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
+                : <ScreenerTable rows={proScreenerRows} emptyMessage="No evaluated candidates satisfy the selected filters. Review exclusions, universe coverage, and data availability." onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
               <div className="mt-2 text-[11px] text-slate-600">
                 Bias within these {proScreenerRows.length} Pro matches (from {proScanResults.scanned ?? '—'} {proAsset} symbols scanned) · Regime: {currentRegime.toUpperCase()} · {proScreenerRows.filter(r => r.direction === 'LONG').length} long / {proScreenerRows.filter(r => r.direction === 'SHORT').length} short / {proScreenerRows.filter(r => r.direction === 'NEUTRAL').length} neutral. This describes your filtered universe, not the whole market.
               </div>

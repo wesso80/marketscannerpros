@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://marketscannerpros.app/tools/golden-egg' },
   title: "Deep Analysis",
   description:
     "Educational single-symbol deep analysis combining technical indicators, AI context, options flow, news sentiment, and earnings data.",

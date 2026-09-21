@@ -33,7 +33,7 @@ const SECTION_LABELS: Record<keyof HealthPayload["sections"], string> = {
   eveningPacket: "Evening Packet Cron",
   macroIngest: "Macro Ingest (FRED)",
   aiSignals: "AI Signals (24h)",
-  killSwitches: "Kill Switches",
+  killSwitches: "Research Controls",
 };
 
 const STATUS_STYLES: Record<Status, { bg: string; fg: string; label: string }> = {

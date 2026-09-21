@@ -5,10 +5,9 @@
  * Bound to InternalResearchScore + EvidenceStack + DataTruth so it can
  * never speak outside the data the operator is actually looking at.
  *
- * BOUNDARY: ARCA is forbidden from emitting execution-grade language
- * (buy / sell / execute / place order / position size / deploy). The
- * server prompt enforces this; the output schema does not contain any
- * field that could carry an order instruction.
+ * BOUNDARY: Private desk research may discuss buy/sell scenarios and risk.
+ * ARCA cannot route, place, or claim to execute broker orders. The server
+ * prompt and response validator enforce this across all text fields.
  */
 
 import type {
@@ -157,6 +156,10 @@ export interface ArcaValidationResult {
 const FORBIDDEN_OUTPUT_PHRASES = [
   // Substring match, case-insensitive. Any of these in any field => reject.
   // These all imply broker execution — still hard-banned even in admin desk mode.
+  "execute order",
+  "execute trade",
+  "route order",
+  "connect broker",
   "place order",
   "placed order",
   "send to broker",
@@ -215,6 +218,8 @@ export function validateArcaOutputWithEvidence(
   if (!isStringArray(o.reasoning)) errors.push("reasoning must be string[]");
   if (!isStringArray(o.evidence)) errors.push("evidence must be string[]");
   if (!isStringArray(o.risks)) errors.push("risks must be string[]");
+  if (o.groundingCitations !== undefined && !isStringArray(o.groundingCitations)) errors.push("groundingCitations must be string[]");
+  if (o.unsupportedClaimNotice !== undefined && typeof o.unsupportedClaimNotice !== "string") errors.push("unsupportedClaimNotice must be a string");
   if (
     o.classification !== "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION" &&
     o.classification !== "ADMIN_DESK_COPILOT_NOT_BROKER_EXECUTION"
@@ -229,6 +234,8 @@ export function validateArcaOutputWithEvidence(
       ...(o.reasoning as string[]),
       ...(o.evidence as string[]),
       ...(o.risks as string[]),
+      ...((o.groundingCitations as string[] | undefined) ?? []),
+      (o.unsupportedClaimNotice as string | undefined) ?? "",
     ]
       .join("\n")
       .toLowerCase();

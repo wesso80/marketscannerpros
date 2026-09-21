@@ -30,6 +30,8 @@ import { deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, ass
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
+import { atrResearchLevels } from '@/lib/scanner/atrResearchLevels';
+import { parseProFilters, selectProCandidates, type ProScanFilters, type ProScanSort } from '@/lib/scanner/proSelection';
 import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 
 export const runtime = "nodejs";
@@ -832,6 +834,8 @@ function localDemoBulkScanResponse(args: {
   timeframe: string;
   mode: BulkScanMode;
   requestedUniverseSize: number;
+  filters: ProScanFilters;
+  sort: ProScanSort;
   reason: string;
 }) {
   const symbolsByType: Record<'equity' | 'crypto' | 'forex', string[]> = {
@@ -908,7 +912,7 @@ function localDemoBulkScanResponse(args: {
     mode: args.mode,
     scanned: topPicks.length,
     duration: '0.1s',
-    topPicks: institutional.topPicks,
+    ...selectProCandidates(institutional.topPicks, args.filters, args.sort),
     blockedByInstitutionalFilter: institutional.blockedCount,
     apiCallsUsed: 0,
     apiCallsCap: 0,
@@ -1272,14 +1276,7 @@ function classifyStrategy(ind: Indicators, direction: string): string {
 
 /** Compute entry / stop / target from ATR and direction */
 function computeTradeParams(price: number, atrVal: number | undefined, direction: string) {
-  const atrSafe = Number.isFinite(atrVal) && atrVal! > 0 ? atrVal! : price * 0.02;
-  const dirLabel = direction === 'bearish' ? 'SHORT' : 'LONG';
-  const entry = price;
-  const stop = dirLabel === 'LONG' ? price - atrSafe * 1.5 : price + atrSafe * 1.5;
-  const target = dirLabel === 'LONG' ? price + atrSafe * 3 : price - atrSafe * 3;
-  const risk = Math.abs(entry - stop);
-  const rMultiple = risk > 0 ? Math.round((Math.abs(target - entry) / risk) * 10) / 10 : 0;
-  return { entry, stop: Math.max(0, stop), target: Math.max(0, target), rMultiple };
+  return atrResearchLevels(price, atrVal, direction);
 }
 
 /** Enrich a crypto pick with full CoinGecko OHLC-derived indicators */
@@ -1336,7 +1333,7 @@ function enrichCryptoPickFromAV(pick: any, avInd: Partial<Indicators>): any {
 
 async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe: string) {
   const maxCoinsByApiCap = LIGHT_SCAN_MAX_API_CALLS * LIGHT_SCAN_PER_PAGE;
-  const cappedCoins = clamp(maxCoins, 100, Math.min(15000, maxCoinsByApiCap));
+  const cappedCoins = clamp(maxCoins, 1, Math.min(15000, maxCoinsByApiCap));
   const pageCount = Math.ceil(cappedCoins / LIGHT_SCAN_PER_PAGE);
   const markets: any[] = [];
   let apiCallsUsed = 0;
@@ -1461,7 +1458,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
 
   return {
     scanned: ranked.length,
-    topPicks: enrichedPicks,
+    topPicks: ranked.map(pick => enrichedPicks.find(enriched => enriched.symbol === pick.symbol) ?? pick),
     sourceCoinsFetched: markets.length,
     apiCallsUsed,
     apiCallsCap: LIGHT_SCAN_MAX_API_CALLS,
@@ -1787,7 +1784,7 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
 
   // Read pre-cached indicators for the full equity universe (DB-backed)
   const equityUniverse = await getUniverseFromDB('equity');
-  const symbolsToScan = equityUniverse.slice(0, Math.max(30, universeSize));
+  const symbolsToScan = equityUniverse.slice(0, Math.max(1, universeSize));
   // FAST bulk read: whole universe from the worker cache in TWO DB queries
   // (no per-symbol round-trips, no live AV fallback).
   const cacheMap = await getBulkCachedScanDataFast(symbolsToScan);
@@ -1808,13 +1805,14 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     if (ticker && !moverBiasMap.has(ticker)) moverBiasMap.set(ticker, 0.4);
   }
 
-  // Any top-mover symbols not already in the universe get added
+  // Movers can fill a short universe without exceeding the requested or tier cap.
   for (const ticker of moverBiasMap.keys()) {
+    if (symbolsToScan.length >= universeSize) break;
     if (!symbolsToScan.includes(ticker)) symbolsToScan.push(ticker);
   }
 
   // If cache didn't have enough data, fall back to light scan
-  if (cacheMap.size < 10) {
+  if (cacheMap.size < Math.min(10, symbolsToScan.length)) {
     console.warn(`[bulk-scan/cached] Only ${cacheMap.size} symbols in cache, falling back to light scan`);
     return null; // Caller will use runLightEquityScan
   }
@@ -1876,9 +1874,11 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   }
 
   // Also score movers that weren't in cache using bulk quotes fallback
-  const uncachedMovers = Array.from(moverBiasMap.keys()).filter(t => !cacheMap.has(t));
+  let apiCallsUsed = moverData.apiCallsUsed;
+  const uncachedMovers = Array.from(moverBiasMap.keys()).filter(t => symbolsToScan.includes(t) && !cacheMap.has(t));
   if (uncachedMovers.length > 0) {
     const quoteResult = await fetchAlphaBulkQuotes(uncachedMovers, Math.max(0, 3));
+    apiCallsUsed += quoteResult.apiCallsUsed;
     for (const [sym, quote] of quoteResult.priceMap.entries()) {
       const light = scoreLightEquityCandidate(sym, quote, timeframe, moverBiasMap.get(sym) ?? 0);
       if (light) scored.push({ ...light, indicators: { ...light.indicators } });
@@ -2075,9 +2075,9 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
 
   return {
     scanned: scored.length,
-    topPicks: ranked.slice(0, 10),
+    topPicks: ranked,
     sourceSymbols: symbolsToScan.length,
-    apiCallsUsed: moverData.apiCallsUsed,
+    apiCallsUsed,
     apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
     effectiveUniverseSize: symbolsToScan.length,
     cacheHitRate: `${cacheMap.size}/${symbolsToScan.length}`,
@@ -2104,7 +2104,7 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
   const equityUniverse = await getUniverseFromDB('equity');
   const candidateSymbols = new Set<string>(equityUniverse);
   for (const ticker of moverBiasMap.keys()) candidateSymbols.add(ticker);
-  const maxCandidates = Math.max(30, Math.floor(universeSize || 200));
+  const maxCandidates = Math.max(1, Math.floor(universeSize || 200));
   const prioritized = [
     ...Array.from(moverBiasMap.keys()),
     ...equityUniverse.filter((symbol) => !moverBiasMap.has(symbol)),
@@ -2178,7 +2178,7 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
 
   return {
     scanned: ranked.length,
-    topPicks: enrichedEquity,
+    topPicks: ranked.map(pick => enrichedEquity.find(enriched => enriched.symbol === pick.symbol) ?? pick),
     sourceSymbols: candidates.length,
     apiCallsUsed: moverData.apiCallsUsed + quoteResult.apiCallsUsed,
     apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
@@ -2230,7 +2230,7 @@ async function runForexBulkScan(startTime: number, timeframe: string) {
 
   return {
     scanned: scored.length,
-    topPicks: scored.slice(0, 20),
+    topPicks: scored,
     sourceSymbols: symbolsToScan.length,
     apiCallsUsed,
     apiCallsCap: maxPairs,
@@ -2308,36 +2308,24 @@ function applyInstitutionalFilterToTopPicks(
     let enrichedSetup  = pick?.setup;
     let enrichedConfidence = pick?.confidence;
 
-    if (!hasEntry && pickPrice > 0) {
-      const atrSafe = Number.isFinite(pickAtr) && pickAtr > 0
-        ? pickAtr
-        : pickPrice * 0.02; // fallback 2% of price
-      if (pickDir === 'bullish') {
-        enrichedEntry  = Math.round(pickPrice * 100) / 100;
-        enrichedStop   = Math.round((pickPrice - 1.5 * atrSafe) * 100) / 100;
-        enrichedTarget = Math.round((pickPrice + 3 * atrSafe) * 100) / 100;
-      } else if (pickDir === 'bearish') {
-        enrichedEntry  = Math.round(pickPrice * 100) / 100;
-        enrichedStop   = Math.round((pickPrice + 1.5 * atrSafe) * 100) / 100;
-        enrichedTarget = Math.round((pickPrice - 3 * atrSafe) * 100) / 100;
-      } else {
-        // neutral — still provide levels based on range expectation
-        enrichedEntry  = Math.round(pickPrice * 100) / 100;
-        enrichedStop   = Math.round((pickPrice - 1.0 * atrSafe) * 100) / 100;
-        enrichedTarget = Math.round((pickPrice + 1.5 * atrSafe) * 100) / 100;
-      }
-      const risk = Math.abs(enrichedEntry - enrichedStop);
-      const reward = Math.abs(enrichedTarget - enrichedEntry);
-      enrichedRMultiple = risk > 0 ? Math.round((reward / risk) * 100) / 100 : 0;
+    const hasObservedAtr = Number.isFinite(pickAtr) && pickAtr > 0;
+    if (!hasEntry || !hasObservedAtr || pickDir === 'neutral') {
+      const levels = atrResearchLevels(pickPrice, pickAtr, pickDir);
+      enrichedEntry = levels.entry;
+      enrichedStop = levels.stop;
+      enrichedTarget = levels.target;
+      enrichedRMultiple = levels.rMultiple;
     }
 
     // Derive a setup label from indicator signature if missing
     if (!enrichedSetup) {
-      const adxVal = Number(pick?.indicators?.adx ?? 0);
-      const rsiVal = Number(pick?.indicators?.rsi ?? 50);
+      const adxVal = Number(pick?.indicators?.adx ?? NaN);
+      const rsiVal = Number(pick?.indicators?.rsi ?? NaN);
       const arUp   = Number(pick?.indicators?.aroonUp ?? pick?.indicators?.aroon_up ?? 0);
       const arDn   = Number(pick?.indicators?.aroonDown ?? pick?.indicators?.aroon_down ?? 0);
-      if (adxVal >= 25 && (arUp > 70 || arDn > 70)) {
+      if (!Number.isFinite(adxVal) || !Number.isFinite(rsiVal) || pickDir === 'neutral') {
+        enrichedSetup = 'insufficient_evidence';
+      } else if (adxVal >= 25 && (arUp > 70 || arDn > 70)) {
         enrichedSetup = pickDir === 'bullish' ? 'trend_pullback_long' : 'trend_pullback_short';
       } else if (adxVal >= 25 && Math.abs(arUp - arDn) > 40) {
         enrichedSetup = 'breakout';
@@ -2409,7 +2397,7 @@ function applyInstitutionalFilterToTopPicks(
     if (confDiff !== 0) return confDiff;
     const left = Number(a?.compositeV2?.composite ?? a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
     const right = Number(b?.compositeV2?.composite ?? b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
-    return right - left;
+    return right - left || a.symbol.localeCompare(b.symbol);
   });
   return {
     topPicks: ranked,
@@ -2459,7 +2447,7 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
-  let localFallbackArgs: { type: 'equity' | 'crypto' | 'forex'; timeframe: string; mode: BulkScanMode; requestedUniverseSize: number } | null = null;
+  let localFallbackArgs: { type: 'equity' | 'crypto' | 'forex'; timeframe: string; mode: BulkScanMode; requestedUniverseSize: number; filters: ProScanFilters; sort: ProScanSort } | null = null;
   
   try {
     const session = await getSessionFromCookie();
@@ -2468,6 +2456,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    let filters: ProScanFilters;
+    const sort = body.sort ?? 'rank';
+    try {
+      filters = parseProFilters(body.filters);
+      if (!['rank', 'confidence', 'volatility', 'trend'].includes(sort)) throw new Error('Invalid sort');
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid filters' }, { status: 400 });
+    }
     const { type, timeframe = '1d' } = body; // 'equity', 'crypto', or 'forex'
     const validTimeframes = ['15m', '30m', '1h', '1d'];
     const requestedMode = String(body?.mode || '').toLowerCase();
@@ -2485,7 +2481,7 @@ export async function POST(req: NextRequest) {
       type: ['equity', 'crypto', 'forex'].includes(type) ? type : 'crypto',
       timeframe: validTimeframes.includes(timeframe) ? timeframe : '1d',
       mode,
-      requestedUniverseSize,
+      requestedUniverseSize, filters, sort,
     };
 
     const effectiveTier = await getEffectiveTier(session.workspaceId, session.tier, session.cid, dbQuery);
@@ -2528,7 +2524,7 @@ export async function POST(req: NextRequest) {
         mode,
         scanned: lightResult.scanned,
         duration: `${duration}s`,
-        topPicks: institutional.topPicks,
+        ...selectProCandidates(institutional.topPicks, filters, sort),
         sourceCoinsFetched: lightResult.sourceCoinsFetched,
         blockedByInstitutionalFilter: institutional.blockedCount,
         apiCallsUsed: lightResult.apiCallsUsed,
@@ -2566,7 +2562,7 @@ export async function POST(req: NextRequest) {
         mode: cachedResult ? 'cached' : (isLightMode ? 'hybrid' : mode),
         scanned: equityResult.scanned,
         duration: `${duration}s`,
-        topPicks: institutional.topPicks,
+        ...selectProCandidates(institutional.topPicks, filters, sort),
         sourceSymbols: equityResult.sourceSymbols,
         blockedByInstitutionalFilter: institutional.blockedCount,
         apiCallsUsed: equityResult.apiCallsUsed,
@@ -2613,7 +2609,7 @@ export async function POST(req: NextRequest) {
         mode: 'hybrid',
         scanned: forexResult.scanned,
         duration: `${duration}s`,
-        topPicks: institutional.topPicks,
+        ...selectProCandidates(institutional.topPicks, filters, sort),
         sourceSymbols: forexResult.sourceSymbols,
         blockedByInstitutionalFilter: institutional.blockedCount,
         apiCallsUsed: forexResult.apiCallsUsed,
@@ -2630,7 +2626,7 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    const universe = await getUniverseFromDB(type as 'equity' | 'crypto');
+    const universe = (await getUniverseFromDB(type as 'equity' | 'crypto')).slice(0, universeSize);
     const results: any[] = [];
     const errors: string[] = [];
     
@@ -2725,6 +2721,7 @@ export async function POST(req: NextRequest) {
       
       // Progress check - stop if taking too long
       if (Date.now() - startTime > 55000) {
+        excluded.push(...universe.slice(i + BATCH_SIZE).map(symbol => ({ symbol, reason: 'time_budget_exhausted' })));
         console.log(`[bulk-scan] Time limit approaching, stopping early`);
         break;
       }
@@ -2736,8 +2733,7 @@ export async function POST(req: NextRequest) {
     
     // Sort by conviction strength — distance from 50 — so both bullish AND bearish setups rank high
     const topPicks = results
-      .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50))
-      .slice(0, 10);
+      .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
     const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
       type,
       timeframe: selectedTimeframe,
@@ -2756,7 +2752,7 @@ export async function POST(req: NextRequest) {
       mode,
       scanned: results.length,
       duration: `${duration}s`,
-      topPicks: institutional.topPicks,
+      ...selectProCandidates(institutional.topPicks, filters, sort),
       blockedByInstitutionalFilter: institutional.blockedCount,
       effectiveUniverseSize: universe.length,
       universe: {
@@ -2772,7 +2768,7 @@ export async function POST(req: NextRequest) {
         source: type === 'crypto' ? 'coingecko_ohlc' : 'alpha_vantage',
         computedAt: new Date(),
         stale: false,
-        coverageScore: results.length ? Math.max(0, 100 - Math.min(50, errors.length * 5)) : 0,
+        coverageScore: Math.round(results.length / Math.max(1, universe.length) * 100),
         warnings: [
           ...(universeSize < requestedUniverseSize ? [`Universe capped at ${universeSize} for ${effectiveTier}.`] : []),
           ...errors.slice(0, 5),

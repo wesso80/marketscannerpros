@@ -25,9 +25,14 @@ export const ADMIN_LIFECYCLE_STATES: readonly AdminLifecycleState[] = [
   "CONFIRMED", "PAID", "EXHAUSTED", "INVALIDATED",
 ] as const;
 
-/** States that should be hidden from the active command queue by default. */
+/** Completed lifecycles cannot be reopened through queue transitions. */
 export const TERMINAL_STATES: ReadonlySet<AdminLifecycleState> = new Set([
-  "IGNORE", "PAID", "EXHAUSTED", "INVALIDATED",
+  "PAID", "EXHAUSTED", "INVALIDATED",
+]);
+
+/** Ignored research is hidden by default but can return to WATCH. */
+export const INACTIVE_QUEUE_STATES: ReadonlySet<AdminLifecycleState> = new Set([
+  "IGNORE", ...TERMINAL_STATES,
 ]);
 
 export interface MapLifecycleContext {

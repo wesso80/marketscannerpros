@@ -45,7 +45,7 @@ describe("Phase 6 — ARCA system prompt", () => {
 
   it("declares the strict JSON output contract", () => {
     expect(prompt).toContain("classification");
-    expect(prompt).toContain("ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION");
+    expect(prompt).toContain("ADMIN_DESK_COPILOT_NOT_BROKER_EXECUTION");
   });
 });
 
@@ -89,6 +89,15 @@ describe("Phase 6 — output validator", () => {
     expect(v.errors).toEqual([]);
   });
 
+  it("accepts the current private-desk classification and research wording", () => {
+    expect(validateArcaOutput({ ...good, headline: "Long research idea; review entry, stop and take profit from the evidence.", classification: "ADMIN_DESK_COPILOT_NOT_BROKER_EXECUTION" }, "WHY_IS_THIS_RANKED", "AAPL").ok).toBe(true);
+  });
+
+  it.each(["groundingCitations", "unsupportedClaimNotice"])("rejects execution claims in %s", (field) => {
+    const value = field === "groundingCitations" ? ["order has been placed"] : "order has been placed";
+    expect(validateArcaOutput({ ...good, [field]: value }, "WHY_IS_THIS_RANKED", "AAPL").ok).toBe(false);
+  });
+
   it("rejects mode mismatch", () => {
     const v = validateArcaOutput({ ...good, mode: "RED_TEAM_SETUP" }, "WHY_IS_THIS_RANKED", "AAPL");
     expect(v.ok).toBe(false);
@@ -108,7 +117,7 @@ describe("Phase 6 — output validator", () => {
   });
 
   it("rejects forbidden execution phrasing in any text field", () => {
-    const phrases = ["buy now", "sell now", "place order", "execute trade", "deploy capital", "position size"];
+    const phrases = [...ARCA_FORBIDDEN_VERBS, "send to broker", "execute trade", "order has been placed"];
     for (const phrase of phrases) {
       const v = validateArcaOutput(
         { ...good, headline: `You should ${phrase} immediately.` },
@@ -122,7 +131,7 @@ describe("Phase 6 — output validator", () => {
 
   it("rejects forbidden phrasing inside reasoning bullets", () => {
     const v = validateArcaOutput(
-      { ...good, reasoning: ["Trend looks great.", "Operator should buy now to capture move."] },
+      { ...good, reasoning: ["Trend looks great.", "Operator should place order to capture move."] },
       "WHY_IS_THIS_RANKED",
       "AAPL",
     );
@@ -136,8 +145,10 @@ describe("Phase 6 — output validator", () => {
 });
 
 describe("Phase 6 — mode catalog", () => {
-  it("exposes exactly 11 modes", () => {
-    expect(ARCA_ADMIN_MODES.length).toBe(11);
+  it("includes the desk-read mode without duplicate mode identifiers", () => {
+    expect(ARCA_ADMIN_MODES).toContain("DESK_READ");
+    expect(new Set(ARCA_ADMIN_MODES).size).toBe(ARCA_ADMIN_MODES.length);
+    expect(ARCA_ADMIN_MODES.length).toBe(12);
   });
 
   it("provides a label for every mode", () => {
