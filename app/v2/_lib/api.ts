@@ -601,10 +601,24 @@ export function fetchScannerResults(type: 'crypto' | 'equity' = 'equity', timefr
 }
 
 // --- Golden Egg ---
-export function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 'daily', assetType?: string): Promise<GoldenEggResponse> {
+export async function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 'daily', assetType?: string): Promise<GoldenEggResponse> {
   const params = new URLSearchParams({ symbol, timeframe });
   if (assetType) params.set('type', assetType);
-  return apiFetch(`/api/golden-egg?${params}`);
+
+  // Golden Egg fans out to several market-data providers. Bound the client wait
+  // so a slow derivatives source cannot leave the validation workflow loading forever.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    return await apiFetch(`/api/golden-egg?${params}`, { signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Golden Egg timed out after 20 seconds while waiting for market-data providers. Retry the analysis; if it repeats, treat the data as unavailable.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // --- DVE ---
