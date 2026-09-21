@@ -343,13 +343,22 @@ export default function TerminalPage() {
   const { tier } = useUserTier();
   const { selectedSymbol, selectSymbol } = useV2();
   const searchParams = useSearchParams();
-  const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Close Calendar';
+  const requestedType = searchParams.get('type')?.toLowerCase();
+  const requestedTimeframe = searchParams.get('timeframe') || '';
+  const requestedSymbol = searchParams.get('symbol')?.trim().toUpperCase() || '';
+  const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
+    || (requestedType === 'crypto' ? 'Crypto' : 'Close Calendar');
   const [tab, setTab] = useState<TerminalTab>(requestedInitialTab);
-  const [symInput, setSymInput] = useState(selectedSymbol || 'BTCUSD');
+  const [symInput, setSymInput] = useState(requestedSymbol || selectedSymbol || 'BTCUSD');
+  const [cryptoTerminalState, setCryptoTerminalState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
   /* Symbol management */
-  const sym = selectedSymbol || symInput || 'BTCUSD';
-  const marketPath = detectMarketPath(sym);
+  const sym = requestedSymbol || selectedSymbol || symInput || 'BTCUSD';
+  const marketPath: MarketPath = requestedType === 'crypto'
+    ? 'crypto'
+    : requestedType === 'equity'
+      ? 'equity'
+      : detectMarketPath(sym);
   const commodityFutures = marketPath === 'futures' && hasCommoditySessionMap(sym);
   const asset = marketPathToLegacyAsset(marketPath);
   const flowMarketType = marketPath === 'futures' ? 'futures' : marketPath;
@@ -360,7 +369,14 @@ export default function TerminalPage() {
   const fallbackEquityQuick = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN'];
 
   useEffect(() => {
-    const requestedTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
+    const urlSymbol = searchParams.get('symbol')?.trim().toUpperCase();
+    if (urlSymbol) {
+      setSymInput(urlSymbol);
+      selectSymbol(urlSymbol);
+    }
+    const urlType = searchParams.get('type')?.toLowerCase();
+    const requestedTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
+      || (urlType === 'crypto' ? 'Crypto' : undefined);
     if (requestedTab) setTab(requestedTab);
     // Only re-sync when the URL tab param changes; including `tab` here would force
     // user clicks back to the URL value.
@@ -465,8 +481,8 @@ export default function TerminalPage() {
         title="Use Terminal before Backtest."
         subtitle="Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically."
         actions={[
-          { label: 'Back to Golden Egg', variant: 'primary', href: '/tools/golden-egg' },
-          { label: 'Continue to Backtest', variant: 'secondary', href: '/tools/workspace?tab=backtest' },
+          { label: 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath === 'crypto' ? 'crypto' : 'equity'}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath === 'crypto' ? 'crypto' : 'equity'}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
         ]}
         metrics={[
@@ -745,7 +761,7 @@ export default function TerminalPage() {
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
           <TerminalSubviewFrame tab="Options Terminal" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
-              <OptionsTerminalView />
+              <OptionsTerminalView symbol={sym} />
             </Suspense>
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -756,7 +772,7 @@ export default function TerminalPage() {
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
           <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
-              <CryptoTerminalView />
+              <CryptoTerminalView symbol={sym} onSymbolChange={(next) => { setSymInput(next); selectSymbol(next); }} onDataStateChange={setCryptoTerminalState} />
             </Suspense>
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -1090,7 +1106,7 @@ export default function TerminalPage() {
       {tab === 'Options Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
           <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
-            <OptionsConfluence embeddedInTerminal />
+            <OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} />
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
@@ -1099,7 +1115,7 @@ export default function TerminalPage() {
       {tab === 'Options Flow' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
           <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
-            <OptionsFlow embeddedInTerminal />
+            <OptionsFlow embeddedInTerminal symbol={sym} />
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
