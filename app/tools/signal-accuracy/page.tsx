@@ -291,8 +291,8 @@ export default function SignalAccuracyPage() {
             </div>
           ) : (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-8 text-center">
-              <p className="text-slate-400 text-sm">No historical observation data available yet.</p>
-              <p className="text-slate-500 text-xs mt-1">Observations are recorded during scanner runs and labeled after their horizon expires.</p>
+              <p className="text-slate-400 text-sm">No aggregate accuracy group meets the selected minimum sample threshold.</p>
+              <p className="text-slate-500 text-xs mt-1">Recent observations can still appear below while more outcomes are labeled.</p>
             </div>
           )}
 
