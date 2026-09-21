@@ -18,6 +18,11 @@ interface CommodityData {
   category: string;
   date: string;
   history: { date: string; value: number }[];
+  source: 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY';
+  sourceSymbol?: string;
+  freshnessStatus: 'LIVE' | 'DELAYED' | 'STALE';
+  dataAgeDays: number;
+  eligibleForGate: boolean;
 }
 
 interface CommoditiesResponse {
@@ -29,12 +34,21 @@ interface CommoditiesResponse {
   };
   summary: {
     totalCommodities: number;
+    availableCommodities?: number;
+    staleExcluded?: number;
     gainers: number;
     losers: number;
     avgChange: number;
     topGainer: CommodityData | null;
     topLoser: CommodityData | null;
   };
+  dataHealth?: {
+    gateReady: boolean;
+    eligibleCount: number;
+    totalCount: number;
+    staleSymbols: string[];
+  };
+  sourceAsOf?: string | null;
   lastUpdate: string;
 }
 
@@ -225,12 +239,12 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
   };
 
   const derivedState: DerivedState | null = useMemo(() => {
-    if (!data?.commodities?.length) return null;
+    if (!data?.commodities?.length || data.dataHealth?.gateReady === false) return null;
 
     const byCategory = {
-      Energy: data.byCategory?.Energy || [],
-      Metals: data.byCategory?.Metals || [],
-      Agriculture: data.byCategory?.Agriculture || [],
+      Energy: (data.byCategory?.Energy || []).filter((item) => item.eligibleForGate),
+      Metals: (data.byCategory?.Metals || []).filter((item) => item.eligibleForGate),
+      Agriculture: (data.byCategory?.Agriculture || []).filter((item) => item.eligibleForGate),
     } as const;
 
     const categoryAvg = (Object.keys(byCategory) as CategoryKey[]).reduce((acc, category) => {
@@ -251,7 +265,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
     const rotationClarityRaw = Math.abs(categoryAvg[rotationLeader] - categoryAvg[secondCategory]);
     const rotationClarity = clampScore(rotationClarityRaw * 20);
 
-    const commodities = data.commodities;
+    const commodities = data.commodities.filter((item) => item.eligibleForGate);
     const gainers = commodities.filter((item) => (safeNumber(item.changePercent) ?? 0) > 0).length;
     const breadthScore = clampScore((gainers / commodities.length) * 100);
     const avgAbsMove =
@@ -548,7 +562,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">US/Eastern aligned</span>
               <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">
-                {data?.lastUpdate ? `Updated ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
+                {data?.lastUpdate ? `Fetched ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
               </span>
               <label className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
                 <input id="auto-refresh" name="autoRefresh" type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
@@ -567,6 +581,15 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
       )}
       <main className={embedded ? 'py-2' : 'mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8'}>
         <ComplianceDisclaimer compact />
+        {data?.dataHealth && data.dataHealth.staleSymbols.length > 0 && (
+          <section className={`mt-4 rounded-xl border px-4 py-3 text-sm ${data.dataHealth.gateReady ? 'border-amber-400/30 bg-amber-500/10 text-amber-100' : 'border-rose-400/30 bg-rose-500/10 text-rose-100'}`}>
+            <div className="font-semibold">{data.dataHealth.gateReady ? 'Data degraded — stale rows excluded from analysis' : 'Analysis gate unavailable — insufficient fresh commodity coverage'}</div>
+            <div className="mt-1 text-xs opacity-80">
+              Gate eligible {data.dataHealth.eligibleCount}/{data.dataHealth.totalCount}. Excluded: {data.dataHealth.staleSymbols.join(', ')}.
+              {data.sourceAsOf ? ` Latest eligible source date: ${data.sourceAsOf}.` : ''}
+            </div>
+          </section>
+        )}
         {derivedState && (
           <>
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -749,8 +772,8 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
                   const inflationSensitive = commodity.category === 'Energy' || commodity.symbol === 'GOLD';
                   const growthSensitive = commodity.symbol === 'WTI' || commodity.symbol === 'COPPER' || commodity.category === 'Energy';
                   const usdSensitive = commodity.symbol === 'GOLD' || commodity.symbol === 'SILVER';
-                  const longAllowed = derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
-                  const shortAllowed = derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
+                  const longAllowed = commodity.eligibleForGate && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
+                  const shortAllowed = commodity.eligibleForGate && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
 
                   return (
                     <article key={commodity.symbol} className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/[0.07]">
@@ -801,7 +824,12 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
                         </div>
                       </div>
 
-                      <div className="mt-2 text-right text-[11px] text-white/40">Updated: {commodity.date}</div>
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/40">
+                        <span className={commodity.freshnessStatus === 'STALE' ? 'text-rose-300' : commodity.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>
+                          {commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
+                        </span>
+                        <span>Source date: {commodity.date} · age {commodity.dataAgeDays}d</span>
+                      </div>
                     </article>
                   );
                 })}
@@ -870,8 +898,9 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
 
         {data?.lastUpdate && (
           <div className="mt-6 text-center text-xs text-white/45">
-            Data from Alpha Vantage • Last update: {new Date(data.lastUpdate).toLocaleTimeString()}
-            {autoRefresh && ' • Auto-refreshing every 15 minutes'}
+            Data from Alpha Vantage • Request fetched: {new Date(data.lastUpdate).toLocaleTimeString()}
+            {data.sourceAsOf ? ` • Latest eligible source date: ${data.sourceAsOf}` : ''}
+            {autoRefresh && ' • Refetching every 15 minutes'}
           </div>
         )}
       </main>
