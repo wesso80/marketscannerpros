@@ -167,11 +167,33 @@ export async function GET(req: NextRequest) {
       .filter((snapshot) => snapshot.basis === 'account_equity_v2' && Number.isFinite(snapshot.totalValue) && snapshot.totalValue > 0);
 
     if (riskHistory.length >= 5) {
+      let cashFlowsForRisk: Array<{ effective_date: string; entry_type: string; amount: string }> = [];
+      try {
+        cashFlowsForRisk = await q(
+          `SELECT effective_date, entry_type, amount
+           FROM portfolio_cash_ledger
+           WHERE workspace_id = $1
+             AND entry_type IN ('deposit', 'withdrawal')
+           ORDER BY effective_date ASC`,
+          [workspaceId]
+        ) as Array<{ effective_date: string; entry_type: string; amount: string }>;
+      } catch { /* risk remains computable when no cash ledger exists */ }
+
       const dailyReturns: number[] = [];
       for (let i = 1; i < riskHistory.length; i++) {
-        const prev = riskHistory[i - 1].totalValue;
-        const curr = riskHistory[i].totalValue;
-        if (prev > 0) dailyReturns.push(((curr - prev) / prev) * 100);
+        const prevSnapshot = riskHistory[i - 1];
+        const currSnapshot = riskHistory[i];
+        const prev = prevSnapshot.totalValue;
+        const curr = currSnapshot.totalValue;
+        const prevTs = new Date(prevSnapshot.timestamp).getTime();
+        const currTs = new Date(currSnapshot.timestamp).getTime();
+        const externalFlow = cashFlowsForRisk.reduce((sum, flow) => {
+          const ts = new Date(flow.effective_date).getTime();
+          if (!(ts > prevTs && ts <= currTs)) return sum;
+          const amount = Number(flow.amount || 0);
+          return sum + (flow.entry_type === 'withdrawal' ? -amount : amount);
+        }, 0);
+        if (prev > 0) dailyReturns.push(((curr - prev - externalFlow) / prev) * 100);
       }
       if (dailyReturns.length >= 3) {
         const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
