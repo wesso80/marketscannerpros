@@ -132,12 +132,28 @@ function normalise(raw: AVRaw): OptionsContract | null {
   };
 }
 
+function marketDateKey(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+function isCurrentOrFutureExpiry(expiration: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(expiration) && expiration >= marketDateKey();
+}
+
 function computeExpirations(contracts: OptionsContract[]): ExpirationMeta[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayKey = marketDateKey();
+  const today = new Date(`${todayKey}T00:00:00Z`);
 
   const map = new Map<string, { calls: number; puts: number; totalOI: number }>();
   for (const c of contracts) {
+    if (!isCurrentOrFutureExpiry(c.expiration)) continue;
     const s = map.get(c.expiration) || { calls: 0, puts: 0, totalOI: 0 };
     if (c.type === 'call') s.calls++;
     else s.puts++;
@@ -148,7 +164,7 @@ function computeExpirations(contracts: OptionsContract[]): ExpirationMeta[] {
   return Array.from(map.entries())
     .map(([date, s]) => {
       const d = new Date(date);
-      const dte = Math.max(0, Math.ceil((d.getTime() - today.getTime()) / 86_400_000));
+      const dte = Math.ceil((d.getTime() - today.getTime()) / 86_400_000);
       const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ` (${dte} DTE)`;
       return { date, dte, label, ...s };
     })
@@ -219,9 +235,10 @@ export async function GET(request: NextRequest) {
     const cached = await getCached<{ contracts: OptionsContract[]; provider: string; spot: number; ts: number }>(cacheKey);
 
     if (cached && cached.contracts?.length) {
+      const eligibleCachedContracts = cached.contracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
       const contracts = expirationFilter
-        ? cached.contracts.filter((c) => c.expiration === expirationFilter)
-        : cached.contracts;
+        ? eligibleCachedContracts.filter((c) => c.expiration === expirationFilter)
+        : eligibleCachedContracts;
       if (contracts.length) {
         return NextResponse.json({
           success: true,
@@ -282,15 +299,28 @@ export async function GET(request: NextRequest) {
     await setCached(cacheKey, { contracts: allContracts, provider: usedProvider, spot, ts }, CACHE_TTL.optionsChain).catch(() => {});
 
     /* ── 4. Filter + respond ─────────────────────────────────────── */
+    const eligibleContracts = allContracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
+    if (!eligibleContracts.length) {
+      return NextResponse.json({
+        success: false,
+        symbol,
+        underlyingPrice: spot,
+        expirations: [],
+        contracts: [],
+        provider: usedProvider,
+        cachedAt: ts,
+        error: 'Options provider returned no current or future expirations',
+      } satisfies OptionsChainResponse, { status: 422 });
+    }
     const contracts = expirationFilter
-      ? allContracts.filter((c) => c.expiration === expirationFilter)
-      : allContracts;
+      ? eligibleContracts.filter((c) => c.expiration === expirationFilter)
+      : eligibleContracts;
 
     return NextResponse.json({
       success: true,
       symbol,
       underlyingPrice: spot,
-      expirations: computeExpirations(allContracts),
+      expirations: computeExpirations(eligibleContracts),
       contracts,
       provider: usedProvider,
       cachedAt: ts,
