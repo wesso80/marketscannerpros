@@ -17,10 +17,17 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const coin_id = searchParams.get('coin_id') || undefined;
-  const type = (searchParams.get('type') || undefined) as 'news' | 'guides' | undefined;
+  const requestedType = searchParams.get('type');
+  if (requestedType && !['all', 'news', 'guides'].includes(requestedType)) {
+    return NextResponse.json({ error: 'Unsupported news type.' }, { status: 400 });
+  }
+  const type = requestedType && requestedType !== 'all' ? requestedType as 'news' | 'guides' : undefined;
+  if (type === 'guides' && !coin_id?.trim()) {
+    return NextResponse.json({ error: 'Choose a coin to load its guides.' }, { status: 400 });
+  }
   const language = searchParams.get('language') || 'en';
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const per_page = Math.min(parseInt(searchParams.get('per_page') || '20', 10), 20);
+  const page = Math.max(1, Math.min(parseInt(searchParams.get('page') || '1', 10) || 1, 20));
+  const per_page = Math.max(1, Math.min(parseInt(searchParams.get('per_page') || '20', 10) || 20, 20));
 
   const articles = await getCryptoNews({ coin_id, type, language, page, per_page });
 
@@ -29,8 +36,8 @@ export async function GET(req: NextRequest) {
   }
 
   const lastUpdated = articles.reduce<string | null>((latest, article: any) => {
-    const published = article?.published_at ?? article?.created_at ?? null;
-    if (!published) return latest;
+    const published = article?.posted_at ?? article?.published_at ?? article?.created_at ?? null;
+    if (!published || !Number.isFinite(Date.parse(published))) return latest;
     if (!latest) return published;
     return new Date(published).getTime() > new Date(latest).getTime() ? published : latest;
   }, null);

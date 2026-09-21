@@ -75,9 +75,10 @@ describe('post-remediation audit round 2 regressions', () => {
     const api = read('app/api/crypto/public-treasury/route.ts');
     const widget = read('components/PublicTreasuryWidget.tsx');
 
-    expect(api).toContain('hasCostBasis: Number.isFinite(c.total_entry_value_usd) && c.total_entry_value_usd > 0');
-    expect(api).toContain('profitLossUsd: Number.isFinite(c.total_entry_value_usd)');
-    expect(api).toContain(': null');
+    const valuation = read('lib/crypto/treasuryValuation.ts');
+    expect(api).toContain('...treasuryValueVsCost(c.total_holdings, c.total_entry_value_usd, c.total_current_value_usd)');
+    expect(valuation).toContain('Number.isFinite(cost) && cost > 0');
+    expect(valuation).toContain('profitLossUsd: available ? value - cost : null');
     expect(widget).toContain('Cost basis not supplied');
     expect(widget).toContain('Unavailable');
   });
