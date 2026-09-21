@@ -171,7 +171,29 @@ async function checkSmartAlerts(req: NextRequest) {
   }
 }
 
-const INTERNAL_FETCH_TIMEOUT_MS = 15_000; // 15s max per internal API call
+const INTERNAL_FETCH_TIMEOUT_MS = 35_000; // derivatives payload can be large; provider timeout is 30s
+
+function internalRequestHeaders(): HeadersInit {
+  return CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {};
+}
+
+async function fetchInternalJson(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: internalRequestHeaders(),
+      signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[smart-check] Internal fetch failed ${res.status}: ${new URL(url).pathname}`);
+      return null;
+    }
+    return await res.json();
+  } catch (error) {
+    console.warn(`[smart-check] Internal fetch error: ${new URL(url).pathname}`, error);
+    return null;
+  }
+}
 
 async function fetchDerivativesData(req: NextRequest): Promise<DerivativesData> {
   const host = req.headers.get('host') || 'localhost:5000';
@@ -179,10 +201,10 @@ async function fetchDerivativesData(req: NextRequest): Promise<DerivativesData> 
   const baseUrl = `${protocol}://${host}`;
 
   const [oiRes, fundingRes, lsRes, fgRes] = await Promise.all([
-    fetch(`${baseUrl}/api/open-interest`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
-    fetch(`${baseUrl}/api/funding-rates`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
-    fetch(`${baseUrl}/api/long-short-ratio`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
-    fetch(`${baseUrl}/api/fear-greed`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
+    fetchInternalJson(`${baseUrl}/api/open-interest`),
+    fetchInternalJson(`${baseUrl}/api/funding-rates`),
+    fetchInternalJson(`${baseUrl}/api/long-short-ratio`),
+    fetchInternalJson(`${baseUrl}/api/fear-greed`),
   ]);
 
   return {
@@ -624,6 +646,7 @@ async function savePerCoinSnapshots(req: NextRequest) {
 
     const res = await fetch(`${baseUrl}/api/crypto-derivatives?mode=multi`, {
       cache: 'no-store',
+      headers: internalRequestHeaders(),
       signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return;
@@ -670,6 +693,7 @@ async function saveStablecoinSnapshot(req: NextRequest) {
 
     const res = await fetch(`${baseUrl}/api/stablecoin-liquidity`, {
       cache: 'no-store',
+      headers: internalRequestHeaders(),
       signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return;

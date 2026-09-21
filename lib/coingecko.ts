@@ -39,7 +39,7 @@ const getHeaders = (): HeadersInit => {
   return headers;
 };
 
-const DERIVATIVES_CACHE_TTL_MS = 45_000;
+const DERIVATIVES_CACHE_TTL_MS = 180_000; // large ~9MB payload; reuse for 3 minutes to reduce quota/load
 const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ERROR_COOLDOWN_TTL_MS = 5 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_TTL_MS = 60 * 1000;
@@ -1050,8 +1050,8 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
     try {
       const data = await cgFetch<DerivativeTicker[]>('/derivatives', {
         init: { cache: 'no-store' },
-        retries: 2,
-        timeoutMs: 15_000,
+        retries: 1,
+        timeoutMs: 30_000,
       });
 
       derivativesCache = {
