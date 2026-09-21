@@ -13,7 +13,7 @@
  * current price). Indicators therefore describe the last COMPLETED bar. This is deliberate and surfaced in data trust.
  */
 import { getOHLC, getOHLCRange, getMarketChartRange, resolveSymbolToId } from '@/lib/coingecko';
-import { aggregateBars, attachDailyVolumes, barsFromPriceSamples, splitPartialBar, type Bar, type ScanBarInterval } from './barAggregation';
+import { aggregateBars, attachDailyVolumes, barsFromPriceSamples, splitPartialBar, INTERVAL_MS, type Bar, type ScanBarInterval } from './barAggregation';
 
 export type CryptoScanTimeframe = '15m' | '30m' | '1h' | 'daily' | 'weekly';
 
@@ -38,10 +38,14 @@ const DAY_S = 86_400;
 const HOURLY_MAX_DAYS = 31;
 const DAILY_MAX_DAYS = 180;
 
-const asBars = (rows: number[][] | null): Bar[] =>
+// CoinGecko OHLC timestamps are candle CLOSE times; Bar.t is the OPEN time.
+// Normalise before volume joins, weekly aggregation, or completed-bar checks.
+const asBars = (rows: number[][] | null, interval: Exclude<ScanBarInterval, '1w'>): Bar[] =>
   (rows ?? [])
-    .filter((r) => Array.isArray(r) && r.length >= 5 && r.slice(1, 5).every((v) => Number.isFinite(Number(v))))
-    .map((r) => ({ t: new Date(r[0]).toISOString(), open: Number(r[1]), high: Number(r[2]), low: Number(r[3]), close: Number(r[4]), volume: null }));
+    .filter((r) => Array.isArray(r) && r.length >= 5 && Number.isFinite(r[0]) && r[0] > INTERVAL_MS[interval] &&
+      r.slice(1, 5).every((v) => typeof v === 'number' && Number.isFinite(v) && v > 0) &&
+      r[2] >= Math.max(r[1], r[3], r[4]) && r[3] <= Math.min(r[1], r[2], r[4]))
+    .map((r) => ({ t: new Date(r[0] - INTERVAL_MS[interval]).toISOString(), open: r[1], high: r[2], low: r[3], close: r[4], volume: null }));
 
 const dedupeByTime = (bars: Bar[]): Bar[] => {
   const m = new Map<string, Bar>();
@@ -49,30 +53,32 @@ const dedupeByTime = (bars: Bar[]): Bar[] => {
   return [...m.values()].sort((a, b) => Date.parse(a.t) - Date.parse(b.t));
 };
 
-async function fetchDailyBars(coinId: string, nowS: number): Promise<{ bars: Bar[]; volumes: Array<[number, number]>; warnings: string[] }> {
+type RequestOptions = { retries?: number; timeoutMs?: number };
+
+async function fetchDailyBars(coinId: string, nowS: number, requestOptions?: RequestOptions): Promise<{ bars: Bar[]; volumes: Array<[number, number]>; warnings: string[] }> {
   const warnings: string[] = [];
   const [recent, older, chart] = await Promise.all([
-    getOHLCRange(coinId, nowS - DAILY_MAX_DAYS * DAY_S, nowS),
-    getOHLCRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS - DAILY_MAX_DAYS * DAY_S),
-    getMarketChartRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS),
+    getOHLCRange(coinId, nowS - DAILY_MAX_DAYS * DAY_S, nowS, requestOptions),
+    getOHLCRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS - DAILY_MAX_DAYS * DAY_S, requestOptions),
+    getMarketChartRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS, requestOptions),
   ]);
   if (!recent?.length) throw new Error(`CoinGecko daily OHLC unavailable for ${coinId}`);
   if (!older?.length) warnings.push('only ~180 daily bars available (older history missing)');
   if (!chart?.total_volumes?.length) warnings.push('daily volume unavailable from market_chart');
-  return { bars: dedupeByTime([...asBars(older), ...asBars(recent)]), volumes: chart?.total_volumes ?? [], warnings };
+  return { bars: dedupeByTime([...asBars(older, '1d'), ...asBars(recent, '1d')]), volumes: chart?.total_volumes ?? [], warnings };
 }
 
 async function fetchHourlyBars(coinId: string, nowS: number): Promise<Bar[]> {
   const rows = await getOHLCRange(coinId, nowS - HOURLY_MAX_DAYS * DAY_S, nowS, undefined, 'hourly');
   if (!rows?.length) throw new Error(`CoinGecko hourly OHLC unavailable for ${coinId}`);
-  return dedupeByTime(asBars(rows));
+  return dedupeByTime(asBars(rows, '1h'));
 }
 
 export async function fetchCryptoSeries(
   symbolOrId: string,
   timeframe: CryptoScanTimeframe,
   nowMs = Date.now(),
-  opts: { /** Already-resolved CoinGecko id; skips ticker resolution (never treat an id like 'bitcoin' as a ticker). */ coinId?: string } = {},
+  opts: { /** Already-resolved CoinGecko id; skips ticker resolution (never treat an id like 'bitcoin' as a ticker). */ coinId?: string; requestOptions?: RequestOptions } = {},
 ): Promise<CryptoSeries> {
   const base = symbolOrId.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase();
   const coinId = opts.coinId ?? (await resolveSymbolToId(base)) ?? symbolOrId.toLowerCase();
@@ -86,7 +92,7 @@ export async function fetchCryptoSeries(
   let source: string;
 
   if (timeframe === 'daily' || timeframe === 'weekly') {
-    const d = await fetchDailyBars(coinId, nowS);
+    const d = await fetchDailyBars(coinId, nowS, opts.requestOptions);
     warnings.push(...d.warnings);
     const daily = attachDailyVolumes(d.bars, d.volumes);
     if (d.volumes.length) volumeBasis = 'coingecko_daily_total_volume';
@@ -106,8 +112,9 @@ export async function fetchCryptoSeries(
     // /ohlc with days=1 returns genuine 30-minute candles (CoinGecko granularity rule: 1–2 days → 30m).
     const fine = await getOHLC(coinId, 1);
     if (!fine?.length) throw new Error(`CoinGecko 30-minute OHLC unavailable for ${coinId}`);
-    const fineBars = dedupeByTime(asBars(fine));
-    const gapMin = fineBars.length > 2 ? Math.round((Date.parse(fineBars[1].t) - Date.parse(fineBars[0].t)) / 60_000) : 30;
+    const gapMin = fine.length > 2 ? Math.round((fine[1][0] - fine[0][0]) / 60_000) : 30;
+    if (gapMin !== 30 && gapMin !== 240) throw new Error(`Unsupported CoinGecko OHLC interval: ${gapMin}m`);
+    const fineBars = dedupeByTime(asBars(fine, gapMin === 30 ? '30m' : '4h'));
     bars = gapMin <= 30 ? aggregateBars(fineBars, '30m') : fineBars;
     barInterval = gapMin <= 30 ? '30m' : '4h';
     source = `coingecko /ohlc days=1 (${gapMin}m candles)`;

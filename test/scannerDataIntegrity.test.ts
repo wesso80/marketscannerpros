@@ -83,7 +83,7 @@ describe('crypto series timeframe → source mapping', () => {
   });
 
   it('normalises symbol suffixes without truncating tickers (APT, HBAR, INJ, NEAR, ARB, AVAX, LINK, XRP, BTC, ETH, SOL)', async () => {
-    getOHLCRange.mockResolvedValue(dailyBars(40, now).map((b) => [Date.parse(b.t), b.open, b.high, b.low, b.close]));
+    getOHLCRange.mockResolvedValue(dailyBars(40, now).map((b) => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
     getMarketChartRange.mockResolvedValue({ prices: [], market_caps: [], total_volumes: [] } as any);
     const expected: Record<string, string> = { 'APT-USD': 'aptos', 'HBAR-USD': 'hedera-hashgraph', 'INJ-USD': 'injective-protocol', 'NEAR-USD': 'near', 'ARB-USD': 'arbitrum', 'AVAX-USD': 'avalanche-2', 'LINK-USD': 'chainlink', 'XRP-USD': 'ripple', 'BTC-USD': 'bitcoin', 'ETH-USD': 'ethereum', 'SOL-USD': 'solana', 'SOLUSDT': 'solana', 'btc/usd': 'bitcoin' };
     for (const [sym, id] of Object.entries(expected)) {
@@ -97,7 +97,7 @@ describe('crypto series timeframe → source mapping', () => {
   });
 
   it('uses an explicit coinId without re-resolving it as a ticker (Pro deep-scan BTC regression)', async () => {
-    getOHLCRange.mockResolvedValue(dailyBars(40, now).map((b) => [Date.parse(b.t), b.open, b.high, b.low, b.close]));
+    getOHLCRange.mockResolvedValue(dailyBars(40, now).map((b) => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
     getMarketChartRange.mockResolvedValue({ prices: [], market_caps: [], total_volumes: [] } as any);
     const s = await fetchCryptoSeries('BTC', 'daily', now, { coinId: 'bitcoin' });
     expect(s.coinId).toBe('bitcoin');
@@ -105,25 +105,25 @@ describe('crypto series timeframe → source mapping', () => {
     expect(getOHLCRange.mock.calls.every((c) => c[0] === 'bitcoin')).toBe(true);
   });
 
-  it('daily = two ohlc/range daily windows + market_chart volumes; open day excluded', async () => {
+  it('daily = two daily windows with close timestamps normalised to bar opens and aligned volume', async () => {
     const all = dailyBars(360, now + DAY);
-    getOHLCRange.mockImplementation(async (_id, from, to) => all.filter((b) => Date.parse(b.t) / 1000 >= from && Date.parse(b.t) / 1000 <= to).map((b) => [Date.parse(b.t), b.open, b.high, b.low, b.close]));
+    getOHLCRange.mockImplementation(async (_id, from, to) => all.filter((b) => (Date.parse(b.t) + DAY) / 1000 >= from && (Date.parse(b.t) + DAY) / 1000 <= to).map((b) => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
     getMarketChartRange.mockResolvedValue({ prices: [], market_caps: [], total_volumes: all.map((b) => [Date.parse(b.t) + DAY, 9_000]) } as any);
     const s = await fetchCryptoSeries('BTC-USD', 'daily', now);
     expect(s.barInterval).toBe('1d');
     expect(getOHLCRange).toHaveBeenCalledTimes(2);
     expect(getOHLCRange.mock.calls.every((c) => c[4] === undefined || c[4] === 'daily')).toBe(true);
     expect(s.bars.length).toBeGreaterThanOrEqual(300);
-    expect(s.partialBar?.t).toBe(iso(bucketStart(now, '1d')));
+    expect(s.partialBar).toBeNull(); // provider returns only closed daily candles
     expect(s.bars.at(-1)?.t).toBe(iso(bucketStart(now, '1d') - DAY));
     expect(s.volumeBasis).toBe('coingecko_daily_total_volume');
     expect(s.bars.at(-1)?.volume).toBe(9_000);
-    expect(s.currentPrice).toBe(s.partialBar?.close);
+    expect(s.currentPrice).toBe(s.bars.at(-1)?.close);
   });
 
   it('weekly = Monday-anchored aggregate of completed daily bars (never the daily series relabelled)', async () => {
     const all = dailyBars(360, now + DAY);
-    getOHLCRange.mockResolvedValue(all.map((b) => [Date.parse(b.t), b.open, b.high, b.low, b.close]));
+    getOHLCRange.mockResolvedValue(all.map((b) => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
     getMarketChartRange.mockResolvedValue({ prices: [], market_caps: [], total_volumes: [] } as any);
     const s = await fetchCryptoSeries('ETH-USD', 'weekly', now);
     expect(s.barInterval).toBe('1w');
@@ -136,7 +136,7 @@ describe('crypto series timeframe → source mapping', () => {
 
   it('1h = ohlc/range interval=hourly, volume flagged unavailable', async () => {
     const start = bucketStart(now, '1h') - 745 * HOUR;
-    getOHLCRange.mockResolvedValue(Array.from({ length: 745 }, (_, i) => [start + i * HOUR, 1, 2, 0.5, 1.5]));
+    getOHLCRange.mockResolvedValue(Array.from({ length: 745 }, (_, i) => [start + (i + 1) * HOUR, 1, 2, 0.5, 1.5]));
     const s = await fetchCryptoSeries('SOL-USD', '1h', now);
     expect(getOHLCRange).toHaveBeenCalledTimes(1);
     expect(getOHLCRange.mock.calls[0][4]).toBe('hourly');
@@ -149,7 +149,7 @@ describe('crypto series timeframe → source mapping', () => {
 
   it('30m = /ohlc days=1 candles; 15m = 5-minute price samples with approximate H/L', async () => {
     const start30 = bucketStart(now, '30m') - 48 * 30 * 60_000;
-    getOHLC.mockResolvedValue(Array.from({ length: 48 }, (_, i) => [start30 + i * 30 * 60_000, 1, 2, 0.5, 1.5]));
+    getOHLC.mockResolvedValue(Array.from({ length: 48 }, (_, i) => [start30 + (i + 1) * 30 * 60_000, 1, 2, 0.5, 1.5]));
     const s30 = await fetchCryptoSeries('AVAX-USD', '30m', now);
     expect(s30.barInterval).toBe('30m');
     expect(s30.hlBasis).toBe('exchange_ohlc');

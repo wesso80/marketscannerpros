@@ -29,7 +29,7 @@ function usdBloc(id: string, usd: number[], classification: M2Classification = '
 }
 
 function run(blocs: GlobalM2BlocInput[], lag = 1) {
-  return computeGlobalM2({ blocs }, { lagMonths: lag, nominalWeights: GLOBAL_M2_CONFIG.nominalWeights });
+  return computeGlobalM2({ blocs }, { lagMonths: lag, nominalWeights: GLOBAL_M2_CONFIG.nominalWeights }, '2026-09-21T00:00:00.000Z');
 }
 
 const pc = (a: number, b: number) => 100 * (a / b - 1);

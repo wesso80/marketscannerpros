@@ -144,7 +144,7 @@ export function buildSignals(data: CryptoDerivativesResponse): DerivedSignal[] {
   const { coin, rows, aggregatedFunding, aggregatedOI } = data;
 
   // Funding rate extremes
-  if (Math.abs(aggregatedFunding.fundingRatePct) > 0.05) {
+  if (Number.isFinite(aggregatedFunding.fundingRatePct) && Math.abs(aggregatedFunding.fundingRatePct) > 0.05) {
     const dir = aggregatedFunding.fundingRatePct > 0 ? 'bullish' : 'bearish';
     signals.push({
       symbol: coin.symbol,
@@ -157,7 +157,7 @@ export function buildSignals(data: CryptoDerivativesResponse): DerivedSignal[] {
 
   // Funding divergence across exchanges
   const spread = aggregatedFunding.max - aggregatedFunding.min;
-  if (spread > 0.02 && rows.length >= 3) {
+  if (Number.isFinite(aggregatedFunding.min) && Number.isFinite(aggregatedFunding.max) && spread > 0.02 && rows.length >= 3) {
     signals.push({
       symbol: coin.symbol,
       type: 'funding',
