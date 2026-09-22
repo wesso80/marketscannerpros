@@ -1,0 +1,302 @@
+
+## META default AIO strategy (post-deploy)
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: META
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Edge Group
+  - combobox:
+    - option "MSP AIO Systems" [selected]
+    - option "Scalping Edge"
+    - option "Trend Following"
+    - option "Mean Reversion"
+    - option "Breakdown Play (Bears)"
+    - option "Breakout"
+    - option "Liquidity Play"
+    - option "Time Confluence"
+  - generic: Strategy
+  - combobox:
+    - option "🧠 Brain Signal Replay (Decision Packets)"
+    - option "⏱️ Time Scanner Replay"
+    - option "MSP Day Trader AIO (Score 5+)" [selected]
+    - option "MSP Day Trader Strict (Score 6+)"
+    - option "📈 Day Trader v3 Optimized (More Trades)"
+    - option "🚀 Day Trader v3 Aggressive (Max Trades)"
+    - option "MSP Multi-TF Dashboard (Bias 6+)"
+    - option "MSP Multi-TF Strict (Bias 8+)"
+    - option "MSP Trend Pullback"
+    - option "MSP Liquidity Reversal"
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: META
+  - generic: MSP Day Trader AIO (Score 5+)
+  - generic: Daily
+  - generic: "-3.4%"
+  - generic: 7 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: "-3.4%"
+  - generic: Win Rate
+  - generic: 28.6%
+  - generic: Profit Factor
+  - generic: "0.82"
+  - generic: Realised Drawdown
+  - generic: +11.5%
+  - generic: Sharpe
+  - generic: "-0.11"
+  - generic: CAGR
+  - generic: "-1.73%"
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "7"
+  - generic: Winners
+  - generic: "2"
+  - generic: Losers
+  - generic: "5"
+  - generic: Avg Win (USD)
+  - generic: "806.52"
+  - generic: Avg Loss (USD)
+  - generic: "-391.09"
+  - generic: Sortino
+  - generic: "-0.17"
+  - generic: Calmar
+  - generic: "-0.15"
+  - generic: Volatility
+  - generic: 10.95%
+  - generic: Time in Market
+  - generic: 12.9%
+  - generic: Largest Gain
+  - generic: +9.1%
+  - generic: Largest Loss
+  - generic: "-6.7%"
+  - generic: invalidated
+  - generic: "Invalidated: WR 28.6%, PF 0.82, Return -3.42%."
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-01-01 → 2025-12-31
+  - generic: "Bars: 502"
+  - generic: "Provider: alpha_vantage"
+  - heading "Realised Balance" [level=3]
+  - generic: 2024-01-02
+  - generic: $9,658
+  - generic: 2025-12-31
+  - heading "Trade History (7 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "LONG 2024-10-30 2024-10-31 $597.48 $583.44 -2.4% $-225.19 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-10-30"
+        - cell "2024-10-31"
+        - cell "$597.48"
+        - cell "$583.44"
+        - cell "-2.4%"
+        - cell "$-225.19"
+        - cell "stop"
+      - row "LONG 2024-11-04 2024-11-18 $560.82 $546.40 -2.6% $-246.10 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-11-04"
+        - cell "2024-11-18"
+        - cell "$560.82"
+        - cell "$546.40"
+        - cell "-2.6%"
+        - cell "$-246.10"
+        - cell "stop"
+      - row "LONG 2025-01-28 2025-02-13 $662.65 $723.15 +9.1% $865.32 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-28"
+        - cell "2025-02-13"
+        - cell "$662.65"
+        - cell "$723.15"
+        - cell "+9.1%"
+        - cell "$865.32"
+        - cell "target"
+      - row "SHORT 2025-04-07 2025-04-07 $482.60 $511.10 -5.9% $-562.97 stop":
+        - cell "SHORT":
+          - generic: SHORT
+        - cell "2025-04-07"
+        - cell "2025-04-07"
+        - cell "$482.60"
+        - cell "$511.10"
+        - cell "-5.9%"
+        - cell "$-562.97"
+        - cell "stop"
+      - row "SHORT 2025-04-09 2025-04-09 $506.64 $540.35 -6.7% $-634.05 stop":
+        - cell "SHORT":
+          - generic: SHORT
+        - cell "2025-04-09"
+        - cell "2025-04-09"
+        - cell "$506.64"
+        - cell "$540.35"
+        - cell "-6.7%"
+        - cell "$-634.05"
+        - cell "stop"
+      - row "LONG 2025-06-05 2025-06-30 $688.78 $743.13 +7.9% $747.72 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-06-05"
+        - cell "2025-06-30"
+        - cell "$688.78"
+        - cell "$743.13"
+        - cell "+7.9%"
+        - cell "$747.72"
+        - cell "target"
+      - row "SHORT 2025-11-06 2025-12-04 $633.48 $652.50 -3.0% $-287.15 stop":
+        - cell "SHORT":
+          - generic: SHORT
+        - cell "2025-11-06"
+        - cell "2025-12-04"
+        - cell "$633.48"
+        - cell "$652.50"
+        - cell "-3.0%"
+        - cell "$-287.15"
+        - cell "stop"
+  - heading "Strategy Diagnostics" [level=3]
+  - generic: 25/100
+  - generic: invalidated
+  - paragraph: Edge is invalidated on daily. Prioritize the top adjustments before deploying.
+  - generic: low_sample_size
+  - generic: low_win_rate
+  - generic: negative_expectancy
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```

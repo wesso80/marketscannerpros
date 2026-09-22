@@ -1,0 +1,2838 @@
+# META and ETH live candidate audit — evidence capture
+
+Captured 22 September 2026 UTC. Pre-remediation observations; application commit 925c5e7. Browser timestamps render in Australia local time. Not a trade recommendation.
+
+## META_scanner
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Scanner tools":
+    - generic: Scanner
+    - link "Ranked & custom scans":
+      - /url: /tools/scanner
+    - link "Diamond Hunter":
+      - /url: /tools/diamond-hunter
+    - link "Liquidity sweeps":
+      - /url: /tools/liquidity-sweep
+    - link "Intraday scanner":
+      - /url: /tools/scalper
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - region "Scanner command header":
+    - generic: Workflow step 1 · Market research queue
+    - 'generic "Regime weights — structure: 20 · momentum: 10 · volatility: 10 · options: 20 · time: 40"':
+      - generic: Range / Neutral
+      - generic: ·
+      - generic: Risk low
+      - generic: ·
+      - generic "Execution gate derived from the market regime. Scanner rows are research candidates regardless.": Execution gate Allowed
+    - heading "Inspect one candidate." [level=1]
+    - paragraph: "Analysis: the evidence behind one row — then validate it in Golden Egg."
+    - button "Back to Ranked"
+    - link "Validate META":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - generic: Mode
+    - generic: Symbol analysis
+    - generic "Reviewing META"
+    - generic: Symbol
+    - generic: META
+    - generic "Active analysis case"
+    - generic: Data Health
+    - generic: 2 issues
+    - generic "Equity data incomplete, Crypto data incomplete"
+    - generic: Next Check
+    - generic: Validate in Golden Egg
+    - generic "Open Golden Egg from this case"
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - generic "Scanner workflow views":
+    - button "1. Triage Ranked Auto-ranked market queue":
+      - generic: 1. Triage
+      - generic: Ranked
+      - generic "Auto-ranked market queue"
+    - button "2. Configure Pro Manual scan controls":
+      - generic: 2. Configure
+      - generic: Pro
+      - generic "Manual scan controls"
+    - button "3. Inspect Analysis META case review" [pressed]:
+      - generic: 3. Inspect
+      - generic: Analysis
+      - generic "META case review"
+  - 'region "Analysis: META"':
+    - generic: Analysis view
+    - generic: Symbol case review from the active scanner workflow.
+    - link "Open Historical Test":
+      - /url: /tools/workspace?tab=Backtest&symbol=META
+    - button "Back to Ranked"
+    - generic: META — D
+    - generic: "Ranked #1 of 20 · All · Daily"
+    - generic: Bullish bias, high setup quality · Breakout / expansion.
+    - generic: "Bias: Bullish"
+    - generic: "Setup: Volatility Expansion Long · Stage: Extended · Extension: Elevated"
+    - text: "Regime: Range · Evidence Alignment:"
+    - generic "Share of the four evidence checks (trend, momentum, flow, direction) that agree with the bias — not a probability.": 4 / 4
+    - generic: Setup Quality
+    - generic: A Setup
+    - 'generic "Evidence-weighted confidence: score × evidence coverage × freshness × liquidity. Not a probability of profit."': 75 / 100 · HIGH
+    - 'progressbar "Setup confidence: 75%"'
+    - generic: Setup Alignment
+    - generic: RANGE BREAK CONFIRMATION NEEDED
+    - 'generic "Data trust: GOOD"': Data GOOD
+    - generic "alpha_vantage_or_worker_cache"
+    - generic: • Range regime needs breakout confirmation
+    - generic: "NOTE: QUALITY HIGH — REVIEW ALIGNMENT"
+    - generic: Scores reflect indicator agreement, not profit probability. For educational analysis only. Not financial advice.
+    - generic: Structure Analysis
+    - generic: Evidence Alignment
+    - generic: "Trend vs bias: AGREES"
+    - generic: "Momentum vs bias: AGREES"
+    - generic: "Flow vs bias: AGREES"
+    - generic: "EMA stack: BULLISH"
+    - generic: Momentum State
+    - generic: "RSI: 77.8"
+    - generic: "ADX: 54.3"
+    - generic: "MACD hist: +10.870"
+    - generic: Volatility, Volume & Liquidity
+    - text: "ATR:"
+    - generic: 27.34 (3.69% of price)
+    - generic: "Volume vs 20-bar avg: N/A"
+    - generic: "Avg dollar volume: $35.8B"
+    - generic: "Relative strength: 1.334 vs SPY (20 1d bars)"
+    - generic: Data Basis
+    - generic: "Timeframe: D · Bar interval: 1d"
+    - generic: "Last completed bar: 2026-09-21"
+    - generic: "History: 251 bars · Computed: 2026-09-22 02:07 UTC"
+    - generic: "Data trust: GOOD"
+    - generic: "Source: ohlcv_bars + quotes_latest · volume: session volume only"
+    - generic: Why This Rank
+    - generic: "META is #1 of 20 in the All · Daily queue."
+    - generic: Supports
+    - generic: + ADX 54.3 — trend strength present
+    - generic: + Price above EMA200 by 17.5%
+    - generic: + EMA stack bullish (Strong Bull Alignment)
+    - generic: + Average dollar volume $35.8B
+    - generic: + Relative strength 1.334 vs SPY over 20 1d bars — Strong Outperformer
+    - generic: "+ Research lifecycle: setting up"
+    - generic: Holding it back
+    - generic: − RSI 77.8 — overbought; chasing risk
+    - generic: − Volume ratio unavailable for this interval
+    - generic: − Extension elevated — late in the move
+    - generic: Scorer adjustments (server)
+    - generic: + 10 independent evidence layers contributed
+    - generic: "+ DVE flags: EXPANDING, MOMENTUM_ACCEL"
+    - generic: Preliminary Research Levels
+    - text: Fast ATR-based estimate from scan-time price (741.25) on 1d bars (ATR 27.34). Golden Egg recomputes
+    - emphasis: validated scenario levels
+    - text: from a live quote and price structure — expect them to differ.
+    - generic: Level of Interest (preliminary)
+    - generic: "Reference: 746.71"
+    - generic: "Condition: Close above level"
+    - generic: "Confirms: A close above the breakout level with volume ≥ 1.5× the 20-bar average, holding the level on the next bar."
+    - generic: "Invalidates: A close back below the breakout level (failed break) or volume fading below average on continuation."
+    - generic: Key Levels (preliminary · educational)
+    - generic: "Invalidation: 719.37"
+    - generic: "Reaction Zone 1: 787.72"
+    - generic: "Reaction Zone 2: 815.06"
+    - generic: "Hypothetical R:R: 1.5"
+    - generic: Next Useful Check · Breakout / expansion
+    - generic: A close above the breakout level with volume ≥ 1.5× the 20-bar average, holding the level on the next bar.
+    - generic: Analysis Notes
+    - generic: "Indicator Agreement: Directional signals aligned; range confirmation needed"
+    - generic: "Structure: Breakout / expansion · stage Extended · extension Elevated"
+    - button "Save Case"
+    - link "Set Alert":
+      - /url: /tools/workspace?tab=alerts&symbol=META&price=741.245&direction=bullish
+    - button "Add to Watchlist"
+- alert
+```
+
+## META_GE
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "★"
+  - region "Golden Egg command header":
+    - generic: Golden Egg validation workbench
+    - generic: Regime Range / Neutral
+    - generic: Confluence 73%
+    - generic: Data GOOD
+    - generic: Verdict first
+    - generic: Data trust
+    - generic: Reference level
+    - generic: Invalidation
+    - generic: Next check
+    - heading "Validate one symbol before testing history." [level=1]
+    - paragraph: Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet.
+    - button "Open Terminal"
+    - button "Open Scanner"
+    - button "Open Backtest"
+    - generic: Symbol
+    - generic "META"
+    - generic "Single-symbol validation"
+    - generic: Assessment
+    - generic "Scenario Aligned"
+    - generic "Verdict packet"
+    - generic: Confluence
+    - generic "73%"
+    - generic "Evidence alignment"
+    - generic: Data trust
+    - generic "GOOD — fresh completed bar (2026-09-21), 300 1d bars, indicators complete, liquidity $15.12B.": GOOD
+    - generic "GOOD — fresh completed bar (2026-09-21), 300 1d bars, indicators complete, liquidity $15.12B."
+  - region "Golden Egg symbol input":
+    - textbox "Enter symbol..."
+    - button "Review"
+    - button "DOT"
+    - button "FET"
+    - button "WIF"
+    - button "XRP"
+    - button "ADA"
+    - button "WLD"
+    - button "KSM"
+    - button "SYM"
+    - button "WIFI"
+    - button "SP"
+    - button "auto"
+    - button "equity" [pressed]
+    - button "crypto"
+    - button "15m"
+    - button "1H"
+    - button "Daily" [pressed]
+    - button "Weekly"
+    - generic: "Next useful check: Review blocker: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk."
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - generic "Golden Egg validation views":
+    - generic: Validation workbench
+    - generic: Verdict first, then inspect chart, evidence detail, and business context.
+    - link "Open Liquidity Sweep":
+      - /url: /tools/liquidity-sweep
+    - button "1. Verdict packet Verdict" [pressed]:
+      - generic: 1. Verdict packet
+      - generic: Verdict
+    - button "2. Price context Chart":
+      - generic: 2. Price context
+      - generic: Chart
+    - button "3. Evidence detail Deep Analysis":
+      - generic: 3. Evidence detail
+      - generic: Deep Analysis
+    - button "4. Business context Fundamentals":
+      - generic: 4. Business context
+      - generic: Fundamentals
+  - heading "META" [level=2]
+  - generic: "Regime: Range / Neutral"
+  - generic "Directional research bias from the Golden Egg evidence stack":
+    - generic: LONG
+  - generic "Grade summarizes setup quality across the Golden Egg model":
+    - generic: Grade B
+  - generic "Lifecycle describes whether the setup is forming, ready, watching, or invalidated": READY
+  - generic "Cross-market factors can support, oppose, or remain neutral to the setup": Tailwind
+  - generic "GOOD — fresh completed bar (2026-09-21), 300 1d bars, indicators complete, liquidity $15.12B.": Data GOOD
+  - text: $741.25
+  - generic: +11.42%
+  - generic: equity — 1D — 22/09/2026, 12:08:24 pm
+  - generic: Scenario Aligned
+  - generic: Assessment
+  - generic: 73%
+  - generic: Confluence
+  - generic "Multi-factor confluence score. Reflects how many indicators agree, not a probability of any outcome.": Evidence Alignment
+  - generic: Verdict Packet
+  - generic: equity · 1D
+  - generic "Scenario alignment for educational research only.":
+    - generic: Assessment
+    - generic: Scenario Aligned
+  - generic "GOOD — fresh completed bar (2026-09-21), 300 1d bars, indicators complete, liquidity $15.12B.":
+    - generic: Data Trust
+    - generic: GOOD
+  - generic "Bullish scenario active at current price $741.25 — reference is the live quote.":
+    - generic: Reference
+    - generic: $741.25
+  - generic "1.5x ATR model stop — no structural level within 1–2 ATR":
+    - generic: Invalidation
+    - generic: $700.24
+  - 'generic "Review blocker: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk."':
+    - generic: Next Check
+    - generic: "Review blocker: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk."
+  - generic "Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk":
+    - generic: Blocker
+    - generic: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk
+  - generic: Golden Egg Evidence Stack
+  - generic: Why This Appeared
+  - generic: Supported
+  - generic: Structure leads at 80/100 — price aligned with the 20/50-bar means; EMA200 below price — long-term anchor agrees is present, but Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk is limiting conviction.
+  - generic: Cross Market
+  - generic: Tailwind
+  - generic: "SPY: up (supportive) | QQQ: up (supportive) | XLC: up (supportive)"
+  - generic: Scenario Levels
+  - generic: Available
+  - generic: Reference $741.25 / invalidation $700.24.
+  - generic: Research Caution
+  - generic: Active
+  - generic: "Research caution: blocker still present — Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk."
+  - generic: Quote Data Truth
+  - generic "equity quote": LIVE
+  - text: "Source: equity quote"
+  - generic: "· Updated: 12:08 pm"
+  - generic: Regime Data Truth
+  - generic "cross-market regime": LIVE
+  - generic: "Source: cross-market regime"
+  - generic: DVE Data Truth
+  - generic "volatility engine": LIVE
+  - generic: "Source: volatility engine"
+  - generic: Options Data Truth
+  - generic "options evidence": LIVE
+  - generic: "Source: options evidence"
+  - generic: Time Data Truth
+  - generic "time confluence": LIVE
+  - generic: "Source: time confluence"
+  - generic: Validated scenario levels
+  - generic: Canonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.
+  - generic: Level of Interest (model reference)
+  - generic: Bullish scenario active at current price $741.25 — reference is the live quote.
+  - generic: $741.25 (reference)
+  - generic: Invalidation (mechanical · 1.5 ATR)
+  - generic: $700.24
+  - generic: 1.5x ATR model stop — no structural level within 1–2 ATR
+  - generic: Reaction Zones
+  - generic "Model zone (1.0× reference-to-invalidation risk)": $782.25M›
+  - generic "Model zone (1.5× reference-to-invalidation risk)": $802.76M›
+  - generic "Model zone (2.5× reference-to-invalidation risk)": $843.77M
+  - generic: All zones are model zones based on reference-to-invalidation risk; price caps are labelled. No structural targets were found within range. R is a mechanical calculation, not a forecast.
+  - generic: Research Case Invalidates If
+  - generic "Invalidates or weakens this educational research case.": Reference or invalidation level becomes unavailable.
+  - generic "Invalidates or weakens this educational research case.": Confluence drops below 60%.
+  - generic "Invalidates or weakens this educational research case.": "Primary blocker persists: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk."
+  - generic "Invalidates or weakens this educational research case.": Cross-market conditions flip to headwind.
+  - generic "Invalidates or weakens this educational research case.": DVE flips into climax risk.
+  - generic "Invalidates or weakens this educational research case.": Time confluence flips to disagreement.
+  - generic: Reference or invalidation level becomes unavailable.
+  - generic: Confluence drops below 60%.
+  - generic: "Primary blocker persists: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk."
+  - generic: Cross-market conditions flip to headwind.
+  - generic: DVE flips into climax risk.
+  - generic: Time confluence flips to disagreement.
+  - generic: "Driver: Structure leads at 80/100 — price aligned with the 20/50-bar means; EMA200 below price — long-term anchor agrees"
+  - generic: "Blocker: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk"
+  - button "Save Case"
+  - link "Open Terminal":
+    - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+  - generic: Score Breakdown
+  - generic: Structure (w:30)
+  - generic: "80.0"
+  - generic: Trend alignment supportive
+  - generic: Flow (w:25)
+  - generic: "75.0"
+  - generic: P/C 0.36 · 2026-10-16
+  - generic: Momentum (w:20)
+  - generic: "75.0"
+  - generic: 77.8 · strong momentum, overbought
+  - generic: Risk (w:25)
+  - generic: "60.0"
+  - generic: Risk quality — extension — RSI 78 and stochastic 91 both at extremes
+  - generic "Cross-Market Influence"
+  - heading "Setup" [level=3]
+  - generic: Setup Type
+  - generic: trend
+  - generic: Thesis
+  - generic: META shows a bullish extended trend continuation setup (extended trend — RSI 78 with ADX 54; continuation with extension risk). ADX 54 · very strong trend. Options positioning is bullish (P/C 0.36 on 2026-10-16).
+  - generic: Timeframe Alignment
+  - generic: 2/4
+  - generic: • Daily structure aligned
+  - generic: • MACD histogram positive
+  - generic: • Above EMA200 $628.30
+  - generic: Invalidation
+  - generic: Scenario weakens if price closes below $700.24 with volume confirmation.
+  - heading "Structure" [level=3]
+  - generic: "Structure Verdict:"
+  - generic: agree
+  - generic: htf
+  - generic: Bullish
+  - generic: mtf
+  - generic: Bullish
+  - generic: ltf
+  - generic: Bullish
+  - generic: Key Levels
+  - text: BB Upper
+  - generic: (resistance)
+  - generic: $721.59
+  - text: Call Wall below spot (2026-10-16)
+  - generic: (value)
+  - generic: $700.00
+  - text: Mid-50 decompression (8 TFs)
+  - generic: (value)
+  - generic: $682.64
+  - text: 1D Mid-50
+  - generic: (support)
+  - generic: $637.55
+  - text: EMA 200
+  - generic: (support)
+  - generic: $628.30
+  - text: SMA 20
+  - generic: (pivot)
+  - generic: $624.18
+  - text: SMA 50
+  - generic: (support)
+  - generic: $608.82
+  - text: Max Pain (2026-10-16)
+  - generic: (value)
+  - generic: $600.00
+  - generic: Momentum
+  - generic: "RSI(14): 77.8 · strong momentum, overbought"
+  - generic: "ADX (trend strength): 54 · very strong trend"
+  - generic: "MACD Hist: 10.870"
+  - generic: "Stochastic: 91 · overbought zone"
+  - heading "Timing" [level=3]
+  - generic: "vs setup: neutral"
+  - generic: no signal
+  - generic: neutral
+  - generic: session closed
+  - generic "equity session closed — intraday timing inactive · no timing signal (agent gates not met)": not valid as evidence
+  - generic: US equity session closed — intraday close timing resumes at the next regular session; daily+ closes shown.
+  - generic: Direction here is the weighted pull of price toward multi-timeframe mid-50 levels (a mean-reversion pressure). It only gates the verdict when the agent reports a moderate/strong, current signal in a live session.
+  - generic: Likely Decompression Level
+  - generic: Down to $682.64
+  - generic: weighted from 8 TFs (1h, 2h, 3h, 4h, 6h, 8h, 12h, 1D)
+  - generic: "Total weight: 39.5 — Price is pulled BELOW current level"
+  - generic: Confluence
+  - generic: 35%
+  - generic: Direction
+  - generic: "-100"
+  - generic: Cluster Score
+  - generic: "0"
+  - generic: Decompression
+  - generic: "60"
+  - generic: Close Cluster Timeline — Next 24h
+  - generic: Daily
+  - generic: 1D
+  - generic: 19:59 UTC
+  - generic: 17h 51m
+  - generic: w:10
+  - generic: $637.55
+  - generic "Mid-50 level 13.99% below price; decompression pull down": ▼ 13.99% below price · pull down
+  - generic: Candle Close Confluence
+  - generic: 16/100
+  - generic: low
+  - generic: Agent scenario (not valid as evidence — shown for transparency)
+  - generic: "5 TFs decompressing | 5 TFs clustered (0% ratio) | Pull direction: BEARISH (-100) | Calendar pull BEARISH (9 TFs)"
+  - generic: "Key Level: $740.80"
+  - generic: "Next close: Market closed"
+  - heading "Volatility" [level=3]
+  - generic: expansion
+  - generic: "Confluence: 92%"
+  - generic: BBWP
+  - generic: "88.5"
+  - generic: Direction
+  - generic: bullish
+  - generic: "Score: 49.0"
+  - generic: META BBWP at 88.5 (expansion). Stochastic momentum bullish (+9).
+  - heading "Options / Derivatives" [level=3]
+  - generic: agree
+  - generic: Expiry
+  - generic: 2026-10-16 (25 DTE)
+  - generic: Snapshot
+  - generic: 2026-09-21 20:00 UTC
+  - generic: Put/Call OI
+  - generic: "0.36"
+  - generic: Avg IV (chain)
+  - generic: 62%
+  - generic: Expected move (±1σ to expiry)
+  - generic: ±16.2%
+  - generic: IV Rank
+  - generic: n/a (no IV history)
+  - generic: Dealer Gamma
+  - generic: Long gamma (stabilizing)
+  - generic: Unusual Activity
+  - generic: Elevated
+  - generic: Max Pain
+  - generic: $600.00
+  - generic: Call wall
+  - generic: $700.00 (below spot)
+  - generic: Put wall
+  - generic: $600.00 (below spot)
+  - generic: Chain quality
+  - generic: GOOD
+  - generic: • Call wall 700 sits below spot — pinned/legacy positioning, not overhead resistance.
+  - generic: • Expiry 2026-10-16 (25 DTE) · highest open interest among 9 expiries within 7–60 DTE.
+  - generic: "• Source: alpha_vantage REALTIME_OPTIONS_FMV."
+  - link "Open Options Terminal":
+    - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+  - heading "Scenario Map" [level=3]
+  - generic: Reference Level
+  - generic: Bullish scenario active at current price $741.25 — reference is the live quote.
+  - generic: $741.25 (reference)
+  - generic: Risk Level
+  - generic: $700.24
+  - generic: 1.5x ATR model stop — no structural level within 1–2 ATR
+  - generic: Key Levels
+  - generic: $782.25
+  - generic: 1.0R
+  - generic: Model zone (1.0× reference-to-invalidation risk)
+  - generic: $802.76
+  - generic: 1.5R
+  - generic: Model zone (1.5× reference-to-invalidation risk)
+  - generic: $843.77
+  - generic: 2.5R
+  - generic: Model zone (2.5× reference-to-invalidation risk)
+  - generic: Hypothetical R:R1.5R
+  - link "Open in Terminal":
+    - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+  - generic: Levels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.
+  - heading "Narrative" [level=3]
+  - generic: META shows long alignment with 73/100 confluence. Multiple factors support a trend educational scenario.
+  - list:
+    - listitem: • Multiple factors aligned — conditions support educational scenario analysis.
+    - listitem: • Price structure supports the directional thesis.
+    - listitem: • EMA200 below price — long-term anchor agrees.
+    - listitem: • Price 4.3 ATR from the 20-bar mean — blow-off extension.
+    - listitem: • Options activity elevated on 2026-10-16 — watch for follow-through.
+    - listitem: • US equity session closed — intraday close timing resumes at the next regular session; daily+ closes shown.
+    - listitem: • Mid-50 decompression level $682.64 (below price) from 8 TFs — a mean-reversion pull, not a timing verdict.
+    - listitem: "• Cross-market: 3 supportive (SPY, QQQ, XLC) · 2 headwind (TLT, UUP) · 0 neutral for a long read."
+  - generic: Risks
+  - generic: Extension — RSI 78 and stochastic 91 both at extremes.
+- alert
+```
+
+## META_Deep
+
+```text
+:
+    - generic: Golden Egg subview
+    - generic: 3. Evidence detail
+    - generic: Symbol META
+    - heading "Deep Analysis check for META" [level=2]
+    - paragraph: Review the deeper technical evidence behind the verdict.
+    - button "Review Verdict"
+    - button "Open Fundamentals"
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic: META
+    - generic "Single-symbol validation context"
+    - generic: View
+    - generic: Deep Analysis
+    - generic "3. Evidence detail"
+    - generic: Focus
+    - generic: Evidence Detail
+    - generic "Completes the Verdict packet"
+    - generic: Next Check
+    - generic: Fundamentals
+    - generic "Continue the validation sequence"
+  - main:
+    - textbox "Stock or crypto symbol":
+      - /placeholder: "Enter symbol: AAPL, BTC, EURUSD..."
+      - text: META
+    - button "Run Research"
+    - button "AAPL"
+    - button "BTC"
+    - button "TSLA"
+    - button "ETH"
+    - button "NVDA"
+    - button "EURUSD"
+    - button "GOLD"
+    - generic: Deep Analyst · interprets the Golden Egg canonical packet (1D, 1d bars)
+    - generic: META · STOCK
+    - generic: $741.25
+    - generic: +11.34% vs prior close
+    - generic "Price as of 2026-09-22T02:08:20.237Z": last completed bar 2026-09-21
+    - generic "GOOD": Data GOOD
+    - generic "Scenario Aligned · LONG":
+      - generic: Golden Egg verdict
+      - generic: Scenario Aligned · LONG
+    - generic "73% · grade B":
+      - generic: Confluence (evidence alignment)
+      - generic: 73% · grade B
+    - generic "Bullish · trend":
+      - generic: Bias & setup
+      - generic: Bullish · trend
+    - generic "Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk":
+      - generic: Primary blocker
+      - generic: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk
+    - generic "Close above the model reference $741.25 with expansion — mechanical trigger; look for a structural level to replace it.":
+      - generic: What confirms next
+      - generic: Close above the model reference $741.25 with expansion — mechanical trigger; look for a structural level to replace it.
+    - generic: Golden Egg verdict is canonical. Deep Analyst does not compute a competing bias; it interprets the same numbers. Packet served from the shared 3-minute cache.
+    - heading "Quick Summary" [level=3]
+    - generic: Technical Stance
+    - generic: Overbought
+    - generic: Analyst Target
+    - generic: 2% Upside
+    - generic: Trend Strength
+    - generic: Very Strong
+    - generic: News Sentiment
+    - generic: Very Positive
+    - heading "Technical Indicators" [level=3]
+    - generic: RSI (14)
+    - generic: "77.8"
+    - generic: Overbought
+    - generic: MACD
+    - generic: "29.8202"
+    - generic: Bullish
+    - generic: SMA 20
+    - generic: $624.18
+    - generic: +18.8% vs price
+    - generic: SMA 50
+    - generic: $608.82
+    - generic: Above trend
+    - generic: Stochastic
+    - generic: "K: 91.1"
+    - generic: Overbought
+    - generic: Volume Ratio
+    - generic: 2.37x
+    - generic: vs 20d avg
+    - generic: ATR (14)
+    - generic: $27.34
+    - generic: Volatility
+    - generic: ADX (14)
+    - generic: "54.3"
+    - generic: Strong Trend
+    - heading "Golden Egg evidence (canonical)" [level=3]
+    - generic: Structure
+    - generic: 80/100
+    - generic: Trend alignment quality (20/50-bar means, EMA200 anchor, extension, liquidity)
+    - generic: • EMA200 below price — long-term anchor agrees
+    - generic: • price 4.3 ATR from the 20-bar mean — blow-off extension
+    - generic: Flow
+    - generic: 75/100
+    - generic: Options positioning on the canonical expiry
+    - generic: • call-heavy positioning (P/C 0.36 on 2026-10-16)
+    - generic: • volume/OI elevated
+    - generic: • dealers long gamma (stabilising)
+    - generic: Momentum
+    - generic: 75/100
+    - generic: RSI / MACD / stochastic with extension credit reduced
+    - generic: • RSI 78 overbought — momentum strong but extended (credit reduced)
+    - generic: • stochastic 91 overbought zone
+    - generic: Risk quality
+    - generic: 60/100
+    - generic: 100 = clean conditions. Never bullish evidence.
+    - generic: • extension — RSI 78 and stochastic 91 both at extremes
+    - text: "Time confluence:"
+    - strong: neutral
+    - text: (neutral, no_signal, 35%; session closed; not gating). equity session closed — intraday timing inactive · no timing signal (agent gates not met)
+    - generic: "Extension: extended · DVE exhaustion 50/100 · Cross-market: supportive — 3 supportive (SPY, QQQ, XLC) · 2 headwind (TLT, UUP) · 0 neutral for a long read."
+    - generic: What supports / argues against (from the packet)
+    - generic: For
+    - generic: Structure 80/100 — EMA200 below price — long-term anchor agrees
+    - generic: For
+    - generic: Momentum 75/100 — RSI 77.8, MACD hist 10.870
+    - generic: For
+    - generic: Flow 75/100 — call-heavy positioning (P/C 0.36 on 2026-10-16)
+    - generic: For
+    - generic: Price above EMA200 $628.30
+    - generic: For
+    - generic: Cross-market supportive — 3 supportive (SPY, QQQ, XLC) · 2 headwind (TLT, UUP) · 0 neutral for a long read.
+    - generic: For
+    - generic: Revenue +28.0% YoY (latest quarter)
+    - generic: Against
+    - generic: Extension extended — RSI 77.8, stochastic 91
+    - generic: Against
+    - generic: "Risk: extension — RSI 78 and stochastic 91 both at extremes"
+    - generic: Against
+    - generic: Earnings −13.4% YoY (latest quarter) — fundamental headwind for a bullish read
+    - heading "Company Overview" [level=3]
+    - generic: Meta Platforms Inc.
+    - generic: INTERNET CONTENT & INFORMATION
+    - generic: Sector
+    - generic: COMMUNICATION SERVICES
+    - generic: Market Cap
+    - generic: $1.70T
+    - generic: P/E Ratio
+    - generic: "25.1"
+    - generic: EPS
+    - generic: $26.56
+    - generic: Analyst Price Target
+    - generic: $755.28
+    - generic: +1.9% upside
+    - generic: 52-Week Position
+    - generic: Div Yield
+    - generic: 0%
+    - generic: Third-party Analyst Ratings (62 analysts) — not financial advice
+    - 'img "Analyst ratings: 8 strong buy, 47 buy, 7 hold, 0 sell, 0 strong sell"':
+      - 'generic "Strong Buy: 8"'
+      - 'generic "Buy: 47"'
+      - 'generic "Hold: 7"'
+    - generic: Strong Buy (8)
+    - generic: Buy (47)
+    - generic: Hold (7)
+    - heading "Options positioning · expiry 2026-10-16 (25 DTE) CHAIN GOOD" [level=3]:
+      - text: Options positioning · expiry 2026-10-16 (25 DTE)
+      - generic: CHAIN GOOD
+    - generic: Snapshot 2026-09-21 20:00 UTC. Call wall 700 sits below spot — pinned/legacy positioning, not overhead resistance. Expiry 2026-10-16 (25 DTE) · highest open interest among 9 expiries within 7–60 DTE. IV rank unavailable (no IV history); avg IV is the chain average.
+    - generic: Put/Call Ratio
+    - generic: "0.36"
+    - generic: Max Pain
+    - generic: $600.00
+    - generic: Avg IV
+    - generic: +62%
+    - generic: Sentiment
+    - generic: Bullish
+    - generic: "Unusual activity: Elevated"
+    - text: Highest OI Call
+    - generic: $700
+    - generic: "OI:"
+    - generic: 27,275
+    - generic: "IV:"
+    - generic: +46%
+    - generic: "Δ Delta:"
+    - generic: "0.710"
+    - generic: "Γ Gamma:"
+    - generic: "0.0038"
+    - generic: "Θ Theta:"
+    - generic: "-0.665"
+    - generic: "ν Vega:"
+    - generic: "0.6637"
+    - text: Highest OI Put
+    - generic: $600
+    - generic: "OI:"
+    - generic: 7,203
+    - generic: "IV:"
+    - generic: +49%
+    - generic: "Δ Delta:"
+    - generic: "-0.042"
+    - generic: "Γ Gamma:"
+    - generic: "0.0009"
+    - generic: "Θ Theta:"
+    - generic: "-0.169"
+    - generic: "ν Vega:"
+    - generic: "0.1752"
+    - heading "Earnings Report" [level=3]
+    - generic: Next Earnings Report
+    - generic: November 4, 2026
+    - generic: Last Report
+    - generic: Reported EPS
+    - generic: $6.18
+    - generic: Estimated EPS
+    - generic: $7.10
+    - generic: Result
+    - generic: MISS
+    - generic: "-13.0%"
+    - generic: Beat Rate (4Q)
+    - generic: 75%
+    - generic: Recent Quarters
+    - generic: 2026-06
+    - generic: $6.18
+    - generic: Miss
+    - generic: 2026-03
+    - generic: $7.31
+    - generic: Beat
+    - generic: 2025-12
+    - generic: $8.88
+    - generic: Beat
+    - generic: 2025-09
+    - generic: $7.25
+    - generic: Beat
+    - heading "Symbol-specific news & catalysts" [level=3]
+    - generic: "8 symbol-specific articles: 1 positive, 7 neutral. 50 articles considered, 8 reference META (relevance ≥ 0.35). Catalyst class is rule-based; sentiment is the provider's ticker-level label."
+    - link "Meta’s Muse is outpacing ChatGPT’s early mobile launch TechCrunch • 22/09/2026 NEUTRAL relevance 1.00 Bullish Meta's new AI app, Muse, is showing stronger initial mobile performance than ChatGPT did in its early days, according to Apptopia data. Muse has garnered more downloads and daily active users in the U...":
+      - /url: https://techcrunch.com/2026/09/21/metas-muse-is-outpacing-chatgpts-early-mobile-launch/
+      - generic: Meta’s Muse is outpacing ChatGPT’s early mobile launch
+      - generic: TechCrunch
+      - generic: •
+      - generic: 22/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Meta's new AI app, Muse, is showing stronger initial mobile performance than ChatGPT did in its early days, according to Apptopia data. Muse has garnered more downloads and daily active users in the U...
+    - link "Meta's Muse personal AI agent tops ChatGPT, Grok and Claude for post-launch downloads CNBC • 22/09/2026 NEUTRAL relevance 1.00 Bullish Meta's new AI personal agent tool, Muse, has quickly surpassed rivals like ChatGPT, Claude, and Grok in post-launch downloads, becoming the leading free iOS app in the U.S. within five days of its rel...":
+      - /url: https://www.cnbc.com/2026/09/21/meta-muse-personal-ai-agent-downloads.html
+      - generic: Meta's Muse personal AI agent tops ChatGPT, Grok and Claude for post-launch downloads
+      - generic: CNBC
+      - generic: •
+      - generic: 22/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Meta's new AI personal agent tool, Muse, has quickly surpassed rivals like ChatGPT, Claude, and Grok in post-launch downloads, becoming the leading free iOS app in the U.S. within five days of its rel...
+    - link "We Think Meta Could Keep Soaring Higher and Wells Fargo Agrees 24/7 Wall St. • 22/09/2026 NEUTRAL relevance 1.00 Bullish Wells Fargo has significantly increased its price target for Meta Platforms from $640 to $796, reiterating an Overweight rating, based on strong AI product momentum and early success of the Meta Muse ...":
+      - /url: https://247wallst.com/investing/2026/09/21/we-think-meta-could-keep-soaring-higher-and-wells-fargo-agrees/
+      - generic: We Think Meta Could Keep Soaring Higher and Wells Fargo Agrees
+      - generic: 24/7 Wall St.
+      - generic: •
+      - generic: 22/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Wells Fargo has significantly increased its price target for Meta Platforms from $640 to $796, reiterating an Overweight rating, based on strong AI product momentum and early success of the Meta Muse ...
+    - link "Meta Spikes 7% as Wells Fargo Lifts Price Target to $796 Ahead of Connect; Alphabet Nudges Higher, Microsoft Holds Flat 24/7 Wall St. • 22/09/2026 POSITIVE · analyst upgrade relevance 1.00 Bullish Meta Platforms stock surged 7% after Wells Fargo raised its price target to $796 from $640, ahead of the annual Connect developer conference. The analyst upgrade was attributed to recent model launche...":
+      - /url: https://247wallst.com/investing/2026/09/21/meta-spikes-7-as-wells-fargo-lifts-price-target-to-796-ahead-of-connect-alphabet-nudges-higher-microsoft-holds-flat/
+      - generic: Meta Spikes 7% as Wells Fargo Lifts Price Target to $796 Ahead of Connect; Alphabet Nudges Higher, Microsoft Holds Flat
+      - generic: 24/7 Wall St.
+      - generic: •
+      - generic: 22/09/2026
+      - generic "analyst upgrade": POSITIVE · analyst upgrade
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Meta Platforms stock surged 7% after Wells Fargo raised its price target to $796 from $640, ahead of the annual Connect developer conference. The analyst upgrade was attributed to recent model launche...
+    - link "Meta Spikes 7% as Wells Fargo Lifts Price Target to $796 Ahead of Connect; Alphabet Nudges Higher, Microsoft Holds Flat Yahoo Finance • 22/09/2026 NEUTRAL relevance 1.00 Bullish Meta Platforms (META) stock surged 7% after Wells Fargo raised its price target from $640 to $796, citing early traction for the company's Muse assistant ahead of the Connect developer conference. The...":
+      - /url: https://finance.yahoo.com/markets/stocks/articles/meta-spikes-7-wells-fargo-142420983.html
+      - generic: Meta Spikes 7% as Wells Fargo Lifts Price Target to $796 Ahead of Connect; Alphabet Nudges Higher, Microsoft Holds Flat
+      - generic: Yahoo Finance
+      - generic: •
+      - generic: 22/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Meta Platforms (META) stock surged 7% after Wells Fargo raised its price target from $640 to $796, citing early traction for the company's Muse assistant ahead of the Connect developer conference. The...
+    - 'link "Meta Platforms Inc Stock (META) Opened Up by 6.23% on Sep 21: What Investors Need To Know TradingKey • 21/09/2026 NEUTRAL relevance 1.00 Bullish Meta Platforms Inc (META) shares surged by 6.23% on September 21, driven by institutional buying ahead of its Meta Connect event and optimistic Wall Street sentiment. Analysts maintain buy ratings wit..."':
+      - /url: https://www.tradingkey.com/news/market-movers/262178436-market-movers-meta-20260921
+      - generic: "Meta Platforms Inc Stock (META) Opened Up by 6.23% on Sep 21: What Investors Need To Know"
+      - generic: TradingKey
+      - generic: •
+      - generic: 21/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Meta Platforms Inc (META) shares surged by 6.23% on September 21, driven by institutional buying ahead of its Meta Connect event and optimistic Wall Street sentiment. Analysts maintain buy ratings wit...
+    - link "Meta Heads Into Connect With Fresh Wells Fargo Bull Case As Muse Gains Traction — Analyst Says Company ‘Now Has A Story To Tell’ Yahoo Finance • 21/09/2026 NEUTRAL relevance 1.00 Bullish Wells Fargo raised its price target for Meta Platforms (META) to $796 from $640, maintaining an 'Overweight' rating, ahead of Meta Connect. The upgrade is driven by Meta's recent model releases and th...":
+      - /url: https://finance.yahoo.com/markets/stocks/articles/meta-heads-connect-fresh-wells-123738300.html
+      - generic: Meta Heads Into Connect With Fresh Wells Fargo Bull Case As Muse Gains Traction — Analyst Says Company ‘Now Has A Story To Tell’
+      - generic: Yahoo Finance
+      - generic: •
+      - generic: 21/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Bullish
+      - paragraph: Wells Fargo raised its price target for Meta Platforms (META) to $796 from $640, maintaining an 'Overweight' rating, ahead of Meta Connect. The upgrade is driven by Meta's recent model releases and th...
+    - 'link "Key facts: META $6.6B Sandersville lease; EU bars ''no-knowledge''; +10% TradingView • 19/09/2026 NEUTRAL relevance 1.00 Neutral Meta Platforms (META) has signed a 20-year lease agreement worth $6.6 billion with CleanSpark for a 175 MW AI data center in Sandersville, Georgia. Despite a recent 10% stock increase due to strong Mu..."':
+      - /url: https://www.tradingview.com/news/tradingview:b1d2285e2768e:0-key-facts-meta-6-6b-sandersville-lease-eu-bars-no-knowledge-10/
+      - generic: "Key facts: META $6.6B Sandersville lease; EU bars 'no-knowledge'; +10%"
+      - generic: TradingView
+      - generic: •
+      - generic: 19/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 1.00
+      - generic: Neutral
+      - paragraph: Meta Platforms (META) has signed a 20-year lease agreement worth $6.6 billion with CleanSpark for a 175 MW AI data center in Sandersville, Georgia. Despite a recent 10% stock increase due to strong Mu...
+    - heading "Deep Analyst — research read" [level=3]
+    - generic: Every technical number comes from the Golden Egg canonical packet; news is ticker-filtered (relevance ≥ 0.35); fundamentals are the shared Alpha Vantage OVERVIEW snapshot.
+    - generic: Thesis
+    - generic: "META (equity, 1D) is aligned with a bullish bias: trend setup — extended trend — RSI 78 with ADX 54; continuation with extension risk. Confluence 73/100 (evidence alignment, not a probability)."
+    - generic: What supports it
+    - generic: • Structure 80/100 — EMA200 below price — long-term anchor agrees
+    - generic: • Momentum 75/100 — RSI 77.8, MACD hist 10.870
+    - generic: • Flow 75/100 — call-heavy positioning (P/C 0.36 on 2026-10-16)
+    - generic: • Price above EMA200 $628.30
+    - generic: • Cross-market supportive — 3 supportive (SPY, QQQ, XLC) · 2 headwind (TLT, UUP) · 0 neutral for a long read.
+    - generic: • Revenue +28.0% YoY (latest quarter)
+    - generic: What argues against it
+    - generic: • Extension extended — RSI 77.8, stochastic 91
+    - generic: "• Risk: extension — RSI 78 and stochastic 91 both at extremes"
+    - generic: • Earnings −13.4% YoY (latest quarter) — fundamental headwind for a bullish read
+    - generic: Primary blocker
+    - generic: Extension — extended trend — RSI 78 with ADX 54; continuation with extension risk
+    - generic: What confirms
+    - generic: • Close above the model reference $741.25 with expansion — mechanical trigger; look for a structural level to replace it.
+    - generic: • ADX staying ≥ 25 (now 54) and price holding above EMA200 $628.30.
+    - generic: What invalidates
+    - generic: • Close below $700.24 (1.5× ATR model stop) with volume confirmation.
+    - generic: • Decisive close below EMA200 $628.30 or ADX rolling below 20.
+    - generic: • Climax bar followed by a close through its midpoint — the extended move is failing.
+    - generic: Catalysts / event risk
+    - generic: • [NEUTRAL] Meta’s Muse is outpacing ChatGPT’s early mobile launch — no material catalyst pattern (TechCrunch, relevance 1.00)
+    - generic: • [NEUTRAL] Meta's Muse personal AI agent tops ChatGPT, Grok and Claude for post-launch downloads — no material catalyst pattern (CNBC, relevance 1.00)
+    - generic: • [NEUTRAL] We Think Meta Could Keep Soaring Higher and Wells Fargo Agrees — no material catalyst pattern (24/7 Wall St., relevance 1.00)
+    - generic: • [POSITIVE] Meta Spikes 7% as Wells Fargo Lifts Price Target to $796 Ahead of Connect; Alphabet Nudges Higher, Microsoft Holds Flat — analyst upgrade (24/7 Wall St., relevance 1.00)
+    - generic: • [NEUTRAL] Meta Spikes 7% as Wells Fargo Lifts Price Target to $796 Ahead of Connect; Alphabet Nudges Higher, Microsoft Holds Flat — no material catalyst pattern (Yahoo Finance, relevance 1.00)
+    - generic: • [EVENT_RISK] Next earnings 2026-11-04 (43 days)
+    - generic: What would change the view
+    - generic: "• Weakens: Close below $700.24 (1.5× ATR model stop) with volume confirmation."
+    - generic: "• Weakens: Decisive close below EMA200 $628.30 or ADX rolling below 20."
+    - generic: "• Weakens: Climax bar followed by a close through its midpoint — the extended move is failing."
+    - generic: If close above the model reference $741.25 with expansion — mechanical trigger; look for a structural level to replace it, the bullish scenario would gain support; if close below $700.24 (1.5× ATR model stop) with volume confirmation, it is off the table. Educational research only.
+    - heading "Deep Analyst narrative (packet-constrained)" [level=3]
+    - generic: Source gpt-4o (packet-constrained). Conditional research language only — no probabilities, no instructions.
+    - generic: THESIS Meta Platforms Inc. (META) is currently in a strong upward trend, supported by structural alignment and momentum indicators, but faces extension risk due to overbought conditions. WHAT SUPPORTS IT - Price is aligned with the 20/50-bar means; EMA200 is below price, indicating long-term support (structure score 80). - Strong trend strength with ADX at 54 (trend strength only). - Cross-market support from SPY, QQQ, and XLC, all above their 20/50-bar means. - Call-heavy options positioning with a P/C ratio of 0.36 and dealers long gamma, suggesting stability. WHAT ARGUES AGAINST IT - RSI at 78 and stochastic at 91 indicate overbought conditions, posing extension risk. - Price is 4.3 ATR from the 20-bar mean, suggesting a blow-off extension. - Earnings growth is negative at -13.4% YoY, despite strong revenue growth. PRIMARY BLOCKER Extension risk due to overbought momentum indicators (RSI 78, stochastic 91) and price being significantly above the 20-bar mean. WHAT CONFIRMS - A close above the model reference price of $741.25 with expansion. - ADX remaining above 25 and price holding above EMA200 ($628.30). WHAT INVALIDATES - A close below $700.24 with volume confirmation. - A decisive close below EMA200 ($628.30) or ADX dropping below 20. - A climax bar followed by a close through its midpoint. CATALYSTS / EVENT RISK - Positive analyst upgrade with Wells Fargo raising the price target to $796. - Upcoming earnings report on 2026-11-04. - Meta Connect developer conference could influence sentiment. WHAT WOULD CHANGE THE VIEW - A reduction in extension risk, such as a pullback that alleviates overbought conditions. - Improved earnings growth in the upcoming report. - A shift in cross-market support, particularly if SPY, QQQ, or XLC weaken.
+    - generic: Analysis generated at 22/09/2026, 12:09:05 pm
+    - generic: "Response time: 6917ms"
+    - strong: "Disclaimer:"
+    - text: The Golden Egg analysis is for educational and informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other type of advice. Options trading involves substantial risk of loss and is not suitable for all investors. Past performance does not guarantee future results. Always conduct your own research and consult with a licensed financial advisor before making any investment decisions. MarketScanner Pros is not a registered investment advisor.
+- alert
+```
+
+## META_Fundamentals
+
+```text
+:
+    - generic: Golden Egg subview
+    - generic: 4. Business context
+    - generic: Symbol META
+    - heading "Fundamentals check for META" [level=2]
+    - paragraph: Check company or asset fundamentals before relying on the setup.
+    - button "Review Verdict"
+    - button "Open Chart"
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic: META
+    - generic "Single-symbol validation context"
+    - generic: View
+    - generic: Fundamentals
+    - generic "4. Business context"
+    - generic: Focus
+    - generic: Business Context
+    - generic "Completes the Verdict packet"
+    - generic: Next Check
+    - generic: Chart
+    - generic "Continue the validation sequence"
+  - main:
+    - textbox "Ticker symbol":
+      - /placeholder: Enter ticker symbol (e.g., AAPL)
+      - text: META
+    - button "Search"
+    - heading "Meta Platforms Inc. (META)" [level=2]
+    - generic: COMMUNICATION SERVICES
+    - generic: INTERNET CONTENT & INFORMATION
+    - generic: $741.25
+    - generic: 11.4187%
+    - paragraph: Meta Platforms, Inc. develops products that enable people to connect and share with friends and family through mobile devices, PCs, virtual reality headsets, wearables and home devices around the world. The company is headquartered in Menlo Park, California.
+    - heading "Research Lens" [level=3]:
+      - generic: FX
+      - text: Research Lens
+    - paragraph:
+      - strong: "Overall View:"
+      - text: COMMUNICATION SERVICES stock with moderately valued, revenue growth but earnings compression, moderate volatility.
+    - paragraph: Growth-style valuation profile with above-average volatility.
+    - paragraph: Algorithmically derived from reported financial metrics. Not AI-generated or investment advice.
+    - heading "Bull Case" [level=3]:
+      - generic: BULL
+      - text: Bull Case
+    - list:
+      - listitem: Revenue growing 28% YoY
+      - listitem: Healthy profit margins (30%)
+      - listitem: Strong return on equity (30%)
+      - listitem: COMMUNICATION SERVICES sector positioning
+    - heading "Risk Case" [level=3]:
+      - generic: RISK
+      - text: Risk Case
+    - list:
+      - listitem: Declining earnings (-13% YoY)
+      - listitem: Margin pressure (earnings lagging revenue)
+    - generic: UP
+    - generic: "Technical Bias: Bullish"
+    - text: Strong uptrend, near 52-week high
+    - heading "Valuation" [level=3]
+    - 'generic "Rule: trailing P/E > 50 premium · 25–50 elevated · 12–25 moderate · < 12 low; forward P/E and PEG shown alongside, not folded into the label."': Elevated multiple
+    - paragraph: "trailing P/E 25.1 · forward P/E 19.7 · PEG 0.88. PEG below 1 indicates the multiple is low relative to reported growth. Rule: trailing P/E > 50 premium · 25–50 elevated · 12–25 moderate · < 12 low; forward P/E and PEG shown alongside, not folded into the label."
+    - term: Market Cap
+    - definition: $1.70T
+    - term: P/E (trailing)
+    - definition: "25.07"
+    - term: Forward P/E
+    - definition: "19.72"
+    - term: PEG Ratio
+    - definition: "0.881"
+    - term: Book Value
+    - definition: $102.52
+    - term: Beta
+    - definition: "1.243"
+    - paragraph:
+      - strong: "Period basis:"
+      - text: Latest reported quarter 2026-06-30 · fiscal year ends December. Revenue/EPS/margins are TTM; growth rates are latest-quarter YoY.
+    - generic: "Revenue, gross profit, EPS, margins, ROE/ROA: Trailing twelve months (TTM)"
+    - generic: "Revenue growth, earnings growth: Latest reported quarter (2026-06-30) vs same quarter a year earlier (YoY)"
+    - generic: "P/E (trailing): Price ÷ TTM EPS"
+    - generic: "Forward P/E, PEG, analyst target: Consensus estimates (provider-supplied)"
+    - paragraph: "Snapshot retrieved 22/09/2026, 12:09:35 pm (retrieval time, not the reporting period) · Source: Alpha Vantage"
+    - heading "Earnings & analyst context" [level=3]
+    - term: Next earnings
+    - definition: 2026-11-04
+    - definition:
+      - generic: in 43 days · est. EPS $6.39 — event risk
+    - term: Last reported quarter
+    - definition: 2026-06-30
+    - definition:
+      - generic: EPS $6.18 vs est $7.10 · miss · reported 2026-07-29
+    - term: Beat rate (last 4Q)
+    - definition: 75%
+    - term: Analyst target
+    - definition: $755.28
+    - definition:
+      - text: 62 analysts
+      - generic: · +1.9% upside vs current
+    - term: Rating distribution
+    - definition: SB 8 · B 47 · H 7 · S 0 · SS 0
+    - paragraph: Analyst targets and ratings are third-party consensus context, not signals or forecasts. Earnings dates come from the provider calendar and can move.
+    - heading "Profitability" [level=3]
+    - term: Profit Margin
+    - definition: 29.8%
+    - term: Operating Margin
+    - definition: 34.8%
+    - term: ROE
+    - definition: 29.8%
+    - term: ROA
+    - definition: 14.6%
+    - term: EPS
+    - definition: $26.56
+    - heading "Growth & Revenue" [level=3]
+    - term: Revenue TTM
+    - definition: $228.25B
+    - term: Gross Profit TTM
+    - definition: $186.59B
+    - term: Earnings Growth (latest quarter 2026-06-30 YoY)
+    - definition: "-13.4% YoY"
+    - term: Revenue Growth (latest quarter 2026-06-30 YoY)
+    - definition: +28.0% YoY
+    - heading "Technical" [level=3]
+    - term: 50-Day MA
+    - definition: $607.38
+    - term: 200-Day MA
+    - definition: $624.16
+    - term: 52-Week High
+    - definition: $767.99
+    - term: 52-Week Low
+    - definition: $519.37
+    - heading "Dividends" [level=3]
+    - term: Dividend Yield
+    - definition: 0.3%
+    - paragraph:
+      - strong: "Research disclaimer:"
+      - text: This analysis is algorithmic and for informational purposes only. It does not constitute investment advice. Always conduct your own research and consult a financial advisor before making investment decisions.
+- alert
+```
+
+## META_Chart
+
+```text
+:
+    - generic: Golden Egg subview
+    - generic: 2. Price context
+    - generic: Symbol META
+    - heading "Chart check for META" [level=2]
+    - paragraph: Inspect price action and intraday structure around the scenario levels.
+    - button "Review Verdict"
+    - button "Open Deep Analysis"
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic: META
+    - generic "Single-symbol validation context"
+    - generic: View
+    - generic: Chart
+    - generic "2. Price context"
+    - generic: Focus
+    - generic: Price Action
+    - generic "Completes the Verdict packet"
+    - generic: Next Check
+    - generic: Deep Analysis
+    - generic "Continue the validation sequence"
+  - main:
+    - generic: Indicator review
+    - generic: Caution
+    - generic: Mixed structure. Wait for additional confirmation evidence.
+    - generic: Volatility
+    - generic: Expansion
+    - generic: Session range 21.57%
+    - generic: Dealer context
+    - generic: Supportive
+    - generic: Flip $644.34
+    - generic: Scenario notes
+    - generic: Monitor VWAP reclaim/reject behavior before treating the scenario as stronger.
+    - button "Stocks" [pressed]
+    - button "Crypto"
+    - textbox "Symbol":
+      - /placeholder: Symbol (e.g., AAPL)
+      - text: META
+    - button "Load"
+    - button "AAPL"
+    - button "MSFT"
+    - button "GOOGL"
+    - button "AMZN"
+    - button "NVDA"
+    - button "TSLA"
+    - button "META" [pressed]
+    - button "SPY"
+    - generic: META
+    - heading "$740.00" [level=2]
+    - generic: ▲ +3.29%
+    - generic: 100 bars
+    - button "1 Min"
+    - button "5 Min" [pressed]
+    - button "15 Min"
+    - button "30 Min"
+    - button "1 Hour"
+    - checkbox "Toggle auto-refresh"
+    - text: Auto 60s
+    - generic: Overlays
+    - button "EMA 9"
+    - button "EMA 21"
+    - button "SMA 20"
+    - button "SMA 50"
+    - button "VWAP"
+    - button "Bollinger"
+    - button "RTH"
+    - button "Trades"
+    - button "Compare TF"
+    - generic: Analysis context
+    - generic: VWAP
+    - generic: $738.48
+    - generic: Range
+    - generic: $159.65
+    - generic: Session High
+    - generic: $753.00
+    - generic: Session Low
+    - generic: $593.35
+    - generic: Avg Bar Volume
+    - generic: 346.7K
+    - generic: Liquidity
+    - generic: Stable
+    - generic: Dealer Structure
+    - generic: Regime Long Gamma
+    - generic: Flip $644.34 • Call Wall $700.00 • Put Wall $640.00
+    - generic: Analysis actions
+    - link "Add to Watchlist":
+      - /url: /tools/workspace?tab=watchlists&symbol=META
+    - link "Create Alert":
+      - /url: /tools/workspace?tab=alerts&symbol=META
+    - link "Run Confluence Scan":
+      - /url: /tools/terminal?tab=time-confluence&symbol=META
+    - link "Open Journal Draft":
+      - /url: /tools/workspace?tab=journal&note=Review%20META%20setup
+    - generic: Last refresh 21/09/2026, 7:55:00 pm
+    - generic "Help & methodology"
+- alert
+```
+
+## META_Terminal
+
+```text
+
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Options Risk — Educational Only
+  - text: — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 1. Timing map
+    - generic: EQUITY path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: Active lens
+    - generic "Close Calendar"
+    - generic "1. Timing map"
+    - generic: Data state
+    - generic "Ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Review close cluster timing"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": META
+  - button "Load"
+  - generic: META
+  - generic: EQUITY
+  - generic: EQUITY PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "DOT"
+  - button "FET"
+  - button "WIF"
+  - button "XRP"
+  - button "ADA"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Equity path
+    - button "1. Timing map Close Calendar" [pressed]:
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Chain quality Options Terminal":
+      - generic: 2. Chain quality
+      - generic: Options Terminal
+    - button "3. Options setup Options Confluence":
+      - generic: 3. Options setup
+      - generic: Options Confluence
+    - button "4. Flow estimate Options Flow":
+      - generic: 4. Flow estimate
+      - generic: Options Flow
+    - button "5. Capital pressure Capital Pressure":
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity":
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence":
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - generic: Close Calendar — Forward Schedule
+  - generic: Which timeframes close on your target day? Where do closes stack?
+  - button "↻ Refresh"
+  - generic: Anchor
+  - button "Now"
+  - button "Today" [pressed]
+  - button "Prior Day"
+  - button "End of Week"
+  - button "End of Month"
+  - generic: Horizon
+  - button "1d" [pressed]
+  - button "3d"
+  - button "7d"
+  - button "14d"
+  - button "30d"
+  - generic: "Anchor: Mon Sep 21 00:00 EDT"
+  - text: "Horizon:"
+  - generic: 1d ? Tue Sep 22 00:00 EDT
+  - generic: "Daily+ closes: 13"
+  - generic: Close Cluster Timeline
+  - generic: Mon Sep 21 16:00
+  - generic: 1D
+  - generic: 2D
+  - generic: 3D
+  - generic: 4D
+  - generic: 5D
+  - generic: 6D
+  - generic: 9D
+  - generic: 10D
+  - generic: 12D
+  - generic: 15D
+  - generic: 18D
+  - generic: 20D
+  - generic: 30D
+  - generic: Wt 91 — Score 100
+  - button "Closes on Anchor Day (13)" [pressed]
+  - button "Full Schedule (94)"
+  - generic: daily
+  - table:
+    - rowgroup:
+      - row "TF Close Time In Weight":
+        - columnheader "TF"
+        - columnheader "Close Time"
+        - columnheader "In"
+        - columnheader "Weight"
+    - rowgroup:
+      - row "1D Mon Sep 21 16:00 EDT 16h 10":
+        - cell "1D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "10"
+      - row "2D Mon Sep 21 16:00 EDT 16h 12":
+        - cell "2D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "12"
+      - row "3D Mon Sep 21 16:00 EDT 16h 14":
+        - cell "3D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "14"
+      - row "4D Mon Sep 21 16:00 EDT 16h 15":
+        - cell "4D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "15"
+      - row "5D Mon Sep 21 16:00 EDT 16h 16":
+        - cell "5D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "16"
+      - row "6D Mon Sep 21 16:00 EDT 16h 17":
+        - cell "6D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "17"
+      - row "9D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "9D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+      - row "10D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "10D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+      - row "12D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "12D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+      - row "15D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "15D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+      - row "18D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "18D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+      - row "20D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "20D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+      - row "30D Mon Sep 21 16:00 EDT 16h 1":
+        - cell "30D"
+        - cell "Mon Sep 21 16:00 EDT"
+        - cell "16h"
+        - cell "1"
+- alert
+```
+
+## META_OptionsTerminal
+
+```text
+:
+    - generic: Terminal subview
+    - generic: 2. Chain quality
+    - generic: Symbol META
+    - heading "Options Terminal check for META" [level=2]
+    - paragraph: Inspect strikes, spreads, open interest, IV, and chain data truth.
+    - button "Back to Calendar"
+    - button "Open Options Confluence"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Options Terminal"
+    - generic "2. Chain quality"
+    - generic: Focus
+    - generic "Chain Quality"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Options Confluence"
+    - generic "Continue the mechanics sequence"
+  - generic: Ticker
+  - textbox "AAPL": META
+  - generic: Options Terminal
+  - generic: Underlying
+  - generic: $741.25
+  - generic: +0.00%
+  - generic: Updated 9s ago
+  - generic: LIVE
+  - generic: Expiry
+  - combobox:
+    - option "All"
+    - option "Mon, Sep 21 (0 DTE)"
+    - option "Wed, Sep 23 (2 DTE)" [selected]
+    - option "Fri, Sep 25 (4 DTE)"
+    - option "Mon, Sep 28 (7 DTE)"
+    - option "Wed, Sep 30 (9 DTE)"
+    - option "Fri, Oct 2 (11 DTE)"
+    - option "Mon, Oct 5 (14 DTE)"
+    - option "Fri, Oct 9 (18 DTE)"
+    - option "Fri, Oct 16 (25 DTE)"
+    - option "Fri, Oct 23 (32 DTE)"
+    - option "Fri, Oct 30 (39 DTE)"
+    - option "Fri, Nov 20 (60 DTE)"
+    - option "Fri, Dec 18 (88 DTE)"
+    - option "Fri, Jan 15 (116 DTE)"
+    - option "Fri, Feb 19 (151 DTE)"
+    - option "Fri, Mar 19 (179 DTE)"
+    - option "Thu, Jun 17 (269 DTE)"
+    - option "Fri, Sep 17 (361 DTE)"
+    - option "Fri, Dec 17 (452 DTE)"
+    - option "Fri, Jan 21 (487 DTE)"
+    - option "Fri, Jun 16 (634 DTE)"
+    - option "Fri, Dec 15 (816 DTE)"
+    - option "Fri, Jan 19 (851 DTE)"
+  - button "Retail" [pressed]
+  - button "Institutional"
+  - generic: Options Terminal Evidence Stack
+  - generic: Chain Coverage
+  - generic: 268 contracts
+  - generic: 23 expirations loaded; 0 strikes visible after filters.
+  - generic: Provider
+  - generic: REALTIME_OPTIONS_FMV
+  - generic: Updated 9s ago
+  - generic: Liquidity
+  - generic: Unavailable
+  - generic: Load a chain to compute spread and OI quality.
+  - generic: IV Context
+  - generic: HIGH
+  - generic: ATM IV 57.1%, expected move 4.2%.
+  - generic: Options Terminal Risk Flags
+  - generic "Limits educational options scenario quality until checked.": 268/268 contracts lack valid two-sided quotes. Spread and liquidity assessment are incomplete.
+  - generic "Limits educational options scenario quality until checked.": Current filters hide every strike.
+  - generic: Chain Data Truth
+  - generic "REALTIME_OPTIONS_FMV": LIVE
+  - text: "Source: REALTIME_OPTIONS_FMV"
+  - text: "· Coverage:"
+  - generic: 58%
+  - generic: "· Updated: 12:10 pm"
+  - generic: Liquidity Data Truth
+  - generic "No spread data available.": DEGRADED
+  - text: "Source: bid ask and OI"
+  - text: "· Coverage:"
+  - generic: 0%
+  - generic "No spread data available."
+  - generic: IV Data Truth
+  - generic "implied volatility model": LIVE
+  - text: "Source: implied volatility model"
+  - text: "· Coverage:"
+  - generic: 57%
+  - generic: Chain Navigator
+  - generic: 23 expirations
+  - button "0 DTE 2026-09-21":
+    - generic: 0 DTE
+    - generic: 2026-09-21
+  - button "2 DTE 2026-09-23" [pressed]:
+    - generic: 2 DTE
+    - generic: 2026-09-23
+  - button "4 DTE 2026-09-25":
+    - generic: 4 DTE
+    - generic: 2026-09-25
+  - button "7 DTE 2026-09-28":
+    - generic: 7 DTE
+    - generic: 2026-09-28
+  - generic: Quick Filters
+  - button "ATM Focus"
+  - button "25Δ Focus"
+  - button "High OI"
+  - button "High Volume"
+  - button "Tight Spreads"
+  - generic: Notable Strikes (Auto)
+  - generic: Load a chain to see auto-computed notable strikes.
+  - generic: Options Chain
+  - generic: ±20%
+  - generic: 0 strikes
+  - button "Both" [pressed]
+  - button "Calls"
+  - button "Puts"
+  - generic: Range %
+  - spinbutton: "20"
+  - generic: Min OI
+  - spinbutton: "0"
+  - generic: Min Vol
+  - spinbutton: "0"
+  - generic: Max Spread %
+  - spinbutton: "50"
+  - table:
+    - rowgroup:
+      - row "Bid Ask Last Vol OI IV Δ Strike Δ IV OI Vol Last Bid Ask":
+        - columnheader "Bid"
+        - columnheader "Ask"
+        - columnheader "Last"
+        - columnheader "Vol"
+        - columnheader "OI"
+        - columnheader "IV"
+        - columnheader "Δ"
+        - columnheader "Strike"
+        - columnheader "Δ"
+        - columnheader "IV"
+        - columnheader "OI"
+        - columnheader "Vol"
+        - columnheader "Last"
+        - columnheader "Bid"
+        - columnheader "Ask"
+    - rowgroup:
+      - row "No strikes match your filters.":
+        - cell "No strikes match your filters."
+  - generic: Click Bid/Ask on a strike to load the Contract Inspector →
+  - generic: Contract Inspector
+  - generic: click a strike
+  - generic: Select a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.
+  - generic: IV & Expected Move
+  - generic: 2026-09-23
+  - generic: ATM IV
+  - generic: 57.1%
+  - generic: Expected Move
+  - generic: ±$31.33
+  - generic: IV Level
+  - generic: HIGH
+  - generic: EM %
+  - generic: ±4.2%
+  - generic: Desk Read
+  - generic: "Elevated IV: defined-risk structures may deserve closer review than naked long premium exposure."
+  - generic: Open Interest Map
+  - generic: walls
+  - generic: "550"
+  - generic: "600"
+  - generic: "645"
+  - generic: "660"
+  - generic: "665"
+  - generic: "670"
+  - generic: "673"
+  - generic: "675"
+  - generic: "680"
+  - generic: "683"
+  - generic: "685"
+  - generic: "690"
+  - generic: "700"
+  - generic: "720"
+  - generic: "730"
+  - generic: Calls
+  - generic: Puts
+  - generic: Strategy Scenarios (Educational)
+  - generic: not advice
+  - generic: Directional + Elevated IV
+  - generic: Elevated IV can make defined-risk credit structures worth reviewing, but spread width and event risk still control quality.
+  - generic: Neutral + Elevated IV
+  - generic: Iron-condor frameworks can be compared against the expected move zone; wider wings change risk and reward assumptions.
+  - generic: Directional + Low IV
+  - generic: When IV is high, naked long premium can face headwinds unless a further volatility expansion scenario is credible.
+  - generic: These are educational frameworks only — not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.
+- alert
+```
+
+## META_OptionsOct16
+
+```text
+
+  - textbox "AAPL": META
+  - generic: Options Terminal
+  - generic: Underlying
+  - generic: $741.25
+  - generic: +0.00%
+  - generic: Updated 37s ago
+  - generic: LIVE
+  - generic: Expiry
+  - combobox:
+    - option "All"
+    - option "Mon, Sep 21 (0 DTE)"
+    - option "Wed, Sep 23 (2 DTE)"
+    - option "Fri, Sep 25 (4 DTE)"
+    - option "Mon, Sep 28 (7 DTE)"
+    - option "Wed, Sep 30 (9 DTE)"
+    - option "Fri, Oct 2 (11 DTE)"
+    - option "Mon, Oct 5 (14 DTE)"
+    - option "Fri, Oct 9 (18 DTE)"
+    - option "Fri, Oct 16 (25 DTE)" [selected]
+    - option "Fri, Oct 23 (32 DTE)"
+    - option "Fri, Oct 30 (39 DTE)"
+    - option "Fri, Nov 20 (60 DTE)"
+    - option "Fri, Dec 18 (88 DTE)"
+    - option "Fri, Jan 15 (116 DTE)"
+    - option "Fri, Feb 19 (151 DTE)"
+    - option "Fri, Mar 19 (179 DTE)"
+    - option "Thu, Jun 17 (269 DTE)"
+    - option "Fri, Sep 17 (361 DTE)"
+    - option "Fri, Dec 17 (452 DTE)"
+    - option "Fri, Jan 21 (487 DTE)"
+    - option "Fri, Jun 16 (634 DTE)"
+    - option "Fri, Dec 15 (816 DTE)"
+    - option "Fri, Jan 19 (851 DTE)"
+  - button "Retail" [pressed]
+  - button "Institutional"
+  - generic: Options Terminal Evidence Stack
+  - generic: Chain Coverage
+  - generic: 334 contracts
+  - generic: 23 expirations loaded; 0 strikes visible after filters.
+  - generic: Provider
+  - generic: REALTIME_OPTIONS_FMV
+  - generic: Updated 37s ago
+  - generic: Liquidity
+  - generic: Unavailable
+  - generic: Load a chain to compute spread and OI quality.
+  - generic: IV Context
+  - generic: NORMAL
+  - generic: ATM IV 45.9%, expected move 12.0%.
+  - generic: Options Terminal Risk Flags
+  - generic "Limits educational options scenario quality until checked.": 334/334 contracts lack valid two-sided quotes. Spread and liquidity assessment are incomplete.
+  - generic "Limits educational options scenario quality until checked.": Current filters hide every strike.
+  - generic: Chain Data Truth
+  - generic "REALTIME_OPTIONS_FMV": LIVE
+  - text: "Source: REALTIME_OPTIONS_FMV"
+  - text: "· Coverage:"
+  - generic: 73%
+  - generic: "· Updated: 12:10 pm"
+  - generic: Liquidity Data Truth
+  - generic "No spread data available.": DEGRADED
+  - text: "Source: bid ask and OI"
+  - text: "· Coverage:"
+  - generic: 0%
+  - generic "No spread data available."
+  - generic: IV Data Truth
+  - generic "implied volatility model": LIVE
+  - text: "Source: implied volatility model"
+  - text: "· Coverage:"
+  - generic: 46%
+  - generic: Chain Navigator
+  - generic: 23 expirations
+  - button "0 DTE 2026-09-21":
+    - generic: 0 DTE
+    - generic: 2026-09-21
+  - button "2 DTE 2026-09-23":
+    - generic: 2 DTE
+    - generic: 2026-09-23
+  - button "4 DTE 2026-09-25":
+    - generic: 4 DTE
+    - generic: 2026-09-25
+  - button "7 DTE 2026-09-28":
+    - generic: 7 DTE
+    - generic: 2026-09-28
+  - generic: Quick Filters
+  - button "ATM Focus"
+  - button "25Δ Focus"
+  - button "High OI"
+  - button "High Volume"
+  - button "Tight Spreads"
+  - generic: Notable Strikes (Auto)
+  - generic: Load a chain to see auto-computed notable strikes.
+  - generic: Options Chain
+  - generic: ±20%
+  - generic: 0 strikes
+  - button "Both" [pressed]
+  - button "Calls"
+  - button "Puts"
+  - generic: Range %
+  - spinbutton: "20"
+  - generic: Min OI
+  - spinbutton: "0"
+  - generic: Min Vol
+  - spinbutton: "0"
+  - generic: Max Spread %
+  - spinbutton: "50"
+  - table:
+    - rowgroup:
+      - row "Bid Ask Last Vol OI IV Δ Strike Δ IV OI Vol Last Bid Ask":
+        - columnheader "Bid"
+        - columnheader "Ask"
+        - columnheader "Last"
+        - columnheader "Vol"
+        - columnheader "OI"
+        - columnheader "IV"
+        - columnheader "Δ"
+        - columnheader "Strike"
+        - columnheader "Δ"
+        - columnheader "IV"
+        - columnheader "OI"
+        - columnheader "Vol"
+        - columnheader "Last"
+        - columnheader "Bid"
+        - columnheader "Ask"
+    - rowgroup:
+      - row "No strikes match your filters.":
+        - cell "No strikes match your filters."
+  - generic: Click Bid/Ask on a strike to load the Contract Inspector →
+  - generic: Contract Inspector
+  - generic: click a strike
+  - generic: Select a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.
+  - generic: IV & Expected Move
+  - generic: 2026-10-16
+  - generic: ATM IV
+  - generic: 45.9%
+  - generic: Expected Move
+  - generic: ±$89.00
+  - generic: IV Level
+  - generic: NORMAL
+  - generic: EM %
+  - generic: ±12.0%
+  - generic: Desk Read
+  - generic: "Normal IV: balanced environment. Compare debit spreads and defined-risk structures against liquidity."
+  - generic: Open Interest Map
+  - generic: walls
+  - generic: "550"
+  - generic: "585"
+  - generic: "600"
+  - generic: "620"
+  - generic: "640"
+  - generic: "650"
+  - generic: "670"
+  - generic: "680"
+  - generic: "700"
+  - generic: "710"
+  - generic: "750"
+  - generic: "765"
+  - generic: "780"
+  - generic: "800"
+  - generic: "830"
+  - generic: Calls
+  - generic: Puts
+  - generic: Strategy Scenarios (Educational)
+  - generic: not advice
+  - generic: Directional
+  - generic: "Balanced IV: debit spreads are a defined-risk framework to compare against liquidity and spread width."
+  - generic: Range-Bound
+  - generic: Butterfly or iron-condor frameworks can be reviewed around the expected move in balanced IV.
+  - generic: Event Framework
+  - generic: Earnings/catalyst proximity matters. Near-term events create IV crush risk for long premium holders.
+  - generic: These are educational frameworks only — not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.
+- alert
+```
+
+## META_OptionsConfluence
+
+```text
+:
+    - generic: Terminal subview
+    - generic: 3. Options setup
+    - generic: Symbol META
+    - heading "Options Confluence check for META" [level=2]
+    - paragraph: Check strike and expiry alignment against the selected research scenario.
+    - button "Back to Calendar"
+    - button "Open Options Flow"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Options Confluence"
+    - generic "3. Options setup"
+    - generic: Focus
+    - generic "Setup Alignment"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Options Flow"
+    - generic "Continue the mechanics sequence"
+  - strong: "Why this can fail:"
+  - text: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.
+  - generic: Analysis Panel
+  - generic: View Mode
+  - button "Guided" [pressed]
+  - button "Advanced"
+  - generic: Workflow Suggestions
+  - button "Refresh"
+  - generic: No active suggestions. New decision packets will repopulate this queue.
+  - textbox "Stock symbol":
+    - /placeholder: SPY, AAPL, QQQ, TSLA...
+    - text: META
+  - combobox "Scan timeframe":
+    - option "Scalping (5-15m) (0-2 DTE)"
+    - option "30 Minute (1-3 DTE)"
+    - option "1 Hour (2-5 DTE)"
+    - option "4 Hour (3-7 DTE)"
+    - option "Daily (5-14 DTE)" [selected]
+    - option "3-Day (1-3 weeks)"
+    - option "Weekly (2-4 weeks)"
+    - option "Monthly (30-60 DTE)"
+    - option "LEAPS (60+ DTE)"
+  - combobox "Expiration date":
+    - option "Auto-select expiry" [selected]
+    - option "Wed, Sep 23 (1 DTE) • 19,816 OI"
+    - option "Fri, Sep 25 (3 DTE) • 147,273 OI"
+    - option "Mon, Sep 28 (6 DTE) • 6,388 OI"
+    - option "Wed, Sep 30 (8 DTE) • 4,438 OI"
+    - option "Fri, Oct 2 (10 DTE) • 62,872 OI"
+    - option "Mon, Oct 5 (13 DTE) • 0 OI"
+    - option "Fri, Oct 9 (17 DTE) • 23,145 OI"
+    - option "Fri, Oct 16 (24 DTE) • 381,700 OI"
+    - option "Fri, Oct 23 (31 DTE) • 16,421 OI"
+    - option "Fri, Oct 30 (38 DTE) • 10,848 OI"
+    - option "Fri, Nov 20 (59 DTE) • 281,607 OI"
+    - option "Fri, Dec 18 (87 DTE) • 282,008 OI"
+    - option "Fri, Jan 15 (115 DTE) • 880,258 OI"
+    - option "Fri, Feb 19 (150 DTE) • 45,066 OI"
+    - option "Fri, Mar 19 (178 DTE) • 119,286 OI"
+    - option "Thu, Jun 17 (268 DTE) • 126,792 OI"
+    - option "Fri, Sep 17 (360 DTE) • 55,961 OI"
+    - option "Fri, Dec 17 (451 DTE) • 107,776 OI"
+    - option "Fri, Jan 21 (486 DTE) • 198,447 OI"
+    - option "Fri, Jun 16 (633 DTE) • 55,887 OI"
+    - option "Fri, Dec 15 (815 DTE) • 104,913 OI"
+    - option "Fri, Jan 19 (850 DTE) • 1,138 OI"
+  - button "Run Options Research"
+  - heading "How It Works" [level=3]
+  - generic: Time Confluence
+  - generic: Scans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.
+  - generic: Strike Selection
+  - generic: Identifies strikes based on 50% level clusters and target zones from decompressing timeframes.
+  - generic: Expiration Logic
+  - generic: Matches expiration to the selected timeframe - scalping gets 0-2 DTE, swing scenarios get weekly/monthly options.
+  - generic: Greeks-Aware
+  - generic: Provides delta targets, theta decay warnings, and gamma considerations based on your chosen timeframe.
+  - strong: "Risk Warning:"
+  - text: Options involve significant risk. This tool provides confluence-based research, not financial advice. Review your own risk tolerance and validate scenarios independently before making any financial decision.
+- alert
+```
+
+## META_OptionsFlow
+
+```text
+:
+    - generic: Terminal subview
+    - generic: 4. Flow estimate
+    - generic: Symbol META
+    - heading "Options Flow check for META" [level=2]
+    - paragraph: Review premium-flow classification, skew, and large-flow estimates.
+    - button "Back to Calendar"
+    - button "Open Capital Pressure"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Options Flow"
+    - generic "4. Flow estimate"
+    - generic: Focus
+    - generic "Flow Estimate"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Capital Pressure"
+    - generic "Continue the mechanics sequence"
+  - generic: Flow classifications are estimates derived from public options-chain data. “Large flow” labels may not reflect actual institutional positioning, hedging intent, or future price direction.
+  - textbox "Ticker symbol":
+    - /placeholder: SPY
+    - text: META
+  - button "Analyze Flow"
+  - generic: "Options flow unavailable: only 0% of 2026-09-21 contracts have usable bid/ask quotes"
+  - generic: Options flow classification uses bid/ask inference from snapshot data, not real-time trade prints. Direction classification is approximate. Not financial advice.
+- alert
+```
+
+## META_Capital
+
+```text
+:
+    - generic: Terminal subview
+    - generic: 5. Capital pressure
+    - generic: Symbol META
+    - heading "Capital Pressure check for META" [level=2]
+    - paragraph: Read flow, probability, gamma, liquidity, and session context together.
+    - button "Back to Calendar"
+    - button "Open Time Gravity"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Capital Pressure"
+    - generic "5. Capital pressure"
+    - generic: Focus
+    - generic "Capital Pressure"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Time Gravity"
+    - generic "Continue the mechanics sequence"
+  - heading "Capital Flow — META" [level=3]
+  - generic: as of 12:10:26 pm
+  - button "↻ Refresh"
+  - paragraph: "Blocked: BLOCKED: Trade Permission Score 59 below threshold (78) Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence."
+  - generic: Bias
+  - generic: bullish
+  - generic: Mode
+  - generic: launch
+  - generic: Gamma
+  - generic: Negative
+  - generic: Directional score
+  - generic: 100/100
+  - generic: Spot
+  - generic: $741.25
+  - heading "Scenario weights · heuristic" [level=3]
+  - generic: Continuation
+  - generic: 62/100
+  - generic: Pin / Reversion
+  - generic: 15/100
+  - generic: Expansion
+  - generic: 23/100
+  - generic: Regime
+  - generic: TRENDING
+  - generic: allow trend setups
+  - heading "Brain Decision" [level=3]
+  - generic: Brain Score
+  - generic: "76"
+  - generic: Status
+  - generic: NOT ALIGNED
+  - generic: Risk Mode
+  - generic: DEFENSIVE
+  - generic: Regime
+  - generic: vol expansion
+  - generic: VOL EXPANSION • LAUNCH • BULLISH
+  - heading "Reference Levels" [level=3]
+  - generic: Signal Type
+  - generic: none
+  - generic: Weighting
+  - generic: —
+  - generic: Invalidation Rule
+  - generic: —
+  - generic: Key Levels
+  - generic: • 750
+  - generic: • 843.72
+  - heading "Indicator Alignment" [level=3]
+  - generic: TPS
+  - generic: "59"
+  - generic: Risk Mode
+  - generic: high
+  - generic: Weighting Factor
+  - generic: 0.35x
+  - generic: Analysis Mode
+  - generic: wider confirmation
+  - generic: "Analysis paused: BLOCKED: Trade Permission Score 59 below threshold (78)"
+  - generic: Aligned
+  - generic: Trend continuation
+  - generic: Breakout retests
+  - generic: Momentum add-ons
+  - generic: Limit orders only (ALLOW_TIGHTENED)
+  - generic: Earnings reaction entries (if catalyst)
+  - heading "Risk Analysis" [level=3]
+  - generic: IRS Score
+  - generic: "1"
+  - generic: Risk Mode
+  - generic: DEFENSIVE
+  - generic: Conditions
+  - generic: Not Aligned
+  - generic: Vol Regime
+  - generic: EXTREME
+  - generic: Weighting
+  - generic: 0%
+  - heading "Liquidity Levels" [level=3]
+  - table:
+    - rowgroup:
+      - row "Level Label Heuristic weight":
+        - columnheader "Level"
+        - columnheader "Label"
+        - columnheader "Heuristic weight"
+    - rowgroup:
+      - row "$753.00 WEEK HIGH 91/100":
+        - cell "$753.00"
+        - cell "WEEK HIGH":
+          - generic: WEEK HIGH
+        - cell "91/100"
+      - row "$750.00 PIN 87/100":
+        - cell "$750.00"
+        - cell "PIN":
+          - generic: PIN
+        - cell "87/100"
+      - row "$721.05 VWAP 80/100":
+        - cell "$721.05"
+        - cell "VWAP":
+          - generic: VWAP
+        - cell "80/100"
+      - row "$694.34 PDH 55/100":
+        - cell "$694.34"
+        - cell "PDH":
+          - generic: PDH
+        - cell "55/100"
+      - row "$685.97 ONH 41/100":
+        - cell "$685.97"
+        - cell "ONH":
+          - generic: ONH
+        - cell "41/100"
+      - row "$680.29 GAP OPEN 38/100":
+        - cell "$680.29"
+        - cell "GAP OPEN":
+          - generic: GAP OPEN
+        - cell "38/100"
+      - row "$663.87 EQH 37/100":
+        - cell "$663.87"
+        - cell "EQH":
+          - generic: EQH
+        - cell "37/100"
+      - row "$656.20 WEEK LOW 34/100":
+        - cell "$656.20"
+        - cell "WEEK LOW":
+          - generic: WEEK LOW
+        - cell "34/100"
+  - heading "Key Strikes" [level=3]
+  - generic: $750
+  - generic: "Gravity: 1.0"
+  - generic: call heavy
+  - generic: $700
+  - generic: "Gravity: 0.0"
+  - generic: call heavy
+  - generic: $702.5
+  - generic: "Gravity: 0.0"
+  - generic: call heavy
+  - generic: $705
+  - generic: "Gravity: 0.0"
+  - generic: call heavy
+  - generic: $640
+  - generic: "Gravity: 0.0"
+  - generic: put heavy
+  - generic: $650
+  - generic: "Gravity: 0.0"
+  - generic: mixed
+  - generic: $675
+  - generic: "Gravity: 0.0"
+  - generic: call heavy
+  - generic: $660
+  - generic: "Gravity: 0.0"
+  - generic: call heavy
+  - heading "Flip Zones" [level=3]
+  - generic: $723.12
+  - generic: bearish below
+  - generic: $745.62
+  - generic: bullish above
+  - heading "Session Context" [level=3]
+  - generic: Phase
+  - generic: AFTER HOURS
+  - generic: Exposure Cap
+  - generic: —
+  - generic: Active Session
+  - generic: "Yes"
+  - generic: Short-Term OK
+  - generic: "No"
+- alert
+```
+
+## META_Gravity
+
+```text
+:
+    - generic: Terminal subview
+    - generic: 6. Gravity map
+    - generic: Symbol META
+    - heading "Time Gravity check for META" [level=2]
+    - paragraph: Locate decompression windows, midpoint debt, and gravity zones.
+    - button "Back to Calendar"
+    - button "Open Time Confluence"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Time Gravity"
+    - generic "6. Gravity map"
+    - generic: Focus
+    - generic "Gravity Map"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Time Confluence"
+    - generic "Continue the mechanics sequence"
+  - generic: Symbol
+  - textbox "Symbol":
+    - /placeholder: BTCUSD
+    - text: META
+  - generic: Current Price
+  - spinbutton "Current Price": "741.245"
+  - button "Load Symbol"
+  - heading "Time Gravity Map" [level=2]: ⏰ Time Gravity Map
+  - paragraph: META • 741.25
+  - generic: 60%
+  - generic: Confidence
+  - generic: 🎯
+  - generic: "TARGET ACTIVE: 744.60"
+  - generic: "Alignment: 60%"
+  - generic: 8 active targets
+  - generic: "⚠️ Moderate gravity zone at 744.60 | Confidence: 60% (sparse data)"
+  - generic: PRICE GRAVITY MAP
+  - generic: "Current: 741.25"
+  - generic: "756.07"
+  - generic: 31%
+  - generic: "753.75"
+  - generic: 37%
+  - generic: "751.42"
+  - generic: 46%
+  - generic: "749.10"
+  - generic: 65%
+  - generic: "746.78"
+  - generic: 84%
+  - generic: "744.45"
+  - generic: 97%
+  - generic: "742.13"
+  - generic: 62%
+  - generic: "739.81"
+  - generic: 99%
+  - generic: "737.48"
+  - generic: 66%
+  - generic: "735.16"
+  - generic: 100%
+  - generic: "732.84"
+  - generic: 60%
+  - generic: "730.51"
+  - generic: 46%
+  - generic: "728.19"
+  - generic: 39%
+  - generic: "725.87"
+  - generic: 31%
+  - generic: "723.54"
+  - generic: 31%
+  - generic: "721.22"
+  - generic: 26%
+  - generic: "718.90"
+  - generic: 23%
+  - generic: "716.57"
+  - generic: 22%
+  - generic: "714.25"
+  - generic: 21%
+  - generic: "711.93"
+  - generic: 24%
+  - generic: "709.60"
+  - generic: 18%
+  - generic: AOI TARGET ZONES
+  - generic: "#1"
+  - generic: 742.31–746.88
+  - generic: 60%
+  - generic: 1H • 1H • 1H
+  - generic: ⚠️ 3 debt
+  - generic: "#2"
+  - generic: 736.34–736.88
+  - generic: 56%
+  - generic: 4H • 1H
+  - generic: ⚠️ 2 debt
+  - generic: "#3"
+  - generic: 709.60–712.27
+  - generic: 50%
+  - generic: 1H • 1H
+  - generic: ⚠️ 2 debt
+  - generic: AI ANALYST
+  - generic: "⚠️ Moderate gravity zone at 744.60 | Confidence: 60% (sparse data)"
+  - generic: "Strongest gravity above at 744.60 (1H, 1H, 1H). 0 active decompression windows. 2 TF(s) close today (highest: 4H). ⚠️ Sparse data — fewer than 4 timeframes available."
+  - generic: 💡 Monitor for decompression window activation
+  - generic: MIDPOINT LADDER
+  - generic: 5Y
+  - generic: —
+  - generic: 1Y
+  - generic: —
+  - generic: 3M
+  - generic: —
+  - generic: 1M
+  - generic: —
+  - generic: 1W
+  - generic: —
+  - generic: 1D
+  - generic: —
+  - generic: 8H
+  - generic: —
+  - generic: 6H
+  - generic: —
+  - 'generic "Candle close: 2026-09-21T19:00:00.000Z"':
+    - text: 4H
+    - generic: 09-21 19:00 UTC
+  - generic: 🔴
+  - generic: "736.88"
+  - generic: (737–743)
+  - generic: −0.59%
+  - generic: 2H
+  - generic: —
+  - 'generic "Candle close: 2026-09-21T20:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 20:00 UTC
+  - generic: 🔴
+  - generic: "742.31"
+  - generic: (742–742)
+  - generic: +0.14%
+  - 'generic "Candle close: 2026-09-21T16:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 16:00 UTC
+  - generic: 🔴
+  - generic: "746.88"
+  - generic: (744–747)
+  - generic: +0.76%
+  - 'generic "Candle close: 2026-09-21T15:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 15:00 UTC
+  - generic: 🔴
+  - generic: "745.40"
+  - generic: (744–745)
+  - generic: +0.56%
+  - 'generic "Candle close: 2026-09-21T14:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 14:00 UTC
+  - generic: 🔴
+  - generic: "736.34"
+  - generic: (736–740)
+  - generic: −0.66%
+  - 'generic "Candle close: 2026-09-21T13:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 13:00 UTC
+  - generic: 🔴
+  - generic: "725.35"
+  - generic: (725–727)
+  - generic: −2.14%
+  - 'generic "Candle close: 2026-09-21T12:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 12:00 UTC
+  - generic: 🔴
+  - generic: "709.60"
+  - generic: (710–715)
+  - generic: −4.27%
+  - 'generic "Candle close: 2026-09-21T11:00:00.000Z"':
+    - text: 1H
+    - generic: 09-21 11:00 UTC
+  - generic: 🔴
+  - generic: "712.27"
+  - generic: (712–714)
+  - generic: −3.91%
+  - generic: 30m
+  - generic: —
+  - generic: 15m
+  - generic: —
+  - generic: 🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression
+  - generic: DECOMPRESSION WINDOWS
+  - generic: 15m
+  - generic: —
+  - generic: 30m
+  - generic: —
+  - generic: 1H
+  - generic: COMPRESSION
+  - generic: 0h 38m
+  - generic: 0%
+  - generic: 2H
+  - generic: —
+  - generic: 4H
+  - generic: COMPRESSION
+  - generic: 1h 35m
+  - generic: 0%
+  - generic: 6H
+  - generic: —
+  - generic: 8H
+  - generic: —
+  - generic: 1D
+  - generic: —
+  - generic: 1W
+  - generic: —
+  - generic: 1M
+  - generic: —
+  - generic: MIDPOINT DEBT
+  - generic: "8"
+  - generic: Unresolved
+  - generic: "0"
+  - generic: Tagged
+  - generic: "4"
+  - generic: Clusters
+  - generic: Top Cluster
+  - generic: "744.60"
+  - generic: "3 midpoints • Gravity: 12"
+  - generic: CLOSE CONFLUENCE
+  - generic: 📅
+  - generic: 2 TFs close today
+  - generic: "(highest: 4H)"
+  - generic: DATA COVERAGE
+  - generic: 29%
+  - generic: 1H
+  - generic: 2H
+  - generic: 4H
+  - generic: 6H
+  - generic: 8H
+  - generic: 1D
+  - generic: 1W
+  - generic: "⚠️ Missing: 2H, 6H, 8H, 1D, 1W"
+  - generic: ⏰ CLOSE CALENDAR — CLOSES TODAY
+  - generic: 24 today • 105 total
+  - button "Full Schedule"
+  - generic: Mon Sep 21 16:00
+  - generic: 1D
+  - generic: 2D
+  - generic: 3D
+  - generic: 4D
+  - generic: 5D
+  - generic: 6D
+  - generic: "+7"
+  - generic: "Score: 100 • Wt: 91"
+  - button "All (24)" [pressed]
+  - button "intraday (11)"
+  - button "daily (13)"
+  - generic: TF
+  - generic: Close Time
+  - generic: In
+  - generic: Wt
+  - generic: 5m
+  - generic: Mon Sep 21 00:05 ET
+  - generic: 5m
+  - generic: "0"
+  - generic: 10m
+  - generic: Mon Sep 21 00:10 ET
+  - generic: 10m
+  - generic: "0"
+  - generic: 15m
+  - generic: Mon Sep 21 00:15 ET
+  - generic: 15m
+  - generic: "1"
+  - generic: 30m
+  - generic: Mon Sep 21 00:30 ET
+  - generic: 30m
+  - generic: "1"
+  - generic: 1h
+  - generic: Mon Sep 21 01:00 ET
+  - generic: 1h
+  - generic: "2"
+  - generic: 2h
+  - generic: Mon Sep 21 02:00 ET
+  - generic: 2h
+  - generic: "2"
+  - generic: 3h
+  - generic: Mon Sep 21 03:00 ET
+  - generic: 3h
+  - generic: "3"
+  - generic: 4h
+  - generic: Mon Sep 21 04:00 ET
+  - generic: 4h
+  - generic: "4"
+  - generic: 6h
+  - generic: Mon Sep 21 06:00 ET
+  - generic: 6h
+  - generic: "5"
+  - generic: 8h
+  - generic: Mon Sep 21 08:00 ET
+  - generic: 8h
+  - generic: "6"
+  - generic: 12h
+  - generic: Mon Sep 21 12:00 ET
+  - generic: 12h
+  - generic: "8"
+  - generic: 1D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "10"
+  - generic: 2D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "12"
+  - generic: 3D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "14"
+  - generic: 4D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "15"
+  - generic: 5D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "16"
+  - generic: 6D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "17"
+  - generic: 9D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: 10D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: 12D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: 15D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: 18D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: 20D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: 30D
+  - generic: Mon Sep 21 16:00 ET
+  - generic: 16h
+  - generic: "1"
+  - generic: "Last update: 12:12:53 pm"
+  - generic: 8 active • 0 tagged
+- alert
+```
+
+## META_TimeConfluenceRun
+
+```text
+:
+    - generic: Terminal subview
+    - generic: 7. Final timing check
+    - generic: Symbol META
+    - heading "Time Confluence check for META" [level=2]
+    - paragraph: Combine timing, pressure, close calendar, and macro/fib confluence.
+    - button "Back to Calendar"
+    - button "Open Options Terminal"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Time Confluence"
+    - generic "7. Final timing check"
+    - generic: Focus
+    - generic "Final Timing Check"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Options Terminal"
+    - generic "Continue the mechanics sequence"
+  - main:
+    - textbox "SYMBOL": META
+    - combobox:
+      - option "Scalp 15m"
+      - option "30min"
+      - option "1H"
+      - option "4H"
+      - option "Daily" [selected]
+      - option "3-Day"
+      - option "Weekly"
+      - option "Monthly"
+      - option "Yearly"
+    - combobox "Session hours — affects intraday candle close anchors":
+      - option "RTH (9:30–16:00)"
+      - option "Extended (4:00–20:00)" [selected]
+      - option "Full (00:00–24:00)"
+    - button "Run"
+    - generic: bearish • Daily • META • Extended
+    - generic: NOT ALIGNED
+    - generic: Confluence
+    - generic: 56 / 100
+    - generic: Risk
+    - generic: HIGH
+    - generic: R:R
+    - generic: "4.6"
+    - generic: ↓ BEARISH
+    - text: "Alignment:"
+    - generic: 35%
+    - generic: Current
+    - generic: $741.25
+    - generic: Key Level
+    - generic: $687.46
+    - generic: Reference
+    - generic: $741.25
+    - generic: Risk Level
+    - generic: $753.00
+    - generic: "-1.6%"
+    - generic: Reaction
+    - generic: $687.46
+    - generic: +7.3%
+    - text: "R:R Ratio:"
+    - generic: "4.58"
+    - generic: Analysis
+    - generic: "6 TFs decompressing | 6 TFs clustered (0% ratio) | Direction: BEARISH (-100) | Calendar confirms BEARISH (8 TFs)"
+    - text: 50% Pull Levels
+    - generic: (bearish)
+    - combobox:
+      - option "All TFs (18)" [selected]
+      - option "1h"
+      - option "2h"
+      - option "3h"
+      - option "4h"
+      - option "8h"
+      - option "12h"
+      - option "1D"
+      - option "7D"
+      - option "13D"
+      - option "14D"
+      - option "26D"
+      - option "3D"
+      - option "8D"
+      - option "17D"
+      - option "9D"
+      - option "27D"
+      - option "19D"
+      - option "24D"
+    - generic: 1h
+    - text: $740.80
+    - generic: +0.1%
+    - generic: 2h
+    - text: $668.04
+    - generic: +11.0%
+    - generic: 3h
+    - text: $673.18
+    - generic: +10.1%
+    - generic: 4h
+    - text: $736.88
+    - generic: +0.6%
+    - generic: 8h
+    - text: $709.38
+    - generic: +4.5%
+    - generic: 12h
+    - text: $694.07
+    - generic: +6.8%
+    - generic: 1D
+    - text: $637.55
+    - generic: +16.3%
+    - generic: 7D
+    - text: $630.24
+    - generic: +17.6%
+    - generic: 13D
+    - text: $614.83
+    - generic: +20.6%
+    - generic: 14D
+    - text: $596.25
+    - generic: +24.3%
+    - generic: 26D
+    - text: $591.23
+    - generic: +25.4%
+    - generic: 3D
+    - text: $630.28
+    - generic: +17.6%
+    - generic: 8D
+    - text: $616.77
+    - generic: +20.2%
+    - generic: 17D
+    - text: $593.16
+    - generic: +25.0%
+    - generic: 9D
+    - text: $616.43
+    - generic: +20.2%
+    - generic: 27D
+    - text: $602.54
+    - generic: +23.0%
+    - generic: 19D
+    - text: $610.74
+    - generic: +21.4%
+    - generic: 24D
+    - text: $604.80
+    - generic: +22.6%
+    - generic "Market Pressure EngineComposite pressure from time, volatility, liquidity & options ▾ expand":
+      - generic: Market Pressure EngineComposite pressure from time, volatility, liquidity & options
+      - generic: ▾ expand
+    - generic: Pressure
+    - generic: "43"
+    - generic: LOW PRESSURE
+    - generic: ↑ LONG
+    - generic: ·
+    - text: "Alignment:"
+    - generic: 100%
+    - generic: "Regime: TREND UP"
+    - 'generic "Time: active"'
+    - 'generic "Volatility: active"'
+    - 'generic "Liquidity: no data"'
+    - 'generic "Options: active"'
+    - generic: 3/4
+    - generic: ⏱ Time
+    - text: "74"
+    - generic: × 0.20w
+    - generic: Confluence 35
+    - generic: 6 TFs active (high)
+    - generic: 6 decompressing
+    - generic: 12 midpoint debt
+    - generic: Hot zone active
+    - generic: 📊 Volatility (bullish)
+    - text: "36"
+    - generic: × 0.25w
+    - generic: Trending up
+    - generic: ADX 30 (trending)
+    - generic: IV rank 80 (high)
+    - generic: 💧 Liquidity
+    - text: "0"
+    - generic: × 0.20w
+    - generic: ⚙️ Options (bullish)
+    - text: "55"
+    - generic: × 0.35w
+    - generic: Long gamma (dampened moves)
+    - generic: Near gamma flip (0.1%)
+    - generic: P/C 0.55 (high call demand)
+    - generic: IV rank 80 (premium)
+    - generic: "MPE 43/100 — LOW PRESSURE • Direction: LONG • Strongest: options (55)"
+    - generic: Intraday Equity Close Schedule
+    - generic: Fixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change
+    - table:
+      - rowgroup:
+        - row "Time (ET) Event Candle Closes":
+          - columnheader "Time (ET)"
+          - columnheader "Event"
+          - columnheader "Candle Closes"
+      - rowgroup:
+        - row "04:00 Session Open New bars begin anchoring":
+          - cell "04:00"
+          - cell "Session Open"
+          - cell "New bars begin anchoring"
+        - row "08:00 Early Pre-Market 1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)":
+          - cell "08:00"
+          - cell "Early Pre-Market"
+          - cell "1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)"
+        - row "09:30 NYSE Open 30M (9:00–9:30) — RTH volume surge":
+          - cell "09:30"
+          - cell "NYSE Open"
+          - cell "30M (9:00–9:30) — RTH volume surge"
+        - row "10:00 Opening Range Close 30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)":
+          - cell "10:00"
+          - cell "Opening Range Close"
+          - cell "30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)"
+        - row "12:00 Midday 1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)":
+          - cell "12:00"
+          - cell "Midday"
+          - cell "1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)"
+        - row "14:00 Mid-Afternoon 30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)":
+          - cell "14:00"
+          - cell "Mid-Afternoon"
+          - cell "30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)"
+        - row "16:00 NYSE Close 30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)":
+          - cell "16:00"
+          - cell "NYSE Close"
+          - cell "30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)"
+        - row "20:00 After-Hours Close 1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)":
+          - cell "20:00"
+          - cell "After-Hours Close"
+          - cell "1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)"
+    - generic: Repeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.
+    - generic: Close Calendar — Forward Schedule
+    - generic: Which timeframes close on your target day? Where do closes stack?
+    - button "↻ Refresh"
+    - generic: Anchor
+    - button "Now"
+    - button "Today"
+    - button "Prior Day"
+    - button "End of Week"
+    - button "End of Month"
+    - button "Pick Date"
+    - generic: Horizon
+    - button "1d"
+    - button "3d"
+    - button "7d"
+    - button "14d"
+    - button "30d"
+    - generic: "Anchor: Mon Sep 21 00:00 EDT"
+    - generic "NYSE extended intraday boundaries in America/New_York; daily+ closes use regular-session trading days, weekends, and US market holidays.": Equity NYSE Session
+    - text: "Basis:"
+    - generic: America/New_York / extended
+    - text: "Horizon:"
+    - generic: 1d → Tue Sep 22 00:00 EDT
+    - generic: "Daily+ closes in window: 13"
+    - text: "Schedule Basis: NYSE extended intraday boundaries in America/New_York; daily+ closes use regular-session trading days, weekends, and US market holidays."
+    - generic: Equity schedule uses NYSE trading sessions with weekend and US market holiday handling; daily and higher timeframes use regular-session TradingView-style closes; early-close calendars are not yet modeled.
+    - generic: Close Cluster Timeline
+    - button "Mon Sep 21 16:00 1D 2D 3D 4D 5D 6D 9D 10D 12D 15D 18D 20D 30D Wt 91 • Score 100":
+      - generic: Mon Sep 21 16:00
+      - generic: 1D
+      - generic: 2D
+      - generic: 3D
+      - generic: 4D
+      - generic: 5D
+      - generic: 6D
+      - generic: 9D
+      - generic: 10D
+      - generic: 12D
+      - generic: 15D
+      - generic: 18D
+      - generic: 20D
+      - generic: 30D
+      - generic: Wt 91 • Score 100
+    - button "Closes on Anchor Day (13)"
+    - button "Full Schedule (94)"
+    - generic: daily
+    - table:
+      - rowgroup:
+        - row "TF Close Time In Weight":
+          - columnheader "TF"
+          - columnheader "Close Time"
+          - columnheader "In"
+          - columnheader "Weight"
+      - rowgroup:
+        - row "1D Mon Sep 21 16:00 EDT 16h 10":
+          - cell "1D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "10"
+        - row "2D Mon Sep 21 16:00 EDT 16h 12":
+          - cell "2D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "12"
+        - row "3D Mon Sep 21 16:00 EDT 16h 14":
+          - cell "3D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "14"
+        - row "4D Mon Sep 21 16:00 EDT 16h 15":
+          - cell "4D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "15"
+        - row "5D Mon Sep 21 16:00 EDT 16h 16":
+          - cell "5D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "16"
+        - row "6D Mon Sep 21 16:00 EDT 16h 17":
+          - cell "6D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "17"
+        - row "9D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "9D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+        - row "10D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "10D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+        - row "12D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "12D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+        - row "15D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "15D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+        - row "18D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "18D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+        - row "20D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "20D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+        - row "30D Mon Sep 21 16:00 EDT 16h 1":
+          - cell "30D"
+          - cell "Mon Sep 21 16:00 EDT"
+          - cell "16h"
+          - cell "1"
+    - generic "Time Confluence EngineAlignment score, decompression & structure ▾ expand":
+      - generic: Time Confluence EngineAlignment score, decompression & structure
+      - generic: ▾ expand
+    - generic "Time Gravity MapMidpoint debt, decompression windows & gravity fields ▾ expand":
+      - generic: Time Gravity MapMidpoint debt, decompression windows & gravity fields
+      - generic: ▾ expand
+  - generic: ⏰
+  - heading "Time Confluence Engine" [level=3]
+  - generic: 🔴 Closed
+  - tablist:
+    - tab "Live" [selected]:
+      - generic: 🔴
+      - text: Live
+    - tab "Today":
+      - generic: 📅
+      - text: Today
+    - tab "Fib":
+      - generic: 🔢
+      - text: Fib
+    - tab "Macro":
+      - generic: 📊
+      - text: Macro
+    - tab "Calendar":
+      - generic: 🗓️
+      - text: Calendar
+  - text: CONFLUENCE SCORE
+  - button "Score breakdown info": "?"
+  - generic: "0"
+  - generic: low
+  - generic: 🔔 Set Confluence Alert
+  - generic: Notify when score hits strong again
+  - combobox:
+    - option "Score ≥ 6"
+    - option "Score ≥ 8"
+    - option "Score ≥ 10" [selected]
+    - option "Score ≥ 12"
+    - option "Score ≥ 15"
+  - button "Set Alert"
+  - generic: 🏦 INSTITUTIONAL TWAP WINDOWS
+  - generic: 9:30 AM - 10:00 AM
+  - generic: Opening Range
+  - generic: 10:00 AM - 10:30 AM
+  - generic: Post-Open
+  - generic: 11:30 AM - 12:00 PM
+  - generic: Europe Close
+- alert
+```

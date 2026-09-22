@@ -1,0 +1,6873 @@
+
+
+## Further live evidence (before repairs)
+
+### META_Volatility
+
+```text
+
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility" [active]:
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - generic: DVE
+  - heading "Phase Intelligence Console" [level=1]
+  - paragraph: Directional Volatility Engine — 5-Layer Analysis
+  - main:
+    - textbox "Enter symbol (e.g. BTC, AAPL, TSLA)"
+    - button "Analyze" [disabled]
+    - button "BTC"
+    - button "ETH"
+    - button "AAPL"
+    - button "TSLA"
+    - button "NVDA"
+    - button "SPX"
+    - button "GOLD"
+    - paragraph: Enter a symbol above to generate a phase intelligence analysis
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Workflow | MarketScanner Pros
+```
+
+### META_VolatilityRun
+
+```text
+
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - generic: DVE
+  - heading "Phase Intelligence Console" [level=1]
+  - paragraph: Directional Volatility Engine — 5-Layer Analysis
+  - main:
+    - textbox "Enter symbol (e.g. BTC, AAPL, TSLA)": META
+    - button "Analyze"
+    - button "BTC"
+    - button "ETH"
+    - button "AAPL"
+    - button "TSLA"
+    - button "NVDA"
+    - button "SPX"
+    - button "GOLD"
+    - generic: META
+    - generic: Expansion
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: liquidity."': Data 91%
+    - generic: DVE Evidence Stack
+    - generic: Volatility Regime
+    - generic: EXPANSION
+    - generic: 92% confluence with BBWP 88.
+    - generic: Directional Pressure
+    - generic: BULLISH
+    - generic: 49% confluence, score 49.
+    - generic: Phase State
+    - generic: MIXED
+    - generic: Contraction exit 0%, expansion exit 0%.
+    - generic: Signal Projection
+    - generic: UNAVAILABLE
+    - generic: "Projection unavailable: no active signal or not enough historical data."
+    - generic: DVE Risk Flags
+    - generic "Limits confidence in this DVE read until resolved or confirmed by later data.": 3 missing DVE inputs.
+    - generic "Limits confidence in this DVE read until resolved or confirmed by later data.": Invalidation level unavailable.
+    - generic: DVE Data Truth
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: liquidity."': DEGRADED
+    - text: "Source: dve live calculation"
+    - text: "· Coverage:"
+    - generic: 91%
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: liquidity."': "Missing input: stochKSlope."
+    - generic: Inputs Data Truth
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: liquidity."': DEGRADED
+    - text: "Source: DVE input stack"
+    - text: "· Coverage:"
+    - generic: 40%
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: liquidity."': "Missing input: stochKSlope."
+    - generic: Projection Data Truth
+    - 'generic "Projection unavailable: no active signal or not enough historical data."': DEGRADED
+    - text: "Source: DVE projection model"
+    - text: "· Coverage:"
+    - generic: 0%
+    - 'generic "Projection unavailable: no active signal or not enough historical data."'
+    - generic: Volatility Phase Read
+    - generic: expansion
+    - generic: No Dominant Phase / Early
+    - generic: "Risk: Low"
+    - generic: Phase Age
+    - generic: 0%
+    - generic: Continuation
+    - generic: 0%
+    - generic: Exit Risk
+    - generic: 0%
+    - generic: Breakout
+    - generic: 38/100
+    - generic: LOW
+    - generic: Trap
+    - generic: Clear
+    - generic: 40/100 score
+    - generic: Exhaustion
+    - generic: MODERATE
+    - generic: 50/100 risk
+    - generic: Invalidation
+    - generic: No price invalidation level returned
+    - generic: Read Limits
+    - text: 3 missing inputs
+    - generic: VOL
+    - heading "Layer 1 — Volatility State" [level=2]
+    - generic: VOL
+    - heading "BBWP Gauge" [level=3]
+    - generic: 88.5BBWP
+    - generic: EXPANSION
+    - generic: "SMA5: 86.9"
+    - text: "Rate:"
+    - generic: "+0.4"
+    - generic: (accelerating)
+    - generic: "Squeeze: None"
+    - text: "Confluence:"
+    - generic: 92%
+    - heading "Breakout Readiness" [level=3]
+    - generic: 38/100
+    - generic: LOW
+    - generic: Heuristic score · not a probability
+    - generic: Vol Compression
+    - generic: 0/40
+    - generic: Time Alignment
+    - generic: 30/30
+    - generic: Gamma Wall
+    - generic: 5/20
+    - generic: ADX Rising
+    - generic: 3/10
+    - paragraph: 5 TFs active (30/30)
+    - paragraph: Hot zone (+8)
+    - paragraph: Unusual activity (+5)
+    - generic: DIR
+    - heading "Layer 2 — Directional Bias" [level=2]
+    - heading "Directional Bias" [level=3]
+    - generic: 49% confluence
+    - generic: ← Bearish
+    - generic: Neutral
+    - generic: Bullish →
+    - generic: "+49"
+    - text: bullish
+    - generic: "Confluence: Moderate"
+    - generic: Stoch Momentum
+    - generic: +9/15
+    - generic: Trend Structure
+    - generic: +20/20
+    - generic: Options Flow
+    - generic: +15/20
+    - generic: Volume
+    - generic: +10/10
+    - generic: Dealer Gamma
+    - generic: "-5/15"
+    - generic: Funding Rate
+    - generic: N/A
+    - generic: Market Breadth
+    - generic: 0/10
+    - paragraph: "Stoch momentum: +9/15"
+    - paragraph: Price > SMA20 (+5)
+    - paragraph: Price > SMA50 (+5)
+    - generic: PH
+    - heading "Layer 3 — Phase Persistence" [level=2]
+    - generic: PH
+    - heading "Phase Persistence" [level=3]
+    - generic: Contraction (Inactive)
+    - text: "Current:"
+    - generic: 0 bars
+    - text: "Median:"
+    - generic: 3.5 bars
+    - text: "Average:"
+    - generic: 4.7 bars
+    - text: "Max:"
+    - generic: 13 bars
+    - generic: "Episodes: 6"
+    - text: "Percentile:"
+    - generic: 0%
+    - generic: Expansion (Inactive)
+    - text: "Current:"
+    - generic: 0 bars
+    - text: "Median:"
+    - generic: 5.0 bars
+    - text: "Average:"
+    - generic: 5.1 bars
+    - text: "Max:"
+    - generic: 10 bars
+    - generic: "Episodes: 8"
+    - text: "Percentile:"
+    - generic: 0%
+    - generic: SIG
+    - heading "Layer 4 — Signal & Invalidation" [level=2]
+    - generic: SIG
+    - heading "Signal Status" [level=3]
+    - generic: IDLE
+    - generic: idle
+    - paragraph: "Conditions needed to trigger a signal:"
+    - generic: Compression Release ↑
+    - generic: 4/5
+    - generic: ○
+    - generic: Recent compression (BBWP ≤ 15)
+    - generic: ✓
+    - generic: BBWP breaks above 15 (now 88.5)
+    - generic: ✓
+    - generic: BBWP > SMA5 or accelerating
+    - generic: ✓
+    - generic: Stoch momentum bullish
+    - generic: ✓
+    - generic: Directional bias bullish
+    - generic: Compression Release ↓
+    - generic: 2/5
+    - generic: ○
+    - generic: Recent compression (BBWP ≤ 15)
+    - generic: ✓
+    - generic: BBWP breaks above 15 (now 88.5)
+    - generic: ✓
+    - generic: BBWP > SMA5 or accelerating
+    - generic: ○
+    - generic: Stoch momentum bearish
+    - generic: ○
+    - generic: Directional bias bearish
+    - generic: Expansion Continuation ↑
+    - generic: 5/5
+    - generic: ✓
+    - generic: BBWP ≥ 85 climax zone (now 88.5)
+    - generic: ✓
+    - generic: SMA5 ≥ 85 confirms (now 86.9)
+    - generic: ✓
+    - generic: Stoch momentum bullish
+    - generic: ✓
+    - generic: Directional bias bullish
+    - generic: ✓
+    - generic: Low exhaustion risk
+    - generic: Expansion Continuation ↓
+    - generic: 3/5
+    - generic: ✓
+    - generic: BBWP ≥ 85 climax zone (now 88.5)
+    - generic: ✓
+    - generic: SMA5 ≥ 85 confirms (now 86.9)
+    - generic: ○
+    - generic: Stoch momentum bearish
+    - generic: ○
+    - generic: Directional bias bearish
+    - generic: ✓
+    - generic: Low exhaustion risk
+    - heading "Invalidation Levels" [level=3]
+    - generic: UNAVAILABLE
+    - generic: Mode
+    - generic: extreme
+    - generic: PROJ
+    - heading "Layer 5 — Outcome Projection" [level=2]
+    - generic: PROJ
+    - heading "Outcome Projection" [level=3]
+    - paragraph: No active signal — showing expected move range based on current volatility
+    - generic: Expected Move Range (1 ATR)
+    - generic: Downside
+    - generic: $713.91
+    - generic: "-3.7%"
+    - generic: Upside
+    - generic: $768.58
+    - generic: +3.7%
+    - generic: Extended Range (1.5× ATR)
+    - generic: Downside
+    - generic: $700.24
+    - generic: "-5.5%"
+    - generic: Upside
+    - generic: $782.25
+    - generic: +5.5%
+    - generic: "BBWP: 88.5 • expansion"
+    - generic: SUP
+    - heading "Supporting Analysis" [level=2]
+    - heading "Regime & Outlook" [level=3]
+    - generic: Volatility Regime Timeline
+    - generic: →
+    - generic: compression
+    - generic: neutral
+    - generic: transition
+    - generic: expansion
+    - generic: climax
+    - generic: expansion
+    - generic: →
+    - generic: climax
+    - generic: 50% prob
+    - paragraph: "Trigger: BBWP accelerating above 85"
+    - generic: Next Regime Probability
+    - generic: climax
+    - generic: 50%
+    - generic: expansion
+    - generic: 35%
+    - generic: transition
+    - generic: 15%
+    - generic: "Exhaustion:"
+    - generic: 50/100 (MODERATE)
+    - generic: BBWP 88.5 > 85
+    - generic: StochK 91 > 80
+    - generic: Active Flags
+    - generic: EXPANSION UP
+    - generic: Summary
+    - paragraph: META BBWP at 88.5 (expansion). Stochastic momentum bullish (+9).
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Workflow | MarketScanner Pros
+```
+
+### META_BacktestInitial
+
+```text
+
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: META
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Edge Group
+  - combobox:
+    - option "MSP AIO Systems" [selected]
+    - option "Scalping Edge"
+    - option "Trend Following"
+    - option "Mean Reversion"
+    - option "Breakdown Play (Bears)"
+    - option "Breakout"
+    - option "Liquidity Play"
+    - option "Time Confluence"
+  - generic: Strategy
+  - combobox:
+    - option "🧠 Brain Signal Replay (Decision Packets)"
+    - option "⏱️ Time Scanner Replay"
+    - option "MSP Day Trader AIO (Score 5+)" [selected]
+    - option "MSP Day Trader Strict (Score 6+)"
+    - option "📈 Day Trader v3 Optimized (More Trades)"
+    - option "🚀 Day Trader v3 Aggressive (Max Trades)"
+    - option "MSP Multi-TF Dashboard (Bias 6+)"
+    - option "MSP Multi-TF Strict (Bias 8+)"
+    - option "MSP Trend Pullback"
+    - option "MSP Liquidity Reversal"
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: 🧪
+  - generic: Configure your strategy parameters above and click Run Backtest
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+### META_Backtest
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: META
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Min Score
+  - spinbutton: "70"
+  - generic: ATR Invalidation ×
+  - spinbutton: "2"
+  - generic: ATR Key Level ×
+  - spinbutton: "3"
+  - generic: Max Bars
+  - spinbutton: "20"
+  - checkbox "Allow Shorts"
+  - text: Allow Shorts
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: META
+  - generic: Scanner ≥70
+  - generic: Daily
+  - generic: +152.7%
+  - generic: 174 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: +152.7%
+  - generic: Win Rate
+  - generic: 47.1%
+  - generic: Profit Factor
+  - generic: "1.40"
+  - generic: Realised Drawdown
+  - generic: +21.4%
+  - generic: Sharpe
+  - generic: "0.61"
+  - generic: CAGR
+  - generic: 7.09%
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "174"
+  - generic: Winners
+  - generic: "82"
+  - generic: Losers
+  - generic: "91"
+  - generic: Avg Win (USD)
+  - generic: "647.72"
+  - generic: Avg Loss (USD)
+  - generic: "-415.81"
+  - generic: Sortino
+  - generic: "1.16"
+  - generic: Calmar
+  - generic: "0.33"
+  - generic: Volatility
+  - generic: 12.46%
+  - generic: Time in Market
+  - generic: 57.3%
+  - generic: Largest Gain
+  - generic: +14.3%
+  - generic: Largest Loss
+  - generic: "-9.0%"
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-01-01 → 2025-12-31
+  - generic: "Bars: 502"
+  - generic: "Provider: alpha_vantage"
+  - heading "Realised Balance" [level=3]
+  - generic: 2013-03-08
+  - generic: $25,274
+  - generic: 2026-09-21
+  - heading "Trade History (174 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "LONG 2013-03-11 2013-03-15 $27.88 $26.40 -5.3% $-531.27 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-03-11"
+        - cell "2013-03-15"
+        - cell "$27.88"
+        - cell "$26.40"
+        - cell "-5.3%"
+        - cell "$-531.27"
+        - cell "signal_flip"
+      - row "LONG 2013-04-04 2013-04-18 $26.82 $25.15 -6.2% $-622.69 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-04-04"
+        - cell "2013-04-18"
+        - cell "$26.82"
+        - cell "$25.15"
+        - cell "-6.2%"
+        - cell "$-622.69"
+        - cell "stop"
+      - row "LONG 2013-04-26 2013-05-15 $26.60 $26.35 -0.9% $-93.11 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-04-26"
+        - cell "2013-05-15"
+        - cell "$26.60"
+        - cell "$26.35"
+        - cell "-0.9%"
+        - cell "$-93.11"
+        - cell "signal_flip"
+      - row "LONG 2013-07-09 2013-07-25 $25.24 $27.29 +8.1% $811.38 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-07-09"
+        - cell "2013-07-25"
+        - cell "$25.24"
+        - cell "$27.29"
+        - cell "+8.1%"
+        - cell "$811.38"
+        - cell "target"
+      - row "LONG 2013-07-25 2013-07-30 $34.04 $37.45 +10.0% $1002.17 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-07-25"
+        - cell "2013-07-30"
+        - cell "$34.04"
+        - cell "$37.45"
+        - cell "+10.0%"
+        - cell "$1002.17"
+        - cell "target"
+      - row "LONG 2013-07-30 2013-08-26 $37.28 $41.10 +10.3% $1026.18 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-07-30"
+        - cell "2013-08-26"
+        - cell "$37.28"
+        - cell "$41.10"
+        - cell "+10.3%"
+        - cell "$1026.18"
+        - cell "target"
+      - row "LONG 2013-08-28 2013-09-06 $40.17 $43.76 +8.9% $892.56 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-08-28"
+        - cell "2013-09-06"
+        - cell "$40.17"
+        - cell "$43.76"
+        - cell "+8.9%"
+        - cell "$892.56"
+        - cell "target"
+      - row "LONG 2013-09-06 2013-09-20 $43.54 $47.16 +8.3% $830.34 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-09-06"
+        - cell "2013-09-20"
+        - cell "$43.54"
+        - cell "$47.16"
+        - cell "+8.3%"
+        - cell "$830.34"
+        - cell "target"
+      - row "LONG 2013-09-20 2013-10-17 $47.05 $51.22 +8.9% $887.29 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-09-20"
+        - cell "2013-10-17"
+        - cell "$47.05"
+        - cell "$51.22"
+        - cell "+8.9%"
+        - cell "$887.29"
+        - cell "target"
+      - row "LONG 2013-10-18 2013-10-28 $53.72 $50.25 -6.5% $-646.05 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-10-18"
+        - cell "2013-10-28"
+        - cell "$53.72"
+        - cell "$50.25"
+        - cell "-6.5%"
+        - cell "$-646.05"
+        - cell "stop"
+      - row "LONG 2013-12-04 2013-12-16 $48.17 $53.32 +10.7% $1069.79 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-12-04"
+        - cell "2013-12-16"
+        - cell "$48.17"
+        - cell "$53.32"
+        - cell "+10.7%"
+        - cell "$1069.79"
+        - cell "target"
+      - row "LONG 2013-12-16 2014-01-15 $53.31 $57.06 +7.0% $704.33 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2013-12-16"
+        - cell "2014-01-15"
+        - cell "$53.31"
+        - cell "$57.06"
+        - cell "+7.0%"
+        - cell "$704.33"
+        - cell "timeout"
+      - row "LONG 2014-01-30 2014-02-19 $60.51 $67.69 +11.9% $1185.77 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2014-01-30"
+        - cell "2014-02-19"
+        - cell "$60.51"
+        - cell "$67.69"
+        - cell "+11.9%"
+        - cell "$1185.77"
+        - cell "target"
+      - row "LONG 2014-02-19 2014-03-19 $67.43 $67.61 +0.3% $26.45 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2014-02-19"
+        - cell "2014-03-19"
+        - cell "$67.43"
+        - cell "$67.61"
+        - cell "+0.3%"
+        - cell "$26.45"
+        - cell "timeout"
+      - row "LONG 2014-04-21 2014-04-28 $60.67 $55.25 -8.9% $-893.88 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2014-04-21"
+        - cell "2014-04-28"
+        - cell "$60.67"
+        - cell "$55.25"
+        - cell "-8.9%"
+        - cell "$-893.88"
+        - cell "stop"
+  - button "← Prev" [disabled]
+  - generic: 1 / 12
+  - button "Next →"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+### META_News
+
+```text
+
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Research command header":
+    - generic: Evidence layer
+    - generic: 1. Catalyst feed
+    - generic: Tier Pro
+    - heading "Research" [level=1]
+    - paragraph: News, events, catalysts, earnings, and saved evidence for validating the morning research queue.
+    - button "Open News"
+    - button "Open Calendar"
+    - link "Open Golden Egg":
+      - /url: /tools/golden-egg
+    - generic: Active Lens
+    - generic "News"
+    - generic "1. Catalyst feed"
+    - generic: News Items
+    - generic "20"
+    - generic "Filtered articles in view"
+    - generic: Saved Cases
+    - generic "0"
+    - generic "Tracked research packets"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+  - generic: Research lens
+  - generic: Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.
+  - button "News" [pressed]
+  - button "Economic Calendar"
+  - button "Earnings"
+  - button "Saved Cases"
+  - button "News Intelligence"
+  - button "Calendar Intelligence"
+  - link "OpenAI Fires Back at Apple (AAPL)":
+    - /url: https://currently.att.yahoo.com/att/openai-fires-back-apple-aapl-142906076.html
+  - generic: OpenAI has denied Apple's allegations of trade secret theft in a recent court filing, labeling the dispute a "mess of Apple's own making" and asserting employees' right to free movement between employers. This legal battle arises as OpenAI recruits former Apple employees for its hardware initiatives, while Apple diversifies its AI partnerships beyond OpenAI. The article analyzes the bull and bear cases for Apple, highlighting the impact of talent loss and potential competitive threats from OpenAI's expansion into consumer hardware.
+  - generic: Currently.com
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Why Traders Are Watching Colgate-Palmolive in dividend stocks Today?":
+    - /url: https://kalkinemedia.com/us/stocks/dividend/why-traders-are-watching-colgate-palmolive-in-dividend-stocks-today
+  - generic: "Colgate-Palmolive (NYSE: CL) is attracting trader attention today amidst rising oil costs, firming Treasury yields, and an unsettled market ahead of the Federal Reserve decision. The company, a dividend stock, is being evaluated based on its operational execution, customer demand, and how it responds to broader market shifts, including technology strength and energy sensitivity. The article highlights that company-specific performance and competitive conditions remain central to its market perception, alongside wider economic narratives."
+  - generic: Kalkine Media
+  - generic: Neutral
+  - button "Open CL in Golden Egg": CL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open AAPL in Golden Egg": AAPL
+  - link "Musk’s xAI and X Corp. settle antitrust case against Apple":
+    - /url: https://www.investing.com/news/stock-market-news/musks-xai-and-x-corp-settle-antitrust-case-against-apple-93CH-4900026
+  - generic: Elon Musk's xAI and X Corp. have settled an antitrust lawsuit against Apple Inc., agreeing to dismiss the case. The lawsuit, filed in August, accused Apple of favoring OpenAI's ChatGPT over competing chatbot makers and sought billions in damages. While the settlement with Apple is finalized, claims against OpenAI for alleged monopolistic practices in the chatbot market remain active.
+  - generic: Investing.com
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open ORCL in Golden Egg": ORCL
+  - button "Open IBM in Golden Egg": IBM
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Alphabet Class C Tokenized Stock (Ondo) price today, GOOGon to USD live price, marketcap and chart":
+    - /url: https://coinmarketcap.com/currencies/alphabet-class-c-tokenized-stock-ondo/
+  - generic: This article provides live price data, market capitalization, and performance statistics for Alphabet Class C Tokenized Stock (Ondo) (GOOGon). GOOGon, an Ondo Tokenized version of Alphabet Inc., offers tokenholders economic exposure similar to holding GOOG shares and reinvesting dividends. The platform enables non-US users to mint and redeem tokenized US stocks and ETFs 24/5 with access to traditional exchange liquidity.
+  - generic: CoinMarketCap
+  - generic: Somewhat-Bullish
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open AAPL in Golden Egg": AAPL
+  - 'link "Prediction: Apple Stock Could Be Headed for a Big Move After Yesterday’s Event"':
+    - /url: https://247wallst.com/investing/2026/09/10/prediction-apple-stock-could-be-headed-for-a-big-move-after-yesterdays-event/
+  - generic: Following Apple's fall product event, options traders are anticipating a significant stock swing, roughly three times the typical post-event movement. 24/7 Wall St. maintains a "Buy" rating for Apple with a price target of $362.61, implying a 15.07% upside, primarily driven by a predicted Siri AI upgrade cycle. However, potential bear risks include memory inflation affecting gross margins and regulatory friction for Siri AI.
+  - generic: 24/7 Wall St.
+  - generic: Somewhat-Bullish
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - link "Apple’s Foldable iPhone Could Become The ‘Birkin Of Smartphones’ In China, Analyst Says – But Others Think The Odds Are 4 To 1 Against The Company":
+    - /url: https://finance.yahoo.com/markets/stocks/articles/apple-foldable-iphone-could-become-112020129.html
+  - generic: Apple is set to unveil its first foldable iPhone, with one analyst predicting it could become a luxury status symbol in China despite a high starting price of $2,199. However, not all on Wall Street are convinced, with a Needham analyst maintaining a 'Hold' rating and expressing concerns about Apple's AI strategy and reliance on Google Gemini, estimating the odds are 4 to 1 against the company. The launch marks the first major product event under new CEO John Ternus.
+  - generic: Yahoo Finance
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open COIN in Golden Egg": COIN
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Why Apple May Be the Safest AI Stock Nobody Calls an AI Stock":
+    - /url: https://247wallst.com/investing/2026/09/07/why-apple-may-be-the-safest-ai-stock-nobody-calls-an-ai-stock/
+  - generic: Apple is presented as a strong, yet overlooked, AI investment due to its ability to deploy AI across 2.5 billion active devices without the significant capital expenditures of hyperscalers. Despite a high P/E ratio compared to competitors like Microsoft and Alphabet, Apple's superior ROE and operating margins justify its premium valuation. The article provides a bullish price target of $363.99, citing strong earnings, growing services revenue, and the upcoming Siri AI, while acknowledging risks like memory costs and supply constraints.
+  - generic: 24/7 Wall St.
+  - generic: Somewhat-Bullish
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AVGO in Golden Egg": AVGO
+  - link "What a $10,000 Investment in the Vanguard S&P 500 ETF (VOO) a Decade Ago Is Worth Today":
+    - /url: https://finance.yahoo.com/markets/stocks/articles/10-000-investment-vanguard-p-232500297.html
+  - generic: This article examines the impressive growth of a $10,000 investment in the Vanguard S&P 500 ETF (VOO) over a decade, highlighting its potential to reach over $38,000 without reinvesting dividends, and over $41,000 with reinvested dividends. It discusses Warren Buffett's endorsement of low-cost S&P 500 index funds and the strong performance of the S&P 500 compared to managed funds. The article also lists the top 10 holdings within the VOO ETF and suggests alternatives like equal-weighted S&P 500 ETFs for diversified investing.
+  - generic: Yahoo Finance
+  - generic: Somewhat-Bullish
+  - button "Open VOO in Golden Egg": VOO
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AAPL in Golden Egg": AAPL
+  - link "Jim Cramer Says Buy the Magnificent Seven Again, Traders See Nvidia as Clear Winner":
+    - /url: https://www.benzinga.com/markets/prediction-markets/26/09/61637578/jim-cramer-magnificent-seven-nvidia
+  - generic: Jim Cramer recommends buying the Magnificent Seven stocks again, citing that their significant AI investments are starting to yield stronger growth, making them more attractive. While Cramer advocates for a broader revival of these tech giants, prediction traders largely favor Nvidia to remain the world's largest company by the end of 2026, despite concerns about rising interest rates potentially impacting tech valuations. The article highlights strong revenue growth in cloud and AI segments for Amazon, Microsoft, and Alphabet, indicating that AI spending is beginning to translate into revenue.
+  - generic: Benzinga
+  - generic: Somewhat-Bullish
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open AMZN in Golden Egg": AMZN
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - 'link "Jim Cramer: Hyperscalers ''Wrecked Their Balance Sheets'', But Apple Carries Twice Alphabet''s Debt"':
+    - /url: https://247wallst.com/investing/2026/09/02/jim-cramer-hyperscalers-wrecked-their-balance-sheets-but-apple-carries-twice-alphabets-debt/
+  - generic: Jim Cramer praised Apple's "pristine" balance sheet while criticizing hyperscalers for excessive AI data center spending, but financial filings reveal Apple carries significantly more debt than Alphabet. Despite Apple's higher debt load and negative retained earnings due to extensive stock buybacks, the market rewards it with a higher P/E ratio due to its substantial liquidity. The article questions whether Apple's balance sheet will remain pristine if it significantly increases AI infrastructure spending under its new leadership.
+  - generic: 24/7 Wall St.
+  - generic: Somewhat-Bearish
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Stocks Fall on Rising Yields and Oil, With Apple the Lone Bright Spot":
+    - /url: https://finance.yahoo.com/markets/stocks/articles/stocks-fall-rising-yields-oil-170338212.html
+  - generic: On September 1, 2026, major stock indexes, including the Nasdaq Composite, Dow Jones Industrial Average, and S&P 500, experienced declines despite a 3% jump in Apple's stock. The market's downturn was primarily influenced by macroeconomic factors such as rising oil prices, intensifying conflict in Iran, and increasing 10-year Treasury yields, which hit 4.8%. Federal Reserve officials' hawkish remarks about potential rate hikes further fueled investor concerns, shifting focus to Friday's upcoming jobs report for market direction.
+  - generic: Yahoo Finance
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOG in Golden Egg": GOOG
+  - link "JAB Acquisition Corp. I Rights - For Shares (ATLQR) Earnings Report Date & History":
+    - /url: https://coincodex.com/stock/ATLQR/earnings/
+  - generic: The article provides information on JAB Acquisition Corp. I Rights - For Shares (ATLQR), focusing on its earnings report date and history. It states that earnings history information for ATLQR is currently unavailable, suggesting either no prior disclosure or a pending earnings statement. The piece also includes current trading data for ATLQR and lists other popular stocks.
+  - generic: CoinCodex
+  - generic: Neutral
+  - button "Open ATLQR in Golden Egg": ATLQR
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - link "Can Apple Inc. (NASDAQ:AAPL) Keep Its Steady Hand As Big Tech Leads Markets Higher?":
+    - /url: https://kalkinemedia.com/us/stocks/bluechip/can-apple-inc-nasdaqaapl-keep-its-steady-hand-as-big-tech-leads-markets-higher
+  - generic: Apple Inc. (NASDAQ:AAPL) is maintaining its strong position in the market as big tech continues to drive overall market growth. The company's integrated ecosystem of hardware, software, and services, combined with its strategic integration of AI into devices, contributes to its steadiness and appeal among blue-chip stocks. As rate-cut expectations firm up, large, dependable earners like Apple are expected to strengthen further.
+  - generic: Kalkine Media
+  - generic: Bullish
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Apple Just Became Wall Street’s Favorite Mag 7 Stock for a Surprising Reason":
+    - /url: https://247wallst.com/investing/2026/08/24/apple-just-became-wall-streets-favorite-mag-7-stock-for-a-surprising-reason/
+  - generic: Apple has emerged as Wall Street's preferred Magnificent 7 stock due to its capital efficiency, spending significantly less on AI infrastructure compared to peers like Alphabet and Microsoft. Despite facing memory cost pressures, Apple's strong iPhone sales, reimagined Siri, and record Services revenue have contributed to a "BUY" rating and a price target of $361.66 from 24/7 Wall St., implying a 17% upside. This valuation is bolstered by its high return on equity and positive free cash flow, contrasting with competitors burdened by massive AI-related capital expenditures.
+  - generic: 24/7 Wall St.
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AVGO in Golden Egg": AVGO
+  - link "The Zacks Analyst Blog Highlights Apple, Alphabet, Microsoft and Amazon":
+    - /url: https://www.theglobeandmail.com/investing/markets/stocks/AAPL/pressreleases/3998884/the-zacks-analyst-blog-highlights-apple-alphabet-microsoft-and-amazon/
+  - generic: "The Zacks Analyst Blog features an analysis of Apple (AAPL) stock, comparing its valuation and performance against Alphabet (GOOGL), Microsoft (MSFT), and Amazon (AMZN). While Apple shows strong iPhone sales, g
+```
+
+### Common_Calendar
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Research command header":
+    - generic: Evidence layer
+    - generic: 2. Macro calendar
+    - generic: Tier Pro
+    - heading "Research" [level=1]
+    - paragraph: News, events, catalysts, earnings, and saved evidence for validating the morning research queue.
+    - button "Open News"
+    - button "Open Calendar"
+    - link "Open Golden Egg":
+      - /url: /tools/golden-egg
+    - generic: Active Lens
+    - generic "Economic Calendar"
+    - generic "2. Macro calendar"
+    - generic: News Items
+    - generic "20"
+    - generic "Filtered articles in view"
+    - generic: Saved Cases
+    - generic "0"
+    - generic "Tracked research packets"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+  - generic: Research lens
+  - generic: Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.
+  - button "News"
+  - button "Economic Calendar" [active] [pressed]
+  - button "Earnings"
+  - button "Saved Cases"
+  - button "News Intelligence"
+  - button "Calendar Intelligence"
+  - button "All Impact (32)" [pressed]
+  - button "High Impact (15)"
+  - button "Medium Impact (16)"
+  - button "Low Impact (1)"
+  - table:
+    - rowgroup:
+      - row "Date Time Impact Event Forecast Previous Actual":
+        - columnheader "Date"
+        - columnheader "Time"
+        - columnheader "Impact"
+        - columnheader "Event"
+        - columnheader "Forecast"
+        - columnheader "Previous"
+        - columnheader "Actual"
+    - rowgroup:
+      - row "2026-09-22 08:30 medium Retail Sales MoM — — —":
+        - cell "2026-09-22"
+        - cell "08:30"
+        - cell "medium": medium
+        - cell "Retail Sales MoM"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-23 04:00 medium HCOB Composite PMI Flash — — —":
+        - cell "2026-09-23"
+        - cell "04:00"
+        - cell "medium": medium
+        - cell "HCOB Composite PMI Flash"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-23 04:00 medium HCOB Manufacturing PMI Flash — — —":
+        - cell "2026-09-23"
+        - cell "04:00"
+        - cell "medium": medium
+        - cell "HCOB Manufacturing PMI Flash"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-23 04:30 medium S&P Global/CIPS Manufacturing PMI Flash — — —":
+        - cell "2026-09-23"
+        - cell "04:30"
+        - cell "medium": medium
+        - cell "S&P Global/CIPS Manufacturing PMI Flash"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-23 20:30 medium au Jibun Bank Manufacturing PMI Flash — — —":
+        - cell "2026-09-23"
+        - cell "20:30"
+        - cell "medium": medium
+        - cell "au Jibun Bank Manufacturing PMI Flash"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-24 03:30 high SNB Policy Rate Decision — — —":
+        - cell "2026-09-24"
+        - cell "03:30"
+        - cell "high": high
+        - cell "SNB Policy Rate Decision"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-24 08:30 medium GDP Growth Rate QoQ (Final) — — —":
+        - cell "2026-09-24"
+        - cell "08:30"
+        - cell "medium": medium
+        - cell "GDP Growth Rate QoQ (Final)"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-24 19:30 high Tokyo CPI YoY — — —":
+        - cell "2026-09-24"
+        - cell "19:30"
+        - cell "high": high
+        - cell "Tokyo CPI YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-24 19:30 high Tokyo Core CPI YoY (ex-fresh food) — — —":
+        - cell "2026-09-24"
+        - cell "19:30"
+        - cell "high": high
+        - cell "Tokyo Core CPI YoY (ex-fresh food)"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-24 19:30 medium Tokyo Core-Core CPI YoY (ex-fresh food & energy) — — —":
+        - cell "2026-09-24"
+        - cell "19:30"
+        - cell "medium": medium
+        - cell "Tokyo Core-Core CPI YoY (ex-fresh food & energy)"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-25 08:30 high PCE Price Index YoY — — —":
+        - cell "2026-09-25"
+        - cell "08:30"
+        - cell "high": high
+        - cell "PCE Price Index YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-25 08:30 high Core PCE Price Index YoY — — —":
+        - cell "2026-09-25"
+        - cell "08:30"
+        - cell "high": high
+        - cell "Core PCE Price Index YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-25 08:30 high Core PCE Price Index MoM — — —":
+        - cell "2026-09-25"
+        - cell "08:30"
+        - cell "high": high
+        - cell "Core PCE Price Index MoM"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-28 19:30 medium Unemployment Rate — — —":
+        - cell "2026-09-28"
+        - cell "19:30"
+        - cell "medium": medium
+        - cell "Unemployment Rate"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-28 19:50 medium Retail Sales YoY — — —":
+        - cell "2026-09-28"
+        - cell "19:50"
+        - cell "medium": medium
+        - cell "Retail Sales YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-29 00:30 high RBA Interest Rate Decision — — —":
+        - cell "2026-09-29"
+        - cell "00:30"
+        - cell "high": high
+        - cell "RBA Interest Rate Decision"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-29 21:30 high Monthly CPI Indicator YoY — — —":
+        - cell "2026-09-29"
+        - cell "21:30"
+        - cell "high": high
+        - cell "Monthly CPI Indicator YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-29 21:30 high NBS Manufacturing PMI — — —":
+        - cell "2026-09-29"
+        - cell "21:30"
+        - cell "high": high
+        - cell "NBS Manufacturing PMI"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-29 21:45 medium Caixin Manufacturing PMI — — —":
+        - cell "2026-09-29"
+        - cell "21:45"
+        - cell "medium": medium
+        - cell "Caixin Manufacturing PMI"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-30 05:00 high HICP Flash YoY — — —":
+        - cell "2026-09-30"
+        - cell "05:00"
+        - cell "high": high
+        - cell "HICP Flash YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-30 05:00 high Core HICP Flash YoY — — —":
+        - cell "2026-09-30"
+        - cell "05:00"
+        - cell "high": high
+        - cell "Core HICP Flash YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-09-30 08:30 medium GDP MoM — — —":
+        - cell "2026-09-30"
+        - cell "08:30"
+        - cell "medium": medium
+        - cell "GDP MoM"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-01 00:30 medium RBI Repo Rate Decision — — —":
+        - cell "2026-10-01"
+        - cell "00:30"
+        - cell "medium": medium
+        - cell "RBI Repo Rate Decision"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-01 02:30 medium CPI YoY — — —":
+        - cell "2026-10-01"
+        - cell "02:30"
+        - cell "medium": medium
+        - cell "CPI YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-01 05:00 medium Unemployment Rate — — —":
+        - cell "2026-10-01"
+        - cell "05:00"
+        - cell "medium": medium
+        - cell "Unemployment Rate"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-01 09:30 low S&P Global Manufacturing PMI — — —":
+        - cell "2026-10-01"
+        - cell "09:30"
+        - cell "low": low
+        - cell "S&P Global Manufacturing PMI"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-01 10:00 high ISM Manufacturing PMI — — —":
+        - cell "2026-10-01"
+        - cell "10:00"
+        - cell "high": high
+        - cell "ISM Manufacturing PMI"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-01 21:30 medium Monthly Household Spending Indicator MoM — — —":
+        - cell "2026-10-01"
+        - cell "21:30"
+        - cell "medium": medium
+        - cell "Monthly Household Spending Indicator MoM"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-02 08:30 high Non-Farm Payrolls — — —":
+        - cell "2026-10-02"
+        - cell "08:30"
+        - cell "high": high
+        - cell "Non-Farm Payrolls"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-02 08:30 high Unemployment Rate — — —":
+        - cell "2026-10-02"
+        - cell "08:30"
+        - cell "high": high
+        - cell "Unemployment Rate"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-05 10:00 high ISM Services PMI — — —":
+        - cell "2026-10-05"
+        - cell "10:00"
+        - cell "high": high
+        - cell "ISM Services PMI"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+      - row "2026-10-05 19:00 medium CPI YoY — — —":
+        - cell "2026-10-05"
+        - cell "19:00"
+        - cell "medium": medium
+        - cell "CPI YoY"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+  - generic: "Next major event: SNB Policy Rate Decision in 3 day(s)"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+### ETH_scanner
+
+```text
+ ETH-USD"':
+    - generic: Analysis view
+    - generic: Symbol case review from the active scanner workflow.
+    - link "Open Historical Test":
+      - /url: /tools/workspace?tab=Backtest&symbol=ETH-USD
+    - button "Back to Ranked"
+    - generic: ETH-USD — D
+    - generic: "Ranked #12 of 20 · All · Daily"
+    - generic: Bullish bias, low setup quality · Breakout / expansion.
+    - generic: "Bias: Bullish"
+    - generic: "Setup: Overbought Breakout · Stage: Dormant · Extension: Elevated"
+    - text: "Regime: Range · Evidence Alignment:"
+    - generic "Share of the four evidence checks (trend, momentum, flow, direction) that agree with the bias — not a probability.": 4 / 4
+    - generic: Setup Quality
+    - generic: D Setup
+    - 'generic "Evidence-weighted confidence: score × evidence coverage × freshness × liquidity. Not a probability of profit."': 30 / 100 · LOW
+    - 'progressbar "Setup confidence: 30%"'
+    - generic: Setup Alignment
+    - generic: LOW ALIGNMENT — REVIEW
+    - 'generic "Data trust: DEGRADED. volume unavailable"': Data DEGRADED
+    - generic "coingecko"
+    - generic: "• Data trust: degraded"
+    - generic: • Quality below threshold
+    - generic: • Range regime needs breakout confirmation
+    - generic: "NOTE: QUALITY LOW — REVIEW ALIGNMENT"
+    - generic: Scores reflect indicator agreement, not profit probability. For educational analysis only. Not financial advice.
+    - generic: Structure Analysis
+    - generic: Evidence Alignment
+    - generic: "Trend vs bias: AGREES"
+    - generic: "Momentum vs bias: AGREES"
+    - generic: "Flow vs bias: AGREES"
+    - generic: "EMA stack: BULLISH"
+    - generic: Momentum State
+    - generic: "RSI: 72.0"
+    - generic: "ADX: 39.6"
+    - generic: "MACD hist: +12.638"
+    - generic: Volatility, Volume & Liquidity
+    - text: "ATR:"
+    - generic: 102.18 (3.68% of price)
+    - generic: "Volume vs 20-bar avg: N/A"
+    - generic: "Avg dollar volume: N/A"
+    - generic: "Relative strength: 1.026 vs BTC (20 1d bars)"
+    - generic: Data Basis
+    - generic: "Timeframe: D · Bar interval: 1d"
+    - generic: "Last completed bar: 2026-09-21 00:00 UTC"
+    - generic: "History: 361 bars · Computed: 2026-09-22 02:18 UTC"
+    - text: "Data trust: DEGRADED"
+    - generic: — volume unavailable
+    - generic: "Source: coingecko ohlc/range interval=daily + market_chart/range total_volumes · volume: unavailable"
+    - generic: Why This Rank
+    - generic: "ETH-USD is #12 of 20 in the All · Daily queue."
+    - generic: Supports
+    - generic: + ADX 39.6 — trend strength present
+    - generic: + Price above EMA200 by 23.7%
+    - generic: + EMA stack bullish (Strong Bull Alignment)
+    - generic: + Relative strength 1.026 vs BTC over 20 1d bars — in line
+    - generic: + 10 evidence layers scored
+    - generic: Holding it back
+    - generic: − RSI 72.0 — overbought; chasing risk
+    - generic: − Volume ratio unavailable for this interval
+    - generic: − Extension elevated — late in the move
+    - generic: "− Research lifecycle: discovered"
+    - generic: "− Data degraded: volume unavailable"
+    - generic: Scorer adjustments (server)
+    - generic: + 10 independent evidence layers contributed
+    - generic: "+ DVE flags: MOMENTUM_ACCEL"
+    - generic: − liquidity penalty 8
+    - generic: Preliminary Research Levels
+    - text: Fast ATR-based estimate from scan-time price (2775.43) on 1d bars (ATR 102.18). Golden Egg recomputes
+    - emphasis: validated scenario levels
+    - text: from a live quote and price structure — expect them to differ.
+    - generic: Level of Interest (preliminary)
+    - generic: "Reference: 2795.87"
+    - generic: "Condition: Close above level"
+    - generic: "Confirms: A close above the breakout level with volume ≥ 1.5× the 20-bar average, holding the level on the next bar."
+    - generic: "Invalidates: A close back below the breakout level (failed break) or volume fading below average on continuation."
+    - generic: Key Levels (preliminary · educational)
+    - generic: "Invalidation: 2693.69"
+    - generic: "Reaction Zone 1: 2949.14"
+    - generic: "Reaction Zone 2: 3051.32"
+    - generic: "Hypothetical R:R: 1.5"
+    - generic: Next Useful Check · Breakout / expansion
+    - generic: A close above the breakout level with volume ≥ 1.5× the 20-bar average, holding the level on the next bar.
+    - generic: Analysis Notes
+    - generic: "Indicator Agreement: Mixed indicator observations"
+    - generic: "Structure: Breakout / expansion · stage Dormant · extension Elevated"
+    - button "Save Case"
+    - link "Set Alert":
+      - /url: /tools/workspace?tab=alerts&symbol=ETH-USD&price=2775.43&direction=bullish
+    - button "Add to Watchlist"
+- alert
+```
+
+### ETH_GE
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "★"
+  - region "Golden Egg command header":
+    - generic: Golden Egg validation workbench
+    - generic: Regime Range / Neutral
+    - generic: Confluence 68%
+    - generic: Data GOOD
+    - generic: Verdict first
+    - generic: Data trust
+    - generic: Reference level
+    - generic: Invalidation
+    - generic: Next check
+    - heading "Validate one symbol before testing history." [level=1]
+    - paragraph: Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet.
+    - button "Open Terminal"
+    - button "Open Scanner"
+    - button "Open Backtest"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "Single-symbol validation"
+    - generic: Assessment
+    - generic "Watch"
+    - generic "Verdict packet"
+    - generic: Confluence
+    - generic "68%"
+    - generic "Evidence alignment"
+    - generic: Data trust
+    - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B.": GOOD
+    - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B."
+  - region "Golden Egg symbol input":
+    - textbox "Enter symbol..."
+    - button "Review"
+    - button "DOT"
+    - button "FET"
+    - button "WIF"
+    - button "XRP"
+    - button "ADA"
+    - button "WLD"
+    - button "KSM"
+    - button "SYM"
+    - button "WIFI"
+    - button "SP"
+    - button "auto"
+    - button "equity"
+    - button "crypto" [pressed]
+    - button "15m"
+    - button "1H"
+    - button "Daily" [pressed]
+    - button "Weekly"
+    - generic: "Next useful check: Review blocker: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - generic "Golden Egg validation views":
+    - generic: Validation workbench
+    - generic: Verdict first, then inspect chart, evidence detail, and business context.
+    - link "Open Liquidity Sweep":
+      - /url: /tools/liquidity-sweep
+    - button "1. Verdict packet Verdict" [pressed]:
+      - generic: 1. Verdict packet
+      - generic: Verdict
+    - button "2. Price context Chart":
+      - generic: 2. Price context
+      - generic: Chart
+    - button "3. Evidence detail Deep Analysis":
+      - generic: 3. Evidence detail
+      - generic: Deep Analysis
+    - button "4. Business context Fundamentals":
+      - generic: 4. Business context
+      - generic: Fundamentals
+  - heading "ETH-USD" [level=2]
+  - generic: "Regime: Range / Neutral"
+  - generic "Directional research bias from the Golden Egg evidence stack":
+    - generic: LONG
+  - generic "Grade summarizes setup quality across the Golden Egg model":
+    - generic: Grade B
+  - generic "Lifecycle describes whether the setup is forming, ready, watching, or invalidated": WATCHING
+  - generic "Cross-market factors can support, oppose, or remain neutral to the setup": Tailwind
+  - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B.": Data GOOD
+  - text: $2,775.43
+  - generic: +3.09%
+  - generic: crypto — 1D — 22/09/2026, 12:18:29 pm
+  - generic: Watch
+  - generic: Assessment
+  - generic: 68%
+  - generic: Confluence
+  - generic "Multi-factor confluence score. Reflects how many indicators agree, not a probability of any outcome.": Evidence Alignment
+  - generic: Verdict Packet
+  - generic: crypto · 1D
+  - generic "Scenario alignment for educational research only.":
+    - generic: Assessment
+    - generic: Watch
+  - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B.":
+    - generic: Data Trust
+    - generic: GOOD
+  - generic "Model reference $2806.08 (price + 0.3 ATR — mechanical; no structural level within 2 ATR).":
+    - generic: Reference
+    - generic: $2,806.08
+  - generic "1.5x ATR model stop — no structural level within 1–2 ATR":
+    - generic: Invalidation
+    - generic: $2,622.16
+  - 'generic "Review blocker: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."':
+    - generic: Next Check
+    - generic: "Review blocker: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - generic "Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk":
+    - generic: Blocker
+    - generic: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk
+  - generic: Golden Egg Evidence Stack
+  - generic: Why This Appeared
+  - generic: Supported
+  - generic: Structure leads at 87/100 — price aligned with the 20/50-bar means; EMA200 below price — long-term anchor agrees is present, but Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk is limiting conviction.
+  - generic: Cross Market
+  - generic: Tailwind
+  - generic: "BTC: up (supportive) | BTC.D: flat (neutral) | TOTAL: up (supportive)"
+  - generic: Scenario Levels
+  - generic: Available
+  - generic: Reference $2,806.08 / invalidation $2,622.16.
+  - generic: Research Caution
+  - generic: Active
+  - generic: "Research caution: blocker still present — Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - generic: Quote Data Truth
+  - generic "crypto quote": LIVE
+  - text: "Source: crypto quote"
+  - generic: "· Updated: 12:18 pm"
+  - generic: Regime Data Truth
+  - generic "cross-market regime": LIVE
+  - generic: "Source: cross-market regime"
+  - generic: DVE Data Truth
+  - generic "volatility engine": LIVE
+  - generic: "Source: volatility engine"
+  - generic: Derivatives Data Truth
+  - generic "derivatives evidence": LIVE
+  - generic: "Source: derivatives evidence"
+  - generic: Time Data Truth
+  - generic "time confluence": LIVE
+  - generic: "Source: time confluence"
+  - generic: Validated scenario levels
+  - generic: Canonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.
+  - generic: Level of Interest (model reference)
+  - generic: Model reference $2806.08 (price + 0.3 ATR — mechanical; no structural level within 2 ATR).
+  - generic: $2,806.08 (confirmation)
+  - generic: Invalidation (mechanical · 1.5 ATR)
+  - generic: $2,622.16
+  - generic: 1.5x ATR model stop — no structural level within 1–2 ATR
+  - generic: Reaction Zones
+  - generic "Model zone (1.0× reference-to-invalidation risk)": $2,990.01M›
+  - generic "Model zone (1.5× reference-to-invalidation risk)": $3,081.97M›
+  - generic "Model zone (2.5× reference-to-invalidation risk)": $3,265.90M
+  - generic: All zones are model zones based on reference-to-invalidation risk; price caps are labelled. No structural targets were found within range. R is a mechanical calculation, not a forecast.
+  - generic: Research Case Invalidates If
+  - generic "Invalidates or weakens this educational research case.": Reference or invalidation level becomes unavailable.
+  - generic "Invalidates or weakens this educational research case.": Confluence drops below 60%.
+  - generic "Invalidates or weakens this educational research case.": "Primary blocker persists: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - generic "Invalidates or weakens this educational research case.": Cross-market conditions flip to headwind.
+  - generic "Invalidates or weakens this educational research case.": DVE flips into climax risk.
+  - generic "Invalidates or weakens this educational research case.": Time confluence remains opposed.
+  - generic: Reference or invalidation level becomes unavailable.
+  - generic: Confluence drops below 60%.
+  - generic: "Primary blocker persists: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - generic: Cross-market conditions flip to headwind.
+  - generic: DVE flips into climax risk.
+  - generic: Time confluence remains opposed.
+  - generic: "Driver: Structure leads at 87/100 — price aligned with the 20/50-bar means; EMA200 below price — long-term anchor agrees"
+  - generic: "Blocker: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk"
+  - button "Save Case"
+  - link "Open Terminal":
+    - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+  - generic: Score Breakdown
+  - generic: Structure (w:30)
+  - generic: "87.0"
+  - generic: Trend alignment supportive
+  - generic: Flow (w:25)
+  - generic: "56.0"
+  - generic: funding +0.0090% per ~8h — at/near exchange baseline (uninformative)
+  - generic: Momentum (w:20)
+  - generic: "64.0"
+  - generic: 72.0 · strong momentum, overbought
+  - generic: Risk (w:25)
+  - generic: "60.0"
+  - generic: Risk quality — extension — RSI 72 and stochastic 89 both at extremes
+  - generic "Cross-Market Influence"
+  - heading "Setup" [level=3]
+  - generic: Setup Type
+  - generic: trend
+  - generic: Thesis
+  - generic: ETH-USD shows a bullish extended trend continuation setup (extended trend — RSI 72 with ADX 40; continuation with extension risk). ADX 40 · trending. Time confluence is bearish with weak signal strength (conflict). DVE compression release up signal — strength 65/100.
+  - generic: Timeframe Alignment
+  - generic: 2/4
+  - generic: • Daily structure aligned
+  - generic: • MACD histogram positive
+  - generic: • Above EMA200 $2243.94
+  - generic: Invalidation
+  - generic: Scenario weakens if price closes below $2622.16 with volume confirmation.
+  - heading "Structure" [level=3]
+  - generic: "Structure Verdict:"
+  - generic: agree
+  - generic: htf
+  - generic: Bullish
+  - generic: mtf
+  - generic: Bullish
+  - generic: ltf
+  - generic: Consolidating
+  - generic: Key Levels
+  - text: 1D Mid-50
+  - generic: (support)
+  - generic: $2,708.33
+  - text: BB Upper
+  - generic: (resistance)
+  - generic: $2,691.90
+  - text: Mid-50 decompression (9 TFs)
+  - generic: (value)
+  - generic: $2,680.75
+  - text: SMA 20
+  - generic: (pivot)
+  - generic: $2,509.19
+  - text: 5D Mid-50
+  - generic: (support)
+  - generic: $2,502.25
+  - text: BB Lower
+  - generic: (support)
+  - generic: $2,326.49
+  - text: SMA 50
+  - generic: (support)
+  - generic: $2,291.18
+  - text: EMA 200
+  - generic: (support)
+  - generic: $2,243.94
+  - generic: Momentum
+  - generic: "RSI(14): 72.0 · strong momentum, overbought"
+  - generic: "ADX (trend strength): 40 · trending"
+  - generic: "MACD Hist: 12.638"
+  - generic: "Stochastic: 89 · overbought zone"
+  - heading "Timing" [level=3]
+  - generic: "vs setup: disagree"
+  - generic: weak
+  - generic: bearish
+  - generic: 24/7 market
+  - generic "conflict noted but below hard-gate thresholds": noted, not gating
+  - generic: Direction here is the weighted pull of price toward multi-timeframe mid-50 levels (a mean-reversion pressure). It only gates the verdict when the agent reports a moderate/strong, current signal in a live session.
+  - generic: Likely Decompression Level
+  - generic: $2,680.75
+  - generic: weighted from 9 TFs (1h, 3h, 2h, 4h, 6h, 8h, 12h, 1D, 5D)
+  - generic: "Total weight: 55.5 — Price is pulled near current level"
+  - generic: Confluence
+  - generic: 77%
+  - generic: Direction
+  - generic: "-100"
+  - generic: Cluster Score
+  - generic: "100"
+  - generic: Decompression
+  - generic: "32"
+  - generic: Close Cluster Timeline — Next 24h
+  - generic: Daily
+  - generic: 1D
+  - generic: 23:59 UTC
+  - generic: 21h 41m
+  - generic: w:10
+  - generic: $2,708.33
+  - generic "Mid-50 level 2.42% below price; decompression pull down": ▼ 2.42% below price · pull down
+  - generic: 5D
+  - generic: 23:59 UTC
+  - generic: 21h 41m
+  - generic: w:16
+  - generic: $2,502.25
+  - generic "Mid-50 level 9.84% below price; decompression pull down": ▼ 9.84% below price · pull down
+  - generic: Intraday
+  - generic: 5m
+  - generic: 02:19 UTC
+  - generic: 1m
+  - generic: w:0.2
+  - generic: — no mid-50
+  - generic: 10m
+  - generic: 02:19 UTC
+  - generic: 1m
+  - generic: w:0.3
+  - generic: — no mid-50
+  - generic: 15m
+  - generic: 02:29 UTC
+  - generic: 11m
+  - generic: w:0.5
+  - generic: — no mid-50
+  - generic: 30m
+  - generic: 02:29 UTC
+  - generic: 11m
+  - generic: w:1
+  - generic: — no mid-50
+  - generic: 1h
+  - generic: 02:59 UTC
+  - generic: 41m
+  - generic: w:1.5
+  - generic: $2,757.94
+  - generic "Mid-50 level 0.63% below price; decompression no pull": ▼ 0.63% below price · no pull
+  - generic: 3h
+  - generic: 02:59 UTC
+  - generic: 41m
+  - generic: w:3
+  - generic: $2,783.89
+  - generic "Mid-50 level 0.30% above price; decompression pull up": ▲ 0.30% above price · pull up
+  - generic: 2h
+  - generic: 03:59 UTC
+  - generic: 1h 41m
+  - generic: w:2
+  - generic: $2,758.08
+  - generic "Mid-50 level 0.63% below price; decompression pull up": ▼ 0.63% below price · pull up
+  - generic: 4h
+  - generic: 03:59 UTC
+  - generic: 1h 41m
+  - generic: w:4
+  - generic: $2,781.24
+  - generic "Mid-50 level 0.21% above price; decompression pull up": ▲ 0.21% above price · pull up
+  - generic: 6h
+  - generic: 05:59 UTC
+  - generic: 3h 41m
+  - generic: w:5
+  - generic: $2,770.39
+  - generic "Mid-50 level 0.18% below price; decompression pull up": ▼ 0.18% below price · pull up
+  - generic: 8h
+  - generic: 07:59 UTC
+  - generic: 5h 41m
+  - generic: w:6
+  - generic: $2,767.49
+  - generic "Mid-50 level 0.29% below price; decompression pull up": ▼ 0.29% below price · pull up
+  - generic: 12h
+  - generic: 11:59 UTC
+  - generic: 9h 41m
+  - generic: w:8
+  - generic: $2,759.46
+  - generic "Mid-50 level 0.58% below price; decompression pull up": ▼ 0.58% below price · pull up
+  - generic: Candle Close Confluence
+  - generic: 18/100
+  - generic: low
+  - generic: "Now: 2 TFs closing"
+  - generic: Agent scenario
+  - generic: "2 TFs decompressing | 2 TFs clustered (100% ratio) | Pull direction: BEARISH (-100) | Calendar pull BEARISH (9 TFs) | 🕐 2 TFs closing NOW (5m, 10m)"
+  - generic: "Next close: 1m (5m close)"
+  - generic: "Best window: Standard market conditions"
+  - heading "Volatility" [level=3]
+  - generic: neutral
+  - generic: "Confluence: 2%"
+  - generic: BBWP
+  - generic: "69.4"
+  - generic: Direction
+  - generic: bullish
+  - generic: "Score: 29.0"
+  - generic: "Active Setup: compression release up"
+  - generic: "Strength: 65%"
+  - generic: "ETH-USD BBWP at 69.4 (neutral). Stochastic momentum bullish (+9). Compression release up signal fired — strength 65/100. Historical: -7.27% expected, 27.3% hit rate. Invalidation: below $2,644.73."
+  - heading "Derivatives" [level=3]
+  - generic: neutral
+  - generic: Funding Rate (median venue, per ~8h interval)
+  - generic: +0.0090%
+  - generic: Annualized (×3×365)
+  - generic: +9.9%
+  - generic: Open Interest
+  - generic: $7.65B
+  - generic: Perp Volume 24h
+  - generic: $11.97B
+  - generic: Exchanges
+  - generic: "2"
+  - generic: OI / perp volume
+  - generic: "0.64"
+  - generic: • funding +0.0090% per ~8h — at/near exchange baseline (uninformative)
+  - generic: • deep open interest $7.65B
+  - generic: • only 2 derivatives venues
+  - heading "Scenario Map" [level=3]
+  - generic: Reference Level
+  - generic: Model reference $2806.08 (price + 0.3 ATR — mechanical; no structural level within 2 ATR).
+  - generic: $2,806.08 (confirmation)
+  - generic: Risk Level
+  - generic: $2,622.16
+  - generic: 1.5x ATR model stop — no structural level within 1–2 ATR
+  - generic: Key Levels
+  - generic: $2,990.01
+  - generic: 1.0R
+  - generic: Model zone (1.0× reference-to-invalidation risk)
+  - generic: $3,081.97
+  - generic: 1.5R
+  - generic: Model zone (1.5× reference-to-invalidation risk)
+  - generic: $3,265.90
+  - generic: 2.5R
+  - generic: Model zone (2.5× reference-to-invalidation risk)
+  - generic: Hypothetical R:R1.5R
+  - link "Open in Terminal":
+    - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+  - generic: Levels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.
+  - heading "Narrative" [level=3]
+  - generic: ETH-USD is in watch mode. Alignment is gated by extension — extended trend — RSI 72 with ADX 40; continuation with extension risk — monitor flip conditions. Time confluence reads bearish (conflict).
+  - list:
+    - listitem: • Price structure supports the directional thesis.
+    - listitem: • EMA200 below price — long-term anchor agrees.
+    - listitem: • Price 2.6 ATR from the 20-bar mean — extended.
+    - listitem: "• Time confluence weak bearish — 2 TFs active; relation to setup: conflict."
+    - listitem: • Mid-50 decompression level $2680.75 (near price) from 9 TFs — a mean-reversion pull, not a timing verdict.
+    - listitem: • DVE compression release up signal active — strength 65/100.
+    - listitem: "• Cross-market: 2 supportive (BTC, TOTAL) · 0 headwind · 1 neutral for a long read."
+  - generic: Risks
+  - generic: Extension — RSI 72 and stochastic 89 both at extremes.
+  - generic: Time confluence bearish opposes the long thesis (below hard-gate thresholds — noted, not gating).
+- alert: Golden Egg | Workflow | MarketScanner Pros
+```
+
+### ETH_Deep
+
+```text
+:
+    - generic: Golden Egg subview
+    - generic: 3. Evidence detail
+    - generic: Symbol ETH-USD
+    - heading "Deep Analysis check for ETH-USD" [level=2]
+    - paragraph: Review the deeper technical evidence behind the verdict.
+    - button "Review Verdict"
+    - button "Open Fundamentals"
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic: ETH-USD
+    - generic "Single-symbol validation context"
+    - generic: View
+    - generic: Deep Analysis
+    - generic "3. Evidence detail"
+    - generic: Focus
+    - generic: Evidence Detail
+    - generic "Completes the Verdict packet"
+    - generic: Next Check
+    - generic: Fundamentals
+    - generic "Continue the validation sequence"
+  - main:
+    - textbox "Stock or crypto symbol":
+      - /placeholder: "Enter symbol: AAPL, BTC, EURUSD..."
+      - text: ETH-USD
+    - button "Run Research"
+    - button "AAPL"
+    - button "BTC"
+    - button "TSLA"
+    - button "ETH"
+    - button "NVDA"
+    - button "EURUSD"
+    - button "GOLD"
+    - generic: Deep Analyst · interprets the Golden Egg canonical packet (1D, 1d bars)
+    - generic: ETH-USD · CRYPTO
+    - generic: $2,775.4300
+    - generic: +0.00% vs prior close
+    - generic "Price as of 2026-09-22T02:18:25.849Z": last completed bar 2026-09-21 00:00
+    - generic "GOOD": Data GOOD
+    - generic "Watch · LONG":
+      - generic: Golden Egg verdict
+      - generic: Watch · LONG
+    - generic "68% · grade B":
+      - generic: Confluence (evidence alignment)
+      - generic: 68% · grade B
+    - generic "Bullish · trend":
+      - generic: Bias & setup
+      - generic: Bullish · trend
+    - generic "Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk":
+      - generic: Primary blocker
+      - generic: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk
+    - generic "Close above the model reference $2806.08 with expansion — mechanical trigger; look for a structural level to replace it.":
+      - generic: What confirms next
+      - generic: Close above the model reference $2806.08 with expansion — mechanical trigger; look for a structural level to replace it.
+    - generic: Golden Egg verdict is canonical. Deep Analyst does not compute a competing bias; it interprets the same numbers. Packet served from the shared 3-minute cache.
+    - heading "Quick Summary" [level=3]
+    - generic: Technical Stance
+    - generic: Overbought
+    - generic: Trend Strength
+    - generic: Trending
+    - generic: Market Sentiment
+    - generic: Neutral (48)
+    - generic: News Sentiment
+    - generic: Very Positive
+    - heading "Technical Indicators" [level=3]
+    - generic: RSI (14)
+    - generic: "72.0"
+    - generic: Overbought
+    - generic: MACD
+    - generic: "89.0333"
+    - generic: Bullish
+    - generic: SMA 20
+    - generic: $2,509.19
+    - generic: +10.6% vs price
+    - generic: SMA 50
+    - generic: $2,291.18
+    - generic: Above trend
+    - generic: Stochastic
+    - generic: "K: 89.5"
+    - generic: Overbought
+    - generic: Volume Ratio
+    - generic: 1.86x
+    - generic: vs 20d avg
+    - generic: ATR (14)
+    - generic: $102.18
+    - generic: Volatility
+    - generic: ADX (14)
+    - generic: "39.6"
+    - generic: Trending
+    - heading "Golden Egg evidence (canonical)" [level=3]
+    - generic: Structure
+    - generic: 87/100
+    - generic: Trend alignment quality (20/50-bar means, EMA200 anchor, extension, liquidity)
+    - generic: • EMA200 below price — long-term anchor agrees
+    - generic: • price 2.6 ATR from the 20-bar mean — extended
+    - generic: Flow
+    - generic: 56/100
+    - generic: Funding, open interest, perp turnover, venue breadth
+    - generic: • funding +0.0090% per ~8h — at/near exchange baseline (uninformative)
+    - generic: • deep open interest $7.65B
+    - generic: • only 2 derivatives venues
+    - generic: Momentum
+    - generic: 64/100
+    - generic: RSI / MACD / stochastic with extension credit reduced
+    - generic: • RSI 72 overbought — momentum strong but extended (credit reduced)
+    - generic: • stochastic 89 overbought zone
+    - generic: Risk quality
+    - generic: 60/100
+    - generic: 100 = clean conditions. Never bullish evidence.
+    - generic: • extension — RSI 72 and stochastic 89 both at extremes
+    - text: "Time confluence:"
+    - strong: conflict
+    - text: (bearish, weak, 77%; session always_open; not gating). conflict noted but below hard-gate thresholds
+    - generic: "Extension: extended · DVE exhaustion 0/100 · Cross-market: supportive — 2 supportive (BTC, TOTAL) · 0 headwind · 1 neutral for a long read."
+    - generic: What supports / argues against (from the packet)
+    - generic: For
+    - generic: Structure 87/100 — EMA200 below price — long-term anchor agrees
+    - generic: For
+    - generic: Price above EMA200 $2243.94
+    - generic: For
+    - generic: Cross-market supportive — 2 supportive (BTC, TOTAL) · 0 headwind · 1 neutral for a long read.
+    - generic: Against
+    - generic: Extension extended — RSI 72.0, stochastic 89
+    - generic: Against
+    - generic: Time confluence bearish (weak) opposes the bullish read — below hard-gate thresholds
+    - generic: Against
+    - generic: "Risk: extension — RSI 72 and stochastic 89 both at extremes"
+    - heading "Market Data" [level=3]
+    - generic: Fear & Greed Index
+    - generic: "48"
+    - generic: Neutral
+    - generic: Rank
+    - generic: "#2"
+    - generic: Market Cap
+    - generic: $334.65B
+    - generic: ATH
+    - generic: $4,946.05
+    - generic: From ATH
+    - generic: "-44.6%"
+    - heading "Symbol-specific news & catalysts" [level=3]
+    - generic: "8 symbol-specific articles: 8 neutral. 50 articles considered, 8 reference ETH-USD (relevance ≥ 0.35). Catalyst class is rule-based; sentiment is the provider's ticker-level label."
+    - link "Down 47% From Its All-Time High, This Is the Most Undervalued Cryptocurrency to Buy Right Now Motley Fool • 21/09/2026 NEUTRAL relevance 0.97 Bullish Ethereum's dominant role in decentralized finance (DeFi) gives it plenty of upside potential ahead.":
+      - /url: https://www.fool.com/investing/2026/09/21/down-47-for-the-year-this-is-the-most-undervalued-/
+      - generic: Down 47% From Its All-Time High, This Is the Most Undervalued Cryptocurrency to Buy Right Now
+      - generic: Motley Fool
+      - generic: •
+      - generic: 21/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.97
+      - generic: Bullish
+      - paragraph: Ethereum's dominant role in decentralized finance (DeFi) gives it plenty of upside potential ahead.
+    - link "This Ethereum Treasury Company Is Close to Owning 5% of All ETH in Circulation. Does That Make It a Buy? Motley Fool • 17/09/2026 NEUTRAL relevance 0.89 Bullish BitMine continues to buy Ethereum at a rapid clip, but where's the payoff for investors?":
+      - /url: https://www.fool.com/investing/2026/09/16/is-this-ethereum-treasury-company-a-buy/
+      - generic: This Ethereum Treasury Company Is Close to Owning 5% of All ETH in Circulation. Does That Make It a Buy?
+      - generic: Motley Fool
+      - generic: •
+      - generic: 17/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.89
+      - generic: Bullish
+      - paragraph: BitMine continues to buy Ethereum at a rapid clip, but where's the payoff for investors?
+    - link "Ethereum Institutional Supports Ethlabs' Motion to Reduce Ethereum Block Times Cointelegraph • 18/09/2026 NEUTRAL relevance 0.76 Neutral The non-profit signaled support for reducing Ethereum block times, citing increasing institutional activity moving onto the smart-contract network.":
+      - /url: https://cointelegraph.com/news/ethereum-institutional-support-ethlabs-reduce-ethereum-block-times
+      - generic: Ethereum Institutional Supports Ethlabs' Motion to Reduce Ethereum Block Times
+      - generic: Cointelegraph
+      - generic: •
+      - generic: 18/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.76
+      - generic: Neutral
+      - paragraph: The non-profit signaled support for reducing Ethereum block times, citing increasing institutional activity moving onto the smart-contract network.
+    - link "Kyle Samani Predicts SOL Flippening, Claims 'No One' Uses ETH Cointelegraph • 21/09/2026 NEUTRAL relevance 0.74 Neutral Multicoin Capital co-founder Samani expects SOL to surpass Ether's market capitalization \"this market cycle\" and argues that \"today, no one really uses ...":
+      - /url: https://cointelegraph.com/magazine/kyle-samani-predicts-sol-flippening-claims-no-one-uses-eth
+      - generic: Kyle Samani Predicts SOL Flippening, Claims 'No One' Uses ETH
+      - generic: Cointelegraph
+      - generic: •
+      - generic: 21/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.74
+      - generic: Neutral
+      - paragraph: Multicoin Capital co-founder Samani expects SOL to surpass Ether's market capitalization "this market cycle" and argues that "today, no one really uses ...
+    - link "Is This Cryptocurrency Still a Millionaire Maker? Motley Fool • 21/09/2026 NEUTRAL relevance 0.69 Bullish Ethereum's days of outrageous upside volatility are probably not coming back, but that shouldn't dissuade anyone from buying it.":
+      - /url: https://www.fool.com/investing/2026/09/20/is-this-cryptocurrency-still-a-millionaire-maker/
+      - generic: Is This Cryptocurrency Still a Millionaire Maker?
+      - generic: Motley Fool
+      - generic: •
+      - generic: 21/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.69
+      - generic: Bullish
+      - paragraph: Ethereum's days of outrageous upside volatility are probably not coming back, but that shouldn't dissuade anyone from buying it.
+    - link "Tom Lee's Bitmine Adds $74M in Ethereum, Declares a Crypto Bull Market 'Underway' Decrypt.co • 22/09/2026 NEUTRAL relevance 0.59 Bullish The purchase lifts Bitmine's stash to nearly 5.99 million ETH-4.9% of supply-as chairman Tom Lee argues Ethereum's outperformance signals a stronger move ahead and institutions remain underweight.":
+      - /url: https://decrypt.co/378754/tom-lee-bitmine-adds-ethereum-crypto-bull-market
+      - generic: Tom Lee's Bitmine Adds $74M in Ethereum, Declares a Crypto Bull Market 'Underway'
+      - generic: Decrypt.co
+      - generic: •
+      - generic: 22/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.59
+      - generic: Bullish
+      - paragraph: The purchase lifts Bitmine's stash to nearly 5.99 million ETH-4.9% of supply-as chairman Tom Lee argues Ethereum's outperformance signals a stronger move ahead and institutions remain underweight.
+    - link "Over the Past 90 Days, 38% of Altcoins Outperformed Bitcoin. These 3 Altcoins Need To Be On Your Investment Radar. Motley Fool • 18/09/2026 NEUTRAL relevance 0.57 Bullish Ether, Solana, and Zcash deserve a lot more attention.":
+      - /url: https://www.fool.com/investing/2026/09/17/over-the-past-90-days-40-of-altcoins-are-outperfor/
+      - generic: Over the Past 90 Days, 38% of Altcoins Outperformed Bitcoin. These 3 Altcoins Need To Be On Your Investment Radar.
+      - generic: Motley Fool
+      - generic: •
+      - generic: 18/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.57
+      - generic: Bullish
+      - paragraph: Ether, Solana, and Zcash deserve a lot more attention.
+    - link "Why Ethereum Jumped 5.8% Today Motley Fool • 19/09/2026 NEUTRAL relevance 0.53 Somewhat-Bullish Blockchain-based stock trading got its first official green light. It's tiny, temporary, and Ethereum-shaped.":
+      - /url: https://www.fool.com/investing/2026/09/18/why-ethereum-jumped-58-today/
+      - generic: Why Ethereum Jumped 5.8% Today
+      - generic: Motley Fool
+      - generic: •
+      - generic: 19/09/2026
+      - generic "no material catalyst pattern": NEUTRAL
+      - generic: relevance 0.53
+      - generic: Somewhat-Bullish
+      - paragraph: Blockchain-based stock trading got its first official green light. It's tiny, temporary, and Ethereum-shaped.
+    - heading "Deep Analyst — research read" [level=3]
+    - generic: Every technical number comes from the Golden Egg canonical packet; news is ticker-filtered (relevance ≥ 0.35); fundamentals are the shared Alpha Vantage OVERVIEW snapshot.
+    - generic: Thesis
+    - generic: "ETH-USD (crypto, 1D) is in watch mode with a bullish bias: trend setup — extended trend — RSI 72 with ADX 40; continuation with extension risk. Confluence 68/100 (evidence alignment, not a probability)."
+    - generic: What supports it
+    - generic: • Structure 87/100 — EMA200 below price — long-term anchor agrees
+    - generic: • Price above EMA200 $2243.94
+    - generic: • Cross-market supportive — 2 supportive (BTC, TOTAL) · 0 headwind · 1 neutral for a long read.
+    - generic: What argues against it
+    - generic: • Extension extended — RSI 72.0, stochastic 89
+    - generic: • Time confluence bearish (weak) opposes the bullish read — below hard-gate thresholds
+    - generic: "• Risk: extension — RSI 72 and stochastic 89 both at extremes"
+    - generic: Primary blocker
+    - generic: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk
+    - generic: What confirms
+    - generic: • Close above the model reference $2806.08 with expansion — mechanical trigger; look for a structural level to replace it.
+    - generic: • ADX staying ≥ 25 (now 40) and price holding above EMA200 $2243.94.
+    - generic: • Time confluence flipping to agree, or the conflict falling below gate thresholds.
+    - generic: What invalidates
+    - generic: • Close below $2622.16 (1.5× ATR model stop) with volume confirmation.
+    - generic: • Decisive close below EMA200 $2243.94 or ADX rolling below 20.
+    - generic: • Climax bar followed by a close through its midpoint — the extended move is failing.
+    - generic: Catalysts / event risk
+    - generic: • [NEUTRAL] Down 47% From Its All-Time High, This Is the Most Undervalued Cryptocurrency to Buy Right Now — no material catalyst pattern (Motley Fool, relevance 0.97)
+    - generic: • [NEUTRAL] This Ethereum Treasury Company Is Close to Owning 5% of All ETH in Circulation. Does That Make It a Buy? — no material catalyst pattern (Motley Fool, relevance 0.89)
+    - generic: • [NEUTRAL] Ethereum Institutional Supports Ethlabs' Motion to Reduce Ethereum Block Times — no material catalyst pattern (Cointelegraph, relevance 0.76)
+    - generic: • [NEUTRAL] Kyle Samani Predicts SOL Flippening, Claims 'No One' Uses ETH — no material catalyst pattern (Cointelegraph, relevance 0.74)
+    - generic: • [NEUTRAL] Is This Cryptocurrency Still a Millionaire Maker? — no material catalyst pattern (Motley Fool, relevance 0.69)
+    - generic: What would change the view
+    - generic: "• Weakens: Close below $2622.16 (1.5× ATR model stop) with volume confirmation."
+    - generic: "• Weakens: Decisive close below EMA200 $2243.94 or ADX rolling below 20."
+    - generic: "• Weakens: Climax bar followed by a close through its midpoint — the extended move is failing."
+    - generic: "• Strengthens: time confluence flipping to agree or falling below gate thresholds"
+    - generic: "• Strengthens: positioning turning supportive (P/C or funding moving with the direction)"
+    - generic: If close above the model reference $2806.08 with expansion — mechanical trigger; look for a structural level to replace it, the bullish scenario would gain support; if close below $2622.16 (1.5× ATR model stop) with volume confirmation, it is off the table. Educational research only.
+    - heading "Deep Analyst narrative (packet-constrained)" [level=3]
+    - generic: Source gpt-4o (packet-constrained). Conditional research language only — no probabilities, no instructions.
+    - generic: THESIS The ETH-USD setup is currently in a watch state with a long direction bias. The trend is extended, with strong momentum indicators suggesting continuation but also posing extension risks. The primary blocker is the overextended trend, as indicated by high RSI and ADX values. WHAT SUPPORTS IT - Structure score is high at 87/100, with price aligned above the 20/50-bar means and EMA200 ($2243.94) below price. - Cross-market support from BTC and total crypto market cap increases. - Confirmation requires a close above the model reference ($2806.08) with ADX ≥ 25. WHAT ARGUES AGAINST IT - Extension risk is significant, with RSI at 72 and stochastic at 89, both in overbought zones. - Time confluence shows a weak bearish conflict. - No structural levels within 2 ATR, indicating potential volatility. PRIMARY BLOCKER Extension risk due to high RSI (72) and ADX (40), indicating a strong but overextended trend. WHAT CONFIRMS - A close above $2806.08 with expansion and ADX remaining above 25. - Price holding above EMA200 ($2243.94). WHAT INVALIDATES - A close below $2622.16 with volume confirmation. - Decisive close below EMA200 ($2243.94) or ADX dropping below 20. CATALYSTS / EVENT RISK - News articles are neutral with no material catalyst pattern. - Institutional activity and market sentiment are neutral, with no significant impact expected. WHAT WOULD CHANGE THE VIEW - A decrease in the overall score below the threshold, improving confluence. - Time confluence flipping to agree or the conflict falling below gate thresholds. - Structural levels emerging within 2 ATR to provide clearer support/resistance zones.
+    - generic: Analysis generated at 22/09/2026, 12:18:57 pm
+    - generic: "Response time: 6022ms"
+    - strong: "Disclaimer:"
+    - text: The Golden Egg analysis is for educational and informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other type of advice. Options trading involves substantial risk of loss and is not suitable for all investors. Past performance does not guarantee future results. Always conduct your own research and consult with a licensed financial advisor before making any investment decisions. MarketScanner Pros is not a registered investment advisor.
+- alert: Golden Egg | Workflow | MarketScanner Pros
+```
+
+### ETH_Fundamentals
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "★"
+  - region "Golden Egg command header":
+    - generic: Golden Egg validation workbench
+    - generic: Regime Range / Neutral
+    - generic: Confluence 68%
+    - generic: Data GOOD
+    - generic: Verdict first
+    - generic: Data trust
+    - generic: Reference level
+    - generic: Invalidation
+    - generic: Next check
+    - heading "Validate one symbol before testing history." [level=1]
+    - paragraph: Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet.
+    - button "Open Terminal"
+    - button "Open Scanner"
+    - button "Open Backtest"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "Single-symbol validation"
+    - generic: Assessment
+    - generic "Watch"
+    - generic "Verdict packet"
+    - generic: Confluence
+    - generic "68%"
+    - generic "Evidence alignment"
+    - generic: Data trust
+    - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B.": GOOD
+    - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B."
+  - region "Golden Egg symbol input":
+    - textbox "Enter symbol..."
+    - button "Review"
+    - button "DOT"
+    - button "FET"
+    - button "WIF"
+    - button "XRP"
+    - button "ADA"
+    - button "WLD"
+    - button "KSM"
+    - button "SYM"
+    - button "WIFI"
+    - button "SP"
+    - button "auto"
+    - button "equity"
+    - button "crypto" [pressed]
+    - button "15m"
+    - button "1H"
+    - button "Daily" [pressed]
+    - button "Weekly"
+    - generic: "Next useful check: Review blocker: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - generic "Golden Egg validation views":
+    - generic: Validation workbench
+    - generic: Verdict first, then inspect chart, evidence detail, and business context.
+    - link "Open Liquidity Sweep":
+      - /url: /tools/liquidity-sweep
+    - button "1. Verdict packet Verdict":
+      - generic: 1. Verdict packet
+      - generic: Verdict
+    - button "2. Price context Chart":
+      - generic: 2. Price context
+      - generic: Chart
+    - button "3. Evidence detail Deep Analysis":
+      - generic: 3. Evidence detail
+      - generic: Deep Analysis
+    - button "4. Business context Fundamentals" [active] [pressed]:
+      - generic: 4. Business context
+      - generic: Fundamentals
+  - region "Golden Egg Fundamentals command header":
+    - generic: Golden Egg subview
+    - generic: 4. Business context
+    - generic: Symbol ETH-USD
+    - heading "Fundamentals check for ETH-USD" [level=2]
+    - paragraph: Check company or asset fundamentals before relying on the setup.
+    - button "Review Verdict"
+    - button "Open Chart"
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic: ETH-USD
+    - generic "Single-symbol validation context"
+    - generic: View
+    - generic: Fundamentals
+    - generic "4. Business context"
+    - generic: Focus
+    - generic: Business Context
+    - generic "Completes the Verdict packet"
+    - generic: Next Check
+    - generic: Chart
+    - generic "Continue the validation sequence"
+  - heading "Network & derivatives context — ETH" [level=3]
+  - paragraph: Crypto assets have no company filings. Market structure below comes from CoinGecko coin data and the canonical daily series; derivatives are the same snapshot used in the verdict. No corporate-style fundamentals are inferred.
+  - generic: Market cap
+  - generic: $334.65B
+  - generic: "rank #2"
+  - generic: FDV
+  - generic: $334.65B
+  - generic: provider
+  - generic: Circulating supply
+  - generic: 122,067,646
+  - generic: max supply unknown
+  - generic: Max supply
+  - generic: uncapped / n/a
+  - generic: total 122,070,499
+  - generic: Spot volume 24h
+  - generic: $25.28B
+  - generic: 7.6% of market cap
+  - generic: Distance from ATH
+  - generic: "-44.6%"
+  - generic: ATH $4,946.05 · 2025-08-24
+  - generic: 7d / 30d
+  - generic: +9.0% / +13.2%
+  - generic: price change
+  - generic: Volatility regime
+  - generic: neutral
+  - generic: ATR 3.68% (1d)
+  - generic: Relative strength (20 daily bars)
+  - generic: vs BTC
+  - generic: 1.026 · in line (+14.8% vs +11.9%)
+  - generic: "Categories: Smart Contract Platform · Layer 1 (L1) · Ethereum Ecosystem · FTX Holdings"
+  - generic: Derivatives (same snapshot as the verdict)
+  - generic: "vs setup: neutral"
+  - generic: Funding Rate (median venue, per ~8h interval)
+  - generic: +0.0090%
+  - generic: Annualized (×3×365)
+  - generic: +9.9%
+  - generic: Open Interest
+  - generic: $7.65B
+  - generic: Perp Volume 24h
+  - generic: $11.97B
+  - generic: Exchanges
+  - generic: "2"
+  - generic: OI / perp volume
+  - generic: "0.64"
+  - generic: • funding +0.0090% per ~8h — at/near exchange baseline (uninformative)
+  - generic: • deep open interest $7.65B
+  - generic: • only 2 derivatives venues
+  - generic: Price
+  - generic: $2,775.43
+  - generic: as of 02:18 UTC · last bar 2026-09-21
+  - generic: Market regime
+  - generic: Range / Neutral
+  - generic: Data trust
+  - generic: GOOD
+  - link "Open Crypto Command ›":
+    - /url: /tools/explorer?tab=crypto-command
+  - link "Open Crypto Derivatives lens ›":
+    - /url: /tools/dashboard?tab=crypto
+- alert: Golden Egg | Workflow | MarketScanner Pros
+```
+
+### ETH_Chart
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "★"
+  - region "Golden Egg command header":
+    - generic: Golden Egg validation workbench
+    - generic: Regime Range / Neutral
+    - generic: Confluence 68%
+    - generic: Data GOOD
+    - generic: Verdict first
+    - generic: Data trust
+    - generic: Reference level
+    - generic: Invalidation
+    - generic: Next check
+    - heading "Validate one symbol before testing history." [level=1]
+    - paragraph: Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet.
+    - button "Open Terminal"
+    - button "Open Scanner"
+    - button "Open Backtest"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "Single-symbol validation"
+    - generic: Assessment
+    - generic "Watch"
+    - generic "Verdict packet"
+    - generic: Confluence
+    - generic "68%"
+    - generic "Evidence alignment"
+    - generic: Data trust
+    - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B.": GOOD
+    - generic "GOOD — fresh completed bar (2026-09-21T00:00:00.000Z), 360 1d bars, indicators complete, liquidity $14.66B."
+  - region "Golden Egg symbol input":
+    - textbox "Enter symbol..."
+    - button "Review"
+    - button "DOT"
+    - button "FET"
+    - button "WIF"
+    - button "XRP"
+    - button "ADA"
+    - button "WLD"
+    - button "KSM"
+    - button "SYM"
+    - button "WIFI"
+    - button "SP"
+    - button "auto"
+    - button "equity"
+    - button "crypto" [pressed]
+    - button "15m"
+    - button "1H"
+    - button "Daily" [pressed]
+    - button "Weekly"
+    - generic: "Next useful check: Review blocker: Extension — extended trend — RSI 72 with ADX 40; continuation with extension risk."
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - generic "Golden Egg validation views":
+    - generic: Validation workbench
+    - generic: Verdict first, then inspect chart, evidence detail, and business context.
+    - link "Open Liquidity Sweep":
+      - /url: /tools/liquidity-sweep
+    - button "1. Verdict packet Verdict":
+      - generic: 1. Verdict packet
+      - generic: Verdict
+    - button "2. Price context Chart" [active] [pressed]:
+      - generic: 2. Price context
+      - generic: Chart
+    - button "3. Evidence detail Deep Analysis":
+      - generic: 3. Evidence detail
+      - generic: Deep Analysis
+    - button "4. Business context Fundamentals":
+      - generic: 4. Business context
+      - generic: Fundamentals
+  - region "Golden Egg Chart command header":
+    - generic: Golden Egg subview
+    - generic: 2. Price context
+    - generic: Symbol ETH-USD
+    - heading "Chart check for ETH-USD" [level=2]
+    - paragraph: Inspect price action and intraday structure around the scenario levels.
+    - button "Review Verdict"
+    - button "Open Deep Analysis"
+    - link "Open Terminal":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic: ETH-USD
+    - generic "Single-symbol validation context"
+    - generic: View
+    - generic: Chart
+    - generic "2. Price context"
+    - generic: Focus
+    - generic: Price Action
+    - generic "Completes the Verdict packet"
+    - generic: Next Check
+    - generic: Deep Analysis
+    - generic "Continue the validation sequence"
+  - main:
+    - generic: Indicator review
+    - generic: Caution
+    - generic: Mixed structure. Wait for additional confirmation evidence.
+    - generic: Volatility
+    - generic: Expansion
+    - generic: Session range 5.73%
+    - generic: Dealer context
+    - generic: Unavailable
+    - generic: Overlay unavailable
+    - generic: Scenario notes
+    - generic: Monitor VWAP reclaim/reject behavior before treating the scenario as stronger.
+    - button "Stocks"
+    - button "Crypto" [pressed]
+    - generic: 24/7
+    - textbox "Symbol":
+      - /placeholder: Symbol (e.g., BTC)
+      - text: ETH-USD
+    - button "Load"
+    - button "BTC"
+    - button "ETH"
+    - button "SOL"
+    - button "XRP"
+    - button "DOGE"
+    - button "ADA"
+    - button "AVAX"
+    - button "LINK"
+    - generic: ETH-USD
+    - heading "$2,747.46" [level=2]
+    - generic: ▲ +3.67%
+    - generic: 48 bars
+    - button "1 Min"
+    - button "5 Min" [pressed]
+    - button "15 Min"
+    - button "30 Min"
+    - button "1 Hour"
+    - checkbox "Toggle auto-refresh"
+    - text: Auto 60s
+    - generic: Overlays
+    - button "EMA 9"
+    - button "EMA 21"
+    - button "SMA 20"
+    - button "SMA 50"
+    - button "VWAP"
+    - button "Bollinger"
+    - button "Trades"
+    - button "Compare TF"
+    - generic: Analysis context
+    - generic: VWAP
+    - generic: $2,747.46
+    - generic: Range
+    - generic: $157.44
+    - generic: Session High
+    - generic: $2,804.42
+    - generic: Session Low
+    - generic: $2,646.98
+    - generic: Avg Bar Volume
+    - generic: "0"
+    - generic: Liquidity
+    - generic: Thin
+    - generic: Analysis actions
+    - link "Add to Watchlist":
+      - /url: /tools/workspace?tab=watchlists&symbol=ETH-USD
+    - link "Create Alert":
+      - /url: /tools/workspace?tab=alerts&symbol=ETH-USD
+    - link "Run Confluence Scan":
+      - /url: /tools/scanner?asset=crypto&symbol=ETH-USD
+    - link "Open Journal Draft":
+      - /url: /tools/workspace?tab=journal&note=Review%20ETH-USD%20setup
+    - generic: Last refresh 22/09/2026, 12:00:00 pm
+    - generic "Help & methodology"
+- alert: Golden Egg | Workflow | MarketScanner Pros
+```
+
+### ETH_Terminal
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics" [active]:
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Crypto Derivatives Risk — Educational Only
+  - text: — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 2. Derivatives map
+    - generic: CRYPTO path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: Active lens
+    - generic "Crypto"
+    - generic "2. Derivatives map"
+    - generic: Data state
+    - generic "Lens ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Check derivatives pressure"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": ETH-USD
+  - button "Load"
+  - generic: ETH-USD
+  - generic: CRYPTO
+  - generic: CRYPTO PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "XRP"
+  - button "ADA"
+  - button "XLM"
+  - button "LINK"
+  - button "FET"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Crypto path
+    - button "1. Timing map Close Calendar":
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Derivatives map Crypto" [pressed]:
+      - generic: 2. Derivatives map
+      - generic: Crypto
+    - button "5. Capital pressure Capital Pressure":
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity":
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence":
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - region "Terminal Crypto command header":
+    - generic: Terminal subview
+    - generic: 2. Derivatives map
+    - generic: Symbol ETH-USD
+    - heading "Crypto check for ETH-USD" [level=2]
+    - paragraph: Inspect funding, open interest, liquidations, exchanges, and stablecoin context.
+    - button "Back to Calendar"
+    - button "Open Capital Pressure"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: View
+    - generic "Crypto"
+    - generic "2. Derivatives map"
+    - generic: Focus
+    - generic "Derivatives Map"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Capital Pressure"
+    - generic "Continue the mechanics sequence"
+  - generic: Ethereum
+  - generic: ETH
+  - generic: $2,741.74
+  - generic: +2.90%
+  - generic: "Rank #2"
+  - generic: MCap $334.52B
+  - generic: Vol $25.31B
+  - generic: 24h $2.6K – $2.8K
+  - button "↻ Refresh"
+  - heading "Coin Navigator" [level=3]
+  - generic: 15 coins
+  - button "₿ BTC":
+    - generic: ₿
+    - generic: BTC
+  - button "Ξ ETH":
+    - generic: Ξ
+    - generic: ETH
+  - button "◎ SOL":
+    - generic: ◎
+    - generic: SOL
+  - button "⬡ BNB":
+    - generic: ⬡
+    - generic: BNB
+  - button "✕ XRP":
+    - generic: ✕
+    - generic: XRP
+  - button "🐕 DOGE":
+    - generic: 🐕
+    - generic: DOGE
+  - button "₳ ADA":
+    - generic: ₳
+    - generic: ADA
+  - button "🔺 AVAX":
+    - generic: 🔺
+    - generic: AVAX
+  - button "⬡ LINK":
+    - generic: ⬡
+    - generic: LINK
+  - button "● DOT":
+    - generic: ●
+    - generic: DOT
+  - button "Ⓝ NEAR":
+    - generic: Ⓝ
+    - generic: NEAR
+  - button "Ł LTC":
+    - generic: Ł
+    - generic: LTC
+  - button "🔵 ARB":
+    - generic: 🔵
+    - generic: ARB
+  - button "🔴 OP":
+    - generic: 🔴
+    - generic: OP
+  - button "🦄 UNI":
+    - generic: 🦄
+    - generic: UNI
+  - generic: Market Cap
+  - generic: $334.52B
+  - generic: 24h Volume
+  - generic: $25.31B
+  - generic: 7d Change
+  - generic: +9.23%
+  - generic: Supply
+  - generic: 122.1M
+  - heading "Derivatives Summary" [level=4]
+  - generic: Avg Funding
+  - generic: +0.0095%
+  - generic: "Annualised: 10.4%"
+  - generic: Sentiment
+  - generic: Neutral
+  - generic: Total OI
+  - generic: $4.54B
+  - generic: 1 exchanges
+  - generic: Perps Volume
+  - generic: $9.90B
+  - heading "ETH Perpetuals — 2 Exchanges" [level=3]
+  - button "OI ↓"
+  - button "Funding"
+  - button "Volume"
+  - button "Basis"
+  - table:
+    - rowgroup:
+      - row "Exchange Funding Open Interest ↓ Volume 24h Basis Spread Price":
+        - columnheader "Exchange"
+        - columnheader "Funding"
+        - columnheader "Open Interest ↓"
+        - columnheader "Volume 24h"
+        - columnheader "Basis"
+        - columnheader "Spread"
+        - columnheader "Price"
+    - rowgroup:
+      - row "CoinW ETH/USDT +0.0090% $2.96B $7.31B 0.0000 0.00 $2,738.05":
+        - cell "CoinW ETH/USDT":
+          - generic: CoinW
+          - generic: ETH/USDT
+        - cell "+0.0090%"
+        - cell "$2.96B"
+        - cell "$7.31B"
+        - cell "0.0000"
+        - cell "0.00"
+        - cell "$2,738.05"
+      - row "CoinW ETH/USDC +0.0100% $1.58B $2.60B 0.0140 0.00 $2,737.87":
+        - cell "CoinW ETH/USDC":
+          - generic: CoinW
+          - generic: ETH/USDC
+        - cell "+0.0100%"
+        - cell "$1.58B"
+        - cell "$2.60B"
+        - cell "0.0140"
+        - cell "0.00"
+        - cell "$2,737.87"
+  - heading "Inspector" [level=3]
+  - img "Crypto Terminal"
+  - paragraph: Click an exchange row
+  - paragraph: to inspect derivatives detail
+  - heading "Positioning Signals" [level=3]
+  - generic: "0"
+  - paragraph: No significant signals detected in the loaded derivatives dataset.
+  - heading "Funding Rate Heatmap" [level=3]
+  - generic: Top 20 coins × 8 exchanges
+  - table:
+    - rowgroup:
+      - row "Coin CoinW":
+        - columnheader "Coin"
+        - columnheader "CoinW"
+    - rowgroup:
+      - row "BTC +0.0090%":
+        - cell "BTC"
+        - cell "+0.0090%"
+      - row "ETH +0.0090%":
+        - cell "ETH"
+        - cell "+0.0090%"
+      - row "SOL +0.0100%":
+        - cell "SOL"
+        - cell "+0.0100%"
+      - row "BNB +0.0070%":
+        - cell "BNB"
+        - cell "+0.0070%"
+      - row "XRP +0.0100%":
+        - cell "XRP"
+        - cell "+0.0100%"
+      - row "DOGE +0.0100%":
+        - cell "DOGE"
+        - cell "+0.0100%"
+      - row "ADA +0.0100%":
+        - cell "ADA"
+        - cell "+0.0100%"
+      - row "AVAX +0.0100%":
+        - cell "AVAX"
+        - cell "+0.0100%"
+      - row "DOT +0.0100%":
+        - cell "DOT"
+        - cell "+0.0100%"
+      - row "LINK +0.0100%":
+        - cell "LINK"
+        - cell "+0.0100%"
+      - row "NEAR +0.0100%":
+        - cell "NEAR"
+        - cell "+0.0100%"
+      - row "LTC +0.0100%":
+        - cell "LTC"
+        - cell "+0.0100%"
+      - row "UNI +0.0100%":
+        - cell "UNI"
+        - cell "+0.0100%"
+      - row "ATOM +0.0100%":
+        - cell "ATOM"
+        - cell "+0.0100%"
+      - row "ARB +0.0010%":
+        - cell "ARB"
+        - cell "+0.0010%"
+      - row "OP +0.0100%":
+        - cell "OP"
+        - cell "+0.0100%"
+      - row "TRX +0.0100%":
+        - cell "TRX"
+        - cell "+0.0100%"
+  - heading "Market Overview" [level=3]
+  - generic: 17 coins
+  - 'button "BTC Bitcoin $85,538.00 +5.27% F: +0.0095% OI: $7.88B"':
+    - generic: BTC
+    - generic: Bitcoin
+    - generic: $85,538.00
+    - generic: +5.27%
+    - generic: "F: +0.0095%"
+    - generic: "OI: $7.88B"
+  - 'button "ETH Ethereum $2,742.56 +3.20% F: +0.0095% OI: $4.54B"':
+    - generic: ETH
+    - generic: Ethereum
+    - generic: $2,742.56
+    - generic: +3.20%
+    - generic: "F: +0.0095%"
+    - generic: "OI: $4.54B"
+  - 'button "SOL Solana $117.35 +5.29% F: +0.0100% OI: $1.57B"':
+    - generic: SOL
+    - generic: Solana
+    - generic: $117.35
+    - generic: +5.29%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $1.57B"
+  - 'button "BNB BNB $788.50 +1.26% F: +0.0070% OI: $277.41M"':
+    - generic: BNB
+    - generic: BNB
+    - generic: $788.50
+    - generic: +1.26%
+    - generic: "F: +0.0070%"
+    - generic: "OI: $277.41M"
+  - 'button "XRP XRP $1.51 +6.77% F: +0.0100% OI: $607.77M"':
+    - generic: XRP
+    - generic: XRP
+    - generic: $1.51
+    - generic: +6.77%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $607.77M"
+  - 'button "DOGE Dogecoin $0.099988 +13.76% F: +0.0100% OI: $83.82M"':
+    - generic: DOGE
+    - generic: Dogecoin
+    - generic: $0.099988
+    - generic: +13.76%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $83.82M"
+  - 'button "ADA Cardano $0.245280 +7.38% F: +0.0100% OI: $76.71M"':
+    - generic: ADA
+    - generic: Cardano
+    - generic: $0.245280
+    - generic: +7.38%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $76.71M"
+  - 'button "AVAX Avalanche $11.12 +0.29% F: +0.0100% OI: $35.00M"':
+    - generic: AVAX
+    - generic: Avalanche
+    - generic: $11.12
+    - generic: +0.29%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $35.00M"
+  - 'button "DOT Polkadot $1.19 +5.06% F: +0.0100% OI: $32.60M"':
+    - generic: DOT
+    - generic: Polkadot
+    - generic: $1.19
+    - generic: +5.06%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $32.60M"
+  - 'button "LINK Chainlink $12.98 +3.63% F: +0.0100% OI: $35.51M"':
+    - generic: LINK
+    - generic: Chainlink
+    - generic: $12.98
+    - generic: +3.63%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $35.51M"
+  - 'button "NEAR NEAR Protocol $4.37 +5.75% F: +0.0100% OI: $84.57M"':
+    - generic: NEAR
+    - generic: NEAR Protocol
+    - generic: $4.37
+    - generic: +5.75%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $84.57M"
+  - 'button "LTC Litecoin $60.72 +3.69% F: +0.0100% OI: $57.42M"':
+    - generic: LTC
+    - generic: Litecoin
+    - generic: $60.72
+    - generic: +3.69%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $57.42M"
+  - 'button "UNI Uniswap $9.08 +5.05% F: +0.0100% OI: $157.88M"':
+    - generic: UNI
+    - generic: Uniswap
+    - generic: $9.08
+    - generic: +5.05%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $157.88M"
+  - 'button "ATOM Cosmos Hub $1.80 +3.64% F: +0.0100% OI: $3.71M"':
+    - generic: ATOM
+    - generic: Cosmos Hub
+    - generic: $1.80
+    - generic: +3.64%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $3.71M"
+  - 'button "ARB Arbitrum $0.221163 +4.37% F: +0.0010% OI: $13.25M"':
+    - generic: ARB
+    - generic: Arbitrum
+    - generic: $0.221163
+    - generic: +4.37%
+    - generic: "F: +0.0010%"
+    - generic: "OI: $13.25M"
+  - 'button "OP Optimism $0.126448 +2.00% F: +0.0100% OI: $4.67M"':
+    - generic: OP
+    - generic: Optimism
+    - generic: $0.126448
+    - generic: +2.00%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $4.67M"
+  - 'button "TRX TRON $0.348227 +1.47% F: +0.0100% OI: $75.56M"':
+    - generic: TRX
+    - generic: TRON
+    - generic: $0.348227
+    - generic: +1.47%
+    - generic: "F: +0.0100%"
+    - generic: "OI: $75.56M"
+  - heading "ETH Funding Rate History" [level=3]
+  - generic: 30-day snapshots
+  - paragraph: Comparable history unavailable
+  - paragraph: Historical funding observations need verified units, intervals and venue coverage before they can be compared.
+  - heading "Funding Arbitrage" [level=3]
+  - generic: "0"
+  - paragraph: No significant funding differentials detected
+  - heading "Stablecoin Liquidity Proxy" [level=3]
+  - generic: STABLE
+  - generic: USDT Market Cap
+  - generic: $183.34B
+  - generic: "-0.00% 24h"
+  - generic: USDC Market Cap
+  - generic: $74.65B
+  - generic: +0.01% 24h
+  - generic: Total Stablecoin
+  - generic: $257.99B
+  - generic: 24h Delta
+  - generic: $4.22M
+  - generic: Inflow
+  - generic: Signal
+  - generic: ⚪ Stable
+  - generic: No significant supply change
+- alert: Terminal | Workflow | MarketScanner Pros
+```
+
+### ETH_Capital
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Crypto Derivatives Risk — Educational Only
+  - text: — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 5. Capital pressure
+    - generic: CRYPTO path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: Active lens
+    - generic "Capital Pressure"
+    - generic "5. Capital pressure"
+    - generic: Data state
+    - generic "Lens ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Review capital pressure"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": ETH-USD
+  - button "Load"
+  - generic: ETH-USD
+  - generic: CRYPTO
+  - generic: CRYPTO PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "XRP"
+  - button "ADA"
+  - button "XLM"
+  - button "LINK"
+  - button "FET"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Crypto path
+    - button "1. Timing map Close Calendar":
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Derivatives map Crypto":
+      - generic: 2. Derivatives map
+      - generic: Crypto
+    - button "5. Capital pressure Capital Pressure" [active] [pressed]:
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity":
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence":
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - region "Terminal Capital Pressure command header":
+    - generic: Terminal subview
+    - generic: 5. Capital pressure
+    - generic: Symbol ETH-USD
+    - heading "Capital Pressure check for ETH-USD" [level=2]
+    - paragraph: Read flow, probability, gamma, liquidity, and session context together.
+    - button "Back to Calendar"
+    - button "Open Time Gravity"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: View
+    - generic "Capital Pressure"
+    - generic "5. Capital pressure"
+    - generic: Focus
+    - generic "Capital Pressure"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Time Gravity"
+    - generic "Continue the mechanics sequence"
+  - heading "Capital Flow — ETH-USD" [level=3]
+  - generic: as of 12:25:20 pm
+  - button "↻ Refresh"
+  - paragraph: "Blocked: BLOCKED: Trade Permission Score 62 below threshold (68) Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence."
+  - generic: Bias
+  - generic: neutral
+  - generic: Mode
+  - generic: pin
+  - generic: Gamma
+  - generic: Positive
+  - generic: Directional score
+  - generic: 62/100
+  - generic: Spot
+  - generic: $2,775.43
+  - heading "Scenario weights · heuristic" [level=3]
+  - generic: Continuation
+  - generic: 40/100
+  - generic: Pin / Reversion
+  - generic: 34/100
+  - generic: Expansion
+  - generic: 26/100
+  - generic: Regime
+  - generic: TRENDING
+  - generic: allow trend setups
+  - heading "Brain Decision" [level=3]
+  - generic: Brain Score
+  - generic: "68"
+  - generic: Status
+  - generic: NOT ALIGNED
+  - generic: Risk Mode
+  - generic: NORMAL
+  - generic: Regime
+  - generic: mean revert day
+  - generic: MEAN REVERT DAY • LAUNCH • NEUTRAL
+  - heading "Reference Levels" [level=3]
+  - generic: Signal Type
+  - generic: none
+  - generic: Weighting
+  - generic: —
+  - generic: Invalidation Rule
+  - generic: —
+  - generic: Key Levels
+  - generic: • 2800
+  - generic: • 2875.96
+  - heading "Indicator Alignment" [level=3]
+  - generic: TPS
+  - generic: "62"
+  - generic: Risk Mode
+  - generic: high
+  - generic: Weighting Factor
+  - generic: 0.35x
+  - generic: Analysis Mode
+  - generic: atr trailing
+  - generic: "Analysis paused: BLOCKED: Trade Permission Score 62 below threshold (68)"
+  - generic: Aligned
+  - generic: Trend continuation
+  - generic: Breakout retests
+  - generic: Momentum add-ons
+  - generic: BTC/ETH pairs (liquid enough)
+  - generic: Mean reversion setups
+  - heading "Risk Analysis" [level=3]
+  - generic: IRS Score
+  - generic: "1"
+  - generic: Risk Mode
+  - generic: NORMAL
+  - generic: Conditions
+  - generic: Not Aligned
+  - generic: Vol Regime
+  - generic: NORMAL
+  - generic: Weighting
+  - generic: 0%
+  - heading "Liquidity Levels" [level=3]
+  - table:
+    - rowgroup:
+      - row "Level Label Heuristic weight":
+        - columnheader "Level"
+        - columnheader "Label"
+        - columnheader "Heuristic weight"
+    - rowgroup:
+      - row "$2,772.97 PDH 95/100":
+        - cell "$2,772.97"
+        - cell "PDH":
+          - generic: PDH
+        - cell "95/100"
+      - row "$2,762.51 ONL 83/100":
+        - cell "$2,762.51"
+        - cell "ONL":
+          - generic: ONL
+        - cell "83/100"
+      - row "$2,800.00 ROUND 68/100":
+        - cell "$2,800.00"
+        - cell "ROUND":
+          - generic: ROUND
+        - cell "68/100"
+      - row "$2,804.42 ONH 62/100":
+        - cell "$2,804.42"
+        - cell "ONH":
+          - generic: ONH
+        - cell "62/100"
+      - row "$2,804.42 WEEK HIGH 62/100":
+        - cell "$2,804.42"
+        - cell "WEEK HIGH":
+          - generic: WEEK HIGH
+        - cell "62/100"
+      - row "$2,733.80 POS CLUSTER 50/100":
+        - cell "$2,733.80"
+        - cell "POS CLUSTER":
+          - generic: POS CLUSTER
+        - cell "50/100"
+      - row "$2,733.80 LONG LIQ 50/100":
+        - cell "$2,733.80"
+        - cell "LONG LIQ":
+          - generic: LONG LIQ
+        - cell "50/100"
+      - row "$2,817.06 SHORT LIQ 50/100":
+        - cell "$2,817.06"
+        - cell "SHORT LIQ":
+          - generic: SHORT LIQ
+        - cell "50/100"
+  - heading "Key Strikes" [level=3]
+  - generic: $2,733.8
+  - generic: "Gravity: 0.8"
+  - generic: put heavy
+  - generic: $2,817.06
+  - generic: "Gravity: 0.7"
+  - generic: call heavy
+  - heading "Flip Zones" [level=3]
+  - generic: $2,754.61
+  - generic: bearish below
+  - generic: $2,796.24
+  - generic: bullish above
+  - heading "Session Context" [level=3]
+  - generic: Phase
+  - generic: CRYPTO ASIAN
+  - generic: Exposure Cap
+  - generic: —
+  - generic: Active Session
+  - generic: "Yes"
+  - generic: Short-Term OK
+  - generic: "No"
+- alert: Terminal | Workflow | MarketScanner Pros
+```
+
+### ETH_Gravity
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Crypto Derivatives Risk — Educational Only
+  - text: — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 6. Gravity map
+    - generic: CRYPTO path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: Active lens
+    - generic "Time Gravity"
+    - generic "6. Gravity map"
+    - generic: Data state
+    - generic "Lens ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Validate mechanics context"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": ETH-USD
+  - button "Load"
+  - generic: ETH-USD
+  - generic: CRYPTO
+  - generic: CRYPTO PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "XRP"
+  - button "ADA"
+  - button "XLM"
+  - button "LINK"
+  - button "FET"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Crypto path
+    - button "1. Timing map Close Calendar":
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Derivatives map Crypto":
+      - generic: 2. Derivatives map
+      - generic: Crypto
+    - button "5. Capital pressure Capital Pressure":
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity" [active] [pressed]:
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence":
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - region "Terminal Time Gravity command header":
+    - generic: Terminal subview
+    - generic: 6. Gravity map
+    - generic: Symbol ETH-USD
+    - heading "Time Gravity check for ETH-USD" [level=2]
+    - paragraph: Locate decompression windows, midpoint debt, and gravity zones.
+    - button "Back to Calendar"
+    - button "Open Time Confluence"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: View
+    - generic "Time Gravity"
+    - generic "6. Gravity map"
+    - generic: Focus
+    - generic "Gravity Map"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Time Confluence"
+    - generic "Continue the mechanics sequence"
+  - generic: Symbol
+  - textbox "Symbol":
+    - /placeholder: BTCUSD
+    - text: ETH-USD
+  - generic: Current Price
+  - spinbutton "Current Price": "2743.36"
+  - button "Load Symbol"
+  - heading "Time Gravity Map" [level=2]: ⏰ Time Gravity Map
+  - paragraph: ETH-USD • 2743.36
+  - generic: 100%
+  - generic: Confidence
+  - generic: 🎯
+  - generic: "TARGET ACTIVE: 2741.80"
+  - generic: "Alignment: 100%"
+  - generic: 54 active targets
+  - generic: "⚠️ Moderate gravity zone at 2741.80 | Confidence: 100% (sparse data)"
+  - generic: PRICE GRAVITY MAP
+  - generic: "Current: 2743.36"
+  - generic: "2798.23"
+  - generic: 24%
+  - generic: "2789.15"
+  - generic: 30%
+  - generic: "2780.08"
+  - generic: 44%
+  - generic: "2771.00"
+  - generic: 50%
+  - generic: "2761.93"
+  - generic: 64%
+  - generic: "2752.86"
+  - generic: 100%
+  - generic: "2743.78"
+  - generic: 79%
+  - generic: "2734.71"
+  - generic: 83%
+  - generic: "2725.63"
+  - generic: 63%
+  - generic: "2716.56"
+  - generic: 51%
+  - generic: "2707.48"
+  - generic: 35%
+  - generic: "2698.41"
+  - generic: 28%
+  - generic: "2689.33"
+  - generic: 25%
+  - generic: "2680.26"
+  - generic: 23%
+  - generic: "2671.19"
+  - generic: 22%
+  - generic: "2662.11"
+  - generic: 24%
+  - generic: "2653.04"
+  - generic: 19%
+  - generic: "2643.96"
+  - generic: 17%
+  - generic: "2634.89"
+  - generic: 15%
+  - generic: "2625.81"
+  - generic: 14%
+  - generic: "2616.74"
+  - generic: 12%
+  - generic: AOI TARGET ZONES
+  - generic: "#1"
+  - generic: 2693.16–2790.44
+  - generic: 100%
+  - generic: 30m • 30m • 30m
+  - generic: 🔥 32 active
+  - generic: ⚠️ 32 debt
+  - generic: "#2"
+  - generic: 2616.74–2670.34
+  - generic: 94%
+  - generic: 1D • 1D • 1D
+  - generic: 🔥 13 active
+  - generic: ⚠️ 22 debt
+  - generic: AI ANALYST
+  - generic: "⚠️ Moderate gravity zone at 2741.80 | Confidence: 100% (sparse data)"
+  - generic: "Strongest gravity below at 2741.80 (30m, 30m, 30m). 32 active decompression windows. 2 TF(s) close today (highest: 1D). ⚠️ Sparse data — fewer than 4 timeframes available."
+  - generic: 💡 32 decompression windows active — multiple timeframes aligned
+  - generic: MIDPOINT LADDER
+  - generic: 5Y
+  - generic: —
+  - generic: 1Y
+  - generic: —
+  - generic: 3M
+  - generic: —
+  - generic: 1M
+  - generic: —
+  - generic: 1W
+  - generic: —
+  - 'generic "Candle close: 2026-09-22T00:00:00.000Z"':
+    - text: 1D
+    - generic: 09-22 00:00 UTC
+  - generic: 🔴
+  - generic: "2629.02"
+  - generic: (2629–2636)
+  - generic: −4.17%
+  - 'generic "Candle close: 2026-09-21T20:00:00.000Z"':
+    - text: 1D
+    - generic: 09-21 20:00 UTC
+  - generic: 🔴
+  - generic: "2626.33"
+  - generic: (2626–2634)
+  - generic: −4.27%
+  - 'generic "Candle close: 2026-09-21T00:00:00.000Z"':
+    - text: 1D
+    - generic: 09-21 00:00 UTC
+  - generic: 🔴
+  - generic: "2629.24"
+  - generic: (2629–2633)
+  - generic: −4.16%
+  - 'generic "Candle close: 2026-09-20T20:00:00.000Z"':
+    - text: 1D
+    - generic: 09-20 20:00 UTC
+  - generic: 🔴
+  - generic: "2644.26"
+  - generic: (2644–2649)
+  - generic: −3.61%
+  - 'generic "Candle close: 2026-09-20T16:00:00.000Z"':
+    - text: 1D
+    - generic: 09-20 16:00 UTC
+  - generic: 🔴
+  - generic: "2638.62"
+  - generic: (2639–2642)
+  - generic: −3.82%
+  - 'generic "Candle close: 2026-09-20T12:00:00.000Z"':
+    - text: 1D
+    - generic: 09-20 12:00 UTC
+  - generic: 🔴
+  - generic: "2639.84"
+  - generic: (2640–2646)
+  - generic: −3.77%
+  - 'generic "Candle close: 2026-09-20T08:00:00.000Z"':
+    - text: 1D
+    - generic: 09-20 08:00 UTC
+  - generic: 🔴
+  - generic: "2622.68"
+  - generic: (2623–2627)
+  - generic: −4.40%
+  - 'generic "Candle close: 2026-09-20T04:00:00.000Z"':
+    - text: 1D
+    - generic: 09-20 04:00 UTC
+  - generic: 🔴
+  - generic: "2616.74"
+  - generic: (2617–2622)
+  - generic: −4.62%
+  - 'generic "Candle close: 2026-09-20T00:00:00.000Z"':
+    - text: 1D
+    - generic: 09-20 00:00 UTC
+  - generic: 🔴
+  - generic: "2623.91"
+  - generic: (2624–2630)
+  - generic: −4.35%
+  - generic: 8H
+  - generic: —
+  - generic: 6H
+  - generic: —
+  - generic: 4H
+  - generic: —
+  - generic: 2H
+  - generic: —
+  - generic: 1H
+  - generic: —
+  - 'generic "Candle close: 2026-09-22T02:00:00.000Z"':
+    - text: 30m
+    - generic: 09-22 02:00 UTC
+  - generic: 🔴
+  - generic: "2747.66"
+  - generic: (2745–2748)
+  - generic: +0.16%
+  - 'generic "Candle close: 2026-09-22T01:30:00.000Z"':
+    - text: 30m
+    - generic: 09-22 01:30 UTC
+  - generic: 🔴
+  - generic: "2764.80"
+  - generic: (2760–2765)
+  - generic: +0.78%
+  - 'generic "Candle close: 2026-09-22T01:00:00.000Z"':
+    - text: 30m
+    - generic: 09-22 01:00 UTC
+  - generic: 🔴
+  - generic: "2771.90"
+  - generic: (2771–2772)
+  - generic: +1.04%
+  - 'generic "Candle close: 2026-09-22T00:30:00.000Z"':
+    - text: 30m
+    - generic: 09-22 00:30 UTC
+  - generic: 🔴
+  - generic: "2771.99"
+  - generic: (2770–2772)
+  - generic: +1.04%
+  - 'generic "Candle close: 2026-09-22T00:00:00.000Z"':
+    - text: 30m
+    - generic: 09-22 00:00 UTC
+  - generic: 🔴
+  - generic: "2779.72"
+  - generic: (2777–2780)
+  - generic: +1.33%
+  - 'generic "Candle close: 2026-09-21T23:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 23:30 UTC
+  - generic: 🔴
+  - generic: "2776.13"
+  - generic: (2774–2776)
+  - generic: +1.19%
+  - 'generic "Candle close: 2026-09-21T23:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 23:00 UTC
+  - generic: 🔴
+  - generic: "2775.47"
+  - generic: (2773–2775)
+  - generic: +1.17%
+  - 'generic "Candle close: 2026-09-21T22:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 22:30 UTC
+  - generic: 🔴
+  - generic: "2774.03"
+  - generic: (2772–2774)
+  - generic: +1.12%
+  - 'generic "Candle close: 2026-09-21T22:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 22:00 UTC
+  - generic: 🔴
+  - generic: "2773.24"
+  - generic: (2770–2773)
+  - generic: +1.09%
+  - 'generic "Candle close: 2026-09-21T21:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 21:30 UTC
+  - generic: 🔴
+  - generic: "2790.44"
+  - generic: (2785–2790)
+  - generic: +1.72%
+  - 'generic "Candle close: 2026-09-21T21:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 21:00 UTC
+  - generic: 🔴
+  - generic: "2783.47"
+  - generic: (2775–2783)
+  - generic: +1.46%
+  - 'generic "Candle close: 2026-09-21T20:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 20:30 UTC
+  - generic: 🔴
+  - generic: "2765.51"
+  - generic: (2763–2766)
+  - generic: +0.81%
+  - 'generic "Candle close: 2026-09-21T20:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 20:00 UTC
+  - generic: 🔴
+  - generic: "2763.43"
+  - generic: (2761–2763)
+  - generic: +0.73%
+  - 'generic "Candle close: 2026-09-21T19:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 19:30 UTC
+  - generic: 🔴
+  - generic: "2751.40"
+  - generic: (2749–2751)
+  - generic: +0.29%
+  - 'generic "Candle close: 2026-09-21T19:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 19:00 UTC
+  - generic: 🔴
+  - generic: "2746.13"
+  - generic: (2744–2746)
+  - generic: +0.10%
+  - 'generic "Candle close: 2026-09-21T18:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 18:00 UTC
+  - generic: 🔴
+  - generic: "2750.43"
+  - generic: (2748–2750)
+  - generic: +0.26%
+  - 'generic "Candle close: 2026-09-21T17:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 17:30 UTC
+  - generic: 🔴
+  - generic: "2759.51"
+  - generic: (2757–2760)
+  - generic: +0.59%
+  - 'generic "Candle close: 2026-09-21T17:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 17:00 UTC
+  - generic: 🔴
+  - generic: "2755.08"
+  - generic: (2751–2755)
+  - generic: +0.43%
+  - 'generic "Candle close: 2026-09-21T16:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 16:30 UTC
+  - generic: 🔴
+  - generic: "2746.66"
+  - generic: (2740–2747)
+  - generic: +0.12%
+  - 'generic "Candle close: 2026-09-21T16:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 16:00 UTC
+  - generic: 🔴
+  - generic: "2739.88"
+  - generic: (2740–2743)
+  - generic: −0.13%
+  - 'generic "Candle close: 2026-09-21T15:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 15:00 UTC
+  - generic: 🔴
+  - generic: "2725.30"
+  - generic: (2725–2730)
+  - generic: −0.66%
+  - 'generic "Candle close: 2026-09-21T14:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 14:30 UTC
+  - generic: 🔴
+  - generic: "2731.01"
+  - generic: (2731–2735)
+  - generic: −0.45%
+  - 'generic "Candle close: 2026-09-21T14:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 14:00 UTC
+  - generic: 🔴
+  - generic: "2736.08"
+  - generic: (2736–2738)
+  - generic: −0.27%
+  - 'generic "Candle close: 2026-09-21T13:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 13:30 UTC
+  - generic: 🔴
+  - generic: "2729.25"
+  - generic: (2729–2733)
+  - generic: −0.51%
+  - 'generic "Candle close: 2026-09-21T13:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 13:00 UTC
+  - generic: 🔴
+  - generic: "2723.88"
+  - generic: (2724–2726)
+  - generic: −0.71%
+  - 'generic "Candle close: 2026-09-21T12:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 12:30 UTC
+  - generic: 🔴
+  - generic: "2723.68"
+  - generic: (2724–2725)
+  - generic: −0.72%
+  - 'generic "Candle close: 2026-09-21T12:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 12:00 UTC
+  - generic: 🔴
+  - generic: "2718.64"
+  - generic: (2719–2720)
+  - generic: −0.90%
+  - 'generic "Candle close: 2026-09-21T11:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 11:30 UTC
+  - generic: 🔴
+  - generic: "2713.12"
+  - generic: (2713–2714)
+  - generic: −1.10%
+  - 'generic "Candle close: 2026-09-21T11:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 11:00 UTC
+  - generic: 🔴
+  - generic: "2718.28"
+  - generic: (2718–2721)
+  - generic: −0.91%
+  - 'generic "Candle close: 2026-09-21T10:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 10:30 UTC
+  - generic: 🔴
+  - generic: "2730.42"
+  - generic: (2730–2736)
+  - generic: −0.47%
+  - 'generic "Candle close: 2026-09-21T10:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 10:00 UTC
+  - generic: 🔴
+  - generic: "2704.05"
+  - generic: (2704–2708)
+  - generic: −1.43%
+  - 'generic "Candle close: 2026-09-21T09:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 09:30 UTC
+  - generic: 🔴
+  - generic: "2693.16"
+  - generic: (2693–2699)
+  - generic: −1.83%
+  - 'generic "Candle close: 2026-09-21T09:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 09:00 UTC
+  - generic: 🔴
+  - generic: "2670.34"
+  - generic: (2670–2674)
+  - generic: −2.66%
+  - 'generic "Candle close: 2026-09-21T08:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 08:30 UTC
+  - generic: 🔴
+  - generic: "2652.92"
+  - generic: (2653–2655)
+  - generic: −3.30%
+  - 'generic "Candle close: 2026-09-21T08:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 08:00 UTC
+  - generic: 🔴
+  - generic: "2660.30"
+  - generic: (2660–2662)
+  - generic: −3.03%
+  - 'generic "Candle close: 2026-09-21T07:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 07:30 UTC
+  - generic: 🔴
+  - generic: "2663.57"
+  - generic: (2664–2667)
+  - generic: −2.91%
+  - 'generic "Candle close: 2026-09-21T07:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 07:00 UTC
+  - generic: 🔴
+  - generic: "2669.96"
+  - generic: (2670–2672)
+  - generic: −2.68%
+  - 'generic "Candle close: 2026-09-21T06:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 06:30 UTC
+  - generic: 🔴
+  - generic: "2668.82"
+  - generic: (2669–2671)
+  - generic: −2.72%
+  - 'generic "Candle close: 2026-09-21T06:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 06:00 UTC
+  - generic: 🔴
+  - generic: "2665.07"
+  - generic: (2665–2668)
+  - generic: −2.85%
+  - 'generic "Candle close: 2026-09-21T05:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 05:30 UTC
+  - generic: 🔴
+  - generic: "2660.86"
+  - generic: (2661–2664)
+  - generic: −3.01%
+  - 'generic "Candle close: 2026-09-21T05:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 05:00 UTC
+  - generic: 🔴
+  - generic: "2661.20"
+  - generic: (2661–2664)
+  - generic: −3.00%
+  - 'generic "Candle close: 2026-09-21T04:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 04:30 UTC
+  - generic: 🔴
+  - generic: "2666.70"
+  - generic: (2667–2669)
+  - generic: −2.79%
+  - 'generic "Candle close: 2026-09-21T04:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 04:00 UTC
+  - generic: 🔴
+  - generic: "2664.40"
+  - generic: (2664–2667)
+  - generic: −2.88%
+  - 'generic "Candle close: 2026-09-21T03:30:00.000Z"':
+    - text: 30m
+    - generic: 09-21 03:30 UTC
+  - generic: 🔴
+  - generic: "2659.52"
+  - generic: (2660–2662)
+  - generic: −3.06%
+  - 'generic "Candle close: 2026-09-21T03:00:00.000Z"':
+    - text: 30m
+    - generic: 09-21 03:00 UTC
+  - generic: 🔴
+  - generic: "2658.12"
+  - generic: (2658–2662)
+  - generic: −3.11%
+  - generic: 15m
+  - generic: —
+  - generic: 🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression
+  - generic: DECOMPRESSION WINDOWS
+  - generic: 15m
+  - generic: —
+  - generic: 30m
+  - generic: ACTIVE
+  - generic: In window
+  - generic: 98%
+  - generic: 1H
+  - generic: —
+  - generic: 2H
+  - generic: —
+  - generic: 4H
+  - generic: —
+  - generic: 6H
+  - generic: —
+  - generic: 8H
+  - generic: —
+  - generic: 1D
+  - generic: COMPRESSION
+  - generic: 20h 34m
+  - generic: 0%
+  - generic: 1W
+  - generic: —
+  - generic: 1M
+  - generic: —
+  - generic: MIDPOINT DEBT
+  - generic: "54"
+  - generic: Unresolved
+  - generic: "0"
+  - generic: Tagged
+  - generic: "2"
+  - generic: Clusters
+  - generic: Top Cluster
+  - generic: "2741.80"
+  - generic: "32 midpoints • Gravity: 60"
+  - generic: CLOSE CONFLUENCE
+  - generic: 📅
+  - generic: 2 TFs close today
+  - generic: "(highest: 1D)"
+  - generic: DATA COVERAGE
+  - generic: 40%
+  - generic: 30m
+  - generic: 1H
+  - generic: 4H
+  - generic: 1D
+  - generic: 1W
+  - generic: "⚠️ Missing: 1H, 4H, 1W"
+  - generic: ⏰ CLOSE CALENDAR — CLOSES TODAY
+  - generic: 13 today • 105 total
+  - button "Full Schedule"
+  - generic: Wed Sep 23 00:00
+  - generic: 1D
+  - generic: 5D
+  - generic: "Score: 26 • Wt: 26"
+  - button "All (13)" [pressed]
+  - button "intraday (11)"
+  - button "daily (2)"
+  - generic: TF
+  - generic: Close Time
+  - generic: In
+  - generic: Wt
+  - generic: 5m
+  - generic: Tue Sep 22 02:30 UTC
+  - generic: 4m
+  - generic: "0"
+  - generic: 10m
+  - generic: Tue Sep 22 02:30 UTC
+  - generic: 4m
+  - generic: "0"
+  - generic: 15m
+  - generic: Tue Sep 22 02:30 UTC
+  - generic: 4m
+  - generic: "1"
+  - generic: 30m
+  - generic: Tue Sep 22 02:30 UTC
+  - generic: 4m
+  - generic: "1"
+  - generic: 1h
+  - generic: Tue Sep 22 03:00 UTC
+  - generic: 34m
+  - generic: "2"
+  - generic: 2h
+  - generic: Tue Sep 22 04:00 UTC
+  - generic: 1h 34m
+  - generic: "2"
+  - generic: 3h
+  - generic: Tue Sep 22 03:00 UTC
+  - generic: 34m
+  - generic: "3"
+  - generic: 4h
+  - generic: Tue Sep 22 04:00 UTC
+  - generic: 1h 34m
+  - generic: "4"
+  - generic: 6h
+  - generic: Tue Sep 22 06:00 UTC
+  - generic: 3h 34m
+  - generic: "5"
+  - generic: 8h
+  - generic: Tue Sep 22 08:00 UTC
+  - generic: 5h 34m
+  - generic: "6"
+  - generic: 12h
+  - generic: Tue Sep 22 12:00 UTC
+  - generic: 9h 34m
+  - generic: "8"
+  - generic: 1D
+  - generic: Wed Sep 23 00:00 UTC
+  - generic: 21h 34m
+  - generic: "10"
+  - generic: 5D
+  - generic: Wed Sep 23 00:00 UTC
+  - generic: 21h 34m
+  - generic: "16"
+  - generic: "Last update: 12:25:59 pm"
+  - generic: 54 active • 0 tagged
+- alert: Terminal | Workflow | MarketScanner Pros
+```
+
+### ETH_TimeConfluence
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Crypto Derivatives Risk — Educational Only
+  - text: — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 7. Final timing check
+    - generic: CRYPTO path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: Active lens
+    - generic "Time Confluence"
+    - generic "7. Final timing check"
+    - generic: Data state
+    - generic "Lens ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Validate mechanics context"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": ETH-USD
+  - button "Load"
+  - generic: ETH-USD
+  - generic: CRYPTO
+  - generic: CRYPTO PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "XRP"
+  - button "ADA"
+  - button "XLM"
+  - button "LINK"
+  - button "FET"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Crypto path
+    - button "1. Timing map Close Calendar":
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Derivatives map Crypto":
+      - generic: 2. Derivatives map
+      - generic: Crypto
+    - button "5. Capital pressure Capital Pressure":
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity":
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence" [pressed]:
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - region "Terminal Time Confluence command header":
+    - generic: Terminal subview
+    - generic: 7. Final timing check
+    - generic: Symbol ETH-USD
+    - heading "Time Confluence check for ETH-USD" [level=2]
+    - paragraph: Combine timing, pressure, close calendar, and macro/fib confluence.
+    - button "Back to Calendar"
+    - button "Open Crypto"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+    - generic: Symbol
+    - generic "ETH-USD"
+    - generic "CRYPTO mechanics path"
+    - generic: View
+    - generic "Time Confluence"
+    - generic "7. Final timing check"
+    - generic: Focus
+    - generic "Final Timing Check"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Crypto"
+    - generic "Continue the mechanics sequence"
+  - main:
+    - textbox "SYMBOL": ETH-USD
+    - combobox:
+      - option "Scalp 15m"
+      - option "30min"
+      - option "1H"
+      - option "4H"
+      - option "Daily" [selected]
+      - option "3-Day"
+      - option "Weekly"
+      - option "Monthly"
+      - option "Yearly"
+    - button "Run"
+    - generic: neutral • Daily • ETH-USD
+    - generic: NOT ALIGNED
+    - generic: Confluence
+    - generic: 57 / 100
+    - generic: Risk
+    - generic: HIGH
+    - generic: R:R
+    - generic: "2.4"
+    - generic: ↓ BEARISH
+    - text: "Alignment:"
+    - generic: 83%
+    - generic: Current
+    - generic: $2,743.36
+    - generic: Key Level
+    - generic: $2,708.33
+    - generic: Reference
+    - generic: $2,743.36
+    - generic: Risk Level
+    - generic: $2,757.94
+    - generic: "-0.5%"
+    - generic: Reaction
+    - generic: $2,708.33
+    - generic: +1.3%
+    - text: "R:R Ratio:"
+    - generic: "2.40"
+    - generic: "· Expected: 3m (30m close)"
+    - generic: Analysis
+    - generic: "1 TFs decompressing | Direction: BEARISH (-100) | 🏆 EXTREME BEARISH | Calendar confirms BEARISH (8 TFs) | 🕐 4 TFs closing NOW (5m, 10m, 15m, 30m)"
+    - text: 50% Pull Levels
+    - generic: (bearish)
+    - combobox:
+      - option "All TFs (31)" [selected]
+      - option "1h"
+      - option "3h"
+      - option "2h"
+      - option "4h"
+      - option "6h"
+      - option "8h"
+      - option "12h"
+      - option "1D"
+      - option "5D"
+      - option "2D"
+      - option "7D"
+      - option "14D"
+      - option "19D"
+      - option "4D"
+      - option "6D"
+      - option "9D"
+      - option "10D"
+      - option "27D"
+      - option "30D"
+      - option "16D"
+      - option "3M"
+      - option "25D"
+      - option "28D"
+      - option "5W"
+      - option "8W"
+      - option "10W"
+      - option "24D"
+      - option "6W"
+      - option "7W"
+      - option "2M"
+      - option "11W"
+    - generic: 1h
+    - text: $2,757.94
+    - generic: "-0.5%"
+    - generic: 3h
+    - text: $2,783.89
+    - generic: "-1.5%"
+    - generic: 2h
+    - text: $2,758.08
+    - generic: "-0.5%"
+    - generic: 4h
+    - text: $2,781.24
+    - generic: "-1.4%"
+    - generic: 6h
+    - text: $2,770.39
+    - generic: "-1.0%"
+    - generic: 8h
+    - text: $2,767.49
+    - generic: "-0.9%"
+    - generic: 12h
+    - text: $2,759.46
+    - generic: "-0.6%"
+    - generic: 1D
+    - text: $2,708.33
+    - generic: +1.3%
+    - generic: 5D
+    - text: $2,502.25
+    - generic: +9.6%
+    - generic: 2D
+    - text: $2,686.26
+    - generic: +2.1%
+    - generic: 7D
+    - text: $2,504.42
+    - generic: +9.5%
+    - generic: 14D
+    - text: $2,457.98
+    - generic: +11.6%
+    - generic: 19D
+    - text: $2,502.58
+    - generic: +9.6%
+    - generic: 4D
+    - text: $2,513.54
+    - generic: +9.1%
+    - generic: 6D
+    - text: $2,587.89
+    - generic: +6.0%
+    - generic: 9D
+    - text: $2,582.79
+    - generic: +6.2%
+    - generic: 10D
+    - text: $2,528.95
+    - generic: +8.5%
+    - generic: 27D
+    - text: $2,257.79
+    - generic: +21.5%
+    - generic: 30D
+    - text: $2,193.57
+    - generic: +25.1%
+    - generic: 16D
+    - text: $2,231.96
+    - generic: +22.9%
+    - generic: 3M
+    - text: $2,035.98
+    - generic: +34.7%
+    - generic: 25D
+    - text: $2,206.68
+    - generic: +24.3%
+    - generic: 28D
+    - text: $2,182.64
+    - generic: +25.7%
+    - generic: 5W
+    - text: $1,873.15
+    - generic: +46.5%
+    - generic: 8W
+    - text: $1,733.76
+    - generic: +58.2%
+    - generic: 10W
+    - text: $1,676.36
+    - generic: +63.6%
+    - generic: 24D
+    - text: $2,276.56
+    - generic: +20.5%
+    - generic: 6W
+    - text: $2,190.93
+    - generic: +25.2%
+    - generic: 7W
+    - text: $1,743.69
+    - generic: +57.3%
+    - generic: 2M
+    - text: $2,077.35
+    - generic: +32.1%
+    - generic: 11W
+    - text: $2,098.79
+    - generic: +30.7%
+    - generic "Market Pressure EngineComposite pressure from time, volatility, liquidity & options ▾ expand":
+      - generic: Market Pressure EngineComposite pressure from time, volatility, liquidity & options
+      - generic: ▾ expand
+    - generic: Computing market pressure…
+    - generic: Close Calendar — Forward Schedule
+    - generic: Which timeframes close on your target day? Where do closes stack?
+    - button "↻ Refresh"
+    - generic: Anchor
+    - button "Now"
+    - button "Today"
+    - button "Prior Day"
+    - button "End of Week"
+    - button "End of Month"
+    - button "Pick Date"
+    - generic: Horizon
+    - button "1d"
+    - button "3d"
+    - button "7d"
+    - button "14d"
+    - button "30d"
+    - generic: "Anchor: Tue Sep 22 00:00 UTC"
+    - 'generic "24/7 UTC candle boundaries: intraday fixed intervals, daily at 00:00 UTC, weekly Monday 00:00 UTC, monthly first day 00:00 UTC."': Crypto 24/7 UTC
+    - generic: "Basis: UTC"
+    - text: "Horizon:"
+    - generic: 1d → Wed Sep 23 02:26 UTC
+    - generic: "Daily+ closes in window: 2"
+    - text: "Schedule Basis: 24/7 UTC candle boundaries: intraday fixed intervals, daily at 00:00 UTC, weekly Monday 00:00 UTC, monthly first day 00:00 UTC."
+    - generic: Crypto schedule uses 24/7 UTC TradingView-style close boundaries; it does not observe weekends or exchange holidays.
+    - generic: Close Cluster Timeline
+    - button "Wed Sep 23 00:00 1D 5D Wt 26 • Score 26":
+      - generic: Wed Sep 23 00:00
+      - generic: 1D
+      - generic: 5D
+      - generic: Wt 26 • Score 26
+    - button "Closes on Anchor Day (13)"
+    - button "Full Schedule (105)"
+    - generic: intraday
+    - table:
+      - rowgroup:
+        - row "TF Close Time In Weight":
+          - columnheader "TF"
+          - columnheader "Close Time"
+          - columnheader "In"
+          - columnheader "Weight"
+      - rowgroup:
+        - row "5m Tue Sep 22 02:30 UTC 4m 0.2":
+          - cell "5m"
+          - cell "Tue Sep 22 02:30 UTC"
+          - cell "4m"
+          - cell "0.2"
+        - row "10m Tue Sep 22 02:30 UTC 4m 0.3":
+          - cell "10m"
+          - cell "Tue Sep 22 02:30 UTC"
+          - cell "4m"
+          - cell "0.3"
+        - row "15m Tue Sep 22 02:30 UTC 4m 0.5":
+          - cell "15m"
+          - cell "Tue Sep 22 02:30 UTC"
+          - cell "4m"
+          - cell "0.5"
+        - row "30m Tue Sep 22 02:30 UTC 4m 1":
+          - cell "30m"
+          - cell "Tue Sep 22 02:30 UTC"
+          - cell "4m"
+          - cell "1"
+        - row "1h Tue Sep 22 03:00 UTC 34m 1.5":
+          - cell "1h"
+          - cell "Tue Sep 22 03:00 UTC"
+          - cell "34m"
+          - cell "1.5"
+        - row "2h Tue Sep 22 04:00 UTC 1h 34m 2":
+          - cell "2h"
+          - cell "Tue Sep 22 04:00 UTC"
+          - cell "1h 34m"
+          - cell "2"
+        - row "3h Tue Sep 22 03:00 UTC 34m 3":
+          - cell "3h"
+          - cell "Tue Sep 22 03:00 UTC"
+          - cell "34m"
+          - cell "3"
+        - row "4h Tue Sep 22 04:00 UTC 1h 34m 4":
+          - cell "4h"
+          - cell "Tue Sep 22 04:00 UTC"
+          - cell "1h 34m"
+          - cell "4"
+        - row "6h Tue Sep 22 06:00 UTC 3h 34m 5":
+          - cell "6h"
+          - cell "Tue Sep 22 06:00 UTC"
+          - cell "3h 34m"
+          - cell "5"
+        - row "8h Tue Sep 22 08:00 UTC 5h 34m 6":
+          - cell "8h"
+          - cell "Tue Sep 22 08:00 UTC"
+          - cell "5h 34m"
+          - cell "6"
+        - row "12h Tue Sep 22 12:00 UTC 9h 34m 8":
+          - cell "12h"
+          - cell "Tue Sep 22 12:00 UTC"
+          - cell "9h 34m"
+          - cell "8"
+    - generic: daily
+    - table:
+      - rowgroup:
+        - row "TF Close Time In Weight":
+          - columnheader "TF"
+          - columnheader "Close Time"
+          - columnheader "In"
+          - columnheader "Weight"
+      - rowgroup:
+        - row "1D Wed Sep 23 00:00 UTC 21h 34m 10":
+          - cell "1D"
+          - cell "Wed Sep 23 00:00 UTC"
+          - cell "21h 34m"
+          - cell "10"
+        - row "5D Wed Sep 23 00:00 UTC 21h 34m 16":
+          - cell "5D"
+          - cell "Wed Sep 23 00:00 UTC"
+          - cell "21h 34m"
+          - cell "16"
+    - generic "Time Confluence EngineAlignment score, decompression & structure ▾ expand":
+      - generic: Time Confluence EngineAlignment score, decompression & structure
+      - generic: ▾ expand
+    - generic "Time Gravity MapMidpoint debt, decompression windows & gravity fields ▾ expand":
+      - generic: Time Gravity MapMidpoint debt, decompression windows & gravity fields
+      - generic: ▾ expand
+  - generic: ⏰
+  - heading "Time Confluence Engine" [level=3]
+  - generic: 🟢 Market Open
+  - tablist:
+    - tab "Live" [selected]:
+      - generic: 🔴
+      - text: Live
+    - tab "Today":
+      - generic: 📅
+      - text: Today
+    - tab "Fib":
+      - generic: 🔢
+      - text: Fib
+    - tab "Macro":
+      - generic: 📊
+      - text: Macro
+    - tab "Calendar":
+      - generic: 🗓️
+      - text: Calendar
+  - text: CONFLUENCE SCORE
+  - button "Score breakdown info": "?"
+  - generic: "0"
+  - generic: low
+  - generic: 🔔 Set Confluence Alert
+  - generic: Notify when score hits strong again
+  - combobox:
+    - option "Score ≥ 6"
+    - option "Score ≥ 8"
+    - option "Score ≥ 10" [selected]
+    - option "Score ≥ 12"
+    - option "Score ≥ 15"
+  - button "Set Alert"
+  - generic: 🏦 INSTITUTIONAL TWAP WINDOWS
+  - generic: 9:30 AM - 10:00 AM
+  - generic: Opening Range
+  - generic: 10:00 AM - 10:30 AM
+  - generic: Post-Open
+  - generic: 11:30 AM - 12:00 PM
+  - generic: Europe Close
+- alert: Terminal | Workflow | MarketScanner Pros
+```
+
+### ETH_CryptoIntel
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Crypto Intel"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command"
+  - button "Crypto Intel" [pressed]
+  - button "Movers"
+  - generic: 📰
+  - heading "Crypto Intel" [level=1]
+  - paragraph: Live news, guides, and institutional treasury holdings for crypto markets.
+  - paragraph: Zone 2 • News & Guides
+  - generic: 📰
+  - heading "Crypto News & Guides" [level=3]
+  - button "All" [pressed]
+  - button "News"
+  - button "Guides"
+  - link "Bitcoin rises, trader 0xc3ed liquidated four times in 14 hours and loses $32.5M in shorts Crypto Briefing by Editorial Team · 6m ago":
+    - /url: https://cryptobriefing.com/bitcoin-rises-trader-0xc3ed-liquidated-four-times/
+    - paragraph: Bitcoin rises, trader 0xc3ed liquidated four times in 14 hours and loses $32.5M in shorts
+    - generic: Crypto Briefing
+    - generic: by Editorial Team
+    - generic: · 6m ago
+  - link "某巨鲸昨日将4000万USDC转入币安，目前已全部买成ETH PANews (EN) · 6m ago":
+    - /url: https://www.panewslab.com/en/articles/01a0c6ea-8d16-7727-bab9-eabbb7e6b5e7
+    - paragraph: 某巨鲸昨日将4000万USDC转入币安，目前已全部买成ETH
+    - generic: PANews (EN)
+    - generic: · 6m ago
+  - link "Solana hits $117 technical target, traders eye $141 and $176 as next levels COINTURK NEWS by Güvenç Koçkaya · 7m ago":
+    - /url: https://en.coin-turk.com/solana-hits-117-technical-target-traders-eye-141-and-176-as-next-levels/?utm_source=rss&utm_medium=rss&utm_campaign=solana-hits-117-technical-target-traders-eye-141-and-176-as-next-levels
+    - paragraph: Solana hits $117 technical target, traders eye $141 and $176 as next levels
+    - generic: COINTURK NEWS
+    - generic: by Güvenç Koçkaya
+    - generic: · 7m ago
+  - 'link "Bittensor enters the \"revenue era\": 24 to 25 subnets generating commercial revenue, with annual ecosystem revenue estimated at $28 million to $35 million PANews (EN) · 8m ago"':
+    - /url: https://www.panewslab.com/en/articles/01a0c6e8-30d0-7272-ac2f-9195bbaa5e50
+    - paragraph: "Bittensor enters the \"revenue era\": 24 to 25 subnets generating commercial revenue, with annual ecosystem revenue estimated at $28 million to $35 million"
+    - generic: PANews (EN)
+    - generic: · 8m ago
+  - link "Treasury Secretary Bessent Blames OpenAI Management for Hugging Face Breach, Opposes AI Liability Shield Forkast by Lena Park · 9m ago":
+    - /url: https://forkast.news/treasury-secretary-bessent-blames-openai-management-for-hugging-face-breach-opposes-ai-liability-shield/
+    - paragraph: Treasury Secretary Bessent Blames OpenAI Management for Hugging Face Breach, Opposes AI Liability Shield
+    - generic: Forkast
+    - generic: by Lena Park
+    - generic: · 9m ago
+  - 'link "BLOOMBERG: Bitcoin Retreats From Eight-Month High After Dizzying 13% Rally Tree News by bloomberg · 13m ago"':
+    - /url: https://www.bloomberg.com/news/articles/2026-09-22/bitcoin-retreats-from-eight-month-high-after-dizzying-13-rally
+    - paragraph: "BLOOMBERG: Bitcoin Retreats From Eight-Month High After Dizzying 13% Rally"
+    - generic: Tree News
+    - generic: by bloomberg
+    - generic: · 13m ago
+  - link "Republican senators complicate Clarity Act with stablecoin yield support Crypto Briefing by Estefano Gomez · 15m ago":
+    - /url: https://cryptobriefing.com/republican-senators-complicate-clarity-act-with-stablecoin-yield-support/
+    - paragraph: Republican senators complicate Clarity Act with stablecoin yield support
+    - generic: Crypto Briefing
+    - generic: by Estefano Gomez
+    - generic: · 15m ago
+  - 'link "CNA: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports Tree News by channelnewsasia · 17m ago"':
+    - /url: https://www.channelnewsasia.com/business/binance-under-us-scrutiny-over-possible-iran-sanctions-violations-bloomberg-news-reports-6401076
+    - paragraph: "CNA: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports"
+    - generic: Tree News
+    - generic: by channelnewsasia
+    - generic: · 17m ago
+  - 'link "REUTERS: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports Tree News by reuters · 20m ago"':
+    - /url: https://www.reuters.com/legal/government/binance-under-us-scrutiny-over-possible-iran-sanctions-violations-bloomberg-news-2026-09-22
+    - paragraph: "REUTERS: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports"
+    - generic: Tree News
+    - generic: by reuters
+    - generic: · 20m ago
+  - link "Bitcoin Tops $86,000 as Short Squeeze Lifts Crypto and Equity Markets Blockhead by Blockhead · 20m ago":
+    - /url: https://www.blockhead.co/2026/09/22/bitcoin-tops-86-000-as-short-squeeze-lifts-crypto-and-equity-markets/
+    - paragraph: Bitcoin Tops $86,000 as Short Squeeze Lifts Crypto and Equity Markets
+    - generic: Blockhead
+    - generic: by Blockhead
+    - generic: · 20m ago
+  - link "COLDCARD white hats transfer 52 BTC to Crypto Recovery Trust for victim reimbursement Crypto Briefing by Editorial Team · 22m ago":
+    - /url: https://cryptobriefing.com/coldcard-white-hats-btc-crypto-recovery-trust/
+    - paragraph: COLDCARD white hats transfer 52 BTC to Crypto Recovery Trust for victim reimbursement
+    - generic: Crypto Briefing
+    - generic: by Editorial Team
+    - generic: · 22m ago
+  - link "Jack Butcher launches NFT artwork ‘8’ sold via $8 transfers on X Money Crypto Briefing by Editorial Team · 23m ago":
+    - /url: https://cryptobriefing.com/jack-butcher-nft-8-x-money/
+    - paragraph: Jack Butcher launches NFT artwork ‘8’ sold via $8 transfers on X Money
+    - generic: Crypto Briefing
+    - generic: by Editorial Team
+    - generic: · 23m ago
+  - link "Trader liquidated 4 times in 14 hours, 375.8 BTC in short positions wiped out PANews (EN) · 24m ago":
+    - /url: https://www.panewslab.com/en/articles/01a0c6d9-cc0b-7418-ae62-39a367a4f0fb
+    - paragraph: Trader liquidated 4 times in 14 hours, 375.8 BTC in short positions wiped out
+    - generic: PANews (EN)
+    - generic: · 24m ago
+  - 'link "Monero sees $54M perpetual inflow: Will liquidity clusters trigger XMR’s pullback? AMBCrypto by Olayiwola Dolapo · 26m ago"':
+    - /url: https://ambcrypto.com/monero-sees-54m-perpetual-inflow-will-liquidity-clusters-trigger-xmrs-pullback/
+    - paragraph: "Monero sees $54M perpetual inflow: Will liquidity clusters trigger XMR’s pullback?"
+    - generic: AMBCrypto
+    - generic: by Olayiwola Dolapo
+    - generic: · 26m ago
+  - link "Meta's subsidiary Muse has ignited a rally in chip stocks, sending Hong Kong-listed firms Langchips Technology and Days Semiconductor surging sharply. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73538
+    - paragraph: Meta's subsidiary Muse has ignited a rally in chip stocks, sending Hong Kong-listed firms Langchips Technology and Days Semiconductor surging sharply.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "A sharp rally in the crypto market has saved \"Maji's\" holdings, lifting its net asset value back above $11 million. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73540
+    - paragraph: A sharp rally in the crypto market has saved "Maji's" holdings, lifting its net asset value back above $11 million.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "DeepSeek plans to train an 8-trillion-parameter model, whose scale is nearly three times that of the largest existing open model. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73539
+    - paragraph: DeepSeek plans to train an 8-trillion-parameter model, whose scale is nearly three times that of the largest existing open model.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "A certain crypto whale has accumulated a total of 14,783 ETH since yesterday, with a total value of $39.9 million. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73541
+    - paragraph: A certain crypto whale has accumulated a total of 14,783 ETH since yesterday, with a total value of $39.9 million.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "Iran ready to target US assets as UK boosts Saudi air defenses Crypto Briefing by Estefano Gomez · 36m ago":
+    - /url: https://cryptobriefing.com/iran-ready-to-target-us-assets-as-uk-boosts-saudi-air-defenses/
+    - paragraph: Iran ready to target US assets as UK boosts Saudi air defenses
+    - generic: Crypto Briefing
+    - generic: by Estefano Gomez
+    - generic: · 36m ago
+  - link "Smart money that made $3.666 million buying low and selling high on ETH in August adds another $19.97 million position PANews (EN) · 37m ago":
+    - /url: https://www.panewslab.com/en/articles/01a0c6ce-16e5-75f7-b72d-5cd13d6fed10
+    - paragraph: Smart money that made $3.666 million buying low and selling high on ETH in August adds another $19.97 million position
+    - generic: PANews (EN)
+    - generic: · 37m ago
+  - paragraph: Powered by CoinGecko News
+  - generic "Zone 3 • Institutional Treasury Holdings Collapse":
+    - generic: Zone 3 • Institutional Treasury Holdings
+    - generic: Collapse
+  - paragraph: Treasury
+  - heading "Institutional Holdings" [level=3]
+  - paragraph: Public companies & governments holding crypto
+  - button "BTC" [pressed]
+  - button "ETH"
+  - paragraph: Total Holdings
+  - paragraph: 1,294,918.669
+  - paragraph: BTC
+  - paragraph: Total Value
+  - paragraph: $110.90B
+  - paragraph: USD
+  - paragraph: Entities
+  - paragraph: "180"
+  - paragraph: Companies
+  - paragraph: Supply Held
+  - paragraph: 6.17%
+  - paragraph: Of Total Supply
+  - generic: "Sort:"
+  - button "Value" [pressed]
+  - button "Holdings"
+  - button "Value vs cost $"
+  - button "Value vs cost %"
+  - table:
+    - rowgroup:
+      - row "Entity Holdings Value Value vs cost % Supply":
+        - columnheader "Entity"
+        - columnheader "Holdings"
+        - columnheader "Value"
+        - columnheader "Value vs cost"
+        - columnheader "% Supply"
+    - rowgroup:
+      - row "US Strategy MSTR.US 846,000 $72.45B $8.11B +12.60% 4.029%":
+        - cell "US Strategy MSTR.US":
+          - generic: US
+          - paragraph: Strategy
+          - paragraph: MSTR.US
+        - cell "846,000"
+        - cell "$72.45B"
+        - cell "$8.11B +12.60%":
+          - paragraph: $8.11B
+          - paragraph: +12.60%
+        - cell "4.029%"
+      - row "US Twenty One Capital XXI.US 43,514 $3.73B Unavailable Cost basis not supplied 0.207%":
+        - cell "US Twenty One Capital XXI.US":
+          - generic: US
+          - paragraph: Twenty One Capital
+          - paragraph: XXI.US
+        - cell "43,514"
+        - cell "$3.73B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.207%"
+      - row "JP Metaplanet 3350.T 43,000 $3.68B −$128.3M -3.37% 0.205%":
+        - cell "JP Metaplanet 3350.T":
+          - generic: JP
+          - paragraph: Metaplanet
+          - paragraph: 3350.T
+        - cell "43,000"
+        - cell "$3.68B"
+        - cell "−$128.3M -3.37%":
+          - paragraph: −$128.3M
+          - paragraph: "-3.37%"
+        - cell "0.205%"
+      - row "US MARA Holdings MARA.US 35,303 $3.02B Unavailable Cost basis not supplied 0.168%":
+        - cell "US MARA Holdings MARA.US":
+          - generic: US
+          - paragraph: MARA Holdings
+          - paragraph: MARA.US
+        - cell "35,303"
+        - cell "$3.02B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.168%"
+      - row "US Bitcoin Standard Treasury Company CEPO.US 30,021 $2.57B Unavailable Cost basis not supplied 0.143%":
+        - cell "US Bitcoin Standard Treasury Company CEPO.US":
+          - generic: US
+          - paragraph: Bitcoin Standard Treasury Company
+          - paragraph: CEPO.US
+        - cell "30,021"
+        - cell "$2.57B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.143%"
+      - row "US Galaxy Digital Holdings Ltd GLXY.US 25,723 $2.20B −$80.1M -3.51% 0.122%":
+        - cell "US Galaxy Digital Holdings Ltd GLXY.US":
+          - generic: US
+          - paragraph: Galaxy Digital Holdings Ltd
+          - paragraph: GLXY.US
+        - cell "25,723"
+        - cell "$2.20B"
+        - cell "−$80.1M -3.51%":
+          - paragraph: −$80.1M
+          - paragraph: "-3.51%"
+        - cell "0.122%"
+      - row "US Strive ASST.US 24,999.45 $2.14B −$139.4M -6.11% 0.119%":
+        - cell "US Strive ASST.US":
+          - generic: US
+          - paragraph: Strive
+          - paragraph: ASST.US
+        - cell "24,999.45"
+        - cell "$2.14B"
+        - cell "−$139.4M -6.11%":
+          - paragraph: −$139.4M
+          - paragraph: "-6.11%"
+        - cell "0.119%"
+      - row "US Bullish BLSH.US 23,300 $2.00B Unavailable Cost basis not supplied 0.111%":
+        - cell "US Bullish BLSH.US":
+          - generic: US
+          - paragraph: Bullish
+          - paragraph: BLSH.US
+        - cell "23,300"
+        - cell "$2.00B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.111%"
+      - row "US Space Exploration Technologies Corp. SPCX 18,712 $1.60B $941.5M +142.43% 0.089%":
+        - cell "US Space Exploration Technologies Corp. SPCX":
+          - generic: US
+          - paragraph: Space Exploration Technologies Corp.
+          - paragraph: SPCX
+        - cell "18,712"
+        - cell "$1.60B"
+        - cell "$941.5M +142.43%":
+          - paragraph: $941.5M
+          - paragraph: +142.43%
+        - cell "0.089%"
+      - row "US Coinbase Global COIN.US 16,492 $1.41B $255.6M +22.10% 0.079%":
+        - cell "US Coinbase Global COIN.US":
+          - generic: US
+          - paragraph: Coinbase Global
+          - paragraph: COIN.US
+        - cell "16,492"
+        - cell "$1.41B"
+        - cell "$255.6M +22.10%":
+          - paragraph: $255.6M
+          - paragraph: +22.10%
+        - cell "0.079%"
+      - row "US Riot Platforms RIOT.US 15,680 $1.34B Unavailable Cost basis not supplied 0.075%":
+        - cell "US Riot Platforms RIOT.US":
+          - generic: US
+          - paragraph: Riot Platforms
+          - paragraph: RIOT.US
+        - cell "15,680"
+        - cell "$1.34B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.075%"
+      - row "US Hut 8 Mining Corp HUT.US 13,696 $1.17B Unavailable Cost basis not supplied 0.065%":
+        - cell "US Hut 8 Mining Corp HUT.US":
+          - generic: US
+          - paragraph: Hut 8 Mining Corp
+          - paragraph: HUT.US
+        - cell "13,696"
+        - cell "$1.17B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.065%"
+      - row "US CleanSpark CLSK.US 13,470 $1.15B Unavailable Cost basis not supplied 0.064%":
+        - cell "US CleanSpark CLSK.US":
+          - generic: US
+          - paragraph: CleanSpark
+          - paragraph: CLSK.US
+        - cell "13,470"
+        - cell "$1.15B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.064%"
+      - row "US Tesla TSLA.US 11,509 $985.6M $599.6M +155.34% 0.055%":
+        - cell "US Tesla TSLA.US":
+          - generic: US
+          - paragraph: Tesla
+          - paragraph: TSLA.US
+        - cell "11,509"
+        - cell "$985.6M"
+        - cell "$599.6M +155.34%":
+          - paragraph: $599.6M
+          - paragraph: +155.34%
+        - cell "0.055%"
+      - row "US Trump Media & Technology Group Corp. DJT.US 9,542.16 $817.2M −$313.8M -27.75% 0.045%":
+        - cell "US Trump Media & Technology Group Corp. DJT.US":
+          - generic: US
+          - paragraph: Trump Media & Technology Group Corp.
+          - paragraph: DJT.US
+        - cell "9,542.16"
+        - cell "$817.2M"
+        - cell "−$313.8M -27.75%":
+          - paragraph: −$313.8M
+          - paragraph: "-27.75%"
+        - cell "0.045%"
+      - row "US Block XYZ.US 9,032 $773.5M Unavailable Cost basis not supplied 0.043%":
+        - cell "US Block XYZ.US":
+          - generic: US
+          - paragraph: Block
+          - paragraph: XYZ.US
+        - cell "9,032"
+        - cell "$773.5M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.043%"
+      - row "CN GD Culture Group GDC.US 7,500 $642.3M −$199.2M -23.67% 0.036%":
+        - cell "CN GD Culture Group GDC.US":
+          - generic: CN
+          - paragraph: GD Culture Group
+          - paragraph: GDC.US
+        - cell "7,500"
+        - cell "$642.3M"
+        - cell "−$199.2M -23.67%":
+          - paragraph: −$199.2M
+          - paragraph: "-23.67%"
+        - cell "0.036%"
+      - row "US American Bitcoin ABTC.US 7,500 $642.3M Unavailable Cost basis not supplied 0.036%":
+        - cell "US American Bitcoin ABTC.US":
+          - generic: US
+          - paragraph: American Bitcoin
+          - paragraph: ABTC.US
+        - cell "7,500"
+        - cell "$642.3M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.036%"
+      - row "CN Next Technology Holding NXTT.US 5,833 $499.5M $316.5M +172.86% 0.028%":
+        - cell "CN Next Technology Holding NXTT.US":
+          - generic: CN
+          - paragraph: Next Technology Holding
+          - paragraph: NXTT.US
+        - cell "5,833"
+        - cell "$499.5M"
+        - cell "$316.5M +172.86%":
+          - paragraph: $316.5M
+          - paragraph: +172.86%
+        - cell "0.028%"
+      - row "US ProCap Financial (formerly ProCap BTC) BRR.US 5,305 $454.3M Unavailable Cost basis not supplied 0.025%":
+        - cell "US ProCap Financial (formerly ProCap BTC) BRR.US":
+          - generic: US
+          - paragraph: ProCap Financial (formerly ProCap BTC)
+          - paragraph: BRR.US
+        - cell "5,305"
+        - cell "$454.3M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.025%"
+  - navigation "Treasury pages":
+    - button "Previous" [disabled]
+    - generic: Page 1 of 9 · 180 entities
+    - button "Next"
+  - paragraph: Observation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.
+  - paragraph: "Source: CoinGecko Public Treasury"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Market Explorer | Workflow | MarketScanner Pros
+```
+
+### ETH_Treasury
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Crypto Intel"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command"
+  - button "Crypto Intel" [pressed]
+  - button "Movers"
+  - generic: 📰
+  - heading "Crypto Intel" [level=1]
+  - paragraph: Live news, guides, and institutional treasury holdings for crypto markets.
+  - paragraph: Zone 2 • News & Guides
+  - generic: 📰
+  - heading "Crypto News & Guides" [level=3]
+  - button "All" [pressed]
+  - button "News"
+  - button "Guides"
+  - link "Bitcoin rises, trader 0xc3ed liquidated four times in 14 hours and loses $32.5M in shorts Crypto Briefing by Editorial Team · 6m ago":
+    - /url: https://cryptobriefing.com/bitcoin-rises-trader-0xc3ed-liquidated-four-times/
+    - paragraph: Bitcoin rises, trader 0xc3ed liquidated four times in 14 hours and loses $32.5M in shorts
+    - generic: Crypto Briefing
+    - generic: by Editorial Team
+    - generic: · 6m ago
+  - link "某巨鲸昨日将4000万USDC转入币安，目前已全部买成ETH PANews (EN) · 6m ago":
+    - /url: https://www.panewslab.com/en/articles/01a0c6ea-8d16-7727-bab9-eabbb7e6b5e7
+    - paragraph: 某巨鲸昨日将4000万USDC转入币安，目前已全部买成ETH
+    - generic: PANews (EN)
+    - generic: · 6m ago
+  - link "Solana hits $117 technical target, traders eye $141 and $176 as next levels COINTURK NEWS by Güvenç Koçkaya · 7m ago":
+    - /url: https://en.coin-turk.com/solana-hits-117-technical-target-traders-eye-141-and-176-as-next-levels/?utm_source=rss&utm_medium=rss&utm_campaign=solana-hits-117-technical-target-traders-eye-141-and-176-as-next-levels
+    - paragraph: Solana hits $117 technical target, traders eye $141 and $176 as next levels
+    - generic: COINTURK NEWS
+    - generic: by Güvenç Koçkaya
+    - generic: · 7m ago
+  - 'link "Bittensor enters the \"revenue era\": 24 to 25 subnets generating commercial revenue, with annual ecosystem revenue estimated at $28 million to $35 million PANews (EN) · 8m ago"':
+    - /url: https://www.panewslab.com/en/articles/01a0c6e8-30d0-7272-ac2f-9195bbaa5e50
+    - paragraph: "Bittensor enters the \"revenue era\": 24 to 25 subnets generating commercial revenue, with annual ecosystem revenue estimated at $28 million to $35 million"
+    - generic: PANews (EN)
+    - generic: · 8m ago
+  - link "Treasury Secretary Bessent Blames OpenAI Management for Hugging Face Breach, Opposes AI Liability Shield Forkast by Lena Park · 9m ago":
+    - /url: https://forkast.news/treasury-secretary-bessent-blames-openai-management-for-hugging-face-breach-opposes-ai-liability-shield/
+    - paragraph: Treasury Secretary Bessent Blames OpenAI Management for Hugging Face Breach, Opposes AI Liability Shield
+    - generic: Forkast
+    - generic: by Lena Park
+    - generic: · 9m ago
+  - 'link "BLOOMBERG: Bitcoin Retreats From Eight-Month High After Dizzying 13% Rally Tree News by bloomberg · 13m ago"':
+    - /url: https://www.bloomberg.com/news/articles/2026-09-22/bitcoin-retreats-from-eight-month-high-after-dizzying-13-rally
+    - paragraph: "BLOOMBERG: Bitcoin Retreats From Eight-Month High After Dizzying 13% Rally"
+    - generic: Tree News
+    - generic: by bloomberg
+    - generic: · 13m ago
+  - link "Republican senators complicate Clarity Act with stablecoin yield support Crypto Briefing by Estefano Gomez · 15m ago":
+    - /url: https://cryptobriefing.com/republican-senators-complicate-clarity-act-with-stablecoin-yield-support/
+    - paragraph: Republican senators complicate Clarity Act with stablecoin yield support
+    - generic: Crypto Briefing
+    - generic: by Estefano Gomez
+    - generic: · 15m ago
+  - 'link "CNA: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports Tree News by channelnewsasia · 17m ago"':
+    - /url: https://www.channelnewsasia.com/business/binance-under-us-scrutiny-over-possible-iran-sanctions-violations-bloomberg-news-reports-6401076
+    - paragraph: "CNA: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports"
+    - generic: Tree News
+    - generic: by channelnewsasia
+    - generic: · 17m ago
+  - 'link "REUTERS: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports Tree News by reuters · 20m ago"':
+    - /url: https://www.reuters.com/legal/government/binance-under-us-scrutiny-over-possible-iran-sanctions-violations-bloomberg-news-2026-09-22
+    - paragraph: "REUTERS: Binance under US scrutiny over possible Iran sanctions violations, Bloomberg News reports"
+    - generic: Tree News
+    - generic: by reuters
+    - generic: · 20m ago
+  - link "Bitcoin Tops $86,000 as Short Squeeze Lifts Crypto and Equity Markets Blockhead by Blockhead · 20m ago":
+    - /url: https://www.blockhead.co/2026/09/22/bitcoin-tops-86-000-as-short-squeeze-lifts-crypto-and-equity-markets/
+    - paragraph: Bitcoin Tops $86,000 as Short Squeeze Lifts Crypto and Equity Markets
+    - generic: Blockhead
+    - generic: by Blockhead
+    - generic: · 20m ago
+  - link "COLDCARD white hats transfer 52 BTC to Crypto Recovery Trust for victim reimbursement Crypto Briefing by Editorial Team · 22m ago":
+    - /url: https://cryptobriefing.com/coldcard-white-hats-btc-crypto-recovery-trust/
+    - paragraph: COLDCARD white hats transfer 52 BTC to Crypto Recovery Trust for victim reimbursement
+    - generic: Crypto Briefing
+    - generic: by Editorial Team
+    - generic: · 22m ago
+  - link "Jack Butcher launches NFT artwork ‘8’ sold via $8 transfers on X Money Crypto Briefing by Editorial Team · 23m ago":
+    - /url: https://cryptobriefing.com/jack-butcher-nft-8-x-money/
+    - paragraph: Jack Butcher launches NFT artwork ‘8’ sold via $8 transfers on X Money
+    - generic: Crypto Briefing
+    - generic: by Editorial Team
+    - generic: · 23m ago
+  - link "Trader liquidated 4 times in 14 hours, 375.8 BTC in short positions wiped out PANews (EN) · 24m ago":
+    - /url: https://www.panewslab.com/en/articles/01a0c6d9-cc0b-7418-ae62-39a367a4f0fb
+    - paragraph: Trader liquidated 4 times in 14 hours, 375.8 BTC in short positions wiped out
+    - generic: PANews (EN)
+    - generic: · 24m ago
+  - 'link "Monero sees $54M perpetual inflow: Will liquidity clusters trigger XMR’s pullback? AMBCrypto by Olayiwola Dolapo · 26m ago"':
+    - /url: https://ambcrypto.com/monero-sees-54m-perpetual-inflow-will-liquidity-clusters-trigger-xmrs-pullback/
+    - paragraph: "Monero sees $54M perpetual inflow: Will liquidity clusters trigger XMR’s pullback?"
+    - generic: AMBCrypto
+    - generic: by Olayiwola Dolapo
+    - generic: · 26m ago
+  - link "Meta's subsidiary Muse has ignited a rally in chip stocks, sending Hong Kong-listed firms Langchips Technology and Days Semiconductor surging sharply. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73538
+    - paragraph: Meta's subsidiary Muse has ignited a rally in chip stocks, sending Hong Kong-listed firms Langchips Technology and Days Semiconductor surging sharply.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "A sharp rally in the crypto market has saved \"Maji's\" holdings, lifting its net asset value back above $11 million. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73540
+    - paragraph: A sharp rally in the crypto market has saved "Maji's" holdings, lifting its net asset value back above $11 million.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "DeepSeek plans to train an 8-trillion-parameter model, whose scale is nearly three times that of the largest existing open model. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73539
+    - paragraph: DeepSeek plans to train an 8-trillion-parameter model, whose scale is nearly three times that of the largest existing open model.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "A certain crypto whale has accumulated a total of 14,783 ETH since yesterday, with a total value of $39.9 million. Lookonchain by Lookonchain · 31m ago":
+    - /url: https://lookonchain.com/feeds/73541
+    - paragraph: A certain crypto whale has accumulated a total of 14,783 ETH since yesterday, with a total value of $39.9 million.
+    - generic: Lookonchain
+    - generic: by Lookonchain
+    - generic: · 31m ago
+  - link "Iran ready to target US assets as UK boosts Saudi air defenses Crypto Briefing by Estefano Gomez · 36m ago":
+    - /url: https://cryptobriefing.com/iran-ready-to-target-us-assets-as-uk-boosts-saudi-air-defenses/
+    - paragraph: Iran ready to target US assets as UK boosts Saudi air defenses
+    - generic: Crypto Briefing
+    - generic: by Estefano Gomez
+    - generic: · 36m ago
+  - link "Smart money that made $3.666 million buying low and selling high on ETH in August adds another $19.97 million position PANews (EN) · 37m ago":
+    - /url: https://www.panewslab.com/en/articles/01a0c6ce-16e5-75f7-b72d-5cd13d6fed10
+    - paragraph: Smart money that made $3.666 million buying low and selling high on ETH in August adds another $19.97 million position
+    - generic: PANews (EN)
+    - generic: · 37m ago
+  - paragraph: Powered by CoinGecko News
+  - generic "Zone 3 • Institutional Treasury Holdings Collapse":
+    - generic: Zone 3 • Institutional Treasury Holdings
+    - generic: Collapse
+  - paragraph: Treasury
+  - heading "Institutional Holdings" [level=3]
+  - paragraph: Public companies & governments holding crypto
+  - button "BTC"
+  - button "ETH" [active] [pressed]
+  - paragraph: Total Holdings
+  - paragraph: 7,997,294.23
+  - paragraph: ETH
+  - paragraph: Total Value
+  - paragraph: $21.94B
+  - paragraph: USD
+  - paragraph: Entities
+  - paragraph: "34"
+  - paragraph: Companies
+  - paragraph: Supply Held
+  - paragraph: 6.55%
+  - paragraph: Of Total Supply
+  - generic: "Sort:"
+  - button "Value" [pressed]
+  - button "Holdings"
+  - button "Value vs cost $"
+  - button "Value vs cost %"
+  - table:
+    - rowgroup:
+      - row "Entity Holdings Value Value vs cost % Supply":
+        - columnheader "Entity"
+        - columnheader "Holdings"
+        - columnheader "Value"
+        - columnheader "Value vs cost"
+        - columnheader "% Supply"
+    - rowgroup:
+      - row "US BitMine Immersion BMNR.US 5,983,940 $16.42B Unavailable Cost basis not supplied 4.902%":
+        - cell "US BitMine Immersion BMNR.US":
+          - generic: US
+          - paragraph: BitMine Immersion
+          - paragraph: BMNR.US
+        - cell "5,983,940"
+        - cell "$16.42B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "4.902%"
+      - row "US SharpLink SBET.US 868,699 $2.38B Unavailable Cost basis not supplied 0.712%":
+        - cell "US SharpLink SBET.US":
+          - generic: US
+          - paragraph: SharpLink
+          - paragraph: SBET.US
+        - cell "868,699"
+        - cell "$2.38B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.712%"
+      - row "US The Ether Machine ETHM.US 496,712 $1.36B Unavailable Cost basis not supplied 0.407%":
+        - cell "US The Ether Machine ETHM.US":
+          - generic: US
+          - paragraph: The Ether Machine
+          - paragraph: ETHM.US
+        - cell "496,712"
+        - cell "$1.36B"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.407%"
+      - row "US Bit Digital BTBT.US 158,461.75 $434.8M −$15.5M -3.44% 0.130%":
+        - cell "US Bit Digital BTBT.US":
+          - generic: US
+          - paragraph: Bit Digital
+          - paragraph: BTBT.US
+        - cell "158,461.75"
+        - cell "$434.8M"
+        - cell "−$15.5M -3.44%":
+          - paragraph: −$15.5M
+          - paragraph: "-3.44%"
+        - cell "0.130%"
+      - row "US Coinbase Global COIN.US 150,193 $412.1M $55.0M +15.40% 0.123%":
+        - cell "US Coinbase Global COIN.US":
+          - generic: US
+          - paragraph: Coinbase Global
+          - paragraph: COIN.US
+        - cell "150,193"
+        - cell "$412.1M"
+        - cell "$55.0M +15.40%":
+          - paragraph: $55.0M
+          - paragraph: +15.40%
+        - cell "0.123%"
+      - row "US BTCS BTCS.US 70,787 $194.2M −$21.0M -9.75% 0.058%":
+        - cell "US BTCS BTCS.US":
+          - generic: US
+          - paragraph: BTCS
+          - paragraph: BTCS.US
+        - cell "70,787"
+        - cell "$194.2M"
+        - cell "−$21.0M -9.75%":
+          - paragraph: −$21.0M
+          - paragraph: "-9.75%"
+        - cell "0.058%"
+      - row "US Forum Markets (formerly ETHZilla) FRMM.US 69,802 $191.5M Unavailable Cost basis not supplied 0.057%":
+        - cell "US Forum Markets (formerly ETHZilla) FRMM.US":
+          - generic: US
+          - paragraph: Forum Markets (formerly ETHZilla)
+          - paragraph: FRMM.US
+        - cell "69,802"
+        - cell "$191.5M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.057%"
+      - row "US Galaxy Digital Holdings Ltd GLXY.US 61,137 $167.8M −$13.2M -7.29% 0.050%":
+        - cell "US Galaxy Digital Holdings Ltd GLXY.US":
+          - generic: US
+          - paragraph: Galaxy Digital Holdings Ltd
+          - paragraph: GLXY.US
+        - cell "61,137"
+        - cell "$167.8M"
+        - cell "−$13.2M -7.29%":
+          - paragraph: −$13.2M
+          - paragraph: "-7.29%"
+        - cell "0.050%"
+      - row "US FG Nexus FGNX.US 40,093 $110.0M −$47.7M -30.24% 0.033%":
+        - cell "US FG Nexus FGNX.US":
+          - generic: US
+          - paragraph: FG Nexus
+          - paragraph: FGNX.US
+        - cell "40,093"
+        - cell "$110.0M"
+        - cell "−$47.7M -30.24%":
+          - paragraph: −$47.7M
+          - paragraph: "-30.24%"
+        - cell "0.033%"
+      - row "KY Yueda Digital Holding YDKG.US 19,928.91 $54.7M Unavailable Cost basis not supplied 0.016%":
+        - cell "KY Yueda Digital Holding YDKG.US":
+          - generic: KY
+          - paragraph: Yueda Digital Holding
+          - paragraph: YDKG.US
+        - cell "19,928.91"
+        - cell "$54.7M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.016%"
+      - row "US Bullish BLSH.US 14,200 $39.0M Unavailable Cost basis not supplied 0.012%":
+        - cell "US Bullish BLSH.US":
+          - generic: US
+          - paragraph: Bullish
+          - paragraph: BLSH.US
+        - cell "14,200"
+        - cell "$39.0M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.012%"
+      - row "US Eightco Holdings ORBS.US 11,068 $30.4M Unavailable Cost basis not supplied 0.009%":
+        - cell "US Eightco Holdings ORBS.US":
+          - generic: US
+          - paragraph: Eightco Holdings
+          - paragraph: ORBS.US
+        - cell "11,068"
+        - cell "$30.4M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.009%"
+      - row "KR Parataxis Ethereum, Inc. 290560.KQ 10,449 $28.7M Unavailable Cost basis not supplied 0.009%":
+        - cell "KR Parataxis Ethereum, Inc. 290560.KQ":
+          - generic: KR
+          - paragraph: Parataxis Ethereum, Inc.
+          - paragraph: 290560.KQ
+        - cell "10,449"
+        - cell "$28.7M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.009%"
+      - row "CN Intchains ICG.US 8,816 $24.2M Unavailable Cost basis not supplied 0.007%":
+        - cell "CN Intchains ICG.US":
+          - generic: CN
+          - paragraph: Intchains
+          - paragraph: ICG.US
+        - cell "8,816"
+        - cell "$24.2M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.007%"
+      - row "JP Quantum Solutions 2338.T 5,764.8 $15.8M −$5.5M -25.74% 0.005%":
+        - cell "JP Quantum Solutions 2338.T":
+          - generic: JP
+          - paragraph: Quantum Solutions
+          - paragraph: 2338.T
+        - cell "5,764.8"
+        - cell "$15.8M"
+        - cell "−$5.5M -25.74%":
+          - paragraph: −$5.5M
+          - paragraph: "-25.74%"
+        - cell "0.005%"
+      - row "JP Def Consulting 4833.T 4,571.142 $12.5M −$8.0M -39.09% 0.004%":
+        - cell "JP Def Consulting 4833.T":
+          - generic: JP
+          - paragraph: Def Consulting
+          - paragraph: 4833.T
+        - cell "4,571.142"
+        - cell "$12.5M"
+        - cell "−$8.0M -39.09%":
+          - paragraph: −$8.0M
+          - paragraph: "-39.09%"
+        - cell "0.004%"
+      - row "US Canaan CAN.US 3,952 $10.8M Unavailable Cost basis not supplied 0.003%":
+        - cell "US Canaan CAN.US":
+          - generic: US
+          - paragraph: Canaan
+          - paragraph: CAN.US
+        - cell "3,952"
+        - cell "$10.8M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.003%"
+      - row "CN SOS Limited SOS.US 2,949.79 $8.1M Unavailable Cost basis not supplied 0.002%":
+        - cell "CN SOS Limited SOS.US":
+          - generic: CN
+          - paragraph: SOS Limited
+          - paragraph: SOS.US
+        - cell "2,949.79"
+        - cell "$8.1M"
+        - cell "Unavailable Cost basis not supplied":
+          - paragraph: Unavailable
+          - paragraph: Cost basis not supplied
+        - cell "0.002%"
+      - row "JP TORICO Co.,Ltd. 7138.T 2,773.324 $7.6M $342K +4.70% 0.002%":
+        - cell "JP TORICO Co.,Ltd. 7138.T":
+          - generic: JP
+          - paragraph: TORICO Co.,Ltd.
+          - paragraph: 7138.T
+        - cell "2,773.324"
+        - cell "$7.6M"
+        - cell "$342K +4.70%":
+          - paragraph: $342K
+          - paragraph: +4.70%
+        - cell "0.002%"
+      - row "US Gemini Space Station GEMI.US 2,741 $7.5M −$2.1M -21.57% 0.002%":
+        - cell "US Gemini Space Station GEMI.US":
+          - generic: US
+          - paragraph: Gemini Space Station
+          - paragraph: GEMI.US
+        - cell "2,741"
+        - cell "$7.5M"
+        - cell "−$2.1M -21.57%":
+          - paragraph: −$2.1M
+          - paragraph: "-21.57%"
+        - cell "0.002%"
+  - navigation "Treasury pages":
+    - button "Previous" [disabled]
+    - generic: Page 1 of 2 · 34 entities
+    - button "Next"
+  - paragraph: Observation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.
+  - paragraph: "Source: CoinGecko Public Treasury"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Market Explorer | Workflow | MarketScanner Pros
+```
+
+### ETH_Explorer
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Crypto Deep-Dive"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive" [pressed]
+  - button "Crypto Command"
+  - button "Crypto Intel"
+  - button "Movers"
+  - region "Crypto Explorer command header":
+    - generic: Crypto asset explorer
+    - generic: Permission Aligned
+    - generic: Bias Bullish
+    - heading "Crypto Asset Explorer" [level=1]
+    - paragraph: "Decision-grade asset view: status, permission, context, then details."
+    - button "Open Markets"
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - paragraph: Crypto Review Gate
+  - generic: "Oldest feed: 12:17:29 pm"
+  - button "Refresh evidence"
+  - generic: "Market: Fresh"
+  - generic: "Trending: Fresh"
+  - generic: "Funding: Delayed"
+  - generic: "OI: Fresh"
+  - generic: 🟡
+  - 'heading "REVIEW: CONDITIONAL" [level=2]'
+  - generic: "Confluence Score: Unavailable"
+  - generic: "Risk Context: Data unavailable — refresh to reassess"
+  - generic: "Long Evidence: Limited"
+  - generic: "Short Evidence: Limited"
+  - paragraph: Environment Breakdown (5 Inputs)
+  - text: Risk State
+  - paragraph: Unavailable
+  - text: Leadership
+  - paragraph: Unavailable
+  - text: Liquidity
+  - paragraph: Unavailable
+  - text: Volatility Regime
+  - paragraph: Unavailable
+  - text: Breadth
+  - paragraph: Unavailable (Unavailable)
+  - generic: "Hard Blocks: Funding freshness delayed • Open interest unavailable"
+  - textbox "Search cryptocurrency":
+    - /placeholder: Search any coin (e.g., XRP, Bitcoin, SOL)...
+  - button "BTC"
+  - button "ETH" [active] [pressed]
+  - button "SOL"
+  - button "XRP"
+  - button "DOGE"
+  - button "ADA"
+  - button "AVAX"
+  - button "LINK"
+  - generic: "Asset · ETH • #2"
+  - generic: Price · $2,743.98
+  - generic: 24h · +2.90%
+  - generic: Bias · Bullish
+  - generic: Align · 100%
+  - generic: Vol · Normal
+  - generic: Liquidity · Moderate
+  - generic: Regime · neutral
+  - generic: Micro · risk_on
+  - generic: Risk · Normal
+  - generic: Permission · Aligned
+  - generic: CRCS · 81.3
+  - generic: ΔHr · +5.80
+  - paragraph: Zone 2 · Action
+  - heading "Price + Permission Console" [level=2]
+  - button "Refresh"
+  - generic: Ethereum (ETH)
+  - generic: +2.90%
+  - button "Candles" [pressed]
+  - button "Sparkline"
+  - paragraph: Indicator Status
+  - paragraph: Aligned
+  - paragraph: Alignment 100%
+  - paragraph: Structure and liquidity conditions support analysis workflow.
+  - link "Add to Watchlist":
+    - /url: /tools/workspace?tab=watchlists&symbol=ETH
+  - link "Create Alert":
+    - /url: /tools/workspace?tab=alerts&symbol=ETH
+  - link "Run Confluence Scan":
+    - /url: /tools/scanner?asset=crypto&symbol=ETH
+  - link "Open Journal Draft":
+    - /url: /tools/workspace?tab=journal&note=Review%20ETH%20setup
+  - paragraph: Zone 2 · Context
+  - heading "Trend / RS / Liquidity Context" [level=2]
+  - paragraph: Structure Bias
+  - paragraph: Bullish
+  - paragraph: Weekly 9.09% • Monthly 13.27%
+  - paragraph: Relative Strength vs BTC (7D)
+  - paragraph: "-0.88%"
+  - paragraph: Volatility + Liquidity
+  - paragraph: "Volatility: Normal"
+  - paragraph: "Liquidity: Moderate"
+  - paragraph: 24h Vol $25.33B • MCap $334.95B
+  - paragraph: Derivatives Overlay
+  - paragraph: "Funding: 0.0085% / interval"
+  - paragraph: "Sentiment: NEUTRAL"
+  - paragraph: "Open Interest: $17.31B"
+  - generic "Zone 3 • Informational (Collapsed by Default) Expand":
+    - generic: Zone 3 • Informational (Collapsed by Default)
+    - generic: Expand
+  - generic: "Last updated: 22/09/2026, 12:26:30 pm"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Market Explorer | Workflow | MarketScanner Pros
+```
+
+### Common_CryptoCommand
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Crypto Command"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command" [active] [pressed]
+  - button "Crypto Intel"
+  - button "Movers"
+  - main:
+    - region "Crypto Command Center command header":
+      - generic: Crypto command
+      - generic: Verdict Mixed
+      - generic: Risk Unavailable
+      - generic: Vol Unavailable
+      - generic: Data incomplete
+      - heading "Crypto Command Center." [level=1]
+      - paragraph: Permission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.
+      - button "Refresh evidence"
+      - button "Open Scanner"
+      - button "Open Crypto Derivatives"
+      - button "Open Macro Lens"
+      - generic: Verdict
+      - generic "Mixed"
+      - generic "Confluence Unavailable"
+      - generic: Breadth
+      - generic "Unavailable"
+      - generic "Score Unavailable"
+      - generic: Dominance
+      - generic "58.8% BTC"
+      - generic "$2.91T"
+      - generic: Next check
+      - generic "Overview"
+      - generic "Refreshed 12:17:29 pm"
+    - generic: Regime · Unavailable
+    - generic: Risk · Unavailable
+    - generic: Dominance · 58.8% BTC
+    - generic: Mkt Cap · $2.91T
+    - generic: 24h · +1.59%
+    - generic: Data · CoinGecko Live
+    - generic: Last Refresh · 12:17:29 pm
+    - paragraph: Crypto Analysis Gate
+    - 'heading "REVIEW: Mixed" [level=2]'
+    - generic: "Adaptive Confluence: Unavailable"
+    - generic: "Risk Context: Data unavailable — refresh to reassess"
+    - generic: "Long Evidence: Limited"
+    - generic: "Short Evidence: Limited"
+    - paragraph: Funding freshness delayed; Open interest unavailable
+    - paragraph: Environment Breakdown (5 Inputs)
+    - text: Risk State
+    - paragraph: Unavailable
+    - text: Leadership
+    - paragraph: Unavailable
+    - text: Liquidity
+    - paragraph: Unavailable
+    - text: Volatility Regime
+    - paragraph: Unavailable
+    - text: Breadth
+    - paragraph: Unavailable (Unavailable)
+    - generic: "Hard Blocks: Funding freshness delayed • Open interest unavailable"
+    - paragraph: Zone 2 • Action
+    - heading "Crypto Command Console" [level=1]
+    - link "Open Scanner":
+      - /url: /tools/scanner?asset=crypto
+    - button "OVR Overview Market cap, dominance & global metrics Also in Markets" [pressed]:
+      - generic: OVR Overview
+      - generic: Market cap, dominance & global metrics
+      - generic: Also in Markets
+    - button "SRC Coin Search Find any cryptocurrency":
+      - generic: SRC Coin Search
+      - generic: Find any cryptocurrency
+    - button "MAP Market Heatmap Visual market performance Also in Markets":
+      - generic: MAP Market Heatmap
+      - generic: Visual market performance
+      - generic: Also in Markets
+    - button "TRD Trending Hot coins & searches":
+      - generic: TRD Trending
+      - generic: Hot coins & searches
+    - button "MOV Top Movers Biggest gainers & losers Also in Markets":
+      - generic: MOV Top Movers
+      - generic: Biggest gainers & losers
+      - generic: Also in Markets
+    - button "SEC Sectors Category performance Also in Markets":
+      - generic: SEC Sectors
+      - generic: Category performance
+      - generic: Also in Markets
+    - button "DFI DeFi Decentralized finance stats":
+      - generic: DFI DeFi
+      - generic: Decentralized finance stats
+    - button "DEX DEX Pools Hot trading pairs":
+      - generic: DEX DEX Pools
+      - generic: Hot trading pairs
+    - button "NEW New Pools Just created liquidity":
+      - generic: NEW New Pools
+      - generic: Just created liquidity
+    - button "LST New Coins Newly listed tokens":
+      - generic: LST New Coins
+      - generic: Newly listed tokens
+    - generic: OVR
+    - generic: Overview
+    - generic: • Market cap, dominance & global metrics
+    - heading "📈 Market Overview" [level=3]
+    - generic: Fresh
+    - generic: CoinGecko • 12:29 pm
+    - generic: ↗ 1.59%
+    - generic: Total Crypto Market Cap
+    - generic: $2.91T
+    - generic: 30 Day Chart
+    - generic: 24h Volume
+    - generic: $156.44B
+    - generic: Market Dominance
+    - text: BTC
+    - generic: 58.8%
+    - text: ETH
+    - generic: 11.5%
+    - text: USDT
+    - generic: 6.3%
+    - text: BNB
+    - generic: 3.6%
+    - paragraph: Zone 2 • Context
+    - heading "Context / Rotation / Routing" [level=2]
+    - paragraph: Market Snapshot
+    - paragraph: "Cap: $2.91T"
+    - paragraph: "24h: 1.59%"
+    - paragraph: "Review: Data unavailable — refresh to reassess"
+    - paragraph: Trending Leadership
+    - generic: FIRO
+    - generic: Rank 1
+    - generic: EDEL
+    - generic: Rank 2
+    - generic: PENGU
+    - generic: Rank 3
+    - generic: NEAR
+    - generic: Rank 4
+    - generic: TRUMP
+    - generic: Rank 5
+    - link "Derivatives":
+      - /url: /tools/dashboard?tab=crypto
+    - link "Full Heatmap":
+      - /url: /tools/explorer?tab=crypto-command&section=heatmap
+    - link "Explorer":
+      - /url: /tools/explorer?tab=crypto
+    - link "Create Alert":
+      - /url: /tools/workspace?tab=alerts
+    - paragraph: High-Quality Setups Only
+    - generic: 1. AURORA
+    - generic: +143.7%
+    - generic: 2. RHEA
+    - generic: +80.5%
+    - generic: 3. TAO
+    - generic: +22.2%
+    - generic "Zone 3 • Audit / Log Collapse":
+      - generic: Zone 3 • Audit / Log
+      - generic: Collapse
+    - button "Triggered Alerts" [pressed]
+    - button "Regime Flips"
+    - button "Scanner Hits"
+    - button "No-Trade Reasons"
+    - button "Data Gaps"
+    - generic: 12:29
+    - generic: FIRO market update
+    - paragraph: "Top trending coin: FIRO. Monitor for momentum shifts."
+    - generic "Zone 4 • Capabilities / Plan / Help Expand":
+      - generic: Zone 4 • Capabilities / Plan / Help
+      - generic: Expand
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Market Explorer | Workflow | MarketScanner Pros
+```
+
+### Common_CryptoHeatmap
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Crypto Command"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command" [pressed]
+  - button "Crypto Intel"
+  - button "Movers"
+  - main:
+    - region "Crypto Command Center command header":
+      - generic: Crypto command
+      - generic: Verdict Mixed
+      - generic: Risk Unavailable
+      - generic: Vol Unavailable
+      - generic: Data incomplete
+      - heading "Crypto Command Center." [level=1]
+      - paragraph: Permission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.
+      - button "Refresh evidence"
+      - button "Open Scanner"
+      - button "Open Crypto Derivatives"
+      - button "Open Macro Lens"
+      - generic: Verdict
+      - generic "Mixed"
+      - generic "Confluence Unavailable"
+      - generic: Breadth
+      - generic "Unavailable"
+      - generic "Score Unavailable"
+      - generic: Dominance
+      - generic "58.8% BTC"
+      - generic "$2.91T"
+      - generic: Next check
+      - generic "Market Heatmap"
+      - generic "Refreshed 12:17:29 pm"
+    - generic: Regime · Unavailable
+    - generic: Risk · Unavailable
+    - generic: Dominance · 58.8% BTC
+    - generic: Mkt Cap · $2.91T
+    - generic: 24h · +1.59%
+    - generic: Data · CoinGecko Live
+    - generic: Last Refresh · 12:17:29 pm
+    - paragraph: Crypto Analysis Gate
+    - 'heading "REVIEW: Mixed" [level=2]'
+    - generic: "Adaptive Confluence: Unavailable"
+    - generic: "Risk Context: Data unavailable — refresh to reassess"
+    - generic: "Long Evidence: Limited"
+    - generic: "Short Evidence: Limited"
+    - paragraph: Funding freshness delayed; Open interest unavailable
+    - paragraph: Environment Breakdown (5 Inputs)
+    - text: Risk State
+    - paragraph: Unavailable
+    - text: Leadership
+    - paragraph: Unavailable
+    - text: Liquidity
+    - paragraph: Unavailable
+    - text: Volatility Regime
+    - paragraph: Unavailable
+    - text: Breadth
+    - paragraph: Unavailable (Unavailable)
+    - generic: "Hard Blocks: Funding freshness delayed • Open interest unavailable"
+    - paragraph: Zone 2 • Action
+    - heading "Crypto Command Console" [level=1]
+    - link "Open Scanner":
+      - /url: /tools/scanner?asset=crypto
+    - button "OVR Overview Market cap, dominance & global metrics Also in Markets":
+      - generic: OVR Overview
+      - generic: Market cap, dominance & global metrics
+      - generic: Also in Markets
+    - button "SRC Coin Search Find any cryptocurrency":
+      - generic: SRC Coin Search
+      - generic: Find any cryptocurrency
+    - button "MAP Market Heatmap Visual market performance Also in Markets" [active] [pressed]:
+      - generic: MAP Market Heatmap
+      - generic: Visual market performance
+      - generic: Also in Markets
+    - button "TRD Trending Hot coins & searches":
+      - generic: TRD Trending
+      - generic: Hot coins & searches
+    - button "MOV Top Movers Biggest gainers & losers Also in Markets":
+      - generic: MOV Top Movers
+      - generic: Biggest gainers & losers
+      - generic: Also in Markets
+    - button "SEC Sectors Category performance Also in Markets":
+      - generic: SEC Sectors
+      - generic: Category performance
+      - generic: Also in Markets
+    - button "DFI DeFi Decentralized finance stats":
+      - generic: DFI DeFi
+      - generic: Decentralized finance stats
+    - button "DEX DEX Pools Hot trading pairs":
+      - generic: DEX DEX Pools
+      - generic: Hot trading pairs
+    - button "NEW New Pools Just created liquidity":
+      - generic: NEW New Pools
+      - generic: Just created liquidity
+    - button "LST New Coins Newly listed tokens":
+      - generic: LST New Coins
+      - generic: Newly listed tokens
+    - generic: MAP
+    - generic: Market Heatmap
+    - generic: • Visual market performance
+    - heading "🪙 Crypto Heat Map" [level=3]:
+      - generic: 🪙
+      - text: Crypto Heat Map
+    - paragraph: Top cryptocurrencies by market cap • 24h change • Data updates every 60s
+    - generic: "Sort:"
+    - button "Market Cap"
+    - button "% Change"
+    - generic: Store of Value
+    - generic: BTC
+    - generic: Bitcoin
+    - generic: +5.31%
+    - generic: $85,698
+    - generic: Layer 1
+    - generic: ETH
+    - generic: Ethereum
+    - generic: +3.02%
+    - generic: $2,744
+    - generic: Layer 1
+    - generic: BNB
+    - generic: BNB
+    - generic: +1.23%
+    - generic: $789.93
+    - generic: Layer 1
+    - generic: SOL
+    - generic: Solana
+    - generic: +5.33%
+    - generic: $117.62
+    - generic: Payments
+    - generic: XRP
+    - generic: XRP
+    - generic: +7.22%
+    - generic: $1.52
+    - generic: Meme
+    - generic: DOGE
+    - generic: Dogecoin
+    - generic: +13.20%
+    - generic: $0.0998
+    - generic: Layer 1
+    - generic: ADA
+    - generic: Cardano
+    - generic: +7.36%
+    - generic: $0.2474
+    - generic: Layer 1
+    - generic: AVAX
+    - generic: Avalanche
+    - generic: "-0.13%"
+    - generic: $11.16
+    - generic: Layer 1
+    - generic: DOT
+    - generic: Polkadot
+    - generic: +4.47%
+    - generic: $1.20
+    - generic: Oracle / DeFi
+    - generic: LINK
+    - generic: Chainlink
+    - generic: +3.25%
+    - generic: $13.02
+    - generic: Layer 2
+    - generic: MATIC
+    - generic: MATIC (migrated to POL)
+    - generic: +0.00%
+    - generic: $0.1262
+    - generic: Payments
+    - generic: LTC
+    - generic: Litecoin
+    - generic: +3.47%
+    - generic: $60.88
+    - generic: Meme
+    - generic: SHIB
+    - generic: Shiba Inu
+    - generic: +8.81%
+    - generic: $0.00000599
+    - generic: DeFi
+    - generic: UNI
+    - generic: Uniswap
+    - generic: +4.78%
+    - generic: $9.14
+    - generic: Payments
+    - generic: XLM
+    - generic: Stellar
+    - generic: +7.92%
+    - generic: $0.2133
+    - generic: Layer 1
+    - generic: ATOM
+    - generic: Cosmos Hub
+    - generic: +3.95%
+    - generic: $1.81
+    - generic: "-8%"
+    - generic: +8%
+    - generic: "🚀 Best:"
+    - generic: DOGE (+13.20%)
+    - generic: "📉 Worst:"
+    - generic: AVAX (-0.13%)
+    - paragraph: "Last updated: 12:29:48 pm"
+    - generic: Fresh
+    - generic: Data by CoinGecko
+    - heading "🧠 Crypto Intelligence" [level=4]:
+      - generic: 🧠
+      - text: Crypto Intelligence
+    - heading "Funding Rates" [level=5]
+    - paragraph: "Comparable funding unavailable: cached snapshots do not identify the funding interval and calculation version."
+    - heading "OI Change (24h)" [level=5]
+    - paragraph: OI data populates from derivatives cron snapshots
+    - heading "Sector Breakdown" [level=5]
+    - generic: Meme
+    - generic: +11.01%
+    - text: DOGE, SHIB
+    - generic: Payments
+    - generic: +6.20%
+    - text: XRP, LTC, XLM
+    - generic: Store of Value
+    - generic: +5.31%
+    - text: BTC
+    - generic: DeFi
+    - generic: +4.78%
+    - text: UNI
+    - generic: Layer 1
+    - generic: +3.60%
+    - text: ETH, BNB, SOL, ADA, AVAX, DOT, ATOM
+    - generic: Oracle / DeFi
+    - generic: +3.25%
+    - text: LINK
+    - generic: Layer 2
+    - generic: +0.00%
+    - text: MATIC
+    - heading "DeFi Market Capitalization" [level=5]
+    - generic: Market Cap
+    - generic: $131.79B
+    - generic: 24h Volume
+    - generic: $7.18B
+    - generic: DeFi Dominance
+    - generic: 4.37%
+    - generic: DeFi/ETH Ratio
+    - generic: 39.33%
+    - generic: Top DeFi Coin
+    - generic: Lido Staked Ether (20.3%)
+    - paragraph: Zone 2 • Context
+    - heading "Context / Rotation / Routing" [level=2]
+    - paragraph: Market Snapshot
+    - paragraph: "Cap: $2.91T"
+    - paragraph: "24h: 1.59%"
+    - paragraph: "Review: Data unavailable — refresh to reassess"
+    - paragraph: Trending Leadership
+    - generic: FIRO
+    - generic: Rank 1
+    - generic: EDEL
+    - generic: Rank 2
+    - generic: PENGU
+    - generic: Rank 3
+    - generic: NEAR
+    - generic: Rank 4
+    - generic: TRUMP
+    - generic: Rank 5
+    - link "Derivatives":
+      - /url: /tools/dashboard?tab=crypto
+    - link "Full Heatmap":
+      - /url: /tools/explorer?tab=crypto-command&section=heatmap
+    - link "Explorer":
+      - /url: /tools/explorer?tab=crypto
+    - link "Create Alert":
+      - /url: /tools/workspace?tab=alerts
+    - paragraph: High-Quality Setups Only
+    - generic: 1. AURORA
+    - generic: +143.7%
+    - generic: 2. RHEA
+    - generic: +80.5%
+    - generic: 3. TAO
+    - generic: +22.2%
+    - generic "Zone 3 • Audit / Log Collapse":
+      - generic: Zone 3 • Audit / Log
+      - generic: Collapse
+    - button "Triggered Alerts" [pressed]
+    - button "Regime Flips"
+    - button "Scanner Hits"
+    - button "No-Trade Reasons"
+    - button "Data Gaps"
+    - generic: 12:29
+    - generic: FIRO market update
+    - paragraph: "Top trending coin: FIRO. Monitor for momentum shifts."
+    - generic "Zone 4 • Capabilities / Plan / Help Expand":
+      - generic: Zone 4 • Capabilities / Plan / Help
+      - generic: Expand
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Market Explorer | Workflow | MarketScanner Pros
+```
+
+### Common_Derivatives
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - region "Dashboard command header":
+    - text: Research dashboard ·
+    - link "market overview in Command Center":
+      - /url: /tools/command-center
+    - generic: range neutral
+    - generic: ·
+    - generic: risk low
+    - generic: ·
+    - generic: sizing full
+    - heading "Open the research queue, then validate one symbol." [level=1]
+    - paragraph: Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.
+    - button "Start scanner"
+    - button "Validate META"
+    - button "Open journal"
+    - generic: Queue
+    - generic: 5 items
+    - 'generic "Top focus: META"'
+    - generic: Data health
+    - generic: 3 issues
+    - 'generic "Equity scan data incomplete, Crypto scan data incomplete (1 weak rows), Calendar: 32/32 events have unconfirmed timing or unavailable/stale data"'
+    - generic: High impact
+    - generic: "3"
+    - generic "Calendar events in queue"
+    - generic: Next check
+    - generic: Validate META
+    - generic "Open Golden Egg from queue below"
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - region "Morning research start":
+    - generic: Today's research queue
+    - heading "Highest-evidence symbols first." [level=2]
+    - paragraph: Click a symbol to open Golden Egg. Review context only; no trade instructions.
+    - button "Open scanner"
+    - button "Validate META in Golden Egg":
+      - generic: META
+      - generic: Bullish bias
+      - generic: Score
+      - generic: "72"
+      - generic: Price
+      - generic: $741.25
+      - generic: Last bar
+      - generic: +11.34%
+      - generic: "Next: review in Golden Egg"
+    - button "Validate LTC-USD in Golden Egg":
+      - generic: LTC-USD
+      - generic: Bullish bias
+      - generic: Score
+      - generic: "60"
+      - generic: Price
+      - generic: $62.01
+      - generic: Last bar
+      - generic: +5.58%
+      - generic: "Next: review in Golden Egg"
+    - button "Validate AAPL in Golden Egg":
+      - generic: AAPL
+      - generic: Bullish bias
+      - generic: Score
+      - generic: "57"
+      - generic: Price
+      - generic: $338.98
+      - generic: Last bar
+      - generic: +0.85%
+      - generic: "Next: review in Golden Egg"
+    - button "Validate AMD in Golden Egg":
+      - generic: AMD
+      - generic: Bullish bias
+      - generic: Score
+      - generic: "57"
+      - generic: Price
+      - generic: $615.52
+      - generic: Last bar
+      - generic: +9.95%
+      - generic: "Next: review in Golden Egg"
+    - button "Validate FET-USD in Golden Egg":
+      - generic: FET-USD
+      - generic: Bullish bias
+      - generic: Score
+      - generic: "48"
+      - generic: Price
+      - generic: $0.2048
+      - generic: Last bar
+      - generic: +16.78%
+      - generic: "Next: review in Golden Egg"
+    - generic: Data health strip
+    - generic: Loading feeds
+    - generic: "0"
+    - generic: Degraded feeds
+    - generic: "3"
+    - generic: "Scanner data: 0m old — fresh"
+    - paragraph: "Review feed issues: Equity scan data incomplete, Crypto scan data incomplete (1 weak rows), Calendar: 32/32 events have unconfirmed timing or unavailable/stale data."
+    - generic: Continue workflow
+    - button "✓ 5 scenarios queued"
+    - link "2. Validate META in Golden Egg":
+      - /url: /tools/golden-egg?symbol=META
+    - link "3. Test history in Backtest":
+      - /url: /tools/workspace?tab=backtest
+    - link "4. Save notes in Journal":
+      - /url: /tools/workspace?tab=journal
+  - region "Volatility and research context panels":
+    - generic: Volatility watch
+    - generic: Compression & expansion signals
+    - button "Open Dynamic Volatility Engine": DVE ›
+    - button "Open Golden Egg for META":
+      - generic: META
+      - generic: ADX 54
+      - generic: Trending
+    - button "Open Golden Egg for LTC-USD":
+      - generic: LTC-USD
+      - generic: ADX 49
+      - generic: Trending
+    - button "Open Golden Egg for AAPL":
+      - generic: AAPL
+      - generic: ADX 32
+      - generic: Trending
+    - button "Open Golden Egg for FET-USD":
+      - generic: FET-USD
+      - generic: ADX 29
+      - generic: Developing
+    - generic: ADX ≥ 30 trending · 20–29 developing · <20 compression. Heuristic only.
+    - generic: Time confluence watch
+    - generic: Upcoming close clusters
+    - button "Open Time Scanner": Time ›
+    - generic: Regime context
+    - generic: range neutral · low volatility stress
+    - generic: What to check
+    - generic: · Weekly/monthly closes within next 3 sessions
+    - generic: · High-impact calendar events (3 queued)
+    - generic: "· Crypto: UTC Saturday close risk"
+    - link "Open Time Scanner for close calendar ›":
+      - /url: /tools/time-scanner
+    - generic: ARCA research context
+    - generic: AI analyst briefing
+    - button "Open MSP Analyst": Ask ›
+    - generic: MSP Analyst
+    - generic: Regime is range neutral. Normal risk conditions. Review evidence for each queued symbol.
+    - generic: Today's research questions
+    - generic: · Which symbols have the most aligned evidence?
+    - generic: · What invalidates the top setup?
+    - generic: · What does the volatility phase suggest?
+    - link "Open MSP Analyst ›":
+      - /url: /tools/ai-analyst
+  - generic: Dashboard lens
+  - generic: Switch between saved pages, live market desk, derivatives, and macro context.
+  - tablist "Dashboard lens":
+    - tab "My pages"
+    - tab "Command center"
+    - tab "Crypto derivatives" [selected]
+    - tab "Macro"
+  - region "Crypto Derivatives command header":
+    - generic: Derivatives lens
+    - generic: Permission Unavailable
+    - generic: SOL-led
+    - generic: 24h move Large
+    - heading "Funding, open interest, and evidence coverage." [level=1]
+    - paragraph: Review the observed venue sample and its data gaps before comparing derivatives conditions.
+    - button "Refresh data"
+    - button "Open Options"
+    - button "Open Scanner"
+    - generic: Bias
+    - generic "Unavailable"
+    - generic "Evidence unavailable · 0/4 inputs"
+    - generic: OI trend
+    - generic "Comparable 24-hour OI baseline unavailable": Unavailable
+    - generic "Comparable 24-hour OI baseline unavailable"
+    - generic: Funding
+    - generic "Funding data pending": Unavailable
+    - generic "Funding data pending"
+    - generic: Next check
+    - generic "Liquidation confirmation pending": Wait for complete data
+    - generic "Liquidation confirmation pending"
+  - paragraph: Last retrieved 12:30:01 pm
+  - strong: Crypto Derivatives Risk — Educational Only
+  - text: — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.
+  - alert: "Some data feeds unavailable: Error: Verified liquidation totals are unavailable. The previous recent OKX sample did not establish 24-hour coverage or USD notional. · Error: Exchange-reported long/short positioning is not connected. Funding rates cannot substitute for account ratios.. Displayed values may be incomplete or from a prior snapshot."
+  - paragraph: Crypto Review Gate
+  - generic: "Oldest feed: 12:17:29 pm"
+  - button "Refresh evidence"
+  - generic: "Market: Fresh"
+  - generic: "Trending: Fresh"
+  - generic: "Funding: Delayed"
+  - generic: "OI: Fresh"
+  - generic: 🟡
+  - 'heading "REVIEW: CONDITIONAL" [level=2]'
+  - generic: "Confluence Score: Unavailable"
+  - generic: "Risk Context: Data unavailable — refresh to reassess"
+  - generic: "Long Evidence: Limited"
+  - generic: "Short Evidence: Limited"
+  - paragraph: Environment Breakdown (5 Inputs)
+  - text: Risk State
+  - paragraph: Unavailable
+  - text: Leadership
+  - paragraph: Unavailable
+  - text: Liquidity
+  - paragraph: Unavailable
+  - text: Volatility Regime
+  - paragraph: Unavailable
+  - text: Breadth
+  - paragraph: Unavailable (Unavailable)
+  - generic: "Hard Blocks: Funding freshness delayed • Open interest unavailable"
+  - generic: Condition
+  - generic: Unavailable
+  - generic: Bias
+  - generic: Unavailable
+  - generic: Rotation
+  - generic: SOL-led
+  - generic: 24h move
+  - generic: Large
+  - generic: OI trend
+  - generic: Unavailable
+  - generic: Framework
+  - generic: Wait for complete data
+  - generic: Why
+  - generic: 3 factors in today's analysis
+  - generic: • Funding data pending
+  - generic: • Comparable 24-hour OI baseline unavailable
+  - generic: • Liquidation confirmation pending
+  - generic: BTC
+  - generic: $85,698
+  - generic: +5.31%
+  - generic: OI Δ
+  - generic: Unavailable
+  - generic: Funding
+  - generic: Unavailable
+  - generic: 24h move
+  - generic: Large
+  - generic: ETH
+  - generic: $2,744.26
+  - generic: +3.02%
+  - generic: OI Δ
+  - generic: Unavailable
+  - generic: Funding
+  - generic: Unavailable
+  - generic: 24h move
+  - generic: Large
+  - generic: SOL
+  - generic: $117.62
+  - generic: +5.33%
+  - generic: OI Δ
+  - generic: Unavailable
+  - generic: Funding
+  - generic: Unavailable
+  - generic: 24h move
+  - generic: Large
+  - generic: Positioning
+  - generic: Funding + Long/Short + Open Interest
+  - generic: Funding Rates
+  - generic: Long / Short Ratio
+  - paragraph: Unavailable — exchange-reported account ratios are not connected. Funding is not an account-positioning measurement.
+  - generic: Open Interest
+  - generic: $50.34B total
+  - paragraph: Perpetual contracts on the available top three CoinGecko derivatives venues; not the whole market.
+  - paragraph: A 23–25 hour baseline with the same venues and contracts is not yet available.
+  - generic: BTC
+  - generic: $23.88B
+  - generic: Unavailable
+  - generic: ETH
+  - generic: $17.31B
+  - generic: Unavailable
+  - generic: SOL
+  - generic: $3.46B
+  - generic: Unavailable
+  - generic: XRP
+  - generic: $1.52B
+  - generic: Unavailable
+  - generic: BNB
+  - generic: $969.33M
+  - generic: Unavailable
+  - generic: NEAR
+  - generic: $736.00M
+  - generic: Unavailable
+  - generic: Stress
+  - generic: Liquidations + Volatility + Liquidity
+  - generic: Verified liquidations
+  - generic: Complete window and notional coverage required
+  - paragraph: Unavailable — the previous recent OKX sample did not establish a complete 24-hour USD total.
+  - generic: Longs
+  - generic: Unavailable
+  - generic: Shorts
+  - generic: Unavailable
+  - generic: 24h Price Move
+  - generic: Large
+  - generic: "Largest absolute BTC/ETH/SOL 24h return: large ≥3%, moderate ≥1.5%, small <1.5%. This is not measured volatility."
+  - generic: Open-Interest Trend
+  - generic: Unavailable
+  - generic: A comparable 24-hour open-interest baseline is unavailable.
+  - generic: Research Scenario Watchlist
+  - generic: Educational scenarios aligned to current regime — observations only, not trade instructions.
+  - paragraph: Scenarios withheld until the required evidence is complete.
+  - generic "Toggle Context Discovery section":
+    - generic: Context (Discovery)
+    - generic: Trending / Gainers / Sectors — non-core derivatives context
+    - generic: Toggle
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert: Research Dashboard | MarketScanner Pros | Workflow | MarketScanner Pros
+```

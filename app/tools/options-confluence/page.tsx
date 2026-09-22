@@ -26,7 +26,7 @@ import { writeOperatorState } from "@/lib/operatorState";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence, qualityTierFromConfidence } from "@/lib/workflow/scoring";
-import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
+import type { AssetClass, CandidateEvaluation, DecisionPacket, UnifiedSignal } from "@/lib/workflow/types";
 
 const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
 const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
@@ -855,7 +855,6 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
     const signalId = `sig_opt_${symbolKey}_${Date.now()}`;
     const candidateId = `cand_opt_${symbolKey}_${Date.now()}`;
-    const planId = `plan_opt_${symbolKey}_${Date.now()}`;
 
     const bias: DecisionPacket['bias'] = result.direction === 'bullish'
       ? 'bullish'
@@ -970,56 +969,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       },
     });
 
-    if (candidateOutcome === 'pass') {
-      const tradePlanEvent = createWorkflowEvent<TradePlan>({
-        eventType: 'trade.plan.created',
-        workflowId,
-        parentEventId: candidateEvent.event_id,
-        route: '/tools/terminal?tab=options-confluence',
-        module: 'options_confluence',
-        entity: {
-          entity_type: 'trade_plan',
-          entity_id: planId,
-          symbol: symbolKey,
-          asset_class: 'options' as AssetClass,
-        },
-        payload: {
-          plan_id: planId,
-          created_at: new Date().toISOString(),
-          symbol: symbolKey,
-          asset_class: 'options',
-          direction,
-          timeframe: selectedTF,
-          setup: {
-            source: 'options.confluence',
-            signal_type: 'options_confluence',
-            confidence,
-            decision_packet_id: decisionPacket.id,
-            strategy: result.strategyRecommendation?.strategy,
-          },
-          entry: {
-            zone: entryMid,
-            low: result.tradeLevels?.entryZone.low,
-            high: result.tradeLevels?.entryZone.high,
-            current_price: result.currentPrice,
-          },
-          risk: {
-            invalidation: result.tradeLevels?.stopLoss,
-            targets: decisionPacket.targets,
-            risk_score: decisionPacket.riskScore,
-            volatility_regime: decisionPacket.volatilityRegime,
-          },
-          links: {
-            candidate_id: candidateId,
-            signal_id: signalId,
-            decision_packet_id: decisionPacket.id,
-          },
-        },
-      });
-
-      void emitWorkflowEvents([signalEvent, candidateEvent, tradePlanEvent]);
-      return;
-    }
+    // Research may retain an evidence packet, but must never promote itself
+    // into a trade plan (which can create alerts, journal drafts or execution).
 
     void emitWorkflowEvents([signalEvent, candidateEvent]);
   }, [result, selectedTF]);

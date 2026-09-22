@@ -1,0 +1,5034 @@
+# Candidate audit: additional live evidence
+
+Captured 22 September 2026. Options Confluence post-deploy runs use release 94a07d2; earlier observations remain pre-repair.
+
+## ETH_Volatility
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - generic: DVE
+  - heading "Phase Intelligence Console" [level=1]
+  - paragraph: Directional Volatility Engine — 5-Layer Analysis
+  - main:
+    - textbox "Enter symbol (e.g. BTC, AAPL, TSLA)": ETH-USD
+    - button "Analyze"
+    - button "BTC"
+    - button "ETH"
+    - button "AAPL"
+    - button "TSLA"
+    - button "NVDA"
+    - button "SPX"
+    - button "GOLD"
+    - generic: ETH-USD
+    - generic: Neutral
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: options."': Data 89%
+    - generic: DVE Evidence Stack
+    - generic: Volatility Regime
+    - generic: NEUTRAL
+    - generic: 2% confluence with BBWP 69.
+    - generic: Directional Pressure
+    - generic: BULLISH
+    - generic: 29% confluence, score 29.
+    - generic: Phase State
+    - generic: MIXED
+    - generic: Contraction exit 0%, expansion exit 0%.
+    - generic: Signal Projection
+    - generic: LOW
+    - generic: "Projection quality low: 11 outcomes and 14.0% dispersion make this estimate unstable."
+    - generic: DVE Risk Flags
+    - generic "Limits confidence in this DVE read until resolved or confirmed by later data.": 3 missing DVE inputs.
+    - generic: DVE Data Truth
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: options."': DEGRADED
+    - text: "Source: dve live calculation"
+    - text: "· Coverage:"
+    - generic: 89%
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: options."': "Missing input: stochKSlope."
+    - generic: Inputs Data Truth
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: options."': DEGRADED
+    - text: "Source: DVE input stack"
+    - text: "· Coverage:"
+    - generic: 40%
+    - 'generic "Missing input: stochKSlope. | Missing input: stochDSlope. | Missing input: options."': "Missing input: stochKSlope."
+    - generic: Projection Data Truth
+    - 'generic "Projection quality low: 11 outcomes and 14.0% dispersion make this estimate unstable."': DEGRADED
+    - text: "Source: DVE projection model"
+    - text: "· Coverage:"
+    - generic: 0%
+    - 'generic "Projection quality low: 11 outcomes and 14.0% dispersion make this estimate unstable."'
+    - generic: Volatility Phase Read
+    - generic: neutral
+    - generic: No Dominant Phase / Early
+    - generic: "Risk: Low"
+    - generic: Phase Age
+    - generic: 0%
+    - generic: Continuation
+    - generic: 0%
+    - generic: Exit Risk
+    - generic: 0%
+    - generic: Breakout
+    - generic: 3/100
+    - generic: LOW
+    - generic: Trap
+    - generic: Clear
+    - generic: 0/100 score
+    - generic: Exhaustion
+    - generic: LOW
+    - generic: 0/100 risk
+    - generic: Invalidation
+    - generic: $2644.73 extreme invalidation
+    - generic: Price below signal bar low (2644.73) · BBWP re-enters below 15
+    - generic: Read Limits
+    - text: 3 missing inputs
+    - generic: VOL
+    - heading "Layer 1 — Volatility State" [level=2]
+    - generic: VOL
+    - heading "BBWP Gauge" [level=3]
+    - generic: 69.4BBWP
+    - generic: NEUTRAL
+    - generic: "SMA5: 38.8"
+    - text: "Rate:"
+    - generic: "+11.0"
+    - generic: (accelerating)
+    - generic: "Squeeze: None"
+    - text: "Confluence:"
+    - generic: 2%
+    - heading "Breakout Readiness" [level=3]
+    - generic: 3/100
+    - generic: LOW
+    - generic: Heuristic score · not a probability
+    - generic: Vol Compression
+    - generic: 0/40
+    - generic: Time Alignment
+    - generic: 0/30
+    - generic: Gamma Wall
+    - generic: N/A
+    - generic: ADX Rising
+    - generic: 3/10
+    - paragraph: ADX 40 already trending (3/10)
+    - generic: DIR
+    - heading "Layer 2 — Directional Bias" [level=2]
+    - heading "Directional Bias" [level=3]
+    - generic: 29% confluence
+    - generic: ← Bearish
+    - generic: Neutral
+    - generic: Bullish →
+    - generic: "+29"
+    - text: bullish
+    - generic: "Confluence: Low"
+    - generic: Stoch Momentum
+    - generic: +9/15
+    - generic: Trend Structure
+    - generic: +20/20
+    - generic: Options Flow
+    - generic: N/A
+    - generic: Volume
+    - generic: 0/10
+    - generic: Dealer Gamma
+    - generic: N/A
+    - generic: Funding Rate
+    - generic: 0/10
+    - generic: Market Breadth
+    - generic: 0/10
+    - paragraph: "Stoch momentum: +9/15"
+    - paragraph: Price > SMA20 (+5)
+    - paragraph: Price > SMA50 (+5)
+    - generic: PH
+    - heading "Layer 3 — Phase Persistence" [level=2]
+    - generic: PH
+    - heading "Phase Persistence" [level=3]
+    - generic: Contraction (Inactive)
+    - text: "Current:"
+    - generic: 0 bars
+    - text: "Median:"
+    - generic: 3.5 bars
+    - text: "Average:"
+    - generic: 6.6 bars
+    - text: "Max:"
+    - generic: 25 bars
+    - generic: "Episodes: 14"
+    - text: "Percentile:"
+    - generic: 0%
+    - generic: Expansion (Inactive)
+    - text: "Current:"
+    - generic: 0 bars
+    - text: "Median:"
+    - generic: 5.0 bars
+    - text: "Average:"
+    - generic: 6.3 bars
+    - text: "Max:"
+    - generic: 12 bars
+    - generic: "Episodes: 7"
+    - text: "Percentile:"
+    - generic: 0%
+    - generic: SIG
+    - heading "Layer 4 — Signal & Invalidation" [level=2]
+    - generic: SIG
+    - heading "Signal Status" [level=3]
+    - generic: LIVE
+    - generic: fired
+    - generic: Compression Release Up
+    - generic: 65/100
+    - text: "Trigger Price:"
+    - generic: $2775.43
+    - text: "Open:"
+    - generic: $2775.43
+    - text: "High:"
+    - generic: $2804.42
+    - text: "Low:"
+    - generic: $2644.73
+    - paragraph: • BBWP broke above 15
+    - paragraph: • Stoch momentum bullish (+9)
+    - paragraph: "• Direction: bullish (+29)"
+    - heading "Invalidation Levels" [level=3]
+    - generic: VALID
+    - generic: Price Level
+    - generic: $2644.73
+    - generic: Phase (BBWP)
+    - generic: "15.0"
+    - generic: Smooth (SMA5)
+    - generic: "15.0"
+    - generic: Mode
+    - generic: extreme
+    - paragraph: • Price below signal bar low (2644.73)
+    - paragraph: • BBWP re-enters below 15
+    - paragraph: • BBWP SMA5 re-enters below 15
+    - generic: PROJ
+    - heading "Layer 5 — Outcome Projection" [level=2]
+    - generic: PROJ
+    - heading "Outcome Projection" [level=3]
+    - generic: Low quality - 0/100
+    - generic: Expected Move
+    - generic: "-7.3%"
+    - generic: Hit Rate
+    - generic: 27%
+    - generic: 11 samples
+    - generic: Median Move
+    - generic: "-5.9%"
+    - generic: Avg Bars
+    - generic: "5.1"
+    - generic: Dispersion 14.0%
+    - generic: "Max historical: +17.3%"
+    - generic: "Projection quality low: 11 outcomes and 14.0% dispersion make this estimate unstable."
+    - generic: SUP
+    - heading "Supporting Analysis" [level=2]
+    - heading "Regime & Outlook" [level=3]
+    - generic: Volatility Regime Timeline
+    - generic: →
+    - generic: compression
+    - generic: neutral
+    - generic: transition
+    - generic: expansion
+    - generic: climax
+    - generic: neutral
+    - generic: →
+    - generic: expansion
+    - generic: 40% prob
+    - paragraph: "Trigger: BBWP accelerating toward expansion"
+    - generic: Next Regime Probability
+    - generic: expansion
+    - generic: 40%
+    - generic: neutral
+    - generic: 30%
+    - generic: compression
+    - generic: 20%
+    - generic: transition
+    - generic: 10%
+    - generic: "Exhaustion:"
+    - generic: 0/100 (LOW)
+    - generic: Active Flags
+    - generic: SIGNAL UP
+    - generic: Summary
+    - paragraph: "ETH-USD BBWP at 69.4 (neutral). Stochastic momentum bullish (+9). Compression release up signal fired — strength 65/100. Historical: -7.27% expected, 27.3% hit rate. Invalidation: below $2,644.73."
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## META_Explorer
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Equity Deep-Dive"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive" [pressed]
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command"
+  - button "Crypto Intel"
+  - button "Movers"
+  - heading "Equity Explorer" [level=1]
+  - paragraph: "Decision-grade equity view: valuation, trend, risk, and catalyst context."
+  - strong: General Information Only
+  - text: — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.
+  - textbox "Stock symbol":
+    - /placeholder: Enter stock symbol (e.g., AAPL, MSFT, GOOGL)
+    - text: META
+  - button "Find Stock Setup"
+  - button "Refresh"
+  - button "AAPL"
+  - button "MSFT"
+  - button "GOOGL"
+  - button "AMZN"
+  - button "NVDA"
+  - button "TSLA"
+  - button "META" [active] [pressed]
+  - button "JPM"
+  - paragraph: Zone 1 · Equity analysis gate
+  - generic: US session anchor
+  - generic: "Status: Conditional"
+  - generic: "Risk Context: Reduced conviction"
+  - generic: "Vol Regime: elevated"
+  - paragraph: Large Cap
+  - paragraph: Aligned
+  - paragraph: Mid Cap
+  - paragraph: Conditional
+  - paragraph: High Beta
+  - paragraph: Conditional
+  - paragraph: Earnings Risk
+  - paragraph: Review
+  - paragraph: Mixed conditions — require trend + volume confirmation.
+  - paragraph: Environment breakdown
+  - generic: Inputs
+  - text: Global Regime
+  - paragraph: neutral
+  - text: Equities Micro Regime
+  - paragraph: risk_on
+  - text: Liquidity
+  - paragraph: stable
+  - text: Adaptive Confluence
+  - paragraph: 54%
+  - generic: Asset · META • NASDAQ
+  - generic: Price · $741.25
+  - generic: 24h · +11.42%
+  - generic: Permission · Conditional
+  - generic: CRCS · 70.0
+  - generic: ΔHr · +8.00
+  - generic: Trend · Bullish
+  - generic: Momentum · Strong
+  - generic: Volatility · Normal
+  - generic: Volume · 48.32M
+  - generic: P/E · 25.07
+  - paragraph: Zone 2 · Action
+  - heading "Price + Permission Console" [level=2]
+  - button "Refresh"
+  - heading "META" [level=2]
+  - generic: NASDAQ
+  - paragraph: Meta Platforms Inc.
+  - paragraph: COMMUNICATION SERVICES • INTERNET CONTENT & INFORMATION
+  - paragraph: $741.25
+  - generic: "+75.97"
+  - generic: ▲ 11.42%
+  - paragraph: "Last updated: 2026-09-21"
+  - generic: Trend
+  - generic: UP Bullish
+  - generic: Momentum
+  - generic: STR Strong
+  - generic: Volatility
+  - generic: NORM Normal
+  - generic: Permission
+  - generic: Conditional
+  - generic: Action
+  - link "Open Scanner":
+    - /url: /tools/terminal?tab=time-confluence&symbol=META&eligibility=conditional&crcs=70.0
+  - link "Add to Watchlist":
+    - /url: /tools/workspace?tab=watchlists&symbol=META
+  - link "Create Alert":
+    - /url: /tools/workspace?tab=alerts&symbol=META
+  - link "Run Confluence Scan":
+    - /url: /tools/terminal?tab=time-confluence&symbol=META
+  - link "Open Journal Draft":
+    - /url: /tools/workspace?tab=journal&note=Review%20META%20setup
+  - paragraph: Zone 2 • Context
+  - heading "Trend / RS / Volatility Context" [level=2]
+  - paragraph: Structure Bias
+  - paragraph: "Weekly: Bullish • Daily: Bullish"
+  - paragraph: Relative Strength
+  - paragraph:
+    - text: "vs SPY:"
+    - generic: +11.42%
+    - text: "• vs Sector: proxy"
+  - paragraph: Volatility + Liquidity
+  - paragraph:
+    - text: "ATR state: elevated • RVOL proxy:"
+    - generic: 0.03x
+  - paragraph: Event Risk
+  - paragraph: "Earnings: Upcoming schedule check • News: Neutral"
+  - generic: Conditional — trend + volume confirmation indicated.
+  - generic "Zone 3 • Informational (Collapsed by Default) Expand":
+    - generic: Zone 3 • Informational (Collapsed by Default)
+    - generic: Expand
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## Common_Sectors
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Sectors"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors" [active] [pressed]
+  - button "Commodities"
+  - button "Cross-Market"
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command"
+  - button "Crypto Intel"
+  - button "Movers"
+  - table:
+    - rowgroup:
+      - row "Sector ETF Change % Weekly Monthly YTD Weight":
+        - columnheader "Sector"
+        - columnheader "ETF"
+        - columnheader "Change %"
+        - columnheader "Weekly"
+        - columnheader "Monthly"
+        - columnheader "YTD"
+        - columnheader "Weight"
+    - rowgroup:
+      - row "Technology XLK +2.89% — — — 28.0%":
+        - cell "Technology"
+        - cell "XLK"
+        - cell "+2.89%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "28.0%"
+      - row "Financials XLF +0.42% — — — 13.0%":
+        - cell "Financials"
+        - cell "XLF"
+        - cell "+0.42%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "13.0%"
+      - row "Healthcare XLV +0.75% — — — 13.0%":
+        - cell "Healthcare"
+        - cell "XLV"
+        - cell "+0.75%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "13.0%"
+      - row "Energy XLE -2.29% — — — 4.0%":
+        - cell "Energy"
+        - cell "XLE"
+        - cell "-2.29%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "4.0%"
+      - row "Consumer Discretionary XLY +1.30% — — — 10.0%":
+        - cell "Consumer Discretionary"
+        - cell "XLY"
+        - cell "+1.30%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "10.0%"
+      - row "Consumer Staples XLP -0.41% — — — 6.0%":
+        - cell "Consumer Staples"
+        - cell "XLP"
+        - cell "-0.41%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "6.0%"
+      - row "Industrials XLI +0.40% — — — 8.0%":
+        - cell "Industrials"
+        - cell "XLI"
+        - cell "+0.40%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "8.0%"
+      - row "Materials XLB -0.10% — — — 3.0%":
+        - cell "Materials"
+        - cell "XLB"
+        - cell "-0.10%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "3.0%"
+      - row "Utilities XLU -0.34% — — — 3.0%":
+        - cell "Utilities"
+        - cell "XLU"
+        - cell "-0.34%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "3.0%"
+      - row "Real Estate XLRE +0.98% — — — 3.0%":
+        - cell "Real Estate"
+        - cell "XLRE"
+        - cell "+0.98%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "3.0%"
+      - row "Communication Services XLC +3.88% — — — 9.0%":
+        - cell "Communication Services"
+        - cell "XLC"
+        - cell "+3.88%"
+        - cell "—"
+        - cell "—"
+        - cell "—"
+        - cell "9.0%"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## Common_CrossMarket
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Overview tools":
+    - generic: Overview
+    - link "Session overview":
+      - /url: /tools/command-center
+    - link "Daily Radar":
+      - /url: /tools/msp-radar
+    - link "Market dashboard":
+      - /url: /tools/dashboard
+    - link "Markets & sectors":
+      - /url: /tools/explorer
+    - link "Macro intelligence":
+      - /url: /intelligence
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Markets command header":
+    - generic: Cross-market map
+    - generic: 9 lenses
+    - generic: Tier Pro
+    - generic: Regime Range / Neutral
+    - heading "Markets." [level=1]
+    - paragraph: Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.
+    - button "Open Scanner"
+    - button "Open Golden Egg"
+    - button "Open Macro Lens"
+    - generic: Sectors leading
+    - generic "7/11 green"
+    - 'generic "Top: Communication Services"'
+    - generic: Crypto cap
+    - generic "$2.91T"
+    - generic "BTC 58.8% · ETH 11.5%"
+    - generic: Top gainer
+    - generic "GRML"
+    - generic "+230.53% (equity)"
+    - generic: Next check
+    - generic "Cross-Market"
+    - generic "Pick one lens, then drop into Scanner or Golden Egg"
+  - button "Overview"
+  - button "Sectors"
+  - button "Commodities"
+  - button "Cross-Market" [active] [pressed]
+  - button "Equity Deep-Dive"
+  - button "Crypto Deep-Dive"
+  - button "Crypto Command"
+  - button "Crypto Intel"
+  - button "Movers"
+  - heading "Cross-Market Influence Map" [level=3]
+  - generic: Known Relationships
+  - generic: DXY↑
+  - generic: Crypto & equities ↓
+  - generic: Oil↑
+  - generic: Inflation expectations ↑
+  - generic: Bond Yields↑
+  - generic: Growth stocks ↓
+  - generic: BTC.D↑
+  - generic: Altcoins ↓
+  - generic: VIXspike
+  - generic: Risk-off, equities ↓
+  - generic: Gold↑
+  - generic: Safe haven demand
+  - paragraph: Static heuristics — not live readings. Educational context only.
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## ETH_News
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Research command header":
+    - generic: Evidence layer
+    - generic: 1. Catalyst feed
+    - generic: Tier Pro
+    - heading "Research" [level=1]
+    - paragraph: News, events, catalysts, earnings, and saved evidence for validating the morning research queue.
+    - button "Open News"
+    - button "Open Calendar"
+    - link "Open Golden Egg":
+      - /url: /tools/golden-egg
+    - generic: Active Lens
+    - generic "News"
+    - generic "1. Catalyst feed"
+    - generic: News Items
+    - generic "20"
+    - generic "Filtered articles in view"
+    - generic: Saved Cases
+    - generic "0"
+    - generic "Tracked research packets"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+  - generic: Research lens
+  - generic: Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.
+  - button "News" [pressed]
+  - button "Economic Calendar"
+  - button "Earnings"
+  - button "Saved Cases"
+  - button "News Intelligence"
+  - button "Calendar Intelligence"
+  - link "OpenAI Fires Back at Apple (AAPL)":
+    - /url: https://currently.att.yahoo.com/att/openai-fires-back-apple-aapl-142906076.html
+  - generic: OpenAI has denied Apple's allegations of trade secret theft in a recent court filing, labeling the dispute a "mess of Apple's own making" and asserting employees' right to free movement between employers. This legal battle arises as OpenAI recruits former Apple employees for its hardware initiatives, while Apple diversifies its AI partnerships beyond OpenAI. The article analyzes the bull and bear cases for Apple, highlighting the impact of talent loss and potential competitive threats from OpenAI's expansion into consumer hardware.
+  - generic: Currently.com
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Why Traders Are Watching Colgate-Palmolive in dividend stocks Today?":
+    - /url: https://kalkinemedia.com/us/stocks/dividend/why-traders-are-watching-colgate-palmolive-in-dividend-stocks-today
+  - generic: "Colgate-Palmolive (NYSE: CL) is attracting trader attention today amidst rising oil costs, firming Treasury yields, and an unsettled market ahead of the Federal Reserve decision. The company, a dividend stock, is being evaluated based on its operational execution, customer demand, and how it responds to broader market shifts, including technology strength and energy sensitivity. The article highlights that company-specific performance and competitive conditions remain central to its market perception, alongside wider economic narratives."
+  - generic: Kalkine Media
+  - generic: Neutral
+  - button "Open CL in Golden Egg": CL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open AAPL in Golden Egg": AAPL
+  - link "Musk’s xAI and X Corp. settle antitrust case against Apple":
+    - /url: https://www.investing.com/news/stock-market-news/musks-xai-and-x-corp-settle-antitrust-case-against-apple-93CH-4900026
+  - generic: Elon Musk's xAI and X Corp. have settled an antitrust lawsuit against Apple Inc., agreeing to dismiss the case. The lawsuit, filed in August, accused Apple of favoring OpenAI's ChatGPT over competing chatbot makers and sought billions in damages. While the settlement with Apple is finalized, claims against OpenAI for alleged monopolistic practices in the chatbot market remain active.
+  - generic: Investing.com
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open ORCL in Golden Egg": ORCL
+  - button "Open IBM in Golden Egg": IBM
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Alphabet Class C Tokenized Stock (Ondo) price today, GOOGon to USD live price, marketcap and chart":
+    - /url: https://coinmarketcap.com/currencies/alphabet-class-c-tokenized-stock-ondo/
+  - generic: This article provides live price data, market capitalization, and performance statistics for Alphabet Class C Tokenized Stock (Ondo) (GOOGon). GOOGon, an Ondo Tokenized version of Alphabet Inc., offers tokenholders economic exposure similar to holding GOOG shares and reinvesting dividends. The platform enables non-US users to mint and redeem tokenized US stocks and ETFs 24/5 with access to traditional exchange liquidity.
+  - generic: CoinMarketCap
+  - generic: Somewhat-Bullish
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open AAPL in Golden Egg": AAPL
+  - 'link "Prediction: Apple Stock Could Be Headed for a Big Move After Yesterday’s Event"':
+    - /url: https://247wallst.com/investing/2026/09/10/prediction-apple-stock-could-be-headed-for-a-big-move-after-yesterdays-event/
+  - generic: Following Apple's fall product event, options traders are anticipating a significant stock swing, roughly three times the typical post-event movement. 24/7 Wall St. maintains a "Buy" rating for Apple with a price target of $362.61, implying a 15.07% upside, primarily driven by a predicted Siri AI upgrade cycle. However, potential bear risks include memory inflation affecting gross margins and regulatory friction for Siri AI.
+  - generic: 24/7 Wall St.
+  - generic: Somewhat-Bullish
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - link "Apple’s Foldable iPhone Could Become The ‘Birkin Of Smartphones’ In China, Analyst Says – But Others Think The Odds Are 4 To 1 Against The Company":
+    - /url: https://finance.yahoo.com/markets/stocks/articles/apple-foldable-iphone-could-become-112020129.html
+  - generic: Apple is set to unveil its first foldable iPhone, with one analyst predicting it could become a luxury status symbol in China despite a high starting price of $2,199. However, not all on Wall Street are convinced, with a Needham analyst maintaining a 'Hold' rating and expressing concerns about Apple's AI strategy and reliance on Google Gemini, estimating the odds are 4 to 1 against the company. The launch marks the first major product event under new CEO John Ternus.
+  - generic: Yahoo Finance
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open COIN in Golden Egg": COIN
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Why Apple May Be the Safest AI Stock Nobody Calls an AI Stock":
+    - /url: https://247wallst.com/investing/2026/09/07/why-apple-may-be-the-safest-ai-stock-nobody-calls-an-ai-stock/
+  - generic: Apple is presented as a strong, yet overlooked, AI investment due to its ability to deploy AI across 2.5 billion active devices without the significant capital expenditures of hyperscalers. Despite a high P/E ratio compared to competitors like Microsoft and Alphabet, Apple's superior ROE and operating margins justify its premium valuation. The article provides a bullish price target of $363.99, citing strong earnings, growing services revenue, and the upcoming Siri AI, while acknowledging risks like memory costs and supply constraints.
+  - generic: 24/7 Wall St.
+  - generic: Somewhat-Bullish
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AVGO in Golden Egg": AVGO
+  - link "What a $10,000 Investment in the Vanguard S&P 500 ETF (VOO) a Decade Ago Is Worth Today":
+    - /url: https://finance.yahoo.com/markets/stocks/articles/10-000-investment-vanguard-p-232500297.html
+  - generic: This article examines the impressive growth of a $10,000 investment in the Vanguard S&P 500 ETF (VOO) over a decade, highlighting its potential to reach over $38,000 without reinvesting dividends, and over $41,000 with reinvested dividends. It discusses Warren Buffett's endorsement of low-cost S&P 500 index funds and the strong performance of the S&P 500 compared to managed funds. The article also lists the top 10 holdings within the VOO ETF and suggests alternatives like equal-weighted S&P 500 ETFs for diversified investing.
+  - generic: Yahoo Finance
+  - generic: Somewhat-Bullish
+  - button "Open VOO in Golden Egg": VOO
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AAPL in Golden Egg": AAPL
+  - link "Jim Cramer Says Buy the Magnificent Seven Again, Traders See Nvidia as Clear Winner":
+    - /url: https://www.benzinga.com/markets/prediction-markets/26/09/61637578/jim-cramer-magnificent-seven-nvidia
+  - generic: Jim Cramer recommends buying the Magnificent Seven stocks again, citing that their significant AI investments are starting to yield stronger growth, making them more attractive. While Cramer advocates for a broader revival of these tech giants, prediction traders largely favor Nvidia to remain the world's largest company by the end of 2026, despite concerns about rising interest rates potentially impacting tech valuations. The article highlights strong revenue growth in cloud and AI segments for Amazon, Microsoft, and Alphabet, indicating that AI spending is beginning to translate into revenue.
+  - generic: Benzinga
+  - generic: Somewhat-Bullish
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open AMZN in Golden Egg": AMZN
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - 'link "Jim Cramer: Hyperscalers ''Wrecked Their Balance Sheets'', But Apple Carries Twice Alphabet''s Debt"':
+    - /url: https://247wallst.com/investing/2026/09/02/jim-cramer-hyperscalers-wrecked-their-balance-sheets-but-apple-carries-twice-alphabets-debt/
+  - generic: Jim Cramer praised Apple's "pristine" balance sheet while criticizing hyperscalers for excessive AI data center spending, but financial filings reveal Apple carries significantly more debt than Alphabet. Despite Apple's higher debt load and negative retained earnings due to extensive stock buybacks, the market rewards it with a higher P/E ratio due to its substantial liquidity. The article questions whether Apple's balance sheet will remain pristine if it significantly increases AI infrastructure spending under its new leadership.
+  - generic: 24/7 Wall St.
+  - generic: Somewhat-Bearish
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Stocks Fall on Rising Yields and Oil, With Apple the Lone Bright Spot":
+    - /url: https://finance.yahoo.com/markets/stocks/articles/stocks-fall-rising-yields-oil-170338212.html
+  - generic: On September 1, 2026, major stock indexes, including the Nasdaq Composite, Dow Jones Industrial Average, and S&P 500, experienced declines despite a 3% jump in Apple's stock. The market's downturn was primarily influenced by macroeconomic factors such as rising oil prices, intensifying conflict in Iran, and increasing 10-year Treasury yields, which hit 4.8%. Federal Reserve officials' hawkish remarks about potential rate hikes further fueled investor concerns, shifting focus to Friday's upcoming jobs report for market direction.
+  - generic: Yahoo Finance
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOG in Golden Egg": GOOG
+  - link "JAB Acquisition Corp. I Rights - For Shares (ATLQR) Earnings Report Date & History":
+    - /url: https://coincodex.com/stock/ATLQR/earnings/
+  - generic: The article provides information on JAB Acquisition Corp. I Rights - For Shares (ATLQR), focusing on its earnings report date and history. It states that earnings history information for ATLQR is currently unavailable, suggesting either no prior disclosure or a pending earnings statement. The piece also includes current trading data for ATLQR and lists other popular stocks.
+  - generic: CoinCodex
+  - generic: Neutral
+  - button "Open ATLQR in Golden Egg": ATLQR
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - link "Can Apple Inc. (NASDAQ:AAPL) Keep Its Steady Hand As Big Tech Leads Markets Higher?":
+    - /url: https://kalkinemedia.com/us/stocks/bluechip/can-apple-inc-nasdaqaapl-keep-its-steady-hand-as-big-tech-leads-markets-higher
+  - generic: Apple Inc. (NASDAQ:AAPL) is maintaining its strong position in the market as big tech continues to drive overall market growth. The company's integrated ecosystem of hardware, software, and services, combined with its strategic integration of AI into devices, contributes to its steadiness and appeal among blue-chip stocks. As rate-cut expectations firm up, large, dependable earners like Apple are expected to strengthen further.
+  - generic: Kalkine Media
+  - generic: Bullish
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open MSFT in Golden Egg": MSFT
+  - link "Apple Just Became Wall Street’s Favorite Mag 7 Stock for a Surprising Reason":
+    - /url: https://247wallst.com/investing/2026/08/24/apple-just-became-wall-streets-favorite-mag-7-stock-for-a-surprising-reason/
+  - generic: Apple has emerged as Wall Street's preferred Magnificent 7 stock due to its capital efficiency, spending significantly less on AI infrastructure compared to peers like Alphabet and Microsoft. Despite facing memory cost pressures, Apple's strong iPhone sales, reimagined Siri, and record Services revenue have contributed to a "BUY" rating and a price target of $361.66 from 24/7 Wall St., implying a 17% upside. This valuation is bolstered by its high return on equity and positive free cash flow, contrasting with competitors burdened by massive AI-related capital expenditures.
+  - generic: 24/7 Wall St.
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open AVGO in Golden Egg": AVGO
+  - link "The Zacks Analyst Blog Highlights Apple, Alphabet, Microsoft and Amazon":
+    - /url: https://www.theglobeandmail.com/investing/markets/stocks/AAPL/pressreleases/3998884/the-zacks-analyst-blog-highlights-apple-alphabet-microsoft-and-amazon/
+  - generic: "The Zacks Analyst Blog features an analysis of Apple (AAPL) stock, comparing its valuation and performance against Alphabet (GOOGL), Microsoft (MSFT), and Amazon (AMZN). While Apple shows strong iPhone sales, growing services revenue, and promising AI developments, its high P/E ratio suggests it might be overvalued. The article concludes that despite positive long-term prospects, Apple currently holds a Zacks Rank #3 (Hold) due to its premium valuation."
+  - generic: The Globe and Mail
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open AMZN in Golden Egg": AMZN
+  - link "The Zacks Analyst Blog Highlights Apple, Alphabet, Microsoft and Amazon":
+    - /url: https://www.theglobeandmail.com/investing/markets/stocks/AMZN/pressreleases/3998884/the-zacks-analyst-blog-highlights-apple-alphabet-microsoft-and-amazon/
+  - generic: This Zacks Analyst Blog examines whether Apple's stock, with its 33.54x P/E ratio, is still a worthwhile investment compared to competitors like Alphabet, Microsoft, and Amazon. Despite Apple's strong iPhone sales and AI prospects, it faces significant challenges such as supply chain constraints, foreign exchange headwinds, and stiff competition. The article concludes that while Apple's long-term prospects are strong, its current premium valuation suggests investors might want to wait for a better entry point.
+  - generic: The Globe and Mail
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open AMZN in Golden Egg": AMZN
+  - link "The Zacks Analyst Blog Highlights Apple, Alphabet, Microsoft and Amazon":
+    - /url: https://www.theglobeandmail.com/investing/markets/stocks/MSFT/pressreleases/3998884/the-zacks-analyst-blog-highlights-apple-alphabet-microsoft-and-amazon/
+  - generic: This Zacks Analyst Blog highlights Apple, Alphabet, Microsoft, and Amazon, focusing on Apple's stock valuation and performance. It discusses Apple's strengths, including strong iPhone sales and improving AI prospects, against challenges like supply chain constraints and competition. Despite a positive earnings outlook, Apple's current valuation suggests it might be overvalued compared to peers and the broader sector.
+  - generic: The Globe and Mail
+  - generic: Neutral
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open AMZN in Golden Egg": AMZN
+  - link "How Big Tech Captured American Schools":
+    - /url: https://www.nytimes.com/2026/08/23/business/schools-big-tech-google-microsoft.html
+  - generic: Big Tech companies like Google and Microsoft have significantly influenced American education through funding, curriculum development, and teacher training, often promoting their products and worldviews. This influence has led to concerns about corporate agendas shaping public schooling, with critics arguing that schools are becoming avenues for these multi-trillion-dollar companies to advance their interests, despite claims of filling gaps left by the public sector. While early adoption of tech in classrooms, like Chromebooks and coding initiatives, was widespread, there is growing pushback from parents and educators who question the educational benefits and ethical implications of this deep corporate involvement, especially with the rise of AI.
+  - generic: The New York Times
+  - generic: Neutral
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open GOOGL in Golden Egg": GOOGL
+  - button "Open GOOG in Golden Egg": GOOG
+  - button "Open AAPL in Golden Egg": AAPL
+  - link "Creative Financial Designs Inc. ADV Buys 2,696 Shares of Invesco QQQ $QQQ":
+    - /url: https://www.marketbeat.com/instant-alerts/filing-creative-financial-designs-inc-adv-buys-2696-shares-of-invesco-qqq-qqq-2026-08-24/
+  - generic: Creative Financial Designs Inc. ADV increased its stake in Invesco QQQ (NASDAQ:QQQ) by 12.5% in the second quarter, purchasing 2,696 additional shares to hold a total of 24,254 shares valued at $17.9 million. The Invesco QQQ fund recently raised its quarterly dividend to $0.8135, resulting in an annualized payout of $3.25 and a 0.5% yield. The article also notes that institutional investors own 44.58% of the fund and discusses various market sentiments impacting QQQ.
+  - generic: MarketBeat
+  - generic: Somewhat-Bullish
+  - button "Open IVZ in Golden Egg": IVZ
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open NVDA in Golden Egg": NVDA
+  - link "Whittier Trust Co. of Nevada Inc. Sells 2,278 Shares of Invesco QQQ $QQQ":
+    - /url: https://www.marketbeat.com/instant-alerts/filing-whittier-trust-co-of-nevada-inc-sells-2278-shares-of-invesco-qqq-qqq-2026-08-23/
+  - generic: Whittier Trust Co. of Nevada Inc. reduced its stake in Invesco QQQ (NASDAQ:QQQ) by 3.6% in the second quarter, selling 2,278 shares and now holding 61,443 shares valued at $43.59 million. The Invesco QQQ fund recently increased its quarterly dividend to $0.8135, resulting in a 0.5% annualized yield. The article also details other institutional investor activity in QQQ and highlights current market sentiment and factors influencing the ETF, including technology exposure, interest rates, and credit risks.
+  - generic: MarketBeat
+  - generic: Somewhat-Bullish
+  - button "Open IVZ in Golden Egg": IVZ
+  - button "Open AAPL in Golden Egg": AAPL
+  - button "Open MSFT in Golden Egg": MSFT
+  - button "Open NVDA in Golden Egg": NVDA
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## Common_NewsIntel
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Research command header":
+    - generic: Evidence layer
+    - generic: 5. News intelligence
+    - generic: Tier Pro
+    - heading "Research" [level=1]
+    - paragraph: News, events, catalysts, earnings, and saved evidence for validating the morning research queue.
+    - button "Open News"
+    - button "Open Calendar"
+    - link "Open Golden Egg":
+      - /url: /tools/golden-egg
+    - generic: Active Lens
+    - generic "News Intelligence"
+    - generic "5. News intelligence"
+    - generic: News Items
+    - generic "20"
+    - generic "Filtered articles in view"
+    - generic: Saved Cases
+    - generic "0"
+    - generic "Tracked research packets"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+  - generic: Research lens
+  - generic: Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.
+  - button "News"
+  - button "Economic Calendar"
+  - button "Earnings"
+  - button "Saved Cases"
+  - button "News Intelligence" [active] [pressed]
+  - button "Calendar Intelligence"
+  - main:
+    - button "News & Sentiment"
+    - button "Earnings Calendar"
+    - article:
+      - generic: News Review Gate
+      - generic: "REVIEW:"
+      - generic: BLOCKED
+      - paragraph: High-impact macro catalysts and event-shock language elevate scenario risk.
+      - generic: "Mode: Observation"
+      - generic: "Risk State: Unavailable"
+      - generic: "Vol Regime: Unavailable"
+      - generic: "Catalyst Density: Unavailable"
+      - generic: "Narrative Strength: Unavailable"
+      - generic: "Research Mode: Observation"
+      - generic: • Treat T-15/T+15 around high-impact prints as elevated uncertainty.
+      - generic: • Risk-Off plus Expansion means the scenario needs stronger evidence.
+      - generic: • Dominant narrative plus improving sentiment can support trend context.
+    - article:
+      - generic: Top Narrative
+      - generic: No news from the last 24 hours
+      - generic: Confluence
+      - generic: Unavailable
+      - generic: Equities
+      - generic: Rates
+      - generic: USD
+      - generic: Crypto
+    - article:
+      - generic: Sentiment
+      - generic: Unavailable
+      - generic: Sentiment unavailable
+    - article:
+      - generic: Vol Warning
+      - generic: Unavailable
+      - generic: No current news evidence. Older articles remain in the archive below.
+    - article:
+      - generic: Rotation
+      - generic: No clear leader
+      - generic: Theme leadership flow
+    - article:
+      - generic: Event Risk
+      - generic: SNB Policy Rate Decision
+      - generic: Unavailable • ET
+    - textbox "Search news":
+      - /placeholder: Search symbol/topic (AAPL, inflation, BTC...)
+    - button "ALL"
+    - button "HIGH IMPACT"
+    - button "EARNINGS"
+    - button "MACRO"
+    - button "CRYPTO"
+    - button "GEOPOLITICS"
+    - button "AI"
+    - button "COMMODITIES"
+    - combobox:
+      - option "Most Relevant" [selected]
+      - option "Newest"
+      - option "Highest Impact"
+      - option "Most Mentioned"
+    - checkbox "Hide Low Quality" [checked]
+    - text: Hide Low Quality
+    - checkbox "Group by Narrative" [checked]
+    - text: Group by Narrative
+    - button "Find News Evidence"
+    - article:
+      - generic: Narrative Stack
+      - generic: Top 3 Drivers
+    - article:
+      - generic: Rotation Board
+      - generic: Flow Map
+      - generic: Leading Themes
+      - generic: No leader
+      - generic: Lagging Themes
+      - generic: No laggards
+      - generic: Newly Emerging
+      - generic: Monitor incoming shifts
+    - article:
+      - generic: Watchlist Triggers
+      - generic: "• If status is NO: observation mode only."
+      - generic: "• If Event Shock: defined risk only."
+      - generic: • Track leaders before lower-quality laggards.
+      - button "Create Alert"
+      - button "Add to Watchlist"
+    - generic: Daily Brief
+    - generic: "• Bias: Unavailable with narrative No news from the last 24 hours."
+    - generic: "• Rotation: No clear flow."
+    - generic: "• Volatility Warning: Unavailable (No current news evidence. Older articles remain in the archive below.)."
+    - generic: "Scenario Notes:"
+    - generic: • Refresh current sources
+    - generic: "Avoid:"
+    - generic: • Inferring current conditions from archived headlines
+    - generic: "1. **Overall Sentiment**: The news sentiment is predominantly bullish, with 48% bullish articles compared to only 4% bearish, while 48% remain neutral. This suggests a generally positive outlook for AAPL, MSFT, and GOOGL. 2. **Key Themes**: - **AI Integration and Market Position**: Articles highlight Apple's strong position in AI, leveraging its vast user base for deployment, which could enhance its competitive edge. - **Product Innovations**: The anticipation surrounding Apple's foldable iPhone indicates potential for market excitement and sales growth, especially in luxury markets like China. - **Market Resilience**: Apple's performance is often cited as a stabilizing factor amid broader market volatility, reinforcing its status as a safe investment. 3. **Notable Events**: - **Apple's Recent Product Event**: Analysts predict significant stock movement following the product announcements, suggesting traders should be prepared for volatility in the near term. - **Settlement of Antitrust Case**: The resolution with Musk's xAI may alleviate regulatory concerns, potentially boosting investor confidence. 4. **Market Impact**: The bullish sentiment and product innovation could drive upward momentum in AAPL stock. Anticipated volatility following the product event may present trading opportunities, especially for options traders. 5. **Risk Factors**: The bearish sentiment from Jim Cramer's analysis regarding Apple's debt relative to its peers could raise caution among investors. Additionally, ongoing market pressures, such as rising yields and oil prices, may impact overall market conditions and stock valuations."
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## Common_CalendarIntel
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Research command header":
+    - generic: Evidence layer
+    - generic: 6. Calendar intelligence
+    - generic: Tier Pro
+    - heading "Research" [level=1]
+    - paragraph: News, events, catalysts, earnings, and saved evidence for validating the morning research queue.
+    - button "Open News"
+    - button "Open Calendar"
+    - link "Open Golden Egg":
+      - /url: /tools/golden-egg
+    - generic: Active Lens
+    - generic "Calendar Intelligence"
+    - generic "6. Calendar intelligence"
+    - generic: News Items
+    - generic "20"
+    - generic "Filtered articles in view"
+    - generic: Saved Cases
+    - generic "0"
+    - generic "Tracked research packets"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+  - generic: Research lens
+  - generic: Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.
+  - button "News"
+  - button "Economic Calendar"
+  - button "Earnings"
+  - button "Saved Cases"
+  - button "News Intelligence"
+  - button "Calendar Intelligence" [active] [pressed]
+  - main:
+    - article:
+      - heading "Macro Analysis Gate" [level=2]
+      - generic: "REVIEW: CAUTION"
+      - paragraph: Live calendar provider is not configured. Curated schedule context may be useful, but the macro gate cannot be treated as fully validated.
+      - generic: "Risk State: Risk-On"
+      - generic: "Volatility Risk: Compression"
+      - generic: "Liquidity Window: Stable"
+      - generic: "Catalyst Density: Low"
+      - generic: "Research Mode: Trend review"
+      - list:
+        - listitem: • Treat the T-30 → T+30 window around any high-impact release (any country) as elevated uncertainty.
+        - listitem: • Compare leaders against breadth before relying on a scenario.
+        - listitem: • Require post-window confirmation when event shock risk is active.
+    - article:
+      - heading "Next Major Event Countdown" [level=3]
+      - paragraph: "Scope: Global — earliest high-impact release across enabled markets"
+      - paragraph: Next global event
+      - paragraph:
+        - text: 🇨🇭 CB SNB Policy Rate Decision
+        - generic: (Sep 2026)
+      - paragraph: Switzerland • 09:30 CEST • 17:30 your time
+      - generic: High Impact
+      - generic: 2d 4h
+      - generic: MISSING
+      - generic: Timing CONFIRMED
+      - paragraph: "Danger window: T-30 → T+30"
+      - paragraph: Next market-relevant event • SPX / NQ / USD
+      - paragraph:
+        - text: 🇯🇵 CPI Tokyo CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: Japan • ~08:30 JST • 2d 20h
+      - paragraph: Relevance 50/100 — catalyst attention only, not a directional view.
+      - group "Focus assets":
+        - generic: Focus
+        - button "NQ" [pressed]
+        - button "SPX" [pressed]
+        - button "BTC"
+        - button "ETH"
+        - button "Gold"
+        - button "USD" [pressed]
+        - button "JPY"
+        - button "EUR"
+        - button "GBP"
+        - button "AUD"
+        - button "CAD"
+    - generic: "Source: Curated official-schedule seed (no live provider configured)"
+    - generic: "Provider: NOT_CONFIGURED"
+    - generic: "Seed coverage: 128d"
+    - generic: "Generated: 22/09/2026, 12:34:57 pm"
+    - generic: "Times: UTC internally; shown in your zone (Australia/Sydney)"
+    - generic: LIVE 0
+    - generic: DELAYED 0
+    - generic: STALE 0
+    - generic: MISSING 8
+    - generic: UNCONFIRMED 60
+    - heading "BoJ Sensitivity Context" [level=3]: 🇯🇵 BoJ Sensitivity Context
+    - generic: UNCONFIRMED
+    - generic: "Lean: UNKNOWN"
+    - generic: "Inflation trend: UNKNOWN"
+    - generic: Tokyo CPI
+    - generic: LEADING INFLATION SIGNAL
+    - generic: Tokyo Core CPI YoY (ex-fresh food) (Sep 2026)
+    - generic: "A: -- • F: -- • P: --"
+    - generic: Upcoming • UNCONFIRMED
+    - generic: National CPI
+    - generic: Not in loaded window.
+    - generic: Wages
+    - generic: Labor Cash Earnings YoY (Aug 2026)
+    - generic: "A: -- • F: -- • P: --"
+    - generic: Upcoming • UNCONFIRMED
+    - text: Next BoJ decision
+    - generic: None in loaded window.
+    - list:
+      - listitem: "• Tokyo CPI: next release 08:30 JST, unconfirmed timing."
+      - listitem: • Tokyo CPI leads the national print by roughly three weeks; treat it as the leading inflation signal.
+      - listitem: • No released actuals in the loaded window; BoJ lean cannot be inferred from inflation data alone.
+    - generic: US Session Timeline (ET) — all enabled markets plotted at their ET release time
+    - generic: "Today (ET): 0 events"
+    - generic "Pre-market"
+    - generic "Open"
+    - generic "Midday"
+    - generic "Power Hour"
+    - generic "Close"
+    - generic: Pre-market
+    - generic: Open
+    - generic: Midday
+    - generic: Power hour
+    - generic: Close
+    - generic: Country / region
+    - group "Country filter":
+      - button "GLOBAL" [pressed]:
+        - generic: GLOBAL
+      - button "US":
+        - generic: 🇺🇸
+        - generic: US
+      - button "JP":
+        - generic: 🇯🇵
+        - generic: JP
+      - button "EU":
+        - generic: 🇪🇺
+        - generic: EU
+      - button "UK":
+        - generic: 🇬🇧
+        - generic: UK
+      - button "AU":
+        - generic: 🇦🇺
+        - generic: AU
+      - button "CA":
+        - generic: 🇨🇦
+        - generic: CA
+      - button "CN":
+        - generic: 🇨🇳
+        - generic: CN
+      - button "NZ":
+        - generic: 🇳🇿
+        - generic: NZ
+      - button "CH":
+        - generic: 🇨🇭
+        - generic: CH
+      - button "KR":
+        - generic: 🇰🇷
+        - generic: KR
+      - button "IN":
+        - generic: 🇮🇳
+        - generic: IN
+    - button "All Impact"
+    - button "High Impact"
+    - button "Medium Impact"
+    - button "Low Impact"
+    - button "JOBS employment":
+      - generic: JOBS
+      - generic: employment
+    - button "CPI inflation":
+      - generic: CPI
+      - generic: inflation
+    - button "CB central bank":
+      - generic: CB
+      - generic: central bank
+    - button "GDP gdp":
+      - generic: GDP
+      - generic: gdp
+    - button "PMI pmi":
+      - generic: PMI
+      - generic: pmi
+    - button "CONS consumer":
+      - generic: CONS
+      - generic: consumer
+    - button "MFG manufacturing":
+      - generic: MFG
+      - generic: manufacturing
+    - button "WAGE wages":
+      - generic: WAGE
+      - generic: wages
+    - checkbox "Hide Low Impact" [checked]
+    - text: Hide Low Impact
+    - group "Time display":
+      - button "My time" [pressed]
+      - button "Release local"
+      - button "ET"
+    - article:
+      - generic: "68"
+      - generic: Total Events
+      - generic: Risk manageable
+    - article:
+      - generic: "35"
+      - generic: High Impact
+      - generic: Risk manageable
+    - article:
+      - generic: "7"
+      - generic: Central Bank
+      - generic: Risk manageable
+    - article:
+      - generic: "31"
+      - generic: Inflation
+      - generic: Risk manageable
+    - article:
+      - heading "Tue, Sep 22" [level=3]
+      - paragraph: 0 high impact / 1 total
+      - generic: "Density: Low"
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-09-22T12:30:00.000Z": ~22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CONS Retail Sales MoM
+        - generic: (Jul 2026)
+      - paragraph: Canada • consumer • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Wed, Sep 23" [level=3]
+      - paragraph: 0 high impact / 3 total
+      - generic: "Density: Medium"
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-09-23T08:00:00.000Z": ~18:00
+      - generic: 10:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: PMI HCOB Composite PMI Flash
+        - generic: (Sep 2026)
+      - paragraph: Eurozone • pmi • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.pmi.spglobal.com/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-09-23T08:00:00.000Z": ~18:00
+      - generic: 10:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: PMI HCOB Manufacturing PMI Flash
+        - generic: (Sep 2026)
+      - paragraph: Eurozone • pmi • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.pmi.spglobal.com/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-09-23T08:30:00.000Z": ~18:30
+      - generic: 09:30 BST local
+      - text: PRE
+      - paragraph:
+        - text: PMI S&P Global/CIPS Manufacturing PMI Flash
+        - generic: (Sep 2026)
+      - paragraph: United Kingdom • pmi • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.pmi.spglobal.com/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Thu, Sep 24" [level=3]
+      - paragraph: 1 high impact / 3 total
+      - generic: "Density: Medium"
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-09-24T00:30:00.000Z": ~10:30
+      - generic: 09:30 JST local
+      - text: AH
+      - paragraph:
+        - text: PMI au Jibun Bank Manufacturing PMI Flash
+        - generic: (Sep 2026)
+      - paragraph: Japan • pmi • JPY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.pmi.spglobal.com/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇭
+      - generic: CH
+      - generic "UTC 2026-09-24T07:30:00.000Z": 17:30
+      - generic: 09:30 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CB SNB Policy Rate Decision
+        - generic: (Sep 2026)
+      - paragraph: Switzerland • central bank • CHF
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.snb.ch/en/the-snb/mandates-goals/monetary-policy/monetary-policy-assessments
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-09-24T12:30:00.000Z": 22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: GDP GDP Growth Rate QoQ (Final)
+        - generic: (Q2 2026)
+      - paragraph: United States • gdp • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bea.gov/news/schedule
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Fri, Sep 25" [level=3]
+      - paragraph: 5 high impact / 6 total
+      - generic: "Density: High"
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-09-24T23:30:00.000Z": ~09:30
+      - generic: 08:30 JST local
+      - text: AH
+      - paragraph:
+        - text: CPI Tokyo CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: Japan • inflation • JPY
+      - generic: LEADING INFLATION SIGNAL
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stat.go.jp/english/data/cpi/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-09-24T23:30:00.000Z": ~09:30
+      - generic: 08:30 JST local
+      - text: AH
+      - paragraph:
+        - text: CPI Tokyo Core CPI YoY (ex-fresh food)
+        - generic: (Sep 2026)
+      - paragraph: Japan • inflation • JPY
+      - generic: LEADING INFLATION SIGNAL
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stat.go.jp/english/data/cpi/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-09-24T23:30:00.000Z": ~09:30
+      - generic: 08:30 JST local
+      - text: AH
+      - paragraph:
+        - text: CPI Tokyo Core-Core CPI YoY (ex-fresh food & energy)
+        - generic: (Sep 2026)
+      - paragraph: Japan • inflation • JPY
+      - generic: LEADING INFLATION SIGNAL
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stat.go.jp/english/data/cpi/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-09-25T12:30:00.000Z": ~22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI PCE Price Index YoY
+        - generic: (Aug 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bea.gov/news/schedule
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-09-25T12:30:00.000Z": ~22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core PCE Price Index YoY
+        - generic: (Aug 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bea.gov/news/schedule
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-09-25T12:30:00.000Z": ~22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core PCE Price Index MoM
+        - generic: (Aug 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bea.gov/news/schedule
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Tue, Sep 29" [level=3]
+      - paragraph: 1 high impact / 3 total
+      - generic: "Density: Medium"
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-09-28T23:30:00.000Z": ~09:30
+      - generic: 08:30 JST local
+      - text: AH
+      - paragraph:
+        - text: JOBS Unemployment Rate
+        - generic: (Aug 2026)
+      - paragraph: Japan • employment • JPY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → DOVISH • Below F → HAWKISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stat.go.jp/english/data/cpi/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-09-28T23:50:00.000Z": ~09:50
+      - generic: 08:50 JST local
+      - text: AH
+      - paragraph:
+        - text: CONS Retail Sales YoY
+        - generic: (Aug 2026)
+      - paragraph: Japan • consumer • JPY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.meti.go.jp/english/statistics/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇦🇺
+      - generic: AU
+      - generic "UTC 2026-09-29T04:30:00.000Z": ~14:30
+      - generic: 14:30 AEST local
+      - text: PRE
+      - paragraph:
+        - text: CB RBA Interest Rate Decision
+        - generic: (Sep 2026)
+      - paragraph: Australia • central bank • AUD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.rba.gov.au/schedules-events/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Wed, Sep 30" [level=3]
+      - paragraph: 4 high impact / 6 total
+      - generic: "Density: High"
+      - generic: 🇦🇺
+      - generic: AU
+      - generic "UTC 2026-09-30T01:30:00.000Z": ~11:30
+      - generic: 11:30 AEST local
+      - text: AH
+      - paragraph:
+        - text: CPI Monthly CPI Indicator YoY
+        - generic: (Aug 2026)
+      - paragraph: Australia • inflation • AUD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.abs.gov.au/release-calendar/future-releases
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-09-30T01:30:00.000Z": ~11:30
+      - generic: 09:30 CST local
+      - text: AH
+      - paragraph:
+        - text: PMI NBS Manufacturing PMI
+        - generic: (Sep 2026)
+      - paragraph: China • pmi • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-09-30T01:45:00.000Z": ~11:45
+      - generic: 09:45 CST local
+      - text: AH
+      - paragraph:
+        - text: PMI Caixin Manufacturing PMI
+        - generic: (Sep 2026)
+      - paragraph: China • pmi • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.pmi.spglobal.com/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-09-30T09:00:00.000Z": ~19:00
+      - generic: 11:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CPI HICP Flash YoY
+        - generic: (Sep 2026)
+      - paragraph: Eurozone • inflation • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://ec.europa.eu/eurostat/web/main/news/release-calendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-09-30T09:00:00.000Z": ~19:00
+      - generic: 11:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core HICP Flash YoY
+        - generic: (Sep 2026)
+      - paragraph: Eurozone • inflation • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://ec.europa.eu/eurostat/web/main/news/release-calendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-09-30T12:30:00.000Z": ~22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: GDP GDP MoM
+        - generic: (Jul 2026)
+      - paragraph: Canada • gdp • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Thu, Oct 1" [level=3]
+      - paragraph: 0 high impact / 3 total
+      - generic: "Density: Medium"
+      - generic: 🇮🇳
+      - generic: IN
+      - generic "UTC 2026-10-01T04:30:00.000Z": ~14:30
+      - generic: 10:00 IST local
+      - text: PRE
+      - paragraph:
+        - text: CB RBI Repo Rate Decision
+        - generic: (Oct 2026)
+      - paragraph: India • central bank • INR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.rbi.org.in/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇭
+      - generic: CH
+      - generic "UTC 2026-10-01T06:30:00.000Z": ~16:30
+      - generic: 08:30 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: Switzerland • inflation • CHF
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bfs.admin.ch/bfs/en/home/statistics/prices.html
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-10-01T09:00:00.000Z": ~19:00
+      - generic: 11:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: JOBS Unemployment Rate
+        - generic: (Aug 2026)
+      - paragraph: Eurozone • employment • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → DOVISH • Below F → HAWKISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://ec.europa.eu/eurostat/web/main/news/release-calendar
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Fri, Oct 2" [level=3]
+      - paragraph: 3 high impact / 4 total
+      - generic: "Density: High"
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-01T14:00:00.000Z": ~00:00
+      - generic: 10:00 EDT local
+      - text: RTH
+      - paragraph:
+        - text: MFG ISM Manufacturing PMI
+        - generic: (Sep 2026)
+      - paragraph: United States • manufacturing • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇦🇺
+      - generic: AU
+      - generic "UTC 2026-10-02T01:30:00.000Z": ~11:30
+      - generic: 11:30 AEST local
+      - text: AH
+      - paragraph:
+        - text: CONS Monthly Household Spending Indicator MoM
+        - generic: (Aug 2026)
+      - paragraph: Australia • consumer • AUD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.abs.gov.au/release-calendar/future-releases
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-02T12:30:00.000Z": 22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: JOBS Non-Farm Payrolls
+        - generic: (Sep 2026)
+      - paragraph: United States • employment • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bls.gov/schedule/news_release/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-02T12:30:00.000Z": 22:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: JOBS Unemployment Rate
+        - generic: (Sep 2026)
+      - paragraph: United States • employment • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → DOVISH • Below F → HAWKISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bls.gov/schedule/news_release/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Tue, Oct 6" [level=3]
+      - paragraph: 1 high impact / 3 total
+      - generic: "Density: Medium"
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-05T14:00:00.000Z": ~01:00
+      - generic: 10:00 EDT local
+      - text: RTH
+      - paragraph:
+        - text: PMI ISM Services PMI
+        - generic: (Sep 2026)
+      - paragraph: United States • pmi • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇰🇷
+      - generic: KR
+      - generic "UTC 2026-10-05T23:00:00.000Z": ~10:00
+      - generic: 08:00 KST local
+      - text: AH
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: South Korea • inflation • KRW
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://kostat.go.kr/anse/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-10-06T09:00:00.000Z": ~20:00
+      - generic: 11:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CONS Retail Sales MoM
+        - generic: (Aug 2026)
+      - paragraph: Eurozone • consumer • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://ec.europa.eu/eurostat/web/main/news/release-calendar
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Wed, Oct 7" [level=3]
+      - paragraph: 1 high impact / 2 total
+      - generic: "Density: Low"
+      - generic: 🇯🇵
+      - generic: JP
+      - generic "UTC 2026-10-06T23:30:00.000Z": ~10:30
+      - generic: 08:30 JST local
+      - text: AH
+      - paragraph:
+        - text: WAGE Labor Cash Earnings YoY
+        - generic: (Aug 2026)
+      - paragraph: Japan • wages • JPY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.mhlw.go.jp/english/database/db-l/monthly-labour.html
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇳🇿
+      - generic: NZ
+      - generic "UTC 2026-10-07T01:00:00.000Z": ~12:00
+      - generic: 14:00 NZDT local
+      - text: AH
+      - paragraph:
+        - text: CB RBNZ Official Cash Rate Decision
+        - generic: (Oct 2026)
+      - paragraph: New Zealand • central bank • NZD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.rbnz.govt.nz/monetary-policy/about-monetary-policy/monetary-policy-dates
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Fri, Oct 9" [level=3]
+      - paragraph: 2 high impact / 2 total
+      - generic: "Density: High"
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-10-09T12:30:00.000Z": ~23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: JOBS Employment Change
+        - generic: (Sep 2026)
+      - paragraph: Canada • employment • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-10-09T12:30:00.000Z": ~23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: JOBS Unemployment Rate
+        - generic: (Sep 2026)
+      - paragraph: Canada • employment • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → DOVISH • Below F → HAWKISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Mon, Oct 12" [level=3]
+      - paragraph: 0 high impact / 1 total
+      - generic: "Density: Low"
+      - generic: 🇮🇳
+      - generic: IN
+      - generic "UTC 2026-10-12T12:00:00.000Z": ~23:00
+      - generic: 17:30 IST local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: India • inflation • INR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.mospi.gov.in/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Tue, Oct 13" [level=3]
+      - paragraph: 5 high impact / 6 total
+      - generic: "Density: High"
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-13T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: WAGE Average Earnings incl. Bonus (3m/YoY)
+        - generic: (Aug 2026)
+      - paragraph: United Kingdom • wages • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-13T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: JOBS Unemployment Rate (ILO)
+        - generic: (Aug 2026)
+      - paragraph: United Kingdom • employment • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → DOVISH • Below F → HAWKISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-13T12:30:00.000Z": 23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bls.gov/schedule/news_release/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-13T12:30:00.000Z": 23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI MoM
+        - generic: (Sep 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bls.gov/schedule/news_release/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-13T12:30:00.000Z": 23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bls.gov/schedule/news_release/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-13T12:30:00.000Z": 23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core CPI MoM
+        - generic: (Sep 2026)
+      - paragraph: United States • inflation • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Consensus not available for this release.": MISSING
+      - 'generic "Source authority: OFFICIAL • confidence HIGH"': CONFIRMED • OFFICIAL
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bls.gov/schedule/news_release/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Thu, Oct 15" [level=3]
+      - paragraph: 4 high impact / 7 total
+      - generic: "Density: High"
+      - generic: 🇦🇺
+      - generic: AU
+      - generic "UTC 2026-10-15T00:30:00.000Z": ~11:30
+      - generic: 11:30 AEDT local
+      - text: AH
+      - paragraph:
+        - text: JOBS Employment Change
+        - generic: (Sep 2026)
+      - paragraph: Australia • employment • AUD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.abs.gov.au/release-calendar/future-releases
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇦🇺
+      - generic: AU
+      - generic "UTC 2026-10-15T00:30:00.000Z": ~11:30
+      - generic: 11:30 AEDT local
+      - text: AH
+      - paragraph:
+        - text: JOBS Unemployment Rate
+        - generic: (Sep 2026)
+      - paragraph: Australia • employment • AUD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → DOVISH • Below F → HAWKISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.abs.gov.au/release-calendar/future-releases
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-15T01:30:00.000Z": ~12:30
+      - generic: 09:30 CST local
+      - text: AH
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: China • inflation • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-15T01:30:00.000Z": ~12:30
+      - generic: 09:30 CST local
+      - text: AH
+      - paragraph:
+        - text: CPI PPI YoY
+        - generic: (Sep 2026)
+      - paragraph: China • inflation • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-15T01:30:00.000Z": ~12:30
+      - generic: 09:30 CST local
+      - text: AH
+      - paragraph:
+        - text: CPI CPI MoM
+        - generic: (Sep 2026)
+      - paragraph: China • inflation • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-15T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: GDP GDP MoM
+        - generic: (Aug 2026)
+      - paragraph: United Kingdom • gdp • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇺🇸
+      - generic: US
+      - generic "UTC 2026-10-15T12:30:00.000Z": ~23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CONS Retail Sales MoM
+        - generic: (Sep 2026)
+      - paragraph: United States • consumer • USD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.census.gov/retail/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Fri, Oct 16" [level=3]
+      - paragraph: 0 high impact / 2 total
+      - generic: "Density: Low"
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-10-16T09:00:00.000Z": ~20:00
+      - generic: 11:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CPI HICP Final YoY
+        - generic: (Sep 2026)
+      - paragraph: Eurozone • inflation • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://ec.europa.eu/eurostat/web/main/news/release-calendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇪🇺
+      - generic: EU
+      - generic "UTC 2026-10-16T09:00:00.000Z": ~20:00
+      - generic: 11:00 CEST local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core HICP Final YoY
+        - generic: (Sep 2026)
+      - paragraph: Eurozone • inflation • EUR
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://ec.europa.eu/eurostat/web/main/news/release-calendar
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Mon, Oct 19" [level=3]
+      - paragraph: 1 high impact / 3 total
+      - generic: "Density: Medium"
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-19T02:00:00.000Z": ~13:00
+      - generic: 10:00 CST local
+      - text: AH
+      - paragraph:
+        - text: GDP GDP Growth Rate YoY
+        - generic: (Q3 2026)
+      - paragraph: China • gdp • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-19T02:00:00.000Z": ~13:00
+      - generic: 10:00 CST local
+      - text: AH
+      - paragraph:
+        - text: CONS Retail Sales YoY
+        - generic: (Sep 2026)
+      - paragraph: China • consumer • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-19T02:00:00.000Z": ~13:00
+      - generic: 10:00 CST local
+      - text: AH
+      - paragraph:
+        - text: MFG Industrial Production YoY
+        - generic: (Sep 2026)
+      - paragraph: China • manufacturing • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.gov.cn/english/PressRelease/
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Tue, Oct 20" [level=3]
+      - paragraph: 4 high impact / 8 total
+      - generic: "Density: High"
+      - generic: 🇳🇿
+      - generic: NZ
+      - generic "UTC 2026-10-19T21:45:00.000Z": ~08:45
+      - generic: 10:45 NZDT local
+      - text: AH
+      - paragraph:
+        - text: CPI CPI QoQ
+        - generic: (Q3 2026)
+      - paragraph: New Zealand • inflation • NZD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.govt.nz/release-calendar/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇳🇿
+      - generic: NZ
+      - generic "UTC 2026-10-19T21:45:00.000Z": ~08:45
+      - generic: 10:45 NZDT local
+      - text: AH
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Q3 2026)
+      - paragraph: New Zealand • inflation • NZD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.govt.nz/release-calendar/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇳🇿
+      - generic: NZ
+      - generic "UTC 2026-10-19T21:45:00.000Z": ~08:45
+      - generic: 10:45 NZDT local
+      - text: AH
+      - paragraph:
+        - text: CPI Non-Tradable CPI QoQ
+        - generic: (Q3 2026)
+      - paragraph: New Zealand • inflation • NZD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.stats.govt.nz/release-calendar/
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-20T01:00:00.000Z": ~12:00
+      - generic: 09:00 CST local
+      - text: AH
+      - paragraph:
+        - text: CB PBoC 1-Year Loan Prime Rate
+        - generic: (Oct 2026)
+      - paragraph: China • central bank • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: http://www.pbc.gov.cn/en/3688229/index.html
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇳
+      - generic: CN
+      - generic "UTC 2026-10-20T01:00:00.000Z": ~12:00
+      - generic: 09:00 CST local
+      - text: AH
+      - paragraph:
+        - text: CB PBoC 5-Year Loan Prime Rate
+        - generic: (Oct 2026)
+      - paragraph: China • central bank • CNY
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: http://www.pbc.gov.cn/en/3688229/index.html
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-10-20T12:30:00.000Z": ~23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: Canada • inflation • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-10-20T12:30:00.000Z": ~23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI Median YoY
+        - generic: (Sep 2026)
+      - paragraph: Canada • inflation • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇨🇦
+      - generic: CA
+      - generic "UTC 2026-10-20T12:30:00.000Z": ~23:30
+      - generic: 08:30 EDT local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI Trim YoY
+        - generic: (Sep 2026)
+      - paragraph: Canada • inflation • CAD
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.statcan.gc.ca/en/dai/sched
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Wed, Oct 21" [level=3]
+      - paragraph: 3 high impact / 4 total
+      - generic: "Density: High"
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-21T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: United Kingdom • inflation • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-21T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: CPI Core CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: United Kingdom • inflation • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-21T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: CPI Services CPI YoY
+        - generic: (Sep 2026)
+      - paragraph: United Kingdom • inflation • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: HIGH
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+      - generic: 🇬🇧
+      - generic: UK
+      - generic "UTC 2026-10-21T06:00:00.000Z": ~17:00
+      - generic: 07:00 BST local
+      - text: PRE
+      - paragraph:
+        - text: CPI CPI MoM
+        - generic: (Sep 2026)
+      - paragraph: United Kingdom • inflation • GBP
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.ons.gov.uk/releasecalendar
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "Thu, Oct 22" [level=3]
+      - paragraph: 0 high impact / 1 total
+      - generic: "Density: Low"
+      - generic: 🇰🇷
+      - generic: KR
+      - generic "UTC 2026-10-22T01:00:00.000Z": ~12:00
+      - generic: 10:00 KST local
+      - text: AH
+      - paragraph:
+        - text: CB BoK Base Rate Decision
+        - generic: (Oct 2026)
+      - paragraph: South Korea • central bank • KRW
+      - generic: "F: --"
+      - generic: "P: --"
+      - generic: "A: --"
+      - generic: "Δ: --"
+      - generic: Above F → HAWKISH • Below F → DOVISH
+      - generic: MEDIUM
+      - generic "Release time is estimated, not confirmed by an official schedule.": UNCONFIRMED
+      - 'generic "Source authority: CURATED • confidence LOW"': ESTIMATED • CURATED
+      - generic: UPCOMING
+      - link "Source":
+        - /url: https://www.bok.or.kr/eng/main/main.do
+      - link "Macro":
+        - /url: /tools/macro
+    - article:
+      - heading "If High Impact Today" [level=3]
+      - list:
+        - listitem: • Expect volatility expansion and opening whipsaw around print windows.
+        - listitem: • Compare leaders with market breadth; volatility is historically elevated.
+        - listitem: • Wait for post-window confirmation before escalating a scenario.
+    - article:
+      - heading "If Low Impact Today" [level=3]
+      - list:
+        - listitem: • Trend-following context is generally cleaner.
+        - listitem: • Standard risk review assumptions apply.
+        - listitem: • Best windows are post-open trend continuation and power hour.
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## META_Sweeps
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Scanner tools":
+    - generic: Scanner
+    - link "Ranked & custom scans":
+      - /url: /tools/scanner
+    - link "Diamond Hunter":
+      - /url: /tools/diamond-hunter
+    - link "Liquidity sweeps":
+      - /url: /tools/liquidity-sweep
+    - link "Intraday scanner":
+      - /url: /tools/scalper
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - main:
+    - region "Liquidity Sweep command header":
+      - generic: Liquidity sweep scanner
+      - generic: EQUITY mode
+      - generic: Filter all
+      - heading "Detect stop hunts before sizing risk." [level=1]
+      - paragraph: Detect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.
+      - button "Run scan"
+      - button "Open Golden Egg"
+      - button "Open Terminal"
+      - generic: Mode
+      - generic "Equity"
+      - generic "Sweep detection"
+      - generic: Sweeps
+      - generic "37"
+      - generic "Active observations"
+      - generic: Filter
+      - generic "All"
+      - generic "Result filter applied"
+      - generic: Updated
+      - generic "12:36 pm"
+      - generic "Local time"
+    - button "Equity"
+    - button "Crypto"
+    - combobox:
+      - option "All Results" [selected]
+      - option "Sweeps Only"
+      - option "Observations (Sweep + Near Level)"
+    - button "Scan for Sweeps"
+    - generic: 39 scanned • 37 sweeps • 2 near level • 8.2s
+    - generic: COST
+    - text: $898.48
+    - generic: +0.35%
+    - generic: ACTIVE SWEEP
+    - generic: "69"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $898.4"
+    - generic: 0.01% away
+    - 'generic "WEEK_LOW: $885.5"': WEEK_LOW
+    - 'generic "PDL: $890.55"': PDL
+    - 'generic "GAP_REF: $895.31"': GAP_REF
+    - 'generic "PDH: $898.4"': PDH
+    - 'generic "WEEK_HIGH: $916.92"': WEEK_HIGH
+    - generic: "ATR: 1.6%"
+    - generic: "Levels: 5"
+    - generic: MSFT
+    - text: $501.61
+    - generic: +1.59%
+    - generic: ACTIVE SWEEP
+    - generic: "67"
+    - generic: Bullish context
+    - generic: "Nearest: ROUND @ $500"
+    - generic: 0.32% away
+    - 'generic "WEEK_LOW: $487.23"': WEEK_LOW
+    - 'generic "PDL: $491.1"': PDL
+    - 'generic "EQL: $495.44"': EQL
+    - 'generic "PDH: $498.65"': PDH
+    - 'generic "ROUND: $500"': ROUND
+    - 'generic "WEEK_HIGH: $505.9"': WEEK_HIGH
+    - generic: "ATR: 2.1%"
+    - generic: "Levels: 6"
+    - generic: JNJ
+    - text: $269.47
+    - generic: "-0.19%"
+    - generic: ACTIVE SWEEP
+    - generic: "66"
+    - generic: Bearish context
+    - generic: "Nearest: GAP_REF @ $269.99"
+    - generic: 0.19% away
+    - 'generic "WEEK_LOW: $260.68"': WEEK_LOW
+    - 'generic "EQL: $267.15"': EQL
+    - 'generic "GAP_REF: $269.99"': GAP_REF
+    - 'generic "PDH: $272.11"': PDH
+    - 'generic "WEEK_HIGH: $273.73"': WEEK_HIGH
+    - generic: "ATR: 1.9%"
+    - generic: "Levels: 5"
+    - generic: KO
+    - text: $87.12
+    - generic: "-1.28%"
+    - generic: ACTIVE SWEEP
+    - generic: "66"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $87.00"
+    - generic: 0.14% away
+    - 'generic "ROUND: $87.00"': ROUND
+    - 'generic "EQL: $87.52"': EQL
+    - 'generic "EQL: $87.77"': EQL
+    - 'generic "PDH: $88.28"': PDH
+    - 'generic "WEEK_HIGH: $88.89"': WEEK_HIGH
+    - generic: "ATR: 1.5%"
+    - generic: "Levels: 5"
+    - generic: HD
+    - text: $297.2
+    - generic: "-0.93%"
+    - generic: ACTIVE SWEEP
+    - generic: "63"
+    - generic: Bearish context
+    - generic: "Nearest: PDL @ $298.25"
+    - generic: 0.35% away
+    - 'generic "WEEK_LOW: $295.39"': WEEK_LOW
+    - 'generic "PDL: $298.25"': PDL
+    - 'generic "ROUND: $300"': ROUND
+    - 'generic "PDH: $302.25"': PDH
+    - 'generic "WEEK_HIGH: $311.13"': WEEK_HIGH
+    - generic: "ATR: 2.3%"
+    - generic: "Levels: 5"
+    - generic: XOM
+    - text: $158.3
+    - generic: "-3.20%"
+    - generic: ACTIVE SWEEP
+    - generic: "63"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_LOW @ $157.94"
+    - generic: 0.23% away
+    - 'generic "WEEK_LOW: $157.94"': WEEK_LOW
+    - 'generic "ROUND: $160"': ROUND
+    - 'generic "PDL: $161.31"': PDL
+    - 'generic "EQH: $163.46"': EQH
+    - 'generic "EQL: $164.06"': EQL
+    - 'generic "EQH: $169.55"': EQH
+    - generic: "ATR: 2.4%"
+    - generic: "Levels: 6"
+    - generic: NFLX
+    - text: $73.36
+    - generic: +2.19%
+    - generic: ACTIVE SWEEP
+    - generic: "63"
+    - generic: Bullish context
+    - generic: "Nearest: ROUND @ $73.00"
+    - generic: 0.49% away
+    - 'generic "PDL: $70.11"': PDL
+    - 'generic "PDH: $72.38"': PDH
+    - 'generic "ROUND: $73.00"': ROUND
+    - 'generic "WEEK_HIGH: $79.48"': WEEK_HIGH
+    - generic: "ATR: 3.3%"
+    - generic: "Levels: 4"
+    - generic: ABBV
+    - text: $264.48
+    - generic: +0.20%
+    - generic: ACTIVE SWEEP
+    - generic: "60"
+    - generic: Bearish context
+    - generic: "Nearest: EQH @ $264.73"
+    - generic: 0.09% away
+    - 'generic "WEEK_LOW: $257.8"': WEEK_LOW
+    - 'generic "ROUND: $260"': ROUND
+    - 'generic "EQL: $260.93"': EQL
+    - 'generic "PDL: $262.44"': PDL
+    - 'generic "EQH: $264.73"': EQH
+    - 'generic "PDH: $266.34"': PDH
+    - generic: "ATR: 2.1%"
+    - generic: "Levels: 6"
+    - generic: CAT
+    - text: $816.5
+    - generic: +0.93%
+    - generic: ACTIVE SWEEP
+    - generic: "60"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $820"
+    - generic: 0.43% away
+    - 'generic "WEEK_LOW: $774.48"': WEEK_LOW
+    - 'generic "PDL: $799.57"': PDL
+    - 'generic "GAP_REF: $808.99"': GAP_REF
+    - 'generic "ROUND: $820"': ROUND
+    - 'generic "WEEK_HIGH: $827.81"': WEEK_HIGH
+    - generic: "ATR: 3.0%"
+    - generic: "Levels: 5"
+    - generic: CVX
+    - text: $203.67
+    - generic: "-2.79%"
+    - generic: ACTIVE SWEEP
+    - generic: "60"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_LOW @ $203.5"
+    - generic: 0.08% away
+    - 'generic "ROUND: $200"': ROUND
+    - 'generic "WEEK_LOW: $203.5"': WEEK_LOW
+    - 'generic "PDL: $207.31"': PDL
+    - 'generic "GAP_REF: $209.51"': GAP_REF
+    - 'generic "EQH: $211.83"': EQH
+    - 'generic "EQH: $217.72"': EQH
+    - generic: "ATR: 2.3%"
+    - generic: "Levels: 6"
+    - generic: BA
+    - text: $201.15
+    - generic: +1.49%
+    - generic: ACTIVE SWEEP
+    - generic: "59"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $199.63"
+    - generic: 0.76% away
+    - 'generic "PDL: $195.46"': PDL
+    - 'generic "EQL: $197.01"': EQL
+    - 'generic "GAP_REF: $198.2"': GAP_REF
+    - 'generic "PDH: $199.63"': PDH
+    - 'generic "EQH: $211.76"': EQH
+    - 'generic "EQH: $212.31"': EQH
+    - generic: "ATR: 2.7%"
+    - generic: "Levels: 6"
+    - generic: GE
+    - text: $319.01
+    - generic: +1.51%
+    - generic: ACTIVE SWEEP
+    - generic: "59"
+    - generic: Bearish context
+    - generic: "Nearest: EQH @ $318.59"
+    - generic: 0.13% away
+    - 'generic "WEEK_LOW: $306.8"': WEEK_LOW
+    - 'generic "PDL: $309.62"': PDL
+    - 'generic "GAP_REF: $314.27"': GAP_REF
+    - 'generic "EQH: $318.59"': EQH
+    - 'generic "ROUND: $320"': ROUND
+    - 'generic "WEEK_HIGH: $322.14"': WEEK_HIGH
+    - generic: "ATR: 2.7%"
+    - generic: "Levels: 6"
+    - generic: COP
+    - text: $127.53
+    - generic: "-3.26%"
+    - generic: ACTIVE SWEEP
+    - generic: "59"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_LOW @ $127.24"
+    - generic: 0.23% away
+    - 'generic "WEEK_LOW: $127.24"': WEEK_LOW
+    - 'generic "ROUND: $130"': ROUND
+    - 'generic "PDL: $131.48"': PDL
+    - 'generic "GAP_REF: $131.83"': GAP_REF
+    - 'generic "PDH: $133.33"': PDH
+    - 'generic "WEEK_HIGH: $141.62"': WEEK_HIGH
+    - generic: "ATR: 2.8%"
+    - generic: "Levels: 6"
+    - generic: BAC
+    - text: $57.96
+    - generic: +0.40%
+    - generic: ACTIVE SWEEP
+    - generic: "58"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $58.00"
+    - generic: 0.07% away
+    - 'generic "WEEK_LOW: $57.18"': WEEK_LOW
+    - 'generic "EQL: $57.49"': EQL
+    - 'generic "GAP_REF: $57.73"': GAP_REF
+    - 'generic "ROUND: $58.00"': ROUND
+    - 'generic "PDH: $58.23"': PDH
+    - 'generic "WEEK_HIGH: $59.92"': WEEK_HIGH
+    - generic: "ATR: 2.2%"
+    - generic: "Levels: 6"
+    - generic: PG
+    - text: $146.08
+    - generic: "-0.21%"
+    - generic: ACTIVE SWEEP
+    - generic: "58"
+    - generic: Bearish context
+    - generic: "Nearest: EQL @ $146.43"
+    - generic: 0.24% away
+    - 'generic "WEEK_LOW: $143.92"': WEEK_LOW
+    - 'generic "PDL: $145.49"': PDL
+    - 'generic "EQL: $146.43"': EQL
+    - 'generic "EQH: $146.75"': EQH
+    - 'generic "WEEK_HIGH: $148.23"': WEEK_HIGH
+    - 'generic "ROUND: $150"': ROUND
+    - generic: "ATR: 1.6%"
+    - generic: "Levels: 6"
+    - generic: UBER
+    - text: $70.84
+    - generic: +0.48%
+    - generic: ACTIVE SWEEP
+    - generic: "58"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $71.00"
+    - generic: 0.23% away
+    - 'generic "PDL: $70.06"': PDL
+    - 'generic "GAP_REF: $70.50"': GAP_REF
+    - 'generic "PDH: $71.00"': PDH
+    - 'generic "EQL: $71.28"': EQL
+    - 'generic "WEEK_HIGH: $72.42"': WEEK_HIGH
+    - generic: "ATR: 3.0%"
+    - generic: "Levels: 5"
+    - generic: GOOGL
+    - text: $354.97
+    - generic: +1.55%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $359.44"
+    - generic: 1.26% away
+    - 'generic "WEEK_LOW: $340.64"': WEEK_LOW
+    - 'generic "EQH: $348.24"': EQH
+    - 'generic "ROUND: $350"': ROUND
+    - 'generic "PDH: $359.44"': PDH
+    - generic: "ATR: 2.4%"
+    - generic: "Levels: 4"
+    - generic: V
+    - text: $369.95
+    - generic: +0.45%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $370"
+    - generic: 0.01% away
+    - 'generic "WEEK_LOW: $366.09"': WEEK_LOW
+    - 'generic "PDL: $366.93"': PDL
+    - 'generic "EQL: $368.26"': EQL
+    - 'generic "ROUND: $370"': ROUND
+    - 'generic "PDH: $370.8"': PDH
+    - 'generic "EQH: $376.42"': EQH
+    - generic: "ATR: 1.5%"
+    - generic: "Levels: 6"
+    - generic: MA
+    - text: $567.65
+    - generic: +0.43%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $568.43"
+    - generic: 0.14% away
+    - 'generic "PDL: $561.9"': PDL
+    - 'generic "PDH: $568.43"': PDH
+    - 'generic "ROUND: $570"': ROUND
+    - 'generic "WEEK_HIGH: $574"': WEEK_HIGH
+    - generic: "ATR: 1.5%"
+    - generic: "Levels: 4"
+    - generic: ADBE
+    - text: $249.52
+    - generic: +0.24%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $250"
+    - generic: 0.19% away
+    - 'generic "WEEK_LOW: $244.23"': WEEK_LOW
+    - 'generic "PDL: $247.21"': PDL
+    - 'generic "ROUND: $250"': ROUND
+    - 'generic "PDH: $252.67"': PDH
+    - 'generic "EQH: $255.15"': EQH
+    - 'generic "WEEK_HIGH: $264.46"': WEEK_HIGH
+    - generic: "ATR: 4.0%"
+    - generic: "Levels: 6"
+    - generic: AVGO
+    - text: $362.66
+    - generic: +1.41%
+    - generic: ACTIVE SWEEP
+    - generic: "56"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $363.28"
+    - generic: 0.17% away
+    - 'generic "WEEK_LOW: $335.81"': WEEK_LOW
+    - 'generic "PDL: $351.33"': PDL
+    - 'generic "ROUND: $360"': ROUND
+    - 'generic "PDH: $363.28"': PDH
+    - generic: "ATR: 3.3%"
+    - generic: "Levels: 4"
+    - generic: GS
+    - text: $959.39
+    - generic: +1.85%
+    - generic: ACTIVE SWEEP
+    - generic: "56"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $960"
+    - generic: 0.06% away
+    - 'generic "WEEK_LOW: $922"': WEEK_LOW
+    - 'generic "PDL: $939.55"': PDL
+    - 'generic "GAP_REF: $942"': GAP_REF
+    - 'generic "PDH: $952.99"': PDH
+    - 'generic "ROUND: $960"': ROUND
+    - 'generic "WEEK_HIGH: $988.28"': WEEK_HIGH
+    - generic: "ATR: 2.9%"
+    - generic: "Levels: 6"
+    - generic: UNH
+    - text: $377.56
+    - generic: +0.18%
+    - generic: ACTIVE SWEEP
+    - generic: "56"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $378.49"
+    - generic: 0.25% away
+    - 'generic "PDL: $372.42"': PDL
+    - 'generic "PDH: $378.49"': PDH
+    - 'generic "ROUND: $380"': ROUND
+    - 'generic "WEEK_HIGH: $383.8"': WEEK_HIGH
+    - generic: "ATR: 2.5%"
+    - generic: "Levels: 4"
+    - generic: NOW
+    - text: $137.68
+    - generic: +1.63%
+    - generic: ACTIVE SWEEP
+    - generic: "56"
+    - generic: Bearish context
+    - generic: "Nearest: GAP_REF @ $135.47"
+    - generic: 1.61% away
+    - 'generic "PDL: $135.07"': PDL
+    - 'generic "GAP_REF: $135.47"': GAP_REF
+    - 'generic "PDH: $139.94"': PDH
+    - 'generic "WEEK_HIGH: $147.57"': WEEK_HIGH
+    - generic: "ATR: 4.5%"
+    - generic: "Levels: 4"
+    - generic: AAPL
+    - text: $338.98
+    - generic: +0.85%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: EQH @ $338.41"
+    - generic: 0.17% away
+    - 'generic "WEEK_LOW: $328.35"': WEEK_LOW
+    - 'generic "PDL: $332.53"': PDL
+    - 'generic "EQH: $338.41"': EQH
+    - 'generic "WEEK_HIGH: $339.64"': WEEK_HIGH
+    - generic: "ATR: 2.1%"
+    - generic: "Levels: 4"
+    - generic: AMZN
+    - text: $258.45
+    - generic: +1.87%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $259.49"
+    - generic: 0.40% away
+    - 'generic "WEEK_LOW: $244.3"': WEEK_LOW
+    - 'generic "PDL: $251.88"': PDL
+    - 'generic "GAP_REF: $253.71"': GAP_REF
+    - 'generic "PDH: $255.43"': PDH
+    - 'generic "WEEK_HIGH: $259.49"': WEEK_HIGH
+    - generic: "ATR: 2.3%"
+    - generic: "Levels: 5"
+    - generic: NVDA
+    - text: $227.38
+    - generic: +2.30%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $228.5"
+    - generic: 0.49% away
+    - 'generic "WEEK_LOW: $211.16"': WEEK_LOW
+    - 'generic "PDL: $218.03"': PDL
+    - 'generic "PDH: $222.73"': PDH
+    - 'generic "WEEK_HIGH: $228.5"': WEEK_HIGH
+    - 'generic "ROUND: $230"': ROUND
+    - generic: "ATR: 2.8%"
+    - generic: "Levels: 5"
+    - generic: META
+    - text: $741.25
+    - generic: +11.34%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $740"
+    - generic: 0.17% away
+    - 'generic "WEEK_LOW: $656.2"': WEEK_LOW
+    - 'generic "PDL: $660.8"': PDL
+    - 'generic "EQH: $663.87"': EQH
+    - 'generic "GAP_REF: $665.75"': GAP_REF
+    - 'generic "PDH: $690.15"': PDH
+    - 'generic "ROUND: $740"': ROUND
+    - 'generic "WEEK_HIGH: $753"': WEEK_HIGH
+    - generic: "ATR: 3.5%"
+    - generic: "Levels: 7"
+    - generic: TSLA
+    - text: $375.3
+    - generic: +3.03%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $378.36"
+    - generic: 0.82% away
+    - 'generic "WEEK_LOW: $354.05"': WEEK_LOW
+    - 'generic "PDL: $360.75"': PDL
+    - 'generic "GAP_REF: $364.27"': GAP_REF
+    - 'generic "EQH: $368.94"': EQH
+    - 'generic "PDH: $370.9"': PDH
+    - 'generic "WEEK_HIGH: $378.36"': WEEK_HIGH
+    - 'generic "ROUND: $380"': ROUND
+    - generic: "ATR: 3.5%"
+    - generic: "Levels: 7"
+    - generic: LLY
+    - text: $1,164.89
+    - generic: +1.04%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $1,170.9"
+    - generic: 0.52% away
+    - 'generic "EQL: $1,131.05"': EQL
+    - 'generic "PDL: $1,140.27"': PDL
+    - 'generic "GAP_REF: $1,152.93"': GAP_REF
+    - 'generic "PDH: $1,157.6"': PDH
+    - 'generic "WEEK_HIGH: $1,170.9"': WEEK_HIGH
+    - generic: "ATR: 2.6%"
+    - generic: "Levels: 5"
+    - generic: WMT
+    - text: $107.44
+    - generic: +0.67%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: EQH @ $107.18"
+    - generic: 0.24% away
+    - 'generic "EQL: $105.65"': EQL
+    - 'generic "WEEK_LOW: $106.08"': WEEK_LOW
+    - 'generic "GAP_REF: $106.73"': GAP_REF
+    - 'generic "EQH: $107.18"': EQH
+    - 'generic "PDH: $107.72"': PDH
+    - 'generic "WEEK_HIGH: $109.24"': WEEK_HIGH
+    - 'generic "ROUND: $110"': ROUND
+    - generic: "ATR: 1.9%"
+    - generic: "Levels: 7"
+    - generic: AMD
+    - text: $615.52
+    - generic: +9.95%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $616.69"
+    - generic: 0.19% away
+    - 'generic "WEEK_LOW: $497.51"': WEEK_LOW
+    - 'generic "PDL: $541.53"': PDL
+    - 'generic "GAP_REF: $559.82"': GAP_REF
+    - 'generic "WEEK_HIGH: $616.69"': WEEK_HIGH
+    - 'generic "ROUND: $620"': ROUND
+    - generic: "ATR: 4.3%"
+    - generic: "Levels: 5"
+    - generic: INTC
+    - text: $121.78
+    - generic: +12.14%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $120"
+    - generic: 1.46% away
+    - 'generic "WEEK_LOW: $96.52"': WEEK_LOW
+    - 'generic "PDL: $106.4"': PDL
+    - 'generic "GAP_REF: $108.6"': GAP_REF
+    - 'generic "PDH: $110.49"': PDH
+    - 'generic "ROUND: $120"': ROUND
+    - 'generic "WEEK_HIGH: $124.73"': WEEK_HIGH
+    - generic: "ATR: 5.4%"
+    - generic: "Levels: 6"
+    - generic: QCOM
+    - text: $194.23
+    - generic: +9.29%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $195.31"
+    - generic: 0.56% away
+    - 'generic "PDL: $175.97"': PDL
+    - 'generic "GAP_REF: $177.72"': GAP_REF
+    - 'generic "ROUND: $190"': ROUND
+    - 'generic "EQH: $192.02"': EQH
+    - 'generic "WEEK_HIGH: $195.31"': WEEK_HIGH
+    - generic: "ATR: 4.6%"
+    - generic: "Levels: 5"
+    - generic: MU
+    - text: $1,043.96
+    - generic: +2.77%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $1,064.49"
+    - generic: 1.97% away
+    - 'generic "WEEK_LOW: $917.64"': WEEK_LOW
+    - 'generic "PDL: $977.83"': PDL
+    - 'generic "GAP_REF: $1,015.8"': GAP_REF
+    - 'generic "WEEK_HIGH: $1,064.49"': WEEK_HIGH
+    - generic: "ATR: 4.7%"
+    - generic: "Levels: 4"
+    - generic: PLTR
+    - text: $183.09
+    - generic: +3.07%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $183.38"
+    - generic: 0.16% away
+    - 'generic "WEEK_LOW: $168.96"': WEEK_LOW
+    - 'generic "PDL: $172"': PDL
+    - 'generic "GAP_REF: $177.64"': GAP_REF
+    - 'generic "ROUND: $180"': ROUND
+    - 'generic "WEEK_HIGH: $183.38"': WEEK_HIGH
+    - generic: "ATR: 3.9%"
+    - generic: "Levels: 5"
+    - generic: CRWD
+    - text: $249.35
+    - generic: +4.92%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $250"
+    - generic: 0.26% away
+    - 'generic "EQL: $204.36"': EQL
+    - 'generic "WEEK_LOW: $230.85"': WEEK_LOW
+    - 'generic "PDL: $234.9"': PDL
+    - 'generic "GAP_REF: $237.65"': GAP_REF
+    - 'generic "PDH: $247.5"': PDH
+    - 'generic "ROUND: $250"': ROUND
+    - generic: "ATR: 5.8%"
+    - generic: "Levels: 6"
+    - generic: JPM
+    - text: $352.04
+    - generic: +0.68%
+    - generic: NEAR LEVEL
+    - generic: "37"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $349.67"
+    - generic: 0.67% away
+    - 'generic "WEEK_LOW: $343.07"': WEEK_LOW
+    - 'generic "PDL: $345.01"': PDL
+    - 'generic "PDH: $349.67"': PDH
+    - 'generic "WEEK_HIGH: $355.6"': WEEK_HIGH
+    - generic: "ATR: 1.9%"
+    - generic: "Levels: 4"
+    - generic: DIS
+    - text: $104.23
+    - generic: +1.52%
+    - generic: NEAR LEVEL
+    - generic: "34"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $105.05"
+    - generic: 0.78% away
+    - 'generic "PDL: $102.37"': PDL
+    - 'generic "GAP_REF: $102.67"': GAP_REF
+    - 'generic "PDH: $105.05"': PDH
+    - 'generic "EQH: $108.32"': EQH
+    - generic: "ATR: 2.2%"
+    - generic: "Levels: 4"
+    - generic: Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## ETH_Sweeps
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Scanner tools":
+    - generic: Scanner
+    - link "Ranked & custom scans":
+      - /url: /tools/scanner
+    - link "Diamond Hunter":
+      - /url: /tools/diamond-hunter
+    - link "Liquidity sweeps":
+      - /url: /tools/liquidity-sweep
+    - link "Intraday scanner":
+      - /url: /tools/scalper
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - main:
+    - region "Liquidity Sweep command header":
+      - generic: Liquidity sweep scanner
+      - generic: CRYPTO mode
+      - generic: Filter all
+      - heading "Detect stop hunts before sizing risk." [level=1]
+      - paragraph: Detect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.
+      - button "Run scan"
+      - button "Open Golden Egg"
+      - button "Open Terminal"
+      - generic: Mode
+      - generic "Crypto"
+      - generic "Sweep detection"
+      - generic: Sweeps
+      - generic "22"
+      - generic "Active observations"
+      - generic: Filter
+      - generic "All"
+      - generic "Result filter applied"
+      - generic: Updated
+      - generic "12:37 pm"
+      - generic "Local time"
+    - button "Equity"
+    - button "Crypto"
+    - combobox:
+      - option "All Results" [selected]
+      - option "Sweeps Only"
+      - option "Observations (Sweep + Near Level)"
+    - button "Scan for Sweeps"
+    - generic: 24 scanned • 22 sweeps • 1 near level • 9.4s
+    - generic: PEPE
+    - text: $0.000005
+    - generic: "-4.02%"
+    - generic: ACTIVE SWEEP
+    - generic: "74"
+    - generic: Bearish context
+    - generic: "Nearest: EQL @ $0.000005"
+    - generic: 0.10% away
+    - 'generic "EQL: $0.000004"': EQL
+    - 'generic "EQL: $0.000005"': EQL
+    - 'generic "EQH: $0.000005"': EQH
+    - generic: "ATR: 4.0%"
+    - generic: "Levels: 3"
+    - generic: TON
+    - text: $1.45
+    - generic: "-0.68%"
+    - generic: ACTIVE SWEEP
+    - generic: "69"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $1.46"
+    - generic: 0.69% away
+    - 'generic "EQL: $1.37"': EQL
+    - 'generic "WEEK_LOW: $1.38"': WEEK_LOW
+    - 'generic "EQH: $1.39"': EQH
+    - 'generic "EQL: $1.41"': EQL
+    - 'generic "PDL: $1.43"': PDL
+    - 'generic "PDH: $1.46"': PDH
+    - 'generic "WEEK_HIGH: $1.48"': WEEK_HIGH
+    - generic: "ATR: 1.5%"
+    - generic: "Levels: 7"
+    - generic: DOGE
+    - text: $0.099810
+    - generic: +1.31%
+    - generic: ACTIVE SWEEP
+    - generic: "68"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $0.099813"
+    - generic: 0.00% away
+    - 'generic "WEEK_LOW: $0.087821"': WEEK_LOW
+    - 'generic "EQH: $0.089639"': EQH
+    - 'generic "PDL: $0.095412"': PDL
+    - 'generic "PDH: $0.099813"': PDH
+    - 'generic "WEEK_HIGH: $0.101880"': WEEK_HIGH
+    - generic: "ATR: 2.4%"
+    - generic: "Levels: 5"
+    - generic: SUI
+    - text: $1.04
+    - generic: +0.68%
+    - generic: ACTIVE SWEEP
+    - generic: "67"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $1.04"
+    - generic: 0.10% away
+    - 'generic "WEEK_LOW: $0.929251"': WEEK_LOW
+    - 'generic "PDL: $0.992193"': PDL
+    - 'generic "PDH: $1.04"': PDH
+    - 'generic "WEEK_HIGH: $1.05"': WEEK_HIGH
+    - generic: "ATR: 3.5%"
+    - generic: "Levels: 4"
+    - generic: BTC
+    - text: $86,598
+    - generic: +0.06%
+    - generic: ACTIVE SWEEP
+    - generic: "66"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $86,600"
+    - generic: 0.00% away
+    - 'generic "WEEK_LOW: $81,217"': WEEK_LOW
+    - 'generic "PDL: $85,665"': PDL
+    - 'generic "ROUND: $86,600"': ROUND
+    - 'generic "PDH: $86,838"': PDH
+    - 'generic "WEEK_HIGH: $87,330"': WEEK_HIGH
+    - generic: "ATR: 1.1%"
+    - generic: "Levels: 5"
+    - generic: BNB
+    - text: $799.22
+    - generic: "-0.10%"
+    - generic: ACTIVE SWEEP
+    - generic: "64"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $800"
+    - generic: 0.10% away
+    - 'generic "WEEK_LOW: $766.34"': WEEK_LOW
+    - 'generic "PDL: $793.78"': PDL
+    - 'generic "ROUND: $800"': ROUND
+    - 'generic "PDH: $803.14"': PDH
+    - 'generic "WEEK_HIGH: $806.75"': WEEK_HIGH
+    - generic: "ATR: 1.4%"
+    - generic: "Levels: 5"
+    - generic: LTC
+    - text: $62.01
+    - generic: "-0.58%"
+    - generic: ACTIVE SWEEP
+    - generic: "61"
+    - generic: Bullish context
+    - generic: "Nearest: ROUND @ $62.00"
+    - generic: 0.02% away
+    - 'generic "WEEK_LOW: $58.17"': WEEK_LOW
+    - 'generic "PDL: $61.26"': PDL
+    - 'generic "ROUND: $62.00"': ROUND
+    - 'generic "PDH: $63.49"': PDH
+    - 'generic "WEEK_HIGH: $63.74"': WEEK_HIGH
+    - generic: "ATR: 2.3%"
+    - generic: "Levels: 5"
+    - generic: UNI
+    - text: $8.99
+    - generic: +1.93%
+    - generic: ACTIVE SWEEP
+    - generic: "61"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $8.98"
+    - generic: 0.11% away
+    - 'generic "WEEK_LOW: $8.53"': WEEK_LOW
+    - 'generic "PDL: $8.68"': PDL
+    - 'generic "PDH: $8.98"': PDH
+    - 'generic "ROUND: $9.00"': ROUND
+    - 'generic "WEEK_HIGH: $9.25"': WEEK_HIGH
+    - generic: "ATR: 3.9%"
+    - generic: "Levels: 5"
+    - generic: AVAX
+    - text: $11.23
+    - generic: +1.35%
+    - generic: ACTIVE SWEEP
+    - generic: "60"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $11.14"
+    - generic: 0.80% away
+    - 'generic "PDL: $10.78"': PDL
+    - 'generic "EQL: $10.93"': EQL
+    - 'generic "ROUND: $11.00"': ROUND
+    - 'generic "PDH: $11.14"': PDH
+    - 'generic "WEEK_HIGH: $11.58"': WEEK_HIGH
+    - generic: "ATR: 4.1%"
+    - generic: "Levels: 5"
+    - generic: INJ
+    - text: $7.85
+    - generic: +0.00%
+    - generic: ACTIVE SWEEP
+    - generic: "59"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $7.90"
+    - generic: 0.64% away
+    - 'generic "WEEK_LOW: $7.58"': WEEK_LOW
+    - 'generic "EQL: $7.67"': EQL
+    - 'generic "PDL: $7.73"': PDL
+    - 'generic "ROUND: $7.90"': ROUND
+    - 'generic "EQH: $8.02"': EQH
+    - generic: "ATR: 4.1%"
+    - generic: "Levels: 5"
+    - generic: JUP
+    - text: $0.298206
+    - generic: +0.19%
+    - generic: ACTIVE SWEEP
+    - generic: "59"
+    - generic: Bearish context
+    - generic: "Nearest: EQL @ $0.298346"
+    - generic: 0.05% away
+    - 'generic "PDL: $0.291224"': PDL
+    - 'generic "EQL: $0.298346"': EQL
+    - 'generic "ROUND: $0.300000"': ROUND
+    - 'generic "PDH: $0.306205"': PDH
+    - 'generic "WEEK_HIGH: $0.311823"': WEEK_HIGH
+    - generic: "ATR: 3.6%"
+    - generic: "Levels: 5"
+    - generic: ADA
+    - text: $0.245140
+    - generic: +0.18%
+    - generic: ACTIVE SWEEP
+    - generic: "58"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $0.246166"
+    - generic: 0.42% away
+    - 'generic "EQL: $0.224172"': EQL
+    - 'generic "WEEK_LOW: $0.230161"': WEEK_LOW
+    - 'generic "PDL: $0.240416"': PDL
+    - 'generic "PDH: $0.246166"': PDH
+    - 'generic "WEEK_HIGH: $0.248479"': WEEK_HIGH
+    - generic: "ATR: 2.4%"
+    - generic: "Levels: 5"
+    - generic: ARB
+    - text: $0.225762
+    - generic: "-0.98%"
+    - generic: ACTIVE SWEEP
+    - generic: "58"
+    - generic: Bullish context
+    - generic: "Nearest: PDL @ $0.223516"
+    - generic: 0.99% away
+    - 'generic "WEEK_LOW: $0.211825"': WEEK_LOW
+    - 'generic "PDL: $0.223516"': PDL
+    - 'generic "PDH: $0.235027"': PDH
+    - 'generic "WEEK_HIGH: $0.247068"': WEEK_HIGH
+    - generic: "ATR: 5.6%"
+    - generic: "Levels: 4"
+    - generic: OP
+    - text: $0.127443
+    - generic: +2.52%
+    - generic: ACTIVE SWEEP
+    - generic: "58"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $0.127314"
+    - generic: 0.10% away
+    - 'generic "PDL: $0.122776"': PDL
+    - 'generic "PDH: $0.127314"': PDH
+    - 'generic "EQH: $0.127918"': EQH
+    - 'generic "WEEK_HIGH: $0.131483"': WEEK_HIGH
+    - generic: "ATR: 3.8%"
+    - generic: "Levels: 4"
+    - generic: ETH
+    - text: $2,775.43
+    - generic: +0.46%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $2,772.97"
+    - generic: 0.09% away
+    - 'generic "EQH: $2,645.73"': EQH
+    - 'generic "PDL: $2,736.36"': PDL
+    - 'generic "PDH: $2,772.97"': PDH
+    - 'generic "ROUND: $2,800"': ROUND
+    - generic: "ATR: 1.4%"
+    - generic: "Levels: 4"
+    - generic: NEAR
+    - text: $4.27
+    - generic: +2.64%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bearish context
+    - generic: "Nearest: ROUND @ $4.30"
+    - generic: 0.70% away
+    - 'generic "PDL: $3.92"': PDL
+    - 'generic "PDH: $4.17"': PDH
+    - 'generic "ROUND: $4.30"': ROUND
+    - 'generic "WEEK_HIGH: $4.44"': WEEK_HIGH
+    - generic: "ATR: 4.9%"
+    - generic: "Levels: 4"
+    - generic: FET
+    - text: $0.204825
+    - generic: +1.40%
+    - generic: ACTIVE SWEEP
+    - generic: "57"
+    - generic: Bullish context
+    - generic: "Nearest: PDH @ $0.206627"
+    - generic: 0.88% away
+    - 'generic "WEEK_LOW: $0.178731"': WEEK_LOW
+    - 'generic "PDL: $0.196724"': PDL
+    - 'generic "ROUND: $0.200000"': ROUND
+    - 'generic "PDH: $0.206627"': PDH
+    - 'generic "WEEK_HIGH: $0.207596"': WEEK_HIGH
+    - generic: "ATR: 3.3%"
+    - generic: "Levels: 5"
+    - generic: SOL
+    - text: $118.89
+    - generic: +0.49%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $118.34"
+    - generic: 0.46% away
+    - 'generic "EQL: $110.97"': EQL
+    - 'generic "PDL: $116.77"': PDL
+    - 'generic "PDH: $118.34"': PDH
+    - 'generic "WEEK_HIGH: $119.9"': WEEK_HIGH
+    - generic: "ATR: 1.7%"
+    - generic: "Levels: 4"
+    - generic: XRP
+    - text: $1.54
+    - generic: +1.99%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $1.51"
+    - generic: 1.95% away
+    - 'generic "EQL: $1.39"': EQL
+    - 'generic "WEEK_LOW: $1.41"': WEEK_LOW
+    - 'generic "EQH: $1.44"': EQH
+    - 'generic "PDL: $1.48"': PDL
+    - 'generic "ROUND: $1.50"': ROUND
+    - 'generic "PDH: $1.51"': PDH
+    - 'generic "WEEK_HIGH: $1.57"': WEEK_HIGH
+    - generic: "ATR: 2.2%"
+    - generic: "Levels: 7"
+    - generic: LINK
+    - text: $13.18
+    - generic: +1.15%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: WEEK_HIGH @ $13.26"
+    - generic: 0.61% away
+    - 'generic "EQL: $12.48"': EQL
+    - 'generic "PDL: $12.76"': PDL
+    - 'generic "ROUND: $13.00"': ROUND
+    - 'generic "PDH: $13.07"': PDH
+    - 'generic "WEEK_HIGH: $13.26"': WEEK_HIGH
+    - generic: "ATR: 2.1%"
+    - generic: "Levels: 5"
+    - generic: DOT
+    - text: $1.21
+    - generic: +2.54%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $1.20"
+    - generic: 0.83% away
+    - 'generic "EQL: $1.13"': EQL
+    - 'generic "WEEK_LOW: $1.14"': WEEK_LOW
+    - 'generic "PDL: $1.16"': PDL
+    - 'generic "EQH: $1.17"': EQH
+    - 'generic "PDH: $1.20"': PDH
+    - 'generic "WEEK_HIGH: $1.22"': WEEK_HIGH
+    - generic: "ATR: 2.7%"
+    - generic: "Levels: 6"
+    - generic: ATOM
+    - text: $1.81
+    - generic: +1.12%
+    - generic: ACTIVE SWEEP
+    - generic: "55"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $1.81"
+    - generic: 0.00% away
+    - 'generic "WEEK_LOW: $1.75"': WEEK_LOW
+    - 'generic "PDL: $1.78"': PDL
+    - 'generic "ROUND: $1.80"': ROUND
+    - 'generic "PDH: $1.81"': PDH
+    - 'generic "WEEK_HIGH: $1.82"': WEEK_HIGH
+    - generic: "ATR: 2.3%"
+    - generic: "Levels: 5"
+    - generic: TRX
+    - text: $0.344563
+    - generic: +0.08%
+    - generic: AT LEVEL
+    - generic: "45"
+    - generic: Bearish context
+    - generic: "Nearest: PDH @ $0.345361"
+    - generic: 0.23% away
+    - 'generic "EQL: $0.342513"': EQL
+    - 'generic "EQH: $0.343344"': EQH
+    - 'generic "PDH: $0.345361"': PDH
+    - generic: "ATR: 0.4%"
+    - generic: "Levels: 3"
+    - generic: WIF
+    - text: $0.245135
+    - generic: +2.55%
+    - generic: NO OBSERVATION
+    - generic: "Nearest: PDH @ $0.247820"
+    - generic: 1.10% away
+    - 'generic "WEEK_LOW: $0.200905"': WEEK_LOW
+    - 'generic "PDL: $0.230246"': PDL
+    - 'generic "PDH: $0.247820"': PDH
+    - 'generic "WEEK_HIGH: $0.249424"': WEEK_HIGH
+    - generic: "ATR: 3.8%"
+    - generic: "Levels: 4"
+    - generic: Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## META_OptionsConfluencePost
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Options Risk — Educational Only
+  - text: — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 3. Options setup
+    - generic: EQUITY path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: Active lens
+    - generic "Options Confluence"
+    - generic "3. Options setup"
+    - generic: Data state
+    - generic "Lens ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Validate mechanics context"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": META
+  - button "Load"
+  - generic: META
+  - generic: EQUITY
+  - generic: EQUITY PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "ADA"
+  - button "XRP"
+  - button "XLM"
+  - button "LINK"
+  - button "FET"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Equity path
+    - button "1. Timing map Close Calendar":
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Chain quality Options Terminal":
+      - generic: 2. Chain quality
+      - generic: Options Terminal
+    - button "3. Options setup Options Confluence" [pressed]:
+      - generic: 3. Options setup
+      - generic: Options Confluence
+    - button "4. Flow estimate Options Flow":
+      - generic: 4. Flow estimate
+      - generic: Options Flow
+    - button "5. Capital pressure Capital Pressure":
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity":
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence":
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - region "Terminal Options Confluence command header":
+    - generic: Terminal subview
+    - generic: 3. Options setup
+    - generic: Symbol META
+    - heading "Options Confluence check for META" [level=2]
+    - paragraph: Check strike and expiry alignment against the selected research scenario.
+    - button "Back to Calendar"
+    - button "Open Options Flow"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Options Confluence"
+    - generic "3. Options setup"
+    - generic: Focus
+    - generic "Setup Alignment"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Options Flow"
+    - generic "Continue the mechanics sequence"
+  - strong: "Why this can fail:"
+  - text: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.
+  - generic: META
+  - generic: "Status: ACTIVE"
+  - generic: "Confidence: 24%"
+  - generic: "Data: REALTIME"
+  - generic: "Mode: VOLATILITY EXPANSION"
+  - button "Compact"
+  - button "Normal"
+  - button "Focus"
+  - generic: Context
+  - heading "Bias & Regime" [level=3]
+  - generic: META • BEARISH
+  - generic: "Regime: UNCERTAIN REGIME"
+  - generic: "Session: CLOSED"
+  - generic: Analysis
+  - heading "Setup Status" [level=3]
+  - generic: NOT ALIGNED
+  - generic: "Pipeline: 3/5"
+  - generic: "Confluence: 24%"
+  - generic: Levels
+  - heading "Risk & Trigger" [level=3]
+  - generic: "Trigger: Entry on breakdown/hold below 741.25"
+  - generic: "Risk: HIGH"
+  - generic: "Data: REALTIME"
+  - generic: Confluence
+  - generic: 6 TF
+  - generic: Flow
+  - generic: BULLISH
+  - generic: Expected Move
+  - generic: 12.0%
+  - generic: Conditions
+  - generic: NOT ALIGNED
+  - generic: Mode
+  - generic: VOLATILITY EXPANSION
+  - generic: Updated
+  - generic: 2s
+  - generic: AI Co-Pilot
+  - generic: •
+  - generic: "Market State: VOLATILITY EXPANSION"
+  - generic: •
+  - generic: "Confluence: 55%"
+  - generic: •
+  - generic: "Watching: STRUCTURE + FLOW"
+  - generic: "MODE: TRANSITION | ATTENTION: RISK | WATCHING: STRUCTURE + FLOW • BEARISH EDGE | Grade B"
+  - generic: Analysis Panel
+  - generic: View Mode
+  - button "Guided" [pressed]
+  - button "Advanced"
+  - generic: Workflow Suggestions
+  - button "Refresh"
+  - generic: No active suggestions. New decision packets will repopulate this queue.
+  - textbox "Stock symbol":
+    - /placeholder: SPY, AAPL, QQQ, TSLA...
+    - text: META
+  - combobox "Scan timeframe":
+    - option "Scalping (5-15m) (0-2 DTE)"
+    - option "30 Minute (1-3 DTE)"
+    - option "1 Hour (2-5 DTE)"
+    - option "4 Hour (3-7 DTE)"
+    - option "Daily (5-14 DTE)" [selected]
+    - option "3-Day (1-3 weeks)"
+    - option "Weekly (2-4 weeks)"
+    - option "Monthly (30-60 DTE)"
+    - option "LEAPS (60+ DTE)"
+  - combobox "Expiration date":
+    - option "Auto-select expiry"
+    - option "Wed, Sep 23 (1 DTE) • 19,816 OI"
+    - option "Fri, Sep 25 (3 DTE) • 147,273 OI"
+    - option "Mon, Sep 28 (6 DTE) • 6,388 OI"
+    - option "Wed, Sep 30 (8 DTE) • 4,438 OI"
+    - option "Fri, Oct 2 (10 DTE) • 62,872 OI"
+    - option "Mon, Oct 5 (13 DTE) • 0 OI"
+    - option "Fri, Oct 9 (17 DTE) • 23,145 OI"
+    - option "Fri, Oct 16 (24 DTE) • 381,700 OI" [selected]
+    - option "Fri, Oct 23 (31 DTE) • 16,421 OI"
+    - option "Fri, Oct 30 (38 DTE) • 10,848 OI"
+    - option "Fri, Nov 20 (59 DTE) • 281,607 OI"
+    - option "Fri, Dec 18 (87 DTE) • 282,008 OI"
+    - option "Fri, Jan 15 (115 DTE) • 880,258 OI"
+    - option "Fri, Feb 19 (150 DTE) • 45,066 OI"
+    - option "Fri, Mar 19 (178 DTE) • 119,286 OI"
+    - option "Thu, Jun 17 (268 DTE) • 126,792 OI"
+    - option "Fri, Sep 17 (360 DTE) • 55,961 OI"
+    - option "Fri, Dec 17 (451 DTE) • 107,776 OI"
+    - option "Fri, Jan 21 (486 DTE) • 198,447 OI"
+    - option "Fri, Jun 16 (633 DTE) • 55,887 OI"
+    - option "Fri, Dec 15 (815 DTE) • 104,913 OI"
+    - option "Fri, Jan 19 (850 DTE) • 1,138 OI"
+  - button "Run Options Research"
+  - button "Refresh"
+  - generic: "Last updated: 12:41:38 pm"
+  - generic: Options Research Packet
+  - generic: Scenario • Evidence • Invalidation • Data Trust
+  - generic: "Dealer:"
+  - generic: COMPRESSION (Long Gamma)
+  - generic: •
+  - generic: Flip N/A
+  - generic: Scenario
+  - generic: META • BEARISH • Not Aligned
+  - generic: BEARISH edge near support zone with time activation
+  - generic: Confluence
+  - generic: 24%
+  - generic: Contract Focus
+  - generic: 740 PUT
+  - generic: ATM
+  - generic: Expiry Focus
+  - generic: 4 DTE
+  - generic: 2026-09-27
+  - generic: Reference Zone
+  - generic: 741.25 - 744.95
+  - generic: "Trigger: Entry on breakdown/hold below 741.25"
+  - generic: Why This Appeared
+  - list:
+    - listitem: SUPPORT @ 740.80 — 1h 50% reflection level (decompressing)
+    - listitem: "PATTERN: Double Bottom (1H) (bullish, 90%) — Two pivot lows near 593.35; neckline near 753.00"
+    - listitem: "TIME EDGE: 6 TFs clustered (timing advantage)"
+  - generic: Do Nothing Because
+  - list:
+    - listitem: Institutional filter is blocking this scenario.
+    - listitem: Expected move is elevated; option premium may be less forgiving.
+  - generic: Invalidates If
+  - list:
+    - listitem: Price loses 758.29 invalidation.
+    - listitem: Invalid if price breaches stop structure (758.29)
+    - listitem: Open interest sentiment diverges from the scenario.
+  - generic: Options Snapshot
+  - generic: "P/C: 0.26"
+  - generic: "IV Rank: 65%"
+  - generic: "Strategy: PUT DEBIT SPREAD"
+  - generic: "Expected Move: 12.0%"
+  - generic: "Theta: MODERATE"
+  - generic: Data Trust
+  - generic: "Data: REALTIME"
+  - generic: "Options: alpha vantage"
+  - generic: Greeks from API
+  - generic: OI usable
+  - generic: Research State
+  - generic: NOT ALIGNED
+  - generic: Decompression Stack
+  - generic: "5"
+  - generic: ▼ BEAR (-100)
+  - generic: No active decompression windows
+  - generic: • 6 tagged
+  - generic: $741.1300
+  - generic: AOI
+  - generic: 1h · 5m · 10m · 15m
+  - generic: Q58
+  - generic: ▼
+  - generic: $673.1800
+  - generic: AOI
+  - generic: 3h · 6h
+  - generic: Q54
+  - generic: ▼
+  - generic: "No active decompression windows · AOI at 741.13 (1h, 5m, 10m, 15m) · Pull bias: bearish (-100)"
+  - generic: Guided mode keeps Analyst sections collapsed for faster decision flow.
+  - button "Show Full Analysis"
+  - button "1) Evidence (6 TF)" [pressed]:
+    - generic: 1) Evidence
+    - generic: (6 TF)
+  - button "2) Contracts & Greeks (Ready)":
+    - generic: 2) Contracts & Greeks
+    - generic: (Ready)
+  - button "2) Contracts & Greeks • Collapsed Strike, expiry, open interest, greeks, and risk setup Click to expand":
+    - generic: 2) Contracts & Greeks • Collapsed
+    - generic: Strike, expiry, open interest, greeks, and risk setup
+    - generic: Click to expand
+  - generic: Section 1 — EvidenceConfluence + structure + setup confirmation
+  - generic: AI Research Card
+  - generic: Conviction 65%
+  - generic: "TERMINAL MODE: VOLATILITY EXPANSION"
+  - text: • IV/expected-move expansion detected; risk and flow prioritized.
+  - generic: Direction
+  - generic: BEARISH
+  - generic: Primary Setup
+  - generic: Put Debit Spread
+  - generic: Expected Move
+  - generic: ±12.0%
+  - generic: Invalidation
+  - generic: "758.29"
+  - generic: "Key Condition: Entry on breakdown/hold below 741.25"
+  - generic: Signal Stack
+  - generic: Trend StructureAI Watching
+  - generic: 59%
+  - generic: MODERATE • BEARISH bias • 65% confluence
+  - generic: Momentum
+  - generic: 30%
+  - generic: NO_SIGNAL • 6 TFs aligned • wait
+  - generic: Options FlowAI Watching
+  - generic: 34%
+  - generic: NEUTRAL • PCR 0.26 • none alert
+  - generic: Volatility Regime
+  - generic: 100%
+  - generic: IV 65% • Expected ±12.0%
+  - generic: Sentiment
+  - generic: 92%
+  - generic: BULLISH • launch • LOW ALIGNMENT
+  - generic: Analysis Panel
+  - generic: Reference Zone
+  - generic: 741.25 - 744.95
+  - generic: Invalidation Level
+  - generic: "758.29"
+  - generic: Key Level / R:R
+  - generic: 736.88 • 0.3:1
+  - generic: "Status: NOT ALIGNED"
+  - generic: Co-Pilot Observation
+  - generic: Favor reduced size or defined-risk structure
+  - generic: Attention state is RISK — preserve optionality until edge improves.
+  - generic: Co-Pilot Observations
+  - generic: Co-Pilot Note • Regime transition
+  - generic: Signals diverging — wait for confirmation or reduce size.
+  - generic: Co-Pilot Note • Risk elevated
+  - generic: Edge not clean — prioritize confirmation and defined-risk structures.
+  - generic: MSP Signature • Confluence Radar
+  - generic: $741.2450
+  - generic: EM ±12.0%
+  - generic: Composite 68%
+  - img "Confluence Radar":
+    - generic: TREND
+    - generic: FLOW
+    - generic: MOMENTUM
+    - generic: VOLATILITY
+    - generic: SENTIMENT
+  - generic: TREND
+  - generic: 60%
+  - generic: FLOW
+  - generic: 48%
+  - generic: MOMENTUM
+  - generic: 42%
+  - generic: VOLATILITY
+  - generic: 100%
+  - generic: SENTIMENT
+  - generic: 88%
+  - generic: Institutional Lens State
+  - generic: ACTIVE
+  - generic: CAUTION ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and monitor for stability.Active monitoring mode. Focus on risk, flow shifts, and analysis.
+  - generic: MRI Regime
+  - generic: CHAOTIC_NEWS
+  - generic: MRI Confluence
+  - generic: 70%
+  - generic: Adaptive Confluence
+  - generic: 65% (HIGH)
+  - generic: Risk Modifier
+  - generic: "0.00"
+  - generic: Institutional Intent
+  - generic: REPRICE_TREND
+  - generic: Confluence
+  - generic: 46%
+  - generic: Expected Path
+  - generic: EXPANSION CONTINUATION
+  - generic: Directional Bias
+  - generic: SHORT
+  - generic: • Intent remains mixed; wait for clearer structure-flow alignment
+  - generic "Show intent probabilities"
+  - generic: Dealer Positioning Engine
+  - generic: LONG GAMMA
+  - generic: Net GEX
+  - generic: $237.67M
+  - generic: Net DEX (Vanna)
+  - generic: "-$4.78B"
+  - generic: Gamma Flip
+  - generic: $N/A
+  - generic: Flip Distance
+  - generic: N/A
+  - generic: Call Wall
+  - generic: $700.00
+  - generic: Put Wall
+  - generic: $N/A
+  - generic: Vanna Flow Direction
+  - generic: Negative Vanna - IV rise pushes delta down, dealers sell underlying
+  - generic: Charm Decay Pressure
+  - generic: Call-heavy - Charm decay adds upward delta pressure into expiry
+  - generic: Dealer Pressure Summary
+  - generic: "Dealers are long gamma - expect dampened moves toward pin. Pin zone: UNKNOWN. Volatility state: Suppressed. Price likely gravitates to gamma flip."
+  - generic: Top GEX Nodes
+  - generic: $700
+  - generic: $750
+  - generic: $710
+  - generic: Liquidity & Level Map
+  - generic: 14 Levels Mapped
+  - generic: Liquidity Magnet Levels
+  - generic: $741.25
+  - generic: ENTRY_LOW
+  - generic: 95%
+  - generic: $744.95
+  - generic: ENTRY_HIGH
+  - generic: 95%
+  - generic: $736.88
+  - generic: TARGET_1
+  - generic: 95%
+  - generic: $740.80
+  - generic: SUPPORT
+  - generic: 95%
+  - generic: $738.84
+  - generic: DEMAND
+  - generic: 95%
+  - generic: $750.00
+  - generic: PIN
+  - generic: 91%
+  - generic: Open Interest Walls
+  - generic: CALL
+  - generic: $700.00
+  - generic: 9%
+  - generic: CALL
+  - generic: $750.00
+  - generic: 5%
+  - generic: Strike Gravity Map
+  - generic: $750 • call-heavy • G:1.0
+  - generic: $760 • call-heavy • G:0.1
+  - generic: $765 • call-heavy • G:0.1
+  - generic: $710 • call-heavy • G:0.0
+  - generic: $700 • call-heavy • G:0.0
+  - generic: $780 • call-heavy • G:0.0
+  - generic: Gamma Flip Zones
+  - generic: $725.62 — ↓ Bearish Below
+  - generic: $745.62 — ↑ Bullish Above
+  - generic: Structural Key Zones
+  - generic: support
+  - generic: $740.80
+  - generic: strong
+  - generic: demand
+  - generic: $0.00
+  - generic: strong
+  - generic: demand
+  - generic: $738.84
+  - generic: moderate
+  - generic: Institutional Liquidity Pools
+  - generic: SUPPORT
+  - generic: DEMAND
+  - generic: DEMAND
+  - generic: Most Likely Price Path
+  - generic: 1. Break/hold above 745.62
+  - generic: 2. Confirm continuation on retest
+  - generic: 3. Expand toward 750 key strike
+  - generic: No VWAP anchor available — execution quality lower
+  - generic: Break 745.62 → bullish launch risk
+  - generic: Cross-Asset Flow Intelligence
+  - generic: RISK ON
+  - generic: VIX Regime
+  - generic: NORMAL (18.0)
+  - generic: DXY Trend
+  - generic: Neutral (103.00)
+  - generic: Risk Score
+  - generic: 63/100
+  - generic: Size Multiplier
+  - generic: 1.00x
+  - generic: Sector Rotation
+  - generic: MIXED
+  - generic: Gold Safe Haven
+  - generic: Inactive
+  - generic: SPY Momentum
+  - generic: 1.6%
+  - generic: BTC Momentum
+  - generic: 0.0%
+  - generic: Cross-Asset Analysis
+  - generic: Normal conditions. No significant regime signal detected.
+  - generic: Market Playbook Engine
+  - generic: Scenarios Active
+  - generic: Bull Case
+  - generic: Awaiting catalyst data
+  - generic: Base Case
+  - generic: Range-bound continuation
+  - generic: Bear Case
+  - generic: Awaiting catalyst data
+  - generic: "Strategy: Put Debit Spread"
+  - generic: Bull Trigger
+  - generic: Above $736.88
+  - generic: Gamma Flip Trigger
+  - generic: $N/A
+  - generic: Bear Trigger
+  - generic: Below $758.29
+  - generic: Primary Edge
+  - generic: None • N/A • Strength 0%
+  - generic: ⭐ MSP AI SETUP
+  - generic: Powered by Nasdaq BX + FMV Options (LIVE)
+  - text: "Market Mode:"
+  - generic: Uncertain Regime ↓
+  - generic: "Setup Type: Countertrend Bounce"
+  - generic: Setup Score
+  - generic: 72%
+  - generic: Analysis Layer
+  - generic: Analysis Score 76
+  - generic: Fill Quality 1.00
+  - generic: Time Fit 0.85
+  - generic: MSP AI Personality Match
+  - generic: Setup Fit Score
+  - generic: 50%
+  - generic: Adaptive Confluence
+  - generic: 65%
+  - generic: Profile warming up from Journal data
+  - generic: "OK Build profile: close at least 6 journal trades for adaptive matching"
+  - generic: Institutional Filters
+  - generic: "FINAL QUALITY: F (24)"
+  - generic: PASS Market Regime
+  - generic: BLOCK Liquidity & Timing
+  - generic: WARN Volatility Alignment
+  - generic: WARN Data Reliability
+  - generic: Capital Flow Engine
+  - generic: LAUNCH • Negative Gamma • monthly
+  - generic: "Flow Bias: BULLISH"
+  - generic: "Conviction: 92"
+  - generic: "Pin Strike: 750"
+  - generic: Confluence Card
+  - generic: Confluence Score 74/100 • NOT ALIGNED
+  - strong: "Regime Fit:"
+  - text: 68/100
+  - strong: "Flow Align:"
+  - text: 66/100
+  - strong: "Setup Quality:"
+  - text: 85/100
+  - strong: "Risk Metric:"
+  - text: 63/100
+  - strong: "Data Health:"
+  - text: 75/100
+  - strong: "Mode:"
+  - text: DEFENSIVE •
+  - strong: "State:"
+  - text: VOL EXPANSION • LAUNCH • BULLISH
+  - strong: "Key Level:"
+  - text: TPS 58 below threshold
+  - strong: "Scenario:"
+  - text: NONE • Size 0% • No active paper scenario
+  - strong: ✔ Favorable
+  - generic: • Standard setups allowed within flow permissions
+  - generic: • Defensive sizing enforced
+  - strong: ✖ Unfavorable
+  - generic: • Flow permission blocked (TPS 58)
+  - generic: Most Likely Path
+  - generic: 1. Break/hold above 745.62
+  - generic: 2. Confirm continuation on retest
+  - generic: 3. Expand toward 750 key strike
+  - generic: Analytical Probability Matrix
+  - generic: TRENDING
+  - generic: Trend Continuation
+  - generic: 59%
+  - generic: Pin / Reversion
+  - generic: 16%
+  - generic: Vol Expansion
+  - generic: 25%
+  - generic: "Expansion Shift: 0.0%"
+  - generic: FLAT
+  - generic: Analytical Flow State
+  - generic: LAUNCH (31%)
+  - strong: "Bias:"
+  - text: BULLISH
+  - strong: "Risk:"
+  - text: MEDIUM
+  - strong: "Next:"
+  - text: ↑ 741.25 / ↓ 740.80
+  - strong: "Framework:"
+  - text: Trend continuation structure detected; momentum expanding into liquidity
+  - generic: Flow Analysis Matrix
+  - generic: TPS 58 • NOT ALIGNED
+  - strong: "Risk:"
+  - text: HIGH
+  - strong: "Size:"
+  - text: 35%
+  - strong: "Invalidation:"
+  - text: wider confirmation
+  - strong: ✔ Favorable
+  - generic: • Trend continuation
+  - generic: • Breakout retests
+  - generic: • Momentum add-ons
+  - strong: ✖ Unfavorable
+  - generic: • Counter-trend fades
+  - generic: • Early reversal guesses
+  - generic: • Market orders
+  - generic: Risk Metrics Engine
+  - generic: REVIEW BLOCKED
+  - strong: "Risk Mode:"
+  - text: DEFENSIVE
+  - strong: "IRS:"
+  - text: "0.63"
+  - strong: "Exposure Context:"
+  - text: 55% used
+  - strong: "Correlation:"
+  - text: LOW
+  - strong: "Drawdown:"
+  - text: 0.0R
+  - strong: "Volatility:"
+  - text: EXTREME •
+  - strong: "Behavior:"
+  - text: Behavior stable
+  - generic: ⚠ Risk threshold reached
+  - strong: "Context Formula:"
+  - text: 1.00 × 0.35 × 0.60 × 1.00 = 0.00
+  - strong: ✔ Favorable
+  - generic: • Standard setups allowed within flow permissions
+  - generic: • Defensive sizing enforced
+  - strong: ✖ Unfavorable
+  - generic: • Flow permission blocked (TPS 58)
+  - generic: Key Strikes
+  - generic: • 750 (call-heavy, g=1.00)
+  - generic: • 760 (call-heavy, g=0.09)
+  - generic: • 765 (call-heavy, g=0.08)
+  - generic: Liquidity Magnets
+  - generic: • ENTRY_LOW 741.25 (95%)
+  - generic: • ENTRY_HIGH 744.95 (95%)
+  - generic: • TARGET_1 736.88 (95%)
+  - generic: Risk / Flip
+  - generic: • Bearish below 725.62
+  - generic: • Bullish above 745.62
+  - generic: • No VWAP anchor available — execution quality lower
+  - generic: Scenario State
+  - generic: NO STATE
+  - strong: "WHY:"
+  - text: No transition snapshot yet
+  - strong: "WAITING FOR:"
+  - text: Trigger definition unavailable
+  - strong: "REVIEW:"
+  - text: N/A (0% context)
+  - generic: "Risk State: NORMAL"
+  - generic: "Primary Action: ENTRY ON BREAKDOWN/HOLD BELOW 741.25"
+  - generic: "LIVE DATA STATUS: Nasdaq BX OK • FMV Options OK"
+  - generic: "Latency: NaNs"
+  - generic: Pattern Formation
+  - generic: Confirmed
+  - generic: Pattern
+  - generic: Double Bottom (1H)
+  - generic: Strength
+  - generic: 90%
+  - generic: Bias Align
+  - generic: MIXED
+- alert
+```

@@ -1,0 +1,2394 @@
+# Candidate audit: post-deploy evidence
+
+Release94a07d2; 22September2026. Scanner historical-window acceptance and full options-contract inspection.
+
+## META_OptionsContractsPost
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Research tools":
+    - generic: Research
+    - link "Symbol analysis":
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+    - link "Charts & mechanics":
+      - /url: /tools/terminal?symbol=META&type=equity&timeframe=daily
+    - link "News & calendar":
+      - /url: /tools/research?symbol=META&type=equity&timeframe=daily
+    - link "Crypto intelligence":
+      - /url: /tools/crypto-intel?symbol=META&type=equity&timeframe=daily
+    - link "Volatility":
+      - /url: /tools/volatility-engine?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - strong: Options Risk — Educational Only
+  - text: — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.
+  - region "Terminal command header":
+    - generic: Workflow step 3 · Market mechanics check
+    - generic: 3. Options setup
+    - generic: EQUITY path
+    - heading "Use Terminal before Backtest." [level=1]
+    - paragraph: Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+    - button "Back to Golden Egg"
+    - button "Continue to Backtest"
+    - button "Open Workflow"
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: Active lens
+    - generic "Options Confluence"
+    - generic "3. Options setup"
+    - generic: Data state
+    - generic "Lens ready"
+    - generic "No blocking route errors"
+    - generic: Next check
+    - generic "Validate mechanics context"
+    - generic "Complete before historical testing"
+  - textbox "Symbol...": META
+  - button "Load"
+  - generic: META
+  - generic: EQUITY
+  - generic: EQUITY PATH
+  - generic: Futures
+  - button "/ES"
+  - button "/NQ"
+  - button "/YM"
+  - button "/RTY"
+  - button "/CL"
+  - button "/GC"
+  - button "/SI"
+  - button "/M2K"
+  - button "/MES"
+  - button "/MNQ"
+  - button "/MCL"
+  - button "/MGC"
+  - generic: Crypto
+  - button "ADA"
+  - button "XRP"
+  - button "XLM"
+  - button "LINK"
+  - button "FET"
+  - generic: Equity
+  - button "WLD"
+  - button "KSM"
+  - button "SYM"
+  - button "WIFI"
+  - button "SP"
+  - generic "Terminal market mechanics views":
+    - generic: Mechanics workbench
+    - generic: Timing first, then positioning, flow, and final confluence before Backtest.
+    - generic: Equity path
+    - button "1. Timing map Close Calendar":
+      - generic: 1. Timing map
+      - generic: Close Calendar
+    - button "2. Chain quality Options Terminal":
+      - generic: 2. Chain quality
+      - generic: Options Terminal
+    - button "3. Options setup Options Confluence" [pressed]:
+      - generic: 3. Options setup
+      - generic: Options Confluence
+    - button "4. Flow estimate Options Flow":
+      - generic: 4. Flow estimate
+      - generic: Options Flow
+    - button "5. Capital pressure Capital Pressure":
+      - generic: 5. Capital pressure
+      - generic: Capital Pressure
+    - button "6. Gravity map Time Gravity":
+      - generic: 6. Gravity map
+      - generic: Time Gravity
+    - button "7. Final timing check Time Confluence":
+      - generic: 7. Final timing check
+      - generic: Time Confluence
+  - region "Terminal Options Confluence command header":
+    - generic: Terminal subview
+    - generic: 3. Options setup
+    - generic: Symbol META
+    - heading "Options Confluence check for META" [level=2]
+    - paragraph: Check strike and expiry alignment against the selected research scenario.
+    - button "Back to Calendar"
+    - button "Open Options Flow"
+    - link "Open Backtest":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - generic: Symbol
+    - generic "META"
+    - generic "EQUITY mechanics path"
+    - generic: View
+    - generic "Options Confluence"
+    - generic "3. Options setup"
+    - generic: Focus
+    - generic "Setup Alignment"
+    - generic "Completes the mechanics packet"
+    - generic: Next Check
+    - generic "Options Flow"
+    - generic "Continue the mechanics sequence"
+  - strong: "Why this can fail:"
+  - text: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.
+  - generic: META
+  - generic: "Status: ACTIVE"
+  - generic: "Confidence: 24%"
+  - generic: "Data: REALTIME"
+  - generic: "Mode: VOLATILITY EXPANSION"
+  - button "Compact"
+  - button "Normal"
+  - button "Focus"
+  - generic: Context
+  - heading "Bias & Regime" [level=3]
+  - generic: META • BEARISH
+  - generic: "Regime: UNCERTAIN REGIME"
+  - generic: "Session: CLOSED"
+  - generic: Analysis
+  - heading "Setup Status" [level=3]
+  - generic: NOT ALIGNED
+  - generic: "Pipeline: 3/5"
+  - generic: "Confluence: 24%"
+  - generic: Levels
+  - heading "Risk & Trigger" [level=3]
+  - generic: "Trigger: Entry on breakdown/hold below 741.25"
+  - generic: "Risk: HIGH"
+  - generic: "Data: REALTIME"
+  - generic: Confluence
+  - generic: 6 TF
+  - generic: Flow
+  - generic: BULLISH
+  - generic: Expected Move
+  - generic: 12.0%
+  - generic: Conditions
+  - generic: NOT ALIGNED
+  - generic: Mode
+  - generic: VOLATILITY EXPANSION
+  - generic: Updated
+  - generic: 27s
+  - generic: AI Co-Pilot
+  - generic: •
+  - generic: "Market State: VOLATILITY EXPANSION"
+  - generic: •
+  - generic: "Confluence: 55%"
+  - generic: •
+  - generic: "Watching: STRUCTURE + FLOW"
+  - generic: "MODE: TRANSITION | ATTENTION: RISK | WATCHING: STRUCTURE + FLOW • BEARISH EDGE | Grade B"
+  - generic: Analysis Panel
+  - generic: View Mode
+  - button "Guided" [pressed]
+  - button "Advanced"
+  - generic: Workflow Suggestions
+  - button "Refresh"
+  - generic: No active suggestions. New decision packets will repopulate this queue.
+  - textbox "Stock symbol":
+    - /placeholder: SPY, AAPL, QQQ, TSLA...
+    - text: META
+  - combobox "Scan timeframe":
+    - option "Scalping (5-15m) (0-2 DTE)"
+    - option "30 Minute (1-3 DTE)"
+    - option "1 Hour (2-5 DTE)"
+    - option "4 Hour (3-7 DTE)"
+    - option "Daily (5-14 DTE)" [selected]
+    - option "3-Day (1-3 weeks)"
+    - option "Weekly (2-4 weeks)"
+    - option "Monthly (30-60 DTE)"
+    - option "LEAPS (60+ DTE)"
+  - combobox "Expiration date":
+    - option "Auto-select expiry"
+    - option "Wed, Sep 23 (1 DTE) • 19,816 OI"
+    - option "Fri, Sep 25 (3 DTE) • 147,273 OI"
+    - option "Mon, Sep 28 (6 DTE) • 6,388 OI"
+    - option "Wed, Sep 30 (8 DTE) • 4,438 OI"
+    - option "Fri, Oct 2 (10 DTE) • 62,872 OI"
+    - option "Mon, Oct 5 (13 DTE) • 0 OI"
+    - option "Fri, Oct 9 (17 DTE) • 23,145 OI"
+    - option "Fri, Oct 16 (24 DTE) • 381,700 OI" [selected]
+    - option "Fri, Oct 23 (31 DTE) • 16,421 OI"
+    - option "Fri, Oct 30 (38 DTE) • 10,848 OI"
+    - option "Fri, Nov 20 (59 DTE) • 281,607 OI"
+    - option "Fri, Dec 18 (87 DTE) • 282,008 OI"
+    - option "Fri, Jan 15 (115 DTE) • 880,258 OI"
+    - option "Fri, Feb 19 (150 DTE) • 45,066 OI"
+    - option "Fri, Mar 19 (178 DTE) • 119,286 OI"
+    - option "Thu, Jun 17 (268 DTE) • 126,792 OI"
+    - option "Fri, Sep 17 (360 DTE) • 55,961 OI"
+    - option "Fri, Dec 17 (451 DTE) • 107,776 OI"
+    - option "Fri, Jan 21 (486 DTE) • 198,447 OI"
+    - option "Fri, Jun 16 (633 DTE) • 55,887 OI"
+    - option "Fri, Dec 15 (815 DTE) • 104,913 OI"
+    - option "Fri, Jan 19 (850 DTE) • 1,138 OI"
+  - button "Run Options Research"
+  - button "Refresh"
+  - generic: "Last updated: 12:41:38 pm"
+  - generic: Options Research Packet
+  - generic: Scenario • Evidence • Invalidation • Data Trust
+  - generic: "Dealer:"
+  - generic: COMPRESSION (Long Gamma)
+  - generic: •
+  - generic: Flip N/A
+  - generic: Scenario
+  - generic: META • BEARISH • Not Aligned
+  - generic: BEARISH edge near support zone with time activation
+  - generic: Confluence
+  - generic: 24%
+  - generic: Contract Focus
+  - generic: 740 PUT
+  - generic: ATM
+  - generic: Expiry Focus
+  - generic: 4 DTE
+  - generic: 2026-09-27
+  - generic: Reference Zone
+  - generic: 741.25 - 744.95
+  - generic: "Trigger: Entry on breakdown/hold below 741.25"
+  - generic: Why This Appeared
+  - list:
+    - listitem: SUPPORT @ 740.80 — 1h 50% reflection level (decompressing)
+    - listitem: "PATTERN: Double Bottom (1H) (bullish, 90%) — Two pivot lows near 593.35; neckline near 753.00"
+    - listitem: "TIME EDGE: 6 TFs clustered (timing advantage)"
+  - generic: Do Nothing Because
+  - list:
+    - listitem: Institutional filter is blocking this scenario.
+    - listitem: Expected move is elevated; option premium may be less forgiving.
+  - generic: Invalidates If
+  - list:
+    - listitem: Price loses 758.29 invalidation.
+    - listitem: Invalid if price breaches stop structure (758.29)
+    - listitem: Open interest sentiment diverges from the scenario.
+  - generic: Options Snapshot
+  - generic: "P/C: 0.26"
+  - generic: "IV Rank: 65%"
+  - generic: "Strategy: PUT DEBIT SPREAD"
+  - generic: "Expected Move: 12.0%"
+  - generic: "Theta: MODERATE"
+  - generic: Data Trust
+  - generic: "Data: REALTIME"
+  - generic: "Options: alpha vantage"
+  - generic: Greeks from API
+  - generic: OI usable
+  - generic: Research State
+  - generic: NOT ALIGNED
+  - generic: Decompression Stack
+  - generic: "5"
+  - generic: ▼ BEAR (-100)
+  - generic: No active decompression windows
+  - generic: • 6 tagged
+  - generic: $741.1300
+  - generic: AOI
+  - generic: 1h · 5m · 10m · 15m
+  - generic: Q58
+  - generic: ▼
+  - generic: $673.1800
+  - generic: AOI
+  - generic: 3h · 6h
+  - generic: Q54
+  - generic: ▼
+  - generic: "No active decompression windows · AOI at 741.13 (1h, 5m, 10m, 15m) · Pull bias: bearish (-100)"
+  - generic: Guided mode keeps Analyst sections collapsed for faster decision flow.
+  - button "Show Full Analysis"
+  - button "1) Evidence (6 TF)" [pressed]:
+    - generic: 1) Evidence
+    - generic: (6 TF)
+  - button "2) Contracts & Greeks (Ready)" [active] [pressed]:
+    - generic: 2) Contracts & Greeks
+    - generic: (Ready)
+  - generic: Section 1 — EvidenceConfluence + structure + setup confirmation
+  - generic: AI Research Card
+  - generic: Conviction 65%
+  - generic: "TERMINAL MODE: VOLATILITY EXPANSION"
+  - text: • IV/expected-move expansion detected; risk and flow prioritized.
+  - generic: Direction
+  - generic: BEARISH
+  - generic: Primary Setup
+  - generic: Put Debit Spread
+  - generic: Expected Move
+  - generic: ±12.0%
+  - generic: Invalidation
+  - generic: "758.29"
+  - generic: "Key Condition: Entry on breakdown/hold below 741.25"
+  - generic: Signal Stack
+  - generic: Trend StructureAI Watching
+  - generic: 59%
+  - generic: MODERATE • BEARISH bias • 65% confluence
+  - generic: Momentum
+  - generic: 30%
+  - generic: NO_SIGNAL • 6 TFs aligned • wait
+  - generic: Options FlowAI Watching
+  - generic: 34%
+  - generic: NEUTRAL • PCR 0.26 • none alert
+  - generic: Volatility Regime
+  - generic: 100%
+  - generic: IV 65% • Expected ±12.0%
+  - generic: Sentiment
+  - generic: 92%
+  - generic: BULLISH • launch • LOW ALIGNMENT
+  - generic: Analysis Panel
+  - generic: Reference Zone
+  - generic: 741.25 - 744.95
+  - generic: Invalidation Level
+  - generic: "758.29"
+  - generic: Key Level / R:R
+  - generic: 736.88 • 0.3:1
+  - generic: "Status: NOT ALIGNED"
+  - generic: Co-Pilot Observation
+  - generic: Favor reduced size or defined-risk structure
+  - generic: Attention state is RISK — preserve optionality until edge improves.
+  - generic: Co-Pilot Observations
+  - generic: Co-Pilot Note • Regime transition
+  - generic: Signals diverging — wait for confirmation or reduce size.
+  - generic: Co-Pilot Note • Risk elevated
+  - generic: Edge not clean — prioritize confirmation and defined-risk structures.
+  - generic: MSP Signature • Confluence Radar
+  - generic: $741.2450
+  - generic: EM ±12.0%
+  - generic: Composite 68%
+  - img "Confluence Radar":
+    - generic: TREND
+    - generic: FLOW
+    - generic: MOMENTUM
+    - generic: VOLATILITY
+    - generic: SENTIMENT
+  - generic: TREND
+  - generic: 60%
+  - generic: FLOW
+  - generic: 48%
+  - generic: MOMENTUM
+  - generic: 42%
+  - generic: VOLATILITY
+  - generic: 100%
+  - generic: SENTIMENT
+  - generic: 88%
+  - generic: Institutional Lens State
+  - generic: ACTIVE
+  - generic: CAUTION ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and monitor for stability.Active monitoring mode. Focus on risk, flow shifts, and analysis.
+  - generic: MRI Regime
+  - generic: CHAOTIC_NEWS
+  - generic: MRI Confluence
+  - generic: 70%
+  - generic: Adaptive Confluence
+  - generic: 65% (HIGH)
+  - generic: Risk Modifier
+  - generic: "0.00"
+  - generic: Institutional Intent
+  - generic: REPRICE_TREND
+  - generic: Confluence
+  - generic: 46%
+  - generic: Expected Path
+  - generic: EXPANSION CONTINUATION
+  - generic: Directional Bias
+  - generic: SHORT
+  - generic: • Intent remains mixed; wait for clearer structure-flow alignment
+  - generic "Show intent probabilities"
+  - generic: Dealer Positioning Engine
+  - generic: LONG GAMMA
+  - generic: Net GEX
+  - generic: $237.67M
+  - generic: Net DEX (Vanna)
+  - generic: "-$4.78B"
+  - generic: Gamma Flip
+  - generic: $N/A
+  - generic: Flip Distance
+  - generic: N/A
+  - generic: Call Wall
+  - generic: $700.00
+  - generic: Put Wall
+  - generic: $N/A
+  - generic: Vanna Flow Direction
+  - generic: Negative Vanna - IV rise pushes delta down, dealers sell underlying
+  - generic: Charm Decay Pressure
+  - generic: Call-heavy - Charm decay adds upward delta pressure into expiry
+  - generic: Dealer Pressure Summary
+  - generic: "Dealers are long gamma - expect dampened moves toward pin. Pin zone: UNKNOWN. Volatility state: Suppressed. Price likely gravitates to gamma flip."
+  - generic: Top GEX Nodes
+  - generic: $700
+  - generic: $750
+  - generic: $710
+  - generic: Liquidity & Level Map
+  - generic: 14 Levels Mapped
+  - generic: Liquidity Magnet Levels
+  - generic: $741.25
+  - generic: ENTRY_LOW
+  - generic: 95%
+  - generic: $744.95
+  - generic: ENTRY_HIGH
+  - generic: 95%
+  - generic: $736.88
+  - generic: TARGET_1
+  - generic: 95%
+  - generic: $740.80
+  - generic: SUPPORT
+  - generic: 95%
+  - generic: $738.84
+  - generic: DEMAND
+  - generic: 95%
+  - generic: $750.00
+  - generic: PIN
+  - generic: 91%
+  - generic: Open Interest Walls
+  - generic: CALL
+  - generic: $700.00
+  - generic: 9%
+  - generic: CALL
+  - generic: $750.00
+  - generic: 5%
+  - generic: Strike Gravity Map
+  - generic: $750 • call-heavy • G:1.0
+  - generic: $760 • call-heavy • G:0.1
+  - generic: $765 • call-heavy • G:0.1
+  - generic: $710 • call-heavy • G:0.0
+  - generic: $700 • call-heavy • G:0.0
+  - generic: $780 • call-heavy • G:0.0
+  - generic: Gamma Flip Zones
+  - generic: $725.62 — ↓ Bearish Below
+  - generic: $745.62 — ↑ Bullish Above
+  - generic: Structural Key Zones
+  - generic: support
+  - generic: $740.80
+  - generic: strong
+  - generic: demand
+  - generic: $0.00
+  - generic: strong
+  - generic: demand
+  - generic: $738.84
+  - generic: moderate
+  - generic: Institutional Liquidity Pools
+  - generic: SUPPORT
+  - generic: DEMAND
+  - generic: DEMAND
+  - generic: Most Likely Price Path
+  - generic: 1. Break/hold above 745.62
+  - generic: 2. Confirm continuation on retest
+  - generic: 3. Expand toward 750 key strike
+  - generic: No VWAP anchor available — execution quality lower
+  - generic: Break 745.62 → bullish launch risk
+  - generic: Cross-Asset Flow Intelligence
+  - generic: RISK ON
+  - generic: VIX Regime
+  - generic: NORMAL (18.0)
+  - generic: DXY Trend
+  - generic: Neutral (103.00)
+  - generic: Risk Score
+  - generic: 63/100
+  - generic: Size Multiplier
+  - generic: 1.00x
+  - generic: Sector Rotation
+  - generic: MIXED
+  - generic: Gold Safe Haven
+  - generic: Inactive
+  - generic: SPY Momentum
+  - generic: 1.6%
+  - generic: BTC Momentum
+  - generic: 0.0%
+  - generic: Cross-Asset Analysis
+  - generic: Normal conditions. No significant regime signal detected.
+  - generic: Market Playbook Engine
+  - generic: Scenarios Active
+  - generic: Bull Case
+  - generic: Awaiting catalyst data
+  - generic: Base Case
+  - generic: Range-bound continuation
+  - generic: Bear Case
+  - generic: Awaiting catalyst data
+  - generic: "Strategy: Put Debit Spread"
+  - generic: Bull Trigger
+  - generic: Above $736.88
+  - generic: Gamma Flip Trigger
+  - generic: $N/A
+  - generic: Bear Trigger
+  - generic: Below $758.29
+  - generic: Primary Edge
+  - generic: None • N/A • Strength 0%
+  - generic: ⭐ MSP AI SETUP
+  - generic: Powered by Nasdaq BX + FMV Options (LIVE)
+  - text: "Market Mode:"
+  - generic: Uncertain Regime ↓
+  - generic: "Setup Type: Countertrend Bounce"
+  - generic: Setup Score
+  - generic: 72%
+  - generic: Analysis Layer
+  - generic: Analysis Score 76
+  - generic: Fill Quality 1.00
+  - generic: Time Fit 0.85
+  - generic: MSP AI Personality Match
+  - generic: Setup Fit Score
+  - generic: 50%
+  - generic: Adaptive Confluence
+  - generic: 65%
+  - generic: Profile warming up from Journal data
+  - generic: "OK Build profile: close at least 6 journal trades for adaptive matching"
+  - generic: Institutional Filters
+  - generic: "FINAL QUALITY: F (24)"
+  - generic: PASS Market Regime
+  - generic: BLOCK Liquidity & Timing
+  - generic: WARN Volatility Alignment
+  - generic: WARN Data Reliability
+  - generic: Capital Flow Engine
+  - generic: LAUNCH • Negative Gamma • monthly
+  - generic: "Flow Bias: BULLISH"
+  - generic: "Conviction: 92"
+  - generic: "Pin Strike: 750"
+  - generic: Confluence Card
+  - generic: Confluence Score 74/100 • NOT ALIGNED
+  - strong: "Regime Fit:"
+  - text: 68/100
+  - strong: "Flow Align:"
+  - text: 66/100
+  - strong: "Setup Quality:"
+  - text: 85/100
+  - strong: "Risk Metric:"
+  - text: 63/100
+  - strong: "Data Health:"
+  - text: 75/100
+  - strong: "Mode:"
+  - text: DEFENSIVE •
+  - strong: "State:"
+  - text: VOL EXPANSION • LAUNCH • BULLISH
+  - strong: "Key Level:"
+  - text: TPS 58 below threshold
+  - strong: "Scenario:"
+  - text: NONE • Size 0% • No active paper scenario
+  - strong: ✔ Favorable
+  - generic: • Standard setups allowed within flow permissions
+  - generic: • Defensive sizing enforced
+  - strong: ✖ Unfavorable
+  - generic: • Flow permission blocked (TPS 58)
+  - generic: Most Likely Path
+  - generic: 1. Break/hold above 745.62
+  - generic: 2. Confirm continuation on retest
+  - generic: 3. Expand toward 750 key strike
+  - generic: Analytical Probability Matrix
+  - generic: TRENDING
+  - generic: Trend Continuation
+  - generic: 59%
+  - generic: Pin / Reversion
+  - generic: 16%
+  - generic: Vol Expansion
+  - generic: 25%
+  - generic: "Expansion Shift: 0.0%"
+  - generic: FLAT
+  - generic: Analytical Flow State
+  - generic: LAUNCH (31%)
+  - strong: "Bias:"
+  - text: BULLISH
+  - strong: "Risk:"
+  - text: MEDIUM
+  - strong: "Next:"
+  - text: ↑ 741.25 / ↓ 740.80
+  - strong: "Framework:"
+  - text: Trend continuation structure detected; momentum expanding into liquidity
+  - generic: Flow Analysis Matrix
+  - generic: TPS 58 • NOT ALIGNED
+  - strong: "Risk:"
+  - text: HIGH
+  - strong: "Size:"
+  - text: 35%
+  - strong: "Invalidation:"
+  - text: wider confirmation
+  - strong: ✔ Favorable
+  - generic: • Trend continuation
+  - generic: • Breakout retests
+  - generic: • Momentum add-ons
+  - strong: ✖ Unfavorable
+  - generic: • Counter-trend fades
+  - generic: • Early reversal guesses
+  - generic: • Market orders
+  - generic: Risk Metrics Engine
+  - generic: REVIEW BLOCKED
+  - strong: "Risk Mode:"
+  - text: DEFENSIVE
+  - strong: "IRS:"
+  - text: "0.63"
+  - strong: "Exposure Context:"
+  - text: 55% used
+  - strong: "Correlation:"
+  - text: LOW
+  - strong: "Drawdown:"
+  - text: 0.0R
+  - strong: "Volatility:"
+  - text: EXTREME •
+  - strong: "Behavior:"
+  - text: Behavior stable
+  - generic: ⚠ Risk threshold reached
+  - strong: "Context Formula:"
+  - text: 1.00 × 0.35 × 0.60 × 1.00 = 0.00
+  - strong: ✔ Favorable
+  - generic: • Standard setups allowed within flow permissions
+  - generic: • Defensive sizing enforced
+  - strong: ✖ Unfavorable
+  - generic: • Flow permission blocked (TPS 58)
+  - generic: Key Strikes
+  - generic: • 750 (call-heavy, g=1.00)
+  - generic: • 760 (call-heavy, g=0.09)
+  - generic: • 765 (call-heavy, g=0.08)
+  - generic: Liquidity Magnets
+  - generic: • ENTRY_LOW 741.25 (95%)
+  - generic: • ENTRY_HIGH 744.95 (95%)
+  - generic: • TARGET_1 736.88 (95%)
+  - generic: Risk / Flip
+  - generic: • Bearish below 725.62
+  - generic: • Bullish above 745.62
+  - generic: • No VWAP anchor available — execution quality lower
+  - generic: Scenario State
+  - generic: NO STATE
+  - strong: "WHY:"
+  - text: No transition snapshot yet
+  - strong: "WAITING FOR:"
+  - text: Trigger definition unavailable
+  - strong: "REVIEW:"
+  - text: N/A (0% context)
+  - generic: "Risk State: NORMAL"
+  - generic: "Primary Action: ENTRY ON BREAKDOWN/HOLD BELOW 741.25"
+  - generic: "LIVE DATA STATUS: Nasdaq BX OK • FMV Options OK"
+  - generic: "Latency: NaNs"
+  - generic: Pattern Formation
+  - generic: Confirmed
+  - generic: Pattern
+  - generic: Double Bottom (1H)
+  - generic: Strength
+  - generic: 90%
+  - generic: Bias Align
+  - generic: MIXED
+  - generic: Section 2 — Contracts & GreeksStrike + expiry + OI + greeks + scenario risk
+  - heading "Highest Confluence Strike" [level=3]
+  - generic: $740 PUT
+  - generic: ATM
+  - generic: Nearest-to-price strike (best liquidity, balanced delta/gamma)
+  - generic: Est. Delta:0.47
+  - text: "Distance:"
+  - generic: "-0.17%"
+  - text: "Key Level:"
+  - generic: $735.3150
+  - text: "Confluence:"
+  - generic: 35%
+  - generic: "Alternative Strikes:"
+  - generic: $270 PUT
+  - generic: (OTM)
+  - generic: Strike at 50% cluster (5m/10m/15m/30m converging)
+  - heading "Expiration Window" [level=3]
+  - generic: 4 DTE
+  - generic: MODERATE THETA
+  - generic: 2026-09-27
+  - generic: "Primary: Daily confluence = weekly expiration"
+  - generic: Timeframe:intraday
+  - text: "Confluence:"
+  - generic: 45%
+  - generic: "Alternative Expirations:"
+  - generic: 5 DTE
+  - generic: (2026-09-28)
+  - generic: 8 DTE
+  - generic: (2026-10-01)
+  - generic: 10 DTE
+  - generic: (2026-10-05)
+  - heading "Open Interest Context" [level=3]
+  - generic: EOD Data
+  - generic: "Expiry: 2026-10-16"
+  - generic: Put/Call Ratio
+  - generic: "0.26"
+  - generic: Bullish bias
+  - generic: Max Pain Strike
+  - generic: $662.5
+  - generic: Below price
+  - generic: O/I Sentiment
+  - generic: BULLISH
+  - generic: P/C 0.26 = heavy call buying
+  - generic: Total Call O/I
+  - generic: 250.9K
+  - generic: Total Put O/I
+  - generic: 65.4K
+  - generic "Strike Analysis with Greeks (10 strikes)"
+  - table:
+    - rowgroup:
+      - row "Strike OI IV Δ Γ Θ ν":
+        - columnheader "Strike"
+        - columnheader "OI"
+        - columnheader "IV"
+        - columnheader "Δ"
+        - columnheader "Γ"
+        - columnheader "Θ"
+        - columnheader "ν"
+    - rowgroup:
+      - row "$700C 27.3K 46% 0.71 0.004 -0.665 0.664":
+        - cell "$700C":
+          - generic: $700
+          - text: C
+        - cell "27.3K"
+        - cell "46%"
+        - cell "0.71"
+        - cell "0.004"
+        - cell "-0.665"
+        - cell "0.664"
+      - row "$750C 15.6K 46% 0.49 0.004 -0.753 0.774":
+        - cell "$750C":
+          - generic: $750
+          - text: C
+        - cell "15.6K"
+        - cell "46%"
+        - cell "0.49"
+        - cell "0.004"
+        - cell "-0.753"
+        - cell "0.774"
+      - row "$800C 13.1K 46% 0.29 0.004 -0.640 0.667":
+        - cell "$800C":
+          - generic: $800
+          - text: C
+        - cell "13.1K"
+        - cell "46%"
+        - cell "0.29"
+        - cell "0.004"
+        - cell "-0.640"
+        - cell "0.667"
+      - row "$710C 12.6K 45% 0.67 0.004 -0.684 0.701":
+        - cell "$710C":
+          - generic: $710
+          - text: C
+        - cell "12.6K"
+        - cell "45%"
+        - cell "0.67"
+        - cell "0.004"
+        - cell "-0.684"
+        - cell "0.701"
+      - row "$650C 11.9K 49% 0.87 0.002 -0.473 0.421":
+        - cell "$650C":
+          - generic: $650
+          - text: C
+        - cell "11.9K"
+        - cell "49%"
+        - cell "0.87"
+        - cell "0.002"
+        - cell "-0.473"
+        - cell "0.421"
+      - row "$765C 9.8K 46% 0.43 0.004 -0.737 0.762":
+        - cell "$765C":
+          - generic: $765
+          - text: C
+        - cell "9.8K"
+        - cell "46%"
+        - cell "0.43"
+        - cell "0.004"
+        - cell "-0.737"
+        - cell "0.762"
+  - generic: Δ Delta • Γ Gamma • Θ Theta • ν Vega
+  - generic: O/I sentiment diverges from confluence; scenario confidence should be capped.
+  - generic "Greeks & Scenario Risk Show advanced data":
+    - text: Greeks & Scenario Risk
+    - generic: Show advanced data
+  - generic "Scenario Risk Plan 2% max risk • Show details":
+    - text: Scenario Risk Plan
+    - generic: 2% max risk • Show details
+  - heading "Scenario Summary" [level=3]
+  - text: Symbol:META@
+  - generic: $741.2450
+  - generic: Contract Type:PUT
+  - text: "Strike:"
+  - generic: $740
+  - generic: (ATM)
+  - text: Expiration:2026-09-27
+  - generic: (4 DTE)
+  - text: "Quality:"
+  - generic: B B
+  - text: "|"
+  - generic: Wait WAIT
+  - generic: Expiration Logic
+  - generic: "Key Level: $735.3150 (50% level) | Max Risk: 2% of portfolio"
+- alert
+```
+
+## META_BacktestPost
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: META
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Min Score
+  - spinbutton: "70"
+  - generic: ATR Invalidation ×
+  - spinbutton: "2"
+  - generic: ATR Key Level ×
+  - spinbutton: "3"
+  - generic: Max Bars
+  - spinbutton: "20"
+  - checkbox "Allow Shorts"
+  - text: Allow Shorts
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: META
+  - generic: Scanner ≥70
+  - generic: Daily
+  - generic: +43.6%
+  - generic: 28 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: +43.6%
+  - generic: Win Rate
+  - generic: 50.0%
+  - generic: Profit Factor
+  - generic: "1.77"
+  - generic: Realised Drawdown
+  - generic: +11.6%
+  - generic: Sharpe
+  - generic: "1.11"
+  - generic: CAGR
+  - generic: 19.85%
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "28"
+  - generic: Winners
+  - generic: "14"
+  - generic: Losers
+  - generic: "14"
+  - generic: Avg Win (USD)
+  - generic: "714.12"
+  - generic: Avg Loss (USD)
+  - generic: "-402.59"
+  - generic: Sortino
+  - generic: "2.36"
+  - generic: Calmar
+  - generic: "1.71"
+  - generic: Volatility
+  - generic: 17.73%
+  - generic: Time in Market
+  - generic: 58.6%
+  - generic: Largest Gain
+  - generic: +14.3%
+  - generic: Largest Loss
+  - generic: "-7.5%"
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-01-02 → 2025-12-31
+  - generic: "Bars: 502"
+  - generic: "Provider: alpha_vantage"
+  - heading "Realised Balance" [level=3]
+  - generic: 2024-01-02
+  - generic: $14,362
+  - generic: 2025-12-31
+  - heading "Trade History (28 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "LONG 2024-01-02 2024-01-10 $343.07 $366.32 +6.8% $677.47 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-01-02"
+        - cell "2024-01-10"
+        - cell "$343.07"
+        - cell "$366.32"
+        - cell "+6.8%"
+        - cell "$677.47"
+        - cell "target"
+      - row "LONG 2024-01-10 2024-01-24 $367.03 $390.23 +6.3% $632.10 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-01-10"
+        - cell "2024-01-24"
+        - cell "$367.03"
+        - cell "$390.23"
+        - cell "+6.3%"
+        - cell "$632.10"
+        - cell "target"
+      - row "LONG 2024-01-24 2024-02-02 $387.07 $411.73 +6.4% $636.97 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-01-24"
+        - cell "2024-02-02"
+        - cell "$387.07"
+        - cell "$411.73"
+        - cell "+6.4%"
+        - cell "$636.97"
+        - cell "target"
+      - row "LONG 2024-02-02 2024-03-04 $470.58 $494.09 +5.0% $499.64 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-02-02"
+        - cell "2024-03-04"
+        - cell "$470.58"
+        - cell "$494.09"
+        - cell "+5.0%"
+        - cell "$499.64"
+        - cell "timeout"
+      - row "LONG 2024-04-04 2024-04-19 $506.71 $479.98 -5.3% $-527.57 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-04-04"
+        - cell "2024-04-19"
+        - cell "$506.71"
+        - cell "$479.98"
+        - cell "-5.3%"
+        - cell "$-527.57"
+        - cell "stop"
+      - row "LONG 2024-05-08 2024-06-06 $468.71 $489.70 +4.5% $447.74 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-05-08"
+        - cell "2024-06-06"
+        - cell "$468.71"
+        - cell "$489.70"
+        - cell "+4.5%"
+        - cell "$447.74"
+        - cell "timeout"
+      - row "LONG 2024-06-06 2024-07-05 $489.70 $525.94 +7.4% $740.17 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-06-06"
+        - cell "2024-07-05"
+        - cell "$489.70"
+        - cell "$525.94"
+        - cell "+7.4%"
+        - cell "$740.17"
+        - cell "target"
+      - row "LONG 2024-07-05 2024-07-11 $536.00 $510.93 -4.7% $-467.62 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-07-05"
+        - cell "2024-07-11"
+        - cell "$536.00"
+        - cell "$510.93"
+        - cell "-4.7%"
+        - cell "$-467.62"
+        - cell "stop"
+      - row "LONG 2024-07-11 2024-07-16 $508.98 $486.24 -4.5% $-446.85 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-07-11"
+        - cell "2024-07-16"
+        - cell "$508.98"
+        - cell "$486.24"
+        - cell "-4.5%"
+        - cell "$-446.85"
+        - cell "signal_flip"
+      - row "LONG 2024-08-06 2024-09-04 $490.51 $509.02 +3.8% $377.46 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-08-06"
+        - cell "2024-09-04"
+        - cell "$490.51"
+        - cell "$509.02"
+        - cell "+3.8%"
+        - cell "$377.46"
+        - cell "timeout"
+      - row "LONG 2024-09-16 2024-09-25 $529.91 $573.22 +8.2% $817.29 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-09-16"
+        - cell "2024-09-25"
+        - cell "$529.91"
+        - cell "$573.22"
+        - cell "+8.2%"
+        - cell "$817.29"
+        - cell "target"
+      - row "LONG 2024-09-25 2024-10-23 $564.72 $560.13 -0.8% $-81.29 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-09-25"
+        - cell "2024-10-23"
+        - cell "$564.72"
+        - cell "$560.13"
+        - cell "-0.8%"
+        - cell "$-81.29"
+        - cell "timeout"
+      - row "LONG 2024-11-12 2024-11-14 $581.13 $573.51 -1.3% $-130.98 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-11-12"
+        - cell "2024-11-14"
+        - cell "$581.13"
+        - cell "$573.51"
+        - cell "-1.3%"
+        - cell "$-130.98"
+        - cell "signal_flip"
+      - row "LONG 2024-12-02 2024-12-11 $589.09 $630.72 +7.1% $706.80 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-12-02"
+        - cell "2024-12-11"
+        - cell "$589.09"
+        - cell "$630.72"
+        - cell "+7.1%"
+        - cell "$706.80"
+        - cell "target"
+      - row "LONG 2024-12-11 2024-12-18 $628.68 $598.18 -4.8% $-485.22 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-12-11"
+        - cell "2024-12-18"
+        - cell "$628.68"
+        - cell "$598.18"
+        - cell "-4.8%"
+        - cell "$-485.22"
+        - cell "stop"
+  - button "← Prev" [disabled]
+  - generic: 1 / 2
+  - button "Next →"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## META_BacktestPostPage2
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=META&type=equity&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=META&type=equity&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=META&type=equity&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: META
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Min Score
+  - spinbutton: "70"
+  - generic: ATR Invalidation ×
+  - spinbutton: "2"
+  - generic: ATR Key Level ×
+  - spinbutton: "3"
+  - generic: Max Bars
+  - spinbutton: "20"
+  - checkbox "Allow Shorts"
+  - text: Allow Shorts
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: META
+  - generic: Scanner ≥70
+  - generic: Daily
+  - generic: +43.6%
+  - generic: 28 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: +43.6%
+  - generic: Win Rate
+  - generic: 50.0%
+  - generic: Profit Factor
+  - generic: "1.77"
+  - generic: Realised Drawdown
+  - generic: +11.6%
+  - generic: Sharpe
+  - generic: "1.11"
+  - generic: CAGR
+  - generic: 19.85%
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "28"
+  - generic: Winners
+  - generic: "14"
+  - generic: Losers
+  - generic: "14"
+  - generic: Avg Win (USD)
+  - generic: "714.12"
+  - generic: Avg Loss (USD)
+  - generic: "-402.59"
+  - generic: Sortino
+  - generic: "2.36"
+  - generic: Calmar
+  - generic: "1.71"
+  - generic: Volatility
+  - generic: 17.73%
+  - generic: Time in Market
+  - generic: 58.6%
+  - generic: Largest Gain
+  - generic: +14.3%
+  - generic: Largest Loss
+  - generic: "-7.5%"
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-01-02 → 2025-12-31
+  - generic: "Bars: 502"
+  - generic: "Provider: alpha_vantage"
+  - heading "Realised Balance" [level=3]
+  - generic: 2024-01-02
+  - generic: $14,362
+  - generic: 2025-12-31
+  - heading "Trade History (28 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "LONG 2025-01-07 2025-01-14 $614.48 $590.97 -3.8% $-382.59 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-07"
+        - cell "2025-01-14"
+        - cell "$614.48"
+        - cell "$590.97"
+        - cell "-3.8%"
+        - cell "$-382.59"
+        - cell "signal_flip"
+      - row "LONG 2025-01-21 2025-01-28 $613.06 $665.19 +8.5% $850.44 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-21"
+        - cell "2025-01-28"
+        - cell "$613.06"
+        - cell "$665.19"
+        - cell "+8.5%"
+        - cell "$850.44"
+        - cell "target"
+      - row "LONG 2025-01-28 2025-02-14 $670.61 $727.84 +8.5% $853.40 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-28"
+        - cell "2025-02-14"
+        - cell "$670.61"
+        - cell "$727.84"
+        - cell "+8.5%"
+        - cell "$853.40"
+        - cell "target"
+      - row "LONG 2025-02-14 2025-02-19 $732.60 $697.96 -4.7% $-472.84 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-02-14"
+        - cell "2025-02-19"
+        - cell "$732.60"
+        - cell "$697.96"
+        - cell "-4.7%"
+        - cell "$-472.84"
+        - cell "stop"
+      - row "LONG 2025-03-25 2025-03-28 $623.39 $576.38 -7.5% $-754.12 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-03-25"
+        - cell "2025-03-28"
+        - cell "$623.39"
+        - cell "$576.38"
+        - cell "-7.5%"
+        - cell "$-754.12"
+        - cell "stop"
+      - row "LONG 2025-05-01 2025-05-13 $569.54 $650.70 +14.3% $1424.99 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-05-01"
+        - cell "2025-05-13"
+        - cell "$569.54"
+        - cell "$650.70"
+        - cell "+14.3%"
+        - cell "$1424.99"
+        - cell "target"
+      - row "LONG 2025-05-13 2025-06-11 $652.97 $690.90 +5.8% $580.92 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-05-13"
+        - cell "2025-06-11"
+        - cell "$652.97"
+        - cell "$690.90"
+        - cell "+5.8%"
+        - cell "$580.92"
+        - cell "timeout"
+      - row "LONG 2025-06-11 2025-06-30 $690.90 $742.88 +7.5% $752.35 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-06-11"
+        - cell "2025-06-30"
+        - cell "$690.90"
+        - cell "$742.88"
+        - cell "+7.5%"
+        - cell "$752.35"
+        - cell "target"
+      - row "LONG 2025-06-30 2025-07-16 $735.20 $703.73 -4.3% $-428.03 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-06-30"
+        - cell "2025-07-16"
+        - cell "$735.20"
+        - cell "$703.73"
+        - cell "-4.3%"
+        - cell "$-428.03"
+        - cell "stop"
+      - row "LONG 2025-07-31 2025-08-20 $770.41 $731.11 -5.1% $-510.10 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-07-31"
+        - cell "2025-08-20"
+        - cell "$770.41"
+        - cell "$731.11"
+        - cell "-5.1%"
+        - cell "$-510.10"
+        - cell "stop"
+      - row "LONG 2025-09-15 2025-09-30 $761.70 $730.24 -4.1% $-413.06 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-09-15"
+        - cell "2025-09-30"
+        - cell "$761.70"
+        - cell "$730.24"
+        - cell "-4.1%"
+        - cell "$-413.06"
+        - cell "stop"
+      - row "LONG 2025-10-20 2025-10-30 $729.80 $695.48 -4.7% $-470.32 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-10-20"
+        - cell "2025-10-30"
+        - cell "$729.80"
+        - cell "$695.48"
+        - cell "-4.7%"
+        - cell "$-470.32"
+        - cell "stop"
+      - row "LONG 2025-12-18 2025-12-31 $662.84 $658.49 -0.7% $-65.62 end_of_data":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-12-18"
+        - cell "2025-12-31"
+        - cell "$662.84"
+        - cell "$658.49"
+        - cell "-0.7%"
+        - cell "$-65.62"
+        - cell "end_of_data"
+  - button "← Prev"
+  - generic: 2 / 2
+  - button "Next →" [disabled]
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## ETH_BacktestPost
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: ETH-USD
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Min Score
+  - spinbutton: "70"
+  - generic: ATR Invalidation ×
+  - spinbutton: "2"
+  - generic: ATR Key Level ×
+  - spinbutton: "3"
+  - generic: Max Bars
+  - spinbutton: "20"
+  - checkbox "Allow Shorts"
+  - text: Allow Shorts
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: ETH-USD
+  - generic: Scanner ≥70
+  - generic: Daily
+  - generic: "-20.9%"
+  - generic: 25 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: "-20.9%"
+  - generic: Win Rate
+  - generic: 36.0%
+  - generic: Profit Factor
+  - generic: "0.83"
+  - generic: Realised Drawdown
+  - generic: +39.4%
+  - generic: Sharpe
+  - generic: "-0.14"
+  - generic: CAGR
+  - generic: "-12.66%"
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "25"
+  - generic: Winners
+  - generic: "9"
+  - generic: Losers
+  - generic: "16"
+  - generic: Avg Win (USD)
+  - generic: "1159.79"
+  - generic: Avg Loss (USD)
+  - generic: "-782.84"
+  - generic: Sortino
+  - generic: "-0.22"
+  - generic: Calmar
+  - generic: "-0.32"
+  - generic: Volatility
+  - generic: 40.69%
+  - generic: Time in Market
+  - generic: 32.6%
+  - generic: Largest Gain
+  - generic: +14.5%
+  - generic: Largest Loss
+  - generic: "-10.8%"
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-04-09 → 2025-12-31
+  - generic: "Bars: 632"
+  - generic: "Provider: coingecko"
+  - heading "Realised Balance" [level=3]
+  - generic: 2024-04-09
+  - generic: $7,913
+  - generic: 2025-12-31
+  - heading "Trade History (25 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "LONG 2024-04-09 2024-04-13 $3503.65 $3126.52 -10.8% $-1076.39 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-04-09"
+        - cell "2024-04-13"
+        - cell "$3503.65"
+        - cell "$3126.52"
+        - cell "-10.8%"
+        - cell "$-1076.39"
+        - cell "stop"
+      - row "LONG 2024-04-27 2024-04-30 $3259.25 $2926.35 -10.2% $-1021.40 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-04-27"
+        - cell "2024-04-30"
+        - cell "$3259.25"
+        - cell "$2926.35"
+        - cell "-10.2%"
+        - cell "$-1021.40"
+        - cell "stop"
+      - row "LONG 2024-05-17 2024-05-20 $3096.00 $3500.93 +13.1% $1307.90 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-05-17"
+        - cell "2024-05-20"
+        - cell "$3096.00"
+        - cell "$3500.93"
+        - cell "+13.1%"
+        - cell "$1307.90"
+        - cell "target"
+      - row "LONG 2024-05-20 2024-06-09 $3656.39 $3705.90 +1.4% $135.41 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-05-20"
+        - cell "2024-06-09"
+        - cell "$3656.39"
+        - cell "$3705.90"
+        - cell "+1.4%"
+        - cell "$135.41"
+        - cell "timeout"
+      - row "LONG 2024-07-15 2024-07-25 $3488.54 $3213.51 -7.9% $-788.39 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-07-15"
+        - cell "2024-07-25"
+        - cell "$3488.54"
+        - cell "$3213.51"
+        - cell "-7.9%"
+        - cell "$-788.39"
+        - cell "stop"
+      - row "LONG 2024-11-07 2024-11-11 $2894.97 $3252.60 +12.3% $1235.34 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-11-07"
+        - cell "2024-11-11"
+        - cell "$2894.97"
+        - cell "$3252.60"
+        - cell "+12.3%"
+        - cell "$1235.34"
+        - cell "target"
+      - row "LONG 2024-11-11 2024-11-14 $3372.79 $3104.91 -7.9% $-794.24 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-11-11"
+        - cell "2024-11-14"
+        - cell "$3372.79"
+        - cell "$3104.91"
+        - cell "-7.9%"
+        - cell "$-794.24"
+        - cell "stop"
+      - row "LONG 2024-11-14 2024-11-25 $3059.81 $3504.39 +14.5% $1452.96 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-11-14"
+        - cell "2024-11-25"
+        - cell "$3059.81"
+        - cell "$3504.39"
+        - cell "+14.5%"
+        - cell "$1452.96"
+        - cell "target"
+      - row "LONG 2024-11-25 2024-12-05 $3417.29 $3896.43 +14.0% $1402.11 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-11-25"
+        - cell "2024-12-05"
+        - cell "$3417.29"
+        - cell "$3896.43"
+        - cell "+14.0%"
+        - cell "$1402.11"
+        - cell "target"
+      - row "LONG 2024-12-05 2024-12-19 $3796.87 $3440.30 -9.4% $-939.13 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-12-05"
+        - cell "2024-12-19"
+        - cell "$3796.87"
+        - cell "$3440.30"
+        - cell "-9.4%"
+        - cell "$-939.13"
+        - cell "stop"
+      - row "LONG 2025-01-03 2025-01-08 $3604.29 $3272.14 -9.2% $-921.54 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-03"
+        - cell "2025-01-08"
+        - cell "$3604.29"
+        - cell "$3272.14"
+        - cell "-9.2%"
+        - cell "$-921.54"
+        - cell "stop"
+      - row "LONG 2025-01-17 2025-01-19 $3477.28 $3208.14 -7.7% $-774.00 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-17"
+        - cell "2025-01-19"
+        - cell "$3477.28"
+        - cell "$3208.14"
+        - cell "-7.7%"
+        - cell "$-774.00"
+        - cell "signal_flip"
+      - row "LONG 2025-01-21 2025-01-27 $3326.03 $3173.53 -4.6% $-458.50 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-21"
+        - cell "2025-01-27"
+        - cell "$3326.03"
+        - cell "$3173.53"
+        - cell "-4.6%"
+        - cell "$-458.50"
+        - cell "signal_flip"
+      - row "LONG 2025-01-31 2025-02-01 $3296.39 $3125.04 -5.2% $-519.81 signal_flip":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-01-31"
+        - cell "2025-02-01"
+        - cell "$3296.39"
+        - cell "$3125.04"
+        - cell "-5.2%"
+        - cell "$-519.81"
+        - cell "signal_flip"
+      - row "LONG 2025-05-10 2025-05-30 $2583.68 $2524.48 -2.3% $-229.13 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-05-10"
+        - cell "2025-05-30"
+        - cell "$2583.68"
+        - cell "$2524.48"
+        - cell "-2.3%"
+        - cell "$-229.13"
+        - cell "timeout"
+  - button "← Prev" [disabled]
+  - generic: 1 / 2
+  - button "Next →"
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## ETH_BacktestPostPage2
+
+```text
+- banner:
+  - link "MarketScannerPros MarketScannerPros":
+    - /url: /tools/command-center
+    - img "MarketScannerPros"
+    - generic: MarketScannerPros
+  - generic: Pro
+  - button "Open menu"
+  - dialog:
+    - generic: Menu
+    - button: ×
+    - link:
+      - /url: /tools/command-center
+      - text: Overview
+    - link:
+      - /url: /tools/scanner
+      - text: Scanner
+    - link:
+      - /url: /tools/golden-egg?symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Research
+    - link:
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+      - text: Backtest
+    - link:
+      - /url: /tools/workspace?tab=journal
+      - text: Track
+    - generic: More tools
+    - link:
+      - /url: /tools
+      - text: All tools
+    - link:
+      - /url: /compliance-hub
+      - text: Compliance Hub
+    - link:
+      - /url: /pricing
+      - text: Pricing
+    - link:
+      - /url: /tools/referrals
+      - text: Referrals
+    - link:
+      - /url: /account
+      - text: Account
+    - button: Sign Out
+- main:
+  - navigation "Backtest tools":
+    - generic: Backtest
+    - link "Strategy & scanner tests":
+      - /url: /tools/workspace?tab=backtest&symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Recorded outcomes":
+      - /url: /tools/signal-accuracy?symbol=ETH-USD&type=crypto&timeframe=daily
+    - link "Find a tool":
+      - /url: /tools
+  - generic: Market Regime
+  - generic: Range / Neutral
+  - button "☆"
+  - button "General Information Only — educational use only. Read ▾":
+    - text: ⓘ
+    - strong: General Information Only
+    - text: — educational use only.
+    - generic: Read ▾
+  - region "Workspace command header":
+    - generic: Workflow memory
+    - generic: 5. Historical test
+    - generic: Tier Pro
+    - heading "Workspace" [level=1]
+    - paragraph: Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.
+    - button "Open watchlists"
+    - button "Open Alerts"
+    - button "Open workflow"
+    - generic: Active tab
+    - generic "Backtest"
+    - generic "5. Historical test"
+    - generic: Tier
+    - generic "Pro"
+    - generic "Subscription level"
+    - generic: Focus
+    - generic "Historical test"
+    - generic "Current workbench focus"
+    - generic: Next tab
+    - generic "Alerts"
+    - generic "Continue the workspace loop"
+  - generic "Workspace tabs":
+    - button "1. Symbol shortlist Watchlists":
+      - generic: 1. Symbol shortlist
+      - generic: Watchlists
+    - button "2. Trade journal Journal":
+      - generic: 2. Trade journal
+      - generic: Journal
+    - button "3. Open exposure Portfolio":
+      - generic: 3. Open exposure
+      - generic: Portfolio
+    - button "4. Doctrine Learning":
+      - generic: 4. Doctrine
+      - generic: Learning
+    - button "5. Historical test Backtest" [pressed]:
+      - generic: 5. Historical test
+      - generic: Backtest
+    - button "6. Triggers Alerts":
+      - generic: 6. Triggers
+      - generic: Alerts
+    - button "7. Account Settings":
+      - generic: 7. Account
+      - generic: Settings
+  - heading "Backtest Lab" [level=1]
+  - paragraph: Strategy & scanner backtesting engine
+  - generic: Backtest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: ETH-USD
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Min Score
+  - spinbutton: "70"
+  - generic: ATR Invalidation ×
+  - spinbutton: "2"
+  - generic: ATR Key Level ×
+  - spinbutton: "3"
+  - generic: Max Bars
+  - spinbutton: "20"
+  - checkbox "Allow Shorts"
+  - text: Allow Shorts
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: ETH-USD
+  - generic: Scanner ≥70
+  - generic: Daily
+  - generic: "-20.9%"
+  - generic: 25 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: "-20.9%"
+  - generic: Win Rate
+  - generic: 36.0%
+  - generic: Profit Factor
+  - generic: "0.83"
+  - generic: Realised Drawdown
+  - generic: +39.4%
+  - generic: Sharpe
+  - generic: "-0.14"
+  - generic: CAGR
+  - generic: "-12.66%"
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "25"
+  - generic: Winners
+  - generic: "9"
+  - generic: Losers
+  - generic: "16"
+  - generic: Avg Win (USD)
+  - generic: "1159.79"
+  - generic: Avg Loss (USD)
+  - generic: "-782.84"
+  - generic: Sortino
+  - generic: "-0.22"
+  - generic: Calmar
+  - generic: "-0.32"
+  - generic: Volatility
+  - generic: 40.69%
+  - generic: Time in Market
+  - generic: 32.6%
+  - generic: Largest Gain
+  - generic: +14.5%
+  - generic: Largest Loss
+  - generic: "-10.8%"
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-04-09 → 2025-12-31
+  - generic: "Bars: 632"
+  - generic: "Provider: coingecko"
+  - heading "Realised Balance" [level=3]
+  - generic: 2024-04-09
+  - generic: $7,913
+  - generic: 2025-12-31
+  - heading "Trade History (25 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "LONG 2025-06-11 2025-06-13 $2776.14 $2544.90 -8.3% $-832.94 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-06-11"
+        - cell "2025-06-13"
+        - cell "$2776.14"
+        - cell "$2544.90"
+        - cell "-8.3%"
+        - cell "$-832.94"
+        - cell "stop"
+      - row "LONG 2025-07-02 2025-07-10 $2574.07 $2920.33 +13.4% $1345.20 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-07-02"
+        - cell "2025-07-10"
+        - cell "$2574.07"
+        - cell "$2920.33"
+        - cell "+13.4%"
+        - cell "$1345.20"
+        - cell "target"
+      - row "LONG 2025-07-10 2025-07-16 $2948.45 $3297.80 +11.8% $1184.86 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-07-10"
+        - cell "2025-07-16"
+        - cell "$2948.45"
+        - cell "$3297.80"
+        - cell "+11.8%"
+        - cell "$1184.86"
+        - cell "target"
+      - row "LONG 2025-07-16 2025-07-20 $3368.13 $3753.76 +11.4% $1144.93 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-07-16"
+        - cell "2025-07-20"
+        - cell "$3368.13"
+        - cell "$3753.76"
+        - cell "+11.4%"
+        - cell "$1144.93"
+        - cell "target"
+      - row "LONG 2025-07-20 2025-08-01 $3758.61 $3478.93 -7.4% $-744.11 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-07-20"
+        - cell "2025-08-01"
+        - cell "$3758.61"
+        - cell "$3478.93"
+        - cell "-7.4%"
+        - cell "$-744.11"
+        - cell "stop"
+      - row "LONG 2025-08-09 2025-08-22 $4265.56 $4789.95 +12.3% $1229.37 target":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-08-09"
+        - cell "2025-08-22"
+        - cell "$4265.56"
+        - cell "$4789.95"
+        - cell "+12.3%"
+        - cell "$1229.37"
+        - cell "target"
+      - row "LONG 2025-08-23 2025-08-29 $4773.88 $4314.02 -9.6% $-963.28 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-08-23"
+        - cell "2025-08-29"
+        - cell "$4773.88"
+        - cell "$4314.02"
+        - cell "-9.6%"
+        - cell "$-963.28"
+        - cell "stop"
+      - row "LONG 2025-09-12 2025-09-22 $4708.84 $4345.85 -7.7% $-770.87 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-09-12"
+        - cell "2025-09-22"
+        - cell "$4708.84"
+        - cell "$4345.85"
+        - cell "-7.7%"
+        - cell "$-770.87"
+        - cell "stop"
+      - row "LONG 2025-10-02 2025-10-10 $4484.01 $4159.21 -7.2% $-724.35 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-10-02"
+        - cell "2025-10-10"
+        - cell "$4484.01"
+        - cell "$4159.21"
+        - cell "-7.2%"
+        - cell "$-724.35"
+        - cell "stop"
+      - row "LONG 2025-10-26 2025-10-30 $4161.59 $3759.03 -9.7% $-967.32 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-10-26"
+        - cell "2025-10-30"
+        - cell "$4161.59"
+        - cell "$3759.03"
+        - cell "-9.7%"
+        - cell "$-967.32"
+        - cell "stop"
+  - button "← Prev"
+  - generic: 2 / 2
+  - button "Next →" [disabled]
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
+
+## ETH_Strategy
+
+```text
+acktest method
+  - generic: Choose one engine, then read the full result stack below.
+  - button "Strategy"
+  - button "Scanner"
+  - generic: Symbol
+  - textbox: ETH-USD
+  - generic: Timeframe
+  - combobox:
+    - option "5m"
+    - option "15m"
+    - option "30m"
+    - option "1H"
+    - option "4H"
+    - option "Daily" [selected]
+    - option "Weekly"
+  - generic: Start
+  - textbox: 2024-01-01
+  - generic: End
+  - textbox: 2025-12-31
+  - generic: Edge Group
+  - combobox:
+    - option "MSP AIO Systems" [selected]
+    - option "Scalping Edge"
+    - option "Trend Following"
+    - option "Mean Reversion"
+    - option "Breakdown Play (Bears)"
+    - option "Breakout"
+    - option "Liquidity Play"
+    - option "Time Confluence"
+  - generic: Strategy
+  - combobox:
+    - option "🧠 Brain Signal Replay (Decision Packets)"
+    - option "⏱️ Time Scanner Replay"
+    - option "MSP Day Trader AIO (Score 5+)" [selected]
+    - option "MSP Day Trader Strict (Score 6+)"
+    - option "📈 Day Trader v3 Optimized (More Trades)"
+    - option "🚀 Day Trader v3 Aggressive (Max Trades)"
+    - option "MSP Multi-TF Dashboard (Bias 6+)"
+    - option "MSP Multi-TF Strict (Bias 8+)"
+    - option "MSP Trend Pullback"
+    - option "MSP Liquidity Reversal"
+  - generic: Capital ($)
+  - spinbutton: "10000"
+  - button "Run Backtest"
+  - generic: ETH-USD
+  - generic: MSP Day Trader AIO (Score 5+)
+  - generic: Daily
+  - generic: "-8.8%"
+  - generic: 5 trades
+  - strong: Realised balance statistics
+  - paragraph: Open-position gains and losses are excluded. Drawdown and risk ratios describe closed trades, so they can understate portfolio risk.
+  - generic "Calculation basis and sample limits"
+  - generic: Total Return
+  - generic: "-8.8%"
+  - generic: Win Rate
+  - generic: 40.0%
+  - generic: Profit Factor
+  - generic: "0.23"
+  - generic: Realised Drawdown
+  - generic: +11.5%
+  - generic: Sharpe
+  - generic: "-0.84"
+  - generic: CAGR
+  - generic: "-4.50%"
+  - heading "Performance Detail" [level=3]
+  - generic: Total Trades
+  - generic: "5"
+  - generic: Winners
+  - generic: "2"
+  - generic: Losers
+  - generic: "3"
+  - generic: Avg Win (USD)
+  - generic: "132.59"
+  - generic: Avg Loss (USD)
+  - generic: "-381.95"
+  - generic: Sortino
+  - generic: "-0.88"
+  - generic: Calmar
+  - generic: "-0.39"
+  - generic: Volatility
+  - generic: 5.30%
+  - generic: Time in Market
+  - generic: 9.2%
+  - generic: Largest Gain
+  - generic: +2.0%
+  - generic: Largest Loss
+  - generic: "-4.8%"
+  - generic: invalidated
+  - generic: "Invalidated: WR 40.0%, PF 0.23, Return -8.81%."
+  - heading "Data Coverage" [level=3]
+  - text: "Applied:"
+  - generic: 2024-01-01 → 2025-12-31
+  - generic: "Bars: 731"
+  - generic: "Provider: coingecko"
+  - heading "Realised Balance" [level=3]
+  - generic: 2024-01-01
+  - generic: $9,119
+  - generic: 2025-12-31
+  - heading "Trade History (5 trades)" [level=3]
+  - table:
+    - rowgroup:
+      - row "Side Entry Exit Entry $ Exit $ Return % Return $ Reason":
+        - columnheader "Side"
+        - columnheader "Entry"
+        - columnheader "Exit"
+        - columnheader "Entry $"
+        - columnheader "Exit $"
+        - columnheader "Return %"
+        - columnheader "Return $"
+        - columnheader "Reason"
+    - rowgroup:
+      - row "SHORT 2024-08-05 2024-08-25 $2689.30 $2746.53 -2.5% $-240.56 timeout":
+        - cell "SHORT":
+          - generic: SHORT
+        - cell "2024-08-05"
+        - cell "2024-08-25"
+        - cell "$2689.30"
+        - cell "$2746.53"
+        - cell "-2.5%"
+        - cell "$-240.56"
+        - cell "timeout"
+      - row "LONG 2024-12-01 2024-12-03 $3708.72 $3544.88 -4.8% $-456.85 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2024-12-01"
+        - cell "2024-12-03"
+        - cell "$3708.72"
+        - cell "$3544.88"
+        - cell "-4.8%"
+        - cell "$-456.85"
+        - cell "stop"
+      - row "LONG 2025-06-12 2025-06-12 $2776.29 $2656.10 -4.7% $-448.44 stop":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-06-12"
+        - cell "2025-06-12"
+        - cell "$2776.29"
+        - cell "$2656.10"
+        - cell "-4.7%"
+        - cell "$-448.44"
+        - cell "stop"
+      - row "LONG 2025-08-10 2025-08-30 $4267.32 $4371.17 +2.0% $192.73 timeout":
+        - cell "LONG":
+          - generic: LONG
+        - cell "2025-08-10"
+        - cell "2025-08-30"
+        - cell "$4267.32"
+        - cell "$4371.17"
+        - cell "+2.0%"
+        - cell "$192.73"
+        - cell "timeout"
+      - row "SHORT 2025-11-17 2025-12-07 $3090.36 $3054.51 +0.8% $72.45 timeout":
+        - cell "SHORT":
+          - generic: SHORT
+        - cell "2025-11-17"
+        - cell "2025-12-07"
+        - cell "$3090.36"
+        - cell "$3054.51"
+        - cell "+0.8%"
+        - cell "$72.45"
+        - cell "timeout"
+  - heading "Strategy Diagnostics" [level=3]
+  - generic: 6/100
+  - generic: invalidated
+  - paragraph: Edge is invalidated on daily. Prioritize the top adjustments before deploying.
+  - generic: low_sample_size
+  - generic: low_win_rate
+  - generic: negative_expectancy
+  - generic: poor_risk_reward
+  - button "✕"
+  - button "ARCA AI ARCA AI":
+    - img "ARCA AI"
+    - generic: ARCA AI
+- alert
+```
