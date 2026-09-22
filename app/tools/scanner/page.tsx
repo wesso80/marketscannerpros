@@ -419,8 +419,8 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
                 <div className="mt-1 text-xs font-black text-white">{compactBiasLabel(row.direction)}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
-                <div className="mt-1 text-xs font-black text-white">{row.confidence != null ? `${row.confidence}%` : 'Mixed'}</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factor coverage</div>
+                <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Unavailable'}</div>
               </div>
             </div>
 
@@ -478,8 +478,8 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
                 <div className="mt-1 text-xs font-black text-white">{compactBiasLabel(row.direction)}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
-                <div className="mt-1 text-xs font-black text-white">{row.confidence != null ? `${row.confidence}%` : 'Mixed'}</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factor coverage</div>
+                <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Unavailable'}</div>
               </div>
             </div>
             {/* Algorithm truth labels */}
@@ -488,19 +488,19 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
                 type={row.scoreQuality?.staleDataPenalty ? 'stale' : row.scoreQuality?.missingEvidencePenalty ? 'partial' : 'heuristic'}
                 compact
               />
-              {row.scoreQuality?.missingEvidencePenalty != null && row.scoreQuality.missingEvidencePenalty > 0 && (
+              {!row.compositeV2?.version && row.scoreQuality?.missingEvidencePenalty != null && row.scoreQuality.missingEvidencePenalty > 0 && (
                 <span className="inline-flex items-center rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-300">
                   −{row.scoreQuality.missingEvidencePenalty} missing evidence
                 </span>
               )}
-              {row.scoreQuality?.liquidityPenalty != null && row.scoreQuality.liquidityPenalty > 0 && (
+              {!row.compositeV2?.version && row.scoreQuality?.liquidityPenalty != null && row.scoreQuality.liquidityPenalty > 0 && (
                 <span className="inline-flex items-center rounded border border-slate-600/40 bg-slate-800/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-400">
                   −{row.scoreQuality.liquidityPenalty} liquidity
                 </span>
               )}
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
-            {row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} /> : null}
+            {row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
             {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
@@ -1104,7 +1104,7 @@ export default function ScannerPage() {
         case 'score': av = a.score ?? 0; bv = b.score ?? 0; break;
         case 'mspScore': av = computeMspScore(a, currentRegime); bv = computeMspScore(b, currentRegime); break;
         case 'direction': av = a.direction ?? ''; bv = b.direction ?? ''; break;
-        case 'confidence': av = a.confidence ?? 0; bv = b.confidence ?? 0; break;
+        case 'confidence': av = a.compositeV2?.coverage ?? -1; bv = b.compositeV2?.coverage ?? -1; break;
         case 'rsi': av = a.rsi ?? 0; bv = b.rsi ?? 0; break;
         case 'price': av = a.price ?? 0; bv = b.price ?? 0; break;
         case 'dveBbwp': av = a.dveBbwp ?? 0; bv = b.dveBbwp ?? 0; break;
@@ -1538,7 +1538,7 @@ export default function ScannerPage() {
               {showRegimeChip && (
                 <span
                   className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300"
-                  title={weightTooltip ? `Regime weights — ${weightTooltip}` : undefined}
+                  title={weightTooltip ? `Workspace confluence weights (separate from the MSP scanner score) — ${weightTooltip}` : undefined}
                 >
                   <span style={{ color: regimeColor }}>{humanizeEnum(regime.data?.regime)}</span>
                   <span className="text-slate-600">·</span>
@@ -1685,7 +1685,7 @@ export default function ScannerPage() {
                       <SortHeader k="mspScore" label="MSP" w="w-14" title="MSP research score (0–100): system ranking of research quality under the current regime. Not a probability." />
                       <SortHeader k="price" label="Price" w="w-20" />
                       <SortHeader k="direction" label="Bias" w="w-16" />
-                      <SortHeader k="confidence" label="Evidence" w="w-16" title="Evidence-weighted confidence (0–100): conviction × evidence coverage × freshness × liquidity. Not a probability." />
+                      <SortHeader k="confidence" label="Coverage" w="w-16" title="Available factor weight as a percentage of this asset’s applicable factor profile. Data coverage is separate from the MSP score." />
                       <th scope="col" className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Setup stage (where the structure is) and the factors supporting the bias">Setup · Reason</th>
                       <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Data trust: freshness of the last completed bar, interval integrity, indicator coverage, history depth">Trust</th>
                       <th scope="col" className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Extension / volatility state (DVE): where price is in the move — independent of setup and lifecycle">Extension</th>
@@ -1718,10 +1718,16 @@ export default function ScannerPage() {
                           }}
                         >
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600" title="Setup / regime label from the scoring engine">{r.setup ?? regimeLabel}</div></td>
-                          <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span>
+                            {r.compositeV2 ? <details className="text-left" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                              <summary className="cursor-pointer text-[10px] text-emerald-300">Why</summary>
+                              <div className="min-w-80 max-w-md whitespace-normal"><CompositeBreakdown v2={r.compositeV2} expanded /></div>
+                            </details> : null}
+                          </td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(r.direction)} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}` : '—'}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.compositeV2?.coverage != null ? `${Math.round(r.compositeV2.coverage * 100)}% · ${r.compositeV2.evidenceQuality}` : 'Unavailable'}</td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap" style={{ color: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust), borderColor: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust) + '55', backgroundColor: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust) + '15' }}>

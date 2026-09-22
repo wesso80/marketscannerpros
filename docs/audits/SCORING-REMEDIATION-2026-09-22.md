@@ -64,3 +64,11 @@ Best-effort Ranked event recording now includes all evaluated candidates before 
 7. Shadow the frozen version forward, including losing and rejected observations. Set evidence-based acceptance thresholds and monitoring for drift and stale/missing inputs.
 
 No weight optimization, probability calibration or out-of-sample performance improvement is claimed by this release. Lower scores and more WATCH/BLOCK labels can be the correct result of exposing missing evidence.
+
+## Live acceptance of the core release
+
+Core application release `c9142ff8e6cae0ca54c2f20bbd37493cae3969d1` was verified live on Render web (`dep-dap32uh7lnhs73ap84a0`, 07:45:55 UTC) and worker (`dep-dap32up7lnhs73ap8550`, 07:43:45 UTC). Its Git tree `6792b9e355033c6c95537afd07e9e73832a6e747` exactly matched the tested local release; publication used the connected GitHub app when the shell lacked write credentials.
+
+Live Ranked returned crypto and equity rows (including AVAX 60, META 58 and LTC 56 in the observed snapshot). Live FIVN Golden Egg displayed 75% coverage, unavailable flow contributing 0, component total 56.75 and final 57/100. Backtest displayed the historical technical proxy identity and the long ≥70 / short ≤30 thresholds.
+
+A final display follow-up replaces the duplicate Evidence score column with factor coverage, exposes the full calculation through each row's Why control, and identifies the header's workspace confluence weights as a separate model. Legacy additive penalty badges are not attached to new-version scores.

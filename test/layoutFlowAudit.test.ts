@@ -1170,7 +1170,7 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).toContain('Why This Rank / Review');
     expect(scannerPage).toContain('Aligned Scenarios');
     expect(scannerPage).toContain('<SortHeader k="direction" label="Bias"');
-    expect(scannerPage).toContain("<SortHeader k=\"confidence\" label=\"Evidence\"");
+    expect(scannerPage).toContain("<SortHeader k=\"confidence\" label=\"Coverage\"");
     expect(scannerPage).toContain("Review scenario for ${row.symbol}");
     expect(scannerPage).not.toContain("label=\"Direction\"");
     expect(scannerPage).not.toContain("label=\"Conf\"");

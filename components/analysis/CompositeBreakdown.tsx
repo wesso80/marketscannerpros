@@ -44,7 +44,7 @@ function pctSuffix(n: number): string {
   return `${n}th`;
 }
 
-export default function CompositeBreakdown({ v2, compact = false }: { v2: CompositeV2; compact?: boolean }) {
+export default function CompositeBreakdown({ v2, compact = false, expanded = false }: { v2: CompositeV2; compact?: boolean; expanded?: boolean }) {
   const [open, setOpen] = useState(false);
   const topPct = Math.max(1, 100 - v2.percentileRank);
   const contributions = [...(v2.factorContributions ?? [])].sort((a, b) => b.weight - a.weight);
@@ -87,7 +87,7 @@ export default function CompositeBreakdown({ v2, compact = false }: { v2: Compos
             {v2.catalyst.earningsInDays === 0 ? 'Earnings today' : v2.catalyst.earningsInDays === 1 ? 'Earnings tomorrow' : `Earnings in ${v2.catalyst.earningsInDays}d`}
           </span>
         ) : null}
-        {!compact && contributions.length > 0 ? (
+        {!compact && !expanded && contributions.length > 0 ? (
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
@@ -99,7 +99,7 @@ export default function CompositeBreakdown({ v2, compact = false }: { v2: Compos
         ) : null}
       </div>
 
-      {open && contributions.length > 0 ? (
+      {(expanded || open) && contributions.length > 0 ? (
         <div className="mt-2 space-y-1">
           {contributions.map((c) => {
             const missing = c.available === false || c.applicable === false;
