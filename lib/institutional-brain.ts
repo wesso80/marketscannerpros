@@ -10,7 +10,7 @@ export interface BrainDecisionInput {
   generatedAt: string;
   timeframes: string[];
   marketMode: 'pin' | 'launch' | 'chop';
-  gammaState: 'Positive' | 'Negative' | 'Mixed';
+  gammaState: 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
   bias: 'bullish' | 'bearish' | 'neutral';
   spot: number;
   conviction: number;

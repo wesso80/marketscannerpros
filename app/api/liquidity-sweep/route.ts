@@ -1,3 +1,4 @@
+import { closedCandles } from '@/lib/market/candleIntegrity';
 /**
  * Liquidity Sweep Scanner API — /api/liquidity-sweep
  *
@@ -55,6 +56,9 @@ interface LiquidityLevel {
 }
 
 interface SweepResult {
+  candleDate: string;
+  changeBasis: string;
+  volumeAvailable: boolean;
   symbol: string;
   price: number;
   change24h: number;
@@ -109,16 +113,11 @@ async function fetchCryptoOHLCV(symbol: string): Promise<OHLCV[] | null> {
   const idMap: Record<string, string> = { ...COINGECKO_ID_MAP };
   const id = idMap[symbol.toUpperCase()];
   if (!id) return null;
-  const ohlcData = await getOHLC(id, 30);
+  const ohlcData = await getOHLC(id, 90, { interval: 'daily', retries: 0, timeoutMs: 8000 });
   if (!ohlcData || !Array.isArray(ohlcData) || ohlcData.length < 20) return null;
-  const ohlcv: OHLCV[] = ohlcData.map((c: number[]) => ({
-    date: new Date(c[0]).toISOString().slice(0, 10),
-    open: c[1],
-    high: c[2],
-    low: c[3],
-    close: c[4],
-    volume: 0,
-  })).filter(c => Number.isFinite(c.close) && c.close > 0);
+  const ohlcv: OHLCV[] = closedCandles(ohlcData, 86400000).map(c => ({
+    date: c.time.toISOString().slice(0, 10), open: c.open, high: c.high, low: c.low, close: c.close, volume: 0,
+  }));
   return ohlcv.length >= 20 ? ohlcv : null;
 }
 
@@ -137,11 +136,17 @@ function computeLiquidityLevels(ohlcv: OHLCV[], currentPrice: number): Liquidity
   }
 
   // Week high/low — last 5 bars
-  const weekSlice = ohlcv.slice(-5);
+  const lastDate = new Date(ohlcv[n - 1].date + 'T00:00:00Z');
+  const monday = new Date(lastDate);
+  monday.setUTCDate(lastDate.getUTCDate() - ((lastDate.getUTCDay() + 6) % 7));
+  const weekStart = monday.getTime() - 7 * 86400000;
+  const weekSlice = ohlcv.filter(c => Date.parse(c.date) >= weekStart && Date.parse(c.date) < monday.getTime());
   const weekHigh = Math.max(...weekSlice.map(c => c.high));
   const weekLow = Math.min(...weekSlice.map(c => c.low));
-  levels.push({ level: weekHigh, label: 'WEEK_HIGH' });
-  levels.push({ level: weekLow, label: 'WEEK_LOW' });
+  if (weekSlice.length) {
+    levels.push({ level: weekHigh, label: 'PREV_WEEK_HIGH' });
+    levels.push({ level: weekLow, label: 'PREV_WEEK_LOW' });
+  }
 
   // EQH / EQL — equal highs / lows within 0.15%
   const recent = ohlcv.slice(-8);
@@ -252,11 +257,13 @@ function analyzeSymbol(symbol: string, ohlcv: OHLCV[]): SweepResult | null {
   let direction: SweepResult['direction'] = 'neutral';
   let confidence = 0;
 
-  if (sweepPattern) {
+  if (sweepPattern && ((wickedAbove && !wickedBelow && sweepPattern.bias === 'bearish') || (wickedBelow && !wickedAbove && sweepPattern.bias === 'bullish'))) {
     // Pattern engine detected a sweep
     setupType = 'active_sweep';
     direction = sweepPattern.bias;
     confidence = sweepPattern.confidence;
+  } else if (wickedAbove && wickedBelow) {
+    setupType = 'active_sweep'; direction = 'neutral'; confidence = 40;
   } else if (wickedAbove) {
     // Today's candle wicked above a level then closed below → potential sweep high
     setupType = 'active_sweep';
@@ -297,6 +304,9 @@ function analyzeSymbol(symbol: string, ohlcv: OHLCV[]): SweepResult | null {
     atr: atrValue,
     atrPct: Math.round(atrPct * 100) / 100,
     keyLines: patternResult.keyLines,
+    candleDate: ohlcv[n - 1].date,
+    changeBasis: 'Last completed daily close versus previous close',
+    volumeAvailable: ohlcv.some(c => c.volume > 0),
   };
 }
 

@@ -1,3 +1,5 @@
+import { equitySessionForDate } from '@/lib/time/sessionCloseEngine';
+import { closedCandles } from '@/lib/market/candleIntegrity';
 /**
  * Candle-to-Midpoint Processor
  * 
@@ -97,7 +99,7 @@ function inferCloseTime(openTime: Date, timeframe: string, assetType: string): D
     if (assetType === 'crypto') {
       d.setUTCHours(23, 59, 59, 999);
     } else {
-      d.setUTCHours(20, 0, 0, 0); // 16:00 ET = 20:00 UTC (standard time)
+      return equitySessionForDate(d.toISOString().slice(0, 10))?.close ?? new Date(NaN);
     }
     return d;
   }
@@ -111,7 +113,8 @@ function inferCloseTime(openTime: Date, timeframe: string, assetType: string): D
     if (assetType === 'crypto') {
       d.setUTCHours(23, 59, 59, 999);
     } else {
-      d.setUTCHours(20, 0, 0, 0);
+      while (!equitySessionForDate(d.toISOString().slice(0, 10))) d.setUTCDate(d.getUTCDate() - 1);
+      return equitySessionForDate(d.toISOString().slice(0, 10))!.close;
     }
     return d;
   }
@@ -258,16 +261,9 @@ export function parseAlphaVantageTimeSeries(
  * Convert CoinGecko OHLC data to OHLCV bars
  */
 export function parseCoinGeckoOHLC(
-  ohlcData: [number, number, number, number, number][]
+  ohlcData: [number, number, number, number, number][], intervalMs = 30 * 60_000
 ): OHLCVBar[] {
-  return ohlcData.map(([timestamp, open, high, low, close]) => ({
-    time: new Date(timestamp),
-    open,
-    high,
-    low,
-    close,
-    volume: 0, // CoinGecko OHLC doesn't include volume
-  }));
+  return closedCandles(ohlcData, intervalMs).map(bar => ({ ...bar, volume: 0 }));
 }
 
 /**

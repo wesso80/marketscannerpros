@@ -1,6 +1,7 @@
 'use client';
+import { useSearchParams } from 'next/navigation';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
 import VEHeatmapGauge from '@/src/features/volatilityEngine/components/VEHeatmapGauge';
 import VEDirectionalCompass from '@/src/features/volatilityEngine/components/VEDirectionalCompass';
@@ -41,7 +42,10 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 }
 
 export default function VolatilityEnginePage() {
-  const [symbol, setSymbol] = useState('');
+  const params = useSearchParams();
+  const requestedSymbol = params.get('symbol')?.toUpperCase() || '';
+  const [symbol, setSymbol] = useState(requestedSymbol);
+  useEffect(() => { setSymbol(requestedSymbol); setReading(null); }, [requestedSymbol]);
   const [reading, setReading] = useState<DVEReading | null>(null);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [loading, setLoading] = useState(false);

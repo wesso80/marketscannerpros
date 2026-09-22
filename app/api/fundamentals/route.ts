@@ -1,3 +1,5 @@
+import { getQuote } from '@/lib/onDemandFetch';
+import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
@@ -65,7 +67,7 @@ export async function GET(req: NextRequest) {
     
     let formattedData;
     switch (type) {
-      case 'overview': formattedData = formatOverview(data, symbol); break;
+      case 'overview': formattedData = formatOverview(data, symbol, (await getQuote(symbol).catch(() => null))?.price); break;
       case 'income': formattedData = formatIncomeStatement(data, symbol); break;
       case 'balance': formattedData = formatBalanceSheet(data, symbol); break;
       case 'cashflow': formattedData = formatCashFlow(data, symbol); break;
@@ -83,11 +85,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function formatOverview(data: any, symbol: string) {
+function formatOverview(data: any, symbol: string, price?: number) {
   // Quality score based on fundamentals
   let qualityScore = 50; // Base score
   
-  const peRatio = parseFloat(data.PERatio) || 0;
+  const valuation = valuationAtPrice(price, data.EPS, data.SharesOutstanding);
+  const peRatio = valuation.pe ?? 0;
   const profitMargin = parseFloat(data.ProfitMargin) || 0;
   const roe = parseFloat(data.ReturnOnEquityTTM) || 0;
   const debtToEquity = parseFloat(data.DebtToEquityRatio) || 999;
@@ -114,9 +117,12 @@ function formatOverview(data: any, symbol: string) {
     country: data.Country,
     
     // Valuation
-    marketCap: parseFloat(data.MarketCapitalization) || null,
+    marketCap: valuation.marketCap,
     marketCapFormatted: formatLargeNumber(parseFloat(data.MarketCapitalization)),
     peRatio: peRatio || null,
+    valuationBasis: valuation.basis,
+    valuationPrice: price ?? null,
+    providerPeRatio: data.PERatio,
     pegRatio: parseFloat(data.PEGRatio) || null,
     bookValue: parseFloat(data.BookValue) || null,
     priceToBook: parseFloat(data.PriceToBookRatio) || null,

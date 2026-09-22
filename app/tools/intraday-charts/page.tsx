@@ -13,12 +13,13 @@ interface IntradayBar {
   high: number;
   low: number;
   close: number;
-  volume: number;
+  volume: number | null;
 }
 
 interface IntradayData {
   symbol: string;
   interval: string;
+  warning?: string;
   lastRefreshed: string;
   timeZone: string;
   data: IntradayBar[];
@@ -79,7 +80,8 @@ function formatPrice(price: number): string {
   return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatVolume(vol: number): string {
+function formatVolume(vol: number | null): string {
+  if (vol == null) return 'Unavailable';
   if (vol >= 1e9) return `${(vol / 1e9).toFixed(2)}B`;
   if (vol >= 1e6) return `${(vol / 1e6).toFixed(2)}M`;
   if (vol >= 1e3) return `${(vol / 1e3).toFixed(1)}K`;
@@ -132,15 +134,16 @@ function calculateSMA(data: IntradayBar[], period: number): (number | null)[] {
 }
 
 // Calculate VWAP (Volume Weighted Average Price)
-function calculateVWAP(data: IntradayBar[]): number[] {
+function calculateVWAP(data: IntradayBar[]): (number | null)[] {
+  if (data.some(b => b.volume == null)) return data.map(() => null);
   let cumulativeTPV = 0;
   let cumulativeVolume = 0;
   
   return data.map(bar => {
     const typicalPrice = (bar.high + bar.low + bar.close) / 3;
-    cumulativeTPV += typicalPrice * bar.volume;
-    cumulativeVolume += bar.volume;
-    return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : typicalPrice;
+    cumulativeTPV += typicalPrice * (bar.volume ?? 0);
+    cumulativeVolume += (bar.volume ?? 0);
+    return cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : null;
   });
 }
 
@@ -645,7 +648,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   
-  const maxVolume = Math.max(1, ...data.map(d => d.volume));
+  const maxVolume = Math.max(1, ...data.map(d => d.volume ?? 0));
   const barWidth = Math.max(1, Math.min(12, (chartWidth / data.length) * 0.8));
   const barGap = Math.max(1, (chartWidth / data.length) * 0.2);
 
@@ -655,7 +658,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
       {data.map((bar, i) => {
         const x = padding.left + (i * (barWidth + barGap));
         const isUp = bar.close >= bar.open;
-        const barHeight = (bar.volume / maxVolume) * chartHeight;
+        const barHeight = ((bar.volume ?? 0) / maxVolume) * chartHeight;
         return (
           <rect
             key={i}
@@ -776,6 +779,7 @@ export default function IntradayChartsPage({
       const result = await response.json();
 
       setData(result);
+      setInterval(result.interval as Interval);
       setSymbol(sym);
       setIsCrypto(result.isCrypto || false);
       if (includeDealer && !(result.isCrypto || false)) {
@@ -906,9 +910,9 @@ export default function IntradayChartsPage({
     const changePercent = first.open !== 0 ? (change / first.open) * 100 : 0;
     const high = Math.max(...bars.map(b => b.high));
     const low = Math.min(...bars.map(b => b.low));
-    const totalVolume = bars.reduce((sum, b) => sum + b.volume, 0);
-    const avgVolume = bars.length > 0 ? totalVolume / bars.length : 0;
-    const vwap = totalVolume > 0 ? bars.reduce((sum, b) => sum + ((b.high + b.low + b.close) / 3) * b.volume, 0) / totalVolume : last.close;
+    const totalVolume = bars.reduce((sum, b) => sum + (b.volume ?? 0), 0);
+    const avgVolume = bars.every(b => b.volume != null) ? totalVolume / bars.length : null;
+    const vwap = avgVolume != null && totalVolume > 0 ? bars.reduce((sum, b) => sum + ((b.high + b.low + b.close) / 3) * (b.volume ?? 0), 0) / totalVolume : null;
 
     return { first, last, change, changePercent, high, low, totalVolume, avgVolume, vwap };
   })() : null;
@@ -918,7 +922,7 @@ export default function IntradayChartsPage({
     : 0;
 
   const volatilityState = rangePercent >= 3 ? 'Expansion' : rangePercent >= 1.5 ? 'Normal' : 'Compression';
-  const liquidityState = !stats ? 'Unknown' : stats.avgVolume >= 500000 ? 'Strong' : stats.avgVolume >= 100000 ? 'Stable' : 'Thin';
+  const liquidityState = !stats || stats.avgVolume == null ? 'Unavailable' : stats.avgVolume >= 500000 ? 'Strong' : stats.avgVolume >= 100000 ? 'Stable' : 'Thin';
   const dealerState = dealerOverlay
     ? dealerOverlay.regime === 'LONG_GAMMA'
       ? 'Supportive'
@@ -1349,19 +1353,19 @@ export default function IntradayChartsPage({
                 <div className="text-[11px] text-[var(--msp-text-muted)]">Analysis context</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
-                    <div className="text-slate-400">VWAP</div>
-                    <div className="text-slate-100">${formatPrice(stats.vwap)}</div>
+                    <div className="text-slate-400">Window VWAP</div>
+                    <div className="text-slate-100">{stats.vwap == null ? 'Unavailable' : `$${formatPrice(stats.vwap)}`} </div>
                   </div>
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
                     <div className="text-slate-400">Range</div>
                     <div className="text-slate-100">${formatPrice(stats.high - stats.low)}</div>
                   </div>
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
-                    <div className="text-slate-400">Session High</div>
+                    <div className="text-slate-400">Window High</div>
                     <div className="text-emerald-300">${formatPrice(stats.high)}</div>
                   </div>
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
-                    <div className="text-slate-400">Session Low</div>
+                    <div className="text-slate-400">Window Low</div>
                     <div className="text-rose-300">${formatPrice(stats.low)}</div>
                   </div>
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
@@ -1416,7 +1420,9 @@ export default function IntradayChartsPage({
                   blockReason={reviewBlockReason}
                 />
                 <div className="mt-2 text-[11px] text-slate-400">
-                  Last refresh {new Date(data.lastRefreshed).toLocaleString()}
+                  {outerTimeframe && <p className="text-slate-400">Research case: {outerTimeframe}. Chart detail: {interval}.</p>}
+                  {data.warning && <p className="text-amber-300">{data.warning}</p>}
+                  Candle observation {new Date(data.lastRefreshed).toLocaleString()}
                 </div>
               </div>
             </div>

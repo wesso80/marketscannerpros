@@ -199,8 +199,8 @@ export async function fetchPrice(
       const last = bars[bars.length - 1];
       const prev = bars[bars.length - 2];
       const md = detail?.market_data;
-      const livePrice = series.currentPrice ?? md?.current_price?.usd ?? last.close;
-      const changeBase = seriesTf === 'daily' || seriesTf === 'weekly' ? last.close : prev.close;
+      const livePrice = Number.isFinite(md?.current_price?.usd) && md.current_price.usd > 0 ? md.current_price.usd : series.currentPrice ?? last.close;
+      const changeBase = series.partialBar || livePrice !== last.close ? last.close : prev.close;
       const histLen = opts?.requireHistoricals ? 360 : 60;
       const tail = bars.slice(-histLen);
       const vols = tail.slice(-20).map((b) => b.volume).filter((v): v is number => v != null && v > 0);
@@ -218,7 +218,7 @@ export async function fetchPrice(
         historicalDates: tail.map((b) => b.t),
         barInterval: series.barInterval,
         lastCompletedBarAt: series.lastCompletedBarAt,
-        priceTs: new Date().toISOString(),
+        priceTs: detail?.last_updated || md?.last_updated || series.partialBar?.t || series.lastCompletedBarAt || undefined,
         source: series.source,
         volumeBasis: series.volumeBasis,
         coinDetail: detail ?? null,
@@ -236,6 +236,8 @@ export async function fetchPrice(
         changePct: cached.changePct ?? 0,
         high: cached.price, low: cached.price, volume: 0,
         historicalCloses: [],
+        priceTs: cached.latestDay,
+        source: `alpha_vantage ${cached.source} quote; observation date only`,
       };
     }
 
@@ -258,6 +260,8 @@ export async function fetchPrice(
           changePct: cached.changePct ?? 0,
           high: cached.price, low: cached.price, volume: 0,
           historicalCloses: [],
+        priceTs: cached.latestDay,
+        source: `alpha_vantage ${cached.source} quote; observation date only`,
         };
       }
       return null;
@@ -308,7 +312,7 @@ export async function fetchPrice(
       historicalDates: histDates,
       barInterval,
       lastCompletedBarAt: lastKey ?? null,
-      priceTs: new Date().toISOString(),
+      priceTs: lastKey,
       source: isIntraday ? `alpha_vantage TIME_SERIES_INTRADAY ${interval}` : `alpha_vantage TIME_SERIES_${interval === 'weekly' ? 'WEEKLY' : 'DAILY'}_ADJUSTED (O/H/L/C split-adjusted via coefficients${splitsApplied ? `, ${splitsApplied} split${splitsApplied === 1 ? '' : 's'} applied` : ''})`,
       volumeBasis: avgVol && avgVol > 0 ? 'exchange_volume_20_bars' : 'unavailable',
     };
@@ -395,7 +399,7 @@ export async function fetchOptionsSnapshot(
     if (!rawData?.length) return null;
 
     // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.
-    const snapshotTs = rawData[0]?.date ? `${String(rawData[0].date).slice(0, 10)}T20:00:00Z` : new Date().toISOString();
+    const snapshotTs = rawData[0]?.date ? String(rawData[0].date).slice(0, 10) : '';
     const canonical = summarizeChain(rawData, price, { snapshotTs, recentCloses: ctx.recentCloses, recentDates: ctx.recentDates });
     if (!canonical) return null;
     canonical.notes.push(`Source: ${provider}.`);
@@ -439,7 +443,7 @@ export async function fetchCryptoDerivatives(symbol: string): Promise<CryptoDeri
     ]);
     const funding = fundingArr?.[0];
     const oi = oiArr?.[0];
-    if (!funding && !oi) return null;
+    if (!funding || !Number.isFinite(funding.fundingRatePercent)) return null;
 
     return {
       fundingRate: funding?.avgFundingRate ?? 0,

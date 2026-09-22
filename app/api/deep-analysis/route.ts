@@ -210,7 +210,7 @@ const FORBIDDEN = /\b(high probability|likely to (rally|rise|fall|break)|should 
 function sanitizeAnalyst(text: string | null): { text: string | null; removedLines: number } {
   if (!text) return { text: null, removedLines: 0 };
   const lines = text.split('\n');
-  const kept = lines.filter((l) => !FORBIDDEN.test(l));
+  const kept = lines.filter((l) => !FORBIDDEN.test(l) && !/decreas.*(?:score|confluence).*(?:improv|strength)|no significant impact expected/i.test(l));
   return { text: kept.join('\n'), removedLines: lines.length - kept.length };
 }
 
@@ -337,7 +337,7 @@ export async function GET(request: NextRequest) {
       indicators: legacyIndicators(c),
       company: fundamentals ? {
         name: fundamentals.name, description: '', sector: fundamentals.sector, industry: fundamentals.industry, marketCap: fundamentals.marketCap != null ? String(fundamentals.marketCap) : null,
-        peRatio: fundamentals.pe, forwardPE: fundamentals.forwardPe, peg: fundamentals.peg, eps: fundamentals.eps, dividendYield: null, week52High: null, week52Low: null,
+        peRatio: fundamentals.pe, forwardPE: fundamentals.forwardPe, peg: fundamentals.peg, eps: fundamentals.eps, dividendYield: fundamentals.dividendYield != null ? fundamentals.dividendYield * 100 : null, week52High: null, week52Low: null,
         targetPrice: fundamentals.analystTarget, analystCount: fundamentals.analystCount,
         strongBuy: fundamentals.ratings?.strongBuy ?? 0, buy: fundamentals.ratings?.buy ?? 0, hold: fundamentals.ratings?.hold ?? 0, sell: fundamentals.ratings?.sell ?? 0, strongSell: fundamentals.ratings?.strongSell ?? 0,
         multiple: fundamentals.multiple, period: fundamentals.period, revenueGrowthYoy: fundamentals.revenueGrowthYoy, earningsGrowthYoy: fundamentals.earningsGrowthYoy, profitMargin: fundamentals.profitMargin,

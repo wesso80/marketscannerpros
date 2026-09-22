@@ -648,7 +648,7 @@ function CryptoCommandCenterContent() {
                 ) : (
                   <>
                     <p className="text-[11px] uppercase text-slate-500">
-                      {morningDecision.verdict === 'ALIGNED' ? 'Top Movers by Change' : 'High-Quality Setups Only'}
+                      Top Movers by Change — research context
                     </p>
                     <div className="mt-1 grid gap-1">
                       {rankedOpportunities.map((op, idx) => (

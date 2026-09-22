@@ -2168,7 +2168,7 @@ export async function POST(req: NextRequest) {
             const volumeRatio = avgVolume20 && lastVolume !== undefined && avgVolume20 > 0 ? lastVolume / avgVolume20 : null;
             const adv20 = avgVolume20 !== undefined
               ? positiveVolumeBars.reduce((s, c) => s + c.close * c.volume, 0) / positiveVolumeBars.length
-              : lastVolume !== undefined ? price * lastVolume : undefined;
+              : undefined;
             const volumeBasisLabel = volumeAvailable
               ? (positiveVolumeBars.length >= 20 ? 'exchange_volume_20_bars' : `exchange_volume_${positiveVolumeBars.length}_bars`)
               : lastVolume !== undefined ? 'session_volume_only' : 'unavailable';

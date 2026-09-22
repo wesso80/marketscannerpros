@@ -424,6 +424,11 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {(!showTabbedResults || resultTab === 'Summary') && (
               <div className="space-y-4">
                 <StatisticsBasisNote basis={result.statisticsBasis} />
+                {result.executionAssumptions && <details className="mb-4 rounded-lg border border-amber-500/30 p-3 text-xs text-amber-100">
+                  <summary className="cursor-pointer font-semibold">Execution assumptions and sample limits</summary>
+                  <p>{result.executionAssumptions.fillModel.entryTiming}</p><p>{result.executionAssumptions.fillModel.exitTiming}</p>
+                  {result.executionAssumptions.warnings.map(w => <p className="mt-2" key={w}>{w}</p>)}
+                </details>}
                 {/* Key metrics grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   <MetricCard label="Total Return" value={fmtPct(n(result.totalReturn))} color={pctColor(n(result.totalReturn))} />

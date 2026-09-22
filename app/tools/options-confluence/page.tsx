@@ -138,8 +138,8 @@ interface DealerIntelligence {
 // PRO TRADER TYPES
 interface IVAnalysis {
   currentIV: number;
-  ivRank: number;
-  ivPercentile: number;
+  ivRank: number | null;
+  ivPercentile: number | null;
   ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
   ivReason: string;
 }
@@ -478,7 +478,7 @@ interface OptionsSetup {
   };
   capitalFlow?: {
     market_mode: 'pin' | 'launch' | 'chop';
-    gamma_state: 'Positive' | 'Negative' | 'Mixed';
+    gamma_state: 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
     bias: 'bullish' | 'bearish' | 'neutral';
     conviction: number;
     dominant_expiry: '0DTE' | 'weekly' | 'monthly' | 'long_dated' | 'unknown';
@@ -1040,9 +1040,9 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       },
       
       // IV Rank
-      ivRank: result.ivAnalysis ? {
-        triggered: result.ivAnalysis.ivRank <= 30 || result.ivAnalysis.ivRank >= 70,
-        confidence: result.ivAnalysis.ivRank <= 20 || result.ivAnalysis.ivRank >= 80 ? 0.85 : 0.6,
+      ivRank: result.ivAnalysis?.ivRank != null ? {
+        triggered: (result.ivAnalysis.ivRank ?? 50) <= 30 || (result.ivAnalysis.ivRank ?? 50) >= 70,
+        confidence: (result.ivAnalysis.ivRank ?? 50) <= 20 || (result.ivAnalysis.ivRank ?? 50) >= 80 ? 0.85 : 0.6,
         rank: result.ivAnalysis.ivRank,
         signal: result.ivAnalysis.ivSignal,
       } : { triggered: false, confidence: 0 },
@@ -1432,7 +1432,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     ?? (result?.aiMarketState?.regime?.confidence != null ? result.aiMarketState.regime.confidence / 100 : undefined);
   const layerMetricLiquidity = universalTopCandidate?.features?.context?.liquidityHealth
     ?? (result?.openInterestAnalysis?.totalCallOI || result?.openInterestAnalysis?.totalPutOI ? 0.65 : undefined);
-  const layerMetricFill = universalTopCandidate?.features?.execution?.fillQuality;
+  const layerMetricFill = result?.primaryStrike && result?.primaryExpiration && result?.dataQuality?.freshness === 'REALTIME' ? universalTopCandidate?.features?.execution?.fillQuality : undefined;
   const layerMetricTimeFit = universalTopCandidate?.scores?.timeWindowFit;
   const hasContextMetrics = typeof layerMetricVolFit === 'number' || typeof layerMetricRegime === 'number' || typeof layerMetricLiquidity === 'number';
   const hasExecutionMetrics = typeof layerMetricFill === 'number' || typeof layerMetricTimeFit === 'number';
@@ -2063,7 +2063,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     {
       label: 'Volatility Regime',
       score: Math.round(Math.max(0, Math.min(100, ((result.expectedMove?.selectedExpiryPercent ?? 0) * 11) + (Math.abs((result.ivAnalysis?.ivRank ?? 50) - 50) * 0.8) + 24))),
-      state: `${result.ivAnalysis?.ivRank != null ? `IV ${result.ivAnalysis.ivRank}%` : 'IV N/A'}`,
+      state: `${result.ivAnalysis?.ivRank != null ? `IV ${result.ivAnalysis.ivRank == null ? 'Unavailable' : `${result.ivAnalysis.ivRank}%`}` : 'IV N/A'}`,
       summary: result.expectedMove ? `Expected ±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'Expected move unavailable',
     },
     {
@@ -2577,7 +2577,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
                     <div className="mt-1 grid gap-1 text-[0.76rem]">
                       <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
-                      <div className="text-slate-200">IV Rank: {result.ivAnalysis ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'N/A'}</div>
+                      <div className="text-slate-200">IV Rank: {result.ivAnalysis?.ivRank != null ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'Unavailable'}</div>
                       <div className="text-slate-200">Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
                       <div className="text-slate-300">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
                       <div className="text-slate-400">Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
@@ -3550,7 +3550,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                 {/* Invalidation Level */}
                 {result.aiMarketState.thesis?.invalidationLevel != null && (
                   <div className="mt-[0.45rem] text-[0.74rem] font-bold text-red-300/80">
-                    Framework invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — all scenarios void
+                    Framework invalidation: {result.direction === 'bearish' ? 'Above' : result.direction === 'bullish' ? 'Below' : 'Review at'} ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — reassess the directional scenario
                   </div>
                 )}
               </div>
@@ -3567,7 +3567,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   <span aria-hidden="true">⭐ </span>MSP AI SETUP
                 </div>
                 <div className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.72rem] font-bold text-[var(--msp-muted)]">
-                  Powered by Nasdaq BX + FMV Options (LIVE)
+                  Options provider context — verify observation time and quotes
                 </div>
               </div>
 
@@ -3674,7 +3674,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.72rem]">
-                <div className="text-emerald-200">LIVE DATA STATUS: Nasdaq BX OK • FMV Options OK</div>
+                <div className="text-emerald-200">OPTIONS DATA: availability and timestamps shown in Data Quality</div>
                 <div className="text-slate-400">
                   {liveLatencySeconds !== null ? `Latency: ${liveLatencySeconds.toFixed(1)}s` : 'Latency: n/a'}
                 </div>
@@ -4007,8 +4007,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     <h4 className="mb-3 mt-0 text-[0.9rem] text-violet-500">IV Rank / Percentile</h4>
                     <div className="mb-3 flex flex-wrap gap-4">
                       <div className="text-center">
-                        <div className={`text-[1.75rem] font-bold ${result.ivAnalysis.ivRank >= 70 ? 'text-red-500' : result.ivAnalysis.ivRank <= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                          {result.ivAnalysis.ivRank}%
+                        <div className={`text-[1.75rem] font-bold ${(result.ivAnalysis.ivRank ?? 50) >= 70 ? 'text-red-500' : (result.ivAnalysis.ivRank ?? 50) <= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                          {result.ivAnalysis.ivRank == null ? 'Unavailable' : `${result.ivAnalysis.ivRank}%`}
                         </div>
                         <div className="text-[0.7rem] text-slate-400">IV Rank</div>
                       </div>

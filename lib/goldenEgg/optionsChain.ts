@@ -46,7 +46,7 @@ export interface CanonicalOptionsSnapshot {
   maxPain: number | null;
   callWall: { strike: number; oi: number; relation: 'above' | 'below' | 'at' } | null;
   putWall: { strike: number; oi: number; relation: 'above' | 'below' | 'at' } | null;
-  dealerGamma: 'Long gamma (stabilizing)' | 'Short gamma (amplifying)' | 'Neutral';
+  dealerGamma: 'Unavailable';
   unusualActivity: 'Very High' | 'Elevated' | 'Normal';
   sentiment: 'Bullish' | 'Bearish' | 'Neutral';
   quality: { level: 'GOOD' | 'DEGRADED' | 'UNUSABLE'; reasons: string[]; contracts: number; strikeSpanPct: number | null };
@@ -67,7 +67,7 @@ export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now
   const byExpiry = new Map<string, number>();
   for (const c of contracts) {
     const e = String(c.expiration ?? '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(e)) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e) || e < new Date(nowMs).toISOString().slice(0, 10)) continue;
     byExpiry.set(e, (byExpiry.get(e) ?? 0) + num(c.open_interest));
   }
   const available = [...byExpiry.keys()].sort();
@@ -93,6 +93,8 @@ export function summarizeChain(
   const sel = selectCanonicalExpiry(contracts, nowMs);
   if (!sel.expiry) return null;
   const chain = contracts.filter((c) => c.expiration === sel.expiry);
+  const observedDates = [...new Set(chain.map(c => String(c.date ?? '')).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
+  const observedAt = opts.snapshotTs || (observedDates.length === 1 ? observedDates[0] : '');
   const calls = chain.filter((c) => String(c.type).toLowerCase() === 'call');
   const puts = chain.filter((c) => String(c.type).toLowerCase() === 'put');
   const totalCallOi = calls.reduce((s, c) => s + num(c.open_interest), 0);
@@ -128,12 +130,16 @@ export function summarizeChain(
   const putWall = topP ? { strike: num(topP.strike), oi: num(topP.open_interest), relation: relation(num(topP.strike)) } : null;
 
   const netGamma = calls.reduce((s, c) => s + num(c.gamma) * num(c.open_interest), 0) - puts.reduce((s, p) => s + num(p.gamma) * num(p.open_interest), 0);
-  const dealerGamma: CanonicalOptionsSnapshot['dealerGamma'] = netGamma > 0 ? 'Long gamma (stabilizing)' : netGamma < 0 ? 'Short gamma (amplifying)' : 'Neutral';
+  const dealerGamma: CanonicalOptionsSnapshot['dealerGamma'] = 'Unavailable';
   const sentiment: CanonicalOptionsSnapshot['sentiment'] = putCallOi > 1.2 ? 'Bearish' : putCallOi < 0.8 ? 'Bullish' : 'Neutral';
 
   // ── Quality ────────────────────────────────────────────────────────────
   const reasons: string[] = [];
-  const notes: string[] = [];
+  const quoted = chain.filter(c => num(c.bid) > 0 && num(c.ask) >= num(c.bid));
+  if (quoted.length === 0) reasons.push('no usable two-sided quotes');
+  else if (quoted.length / chain.length < .8) reasons.push(`${Math.round(quoted.length / chain.length * 100)}% two-sided quote coverage`);
+  if (!observedAt) reasons.push('Provider observation timestamp unavailable');
+  const notes: string[] = ['Dealer positions are unavailable; unsigned contract gamma and open interest do not establish dealer gamma exposure.'];
   const strikeSpanPct = strikes.length ? ((strikes[strikes.length - 1] - strikes[0]) / spot) * 100 : null;
   const nearSpot = strikes.filter((k) => Math.abs(k - spot) / spot <= 0.1).length;
   if (chain.length < 10) reasons.push(`only ${chain.length} contracts on ${sel.expiry}`);
@@ -148,7 +154,7 @@ export function summarizeChain(
   }
   const ivOutliers = chain.filter((c) => num(c.implied_volatility) >= 3).length;
   if (ivOutliers > chain.length * 0.2) reasons.push(`${ivOutliers} contracts carry IV ≥ 300% — stale or illiquid quotes`);
-  const level: CanonicalOptionsSnapshot['quality']['level'] = reasons.some((r) => /pre-split|corporate action|only \d+ contracts/.test(r)) ? 'UNUSABLE' : reasons.length ? 'DEGRADED' : 'GOOD';
+  const level: CanonicalOptionsSnapshot['quality']['level'] = reasons.some((r) => /pre-split|corporate action|only \d+ contracts|no usable two-sided quotes/.test(r)) ? 'UNUSABLE' : reasons.length ? 'DEGRADED' : 'GOOD';
 
   if (callWall && callWall.relation === 'below') notes.push(`Call wall ${callWall.strike} sits below spot — pinned/legacy positioning, not overhead resistance.`);
   if (putWall && putWall.relation === 'above') notes.push(`Put wall ${putWall.strike} sits above spot — not support beneath price.`);
@@ -157,7 +163,7 @@ export function summarizeChain(
   return {
     expiry: sel.expiry,
     daysToExpiry,
-    snapshotTs: opts.snapshotTs ?? new Date(nowMs).toISOString(),
+    snapshotTs: observedAt,
     expirySelection: sel.reason,
     putCallOi: Math.round(putCallOi * 100) / 100,
     totalCallOi, totalPutOi, totalVolume,

@@ -148,7 +148,7 @@ export default function OptionsTopStrip({
         )}
         {provider && !loading && (
           <span className="text-[9px] font-mono" style={{ color: 'var(--msp-text-faint)' }}>
-            {provider === 'REALTIME_OPTIONS_FMV' ? 'LIVE' : 'DELAYED'}
+            {provider === 'REALTIME_OPTIONS_FMV' ? 'QUOTE TIME UNVERIFIED' : 'DELAYED'}
           </span>
         )}
       </div>

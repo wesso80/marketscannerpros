@@ -238,16 +238,8 @@ export async function collectCrypto(nowMs: number): Promise<Dataset<CryptoSnapsh
     const valid24 = top100.filter((c) => c.change24h !== null);
     const valid7 = top100.filter((c) => c.change7d !== null);
     const alts = valid24.filter((c) => !['BTC', 'ETH', 'USDT', 'USDC', 'DAI', 'USDE', 'FDUSD', 'USDS', 'PYUSD', 'TUSD', 'USD1'].includes(c.symbol)).map((c) => c.change24h as number).sort((a, b) => a - b);
-    // Funding: MEDIAN of raw perpetual funding_rate per index. CoinGecko /derivatives reports funding_rate already in
-    // percent per interval (median BTC ≈ 0.005); the shared getAggregatedFundingRates() takes the MEAN and multiplies by
-    // 100, so a couple of outlier venues (e.g. 9.9) inflate it to double-digit "percent". Jarvis does not reuse that number.
+    // The derivative feed lacks comparable funding intervals.
     const fundingMap: CryptoSnapshot['funding'] = {};
-    const bySym: Record<string, number[]> = {};
-    for (const t of perps) { const r = num(t.funding_rate); if (r === null) continue; (bySym[t.index_id.toUpperCase()] ??= []).push(r); }
-    for (const [sym, rates] of Object.entries(bySym)) {
-      const s = [...rates].sort((a, b) => a - b); const med = s[Math.floor(s.length / 2)];
-      fundingMap[sym] = { fundingRatePct: med, annualised: med * 3 * 365, exchangeCount: s.length, sentiment: med > 0.03 ? 'Bullish' : med < -0.01 ? 'Bearish' : 'Neutral' };
-    }
     const funding = Object.keys(fundingMap);
     const oiMap: CryptoSnapshot['openInterest'] = {}; for (const o of oi) oiMap[o.symbol] = { totalOI: o.totalOpenInterest, exchangeCount: o.exchanges };
     const snapshot: CryptoSnapshot = {

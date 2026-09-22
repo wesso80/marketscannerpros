@@ -432,29 +432,9 @@ export default function CryptoTerminalView({
 
   // Arbitrage opportunities — ranked funding differentials across exchange pairs
   const arbitrageOpps = useMemo<ArbitrageOpportunity[]>(() => {
-    if (!multi.data?.coins) return [];
-    const opps: ArbitrageOpportunity[] = [];
-    for (const coin of multi.data.coins) {
-      const rows = coin.exchanges.filter(row => Number.isFinite(row.fundingPct));
-      if (rows.length < 2) continue;
-      // Find max and min funding exchange for this coin
-      const sorted = [...rows].sort((a, b) => b.fundingPct - a.fundingPct);
-      const high = sorted[0];
-      const low = sorted[sorted.length - 1];
-      const spread = high.fundingPct - low.fundingPct;
-      if (spread > 0.005) { // >0.005% minimum to be interesting
-        opps.push({
-          symbol: coin.symbol,
-          exchangeA: high.market.replace(' (Futures)', '').replace(' (Derivatives)', ''),
-          exchangeB: low.market.replace(' (Futures)', '').replace(' (Derivatives)', ''),
-          fundingA: high.fundingPct,
-          fundingB: low.fundingPct,
-          spread,
-          annualisedYield: spread * 3 * 365, // 3 funding periods per day
-        });
-      }
-    }
-    return opps.sort((a, b) => b.spread - a.spread).slice(0, 15);
+    // A funding spread is not an arbitrage comparison without matched intervals.
+    return [];
+
   }, [multi.data]);
 
   return (
@@ -545,7 +525,7 @@ export default function CryptoTerminalView({
                   <div className="space-y-2 border-t border-zinc-800/60 pt-3">
                     <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Derivatives Summary</h4>
                     <div className="grid grid-cols-2 gap-2">
-                      <MiniStat label="Avg Funding" value={fmtFunding(aggFunding.fundingRatePct)} sub={`Annualised: ${fmt(aggFunding.annualised, 1)}%`} />
+                      <MiniStat label="Avg Funding" value={fmtFunding(aggFunding.fundingRatePct)} sub="Unavailable: funding intervals not supplied" />
                       <MiniStat label="Sentiment" value={aggFunding.sentiment} />
                       <MiniStat label="Total OI" value={fmtUsd(aggOI.totalOI)} sub={`${aggOI.exchangeCount} exchanges`} />
                       <MiniStat label="Perps Volume" value={fmtUsd(aggOI.totalVolume24h)} />
@@ -559,7 +539,7 @@ export default function CryptoTerminalView({
           {/* ── Center: Derivatives Table ────────────── */}
           <div className="col-span-12 xl:col-span-6">
             <Card
-              title={`${selectedSymbol} Perpetuals — ${sortedRows.length} Exchanges`}
+              title={`${selectedSymbol} Perpetuals — ${new Set(sortedRows.map(r => r.market)).size} Exchanges · ${sortedRows.length} Contracts`}
               right={
                 <div className="flex items-center gap-2">
                   {['oi', 'funding', 'volume', 'basis'].map(col => (
@@ -633,7 +613,7 @@ export default function CryptoTerminalView({
               <Card title={`${selectedRow.market.replace(' (Futures)', '').replace(' (Derivatives)', '')}`} right={<Badge>{selectedRow.symbol}</Badge>}>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <MiniStat label="Funding Rate" value={fmtFunding(selectedRow.fundingPct)} sub={`Ann (8h assumption): ${fmt(Number.isFinite(selectedRow.fundingPct) ? selectedRow.fundingPct * 3 * 365 : Number.NaN, 1)}%`} />
+                    <MiniStat label="Funding Rate" value={fmtFunding(selectedRow.fundingPct)} sub="Reported rate; interval unknown; annualisation unavailable" />
                     <MiniStat label="Open Interest" value={fmtUsd(selectedRow.openInterest)} />
                     <MiniStat label="24h Volume" value={fmtUsd(selectedRow.volume24h)} />
                     <MiniStat label="Basis" value={fmt(selectedRow.basis, 4)} />

@@ -493,8 +493,8 @@ describe('layout and flow audit regressions', () => {
     expect(optionsConfluencePage).toContain('AI Watching');
     expect(optionsConfluencePage).toContain('EXPANSION CONTINUATION');
     expect(optionsConfluencePage).toContain('Bear Case');
-    expect(optionsConfluencePage).toContain('Framework invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)}');
-    expect(optionsConfluencePage).toContain('LIVE DATA STATUS: Nasdaq BX OK • FMV Options OK');
+    expect(optionsConfluencePage).toContain("result.direction === 'bearish' ? 'Above'");
+    expect(optionsConfluencePage).toContain('OPTIONS DATA: availability and timestamps shown in Data Quality');
     expect(optionsConfluencePage).toContain('DECISION LADDER');
     expect(optionsConfluencePage).not.toContain("icon: '✔'");
     expect(optionsConfluencePage).not.toContain("icon: '✖'");

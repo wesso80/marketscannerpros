@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
-import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
+import CryptoMorningDecisionCard, { type CryptoDecisionGate } from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { PageHero } from '@/components/ui';
@@ -285,6 +285,7 @@ function computeDecisionState(coinData: CoinData | null, btc7d: number | null) {
 function CryptoDetailPageContent() {
   const { tier } = useUserTier();
   const searchParams = useSearchParams();
+  const [marketGate, setMarketGate] = useState<CryptoDecisionGate | null>(null);
   const initialCoinId = searchParams.get('coin');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -431,7 +432,7 @@ function CryptoDetailPageContent() {
         developer: coinData.developer,
         decision: {
           structureBias: decision.structureBias,
-          tradePermission: decision.tradePermission,
+          tradePermission: !marketGate?.dataComplete ? 'Unavailable: market evidence gate' : decision.tradePermission,
           alignmentScore: decision.alignmentScore,
           volatilityState: decision.volatilityState,
           regimeTag: decision.regimeTag,
@@ -440,9 +441,9 @@ function CryptoDetailPageContent() {
         upeEligibility: upeSignal?.eligibilityUser,
         upeCrcs: upeSignal?.crcsFinal,
       },
-      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — Rank #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Status: ${decision.tradePermission}.`,
+      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — Rank #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Structural context only; consult the market evidence gate before assigning permission.`,
     });
-  }, [coinData, decision, upeSignal, setPageData]);
+  }, [coinData, decision, upeSignal, marketGate, setPageData]);
 
   if (!tier || tier === 'free') {
     return (
@@ -453,7 +454,9 @@ function CryptoDetailPageContent() {
       </div>
     );
   }
-  const permissionLabel = upeSignal
+  const gateBlocked = !marketGate?.dataComplete || (decision.structureBias === 'Bullish' ? !marketGate.longsAllowed : decision.structureBias === 'Bearish' ? !marketGate.shortsAllowed : (!marketGate.longsAllowed && !marketGate.shortsAllowed));
+  const permissionLabel = gateBlocked || upeSignal?.globalEligibility === 'blocked' || upeSignal?.eligibilityUser === 'blocked' || !coinData?.market?.total_volume_24h
+    ? 'Not aligned' : upeSignal
     ? upeSignal.eligibilityUser === 'eligible'
       ? 'Aligned'
       : upeSignal.eligibilityUser === 'conditional'
@@ -465,7 +468,7 @@ function CryptoDetailPageContent() {
     ? 'Not aligned'
     : 'Conditional';
   const isBlocked = permissionLabel === 'Not aligned';
-  const blockReason = upeSignal?.overlayReasons?.length
+  const blockReason = gateBlocked ? (marketGate?.hardBlocks.join(' • ') || 'Market evidence is loading or unavailable') : upeSignal?.overlayReasons?.length
     ? upeSignal.overlayReasons.join(' • ')
     : 'Not aligned per governance profile or global gate';
 
@@ -490,7 +493,7 @@ function CryptoDetailPageContent() {
 
         <ComplianceDisclaimer compact />
 
-        <CryptoMorningDecisionCard />
+        <CryptoMorningDecisionCard onDecision={setMarketGate} />
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2" ref={searchRef}>
           <div className="relative">

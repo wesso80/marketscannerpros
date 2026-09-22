@@ -5,7 +5,7 @@ export type LiquidityState = 'THIN' | 'NORMAL' | 'RICH';
 
 export interface RegimeEngineInput {
   marketMode: 'pin' | 'launch' | 'chop';
-  gammaState: 'Positive' | 'Negative' | 'Mixed';
+  gammaState: 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
   atrPercent: number;
   expansionProbability: number;
   dataHealthScore: number;

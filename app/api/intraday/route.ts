@@ -1,3 +1,5 @@
+import { equityObservationUtc } from '@/lib/time/sessionCloseEngine';
+import { closedCandles, aggregateClosedCandles } from '@/lib/market/candleIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -29,12 +31,14 @@ interface IntradayBar {
   high: number;
   low: number;
   close: number;
-  volume: number;
+  volume: number | null;
 }
 
 interface IntradayResponse {
   symbol: string;
   interval: IntradayInterval;
+  requestedInterval?: string;
+  warning?: string;
   lastRefreshed: string;
   timeZone: string;
   source?: 'coingecko' | 'alpha_vantage' | 'memory';
@@ -79,7 +83,7 @@ export async function GET(req: NextRequest) {
   const isCrypto = isCryptoSymbol(symbol);
 
   const cached = getCachedBarsOnly(symbol, isCrypto ? 'crypto' : 'equity', interval);
-  if (cached) {
+  if (cached && !isCrypto) {
     const cachedBars: IntradayBar[] = cached.bars.map((bar) => ({
       timestamp: typeof bar.timestamp === 'string' ? bar.timestamp : bar.timestamp.toISOString(),
       open: bar.open,
@@ -124,49 +128,39 @@ export async function GET(req: NextRequest) {
         }, { status: 404 });
       }
 
-      const days = outputSize === 'full' ? 7 : 1;
-      const ohlc = await getOHLC(coinId, days as 1 | 7);
-
-      if (!ohlc || ohlc.length === 0) {
-        return NextResponse.json({
-          error: 'No intraday data available for this symbol',
-          symbol,
-        }, { status: 404 });
-      }
-
-      const bars: IntradayBar[] = ohlc
-        .map((candle) => ({
-          timestamp: new Date(candle[0]).toISOString(),
-          open: Number(candle[1]),
-          high: Number(candle[2]),
-          low: Number(candle[3]),
-          close: Number(candle[4]),
-          volume: 0,
-        }))
-        .filter((bar) => Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close))
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
+      // The source cannot provide 1/5/15-minute candles. Return an explicit
+      // 30-minute view and its identity instead of manufacturing those intervals.
+      const actualInterval: IntradayInterval = interval === '60min' ? '60min' : '30min';
+      const ohlc = await getOHLC(coinId, 1, { timeoutMs: 8000, retries: 0 });
+      const native = closedCandles(ohlc || [], 30 * 60_000);
+      const candles = actualInterval === '60min' ? aggregateClosedCandles(native, 30 * 60_000, 60 * 60_000) : native;
+      if (!candles.length) return NextResponse.json({ error: 'No verified closed candles available', symbol }, { status: 503 });
+      const bars: IntradayBar[] = candles.map(c => ({
+        timestamp: c.closeTime.toISOString(), open: c.open, high: c.high, low: c.low, close: c.close, volume: null,
+      }));
       const lastRefreshed = bars[bars.length - 1]?.timestamp || new Date().toISOString();
 
       const result: IntradayResponse = {
         symbol,
-        interval,
+        interval: actualInterval,
+        requestedInterval: interval,
+        warning: 'CoinGecko supplies closed 30-minute OHLC without candle volume. VWAP and volume-based liquidity are unavailable.',
         lastRefreshed,
         timeZone: 'UTC',
         source: 'coingecko',
         data: bars,
         metadata: {
-          information: `CoinGecko OHLC (${days}d window)`,
+          information: 'CoinGecko closed OHLC; one-day window; no candle volume',
           symbol,
           lastRefreshed,
-          interval,
+          interval: actualInterval,
           outputSize,
           timeZone: 'UTC'
         },
         isCrypto: true,
       };
 
-      setCachedBars(symbol, 'crypto', interval, bars);
+
 
       return NextResponse.json(result);
     }
@@ -231,7 +225,7 @@ export async function GET(req: NextRequest) {
     // Convert to array of bars
     const bars: IntradayBar[] = Object.entries(timeSeries)
       .map(([timestamp, values]: [string, any]) => ({
-        timestamp,
+        timestamp: equityObservationUtc(timestamp).toISOString(),
         open: parseFloat(values['1. open']),
         high: parseFloat(values['2. high']),
         low: parseFloat(values['3. low']),
@@ -243,14 +237,14 @@ export async function GET(req: NextRequest) {
     const result: IntradayResponse = {
       symbol: metaData['2. Symbol'],
       interval: interval,
-      lastRefreshed: metaData['3. Last Refreshed'] || metaData['6. Last Refreshed'],
+      lastRefreshed: bars.at(-1)?.timestamp || '',
       timeZone: metaData['6. Time Zone'],
       source: 'alpha_vantage',
       data: bars,
       metadata: {
         information: metaData['1. Information'],
         symbol: metaData['2. Symbol'],
-        lastRefreshed: metaData['3. Last Refreshed'] || metaData['6. Last Refreshed'],
+        lastRefreshed: bars.at(-1)?.timestamp || '',
         interval: metaData['4. Interval'],
         outputSize: metaData['5. Output Size'],
         timeZone: metaData['6. Time Zone']
@@ -258,7 +252,9 @@ export async function GET(req: NextRequest) {
       isCrypto: false
     };
 
-    setCachedBars(symbol, 'equity', interval, bars);
+    if (bars.every(b => b.volume != null && Number.isFinite(b.volume))) {
+      setCachedBars(symbol, 'equity', interval, bars.map(b => ({ ...b, volume: b.volume! })));
+    }
 
     return NextResponse.json(result);
   } catch (error) {

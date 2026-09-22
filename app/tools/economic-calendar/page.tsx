@@ -241,21 +241,21 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
     const highImpactCountNext24h = nextHigh.length;
     const highImpactWithinNext120m = closestHighMinutes <= 120;
 
-    const liveProviderUnavailable = data?.meta?.providerStatus === 'NOT_CONFIGURED';
+    const liveProviderUnavailable = data?.meta?.providerStatus === 'NOT_CONFIGURED' || !data || !enrichedEvents.some(e => e.dataStatus === 'LIVE' && e.timingConfirmed);
     let reviewState: ReviewState = liveProviderUnavailable ? 'CAUTION' : 'CLEAR';
     if (closestHighMinutes <= HIGH_IMPACT_DANGER_WINDOW.beforeMin || insidePostWindow) reviewState = 'BLOCKED';
     else if (highImpactCountNext24h >= 2 || isCentralBankDay || liveProviderUnavailable) reviewState = 'CAUTION';
 
-    const volRegime = closestHighMinutes <= 60 || isCentralBankDay
+    const volRegime = liveProviderUnavailable ? 'Unavailable' : closestHighMinutes <= 60 || isCentralBankDay
       ? 'Event Shock'
       : highImpactCountNext24h >= 2
         ? 'Expansion'
         : 'Compression';
 
-    const riskState = isCentralBankDay || isInflationOrJobs ? 'Risk-Off' : highImpactCountNext24h ? 'Neutral' : 'Risk-On';
-    const liquidity = closestHighMinutes <= 60 ? 'Spiky' : highImpactCountNext24h >= 2 ? 'Thin' : 'Stable';
+    const riskState = liveProviderUnavailable ? 'Unavailable' : isCentralBankDay || isInflationOrJobs ? 'Risk-Off' : highImpactCountNext24h ? 'Neutral' : 'Risk-On';
+    const liquidity = liveProviderUnavailable ? 'Unavailable' : closestHighMinutes <= 60 ? 'Spiky' : highImpactCountNext24h >= 2 ? 'Thin' : 'Stable';
     const density = highImpactCountNext24h >= 3 ? 'High' : highImpactCountNext24h >= 1 ? 'Medium' : 'Low';
-    const researchMode = reviewState === 'BLOCKED' ? 'Observation' : volRegime === 'Compression' ? 'Trend review' : 'Mean-reversion review';
+    const researchMode = liveProviderUnavailable ? 'Schedule context only' : reviewState === 'BLOCKED' ? 'Observation' : volRegime === 'Compression' ? 'Trend review' : 'Mean-reversion review';
 
     // Global selection: earliest upcoming HIGH event across the enabled countries — no US preference.
     const nextMajorEvent = enrichedEvents.find((event) => event.impact === 'high' && event.releaseMs > nowMs) || null;

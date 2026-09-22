@@ -927,7 +927,7 @@ export default function TimeGravityMapWidget({
     } finally {
       setCalendarLoading(false);
     }
-  }, [symbol]);
+  }, [symbol, assetType]);
   
   // Fetch TGM data from API
   const fetchTGM = async (forceGenerate = false) => {

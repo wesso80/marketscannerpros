@@ -114,6 +114,6 @@ export async function GET(req: NextRequest) {
       });
     }
     
-    return NextResponse.json({ error: 'Failed to fetch funding rates' }, { status: 500 });
+    return NextResponse.json({ error: 'Funding intervals are unavailable; cross-venue rates and annualisation are withheld.', available: false, rates: [], coins: [] }, { status: 503 });
   }
 }

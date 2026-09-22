@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { formatTreasuryUsd as formatUsd } from '@/lib/crypto/treasuryValuation';
 
 interface TreasuryCompany {
@@ -41,7 +42,10 @@ function formatPct(val: number | null): string {
 }
 
 export default function PublicTreasuryWidget() {
-  const [coin, setCoin] = useState<'bitcoin' | 'ethereum'>('bitcoin');
+  const params = useSearchParams();
+  const requestedCoin = params.get('symbol')?.toUpperCase().replace(/[-/]?USD[T]?$/, '') === 'ETH' ? 'ethereum' : 'bitcoin';
+  const [coin, setCoin] = useState<'bitcoin' | 'ethereum'>(requestedCoin);
+  useEffect(() => setCoin(requestedCoin), [requestedCoin]);
   const [data, setData] = useState<TreasuryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +55,7 @@ export default function PublicTreasuryWidget() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setData(null);
     setError(null);
     setPage(1);
 

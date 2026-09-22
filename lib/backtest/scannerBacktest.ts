@@ -19,7 +19,7 @@
 
 import type { BacktestTrade } from './engine';
 import { buildBacktestEngineResult, type BacktestEngineResult } from './engine';
-import type { PriceBar } from './providers';
+import { BACKTEST_SLIPPAGE_BPS, BACKTEST_COMMISSION_BPS, buildBacktestAssumptionsMetadata } from './assumptions';
 
 // ─── Indicator helpers (same as /api/scanner/run) ─────────────────────────
 
@@ -276,6 +276,8 @@ function computeScore(
 
 export interface ScannerBacktestParams {
   sourceBarMinutes?: number;
+  assetType?: 'stock' | 'crypto';
+  timeframe?: string;
   /** Inclusive trading window; earlier bars are used only to warm indicators. */
   startDate?: string;
   endDate?: string;
@@ -309,6 +311,16 @@ export interface ScannerBacktestResult extends BacktestEngineResult {
   };
   /** Per-bar score series for charting */
   scoreSeries: { date: string; score: number; direction: string }[];
+}
+
+export function scannerExitFill(side: 'LONG' | 'SHORT', rawPrice: number): number {
+  return rawPrice * (1 + (side === 'LONG' ? -1 : 1) * BACKTEST_SLIPPAGE_BPS / 10000);
+}
+
+export function scannerTradeNet(side: 'LONG' | 'SHORT', entry: number, exit: number, notional: number, asset: 'stock' | 'crypto') {
+  const units = notional / entry;
+  const gross = (side === 'LONG' ? exit - entry : entry - exit) * units;
+  return gross - (entry + exit) * units * BACKTEST_COMMISSION_BPS[asset] / 10000;
 }
 
 const WARMUP_BARS = 200; // Need 200 bars for EMA200
@@ -357,6 +369,11 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   const atrArr = atr(highs, lows, closes, 14);
   const obvArr = obv(closes, volumes);
 
+  const assetType = params.assetType ?? 'stock';
+  let balance = initialCapital;
+  let notional = initialCapital * 0.95;
+  let pendingExit: BacktestTrade['exitReason'];
+  const markedBalances = new Map<string, number>();
   // Track open position
   let inTrade = false;
   let tradeSide: 'LONG' | 'SHORT' = 'LONG';
@@ -402,29 +419,28 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
       let exitPrice = 0;
       let exitReason: BacktestTrade['exitReason'] = undefined;
 
-      if (tradeSide === 'LONG') {
-        if (low <= stopPrice) { exitPrice = stopPrice; exitReason = 'stop'; }
+      if (pendingExit) { exitPrice = bars[i].open; exitReason = pendingExit; pendingExit = undefined; }
+      else if (tradeSide === 'LONG') {
+        if (low <= stopPrice) { exitPrice = Math.min(bars[i].open, stopPrice); exitReason = 'stop'; }
         else if (high >= targetPrice) { exitPrice = targetPrice; exitReason = 'target'; }
-        else if (result.direction === 'bearish' && result.score <= 40) { exitPrice = close; exitReason = 'signal_flip'; }
-        else if (i - entryIdx >= maxHoldBars) { exitPrice = close; exitReason = 'timeout'; }
+        else if (result.direction === 'bearish' && result.score <= 40) { pendingExit = 'signal_flip'; }
+        else if (i - entryIdx >= maxHoldBars) { pendingExit = 'timeout'; }
       } else {
-        if (high >= stopPrice) { exitPrice = stopPrice; exitReason = 'stop'; }
+        if (high >= stopPrice) { exitPrice = Math.max(bars[i].open, stopPrice); exitReason = 'stop'; }
         else if (low <= targetPrice) { exitPrice = targetPrice; exitReason = 'target'; }
-        else if (result.direction === 'bullish' && result.score >= 60) { exitPrice = close; exitReason = 'signal_flip'; }
-        else if (i - entryIdx >= maxHoldBars) { exitPrice = close; exitReason = 'timeout'; }
+        else if (result.direction === 'bullish' && result.score >= 60) { pendingExit = 'signal_flip'; }
+        else if (i - entryIdx >= maxHoldBars) { pendingExit = 'timeout'; }
       }
 
       if (exitPrice > 0 && exitReason) {
-        const pnl = tradeSide === 'LONG'
-          ? (exitPrice - entryPrice) * (initialCapital / entryPrice)
-          : (entryPrice - exitPrice) * (initialCapital / entryPrice);
-        const pnlPct = tradeSide === 'LONG'
-          ? ((exitPrice - entryPrice) / entryPrice) * 100
-          : ((entryPrice - exitPrice) / entryPrice) * 100;
+        exitPrice = scannerExitFill(tradeSide, exitPrice);
+        const pnl = scannerTradeNet(tradeSide, entryPrice, exitPrice, notional, assetType);
+        const pnlPct = pnl / notional * 100;
+        balance += pnl;
 
         // Compute MFE/MAE
         let mfe = 0, mae = 0;
-        for (let j = entryIdx + 1; j <= i; j++) {
+        for (let j = entryIdx; j <= i; j++) {
           if (tradeSide === 'LONG') {
             mfe = Math.max(mfe, ((highs[j] - entryPrice) / entryPrice) * 100);
             mae = Math.min(mae, ((lows[j] - entryPrice) / entryPrice) * 100);
@@ -456,26 +472,29 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
       }
     }
 
-    // Check entry conditions (only if not in a trade)
-    if (!inTrade && i < bars.length - 1 && Number.isFinite(atrVal) && atrVal > 0) {
+    const unrealized = inTrade ? scannerTradeNet(tradeSide, entryPrice, scannerExitFill(tradeSide, close), notional, assetType) : 0;
+    markedBalances.set(date, balance + unrealized);
+    // Signals use this completed bar; entries fill at the following bar's open.
+    if (!inTrade && balance > 0 && i < bars.length - 1 && Number.isFinite(atrVal) && atrVal > 0) {
       const atrSafe = atrVal;
+      notional = Math.min(initialCapital, balance) * 0.95;
 
       if (result.direction === 'bullish' && result.score >= minScore) {
         inTrade = true;
         tradeSide = 'LONG';
-        entryPrice = close;
-        entryDate = date;
-        entryIdx = i;
-        stopPrice = close - atrSafe * stopMultiplier;
-        targetPrice = close + atrSafe * targetMultiplier;
+        entryPrice = bars[i + 1].open * (1 + (tradeSide === 'LONG' ? 1 : -1) * BACKTEST_SLIPPAGE_BPS / 10000);
+        entryDate = bars[i + 1].date;
+        entryIdx = i + 1;
+        stopPrice = entryPrice - atrSafe * stopMultiplier;
+        targetPrice = entryPrice + atrSafe * targetMultiplier;
       } else if (allowShorts && result.direction === 'bearish' && result.score <= (100 - minScore)) {
         inTrade = true;
         tradeSide = 'SHORT';
-        entryPrice = close;
-        entryDate = date;
-        entryIdx = i;
-        stopPrice = close + atrSafe * stopMultiplier;
-        targetPrice = close - atrSafe * targetMultiplier;
+        entryPrice = bars[i + 1].open * (1 + -1 * BACKTEST_SLIPPAGE_BPS / 10000);
+        entryDate = bars[i + 1].date;
+        entryIdx = i + 1;
+        stopPrice = entryPrice + atrSafe * stopMultiplier;
+        targetPrice = entryPrice - atrSafe * targetMultiplier;
       }
     }
   }
@@ -483,12 +502,11 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   // Close any open trade at end of data
   if (inTrade) {
     const lastBar = bars[bars.length - 1];
-    const pnl = tradeSide === 'LONG'
-      ? (lastBar.close - entryPrice) * (initialCapital / entryPrice)
-      : (entryPrice - lastBar.close) * (initialCapital / entryPrice);
-    const pnlPct = tradeSide === 'LONG'
-      ? ((lastBar.close - entryPrice) / entryPrice) * 100
-      : ((entryPrice - lastBar.close) / entryPrice) * 100;
+    const finalExit = scannerExitFill(tradeSide, lastBar.close);
+    const pnl = scannerTradeNet(tradeSide, entryPrice, finalExit, notional, assetType);
+    const pnlPct = pnl / notional * 100;
+    balance += pnl;
+    markedBalances.set(lastBar.date, balance);
 
     trades.push({
       entryDate,
@@ -499,7 +517,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
       entryTs: entryDate,
       exitTs: lastBar.date,
       entry: entryPrice,
-      exit: lastBar.close,
+      exit: finalExit,
       return: pnl,
       returnPercent: pnlPct,
       exitReason: 'end_of_data',
@@ -508,10 +526,17 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   }
 
   const dates = bars.slice(firstTradingIndex).map(b => b.date);
-  const engineResult = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: params.sourceBarMinutes });
+  const engineResult = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: params.sourceBarMinutes, markedBalances });
 
+  const executionAssumptions = buildBacktestAssumptionsMetadata({ strategyId: 'scanner_technical_proxy', timeframe: params.timeframe ?? 'daily', assetType,
+    totalTrades: trades.length, bars: dates.length, volumeUnavailable: bars.some(bar => !(bar.volume > 0)) });
+  executionAssumptions.fillModel.entryTiming = 'Completed-bar signals enter at the next bar open with adverse slippage.';
+  executionAssumptions.fillModel.exitTiming = 'Gap-through stops fill at the worse of open or stop plus slippage; signal flips/timeouts exit at the next open.';
+  executionAssumptions.liquidity.sizeModel = '95% of the lesser of initial and available realized capital; one position at a time; no compounding above initial capital.';
+  executionAssumptions.warnings.push('Technical-indicator proxy only: historical MSP permissions, options, funding, news and institutional scores are not replayed.');
   return {
     ...engineResult,
+    executionAssumptions,
     params: {
       symbol,
       minScore,

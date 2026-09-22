@@ -636,6 +636,7 @@ export async function getOHLC(
   coinId: string,
   days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7,
   requestOptions?: {
+    interval?: 'daily' | 'hourly';
     retries?: number;
     timeoutMs?: number;
   }
@@ -644,6 +645,7 @@ export async function getOHLC(
     const params = new URLSearchParams({
       vs_currency: 'usd',
       days: String(days),
+      ...(requestOptions?.interval ? { interval: requestOptions.interval } : {}),
     });
 
     return await cgFetch<number[][]>(`/coins/${coinId}/ohlc`, {
@@ -658,93 +660,15 @@ export async function getOHLC(
   }
 }
 
-/**
- * Fetch OHLC candles WITH volume data by combining /ohlc + /market_chart endpoints.
- * CoinGecko's /ohlc endpoint returns no volume — this merges volume from /market_chart
- * by matching timestamps (nearest within 2h bucket). Returns candles with real volume.
- */
+/** CoinGecko OHLC has no candle volume. Rolling 24h volume cannot substitute for it. */
 export async function getOHLCWithVolume(
   coinId: string,
   days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7,
   requestOptions?: { retries?: number; timeoutMs?: number }
 ): Promise<{ t: number; o: number; h: number; l: number; c: number; v: number; volumeMissing?: boolean }[] | null> {
-  try {
-    // Fetch OHLC and market_chart (which has total_volumes) in parallel
-    const [ohlc, chart] = await Promise.all([
-      getOHLC(coinId, days, requestOptions),
-      cgFetch<{
-        prices: [number, number][];
-        total_volumes: [number, number][];
-      }>(`/coins/${coinId}/market_chart`, {
-        params: new URLSearchParams({ vs_currency: 'usd', days: String(days) }),
-        init: { next: { revalidate: 300 } },
-        retries: requestOptions?.retries,
-        timeoutMs: requestOptions?.timeoutMs,
-      }),
-    ]);
-
-    if (!ohlc || ohlc.length === 0) return null;
-
-    // Build volume lookup from market_chart total_volumes (timestamp → volume)
-    // Use sorted array + binary search for O(n log n) instead of O(n²)
-    const volEntries: { ts: number; vol: number }[] = [];
-    if (chart?.total_volumes) {
-      for (const [ts, vol] of chart.total_volumes) {
-        if (Number.isFinite(vol) && vol >= 0) {
-          volEntries.push({ ts, vol });
-        }
-      }
-      volEntries.sort((a, b) => a.ts - b.ts);
-    }
-
-    // Binary search helper: find nearest volume timestamp within window
-    const TWO_HOURS = 2 * 60 * 60 * 1000;
-    function findNearestVol(targetTs: number): number {
-      if (volEntries.length === 0) return 0;
-      let lo = 0, hi = volEntries.length - 1;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (volEntries[mid].ts < targetTs) lo = mid + 1;
-        else hi = mid;
-      }
-      // Check lo and lo-1 for closest
-      let bestVol = 0;
-      let bestDist = Infinity;
-      for (const idx of [lo - 1, lo, lo + 1]) {
-        if (idx >= 0 && idx < volEntries.length) {
-          const dist = Math.abs(volEntries[idx].ts - targetTs);
-          if (dist < bestDist && dist < TWO_HOURS) {
-            bestDist = dist;
-            bestVol = volEntries[idx].vol;
-          }
-        }
-      }
-      return bestVol;
-    }
-
-    const merged = ohlc.map((row) => ({
-      t: row[0],
-      o: Number(row[1]),
-      h: Number(row[2]),
-      l: Number(row[3]),
-      c: Number(row[4]),
-      v: findNearestVol(row[0]),
-    })).filter(c => Number.isFinite(c.c));
-
-    // Volume quality check: warn and mark volumeMissing if >50% of candles have zero volume
-    const zeroVolCount = merged.filter(c => c.v === 0).length;
-    const volumeMissing = merged.length > 0 && zeroVolCount / merged.length > 0.5;
-    if (volumeMissing) {
-      console.warn(
-        `[CoinGecko] Volume quality warning for ${coinId}: ${zeroVolCount}/${merged.length} candles have zero volume`
-      );
-    }
-
-    return merged.map(c => volumeMissing ? { ...c, volumeMissing: true } : c);
-  } catch (error) {
-    console.error('[CoinGecko] OHLC+Volume fetch error:', error);
-    return null;
-  }
+  const ohlc = await getOHLC(coinId, days, requestOptions);
+  return ohlc?.filter(row => row.length >= 5 && row.every(Number.isFinite)).map(([t, o, h, l, c]) =>
+    ({ t, o, h, l, c, v: 0, volumeMissing: true })) ?? null;
 }
 
 export async function getOHLCRange(
@@ -1257,43 +1181,11 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
   fundingRateMissing?: boolean;
   observedAt: string;
 }[]> {
-  const tickers = await getDerivativesForSymbols(symbols);
-  if (!tickers.length) return [];
+  // This feed does not supply funding intervals. Cross-venue aggregation and
+  // annualisation are undefined until an interval-normalized source is available.
+  // Raw per-contract reported rates remain available in the derivatives terminal.
+  return [];
 
-  // Group by index_id (e.g., BTC, ETH)
-  const grouped: Record<string, DerivativeTicker[]> = {};
-  for (const ticker of tickers) {
-    const sym = ticker.index_id.toUpperCase();
-    if (!grouped[sym]) grouped[sym] = [];
-    grouped[sym].push(ticker);
-  }
-
-  return Object.entries(grouped).map(([symbol, exchanges]) => {
-    // MEDIAN funding across venues. CoinGecko's funding_rate is already percent per interval, and a handful of illiquid
-    // venues report absurd values (e.g. 9.5), so mean×100 produced impossible readings (BTC "+8.66%", annualised +9486%).
-    const rates = exchanges.map(e => e.funding_rate).filter((r): r is number => typeof r === 'number' && !isNaN(r)).sort((a, b) => a - b);
-    const fundingRateMissing = rates.length === 0;
-    const ratePercent = fundingRateMissing ? Number.NaN : rates.length % 2 ? rates[(rates.length - 1) / 2] : (rates[rates.length / 2 - 1] + rates[rates.length / 2]) / 2;
-    const avgRate = ratePercent / 100; // decimal form for legacy consumers
-    const annualized = ratePercent * 3 * 365; // 3 funding periods per day
-
-    let sentiment: 'Bullish' | 'Bearish' | 'Neutral';
-    if (fundingRateMissing) sentiment = 'Neutral';
-    else if (ratePercent > 0.03) sentiment = 'Bullish';
-    else if (ratePercent < -0.01) sentiment = 'Bearish';
-    else sentiment = 'Neutral';
-
-    return {
-      symbol,
-      avgFundingRate: avgRate,
-      fundingRatePercent: ratePercent,
-      annualized,
-      exchanges: new Set(exchanges.map(e => e.market)).size,
-      observedAt: new Date(Math.min(...exchanges.map(e => e.last_traded_at)) * 1000).toISOString(),
-      sentiment,
-      fundingRateMissing: fundingRateMissing || undefined,
-    };
-  });
 }
 
 /**

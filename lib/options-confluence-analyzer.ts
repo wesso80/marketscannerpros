@@ -1,3 +1,4 @@
+import { optionEntryBlocker } from '@/lib/options/decisionGate';
 /**
  * Options Confluence Analyzer
  * 
@@ -719,9 +720,9 @@ export interface GreeksAdvice {
 
 export interface IVAnalysis {
   currentIV: number;              // Current implied volatility (avg across ATM options)
-  ivRank: number;                 // 0-100: Where is IV vs last 52 weeks
-  ivRankHeuristic: number;        // Alias to make explicit this is heuristic (no historical series)
-  ivPercentile: number;           // 0-100: % of days IV was lower
+  ivRank: number | null;                 // 0-100: Where is IV vs last 52 weeks
+  ivRankHeuristic: number | null;        // Alias to make explicit this is heuristic (no historical series)
+  ivPercentile: number | null;           // 0-100: % of days IV was lower
   ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
   ivReason: string;
 }
@@ -1463,7 +1464,7 @@ function analyzeIV(
   calls: AVOptionContract[],
   puts: AVOptionContract[],
   currentPrice: number
-): IVAnalysis {
+): IVAnalysis | null {
   // Find ATM options (within 2% of current price) for accurate IV reading
   const atmRange = currentPrice * 0.02;
   const atmOptions = [...calls, ...puts].filter(opt => {
@@ -1483,59 +1484,13 @@ function analyzeIV(
     }
   }
   
-  const currentIV = ivCount > 0 ? totalIV / ivCount : 0.25;  // Default 25% if no data
+  if (ivCount === 0) return null;
+  const currentIV = totalIV / ivCount;
   
-  // IV Rank approximation based on typical stock IV ranges
-  // Without historical data, we estimate based on absolute levels
-  // < 15% = very low, 15-25% = low, 25-40% = normal, 40-60% = elevated, > 60% = high
-  let ivRankHeuristic: number;
-  let ivPercentile: number;
-  
-  if (currentIV < 0.15) {
-    ivRankHeuristic = 10;
-    ivPercentile = 15;
-  } else if (currentIV < 0.25) {
-    ivRankHeuristic = 25;
-    ivPercentile = 30;
-  } else if (currentIV < 0.35) {
-    ivRankHeuristic = 45;
-    ivPercentile = 50;
-  } else if (currentIV < 0.50) {
-    ivRankHeuristic = 65;
-    ivPercentile = 70;
-  } else if (currentIV < 0.70) {
-    ivRankHeuristic = 80;
-    ivPercentile = 85;
-  } else {
-    ivRankHeuristic = 95;
-    ivPercentile = 95;
-  }
-  
-  // Determine signal
-  let ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
-  let ivReason: string;
-  
-  if (ivRankHeuristic >= 70) {
-    ivSignal = 'sell_premium';
-    ivReason = `IV Rank (heuristic) ${ivRankHeuristic}% is elevated. Consider credit spreads, iron condors, or selling premium.`;
-  } else if (ivRankHeuristic <= 30) {
-    ivSignal = 'buy_premium';
-    ivReason = `IV Rank (heuristic) ${ivRankHeuristic}% is low. Buying options is relatively cheap. Consider long calls/puts or debit spreads.`;
-  } else {
-    ivSignal = 'neutral';
-    ivReason = `IV Rank (heuristic) ${ivRankHeuristic}% is in normal range. Both buying and selling strategies viable.`;
-  }
-  
-  console.log(`📊 IV Analysis: Current IV=${(currentIV * 100).toFixed(1)}%, Rank(heuristic)=${ivRankHeuristic}%, Signal=${ivSignal}`);
-  
-  return {
-    currentIV,
-    ivRank: ivRankHeuristic,
-    ivRankHeuristic,
-    ivPercentile,
-    ivSignal,
-    ivReason,
-  };
+  // A current chain cannot establish a 52-week IV rank or percentile.
+  return { currentIV, ivRank: null, ivRankHeuristic: null, ivPercentile: null,
+    ivSignal: 'neutral', ivReason: 'Historical IV rank and percentile unavailable: no comparable IV history. Current ATM IV is descriptive only.' };
+
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2239,7 +2194,7 @@ function calculateCompositeScore(
       direction: 'neutral', // IV is never directional
       weight: ivQualityWeight,
       score: ivScore,
-      reason: `IV Rank: ${ivRankValue.toFixed(0)}% → ${ivStrategy}`
+      reason: `Historical IV rank unavailable; neutral model input: ${ivRankValue.toFixed(0)}% → ${ivStrategy}`
     });
     
     qualityScore += ivScore * ivQualityWeight;
@@ -2820,17 +2775,17 @@ function calculateAIMarketState(
     if (ivRank >= 70) {
       volEdgeScore = Math.min(100, 50 + (ivRank - 70) * 1.5);
       volEdgeSignal = 'SELL_VOL';
-      volEdgeFactors.push(`IV Rank: ${ivRank}% (elevated)`);
+      volEdgeFactors.push(`Historical IV rank unavailable; neutral model input: ${ivRank}% (elevated)`);
       volEdgeFactors.push('Premium overpriced vs realized');
     } else if (ivRank <= 30) {
       volEdgeScore = Math.min(100, 50 + (30 - ivRank) * 1.5);
       volEdgeSignal = 'BUY_VOL';
-      volEdgeFactors.push(`IV Rank: ${ivRank}% (depressed)`);
+      volEdgeFactors.push(`Historical IV rank unavailable; neutral model input: ${ivRank}% (depressed)`);
       volEdgeFactors.push('Options cheap relative to history');
     } else {
       volEdgeScore = 30;
       volEdgeSignal = 'NEUTRAL';
-      volEdgeFactors.push(`IV Rank: ${ivRank}% (neutral zone)`);
+      volEdgeFactors.push(`Historical IV rank unavailable; neutral model input: ${ivRank}% (neutral zone)`);
     }
   }
   
@@ -2873,7 +2828,7 @@ function calculateAIMarketState(
       ? 'IV is elevated relative to historical levels. The primary edge comes from selling overpriced premium and collecting theta decay.'
       : 'IV is depressed relative to historical levels. Options are cheap and positioned for volatility expansion.';
     notEdge = 'This setup is NOT primarily about directional movement. Direction is secondary to volatility.';
-    keyFactors.push(`IV Rank at ${ivRank}%`);
+    keyFactors.push(`Historical IV rank unavailable`);
     keyFactors.push(volEdgeSignal === 'SELL_VOL' ? 'Premium elevated vs realized vol' : 'Premium cheap vs realized vol');
   } else if (dirEdgeScore > volEdgeScore && dirEdgeScore > timeEdgeScore) {
     primaryEdge = compositeScore.finalDirection === 'bullish' ? 'Bullish Momentum' : 'Bearish Momentum';
@@ -3614,10 +3569,11 @@ function selectStrikesFromConfluence(
 // EXPIRATION SELECTION BASED ON CONFLUENCE TIMING
 // ═══════════════════════════════════════════════════════════════════════════
 
-function selectExpirationFromConfluence(
+export function selectExpirationFromConfluence(
   confluenceResult: HierarchicalScanResult,
   scanMode: ScanMode,
-  assetType: AssetType
+  assetType: AssetType,
+  listedExpiries: string[] = []
 ): ExpirationRecommendation[] {
   const expirationConfig = EXPIRATION_MAP[scanMode] || EXPIRATION_MAP.intraday_1h;
   const recommendations: ExpirationRecommendation[] = [];
@@ -3627,15 +3583,11 @@ function selectExpirationFromConfluence(
   const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
   const hasHighConfluence = decompCount >= 3;
   
-  for (const dte of expirationConfig.dte) {
-    const expDate = new Date(today);
-    expDate.setDate(expDate.getDate() + dte);
-    // Skip weekends for equity options
-    while (expDate.getDay() === 0 || expDate.getDay() === 6) {
-      expDate.setDate(expDate.getDate() + 1);
-    }
-    
-    const dateStr = formatNYDate(expDate);
+  for (const dateStr of [...new Set(listedExpiries)].sort()) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || dateStr < formatNYDate(today)) continue;
+    const expDate = new Date(dateStr + 'T20:00:00Z');
+    if ([0, 6].includes(expDate.getUTCDay())) continue;
+    const dte = Math.max(0, dateDiffDaysYMD(formatNYDate(today), dateStr));
     const calendarDTE = Math.max(0, dateDiffDaysYMD(formatNYDate(today), dateStr));
     const marketDTE = calculateMarketDTE(today, expDate, assetType);
 
@@ -4062,15 +4014,29 @@ export class OptionsConfluenceAnalyzer {
     let ivAnalysis: IVAnalysis | null = null;
     let unusualActivity: UnusualActivity | null = null;
     let expectedMove: ExpectedMove | null = null;
+    let quotedCalls: number[] = [];
+    let quotedPuts: number[] = [];
+
     
     // Only fetch options for equity/etf/index (not crypto/forex)
     if (assetType === 'equity' || assetType === 'etf' || assetType === 'index') {
       try {
         const optionsChain = await fetchOptionsChain(symbol, expirationDate);
         if (optionsChain) {
+          const usable = (c: any) => {
+            const bid = Number(c.bid), ask = Number(c.ask), strike = Number(c.strike);
+            return bid > 0 && ask >= bid && (ask - bid) / ((ask + bid) / 2) <= .3 &&
+              strike > 0 && Math.abs(strike - currentPrice) / currentPrice <= .2 && c.expiration === optionsChain.selectedExpiry;
+          };
+          quotedCalls = optionsChain.calls.filter(usable).map(c => Number(c.strike));
+          quotedPuts = optionsChain.puts.filter(usable).map(c => Number(c.strike));
+          if (!quotedCalls.length && !quotedPuts.length) {
+            executionNotes.push('Contract selection blocked: no usable two-sided quotes near spot on the selected expiry.');
+            dataConfidenceCaps.push('Missing executable option quotes; research only.');
+          }
           // Update data quality
           dataQuality.optionsChainSource = 'alpha_vantage';
-          dataQuality.freshness = optionsChain.freshness;
+          dataQuality.freshness = optionsChain.dataDate ? optionsChain.freshness : 'STALE';
           dataQuality.contractsCount = { 
             calls: optionsChain.calls.length, 
             puts: optionsChain.puts.length 
@@ -4102,19 +4068,17 @@ export class OptionsConfluenceAnalyzer {
           unusualActivity = detectUnusualActivity(optionsChain.calls, optionsChain.puts, currentPrice);
           
           // PRO TRADER: Expected Move Calculation
-          const avgIV = ivAnalysis.currentIV;
+          const avgIV = ivAnalysis?.currentIV;
           const todayNy = formatNYDate(new Date());
-          const selectedCalendarDTE = expirationDate
-            ? Math.max(0, dateDiffDaysYMD(todayNy, expirationDate))
-            : 7;
+          const selectedCalendarDTE = Math.max(0, dateDiffDaysYMD(todayNy, optionsChain.selectedExpiry));
           const selectedDTE = expirationDate
             ? calculateMarketDTE(new Date(), new Date(expirationDate), assetType)
             : 7;
-          expectedMove = calculateExpectedMove(currentPrice, avgIV, selectedCalendarDTE);
+          expectedMove = avgIV != null ? calculateExpectedMove(currentPrice, avgIV, selectedCalendarDTE) : null;
           
           // Add EOD data confidence cap
           dataConfidenceCaps.push('EOD options data - confidence capped (not realtime)');
-          executionNotes.push('DTE uses weekend-adjusted market days for listed assets');
+          executionNotes.push('Expected move uses calendar days to the actual selected chain expiry; timing scores separately use market days.');
           if (!openInterestAnalysis.maxPainReliability.reliable) {
             executionNotes.push(`Max pain reliability low (${openInterestAnalysis.maxPainReliability.score}/100) - max pain excluded`);
             dataConfidenceCaps.push('Max pain unreliable due to weak OI/strike coverage');
@@ -4143,7 +4107,7 @@ export class OptionsConfluenceAnalyzer {
     const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult, openInterestAnalysis);
     
     // Select expirations based on confluence timing
-    let allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode, assetType);
+    let allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode, assetType, dataQuality.chainExpiryUsed ? [dataQuality.chainExpiryUsed] : []);
     let primaryExpiration = allExpirations.length > 0 ? allExpirations[0] : null;
     let alternativeExpirations = allExpirations.slice(1);
 
@@ -4266,13 +4230,14 @@ export class OptionsConfluenceAnalyzer {
     const isCallDirection = finalDirection === 'bullish';
 
     // Select strikes after final direction is resolved
-    const allStrikes = finalDirection !== 'neutral'
+    const quoteStrikes = isCallDirection ? quotedCalls : quotedPuts;
+    const allStrikes = finalDirection !== 'neutral' && quoteStrikes.length > 0 && ivAnalysis != null
       ? selectStrikesFromConfluence(
           confluenceResult,
           isCallDirection,
-          dataQuality.availableStrikes,
+          quoteStrikes,
           ivAnalysis?.currentIV ?? 0.25
-        )
+        ).filter(candidate => quoteStrikes.includes(candidate.strike))
       : [];
     let primaryStrike = allStrikes.length > 0 ? allStrikes[0] : null;
     let alternativeStrikes = allStrikes.slice(1);
@@ -4341,13 +4306,20 @@ export class OptionsConfluenceAnalyzer {
       capGrade('C', 'Weak OI quality: options grade capped at C');
     }
 
+    const contractBlocker = optionEntryBlocker({ quotedStrikes: quoteStrikes.length,
+      freshness: dataQuality.freshness, hasExpiry: !!primaryExpiration, hasCurrentIV: !!ivAnalysis });
+    if (contractBlocker) capGrade('C', contractBlocker);
     const shouldGateWait =
+      !!contractBlocker ||
       finalDirection === 'neutral' ||
       aiMarketState.tradeQualityGate === 'WAIT' ||
       grade === 'C' || grade === 'F' ||
       optionsGrade === 'C' || optionsGrade === 'F';
 
     if (shouldGateWait) {
+      aiMarketState.tradeQualityGate = 'WAIT';
+      entryTiming.urgency = 'wait';
+      entryTiming.reason = contractBlocker || 'Trade quality or directional alignment is insufficient.';
       primaryStrike = null;
       alternativeStrikes = [];
       primaryExpiration = null;
@@ -4355,7 +4327,7 @@ export class OptionsConfluenceAnalyzer {
       strategyRecommendation = {
         strategy: 'WAIT',
         strategyType: 'neutral',
-        reason: 'Trade quality/directional gate not met. Wait for stronger alignment.',
+        reason: contractBlocker || 'Trade quality/directional gate not met. Wait for stronger alignment.',
         riskProfile: 'defined',
         maxRisk: '0',
         maxReward: '0',
@@ -4453,6 +4425,13 @@ export class OptionsConfluenceAnalyzer {
       tradeLevels,
       location: locationContext,
     });
+
+    if (shouldGateWait) {
+      tradeSnapshot.verdict = 'WAIT';
+      tradeSnapshot.oneLine = entryTiming.reason;
+      tradeSnapshot.why.unshift(entryTiming.reason);
+      tradeSnapshot.action.entryTrigger = entryTiming.reason;
+    }
 
     const institutionalIntent = computeInstitutionalIntent({
       symbol,

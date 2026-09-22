@@ -24,7 +24,7 @@ export interface QuoteData {
 
 export interface FlowData {
   market_mode: 'pin' | 'launch' | 'chop';
-  gamma_state: 'Positive' | 'Negative' | 'Mixed';
+  gamma_state: 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
   bias: 'bullish' | 'bearish' | 'neutral';
   conviction: number;
   dominant_expiry: string;

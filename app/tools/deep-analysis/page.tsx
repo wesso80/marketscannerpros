@@ -834,7 +834,7 @@ export default function DeepAnalysisPage({
 
         {result && !embeddedInGoldenEgg && (
           <DecisionCockpit
-            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.assetType.toUpperCase()}</div><div className="msp-muted">Price: ${result.price.price.toFixed(2)}</div><div className="msp-muted">24h: {result.price.changePercent.toFixed(2)}%</div></div>}
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.assetType.toUpperCase()}</div><div className="msp-muted">Price: ${result.price.price.toFixed(2)}</div><div className="msp-muted">Vs prior close: {result.price.changePercent.toFixed(2)}%</div></div>}
             center={<div className="grid gap-1 text-sm"><div className="font-extrabold text-[var(--msp-accent)]">{result.signals.signal}</div><div className="msp-muted">Score: {result.signals.score.toFixed(0)}</div><div className="msp-muted">Response: {result.responseTime}</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">RSI: {result.indicators.rsi?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">MACD: {result.indicators.macdHist?.toFixed(2) ?? 'n/a'}</div><div className="msp-muted">ADX: {result.indicators.adx?.toFixed(1) ?? 'n/a'}</div></div>}
           />
@@ -1599,7 +1599,7 @@ export default function DeepAnalysisPage({
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Div Yield</div>
                         <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "var(--msp-muted)" }}>
-                          {result.company.dividendYield?.toFixed(2) || '0'}%
+                          {result.company.dividendYield == null ? 'Unavailable' : `${result.company.dividendYield.toFixed(2)}%`}
                         </div>
                       </div>
                     </>

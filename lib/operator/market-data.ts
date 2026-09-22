@@ -187,7 +187,7 @@ async function fetchCGBars(
     }
 
     const candles = await getOHLCWithVolume(coinId, days);
-    if (!candles || candles.length === 0) return [];
+    if (!candles || candles.length === 0 || candles.some(c => c.volumeMissing)) return [];
 
     const bars = candles
       .filter(c => Number.isFinite(c.c) && c.c > 0)

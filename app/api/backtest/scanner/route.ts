@@ -108,6 +108,8 @@ export async function POST(req: NextRequest) {
     // Run the scanner backtest engine
     const result = runScannerBacktest({
       sourceBarMinutes: parsedTimeframe.minutes,
+      assetType: isCrypto ? 'crypto' : 'stock',
+      timeframe,
       startDate,
       endDate,
       symbol,

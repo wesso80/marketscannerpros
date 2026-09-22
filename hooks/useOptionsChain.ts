@@ -156,6 +156,11 @@ export function useOptionsChain(): UseOptionsChainState {
     abortRef.current = ctrl;
 
     setLoading(true);
+    setContracts([]);
+    setUnderlyingPrice(0);
+    setExpirations([]);
+    setProvider('');
+    setLastFetchedAt(0);
     setError(null);
 
     const params = new URLSearchParams({ symbol });
@@ -167,7 +172,10 @@ export function useOptionsChain(): UseOptionsChainState {
         if (!res.ok || !json.success) {
           throw new Error(json.error || `HTTP ${res.status}`);
         }
-        setContracts(json.contracts);
+        if (ctrl.signal.aborted) return;
+        const dates = [...new Set(json.contracts.map(c => c.expiration))].sort();
+        const chosen = expiration || dates.find(d => d >= new Date().toISOString().slice(0, 10));
+        setContracts(json.contracts.filter(c => c.expiration === chosen));
         setExpirations(json.expirations);
         setUnderlyingPrice(json.underlyingPrice);
         setProvider(json.provider);

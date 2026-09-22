@@ -1,3 +1,6 @@
+import { equityCandles, aggregateEquityCandles } from '@/lib/market/equityCandles';
+import { getPriceBySymbol } from '@/lib/coingecko';
+import { closedCandles, aggregateClosedCandles, type ClosedCandle } from '@/lib/market/candleIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
@@ -213,9 +216,9 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
 
       // Fetch 30-day daily OHLC (gives ~30 candles)
       try {
-        const ohlc30 = await getOHLC(coinId, 30);
+        const ohlc30 = await getOHLC(coinId, 90, { interval: 'daily', timeoutMs: 8000, retries: 0 });
         if (ohlc30 && ohlc30.length > 0) {
-          const bars30 = parseCoinGeckoOHLC(ohlc30 as [number, number, number, number, number][]);
+          const bars30 = closedCandles(ohlc30, 86400000);
           const stored = await processor.processCandleBatch(symbol, 'daily', bars30, 'crypto');
           totalStored += stored;
           if (stored > 0) timeframesGenerated.push('1D');
@@ -236,7 +239,7 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       try {
         const ohlc1 = await getOHLC(coinId, 1);
         if (ohlc1 && ohlc1.length > 0) {
-          const bars1 = parseCoinGeckoOHLC(ohlc1 as [number, number, number, number, number][]);
+          const bars1 = closedCandles(ohlc1, 1800000);
           const stored = await processor.processCandleBatch(symbol, '30min', bars1, 'crypto');
           totalStored += stored;
           if (stored > 0) timeframesGenerated.push('30m');
@@ -380,6 +383,55 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
   }
 }
 
+// Build crypto targets from verified source candles. Legacy stored midpoints did
+// not record a candle contract and can contain four-hour candles labelled daily.
+async function verifiedCryptoMidpoints(symbol: string, price: number): Promise<MidpointRecord[]> {
+  const base = symbol.replace(/[-/]?(USDT|USDC|USD)$/i, '');
+  const id = symbolToId(base) || await resolveSymbolToId(base);
+  if (!id) return [];
+  const [dailyRows, hourlyRows, halfHourRows] = await Promise.all([
+    getOHLC(id, 90, { interval: 'daily', retries: 0, timeoutMs: 8000 }),
+    getOHLC(id, 7, { interval: 'hourly', retries: 0, timeoutMs: 8000 }),
+    getOHLC(id, 1, { retries: 0, timeoutMs: 8000 }),
+  ]);
+  const daily = closedCandles(dailyRows || [], 86400000);
+  const hourly = closedCandles(hourlyRows || [], 3600000);
+  const series: [string, ClosedCandle[]][] = [
+    ['30m', closedCandles(halfHourRows || [], 1800000)], ['1H', hourly],
+    ['4H', aggregateClosedCandles(hourly, 3600000, 14400000)], ['1D', daily],
+    ['1W', aggregateClosedCandles(daily, 86400000, 7 * 86400000)],
+  ];
+  return midpointsFromSeries(series, price);
+}
+
+function midpointsFromSeries(series: [string, ClosedCandle[]][], price: number): MidpointRecord[] {
+  return series.flatMap(([timeframe, bars]) => bars.flatMap((b, i) => {
+    const midpoint = (b.high + b.low) / 2, range = b.high - b.low;
+    if (bars.slice(i + 1).some(later => later.low <= midpoint && later.high >= midpoint)) return [];
+    return [{ timeframe, midpoint, high: b.high, low: b.low, range,
+      retrace30High: b.high - range * .3, retrace30Low: b.low + range * .3,
+      createdAt: b.closeTime, candleOpenTime: b.time, candleCloseTime: b.closeTime,
+      tagged: false, taggedAt: null, distanceFromPrice: ((midpoint - price) / price) * 100,
+      ageMinutes: (Date.now() - b.closeTime.getTime()) / 60000,
+      weight: TF_WEIGHTS[timeframe] || 1, isAbovePrice: midpoint > price }];
+  }));
+}
+
+async function verifiedEquityMidpoints(symbol: string, price: number): Promise<MidpointRecord[]> {
+  const key = process.env.ALPHA_VANTAGE_API_KEY;
+  if (!key) return [];
+  const base = `https://www.alphavantage.co/query?symbol=${encodeURIComponent(symbol)}&outputsize=compact&apikey=${key}`;
+  const [daily, intraday] = await Promise.all([
+    avFetch<Record<string, any>>(`${base}&function=TIME_SERIES_DAILY`, `TGM verified daily ${symbol}`),
+    avFetch<Record<string, any>>(`${base}&function=TIME_SERIES_INTRADAY&interval=15min&extended_hours=false`, `TGM verified intraday ${symbol}`),
+  ]);
+  const d = equityCandles(daily?.['Time Series (Daily)'] || {});
+  const q = equityCandles(intraday?.['Time Series (15min)'] || {}, 15);
+  return midpointsFromSeries([['1D', d], ['30m', aggregateEquityCandles(q,15,30)],
+    ['1H', aggregateEquityCandles(q,15,60)], ['2H', aggregateEquityCandles(q,15,120)],
+    ['4H', aggregateEquityCandles(q,15,240)]], price);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSessionFromCookie();
@@ -411,10 +463,10 @@ export async function GET(request: NextRequest) {
     // Auto-resolve price using the full getQuote cascade (cache → DB → live AV)
     if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
       try {
-        const quoteData = await getQuote(symbol);
+        const quoteData = assetTypeHint === 'crypto' || (!assetTypeHint && isCryptoSymbol(symbol)) ? await getPriceBySymbol(symbol) : await getQuote(symbol);
         if (quoteData && quoteData.price > 0) {
           currentPrice = quoteData.price;
-          console.log(`[TGM API] Auto-resolved price for ${symbol}: ${currentPrice} (source: ${quoteData.source})`);
+          console.log(`[TGM API] Auto-resolved price for ${symbol}: ${currentPrice} (source: ${'provider'})`);
         }
       } catch { /* ignore — will try on-demand generation which also resolves price */ }
     }
@@ -424,7 +476,7 @@ export async function GET(request: NextRequest) {
     
     let midpoints: MidpointRecord[] = [];
     let generationAttempted = false;
-    let generationResult: OnDemandResult | null = null;
+    const generationResult: OnDemandResult = { totalStored: 0, timeframesGenerated: [], rateLimited: false };
     
     // Priority 1: Custom midpoints from query param
     if (midpointsStr) {
@@ -437,87 +489,13 @@ export async function GET(request: NextRequest) {
         );
       }
     }
-    // Priority 2: Fetch from database (with pre-tagging)
-    else {
-      try {
-        const service = getMidpointService();
-
-        // Only run tagging + midpoint fetch when we have a valid price
-        if (!priceMissing) {
-          // ── PRE-TAG: mark midpoints the current price has touched ──────
-          // Use a 0.1% buffer around current price for the "current bar" range
-          const tagBuffer = currentPrice * 0.001;
-          const touchTagged = await service.checkAndTagMidpoints(
-            symbol,
-            currentPrice + tagBuffer,
-            currentPrice - tagBuffer
-          );
-
-          // ── OVERSHOOT TAG: mark midpoints price has clearly blown past ──
-          // 5% threshold — only tags midpoints that are way behind price
-          const overshootTagged = await service.tagOvershootMidpoints(
-            symbol,
-            currentPrice,
-            0.05  // 5% overshoot threshold
-          );
-
-          if (touchTagged > 0 || overshootTagged > 0) {
-            console.log(
-              `[TGM API] Pre-tagged ${touchTagged} touch + ${overshootTagged} overshoot midpoints for ${symbol}`
-            );
-          }
-
-          // ── NOW fetch only the remaining untagged midpoints ────────────
-          midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
-            maxDistancePercent: maxDistance,
-            limit: 100,
-          });
-        }
-
-        // ── ON-DEMAND: No midpoints in DB or user forced regeneration ──
-        if (midpoints.length === 0 || forceGenerate || priceMissing) {
-          const assetType: 'crypto' | 'equity' = (assetTypeHint === 'stock' || assetTypeHint === 'equity')
-            ? 'equity'
-            : (assetTypeHint === 'crypto' ? 'crypto' : (isCryptoSymbol(symbol) ? 'crypto' : 'equity'));
-          console.log(`[TGM API] ${forceGenerate ? 'Force generating' : 'No midpoints for'} ${symbol}, on-demand (${assetType})...`);
-          generationResult = await generateMidpointsOnDemand(symbol, assetType);
-          generationAttempted = true;
-          
-          // If price was missing before, try to resolve it now using getQuote
-          // (on-demand generation via AV will have populated quotes_latest)
-          if (priceMissing) {
-            try {
-              const quoteData = await getQuote(symbol);
-              if (quoteData && quoteData.price > 0) {
-                currentPrice = quoteData.price;
-                console.log(`[TGM API] Post-generation price resolved for ${symbol}: ${currentPrice}`);
-              }
-            } catch { /* non-fatal */ }
-          }
-          
-          if (currentPrice > 0) {
-            // Always re-fetch after generation — upserts may have refreshed
-            // existing rows (rowCount reflects updates too), and even when
-            // totalStored reports 0 the DB may contain usable midpoints.
-            midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
-              maxDistancePercent: maxDistance,
-              limit: 100,
-            });
-            console.log(`[TGM API] On-demand: ${generationResult.totalStored} stored, ${midpoints.length} within range for ${symbol}`);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch midpoints from database:', error);
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Database connection failed. Ensure midpoints table exists and is populated.',
-            hint: 'Run: npm run migrate:midpoints && npm run backfill:midpoints',
-          },
-          { status: 503 }
-        );
-      }
+    else if (assetTypeHint === 'crypto' || (!assetTypeHint && isCryptoSymbol(symbol))) {
+      midpoints = await verifiedCryptoMidpoints(symbol, currentPrice);
     }
+    else {
+      midpoints = await verifiedEquityMidpoints(symbol, currentPrice);
+    }
+    midpoints = midpoints.filter(m => Math.abs(m.distanceFromPrice) <= maxDistance).slice(-100);
 
     // Final price check — if still missing after all resolution attempts, fail
     if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
@@ -550,7 +528,7 @@ export async function GET(request: NextRequest) {
     const tgm = computeTimeGravityMap(midpoints, currentPrice);
     
     // Determine data source
-    const dataSource = midpointsStr ? 'custom' : (localDemo ? 'local_demo' : 'database');
+    const dataSource = midpointsStr ? 'custom' : (localDemo ? 'local_demo' : 'verified_closed_ohlc');
 
     // ── Coverage diagnostics ─────────────────────────────────────────
     const EXPECTED_TFS: Record<string, string[]> = {

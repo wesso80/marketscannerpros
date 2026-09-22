@@ -4,7 +4,7 @@ import React from 'react';
 
 type FlowPayload = {
   market_mode: 'pin' | 'launch' | 'chop';
-  gamma_state: 'Positive' | 'Negative' | 'Mixed';
+  gamma_state: 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
   bias: 'bullish' | 'bearish' | 'neutral';
   conviction: number;
   dominant_expiry: '0DTE' | 'weekly' | 'monthly' | 'long_dated' | 'unknown';

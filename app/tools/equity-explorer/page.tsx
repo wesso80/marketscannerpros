@@ -746,11 +746,11 @@ export default function EquityExplorerPage() {
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Relative Strength</p>
-                    <p className="text-xs text-slate-200">vs SPY: <span className={`font-semibold ${(data.quote.changePercent ?? 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}{(data.quote.changePercent ?? 0).toFixed(2)}%</span> • vs Sector: <span className="font-semibold text-slate-300">proxy</span></p>
+                    <p className="text-xs text-slate-200">SPY-relative return: Unavailable • matched benchmark observations required</p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Volatility + Liquidity</p>
-                    <p className="text-xs text-slate-200">ATR state: <span className="font-semibold">{upeGlobal?.volatilityState || 'normal'}</span> • RVOL proxy: <span className="font-semibold">{(data.quote.volume / Math.max(1, data.valuation.marketCap / 1000)).toFixed(2)}x</span></p>
+                    <p className="text-xs text-slate-200">ATR state: <span className="font-semibold">{upeGlobal?.volatilityState || 'normal'}</span> • RVOL: <span className="font-semibold">Unavailable — comparable volume history required</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Event Risk</p>

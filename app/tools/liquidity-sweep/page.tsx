@@ -18,6 +18,8 @@ interface SweepResult {
   symbol: string;
   price: number;
   change24h: number;
+  candleDate?: string;
+  changeBasis?: string;
   sweepDetected: boolean;
   sweepPattern: { name: string; bias: string; confidence: number; reason: string } | null;
   nearestLevel: LiquidityLevel | null;
@@ -127,7 +129,7 @@ export default function LiquiditySweepPage() {
           ]}
           metrics={[
             { label: 'Mode', value: scanType === 'crypto' ? 'Crypto' : 'Equity', tone: scanType === 'crypto' ? 'warn' : 'info', detail: 'Sweep detection' },
-            { label: 'Sweeps', value: data ? String(data.sweepCount) : '—', tone: 'bull', detail: 'Active observations' },
+            { label: 'Sweeps', value: data ? String(data.sweepCount) : '—', tone: 'bull', detail: 'Latest completed candle observations' },
             { label: 'Filter', value: filter === 'sweep' ? 'Sweeps only' : filter === 'near' ? 'Near level' : 'All', tone: 'info', detail: 'Result filter applied' },
             { label: 'Updated', value: lastUpdated, tone: 'info', detail: 'Local time' },
           ]}
@@ -243,7 +245,7 @@ export default function LiquiditySweepPage() {
                         <div style={{ fontSize: '12px', color: 'var(--msp-text-muted)', marginTop: '2px' }}>
                           {fmtPrice(r.price)}
                           <span style={{ color: r.change24h >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', marginLeft: '8px' }}>
-                            {r.change24h >= 0 ? '+' : ''}{r.change24h.toFixed(2)}%
+                            {r.change24h >= 0 ? '+' : ''}{r.change24h.toFixed(2)}% · completed {r.candleDate ?? 'date unavailable'}
                           </span>
                         </div>
                       </div>

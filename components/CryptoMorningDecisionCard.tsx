@@ -43,7 +43,8 @@ function freshnessLabel(status: FreshnessStatus): string {
   return 'Unknown';
 }
 
-export default function CryptoMorningDecisionCard() {
+export type CryptoDecisionGate = { dataComplete: boolean; longsAllowed: boolean; shortsAllowed: boolean; hardBlocks: string[] };
+export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?: (gate: CryptoDecisionGate) => void } = {}) {
   const [marketData, setMarketData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
@@ -213,6 +214,8 @@ export default function CryptoMorningDecisionCard() {
       subClusters,
     };
   }, [marketData]);
+
+  useEffect(() => { onDecision?.(decision); }, [decision, onDecision]);
 
   const freshnessBadges = useMemo(() => {
     const entries = [

@@ -1,3 +1,4 @@
+import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
  * Shared, cached equity fundamentals access so Golden Egg, Deep Analyst and the Fundamentals tab read the SAME
  * Alpha Vantage OVERVIEW / EARNINGS / EARNINGS_CALENDAR snapshot for a symbol.
@@ -78,6 +79,9 @@ export interface FundamentalsSummary {
   industry: string | null;
   marketCap: number | null;
   pe: number | null;
+  sharesOutstanding?: number | null;
+  dividendYield?: number | null;
+  valuationBasis?: string;
   forwardPe: number | null;
   peg: number | null;
   eps: number | null;
@@ -107,7 +111,8 @@ export async function getFundamentalsSummary(symbol: string, opts: { includeEarn
     opts.includeEarnings === false ? null : getNextEarnings(symbol).catch(() => null),
     getQuote(symbol).catch(() => null),
   ]);
-  const pe = numOrNull(raw.PERatio), fwd = numOrNull(raw.ForwardPE), peg = numOrNull(raw.PEGRatio);
+  const valuation = valuationAtPrice(quote?.price, raw.EPS, raw.SharesOutstanding);
+  const pe = valuation.pe, fwd = numOrNull(raw.ForwardPE), peg = numOrNull(raw.PEGRatio);
   const ratings = { strongBuy: Number(raw.AnalystRatingStrongBuy) || 0, buy: Number(raw.AnalystRatingBuy) || 0, hold: Number(raw.AnalystRatingHold) || 0, sell: Number(raw.AnalystRatingSell) || 0, strongSell: Number(raw.AnalystRatingStrongSell) || 0 };
   const analystCount = ratings.strongBuy + ratings.buy + ratings.hold + ratings.sell + ratings.strongSell;
   const nextDate = next?.reportDate ?? null;
@@ -116,7 +121,10 @@ export async function getFundamentalsSummary(symbol: string, opts: { includeEarn
     name: raw.Name ?? null,
     sector: raw.Sector ?? null,
     industry: raw.Industry ?? null,
-    marketCap: numOrNull(raw.MarketCapitalization),
+    marketCap: valuation.marketCap,
+    sharesOutstanding: numOrNull(raw.SharesOutstanding),
+    dividendYield: numOrNull(raw.DividendYield),
+    valuationBasis: valuation.basis,
     pe, forwardPe: fwd, peg,
     eps: numOrNull(raw.EPS),
     revenueTtm: numOrNull(raw.RevenueTTM),

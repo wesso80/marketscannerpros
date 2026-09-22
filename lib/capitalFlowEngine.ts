@@ -8,7 +8,7 @@ import { computeSessionPermissionOverlayFromPhase, SessionPermissionOverlay } fr
 
 export type FlowBias = 'bullish' | 'bearish' | 'neutral';
 export type MarketMode = 'pin' | 'launch' | 'chop';
-export type GammaState = 'Positive' | 'Negative' | 'Mixed';
+export type GammaState = 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
 
 export interface FlowKeyStrike {
   strike: number;
@@ -516,19 +516,14 @@ function buildCryptoClusters(input: CapitalFlowInput): FlowKeyStrike[] {
   const spot = input.spot;
   const positioning = input.cryptoPositioning;
   const liq = positioning?.liquidationLevels ?? [];
-  const levels = liq.length
-    ? liq
-    : [
-        { level: spot * 0.985, side: 'long_liq' as const, weight: 0.75 },
-        { level: spot * 1.015, side: 'short_liq' as const, weight: 0.75 },
-      ];
+  const levels = liq.filter(l => Number.isFinite(l.level) && l.level > 0);
 
   const maxWeight = Math.max(1, ...levels.map((level) => level.weight ?? 0.6));
   return levels
     .map((level) => ({
       strike: Number(level.level.toFixed(2)),
       gravity: Number(clamp((level.weight ?? 0.6) / maxWeight, 0.2, 1).toFixed(2)),
-      type: (level.side === 'short_liq' ? 'call-heavy' : 'put-heavy') as 'call-heavy' | 'put-heavy',
+      type: 'mixed' as const,
     }))
     .sort((a, b) => b.gravity - a.gravity)
     .slice(0, 8);
@@ -632,16 +627,12 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const centeredMixed = keyStrikes.slice(0, 2).every((strike) => strike.type === 'mixed');
   const oneSidedEquity = pcrBand < 0.7 || pcrBand > 1.3;
 
-  const gammaState: GammaState = marketType === 'crypto'
-    ? (extremeFunding && highCrowding ? 'Negative' : Math.abs(cryptoFunding) <= 0.015 ? 'Positive' : 'Mixed')
-    : centeredMixed && pinDistancePercent <= 0.7
-      ? 'Positive'
-      : oneSidedEquity
-        ? 'Negative'
-        : 'Mixed';
+  // Open-interest ratios and perpetual funding do not identify dealer gamma.
+  // A signed, expiry-scoped gamma source is required.
+  const gammaState = 'Unavailable' as GammaState;
 
   const marketMode: MarketMode = marketType === 'crypto'
-    ? (extremeFunding && highCrowding ? 'launch' : Math.abs(cryptoFunding) <= 0.015 && Math.abs(cryptoOiChange) < 2 ? 'pin' : 'chop')
+    ? (extremeFunding && highCrowding ? 'launch' : 'chop')
     : gammaState === 'Positive'
       ? 'pin'
       : gammaState === 'Negative'

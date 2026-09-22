@@ -84,7 +84,8 @@ function buildHolidaySet(year: number): Set<string> {
   const holidays = new Set<string>();
 
   // 1. New Year's Day (Jan 1, observed)
-  holidays.add(observedKey(year, 0, 1));
+  // NYSE does not observe a Saturday New Year's Day on the prior Friday.
+  if (new Date(Date.UTC(year, 0, 1)).getUTCDay() !== 6) holidays.add(observedKey(year, 0, 1));
 
   // 2. Martin Luther King Jr. Day (3rd Monday in Jan)
   holidays.add(dateKey(year, 0, nthWeekday(year, 0, 1, 3)));
@@ -185,4 +186,11 @@ export function lastTradingDayOfMonth(year: number, month: number): number {
  */
 export function getUSMarketHolidayList(year: number): string[] {
   return [...getHolidays(year)].sort();
+}
+
+/** Scheduled US cash-equity early closes; unscheduled exchange closures need calendar updates. */
+export function isUSEquityEarlyClose(year: number, month: number, day: number): boolean {
+  if (isNonTradingDay(year, month, day)) return false;
+  return (month === 6 && day === 3) || (month === 11 && day === 24) ||
+    (month === 10 && day === nthWeekday(year, 10, 4, 4) + 1);
 }

@@ -205,7 +205,7 @@ function computeMergedTimeInMarket(trades: BacktestTrade[], dates: string[]): nu
   return Math.min(100, (coveredBars / dates.length) * 100);
 }
 
-export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string[], initialCapital: number, options: { sourceBarMinutes?: number } = {}): BacktestEngineResult {
+export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string[], initialCapital: number, options: { sourceBarMinutes?: number; markedBalances?: Map<string, number> } = {}): BacktestEngineResult {
   if (!Number.isFinite(initialCapital) || initialCapital <= 0) throw new Error('Initial capital must be positive');
   if (trades.length === 0) {
     return { ...createEmptyBacktestResult(), initialCapital, statisticsBasis: computeBalanceStatistics([], initialCapital, 0).statisticsBasis };
@@ -245,6 +245,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
       equity += exitReturnsByDate[date];
     }
 
+    if (options.markedBalances?.has(date)) equity = options.markedBalances.get(date)!;
     if (equity > peak) {
       peak = equity;
     }
@@ -257,7 +258,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
     equityCurve.push({ date, equity, drawdown });
   });
 
-  const balanceStatistics = computeBalanceStatistics(equityCurve, initialCapital, maxDrawdown, options.sourceBarMinutes);
+  const balanceStatistics = computeBalanceStatistics(equityCurve, initialCapital, maxDrawdown, options.sourceBarMinutes, !!options.markedBalances);
 
   const grossProfit = trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0);
   const grossLoss = Math.abs(trades.filter(t => t.return < 0).reduce((sum, t) => sum + t.return, 0));

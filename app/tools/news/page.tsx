@@ -1,6 +1,7 @@
 "use client";
 
 import { isRecentNews, newsTopicFlags } from '@/lib/newsEvidence';
+import { useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
@@ -152,7 +153,7 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 type EarningsFilter = 'all' | 'today' | 'tomorrow' | 'thisWeek' | 'nextWeek';
-type SessionTag = 'PRE' | 'RTH' | 'AH';
+type SessionTag = 'PRE' | 'RTH' | 'AH' | 'Unknown';
 type ImpactTier = 'A' | 'B' | 'C';
 type PermissionState = 'YES' | 'CONDITIONAL' | 'NO';
 
@@ -175,17 +176,8 @@ function getMarketCapRank(symbol: string): { rank: 'top10' | 'top25' | 'top100' 
   return { rank: null, label: '', color: '', bgColor: '' };
 }
 
-// Session tag is estimated — Alpha Vantage doesn't provide report timing.
-// Most large-cap earnings report PRE or AH; RTH is rare.
-// Default to PRE for top-25 companies, AH for others, RTH for mid-caps as a rough heuristic.
-function inferSessionTag(symbol: string): SessionTag {
-  const sym = symbol.toUpperCase();
-  if (TOP_25_COMPANIES.includes(sym)) return 'PRE';
-  if (TOP_100_COMPANIES.includes(sym)) return 'AH';
-  // For unknown companies, alternate PRE/AH based on symbol
-  const hash = sym.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return hash % 2 === 0 ? 'PRE' : 'AH';
-}
+// Calendar provider supplies the date, not a confirmed intraday release time.
+function inferSessionTag(_symbol: string): SessionTag { return 'Unknown'; }
 
 function getImpactTier(symbol: string): ImpactTier {
   const rank = getMarketCapRank(symbol).rank;
@@ -225,8 +217,12 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
   }, []);
   
   // News state
-  const [tickers, setTickers] = useState("AAPL,MSFT,GOOGL");
+  const searchParams = useSearchParams();
+  const requestedNewsSymbol = searchParams.get('symbol')?.toUpperCase() || '';
+  const newsSymbol = searchParams.get('type') === 'crypto' ? `CRYPTO:${requestedNewsSymbol.replace(/[-/]?USD[T]?$/, '')}` : requestedNewsSymbol;
+  const [tickers, setTickers] = useState(newsSymbol || 'AAPL,MSFT,GOOGL');
   const [loading, setLoading] = useState(false);
+  const newsRequestId = useRef(0);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [error, setError] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
@@ -397,7 +393,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
     const densityLabel = densityScore >= 66 ? 'High' : densityScore >= 31 ? 'Medium' : 'Low';
     const volRisk = densityScore >= 60 || aTier24 >= 3 ? 'Expansion' : 'Compression';
     const headlineRisk = aTier24 >= 2 || meanImpact >= 78 ? 'Elevated' : 'Low';
-    const liquidityWindow: SessionTag = pre24 >= ah24 && pre24 > 0 ? 'PRE' : ah24 > 0 ? 'AH' : 'RTH';
+    const liquidityWindow: SessionTag = pre24 >= ah24 && pre24 > 0 ? 'PRE' : ah24 > 0 ? 'AH' : 'Unknown';
 
     let researchMode: 'Trend review' | 'Mean-reversion review' | 'Observation' = 'Trend review';
     if (volRisk === 'Compression') researchMode = 'Mean-reversion review';
@@ -438,6 +434,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       watchlist24,
       meanImpact,
       timeline: {
+        Unknown: enhancedEarningsRows.filter(row => row.session === 'Unknown' && row.deltaDays <= 1),
         PRE: enhancedEarningsRows.filter((row) => row.session === 'PRE' && row.deltaDays <= 1),
         RTH: enhancedEarningsRows.filter((row) => row.session === 'RTH' && row.deltaDays <= 1),
         AH: enhancedEarningsRows.filter((row) => row.session === 'AH' && row.deltaDays <= 1),
@@ -445,12 +442,19 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
     };
   }, [enhancedEarningsRows, myWatchlistSymbols]);
 
+  useEffect(() => {
+    if (!newsSymbol) return;
+    newsRequestId.current++; setLoading(false);
+    setTickers(newsSymbol); setArticles([]); setNewsAIAnalysis(null);
+    newsInitialFetchDone.current = false;
+  }, [newsSymbol]);
   const handleSearch = async () => {
     if (!tickers.trim()) {
       setError("Please enter at least one ticker symbol");
       return;
     }
 
+    const requestId = ++newsRequestId.current;
     setLoading(true);
     setError("");
     setArticles([]);
@@ -459,19 +463,20 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
     try {
       const response = await fetch(`/api/news-sentiment?tickers=${tickers.toUpperCase()}&limit=25&includeAI=true`);
       const result = await response.json();
+      if (requestId !== newsRequestId.current) return;
 
       if (!result.success) {
         setError(result.error || "Failed to fetch news data");
       } else {
         setArticles(result.articles);
-        if (result.aiAnalysis) {
+        if (result.aiAnalysis && result.articles?.some((a: NewsArticle) => isRecentNews(a.timePublished))) {
           setNewsAIAnalysis(result.aiAnalysis);
         }
       }
     } catch (err) {
-      setError("Network error - please try again");
+      if (requestId === newsRequestId.current) setError("Network error - please try again");
     } finally {
-      setLoading(false);
+      if (requestId === newsRequestId.current) setLoading(false);
     }
   };
 
@@ -482,7 +487,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       handleSearch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, tickers, loading, articles.length]);
 
   const handleEarningsSearch = async () => {
     setEarningsLoading(true);
@@ -1229,7 +1234,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
                 <section className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
                   <article className="rounded-xl border border-white/10 bg-white/5 p-3">
                     <h3 className="mb-2 text-sm font-semibold text-white/85">Catalyst Timeline</h3>
-                    {(['PRE', 'RTH', 'AH'] as SessionTag[]).map((session) => {
+                    {(['PRE', 'RTH', 'AH', 'Unknown'] as SessionTag[]).map((session) => {
                       const bucket = catalystState.timeline[session];
                       const topSymbols = bucket.slice(0, 4).map((row) => row.symbol).join(', ') || 'None';
                       return (

@@ -19,7 +19,7 @@
  *   1h closes: 10:30, 11:30, 12:30, 13:30, 14:30, 15:30, (then 16:00 daily)
  */
 
-import { isUSMarketHoliday } from './marketHolidays';
+import { isUSMarketHoliday, isUSEquityEarlyClose } from './marketHolidays';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -180,11 +180,8 @@ export function getNextCloseIntraday(opts: {
   // ── Build today's anchor / session open / session close in UTC ──
   const anchorToday = zonedTimeToUtc(now, tz, template.anchorHH, template.anchorMM);
   const sessionOpenToday = zonedTimeToUtc(now, tz, template.sessionOpenHH, template.sessionOpenMM);
-  const sessionCloseHH = template.sessionCloseHH === 24 ? 23 : template.sessionCloseHH;
-  const sessionCloseMM = template.sessionCloseHH === 24 ? 59 : template.sessionCloseMM;
-  const sessionCloseToday = template.sessionCloseHH === 24
-    ? new Date(zonedTimeToUtc(now, tz, 23, 59).getTime() + 60_000) // midnight
-    : zonedTimeToUtc(now, tz, sessionCloseHH, sessionCloseMM);
+  const closeHour = sessionEndHour(now, sessionMode, tz);
+  const sessionCloseToday = zonedTimeToUtc(now, tz, closeHour, 0);
 
   const nowMs = now.getTime();
   const isWeekday = z.dayOfWeek >= 1 && z.dayOfWeek <= 5;
@@ -237,7 +234,9 @@ export function getNextCloseIntraday(opts: {
   // First close = anchor + ceil((sessionOpen - anchor) / tf) * tf
   // (For regular mode where anchor = sessionOpen, first close = anchor + tfMinutes)
   const result = computeNextCloseFromAnchor(nextSessionOpen, nextAnchor, tfMinutes);
-  return result;
+  const end = zonedTimeToUtc(nextDate, tz, sessionEndHour(nextDate, sessionMode, tz), 0);
+  const nextCloseAt = new Date(Math.min(result.nextCloseAt.getTime(), end.getTime()));
+  return { nextCloseAt, minsToClose: Math.ceil((nextCloseAt.getTime() - nowMs) / 60_000) };
 }
 
 /**
@@ -258,11 +257,9 @@ export function getSessionBounds(opts: {
   const nowMs = now.getTime();
 
   const sessionOpen = zonedTimeToUtc(now, tz, template.sessionOpenHH, template.sessionOpenMM);
-  const sessionClose = template.sessionCloseHH === 24
-    ? new Date(zonedTimeToUtc(now, tz, 23, 59).getTime() + 60_000)
-    : zonedTimeToUtc(now, tz, template.sessionCloseHH, template.sessionCloseMM);
+  const sessionClose = zonedTimeToUtc(now, tz, sessionEndHour(now, sessionMode, tz), 0);
 
-  const isWeekday = z.dayOfWeek >= 1 && z.dayOfWeek <= 5;
+  const isWeekday = z.dayOfWeek >= 1 && z.dayOfWeek <= 5 && !isUSMarketHoliday(z.year, z.month - 1, z.day);
   const isInSession = isWeekday && nowMs >= sessionOpen.getTime() && nowMs < sessionClose.getTime();
 
   if (isInSession) {
@@ -283,11 +280,14 @@ export function getSessionBounds(opts: {
     daysAhead = 1;
   }
 
-  const nextDate = new Date(nowMs + daysAhead * 86_400_000);
+  let nextDate = new Date(nowMs + daysAhead * 86_400_000);
+  for (let i = 0; i < 10; i++) {
+    const day = getZonedParts(nextDate, tz);
+    if (day.dayOfWeek > 0 && day.dayOfWeek < 6 && !isUSMarketHoliday(day.year, day.month - 1, day.day)) break;
+    nextDate = new Date(nextDate.getTime() + 86_400_000);
+  }
   const nextOpen = zonedTimeToUtc(nextDate, tz, template.sessionOpenHH, template.sessionOpenMM);
-  const nextClose = template.sessionCloseHH === 24
-    ? new Date(zonedTimeToUtc(nextDate, tz, 23, 59).getTime() + 60_000)
-    : zonedTimeToUtc(nextDate, tz, template.sessionCloseHH, template.sessionCloseMM);
+  const nextClose = zonedTimeToUtc(nextDate, tz, sessionEndHour(nextDate, sessionMode, tz), 0);
 
   return { openMs: nextOpen.getTime(), closeMs: nextClose.getTime(), isInSession: false };
 }
@@ -309,4 +309,27 @@ export function isMarketOpenForSession(now: Date, sessionMode: SessionMode): boo
 export function getSessionLengthMins(sessionMode: SessionMode): number {
   const t = US_EQUITY_SESSIONS[sessionMode];
   return (t.sessionCloseHH * 60 + t.sessionCloseMM) - (t.sessionOpenHH * 60 + t.sessionOpenMM);
+}
+
+function sessionEndHour(date: Date, mode: SessionMode, tz = 'America/New_York'): number {
+  const z = getZonedParts(date, tz);
+  if (mode !== 'full' && isUSEquityEarlyClose(z.year, z.month - 1, z.day)) return mode === 'regular' ? 13 : 17;
+  return US_EQUITY_SESSIONS[mode].sessionCloseHH;
+}
+
+/** Convert provider New York wall time without depending on the server/browser timezone. */
+export function equityObservationUtc(value: string): Date {
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(value)) return new Date(value);
+  const [date, time = '09:30:00'] = value.split(/[ T]/);
+  const [year, month, day] = date.split('-').map(Number);
+  const [hh, mm, ss = 0] = time.split(':').map(Number);
+  const reference = new Date(Date.UTC(year, month - 1, day, 12));
+  return new Date(zonedTimeToUtc(reference, 'America/New_York', hh, mm).getTime() + ss * 1000);
+}
+
+export function equitySessionForDate(date: string): { open: Date; close: Date } | null {
+  const [year, month, day] = date.slice(0, 10).split('-').map(Number);
+  const ref = new Date(Date.UTC(year, month - 1, day, 12));
+  if (ref.getUTCDay() === 0 || ref.getUTCDay() === 6 || isUSMarketHoliday(year, month - 1, day)) return null;
+  return { open: zonedTimeToUtc(ref, 'America/New_York', 9, 30), close: zonedTimeToUtc(ref, 'America/New_York', sessionEndHour(ref, 'regular'), 0) };
 }

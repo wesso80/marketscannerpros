@@ -1,3 +1,5 @@
+import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
+import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
  * Golden Egg engine — the ONE validated research packet for a symbol.
  *
@@ -239,6 +241,12 @@ function buildPayload(
 ): GoldenEggPayload {
   const nowMs = extras.nowMs ?? Date.now();
   const p = price.price;
+  if (extras.fundamentals) {
+    const f = extras.fundamentals;
+    const v = valuationAtPrice(p, f.eps, f.sharesOutstanding);
+    extras = { ...extras, fundamentals: { ...f, pe: v.pe, marketCap: v.marketCap,
+      currentPrice: p, valuationBasis: v.basis, multiple: describeMultiple(v.pe, f.forwardPe, f.peg) } };
+  }
   const atr = ind?.atr ?? (price.high - price.low);
   const atrPct = p > 0 ? (atr / p) * 100 : 0;
   const closes = price.historicalCloses ?? [];
@@ -411,6 +419,8 @@ function buildPayload(
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
   else if (macroRegime?.riskState === 'risk_off') primaryBlocker = `Macro regime RISK_OFF (${macroRegime.concerns.join(', ')})`;
 
+  if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
+
   // ── Flip conditions ─────────────────────────────────────────────────────────────────────────────────
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
   if (permission !== 'TRADE') {
@@ -423,6 +433,7 @@ function buildPayload(
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
     if (riskScore < 50) flipConditions.push({ id: 'f9', text: `Risk conditions need to improve — ${riskQ.reasons.slice(0, 2).join('; ')}`, severity: 'should' });
     if (direction === 'NEUTRAL') flipConditions.push({ id: 'f10', text: `Direction is neutral (${bullish} bullish vs ${bearish} bearish layers of ${directionalLayers}) — a directional resolution is required`, severity: 'must' });
+    if (setup.extended) flipConditions.push({ id: 'extension', text: `Extension must resolve: ${setup.note}`, severity: 'must' });
     if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall score below threshold — waiting for improved confluence', severity: 'must' });
   }
 
@@ -631,7 +642,7 @@ function buildPayload(
 
   const canonical: GoldenEggCanonical = {
     symbol, assetClass, timeframe: tfLabel, barInterval: price.barInterval ?? null,
-    price: p, changePct: Math.round(price.changePct * 100) / 100, priceTs: price.priceTs ?? new Date(nowMs).toISOString(), lastCompletedBarAt: price.lastCompletedBarAt ?? null, historyBars: closes.length, source: price.source ?? null,
+    price: p, changePct: Math.round(price.changePct * 100) / 100, priceTs: price.priceTs ?? price.lastCompletedBarAt ?? '', lastCompletedBarAt: price.lastCompletedBarAt ?? null, historyBars: closes.length, source: price.source ?? null,
     indicators: {
       rsi: ind?.rsi ?? null, adx: ind?.adx ?? null, atr: ind?.atr ?? null, atrPct: ind?.atr != null && p > 0 ? Math.round((ind.atr / p) * 10000) / 100 : null,
       ema20: ind?.ema20 ?? null, ema50: ind?.ema50 ?? null, ema200: ind?.ema200 ?? null, sma20: ind?.sma20 ?? null, sma50: ind?.sma50 ?? null, macdHist: ind?.macdHist ?? null, macd: ind?.macd ?? null, macdSignal: ind?.macdSignal ?? null, stochK: ind?.stochK ?? null,

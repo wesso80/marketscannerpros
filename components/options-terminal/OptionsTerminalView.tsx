@@ -159,10 +159,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
   const chainAgeSeconds = chain.lastFetchedAt ? Math.round((Date.now() - chain.lastFetchedAt) / 1000) : null;
   const chainIsStale = chainAgeSeconds != null && chainAgeSeconds > 15 * 60;
-  const chainCoverage = chain.expirations.length > 0
-    ? Math.min(100, Math.round((chain.contracts.length / Math.max(chain.expirations.length * 20, 1)) * 100))
-    : 0;
-  const liquidContracts = chain.contracts.filter((contract) => contract.spreadPct > 0 && Number.isFinite(contract.spreadPct));
+  const liquidContracts = chain.contracts.filter(c => c.bid > 0 && c.ask >= c.bid && Number.isFinite(c.spreadPct));
+  const chainCoverage = chain.contracts.length ? Math.round(liquidContracts.length / chain.contracts.length * 100) : 0;
   const avgSpreadPct = liquidContracts.length
     ? liquidContracts.reduce((sum, contract) => sum + contract.spreadPct, 0) / liquidContracts.length
     : 0;
@@ -173,8 +171,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     source: 'options-terminal',
     provider: chain.provider || 'options chain',
     stale: chainIsStale,
-    degraded: Boolean(chain.error) || chain.contracts.length === 0 || chainCoverage < 50 || chain.provider === 'HISTORICAL_OPTIONS',
+    degraded: true, // Quote observation time is not provided by this endpoint.
     warnings: [
+      'Provider quote observation time unavailable. Retrieval age does not establish live quotes.',
       chain.error ? `Options chain error: ${chain.error}` : null,
       chain.contracts.length === 0 && ticker ? 'No option contracts loaded.' : null,
       chain.provider === 'HISTORICAL_OPTIONS' ? 'Historical options provider is delayed context.' : null,
@@ -214,7 +213,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
           chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV requires event and spread checks.' : null,
         ].filter(Boolean) as string[],
       }),
-      coverageScore: chain.ivMetrics.avgIV > 0 ? Math.min(100, Math.round(chain.ivMetrics.avgIV * 100)) : 0,
+      coverageScore: chain.contracts.length ? Math.round(chain.contracts.filter(c => Number.isFinite(c.iv) && c.iv > 0).length / chain.contracts.length * 100) : 0,
     },
   ];
   const optionsEvidenceItems = [
@@ -352,7 +351,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
               </div>
               <div className="hidden md:block text-xs text-zinc-400">{updatedLabel}</div>
               <Badge tone="neutral">
-                {chain.provider === 'REALTIME_OPTIONS_FMV' ? 'LIVE' : chain.provider === 'HISTORICAL_OPTIONS' ? 'DELAYED' : '—'}
+                {chain.provider === 'REALTIME_OPTIONS_FMV' ? 'FMV · QUOTE TIME UNVERIFIED' : chain.provider === 'HISTORICAL_OPTIONS' ? 'DELAYED' : '—'}
               </Badge>
             </div>
 
@@ -771,7 +770,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
         <div className="grid grid-cols-12 gap-4">
           {/* ── IV & Expected Move ─────────────────────── */}
           <div className="col-span-12 xl:col-span-4">
-            <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'all expirations'}</span>}>
+            <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'nearest listed expiry'}</span>}>
               <div className="grid grid-cols-2 gap-4">
                 <MiniStat label="ATM IV" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : '—'} />
                 <MiniStat label="Expected Move" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : '—'} />

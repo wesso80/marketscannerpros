@@ -4,8 +4,8 @@ const DAY_MS = 86_400_000;
 const YEAR_DAYS = 365.25;
 
 export interface BacktestStatisticsBasis {
-  version: 'realized_balance_v2';
-  equity: 'closed_trade_balance';
+  version: 'realized_balance_v2' | 'marked_balance_v1';
+  equity: 'closed_trade_balance' | 'bar_close_mark_to_market';
   sampling: 'calendar_day';
   sourceBarMinutes: number;
   periodsPerYear: number;
@@ -33,14 +33,14 @@ export function roundedMetric(value: number | null, digits = 2): number | null {
 }
 
 /** Statistics of the realised cash ledger, explicitly NOT marked portfolio risk. */
-export function computeBalanceStatistics(curve: BacktestEquityPoint[], initialCapital: number, maxDrawdown: number, sourceBarMinutes = 1440) {
+export function computeBalanceStatistics(curve: BacktestEquityPoint[], initialCapital: number, maxDrawdown: number, sourceBarMinutes = 1440, marked = false) {
   const basis: BacktestStatisticsBasis = {
-    version: 'realized_balance_v2', equity: 'closed_trade_balance', sampling: 'calendar_day',
+    version: marked ? 'marked_balance_v1' : 'realized_balance_v2', equity: marked ? 'bar_close_mark_to_market' : 'closed_trade_balance', sampling: 'calendar_day',
     sourceBarMinutes, periodsPerYear: YEAR_DAYS, observations: 0, elapsedDays: 0,
     riskFreeRate: 0, minimumAcceptableReturn: 0,
     warnings: [
-      'Balance changes only when trades close. Open-position gains, losses and intrabar drawdowns are excluded; these are not marked portfolio risk statistics.',
-      'Returns use the last realised balance on each provider-labelled date. Days with no closes, including weekends, carry that balance unchanged; annualisation uses 365.25 calendar days.',
+      marked ? 'Equity marks open positions at each available bar close including estimated exit costs. Intrabar drawdown, depth and stressed exits remain unobserved.' : 'Balance changes only when trades close. Open-position gains, losses and intrabar drawdowns are excluded; these are not marked portfolio risk statistics.',
+      marked ? 'Returns use the final available mark on each provider-labelled day; missing days carry the prior mark. Annualisation uses 365.25 calendar days.' : 'Returns use the last realised balance on each provider-labelled date. Days with no closes, including weekends, carry that balance unchanged; annualisation uses 365.25 calendar days.',
       'Sharpe uses sample standard deviation and a zero risk-free rate; Sortino uses downside squared returns divided by all daily observations and a zero target. Square-root scaling assumes uncorrelated returns.',
     ],
   };

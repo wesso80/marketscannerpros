@@ -69,7 +69,7 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
       sessionLabel: data?.entryTiming?.marketSession || 'regular',
       regime: {
         marketRegime: data?.aiMarketState?.regime?.regime || 'UNKNOWN',
-        volatility: data?.ivAnalysis ? `IVR ${Math.round(Number(data.ivAnalysis.ivRankHeuristic ?? data.ivAnalysis.ivRank ?? 0))}` : 'Unknown',
+        volatility: data?.ivAnalysis?.ivRank != null ? `IVR ${Math.round(data.ivAnalysis.ivRank)}` : 'Historical IV rank unavailable',
         liquidity: data?.dataQuality?.freshness || 'Unknown',
       },
       feed: {

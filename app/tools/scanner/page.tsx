@@ -646,11 +646,12 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
   const trendAligned = (detail.signals?.bullish ?? 0) > (detail.signals?.bearish ?? 0) && direction === 'bullish'
     || (detail.signals?.bearish ?? 0) > (detail.signals?.bullish ?? 0) && direction === 'bearish';
   const momentumAligned = detail.rsi != null && ((direction === 'bullish' && detail.rsi > 45) || (direction === 'bearish' && detail.rsi < 55));
-  const flowAligned = direction === 'bullish'
+  const flowAvailable = detail.liquidity?.volumeRatio != null;
+  const flowAligned = flowAvailable && (direction === 'bullish'
     ? (detail.signals?.bullish ?? 0) >= (detail.signals?.neutral ?? 0)
     : direction === 'bearish'
       ? (detail.signals?.bearish ?? 0) >= (detail.signals?.neutral ?? 0)
-      : false;
+      : false);
   const tfAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
   // ONE trust vocabulary: prefer the shared server verdict; fall back to the local input check only when absent.
   const localQuality = getDataQualityLabel({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
@@ -885,7 +886,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
                 <div>Trend vs bias: <span className={`font-bold ${trendAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{trendAligned ? 'AGREES' : 'MIXED'}</span></div>
                 <div>Momentum vs bias: <span className={`font-bold ${momentumAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{momentumAligned ? 'AGREES' : 'MIXED'}</span></div>
-                <div>Flow vs bias: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? 'AGREES' : 'MIXED'}</span></div>
+                <div>Flow vs bias: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{!flowAvailable ? 'UNAVAILABLE' : flowAligned ? 'AGREES' : 'MIXED'}</span></div>
                 {detail.enhancements?.emaStack?.direction && <div>EMA stack: <span className="font-bold text-white">{String(detail.enhancements.emaStack.direction).toUpperCase()}</span></div>}
               </div>
             </div>

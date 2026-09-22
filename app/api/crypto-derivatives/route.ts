@@ -27,38 +27,42 @@ function normRow(t: DerivativeTicker) {
     price,
     priceChange24h: t.price_percentage_change_24h ?? 0,
     index: t.index ?? price,
-    basis: t.basis ?? 0,
-    spread: t.spread ?? 0,
-    fundingRate: t.funding_rate ?? 0,
+    basis: t.basis ?? Number.NaN,
+    spread: t.spread ?? Number.NaN,
+    fundingRate: t.funding_rate ?? Number.NaN,
     // CoinGecko funding_rate is already percent per interval (BTC median ≈ 0.005%); do not multiply by 100.
-    fundingPct: t.funding_rate ?? 0,
-    openInterest: t.open_interest ?? 0,
-    volume24h: t.volume_24h ?? 0,
+    fundingPct: t.funding_rate ?? Number.NaN,
+    openInterest: t.open_interest ?? Number.NaN,
+    volume24h: t.volume_24h ?? Number.NaN,
     lastTradedAt: t.last_traded_at ?? 0,
   };
 }
 
 function aggregateFunding(rows: ReturnType<typeof normRow>[]) {
-  // Median across venues — a few illiquid venues report outliers (e.g. 9.5%/interval) that made the mean impossible.
-  const rates = rows.map(r => r.fundingPct).filter(Number.isFinite).sort((a, b) => a - b);
-  const n = rates.length;
-  const avg = n ? (n % 2 ? rates[(n - 1) / 2] : (rates[n / 2 - 1] + rates[n / 2]) / 2) : Number.NaN;
-  const ann = avg * 3 * 365;
-  const min = rates.length ? Math.min(...rates) : Number.NaN;
-  const max = rates.length ? Math.max(...rates) : Number.NaN;
-  let sentiment: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
-  if (avg > 0.03) sentiment = 'Bullish';
-  else if (avg < -0.01) sentiment = 'Bearish';
-  return { avgFundingRate: avg / 100, fundingRatePct: avg, annualised: ann, exchangeCount: new Set(rows.map(r => r.market)).size, sentiment, min, max, fundingRateMissing: n === 0 };
+  // Provider has no funding-period contract, so rates are not comparable.
+  return { avgFundingRate: Number.NaN, fundingRatePct: Number.NaN, annualised: Number.NaN,
+    exchangeCount: new Set(rows.map(r => r.market)).size, sentiment: 'Unavailable' as const,
+    min: Number.NaN, max: Number.NaN, fundingRateMissing: true,
+    reason: 'Funding intervals unavailable; aggregate and annualisation withheld.' };
+
 }
 
-function aggregateOI(rows: ReturnType<typeof normRow>[]) {
+function aggregateOI(sourceRows: ReturnType<typeof normRow>[]) {
+  const unique = new Map<string, ReturnType<typeof normRow>>();
+  for (const row of sourceRows) {
+    if (!(row.openInterest > 0) || !(row.lastTradedAt > 0)) continue;
+    const key = `${row.market}:${row.symbol}`;
+    if (!unique.has(key) || row.lastTradedAt > unique.get(key)!.lastTradedAt) unique.set(key, row);
+  }
+  const rows = [...unique.values()];
   const total = (values: number[]) => {
     const observed = values.filter(Number.isFinite);
     return observed.length ? observed.reduce((a, b) => a + b, 0) : Number.NaN;
   };
   return {
     totalOI: total(rows.map(r => r.openInterest)),
+    contracts: rows.length,
+    observedAt: rows.length ? new Date(Math.min(...rows.map(r => r.lastTradedAt)) * 1000).toISOString() : null,
     totalVolume24h: total(rows.map(r => r.volume24h)),
     exchangeCount: new Set(rows.map(r => r.market)).size,
   };
@@ -83,7 +87,7 @@ export async function GET(req: NextRequest) {
 
   /* ── multi-coin mode (for heatmap / overview) ──── */
   if (mode === 'multi') {
-    const cacheKey = `crypto-deriv:multi`;
+    const cacheKey = `crypto-deriv:v2:multi`;
     const cached = await getCached<any>(cacheKey);
     if (cached) return NextResponse.json(cached);
 
@@ -135,7 +139,7 @@ export async function GET(req: NextRequest) {
   }
 
   /* ── single-coin mode ─────────────────────────── */
-  const cacheKey = `crypto-deriv:${symbol}`;
+  const cacheKey = `crypto-deriv:v2:${symbol}`;
   const cached = await getCached<any>(cacheKey);
   if (cached) return NextResponse.json(cached);
 

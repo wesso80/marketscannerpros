@@ -516,10 +516,7 @@ function buildGravityZone(points: GravityPoint[]): GravityZone {
   const activeDecompressionCount = points.filter(p => p.decompressionState.status === 'ACTIVE').length;
   
   // Get dominant timeframes (highest weight)
-  const dominantTimeframes = points
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 3)
-    .map(p => p.timeframe);
+  const dominantTimeframes = [...new Set([...points].sort((a, b) => b.weight - a.weight).map(p => p.timeframe))].slice(0, 3);
   
   // Visual intensity for heatmap
   const maxGravity = 500;
@@ -531,7 +528,7 @@ function buildGravityZone(points: GravityPoint[]): GravityZone {
   const stackedPointCount = points.filter(p => p.closeStackFactor > 1.15).length;
   const avgDistance = points.reduce((sum, p) => sum + p.distance, 0) / points.length;
   let confidence = 30;
-  confidence += Math.min(25, points.length * 6);                  // More TFs = more confidence
+  confidence += Math.min(25, new Set(points.map(p => p.timeframe)).size * 6);                  // More TFs = more confidence
   confidence += Math.min(15, debtCount * 4);                      // Debt adds context, not certainty
   confidence += Math.min(20, activeDecompressionCount * 10);      // Active windows are the real timing edge
   confidence += Math.min(10, stackedPointCount * 4);              // Close-stack support
@@ -545,7 +542,7 @@ function buildGravityZone(points: GravityPoint[]): GravityZone {
     confidence = Math.min(confidence, 68);
   }
   if (visualIntensity < 10) confidence = Math.min(confidence, 60);
-  confidence = Math.min(100, Math.round(confidence));
+  confidence = Math.min(new Set(points.map(p => p.timeframe)).size < 4 ? 59 : 95, Math.round(confidence));
   
   const tfs = points.map(p => p.timeframe).join(' • ');
   const label = `${minPrice.toFixed(2)}–${maxPrice.toFixed(2)} (${tfs})`;

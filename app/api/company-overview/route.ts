@@ -1,3 +1,4 @@
+import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
@@ -47,7 +48,8 @@ export async function GET(request: NextRequest) {
       getQuote(symbol).catch(() => null),
     ]);
 
-    const pe = numOrNull(data.PERatio), fwd = numOrNull(data.ForwardPE), peg = numOrNull(data.PEGRatio);
+    const valuation = valuationAtPrice(quote?.price, data.EPS, data.SharesOutstanding);
+    const pe = valuation.pe, fwd = numOrNull(data.ForwardPE), peg = numOrNull(data.PEGRatio);
     const ratings = {
       strongBuy: Number(data.AnalystRatingStrongBuy) || 0,
       buy: Number(data.AnalystRatingBuy) || 0,
@@ -67,8 +69,11 @@ export async function GET(request: NextRequest) {
         description: data.Description,
         sector: data.Sector,
         industry: data.Industry,
-        marketCap: data.MarketCapitalization,
-        pe: data.PERatio,
+        marketCap: valuation.marketCap,
+        providerMarketCap: data.MarketCapitalization,
+        valuationBasis: valuation.basis,
+        pe,
+        providerPe: data.PERatio,
         peg: data.PEGRatio,
         bookValue: data.BookValue,
         dividendYield: data.DividendYield,
@@ -84,7 +89,8 @@ export async function GET(request: NextRequest) {
         quarterlyEarningsGrowth: data.QuarterlyEarningsGrowthYOY,
         quarterlyRevenueGrowth: data.QuarterlyRevenueGrowthYOY,
         analystTargetPrice: data.AnalystTargetPrice,
-        trailingPE: data.TrailingPE,
+        trailingPE: pe,
+        providerTrailingPE: data.TrailingPE,
         forwardPE: data.ForwardPE,
         priceToSales: data.PriceToSalesRatioTTM,
         priceToBook: data.PriceToBookRatio,
@@ -103,7 +109,7 @@ export async function GET(request: NextRequest) {
         latestQuarter: period.latestQuarter,
         fiscalYearEnd: period.fiscalYearEnd,
         periodBasis: period.basis,
-        periodSummary: period.summary,
+        periodSummary: `${period.summary} ${valuation.basis}`,
         // Transparent multiple wording (Part K2)
         multiple,
         // Earnings (Part K3)

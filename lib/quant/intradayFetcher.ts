@@ -60,29 +60,7 @@ async function fetchCryptoIntradayBars(
 ): Promise<OHLCVBar[] | null> {
   const base = symbol.replace(/-?USD$/i, '').toUpperCase();
 
-  // Primary: CoinGecko. days=1 gives ~5-minute granularity (suitable for 15min/60min indicators).
-  try {
-    const coinId = COINGECKO_ID_MAP[base] || (await resolveSymbolToId(base));
-    if (coinId) {
-      const ohlcv = await getOHLCWithVolume(coinId, 1);
-      if (ohlcv && ohlcv.length > 0) {
-        const bars: OHLCVBar[] = ohlcv
-          .filter(c => Number.isFinite(c.c) && c.c > 0)
-          .map(c => ({
-            timestamp: new Date(c.t).toISOString(),
-            open: c.o,
-            high: c.h,
-            low: c.l,
-            close: c.c,
-            volume: Math.round(c.v || 0),
-          }))
-          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        if (bars.length > 0) return bars;
-      }
-    }
-  } catch (err) {
-    console.warn(`[quant:intraday] CoinGecko fetch failed for ${base}:`, err);
-  }
+  // Scalp/volume indicators require true interval OHLCV; CoinGecko OHLC cannot supply it.
 
   // Fallback: Alpha Vantage CRYPTO_INTRADAY.
   if (!AV_KEY()) return null;
