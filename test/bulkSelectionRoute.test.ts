@@ -30,11 +30,14 @@ describe('bulk scanner filter contract', () => {
   });
 
   it('retains and filters candidates outside the ten enriched leaders', async () => {
-    const res = await POST(request({ type: 'crypto', mode: 'light', universeSize: 12, filters: { direction: 'short' } }));
+    const res = await POST(request({ type: 'crypto', mode: 'light', universeSize: 12, filters: {} }));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.topPicks.map((p: { symbol: string }) => p.symbol)).toEqual(['ASSET11']);
-    expect(data.selection).toMatchObject({ evaluated: 12, matched: 1, returned: 1, excluded: 11 });
+    expect(data.topPicks.map((p: { symbol: string }) => p.symbol)).toContain('ASSET11');
+    expect(data.selection).toMatchObject({ evaluated: 12, matched: 12, returned: 12, excluded: 0 });
+    const unobserved = data.topPicks.find((p: { symbol: string }) => p.symbol === 'ASSET11');
+    expect(unobserved.compositeV2.permission).toBe('BLOCK');
+    expect(unobserved.direction).toBe('neutral'); // A one-day return is not a technical short setup.
     expect(mocks.marketData).toHaveBeenCalledWith(expect.objectContaining({ per_page: 12 }), { retries: 0, timeoutMs: 5000 });
     expect(data.topPicks[0].entry).toBeUndefined();
     expect(data.topPicks[0].stop).toBeUndefined();

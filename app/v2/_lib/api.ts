@@ -1,3 +1,4 @@
+import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
 /**
  * v2 Data Hooks — Wire v2 surfaces to v1 API endpoints
@@ -83,7 +84,7 @@ export interface ScanResult {
     derivativesEvidenceStatus?: 'available' | 'missing' | 'not_applicable';
     derivativesBoost?: number;
     staleDataPenalty?: number;
-    freshnessStatus?: 'fresh' | 'stale' | 'missing';
+    freshnessStatus?: 'fresh' | 'delayed' | 'stale' | 'missing';
     liquidityPenalty?: number;
     liquidityStatus?: 'sufficient' | 'thin' | 'missing' | 'not_applicable';
   };
@@ -147,15 +148,7 @@ export interface ScanResult {
   };
   capitalFlow?: any;
   insight?: ScannerInsight;
-  compositeV2?: {
-    composite: number;
-    direction: 'bullish' | 'bearish' | 'neutral';
-    percentileRank: number;
-    regime: string;
-    liquidityMultiplier: number;
-    catalyst?: { earningsInDays: number | null; imminent: boolean };
-    factorContributions: { factor: string; weight: number; signed: number }[];
-  };
+  compositeV2?: ScannerScorePayload;
   scoreV2?: {
     regime: { label: string; confidence: number };
     regimeScore: { weightedScore: number; tradeBias: string; gated: boolean };

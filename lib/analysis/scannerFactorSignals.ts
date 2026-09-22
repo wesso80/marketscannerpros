@@ -67,6 +67,7 @@ export interface FactorSignalInput {
   rsSectorRatio?: number;
   // Volatility state
   bbwp?: number;
+  volatilityObserved?: boolean;
   dveBreakoutScore?: number;
   dveFlags?: string[];
   // Positioning (crypto derivatives)
@@ -82,6 +83,8 @@ export interface FactorSignalInput {
   earningsInDays?: number | null;
   /** Directional news sentiment in [-1, 1] (e.g. Alpha Vantage). */
   newsSentiment?: number;
+  /** Fixed profile switch, not inferred from whether the provider responded. */
+  catalystExpected?: boolean;
 }
 
 export interface FactorSignalResult {
@@ -157,7 +160,7 @@ export function derivePositioningSignal(i: FactorSignalInput): SubSignal {
 }
 
 export function deriveVolatilityModifier(i: FactorSignalInput, provisionalSign: number): SubSignal {
-  const hasVol = fin(i.bbwp) || fin(i.dveBreakoutScore) || (i.dveFlags?.length ?? 0) > 0;
+  const hasVol = i.volatilityObserved === true || fin(i.bbwp) || (i.dveFlags?.length ?? 0) > 0;
   if (!hasVol) return { available: false, signed: 0 };
   const flags = i.dveFlags ?? [];
   let support = 0;
@@ -219,11 +222,11 @@ export function deriveFactorSignals(i: FactorSignalInput, u?: UniverseContext): 
     { factor: 'MOMENTUM', signed: momentum.signed, available: momentum.available },
     { factor: 'VOLUME', signed: volume.signed, available: volume.available },
     { factor: 'RELATIVE_STRENGTH', signed: rs.signed, available: rs.available },
-    { factor: 'POSITIONING', signed: positioning.signed, available: positioning.available },
+    { factor: 'POSITIONING', signed: positioning.signed, available: positioning.available, applicable: i.derivativesExpected === true },
     { factor: 'VOLATILITY', signed: volatility.signed, available: volatility.available },
     // QUALITY is expressed as the liquidity multiplier, not a directional vote.
-    { factor: 'QUALITY', signed: 0, available: false },
-    { factor: 'CATALYST', signed: catalyst.signed, available: catalyst.available },
+    { factor: 'QUALITY', signed: 0, available: false, applicable: false },
+    { factor: 'CATALYST', signed: catalyst.signed, available: catalyst.available, applicable: i.catalystExpected === true },
   ];
 
   return {

@@ -292,11 +292,17 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
               </div>
             )}
 
+            {mode === 'scanner' && (
+              <p className="text-xs text-slate-400 mb-3">
+                Historical technical proxy v1. Long signals require a bullish score ≥ {minScore}; shorts require ≤ {100 - minScore}.
+                This test excludes the full MSP composite’s historical permissions, relative ranks, options, funding and news.
+              </p>
+            )}
             {/* Scanner-specific controls */}
             {mode === 'scanner' && (
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Min Score</label>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Proxy threshold</label>
                   <input
                     type="number"
                     min={50} max={95} step={5}
@@ -398,7 +404,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-bold text-white">{symbol}</span>
                   <Badge
-                    label={mode === 'strategy' ? (getBacktestStrategy(strategy)?.label || strategy) : `Scanner ≥${minScore}`}
+                    label={mode === 'strategy' ? (getBacktestStrategy(strategy)?.label || strategy) : `Technical proxy ≥${minScore}`}
                     color="#6366F1"
                     small
                   />

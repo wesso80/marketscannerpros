@@ -75,6 +75,7 @@ export function classifySetup(i: SetupInput): { setupType: SetupType; extended: 
 }
 
 export interface StructureInput {
+  direction?: 'LONG' | 'SHORT' | 'NEUTRAL';
   price: number;
   sma20: number | null;
   sma50: number | null;
@@ -95,10 +96,12 @@ export function computeStructureQuality(s: StructureInput): { score: number; not
   const notes: string[] = [];
   let score = 50;
   const p = s.price;
-  if (s.sma20 != null) score += p > s.sma20 ? 10 : -10;
-  if (s.sma50 != null) score += p > s.sma50 ? 10 : -10;
-  if (s.sma20 != null && s.sma50 != null) score += s.sma20 > s.sma50 ? 8 : -8;
-  if (s.bbMiddle != null) score += p > s.bbMiddle ? 5 : -5;
+  const side = s.direction === 'SHORT' ? -1 : s.direction === 'NEUTRAL' ? 0 : 1;
+  const alignment = (a: number, b: number) => Math.sign(a - b) * side;
+  if (s.sma20 != null) score += alignment(p, s.sma20) * 10;
+  if (s.sma50 != null) score += alignment(p, s.sma50) * 10;
+  if (s.sma20 != null && s.sma50 != null) score += alignment(s.sma20, s.sma50) * 8;
+  if (s.bbMiddle != null) score += alignment(p, s.bbMiddle) * 5;
   if (s.adx != null) score += s.adx > 25 ? 7 : -3;
   if (s.ema200 != null) {
     // Long-term anchor agreement (or disagreement) — only awarded when we actually have 200 bars.
@@ -145,7 +148,7 @@ export function computeRiskQuality(r: RiskInput): { score: number; reasons: stri
   const reasons: string[] = [];
   let score = 75;
   if (r.atrPct != null) {
-    const dailyEq = r.atrPct * Math.sqrt(Math.max(1, r.barsPerDay));
+    const dailyEq = r.atrPct * Math.sqrt(Number.isFinite(r.barsPerDay) && r.barsPerDay > 0 ? r.barsPerDay : 1);
     const cryptoScale = r.assetClass === 'crypto' ? 1.6 : 1; // crypto baseline vol is structurally higher
     const hi = 6 * cryptoScale, mid = 4 * cryptoScale, lo = 1.5 * cryptoScale;
     if (dailyEq > hi) { score -= 20; reasons.push(`volatility high — daily-equivalent ATR ${dailyEq.toFixed(1)}%`); }
@@ -169,6 +172,40 @@ export function computeRiskQuality(r: RiskInput): { score: number; reasons: stri
   }
   if (reasons.length === 0) reasons.push('no material risk flags — volatility, extension and liquidity within normal ranges');
   return { score: Math.max(0, Math.min(100, Math.round(score))), reasons };
+}
+
+/** Quality of momentum supporting the proposed side, not a bullishness score. */
+export function computeMomentumQuality(ind: {rsi?: number | null; macd?: number | null; macdHist?: number | null; stochK?: number | null} | null, changePct: number, direction: 'LONG' | 'SHORT' | 'NEUTRAL'): {score: number; notes: string[]} {
+  const side = direction === 'LONG' ? 1 : direction === 'SHORT' ? -1 : 0;
+  if (!ind) return {score: 50, notes: ['Momentum evidence unavailable.']};
+  let score = 50;
+  const notes: string[] = [];
+  if (ind.rsi != null && Number.isFinite(ind.rsi)) {
+    const rsi = ind.rsi;
+    const vote = rsi >= 70 ? 4 : rsi > 55 ? 12 : rsi <= 30 ? -4 : rsi < 45 ? -12 : 0;
+    score += vote * side;
+    notes.push(rsiRead(rsi).label);
+  }
+  if (ind.macd != null && Number.isFinite(ind.macd)) score += Math.sign(ind.macd) * side * 8;
+  if (ind.macdHist != null && Number.isFinite(ind.macdHist)) score += Math.sign(ind.macdHist) * side * 7;
+  if (ind.stochK != null && (ind.stochK > 80 || ind.stochK < 20)) { score -= 2; notes.push('Stochastic at an extreme; extension discount.'); }
+  if (Number.isFinite(changePct)) score += Math.sign(changePct) * side * (Math.abs(changePct) > 2 ? 8 : 3);
+  return {score: Math.max(0, Math.min(100, score)), notes};
+}
+
+export interface ConfluenceComponent {key: string; weight: number; value: number; present: boolean; applicable?: boolean}
+/** Fixed applicable weights preserve the missing-data penalty and an exact additive explanation. */
+export function computeConfluenceScore(components: ConfluenceComponent[], trustCap: number) {
+  const applicableWeight = components.filter(c => c.applicable !== false).reduce((s,c) => s+c.weight,0);
+  const rows = components.map(c => {
+    const available = c.applicable !== false && c.present && Number.isFinite(c.value);
+    const weight = c.applicable !== false && applicableWeight > 0 ? c.weight/applicableWeight : 0;
+    return {...c, available, effectiveWeight: available ? weight : 0, points: available ? Math.max(0,Math.min(100,c.value))*weight : 0};
+  });
+  const rawTotal = rows.reduce((s,c) => s+c.points,0);
+  const coverage = rows.reduce((s,c) => s+c.effectiveWeight,0);
+  const finalScore = Math.round(Math.min(rawTotal, trustCap));
+  return {version: 'msp.golden-egg.v2.1', rows, rawTotal, coverage, trustCap, capAdjustment: Math.min(0,trustCap-rawTotal), finalScore};
 }
 
 export function formatUsdShort(v: number): string {

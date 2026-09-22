@@ -201,7 +201,7 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
             semantic: riskToSemantic(h.earlyWarningRisk),
           },
           {
-            label: 'Confidence',
+            label: 'Evidence quality',
             value: `${h.confidence} ${h.confidenceLabel}`,
             semantic:
               h.confidenceLabel === 'HIGH'

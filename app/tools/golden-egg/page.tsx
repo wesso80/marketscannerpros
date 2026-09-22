@@ -335,7 +335,7 @@ function buildGEInvalidationConditions(args: { confluence: number; dataQuality: 
   return [
     'Reference or invalidation level becomes unavailable.',
     args.dataQuality !== 'GOOD' ? 'Data trust remains degraded or missing.' : null,
-    args.confluence < 60 ? 'Confluence remains below 60%.' : 'Confluence drops below 60%.',
+    args.confluence < 60 ? 'Confluence remains below 60/100.' : 'Confluence drops below 60/100.',
     args.primaryBlocker ? `Primary blocker persists: ${args.primaryBlocker}.` : null,
     args.crossMarket === 'headwind' ? 'Cross-market conditions remain a headwind.' : 'Cross-market conditions flip to headwind.',
     args.dveRegime === 'climax' ? 'DVE remains in climax risk.' : 'DVE flips into climax risk.',
@@ -557,7 +557,7 @@ export default function GoldenEggPage() {
   const geAiSummary = useMemo(() => {
     if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
     if (!ge) return `Golden Egg: Loading ${sym}...`;
-    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Confluence: ${geConfluenceScore}%`;
+    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Confluence: ${geConfluenceScore}/100`;
   }, [sym, ge, geAssessment, geConfluenceScore, goldenEgg.error]);
 
   useRegisterPageData('deep_analysis', geAiData, [sym], geAiSummary);
@@ -584,7 +584,7 @@ export default function GoldenEggPage() {
           truthLayer: {
             whatWeKnow: [
               `Golden Egg assessment is ${geAssessment ?? 'unknown'}.`,
-              `Confluence score is ${geConfluenceScore}%.`,
+              `Confluence score is ${geConfluenceScore}/100.`,
               ge.layer1?.primaryDriver ? `Primary driver: ${ge.layer1.primaryDriver}.` : null,
             ].filter(Boolean),
             whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice }),
@@ -627,7 +627,7 @@ export default function GoldenEggPage() {
         eyebrow="Golden Egg validation workbench"
         badges={[
           ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
-          ...(ge ? [{ label: `Confluence ${geConfluenceScore}%` }] : []),
+          ...(ge ? [{ label: `Confluence ${geConfluenceScore}/100` }] : []),
           { label: `Data ${geDataQuality}` },
           ...GOLDEN_EGG_WORKFLOW_CHECKS.map((c) => ({ label: c })),
         ]}
@@ -641,7 +641,7 @@ export default function GoldenEggPage() {
         metrics={[
           { label: 'Symbol', value: sym, tone: 'warn', detail: 'Single-symbol validation' },
           { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : 'Verdict packet' },
-          { label: 'Confluence', value: ge ? `${geConfluenceScore}%` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : 'Evidence alignment' },
+          { label: 'Confluence', value: ge ? `${geConfluenceScore}/100` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : 'Evidence alignment' },
           { label: 'Data trust', value: geDataQuality, tone: geDataQuality === 'GOOD' ? 'bull' : geDataQuality === 'DEGRADED' ? 'warn' : 'bear', detail: geDataQualityTitle, title: geDataQualityTitle },
         ]}
       />
@@ -899,7 +899,7 @@ export default function GoldenEggPage() {
                     <div className="text-[11px] text-slate-500 uppercase">Assessment</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{geConfluenceScore}%</div>
+                    <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{geConfluenceScore}/100</div>
                     <div className="text-[11px] text-slate-500 uppercase">Confluence</div>
                   </div>
                   <ScoreTypeBadge
@@ -1019,13 +1019,19 @@ export default function GoldenEggPage() {
                     <div key={sb.key} className="bg-[var(--msp-panel-2)] rounded-lg p-2">
                       <div className="text-[11px] text-slate-500">{sb.key} (w:{sb.weight})</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{sb.value.toFixed(1)}</span>
-                        <ScoreBar value={Math.min(sb.value * 10, 100)} color="#10B981" />
+                        <span className="text-sm font-bold text-white">{sb.available === false ? 'Unavailable' : sb.value.toFixed(1)}</span>
+                        {sb.available !== false && <ScoreBar value={Math.min(sb.value, 100)} color="#10B981" />}
                       </div>
+                      {sb.points != null && <div className="text-[11px] text-slate-400">{sb.points.toFixed(2)} points · {(sb.effectiveWeight ?? sb.weight).toFixed(0)}% effective weight</div>}
                       {sb.note && <div className="text-[11px] text-slate-600 mt-0.5">{sb.note}</div>}
                     </div>
                   ))}
                 </div>
+                {ge.layer1.scoreCalculation && <p className="mt-2 text-xs text-slate-400">
+                  Coverage {(ge.layer1.scoreCalculation.coverage * 100).toFixed(0)}% · Component total {ge.layer1.scoreCalculation.rawTotal.toFixed(2)}
+                  {ge.layer1.scoreCalculation.capAdjustment < 0 && ` · Trust cap ${ge.layer1.scoreCalculation.trustCap}`}
+                  {' · Final '}{ge.layer1.scoreCalculation.finalScore}/100. Research alignment, not an outcome probability.
+                </p>}
               </div>
             )}
           </Card>
@@ -1268,7 +1274,7 @@ export default function GoldenEggPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="bg-[var(--msp-panel-2)] rounded p-2">
                         <div className="text-[11px] text-slate-500">Confluence</div>
-                        <div className="text-sm font-bold text-white">{tc.confidence}%</div>
+                        <div className="text-sm font-bold text-white">{tc.confidence}/100</div>
                         <ScoreBar value={tc.confidence} color="#10B981" />
                       </div>
                       <div className="bg-[var(--msp-panel-2)] rounded p-2">

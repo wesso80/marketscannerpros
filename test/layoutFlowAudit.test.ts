@@ -572,7 +572,8 @@ describe('layout and flow audit regressions', () => {
     expect(backtestHub).toContain('const showTabbedResults = !embeddedInWorkspace;');
     expect(backtestHub).toContain('{showTabbedResults && (');
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Summary') && (");
-    expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Realised Balance') && (");
+    expect(backtestHub).toContain("{(!showTabbedResults || resultTab === equityLabel) && (");
+    expect(backtestHub).toContain("const equityLabel = markedEquity ? 'Marked Equity' : 'Realised Balance';");
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Trades') && (");
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Diagnostics') && result.diagnostics && (");
   });
@@ -1038,7 +1039,7 @@ describe('layout and flow audit regressions', () => {
     expect(veProjectionCard).toContain('>PROJ</span>');
     expect(veProjectionCard).not.toContain('>📊</span>');
     expect(veSignalCard).toContain('function stateCode');
-    expect(veSignalCard).toContain("case 'fired': return 'LIVE';");
+    expect(veSignalCard).toContain("case 'fired': return 'DETECTED';");
     expect(veSignalCard).toContain('>SIG</span>');
     expect(veSignalCard).not.toContain('function stateIcon');
     expect(veSignalCard).not.toContain("return '🟢'");

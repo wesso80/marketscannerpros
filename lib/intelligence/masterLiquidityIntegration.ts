@@ -198,7 +198,7 @@ function buildLiveComponents(resolved: LiquidityTransmissionResolved): EngineRes
     },
     freshness,
     {
-      label: 'Confidence',
+      label: 'Evidence quality',
       value: `${result.confidence} ${result.confidenceLabel}`,
       state:
         result.confidenceLabel === 'HIGH'

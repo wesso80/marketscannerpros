@@ -41,6 +41,7 @@ export interface DataTrustResult {
   freshness: 'fresh' | 'delayed' | 'stale' | 'unknown';
   /** True when `barInterval` does not match the requested timeframe. */
   intervalMismatch: boolean;
+  eligibilityBlockers: string[];
 }
 
 const INTERVAL_MINUTES: Record<string, number> = { '5m': 5, '15m': 15, '30m': 30, '1h': 60, '60m': 60, '4h': 240, '1d': 1440, daily: 1440, '1w': 10_080, weekly: 10_080 };
@@ -70,6 +71,7 @@ function judgeFreshness(input: DataTrustInput, nowMs: number): DataTrustResult['
   if (!input.lastBarAt) return 'unknown';
   const lastMs = Date.parse(input.lastBarAt);
   if (!Number.isFinite(lastMs)) return 'unknown';
+  if (lastMs > nowMs + 60_000) return 'unknown';
   const interval = normalizeTimeframeInterval(input.barInterval || input.timeframe);
   const minutes = INTERVAL_MINUTES[interval] ?? 1440;
 
@@ -78,7 +80,11 @@ function judgeFreshness(input: DataTrustInput, nowMs: number): DataTrustResult['
     // holiday). Only while a session is open do intraday bars age against the clock.
     const barDate = input.lastBarAt.slice(0, 10);
     const expected = lastCompletedEquitySession(nowMs);
-    if (barDate > expected) return 'fresh';
+    if (barDate > expected) {
+      if (minutes >= 1440) return 'fresh';
+      const ageMin = (nowMs - lastMs) / 60_000;
+      return ageMin <= minutes * 2 ? 'fresh' : ageMin <= minutes * 3 ? 'delayed' : 'stale';
+    }
     if (barDate === expected) {
       if (minutes >= 1440 || !isEquitySessionOpen(nowMs)) return 'fresh';
       const ageMin = (nowMs - lastMs) / 60_000;
@@ -149,7 +155,11 @@ export function evaluateDataTrust(input: DataTrustInput): DataTrustResult {
   }
   if (freshness === 'unknown' && level === 'GOOD') { level = 'DEGRADED'; factor = 0.85; reasons.push('bar time unknown'); }
 
-  return { level, reasons, factor, freshness, intervalMismatch };
+  const eligibilityBlockers = [
+    ...missingCritical.map(name => `Required input missing: ${name}.`),
+    ...(intervalMismatch ? [`Requested ${requested}, received ${actual} bars.`] : []),
+  ];
+  return { level, reasons, factor, freshness, intervalMismatch, eligibilityBlockers };
 }
 
 export const DATA_TRUST_LABEL: Record<DataTrustLevel, string> = {

@@ -8,6 +8,9 @@ export interface ScreenerRow {
   symbol: string;
   direction: 'LONG' | 'SHORT' | 'NEUTRAL';
   confidence: number;
+  scoreExplanation?: string;
+  scorePermission?: 'PASS' | 'WATCH' | 'BLOCK';
+  factorCoverage?: number;
   quality: string; // 'high' | 'medium' | 'low'
   strategy: string;
   rsi?: number;
@@ -131,10 +134,10 @@ const COLUMNS: Column[] = [
     ),
   },
   {
-    key: 'confidence', label: 'Match', width: '70px', align: 'center',
+    key: 'confidence', label: 'MSP', width: '70px', align: 'center',
     render: (r) => (
-      <span title={`Condition match ${r.matchConfidence ?? r.confidence}/100${r.matchConfidence != null && r.matchConfidence !== r.confidence ? ` — capped to ${r.confidence} by data trust` : ''}. Strength of match to the selected conditions; not a probability.`} style={{ fontWeight: 700, color: confColor(r.confidence) }}>
-        {r.confidence}{r.matchConfidence != null && r.matchConfidence !== r.confidence ? <span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}> /{r.matchConfidence}</span> : null}
+      <span title={r.scoreExplanation ?? `Condition match ${r.matchConfidence ?? r.confidence}/100${r.matchConfidence != null && r.matchConfidence !== r.confidence ? ` — capped to ${r.confidence} by data trust` : ''}. Strength of match to the selected conditions; not a probability.`} style={{ fontWeight: 700, color: confColor(r.confidence) }}>
+        {r.confidence}<span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}>/100</span>
       </span>
     ),
   },
@@ -226,7 +229,7 @@ const COLUMNS: Column[] = [
         fontSize: 11, fontWeight: 700, color: permColor(r.permission),
         background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
       }}>
-        {r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014'}
+        {r.scorePermission ?? (r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014')}
       </span>
     ),
   },

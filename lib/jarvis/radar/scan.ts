@@ -180,7 +180,7 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
   const rejectedAll = scored.filter((s) => single(s.f) && s.bigMove && (s.status === 'LOW_QUALITY_MOVE' || s.status === 'IGNORE')).sort((a, b) => Math.abs(b.f.ret1) - Math.abs(a.f.ret1));
   const rejected = rejectedAll.slice(0, 20).map((s) => ({ symbol: s.f.symbol, assetClass: s.f.assetClass, ret1: s.f.ret1, reasons: s.rejection, detail: [...s.reasons.filter((r) => !r.startsWith('flags')), ...s.conflicting].slice(0, 3) }));
   const settingUpRaw = [...premove.entries()].filter(([, p]) => ['NEAR_TRIGGER', 'DEVELOPING', 'EARLY_STAGE'].includes(p.stage) && p.score >= 40).sort((a, b) => (a[1].stage === 'NEAR_TRIGGER' ? 0 : 1) - (b[1].stage === 'NEAR_TRIGGER' ? 0 : 1) || b[1].score - a[1].score);
-  const settingUp = capped(settingUpRaw, ([k]) => featByKey.get(k)!.assetClass, 9, 15).map(([k, p]) => { const f = featByKey.get(k)!; return { symbol: f.symbol, assetClass: f.assetClass, stage: p.stage, score: p.score, ret1: f.ret1, ret5: f.ret5, bbWidthPctile: f.now.bbWidthPctile, rsBenchDelta: f.rsBenchDelta, accumRatio: f.accumRatio, distToHi20Pct: f.distToHi20Pct, adx: f.adx, signals: p.signals, penalties: p.penalties, triggerLevel: p.triggerLevel, themeBoost: p.themeBoost }; });
+  const settingUp = capped(settingUpRaw, ([k]) => featByKey.get(k)!.assetClass, 9, 15).map(([k, p]) => { const f = featByKey.get(k)!; return { scoreVersion: p.scoreVersion, baseScore: p.baseScore, penaltyPoints: p.penaltyPoints, componentPoints: p.componentPoints, symbol: f.symbol, assetClass: f.assetClass, stage: p.stage, score: p.score, ret1: f.ret1, ret5: f.ret5, bbWidthPctile: f.now.bbWidthPctile, rsBenchDelta: f.rsBenchDelta, accumRatio: f.accumRatio, distToHi20Pct: f.distToHi20Pct, adx: f.adx, signals: p.signals, penalties: p.penalties, triggerLevel: p.triggerLevel, themeBoost: p.themeBoost }; });
 
   // ── 8. Stage 3: deep dive ────────────────────────────────────────────────
   log(`stage3: deep-diving ${initialCandidates.length} candidates …`);
@@ -263,7 +263,7 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
   };
 
   const snapshot: MorningReport['snapshot'] = {};
-  for (const s of scored) { const p = premove.get(keyOf(s.f)); snapshot[keyOf(s.f)] = { funding: s.f.crypto?.fundingMedianPct ?? null, oi: s.f.crypto?.openInterestUsd ?? null, score: s.score, status: s.status, premove: p?.score ?? 0, stage: p?.stage ?? 'n/a', rsRank: ranks.get(0)?.get(s.f.symbol) ?? null, volRatio: s.f.volRatio, price: s.f.price }; }
+  for (const s of scored) { const p = premove.get(keyOf(s.f)); snapshot[keyOf(s.f)] = { funding: s.f.crypto?.fundingMedianPct ?? null, oi: s.f.crypto?.openInterestUsd ?? null, score: s.score, status: s.status, premove: p?.score ?? 0, premoveVersion: p?.scoreVersion, stage: p?.stage ?? 'n/a', rsRank: ranks.get(0)?.get(s.f.symbol) ?? null, volRatio: s.f.volRatio, price: s.f.price }; }
 
   if (!previous) gaps.push('No prior run in the private store — funding/OI change and score history begin accumulating from this run');
   else providers.push({ name: 'Run history (jarvis_runs)', status: 'OK', detail: `${recentRuns.length} prior run(s); latest ${previous.sessionDate} — funding/OI deltas and lifecycle active` });

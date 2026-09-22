@@ -127,6 +127,8 @@ export interface FragilityResult {
   playbook: string;
   rotationRegime: string;
   confidence: number;
+  componentAgreement?: number;
+  inputCoverage?: number;
   confidenceText: string;
 
   // Rotation rankings.
@@ -496,8 +498,7 @@ export function computeFragility(
   const agreeCount = [breadth, credit, volatility, ratesDollar, leadership, trend].filter((s) => (s >= 50) === bullSide).length;
   const agreementPct = (100 * agreeCount) / 6;
   const dispersionScore = clamp(100 - avgDev * 1.8, 0, 100);
-  const confidence = clamp(0.6 * agreementPct + 0.4 * dispersionScore, 0, 100);
-  const confidenceText = confidence >= 80 ? 'HIGH' : confidence >= 65 ? 'GOOD' : confidence >= 50 ? 'MOD' : 'LOW';
+  const componentAgreement = clamp(0.6 * agreementPct + 0.4 * dispersionScore, 0, 100);
 
   const masterLink = health - fragility;
 
@@ -543,6 +544,10 @@ export function computeFragility(
   const isStale = Number.isFinite(dataAge) ? dataAge > cfg.staleAfterHours * 3600_000 : true;
   const sourceStatus: FragilitySourceStatus = missingSymbols.length === 0 ? input.sourceStatus : missingSymbols.length >= FRAGILITY_SYMBOLS.length ? 'DATA_UNAVAILABLE' : 'PARTIAL';
 
+  const inputCoverage = 100 * (FRAGILITY_SYMBOLS.length - missingSymbols.length) / FRAGILITY_SYMBOLS.length;
+  const confidence = isStale || sourceStatus === 'DATA_UNAVAILABLE' ? 0 : Math.min(componentAgreement, inputCoverage);
+  const confidenceText = confidence >= 80 ? 'HIGH' : confidence >= 65 ? 'GOOD' : confidence >= 50 ? 'MOD' : 'LOW';
+
   return {
     calculatedAt,
     dataAsOf: input.dataAsOf,
@@ -555,7 +560,7 @@ export function computeFragility(
     warningCount,
     warnings: { breadth: breadthWarn, credit: creditWarn, vol: volWarn, rates: ratesWarn, lead: leadWarn },
     regime, transitionPath, verdict, verdictSemantic, playbook, rotationRegime,
-    confidence, confidenceText,
+    confidence, confidenceText, componentAgreement, inputCoverage,
     rotation: { growth: rotGrowth, small: rotSmall, cyclical: rotCyclical, em: rotEM, crypto: rotCrypto, metals: rotMetals, commodities: rotCommodities, bonds: rotBonds, defensive: rotDefensive },
     rotationTop,
     radar,

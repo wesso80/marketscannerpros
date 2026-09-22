@@ -52,6 +52,7 @@ export default function CompositeBreakdown({ v2, compact = false }: { v2: Compos
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-1.5">
+        {v2.permission ? <span className={`text-[10px] font-bold ${v2.permission === 'BLOCK' ? 'text-rose-300' : v2.permission === 'WATCH' ? 'text-amber-300' : 'text-emerald-300'}`}>{v2.permission} · {Math.round((v2.coverage ?? 0) * 100)}% factor coverage</span> : null}
         <span
           className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300"
           title="Cross-sectional rank within the symbols scanned this run"
@@ -101,7 +102,8 @@ export default function CompositeBreakdown({ v2, compact = false }: { v2: Compos
       {open && contributions.length > 0 ? (
         <div className="mt-2 space-y-1">
           {contributions.map((c) => {
-            const magnitude = Math.min(1, Math.abs(c.signed));
+            const missing = c.available === false || c.applicable === false;
+            const magnitude = missing ? 0 : Math.min(1, Math.abs(c.signed));
             const bullish = c.signed > 0;
             const neutral = c.signed === 0;
             const color = neutral ? 'var(--msp-flat, #94a3b8)' : bullish ? 'var(--msp-bull, #10b981)' : 'var(--msp-bear, #f43f5e)';
@@ -120,15 +122,21 @@ export default function CompositeBreakdown({ v2, compact = false }: { v2: Compos
                   />
                   <div className="absolute left-1/2 top-0 h-2 w-px bg-slate-600" />
                 </div>
-                <span className="w-10 shrink-0 text-right text-slate-500">{Math.round(c.weight * 100)}%</span>
+                <span className="w-28 shrink-0 text-right text-slate-500">{c.applicable === false ? 'Not applicable' : c.available === false ? 'Unavailable · 0 pts' : `${((c.contribution ?? c.weight * c.signed) * 100).toFixed(2)} signed pts`}</span>
               </div>
             );
           })}
           <p className="pt-1 text-[10px] italic text-slate-500">
-            Direction × regime weight per independent factor. Evidence, freshness and liquidity gate the headline. Educational — not a probability.
+            Factor votes use the current regime weights. These research scores are not probabilities; the factor groups can still be correlated.
           </p>
+          {v2.version ? <div className="text-[11px] text-slate-400 space-y-1">
+            <p>Observed magnitude {v2.observedMagnitude?.toFixed(2)} → conservative magnitude {v2.conservativeMagnitude?.toFixed(2)} after accounting for missing factors.</p>
+            <p>Round(conservative magnitude × {v2.appliedMultiplier?.toFixed(4)} evidence/freshness/liquidity) × {v2.gateMultiplier} gate; cap {v2.trustCap} → {v2.composite}/100.</p>
+            <p>{v2.freshness} data · {v2.evidenceQuality} evidence · {v2.version}</p>
+          </div> : null}
         </div>
       ) : null}
+      {v2.blockers?.length ? <p className="mt-1 text-[11px] text-rose-300">{v2.blockers.join(' ')}</p> : null}
     </div>
   );
 }

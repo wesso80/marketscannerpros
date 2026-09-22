@@ -188,7 +188,10 @@ export interface LiquidityTransmissionResult {
 
   // Engine-layer composites (NOT in the v1.1.1 Pine; documented, never affect stages).
   playbook: string;
+  /** Fresh usable input coverage, not forecast probability. */
   confidence: number;
+  confidenceBasis?: 'fresh-input-coverage';
+  presenceCoverage?: number;
   confidenceLabel: 'HIGH' | 'MODERATE' | 'LOW';
 
   alerts: LiquidityAlerts;
@@ -600,8 +603,10 @@ export function computeLiquidityTransmission(
   const playbook = `${orientationLabel(transmissionRiskOn)} \u00b7 ${clockName}. `
     + `${roleText(stageForText, dominantRiskOn)}. Next: ${stageNext(stageForText, dominantRiskOn)}. `
     + `Divergence: ${divergenceState}.`;
-  const confidence = clamp(
-    Math.round(100 * (0.5 * (presentAssets / assetPacks.length) + 0.5 * (m2.validBlocCount / 11))), 0, 100);
+  const presenceCoverage = clamp(Math.round(100 * (0.5 * presentAssets / assetPacks.length + 0.5 * m2.validBlocCount / 11)), 0, 100);
+  const freshReturns = assetPacks.reduce((sum, pack) => sum + (pack.stale ? 0 : [pack.m1, pack.r20, pack.r5].filter(v => v != null && Number.isFinite(v)).length), 0);
+  const m2Usable = m2.interpretationEligible === true && m2.stale !== true;
+  const confidence = clamp(Math.round(50 * freshReturns / (assetPacks.length * 3) + 50 * (m2Usable ? m2.validBlocCount / 11 : 0)), 0, 100);
   const confidenceLabel: 'HIGH' | 'MODERATE' | 'LOW' = confidence >= 80 ? 'HIGH' : confidence >= 55 ? 'MODERATE' : 'LOW';
 
   return {
@@ -632,6 +637,8 @@ export function computeLiquidityTransmission(
     stages,
     playbook,
     confidence,
+    confidenceBasis: 'fresh-input-coverage',
+    presenceCoverage,
     confidenceLabel,
     alerts,
     quality,

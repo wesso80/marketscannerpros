@@ -2047,7 +2047,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       label: 'Trend Structure',
       score: Math.round(Math.max(0, Math.min(100, ((result.compositeScore?.confidence ?? 45) * 0.6) + (Math.abs(result.compositeScore?.directionScore ?? 0) * 0.4)))),
       state: trendStrength,
-      summary: `${thesisDirection.toUpperCase()} bias • ${result.compositeScore?.confidence?.toFixed(0) || '0'}% confluence`,
+      summary: `${thesisDirection.toUpperCase()} bias • ${result.compositeScore?.confidence?.toFixed(0) || '0'}/100 confluence`,
     },
     {
       label: 'Momentum',
@@ -2336,7 +2336,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
               <span className="msp-muted">•</span>
               <span className="font-extrabold text-[var(--msp-accent)]">Market State: {adaptiveModeMeta.label}</span>
               <span className="msp-muted">•</span>
-              <span className="msp-muted">Confluence: {copilotPresence.confidence}%</span>
+              <span className="msp-muted">Confluence: {copilotPresence.confidence}/100</span>
               <span className="msp-muted">•</span>
               <span className="msp-muted">Watching: {copilotPresence.watching}</span>
             </div>
@@ -2991,7 +2991,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     <div className="mt-[0.45rem]">
                       <div className="mb-[0.2rem] flex justify-between text-[0.72rem] text-slate-400">
                         <span>Confluence</span>
-                        <span>{Math.round(result.institutionalIntent.intent_confidence * 100)}%</span>
+                        <span>{Math.round(result.institutionalIntent.intent_confidence * 100)}/100</span>
                       </div>
                       <div className="h-[6px] overflow-hidden rounded-full bg-slate-500/25">
                         <svg viewBox="0 0 100 1" preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
@@ -3634,7 +3634,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   <div>
                     <div className="text-[0.67rem] font-bold uppercase text-slate-400">Adaptive Confluence</div>
                     <div className={`text-[1.02rem] font-black ${(adaptiveMatch?.adaptiveScore ?? 50) >= 70 ? 'text-emerald-500' : (adaptiveMatch?.adaptiveScore ?? 50) >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                      {adaptiveMatch?.adaptiveScore ?? (result.compositeScore?.confidence ?? 50)}%
+                      {adaptiveMatch?.adaptiveScore ?? (result.compositeScore?.confidence ?? 50)}/100
                     </div>
                   </div>
                   <div className="text-right text-[0.72rem] text-slate-400">
@@ -3933,7 +3933,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                         </div>
                         <div className="text-center">
                           <div className={`text-[clamp(1rem,3vw,1.5rem)] font-bold ${result.compositeScore.confidence >= 70 ? 'text-emerald-500' : result.compositeScore.confidence >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                            {result.compositeScore.confidence.toFixed(0)}%
+                            {result.compositeScore.confidence.toFixed(0)}/100
                           </div>
                           <div className="text-[0.7rem] text-slate-500">Confluence</div>
                         </div>
@@ -4337,7 +4337,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                           <div>
                             <span className="text-slate-500">Confluence:</span>
                             <span className="ml-1.5 text-slate-200">
-                              {result.primaryStrike.confidenceScore.toFixed(0)}%
+                              {result.primaryStrike.confidenceScore.toFixed(0)}/100
                             </span>
                           </div>
                         </div>
@@ -4397,7 +4397,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                           <div>
                             <span className="text-slate-500">Confluence:</span>
                             <span className="ml-1.5 text-slate-200">
-                              {result.primaryExpiration.confidenceScore.toFixed(0)}%
+                              {result.primaryExpiration.confidenceScore.toFixed(0)}/100
                             </span>
                           </div>
                         </div>

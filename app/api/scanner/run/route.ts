@@ -1,3 +1,6 @@
+import { computeTechnicalProxy, type TechnicalProxyResult } from '@/lib/scanner/technicalProxy';
+import { buildScannerScore, compareScannerScores, dollarVolume, scoreFreshness, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
+import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q as dbQuery } from "@/lib/db";
@@ -150,6 +153,7 @@ interface DerivativesData {
 }
 
 interface ScanResult {
+  technicalProxy?: TechnicalProxyResult;
   symbol: string;
   score: number;
   direction?: 'bullish' | 'bearish' | 'neutral';
@@ -164,7 +168,7 @@ interface ScanResult {
     derivativesEvidenceStatus?: ScannerDerivativesEvidenceStatus;
     derivativesBoost?: number;
     staleDataPenalty?: number;
-    freshnessStatus?: 'fresh' | 'stale' | 'missing';
+    freshnessStatus?: 'fresh' | 'delayed' | 'stale' | 'missing';
     liquidityPenalty?: number;
     liquidityStatus?: 'sufficient' | 'thin' | 'missing' | 'not_applicable';
   };
@@ -172,15 +176,7 @@ interface ScanResult {
   rankExplanation?: ScannerRankExplanation;
   insight?: ScannerInsight;
   // MSP Composite v2 — cross-sectional, regime-conditional score (additive).
-  compositeV2?: {
-    composite: number;
-    direction: 'bullish' | 'bearish' | 'neutral';
-    percentileRank: number;
-    regime: string;
-    liquidityMultiplier: number;
-    catalyst?: { earningsInDays: number | null; imminent: boolean };
-    factorContributions: { factor: string; weight: number; signed: number }[];
-  };
+  compositeV2?: ScannerScorePayload;
   timeframe: string;
   type: string;
   price?: number;
@@ -1273,7 +1269,7 @@ export async function POST(req: NextRequest) {
       fundingRate?: number,
       oiChangePercent?: number,
       derivativesExpected = false,
-    ): { score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number }; scoreQuality: { evidenceLayers: number; missingEvidencePenalty: number; derivativesEvidenceStatus: ScannerDerivativesEvidenceStatus; derivativesBoost: number } } {
+    ): { technicalProxy: TechnicalProxyResult; score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number }; scoreQuality: { evidenceLayers: number; missingEvidencePenalty: number; derivativesEvidenceStatus: ScannerDerivativesEvidenceStatus; derivativesBoost: number } } {
       let bullishSignals = 0;
       let bearishSignals = 0;
       let neutralSignals = 0;
@@ -1550,6 +1546,7 @@ export async function POST(req: NextRequest) {
       score = Math.max(0, Math.min(100, score));
 
       return {
+        technicalProxy: computeTechnicalProxy(close ?? NaN, ema200, rsi, macd, sig, hist, atr, adxVal ?? NaN, stochK ?? NaN, aroonUp ?? NaN, aroonDown ?? NaN, cciVal ?? NaN, obvCurrent ?? NaN, obvPrev ?? NaN),
         score,
         direction,
         signals: {
@@ -1802,6 +1799,7 @@ export async function POST(req: NextRequest) {
             direction: scoreResult.direction,
             signals: scoreResult.signals,
             scoreQuality: scoreResult.scoreQuality,
+            technicalProxy: scoreResult.technicalProxy,
             confidence: confidenceCalcCrypto,
             setup: setupLabelCrypto,
             entry: entryPriceCrypto,
@@ -1993,6 +1991,7 @@ export async function POST(req: NextRequest) {
             direction: scoreResult.direction,
             signals: scoreResult.signals,
             scoreQuality: scoreResult.scoreQuality,
+            technicalProxy: scoreResult.technicalProxy,
             confidence: confidenceCalcFx,
             setup: setupLabelFx,
             entry: entryPriceFx,
@@ -2227,6 +2226,7 @@ export async function POST(req: NextRequest) {
               direction: scoreResult.direction,
               signals: scoreResult.signals,
               scoreQuality: scoreResult.scoreQuality,
+            technicalProxy: scoreResult.technicalProxy,
               confidence: confidenceCalcAV,
               setup: setupLabelAV,
               entry: entryPriceAV,
@@ -2334,17 +2334,6 @@ export async function POST(req: NextRequest) {
       50
     );
 
-    // V3.2: Fetch edge profile hints for soft personalization (non-blocking)
-    let softHints: { preferredAssets: string[]; preferredSides: string[]; preferredStrategies: string[]; preferredRegimes: string[]; hasEnoughData: boolean } | null = null;
-    try {
-      if (session.workspaceId !== 'anonymous') {
-        const edgeCtx = await getEdgeContext(session.workspaceId);
-        softHints = edgeCtx.hints;
-      }
-    } catch {
-      // Non-critical — skip personalization on failure
-    }
-
     // Institutional Filter Engine: downgrade/block low-quality environments before trader sees setup
     // Volatility thresholds inside the regime classifier / institutional filter are calibrated on DAILY bars, so ATR%
     // from other intervals is rescaled to a daily equivalent (√time) before classification — otherwise every weekly
@@ -2359,6 +2348,61 @@ export async function POST(req: NextRequest) {
       if (iv === '15m') return crypto ? 96 : 26;
       return 1;
     };
+    for (const result of results) {
+      // ONE trust verdict (lib/scanner/dataTrust): session-aware freshness from the actual bar time, interval
+      // integrity, critical-indicator coverage, history depth, volume availability. Reused by Analysis and Pro.
+      const trust = evaluateDataTrust({
+        assetClass: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity',
+        timeframe,
+        lastBarAt: result.lastCandleTime ?? null,
+        barInterval: result.barInterval ?? null,
+        historyBars: result.dataBasis?.historyBars ?? null,
+        price: result.price ?? null,
+        indicators: {
+          atr: Number.isFinite(result.atr) && result.atr! > 0, rsi: Number.isFinite(result.rsi), adx: Number.isFinite(result.adx),
+          ema200: Number.isFinite(result.ema200), macd: Number.isFinite(result.macd_hist),
+        },
+        volumeAvailable: type === 'forex' ? null : Number.isFinite(result.avgVolume) && (result.avgVolume as number) > 0,
+        priceDiscontinuity: (result.dataBasis as any)?.priceDiscontinuity ?? null,
+      });
+      result.dataTrust = trust;
+      // Legacy freshness fields kept for consumers; penalties now come from bar-time freshness, never request time.
+      const freshness = {
+        status: (trust.freshness === 'fresh' ? 'fresh' : trust.freshness === 'delayed' ? 'delayed' : trust.freshness === 'stale' ? 'stale' : 'missing') as 'fresh' | 'stale' | 'missing' | 'delayed',
+        penalty: trust.freshness === 'fresh' ? 0 : trust.freshness === 'delayed' ? 4 : trust.freshness === 'stale' ? 12 : 18,
+        warnings: trust.reasons.filter((r) => /behind|bar time|stale/.test(r)),
+      };
+      const liquidity = evaluateScannerLiquidity({ type, averageVolume: result.avgVolume });
+      // Cached rows are no longer floored to "delayed": their bar date is known, so freshness is judged like any other row.
+      const fromCache = Boolean((result as any)._fromCache);
+
+      if (freshness.penalty > 0) {
+        result.score = Math.max(0, result.score - freshness.penalty);
+      }
+      if (liquidity.penalty > 0) {
+        result.score = Math.max(0, result.score - liquidity.penalty);
+      }
+      result.scoreQuality = {
+        ...(result.scoreQuality ?? { evidenceLayers: 0, missingEvidencePenalty: 0 }),
+        staleDataPenalty: freshness.penalty,
+        freshnessStatus: freshness.status,
+        liquidityPenalty: liquidity.penalty,
+        liquidityStatus: liquidity.status,
+        ...(fromCache ? { cachedSourcePenalty: 0, source: 'cache' } : {}),
+      } as any;
+      const rankWarnings = [...freshness.warnings, ...liquidity.warnings, ...(trust.intervalMismatch ? [`interval_mismatch_${result.barInterval}_for_${timeframe}`] : [])];
+      if (rankWarnings.length) {
+        result.rankWarnings = [...(result.rankWarnings ?? []), ...rankWarnings];
+      }
+
+    }
+
+    const rsIndexRatios = results.map(r => r.enhancements?.relativeStrength?.benchmarkMissing ? undefined : r.enhancements?.relativeStrength?.rs)
+      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+    const dollarVolumes = results.map(r => dollarVolume(r.price, r.avgVolume, type)).filter((v): v is number => v != null);
+    let earningsMap: Map<string, string> = new Map();
+    if (type === 'equity') { warmEarningsMap(); earningsMap = peekEarningsMap(); }
+
     const enriched = results.map((result) => {
       const adxValue = Number(result.adx ?? Number.NaN);
       const rawAtrPct = Number.isFinite(result.atr) && Number.isFinite(result.price) && result.price && result.price > 0
@@ -2367,6 +2411,21 @@ export async function POST(req: NextRequest) {
       const atrPct = rawAtrPct !== undefined ? rawAtrPct * Math.sqrt(barsPerDayFor(result.barInterval)) : undefined;
       if (rawAtrPct !== undefined && result.dataBasis) (result.dataBasis as any).atrPercentDailyEquivalent = Math.round(atrPct! * 100) / 100;
 
+      const signals = deriveFactorSignals({
+        price: result.price, ema200: result.ema200, macdHist: result.macd_hist, adx: result.adx,
+        aroonUp: result.aroon_up, aroonDown: result.aroon_down,
+        rsi: result.rsi, stochK: result.stoch_k, cci: result.cci, mfi: result.mfi,
+        vwapPct: Number.isFinite(result.vwap) && result.vwap! > 0 && Number.isFinite(result.price) ? (result.price! / result.vwap! - 1) * 100 : undefined,
+        relativeVolume: result.liquidity?.volumeRatio ?? undefined,
+        rsIndexRatio: result.enhancements?.relativeStrength?.benchmarkMissing ? undefined : result.enhancements?.relativeStrength?.rs ?? undefined,
+        bbwp: result.dveBbwp, dveFlags: result.dveFlags,
+        fundingRate: result.derivatives?.fundingRate, derivativesExpected: type === 'crypto',
+        earningsInDays: type === 'equity' ? daysUntilEarnings(earningsMap.get(result.symbol.toUpperCase())) : undefined,
+        dollarVolume: dollarVolume(result.price, result.avgVolume, type),
+      }, {rsIndexRatios, dollarVolumes});
+      // Resolve regime direction from the current factor packet, never the legacy oscillator vote.
+      const factorDirection = computeCompositeV2({factors: signals.factors, regime: 'neutral', evidenceQuality: 'HIGH'}).direction;
+      synchronizeScannerScenario(result, factorDirection);
       // === UNIFIED REGIME CLASSIFICATION (single source of truth) ===
       const unifiedRegime = classifyRegime({
         adx: adxValue,
@@ -2380,6 +2439,15 @@ export async function POST(req: NextRequest) {
           : undefined,
       });
 
+      const scoreInput = {
+        factors: signals.factors, regime: resolveScoreRegime(unifiedRegime.scoring, unifiedRegime.institutional),
+        freshness: scoreFreshness(result.dataTrust?.freshness), liquidityMultiplier: signals.liquidityMultiplier,
+        trustLevel: result.dataTrust?.level, trustReasons: result.dataTrust?.reasons, criticalBlockers: result.dataTrust?.eligibilityBlockers, catalyst: signals.catalyst,
+      };
+      result.compositeV2 = buildScannerScore(scoreInput);
+      synchronizeScannerScenario(result, result.compositeV2.direction);
+      result.score = result.compositeV2.composite;
+      result.confidence = result.score;
       const regime = unifiedRegime.institutional;
       const volatilityState = typeof atrPct === 'number'
         ? (atrPct > 7 ? 'extreme' : atrPct > 4 ? 'expanded' : atrPct < 1 ? 'compressed' : 'normal')
@@ -2424,7 +2492,7 @@ export async function POST(req: NextRequest) {
           state: volatilityState,
         },
         dataHealth: {
-          freshness: 'LIVE',
+          freshness: result.dataTrust?.freshness === 'fresh' ? 'LIVE' : result.dataTrust?.freshness === 'delayed' ? 'DELAYED' : result.dataTrust?.freshness === 'stale' ? 'STALE' : 'NONE',
         },
         riskEnvironment: {
           traderRiskDNA: adaptiveBase.profile?.riskDNA,
@@ -2432,6 +2500,10 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      result.compositeV2 = buildScannerScore({...scoreInput, regimeGated: regimeScoreResult.gated || institutionalFilter.noTrade});
+      result.score = result.compositeV2.composite;
+      result.confidence = result.score;
+      result.rankWarnings = [...(result.rankWarnings ?? []), ...(result.compositeV2.blockers ?? [])];
       const spot = Number(result.price ?? Number.NaN);
       const liquidityContext = buildScannerLiquidityLevels(result.chartData?.candles as any, spot);
       const liquidationLevels = undefined; // Provider does not supply liquidation positions.
@@ -2462,7 +2534,7 @@ export async function POST(req: NextRequest) {
               structureHigherHighs: liquidityContext.structureHigherHighs,
             },
             dataHealth: {
-              freshness: 'LIVE',
+              freshness: result.dataTrust?.freshness === 'fresh' ? 'LIVE' : result.dataTrust?.freshness === 'delayed' ? 'DELAYED' : result.dataTrust?.freshness === 'stale' ? 'STALE' : 'NONE',
               fallbackActive: false,
               lastUpdatedIso: result.lastCandleTime,
             },
@@ -2550,15 +2622,9 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const tradeable = enriched.filter((item) => !item.institutionalFilter.noTrade);
-    const blockedCount = enriched.length - tradeable.length;
-
-    const finalResults = tradeable.length > 0
-      ? tradeable
-      : (enriched.length > 0 ? [enriched.sort((a, b) => b.score - a.score)[0]] : []);
-
+    const blockedCount = enriched.filter(item => item.compositeV2?.permission === 'BLOCK').length;
     results.length = 0;
-    results.push(...finalResults);
+    results.push(...enriched);
 
     if (type === 'crypto') {
       const beforeFilter = results.length;
@@ -2570,240 +2636,13 @@ export async function POST(req: NextRequest) {
       results.push(...filtered);
     }
 
-    // ===== V3.2 SOFT PERSONALIZATION: Apply edge hints as minor score modifier =====
-    // Maximum ±10% influence. Only when sufficient historical data exists.
-    if (softHints && softHints.hasEnoughData && results.length > 0) {
-      let boostCount = 0;
-      for (const r of results) {
-        let boost = 0;
-        const matchedDims: string[] = [];
-        const dir = ((r as any).direction || '').toLowerCase();
-        const normalizedDir = normalizeSide(dir);
-
-        // Asset class match (+3)
-        const assetClass = type === 'crypto' ? 'crypto'
-          : type === 'forex' ? 'forex'
-          : 'equity';
-        if (softHints.preferredAssets.some(a => a.toLowerCase() === assetClass)) {
-          boost += 3;
-          matchedDims.push('asset');
-        }
-
-        // Side match (+3) — uses normalized vocabulary (long/short)
-        if (normalizedDir !== 'neutral' && softHints.preferredSides.includes(normalizedDir)) {
-          boost += 3;
-          matchedDims.push('side');
-        }
-
-        // Regime match (+2) — use the enriched regime if available
-        const resultRegime = ((r as any).scoreV2?.regime?.label || '').toUpperCase();
-        if (resultRegime && softHints.preferredRegimes.some(reg => reg.toUpperCase() === resultRegime)) {
-          boost += 2;
-          matchedDims.push('regime');
-        }
-
-        // Strategy match (+2) — compare setup label against preferred strategies
-        const setupLabel = ((r as any).setup || '').toLowerCase();
-        if (setupLabel && softHints.preferredStrategies.some(s => setupLabel.includes(s.toLowerCase()))) {
-          boost += 2;
-          matchedDims.push('strategy');
-        }
-
-        // Cap at 10% of base score
-        const maxBoost = Math.max(1, Math.round(r.score * 0.1));
-        const clamped = Math.min(boost, maxBoost);
-
-        if (clamped > 0) {
-          const beforeScore = r.score;
-          (r as any).rawScore = beforeScore; // preserve pre-personalization score for learning loop
-          r.score = Math.min(100, r.score + clamped);
-          (r as any).personalEdgeBoost = clamped;
-          boostCount++;
-
-          // v3.3 observability: structured log per boosted result
-          console.info(`[personalization] boost applied`, JSON.stringify({
-            symbol: r.symbol,
-            dims: matchedDims,
-            before: beforeScore,
-            after: r.score,
-            boost: clamped,
-            maxBoost,
-            ws: session.workspaceId?.slice(0, 8),
-            ts: new Date().toISOString(),
-          }));
-        }
-      }
-      if (boostCount > 0) {
-        console.info(`[personalization] summary: ${boostCount}/${results.length} results boosted for workspace ${session.workspaceId?.slice(0, 8)}`);
-      }
-    }
-
-    for (const result of results) {
-      // ONE trust verdict (lib/scanner/dataTrust): session-aware freshness from the actual bar time, interval
-      // integrity, critical-indicator coverage, history depth, volume availability. Reused by Analysis and Pro.
-      const trust = evaluateDataTrust({
-        assetClass: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity',
-        timeframe,
-        lastBarAt: result.lastCandleTime ?? null,
-        barInterval: result.barInterval ?? null,
-        historyBars: result.dataBasis?.historyBars ?? null,
-        price: result.price ?? null,
-        indicators: {
-          atr: Number.isFinite(result.atr), rsi: Number.isFinite(result.rsi), adx: Number.isFinite(result.adx),
-          ema200: Number.isFinite(result.ema200), macd: Number.isFinite(result.macd_hist),
-        },
-        volumeAvailable: type === 'forex' ? null : Number.isFinite(result.avgVolume) && (result.avgVolume as number) > 0,
-        priceDiscontinuity: (result.dataBasis as any)?.priceDiscontinuity ?? null,
-      });
-      result.dataTrust = trust;
-      // Legacy freshness fields kept for consumers; penalties now come from bar-time freshness, never request time.
-      const freshness = {
-        status: (trust.freshness === 'fresh' ? 'fresh' : trust.freshness === 'delayed' ? 'delayed' : trust.freshness === 'stale' ? 'stale' : 'missing') as 'fresh' | 'stale' | 'missing' | 'delayed',
-        penalty: trust.freshness === 'fresh' ? 0 : trust.freshness === 'delayed' ? 4 : trust.freshness === 'stale' ? 12 : 18,
-        warnings: trust.reasons.filter((r) => /behind|bar time|stale/.test(r)),
-      };
-      const liquidity = evaluateScannerLiquidity({ type, averageVolume: result.avgVolume });
-      // Cached rows are no longer floored to "delayed": their bar date is known, so freshness is judged like any other row.
-      const fromCache = Boolean((result as any)._fromCache);
-
-      if (freshness.penalty > 0) {
-        result.score = Math.max(0, result.score - freshness.penalty);
-      }
-      if (liquidity.penalty > 0) {
-        result.score = Math.max(0, result.score - liquidity.penalty);
-      }
-      result.scoreQuality = {
-        ...(result.scoreQuality ?? { evidenceLayers: 0, missingEvidencePenalty: 0 }),
-        staleDataPenalty: freshness.penalty,
-        freshnessStatus: freshness.status,
-        liquidityPenalty: liquidity.penalty,
-        liquidityStatus: liquidity.status,
-        ...(fromCache ? { cachedSourcePenalty: 0, source: 'cache' } : {}),
-      } as any;
-      const rankWarnings = [...freshness.warnings, ...liquidity.warnings, ...(trust.intervalMismatch ? [`interval_mismatch_${result.barInterval}_for_${timeframe}`] : [])];
-      if (rankWarnings.length) {
-        result.rankWarnings = [...(result.rankWarnings ?? []), ...rankWarnings];
-      }
-
-      // ── Recompute confidence as evidence- and freshness-aware (ai-output-standards rule) ──
-      // confidence = score × evidenceFactor × freshnessFactor × liquidityFactor × directionFactor.
-      const evidenceLayers = result.scoreQuality?.evidenceLayers ?? 0;
-      const evidenceFactor = Math.max(0.4, Math.min(1, evidenceLayers / 10)); // 10+ layers = full confidence
-      const freshnessFactor = freshness.status === 'fresh' ? 1
-        : freshness.status === 'delayed' ? 0.9
-        : freshness.status === 'stale' ? 0.7
-        : 0.4;
-      const liquidityFactor = liquidity.status === 'sufficient' ? 1
-        : liquidity.status === 'thin' ? 0.8
-        : liquidity.status === 'not_applicable' ? 1
-        : 0.6;
-      const directionFactor = result.direction === 'neutral' ? 0.5 : 1;
-      // Trust cap (same caps as Pro): a row whose inputs are stale or structurally unreliable cannot report high
-      // confidence, however aligned the indicators look.
-      const TRUST_CAP: Record<string, number> = { GOOD: 99, DEGRADED: 80, STALE: 60, INSUFFICIENT_DATA: 40 };
-      result.confidence = Math.max(0, Math.min(TRUST_CAP[trust.level] ?? 99,
-        Math.round(result.score * evidenceFactor * freshnessFactor * liquidityFactor * directionFactor)
-      ));
-      if (trust.level === 'INSUFFICIENT_DATA') {
-        result.score = Math.min(result.score, 40);
-        result.rankWarnings = [...(result.rankWarnings ?? []), ...trust.reasons.map((r) => `insufficient_data: ${r}`)];
-      }
-    }
-
-    // ===== MSP Composite v2 (cross-sectional, regime-conditional) =====
-    // Additive observability pass: compute the v2 composite for ALL candidates
-    // (before the top-N slice) so a follow-up can rank by it. Does NOT change
-    // ordering yet. Non-fatal on any error.
-    try {
-      let earningsMap: Map<string, string> = new Map();
-      if (type === 'equity') {
-        // Non-blocking: use whatever is cached now and warm the cache in the
-        // background, so the scan never waits on the earnings-calendar fetch
-        // (which contends for an Alpha Vantage rate-limit token). Catalyst data
-        // appears from the next scan once the cache is warm.
-        warmEarningsMap();
-        earningsMap = peekEarningsMap();
-      }
-      const rsIndexRatios = results
-        .map((r) => (r.enhancements as { relativeStrength?: { rs?: number } } | undefined)?.relativeStrength?.rs)
-        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
-      const dollarVolumes = results
-        .map((r) => (Number.isFinite(r.price) && Number.isFinite(r.avgVolume) ? (r.price as number) * (r.avgVolume as number) : Number.NaN))
-        .filter((v) => Number.isFinite(v));
-
-      const v2Rows = results.map((r) => {
-        const rScoreV2 = (r as { scoreV2?: { regime?: { scoring?: string; institutional?: string } } }).scoreV2;
-        const scoreRegime = resolveScoreRegime(rScoreV2?.regime?.scoring, rScoreV2?.regime?.institutional);
-        const vwapPct = Number.isFinite(r.vwap) && Number.isFinite(r.price) && (r.vwap as number) > 0
-          ? ((r.price! - r.vwap!) / r.vwap!) * 100
-          : undefined;
-        const dollarVolume = Number.isFinite(r.price) && Number.isFinite(r.avgVolume)
-          ? (r.price as number) * (r.avgVolume as number)
-          : undefined;
-        const signals = deriveFactorSignals({
-          price: r.price,
-          ema200: r.ema200,
-          macdHist: r.macd_hist,
-          adx: r.adx,
-          aroonUp: r.aroon_up,
-          aroonDown: r.aroon_down,
-          rsi: r.rsi,
-          stochK: r.stoch_k,
-          cci: r.cci,
-          mfi: r.mfi,
-          vwapPct,
-          rsIndexRatio: (r.enhancements as { relativeStrength?: { rs?: number } } | undefined)?.relativeStrength?.rs,
-          bbwp: r.dveBbwp,
-          dveBreakoutScore: r.dveBreakoutScore,
-          dveFlags: r.dveFlags,
-          fundingRate: r.derivatives?.fundingRate,
-          oiChangePercent: (r.derivatives as { oiChangePercent?: number } | undefined)?.oiChangePercent,
-          derivativesExpected: type === 'crypto',
-          earningsInDays: type === 'equity' ? daysUntilEarnings(earningsMap.get((r.symbol || '').toUpperCase())) : undefined,
-          dollarVolume,
-        }, { rsIndexRatios, dollarVolumes });
-
-        const fsRaw = r.scoreQuality?.freshnessStatus as string | undefined;
-        const freshness: FreshnessLevel = fsRaw === 'stale' ? 'stale' : fsRaw === 'missing' ? 'missing' : 'live';
-        const availableFactors = signals.factors.filter((f) => f.available).length;
-        const evidence = assessEvidenceQuality({ availableFactors, totalFactors: 8, freshness });
-        const composite = computeCompositeV2({
-          factors: signals.factors,
-          regime: scoreRegime,
-          evidenceQuality: evidence.level,
-          freshness,
-          liquidityMultiplier: signals.liquidityMultiplier,
-        });
-        return { r, composite, scoreRegime, signals };
-      });
-
-      const ranked = crossSectionalPercentiles(v2Rows.map((row) => ({ composite: row.composite.composite })));
-      v2Rows.forEach((row, idx) => {
-        row.r.compositeV2 = {
-          composite: row.composite.composite,
-          direction: row.composite.direction,
-          percentileRank: ranked[idx].percentileRank,
-          regime: row.scoreRegime,
-          liquidityMultiplier: row.signals.liquidityMultiplier,
-          catalyst: { earningsInDays: row.signals.catalyst.earningsInDays, imminent: row.signals.catalyst.imminent },
-          factorContributions: row.composite.contributions
-            .filter((c) => c.weight > 0)
-            .map((c) => ({ factor: c.factor, weight: Math.round(c.weight * 100) / 100, signed: Math.round(c.signed * 100) / 100 })),
-        };
-      });
-    } catch (v2Err) {
-      console.warn('[scanner] composite v2 pass failed (non-fatal):', v2Err);
-    }
-
     // Rank by the MSP Composite v2 (cross-sectional, regime-conditional,
     // evidence/freshness/liquidity-gated) when available, falling back to the
     // raw conviction score. Return the top 10.
-    results.sort((a, b) => {
-      const av = a.compositeV2?.composite ?? a.score;
-      const bv = b.compositeV2?.composite ?? b.score;
-      if (bv !== av) return bv - av;
-      return b.score - a.score;
-    });
+    const percentiles = crossSectionalPercentiles(results.map(r => ({composite: r.compositeV2?.composite ?? 0})));
+    results.forEach((r, i) => { if (r.compositeV2) r.compositeV2.percentileRank = percentiles[i].percentileRank; });
+    results.sort(compareScannerScores);
+    const evaluatedResults = [...results];
     if (results.length > 10) {
       results.length = 10;
     }
@@ -2833,7 +2672,7 @@ export async function POST(req: NextRequest) {
           : fsRaw === 'delayed' ? 'delayed'
             : fsRaw === 'stale' ? 'stale'
               : fsRaw === 'missing' ? 'missing'
-                : 'live';
+                : 'unknown';
       const enh = (result as { enhancements?: { relativeStrength?: { rs?: number | null; symbolChangePct?: number }; emaStack?: { direction?: 'bullish' | 'bearish' | 'mixed' } } }).enhancements;
       const vwapPct = Number.isFinite(result.vwap) && Number.isFinite(result.price) && (result.vwap as number) > 0
         ? ((result.price! - result.vwap!) / result.vwap!) * 100
@@ -2882,8 +2721,6 @@ export async function POST(req: NextRequest) {
     const rgLocked = riskSnapshot?.risk_mode === 'LOCKED';
     if (rgLocked) {
       for (const result of results) {
-        const raw = (result as any).rawScore;
-        if (typeof raw === 'number') result.score = raw;
         (result as any).riskGovernorBlocked = true;
         (result as any).riskGovernorReason =
           'Execution gate: risk governor locked — research view only (no auto-log, no learning record).';
@@ -2895,7 +2732,7 @@ export async function POST(req: NextRequest) {
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0 && !rgLocked) {
       const signalsToRecord: RecordSignalParams[] = results
-        .filter(r => r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
+        .filter(r => r.compositeV2?.permission === 'PASS' && r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
         .map(r => {
           const learningScore = (r as any).rawScore ?? r.score; // anti-bias: never feed personalized score back into the brain
           return {
@@ -2933,7 +2770,7 @@ export async function POST(req: NextRequest) {
     // so brain_outcomes can grade these events later.
     if (results.length > 0) {
       void Promise.all(
-        results.slice(0, 5).map(async (r) => {
+        evaluatedResults.map(async (r) => {
           try {
             const learningScore = (r as any).rawScore ?? r.score;
             const sq: any = r.scoreQuality ?? {};
@@ -2969,9 +2806,16 @@ export async function POST(req: NextRequest) {
                 aroon_up: r.aroon_up,
                 aroon_down: r.aroon_down,
                 price: r.price,
+                mfi: r.mfi, vwap: r.vwap, avgVolume: r.avgVolume,
+                derivatives: r.derivatives, dataBasis: r.dataBasis, dataTrust: r.dataTrust,
+                lastCompletedBarAt: r.lastCandleTime, technicalProxy: r.technicalProxy,
+                evaluatedUniverse: evaluatedResults.map(row => row.symbol),
+                returnedInShortlist: results.some(row => row.symbol === r.symbol),
               },
               scoreSnapshot: {
-                score: learningScore,            // pre-personalization
+                score: learningScore,
+                modelVersion: r.compositeV2?.version,
+                scoreContract: r.compositeV2,
                 personalized: r.score,           // post-personalization
                 confidence: r.confidence,
                 direction: r.direction,

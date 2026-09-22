@@ -29,7 +29,9 @@ import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
-import { deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, assessEvidenceQuality, type ScoreRegime } from '@/lib/analysis';
+import { crossSectionalPercentiles } from '@/lib/analysis';
+import { scoreProSnapshot } from '@/lib/scanner/proScore';
+import { compareScannerScores, dollarVolume, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
@@ -1845,15 +1847,15 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   }
 
   // Sector relative strength + SPY benchmark (one DB query, 0 API calls).
-  let benchmarkChange = 0;
+  let benchmarkChange: number | undefined;
   try {
     const sectorRows = await dbQuery<{ symbol: string; change_percent: string }>(
       `SELECT symbol, change_percent FROM quotes_latest WHERE symbol = ANY($1)`,
       [Array.from(SECTOR_ETFS)]
     );
     const sectorChanges = new Map<string, number>();
-    for (const r of sectorRows) sectorChanges.set(r.symbol.toUpperCase(), parseFloat(r.change_percent) || 0);
-    benchmarkChange = sectorChanges.get('SPY') ?? 0;
+    for (const r of sectorRows) { const change = parseFloat(r.change_percent); if (Number.isFinite(change)) sectorChanges.set(r.symbol.toUpperCase(), change); }
+    benchmarkChange = sectorChanges.get('SPY');
     for (const item of scored) {
       const etf = getSectorETF(item.symbol);
       if (etf && sectorChanges.has(etf)) {
@@ -1863,74 +1865,23 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     }
   } catch { /* non-fatal — sector data may not be cached */ }
 
-  // ── MSP Composite v2 (cross-sectional, regime-conditional) for each equity ──
-  try {
-    const REGIME_TO_SCORE: Record<string, ScoreRegime> = {
-      trend: 'trending', range: 'ranging', expansion: 'expansion', contraction: 'compression', unknown: 'neutral',
-    };
-    const rsIndexRatios = scored
-      .map((s) => (1 + (s.change24h || 0) / 100) / (1 + benchmarkChange / 100))
-      .filter((v) => Number.isFinite(v));
-    const dollarVolumes = scored
-      .map((s) => {
-        const p = (s.indicators as any).price; const v = (s.indicators as any).volume;
-        return Number.isFinite(p) && Number.isFinite(v) ? p * v : Number.NaN;
-      })
-      .filter((v) => Number.isFinite(v));
-
-    const v2rows = scored.map((s) => {
-      const ind = s.indicators as any;
-      const vwapPct = Number.isFinite(ind.vwap) && Number.isFinite(ind.price) && ind.vwap > 0
-        ? ((ind.price - ind.vwap) / ind.vwap) * 100 : undefined;
-      const macdHist = Number.isFinite(ind.macd) && Number.isFinite(ind.macdSignal) ? ind.macd - ind.macdSignal : undefined;
-      const sectorChange = Number.isFinite(ind.sectorRelStr) ? (s.change24h || 0) - ind.sectorRelStr : undefined;
-      const rsSectorRatio = sectorChange != null ? (1 + (s.change24h || 0) / 100) / (1 + sectorChange / 100) : undefined;
-      const dollarVolume = Number.isFinite(ind.price) && Number.isFinite(ind.volume) ? ind.price * ind.volume : undefined;
-      const signals = deriveFactorSignals({
-        price: ind.price, ema200: ind.ema200, macdHist, adx: ind.adx,
-        aroonUp: ind.aroonUp, aroonDown: ind.aroonDown,
-        rsi: ind.rsi, stochK: ind.stochK, cci: ind.cci, mfi: ind.mfi, vwapPct,
-        rsIndexRatio: (1 + (s.change24h || 0) / 100) / (1 + benchmarkChange / 100),
-        rsSectorRatio,
-        derivativesExpected: false,
-        dollarVolume,
-      }, { rsIndexRatios, dollarVolumes });
-      const scoreRegime = REGIME_TO_SCORE[deriveRegime(
-        Number.isFinite(ind.adx) ? ind.adx : undefined,
-        Number.isFinite(ind.atr_percent) ? ind.atr_percent : undefined,
-      )] ?? 'neutral';
-      const availableFactors = signals.factors.filter((f) => f.available).length;
-      const evidence = assessEvidenceQuality({ availableFactors, totalFactors: 8, freshness: 'delayed' });
-      const composite = computeCompositeV2({
-        factors: signals.factors, regime: scoreRegime,
-        evidenceQuality: evidence.level, freshness: 'delayed', liquidityMultiplier: signals.liquidityMultiplier,
-      });
-      return { s, composite, scoreRegime, signals };
-    });
-    const pct = crossSectionalPercentiles(v2rows.map((r) => ({ composite: r.composite.composite })));
-    v2rows.forEach((r, idx) => {
-      (r.s as any).compositeV2 = {
-        composite: r.composite.composite,
-        direction: r.composite.direction,
-        percentileRank: pct[idx].percentileRank,
-        regime: r.scoreRegime,
-        liquidityMultiplier: r.signals.liquidityMultiplier,
-        catalyst: { earningsInDays: r.signals.catalyst.earningsInDays, imminent: r.signals.catalyst.imminent },
-        factorContributions: r.composite.contributions
-          .filter((c) => c.weight > 0)
-          .map((c) => ({ factor: c.factor, weight: Math.round(c.weight * 100) / 100, signed: Math.round(c.signed * 100) / 100 })),
-      };
-    });
-  } catch (v2err) {
-    console.warn('[bulk-scan] v2 composite failed (non-fatal):', v2err);
+  // Preserve observed benchmark inputs; missing SPY is never a zero-return benchmark.
+  for (const item of scored) {
+    const ind = item.indicators as any;
+    if (benchmarkChange !== undefined && benchmarkChange > -100) ind.rsIndexRatio = (1 + item.change24h / 100) / (1 + benchmarkChange / 100);
+    if (Number.isFinite(ind.sectorRelStr)) {
+      const sectorChange = item.change24h - ind.sectorRelStr;
+      if (sectorChange > -100) ind.rsSectorRatio = (1 + item.change24h / 100) / (1 + sectorChange / 100);
+    }
   }
+  const context = proScoreUniverse(scored, 'equity');
+  for (const item of scored) Object.assign(item, scoreProSnapshot(item, 'equity', timeframe, context));
 
   // Fetch chartData from ohlcv_bars — ONLY for the top candidates (bounded I/O).
   // Scoring already ranks from the cached snapshot, so we enrich the leaders
   // rather than issuing a per-symbol bar query for the whole universe.
-  const enrichRank = (x: any) => x.compositeV2?.composite ?? Math.abs(x.score - 50);
   const enrichSet = new Set(
-    [...scored].sort((a, b) => enrichRank(b) - enrichRank(a)).slice(0, 12).map((s) => s.symbol),
+    [...scored].sort(compareScannerScores).slice(0, 12).map((s) => s.symbol),
   );
   for (const item of scored) {
     if (!enrichSet.has(item.symbol)) continue;
@@ -2197,6 +2148,14 @@ async function runForexBulkScan(startTime: number, timeframe: string) {
   };
 }
 
+function proScoreUniverse(picks: any[], asset: string) {
+  return {
+    rsIndexRatios: picks.map(p => p.indicators?.rsIndexRatio).filter(Number.isFinite),
+    rsSectorRatios: picks.map(p => p.indicators?.rsSectorRatio).filter(Number.isFinite),
+    dollarVolumes: picks.map(p => dollarVolume(p.indicators?.price ?? p.price, p.indicators?.volume, asset)).filter((v): v is number => v !== undefined),
+  };
+}
+
 function applyInstitutionalFilterToTopPicks(
   topPicks: any[],
   params: {
@@ -2206,7 +2165,13 @@ function applyInstitutionalFilterToTopPicks(
     traderRiskDNA?: 'aggressive' | 'balanced' | 'defensive';
   }
 ) {
-  const withFilter = topPicks.map((pick) => {
+  const universe = proScoreUniverse(topPicks, params.type);
+  const withFilter = topPicks.map((original) => {
+    const initial = scoreProSnapshot(original, params.type, params.timeframe, universe);
+    const pick = {...original, ...initial, price: original.indicators?.price ?? original.price, atr: original.indicators?.atr ?? original.atr};
+    synchronizeScannerScenario(pick, initial.compositeV2.direction);
+    pick.score = initial.compositeV2.composite;
+    pick.confidence = pick.score;
     const scoreV2 = buildInstitutionalPickScoreV2(pick, {
       type: params.type,
       timeframe: params.timeframe,
@@ -2245,7 +2210,7 @@ function applyInstitutionalFilterToTopPicks(
           : 'normal',
       },
       dataHealth: {
-        freshness: params.type === 'crypto' ? 'LIVE' : 'DELAYED',
+        freshness: initial.dataTrust.freshness === 'fresh' ? 'LIVE' : initial.dataTrust.freshness === 'delayed' ? 'DELAYED' : initial.dataTrust.freshness === 'stale' ? 'STALE' : 'NONE',
       },
       riskEnvironment: {
         traderRiskDNA: params.traderRiskDNA,
@@ -2301,36 +2266,21 @@ function applyInstitutionalFilterToTopPicks(
       enrichedConfidence = scoreV2.final.confidence;
     }
 
-    // ── Condition match vs data trust (Part J decision: B + cap) ──
-    // `matchConfidence` = how strongly the available conditions match (uncapped). `dataTrust` = the shared verdict on
-    // the inputs. The headline `confidence` is the match confidence CAPPED by trust so a row with missing ATR/RSI/ADX
-    // (e.g. ticker "I": 69% match, ATR missing) can no longer out-rank a fully evidenced row. Nothing is hidden.
-    const matchConfidence = Number.isFinite(pick?.compositeV2?.composite) ? Math.round(pick.compositeV2.composite) : enrichedConfidence;
-    const basis = (pick as any)?.dataBasis as { barInterval?: string; lastCompletedBarAt?: string | null; historyBars?: number; volumeBasis?: string } | undefined;
-    const dataTrust = evaluateDataTrust({
-      assetClass: params.type,
-      timeframe: params.timeframe,
-      lastBarAt: basis?.lastCompletedBarAt ?? null,
-      barInterval: basis?.barInterval ?? null,
-      historyBars: basis?.historyBars ?? null,
-      price: pickPrice > 0 ? pickPrice : null,
-      indicators: {
-        atr: Number.isFinite(pick?.indicators?.atr) && pick.indicators.atr > 0,
-        rsi: Number.isFinite(pick?.indicators?.rsi),
-        adx: Number.isFinite(pick?.indicators?.adx),
-        ema200: Number.isFinite(pick?.indicators?.ema200) && pick.indicators.ema200 > 0,
-        macd: Number.isFinite(pick?.indicators?.macd),
-      },
-      volumeAvailable: Number.isFinite(pick?.indicators?.volume) && pick.indicators.volume > 0,
-      priceDiscontinuity: pick?.dataBasis?.priceDiscontinuity ?? null,
-    });
-    const TRUST_CAP: Record<string, number> = { GOOD: 99, DEGRADED: 80, STALE: 60, INSUFFICIENT_DATA: 40 };
-    const confidence = Math.min(Number(matchConfidence) || 0, TRUST_CAP[dataTrust.level]);
+    const final = scoreProSnapshot(pick, params.type, params.timeframe, universe,
+      institutionalFilter.noTrade || scoreV2.execution?.permission === 'blocked');
+    const {dataTrust, compositeV2} = final;
+    const matchConfidence = initial.compositeV2.composite;
+    const confidence = compositeV2.composite;
+    // Legacy container remains for diagnostics; every headline uses the same final result.
+    scoreV2.final.confidence = confidence;
+    scoreV2.final.rankScore = confidence;
+    scoreV2.final.qualityTier = compositeV2.permission === 'PASS' && confidence >= 70 ? 'high' : confidence >= 50 ? 'medium' : 'low';
 
     return {
       ...pick,
       scoreV2,
-      score: scoreV2.final.confidence,
+      score: confidence,
+      compositeV2,
       institutionalFilter,
       entry: enrichedEntry,
       stop: enrichedStop,
@@ -2345,19 +2295,10 @@ function applyInstitutionalFilterToTopPicks(
 
   // Don't remove results from discovery — tag them with warnings but keep them visible.
   // Users need to SEE what's out there, then the institutional filter badge guides decisions.
-  const blockedCount = withFilter.filter((pick) => pick.institutionalFilter.noTrade || pick.scoreV2?.execution?.permission === 'blocked').length;
-  const ranked = [...withFilter].sort((a, b) => {
-    // Sort trade-ready results first, then by rank score
-    const aBlocked = a.institutionalFilter.noTrade || a.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
-    const bBlocked = b.institutionalFilter.noTrade || b.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
-    if (aBlocked !== bBlocked) return aBlocked - bBlocked;
-    // Rank by the trust-capped headline confidence so the number shown IS the ordering; tiebreak on composite/rank score.
-    const confDiff = Number(b?.confidence ?? 0) - Number(a?.confidence ?? 0);
-    if (confDiff !== 0) return confDiff;
-    const left = Number(a?.compositeV2?.composite ?? a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
-    const right = Number(b?.compositeV2?.composite ?? b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
-    return right - left || a.symbol.localeCompare(b.symbol);
-  });
+  const blockedCount = withFilter.filter(pick => pick.compositeV2.permission === 'BLOCK').length;
+  const percentiles = crossSectionalPercentiles(withFilter.map(p => ({composite: p.compositeV2.composite})));
+  withFilter.forEach((p, i) => { p.compositeV2.percentileRank = percentiles[i].percentileRank; });
+  const ranked = [...withFilter].sort(compareScannerScores);
   return {
     topPicks: ranked,
     blockedCount,

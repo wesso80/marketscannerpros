@@ -256,6 +256,7 @@ export function detectVolatilitySqueeze(
 //  3. Relative Strength vs Benchmark
 // ═══════════════════════════════════════════════════════════════════════════════
 export interface RelativeStrengthResult {
+  benchmarkMissing?: boolean;
   /** RS ratio: > 1 = outperforming, < 1 = underperforming, null if benchmark missing */
   rs: number | null;
   /** Human label */

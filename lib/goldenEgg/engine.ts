@@ -36,7 +36,7 @@ import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { getGlobalData } from '@/lib/coingecko';
 import { assessTimingEvidence, sanitizeTimeConfluence, timingVerdict, type TimingAssessment } from './timing';
-import { adxStrength, rsiRead, stochasticRead, dveStrengthLabel, classifySetup, computeStructureQuality, computeRiskQuality, formatUsdShort } from './semantics';
+import { adxStrength, rsiRead, stochasticRead, dveStrengthLabel, classifySetup, computeStructureQuality, computeRiskQuality, computeMomentumQuality, computeConfluenceScore, formatUsdShort } from './semantics';
 import { buildNetworkContext, type NetworkContext } from './networkContext';
 import { trendFromLevels, relate, summarizeCrossMarket, SECTOR_ETF, type CrossMarketItem, type CrossMarketContext } from './crossMarket';
 import { getFundamentalsSummary, type FundamentalsSummary } from './companyOverview';
@@ -219,7 +219,7 @@ const TRUST_CAP: Record<DataTrustResult['level'], number> = { GOOD: 99, DEGRADED
 function barsPerDayFor(tfLabel: string, assetClass: 'equity' | 'crypto' | 'forex'): number {
   if (tfLabel === '15m') return assetClass === 'crypto' ? 96 : 26;
   if (tfLabel === '1H') return assetClass === 'crypto' ? 24 : 7;
-  if (tfLabel === '1W') return 1 / 5;
+  if (tfLabel === '1W') return assetClass === 'crypto' ? 1 / 7 : 1 / 5;
   return 1;
 }
 
@@ -296,15 +296,30 @@ function buildPayload(
     if (trust.level === 'GOOD') { trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85); }
   }
 
+  // ── Direction (needs ≥3 directional layers and a 2-vote gap) ───────────────────────────────────────
+  let bullish = 0; let bearish = 0; let directionalLayers = 0;
+  if (ind?.rsi != null) { directionalLayers++; if (ind.rsi > 55) bullish++; else if (ind.rsi < 45) bearish++; }
+  if (ind?.macd != null) { directionalLayers++; if (ind.macd > 0) bullish++; else if (ind.macd < 0) bearish++; }
+  if (ind?.macdHist != null) { directionalLayers++; if (ind.macdHist > 0) bullish++; else if (ind.macdHist < 0) bearish++; }
+  if (ind?.sma50 != null) { directionalLayers++; if (p > ind.sma50) bullish++; else if (p < ind.sma50) bearish++; }
+  if (Math.abs(price.changePct) > 0.1) { directionalLayers++; if (price.changePct > 1) bullish++; else if (price.changePct < -1) bearish++; }
+  if (opts) { directionalLayers++; if (opts.putCallRatio < 0.8) bullish++; else if (opts.putCallRatio > 1.2) bearish++; }
+  let direction: Direction;
+  if (directionalLayers < 3 || Math.abs(bullish - bearish) < 2) direction = 'NEUTRAL';
+  else if (bullish > bearish + 1) direction = 'LONG';
+  else if (bearish > bullish + 1) direction = 'SHORT';
+  else direction = 'NEUTRAL';
+  const isLong = direction === 'LONG' || (direction === 'NEUTRAL' && bullish >= bearish);
+
   // ── Component scores ────────────────────────────────────────────────────────────────────────────────
   const structureQ = computeStructureQuality({
-    price: p, sma20: ind?.sma20 ?? null, sma50: ind?.sma50 ?? null, ema200: ind?.ema200 ?? null, bbMiddle: ind?.bbMiddle ?? null,
+    direction, price: p, sma20: ind?.sma20 ?? null, sma50: ind?.sma50 ?? null, ema200: ind?.ema200 ?? null, bbMiddle: ind?.bbMiddle ?? null,
     adx: ind?.adx ?? null, atr: ind?.atr ?? null, advUsd, assetClass,
   });
   const structureScore = ind ? structureQ.score : 50;
-  const flow = computeFlowScore(opts, mpe, cryptoDerivs);
+  const flow = computeFlowScore(opts, mpe, cryptoDerivs, direction);
   const flowScore = flow.score;
-  const momentum = computeMomentumScore(ind, price);
+  const momentum = computeMomentumQuality(ind, price.changePct, direction);
   const momentumScore = momentum.score;
 
   // DVE first — risk quality needs exhaustion / trap.
@@ -328,21 +343,6 @@ function buildPayload(
   const rsi = rsiRead(ind?.rsi);
   const stoch = stochasticRead(ind?.stochK);
   const adx = adxStrength(ind?.adx);
-
-  // ── Direction (needs ≥3 directional layers and a 2-vote gap) ───────────────────────────────────────
-  let bullish = 0; let bearish = 0; let directionalLayers = 0;
-  if (ind?.rsi != null) { directionalLayers++; if (ind.rsi > 55) bullish++; else if (ind.rsi < 45) bearish++; }
-  if (ind?.macd != null) { directionalLayers++; if (ind.macd > 0) bullish++; else bearish++; }
-  if (ind?.macdHist != null) { directionalLayers++; if (ind.macdHist > 0) bullish++; else bearish++; }
-  if (ind?.sma50 != null) { directionalLayers++; if (p > ind.sma50) bullish++; else bearish++; }
-  if (Math.abs(price.changePct) > 0.1) { directionalLayers++; if (price.changePct > 1) bullish++; else if (price.changePct < -1) bearish++; }
-  if (opts) { directionalLayers++; if (opts.putCallRatio < 0.8) bullish++; else if (opts.putCallRatio > 1.2) bearish++; }
-  let direction: Direction;
-  if (directionalLayers < 3 || Math.abs(bullish - bearish) < 2) direction = 'NEUTRAL';
-  else if (bullish > bearish + 1) direction = 'LONG';
-  else if (bearish > bullish + 1) direction = 'SHORT';
-  else direction = 'NEUTRAL';
-  const isLong = direction === 'LONG' || (direction === 'NEUTRAL' && bullish >= bearish);
 
   // ── Setup + levels (needed for risk: stop distance) ────────────────────────────────────────────────
   const bbWidthPct = ind?.bbUpper && ind?.bbLower && ind?.bbMiddle ? ((ind.bbUpper - ind.bbLower) / ind.bbMiddle) * 100 : null;
@@ -382,19 +382,16 @@ function buildPayload(
   });
   const riskScore = riskQ.score;
 
-  // ── Weighted confluence (renormalised over present layers; never inflated by missing inputs) ───────
+  // ── Weighted confluence (fixed applicable denominator; missing components contribute zero) ───────
   const components = [
     { key: 'Structure', weight: 0.30, value: structureScore, present: ind != null },
-    { key: 'Flow',      weight: 0.25, value: flowScore,      present: assetClass === 'crypto' ? cryptoDerivs?.fundingRatePercent != null : opts != null || mpe != null },
-    { key: 'Momentum',  weight: 0.20, value: momentumScore,  present: ind != null },
-    { key: 'Risk',      weight: 0.25, value: riskScore,      present: ind != null },
+    // Absolute crypto OI is context; no directional flow score without a comparable supported contract.
+    { key: 'Flow', weight: 0.25, value: flowScore, present: assetClass !== 'crypto' && (opts != null || mpe != null), applicable: assetClass !== 'forex' },
+    { key: 'Momentum', weight: 0.20, value: momentumScore, present: ind != null },
+    { key: 'Risk', weight: 0.25, value: riskScore, present: ind != null },
   ];
-  const presentWeight = components.reduce((s, c) => s + (c.present ? c.weight : 0), 0);
-  const weightedScore = presentWeight > 0 ? components.reduce((s, c) => s + (c.present ? c.value * c.weight : 0), 0) / presentWeight : 50;
-  const coverageFactor = presentWeight;
-  const rawConfidence = Math.max(1, Math.min(99, Math.round(weightedScore * Math.max(0.4, coverageFactor))));
-  // Trust cap: stale / contaminated / thin inputs cannot report high conviction (same caps as Scanner / Pro).
-  const confidence = Math.min(rawConfidence, TRUST_CAP[trust.level]);
+  const scoreCalculation = computeConfluenceScore(components, TRUST_CAP[trust.level]);
+  const confidence = scoreCalculation.finalScore;
   const grade = scoreToGrade(confidence);
 
   // ── Timing evidence policy (Part A) ─────────────────────────────────────────────────────────────────
@@ -408,14 +405,15 @@ function buildPayload(
   if (confidence >= 70 && direction !== 'NEUTRAL' && (trust.level === 'GOOD' || trust.level === 'DEGRADED')) permission = 'TRADE';
   else if (confidence < 40 || trust.level === 'INSUFFICIENT_DATA' || trust.level === 'STALE') permission = 'NO_TRADE';
   if (permission === 'TRADE' && timeConfluenceHardConflict) permission = 'WATCH';
-  if (macroRegime?.riskState === 'risk_off' && permission === 'TRADE') permission = 'WATCH';
+  if (macroRegime?.riskState === 'risk_off' && direction === 'LONG' && permission === 'TRADE') permission = 'WATCH';
 
   // ── Driver / blocker (Risk is never a driver) ───────────────────────────────────────────────────────
   const drivers = [
     { key: 'Structure', val: structureScore },
     { key: 'Flow', val: flowScore },
     { key: 'Momentum', val: momentumScore },
-  ].sort((a, b) => b.val - a.val);
+  ].filter(d => components.some(c => c.key === d.key && c.present)).sort((a, b) => b.val - a.val);
+  if (!drivers.length) drivers.push({key: 'Evidence unavailable', val: 0});
   const primaryDriver = `${drivers[0].key} leads at ${drivers[0].val.toFixed(0)}/100 — ${describeScore(drivers[0].key, drivers[0].val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   const weakest = drivers[drivers.length - 1];
   let primaryBlocker: string | undefined;
@@ -424,7 +422,7 @@ function buildPayload(
   else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100 — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   else if (riskScore < 50) primaryBlocker = `Risk conditions ${riskScore}/100 — ${riskQ.reasons[0]}`;
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
-  else if (macroRegime?.riskState === 'risk_off') primaryBlocker = `Macro regime RISK_OFF (${macroRegime.concerns.join(', ')})`;
+  else if (macroRegime?.riskState === 'risk_off' && direction === 'LONG') primaryBlocker = `Macro regime RISK_OFF (${macroRegime.concerns.join(', ')})`;
 
   if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
 
@@ -433,7 +431,7 @@ function buildPayload(
   if (permission !== 'TRADE') {
     if (trust.level !== 'GOOD') flipConditions.push({ id: 'f8', text: `Data trust is ${trust.level.toLowerCase().replace('_', ' ')} (${trust.reasons.join('; ')}) — inputs need to be clean before the packet can be relied on`, severity: 'must' });
     if (timeConfluenceHardConflict) flipConditions.push({ id: 'f6', text: `Time confluence is ${timing.effectiveDirection} while the setup is ${direction.toLowerCase()} — wait for timing to agree or for the conflict to clear`, severity: 'must' });
-    if (macroRegime?.riskState === 'risk_off') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
+    if (macroRegime?.riskState === 'risk_off' && direction === 'LONG') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options positioning needs to confirm direction (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry})`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
@@ -707,12 +705,17 @@ function buildPayload(
       primaryDriver,
       primaryBlocker,
       flipConditions,
-      scoreBreakdown: [
-        { key: 'Structure', weight: 30, value: Math.round(structureScore), note: structureScore >= 65 ? 'Trend alignment supportive' : structureScore >= 45 ? 'Mixed structure' : 'Structure opposing' },
-        { key: 'Flow', weight: 25, value: Math.round(flowScore), note: opts ? `P/C ${opts.putCallRatio.toFixed(2)} · ${opts.canonical.expiry}` : cryptoDerivs ? (flow.notes[0] ?? 'Funding unavailable') : optsIn ? 'Options chain unusable' : 'No options/derivatives data' },
-        { key: 'Momentum', weight: 20, value: Math.round(momentumScore), note: ind?.rsi != null ? rsi.label : undefined },
-        { key: 'Risk', weight: 25, value: Math.round(riskScore), note: `Risk quality — ${riskQ.reasons[0]}` },
-      ],
+      scoreCalculation: {version: scoreCalculation.version, coverage: scoreCalculation.coverage, rawTotal: scoreCalculation.rawTotal,
+        trustCap: scoreCalculation.trustCap, capAdjustment: scoreCalculation.capAdjustment, finalScore: confidence},
+      scoreBreakdown: scoreCalculation.rows.map(c => ({
+        key: c.key, weight: c.weight * 100, value: Math.round(c.value), available: c.available,
+        applicable: c.applicable !== false, effectiveWeight: c.effectiveWeight * 100, points: c.points,
+        note: !c.available ? (c.applicable === false ? 'Not applicable to this asset' : c.key === 'Flow' && optsIn ? 'Options chain unusable; excluded' : 'Evidence unavailable; excluded')
+          : c.key === 'Structure' ? `${direction} structure alignment`
+          : c.key === 'Momentum' ? `${direction} momentum alignment; ${rsi.label}`
+          : c.key === 'Risk' ? `Risk quality — ${riskQ.reasons[0]}`
+          : opts ? `P/C ${opts.putCallRatio.toFixed(2)} · ${opts.canonical.expiry}` : 'Market participation context',
+      })),
       cta,
     },
     layer2: {
@@ -800,15 +803,17 @@ function computeFlowScore(
   opts: OptionsSnapshot | null,
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
   cryptoDerivs: CryptoDerivatives | null = null,
+  direction: Direction = 'LONG',
 ): { score: number; notes: string[] } {
   let score = 50;
   const notes: string[] = [];
+  const side = direction === 'LONG' ? 1 : direction === 'SHORT' ? -1 : 0;
   if (opts) {
     const c = opts.canonical;
-    if (opts.putCallRatio < 0.7) { score += 15; notes.push(`call-heavy positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
-    else if (opts.putCallRatio < 0.9) { score += 5; notes.push(`mildly call-tilted (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
-    else if (opts.putCallRatio > 1.3) { score -= 15; notes.push(`put-heavy positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
-    else if (opts.putCallRatio > 1.1) { score -= 5; notes.push(`mildly put-tilted (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
+    if (opts.putCallRatio < 0.7) { score += 15 * side; notes.push(`call-heavy positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
+    else if (opts.putCallRatio < 0.9) { score += 5 * side; notes.push(`mildly call-tilted (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
+    else if (opts.putCallRatio > 1.3) { score -= 15 * side; notes.push(`put-heavy positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
+    else if (opts.putCallRatio > 1.1) { score -= 5 * side; notes.push(`mildly put-tilted (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
     else notes.push(`balanced positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`);
     if (opts.unusualActivity === 'Very High') { score += 10; notes.push('volume/OI very high — unusual activity'); }
     else if (opts.unusualActivity === 'Elevated') { score += 5; notes.push('volume/OI elevated'); }
@@ -826,28 +831,6 @@ function computeFlowScore(
     score += (mpe.liquidity - 50) * 0.2;
     score += (mpe.options - 50) * 0.15;
   }
-  return { score: Math.max(0, Math.min(100, score)), notes };
-}
-
-function computeMomentumScore(ind: Indicators | null, price: { changePct: number }): { score: number; notes: string[] } {
-  let score = 50;
-  const notes: string[] = [];
-  if (!ind) return { score: score + (price.changePct > 0 ? 5 : -5), notes: ['indicators unavailable — session change only'] };
-  if (ind.rsi != null) {
-    const r = rsiRead(ind.rsi);
-    if (ind.rsi > 55 && ind.rsi < 70) { score += 12; }
-    else if (ind.rsi >= 70) { score += 4; notes.push(`RSI ${ind.rsi.toFixed(0)} overbought — momentum strong but extended (credit reduced)`); }
-    else if (ind.rsi < 45 && ind.rsi > 30) { score -= 10; }
-    else if (ind.rsi <= 30) { score -= 4; notes.push(`RSI ${ind.rsi.toFixed(0)} oversold — bearish momentum but washed out`); }
-    if (!notes.length) notes.push(r.label);
-  }
-  if (ind.macd != null) score += ind.macd > 0 ? 8 : -8;
-  if (ind.macdHist != null) score += ind.macdHist > 0 ? 7 : -7;
-  if (ind.stochK != null) {
-    if (ind.stochK > 80) { score -= 2; notes.push(`stochastic ${ind.stochK.toFixed(0)} overbought zone`); }
-    else if (ind.stochK < 20) { score += 2; notes.push(`stochastic ${ind.stochK.toFixed(0)} oversold zone`); }
-  }
-  score += price.changePct > 2 ? 8 : price.changePct > 0 ? 3 : price.changePct < -2 ? -8 : -3;
   return { score: Math.max(0, Math.min(100, score)), notes };
 }
 

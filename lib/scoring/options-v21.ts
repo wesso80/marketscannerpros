@@ -479,14 +479,19 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
 
   const gateMultiplier = GATE_MULTIPLIER[state];
   const finalScore = clamp100(baseScore * gateMultiplier);
-  const confidence = Math.max(1, Math.min(99, Math.round(finalScore)));
+  const confidence = Math.round(finalScore);
   const tfAlignment = tfAlignmentFromScore(input.tfConfluenceScore);
 
-  const contrib: MSPContribution[] = [
-    { key: 'context_vol_fit', label: 'Vol Fit', layer: 'context', weight: 0.3, value: contextFeatures.volFit, points: contextFeatures.volFit * 30 },
-    { key: 'setup_tf_confluence', label: 'TF Confluence', layer: 'setup', weight: 0.2, value: setupFeatures.tfConfluenceScore, points: setupFeatures.tfConfluenceScore * 20 },
-    { key: 'execution_liquidity', label: 'Spread Liquidity', layer: 'execution', weight: 0.35, value: executionFeatures.spreadLiquidity, points: executionFeatures.spreadLiquidity * 35 },
+  const layers = [
+    {layer: 'context' as const, outer: 0.3, features: contextFeatures, weights: {volFit: .3, underlyingRegimeAlignment: .2, liquidityHealth: .2, dataFreshness: .15, macroRisk: .15}},
+    {layer: 'setup' as const, outer: 0.45, features: setupFeatures, weights: {directionalAgreement: .2, emBufferFit: .25, payoff: .2, tfConfluenceScore: .2, pWinProxy: .15}},
+    {layer: 'execution' as const, outer: 0.25, features: executionFeatures, weights: {spreadLiquidity: .35, fillQuality: .22, dteSuitability: .18, riskGeometry: .15, timeWindowFit: .1}},
   ];
+  const contrib: MSPContribution[] = layers.flatMap(({layer, outer, features, weights}) => Object.entries(weights).map(([key, inner]) => {
+    const value = (features as Record<string, number>)[key];
+    const weight = outer * inner * gateMultiplier;
+    return {key: `${layer}_${key}`, label: key.replace(/([A-Z])/g, ' $1'), layer, weight, value, points: value * weight * 100};
+  }));
 
   const payload: MSPScorePayloadV2 = {
     version: 'msp.score.v2.1',
@@ -532,7 +537,7 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
       optionsCandidate: candidate,
     },
     explain: {
-      oneLiner: `${candidate.strategyType} ${state} @ ${confidence}% confidence`,
+      oneLiner: `${candidate.strategyType} ${state} @ ${confidence}/100 research quality`,
       bullets: [
         `Context ${Math.round(context)} / Setup ${Math.round(setup)} / Execution ${Math.round(execution)}`,
         `Liquidity ${(spreadLiquidity * 100).toFixed(0)}% | Fill ${(fillQuality * 100).toFixed(0)}% | DTE fit ${(dteSuitability * 100).toFixed(0)}%`,

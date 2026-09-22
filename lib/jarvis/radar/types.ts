@@ -135,12 +135,12 @@ export interface MorningReport {
   themes: Array<{ name: string; assetClass: string; members: number; pctUp: number; medianRet1: number; verdict: string; confirmation: string; early: string[]; extended: string[]; leaders: string[] }>;
   shortlist: FinalCandidate[];
   rejected: { symbol: string; assetClass: AssetClass; ret1: number; reasons: RejectionReason[]; detail: string[] }[];
-  settingUp: Array<{ symbol: string; assetClass: AssetClass; stage: string; score: number; ret1: number; ret5: number | null; bbWidthPctile: number | null; rsBenchDelta: number | null; accumRatio: number | null; distToHi20Pct: number | null; adx: number | null; signals: string[]; penalties: string[]; triggerLevel: number | null; themeBoost: string | null }>;
+  settingUp: Array<{ scoreVersion?: string; baseScore?: number; penaltyPoints?: number; componentPoints?: Record<string, number>; symbol: string; assetClass: AssetClass; stage: string; score: number; ret1: number; ret5: number | null; bbWidthPctile: number | null; rsBenchDelta: number | null; accumRatio: number | null; distToHi20Pct: number | null; adx: number | null; signals: string[]; penalties: string[]; triggerLevel: number | null; themeBoost: string | null }>;
   lifecycle: { changes: Array<{ symbol: string; from: string | null; to: string; note: string }>; active: Array<{ symbol: string; status: string; sessionsSeen: number; note: string }> };
   watchToday: string[];
   dataGaps: string[];
   providers: { name: string; status: string; detail: string }[];
   apiUsage: { alphaVantage: number; coingecko: number; dbQueries: number; errors: number; runtimeMs: number; sustainableMaxEquities: string };
   macroNext24h: { time: string; country: string; event: string; impact: string }[];
-  snapshot: Record<string, { funding: number | null; oi: number | null; score: number; status: ResearchStatus; premove: number; stage: string; rsRank: number | null; volRatio: number | null; price: number }>;
+  snapshot: Record<string, { funding: number | null; oi: number | null; score: number; status: ResearchStatus; premove: number; premoveVersion?: string; stage: string; rsRank: number | null; volRatio: number | null; price: number }>;
 }

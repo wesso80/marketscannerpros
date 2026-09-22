@@ -136,7 +136,7 @@ function OptionsScannerPageContent() {
       journalEnabled: payload?.decision.permission === 'GO',
       onDeploy: () => {
         if (!payload) return;
-        alert(`⚠️ Educational Mode\n\nReview observation for ${symbol}:\nDirection bias: ${payload.decision.direction}\nConfidence: ${payload.decision.confidence}%\n\nThis is a simulated research workflow — no recommendation and no broker execution.`);
+        alert(`⚠️ Educational Mode\n\nReview observation for ${symbol}:\nDirection bias: ${payload.decision.direction}\nConfidence: ${payload.decision.confidence}/100\n\nThis is a simulated research workflow — no recommendation and no broker execution.`);
       },
       onAlert: async () => {
         try {
@@ -161,7 +161,7 @@ function OptionsScannerPageContent() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               symbol: symbol.toUpperCase(),
-              note: `Options scan: ${payload?.decision?.direction || 'N/A'} @ confidence ${payload?.decision?.confidence || 0}%`,
+              note: `Options scan: ${payload?.decision?.direction || 'N/A'} @ confidence ${payload?.decision?.confidence || 0}/100`,
             }),
           });
           if (res.ok) alert(`✅ ${symbol} added to watchlist`);

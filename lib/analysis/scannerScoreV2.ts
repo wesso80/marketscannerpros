@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------------
    MSP COMPOSITE v2 — cross-sectional, regime-conditional, normalized scoring
-   core (pure, dependency-light, fully unit-tested).
+   core (pure and dependency-light).
 
    This is the scoring METHODOLOGY upgrade. It does not compute indicators — it
    takes already-computed, normalized factor signals and produces:
@@ -11,7 +11,7 @@
      • a cross-sectional percentile rank so a score MEANS something relative to
        the universe scanned today.
 
-   Design principles (why this beats the v1 additive model):
+   Design principles (heuristics awaiting outcome validation):
      1. Correlated indicators are collapsed to ONE signal per independent factor
         group BEFORE they reach this module, so trend is not quadruple-counted.
      2. Weights are regime-conditional (trend vs range vs compression differ).
@@ -36,7 +36,7 @@ export type ScoreRegime =
   | 'neutral';
 
 /** Independent scoring factors. Correlated indicators are collapsed into one of
- *  these upstream so each is (approximately) independent evidence. */
+ *  these upstream so related indicators share a factor budget; statistical independence is not established. */
 export type ScoreFactor =
   | 'TREND'
   | 'MOMENTUM'
@@ -59,18 +59,20 @@ export const SCORE_FACTOR_LABEL: Record<ScoreFactor, string> = {
 };
 
 /** A single normalized factor signal. `signed` is direction+strength in [-1, 1]
- *  (bullish positive). `available:false` factors are excluded and their weight
- *  redistributed across the rest. */
+ *  (bullish positive). Observed direction uses available votes. Missing applicable
+ *  votes reduce the conservative magnitude; they never become neutral evidence. */
 export interface FactorInput {
   factor: ScoreFactor;
   /** Directional strength in [-1, 1]; produced by upstream normalization. */
   signed: number;
   available: boolean;
+  /** False only for factors outside the declared asset/profile schema. */
+  applicable?: boolean;
 }
 
 /** Regime-conditional weight vectors. Heuristic and principled to start; the
  *  intent is later empirical calibration via the backtest engine. Rows need not
- *  sum to 1 — weights are renormalized over the AVAILABLE factors at runtime. */
+ *  sum to 1. Applicable and available weight bases are both retained at runtime. */
 export const REGIME_WEIGHTS_V2: Record<ScoreRegime, Record<ScoreFactor, number>> = {
   // Trend: reward directional persistence, relative strength, participation.
   trending: { TREND: 0.28, MOMENTUM: 0.16, VOLUME: 0.12, RELATIVE_STRENGTH: 0.20, VOLATILITY: 0.06, POSITIONING: 0.06, QUALITY: 0.08, CATALYST: 0.04 },
@@ -95,13 +97,14 @@ export const EVIDENCE_MULTIPLIER: Record<EvidenceQualityLevel, number> = {
   INSUFFICIENT: 0.45,
 };
 
-export type ScoreFreshness = 'live' | 'delayed' | 'stale' | 'missing';
+export type ScoreFreshness = 'live' | 'delayed' | 'stale' | 'missing' | 'unknown';
 
 export const FRESHNESS_MULTIPLIER: Record<ScoreFreshness, number> = {
   live: 1.0,
   delayed: 0.92,
   stale: 0.75,
   missing: 0.5,
+  unknown: 0.5,
 };
 
 export interface CompositeV2Input {
@@ -122,6 +125,10 @@ export interface FactorContribution {
   weight: number;
   /** Signed contribution to the directional aggregate (weight × signed). */
   contribution: number;
+  applicable: boolean;
+  available: boolean;
+  /** Weight in the complete applicable schema, before any missing data. */
+  applicableWeight: number;
 }
 
 export interface CompositeV2Result {
@@ -136,6 +143,10 @@ export interface CompositeV2Result {
   appliedMultiplier: number;
   contributions: FactorContribution[];
   availableFactors: number;
+  applicableFactors: number;
+  coverage: number;
+  /** Worst-case directional magnitude if unknown applicable votes oppose the observed side. */
+  conservativeMagnitude: number;
 }
 
 const DEFAULT_NEUTRAL_BAND = 0.12;
@@ -179,14 +190,19 @@ export function computeCompositeV2(input: CompositeV2Input): CompositeV2Result {
   const weights = REGIME_WEIGHTS_V2[input.regime] ?? REGIME_WEIGHTS_V2.neutral;
   const band = input.neutralBand ?? DEFAULT_NEUTRAL_BAND;
 
-  const available = input.factors.filter((f) => f.available && Number.isFinite(f.signed));
+  const applicableFactors = input.factors.filter((f) => f.applicable !== false);
+  const available = applicableFactors.filter((f) => f.available && Number.isFinite(f.signed));
   const weightSum = available.reduce((s, f) => s + (weights[f.factor] ?? 0), 0);
+  const applicableWeightSum = applicableFactors.reduce((s, f) => s + (weights[f.factor] ?? 0), 0);
+  const coverage = applicableWeightSum > 0 ? weightSum / applicableWeightSum : 0;
 
   const contributions: FactorContribution[] = input.factors.map((f) => {
-    const applicable = f.available && Number.isFinite(f.signed) && weightSum > 0;
-    const weight = applicable ? (weights[f.factor] ?? 0) / weightSum : 0;
+    const present = f.applicable !== false && f.available && Number.isFinite(f.signed) && weightSum > 0;
+    const weight = present ? (weights[f.factor] ?? 0) / weightSum : 0;
     const signed = clamp(f.signed, -1, 1);
-    return { factor: f.factor, signed, weight, contribution: applicable ? weight * signed : 0 };
+    const applicableWeight = f.applicable !== false && applicableWeightSum > 0 ? (weights[f.factor] ?? 0) / applicableWeightSum : 0;
+    return { factor: f.factor, signed, weight, contribution: present ? weight * signed : 0,
+      applicable: f.applicable !== false, available: present, applicableWeight };
   });
 
   const directional = weightSum > 0
@@ -194,12 +210,15 @@ export function computeCompositeV2(input: CompositeV2Input): CompositeV2Result {
     : 0;
 
   const rawMagnitude = Math.abs(directional) * 100;
+  // Missing evidence is not a neutral observation. Bound the unknown signed votes
+  // pessimistically. Removing any observed vote cannot improve this lower bound.
+  const conservativeMagnitude = Math.max(0, Math.abs(directional) * coverage - (1 - coverage)) * 100;
   const evidenceMult = EVIDENCE_MULTIPLIER[input.evidenceQuality];
   const freshnessMult = FRESHNESS_MULTIPLIER[input.freshness ?? 'live'];
   const liquidityMult = clamp(input.liquidityMultiplier ?? 1, 0, 1);
   const appliedMultiplier = evidenceMult * freshnessMult * liquidityMult;
 
-  const composite = Math.round(clamp(rawMagnitude * appliedMultiplier, 0, 100));
+  const composite = Math.round(clamp(conservativeMagnitude * appliedMultiplier, 0, 100));
   const direction: CompositeV2Result['direction'] =
     directional > band ? 'bullish' : directional < -band ? 'bearish' : 'neutral';
 
@@ -212,6 +231,9 @@ export function computeCompositeV2(input: CompositeV2Input): CompositeV2Result {
     appliedMultiplier,
     contributions,
     availableFactors: available.length,
+    applicableFactors: applicableFactors.length,
+    coverage,
+    conservativeMagnitude,
   };
 }
 

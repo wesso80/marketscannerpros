@@ -73,7 +73,7 @@ export default function FragilityPage() {
             items={[
               { label: 'Path', value: data.path, semantic: 'positive' },
               { label: 'Playbook', value: data.playbook, semantic: 'positive' },
-              { label: 'Confidence', value: data.confidence, semantic: 'strong-positive' },
+              { label: 'Evidence quality', value: data.confidence, semantic: parseFloat(data.confidence) >= 70 ? 'strong-positive' : 'neutral' },
               { label: 'Rot #1', value: data.rot1, semantic: 'strong-positive' },
               { label: 'Rot #2', value: data.rot2, semantic: 'strong-positive' },
               { label: 'Rot #3', value: data.rot3, semantic: 'positive' },

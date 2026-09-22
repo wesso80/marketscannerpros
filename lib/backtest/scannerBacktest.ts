@@ -1,10 +1,9 @@
 /**
  * Scanner Backtest Engine
  *
- * Walks bar-by-bar through historical price data, re-computes the same
- * technical indicators and scoring logic used by the live Market Scanner
- * (/api/scanner/run), and generates trades whenever the score crosses
- * the user-specified threshold.
+ * Replays the versioned technical proxy on completed historical bars.
+ * It shares the proxy formula exposed in live snapshots, but cannot reconstruct
+ * the full MSP composite without point-in-time cross-asset and derivatives data.
  *
  * Trade management:
  *   • Entry: when score ≥ threshold in a direction (bullish/bearish)
@@ -17,6 +16,7 @@
  * so the output shape is identical and the UI can be shared.
  */
 
+import { computeTechnicalProxy, TECHNICAL_PROXY_VERSION } from '@/lib/scanner/technicalProxy';
 import type { BacktestTrade } from './engine';
 import { buildBacktestEngineResult, type BacktestEngineResult } from './engine';
 import { BACKTEST_SLIPPAGE_BPS, BACKTEST_COMMISSION_BPS, buildBacktestAssumptionsMetadata } from './assumptions';
@@ -177,100 +177,7 @@ function obv(closes: number[], volumes: number[]): number[] {
   return out;
 }
 
-// ─── Score computation (mirrors /api/scanner/run computeScore) ────────────
-
-interface ScoreResult {
-  score: number;
-  direction: 'bullish' | 'bearish' | 'neutral';
-  signals: { bullish: number; bearish: number; neutral: number };
-}
-
-function computeScore(
-  close: number,
-  ema200Val: number,
-  rsiVal: number,
-  macLine: number,
-  sigLine: number,
-  macHist: number,
-  atrVal: number,
-  adxVal: number,
-  stochK: number,
-  aroonU: number,
-  aroonD: number,
-  cciVal: number,
-  obvCurr: number,
-  obvPrev: number,
-): ScoreResult {
-  let bull = 0, bear = 0, neut = 0;
-
-  // ADX trend multiplier
-  let tm = 1.0;
-  if (Number.isFinite(adxVal)) {
-    if (adxVal >= 40) tm = 1.4;
-    else if (adxVal >= 25) tm = 1.25;
-    else if (adxVal >= 20) tm = 1.0;
-    else tm = 0.7;
-  }
-
-  // Trend signals (ADX-weighted)
-  if (Number.isFinite(ema200Val) && Number.isFinite(close)) {
-    const w = 2 * tm;
-    if (close > ema200Val * 1.01) bull += w;
-    else if (close < ema200Val * 0.99) bear += w;
-    else neut += 1;
-  }
-  if (Number.isFinite(macHist)) { if (macHist > 0) bull += tm; else bear += tm; }
-  if (Number.isFinite(macLine) && Number.isFinite(sigLine)) { if (macLine > sigLine) bull += tm; else bear += tm; }
-  if (Number.isFinite(aroonU) && Number.isFinite(aroonD)) {
-    const w = tm;
-    if (aroonU > aroonD && aroonU > 70) bull += w;
-    else if (aroonD > aroonU && aroonD > 70) bear += w;
-    else neut += 0.5;
-  }
-  if (Number.isFinite(obvCurr) && Number.isFinite(obvPrev)) {
-    const w = tm;
-    if (obvCurr > obvPrev) bull += w; else if (obvCurr < obvPrev) bear += w; else neut += 0.5;
-  }
-
-  // Oscillator signals (NOT ADX-weighted)
-  if (Number.isFinite(rsiVal)) {
-    if (rsiVal >= 55 && rsiVal <= 70) bull += 1;
-    else if (rsiVal > 70) bear += 1;
-    else if (rsiVal <= 45 && rsiVal >= 30) bear += 1;
-    else if (rsiVal < 30) bull += 1;
-    else neut += 1;
-  }
-  if (Number.isFinite(stochK)) {
-    if (stochK > 80) bear += 1; else if (stochK < 20) bull += 1;
-    else if (stochK >= 50) bull += 0.5; else bear += 0.5;
-  }
-  if (Number.isFinite(cciVal)) {
-    if (cciVal > 100) bull += 1; else if (cciVal > 0) bull += 0.5;
-    else if (cciVal < -100) bear += 1; else bear += 0.5;
-  }
-  if (Number.isFinite(atrVal) && Number.isFinite(close)) {
-    if ((atrVal / close) * 100 > 5) neut += 1;
-  }
-
-  let direction: 'bullish' | 'bearish' | 'neutral';
-  if (bull > bear * 1.15) direction = 'bullish';
-  else if (bear > bull * 1.15) direction = 'bearish';
-  else direction = 'neutral';
-
-  const maxSig = 10 * tm;
-  let score = 50 + ((bull - bear) / maxSig) * 50;
-  score = Math.max(0, Math.min(100, Math.round(score)));
-
-  return {
-    score,
-    direction,
-    signals: {
-      bullish: Math.round(bull * 10) / 10,
-      bearish: Math.round(bear * 10) / 10,
-      neutral: Math.round(neut * 10) / 10,
-    },
-  };
-}
+// ─── Shared historical proxy ─────────────────────────────────────────────
 
 // ─── Walkthrough engine ───────────────────────────────────────────────────
 
@@ -410,7 +317,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
     const obvCurr = obvArr[i] ?? NaN;
     const obvPrev = obvArr[i - 1] ?? NaN;
 
-    const result = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonVal.up, aroonVal.down, cciVal, obvCurr, obvPrev);
+    const result = computeTechnicalProxy(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonVal.up, aroonVal.down, cciVal, obvCurr, obvPrev);
 
     scoreSeries.push({ date, score: result.score, direction: result.direction });
 
@@ -528,7 +435,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   const dates = bars.slice(firstTradingIndex).map(b => b.date);
   const engineResult = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: params.sourceBarMinutes, markedBalances });
 
-  const executionAssumptions = buildBacktestAssumptionsMetadata({ strategyId: 'scanner_technical_proxy', timeframe: params.timeframe ?? 'daily', assetType,
+  const executionAssumptions = buildBacktestAssumptionsMetadata({ strategyId: TECHNICAL_PROXY_VERSION, timeframe: params.timeframe ?? 'daily', assetType,
     totalTrades: trades.length, bars: dates.length, volumeUnavailable: bars.some(bar => !(bar.volume > 0)) });
   executionAssumptions.fillModel.entryTiming = 'Completed-bar signals enter at the next bar open with adverse slippage.';
   executionAssumptions.fillModel.exitTiming = 'Gap-through stops fill at the worse of open or stop plus slippage; signal flips/timeouts exit at the next open.';

@@ -92,8 +92,8 @@ export function classifyRegime(indicators: {
     if (trendingAdx) agreements++;
     if (aroonTrending) agreements++;
 
-    const isBullish = direction === 'bullish' || ema200Above === true;
-    const isBearish = direction === 'bearish' || ema200Above === false;
+    const isBullish = direction === 'bullish' || (direction !== 'bearish' && ema200Above === true);
+    const isBearish = direction === 'bearish' || (direction !== 'bullish' && ema200Above === false);
     const isMature = hasRsi && ((isBullish && rsi! > 70) || (isBearish && rsi! < 30));
 
     confidence = 50 + (agreements / Math.max(1, checks)) * 40;

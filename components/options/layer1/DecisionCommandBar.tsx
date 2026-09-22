@@ -110,7 +110,7 @@ export default function DecisionCommandBar({
 
         <div className="flex items-center justify-between gap-2 lg:justify-end">
           <div className="grid grid-cols-3 gap-2">
-            <MetricPill label="Confluence" value={`${decision.confidence}%`} />
+            <MetricPill label="Confluence" value={`${decision.confidence}/100`} />
             <MetricPill label="Risk" value={riskLabel(decision.permission)} />
             <MetricPill label="R:R" value={rrEstimate(decision.quality)} />
           </div>

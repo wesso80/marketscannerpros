@@ -1,5 +1,7 @@
 'use client';
 
+import { compareScannerScores } from '@/lib/scanner/scoreContract';
+
 /* ---------------------------------------------------------------------------
    UNIFIED SCANNER HUB — V2 Ranked + V1 Pro Scanner on one page
    Toggle between auto-loading regime-aware ranking and manual pro scan.
@@ -344,7 +346,7 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
                 <div className="mt-1 text-lg font-black text-white">{row.symbol}</div>
               </div>
               <div className={`rounded-md border px-2 py-1 text-[11px] font-black uppercase ${researchTone}`}>
-                {row.permission === 'COMPLIANT' ? 'Aligned' : row.permission === 'BLOCKED' ? 'Not aligned' : 'Mixed'}
+                {row.scorePermission ?? (row.permission === 'COMPLIANT' ? 'Aligned' : row.permission === 'BLOCKED' ? 'Not aligned' : 'Mixed')}
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -353,8 +355,8 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
                 <div className={`mt-1 text-xs font-black ${biasColor}`}>{compactBiasLabel(row.direction)}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
-                <div className="mt-1 text-xs font-black text-white">{row.confidence}%</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MSP score</div>
+                <div title={row.scoreExplanation} className="mt-1 text-xs font-black text-white">{row.confidence}/100</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factors</div>
@@ -1095,6 +1097,7 @@ export default function ScannerPage() {
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
     }
     items.sort((a, b) => {
+      if (sortKey === 'mspScore' && sortDir === 'desc' && a.compositeV2?.version && b.compositeV2?.version) return compareScannerScores(a, b);
       let av: any, bv: any;
       switch (sortKey) {
         case 'symbol': av = a.symbol; bv = b.symbol; break;
@@ -1355,7 +1358,7 @@ export default function ScannerPage() {
           && dir !== 'NEUTRAL'
           && !strategyKey.includes('range_fade')
           && !strategyKey.includes('mean_reversion');
-        const reason = dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
+        const reason = pick.compositeV2?.blockers?.length ? pick.compositeV2.blockers.join(' ') : dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
           : blockReasons.includes('risk_mode_block') ? 'Risk mode blocks escalation'
           : blockReasons.includes('tf_alignment_low') ? 'Alignment below threshold'
           : strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
@@ -1366,7 +1369,7 @@ export default function ScannerPage() {
           : trendOk ? 'Trend alignment'
           : 'Mixed evidence';
         const enginePermission = scoreV2?.execution?.permission;
-        const perm = enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
+        const perm = pick.compositeV2?.permission ? ({PASS: 'COMPLIANT', WATCH: 'TIGHT', BLOCK: 'BLOCKED'} as const)[pick.compositeV2.permission as 'PASS' | 'WATCH' | 'BLOCK'] : enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
             ? 'BLOCKED'
             : rangeConfirmationNeeded && dataQuality === 'GOOD'
               ? 'TIGHT'
@@ -1377,6 +1380,8 @@ export default function ScannerPage() {
               : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
+          scorePermission: pick.compositeV2?.permission, factorCoverage: pick.compositeV2?.coverage,
+          scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: conservative magnitude ${pick.compositeV2.conservativeMagnitude.toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} evidence/freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,

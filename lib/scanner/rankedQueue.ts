@@ -7,6 +7,7 @@
 import type { ScanResult } from '@/app/v2/_lib/api';
 import { REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { LifecycleState, RegimePriority } from '@/app/v2/_lib/types';
+import { SCANNER_SCORE_VERSION, type ScorePermission } from './scoreContract';
 
 export const REGIME_SETUP_MAP: Record<string, string[]> = {
   trend: ['breakout', 'trend_continuation', 'pullback', 'expansion_continuation'],
@@ -52,7 +53,7 @@ export function isRegimeCompatibleForRegime(r: ScanResult, regime: string): bool
 export function computeMspScore(r: ScanResult, regime: string): number {
   if (r.compositeV2 && Number.isFinite(r.compositeV2.composite)) {
     const base = Math.min(100, Math.max(0, r.compositeV2.composite));
-    if (r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, base * 0.4));
+    if (r.compositeV2.version !== SCANNER_SCORE_VERSION && r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, base * 0.4));
     return Math.round(base);
   }
   const regimeKey = normalizeRegimeKey(regime);
@@ -72,7 +73,11 @@ export function computeMspScore(r: ScanResult, regime: string): number {
 export function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
   const msp = computeMspScore(r, regime);
   const conf = r.confidence ?? 0;
-  if (r.scoreV2?.regimeScore?.gated) return 'INVALIDATED';
+  if (r.compositeV2?.permission === 'BLOCK' || r.scoreV2?.regimeScore?.gated) return 'INVALIDATED';
+  if (r.compositeV2?.version === SCANNER_SCORE_VERSION) {
+    if (msp >= 75 && r.compositeV2.permission === 'PASS') return 'READY';
+    return msp >= 55 ? 'SETTING_UP' : msp >= 35 ? 'WATCHING' : 'DISCOVERED';
+  }
   if (msp >= 75 && conf >= 65) return 'READY';
   if (msp >= 55 && conf >= 45) return 'SETTING_UP';
   if (msp >= 35) return 'WATCHING';
@@ -95,6 +100,7 @@ export interface RankedQueueRow {
   lifecycle: LifecycleState;
   confidence: number | null;
   setup: string | null;
+  permission?: ScorePermission;
 }
 
 /** Tag results with their asset class exactly as Scanner does. */
@@ -125,7 +131,7 @@ export function buildRankedQueue(results: RankedResult[], regime: string): Ranke
       symbol: r.symbol,
       assetClass: r._assetClass,
       mspScore: computeMspScore(r, regime),
-      direction: r.direction ?? 'neutral',
+      direction: r.compositeV2?.direction ?? r.direction ?? 'neutral',
       price: typeof r.price === 'number' ? r.price : null,
       changePct: lastBarChangePct(r),
       adx: typeof r.adx === 'number' && Number.isFinite(r.adx) ? r.adx : null,
@@ -133,6 +139,10 @@ export function buildRankedQueue(results: RankedResult[], regime: string): Ranke
       lifecycle: deriveLifecycleState(r, regime),
       confidence: typeof r.confidence === 'number' ? r.confidence : null,
       setup: r.setup ?? null,
+      permission: r.compositeV2?.permission,
     }))
-    .sort((a, b) => b.mspScore - a.mspScore || a.symbol.localeCompare(b.symbol));
+    .sort((a, b) => {
+      const order = {PASS: 2, WATCH: 1, BLOCK: 0};
+      return order[b.permission ?? 'BLOCK'] - order[a.permission ?? 'BLOCK'] || b.mspScore - a.mspScore || a.symbol.localeCompare(b.symbol);
+    });
 }
