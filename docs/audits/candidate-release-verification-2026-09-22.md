@@ -72,7 +72,7 @@ The displayed assumptions were opened and checked. Entries use the next open, 5 
 
 The old Realised Balance / Realised Drawdown labels were residual UI defects; follow-up chooses Marked Equity / Bar-close Drawdown when that is the actual calculation basis.
 
-These are technical-indicator proxy tests, not a replay of historical MSP options, funding, news or permission packets. Both samples are small and neither establishes a general predictive edge. The earlier default AIO tests in the original audit were negative (META 7 trades −3.4%; ETH 5 trades −8.8%); they have not been rerun in this follow-up acceptance.
+These are technical-indicator proxy tests, not a replay of historical MSP options, funding, news or permission packets. Both samples are small and neither establishes a general predictive edge. The earlier default AIO tests in the original audit were negative (META 7 trades −3.4%; ETH 5 trades −8.8%); both were rerun on b820a36 and reproduced those negative outcomes. Their statistics remain explicitly realised-balance-only, unlike the scanner engine’s marked-equity statistics.
 
 ## Explorer and crypto intelligence acceptance
 
@@ -86,8 +86,32 @@ A fresh crypto scan returned 24 symbols and 21 latest-candle sweep observations.
 
 ## Follow-up release gate
 
-200 focused regression tests passed across the two focused groups (a stale-label expectation was updated and its 21-test file passed on rerun), including signal OHLC identity, independent OI availability, options eligibility, valuation, completed candles, marked equity and exchange-session schedules. The final production build passed, including TypeScript and all 400 static-generation tasks. Publication and post-release acceptance are pending at the moment this source report is written. Post-release browser observations must be recorded separately from these pre-publication findings.
+200 focused regression tests passed across the two focused groups (a stale-label expectation was updated and its 21-test file passed on rerun), including signal OHLC identity, independent OI availability, options eligibility, valuation, completed candles, marked equity and exchange-session schedules. The final production build passed, including TypeScript and all 400 static-generation tasks. Follow-up code was pushed to main as `b820a365fd6044ac45e0355db284828258492b6a`; the GitHub tree matched the tested local staged tree `6b99063863a443e0ae4d1237e9e7c3ce3583f00c`. Render web `dep-dap0938473hc739qni30` reached live at 04:34:13 UTC; worker `dep-dap093g473hc739qniv0` reached live at 04:32:15 UTC. Post-release browser observations must be recorded separately from these pre-publication findings.
 
 ## Remaining evidence required
 
 The software must continue to withhold claims when timestamps, comparable histories or executable quotes are absent. Provider quote-time/IV history/funding-period coverage requires actual data access, not a fallback number. The META extended-hours extreme print and cross-provider market-cap scope need independent reconciliation. Broad account-role, notification, broker/portfolio and device acceptance, sustained availability, full as-of replay and forward/out-of-sample evaluation are separate gates still outstanding. This report does not certify every integration or a 5/5 institutional trading system.
+
+## Follow-up live acceptance (b820a36)
+
+- META Options Confluence: the entire result is now the WAIT / evidence-incomplete panel. No usable two-sided quotes; state STALE, observation UNKNOWN_REALTIME, OI expiry September 25 as context only, contract withheld, permission blocked, dealer positioning unavailable. The contradictory score/sizing/price-path panels are absent.
+- Initial worker error-log window after 04:32:15 UTC returned no errors. The web window contained one generic `Backtest error` at 04:34:20 UTC; its current logging call discards the underlying exception details, so this is not a clean-error-window certification. Backtest UI is rechecked below.
+
+- Golden Egg META: WATCH 52 / C, Data DEGRADED with explicit unusable-quote reason; quote OBSERVED, derived layers COMPUTED, options UNUSABLE. Daily equity timing shows 20:00 UTC and session closed.
+- Golden Egg ETH: WATCH 54 / C, Data DEGRADED; sampled OI 17.27B, perp volume 33.51B across 3 venues is restored as PARTIAL context. Funding/annualisation remain unavailable and are excluded from directional confirmation. UTC daily close is exactly 00:00. Its DVE summary now identifies the adverse 11-sample historical mean/hit rate instead of calling it an expected forecast.
+
+- META Fundamentals: P/E 27.91, provider cap $1.70T, elevated-multiple wording and explicit snapshot/valuation basis verified. The later Equity Explorer check still showed provider P/E 25.07; final parity patch applies the same valuation helper there.
+- META chart: Window High/Low/VWAP labels, 100-bar loaded range, extended-hours warning, unusually wide-range warning and unavailable dealer overlay verified. The 593.35 low remains an unresolved source-print reconciliation, not silently changed.
+- ETH Capital Pressure: synthetic liquidation/positioning clusters are absent. Actual hourly-derived EQH/EQL/UTC-window levels remain. Permission is blocked. A leftover static aligned-strategy list under that blocker is removed by the final parity patch, and displayed weighting is zero when blocked.
+- Candidate Research: META correctly displays ticker-relevant dated articles; ETH correctly retains its identity but returned no articles through the old crypto-news path. Final parity patch uses Alpha Vantage’s explicit CRYPTO:ETH identity, bounds the request, removes topic-only substitution, and distinguishes provider failure from a successful empty result. Five request/response contract tests passed.
+- Explorer handoffs: META and ETH both load automatically from the candidate URL. ETH structure score is labelled 100/100 separately from Not aligned permission; missing comparable OI change is distinguished from its observed absolute OI.
+- ETH DVE: both input coverage surfaces now agree at 89%; signal-bar close is 2775.43, open/low 2644.73 and high 2804.42, rather than a later spot quote. Projection is labelled historical mean, low quality, 11 samples; regime weights are explicitly heuristic.
+- META scanner backtest rerun reproduced +33.2% / 28 trades with Marked Equity and Bar-close Drawdown labels. AIO META reproduced −3.4% / 7 trades (PF .82); AIO ETH reproduced −8.8% / 5 trades (PF .23). No browser backtest error was reproduced in these checks. The generic earlier server error remains unidentified; final patch preserves sanitized diagnostic text for future investigation.
+
+- META Time Gravity now shows no active overnight equity decompression windows and regular-session first closes (09:35 ET for 5m, 10:30 ET for 1h, 16:00 ET daily). Its calendar column measures elapsed time from the day anchor; the final text correction labels it From anchor, not a live countdown. Coverage remains 57% with unavailable 6h/8h/weekly inputs.
+- Ranked Scanner after b820a36 again rendered 20 rows, 10 equities and 10 crypto, without the former missing-table/crypto-timeout incident. Limited-universe warnings remain visible; one returned crypto row is degraded.
+- Options Terminal IV and chain badges are now degraded with quote-time warnings and 0% quoted coverage. The final text correction also removes a hard-coded +0.00% underlying price change when that feed does not provide change.
+
+### Final parity corrections
+
+A small final follow-up addresses residual Equity Explorer P/E, candidate-specific crypto news routing, blocked-flow strategy wording, missing backtest diagnostics, and the two time/change labels above. Five new provider contract tests passed; the targeted rerun totals 38 passing tests (33 repeat existing gates, five new). The production build passed. Two final text-only availability/calendar label corrections were made afterward and receive an additional TypeScript check; Render builds the complete final tree before live acceptance.

@@ -313,7 +313,7 @@ export default function ResearchPage() {
       {tab === 'News' && (
         <Card>
           <p className="mb-3 text-sm font-semibold text-emerald-300">{candidateSymbol ? `${candidateSymbol} · symbol-relevant news` : 'Market news'} · source publication times shown below</p>
-          {news.loading ? <SkeletonRows n={8} /> : articles.length === 0 ? (
+          {news.loading ? <SkeletonRows n={8} /> : news.error ? <p className="py-4 text-xs text-amber-300">News feed unavailable: {news.error}</p> : articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-8 text-center">No news available</div>
           ) : (
             <div className="space-y-3">

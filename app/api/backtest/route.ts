@@ -262,10 +262,10 @@ export async function POST(req: NextRequest) {
       diagnostics,
     });
   } catch (error: any) {
-    logger.error('Backtest error', { 
-      error: error?.message || 'Failed to run backtest',
-      stack: error?.stack
-    });
+    const diagnostic = String(error?.message || 'Failed to run backtest')
+      .replace(/https?:\/\/[^\s]+/g, '[provider URL]')
+      .replace(/((?:apikey|api_key|token|secret|password)=)[^&\s]+/gi, '$1[redacted]');
+    logger.error('Backtest error', new Error(diagnostic));
     
     return NextResponse.json(
       { error: error.message || 'Failed to run backtest' },

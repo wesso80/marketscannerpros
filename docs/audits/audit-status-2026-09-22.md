@@ -9,6 +9,10 @@ This register consolidates the September 21–22 reports. It supersedes their hi
 - `3fb76d0` backtest-data-integrity changes are on GitHub main and **live on both Render services**. Render web deployment `dep-daotivn40ujc73bpq3kg` finished at 01:30:29 UTC; worker deployment `dep-daotivv40ujc73bpq4hg` finished at 01:28:30 UTC. Live historical-provider/backtest outcome checks remain outstanding.
 - This release repairs the ranked scanner outage described below. Commit `9dfee17` is live on both services; production verification follows below.
 
+## Candidate remediation releases
+
+The later META/ETH workflow audit and live repair passes are recorded in `candidate-release-verification-2026-09-22.md`. Initial release `df352f1` is live on Render; follow-up `b820a36` passed the production build and 200 focused tests and has been pushed to main. Its live acceptance is recorded in that supplement. These reports supersede earlier outstanding items specifically where evidence is now supplied: next-open/cost/marked-equity scanner tests, usable-options gating, candidate news/explorer routing, and verified candle/session identity. They do not close the operational, account-role, dataset or forward-performance gates below.
+
 ## Current scanner incident
 
 The authenticated ranked page returned 10 equities but no crypto, followed by “Data request timed out after 30 seconds.” Render logs show a crypto scan beginning at 01:21:19 UTC and processing its final coin at 01:22:27: histories were fetched serially, exceeding the client deadline. The BTC benchmark was also fetched separately. User screenshots additionally show the results and filter controls absent on desktop despite the count being populated. That exact display failure was not reproduced at the audit browser's 1363px viewport; the affected responsive wrappers use generic hidden/medium-breakpoint utilities, and the repair gives scanner tables, cards and tabs explicit, scoped display rules.

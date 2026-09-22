@@ -1,3 +1,4 @@
+import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
@@ -250,6 +251,7 @@ export async function GET(request: NextRequest) {
     const week52Range = week52High - week52Low;
     const week52Position = week52Range ? ((price - week52Low) / week52Range) * 100 : 50;
 
+    const valuation = valuationAtPrice(price, overview.EPS, null, overview.MarketCapitalization);
     const response = {
       company: {
         symbol: overview.Symbol,
@@ -276,8 +278,10 @@ export async function GET(request: NextRequest) {
         latestTradingDay,
       },
       valuation: {
-        marketCap: parseFloat(overview.MarketCapitalization) || 0,
-        pe: parseFloat(overview.PERatio) || 0,
+        marketCap: valuation.marketCap,
+        pe: valuation.pe,
+        basis: valuation.basis,
+        providerPe: overview.PERatio,
         forwardPE: parseFloat(overview.ForwardPE) || 0,
         peg: parseFloat(overview.PEGRatio) || 0,
         priceToSales: parseFloat(overview.PriceToSalesRatioTTM) || 0,

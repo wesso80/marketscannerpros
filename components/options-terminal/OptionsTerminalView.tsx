@@ -146,7 +146,6 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
   }, []);
 
   const spot = chain.underlyingPrice;
-  const changePct = 0; // AV doesn't return change — use 0
   const [updatedLabel, setUpdatedLabel] = useState('');
   useEffect(() => {
     if (chain.loading) { setUpdatedLabel('Loading…'); return; }
@@ -344,9 +343,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     {spot > 0 ? `$${spot.toFixed(2)}` : '—'}
                   </div>
                   {spot > 0 && (
-                    <div className={`text-sm font-semibold ${changePct >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-                      {changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%
-                    </div>
+                    <div className="text-xs text-slate-400">Price change unavailable in this feed</div>
                   )}
                 </div>
               </div>

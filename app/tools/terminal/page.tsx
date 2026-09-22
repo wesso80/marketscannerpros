@@ -856,7 +856,7 @@ export default function TerminalPage() {
                       <div className="text-base font-bold text-emerald-400">{pm.regime}</div>
                     </div>
                   </div>
-                  {pm.decision && <div className="text-xs text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
+                  {perm && !perm.blocked && pm.decision && <div className="text-xs text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
                 </Card>
               )}
 
@@ -948,14 +948,14 @@ export default function TerminalPage() {
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Weighting Factor</span>
-                        <span className="text-white font-mono">{perm.sizeMultiplier?.toFixed(2) ?? '—'}x</span>
+                        <span className="text-white font-mono">{perm.blocked ? '0.00' : perm.sizeMultiplier?.toFixed(2) ?? '—'}x</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Analysis Mode</span>
                         <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? '—'}</span>
                       </div>
                       {perm.blocked && <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1">Analysis paused: {perm.noTradeMode?.reason || 'conditions not met'}</div>}
-                      {perm.allowed?.length > 0 && (
+                      {!perm.blocked && perm.allowed?.length > 0 && (
                         <div className="mt-2">
                           <div className="text-[11px] text-slate-500 uppercase mb-1">Aligned</div>
                           <div className="flex flex-wrap gap-1">

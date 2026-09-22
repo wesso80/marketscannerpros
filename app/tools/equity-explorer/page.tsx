@@ -35,7 +35,8 @@ interface EquityData {
   };
   valuation: {
     marketCap: number;
-    pe: number;
+    pe: number | null;
+    basis?: string;
     forwardPE: number;
     peg: number;
     priceToSales: number;
@@ -608,7 +609,7 @@ function EquityExplorerContent() {
                 ['Momentum', getQuickSignals(data).momentum.label],
                 ['Volatility', getQuickSignals(data).volatility.label],
                 ['Volume', formatVolume(data.quote.volume)],
-                ['P/E', data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'],
+                ['P/E', (data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'N/A'],
               ].map(([k, v]) => (
                 <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
                   <span className="font-semibold text-slate-100">{k}</span> · {v}
@@ -783,15 +784,16 @@ function EquityExplorerContent() {
               </summary>
 
               <div className="mt-2 space-y-2">
+            {data.valuation.basis && <p className="text-xs text-slate-400">{data.valuation.basis}</p>}
             {/* Key Stats Grid */}
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                <p className="text-[11px] uppercase text-slate-500">Market Cap</p>
+                <p className="text-[11px] uppercase text-slate-500">Market Cap (provider snapshot)</p>
                 <p className="text-sm font-bold">{formatNumber(data.valuation.marketCap)}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
                 <p className="text-[11px] uppercase text-slate-500">P/E Ratio</p>
-                <p className="text-sm font-bold">{data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'}</p>
+                <p className="text-sm font-bold">{(data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'N/A'}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
                 <p className="text-[11px] uppercase text-slate-500">Volume</p>
@@ -813,7 +815,7 @@ function EquityExplorerContent() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">P/E (TTM)</p>
-                    <p className="font-semibold">{data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{(data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Forward P/E</p>

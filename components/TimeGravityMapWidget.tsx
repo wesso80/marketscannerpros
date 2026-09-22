@@ -824,7 +824,7 @@ function ForwardSchedulePanel({
         <div className="grid grid-cols-[60px_1fr_70px_50px] gap-1 px-2 py-1.5 bg-gray-900/60 text-[10px] text-gray-500 font-semibold uppercase">
           <span>TF</span>
           <span>Close Time</span>
-          <span className="text-right">In</span>
+          <span className="text-right" title="Elapsed time from the selected day’s midnight anchor; not a live countdown">From anchor</span>
           <span className="text-right">Wt</span>
         </div>
 
