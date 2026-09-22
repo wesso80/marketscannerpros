@@ -7,7 +7,7 @@ This register consolidates the September 21–22 reports. It supersedes their hi
 - GitHub and Render connectors are accessible again in this session.
 - `335a7c5` performance-integrity changes were deployed to web and worker and received the live checks recorded in that report.
 - `3fb76d0` backtest-data-integrity changes are on GitHub main and **live on both Render services**. Render web deployment `dep-daotivn40ujc73bpq3kg` finished at 01:30:29 UTC; worker deployment `dep-daotivv40ujc73bpq4hg` finished at 01:28:30 UTC. Live historical-provider/backtest outcome checks remain outstanding.
-- This release repairs the ranked scanner outage described below. Its production verification is recorded separately after deployment.
+- This release repairs the ranked scanner outage described below. Commit `9dfee17` is live on both services; production verification follows below.
 
 ## Current scanner incident
 
@@ -22,9 +22,22 @@ Repair:
 - Explicit scanner desktop/mobile display rules cover both partial-loading and completed results, plus market filter controls.
 - Request logs no longer print the session customer identifier.
 
-Regression evidence: **75 tests passed in six files**, including parallel timing, hung/failed/unstarted symbols, immutable returned results, exhausted budgets and deadline forwarding for daily/hourly/30-minute/15-minute providers. Build result and live verification are recorded in the release follow-up. A four-second source deadline can reduce coverage during provider incidents; missing symbols are disclosed, never manufactured.
+Regression evidence: **75 tests passed in six files**, including parallel timing, hung/failed/unstarted symbols, immutable returned results, exhausted budgets and deadline forwarding for daily/hourly/30-minute/15-minute providers. The final production build passed, including TypeScript and all 400 static-generation tasks (local build-only placeholder credentials; no live provider secrets). A four-second source deadline can reduce coverage during provider incidents; missing symbols are disclosed, never manufactured.
 
-The live Pro Fast comparison took **54.4 seconds**, evaluated 81 of 100 requested coins (19 excluded by universe validation), and returned five matches. Its enrichment path could issue seven extra Alpha Vantage requests per candidate to supplement or replace CoinGecko indicators. This release removes that mixed-source fallback, preserves the market-data candidate when technical evidence is missing, uses the market provider's coin ID, bounds individual reads and the enrichment batch, and publishes enrichment availability counts. The ranked-only production build passed; the combined release must also pass before publication.
+The live Pro Fast comparison took **54.4 seconds**, evaluated 81 of 100 requested coins (19 excluded by universe validation), and returned five matches. Its enrichment path could issue seven extra Alpha Vantage requests per candidate to supplement or replace CoinGecko indicators. This release removes that mixed-source fallback, preserves the market-data candidate when technical evidence is missing, uses the market provider's coin ID, bounds individual reads and the enrichment batch, and publishes enrichment availability counts. Both the ranked-only and final combined production builds passed before publication.
+
+## Live repair verification
+
+Repair commit **`9dfee1755e25658e400dbf7ff80138de1e3c8a76`** is deployed:
+
+- Render web: `dep-daotstm7bikc73b7g860`, live at **01:51:38 UTC** on September 22.
+- Render worker: `dep-daotsu67bikc73b7g9n0`, live at **01:49:27 UTC**.
+- Authenticated Ranked Daily: **20 visible rows — 10 equities and 10 crypto**. Crypto evaluated **23/25** attempted symbols; AVAX and LTC provider reads were unavailable and explicitly disclosed. The previous 30-second timeout did not recur in this check. The scoped desktop table had computed display `block` and a nonzero rendered height.
+- Authenticated Pro Fast, crypto, daily, universe 100, default two-factor agreement: **12.6 seconds**, versus **54.4 seconds** before repair with the same settings. **81 evaluated, 9 matched/returned, 9/10 technical enrichments completed**. The original five matches became nine with more available technical evidence; the underlying market snapshot also changed between runs. This is a point-in-time comparison, not a latency service-level guarantee.
+- The exact original user's desktop viewport and mobile device were not available for verification; the 1363px audit browser displayed the repaired table and filters. Reload after deployment is needed to receive the new client assets.
+- Deep mode, all other intervals, concurrent load and repeated outage/recovery checks remain in the acceptance backlog. Missing history and unavailable evidence are still disclosed. Restored functionality is not complete provider coverage or proof of trading performance.
+
+The documentation update containing these observations does not change application code.
 
 ## Original issue register reconciled
 
@@ -39,7 +52,7 @@ The live Pro Fast comparison took **54.4 seconds**, evaluated 81 of 100 requeste
 | A07 | Heuristic score labels and permission precedence clarified | Statistical calibration, or retain explicit heuristic labels |
 | A08 | News freshness gate and topic word boundaries; Guides contract fixed and live verified | Retest all news subviews, provider observation times and outage behavior |
 | A09 | Calendar uses confirmed future events and discloses coverage gaps | Configure and verify missing calendar providers, timezone/session/event coverage |
-| A10 | Ranked request failure reproduced and repaired in this release | Live outage/recovery and latency acceptance; broader coverage/load monitoring |
+| A10 | Ranked request failure reproduced and repaired in this release | Daily Ranked and Pro Fast checks passed as above; all intervals/Deep, repeated outage recovery and coverage/load monitoring remain |
 | A11 | Incompatible funding withheld, scoped OI comparison requires 23–25-hour history, TVL label fixed | Confirm accumulated compatible OI history and funding-period normalization against source venues |
 | A12 | Directional entry/stop/target geometry validated; R denominator and capped projection label corrected | Live upstream scenario-level parity across directions/assets |
 | A13 | Pro filters/sorting now precede shortlist limit; request identity, exclusions and counts implemented | Full Fast/Deep/live provider matrix, recoveries and cross-asset liquidity/spread/event constraints |
