@@ -1,5 +1,17 @@
 # Candidate release acceptance — 22 September 2026
 
+## Latest verified release
+
+Application code **`d612670a5c11f3ab14540024f72924ac54044c93` is live on both Render services**. Web deployment `dep-dap0ffgu01pc73d14j40` finished at **04:47:50 UTC**; worker `dep-dap0ffou01pc73d14jv0` finished at **04:45:55 UTC**, September 22. The GitHub tree matched tested local tree `8835e7ffeabb2cb5645c54f2e3519e810c377f4a`.
+
+The follow-up regression groups contain **205 unique passing focused tests** (200 earlier plus five new provider-contract tests; reruns are not counted twice). The production build passed, with an additional TypeScript pass after two text-only changes; Render then built and deployed the complete final source.
+
+Final live checks confirmed META Explorer P/E **27.91**, consistent with Fundamentals; ETH Research returned **seven dated, ticker-relevant articles**; Options Terminal says **Price change unavailable in this feed**; and blocked ETH Capital Pressure displays **0.00x** weighting, **0%** risk weighting and an analysis-paused reason, with the contradictory eligible-strategy list absent. The scanner had already passed the b820a36 acceptance with 20 visible rows, 10 per asset class.
+
+These fixes restore and strengthen the audited workflow. They do **not** establish full source coverage, predictive edge, operational sign-off or a 5/5 institutional rating. The historical observations below retain their original release and snapshot context.
+
+## First repair release
+
 Code release: `df352f14544b752e553e7f45bdfc0681cd829329`. Published to main after the local Git tree matched the GitHub tree and the production build passed.
 
 Render web deployment: `dep-daovl3jrjlhs73f44lpg`. Worker: `dep-daovl3rrjlhs73f44mlg`. Live acceptance is recorded below as observed.
@@ -114,4 +126,4 @@ The software must continue to withhold claims when timestamps, comparable histor
 
 ### Final parity corrections
 
-A small final follow-up addresses residual Equity Explorer P/E, candidate-specific crypto news routing, blocked-flow strategy wording, missing backtest diagnostics, and the two time/change labels above. Five new provider contract tests passed; the targeted rerun totals 38 passing tests (33 repeat existing gates, five new). The production build passed. Two final text-only availability/calendar label corrections were made afterward and receive an additional TypeScript check; Render builds the complete final tree before live acceptance.
+A small final follow-up addresses residual Equity Explorer P/E, candidate-specific crypto news routing, blocked-flow strategy wording, missing backtest diagnostics, and the two time/change labels above. Five new provider contract tests passed; the targeted rerun totals 38 passing tests (33 repeat existing gates, five new). The production build passed. Two final text-only availability/calendar label corrections were made afterward and passed an additional TypeScript check. Render built and deployed the complete final tree; final live acceptance is recorded at the top of this report.

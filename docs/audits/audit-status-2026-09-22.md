@@ -11,7 +11,7 @@ This register consolidates the September 21–22 reports. It supersedes their hi
 
 ## Candidate remediation releases
 
-The later META/ETH workflow audit and live repair passes are recorded in `candidate-release-verification-2026-09-22.md`. Initial release `df352f1` is live on Render; follow-up `b820a36` passed the production build and 200 focused tests and has been pushed to main. Its live acceptance is recorded in that supplement. These reports supersede earlier outstanding items specifically where evidence is now supplied: next-open/cost/marked-equity scanner tests, usable-options gating, candidate news/explorer routing, and verified candle/session identity. They do not close the operational, account-role, dataset or forward-performance gates below.
+The later META/ETH workflow audit and live repair passes are recorded in `candidate-release-verification-2026-09-22.md`. The final application release `d612670` is live on both Render services (web 04:47:50 UTC; worker 04:45:55 UTC, September 22), following `df352f1` and `b820a36`. Across the follow-up groups, 205 unique focused tests passed, along with production build and TypeScript checks. Final live acceptance, deployment receipts and remaining limits are recorded in that supplement. These reports supersede earlier outstanding items specifically where evidence is now supplied: next-open/cost/marked-equity scanner tests, usable-options gating, candidate news/explorer routing, and verified candle/session identity. They do not close the operational, account-role, dataset or forward-performance gates below.
 
 ## Current scanner incident
 
