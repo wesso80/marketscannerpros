@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { getCachedBarsOnly, setCachedBars } from '@/lib/barCache';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -81,36 +80,6 @@ export async function GET(req: NextRequest) {
   }
 
   const isCrypto = isCryptoSymbol(symbol);
-
-  const cached = getCachedBarsOnly(symbol, isCrypto ? 'crypto' : 'equity', interval);
-  if (cached && !isCrypto) {
-    const cachedBars: IntradayBar[] = cached.bars.map((bar) => ({
-      timestamp: typeof bar.timestamp === 'string' ? bar.timestamp : bar.timestamp.toISOString(),
-      open: bar.open,
-      high: bar.high,
-      low: bar.low,
-      close: bar.close,
-      volume: bar.volume,
-    }));
-    const lastRefreshed = cachedBars[cachedBars.length - 1]?.timestamp || new Date().toISOString();
-    return NextResponse.json({
-      symbol,
-      interval,
-      lastRefreshed,
-      timeZone: 'UTC',
-      source: 'memory',
-      data: cachedBars,
-      metadata: {
-        information: 'Served from MarketScanner Pros bar cache',
-        symbol,
-        lastRefreshed,
-        interval,
-        outputSize,
-        timeZone: 'UTC',
-      },
-      isCrypto,
-    } satisfies IntradayResponse);
-  }
 
   if (!isCrypto && !ALPHA_VANTAGE_KEY) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
@@ -223,6 +192,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Convert to array of bars
+    const intervalMs = parseInt(interval, 10) * 60_000;
+    if (metaData['4. Interval'] !== interval || String(metaData['2. Symbol']).toUpperCase() !== symbol) {
+      return NextResponse.json({ error: 'Provider candle identity does not match the request' }, { status: 503 });
+    }
     const bars: IntradayBar[] = Object.entries(timeSeries)
       .map(([timestamp, values]: [string, any]) => ({
         timestamp: equityObservationUtc(timestamp).toISOString(),
@@ -232,13 +205,23 @@ export async function GET(req: NextRequest) {
         close: parseFloat(values['4. close']),
         volume: parseInt(values['5. volume'], 10)
       }))
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      .filter(b => {
+        const t = Date.parse(b.timestamp);
+        return Number.isFinite(t) && t + intervalMs <= Date.now() &&
+          [b.open,b.high,b.low,b.close].every(n => Number.isFinite(n) && n > 0) &&
+          b.high >= Math.max(b.open,b.low,b.close) && b.low <= Math.min(b.open,b.high,b.close);
+      })
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    const deltas = bars.slice(1).map((b,i) => Date.parse(b.timestamp) - Date.parse(bars[i].timestamp));
+    if (!bars.length || deltas.some(d => d < intervalMs || d % intervalMs !== 0) || (deltas.length > 0 && !deltas.includes(intervalMs))) {
+      return NextResponse.json({ error: 'Provider candle cadence could not be verified for this interval' }, { status: 503 });
+    }
 
     const result: IntradayResponse = {
       symbol: metaData['2. Symbol'],
       interval: interval,
       lastRefreshed: bars.at(-1)?.timestamp || '',
-      timeZone: metaData['6. Time Zone'],
+      timeZone: 'UTC',
       source: 'alpha_vantage',
       data: bars,
       metadata: {
@@ -247,14 +230,10 @@ export async function GET(req: NextRequest) {
         lastRefreshed: bars.at(-1)?.timestamp || '',
         interval: metaData['4. Interval'],
         outputSize: metaData['5. Output Size'],
-        timeZone: metaData['6. Time Zone']
+        timeZone: 'UTC'
       },
       isCrypto: false
     };
-
-    if (bars.every(b => b.volume != null && Number.isFinite(b.volume))) {
-      setCachedBars(symbol, 'equity', interval, bars.map(b => ({ ...b, volume: b.volume! })));
-    }
 
     return NextResponse.json(result);
   } catch (error) {

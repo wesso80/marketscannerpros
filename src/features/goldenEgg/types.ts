@@ -27,7 +27,7 @@ export interface GoldenEggCanonical {
   scores: { structure: number; flow: number; momentum: number; riskQuality: number; notes: { structure: string[]; risk: string[]; flow: string[]; momentum: string[] } };
   timing: { relation: 'supportive' | 'conflict' | 'neutral' | 'unavailable'; valid: boolean; eligibleForHardGate: boolean; direction: 'bullish' | 'bearish' | 'neutral'; signalStrength: string; confidence: number | null; sessionState: 'open' | 'closed' | 'always_open' | 'unknown'; reasons: string[] };
   extension: { rsiExtended: boolean; stochExtended: boolean; dveExhaustion: number | null; dveSignal: string | null; dveSignalStrength: string | null; label: string };
-  derivatives: { fundingRatePercent: number; fundingInterval: string; annualizedPct: number; openInterestUsd: number; perpVolume24hUsd: number; exchanges: number; crowding: 'neutral' | 'long_crowded' | 'short_crowded'; note: string } | null;
+  derivatives: { fundingRatePercent: number | null; fundingInterval: string; annualizedPct: number | null; openInterestUsd: number; perpVolume24hUsd: number; exchanges: number; crowding: 'unavailable' | 'neutral' | 'long_crowded' | 'short_crowded'; note: string } | null;
   options: {
     expiry: string; daysToExpiry: number; snapshotTs: string; putCallOi: number; avgIvPct: number | null; ivRank: null; expectedMovePct: number | null; maxPain: number | null;
     callWall: { strike: number; relation: string } | null; putWall: { strike: number; relation: string } | null; dealerGamma: string; unusualActivity: string;

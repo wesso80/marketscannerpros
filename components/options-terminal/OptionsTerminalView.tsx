@@ -207,8 +207,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       status: buildMarketDataProviderStatus({
         source: 'options-iv',
         provider: 'implied volatility model',
-        degraded: chain.ivMetrics.avgIV <= 0 || chain.ivMetrics.ivLevel === 'extreme',
+        degraded: true,
         warnings: [
+          'IV model observation time unavailable; this is not verified live IV.',
           chain.ivMetrics.avgIV <= 0 ? 'Average IV unavailable.' : null,
           chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV requires event and spread checks.' : null,
         ].filter(Boolean) as string[],
@@ -233,7 +234,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       label: 'Liquidity',
       value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Unavailable',
       status: liquidContracts.length === 0 ? 'missing' as const : tightSpreadPct >= 60 ? 'supportive' as const : 'conflicting' as const,
-      detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across priced contracts.` : 'Load a chain to compute spread and OI quality.',
+      detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across priced contracts.` : 'No usable bid/ask pairs; spread and liquidity quality are unavailable.',
     },
     {
       label: 'IV Context',
@@ -250,7 +251,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     chainIsStale ? 'Options chain is stale.' : null,
     avgSpreadPct > 12 ? `Average spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
     chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV environment.' : null,
-    rows.length === 0 && chain.contracts.length > 0 ? 'Current filters hide every strike.' : null,
+    rows.length === 0 && chain.contracts.length > 0 ? 'No quoted strikes pass the current liquidity filters.' : null,
   ].filter(Boolean).map((label) => ({
     label: label as string,
     severity: riskSeverity(label as string),
@@ -576,7 +577,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                       {rows.length === 0 && (
                         <tr>
                           <td colSpan={99} className="px-6 py-12 text-center text-sm text-zinc-400">
-                            {chain.loading ? 'Loading options chain…' : 'No strikes match your filters.'}
+                            {chain.loading ? 'Loading options chain…' : 'No quoted strikes pass these filters. Check the chain coverage warning above.'}
                           </td>
                         </tr>
                       )}

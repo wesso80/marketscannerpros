@@ -3,7 +3,6 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import type { ScanMode } from '@/lib/confluence-learning-agent';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
-import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/options-gex';
 
 const VALID_SCAN_MODES: ScanMode[] = [
   'scalping',
@@ -38,14 +37,6 @@ export async function GET(request: NextRequest) {
 
     const scanMode: ScanMode = VALID_SCAN_MODES.includes(scanModeRaw) ? scanModeRaw : 'intraday_1h';
     const analysis = await optionsAnalyzer.analyzeForOptions(symbol, scanMode, expirationDate);
-    const dealerGamma = calculateDealerGammaSnapshot(analysis.openInterestAnalysis, analysis.currentPrice);
-    const dealerIntelligence = buildDealerIntelligence({
-      snapshot: dealerGamma,
-      currentPrice: analysis.currentPrice,
-      baseScore: Number(analysis.compositeScore?.confidence ?? 50),
-      setupDescriptor: `${analysis.strategyRecommendation?.strategy || ''} ${analysis.tradeSnapshot?.oneLine || ''}`,
-      direction: analysis.direction,
-    });
 
     return NextResponse.json({
       success: true,
@@ -53,8 +44,10 @@ export async function GET(request: NextRequest) {
         symbol: analysis.symbol,
         currentPrice: analysis.currentPrice,
         expirationDate: analysis.openInterestAnalysis?.expirationDate || null,
-        dealerGamma,
-        dealerIntelligence,
+        dealerGamma: null,
+        dealerIntelligence: null,
+        dealerPositionVerified: false,
+        warning: 'Dealer positions are unavailable. Unsigned contract gamma and open interest cannot establish dealer gamma, a gamma flip, or directional dealer support.',
       },
       timestamp: new Date().toISOString(),
     });

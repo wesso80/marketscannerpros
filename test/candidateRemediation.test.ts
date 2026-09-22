@@ -1,3 +1,4 @@
+import { getCurrentCandleBoundaries } from '../lib/time/decompressionTiming';
 import { optionEntryBlocker } from '../lib/options/decisionGate';
 import { describe, expect, it } from 'vitest';
 import { closedCandles, aggregateClosedCandles } from '../lib/market/candleIntegrity';
@@ -44,9 +45,16 @@ describe('candidate audit data contracts', () => {
   });
   it('makes META valuation coherent and withholds non-positive or missing EPS', () => {
     expect(valuationAtPrice(741.25,26.56,2e9).pe).toBeCloseTo(27.9085,3);
-    expect(valuationAtPrice(741.25,26.56,2e9).marketCap).toBe(1482500000000);
+    expect(valuationAtPrice(741.25,26.56,2e9).marketCap).toBeNull();
+    expect(valuationAtPrice(741.25,26.56,2e9,1.7e12)).toMatchObject({marketCap:1.7e12,reportedShareValue:1482500000000});
     expect(valuationAtPrice(100,-2,null)).toMatchObject({pe:null,marketCap:null});
     expect(valuationAtPrice(null,2,100)).toMatchObject({pe:null,marketCap:null});
+  });
+  it('keeps equity gravity windows inside exchange sessions rather than the crypto clock', () => {
+    const now = new Date('2026-09-22T04:05:00Z');
+    expect(getCurrentCandleBoundaries('1H',now,'equity').close.toISOString()).toBe('2026-09-22T14:30:00.000Z');
+    expect(getCurrentCandleBoundaries('1D',now,'equity').close.toISOString()).toBe('2026-09-22T20:00:00.000Z');
+    expect(getCurrentCandleBoundaries('1H',now,'crypto').close.toISOString()).toBe('2026-09-22T05:00:00.000Z');
   });
   it('normalizes NY timestamps across winter and summer', () => {
     expect(equityObservationUtc('2026-01-12 09:30:00').toISOString()).toBe('2026-01-12T14:30:00.000Z');

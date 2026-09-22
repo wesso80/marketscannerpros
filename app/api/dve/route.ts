@@ -139,6 +139,7 @@ export async function GET(request: NextRequest) {
     const dveInput: DVEInput = {
       price: {
         closes: priceData.historicalCloses,
+        opens: priceData.historicalOpens,
         highs: priceData.historicalHighs,
         lows: priceData.historicalLows,
         currentPrice: priceData.price,

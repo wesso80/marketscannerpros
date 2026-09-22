@@ -1534,7 +1534,7 @@ export default function DeepAnalysisPage({
                         <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#fff" }}>{result.company.sector || 'N/A'}</div>
                       </div>
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Market Cap</div>
+                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Market cap (provider snapshot)</div>
                         <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#fff" }}>{formatLargeNumber(parseFloat(result.company.marketCap))}</div>
                       </div>
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
@@ -1634,7 +1634,7 @@ export default function DeepAnalysisPage({
                             <div style={{ fontSize: "1.2rem", fontWeight: "600", color: "#F59E0B" }}>#{result.cryptoData.marketData.marketCapRank}</div>
                           </div>
                           <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Market Cap</div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Market cap (provider snapshot)</div>
                             <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#fff" }}>{formatLargeNumber(result.cryptoData.marketData.marketCap)}</div>
                           </div>
                           <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
@@ -1705,7 +1705,7 @@ export default function DeepAnalysisPage({
                 </h3>
                 {(result.optionsData.snapshotTs || result.optionsData.notes?.length) && (
                   <div style={{ color: "#64748B", fontSize: "0.72rem", marginBottom: "1rem" }}>
-                    {result.optionsData.snapshotTs ? `Snapshot ${String(result.optionsData.snapshotTs).slice(0, 16).replace('T', ' ')} UTC. ` : ''}
+                    {result.optionsData.snapshotTs ? `Provider observation ${result.optionsData.snapshotTs}${String(result.optionsData.snapshotTs).length === 10 ? ' (date only; time unavailable)' : ''}. ` : ''}
                     {result.optionsData.quality && result.optionsData.quality.level !== 'GOOD' ? `Not used as flow evidence: ${result.optionsData.quality.reasons.join('; ')}. ` : ''}
                     {(result.optionsData.notes ?? []).slice(0, 2).join(' ')}
                     {' IV rank unavailable (no IV history); avg IV is the chain average.'}

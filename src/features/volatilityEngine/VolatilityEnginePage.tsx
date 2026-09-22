@@ -110,7 +110,7 @@ export default function VolatilityEnginePage() {
         degraded: reading.dataQuality.missing.length > 0,
         warnings: reading.dataQuality.missing.map((item) => `Missing input: ${item}.`),
       }),
-      coverageScore: Math.max(0, 100 - (reading.dataQuality.missing.length * 20)),
+      coverageScore: Math.round(reading.dataQuality.score),
     },
     {
       label: 'Projection',

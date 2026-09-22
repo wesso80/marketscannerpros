@@ -607,15 +607,15 @@ export function detectSignal(
 
   const bbwp = volState.bbwp;
   const sma5 = volState.bbwpSma5;
-  const lastClose = priceInput.currentPrice;
+  const lastClose = priceInput.closes.at(-1) ?? priceInput.currentPrice;
   const lastIdx = priceInput.closes.length - 1;
 
   function makeTriggerBar(): Pick<DVESignal, 'triggerBarPrice' | 'triggerBarOpen' | 'triggerBarHigh' | 'triggerBarLow'> {
     return {
       triggerBarPrice: lastClose,
-      triggerBarOpen: priceInput.opens?.[lastIdx] ?? lastClose,
-      triggerBarHigh: priceInput.highs?.[lastIdx] ?? lastClose,
-      triggerBarLow: priceInput.lows?.[lastIdx] ?? lastClose,
+      triggerBarOpen: priceInput.opens?.[lastIdx],
+      triggerBarHigh: priceInput.highs?.[lastIdx],
+      triggerBarLow: priceInput.lows?.[lastIdx],
     };
   }
 
@@ -1349,7 +1349,7 @@ function buildSummary(
     parts.push(`${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} signal fired — strength ${signal.strength}/100.`);
 
     if (projection.sampleSize >= PROJECTION.MIN_SAMPLE_SIZE) {
-      parts.push(`Historical: ${projection.expectedMovePct > 0 ? '+' : ''}${projection.expectedMovePct}% expected, ${projection.hitRate}% hit rate.`);
+      parts.push(`Historical: ${projection.expectedMovePct > 0 ? '+' : ''}${projection.expectedMovePct}% mean move, ${projection.hitRate}% observed hit rate (${projection.sampleSize} samples).`);
     }
 
     if (invalidation.priceInvalidation != null) {

@@ -741,7 +741,7 @@ export default function IntradayChartsPage({
       );
       if (!response.ok) { setDealerOverlay(null); return; }
       const payload = await response.json();
-      if (!payload?.success) {
+      if (!payload?.success || payload.data?.dealerPositionVerified !== true) {
         setDealerOverlay(null);
         return;
       }
@@ -987,7 +987,7 @@ export default function IntradayChartsPage({
                 }`}>
                   {volatilityState}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">Session range {rangePercent.toFixed(2)}%</div>
+                <div className="mt-1 text-xs text-slate-400">Window range {rangePercent.toFixed(2)}%</div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] text-[var(--msp-text-muted)]">Dealer context</div>
@@ -1422,7 +1422,8 @@ export default function IntradayChartsPage({
                 <div className="mt-2 text-[11px] text-slate-400">
                   {outerTimeframe && <p className="text-slate-400">Research case: {outerTimeframe}. Chart detail: {interval}.</p>}
                   {data.warning && <p className="text-amber-300">{data.warning}</p>}
-                  Candle observation {new Date(data.lastRefreshed).toLocaleString()}
+                  Window: {new Date(data.data[0].timestamp).toLocaleString()} – {new Date(data.lastRefreshed).toLocaleString()} ({data.data.length} bars). {assetType !== 'crypto' && 'Equity data includes extended hours. RTH adds session markers; it does not filter the data.'}
+                  {rangePercent > 20 && <p className="text-amber-300">Large window range: inspect individual bars and extended-hours prints before relying on window VWAP or liquidity summaries.</p>}
                 </div>
               </div>
             </div>

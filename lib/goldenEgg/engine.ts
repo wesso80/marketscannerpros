@@ -243,7 +243,7 @@ function buildPayload(
   const p = price.price;
   if (extras.fundamentals) {
     const f = extras.fundamentals;
-    const v = valuationAtPrice(p, f.eps, f.sharesOutstanding);
+    const v = valuationAtPrice(p, f.eps, f.sharesOutstanding, f.marketCap);
     extras = { ...extras, fundamentals: { ...f, pe: v.pe, marketCap: v.marketCap,
       currentPrice: p, valuationBasis: v.basis, multiple: describeMultiple(v.pe, f.forwardPe, f.peg) } };
   }
@@ -287,7 +287,14 @@ function buildPayload(
   // Options chains that look pre-split or illiquid are display-only, never flow evidence.
   const optsUsable = optsIn && optsIn.canonical.quality.level !== 'UNUSABLE';
   const opts = optsUsable ? optsIn : null;
-  if (optsIn && !optsUsable) trust.reasons.push(`options chain unusable: ${optsIn.canonical.quality.reasons[0] ?? 'quality check failed'}`);
+  if (((assetClass === 'equity' && !optsIn) || (assetClass === 'crypto' && cryptoDerivs?.fundingRatePercent == null)) && trust.level === 'GOOD') {
+    trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85);
+    trust.reasons.push('Flow evidence unavailable; price and indicators remain separately inspectable.');
+  }
+  if (optsIn && !optsUsable) {
+    trust.reasons.push(`options chain unusable: ${optsIn.canonical.quality.reasons[0] ?? 'quality check failed'}`);
+    if (trust.level === 'GOOD') { trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85); }
+  }
 
   // ── Component scores ────────────────────────────────────────────────────────────────────────────────
   const structureQ = computeStructureQuality({
@@ -306,7 +313,7 @@ function buildPayload(
     const stochK = ind?.stochK ?? null;
     const stochD = ind?.stochD ?? null;
     const dveInput: DVEInput = {
-      price: { closes, highs: price.historicalHighs, lows: price.historicalLows, currentPrice: p, changePct: price.changePct, volume: price.volume, avgVolume: price.avgVolume },
+      price: { closes, opens: price.historicalOpens, highs: price.historicalHighs, lows: price.historicalLows, currentPrice: p, changePct: price.changePct, volume: price.volume, avgVolume: price.avgVolume },
       indicators: ind ? {
         macd: ind.macd, macdHist: ind.macdHist, macdSignal: ind.macdSignal, adx: ind.adx, atr: ind.atr, sma20: ind.sma20, sma50: ind.sma50,
         bbUpper: ind.bbUpper, bbMiddle: ind.bbMiddle, bbLower: ind.bbLower, stochK, stochD,
@@ -378,7 +385,7 @@ function buildPayload(
   // ── Weighted confluence (renormalised over present layers; never inflated by missing inputs) ───────
   const components = [
     { key: 'Structure', weight: 0.30, value: structureScore, present: ind != null },
-    { key: 'Flow',      weight: 0.25, value: flowScore,      present: opts != null || cryptoDerivs != null || mpe != null },
+    { key: 'Flow',      weight: 0.25, value: flowScore,      present: assetClass === 'crypto' ? cryptoDerivs?.fundingRatePercent != null : opts != null || mpe != null },
     { key: 'Momentum',  weight: 0.20, value: momentumScore,  present: ind != null },
     { key: 'Risk',      weight: 0.25, value: riskScore,      present: ind != null },
   ];
@@ -429,7 +436,6 @@ function buildPayload(
     if (macroRegime?.riskState === 'risk_off') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options positioning needs to confirm direction (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry})`, severity: 'should' });
-    if (flowScore < 50 && cryptoDerivs) flipConditions.push({ id: 'f7', text: `Derivatives positioning is not supportive (funding ${cryptoDerivs.fundingRatePercent >= 0 ? '+' : ''}${cryptoDerivs.fundingRatePercent.toFixed(4)}% per ~8h) — wait for positioning to cool or confirm with price`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
     if (riskScore < 50) flipConditions.push({ id: 'f9', text: `Risk conditions need to improve — ${riskQ.reasons.slice(0, 2).join('; ')}`, severity: 'should' });
     if (direction === 'NEUTRAL') flipConditions.push({ id: 'f10', text: `Direction is neutral (${bullish} bullish vs ${bearish} bearish layers of ${directionalLayers}) — a directional resolution is required`, severity: 'must' });
@@ -510,7 +516,7 @@ function buildPayload(
       verdict,
       highlights: [
         { label: `Expiry`, value: `${c.expiry} (${c.daysToExpiry} DTE)` },
-        { label: 'Snapshot', value: c.snapshotTs.slice(0, 16).replace('T', ' ') + ' UTC' },
+        { label: 'Snapshot', value: c.snapshotTs ? (/^\d{4}-\d{2}-\d{2}$/.test(c.snapshotTs) ? `${c.snapshotTs} (provider date; time unavailable)` : c.snapshotTs) : 'Unavailable' },
         { label: 'Put/Call OI', value: c.putCallOi.toFixed(2) },
         { label: 'Avg IV (chain)', value: c.avgIv != null ? `${(c.avgIv * 100).toFixed(0)}%` : 'n/a' },
         { label: 'Expected move (±1σ to expiry)', value: c.expectedMovePct != null ? `±${c.expectedMovePct.toFixed(1)}%` : 'n/a' },
@@ -529,23 +535,17 @@ function buildPayload(
     };
   } else if (cryptoDerivs) {
     const fmtUsd = (v: number) => formatUsdShort(v);
-    const derivVerdict: Verdict = cryptoDerivs.sentiment === 'Bullish' && isLong ? 'agree' : cryptoDerivs.sentiment === 'Bearish' && !isLong ? 'agree' : cryptoDerivs.sentiment === 'Neutral' ? 'neutral' : 'disagree';
     optionsEvidence = {
       enabled: true,
-      verdict: derivVerdict,
+      verdict: 'neutral',
       highlights: [
-        { label: 'Funding Rate (median venue, per ~8h interval)', value: `${cryptoDerivs.fundingRatePercent >= 0 ? '+' : ''}${cryptoDerivs.fundingRatePercent.toFixed(4)}%` },
-        { label: 'Annualized (×3×365)', value: `${cryptoDerivs.annualizedFunding >= 0 ? '+' : ''}${cryptoDerivs.annualizedFunding.toFixed(1)}%` },
-        { label: 'Open Interest', value: fmtUsd(cryptoDerivs.totalOpenInterest) },
-        { label: 'Perp Volume 24h', value: fmtUsd(cryptoDerivs.volume24h) },
-        { label: 'Exchanges', value: `${cryptoDerivs.exchanges}` },
-        { label: 'OI / perp volume', value: cryptoDerivs.volume24h > 0 ? (cryptoDerivs.totalOpenInterest / cryptoDerivs.volume24h).toFixed(2) : 'n/a' },
+        { label: 'Funding rate', value: 'Unavailable — funding periods not supplied' },
+        { label: 'Annualized funding', value: 'Unavailable' },
+        { label: 'Open interest (sampled venues)', value: fmtUsd(cryptoDerivs.totalOpenInterest) },
+        { label: 'Perp volume 24h (sampled venues)', value: fmtUsd(cryptoDerivs.volume24h) },
+        { label: 'Exchanges in sample', value: `${cryptoDerivs.exchanges}` },
       ],
-      notes: flow.notes.length ? flow.notes : [
-        cryptoDerivs.fundingRatePercent > 0.03 ? 'Positive funding — longs paying shorts (bullish crowding)' :
-        cryptoDerivs.fundingRatePercent < -0.01 ? 'Negative funding — shorts paying longs (bearish crowding)' :
-        'Funding at or near the exchange baseline — no significant positioning bias',
-      ],
+      notes: flow.notes,
     };
   }
 
@@ -587,7 +587,6 @@ function buildPayload(
     if (dveReading.signal.type !== 'none') narrativeBullets.push(`DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active — strength ${dveStrengthLabel(dveReading.signal.strength)}.`);
     if (dveReading.volatility.regime === 'compression' && dveReading.volatility.bbwp < 20) narrativeBullets.push(`Volatility compressed (BBWP ${dveReading.volatility.bbwp.toFixed(1)}) — expansion risk is elevated.`);
   }
-  if (cryptoDerivs && Math.abs(cryptoDerivs.fundingRatePercent) > 0.03) narrativeBullets.push(`Funding ${cryptoDerivs.fundingRatePercent > 0 ? 'positive' : 'negative'} at ${cryptoDerivs.fundingRatePercent.toFixed(4)}% per ~8h — ${cryptoDerivs.fundingRatePercent > 0 ? 'longs crowding' : 'shorts crowding'}.`);
   if (extras.crossMarket && extras.crossMarket.alignment !== 'unknown') narrativeBullets.push(`Cross-market: ${extras.crossMarket.summary}`);
   if (narrativeBullets.length === 0) narrativeBullets.push('Confluence is building but not yet at actionable thresholds.');
 
@@ -661,9 +660,9 @@ function buildPayload(
       label: setup.extended ? 'extended' : rsi.extended || stoch.extended ? 'elevated' : 'normal',
     },
     derivatives: cryptoDerivs ? {
-      fundingRatePercent: cryptoDerivs.fundingRatePercent, fundingInterval: '~8h (median venue)', annualizedPct: cryptoDerivs.annualizedFunding,
+      fundingRatePercent: cryptoDerivs.fundingRatePercent, fundingInterval: 'unavailable', annualizedPct: cryptoDerivs.annualizedFunding,
       openInterestUsd: cryptoDerivs.totalOpenInterest, perpVolume24hUsd: cryptoDerivs.volume24h, exchanges: cryptoDerivs.exchanges,
-      crowding: cryptoDerivs.fundingRatePercent > 0.03 ? 'long_crowded' : cryptoDerivs.fundingRatePercent < -0.01 ? 'short_crowded' : 'neutral',
+      crowding: 'unavailable',
       note: flow.notes[0] ?? 'funding near exchange baseline',
     } : null,
     options: optsIn ? {
@@ -710,7 +709,7 @@ function buildPayload(
       flipConditions,
       scoreBreakdown: [
         { key: 'Structure', weight: 30, value: Math.round(structureScore), note: structureScore >= 65 ? 'Trend alignment supportive' : structureScore >= 45 ? 'Mixed structure' : 'Structure opposing' },
-        { key: 'Flow', weight: 25, value: Math.round(flowScore), note: opts ? `P/C ${opts.putCallRatio.toFixed(2)} · ${opts.canonical.expiry}` : cryptoDerivs ? (flow.notes[0] ?? `Funding ${cryptoDerivs.fundingRatePercent.toFixed(4)}%`) : optsIn ? 'Options chain unusable' : 'No options/derivatives data' },
+        { key: 'Flow', weight: 25, value: Math.round(flowScore), note: opts ? `P/C ${opts.putCallRatio.toFixed(2)} · ${opts.canonical.expiry}` : cryptoDerivs ? (flow.notes[0] ?? 'Funding unavailable') : optsIn ? 'Options chain unusable' : 'No options/derivatives data' },
         { key: 'Momentum', weight: 20, value: Math.round(momentumScore), note: ind?.rsi != null ? rsi.label : undefined },
         { key: 'Risk', weight: 25, value: Math.round(riskScore), note: `Risk quality — ${riskQ.reasons[0]}` },
       ],
@@ -818,25 +817,10 @@ function computeFlowScore(
     if (c.quality.level === 'DEGRADED') { score -= 5; notes.push('chain quality degraded — flow read discounted'); }
   }
   if (cryptoDerivs) {
-    // Funding is one input; OI depth, perp turnover and venue breadth differentiate names that all sit at the +0.0100% baseline.
-    const f = cryptoDerivs.fundingRatePercent;
-    const oi = cryptoDerivs.totalOpenInterest;
-    const vol = cryptoDerivs.volume24h;
-    if (Math.abs(f) > 0.05) { score -= 15; notes.push(`funding ${f > 0 ? '+' : ''}${f.toFixed(4)}% per ~8h — heavily crowded ${f > 0 ? 'long' : 'short'}`); }
-    else if (Math.abs(f) > 0.03) { score -= 8; notes.push(`funding ${f > 0 ? '+' : ''}${f.toFixed(4)}% per ~8h — crowded ${f > 0 ? 'long' : 'short'}`); }
-    else if (f < -0.01) { score += 4; notes.push(`funding ${f.toFixed(4)}% — shorts paying, contrarian support for longs`); }
-    else notes.push(`funding ${f >= 0 ? '+' : ''}${f.toFixed(4)}% per ~8h — at/near exchange baseline (uninformative)`);
-    if (oi >= 5e9) { score += 10; notes.push(`deep open interest ${formatUsdShort(oi)}`); }
-    else if (oi >= 5e8) { score += 6; notes.push(`open interest ${formatUsdShort(oi)}`); }
-    else if (oi >= 5e7) { score += 2; notes.push(`modest open interest ${formatUsdShort(oi)}`); }
-    else if (oi > 0) { score -= 5; notes.push(`thin open interest ${formatUsdShort(oi)}`); }
-    if (vol > 0 && oi > 0) {
-      const turnover = vol / oi;
-      if (turnover > 3) { score += 4; notes.push(`perp turnover ${turnover.toFixed(1)}× OI — active participation`); }
-      else if (turnover < 0.5) { score -= 4; notes.push(`perp turnover ${turnover.toFixed(1)}× OI — positioning parked`); }
-    }
-    if (cryptoDerivs.exchanges >= 80) score += 3;
-    else if (cryptoDerivs.exchanges > 0 && cryptoDerivs.exchanges < 15) { score -= 4; notes.push(`only ${cryptoDerivs.exchanges} derivatives venues`); }
+    return { score: 50, notes: [
+      'Directional funding and comparable OI changes are unavailable; absolute OI is context, not directional confirmation.',
+      `Sampled open interest ${formatUsdShort(cryptoDerivs.totalOpenInterest)}; perp volume ${formatUsdShort(cryptoDerivs.volume24h)} across ${cryptoDerivs.exchanges} venues.`,
+    ] };
   }
   if (mpe) {
     score += (mpe.liquidity - 50) * 0.2;
@@ -875,7 +859,7 @@ function describeScore(key: string, val: number, ind: Indicators | null, opts: O
   }
   if (key === 'Flow') return opts
     ? `options ${flowNotes[0] ?? `P/C ${opts.putCallRatio.toFixed(2)}`}`
-    : cryptoDerivs ? (flowNotes.slice(0, 2).join('; ') || `derivatives funding ${cryptoDerivs.fundingRatePercent.toFixed(4)}% across ${cryptoDerivs.exchanges} venues`) : 'no options/derivatives data available';
+    : cryptoDerivs ? (flowNotes.slice(0, 2).join('; ') || 'Funding period unavailable; OI is context only') : 'no options/derivatives data available';
   if (key === 'Momentum') return ind?.rsi != null ? `${rsiRead(ind.rsi).label}; session ${price.changePct > 0 ? '+' : ''}${price.changePct.toFixed(1)}%` : 'momentum indicators pending';
   return '';
 }
@@ -1062,7 +1046,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     void recordEngineEvent({
       workspaceId: params.workspaceId, engine: 'golden_egg', eventType: 'golden_egg.analysis_generated', symbol,
       assetClass: assetClass === 'crypto' ? 'crypto' : assetClass === 'forex' ? 'fx' : 'equities', timeframe: tfLabel, source: 'golden_egg',
-      dataFreshness: payload.canonical?.dataTrust.freshness === 'stale' ? 'stale' : 'real-time',
+      dataFreshness: payload.canonical?.dataTrust.freshness === 'stale' ? 'stale' : 'unknown',
       inputs: { symbol, assetClass, timeframe: tfLabel, price: priceData.price, rsi: indData?.rsi, macdHist: indData?.macdHist, adx: indData?.adx, mpeComposite: mpeData?.composite, macroRegime: macroRegime?.riskState },
       scoreSnapshot: { direction: payload.layer1.direction, assessment: payload.layer1.assessment, confidence: payload.layer1.confidence, invalidation: payload.canonical?.levels.invalidation.price ?? null, trust: payload.canonical?.dataTrust.level ?? null },
       meta: { primaryBlocker: payload.layer1.primaryBlocker, timing: payload.canonical?.timing.relation ?? null },

@@ -20,7 +20,7 @@ import {
   isMarketOpenForSession,
   type SessionMode,
 } from '@/lib/time/sessionCloseEngine';
-import { isUSMarketHoliday, isNonTradingDay, lastTradingDayOfMonth } from '@/lib/time/marketHolidays';
+import { isUSMarketHoliday, isUSEquityEarlyClose, isNonTradingDay, lastTradingDayOfMonth } from '@/lib/time/marketHolidays';
 
 export type { SessionMode } from '@/lib/time/sessionCloseEngine';
 
@@ -967,7 +967,8 @@ export class ConfluenceLearningAgent {
   private getEquitySessionCloseUtcMs(year: number, month: number, day: number, sessionMode: SessionMode): number {
     const noonUtc = new Date(Date.UTC(year, month, day, 12, 0, 0));
     const nyOffsetMins = this.getTimezoneOffsetMinutes(noonUtc, 'America/New_York');
-    const closeHour = sessionMode === 'extended' ? 20 : 16;
+    const earlyClose = isUSEquityEarlyClose(year, month, day);
+    const closeHour = sessionMode === 'extended' ? (earlyClose ? 17 : 20) : (earlyClose ? 13 : 16);
     return Date.UTC(year, month, day, closeHour, 0, 0) - nyOffsetMins * 60 * 1000;
   }
 
@@ -1145,13 +1146,13 @@ export class ConfluenceLearningAgent {
     if (tfConfig.minutes <= 720) {
       const tfMs = tfConfig.minutes * 60_000;
       const periodEnd = Math.ceil(nowMs / tfMs) * tfMs;
-      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+      return Math.max(0, ((periodEnd - nowMs) / 60_000));
     }
 
     // ── Daily: midnight UTC (00:00) ──
     if (tfId === '1D') {
       const nextMidnight = Math.ceil(nowMs / DAY_MS) * DAY_MS;
-      return Math.max(0, Math.floor((nextMidnight - nowMs) / 60_000));
+      return Math.max(0, ((nextMidnight - nowMs) / 60_000));
     }
 
     // ── Multi-day (2D–30D): TradingView-aligned UTC boundaries ──
@@ -1163,7 +1164,7 @@ export class ConfluenceLearningAgent {
       const periodMs = N * DAY_MS;
       const diff = nowMs - TV_ANCHOR_MS;
       const periodEnd = Math.ceil(diff / periodMs) * periodMs + TV_ANCHOR_MS;
-      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+      return Math.max(0, ((periodEnd - nowMs) / 60_000));
     }
 
     // ── Weekly & Multi-week (1W–52W): TradingView anchor = Jan 5 2026 (Monday) ──
@@ -1176,13 +1177,13 @@ export class ConfluenceLearningAgent {
       const periodMs = N * WEEK_MS;
       const diff = nowMs - TV_WEEK_ANCHOR_MS;
       const periodEnd = Math.ceil(diff / periodMs) * periodMs + TV_WEEK_ANCHOR_MS;
-      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+      return Math.max(0, ((periodEnd - nowMs) / 60_000));
     }
 
     // ── Monthly: 1st of next month 00:00 UTC ──
     if (tfId === '1M') {
       const close = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
-      return Math.max(0, Math.floor((close - nowMs) / 60_000));
+      return Math.max(0, ((close - nowMs) / 60_000));
     }
 
     // ── Multi-month (2M–11M): calendar-year-aligned (matches Pine script) ──
@@ -1204,7 +1205,7 @@ export class ConfluenceLearningAgent {
           const boundaryYear = checkYear + (boundaryMonth > 11 ? 1 : 0);
           const closeMs = Date.UTC(boundaryYear, boundaryMonth % 12, 1);
           if (closeMs > nowMs) {
-            return Math.max(0, Math.floor((closeMs - nowMs) / 60_000));
+            return Math.max(0, ((closeMs - nowMs) / 60_000));
           }
         }
       }
@@ -1222,13 +1223,13 @@ export class ConfluenceLearningAgent {
     // ── Yearly: Jan 1 00:00 UTC ──
     if (tfId === '1Y') {
       const close = Date.UTC(now.getUTCFullYear() + 1, 0, 1);
-      return Math.max(0, Math.floor((close - nowMs) / 60_000));
+      return Math.max(0, ((close - nowMs) / 60_000));
     }
 
     // Fallback: epoch-based alignment
     const tfMs = tfConfig.minutes * 60_000;
     const periodEnd = Math.ceil(nowMs / tfMs) * tfMs;
-    return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+    return Math.max(0, ((periodEnd - nowMs) / 60_000));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1258,12 +1259,12 @@ export class ConfluenceLearningAgent {
     // candle boundaries to the session open (09:30 for regular, 04:00 for
     // extended) — exactly matching TradingView's behaviour.
     if (tfConfig.minutes <= 720) { // 12 hours or less
-      const { minsToClose } = getNextCloseIntraday({
+      const { nextCloseAt } = getNextCloseIntraday({
         now,
         tfMinutes: tfConfig.minutes,
         sessionMode,
       });
-      return minsToClose;
+      return (nextCloseAt.getTime() - now.getTime()) / 60000;
     }
     
     // For daily and above, TradingView's standard US equity candles close on
@@ -1295,7 +1296,7 @@ export class ConfluenceLearningAgent {
     // Today's market close time
     const todayClose = closeAt(year, month, date);
     const todayCloseMs = todayClose.getTime();
-    const minsToTodayClose = Math.floor((todayCloseMs - currentTime) / 60000);
+    const minsToTodayClose = ((todayCloseMs - currentTime) / 60000);
     
     // Trading-day index for multi-day cycle alignment (Mon–Fri only)
     const tdIdx = this.getTradingDayIndex(now);
@@ -1853,7 +1854,7 @@ export class ConfluenceLearningAgent {
     const timezone: ForwardCloseCalendar['timezone'] = assetClass === 'crypto' ? 'UTC' : 'America/New_York';
     const scheduleWarnings = assetClass === 'crypto'
       ? ['Crypto schedule uses 24/7 UTC TradingView-style close boundaries; it does not observe weekends or exchange holidays.']
-      : ['Equity schedule uses NYSE trading sessions with weekend and US market holiday handling; daily and higher timeframes use regular-session TradingView-style closes; early-close calendars are not yet modeled.'];
+      : ['Equity schedule uses NYSE trading sessions with weekend and US market holiday handling; daily and higher timeframes use regular-session TradingView-style closes; scheduled early closes are modeled (13:00 ET regular session).'];
     const scheduleBasis = assetClass === 'crypto'
       ? '24/7 UTC candle boundaries: intraday fixed intervals, daily at 00:00 UTC, weekly Monday 00:00 UTC, monthly first day 00:00 UTC.'
       : `NYSE ${sessionMode} intraday boundaries in America/New_York; daily+ closes use regular-session trading days, weekends, and US market holidays.`;
@@ -2081,7 +2082,7 @@ export class ConfluenceLearningAgent {
     for (const tfConfig of TIMEFRAMES) {
       const minsAway = this.getMinutesToTimeframeClose(now, tfConfig, assetClass, sessionMode);
       if (minsAway !== null && minsAway >= 0) {
-        const nextCloseMs = currentTime + minsAway * 60 * 1000;
+        const nextCloseMs = Math.round((currentTime + minsAway * 60 * 1000) / 60000) * 60000;
         tfCloses.push({
           tf: tfConfig.label,
           minutes: tfConfig.minutes,

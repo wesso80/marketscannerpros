@@ -111,7 +111,7 @@ export async function getFundamentalsSummary(symbol: string, opts: { includeEarn
     opts.includeEarnings === false ? null : getNextEarnings(symbol).catch(() => null),
     getQuote(symbol).catch(() => null),
   ]);
-  const valuation = valuationAtPrice(quote?.price, raw.EPS, raw.SharesOutstanding);
+  const valuation = valuationAtPrice(quote?.price, raw.EPS, raw.SharesOutstanding, raw.MarketCapitalization);
   const pe = valuation.pe, fwd = numOrNull(raw.ForwardPE), peg = numOrNull(raw.PEGRatio);
   const ratings = { strongBuy: Number(raw.AnalystRatingStrongBuy) || 0, buy: Number(raw.AnalystRatingBuy) || 0, hold: Number(raw.AnalystRatingHold) || 0, sell: Number(raw.AnalystRatingSell) || 0, strongSell: Number(raw.AnalystRatingStrongSell) || 0 };
   const analystCount = ratings.strongBuy + ratings.buy + ratings.hold + ratings.sell + ratings.strongSell;

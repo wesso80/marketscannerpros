@@ -1240,7 +1240,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       : (hasConfirmedPattern ? 'Trend Continuation' : 'Awaiting Confirmation')
     : null;
 
-  const dataHealth = result?.dataQuality?.freshness || (isCached ? 'CACHED' : 'LIVE');
+  const dataHealth = result?.dataQuality?.freshness || 'UNKNOWN';
+  const optionsAnalysisBlocked = !!result && (result.strategyRecommendation?.strategy === 'WAIT' || !result.primaryStrike || !result.primaryExpiration || dataHealth !== 'REALTIME');
 
   type LadderState = 'valid' | 'partial' | 'fail';
   const stateVisual = (state: LadderState) => {
@@ -1251,8 +1252,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
   const ladderSteps = result ? (() => {
     const sessionClosed = result.entryTiming.marketSession === 'closed';
-    const dataIsFresh = dataHealth === 'REALTIME' || dataHealth === 'LIVE';
-    const dataIsUsable = dataIsFresh || dataHealth === 'DELAYED' || dataHealth === 'CACHED';
+    const dataIsFresh = dataHealth === 'REALTIME';
+    const dataIsUsable = dataIsFresh || dataHealth === 'DELAYED';
     const regimeKnown = result.aiMarketState?.regime?.type && result.aiMarketState.regime.type !== 'uncertain';
 
     const marketState: LadderState = (!dataIsUsable || sessionClosed)
@@ -1551,13 +1552,13 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         !result.tradeLevels ? 'No clean reference zone is available yet.' : null,
         result.entryTiming.urgency === 'no_trade' ? (result.entryTiming.reason || 'Timing model says wait.') : null,
         (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'Expected move is elevated; option premium may be less forgiving.' : null,
-        dataHealth === 'CACHED' || dataHealth === 'DELAYED' || dataHealth === 'EOD' || dataHealth === 'STALE' ? 'Data freshness is capped, so size the conclusion down.' : null,
+        dataHealth === 'DELAYED' || dataHealth === 'EOD' || dataHealth === 'STALE' ? 'Data freshness is capped, so size the conclusion down.' : null,
       ].filter(Boolean).slice(0, 3)
     : [];
 
   const researchInvalidationItems = result
     ? [
-        result.tradeLevels ? `Price loses ${result.tradeLevels.stopLoss.toFixed(2)} invalidation.` : null,
+        result.tradeLevels ? `Price ${result.direction === 'bearish' ? 'rises above' : 'falls below'} ${result.tradeLevels.stopLoss.toFixed(2)} invalidation.` : null,
         result.tradeSnapshot?.risk?.invalidationReason,
         result.openInterestAnalysis?.sentiment && result.openInterestAnalysis.sentiment !== 'neutral' && result.openInterestAnalysis.sentiment !== result.direction
           ? 'Open interest sentiment diverges from the scenario.'
@@ -2283,7 +2284,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         <div className="relative z-[1]">
 
         {/* Command Strip */}
-        {result && (
+        {result && !optionsAnalysisBlocked && (
           <CommandStrip
             symbol={result.symbol}
             status={commandStatus}
@@ -2305,7 +2306,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           />
         )}
 
-        {result && (
+        {result && !optionsAnalysisBlocked && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
             center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'SCENARIO ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WATCH'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confluence: {unifiedConfidence.toFixed(0)}%</div></div>}
@@ -2313,7 +2314,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           />
         )}
 
-        {result && (
+        {result && !optionsAnalysisBlocked && (
           <SignalRail
             items={[
               { label: 'Confluence', value: `${result.confluenceStack} TF`, tone: result.confluenceStack >= 3 ? 'bull' : 'warn' },
@@ -2328,7 +2329,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
 
 
-        {result && copilotPresence && (
+        {result && !optionsAnalysisBlocked && copilotPresence && (
           <div className="msp-panel -mt-1 mb-3 rounded-lg border border-[var(--msp-border)] px-3 py-2">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-extrabold text-[var(--msp-text)]">AI Co-Pilot</span>
@@ -2479,8 +2480,26 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           </div>
         )}
 
+        {result && optionsAnalysisBlocked && (
+          <section aria-label="Options evidence blocked" className="grid gap-4 rounded-xl border border-amber-500/40 bg-slate-900 p-5">
+            <h2 className="text-xl font-bold text-amber-300">{result.symbol} · WAIT — options evidence incomplete</h2>
+            <p>{result.entryTiming.reason || 'A usable contract, expiry and verified quote time are required.'}</p>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div><dt>Underlying reference</dt><dd>${result.currentPrice.toFixed(2)}</dd></div>
+              <div><dt>Data state</dt><dd>{dataHealth}</dd></div>
+              <div><dt>Provider</dt><dd>{result.dataQuality?.optionsChainSource || 'Unavailable'}</dd></div>
+              <div><dt>Provider observation</dt><dd>{result.dataQuality?.lastUpdated || 'Unavailable'}</dd></div>
+              <div><dt>Open-interest expiry (context only)</dt><dd>{result.openInterestAnalysis?.expirationDate || 'Unavailable'}</dd></div>
+              <div><dt>Dealer positioning</dt><dd>Unavailable — dealer inventory is not supplied.</dd></div>
+              <div><dt>Contract selection</dt><dd>Withheld</dd></div>
+              <div><dt>Trade permission</dt><dd>Blocked</dd></div>
+            </dl>
+            <p className="text-sm text-slate-400">Scores, sizing, price-path projections and playbooks are withheld while required evidence is missing. Review the chain in Options Terminal, then rerun research when usable quotes and observation times are available.</p>
+            <ul className="list-disc pl-5 text-sm text-amber-200">{(result.dataConfidenceCaps || []).map((reason, i) => <li key={i}>{reason}</li>)}</ul>
+          </section>
+        )}
         {/* Results */}
-        {result && (
+        {result && !optionsAnalysisBlocked && (
           <div className="grid gap-6">
 
             <div className="-mt-1 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
@@ -3676,7 +3695,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.72rem]">
                 <div className="text-emerald-200">OPTIONS DATA: availability and timestamps shown in Data Quality</div>
                 <div className="text-slate-400">
-                  {liveLatencySeconds !== null ? `Latency: ${liveLatencySeconds.toFixed(1)}s` : 'Latency: n/a'}
+                  {liveLatencySeconds !== null && Number.isFinite(liveLatencySeconds) ? `Latency: ${liveLatencySeconds.toFixed(1)}s` : 'Latency: n/a'}
                 </div>
               </div>
             </div>

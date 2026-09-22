@@ -12,11 +12,12 @@ vi.mock('@/lib/coingecko', () => ({
 }));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: vi.fn() }));
 vi.mock('@/lib/time/sessionCloseEngine', () => ({
-  getNextCloseIntraday: vi.fn(() => ({ minsToClose: 30 })),
+  getNextCloseIntraday: vi.fn(({now}: {now:Date}) => ({ minsToClose: 30, nextCloseAt: new Date(now.getTime()+30*60000) })),
   getSessionBounds: vi.fn(),
   isMarketOpenForSession: vi.fn(() => true),
 }));
-vi.mock('@/lib/time/marketHolidays', () => {
+vi.mock('@/lib/time/marketHolidays', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/time/marketHolidays')>();
   const isWeekend = (year: number, month: number, day: number) => {
     const dow = new Date(Date.UTC(year, month, day, 12)).getUTCDay();
     return dow === 0 || dow === 6;
@@ -28,6 +29,7 @@ vi.mock('@/lib/time/marketHolidays', () => {
   };
 
   return {
+    ...actual,
     isUSMarketHoliday: vi.fn(() => false),
     isNonTradingDay: vi.fn((date: Date) => {
       const dow = date.getUTCDay();
@@ -107,7 +109,7 @@ describe('time scanner schedule model truth', () => {
     expect(calendar.timezone).toBe('America/New_York');
     expect(calendar.sessionMode).toBe('regular');
     expect(calendar.scheduleBasis).toContain('NYSE regular intraday boundaries');
-    expect(calendar.warnings[0]).toContain('early-close calendars are not yet modeled');
+    expect(calendar.warnings[0]).toContain('scheduled early closes are modeled');
     expect(daily?.firstCloseAtISO).toBe('2026-04-27T20:00:00.000Z');
   });
 
@@ -202,10 +204,10 @@ describe('time scanner schedule model truth', () => {
       'regular',
     );
 
-    expect(findTf(calendar, '1D').firstCloseAtISO).toBe('2026-11-27T21:00:00.000Z');
+    expect(findTf(calendar, '1D').firstCloseAtISO).toBe('2026-11-27T18:00:00.000Z');
   });
 
-  it('surfaces early-close limitation while modeling day-after-Thanksgiving as a full session close', async () => {
+  it('models the scheduled day-after-Thanksgiving early close', async () => {
     const { confluenceLearningAgent } = await import('../lib/confluence-learning-agent');
 
     const calendar = confluenceLearningAgent.computeForwardCloseCalendar(
@@ -216,8 +218,8 @@ describe('time scanner schedule model truth', () => {
       'regular',
     );
 
-    expect(calendar.warnings.join(' ')).toContain('early-close calendars are not yet modeled');
-    expect(findTf(calendar, '1D').firstCloseAtISO).toBe('2026-11-27T21:00:00.000Z');
+    expect(calendar.warnings.join(' ')).toContain('scheduled early closes are modeled');
+    expect(findTf(calendar, '1D').firstCloseAtISO).toBe('2026-11-27T18:00:00.000Z');
   });
 
   it('puts weekly equity closes on Friday market close, not Saturday or Sunday', async () => {

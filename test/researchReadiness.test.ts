@@ -42,7 +42,7 @@ describe('missing observations', () => {
     const data = { market: { marketCapChange24h: 0, totalVolume: 100, totalMarketCap: 1000, dominance: [{}] }, trending: { coins: [{ change24h: 0 }] }, funding: { coins: [{}], average: { fundingRatePercent: 0 } }, oi: { total: { change24h: 0, altDominance: 0 } }, marketMeta: { freshnessStatus: 'fresh' }, trendingMeta: { freshnessStatus: 'fresh' }, fundingMeta: { freshnessStatus: 'fresh' }, oiMeta: { freshnessStatus: 'fresh' } };
     expect(cryptoReviewMissing(data)).toEqual([]);
     data.oiMeta.freshnessStatus = 'stale';
-    expect(cryptoReviewMissing(data)).toEqual(['Open interest freshness stale']);
+    expect(cryptoReviewMissing(data)).toEqual(['Comparable open-interest change freshness stale']);
   });
   it('counts stale and degraded rows even when the table hides them', () => {
     expect(rowHasWeakData({ dataTrust: { level: 'DEGRADED' } })).toBe(true);

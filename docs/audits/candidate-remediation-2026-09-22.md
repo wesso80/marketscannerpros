@@ -14,13 +14,13 @@ This follows `meta-eth-workflow-audit-2026-09-22.md`. Implementation status is n
 | IV history | Rank/percentile unavailable without comparable historical IV; no invented 25% current IV | Historical dataset still required |
 | Capital flow | Remove synthetic crypto call/put walls and inferred dealer gamma | Regression passed; deployed acceptance pending |
 | Funding | Withhold cross-contract aggregate/annualisation without interval identity; distinguish contracts and venues | Provider interval data still required |
-| Fundamentals | P/E and market cap use displayed price with reported EPS/shares; retain provider snapshot fields separately | Regression passed; deployed acceptance pending |
+| Fundamentals | P/E uses displayed price and reported EPS. Market cap retains its provider snapshot basis; unverified share-class counts are not used to reprice total company value | Regression passed; deployed acceptance pending |
 | Explorer metrics | Remove false SPY-relative-return and RVOL formulas | Genuine matched histories still required |
 | Research handoffs | DVE, News, Options and Crypto Intel retain candidate identity | Implementation verified; deployed acceptance pending |
 | Narrative/calendar | Remove score-direction inversion, stale AI summaries, inferred earnings sessions and unsupported current calendar regime | Implementation verified; deployed acceptance pending |
 | Backtest execution | Next-open entry, adverse slippage, per-leg commission, gap stops, next-open signal exits, marked open positions | Regression passed; deployed acceptance pending |
 | Historical validity | Identify scanner as technical proxy; disclose sample limits | Full as-of MSP replay and out-of-sample validation remain outstanding |
-| Operational acceptance | Build, focused/full regression, publish main, Render web+worker, revisit META/ETH | Pending |
+| Operational acceptance | Initial release df352f1 built, published and live on Render web+worker; live META/ETH retest found additional defects | Follow-up release and verification recorded in candidate-release-verification-2026-09-22.md |
 
 ## Provider contracts
 
@@ -52,3 +52,7 @@ Final full-suite rerun: 1,743 passed, 13 skipped, one existing Monte Carlo stres
 A full production build passed with build-only placeholder settings (no runtime secrets or live database). The final build after the decision-precedence adjustment also passed: compilation, TypeScript, and all 400 static-generation tasks. No synthetic provider credentials or local build output are deployed.
 
 The GitHub release tree was compared byte-for-byte by Git tree hash with the staged local source before publication. Deployed page acceptance follows in the release evidence supplement.
+
+### Live acceptance follow-up
+
+The first release was not treated as blanket acceptance. Live navigation exposed residual unsafe options panels, synthetic liquidation levels in another API path, main Research still loading AAPL, unverified market-cap repricing, and equity countdowns using crypto boundaries. The follow-up removes these paths, restores sampled crypto OI independently of unavailable funding, propagates trust degradation, and corrects DVE signal-bar identity and historical-statistic labels. The release supplement records the actual page readings, adverse backtest evidence and limits.

@@ -1,3 +1,4 @@
+import { getNextCloseIntraday, getSessionBounds } from './sessionCloseEngine';
 /**
  * Decompression Timing Engine
  * 
@@ -110,9 +111,22 @@ const TF_DURATION_MS: Record<string, number> = {
  */
 export function getCurrentCandleBoundaries(
   timeframe: string,
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  assetClass: 'crypto' | 'equity' = 'crypto'
 ): { open: Date; close: Date } {
   const t = currentTime.getTime();
+  if (assetClass === 'equity') {
+    const bounds = getSessionBounds({ now: currentTime, sessionMode: 'regular' });
+    const duration = TF_DURATION_MS[timeframe];
+    if (duration && duration < MS_DAY) {
+      const close = getNextCloseIntraday({ now: currentTime, tfMinutes: duration / 60000, sessionMode: 'regular' }).nextCloseAt;
+      const elapsed = Math.max(0, t - bounds.openMs);
+      const open = Math.min(bounds.closeMs, bounds.openMs + Math.floor(elapsed / duration) * duration);
+      return { open: new Date(open), close };
+    }
+    if (timeframe === '1D') return { open: new Date(bounds.openMs), close: new Date(bounds.closeMs) };
+  }
+
 
   // Epoch-aligned timeframes (1H–5D)
   const duration = TF_DURATION_MS[timeframe];

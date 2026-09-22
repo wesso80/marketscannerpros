@@ -58,6 +58,7 @@ export interface PriceData {
   avgVolume?: number;
   historicalCloses: number[];
   historicalHighs?: number[];
+  historicalOpens?: number[];
   historicalLows?: number[];
   /** Provenance — the bar interval indicators are computed on and the last COMPLETED bar time. */
   barInterval?: string;
@@ -213,6 +214,7 @@ export async function fetchPrice(
         volume: last.volume ?? md?.total_volume?.usd ?? 0,
         avgVolume: vols.length >= 5 ? vols.reduce((a, b) => a + b, 0) / vols.length : undefined,
         historicalCloses: tail.map((b) => b.close),
+        historicalOpens: tail.map((b) => b.open),
         historicalHighs: tail.map((b) => b.high),
         historicalLows: tail.map((b) => b.low),
         historicalDates: tail.map((b) => b.t),
@@ -307,6 +309,7 @@ export async function fetchPrice(
       volume: latestVol,
       avgVolume: avgVol,
       historicalCloses: histDates.map(d => adj(d, '4. close')),
+      historicalOpens: histDates.map(d => adj(d, '1. open')),
       historicalHighs: histDates.map(d => adj(d, '2. high')),
       historicalLows: histDates.map(d => adj(d, '3. low')),
       historicalDates: histDates,
@@ -424,35 +427,24 @@ export async function fetchOptionsSnapshot(
 
 // ── Helper: fetch crypto derivatives (funding rates + OI via CoinGecko) ─
 export interface CryptoDerivatives {
-  fundingRate: number;
-  fundingRatePercent: number;
-  annualizedFunding: number;
+  fundingRate: null;
+  fundingRatePercent: null;
+  annualizedFunding: null;
   totalOpenInterest: number;
   volume24h: number;
   exchanges: number;
-  sentiment: 'Bullish' | 'Bearish' | 'Neutral';
+  sentiment: 'Unavailable';
 }
 
 export async function fetchCryptoDerivatives(symbol: string): Promise<CryptoDerivatives | null> {
   try {
-    // Extract base symbol: BTC-USD → BTC, ETHUSDT → ETH
-    const base = symbol.toUpperCase().replace(/-?USD[T]?$/, '');
-    const [fundingArr, oiArr] = await Promise.all([
-      getAggregatedFundingRates([base]),
-      getAggregatedOpenInterest([base]),
-    ]);
-    const funding = fundingArr?.[0];
-    const oi = oiArr?.[0];
-    if (!funding || !Number.isFinite(funding.fundingRatePercent)) return null;
-
+    const base = symbol.toUpperCase().replace(/[-/]?USD[T]?$/, '');
+    const oi = (await getAggregatedOpenInterest([base]))?.find(row => row.symbol === base);
+    if (!oi || !Number.isFinite(oi.totalOpenInterest) || !Number.isFinite(oi.avgVolume24h)) return null;
     return {
-      fundingRate: funding?.avgFundingRate ?? 0,
-      fundingRatePercent: funding?.fundingRatePercent ?? 0,
-      annualizedFunding: funding?.annualized ?? 0,
-      totalOpenInterest: oi?.totalOpenInterest ?? 0,
-      volume24h: oi?.avgVolume24h ?? 0,
-      exchanges: Math.max(funding?.exchanges ?? 0, oi?.exchanges ?? 0),
-      sentiment: funding?.sentiment ?? 'Neutral',
+      fundingRate: null, fundingRatePercent: null, annualizedFunding: null,
+      totalOpenInterest: oi.totalOpenInterest, volume24h: oi.avgVolume24h,
+      exchanges: oi.exchanges, sentiment: 'Unavailable',
     };
   } catch { return null; }
 }

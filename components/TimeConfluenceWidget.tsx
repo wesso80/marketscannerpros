@@ -516,7 +516,7 @@ export default function TimeConfluenceWidget({
                 marginBottom: '1rem',
               }}>
                 <div style={{ color: '#A855F7', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span aria-hidden="true">⏳ </span>NEXT MAJOR CONFLUENCE
+                  <span aria-hidden="true">⏳ </span>{assetClass === 'crypto' ? 'NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)' : 'NEXT MAJOR CONFLUENCE'}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -546,7 +546,7 @@ export default function TimeConfluenceWidget({
                 padding: '1rem',
               }}>
                 <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span aria-hidden="true">🏦 </span>INSTITUTIONAL TWAP WINDOWS
+                  <span aria-hidden="true">🏦 </span>US EQUITY SESSION WINDOWS · ET
                 </div>
                 <div style={{ display: 'grid', gap: '0.5rem' }}>
                   {state.twapWindows.slice(0, 3).map((window, i) => (

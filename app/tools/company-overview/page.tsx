@@ -44,6 +44,7 @@ interface CompanyData {
   fiscalYearEnd?: string | null;
   periodBasis?: Array<{ metric: string; period: string }>;
   periodSummary?: string;
+  valuationBasis?: string;
   multiple?: { label: string; detail: string; rule: string };
   nextEarningsDate?: string | null;
   nextEarningsEstimate?: number | null;
@@ -122,7 +123,8 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
 
   const formatValue = (value: string | undefined | null) => {
     if (!value || value === "None" || value === "-") return "N/A";
-    return value;
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value;
   };
 
   const formatMarketCap = (value: string) => {
@@ -216,14 +218,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
     const earningsGrowth = parseFloat(data.quarterlyEarningsGrowth) * 100;
     const revenueGrowth = parseFloat(data.quarterlyRevenueGrowth) * 100;
     
-    // Valuation assessment
-    let valuationText = "";
-    if (!isNaN(pe)) {
-      if (pe > 50) valuationText = "premium-valued";
-      else if (pe > 25) valuationText = "moderately valued";
-      else if (pe > 15) valuationText = "fairly valued";
-      else valuationText = "value-priced";
-    }
+    const valuationText = data.multiple?.label.toLowerCase() ?? 'multiple unavailable';
     
     // Growth assessment
     let growthText = "";
@@ -559,13 +554,14 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 <p style={{ color: "var(--msp-text-muted)", fontSize: "12px", margin: "0 0 16px 0" }}>{data.multiple.detail} <span style={{ color: "var(--msp-text-faint)" }}>{data.multiple.rule}</span></p>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
-                <MetricCard label="Market Cap" value={formatMarketCap(data.marketCap)} />
+                <MetricCard label="Market cap (provider)" value={formatMarketCap(data.marketCap)} />
                 <MetricCard label="P/E (trailing)" value={formatValue(data.pe)} />
                 <MetricCard label="Forward P/E" value={formatValue(data.forwardPE)} />
                 <MetricCard label="PEG Ratio" value={formatValue(data.peg)} />
                 <MetricCard label="Book Value" value={`$${formatValue(data.bookValue)}`} />
                 <MetricCard label="Beta" value={formatValue(data.beta)} />
               </div>
+              {data.valuationBasis && <p className="mt-2 text-xs text-slate-400">{data.valuationBasis}</p>}
               {data.periodSummary && (
                 <p style={{ color: "var(--msp-text-muted)", fontSize: "12px", marginTop: "12px" }}>
                   <strong style={{ color: "var(--msp-text)" }}>Period basis:</strong> {data.periodSummary}

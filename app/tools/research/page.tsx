@@ -122,7 +122,11 @@ export default function ResearchPage() {
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
   const [updatingOutcomeId, setUpdatingOutcomeId] = useState<string | null>(null);
 
-  const news = useNews();
+  const candidateSymbol = (searchParams.get('symbol') || '').toUpperCase().replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '');
+  const candidateType = searchParams.get('type') === 'crypto' ? 'crypto' : 'equity';
+  const candidateTimeframe = searchParams.get('timeframe') || 'daily';
+  const candidateHref = `/tools/golden-egg?symbol=${encodeURIComponent(candidateSymbol)}&type=${candidateType}&timeframe=${encodeURIComponent(candidateTimeframe)}`;
+  const news = useNews(candidateSymbol || undefined);
   const calendar = useEconomicCalendar();
   const earnings = useEarningsCalendar();
 
@@ -134,7 +138,7 @@ export default function ResearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const articles = news.data?.articles || [];
+  const articles = (news.data?.articles || []).filter(article => !candidateSymbol || article.tickerSentiments?.some(t => t.ticker.replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '') === candidateSymbol && t.relevance >= 0.35));
   const events = useMemo(() => {
     const all = calendar.data?.events || [];
     if (calFilter === 'all') return all;
@@ -146,9 +150,11 @@ export default function ResearchPage() {
   const majorEarnings = earnings.data?.majorEarnings || [];
 
   const openGoldenEgg = useCallback((symbol: string) => {
-    selectSymbol(symbol);
-    navigateTo('golden-egg', symbol);
-  }, [navigateTo, selectSymbol]);
+    const clean = symbol.replace(/^CRYPTO:/, '');
+    const type = symbol.startsWith('CRYPTO:') || clean === candidateSymbol && candidateType === 'crypto' ? 'crypto' : 'equity';
+    selectSymbol(clean, { assetType: type });
+    navigateTo('golden-egg', clean);
+  }, [navigateTo, selectSymbol, candidateSymbol, candidateType]);
 
   // Research → Workspace: one-click add of an earnings symbol to the watchlist.
   const [watchlistStatus, setWatchlistStatus] = useState<Record<string, 'adding' | 'added' | 'exists' | 'signin' | 'error'>>({});
@@ -262,7 +268,7 @@ export default function ResearchPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={() => setTab('News')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Open News</button>
               <button type="button" onClick={() => setTab('Economic Calendar')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open Calendar</button>
-              <a href="/tools/golden-egg" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Golden Egg</a>
+              <a href={candidateSymbol ? candidateHref : "/tools/golden-egg"} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Golden Egg</a>
             </div>
           </div>
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
@@ -306,6 +312,7 @@ export default function ResearchPage() {
       {/* -- NEWS ----------------------------------------------------- */}
       {tab === 'News' && (
         <Card>
+          <p className="mb-3 text-sm font-semibold text-emerald-300">{candidateSymbol ? `${candidateSymbol} · symbol-relevant news` : 'Market news'} · source publication times shown below</p>
           {news.loading ? <SkeletonRows n={8} /> : articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-8 text-center">No news available</div>
           ) : (
@@ -313,14 +320,14 @@ export default function ResearchPage() {
               {articles.map((n: NewsArticle, i: number) => (
                 <div key={i} className="py-2 border-b border-slate-800/30 last:border-0">
                   <div className="flex items-start gap-2">
-                    <ImpactDot impact={n.sentiment.score > 0.2 ? 'high' : n.sentiment.score > 0 ? 'medium' : 'low'} />
+
                     <div className="flex-1 min-w-0">
                       <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-emerald-400 transition-colors leading-snug">
                         {n.title}
                       </a>
                       <div className="text-[10px] text-slate-500 mt-1 line-clamp-2">{n.summary}</div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-slate-600">{n.source}</span>
+                        <span className="text-[10px] text-slate-600">{n.source} · {n.timePublished ? n.timePublished.replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/, "$1-$2-$3 $4:$5:$6 UTC") : "Publication time unavailable"}</span>
                         <span className={`text-[10px] ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
                           {n.sentiment.label}
                         </span>

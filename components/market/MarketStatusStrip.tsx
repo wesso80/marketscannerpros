@@ -3,6 +3,7 @@ import DataFreshnessBadge, { providerStatusColor } from './DataFreshnessBadge';
 
 export type MarketStatusItem = {
   label: string;
+  statusLabel?: string;
   status?: MarketDataProviderStatus | null;
   source?: string | null;
   coverageScore?: number | null;
@@ -34,7 +35,7 @@ export default function MarketStatusStrip({ items, className = '' }: MarketStatu
           <div key={item.label} className="rounded-lg border bg-[var(--msp-panel-2)] px-3 py-2" style={{ borderColor: `${color}55` }}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">{item.label} Data Truth</div>
-              <DataFreshnessBadge status={item.status} />
+              <DataFreshnessBadge status={item.status} label={item.statusLabel} />
             </div>
             <div className="mt-1 text-[0.72rem] text-slate-400">
               Source: <span className="font-bold text-slate-200">{item.status?.provider ?? item.source ?? 'unknown'}</span>

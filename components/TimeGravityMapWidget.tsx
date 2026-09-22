@@ -912,6 +912,7 @@ export default function TimeGravityMapWidget({
           symbol,
           mode: 'calendar',
           assetType: assetType === 'stock' ? 'equity' : assetType,
+          sessionMode: 'regular',
           anchor: 'TODAY',
           horizonDays: 1,
         }),

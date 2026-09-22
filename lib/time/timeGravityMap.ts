@@ -200,9 +200,10 @@ function getDebtMultiplier(isDebt: boolean): number {
  */
 function getCloseStackEntry(
   timeframe: string,
-  currentTime: Date
+  currentTime: Date,
+  assetClass: 'crypto' | 'equity' = 'crypto'
 ): CloseStackEntry | null {
-  const { open, close } = getCurrentCandleBoundaries(timeframe, currentTime);
+  const { open, close } = getCurrentCandleBoundaries(timeframe, currentTime, assetClass);
   const minutesUntilClose = (close.getTime() - currentTime.getTime()) / 60_000;
   if (minutesUntilClose < 0) return null;
 
@@ -262,11 +263,12 @@ function finishCloseStack(entries: CloseStackEntry[]): CloseStack {
  */
 function buildCloseStacks(
   timeframes: string[],
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  assetClass: 'crypto' | 'equity' = 'crypto'
 ): CloseStack[] {
   const entries: CloseStackEntry[] = [];
   for (const tf of timeframes) {
-    const entry = getCloseStackEntry(tf, currentTime);
+    const entry = getCloseStackEntry(tf, currentTime, assetClass);
     if (entry) entries.push(entry);
   }
 
@@ -301,16 +303,17 @@ function buildCloseStacks(
  */
 export function computeCloseConfluence(
   timeframes: string[],
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  assetClass: 'crypto' | 'equity' = 'crypto'
 ): CloseConfluence {
-  const stacks = buildCloseStacks(timeframes, currentTime);
+  const stacks = buildCloseStacks(timeframes, currentTime, assetClass);
 
   const todayCloses: string[] = [];
   let highestOrderClose: string | null = null;
   let highestWeight = 0;
 
   for (const tf of timeframes) {
-    const entry = getCloseStackEntry(tf, currentTime);
+    const entry = getCloseStackEntry(tf, currentTime, assetClass);
     if (entry && entry.minutesUntilClose <= 1440) {
       todayCloses.push(tf);
       if (entry.weight > highestWeight) {
@@ -575,6 +578,7 @@ function buildGravityZone(points: GravityPoint[]): GravityZone {
  * When OHLC bars are provided the momentum override module runs.
  */
 export interface ComputeTGMOptions {
+  assetClass?: 'crypto' | 'equity';
   /** Recent OHLC bars for momentum override (oldest → newest, min 6).
    *  If omitted, momentum override is skipped. */
   ohlcBars?: { open: number; high: number; low: number; close: number }[];
@@ -637,7 +641,7 @@ export function computeTimeGravityMap(
   // ─── 1. GRAVITY POINTS ──────────────────────────────────────────────
   // Compute gravity for active (untagged) midpoints only.
   const allPoints: GravityPoint[] = activeMidpoints.map(midpoint => {
-    const { open, close } = getCurrentCandleBoundaries(midpoint.timeframe, currentTime);
+    const { open, close } = getCurrentCandleBoundaries(midpoint.timeframe, currentTime, options.assetClass);
     const decompressionState = calculateDecompressionState(
       midpoint.timeframe,
       open,
@@ -652,7 +656,7 @@ export function computeTimeGravityMap(
   // ─── 1.5. CLOSE CONFLUENCE + TODAY-CLOSE BOOST ─────────────────────
   // Compute close stacking and today-close factors, then apply to points.
   const activeTimeframes = [...new Set(activeMidpoints.map(m => m.timeframe))];
-  const closeConfluence = computeCloseConfluence(activeTimeframes, currentTime);
+  const closeConfluence = computeCloseConfluence(activeTimeframes, currentTime, options.assetClass);
 
   for (const point of allPoints) {
     const csf = getCloseStackFactorForTf(point.timeframe, closeConfluence);

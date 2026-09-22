@@ -194,16 +194,16 @@ export default function VERegimeTimeline({
         <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold uppercase" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
           {transition.to}
         </span>
-        <span className="text-[0.7rem] text-white/40">{transition.probability.toFixed(0)}% prob</span>
+        <span className="text-[0.7rem] text-white/40">{transition.probability.toFixed(0)}/100 weight</span>
       </div>
       {transition.trigger && (
         <p className="mb-3 text-[0.7rem] text-white/40">Trigger: {transition.trigger}</p>
       )}
 
-      {/* ── Next Regime Probability Forecast ── */}
+      {/* ── Next regime weights · heuristic Forecast ── */}
       {forecast.length > 0 && (
         <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-[0.65rem] uppercase text-white/40 mb-2">Next Regime Probability</div>
+          <div className="text-[0.65rem] uppercase text-white/40 mb-2">Next regime weights · heuristic</div>
           <div className="space-y-1.5">
             {forecast.map((f) => {
               const c = regimeColor(f.regime);

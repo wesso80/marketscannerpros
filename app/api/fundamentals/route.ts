@@ -89,7 +89,7 @@ function formatOverview(data: any, symbol: string, price?: number) {
   // Quality score based on fundamentals
   let qualityScore = 50; // Base score
   
-  const valuation = valuationAtPrice(price, data.EPS, data.SharesOutstanding);
+  const valuation = valuationAtPrice(price, data.EPS, data.SharesOutstanding, data.MarketCapitalization);
   const peRatio = valuation.pe ?? 0;
   const profitMargin = parseFloat(data.ProfitMargin) || 0;
   const roe = parseFloat(data.ReturnOnEquityTTM) || 0;

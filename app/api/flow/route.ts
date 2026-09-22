@@ -1,3 +1,4 @@
+import { closedCandles } from '@/lib/market/candleIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
@@ -209,7 +210,7 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
   if (!coinId) throw new Error(`No CoinGecko mapping for ${base}`);
 
   const [ohlc, derivatives] = await Promise.all([
-    getOHLC(coinId, 7),
+    getOHLC(coinId, 7, { interval: 'hourly', timeoutMs: 8000, retries: 0 }),
     getDerivativesForSymbols([base]),
   ]);
 
@@ -217,14 +218,10 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
     throw new Error(`No CoinGecko OHLC for ${base}`);
   }
 
-  const candles = ohlc.map((row: number[]) => ({
-    t: new Date(row[0]).toISOString(),
-    o: Number(row[1]),
-    h: Number(row[2]),
-    l: Number(row[3]),
-    c: Number(row[4]),
-    v: 0,
+  const candles = closedCandles(ohlc, 3600000).map(bar => ({
+    t: bar.time.toISOString(), o: bar.open, h: bar.high, l: bar.low, c: bar.close, v: 0,
   }));
+  if (!candles.length) throw new Error('No verified closed hourly crypto candles');
 
   const spot = candles[candles.length - 1].c;
   const levels: Array<{ level: number; label: string }> = [];
@@ -248,14 +245,14 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
     const today = byDay.get(currentDay) || [];
     const overnight = today.filter((c) => Number(c.t.slice(11, 13)) < 9);
     if (overnight.length) {
-      levels.push({ level: Math.max(...overnight.map((c) => c.h)), label: 'ONH' });
-      levels.push({ level: Math.min(...overnight.map((c) => c.l)), label: 'ONL' });
+      levels.push({ level: Math.max(...overnight.map((c) => c.h)), label: 'UTC_00_09_HIGH' });
+      levels.push({ level: Math.min(...overnight.map((c) => c.l)), label: 'UTC_00_09_LOW' });
     }
   }
 
-  const week = candles.slice(-96);
-  levels.push({ level: Math.max(...week.map((c) => c.h)), label: 'WEEK_HIGH' });
-  levels.push({ level: Math.min(...week.map((c) => c.l)), label: 'WEEK_LOW' });
+  const week = candles;
+  levels.push({ level: Math.max(...week.map((c) => c.h)), label: '7D_HIGH' });
+  levels.push({ level: Math.min(...week.map((c) => c.l)), label: '7D_LOW' });
   for (let i = 0; i < week.length - 1; i += 1) {
     const current = week[i];
     const next = week[i + 1];
@@ -265,52 +262,21 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
     if (eql <= 0.0015) levels.push({ level: (current.l + next.l) / 2, label: 'EQL' });
   }
 
-  const sumPv = candles.reduce((acc, c) => acc + (((c.h + c.l + c.c) / 3) * Math.max(1, c.v)), 0);
-  const sumVol = candles.reduce((acc, c) => acc + Math.max(1, c.v), 0);
-  const vwap = sumVol > 0 ? sumPv / sumVol : undefined;
+  const vwap = undefined; // OHLC has no volume; an unweighted average is not VWAP.
 
   const best = derivatives.length
     ? [...derivatives].sort((a, b) => (b.volume_24h || 0) - (a.volume_24h || 0))[0]
     : null;
 
   const openInterestUsd = Number(best?.open_interest || 0) || undefined;
-  // CoinGecko funding_rate is already percent per interval — no ×100.
-  const fundingRate = Number.isFinite(best?.funding_rate) ? Number(best!.funding_rate) : undefined;
-  const basisPercent = Number.isFinite(best?.basis) && Number.isFinite(best?.index) && Number(best!.index) > 0
-    ? (Number(best!.basis) / Number(best!.index)) * 100
-    : undefined;
-
-  let oiChangePercent: number | undefined;
-  const global = await getGlobalData();
-  const marketMove = Number(global?.market_cap_change_percentage_24h_usd || 0);
-  if (Number.isFinite(marketMove)) {
-    oiChangePercent = marketMove * 0.35;
-  }
-
+  const fundingRate = undefined; // Funding periods are absent.
+  const basisPercent = undefined; // Provider basis unit is not established.
+  const oiChangePercent = undefined; // No comparable contract history in this response.
   const longShortRatio = undefined;
+  const liquidationLevels = undefined; // Requires actual positions/leverage, not a spot offset.
 
-  const crowdingDirection = Number.isFinite(longShortRatio)
-    ? (longShortRatio! > 1 ? 'long_crowded' : 'short_crowded')
-    : (Number.isFinite(fundingRate) ? (fundingRate! > 0 ? 'long_crowded' : fundingRate! < 0 ? 'short_crowded' : 'neutral') : 'neutral');
-
-  const liquidationLevels = Number.isFinite(spot) && crowdingDirection !== 'neutral'
-    ? [
-        {
-          level: spot * (crowdingDirection === 'long_crowded' ? 0.985 : 1.015),
-          side: (crowdingDirection === 'long_crowded' ? 'long_liq' : 'short_liq') as 'long_liq' | 'short_liq',
-          weight: 0.85,
-        },
-        {
-          level: spot * (crowdingDirection === 'long_crowded' ? 1.015 : 0.985),
-          side: (crowdingDirection === 'long_crowded' ? 'short_liq' : 'long_liq') as 'long_liq' | 'short_liq',
-          weight: 0.65,
-        },
-      ]
-    : undefined;
-
-  const highs = candles.slice(-14).map((c) => c.h);
-  const lows = candles.slice(-14).map((c) => c.l);
-  const atr = highs.length && lows.length ? (Math.max(...highs) - Math.min(...lows)) / Math.max(1, highs.length / 3) : undefined;
+  const trueRanges = candles.slice(1).map((bar,i) => Math.max(bar.h-bar.l, Math.abs(bar.h-candles[i].c), Math.abs(bar.l-candles[i].c)));
+  const atr = trueRanges.length >= 14 ? trueRanges.slice(-14).reduce((a,b)=>a+b,0)/14 : undefined;
 
   return {
     spot,

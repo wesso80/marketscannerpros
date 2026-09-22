@@ -438,22 +438,24 @@ export default function GoldenEggPage() {
   const geMarketStatusItems = [
     {
       label: 'Quote',
-      computedAt: ge?.meta?.asOfTs,
+      statusLabel: geCanonical?.priceTs ? 'OBSERVED' : 'UNVERIFIED',
+      warnings: [`Price observation: ${geCanonical?.priceTs || 'unavailable'}. Packet calculation time is not quote time.`],
       status: buildMarketDataProviderStatus({
         source: 'quote',
         provider: quoteType === 'crypto' ? 'crypto quote' : 'equity quote',
         localDemo: geLocalDemo,
-        stale: !ge?.meta?.asOfTs,
+        stale: geCanonical?.dataTrust.freshness === 'stale',
         degraded: !isUsableNumber(quote.data?.price ?? ge?.meta?.price),
         warnings: [
           !isUsableNumber(quote.data?.price ?? ge?.meta?.price) ? 'Quote price unavailable.' : null,
-          !ge?.meta?.asOfTs ? 'Quote timestamp unavailable.' : null,
+          !geCanonical?.priceTs ? 'Quote timestamp unavailable.' : null,
           ...geWarnings,
         ].filter(Boolean) as string[],
       }),
     },
     {
       label: 'Regime',
+      statusLabel: regime.data ? 'COMPUTED' : 'UNAVAILABLE',
       status: buildMarketDataProviderStatus({
         source: 'regime',
         provider: 'cross-market regime',
@@ -463,6 +465,7 @@ export default function GoldenEggPage() {
     },
     {
       label: 'DVE',
+      statusLabel: d ? 'COMPUTED' : 'UNAVAILABLE',
       status: buildMarketDataProviderStatus({
         source: 'dve',
         provider: 'volatility engine',
@@ -472,15 +475,17 @@ export default function GoldenEggPage() {
     },
     {
       label: ge?.meta?.assetClass === 'crypto' ? 'Derivatives' : 'Options',
+      statusLabel: geCanonical?.options?.quality.level ?? (geCanonical?.derivatives ? 'PARTIAL' : 'UNAVAILABLE'),
       status: buildMarketDataProviderStatus({
         source: ge?.meta?.assetClass === 'crypto' ? 'derivatives' : 'options',
         provider: ge?.meta?.assetClass === 'crypto' ? 'derivatives evidence' : 'options evidence',
-        degraded: !ge?.layer3?.options?.enabled,
-        warnings: ge?.layer3?.options?.enabled ? [] : ['Options or derivatives evidence unavailable.'],
+        degraded: !ge?.layer3?.options?.enabled || geCanonical?.options?.quality.level !== 'GOOD',
+        warnings: geCanonical?.options?.quality.reasons ?? (geCanonical?.derivatives ? ['Sampled open interest is available. Funding period, comparable OI change and directional crowding are unavailable.'] : ['Options or derivatives evidence unavailable.']),
       }),
     },
     {
       label: 'Time',
+      statusLabel: ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'UNAVAILABLE',
       status: buildMarketDataProviderStatus({
         source: 'time-confluence',
         provider: 'time confluence',
@@ -811,8 +816,8 @@ export default function GoldenEggPage() {
                 <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Data trust</div><div className="text-white">{geDataQuality}</div></div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={`/tools/explorer?tab=crypto-command`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Command ›</Link>
-                <Link href={`/tools/dashboard?tab=crypto`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Derivatives lens ›</Link>
+                <Link href={`/tools/explorer?tab=crypto-command&symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Command ›</Link>
+                <Link href={`/tools/dashboard?tab=crypto&symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Derivatives lens ›</Link>
               </div>
             </Card>
           ) : (

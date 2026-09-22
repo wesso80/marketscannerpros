@@ -2434,21 +2434,7 @@ export async function POST(req: NextRequest) {
 
       const spot = Number(result.price ?? Number.NaN);
       const liquidityContext = buildScannerLiquidityLevels(result.chartData?.candles as any, spot);
-      const longShortRatio = result.derivatives?.longShortRatio;
-      const liquidationLevels = Number.isFinite(spot) && Number.isFinite(longShortRatio)
-        ? [
-            {
-              level: spot * (longShortRatio! > 1 ? 0.985 : 1.015),
-              side: (longShortRatio! > 1 ? 'long_liq' : 'short_liq') as 'long_liq' | 'short_liq',
-              weight: 0.85,
-            },
-            {
-              level: spot * (longShortRatio! > 1 ? 1.015 : 0.985),
-              side: (longShortRatio! > 1 ? 'short_liq' : 'long_liq') as 'long_liq' | 'short_liq',
-              weight: 0.65,
-            },
-          ]
-        : undefined;
+      const liquidationLevels = undefined; // Provider does not supply liquidation positions.
 
       const capitalFlow = Number.isFinite(spot)
         ? computeCapitalFlowEngine({

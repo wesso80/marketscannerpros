@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       getQuote(symbol).catch(() => null),
     ]);
 
-    const valuation = valuationAtPrice(quote?.price, data.EPS, data.SharesOutstanding);
+    const valuation = valuationAtPrice(quote?.price, data.EPS, data.SharesOutstanding, data.MarketCapitalization);
     const pe = valuation.pe, fwd = numOrNull(data.ForwardPE), peg = numOrNull(data.PEGRatio);
     const ratings = {
       strongBuy: Number(data.AnalystRatingStrongBuy) || 0,

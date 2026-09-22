@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
@@ -346,7 +347,10 @@ function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
   );
 }
 
-export default function EquityExplorerPage() {
+function EquityExplorerContent() {
+  const searchParams = useSearchParams();
+  const candidateSymbol = searchParams.get('symbol')?.trim().toUpperCase() || '';
+  const loadedCandidate = useRef('');
   const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -434,6 +438,14 @@ export default function EquityExplorerPage() {
       setRefreshing(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (candidateSymbol && loadedCandidate.current !== candidateSymbol && !tierLoading && (tier === 'pro' || tier === 'pro_trader')) {
+      loadedCandidate.current = candidateSymbol;
+      setSearchInput(candidateSymbol);
+      fetchEquityData(candidateSymbol);
+    }
+  }, [candidateSymbol, fetchEquityData, tier, tierLoading]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1114,4 +1126,8 @@ export default function EquityExplorerPage() {
       </div>
     </div>
   );
+}
+
+export default function EquityExplorerPage() {
+  return <Suspense fallback={<div className="p-4 text-slate-400">Loading equity context…</div>}><EquityExplorerContent /></Suspense>;
 }

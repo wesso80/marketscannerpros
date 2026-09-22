@@ -423,7 +423,7 @@ async function verifiedEquityMidpoints(symbol: string, price: number): Promise<M
   const base = `https://www.alphavantage.co/query?symbol=${encodeURIComponent(symbol)}&outputsize=compact&apikey=${key}`;
   const [daily, intraday] = await Promise.all([
     avFetch<Record<string, any>>(`${base}&function=TIME_SERIES_DAILY`, `TGM verified daily ${symbol}`),
-    avFetch<Record<string, any>>(`${base}&function=TIME_SERIES_INTRADAY&interval=15min&extended_hours=false`, `TGM verified intraday ${symbol}`),
+    avFetch<Record<string, any>>(`${base}&function=TIME_SERIES_INTRADAY&interval=15min&extended_hours=false&entitlement=realtime`, `TGM verified intraday ${symbol}`),
   ]);
   const d = equityCandles(daily?.['Time Series (Daily)'] || {});
   const q = equityCandles(intraday?.['Time Series (15min)'] || {}, 15);
@@ -525,7 +525,7 @@ export async function GET(request: NextRequest) {
     // instead of a static "no data" error.
     
     // Compute Time Gravity Map with the engine's own in-memory tagging
-    const tgm = computeTimeGravityMap(midpoints, currentPrice);
+    const tgm = computeTimeGravityMap(midpoints, currentPrice, new Date(), { assetClass: assetType });
     
     // Determine data source
     const dataSource = midpointsStr ? 'custom' : (localDemo ? 'local_demo' : 'verified_closed_ohlc');
@@ -592,6 +592,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     const { symbol, currentPrice, midpoints } = body;
+    const assetType = body.assetType === 'equity' || body.assetType === 'stock' ? 'equity' : 'crypto';
     
     if (!currentPrice || !midpoints) {
       return NextResponse.json(
@@ -608,7 +609,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Compute Time Gravity Map
-    const tgm = computeTimeGravityMap(midpoints, currentPrice);
+    const tgm = computeTimeGravityMap(midpoints, currentPrice, new Date(), { assetClass: assetType });
     
     return NextResponse.json({
       success: true,

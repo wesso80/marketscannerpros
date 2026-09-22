@@ -62,7 +62,7 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
 
             {/* Expected range bands */}
             <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <div className="mb-2 text-[11px] uppercase text-white/40">Expected Move Range (1 ATR)</div>
+              <div className="mb-2 text-[11px] uppercase text-white/40">Model range (1 ATR)</div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center">
                   <div className="text-[11px] text-red-400/60">Downside</div>
@@ -130,7 +130,7 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-          <div className="text-[0.7rem] uppercase text-white/40">Expected Move</div>
+          <div className="text-[0.7rem] uppercase text-white/40">Historical mean move</div>
           <div className="mt-1 text-xl font-black" style={{ color: moveColor }}>
             {proj.expectedMovePct >= 0 ? '+' : ''}{proj.expectedMovePct.toFixed(1)}%
           </div>

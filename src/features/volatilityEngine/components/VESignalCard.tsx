@@ -4,7 +4,7 @@ import type { DVESignal, VolatilityState, DirectionalPressure, ExhaustionRisk } 
 
 function stateCode(state: string): string {
   switch (state) {
-    case 'fired': return 'LIVE';
+    case 'fired': return 'DETECTED';
     case 'armed': return 'ARM';
     case 'invalidated': return 'INV';
     default: return 'IDLE';
@@ -149,7 +149,7 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
 
           {signal.triggerBarPrice != null && (
             <div className="grid grid-cols-1 gap-y-1 text-[0.75rem] sm:grid-cols-2 sm:gap-x-4">
-              <div className="text-white/50">Trigger Price: <span className="font-bold text-white/80">${signal.triggerBarPrice.toFixed(2)}</span></div>
+              <div className="text-white/50">Signal bar close: <span className="font-bold text-white/80">${signal.triggerBarPrice.toFixed(2)}</span></div>
               {signal.triggerBarOpen != null && (
                 <div className="text-white/50">Open: <span className="font-bold text-white/80">${signal.triggerBarOpen.toFixed(2)}</span></div>
               )}

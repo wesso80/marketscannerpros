@@ -286,7 +286,7 @@ function CryptoDetailPageContent() {
   const { tier } = useUserTier();
   const searchParams = useSearchParams();
   const [marketGate, setMarketGate] = useState<CryptoDecisionGate | null>(null);
-  const initialCoinId = searchParams.get('coin');
+  const initialCoinId = searchParams.get('coin') || searchParams.get('symbol');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -302,7 +302,7 @@ function CryptoDetailPageContent() {
   const [upeGlobal, setUpeGlobal] = useState<UpeGlobalSnapshot | null>(null);
   const [upeMicroState, setUpeMicroState] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  const hasLoadedInitial = useRef(false);
+  const loadedInitial = useRef<string | null>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -397,8 +397,8 @@ function CryptoDetailPageContent() {
   }, []);
 
   useEffect(() => {
-    if (initialCoinId && !hasLoadedInitial.current && tier && tier !== 'free') {
-      hasLoadedInitial.current = true;
+    if (initialCoinId && loadedInitial.current !== initialCoinId && tier && tier !== 'free') {
+      loadedInitial.current = initialCoinId;
       loadCoinBySymbolOrId(initialCoinId);
     }
   }, [initialCoinId, loadCoinBySymbolOrId, tier]);
@@ -575,7 +575,7 @@ function CryptoDetailPageContent() {
                 ['Price', formatPrice(coinData.market.price_usd)],
                 ['24h', `${coinData.price_changes['24h'] !== undefined ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h']?.toFixed(2)}%` : 'N/A'}`],
                 ['Bias', decision.structureBias],
-                ['Align', `${decision.alignmentScore}%`],
+                ['Structure score', `${decision.alignmentScore}/100`],
                 ['Vol', decision.volatilityState],
                 ['Liquidity', decision.liquidityState],
                 ['Regime', upeGlobal?.regime || decision.regimeTag],
@@ -652,7 +652,7 @@ function CryptoDetailPageContent() {
                     <p className="text-[11px] uppercase text-slate-500">Indicator Status</p>
                     <div className="mt-1 flex items-center justify-between">
                       <p className="text-sm font-bold text-slate-100">{permissionLabel}</p>
-                      <p className="text-xs text-slate-400">Alignment {decision.alignmentScore}%</p>
+                      <p className="text-xs text-slate-400">Structure score {decision.alignmentScore}/100</p>
                     </div>
                     <p className="mt-1 text-xs text-slate-300">
                       {permissionLabel === 'Aligned' && 'Structure and liquidity conditions support analysis workflow.'}

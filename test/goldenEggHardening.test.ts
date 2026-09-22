@@ -6,7 +6,8 @@ vi.mock('@/lib/coingecko', () => ({
 }));
 
 import { assessTimingEvidence, sanitizeTimeConfluence, timingVerdict, describeLevelRelation, TIMING_HARD_GATE } from '../lib/goldenEgg/timing';
-import type { TimeConfluenceData } from '../lib/goldenEggFetchers';
+import { fetchCryptoDerivatives, type TimeConfluenceData } from '../lib/goldenEggFetchers';
+import { getAggregatedOpenInterest } from '../lib/coingecko';
 import { adxStrength, rsiRead, dveStrengthLabel, classifySetup, computeRiskQuality, computeStructureQuality } from '../lib/goldenEgg/semantics';
 import { filterRelevantNews, classifyCatalyst, summarizeNews, avTickerKey } from '../lib/goldenEgg/newsRelevance';
 import { selectCanonicalExpiry, summarizeChain } from '../lib/goldenEgg/optionsChain';
@@ -288,5 +289,18 @@ describe('split-contaminated trust (Part G)', () => {
   it('a split-like jump forces INSUFFICIENT_DATA even with fresh bars', () => {
     const t = evaluateDataTrust({ assetClass: 'equity', timeframe: 'daily', barInterval: '1d', lastBarAt: '2026-09-18', historyBars: 300, price: 71.79, indicators: { atr: true, rsi: true, adx: true, ema200: true, macd: true }, volumeAvailable: true, priceDiscontinuity: { date: '2025-11-17', ratio: 0.099 }, nowMs: Date.UTC(2026, 8, 19, 15) });
     expect(t.level).toBe('INSUFFICIENT_DATA');
+  });
+});
+
+
+describe('crypto derivative evidence availability', () => {
+  it('retains sampled OI when funding interval is unknown without inventing a direction', async () => {
+    vi.mocked(getAggregatedOpenInterest).mockResolvedValue([{symbol:'ETH',totalOpenInterest:17e9,avgVolume24h:33e9,exchanges:3}]);
+    expect(await fetchCryptoDerivatives('ETHUSD')).toEqual({
+      fundingRate:null,fundingRatePercent:null,annualizedFunding:null,
+      totalOpenInterest:17e9,volume24h:33e9,exchanges:3,sentiment:'Unavailable',
+    });
+    vi.mocked(getAggregatedOpenInterest).mockResolvedValue([]);
+    expect(await fetchCryptoDerivatives('ETH')).toBeNull();
   });
 });

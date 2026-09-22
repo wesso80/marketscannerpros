@@ -656,6 +656,20 @@ describe('detectSignal', () => {
     expect(signal.active).toBe(true);
   });
 
+  test('keeps signal-bar OHLC independent of the later spot quote and leaves absent fields unavailable', () => {
+    const closes = generateCalmSeries(50);
+    const input = { closes, currentPrice: 999, changePct: 1 };
+    const incomplete = detectSignal(compressionVolState, bullishDirection, recentCompressionBBWP, input);
+    expect(incomplete.triggerBarPrice).toBe(closes.at(-1));
+    expect(incomplete.triggerBarOpen).toBeUndefined();
+    expect(incomplete.triggerBarHigh).toBeUndefined();
+    const complete = detectSignal(compressionVolState, bullishDirection, recentCompressionBBWP, {
+      ...input, opens: closes.map(v => v - 1), highs: closes.map(v => v + 2), lows: closes.map(v => v - 2),
+    });
+    expect(complete.triggerBarOpen).toBe(closes.at(-1)! - 1);
+    expect(complete.triggerBarHigh).toBe(closes.at(-1)! + 2);
+  });
+
   test('returns none when no conditions met', () => {
     const neutralDir: DirectionalPressure = {
       score: 0, bias: 'neutral', confidence: 0,
