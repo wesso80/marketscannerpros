@@ -11,6 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP, resolveSymbolToId } from '@/lib/coingecko';
+import { proTimeframe } from '@/lib/scanner/timeframes';
+import { summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
@@ -2362,41 +2364,6 @@ function applyInstitutionalFilterToTopPicks(
   };
 }
 
-async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
-  try {
-    const tickers = await getDerivativesForSymbols([symbol]);
-    if (!tickers.length) return null;
-
-    const openInterestUsd = tickers.reduce((sum, t) => sum + (Number(t.open_interest) || 0), 0);
-    const avgIndex = tickers.length
-      ? tickers.reduce((sum, t) => sum + (Number(t.index) || 0), 0) / tickers.length
-      : 0;
-    const openInterestCoin = avgIndex > 0 ? openInterestUsd / avgIndex : 0;
-    if (!Number.isFinite(openInterestCoin) || openInterestCoin <= 0) return null;
-
-    // CoinGecko funding_rate is already percent per interval — median across venues, no ×100.
-    const fundingRates = tickers
-      .map((t) => Number(t.funding_rate))
-      .filter((v) => Number.isFinite(v))
-      .sort((a, b) => a - b);
-    const fundingRate = fundingRates.length
-      ? (fundingRates.length % 2 ? fundingRates[(fundingRates.length - 1) / 2] : (fundingRates[fundingRates.length / 2 - 1] + fundingRates[fundingRates.length / 2]) / 2)
-      : undefined;
-
-    // Funding payments do not identify observed account positioning.
-    const longShortRatio = undefined;
-
-    return {
-      openInterest: openInterestUsd,
-      openInterestCoin,
-      fundingRate,
-      longShortRatio
-    };
-  } catch {
-    return null;
-  }
-}
-
 // =============================================================================
 // MAIN HANDLER
 // =============================================================================
@@ -2420,7 +2387,10 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid filters' }, { status: 400 });
     }
-    const { type, timeframe = '1d' } = body; // 'equity', 'crypto', or 'forex'
+    const { type } = body;
+    let timeframe: '15m' | '30m' | '1h' | '1d';
+    try { timeframe = proTimeframe(body.timeframe); }
+    catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); } // 'equity', 'crypto', or 'forex'
     const validTimeframes = ['15m', '30m', '1h', '1d'];
     const requestedMode = String(body?.mode || '').toLowerCase();
     const mode: BulkScanMode = requestedMode === 'hybrid'
@@ -2588,105 +2558,45 @@ export async function POST(req: NextRequest) {
     
     console.log(`[bulk-scan] Scanning ${universe.length} ${type} on ${selectedTimeframe} timeframe...`);
     
-    // For crypto, pre-fetch all derivatives data AND market volumes in parallel
-    const derivativesMap = new Map<string, DerivativesData>();
-    const marketVolumeMap = new Map<string, number>();
-    if (type === 'crypto') {
-      const [, marketDataPage] = await Promise.all([
-        (async () => {
-          const derivPromises = universe.map(async (symbol) => {
-            const data = await fetchCryptoDerivatives(symbol);
-            if (data) derivativesMap.set(symbol, data);
-          });
-          await Promise.all(derivPromises);
-        })(),
-        getMarketData({
-          order: 'market_cap_desc',
-          per_page: 250,
-          page: 1,
-          sparkline: false,
-          price_change_percentage: ['24h'],
-        }),
-      ]);
-      if (marketDataPage && Array.isArray(marketDataPage)) {
-        for (const coin of marketDataPage) {
-          const sym = String(coin.symbol || '').toUpperCase();
-          const vol = Number(coin.total_volume);
-          if (sym && Number.isFinite(vol) && vol > 0) marketVolumeMap.set(sym, vol);
-        }
-      }
-      console.log(`[bulk-scan] Fetched derivatives for ${derivativesMap.size} coins, market volumes for ${marketVolumeMap.size} coins`);
-    }
-    
-    // Crypto: CoinGecko (licensed, slower - 10 per batch)
-    // Equity: Alpha Vantage (licensed, rate limited - 5 per batch)
-    const BATCH_SIZE = type === 'crypto' ? 10 : 5;
-    const DELAY = type === 'crypto' ? 200 : 250; // More delay to respect rate limits
-    // Universe accounting: every input symbol ends up either scanned or excluded WITH a reason.
     const excluded: Array<{ symbol: string; reason: string }> = [];
-    let scannedCount = 0;
-    
-    for (let i = 0; i < universe.length; i += BATCH_SIZE) {
-      const batch = universe.slice(i, i + BATCH_SIZE);
-      
-      const batchPromises = batch.map(async (id) => {
-        try {
-          // Crypto uses CoinGecko (licensed), Equity uses Alpha Vantage (licensed)
-          let ohlcv: OHLCV[] | null;
-          let basis: CryptoFetchOutcome['basis'] | undefined;
-          if (type === 'crypto') {
-            const outcome = await fetchCoinGeckoSeries(id, selectedTimeframe);
-            ohlcv = outcome.ohlcv; basis = outcome.basis;
-            if (!ohlcv) { excluded.push({ symbol: id, reason: outcome.excludedReason ?? 'provider_no_data' }); return null; }
-          } else {
-            ohlcv = await fetchAlphaVantageData(id, selectedTimeframe);
-            if (!ohlcv) { excluded.push({ symbol: id, reason: 'provider_no_data' }); errors.push(`${id}: No data`); return null; }
-          }
-          scannedCount += 1;
-          
-          const result = analyzeAssetByTimeframe(id, ohlcv, selectedTimeframe);
-          if (!result) { excluded.push({ symbol: id, reason: 'indicator_warmup_incomplete' }); return null; }
-          if (basis) (result as any).dataBasis = basis;
-          if (result && type === 'crypto') {
-            // Inject 24h volume from market data (CoinGecko OHLC lacks volume)
-            const mktVol = marketVolumeMap.get(id.toUpperCase());
-            if (Number.isFinite(mktVol) && mktVol! > 0 && (!result.indicators.volume || result.indicators.volume <= 0)) {
-              result.indicators.volume = mktVol;
-            }
-            // Add derivatives data
-            const derivData = derivativesMap.get(id);
-            if (derivData && result.indicators?.price) {
-              result.derivatives = {
-                openInterest: derivData.openInterestCoin * result.indicators.price,
-                openInterestCoin: derivData.openInterestCoin,
-                fundingRate: derivData.fundingRate,
-                longShortRatio: derivData.longShortRatio
-              };
-            }
-          }
-          return result;
-        } catch (e: any) {
-          errors.push(`${id}: ${e.message}`);
-          excluded.push({ symbol: id, reason: `error: ${String(e?.message ?? 'unknown').slice(0, 80)}` });
-          return null;
-        }
-      });
-      
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults.filter(r => r !== null));
-      
-      // Progress check - stop if taking too long
-      if (Date.now() - startTime > 55000) {
-        excluded.push(...universe.slice(i + BATCH_SIZE).map(symbol => ({ symbol, reason: 'time_budget_exhausted' })));
-        console.log(`[bulk-scan] Time limit approaching, stopping early`);
-        break;
+    const budgetMs = Math.max(0, 45_000 - (Date.now() - startTime));
+    // Histories and optional context run together; none can hold all results past
+    // the 60-second client deadline. Every requested symbol is accounted for.
+    const [histories, derivativeReads, marketReads] = await Promise.all([
+      boundedBatch(universe, id => fetchCoinGeckoSeries(id, selectedTimeframe, {
+        requestOptions: { retries: 0, timeoutMs: 4_000 },
+      }), { concurrency: 5, budgetMs }),
+      boundedBatch([universe], symbols => getDerivativesForSymbols(symbols), { concurrency: 1, budgetMs: Math.min(budgetMs, 15_000) }),
+      boundedBatch([0], () => getMarketData({ order: 'market_cap_desc', per_page: 250, page: 1, sparkline: false },
+        { retries: 0, timeoutMs: 4_000 }), { concurrency: 1, budgetMs: Math.min(budgetMs, 5_000) }),
+    ]);
+    const derivatives = derivativeReads[0]?.status === 'fulfilled' ? derivativeReads[0].value : [];
+    const markets = marketReads[0]?.status === 'fulfilled' ? marketReads[0].value ?? [] : [];
+    const marketById = new Map(markets.map(coin => [coin.id, coin]));
+    histories.forEach((read, index) => {
+      const symbol = universe[index];
+      if (read.status === 'rejected') {
+        excluded.push({ symbol, reason: 'time_budget_or_provider_failure' });
+        return;
       }
-      
-      if (i + BATCH_SIZE < universe.length) {
-        await new Promise(r => setTimeout(r, DELAY));
-      }
-    }
-    
+      const outcome = read.value;
+      if (!outcome.ohlcv) { excluded.push({ symbol, reason: outcome.excludedReason ?? 'provider_no_data' }); return; }
+      const result = analyzeAssetByTimeframe(symbol, outcome.ohlcv, selectedTimeframe);
+      if (!result) { excluded.push({ symbol, reason: 'indicator_warmup_incomplete' }); return; }
+      if (outcome.basis) (result as any).dataBasis = outcome.basis;
+      // A current 24h market volume is separate from candle volume. It cannot
+      // fill missing hourly/15m volume or make volume-dependent factors valid.
+      const market = outcome.basis?.coinId ? marketById.get(outcome.basis.coinId) : undefined;
+      if (market) (result as any).marketSnapshot = {
+        volume24hUsd: market.total_volume, observedAt: market.last_updated, coinId: market.id,
+      };
+      const derivative = summarizeDerivativeSnapshot(symbol, derivatives);
+      if (derivative) result.derivatives = derivative;
+      results.push(result);
+    });
+    if (excluded.length) errors.push(`${excluded.length}/${universe.length} symbols unavailable; inspect exclusion reasons.`);
+    if (!derivatives.length) errors.push('Derivatives unavailable; dependent evidence omitted.');
+
     // Sort by conviction strength — distance from 50 — so both bullish AND bearish setups rank high
     const topPicks = results
       .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));

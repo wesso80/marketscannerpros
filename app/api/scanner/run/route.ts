@@ -15,6 +15,8 @@ import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
+import { scannerTimeframe } from '@/lib/scanner/timeframes';
+import { summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
@@ -346,39 +348,6 @@ function localDemoScanResponse(args: {
   });
 }
 
-// Fetch derivatives data from CoinGecko commercial derivatives endpoint
-function cryptoDerivativesFromSnapshot(symbol: string, snapshot: Awaited<ReturnType<typeof getDerivativesForSymbols>>): DerivativesData | null {
-  try {
-    const baseSymbol = symbol.replace(/[-]?(USD|USDT)$/i, '').toUpperCase();
-    const source = snapshot.filter(ticker => ticker.index_id.toUpperCase() === baseSymbol);
-    if (!source.length) return null;
-
-    const best = [...source].sort((a, b) => (b.volume_24h || 0) - (a.volume_24h || 0))[0];
-    const markPrice = Number(best.price || 0);
-    const openInterestUsd = Number(best.open_interest || 0);
-    const openInterestCoin = markPrice > 0 ? openInterestUsd / markPrice : 0;
-    // CoinGecko funding_rate is already percent per interval (BTC ≈ 0.005%/8h) — no ×100.
-    const fundingRate = Number.isFinite(best.funding_rate) ? best.funding_rate : undefined;
-    const basisPercent = Number.isFinite(best.basis) && Number.isFinite(best.index) && best.index > 0
-      ? (best.basis / best.index) * 100
-      : undefined;
-
-    if (!Number.isFinite(openInterestUsd) || openInterestUsd <= 0) return null;
-
-    return {
-      openInterest: openInterestUsd,
-      openInterestCoin,
-      fundingRate,
-      longShortRatio: undefined,
-      oiChangePercent: undefined,
-      basisPercent,
-    };
-  } catch (err) {
-    console.warn('[scanner] Failed to fetch derivatives for', symbol, err);
-    return null;
-  }
-}
-
 /** Compute DVE flags for a scanner item. Non-fatal — returns undefined on error. */
 function computeScannerDVE(
   closes: number[],
@@ -628,7 +597,10 @@ export async function POST(req: NextRequest) {
     }
     
     const body = (await req.json()) as ScanRequest;
-    const { type, timeframe, minScore, symbols } = body;
+    const { type, minScore, symbols } = body;
+    let timeframe: CryptoScanTimeframe;
+    try { timeframe = scannerTimeframe(body.timeframe); }
+    catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
     if (type === 'crypto' || type === 'equity' || type === 'forex') requestedType = type;
     requestedTimeframe = timeframe || 'daily';
     requestedSymbols = Array.isArray(symbols) ? symbols.map(String) : undefined;
@@ -737,7 +709,7 @@ export async function POST(req: NextRequest) {
       "weekly": "weekly"
     };
     const avInterval = intervalMap[timeframe] || "daily";
-    const cryptoTimeframe: CryptoScanTimeframe = timeframe === 'weekly' ? 'weekly' : timeframe === '1h' ? '1h' : timeframe === '15m' ? '15m' : 'daily';
+    const cryptoTimeframe = timeframe;
     const isIntradayTimeframe = timeframe === '1h' || timeframe === '15m' || timeframe === '30m';
     console.info("[scanner] Using interval:", avInterval, "for timeframe:", timeframe);
 
@@ -1779,7 +1751,7 @@ export async function POST(req: NextRequest) {
           let cryptoDerivatives: ScanResult['derivatives'] | undefined;
           if (type === 'crypto') {
             try {
-              const derivData = cryptoDerivativesFromSnapshot(baseSym, derivativeSnapshot);
+              const derivData = summarizeDerivativeSnapshot(baseSym, derivativeSnapshot);
               if (derivData) {
                 cryptoDerivatives = {
                   openInterest: Number.isFinite(derivData.openInterest) && derivData.openInterest > 0

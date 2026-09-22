@@ -276,6 +276,9 @@ function computeScore(
 
 export interface ScannerBacktestParams {
   sourceBarMinutes?: number;
+  /** Inclusive trading window; earlier bars are used only to warm indicators. */
+  startDate?: string;
+  endDate?: string;
   /** Symbol for labeling trades */
   symbol: string;
   /** OHLCV bars sorted ascending by date */
@@ -313,7 +316,7 @@ const WARMUP_BARS = 200; // Need 200 bars for EMA200
 export function runScannerBacktest(params: ScannerBacktestParams): ScannerBacktestResult {
   const {
     symbol,
-    bars,
+    bars: suppliedBars,
     initialCapital,
     minScore,
     stopMultiplier = 1.5,
@@ -322,10 +325,16 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
     allowShorts = true,
   } = params;
 
+  const bars = suppliedBars.filter(bar => !params.endDate || bar.date.slice(0, 10) <= params.endDate);
+  const requestedStart = params.startDate
+    ? bars.findIndex(bar => bar.date.slice(0, 10) >= params.startDate!)
+    : WARMUP_BARS;
+  const firstTradingIndex = requestedStart < 0 ? bars.length : Math.max(WARMUP_BARS, requestedStart);
+
   const trades: BacktestTrade[] = [];
   const scoreSeries: { date: string; score: number; direction: string }[] = [];
 
-  if (bars.length < WARMUP_BARS + 30) {
+  if (bars.length < WARMUP_BARS + 30 || firstTradingIndex >= bars.length) {
     // Not enough data
     const emptyResult = buildBacktestEngineResult([], [], initialCapital);
     return {
@@ -358,7 +367,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   let targetPrice = 0;
 
   // Walk bar-by-bar starting after warmup
-  for (let i = WARMUP_BARS; i < bars.length; i++) {
+  for (let i = firstTradingIndex; i < bars.length; i++) {
     const close = closes[i];
     const date = bars[i].date;
     const high = highs[i];
@@ -448,7 +457,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
     }
 
     // Check entry conditions (only if not in a trade)
-    if (!inTrade && Number.isFinite(atrVal) && atrVal > 0) {
+    if (!inTrade && i < bars.length - 1 && Number.isFinite(atrVal) && atrVal > 0) {
       const atrSafe = atrVal;
 
       if (result.direction === 'bullish' && result.score >= minScore) {
@@ -498,7 +507,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
     });
   }
 
-  const dates = bars.slice(WARMUP_BARS).map(b => b.date);
+  const dates = bars.slice(firstTradingIndex).map(b => b.date);
   const engineResult = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: params.sourceBarMinutes });
 
   return {

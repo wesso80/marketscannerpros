@@ -25,7 +25,7 @@ import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { logger } from '@/lib/logger';
 import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { fetchPriceData, isCryptoSymbol, normalizeSymbol } from '@/lib/backtest/providers';
-import { computeCoverage, parseBacktestTimeframe } from '@/lib/backtest/timeframe';
+import { parseBacktestTimeframe } from '@/lib/backtest/timeframe';
 import { runScannerBacktest } from '@/lib/backtest/scannerBacktest';
 import { verifyCronAuth } from '@/lib/adminAuth';
 
@@ -72,6 +72,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'symbol, startDate, and endDate are required' }, { status: 400 });
     }
 
+    const validDate = (value: unknown): value is string => typeof value === 'string'
+      && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && Number.isFinite(Date.parse(value))
+      && new Date(value).toISOString().slice(0, 10) === value;
+    if (typeof rawSymbol !== 'string' || !validDate(startDate) || !validDate(endDate) || startDate > endDate) {
+      return NextResponse.json({ error: 'Use a valid symbol and an ordered YYYY-MM-DD date range' }, { status: 400 });
+    }
+    const parsedTimeframe = typeof timeframe === 'string' ? parseBacktestTimeframe(timeframe) : null;
+    if (!parsedTimeframe || !Number.isFinite(initialCapital) || initialCapital <= 0) {
+      return NextResponse.json({ error: 'Use a supported timeframe and positive starting capital' }, { status: 400 });
+    }
+
     const isCrypto = isCryptoSymbol(rawSymbol);
     const symbol = isCrypto ? normalizeSymbol(rawSymbol) : rawSymbol.toUpperCase();
 
@@ -79,11 +91,11 @@ export async function POST(req: NextRequest) {
 
     // Fetch OHLCV
     const { priceData, source } = await fetchPriceData(symbol, timeframe, startDate, endDate);
-    const coverage = computeCoverage(priceData, startDate, endDate);
 
     // Convert to sorted bars array
     const bars = Object.entries(priceData)
       .map(([date, bar]) => ({ date, ...bar }))
+      .filter(bar => bar.date.slice(0, 10) <= endDate)
       .sort((a, b) => a.date.localeCompare(b.date));
 
     if (bars.length < 230) {
@@ -95,7 +107,9 @@ export async function POST(req: NextRequest) {
 
     // Run the scanner backtest engine
     const result = runScannerBacktest({
-      sourceBarMinutes: parseBacktestTimeframe(timeframe)?.minutes,
+      sourceBarMinutes: parsedTimeframe.minutes,
+      startDate,
+      endDate,
       symbol,
       bars,
       initialCapital,
@@ -105,6 +119,10 @@ export async function POST(req: NextRequest) {
       maxHoldBars: Math.max(3, Math.min(100, Number(maxHoldBars) || 20)),
       allowShorts: allowShorts !== false,
     });
+
+    if (!result.scoreSeries.length) {
+      return NextResponse.json({ error: 'No evaluable bars inside the requested dates after the 200-bar indicator warmup' }, { status: 422 });
+    }
 
     logger.info('Scanner backtest completed', {
       symbol,
@@ -118,8 +136,8 @@ export async function POST(req: NextRequest) {
       ...result,
       dataCoverage: {
         requested: { startDate, endDate },
-        applied: { startDate: coverage.appliedStartDate, endDate: coverage.appliedEndDate },
-        bars: coverage.bars,
+        applied: { startDate: result.scoreSeries[0].date, endDate: result.scoreSeries[result.scoreSeries.length - 1].date },
+        bars: result.scoreSeries.length,
         provider: source,
       },
     });
