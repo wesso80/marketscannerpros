@@ -375,11 +375,11 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
 
 function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   if (!rows.length) {
-    return <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-8 text-center text-sm text-slate-500 md:hidden">No ranked scenarios match this filter.</div>;
+    return <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-8 text-center text-sm text-slate-500 msp-scanner-mobile">No ranked scenarios match this filter.</div>;
   }
 
   return (
-    <div className="grid gap-3 md:hidden">
+    <div className="msp-scanner-mobile-cards gap-3">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
         const msp = computeMspScore(row, activeRegime);
@@ -440,7 +440,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
 
 function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   return (
-    <div className="grid gap-3 md:hidden">
+    <div className="msp-scanner-mobile-cards gap-3">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
         const msp = computeMspScore(row, activeRegime);
@@ -1595,7 +1595,7 @@ export default function ScannerPage() {
           </div>
 
           {/* Tabs — dropdown on mobile, pills on desktop */}
-          <div className="md:hidden">
+          <div className="msp-scanner-mobile">
             <label htmlFor="scanner-tab-select" className="sr-only">Scanner tab</label>
             <select
               id="scanner-tab-select"
@@ -1609,7 +1609,7 @@ export default function ScannerPage() {
               })}
             </select>
           </div>
-          <div className="hidden md:flex items-center gap-1 overflow-x-auto pb-1">
+          <div className="msp-scanner-desktop-tabs items-center gap-1 overflow-x-auto pb-1">
             {TABS.map(tab => (
               <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)}
                 className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
@@ -1666,12 +1666,12 @@ export default function ScannerPage() {
             ) : v2PartialLoading ? (
               <>
                 <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-                <div className="hidden md:block"><RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} /></div>
+                <div className="msp-scanner-desktop"><RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} /></div>
               </>
             ) : (
               <>
               <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-              <div className="hidden overflow-x-auto -mx-1 md:block">
+              <div className="msp-scanner-desktop overflow-x-auto -mx-1">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">

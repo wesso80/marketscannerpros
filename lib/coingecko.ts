@@ -595,7 +595,8 @@ export async function getMarketData(
     order?: 'market_cap_desc' | 'market_cap_asc' | 'volume_desc' | 'volume_asc';
     sparkline?: boolean;
     price_change_percentage?: Array<'1h' | '24h' | '7d' | '14d' | '30d' | '200d' | '1y'>;
-  }
+  },
+  requestOptions?: { retries?: number; timeoutMs?: number },
 ): Promise<CoinGeckoMarketData[] | null> {
   try {
     const params = new URLSearchParams({
@@ -616,6 +617,8 @@ export async function getMarketData(
 
     return await cgFetch<CoinGeckoMarketData[]>('/coins/markets', {
       params,
+      retries: requestOptions?.retries,
+      timeoutMs: requestOptions?.timeoutMs,
       init: { next: { revalidate: 90 } },
     });
   } catch (error) {

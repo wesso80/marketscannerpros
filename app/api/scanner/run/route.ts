@@ -15,6 +15,7 @@ import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
+import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
 import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
@@ -346,10 +347,10 @@ function localDemoScanResponse(args: {
 }
 
 // Fetch derivatives data from CoinGecko commercial derivatives endpoint
-async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
+function cryptoDerivativesFromSnapshot(symbol: string, snapshot: Awaited<ReturnType<typeof getDerivativesForSymbols>>): DerivativesData | null {
   try {
     const baseSymbol = symbol.replace(/[-]?(USD|USDT)$/i, '').toUpperCase();
-    const source = await getDerivativesForSymbols([baseSymbol]);
+    const source = snapshot.filter(ticker => ticker.index_id.toUpperCase() === baseSymbol);
     if (!source.length) return null;
 
     const best = [...source].sort((a, b) => (b.volume_24h || 0) - (a.volume_24h || 0))[0];
@@ -544,6 +545,7 @@ function buildScannerLiquidityLevels(
 }
 
 export async function POST(req: NextRequest) {
+  const requestStartedAt = Date.now();
   console.info(`[scanner] VERSION: ${SCANNER_VERSION} - stablecoins excluded`);
   let requestedType: 'crypto' | 'equity' | 'forex' = 'crypto';
   let requestedTimeframe = 'daily';
@@ -563,7 +565,7 @@ export async function POST(req: NextRequest) {
 
     const session = { ...rawSession, tier: effectiveTier };
 
-    console.info(`[scanner] session: tier=${session.tier} cookieTier=${rawSession.tier} cid=${session.cid} ws=${session.workspaceId.substring(0, 8)}`);
+    console.info(`[scanner] session tier=${session.tier}`);
 
     // Rate limit check - skip for cron jobs and paid tiers
     if (!isCronBypass && session.tier !== 'pro' && session.tier !== 'pro_trader') {
@@ -1602,6 +1604,24 @@ export async function POST(req: NextRequest) {
     const results: ScanResult[] = [];
     const errors: string[] = [];
 
+    // Read crypto histories concurrently and derivatives once, within the browser's
+    // 30-second deadline. A failed/slow coin must not hide other completed reads.
+    const cryptoSeries = new Map<string, PromiseSettledResult<CryptoSeries>>();
+    let derivativeSnapshot: Awaited<ReturnType<typeof getDerivativesForSymbols>> = [];
+    if (type === 'crypto') {
+      const cryptoSymbols = [...new Set(['BTC', ...limited])];
+      const budgetMs = Math.max(0, 22_000 - (Date.now() - requestStartedAt));
+      const [seriesReads, derivativeReads] = await Promise.all([
+        boundedBatch(cryptoSymbols, symbol => fetchCryptoSeries(symbol, cryptoTimeframe, requestStartedAt, {
+          requestOptions: { retries: 0, timeoutMs: 4_000 },
+        }), { concurrency: 5, budgetMs }),
+        boundedBatch([limited], symbols => getDerivativesForSymbols(symbols), { concurrency: 1, budgetMs }),
+      ]);
+      cryptoSymbols.forEach((symbol, index) => cryptoSeries.set(symbol, seriesReads[index]));
+      if (derivativeReads[0]?.status === 'fulfilled') derivativeSnapshot = derivativeReads[0].value;
+      if (!derivativeSnapshot.length) errors.push('Derivatives unavailable within scan deadline; funding and open interest omitted.');
+    }
+
     // PRE-FETCH: Bulk quotes for all equities (saves N-1 API calls!)
     // This fetches all equity prices in 1 call instead of N individual calls
     const equitySymbols = type === "equity" ? limited : [];
@@ -1634,7 +1654,9 @@ export async function POST(req: NextRequest) {
     };
     try {
       if (type === 'crypto') {
-        const btcSeries = await fetchCryptoSeries('BTC', cryptoTimeframe);
+        const btcRead = cryptoSeries.get('BTC');
+        if (!btcRead || btcRead.status !== 'fulfilled') throw new Error('BTC benchmark unavailable');
+        const btcSeries = btcRead.value;
         benchmarkCloses = btcSeries.bars.map((b) => b.close);
         benchmarkChangePct = nBarReturn(benchmarkCloses) ?? 0;
       } else if (type === 'equity') {
@@ -1681,7 +1703,10 @@ export async function POST(req: NextRequest) {
           // Genuine-timeframe bars (lib/scanner/cryptoBars): completed bars drive indicators; the open bar supplies price.
           let series: CryptoSeries;
           try {
-            series = await fetchCryptoSeries(baseSym, cryptoTimeframe);
+            const read = cryptoSeries.get(baseSym);
+            if (!read) throw new Error('Crypto series not evaluated');
+            if (read.status === 'rejected') throw read.reason;
+            series = read.value;
           } catch (cgErr: any) {
             errors.push(`${baseSym}: ${cgErr.message}`);
             continue;
@@ -1754,7 +1779,7 @@ export async function POST(req: NextRequest) {
           let cryptoDerivatives: ScanResult['derivatives'] | undefined;
           if (type === 'crypto') {
             try {
-              const derivData = await fetchCryptoDerivatives(baseSym);
+              const derivData = cryptoDerivativesFromSnapshot(baseSym, derivativeSnapshot);
               if (derivData) {
                 cryptoDerivatives = {
                   openInterest: Number.isFinite(derivData.openInterest) && derivData.openInterest > 0
@@ -2326,6 +2351,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const evaluatedCount = results.length;
     const adaptiveBase = await getAdaptiveLayer(
       session.workspaceId,
       {
@@ -3044,6 +3070,8 @@ export async function POST(req: NextRequest) {
     // Return results with cache-prevention headers
     const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';
     const providerWarnings = errors.slice(0, 5);
+    if (limited.length < symbolsToScan.length) providerWarnings.push(`Ranked sample: ${limited.length} of ${symbolsToScan.length} universe symbols attempted; use Pro for a larger universe.`);
+    if (evaluatedCount < limited.length) providerWarnings.push(`${evaluatedCount}/${limited.length} symbols evaluated; ${limited.length - evaluatedCount} unavailable.`);
     // Any row whose real bar interval differs from the requested timeframe is disclosed at response level too.
     const mismatched = [...new Set(results.filter((r) => r.dataTrust?.intervalMismatch).map((r) => r.barInterval).filter((x): x is string => Boolean(x)))];
     if (mismatched.length) {
@@ -3073,7 +3101,7 @@ export async function POST(req: NextRequest) {
           source: providerSource,
           computedAt: new Date(),
           stale: isStale,
-          coverageScore: results.length ? Math.max(0, 100 - Math.min(50, errors.length * 5)) : 0,
+          coverageScore: limited.length ? Math.round(100 * evaluatedCount / limited.length) : 0,
           warnings: providerWarnings,
           providerStatus: buildMarketDataProviderStatus({
             source: providerSource,
@@ -3083,6 +3111,11 @@ export async function POST(req: NextRequest) {
             warnings: providerWarnings,
           }),
         }),
+        scanCoverage: {
+          universe: symbolsToScan.length, attempted: limited.length, evaluated: evaluatedCount,
+          unavailable: limited.length - evaluatedCount, outsideSample: symbolsToScan.length - limited.length,
+          returned: results.length,
+        },
         blockedByInstitutionalFilter: blockedCount,
         adaptiveTrader: {
           profile: adaptive.profile,

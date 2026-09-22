@@ -82,6 +82,17 @@ describe('crypto series timeframe → source mapping', () => {
     resolve.mockImplementation(async (sym: string) => ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', AVAX: 'avalanche-2', INJ: 'injective-protocol', APT: 'aptos', HBAR: 'hedera-hashgraph', NEAR: 'near', ARB: 'arbitrum', LINK: 'chainlink', XRP: 'ripple' }[sym] ?? null));
   });
 
+  it.each(['daily', '1h', '30m', '15m'] as const)('forwards the ranked request deadline to %s providers', async timeframe => {
+    getOHLCRange.mockResolvedValue(dailyBars(40, now).map(b => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
+    getOHLC.mockResolvedValue([[now - HOUR, 10, 12, 9, 11], [now - HOUR / 2, 11, 13, 10, 12]]);
+    getMarketChartRange.mockResolvedValue({ prices: [[now - HOUR, 10], [now - HOUR / 2, 11]], market_caps: [], total_volumes: [] } as any);
+    const requestOptions = { retries: 0, timeoutMs: 4000 };
+    await fetchCryptoSeries('BTC', timeframe, now, { requestOptions });
+    for (const call of getOHLCRange.mock.calls) expect(call[3]).toEqual(requestOptions);
+    for (const call of getMarketChartRange.mock.calls) expect(call[3]).toEqual(requestOptions);
+    for (const call of getOHLC.mock.calls) expect(call[2]).toEqual(requestOptions);
+  });
+
   it('normalises symbol suffixes without truncating tickers (APT, HBAR, INJ, NEAR, ARB, AVAX, LINK, XRP, BTC, ETH, SOL)', async () => {
     getOHLCRange.mockResolvedValue(dailyBars(40, now).map((b) => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
     getMarketChartRange.mockResolvedValue({ prices: [], market_caps: [], total_volumes: [] } as any);

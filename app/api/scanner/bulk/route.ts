@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP, resolveSymbolToId } from '@/lib/coingecko';
+import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
 import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
@@ -464,13 +465,13 @@ async function fetchAVCryptoIndicators(symbol: string, timeframe: string) {
 // completed bars only. Unknown symbols resolve dynamically instead of relying on the hardcoded map.
 const PRO_TF_TO_SERIES: Record<string, CryptoScanTimeframe> = { '1d': 'daily', '1h': '1h', '30m': '30m', '15m': '15m' };
 type CryptoFetchOutcome = { ohlcv: OHLCV[] | null; excludedReason?: 'stablecoin' | 'no_provider_mapping' | 'provider_no_data' | 'insufficient_history'; basis?: { barInterval: string; lastCompletedBarAt: string | null; historyBars: number; volumeBasis: string; coinId: string } };
-async function fetchCoinGeckoSeries(symbol: string, timeframe: string = '1d'): Promise<CryptoFetchOutcome> {
+async function fetchCoinGeckoSeries(symbol: string, timeframe: string = '1d', opts: { coinId?: string; requestOptions?: { retries?: number; timeoutMs?: number } } = {}): Promise<CryptoFetchOutcome> {
   const upper = symbol.toUpperCase();
   if (STABLECOINS.has(upper)) return { ohlcv: null, excludedReason: 'stablecoin' };
-  const coinId = SYMBOL_TO_COINGECKO[upper] ?? (await resolveSymbolToId(upper));
+  const coinId = opts.coinId ?? SYMBOL_TO_COINGECKO[upper] ?? (await resolveSymbolToId(upper));
   if (!coinId) return { ohlcv: null, excludedReason: 'no_provider_mapping' };
   try {
-    const series = await fetchCryptoSeries(upper, PRO_TF_TO_SERIES[timeframe] ?? 'daily', Date.now(), { coinId });
+    const series = await fetchCryptoSeries(upper, PRO_TF_TO_SERIES[timeframe] ?? 'daily', Date.now(), { coinId, requestOptions: opts.requestOptions });
     if (series.bars.length < 20) return { ohlcv: null, excludedReason: 'insufficient_history' };
     const ohlcv: OHLCV[] = series.bars.map((b) => ({ date: b.t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
     return { ohlcv, basis: { barInterval: series.barInterval, lastCompletedBarAt: series.lastCompletedBarAt, historyBars: series.bars.length, volumeBasis: series.volumeBasis, coinId: series.coinId } };
@@ -1339,7 +1340,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
   let apiCallsUsed = 0;
 
   for (let page = 1; page <= pageCount; page++) {
-    if (Date.now() - startTime > 55000) {
+    if (Date.now() - startTime > 15_000) {
       console.log('[bulk-scan/light] Time limit reached while fetching CoinGecko pages');
       break;
     }
@@ -1353,7 +1354,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
       page,
       sparkline: false,
       price_change_percentage: ['1h', '24h', '7d'],
-    });
+    }, { retries: 0, timeoutMs: 5_000 });
     apiCallsUsed += 1;
 
     if (!pageData || pageData.length === 0) {
@@ -1391,70 +1392,25 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
     .filter((item): item is NonNullable<ReturnType<typeof scoreLightCryptoCandidate>> => item !== null)
     .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
 
-  // ── Enrichment phase: fetch OHLC + compute real indicators for top 10 ──
-  // The light scan uses market-data only (price change, volume, market cap)
-  // which produces identical "—" columns for RSI/ADX/ATR/etc.  Enrichment
-  // fills in real indicators via CoinGecko OHLC first, then AV fallback.
+  // Enrich ten leaders with bounded genuine-timeframe histories. Do not make
+  // seven more AV calls to fill a missing MFI: those inputs can have a different
+  // venue/interval and must not silently replace the CoinGecko candle evidence.
   const top10 = ranked.slice(0, 10);
-  const ENRICH_BATCH = 5;
-  const ENRICH_DELAY = 200;
-  const enrichedPicks: any[] = [];
-
-  for (let i = 0; i < top10.length; i += ENRICH_BATCH) {
-    if (Date.now() - startTime > 50000) {
-      console.log('[bulk-scan/light] Enrichment time limit — returning remaining picks un-enriched');
-      enrichedPicks.push(...top10.slice(i));
-      break;
-    }
-    const batch = top10.slice(i, i + ENRICH_BATCH);
-    const batchResults = await Promise.all(batch.map(async (pick) => {
-      try {
-        // ── Strategy 1: CoinGecko genuine-timeframe bars → full local indicator computation ──
-        const outcome = await fetchCoinGeckoSeries(pick.symbol, timeframe);
-        const ohlcv = outcome.ohlcv;
-        if (ohlcv && ohlcv.length >= 20) {
-          apiCallsUsed += 1;
-          const enriched = analyzeAssetByTimeframe(pick.symbol, ohlcv, timeframe);
-          if (enriched) {
-            const result = enrichCryptoPick(pick, enriched);
-            if (outcome.basis) result.dataBasis = outcome.basis;
-            // CoinGecko OHLC has no volume data → MFI/OBV/VWAP are empty.
-            // Supplement with AV MFI call to fill the gap.
-            if (!result.indicators?.mfi) {
-              try {
-                const avInd = await fetchAVCryptoIndicators(pick.symbol, timeframe);
-                if (avInd) {
-                  apiCallsUsed += 7;
-                  if (Number.isFinite(avInd.mfi)) result.indicators.mfi = avInd.mfi;
-                  // Also grab OBV proxy: not available from AV, but MACD/Stoch may be
-                  // more accurate from AV than local CG computation. Leave existing values.
-                }
-              } catch { /* non-critical — CG indicators already populated */ }
-            }
-            return result;
-          }
-        }
-
-        // ── Strategy 2: Alpha Vantage individual indicators (fallback) ──
-        console.log(`[bulk-scan/light] CoinGecko OHLC unavailable for ${pick.symbol}, trying AV fallback`);
-        const avInd = await fetchAVCryptoIndicators(pick.symbol, timeframe);
-        if (avInd) {
-          apiCallsUsed += 7; // 7 parallel AV calls
-          return enrichCryptoPickFromAV(pick, avInd);
-        }
-
-        // No enrichment available — keep original light-scored pick
-        return pick;
-      } catch (err: any) {
-        console.warn(`[bulk-scan/light] Enrichment failed for ${pick.symbol}:`, err.message);
-        return pick;
-      }
-    }));
-    enrichedPicks.push(...batchResults);
-    if (i + ENRICH_BATCH < top10.length) {
-      await new Promise(r => setTimeout(r, ENRICH_DELAY));
-    }
-  }
+  const reads = await boundedBatch(top10, async pick => {
+    const coinId = dedupedBySymbol.get(pick.symbol)?.id;
+    const outcome = await fetchCoinGeckoSeries(pick.symbol, timeframe, {
+      coinId, requestOptions: { retries: 0, timeoutMs: 4_000 },
+    });
+    const enriched = outcome.ohlcv ? analyzeAssetByTimeframe(pick.symbol, outcome.ohlcv, timeframe) : null;
+    if (!enriched) throw new Error(outcome.excludedReason ?? 'insufficient_history');
+    const result = enrichCryptoPick(pick, enriched);
+    if (outcome.basis) result.dataBasis = outcome.basis;
+    return result;
+  }, { concurrency: 5, budgetMs: Math.max(0, 35_000 - (Date.now() - startTime)) });
+  const enrichedPicks = reads.map((read, index) => read.status === 'fulfilled' ? read.value : top10[index]);
+  const enrichmentUnavailable = reads.filter(read => read.status === 'rejected').length;
+  // Count the upper bound of requested OHLC/volume reads, including failures.
+  apiCallsUsed += top10.length * (timeframe === '1d' ? 3 : 1);
 
   return {
     scanned: ranked.length,
@@ -1468,8 +1424,9 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
       source: 'coingecko /coins/markets (top by market cap)',
       input: markets.length,
       valid: ranked.length,
+      enrichment: { attempted: top10.length, completed: top10.length - enrichmentUnavailable, unavailable: enrichmentUnavailable },
       excludedCounts: { stablecoin: droppedStable, nonAsciiTicker: droppedNonAscii, duplicateSymbol: markets.length - droppedStable - droppedNonAscii - dedupedBySymbol.size, unscorable: dedupedBySymbol.size - ranked.length },
-      note: 'Fast ranks the whole market-cap universe on market data (price change, turnover, rank) and enriches the top 10 with genuine-timeframe indicators. Deep scans the curated symbol_universe list with full indicators for every symbol.',
+      note: `${top10.length - enrichmentUnavailable}/${top10.length} technical enrichments completed. Fast ranks the whole market-cap universe on market data (price change, turnover, rank) and enriches the top 10 with genuine-timeframe indicators. Deep scans the curated symbol_universe list with full indicators for every symbol.`,
     },
   };
 }

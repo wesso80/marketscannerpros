@@ -68,8 +68,8 @@ async function fetchDailyBars(coinId: string, nowS: number, requestOptions?: Req
   return { bars: dedupeByTime([...asBars(older, '1d'), ...asBars(recent, '1d')]), volumes: chart?.total_volumes ?? [], warnings };
 }
 
-async function fetchHourlyBars(coinId: string, nowS: number): Promise<Bar[]> {
-  const rows = await getOHLCRange(coinId, nowS - HOURLY_MAX_DAYS * DAY_S, nowS, undefined, 'hourly');
+async function fetchHourlyBars(coinId: string, nowS: number, requestOptions?: RequestOptions): Promise<Bar[]> {
+  const rows = await getOHLCRange(coinId, nowS - HOURLY_MAX_DAYS * DAY_S, nowS, requestOptions, 'hourly');
   if (!rows?.length) throw new Error(`CoinGecko hourly OHLC unavailable for ${coinId}`);
   return dedupeByTime(asBars(rows, '1h'));
 }
@@ -105,12 +105,12 @@ export async function fetchCryptoSeries(
       source += ' → aggregated to Monday-anchored weekly bars';
     }
   } else if (timeframe === '1h') {
-    bars = await fetchHourlyBars(coinId, nowS); barInterval = '1h';
+    bars = await fetchHourlyBars(coinId, nowS, opts.requestOptions); barInterval = '1h';
     source = 'coingecko ohlc/range interval=hourly';
     warnings.push('hourly volume not provided by CoinGecko — volume factors unavailable on 1H');
   } else if (timeframe === '30m') {
     // /ohlc with days=1 returns genuine 30-minute candles (CoinGecko granularity rule: 1–2 days → 30m).
-    const fine = await getOHLC(coinId, 1);
+    const fine = await getOHLC(coinId, 1, opts.requestOptions);
     if (!fine?.length) throw new Error(`CoinGecko 30-minute OHLC unavailable for ${coinId}`);
     const gapMin = fine.length > 2 ? Math.round((fine[1][0] - fine[0][0]) / 60_000) : 30;
     if (gapMin !== 30 && gapMin !== 240) throw new Error(`Unsupported CoinGecko OHLC interval: ${gapMin}m`);
@@ -121,7 +121,7 @@ export async function fetchCryptoSeries(
     warnings.push('30m history limited to ~1 day (EMA200 unavailable); volume unavailable');
   } else {
     // 15m: CoinGecko exposes no sub-hourly OHLC; aggregate 5-minute price samples from a ≤1-day range.
-    const chart = await getMarketChartRange(coinId, nowS - DAY_S, nowS);
+    const chart = await getMarketChartRange(coinId, nowS - DAY_S, nowS, opts.requestOptions);
     if (!chart?.prices?.length) throw new Error(`CoinGecko 5-minute prices unavailable for ${coinId}`);
     bars = barsFromPriceSamples(chart.prices, '15m'); barInterval = '15m'; hlBasis = 'price_samples';
     source = 'coingecko market_chart/range (5-minute price samples → 15m bars)';
