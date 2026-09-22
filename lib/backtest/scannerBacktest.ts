@@ -275,6 +275,7 @@ function computeScore(
 // ─── Walkthrough engine ───────────────────────────────────────────────────
 
 export interface ScannerBacktestParams {
+  sourceBarMinutes?: number;
   /** Symbol for labeling trades */
   symbol: string;
   /** OHLCV bars sorted ascending by date */
@@ -498,7 +499,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   }
 
   const dates = bars.slice(WARMUP_BARS).map(b => b.date);
-  const engineResult = buildBacktestEngineResult(trades, dates, initialCapital);
+  const engineResult = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: params.sourceBarMinutes });
 
   return {
     ...engineResult,

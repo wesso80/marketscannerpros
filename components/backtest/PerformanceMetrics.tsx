@@ -1,5 +1,8 @@
 'use client';
 
+import StatisticsBasisNote from './StatisticsBasisNote';
+
+import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
 import { BACKTEST_SLIPPAGE_BPS } from '@/lib/backtest/assumptions';
 
 interface Trade {
@@ -39,31 +42,32 @@ interface PerformanceMetricsProps {
   totalTrades: number;
   profitFactor: number | null;
   profitFactorLabel?: string;
-  sharpeRatio: number;
+  sharpeRatio: number | null;
   maxDrawdown: number;
   avgWin: number;
   avgLoss: number;
-  cagr: number;
-  volatility: number;
-  sortinoRatio: number;
-  calmarRatio: number;
+  cagr: number | null;
+  volatility: number | null;
+  sortinoRatio: number | null;
+  calmarRatio: number | null;
   timeInMarket: number;
   bestTrade: Trade | null;
   worstTrade: Trade | null;
   kelly?: KellyCriterion;
   monteCarlo?: MonteCarloResult;
+  statisticsBasis?: BacktestStatisticsBasis;
 }
 
-function safe(v: number) {
+function safe(v: number | null | undefined) {
   return Number.isFinite(v) ? v : null;
 }
 
 function scoreProfitFactor(value: number | null | undefined) {
-  return value ?? 3;
+  return value ?? 0;
 }
 
 function formatProfitFactor(value: number | null | undefined, label?: string) {
-  return value == null ? label ?? 'No losses' : value.toFixed(2);
+  return value == null ? label ?? 'Unavailable' : value.toFixed(2);
 }
 
 function MetricCard({ label, children, emphasized, borderColor }: {
@@ -149,7 +153,7 @@ function BacktestAssumptionsPanel({ totalTrades, monteCarlo }: { totalTrades: nu
         <AssumptionTile
           label="Monte Carlo"
           value={monteCarlo ? `${monteCarlo.simulations} simulations` : 'Not available'}
-          detail={monteCarlo?.seed != null ? `Deterministic seed ${monteCarlo.seed}; sequence risk only, not live execution risk.` : 'Monte Carlo appears after enough trades for a shuffle simulation.'}
+          detail={monteCarlo?.seed != null ? `Deterministic seed ${monteCarlo.seed}; IID resampling of fixed dollar P&L with replacement; no compounding, regime dependence or execution model.` : 'Monte Carlo appears after at least eight trades for resampling. Small samples remain unreliable.'}
         />
         <AssumptionTile
           label="Interpretation"
@@ -161,10 +165,10 @@ function BacktestAssumptionsPanel({ totalTrades, monteCarlo }: { totalTrades: nu
   );
 }
 
-export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, profitFactorLabel, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade, kelly, monteCarlo }: PerformanceMetricsProps) {
+export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, profitFactorLabel, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade, monteCarlo, statisticsBasis }: PerformanceMetricsProps) {
   const pfScore = scoreProfitFactor(profitFactor);
-  const pfColor = pfScore >= 1.5 ? 'var(--msp-bull)' : pfScore >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)';
-  const pfBorder = pfScore >= 1.5 ? 'rgba(16,185,129,0.65)' : pfScore >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
+  const pfColor = profitFactor == null ? 'var(--msp-flat)' : pfScore >= 1.5 ? 'var(--msp-bull)' : pfScore >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)';
+  const pfBorder = profitFactor == null ? 'rgba(148,163,184,0.55)' : pfScore >= 1.5 ? 'rgba(16,185,129,0.65)' : pfScore >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
   const ddColor = maxDrawdown <= 10 ? 'var(--msp-bull)' : maxDrawdown <= 20 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const ddBorder = maxDrawdown <= 10 ? 'rgba(16,185,129,0.55)' : maxDrawdown <= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
 
@@ -184,6 +188,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
       </h2>
 
       <BacktestAssumptionsPanel totalTrades={totalTrades} monteCarlo={monteCarlo} />
+      <StatisticsBasisNote basis={statisticsBasis} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         <MetricCard label="Total Return">
@@ -241,7 +246,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
 
         <MetricCard label="CAGR">
           <div className="text-xl font-bold text-slate-100 sm:text-[22px]">
-            {cagr >= 0 ? '+' : ''}{safe(cagr)?.toFixed(2) ?? '—'}%
+            {cagr != null && cagr >= 0 ? '+' : ''}{safe(cagr)?.toFixed(2) ?? '—'}%
           </div>
         </MetricCard>
 
@@ -271,69 +276,42 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
 
         {bestTrade && (
           <div className="rounded-xl border border-emerald-500/30 bg-slate-800/50 p-4">
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Largest Gain</div>
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Best trade</div>
             <div className="text-lg font-bold text-emerald-500">
-              +{bestTrade.returnPercent.toFixed(2)}% ({bestTrade.symbol})
+              {bestTrade.returnPercent >= 0 ? '+' : ''}{bestTrade.returnPercent.toFixed(2)}% ({bestTrade.symbol})
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
               {new Date(bestTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              {` x${bestTrade.holdingPeriodDays}d`}
+              {` · ${bestTrade.holdingPeriodDays} bars`}
             </div>
           </div>
         )}
 
         {worstTrade && (
           <div className="rounded-xl border border-red-500/30 bg-slate-800/50 p-4">
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Largest Loss</div>
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Worst trade</div>
             <div className="text-lg font-bold text-red-500">
               {worstTrade.returnPercent.toFixed(2)}% ({worstTrade.symbol})
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
               {new Date(worstTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              {` x${worstTrade.holdingPeriodDays}d`}
+              {` · ${worstTrade.holdingPeriodDays} bars`}
             </div>
           </div>
         )}
       </div>
 
       {/* Kelly Criterion & Monte Carlo */}
-      {(kelly || monteCarlo) && (
+      {monteCarlo && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {kelly && (
-            <div className="rounded-xl border border-violet-500/30 bg-slate-800/50 p-4">
-              <h3 className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-violet-300">
-                <span>🎯</span> Kelly Criterion
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <div className="text-[10px] text-slate-400">Full Kelly</div>
-                  <div className="text-lg font-bold text-violet-300">{(kelly.kellyFraction * 100).toFixed(1)}%</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-400">Half Kelly ✓</div>
-                  <div className="text-lg font-bold text-emerald-400">{(kelly.halfKelly * 100).toFixed(1)}%</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-400">Edge / Trade</div>
-                  <div className={`text-lg font-bold ${kelly.expectedEdge >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    ${kelly.expectedEdge.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-2 text-[10px] text-slate-500">
-                                {kelly.kellyFraction > 0 ? 'Positive expectancy detected. Half-Kelly shown for reference.' : 'No positive expectancy detected in simulation.'}
-              </div>
-            </div>
-          )}
-
           {monteCarlo && (
             <div className="rounded-xl border border-amber-500/30 bg-slate-800/50 p-4">
               <h3 className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-amber-300">
-                <span>🎲</span> Monte Carlo ({monteCarlo.simulations} sims)
+                <span>🎲</span> Trade bootstrap ({monteCarlo.simulations} sims)
               </h3>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">5th %ile (worst)</span>
+                  <span className="text-slate-400">5th %ile return</span>
                   <span className={`font-medium ${monteCarlo.p5Return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {monteCarlo.p5Return >= 0 ? '+' : ''}{monteCarlo.p5Return.toFixed(1)}%
                   </span>
@@ -357,8 +335,8 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">95th %ile (best)</span>
-                  <span className="font-medium text-emerald-400">+{monteCarlo.p95Return.toFixed(1)}%</span>
+                  <span className="text-slate-400">95th %ile return</span>
+                  <span className={`font-medium ${monteCarlo.p95Return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{monteCarlo.p95Return >= 0 ? '+' : ''}{monteCarlo.p95Return.toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Median DD</span>
@@ -369,7 +347,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
                   <span className="font-medium text-red-400">{monteCarlo.p95MaxDrawdown.toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Ruin Prob (&gt;50% DD)</span>
+                  <span className="text-slate-400">Simulations &gt;50% DD</span>
                   <span className={`font-bold ${monteCarlo.ruinProbability <= 5 ? 'text-emerald-400' : monteCarlo.ruinProbability <= 15 ? 'text-amber-400' : 'text-red-400'}`}>
                     {monteCarlo.ruinProbability.toFixed(1)}%
                   </span>

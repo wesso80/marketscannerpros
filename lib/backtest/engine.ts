@@ -1,3 +1,5 @@
+import { balanceDay, computeBalanceStatistics, type BacktestStatisticsBasis } from './balanceStatistics';
+
 export interface BacktestTrade {
   entryDate: string;
   exitDate: string;
@@ -78,19 +80,20 @@ export interface BacktestEquityPoint {
 }
 
 export interface KellyCriterion {
-  kellyFraction: number;    // optimal fraction of capital to risk per trade
+  kellyFraction: number;    // binary payoff approximation; not an allocation recommendation
   halfKelly: number;        // conservative half-Kelly (commonly used)
-  expectedEdge: number;     // expected $ return per $1 risked
+  expectedEdge: number;     // sample mean dollar P&L per trade; not risk-normalised
 }
 
 export interface MonteCarloResult {
   simulations: number;
+  method: 'iid_dollar_bootstrap';
   seed: number;
   medianReturn: number;     // median final return %
-  p5Return: number;         // 5th percentile (worst-case)
+  p5Return: number;         // 5th percentile; not a worst-case bound
   p25Return: number;        // 25th percentile
   p75Return: number;        // 75th percentile
-  p95Return: number;        // 95th percentile (best-case)
+  p95Return: number;        // 95th percentile; not a best-case bound
   medianMaxDrawdown: number;
   p95MaxDrawdown: number;   // worst-case drawdown at 95th percentile
   ruinProbability: number;  // % of sims that hit > 50% drawdown
@@ -104,15 +107,15 @@ export interface BacktestEngineResult {
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
-  sharpeRatio: number;
+  sharpeRatio: number | null;
   profitFactor: number | null;
   profitFactorLabel?: string;
   avgWin: number;
   avgLoss: number;
-  cagr: number;
-  volatility: number;
-  sortinoRatio: number;
-  calmarRatio: number;
+  cagr: number | null;
+  volatility: number | null;
+  sortinoRatio: number | null;
+  calmarRatio: number | null;
   timeInMarket: number;
   bestTrade: BacktestTrade | null;
   worstTrade: BacktestTrade | null;
@@ -122,6 +125,8 @@ export interface BacktestEngineResult {
   dataCoverage?: BacktestDataCoverage;
   executionAssumptions?: BacktestExecutionAssumptions;
   diagnostics?: unknown;
+  initialCapital?: number;
+  statisticsBasis?: BacktestStatisticsBasis;
   kelly?: KellyCriterion;
   monteCarlo?: MonteCarloResult;
 }
@@ -135,14 +140,15 @@ export function createEmptyBacktestResult(): BacktestEngineResult {
     winRate: 0,
     totalReturn: 0,
     maxDrawdown: 0,
-    sharpeRatio: 0,
-    profitFactor: 0,
+    sharpeRatio: null,
+    profitFactor: null,
+    profitFactorLabel: 'No completed trades',
     avgWin: 0,
     avgLoss: 0,
-    cagr: 0,
-    volatility: 0,
-    sortinoRatio: 0,
-    calmarRatio: 0,
+    cagr: null,
+    volatility: null,
+    sortinoRatio: null,
+    calmarRatio: null,
     timeInMarket: 0,
     bestTrade: null,
     worstTrade: null,
@@ -199,9 +205,20 @@ function computeMergedTimeInMarket(trades: BacktestTrade[], dates: string[]): nu
   return Math.min(100, (coveredBars / dates.length) * 100);
 }
 
-export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string[], initialCapital: number): BacktestEngineResult {
+export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string[], initialCapital: number, options: { sourceBarMinutes?: number } = {}): BacktestEngineResult {
+  if (!Number.isFinite(initialCapital) || initialCapital <= 0) throw new Error('Initial capital must be positive');
   if (trades.length === 0) {
-    return createEmptyBacktestResult();
+    return { ...createEmptyBacktestResult(), initialCapital, statisticsBasis: computeBalanceStatistics([], initialCapital, 0).statisticsBasis };
+  }
+  if (!dates.length || new Set(dates).size !== dates.length) throw new Error('Backtest timeline is empty or duplicated');
+  dates = [...dates].sort();
+  dates.forEach(balanceDay);
+  const timeline = new Set(dates);
+  for (const trade of trades) {
+    if (!timeline.has(trade.exitDate)) throw new Error('Trade exit is missing from the backtest timeline');
+    if (![trade.return, trade.returnPercent, trade.entry, trade.exit].every(Number.isFinite)) {
+      throw new Error('Backtest trade contains a non-finite value');
+    }
   }
 
   const totalTrades = trades.length;
@@ -240,33 +257,12 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
     equityCurve.push({ date, equity, drawdown });
   });
 
-  const endingEquity = equityCurve[equityCurve.length - 1]?.equity || initialCapital;
-  const tradingDays = equityCurve.length;
-
-  const equityReturns = equityCurve.slice(1).map((point, idx) => {
-    const prev = equityCurve[idx].equity;
-    return ((point.equity - prev) / prev) * 100;
-  });
-
-  const avgReturn = equityReturns.reduce((a, b) => a + b, 0) / (equityReturns.length || 1);
-  const stdDev = Math.sqrt(
-    equityReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (equityReturns.length || 1)
-  );
-  const sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0;
-
-  const downsideReturns = equityReturns.filter(r => r < 0);
-  const downsideStd = Math.sqrt(
-    downsideReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / (downsideReturns.length || 1)
-  );
-  const sortinoRatio = downsideStd > 0 ? (avgReturn / downsideStd) * Math.sqrt(252) : 0;
-
-  const cagr = tradingDays > 0 ? Math.pow(endingEquity / initialCapital, 252 / tradingDays) - 1 : 0;
-  const volatility = stdDev * Math.sqrt(252);
+  const balanceStatistics = computeBalanceStatistics(equityCurve, initialCapital, maxDrawdown, options.sourceBarMinutes);
 
   const grossProfit = trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0);
   const grossLoss = Math.abs(trades.filter(t => t.return < 0).reduce((sum, t) => sum + t.return, 0));
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? null : 0;
-  const profitFactorLabel = profitFactor == null ? 'No losing trades in sample' : undefined;
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : null;
+  const profitFactorLabel = profitFactor == null ? (grossProfit > 0 ? 'No losing trades in sample' : 'No gains or losses in sample') : undefined;
 
   const avgWin = winningTrades > 0
     ? trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0) / winningTrades
@@ -276,26 +272,14 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
     : 0;
 
   const timeInMarket = computeMergedTimeInMarket(trades, dates);
-  const calmarRatio = maxDrawdown > 0 ? (cagr * 100) / maxDrawdown : 0;
 
   const bestTrade = trades.reduce((best, t) => t.returnPercent > (best?.returnPercent ?? -Infinity) ? t : best, trades[0]);
   const worstTrade = trades.reduce((worst, t) => t.returnPercent < (worst?.returnPercent ?? Infinity) ? t : worst, trades[0]);
 
-  // Kelly Criterion: f* = (W × B - L) / B  where W=win rate, L=loss rate, B=avg win / abs(avg loss)
-  let kelly: KellyCriterion | undefined;
-  if (winningTrades > 0 && losingTrades > 0 && avgLoss !== 0) {
-    const W = winningTrades / totalTrades;
-    const L = losingTrades / totalTrades;
-    const B = Math.abs(avgWin / avgLoss);
-    const kellyFraction = (W * B - L) / B;
-    kelly = {
-      kellyFraction: parseFloat(Math.max(0, kellyFraction).toFixed(4)),
-      halfKelly: parseFloat(Math.max(0, kellyFraction / 2).toFixed(4)),
-      expectedEdge: parseFloat((W * avgWin + L * avgLoss).toFixed(2)),
-    };
-  }
-
-  // Monte Carlo Simulation: shuffle trade returns 500 times, track equity paths
+  // Kelly allocation is withheld: trades do not contain consistent risk budgets
+  // or a verified payoff model. Mean dollar outcomes cannot establish % capital risk.
+  // IID bootstrap of observed dollar outcomes, with replacement and fixed trade count.
+  // No compounding, regime dependence, margin or execution model is implied.
   let monteCarlo: MonteCarloResult | undefined;
   if (trades.length >= 8) {
     const tradeReturns = trades.map(t => t.return);
@@ -305,18 +289,12 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
     const maxDrawdowns: number[] = [];
 
     for (let s = 0; s < numSims; s++) {
-      // Fisher-Yates shuffle of trade returns
-      const shuffled = [...tradeReturns];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
       // Simulate equity path
       let eq = initialCapital;
       let pk = initialCapital;
       let md = 0;
-      for (const ret of shuffled) {
-        eq += ret;
+      for (let i = 0; i < tradeReturns.length; i++) {
+        eq += tradeReturns[Math.floor(random() * tradeReturns.length)];
         if (eq > pk) pk = eq;
         const dd = pk > 0 ? ((pk - eq) / pk) * 100 : 0;
         if (dd > md) md = dd;
@@ -333,6 +311,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
 
     monteCarlo = {
       simulations: numSims,
+      method: 'iid_dollar_bootstrap',
       seed: MONTE_CARLO_SEED,
       medianReturn: parseFloat(percentile(finalReturns, 50).toFixed(2)),
       p5Return: parseFloat(percentile(finalReturns, 5).toFixed(2)),
@@ -353,15 +332,12 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
     winRate: parseFloat(winRate.toFixed(2)),
     totalReturn: parseFloat(totalReturnPercent.toFixed(2)),
     maxDrawdown: parseFloat(maxDrawdown.toFixed(2)),
-    sharpeRatio: parseFloat(sharpeRatio.toFixed(2)),
+    ...balanceStatistics,
+    initialCapital,
     profitFactor: profitFactor == null ? null : parseFloat(profitFactor.toFixed(2)),
     profitFactorLabel,
     avgWin: parseFloat(avgWin.toFixed(2)),
     avgLoss: parseFloat(avgLoss.toFixed(2)),
-    cagr: parseFloat((cagr * 100).toFixed(2)),
-    volatility: parseFloat(volatility.toFixed(2)),
-    sortinoRatio: parseFloat(sortinoRatio.toFixed(2)),
-    calmarRatio: parseFloat(calmarRatio.toFixed(2)),
     timeInMarket: parseFloat(timeInMarket.toFixed(2)),
     bestTrade: bestTrade ? {
       ...bestTrade,
@@ -389,7 +365,6 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
       return: parseFloat(t.return.toFixed(2)),
       returnPercent: parseFloat(t.returnPercent.toFixed(2)),
     })),
-    kelly,
     monteCarlo,
   };
 }

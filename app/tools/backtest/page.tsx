@@ -1,5 +1,7 @@
 'use client';
 
+import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
+
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -33,6 +35,8 @@ import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft, TradePlan } from '@/lib/workflow/types';
 
 interface BacktestResult {
+  initialCapital?: number;
+  statisticsBasis?: BacktestStatisticsBasis;
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
@@ -40,15 +44,15 @@ interface BacktestResult {
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
-  sharpeRatio: number;
+  sharpeRatio: number | null;
   profitFactor: number | null;
   profitFactorLabel?: string;
   avgWin: number;
   avgLoss: number;
-  cagr: number;
-  volatility: number;
-  sortinoRatio: number;
-  calmarRatio: number;
+  cagr: number | null;
+  volatility: number | null;
+  sortinoRatio: number | null;
+  calmarRatio: number | null;
   timeInMarket: number;
   bestTrade: Trade | null;
   worstTrade: Trade | null;
@@ -216,7 +220,7 @@ const TOP_MARKET_CAP_STOCKS = [
 const TOP_MARKET_CAP_CRYPTO = 'BTCUSD';
 
 function scoreProfitFactor(value: number | null | undefined) {
-  return value ?? 3;
+  return value ?? 0;
 }
 
 function formatProfitFactor(value: number | null | undefined, label?: string) {
@@ -306,8 +310,8 @@ function BacktestContent() {
   const getWorkflowAssetClass = (assetType?: 'stock' | 'crypto') => (assetType === 'crypto' ? 'crypto' : 'equity');
   const inverseComparison = useMemo(() => {
     if (!results || !showInverseComparison) return null;
-    return buildInverseComparisonSnapshot(results);
-  }, [results, showInverseComparison]);
+    return buildInverseComparisonSnapshot(results, results.initialCapital ?? Number(initialCapital));
+  }, [results, showInverseComparison, initialCapital]);
 
   const journalDraftHref = useMemo(() => {
     if (!results) return '/tools/workspace?tab=journal';
@@ -1248,7 +1252,7 @@ function BacktestContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, max drawdown ${results.maxDrawdown}%, sharpe ${results.sharpeRatio}, profit factor ${formatProfitFactor(results.profitFactor, results.profitFactorLabel)}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
+          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, realised balance drawdown ${results.maxDrawdown}% (open risk excluded), realised balance sharpe ${results.sharpeRatio}, profit factor ${formatProfitFactor(results.profitFactor, results.profitFactorLabel)}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
           context: {
             symbol,
             timeframe: `${startDate} to ${endDate}`,
@@ -2101,7 +2105,7 @@ function BacktestContent() {
                 <button
                   type="button"
                   onClick={() => setShowInverseComparison((previous) => !previous)}
-                  aria-label={showInverseComparison ? 'Hide inverse comparison' : 'Show inverse short comparison'}
+                  aria-label={showInverseComparison ? 'Hide inverse comparison' : 'Show mirrored P&L comparison'}
                   style={{
                     padding: '6px 10px',
                     borderRadius: '999px',
@@ -2122,7 +2126,7 @@ function BacktestContent() {
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
                   <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 ? 'var(--msp-bull)' : scoreProfitFactor(results.profitFactor) >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: '14px', fontWeight: 700 }}>
-                    {scoreProfitFactor(results.profitFactor) >= 1.25 ? 'Positive' : scoreProfitFactor(results.profitFactor) >= 1 ? 'Marginal' : 'Negative'}
+                    {results.profitFactor == null ? 'Unavailable' : scoreProfitFactor(results.profitFactor) >= 1.25 ? 'Positive' : scoreProfitFactor(results.profitFactor) >= 1 ? 'Marginal' : 'Negative'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
@@ -2134,7 +2138,7 @@ function BacktestContent() {
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Assessment</div>
                   <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'var(--msp-bull)' : scoreProfitFactor(results.profitFactor) >= 1 ? 'var(--msp-warn)' : 'var(--msp-flat)', fontSize: '14px', fontWeight: 700 }}>
-                    {scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'HIGH ALIGNMENT' : scoreProfitFactor(results.profitFactor) >= 1 ? 'NEEDS REVIEW' : 'LOW ALIGNMENT'}
+                    {results.profitFactor == null ? 'INSUFFICIENT EVIDENCE' : scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'HIGH ALIGNMENT' : scoreProfitFactor(results.profitFactor) >= 1 ? 'NEEDS REVIEW' : 'LOW ALIGNMENT'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
@@ -2154,10 +2158,10 @@ function BacktestContent() {
                   background: 'rgba(127,29,29,0.12)'
                 }}>
                   <div style={{ color: '#fca5a5', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                    Inverse (Short) Replay
+                    Mirrored P&L Scenario
                   </div>
                   <div style={{ color: '#fecaca', fontSize: '12px', marginBottom: '8px' }}>
-                    Mirrors each signal direction in the same sample window to simulate long-fail vs short-side outcome.
+                    Flips recorded net dollar P&L on the same dates and starting capital. This is a sensitivity illustration: short entries, exits, costs and borrow constraints are not re-simulated.
                   </div>
                   <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
@@ -3037,7 +3041,7 @@ function BacktestContent() {
 
                         {/* Equity Curve Section */}
                         <text x={padding.left} y={padding.top - 5} fill="#94a3b8" fontSize="12" fontWeight="600">
-                          Equity Curve
+                          Realised Balance
                         </text>
 
                         {/* Equity grid lines */}
@@ -3175,6 +3179,7 @@ function BacktestContent() {
               maxDrawdown={results.maxDrawdown}
               avgWin={results.avgWin}
               avgLoss={results.avgLoss}
+              statisticsBasis={results.statisticsBasis}
               cagr={results.cagr}
               volatility={results.volatility}
               sortinoRatio={results.sortinoRatio}

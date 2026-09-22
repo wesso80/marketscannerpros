@@ -1,172 +1,46 @@
-export interface InverseComparableTrade {
-  entryDate: string;
-  exitDate: string;
-  symbol: string;
-  side: 'LONG' | 'SHORT';
-  entry: number;
-  exit: number;
-  return: number;
-  returnPercent: number;
-  holdingPeriodDays: number;
-}
+import { buildBacktestEngineResult, type BacktestTrade, type BacktestEquityPoint } from './engine';
 
-export interface InverseComparableEquityPoint {
-  date: string;
-  equity: number;
-  drawdown: number;
-}
-
-export interface InverseComparableResult {
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  breakevenTrades?: number;
-  winRate: number;
+interface InverseComparableResult {
+  initialCapital?: number;
+  statisticsBasis?: { sourceBarMinutes: number };
   totalReturn: number;
+  winRate: number;
   maxDrawdown: number;
-  sharpeRatio: number;
   profitFactor: number | null;
-  avgWin: number;
-  avgLoss: number;
-  cagr: number;
-  volatility: number;
-  sortinoRatio: number;
-  calmarRatio: number;
-  timeInMarket: number;
-  bestTrade: InverseComparableTrade | null;
-  worstTrade: InverseComparableTrade | null;
-  equityCurve: InverseComparableEquityPoint[];
-  trades: InverseComparableTrade[];
+  trades: BacktestTrade[];
+  equityCurve: BacktestEquityPoint[];
 }
 
-export interface InverseComparisonSnapshot<T extends InverseComparableResult> {
-  inverse: T;
-  delta: {
-    totalReturn: number;
-    winRate: number;
-    maxDrawdown: number;
-    profitFactor: number;
-  };
-}
-
-const toFinite = (value: number | null | undefined): number => (value != null && Number.isFinite(value) ? value : 0);
-
-const round = (value: number, digits = 4): number => {
-  const factor = 10 ** digits;
-  return Math.round(value * factor) / factor;
-};
-
-const invertTrade = (trade: InverseComparableTrade): InverseComparableTrade => ({
-  ...trade,
-  side: trade.side === 'LONG' ? 'SHORT' : 'LONG',
-  return: round(-toFinite(trade.return)),
-  returnPercent: round(-toFinite(trade.returnPercent)),
-});
-
-const buildInverseEquityCurve = (trades: InverseComparableTrade[]): InverseComparableEquityPoint[] => {
-  let equity = 100;
-  let peak = 100;
-
-  return trades.map((trade, index) => {
-    const returnPercent = toFinite(trade.returnPercent);
-    equity *= 1 + returnPercent / 100;
-    peak = Math.max(peak, equity);
-    const drawdown = peak > 0 ? ((peak - equity) / peak) * 100 : 0;
-
-    return {
-      date: trade.exitDate || trade.entryDate || `trade-${index + 1}`,
-      equity: round(equity, 6),
-      drawdown: round(drawdown),
-    };
-  });
-};
-
-export function buildInverseBacktestResult<T extends InverseComparableResult>(base: T): T {
-  const trades = base.trades.map(invertTrade);
-  const totalTrades = trades.length;
-
-  let winningTrades = 0;
-  let losingTrades = 0;
-  let grossProfit = 0;
-  let grossLoss = 0;
-  let totalReturn = 0;
-  let positiveReturnSum = 0;
-  let negativeReturnSum = 0;
-
-  let bestTrade: InverseComparableTrade | null = null;
-  let worstTrade: InverseComparableTrade | null = null;
-
-  for (const trade of trades) {
-    const returnValue = toFinite(trade.return);
-    const returnPercent = toFinite(trade.returnPercent);
-
-    totalReturn += returnPercent;
-
-    if (returnPercent > 0) {
-      winningTrades += 1;
-      positiveReturnSum += returnPercent;
-    } else if (returnPercent < 0) {
-      losingTrades += 1;
-      negativeReturnSum += returnPercent;
-    }
-
-    if (returnValue > 0) {
-      grossProfit += returnValue;
-    } else if (returnValue < 0) {
-      grossLoss += Math.abs(returnValue);
-    }
-
-    if (!bestTrade || returnPercent > bestTrade.returnPercent) {
-      bestTrade = trade;
-    }
-    if (!worstTrade || returnPercent < worstTrade.returnPercent) {
-      worstTrade = trade;
-    }
-  }
-
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
-  const avgWin = winningTrades > 0 ? positiveReturnSum / winningTrades : 0;
-  const avgLoss = losingTrades > 0 ? negativeReturnSum / losingTrades : 0;
-  const maxDrawdown = trades.length > 0
-    ? Math.max(...buildInverseEquityCurve(trades).map((point) => point.drawdown))
-    : 0;
-
-  const inverse: T = {
-    ...base,
-    trades,
-    equityCurve: buildInverseEquityCurve(trades),
-    totalTrades,
-    winningTrades,
-    losingTrades,
-    winRate: round(winRate),
-    totalReturn: round(totalReturn),
-    maxDrawdown: round(maxDrawdown),
-    profitFactor: grossLoss > 0 ? round(grossProfit / grossLoss) : grossProfit > 0 ? null : 0,
-    avgWin: round(avgWin),
-    avgLoss: round(avgLoss),
-    bestTrade,
-    worstTrade,
-    sharpeRatio: round(-toFinite(base.sharpeRatio)),
-    cagr: round(-toFinite(base.cagr)),
-    sortinoRatio: round(-toFinite(base.sortinoRatio)),
-    calmarRatio: round(-toFinite(base.calmarRatio)),
-    volatility: round(toFinite(base.volatility)),
-    timeInMarket: round(toFinite(base.timeInMarket)),
-  };
-
+/** A sign-flipped dollar-P&L sensitivity scenario, not a short execution replay. */
+export function buildInverseBacktestResult(base: InverseComparableResult, initialCapital: number) {
+  const trades = base.trades.map(trade => ({
+    ...trade,
+    side: trade.side === 'LONG' ? 'SHORT' as const : 'LONG' as const,
+    direction: trade.side === 'LONG' ? 'short' as const : 'long' as const,
+    return: -trade.return,
+    returnPercent: -trade.returnPercent,
+    mfe: undefined,
+    mae: undefined,
+  }));
+  const inverse = buildBacktestEngineResult(trades, base.equityCurve.map(point => point.date), initialCapital, { sourceBarMinutes: base.statisticsBasis?.sourceBarMinutes });
+  // Forward-run Kelly/Monte Carlo/validation are not inverse execution evidence.
+  inverse.kelly = undefined;
+  inverse.monteCarlo = undefined;
   return inverse;
 }
 
-export function buildInverseComparisonSnapshot<T extends InverseComparableResult>(base: T): InverseComparisonSnapshot<T> {
-  const inverse = buildInverseBacktestResult(base);
-
+export function buildInverseComparisonSnapshot(base: InverseComparableResult, initialCapital = base.initialCapital) {
+  if (initialCapital == null || !Number.isFinite(initialCapital) || initialCapital <= 0) return null;
+  const inverse = buildInverseBacktestResult(base, initialCapital);
+  const round = (value: number) => Number(value.toFixed(4));
   return {
     inverse,
     delta: {
-      totalReturn: round(inverse.totalReturn - toFinite(base.totalReturn)),
-      winRate: round(inverse.winRate - toFinite(base.winRate)),
-      maxDrawdown: round(inverse.maxDrawdown - toFinite(base.maxDrawdown)),
-      profitFactor: round(toFinite(inverse.profitFactor) - toFinite(base.profitFactor)),
+      totalReturn: round(inverse.totalReturn - base.totalReturn),
+      winRate: round(inverse.winRate - base.winRate),
+      maxDrawdown: round(inverse.maxDrawdown - base.maxDrawdown),
+      profitFactor: inverse.profitFactor != null && base.profitFactor != null
+        ? round(inverse.profitFactor - base.profitFactor) : null,
     },
   };
 }

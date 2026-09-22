@@ -2,6 +2,8 @@
 
 Base release: `483dd6a` (PR23). This batch addresses Journal, Portfolio, quote provenance and the Backtest workflow. It is not a complete platform or 5/5 sign-off.
 
+**Release update, 22 September:** commit `335a7c5d334d722567210e5d277f619c516bd130` is confirmed on GitHub `main` and live on both Render services. Render dashboard access is restored through the authenticated browser in My Workspace. Built-in GitHub/Render connector requests still fail; this is not a claim that those connectors or CLI write access have recovered.
+
 ## Findings and changes
 
 | Finding | Correction in this batch | Verification |
@@ -34,8 +36,8 @@ Base release: `483dd6a` (PR23). This batch addresses Journal, Portfolio, quote p
 
 ## Material remaining work
 
-1. Push and deploy this batch, then recheck the live UI and compatible clean daily histories. Render logs could not be read in this turn, so repaired ingestion is still unverified.
-2. Backtest's shared statistics engine still needs calendar/cadence review: it treats bars as trading days for annualisation and uses realised equity, excluding open-position adverse excursions. Do not interpret those ratios or drawdowns as verified portfolio risk. Scanner/replay cost-model parity also remains to be audited.
+1. Push and deployment are now verified. Complete live cross-tool handoff and clean-history checks. Provider downloads are visible in Render logs; this does not establish end-to-end source-value parity.
+2. The subsequent [backtest and data-integrity batch](backtest-data-integrity-2026-09-22.md) corrects cadence, first-return, downside-denominator and simulation defects locally, with explicit realised-balance disclosures and unavailable annualisation for multi-day bars. That separate release still requires publication and live verification. Open-position adverse excursions and scanner/replay cost-model parity remain unverified; do not interpret realised-only drawdown as complete portfolio risk.
 3. Portfolio flow adjustment uses an explicit UTC day-end convention because snapshots are stored by date. It does not establish the intraday valuations needed for exact time-weighted returns around significant cash flows. VaR is withheld below 20 returns; this threshold does not make a short sample statistically reliable.
 4. Journal/Portfolio P&L remains before fees unless fees are already included in a recorded outcome. Contract multipliers, option premium handling, financing, borrow and full net-cost lifecycle support need a separate verified instrument model.
 5. Stock quotes expose a trading date or retrieval time when available, not an invented precise provider observation timestamp. A complete exchange-session freshness policy and verified manual-position identity are still needed.
@@ -52,6 +54,18 @@ Base release: `483dd6a` (PR23). This batch addresses Journal, Portfolio, quote p
 
 Production build completed with exit code 0: compilation, TypeScript, and **400/400 generated pages passed**. The expected local-database connection refusal came from the deliberately unreachable build fixture, not production. Generated `next-env.d.ts` changes were discarded. This build does not verify live ingestion or deployment.
 
-## Release blocker
+## Initial release blocker
 
-This batch is committed locally on `codex/performance-integrity-20260922`, **not pushed, merged or deployed**. Direct Git push failed with `could not read Username for 'https://github.com': terminal prompts disabled`; no authenticated Git credentials were available. The GitHub and Render connector calls both failed with `Invalid MCP request metadata`. These are access/transport failures, not an approval rejection. The last previously verified live release remains `483dd6a`; no current Render status could be retrieved in this turn.
+The batch initially remained local on `codex/performance-integrity-20260922`. Direct Git push failed with `could not read Username for 'https://github.com': terminal prompts disabled`; no authenticated Git credentials were available. GitHub and Render connector calls failed with `Invalid MCP request metadata`. A subsequent GitHub CLI sign-in was blocked by the workspace network policy at `api.github.com`. A verified Git bundle allowed the user to push from their own computer. No force push was requested.
+
+## Production verification after the user's push
+
+- Public Git fetch confirms `origin/main` at `335a7c5d334d722567210e5d277f619c516bd130`. Its tree, `96769e5b4670cf70f2d6f8bc334e0f6c7d47ba2b`, exactly matches the tested local release.
+- Render web deployment `dep-daoss6rncjis739n7d80` is marked **Deploy succeeded | Live**. Build succeeded; startup completed migration 058; the service became live at **2026-09-22 00:41:51 UTC**.
+- Render worker deployment `dep-daoss73ncjis739n7efg` is marked **Deploy succeeded | Live**, with its live log at **00:39:42 UTC**. The new process waited for the prior process's lane lock, acquired the expired lock at **00:42:48 UTC**, and resumed its loop. This rollout wait is distinct from a failed deployment.
+- `/api/health` returned HTTP 200 at **00:41:54 UTC**. This endpoint reports web-server liveness; it does not check database health, provider freshness, or the deployed commit.
+- The authenticated Journal now displays `Recorded realized P&L` and `Estimated open P&L`; the old `Equity / Balance` label is absent. Private trade details are intentionally excluded from this report.
+- Pre-deployment worker logs at **00:19:50–00:20:43 UTC** show successful CoinGecko daily-OHLC downloads for twenty tier-one assets, including BTC, ETH, SOL and XRP (361 bars reported per asset). This is evidence that the previously repaired provider request path ran in production, not independent verification of every candle value.
+- New-process cycles initially reported zero due requests because crypto was not yet due and equities were outside the configured session. The first due cycle subsequently completed at **00:51:36 UTC**: **20 due crypto assets, 20 processed, 20 CoinGecko successes, zero no-data responses and zero errors**, in 48 seconds. Per-asset logs show history retrieval and successful persistence. This verifies a real post-deployment ingestion cycle; it does not independently reconcile candle values or validate the next equity-session run.
+- Missing-cron-header messages appear in web logs. Source review shows that normal authenticated `/api/quote` requests also call the optional cron verifier before checking the user's session, so these messages alone do not demonstrate failed scheduled jobs. Caller correlation and log-noise cleanup remain follow-ups.
+- No environment variables, account permissions, scheduled-job settings, alerts, trades or saved research records were changed during connection recovery. Diamond was not run.

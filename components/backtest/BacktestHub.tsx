@@ -1,5 +1,7 @@
 'use client';
 
+import StatisticsBasisNote from './StatisticsBasisNote';
+
 /* ═══════════════════════════════════════════════════════════════════════════
    SURFACE 8: BACKTEST — Strategy + Scanner Backtesting (Combined)
    Real APIs: /api/backtest, /api/backtest/brain, /api/backtest/time-scanner,
@@ -169,7 +171,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
   };
 
   // ─── Render ──────────────────────────────────────────────────────────
-  const resultTabs = ['Summary', 'Equity Curve', 'Trades', ...(result?.diagnostics ? ['Diagnostics'] : [])];
+  const resultTabs = ['Summary', 'Realised Balance', 'Trades', ...(result?.diagnostics ? ['Diagnostics'] : [])];
   const showTabbedResults = !embeddedInWorkspace;
 
   return (
@@ -421,14 +423,15 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {/* ─── SUMMARY ──────────────────────────────────── */}
             {(!showTabbedResults || resultTab === 'Summary') && (
               <div className="space-y-4">
+                <StatisticsBasisNote basis={result.statisticsBasis} />
                 {/* Key metrics grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   <MetricCard label="Total Return" value={fmtPct(n(result.totalReturn))} color={pctColor(n(result.totalReturn))} />
                   <MetricCard label="Win Rate" value={sampledMetric(result.winRate, n(result.totalTrades), 1, '%')} color={n(result.totalTrades) === 0 ? 'text-slate-400' : n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'} />
-                  <MetricCard label="Profit Factor" value={sampledProfitFactor(result.profitFactor, n(result.totalTrades), n(result.winningTrades), n(result.losingTrades))} color={n(result.totalTrades) === 0 ? 'text-slate-400' : n(result.profitFactor) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
-                  <MetricCard label="Max Drawdown" value={fmtPct(n(result.maxDrawdown))} color="text-red-400" />
+                  <MetricCard label="Profit Factor" value={sampledProfitFactor(result.profitFactor, n(result.totalTrades), n(result.winningTrades), n(result.losingTrades))} color={n(result.totalTrades) === 0 || result.profitFactor == null ? 'text-slate-400' : n(result.profitFactor) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
+                  <MetricCard label="Realised Drawdown" value={fmtPct(n(result.maxDrawdown))} color="text-red-400" />
                   <MetricCard label="Sharpe" value={sampledMetric(result.sharpeRatio, n(result.totalTrades))} />
-                  <MetricCard label="CAGR" value={fmtPct(n(result.cagr))} color={pctColor(n(result.cagr))} />
+                  <MetricCard label="CAGR" value={sampledMetric(result.cagr, n(result.totalTrades), 2, '%')} color={pctColor(n(result.cagr))} />
                 </div>
 
                 {/* Extended metrics */}
@@ -442,7 +445,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     <MetricRow label="Avg Loss (USD)" value={sampledMetric(result.avgLoss, n(result.losingTrades))} color="text-red-400" />
                     <MetricRow label="Sortino" value={sampledMetric(result.sortinoRatio, n(result.totalTrades))} />
                     <MetricRow label="Calmar" value={sampledMetric(result.calmarRatio, n(result.totalTrades))} />
-                    <MetricRow label="Volatility" value={fmtPct(n(result.volatility))} />
+                    <MetricRow label="Volatility" value={sampledMetric(result.volatility, n(result.totalTrades), 2, '%')} />
                     <MetricRow label="Time in Market" value={`${n(result.timeInMarket).toFixed(1)}%`} />
                     {result.bestTrade && <MetricRow label="Largest Gain" value={fmtPct(n(result.bestTrade.returnPercent))} color="text-emerald-400" />}
                     {result.worstTrade && <MetricRow label="Largest Loss" value={fmtPct(n(result.worstTrade.returnPercent))} color="text-red-400" />}
@@ -478,9 +481,9 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             )}
 
             {/* ─── EQUITY CURVE ─────────────────────────────── */}
-            {(!showTabbedResults || resultTab === 'Equity Curve') && (
+            {(!showTabbedResults || resultTab === 'Realised Balance') && (
               <Card>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Equity Curve</h3>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Realised Balance</h3>
                 {result.equityCurve && result.equityCurve.length > 1 ? (
                   <EquityCurveChart data={result.equityCurve} />
                 ) : (

@@ -5,9 +5,8 @@ import { parseBacktestTimeframe, resamplePriceData, computeCoverage } from '@/li
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
 import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
 import { buildValidationPayload } from '@/lib/backtest/validationPayload';
-import { avTakeToken } from '@/lib/avRateGovernor';
+import { fetchStockPriceData as fetchVerifiedStockPriceData } from '@/lib/backtest/providers';
 
-const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 type PriceData = Record<string, {
   open: number;
@@ -54,46 +53,7 @@ function resolveBarIndexFromTime(sortedDates: string[], timestamp: string, isDai
 }
 
 async function fetchStockPriceData(symbol: string, timeframe: string): Promise<PriceData> {
-  const parsedTimeframe = parseBacktestTimeframe(timeframe);
-  if (!parsedTimeframe) {
-    throw new Error(`Unsupported timeframe: ${timeframe}`);
-  }
-
-  const isDaily = parsedTimeframe.kind === 'daily';
-  const interval = parsedTimeframe.alphaInterval || '1min';
-  const timeSeriesKey = isDaily ? 'Time Series (Daily)' : `Time Series (${interval})`;
-  const url = isDaily
-    ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`
-    : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
-
-  await avTakeToken();
-  const response = await fetch(url);
-  const data = await response.json();
-  const timeSeries = data[timeSeriesKey];
-  if (!timeSeries) {
-    if (data['Error Message']) throw new Error(`Invalid symbol ${symbol}: ${data['Error Message']}`);
-    if (data['Note']) throw new Error('API rate limit exceeded. Please try again in a minute.');
-    throw new Error(`Failed to fetch stock data for ${symbol}`);
-  }
-
-  interface AVTimeSeries { '1. open': string; '2. high': string; '3. low': string; '4. close': string; '5. volume': string }
-
-  const parsed: PriceData = {};
-  for (const [date, values] of Object.entries(timeSeries)) {
-    const v = values as AVTimeSeries;
-    parsed[date] = {
-      open: Number(v['1. open']),
-      high: Number(v['2. high']),
-      low: Number(v['3. low']),
-      close: Number(v['4. close']),
-      volume: Number(v['5. volume']),
-    };
-  }
-  if (parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
-    return resamplePriceData(parsed, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes);
-  }
-
-  return parsed;
+  return (await fetchVerifiedStockPriceData(symbol, timeframe)).priceData;
 }
 
 async function fetchCryptoPriceData(symbol: string, timeframe: string, startDate: string, endDate: string): Promise<PriceData> {
@@ -521,7 +481,7 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
   }
 
   const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);
-  const result = buildBacktestEngineResult(enrichedTrades, dates, params.initialCapital);
+  const result = buildBacktestEngineResult(enrichedTrades, dates, params.initialCapital, { sourceBarMinutes: parsedTimeframe.minutes });
   const strategyDirection = inferStrategyDirection(params.mode, result.trades);
   const diagnostics = buildBacktestDiagnostics(result, strategyDirection, parsedTimeframe.normalized, coverage.bars);
   const validation = buildValidationPayload(params.mode, strategyDirection, result);

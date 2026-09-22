@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
       isCrypto ? 'crypto' : 'stock'
     );
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
-    const result = buildBacktestEngineResult(trades, dates, initialCapital);
+    const result = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: parsedTimeframe.minutes });
     const strategyDirection = strategyDefinition.direction ?? inferStrategyDirection(strategyDefinition.id, result.trades);
     const diagnostics = buildBacktestDiagnostics(
       result,
@@ -162,6 +162,9 @@ export async function POST(req: NextRequest) {
       bars: coverage.bars,
       volumeUnavailable,
     });
+    if (!isCrypto) executionAssumptions.warnings.push('All OHLC fields share the split/dividend-adjusted price basis. Daily volume remains provider-reported shares; fills are research prices, not historical executable quotes.');
+    if (isCrypto) executionAssumptions.warnings.push('Crypto uses genuine CoinGecko hourly/daily OHLC, labelled by candle open. Volume is unavailable; sub-hour backtests are not supported by this feed.');
+
 
     logger.info('Backtest completed successfully', { 
       symbol, 

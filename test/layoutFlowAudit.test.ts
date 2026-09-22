@@ -458,12 +458,12 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('function TerminalSubviewFrame');
     expect(terminalPage).toContain('function TerminalSubviewMetric');
     expect(terminalPage).toContain('aria-label={`Terminal ${tab} command header`}');
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Gravity\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Flow\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Crypto\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Capital Pressure\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Gravity\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Flow\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Crypto\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Capital Pressure\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>");
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Symbol" value={symbol}');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="View" value={tab}');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Focus" value={focusLabel}');
@@ -572,7 +572,7 @@ describe('layout and flow audit regressions', () => {
     expect(backtestHub).toContain('const showTabbedResults = !embeddedInWorkspace;');
     expect(backtestHub).toContain('{showTabbedResults && (');
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Summary') && (");
-    expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Equity Curve') && (");
+    expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Realised Balance') && (");
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Trades') && (");
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Diagnostics') && result.diagnostics && (");
   });

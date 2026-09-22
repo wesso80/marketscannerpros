@@ -25,7 +25,7 @@ import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { logger } from '@/lib/logger';
 import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { fetchPriceData, isCryptoSymbol, normalizeSymbol } from '@/lib/backtest/providers';
-import { computeCoverage } from '@/lib/backtest/timeframe';
+import { computeCoverage, parseBacktestTimeframe } from '@/lib/backtest/timeframe';
 import { runScannerBacktest } from '@/lib/backtest/scannerBacktest';
 import { verifyCronAuth } from '@/lib/adminAuth';
 
@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
 
     // Run the scanner backtest engine
     const result = runScannerBacktest({
+      sourceBarMinutes: parseBacktestTimeframe(timeframe)?.minutes,
       symbol,
       bars,
       initialCapital,

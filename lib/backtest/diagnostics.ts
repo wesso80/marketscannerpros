@@ -28,11 +28,11 @@ function uniquePush(target: string[], value: string) {
 }
 
   function numericProfitFactor(result: BacktestEngineResult): number {
-    return result.profitFactor ?? 3;
+    return result.profitFactor ?? 0;
   }
 
   function formatProfitFactor(result: BacktestEngineResult): string {
-    return result.profitFactor == null ? 'no losing trades in sample' : result.profitFactor.toFixed(2);
+    return result.profitFactor == null ? result.profitFactorLabel ?? 'unavailable' : result.profitFactor.toFixed(2);
   }
 
 export function inferStrategyDirection(strategyId: string, trades: BacktestTrade[]): StrategyDirection {
@@ -117,7 +117,7 @@ export function buildBacktestDiagnostics(
   const invalidationStatus: 'valid' | 'watch' | 'invalidated' =
     result.totalReturn < 0 && result.profitFactor != null && result.profitFactor < 1
       ? 'invalidated'
-      : result.totalReturn < 0 || (result.profitFactor != null && result.profitFactor < 1) || result.winRate < 45
+      : result.profitFactor == null || result.totalReturn < 0 || (result.profitFactor != null && result.profitFactor < 1) || result.winRate < 45
       ? 'watch'
       : 'valid';
 
@@ -135,7 +135,7 @@ export function buildBacktestDiagnostics(
 
   const score = Math.max(0, Math.min(100, Math.round(scoreRaw)));
   const verdict: 'healthy' | 'watch' | 'invalidated' =
-    invalidationStatus === 'invalidated' ? 'invalidated' : score >= 60 ? 'healthy' : 'watch';
+    invalidationStatus === 'invalidated' ? 'invalidated' : result.profitFactor != null && score >= 60 ? 'healthy' : 'watch';
 
   const summary = verdict === 'healthy'
     ? `Edge is stable on ${timeframe} with score ${score}/100. Maintain current rule set and monitor drift.`

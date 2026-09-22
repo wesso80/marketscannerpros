@@ -1,3 +1,4 @@
+import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
 /**
  * v2 Data Hooks — Wire v2 surfaces to v1 API endpoints
  * 
@@ -1056,6 +1057,8 @@ export interface EquityPoint {
 }
 
 export interface BacktestResult {
+  initialCapital?: number;
+  statisticsBasis?: BacktestStatisticsBasis;
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
@@ -1063,15 +1066,15 @@ export interface BacktestResult {
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
-  sharpeRatio: number;
+  sharpeRatio: number | null;
   profitFactor: number | null;
   profitFactorLabel?: string;
   avgWin: number;
   avgLoss: number;
-  cagr: number;
-  volatility: number;
-  sortinoRatio: number;
-  calmarRatio: number;
+  cagr: number | null;
+  volatility: number | null;
+  sortinoRatio: number | null;
+  calmarRatio: number | null;
   timeInMarket: number;
   bestTrade: BacktestTrade | null;
   worstTrade: BacktestTrade | null;

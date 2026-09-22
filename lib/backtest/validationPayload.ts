@@ -6,7 +6,7 @@ export function buildValidationPayload(
   strategyDirection: 'bullish' | 'bearish' | 'both',
   result: { winRate: number; profitFactor: number | null; totalReturn: number; profitFactorLabel?: string },
 ): BacktestValidation {
-  const profitFactorScore = result.profitFactor ?? 3;
+  const profitFactorScore = result.profitFactor ?? 0;
   const profitFactorText = result.profitFactor == null ? result.profitFactorLabel ?? 'no losing trades in sample' : result.profitFactor.toFixed(2);
   const invalidated = result.winRate < 40 || (result.profitFactor != null && result.profitFactor < 1) || result.totalReturn <= 0;
   const validated = result.winRate >= 50 && profitFactorScore >= 1.2 && result.totalReturn > 0;

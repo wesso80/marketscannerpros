@@ -4,14 +4,14 @@
  * Handles fetching from Alpha Vantage (stocks) and CoinGecko (crypto).
  *
  * Audit fixes (2026-02-27):
- *   P0-3  – Intraday uses outputsize=compact by default (not full)
- *   P0-4  – Daily now reads "5. adjusted close" for split/dividend correctness
+ *   Daily OHLC shares one split/dividend adjustment basis.
+ *   Crypto requires genuine bounded OHLC history; sampled prices are not candles.
  *   Cache – Redis caching (daily 6h, intraday 120s, CoinGecko 300s)
  */
 
 import { logger } from '@/lib/logger';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { getOHLC, getOHLCRange, getMarketChartFull, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getOHLCRange, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getCached, setCached } from '@/lib/redis';
 import {
   parseBacktestTimeframe,
@@ -72,7 +72,7 @@ const TTL = {
 } as const;
 
 function cacheKey(provider: string, symbol: string, interval: string, outputsize: string): string {
-  return `bt:${provider}:${symbol}:${interval}:${outputsize}`;
+  return `bt:v3:${provider}:${symbol}:${interval}:${outputsize}`;
 }
 
 // ─── Alpha Vantage — Stocks ───────────────────────────────────────────────
@@ -115,7 +115,7 @@ export async function fetchStockPriceData(
     url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
     timeSeriesKey = 'Time Series (Daily)';
   } else {
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputsize}&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&adjusted=true&outputsize=${outputsize}&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
     timeSeriesKey = `Time Series (${interval})`;
   }
 
@@ -130,26 +130,13 @@ export async function fetchStockPriceData(
     throw new Error(`Failed to fetch price data for ${symbol}`);
   }
 
-  const priceData: PriceData = {};
-  for (const [date, values] of Object.entries(timeSeries)) {
-    const v = values as Record<string, string>;
-    priceData[date] = {
-      open: parseFloat(v['1. open']),
-      high: parseFloat(v['2. high']),
-      low: parseFloat(v['3. low']),
-      // P0-4: Use adjusted close for daily, raw close for intraday
-      close: !isIntraday && v['5. adjusted close']
-        ? parseFloat(v['5. adjusted close'])
-        : parseFloat(v['4. close']),
-      volume: parseFloat(v[isIntraday ? '5. volume' : '6. volume'] || v['5. volume'] || '0'),
-    };
-  }
+  const priceData = normalizeAlphaVantageBars(timeSeries, isIntraday);
 
-  // Cache the raw data
+  // Cache validated data on the coherent adjustment basis
   await setCached(ck, priceData, isIntraday ? TTL.avIntraday : TTL.avDaily);
 
   const final = applyResample(priceData, parsedTimeframe);
-  return { priceData: final, source: 'alpha_vantage', volumeUnavailable: false, closeType: isIntraday ? 'raw' : 'adjusted' };
+  return { priceData: final, source: 'alpha_vantage', volumeUnavailable: false, closeType: 'adjusted' };
 }
 
 // ─── CoinGecko — Crypto ──────────────────────────────────────────────────
@@ -165,153 +152,87 @@ export async function fetchCryptoPriceData(
   const coinId = COINGECKO_ID_MAP[cleanSymbol] || (await resolveSymbolToId(cleanSymbol));
   if (!coinId) throw new Error(`No CoinGecko mapping found for ${cleanSymbol}`);
 
-  // ──── Intraday: /market_chart gives hourly data for up to 90 days ────
-  // CoinGecko /ohlc only returns 4H candles for 7-day windows (~42 bars),
-  // which is far too few for EMA200 warmup.  /market_chart with days=90
-  // yields ~2160 hourly data-points — plenty for indicator warm-up.
-  if (parsedTimeframe.kind === 'intraday') {
-    const ck = cacheKey('cg-mc', cleanSymbol, parsedTimeframe.normalized, '90');
-
-    const cached = await getCached<PriceData>(ck);
-    if (cached && Object.keys(cached).length > 0) {
-      logger.debug(`[backtest/providers] cache hit ${ck}`);
-      return { priceData: cached, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
-    }
-
-    const chart = await getMarketChartFull(coinId, 90);
-    if (!chart || !chart.prices || chart.prices.length === 0) {
-      throw new Error(`Failed to fetch CoinGecko market chart data for ${cleanSymbol}`);
-    }
-
-    // Build volume lookup from total_volumes (round to nearest hour)
-    const HOUR_MS = 3_600_000;
-    const volMap = new Map<number, number>();
-    if (chart.total_volumes) {
-      for (const [ts, vol] of chart.total_volumes) {
-        if (Number.isFinite(vol) && vol >= 0) {
-          const hourKey = Math.round(ts / HOUR_MS) * HOUR_MS;
-          volMap.set(hourKey, vol);
-        }
-      }
-    }
-
-    // Group hourly price points into target-timeframe buckets
-    const bucketMs = parsedTimeframe.minutes * 60_000;
-    const buckets = new Map<number, { prices: number[]; vol: number }>();
-
-    for (const [ts, price] of chart.prices) {
-      if (!Number.isFinite(price)) continue;
-      const bk = Math.floor(ts / bucketMs) * bucketMs;
-      let bucket = buckets.get(bk);
-      if (!bucket) { bucket = { prices: [], vol: 0 }; buckets.set(bk, bucket); }
-      bucket.prices.push(price);
-      const hourKey = Math.round(ts / HOUR_MS) * HOUR_MS;
-      bucket.vol += volMap.get(hourKey) || 0;
-    }
-
-    const priceData: PriceData = {};
-    for (const [bk, bucket] of buckets.entries()) {
-      const date = new Date(bk);
-      const key = date.toISOString().replace('T', ' ').slice(0, 19);
-      priceData[key] = {
-        open:   bucket.prices[0],
-        high:   Math.max(...bucket.prices),
-        low:    Math.min(...bucket.prices),
-        close:  bucket.prices[bucket.prices.length - 1],
-        volume: bucket.vol,
-      };
-    }
-
-    await setCached(ck, priceData, TTL.coingecko);
-    logger.info(
-      `Fetched ${Object.keys(priceData).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko market_chart)`,
-    );
-    return { priceData, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
+  const intraday = parsedTimeframe.kind === 'intraday';
+  if (intraday && (parsedTimeframe.minutes < 60 || parsedTimeframe.minutes % 60 !== 0)) {
+    throw new Error('CoinGecko backtests require genuine hourly or daily OHLC. Sub-hour timeframes are unavailable.');
   }
-
-  // ──── Daily: /ohlc/range with interval=daily — proper daily OHLC candles ────
-  // CoinGecko /ohlc with days=365 auto-selects 4-day granularity (~92 bars),
-  // far too few for EMA200 warmup.  /ohlc/range with interval=daily returns
-  // true daily candles for the requested window (Analyst plan required).
-  const now = Math.floor(Date.now() / 1000);
-  const LOOKBACK_DAYS = 1095; // ~3 years of daily candles
-  const from = now - LOOKBACK_DAYS * 86400;
-
-  const ck = cacheKey('cg-range', cleanSymbol, 'daily', String(LOOKBACK_DAYS));
-
+  const interval = intraday ? 'hourly' : 'daily';
+  const intervalSeconds = intraday ? 3600 : 86400;
+  const lookbackDays = intraday ? 90 : 1095;
+  const ck = cacheKey('cg-ohlc', cleanSymbol, interval, String(lookbackDays));
   const cached = await getCached<PriceData>(ck);
+  const resample = (data: PriceData) => parsedTimeframe.minutes > (intraday ? 60 : 1440)
+    ? resampleCompleteCryptoBars(data, parsedTimeframe.minutes, intraday ? 60 : 1440)
+    : data;
   if (cached && Object.keys(cached).length > 0) {
-    logger.debug(`[backtest/providers] cache hit ${ck}`);
-    const final = applyResample(cached, parsedTimeframe);
-    return { priceData: final, source: 'coingecko', volumeUnavailable: true, closeType: 'n/a' };
+    return { priceData: resample(cached), source: 'coingecko', volumeUnavailable: true, closeType: 'n/a' };
   }
+  const to = Math.floor(Date.now() / (intervalSeconds * 1000)) * intervalSeconds;
+  const from = to - lookbackDays * 86400;
+  const windowSeconds = (intraday ? 31 : 180) * 86400;
+  const candles: number[][] = [];
+  // At most 7 daily requests or 3 hourly requests, each within the provider cap.
+  for (let start = from; start < to; start += windowSeconds) {
+    const chunk = await getOHLCRange(coinId, start, Math.min(start + windowSeconds, to), { retries: 0, timeoutMs: 6000 }, interval);
+    if (!chunk) throw new Error(`Genuine CoinGecko ${interval} OHLC is unavailable for ${cleanSymbol}. Backtest stopped.`);
+    candles.push(...chunk);
+  }
+  const priceData = normalizeCoinGeckoBacktestCandles(candles, interval, to * 1000);
+  if (!Object.keys(priceData).length) throw new Error(`No completed ${interval} OHLC candles for ${cleanSymbol}`);
+  await setCached(ck, priceData, TTL.coingecko);
+  return { priceData: resample(priceData), source: 'coingecko', volumeUnavailable: true, closeType: 'n/a' };
+}
 
-  const ohlc = await getOHLCRange(coinId, from, now);
-  if (!ohlc || ohlc.length === 0) {
-    // Fallback: /market_chart (available on all tiers) when /ohlc/range fails
-    logger.warn(`[backtest/providers] /ohlc/range failed for ${cleanSymbol}, falling back to /market_chart`);
-    const chart = await getMarketChartFull(coinId, LOOKBACK_DAYS);
-    if (!chart || !chart.prices || chart.prices.length === 0) {
-      throw new Error(`Failed to fetch CoinGecko price data for ${cleanSymbol}`);
+/** Apply the provider's close adjustment to every daily OHLC field. Volume
+ * remains provider-reported shares; it is not a reconstructed traded notional. */
+export function normalizeAlphaVantageBars(series: Record<string, Record<string, string>>, intraday: boolean): PriceData {
+  const result: PriceData = {};
+  for (const [date, row] of Object.entries(series)) {
+    const raw = ['1. open', '2. high', '3. low', '4. close'].map(key => Number.parseFloat(row[key]));
+    const adjustedClose = intraday ? raw[3] : Number.parseFloat(row['5. adjusted close']);
+    const volume = Number.parseFloat(row[intraday ? '5. volume' : '6. volume']);
+    if (!raw.every(value => Number.isFinite(value) && value > 0) || !Number.isFinite(adjustedClose) || adjustedClose <= 0 || !Number.isFinite(volume) || volume < 0 || raw[1] < Math.max(raw[0], raw[3]) || raw[2] > Math.min(raw[0], raw[3])) {
+      throw new Error(`Invalid Alpha Vantage OHLCV at ${date}`);
     }
+    const adjustment = adjustedClose / raw[3];
+    result[date] = { open: raw[0] * adjustment, high: raw[1] * adjustment, low: raw[2] * adjustment, close: adjustedClose, volume };
+  }
+  return result;
+}
 
-    // Build daily bars from hourly/daily price points
-    const DAY_MS = 86_400_000;
-    const volMap = new Map<string, number>();
-    if (chart.total_volumes) {
-      for (const [ts, vol] of chart.total_volumes) {
-        if (Number.isFinite(vol) && vol >= 0) {
-          const dayKey = new Date(Math.floor(ts / DAY_MS) * DAY_MS).toISOString().slice(0, 10);
-          volMap.set(dayKey, (volMap.get(dayKey) || 0) + vol);
-        }
+/** CoinGecko timestamps are candle CLOSE times; internal keys are opens. */
+export function normalizeCoinGeckoBacktestCandles(candles: number[][], interval: 'hourly' | 'daily', nowMs: number): PriceData {
+  const duration = interval === 'hourly' ? 3_600_000 : 86_400_000;
+  const result: PriceData = {};
+  for (const candle of [...candles].sort((a, b) => a[0] - b[0])) {
+    const [closeTime, open, high, low, close] = candle;
+    if (![closeTime, open, high, low, close].every(value => Number.isFinite(value) && value > 0) || closeTime % duration !== 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
+      throw new Error('Invalid CoinGecko OHLC candle or interval');
+    }
+    if (closeTime > nowMs) continue;
+    const iso = new Date(closeTime - duration).toISOString();
+    const key = interval === 'hourly' ? iso.replace('T', ' ').slice(0, 19) : iso.slice(0, 10);
+    const bar = { open, high, low, close, volume: 0 };
+    if (result[key] && JSON.stringify(result[key]) !== JSON.stringify(bar)) throw new Error('Conflicting CoinGecko candles at a chunk boundary');
+    result[key] = bar;
+  }
+  return result;
+}
+
+export function resampleCompleteCryptoBars(data: PriceData, targetMinutes: number, sourceMinutes: number): PriceData {
+  if (targetMinutes % sourceMinutes !== 0) throw new Error('Timeframe is not a multiple of the source OHLC interval');
+  const resampled = resamplePriceData(data, targetMinutes, sourceMinutes);
+  const sourceTimes = new Set(Object.keys(data).map(key => Date.parse(key.includes(' ') ? `${key.replace(' ', 'T')}Z` : `${key}T00:00:00Z`)));
+  for (const key of Object.keys(resampled)) {
+    const start = Date.parse(key.includes(' ') ? `${key.replace(' ', 'T')}Z` : `${key}T00:00:00Z`);
+    for (let offset = 0; offset < targetMinutes; offset += sourceMinutes) {
+      if (!sourceTimes.has(start + offset * 60_000)) {
+        delete resampled[key]; // Do not label partial or gapped buckets as complete candles.
+        break;
       }
     }
-
-    const dailyBuckets = new Map<string, number[]>();
-    for (const [ts, price] of chart.prices) {
-      if (!Number.isFinite(price)) continue;
-      const dayKey = new Date(Math.floor(ts / DAY_MS) * DAY_MS).toISOString().slice(0, 10);
-      let bucket = dailyBuckets.get(dayKey);
-      if (!bucket) { bucket = []; dailyBuckets.set(dayKey, bucket); }
-      bucket.push(price);
-    }
-
-    const fallbackData: PriceData = {};
-    for (const [dayKey, prices] of dailyBuckets.entries()) {
-      fallbackData[dayKey] = {
-        open: prices[0],
-        high: Math.max(...prices),
-        low: Math.min(...prices),
-        close: prices[prices.length - 1],
-        volume: volMap.get(dayKey) || 0,
-      };
-    }
-
-    await setCached(ck, fallbackData, TTL.coingecko);
-    const final = applyResample(fallbackData, parsedTimeframe);
-    logger.info(`Fetched ${Object.keys(final).length} daily bars for ${cleanSymbol} (CoinGecko market_chart fallback)`);
-    return { priceData: final, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
   }
-
-  const priceData: PriceData = {};
-  for (const candle of ohlc) {
-    const date = new Date(candle[0]);
-    const key = date.toISOString().slice(0, 10);
-
-    priceData[key] = {
-      open: Number(candle[1]),
-      high: Number(candle[2]),
-      low: Number(candle[3]),
-      close: Number(candle[4]),
-      volume: 0, // CoinGecko OHLC range does not return volume
-    };
-  }
-
-  await setCached(ck, priceData, TTL.coingecko);
-
-  const final = applyResample(priceData, parsedTimeframe);
-  logger.info(`Fetched ${Object.keys(final).length} daily bars of crypto data for ${cleanSymbol} (CoinGecko ohlc/range)`);
-  return { priceData: final, source: 'coingecko', volumeUnavailable: true, closeType: 'n/a' };
+  return resampled;
 }
 
 // ─── Smart fetch ──────────────────────────────────────────────────────────
