@@ -1,7 +1,7 @@
 import { TradeRowModel } from '@/types/journal';
 
 export function toPnlUsd(trade: TradeRowModel): number {
-  return Number(trade.pnlUsd ?? 0);
+  return Number.isFinite(trade.pnlUsd) ? trade.pnlUsd! : 0;
 }
 
 export function toRMultiple(trade: TradeRowModel): number {

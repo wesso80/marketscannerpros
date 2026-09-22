@@ -9,7 +9,7 @@ function buildSymbolCandidates(input: string): string[] {
   const upper = String(input || '').trim().toUpperCase();
   if (!upper) return [];
 
-  const stripped = upper.replace(/USDT$/, '').replace(/USD$/, '');
+  const stripped = upper.replace(/[-_/]?(USDT?|USDC)$/i, '');
   const candidates = [upper, stripped, `${stripped}USD`, `${stripped}USDT`]
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const symbol = String(searchParams.get('symbol') || '').trim().toUpperCase();
+    const typeHint = searchParams.get('type');
+    const assetHint = typeHint === 'crypto' ? 'crypto' : typeHint === 'stock' || typeHint === 'equity' ? 'equity' : null;
 
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
@@ -50,12 +52,13 @@ export async function GET(req: NextRequest) {
     const universeRows = await q<{ symbol: string; asset_type: string }>(
       `SELECT symbol, asset_type
          FROM symbol_universe
-        WHERE symbol = ANY($1::text[])
+        WHERE symbol = ANY($1::text[]) AND ($3::text IS NULL OR asset_type = $3)
         ORDER BY CASE WHEN symbol = $2 THEN 0 ELSE 1 END
         LIMIT 1`,
-      [candidates, symbol]
+      [candidates, symbol, assetHint]
     );
 
+    const coverageCandidates = assetHint ? universeRows.map(row => row.symbol) : candidates;
     const coverageRows = await q<{
       symbol: string;
       min_date: string | null;
@@ -71,7 +74,7 @@ export async function GET(req: NextRequest) {
         GROUP BY symbol
         ORDER BY bars DESC, CASE WHEN symbol = $2 THEN 0 ELSE 1 END
         LIMIT 1`,
-      [candidates, symbol]
+      [coverageCandidates, symbol]
     );
 
     const coverage = coverageRows[0] || null;
@@ -82,7 +85,7 @@ export async function GET(req: NextRequest) {
       symbol,
       candidates,
       resolvedSymbol: coverage?.symbol || universe?.symbol || symbol,
-      assetType: normalizeAssetType(universe?.asset_type),
+      assetType: normalizeAssetType(assetHint || universe?.asset_type),
       coverage: coverage
         ? {
             startDate: coverage.min_date,

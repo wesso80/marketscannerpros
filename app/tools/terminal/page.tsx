@@ -239,6 +239,7 @@ function TerminalSubviewFrame({
   symbol,
   marketPath,
   commodityFutures,
+  timeframe,
   onSelectTab,
   children,
 }: {
@@ -246,6 +247,7 @@ function TerminalSubviewFrame({
   symbol: string;
   marketPath: MarketPath;
   commodityFutures: boolean;
+  timeframe?: string;
   onSelectTab: (tab: TerminalTab) => void;
   children: React.ReactNode;
 }) {
@@ -274,7 +276,7 @@ function TerminalSubviewFrame({
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={() => onSelectTab('Close Calendar')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Back to Calendar</button>
               <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {adjacentTab}</button>
-              <a href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(symbol)}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
+              <a href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(symbol)}&type=${marketPath}${timeframe ? `&timeframe=${encodeURIComponent(timeframe)}` : ''}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
             </div>
           </div>
 
@@ -476,8 +478,8 @@ export default function TerminalPage() {
         title="Use Terminal before Backtest."
         subtitle="Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically."
         actions={[
-          { label: 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath === 'crypto' ? 'crypto' : 'equity'}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
-          { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath === 'crypto' ? 'crypto' : 'equity'}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
         ]}
         metrics={[
@@ -697,7 +699,7 @@ export default function TerminalPage() {
 
       {tab === 'Futures Session' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Futures Session Map">
-          <TerminalSubviewFrame tab="Futures Session" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Futures Session" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <FuturesTerminalPanel
               data={futuresTerminal.data}
               loading={futuresTerminal.loading}
@@ -711,7 +713,7 @@ export default function TerminalPage() {
 
       {tab === 'Cash Bridge' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Cash Bridge Map">
-          <TerminalSubviewFrame tab="Cash Bridge" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Cash Bridge" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <FuturesTerminalPanel
               data={futuresTerminal.data}
               loading={futuresTerminal.loading}
@@ -725,7 +727,7 @@ export default function TerminalPage() {
 
       {tab === 'Commodity Session Map' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Commodity Session Map">
-          <TerminalSubviewFrame tab="Commodity Session Map" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Commodity Session Map" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <FuturesTerminalPanel
               data={futuresTerminal.data}
               loading={futuresTerminal.loading}
@@ -739,7 +741,7 @@ export default function TerminalPage() {
 
       {tab === 'Liquidity & Volume' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Futures Liquidity and Volume">
-          <TerminalSubviewFrame tab="Liquidity & Volume" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Liquidity & Volume" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <FuturesTerminalPanel
               data={futuresTerminal.data}
               loading={futuresTerminal.loading}
@@ -754,7 +756,7 @@ export default function TerminalPage() {
       {/* -- OPTIONS TERMINAL ----------------------------------------------- */}
       {tab === 'Options Terminal' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
-          <TerminalSubviewFrame tab="Options Terminal" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Options Terminal" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
               <OptionsTerminalView symbol={sym} />
             </Suspense>
@@ -765,7 +767,7 @@ export default function TerminalPage() {
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
-          <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
               <CryptoTerminalView key={sym} symbol={sym} onSymbolChange={(next) => { setSymInput(next); selectSymbol(next, { assetType: 'crypto' }); }} onDataStateChange={setCryptoTerminalState} />
             </Suspense>
@@ -788,7 +790,7 @@ export default function TerminalPage() {
         const gammaColor = fd?.gamma_state === 'Positive' ? 'text-emerald-400' : fd?.gamma_state === 'Negative' ? 'text-red-400' : 'text-amber-400';
 
         return (
-        <TerminalSubviewFrame tab="Capital Pressure" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+        <TerminalSubviewFrame tab="Capital Pressure" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
         <div className="space-y-4">
           {flow.loading ? (
             <Card><div className="space-y-3 py-8">{[1,2,3].map(i => <Skel key={i} h="h-10" />)}</div></Card>
@@ -1101,7 +1103,7 @@ export default function TerminalPage() {
       {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
       {tab === 'Options Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
-          <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -1110,7 +1112,7 @@ export default function TerminalPage() {
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
-          <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <OptionsFlow embeddedInTerminal symbol={sym} />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -1119,7 +1121,7 @@ export default function TerminalPage() {
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
       {tab === 'Time Gravity' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
-          <TerminalSubviewFrame tab="Time Gravity" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Time Gravity" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <TimeScanner key={`${asset}:${sym}`} symbol={sym} assetType={asset} embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -1128,7 +1130,7 @@ export default function TerminalPage() {
       {/* ─── Time Confluence Scanner ─── */}
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
-          <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={setTab}>
             <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
             <div className="mt-6">
               <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />

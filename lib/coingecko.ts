@@ -528,6 +528,7 @@ export function cgIsFresh(price: CoinGeckoPrice, maxAgeSeconds = 60): boolean {
 }
 
 export interface CoinGeckoMarketData {
+  last_updated?: string;
   id: string;
   symbol: string;
   name: string;

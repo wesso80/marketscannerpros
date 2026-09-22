@@ -1,6 +1,6 @@
 export type JournalDockKey = 'risk' | 'review' | 'labeling' | 'evidence';
 
-export type TradeAssetClass = 'crypto' | 'equity' | 'options';
+export type TradeAssetClass = 'crypto' | 'equity' | 'options' | 'forex' | 'commodity';
 export type TradeSide = 'long' | 'short';
 export type TradeStatus = 'open' | 'closed';
 
@@ -14,12 +14,18 @@ export type JournalHeaderModel = {
 };
 
 export type JournalKpisModel = {
-  equity: number;
+  equity: number | null;
+  realizedPnlTotal?: number;
   realizedPnl30d: number;
-  unrealizedPnlOpen: number;
-  winRate30d: number;
-  profitFactor30d: number;
-  maxDrawdown90d: number;
+  unrealizedPnlOpen: number | null;
+  unpricedOpenTrades?: number;
+  winRate30d: number | null;
+  profitFactor30d: number | null;
+  profitFactorLabel?: string;
+  maxDrawdown90d: number | null;
+  maxDrawdown90dUsd?: number;
+  closedTrades30d?: number;
+  excludedClosedTrades?: number;
   /** Average Maximum Favorable Excursion (closed trades, 30d) */
   avgMfe30d?: number;
   /** Average Maximum Adverse Excursion (closed trades, 30d) */
@@ -57,6 +63,7 @@ export type TradeRowModel = {
   tradeType?: 'Spot' | 'Options' | 'Futures' | 'Margin';
   entry: { price: number; ts: string };
   exit?: { price: number; ts: string };
+  mark?: { price: number; observedAt: string | null; retrievedAt: string };
   qty: number;
   stop?: number;
   targets?: number[];

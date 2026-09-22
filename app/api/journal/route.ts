@@ -31,7 +31,7 @@ interface JournalEntry {
   dynamicR?: number;
   riskPerTradeAtEntry?: number;
   equityAtEntry?: number;
-  pl: number;
+  pl: number | null;
   plPercent: number;
   strategy: string;
   setup: string;
@@ -287,81 +287,8 @@ export async function GET(req: NextRequest) {
 
     await ensureJournalSchema();
 
-    // ── Auto-backfill: fix open trades missing stops ──────────────────
-    try {
-      const missingStops = await q<{
-        id: number;
-        symbol: string;
-        side: string;
-        entry_price: string;
-        asset_class: string;
-      }>(
-        `SELECT id, symbol, side, entry_price::text, COALESCE(asset_class, 'equity') AS asset_class
-         FROM journal_entries
-         WHERE workspace_id = $1
-           AND is_open = true
-           AND (stop_loss IS NULL OR target IS NULL)
-           AND entry_price > 0
-         LIMIT 10`,
-        [workspaceId]
-      );
-
-      for (const row of missingStops) {
-        const entryPrice = Number(row.entry_price);
-        if (!Number.isFinite(entryPrice) || entryPrice <= 0) continue;
-        const side = row.side === 'SHORT' ? 'SHORT' as const : 'LONG' as const;
-        const ac = (row.asset_class || 'equity') as 'crypto' | 'equity' | 'forex' | 'commodity';
-
-        const pipeline = await runExecutionPipeline({
-          workspaceId,
-          symbol: row.symbol,
-          side,
-          entryPrice,
-          assetClass: ac,
-          confidence: 50,
-          regime: 'Trend',
-          strategyTag: 'alert_intelligence',
-          atr: null,
-          guardEnabled: false, // don't block backfill
-        });
-
-        if (pipeline.ok) {
-          const { exits, sizing, leverage: lev, entryRisk } = pipeline.result;
-          await q(
-            `UPDATE journal_entries
-             SET stop_loss = $2, target = $3, risk_amount = $4, planned_rr = $5,
-                 trail_rule = $6, time_stop_minutes = $7, take_profit_2 = $8,
-                 leverage = $9, execution_mode = COALESCE(execution_mode, 'PAPER'),
-                 quantity = CASE WHEN quantity <= 1 THEN $10 ELSE quantity END,
-                 normalized_r = COALESCE(normalized_r, $11),
-                 dynamic_r = COALESCE(dynamic_r, $12),
-                 risk_per_trade_at_entry = COALESCE(risk_per_trade_at_entry, $13),
-                 equity_at_entry = COALESCE(equity_at_entry, $14)
-             WHERE id = $1 AND workspace_id = $15 AND is_open = true`,
-            [
-              row.id,
-              exits.stop_price,
-              exits.take_profit_1,
-              sizing.total_risk_usd,
-              exits.rr_at_tp1,
-              exits.trail_rule,
-              exits.time_stop_minutes,
-              exits.take_profit_2,
-              lev.recommended_leverage,
-              sizing.quantity,
-              entryRisk.normalizedR,
-              entryRisk.dynamicR,
-              entryRisk.riskPerTradeAtEntry,
-              entryRisk.equityAtEntry,
-              workspaceId,
-            ]
-          );
-          console.info(`[journal/backfill] Fixed stops for ${row.symbol} (id=${row.id}): stop=${exits.stop_price}, tp1=${exits.take_profit_1}`);
-        }
-      }
-    } catch (backfillErr) {
-      console.warn('[journal/backfill] Non-fatal backfill error:', backfillErr instanceof Error ? backfillErr.message : backfillErr);
-    }
+    // Reading the journal must not manufacture or rewrite stops, size, or entry risk.
+    // Missing entry evidence remains missing until an explicit edit records it.
 
     const entriesRaw = await q(
       `SELECT *
@@ -474,7 +401,7 @@ export async function GET(req: NextRequest) {
       dynamicR: e.dynamic_r != null ? parseFloat(e.dynamic_r) : undefined,
       riskPerTradeAtEntry: e.risk_per_trade_at_entry != null ? parseFloat(e.risk_per_trade_at_entry) : undefined,
       equityAtEntry: e.equity_at_entry != null ? parseFloat(e.equity_at_entry) : undefined,
-      pl: e.pl ? parseFloat(e.pl) : 0,
+      pl: e.pl != null ? parseFloat(e.pl) : null,
       plPercent: e.pl_percent ? parseFloat(e.pl_percent) : 0,
       strategy: e.strategy || '',
       setup: e.setup || '',

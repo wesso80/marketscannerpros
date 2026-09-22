@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
         price = cryptoQuote.price;
         source = cryptoQuote.source;
         extraFields = {
+          observedAt: cryptoQuote.observedAt ?? null,
           open: cryptoQuote.open,
           high: cryptoQuote.high,
           low: cryptoQuote.low,
@@ -93,6 +94,9 @@ export async function GET(req: NextRequest) {
         price = stockResult.price;
         source = stockResult.source;
         extraFields = {
+          observedAt: null,
+          observationDate: stockResult.observationDate ?? null,
+          providerRetrievedAt: stockResult.providerRetrievedAt ?? null,
           open: stockResult.open,
           high: stockResult.high,
           low: stockResult.low,
@@ -120,8 +124,11 @@ export async function GET(req: NextRequest) {
       type,
       strict,
       ...(source ? { source } : {}),
+      observedAt: null,
       ...extraFields,
       timestamp: new Date().toISOString(),
+      timestampMeaning: 'retrieval_time',
+      retrievedAt: new Date().toISOString(),
     });
   } catch (err: any) {
     console.error("Quote API error:", err);
@@ -165,6 +172,7 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
  */
 interface CryptoQuoteFull {
   price: number;
+  observedAt?: string | null;
   open?: number;
   high?: number;
   low?: number;
@@ -188,11 +196,12 @@ async function getCryptoQuoteFull(symbol: string, _market: string): Promise<Cryp
       if (marketData && marketData.length > 0) {
         const d = marketData[0];
         const price = d.current_price;
-        const change24h = d.price_change_24h ?? 0;
+        const change24h = d.price_change_24h ?? NaN;
         // CoinGecko doesn't have "open" directly, but we can derive it: open ≈ price - change24h
         const open = price - change24h;
         return {
           price,
+          observedAt: d.last_updated && Number.isFinite(Date.parse(d.last_updated)) ? new Date(d.last_updated).toISOString() : null,
           open: Number.isFinite(open) ? open : undefined,
           high: d.high_24h ?? undefined,
           low: d.low_24h ?? undefined,
@@ -212,10 +221,13 @@ async function getCryptoQuoteFull(symbol: string, _market: string): Promise<Cryp
     }
   }
 
-  // Fallback: simple price only
-  const geckoPrice = await getCoinGeckoPrice(symbol);
-  if (geckoPrice !== null) {
-    return { price: geckoPrice, source: 'coingecko' };
+  // Preserve the simple-price provider timestamp when detailed market data fails.
+  if (coinId) {
+    const prices = await getSimplePrices([coinId]);
+    const quote = prices?.[coinId];
+    if (quote && Number.isFinite(quote.usd) && quote.usd > 0) {
+      return { price: quote.usd, source: 'coingecko', observedAt: quote.last_updated_at ? new Date(quote.last_updated_at * 1000).toISOString() : null };
+    }
   }
 
   return null;
@@ -230,6 +242,8 @@ async function getCryptoQuoteFull(symbol: string, _market: string): Promise<Cryp
  */
 interface StockQuoteFull {
   price: number;
+  observationDate?: string;
+  providerRetrievedAt?: string;
   open?: number;
   high?: number;
   low?: number;
@@ -253,6 +267,8 @@ async function getStockQuoteFull(symbol: string, options?: { strict?: boolean })
         console.log(`[quote] ${symbol} served from ${cachedQuote.source} (${getCacheMode()} mode)`);
         return {
           price: cachedQuote.price,
+          observationDate: cachedQuote.latestDay,
+          providerRetrievedAt: cachedQuote.fetchedAt,
           open: Number.isFinite(cachedQuote.open) ? cachedQuote.open : undefined,
           high: Number.isFinite(cachedQuote.high) ? cachedQuote.high : undefined,
           low: Number.isFinite(cachedQuote.low) ? cachedQuote.low : undefined,
@@ -281,6 +297,8 @@ async function getStockQuoteFull(symbol: string, options?: { strict?: boolean })
         const pf = (v: string | undefined) => v ? parseFloat(v) : undefined;
         return {
           price: parseFloat(price),
+          observationDate: gq['07. latest trading day'],
+          providerRetrievedAt: new Date().toISOString(),
           open: pf(gq["02. open"]),
           high: pf(gq["03. high"]),
           low: pf(gq["04. low"]),

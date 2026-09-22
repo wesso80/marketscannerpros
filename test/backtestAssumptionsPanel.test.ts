@@ -14,7 +14,7 @@ describe('backtest assumptions panel', () => {
     expect(metrics).toContain('Fill Model');
     expect(metrics).toContain('Historical bar simulation');
     expect(metrics).toContain('BACKTEST_SLIPPAGE_BPS');
-    expect(metrics).toContain('Spread, commissions, exchange fees');
+    expect(metrics).toContain('The strategy backtester applies fixed per-leg commissions');
     expect(metrics).toContain('Liquidity');
     expect(metrics).toContain('Survivorship bias');
     expect(metrics).toContain('Sample: {totalTrades} trades');
@@ -64,7 +64,7 @@ describe('backtest execution assumptions payload', () => {
     expect(metadata.liquidity.volumeData).toBe('unavailable');
     expect(metadata.sampleQuality.label).toBe('thin');
     expect(metadata.fillModel.intrabarPriority).toContain('stop is resolved before target');
-    expect(metadata.warnings.join(' ')).toContain('Bid/ask spread, commissions');
+    expect(metadata.warnings.join(' ')).toContain('Commission uses a fixed per-leg research assumption');
     expect(metadata.warnings.join(' ')).toContain('survivorship');
   });
 

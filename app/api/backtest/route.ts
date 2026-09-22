@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const isCrypto = isCryptoSymbol(symbol);
+    const isCrypto = body.assetType ? body.assetType === 'crypto' : isCryptoSymbol(symbol);
     const normalizedSymbol = isCrypto ? normalizeSymbol(symbol) : symbol.toUpperCase();
     
     const parsedTimeframe = parseBacktestTimeframe(timeframe);
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch real historical price data
     logger.debug(`Fetching ${isCrypto ? 'crypto (CoinGecko)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${parsedTimeframe.normalized})...`);
-    const { priceData, source: priceDataSource, volumeUnavailable, closeType } = await fetchPriceData(normalizedSymbol, parsedTimeframe.normalized, startDate, endDate);
+    const { priceData, source: priceDataSource, volumeUnavailable, closeType } = await fetchPriceData(normalizedSymbol, parsedTimeframe.normalized, startDate, endDate, isCrypto ? 'crypto' : 'stock');
     logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data (closeType=${closeType}, volumeUnavailable=${volumeUnavailable})`);
 
     const coverage = computeCoverage(priceData, startDate, endDate);
@@ -141,7 +141,8 @@ export async function POST(req: NextRequest) {
       coverage.appliedStartDate,
       coverage.appliedEndDate,
       normalizedSymbol,
-      parsedTimeframe.normalized
+      parsedTimeframe.normalized,
+      isCrypto ? 'crypto' : 'stock'
     );
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
     const result = buildBacktestEngineResult(trades, dates, initialCapital);

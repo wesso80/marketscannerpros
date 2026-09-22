@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { q } from "@/lib/db";
+import { q, tx } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
+
+import { computePortfolioRisk, type ExternalFlow } from '@/lib/portfolio/riskAnalytics';
 
 interface Position {
   id: number;
@@ -65,10 +67,12 @@ export async function GET(req: NextRequest) {
 
     // Fetch open positions
     const positionsRaw = await q(
-      `SELECT id, symbol, side, quantity, entry_price, current_price, entry_date, journal_entry_id
-       FROM portfolio_positions 
-       WHERE workspace_id = $1 
-       ORDER BY created_at DESC`,
+      `SELECT p.id, p.symbol, p.side, p.quantity, p.entry_price, p.current_price, p.entry_date, p.journal_entry_id,
+              j.trade_type, j.asset_class
+       FROM portfolio_positions p
+       LEFT JOIN journal_entries j ON j.id = p.journal_entry_id AND j.workspace_id = p.workspace_id
+       WHERE p.workspace_id = $1
+       ORDER BY p.created_at DESC`,
       [workspaceId]
     );
 
@@ -118,6 +122,8 @@ export async function GET(req: NextRequest) {
         plPercent,
         entryDate: p.entry_date,
         journalEntryId: p.journal_entry_id || undefined,
+        tradeType: p.trade_type || undefined,
+        assetClass: p.asset_class || undefined,
       };
     });
 
@@ -142,6 +148,8 @@ export async function GET(req: NextRequest) {
         entryDate: p.entry_date,
         closeDate: p.close_date,
         journalEntryId: p.journal_entry_id || undefined,
+        tradeType: p.trade_type || undefined,
+        assetClass: p.asset_class || undefined,
       };
     });
 
@@ -152,76 +160,15 @@ export async function GET(req: NextRequest) {
       basis: p.snapshot_basis === 'account_equity_v2' ? 'account_equity_v2' : 'legacy_position_value',
     }));
 
-    // Compute portfolio risk analytics from daily snapshots
-    let riskAnalytics: {
-      dailySharpe: number;
-      annualizedSharpe: number;
-      var95: number;
-      maxDrawdown: number;
-      currentDrawdown: number;
-      avgDailyReturn: number;
-      dailyVolatility: number;
-    } | null = null;
-
-    const riskHistory = performanceHistory
-      .filter((snapshot) => snapshot.basis === 'account_equity_v2' && Number.isFinite(snapshot.totalValue) && snapshot.totalValue > 0);
-
-    if (riskHistory.length >= 5) {
-      let cashFlowsForRisk: Array<{ effective_date: string; entry_type: string; amount: string }> = [];
-      try {
-        cashFlowsForRisk = await q(
-          `SELECT effective_date, entry_type, amount
-           FROM portfolio_cash_ledger
-           WHERE workspace_id = $1
-             AND entry_type IN ('deposit', 'withdrawal')
-           ORDER BY effective_date ASC`,
-          [workspaceId]
-        ) as Array<{ effective_date: string; entry_type: string; amount: string }>;
-      } catch { /* risk remains computable when no cash ledger exists */ }
-
-      const dailyReturns: number[] = [];
-      for (let i = 1; i < riskHistory.length; i++) {
-        const prevSnapshot = riskHistory[i - 1];
-        const currSnapshot = riskHistory[i];
-        const prev = prevSnapshot.totalValue;
-        const curr = currSnapshot.totalValue;
-        const prevTs = new Date(prevSnapshot.timestamp).getTime();
-        const currTs = new Date(currSnapshot.timestamp).getTime();
-        const externalFlow = cashFlowsForRisk.reduce((sum, flow) => {
-          const ts = new Date(flow.effective_date).getTime();
-          if (!(ts > prevTs && ts <= currTs)) return sum;
-          const amount = Number(flow.amount || 0);
-          return sum + (flow.entry_type === 'withdrawal' ? -amount : amount);
-        }, 0);
-        if (prev > 0) dailyReturns.push(((curr - prev - externalFlow) / prev) * 100);
-      }
-      if (dailyReturns.length >= 3) {
-        const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
-        const stdDev = Math.sqrt(
-          dailyReturns.reduce((s, r) => s + Math.pow(r - avgReturn, 2), 0) / dailyReturns.length
-        );
-        const sortedReturns = [...dailyReturns].sort((a, b) => a - b);
-        const var95 = sortedReturns[Math.floor(sortedReturns.length * 0.05)] ?? 0;
-        let peak = riskHistory[0].totalValue;
-        let maxDD = 0;
-        for (const snap of riskHistory) {
-          if (snap.totalValue > peak) peak = snap.totalValue;
-          const dd = peak > 0 ? ((peak - snap.totalValue) / peak) * 100 : 0;
-          if (dd > maxDD) maxDD = dd;
-        }
-        const latestEquity = riskHistory[riskHistory.length - 1].totalValue;
-        const currentDrawdown = peak > 0 ? ((peak - latestEquity) / peak) * 100 : 0;
-        riskAnalytics = {
-          dailySharpe: stdDev > 0 ? avgReturn / stdDev : 0,
-          annualizedSharpe: stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0,
-          var95: Math.abs(var95),
-          maxDrawdown: maxDD,
-          currentDrawdown,
-          avgDailyReturn: avgReturn,
-          dailyVolatility: stdDev,
-        };
-      }
-    }
+    const riskHistory = performanceHistory.filter(snapshot => snapshot.basis === 'account_equity_v2');
+    let cashFlowsForRisk: ExternalFlow[] | null = null;
+    try {
+      cashFlowsForRisk = await q<ExternalFlow>(
+        `SELECT effective_date, entry_type, amount FROM portfolio_cash_ledger
+         WHERE workspace_id = $1 AND entry_type IN ('deposit', 'withdrawal') ORDER BY effective_date ASC`, [workspaceId],
+      );
+    } catch { /* Unknown cash flows cannot be treated as zero. */ }
+    const riskAnalytics = computePortfolioRisk(performanceHistory, cashFlowsForRisk);
 
     let cashState: CashState | null = null;
     try {
@@ -263,8 +210,8 @@ export async function GET(req: NextRequest) {
         requiredSnapshots: 5,
         status: riskAnalytics ? 'READY' : 'INSUFFICIENT_CLEAN_HISTORY',
         note: riskAnalytics
-          ? 'Risk statistics use full account-equity snapshots only.'
-          : 'Risk statistics are withheld until at least 5 account-equity snapshots exist; legacy position-value rows are excluded.',
+          ? `Flow-adjusted daily account-equity estimates (${riskAnalytics.observations} returns). Cash flows are treated at UTC day end; large intraday flows require valuations around the flow. Annualization uses 365.25 calendar days and zero risk-free rate. VaR needs 20 returns; short samples are descriptive, not calibrated risk estimates.`
+          : 'Risk statistics require at least 5 consecutive daily account-equity snapshots, positive capital, and known cash flows; legacy position-value rows are excluded.',
       },
     });
   } catch (error) {
@@ -284,6 +231,20 @@ export async function POST(req: NextRequest) {
     const workspaceId = session.workspaceId;
     const body = await req.json();
     const { positions, closedPositions, performanceHistory, cashState } = body;
+    if (!Array.isArray(positions) || !Array.isArray(closedPositions) || !Array.isArray(performanceHistory)
+      || !cashState || !Number.isFinite(cashState.startingCapital) || cashState.startingCapital < 0 || !Array.isArray(cashState.cashLedger)) {
+      return NextResponse.json({ error: 'A complete portfolio and valid cash state are required.' }, { status: 400 });
+    }
+    const finite = (n: unknown) => typeof n === 'number' && Number.isFinite(n);
+    const validPosition = (p: any) => p && typeof p.symbol === 'string' && p.symbol.trim() && ['LONG', 'SHORT'].includes(p.side)
+      && finite(p.quantity) && p.quantity > 0 && finite(p.entryPrice) && p.entryPrice > 0
+      && finite(p.currentPrice) && p.currentPrice >= 0 && Number.isFinite(Date.parse(p.entryDate));
+    if (!positions.every(validPosition) || !closedPositions.every((p: any) => validPosition(p)
+      && finite(p.closePrice) && p.closePrice >= 0 && finite(p.realizedPL) && Number.isFinite(Date.parse(p.closeDate)))
+      || !performanceHistory.every((p: any) => p && Number.isFinite(Date.parse(p.timestamp)) && finite(p.totalValue) && finite(p.totalPL))
+      || !cashState.cashLedger.every((f: any) => f && ['deposit', 'withdrawal'].includes(f.type) && finite(f.amount) && f.amount > 0 && Number.isFinite(Date.parse(f.timestamp)))) {
+      return NextResponse.json({ error: 'Invalid position, performance snapshot or cash flow. No records were changed.' }, { status: 400 });
+    }
 
     // ─── Risk Governor check: BLOCK if LOCKED, warn if DEFENSIVE ───
     let riskWarning: string | null = null;
@@ -312,71 +273,73 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* risk check fallback: allow sync for data integrity */ }
 
-    // Clear existing manual entries (preserve journal-linked rows)
-    await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
-    await q(`DELETE FROM portfolio_closed WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
-    await q(`DELETE FROM portfolio_performance WHERE workspace_id = $1`, [workspaceId]);
+    await tx(async (client) => {
+      // Serialize replacements for this workspace; an insert failure rolls back all deletes.
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [workspaceId]);
+      const q = async (sql: string, params: any[] = []) => (await client.query(sql, params)).rows;
+      // Clear existing manual entries (preserve journal-linked rows)
+      await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
+      await q(`DELETE FROM portfolio_closed WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
+      await q(`DELETE FROM portfolio_performance WHERE workspace_id = $1`, [workspaceId]);
 
-    // Insert manual positions (skip journal-linked ones — they're preserved)
-    for (const p of positions || []) {
-      if (p.journalEntryId) continue;
-      await q(
-        `INSERT INTO portfolio_positions (workspace_id, symbol, side, quantity, entry_price, current_price, entry_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [workspaceId, p.symbol, p.side, p.quantity, p.entryPrice, p.currentPrice, p.entryDate || new Date().toISOString()]
-      );
-    }
-
-    // Insert manual closed positions (skip journal-linked ones)
-    for (const p of closedPositions || []) {
-      if (p.journalEntryId) continue;
-      await q(
-        `INSERT INTO portfolio_closed (workspace_id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [workspaceId, p.symbol, p.side, p.quantity, p.entryPrice, p.closePrice || p.currentPrice, p.entryDate, p.closeDate, p.realizedPL || p.pl]
-      );
-    }
-
-    // Insert performance snapshots. Only rows explicitly produced by the new
-    // account-equity model are eligible for risk analytics.
-    try {
-      await q(`ALTER TABLE portfolio_performance ADD COLUMN IF NOT EXISTS snapshot_basis TEXT`);
-    } catch { /* column may already exist */ }
-    for (const p of performanceHistory || []) {
-      const date = new Date(p.timestamp).toISOString().split('T')[0];
-      const basis = p.basis === 'account_equity_v2' ? 'account_equity_v2' : 'legacy_position_value';
-      await q(
-        `INSERT INTO portfolio_performance (workspace_id, snapshot_date, total_value, total_pl, snapshot_basis)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (workspace_id, snapshot_date) DO UPDATE
-         SET total_value = $3, total_pl = $4, snapshot_basis = $5`,
-        [workspaceId, date, p.totalValue, p.totalPL, basis]
-      );
-    }
-
-    try {
-      await q(`DELETE FROM portfolio_cash_ledger WHERE workspace_id = $1`, [workspaceId]);
-
-      const startingCapital = Number(cashState?.startingCapital);
-      await q(
-        `INSERT INTO portfolio_cash_ledger (workspace_id, entry_type, amount, effective_date, note)
-         VALUES ($1, 'starting_capital', $2, $3, $4)`,
-        [workspaceId, Number.isFinite(startingCapital) ? startingCapital : 10000, new Date().toISOString(), 'Configured starting capital']
-      );
-
-      for (const item of cashState?.cashLedger || []) {
-        const entryType = item?.type === 'withdrawal' ? 'withdrawal' : 'deposit';
-        const amount = Number(item?.amount || 0);
-        if (!Number.isFinite(amount) || amount <= 0) continue;
+      // Insert manual positions (skip journal-linked ones — they're preserved)
+      for (const p of positions || []) {
+        if (p.journalEntryId) continue;
         await q(
-          `INSERT INTO portfolio_cash_ledger (workspace_id, entry_type, amount, effective_date, note)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [workspaceId, entryType, amount, item?.timestamp || new Date().toISOString(), item?.note || null]
+          `INSERT INTO portfolio_positions (workspace_id, symbol, side, quantity, entry_price, current_price, entry_date)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [workspaceId, p.symbol, p.side, p.quantity, p.entryPrice, p.currentPrice, p.entryDate || new Date().toISOString()]
         );
       }
-    } catch (cashError) {
-      console.warn('Failed to persist portfolio cash state (table may not exist yet)');
-    }
+
+      // Insert manual closed positions (skip journal-linked ones)
+      for (const p of closedPositions || []) {
+        if (p.journalEntryId) continue;
+        await q(
+          `INSERT INTO portfolio_closed (workspace_id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [workspaceId, p.symbol, p.side, p.quantity, p.entryPrice, p.closePrice ?? p.currentPrice, p.entryDate, p.closeDate, p.realizedPL ?? p.pl]
+        );
+      }
+
+      // Insert performance snapshots. Only rows explicitly produced by the new
+      // account-equity model are eligible for risk analytics.
+      await q(`ALTER TABLE portfolio_performance ADD COLUMN IF NOT EXISTS snapshot_basis TEXT`);
+      for (const p of performanceHistory || []) {
+        const date = new Date(p.timestamp).toISOString().split('T')[0];
+        const basis = p.basis === 'account_equity_v2' ? 'account_equity_v2' : 'legacy_position_value';
+        await q(
+          `INSERT INTO portfolio_performance (workspace_id, snapshot_date, total_value, total_pl, snapshot_basis)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (workspace_id, snapshot_date) DO UPDATE
+           SET total_value = $3, total_pl = $4, snapshot_basis = $5`,
+          [workspaceId, date, p.totalValue, p.totalPL, basis]
+        );
+      }
+
+      {
+        await q(`DELETE FROM portfolio_cash_ledger WHERE workspace_id = $1`, [workspaceId]);
+
+        const startingCapital = Number(cashState?.startingCapital);
+        await q(
+          `INSERT INTO portfolio_cash_ledger (workspace_id, entry_type, amount, effective_date, note)
+           VALUES ($1, 'starting_capital', $2, $3, $4)`,
+          [workspaceId, Number.isFinite(startingCapital) ? startingCapital : 10000, new Date().toISOString(), 'Configured starting capital']
+        );
+
+        for (const item of cashState?.cashLedger || []) {
+          const entryType = item?.type === 'withdrawal' ? 'withdrawal' : 'deposit';
+          const amount = Number(item?.amount || 0);
+          if (!Number.isFinite(amount) || amount <= 0) continue;
+          await q(
+            `INSERT INTO portfolio_cash_ledger (workspace_id, entry_type, amount, effective_date, note)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [workspaceId, entryType, amount, item?.timestamp || new Date().toISOString(), item?.note || null]
+          );
+        }
+      }
+
+    });
 
     return NextResponse.json({ success: true, riskWarning });
   } catch (error) {

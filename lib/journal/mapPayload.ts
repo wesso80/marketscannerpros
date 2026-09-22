@@ -1,4 +1,4 @@
-import { computeKpis } from '@/lib/journal/computeKpis';
+import { computeKpis, orderedClosedTrades } from '@/lib/journal/computeKpis';
 import { computePlaybookExpectancy } from '@/lib/journal/playbookExpectancy';
 import { JournalPayload, TradeAssetClass, TradeRowModel } from '@/types/journal';
 
@@ -6,6 +6,7 @@ function normalizeAssetClass(raw?: string): TradeAssetClass {
   const value = String(raw || '').toLowerCase();
   if (value === 'crypto') return 'crypto';
   if (value === 'options') return 'options';
+  if (value === 'forex' || value === 'commodity') return value;
   return 'equity';
 }
 
@@ -22,7 +23,7 @@ function mapEntry(entry: any): TradeRowModel {
     tradeType,
     entry: {
       price: Number(entry?.entryPrice || 0),
-      ts: entry?.date || new Date().toISOString(),
+      ts: entry?.date || '',
     },
     exit: entry?.exitDate
       ? {
@@ -33,7 +34,7 @@ function mapEntry(entry: any): TradeRowModel {
     qty: Number(entry?.quantity || 0),
     stop: entry?.stopLoss == null ? undefined : Number(entry.stopLoss),
     targets: entry?.target != null ? [Number(entry.target)] : [],
-    pnlUsd: Number(entry?.pl || 0),
+    pnlUsd: entry?.pl == null || !Number.isFinite(Number(entry.pl)) ? undefined : Number(entry.pl),
     pnlPct: Number(entry?.plPercent || 0),
     rMultiple: entry?.rMultiple == null ? undefined : Number(entry.rMultiple),
     strategyTag: entry?.strategy || undefined,
@@ -43,10 +44,12 @@ function mapEntry(entry: any): TradeRowModel {
   };
 }
 
-export function mapJournalResponseToPayload(raw: any): JournalPayload {
+export function mapJournalResponseToPayload(raw: any, nowMs = Date.now()): JournalPayload {
   const rows = Array.isArray(raw?.entries) ? raw.entries : [];
   const trades: TradeRowModel[] = rows.map(mapEntry);
-  const kpis = computeKpis(trades);
+  const kpis = computeKpis(trades, null, nowMs);
+  const completed = orderedClosedTrades(trades, nowMs);
+  let cumulativePnl = 0;
   const openTrades = trades.filter((trade) => trade.status === 'open');
   const closedTrades = trades.filter((trade) => trade.status === 'closed');
   const playbookExpectancy = computePlaybookExpectancy(trades);
@@ -63,7 +66,7 @@ export function mapJournalResponseToPayload(raw: any): JournalPayload {
       accountId: 'workspace',
       asOfTs: new Date().toISOString(),
       mode: 'review',
-      health: 'ok',
+      health: raw?.degraded ? 'degraded' : 'ok',
       subtitle: `Open: ${openTrades.length} • Closed: ${closedTrades.length}`,
     },
     kpis,
@@ -73,16 +76,10 @@ export function mapJournalResponseToPayload(raw: any): JournalPayload {
     },
     trades,
     equityCurve: {
-      points: trades
-        .filter((trade) => trade.status === 'closed')
-        .map((trade, idx) => ({
-          ts: trade.exit?.ts || trade.entry.ts,
-          value:
-            (trades
-              .filter((t) => t.status === 'closed')
-              .slice(0, idx + 1)
-              .reduce((sum, t) => sum + Number(t.pnlUsd || 0), 0)),
-        })),
+      points: completed.map(trade => {
+        cumulativePnl += trade.pnlUsd!;
+        return { ts: trade.exit!.ts, value: cumulativePnl };
+      }),
     },
     dockSummary: {
       openTrades: openTrades.length,

@@ -144,7 +144,8 @@ export function runStrategy(
   startDate: string,
   endDate: string,
   symbol: string,
-  timeframe: string = 'daily'
+  timeframe: string = 'daily',
+  requestedAssetType?: 'stock' | 'crypto' | 'forex'
 ): StrategyResult {
   // Signal-replay strategies require real-time signal packets — not available in historical backtest
   const replayStrategies = ['brain_signal_replay', 'options_signal_replay', 'time_scanner_signal_replay'];
@@ -183,7 +184,7 @@ export function runStrategy(
   const trades: Trade[] = [];
   let position: Position | null = null;
 
-  const assetType = inferAssetType(symbol);
+  const assetType = requestedAssetType ?? inferAssetType(symbol);
 
   const highs = dates.map(d => priceData[d].high);
   const lows = dates.map(d => priceData[d].low);
@@ -1149,7 +1150,7 @@ export function runStrategy(
     t.entry = slippedEntry;
     t.exit = slippedExit;
     t.return = calcReturnDollars(t.side, slippedEntry, slippedExit, shares, calcCommissionCost(slippedEntry, slippedExit, shares, assetType));
-    t.returnPercent = calcReturnPercent(t.side, slippedEntry, slippedExit);
+    t.returnPercent = (t.return / (slippedEntry * shares)) * 100;
   }
 
   const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);

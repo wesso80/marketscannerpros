@@ -118,6 +118,7 @@ export const backtestTimeframeSchema = z
 
 export const backtestRequestSchema = z.object({
   symbol: symbolSchema,
+  assetType: z.enum(['stock', 'crypto']).optional(),
   strategy: z.string().min(1).refine((value) => isBacktestStrategy(value), {
     message: 'Unknown backtest strategy',
   }),

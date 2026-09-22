@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { computeKpis } from '@/lib/journal/computeKpis';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import TradeDrawer from '@/components/journal/drawer/TradeDrawer';
 import { type TradeEntryInitialValues } from '@/components/journal/drawer/TradeEntryForm';
@@ -41,9 +42,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
   // Compute enriched KPIs (unrealized P&L from live prices)
   const enrichedKpis = useMemo(() => {
     if (!payload?.kpis) return payload?.kpis;
-    const openTrades = enrichedTrades.filter((t) => t.status === 'open');
-    const unrealizedPnlOpen = openTrades.reduce((sum, t) => sum + Number(t.pnlUsd || 0), 0);
-    return { ...payload.kpis, unrealizedPnlOpen };
+    return computeKpis(enrichedTrades);
   }, [payload?.kpis, enrichedTrades]);
 
   const [selectedTradeId, setSelectedTradeId] = useState<string | undefined>(undefined);
@@ -115,8 +114,8 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
       symbol: t.symbol,
       side: t.side,
       status: t.status,
-      pnlUsd: Number(t.pnlUsd || 0),
-      pnlPct: Number(t.pnlPct || 0),
+      pnlUsd: t.pnlUsd ?? null,
+      pnlPct: t.pnlPct ?? null,
       rMultiple: t.rMultiple,
       strategy: t.strategyTag,
       assetClass: t.assetClass,
@@ -139,7 +138,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
         avgR30d: kpis?.avgR30d,
         recentTrades,
       },
-      summary: `Journal: ${enrichedTrades.length} trades (${openTrades.length} open, ${closedTrades.length} closed). Win rate ${((kpis?.winRate30d ?? 0) * 100).toFixed(0)}%, PF ${(kpis?.profitFactor30d ?? 0).toFixed(2)}, Avg R ${(kpis?.avgR30d ?? 0).toFixed(2)}.`,
+      summary: `Journal records, including automated research: ${enrichedTrades.length} (${openTrades.length} open, ${closedTrades.length} closed). 30d win rate ${kpis.winRate30d == null ? 'unavailable' : `${(kpis.winRate30d * 100).toFixed(1)}%`}, PF ${kpis.profitFactor30d == null ? kpis.profitFactorLabel : kpis.profitFactor30d.toFixed(2)}. Account equity unavailable; open P&L is estimated before fees.`,
     });
   }, [enrichedTrades, enrichedKpis, payload, setPageData]);
 

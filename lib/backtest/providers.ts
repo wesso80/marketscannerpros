@@ -321,8 +321,9 @@ export async function fetchPriceData(
   timeframe: string = 'daily',
   _startDate: string = '',
   _endDate: string = '',
+  assetType?: 'stock' | 'crypto',
 ): Promise<PriceFetchResult> {
-  if (isCryptoSymbol(symbol)) {
+  if (assetType === 'crypto' || (!assetType && isCryptoSymbol(symbol))) {
     return fetchCryptoPriceData(symbol, timeframe);
   }
   return fetchStockPriceData(symbol, timeframe);

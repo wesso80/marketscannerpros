@@ -14,7 +14,7 @@ export default function EquityCurveCard({ equityCurve }: EquityCurveCardProps) {
   return (
     <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-100">Equity Curve</div>
+        <div className="text-sm font-semibold text-slate-100">Cumulative closed P&amp;L</div>
         <span className="text-[10px] text-slate-500">{points.length} closed trades</span>
       </div>
 

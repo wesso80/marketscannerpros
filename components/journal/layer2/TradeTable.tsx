@@ -55,7 +55,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`text-sm font-mono font-semibold ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {Number(row.pnlUsd || 0) >= 0 ? '+' : ''}{Number(row.pnlUsd || 0).toFixed(2)}
+                  {row.pnlUsd == null ? 'Unavailable' : `${row.pnlUsd >= 0 ? '+' : ''}${row.pnlUsd.toFixed(2)}`}
                 </span>
                 <span className="text-slate-500 text-xs">▸</span>
               </div>
@@ -64,14 +64,14 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
               <div><span className="text-slate-500">Entry</span> <span className="text-slate-200 font-mono">{fmtPrice(row.entry.price)}</span></div>
               <div><span className="text-slate-500">Date</span> <span className="text-slate-200">{new Date(row.entry.ts).toLocaleDateString()}</span></div>
               <div><span className="text-slate-500">Stop</span> <span className="text-slate-200 font-mono">{row.stop != null ? fmtPrice(row.stop) : '—'}</span></div>
-              <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono">{row.exit?.price != null ? fmtPrice(row.exit.price) : 'Open'}</span></div>
-              <div><span className="text-slate-500">P&L %</span> <span className={`font-mono ${Number(row.pnlPct || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{Number(row.pnlPct || 0).toFixed(2)}%</span></div>
+              <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono">{row.mark ? `Est. ${fmtPrice(row.mark.price)}` : row.exit?.price != null ? fmtPrice(row.exit.price) : 'Unmarked'}</span></div>
+              <div><span className="text-slate-500">P&L %</span> <span className={`font-mono ${Number(row.pnlPct || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{row.pnlPct == null ? 'Unavailable' : `${row.pnlPct.toFixed(2)}%`}</span></div>
               <div><span className="text-slate-500">R</span> <span className="text-slate-200 font-mono">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</span></div>
               <div className="col-span-2"><span className="text-slate-500">Strategy</span> <span className="text-slate-200">{row.strategyTag || '—'}</span></div>
               <div className="col-span-2 flex gap-1.5 pt-1">
                 <button type="button" onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
                 {onSnapshot && <button type="button" onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
-                <button type="button" onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
+                <button disabled={row.status !== 'open'} type="button" onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
               </div>
             </div>
           </details>
@@ -139,10 +139,10 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)} · {new Date(row.entry.ts).toLocaleDateString()}</td>
                 <td className="px-3 py-2 text-slate-300">{row.stop != null ? fmtPrice(row.stop) : '—'}</td>
                 <td className="px-3 py-2 text-slate-300">
-                  {row.status === 'open' && (row as any)._isLive ? (
+                  {row.status === 'open' && row.mark ? (
                     <span className="flex items-center gap-1">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="font-mono">{fmtPrice(row.exit?.price ?? 0)}</span>
+                      <span className="text-[10px] text-slate-400" title={row.mark?.observedAt ? `Provider observation: ${row.mark.observedAt}` : 'Provider observation time unavailable'}>Est.</span>
+                      <span className="font-mono">{fmtPrice(row.mark?.price ?? 0)}</span>
                     </span>
                   ) : row.exit?.price != null && row.status === 'closed' ? (
                     fmtPrice(row.exit.price)
@@ -151,12 +151,12 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                   )}
                 </td>
                 <td className={`px-3 py-2 ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-200' : 'text-rose-200'}`}>
-                  {row.status === 'open' && (row as any)._isLive ? (
+                  {row.status === 'open' && row.mark ? (
                     <span className="font-mono">
-                      {Number(row.pnlUsd || 0) >= 0 ? '+' : ''}{Number(row.pnlUsd || 0).toFixed(2)} / {Number(row.pnlPct || 0) >= 0 ? '+' : ''}{Number(row.pnlPct || 0).toFixed(2)}%
+                      {row.pnlUsd == null ? 'Unavailable' : `${row.pnlUsd >= 0 ? '+' : ''}${row.pnlUsd.toFixed(2)}`} / {Number(row.pnlPct || 0) >= 0 ? '+' : ''}{row.pnlPct == null ? 'Unavailable' : `${row.pnlPct.toFixed(2)}%`}
                     </span>
                   ) : (
-                    <>{Number(row.pnlUsd || 0).toFixed(2)} / {Number(row.pnlPct || 0).toFixed(2)}%</>
+                    <>{row.pnlUsd == null ? 'Unavailable' : `${row.pnlUsd.toFixed(2)} / ${(row.pnlPct ?? 0).toFixed(2)}%`}</>
                   )}
                 </td>
                 <td className="px-3 py-2 text-slate-300">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</td>
@@ -165,7 +165,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                   <div className="flex gap-1">
                     <button type="button" onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
                     {onSnapshot && <button type="button" onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
-                    <button type="button" onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
+                    <button disabled={row.status !== 'open'} type="button" onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
                     <button type="button" onClick={() => setExpandedId((prev) => (prev === row.id ? null : row.id))} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Expand</button>
                   </div>
                 </td>

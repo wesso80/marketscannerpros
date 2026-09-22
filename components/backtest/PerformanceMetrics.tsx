@@ -126,7 +126,7 @@ function BacktestAssumptionsPanel({ totalTrades, monteCarlo }: { totalTrades: nu
         <AssumptionTile
           label="Costs"
           value={`${BACKTEST_SLIPPAGE_BPS} bps slippage applied`}
-          detail="Spread, commissions, exchange fees, borrow costs, taxes, and market impact remain unmodeled."
+          detail="The strategy backtester applies fixed per-leg commissions. Rates and other unmodeled costs are recorded in the run assumptions; broker-specific fees are not verified."
         />
         <AssumptionTile
           label="Liquidity"

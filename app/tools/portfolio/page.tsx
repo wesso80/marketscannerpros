@@ -18,10 +18,14 @@ import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { splitPosition } from '@/lib/portfolio/closePosition';
 import { PageHero } from '@/components/ui';
 
 interface Position {
   id: number;
+  journalEntryId?: number;
+  tradeType?: string;
+  assetClass?: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
   quantity: number;
@@ -530,7 +534,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [riskAnalytics, setRiskAnalytics] = useState<{
-    dailySharpe: number; annualizedSharpe: number; var95: number;
+    dailySharpe: number | null; annualizedSharpe: number | null; var95: number | null;
+    annualizedVolatility: number;
     maxDrawdown: number; currentDrawdown: number; avgDailyReturn: number; dailyVolatility: number;
   } | null>(null);
   const [riskAnalyticsMeta, setRiskAnalyticsMeta] = useState<{
@@ -700,7 +705,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           return null;
         }
         const j = await r.json();
-        if (j?.ok && typeof j.price === 'number') return j.price as number;
+        if (j?.ok && typeof j.price === 'number' && Number.isFinite(j.price) && j.price > 0) return j.price as number;
         return null;
       } catch (e) {
         console.error('Fetch error:', url, e);
@@ -708,32 +713,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       }
     };
 
-    // Smart detection: try the most likely type first
-    if (isLikelyStock(s)) {
-      // Try stock first for likely stock symbols
-      const stock = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=stock`);
-      if (stock !== null) return stock;
-      
-      // Fallback to crypto (in case it's actually a crypto)
-      const crypto = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=crypto&market=USD`);
-      if (crypto !== null) return crypto;
-    } else {
-      // Try crypto first for likely crypto symbols
-      const crypto = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=crypto&market=USD`);
-      if (crypto !== null) return crypto;
-      
-      // Fallback to stock
-      const stock = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=stock`);
-      if (stock !== null) return stock;
-    }
-
-    // Try FX if symbol looks like a currency code (3 letters)
-    if (s.length === 3) {
-      const fx = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=fx&market=USD`);
-      if (fx !== null) return fx;
-    }
-
-    return null;
+    // Stay within the identified asset class. A failed crypto quote must never
+    // become a same-ticker equity or currency quote.
+    const explicitCryptoPair = /[-_/](USDT?|USDC|EUR|PERP)$/i.test(symbol);
+    const type = explicitCryptoPair || !isLikelyStock(symbol) ? 'crypto' : 'stock';
+    return tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=${type}&market=USD`);
   }
 
   // Track if data has been loaded from server
@@ -797,7 +781,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       const batch = positionsToUpdate.slice(i, i + BATCH_SIZE);
       const results = await Promise.all(
         batch.map(async (position) => {
-          const fetched = await fetchAutoPrice(position.symbol);
+          const fetched = position.tradeType === 'Options' || position.tradeType === 'Futures' || position.strategy === 'options' ? null : await fetchAutoPrice(position.symbol);
           return { id: position.id, price: fetched };
         })
       );
@@ -893,7 +877,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             setRiskAnalytics(data.riskAnalytics || null);
             setRiskAnalyticsMeta(data.riskAnalyticsMeta || null);
             if (data.cashState) {
-              setStartingCapitalInput(String(Number(data.cashState.startingCapital || 10000)));
+              setStartingCapitalInput(String(Number(data.cashState.startingCapital ?? 10000)));
               setCashLedger(Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : []);
             }
             setDataLoaded(true);
@@ -970,7 +954,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     // Sync to database
     const syncToServer = async () => {
       try {
-        await fetch('/api/portfolio', {
+        const response = await fetch('/api/portfolio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -983,6 +967,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             },
           })
         });
+        if (!response.ok) throw new Error('Portfolio save rejected');
+        setSyncError(null);
       } catch (e) {
         console.error('Failed to sync portfolio to server');
         setSyncError('Portfolio sync failed — changes saved locally only');
@@ -1183,13 +1169,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const closePosition = (id: number) => {
     const position = positions.find(p => p.id === id);
     if (!position) return;
-
-    const closedPos: ClosedPosition = {
-      ...position,
-      closeDate: new Date().toISOString(),
-      closePrice: position.currentPrice,
-      realizedPL: position.pl
-    };
+    if (position.journalEntryId) { setSyncError('This position is linked to Journal. Close it from its journal entry.'); return; }
+    const entered = window.prompt('Record a full paper close. Enter the actual close price (before fees):', String(position.currentPrice));
+    if (entered == null || entered.trim() === '') return;
+    let closedPos: ClosedPosition;
+    try { closedPos = splitPosition(position, 1, Number(entered), new Date().toISOString(), Date.now()).closed; }
+    catch { setSyncError('Enter a valid non-negative close price.'); return; }
 
     const parentEventId = tradeExecutionEventMapRef.current[id] || null;
     const tradeClosedEvent = createWorkflowEvent<TradePayload>({
@@ -1257,22 +1242,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   };
 
   const reducePositionHalf = (id: number) => {
-    setPositions((prev) => prev.map((position) => {
-      if (position.id !== id) return position;
-      const reducedQuantity = Math.max(0, position.quantity * 0.5);
-      const pl = position.side === 'LONG'
-        ? (position.currentPrice - position.entryPrice) * reducedQuantity
-        : (position.entryPrice - position.currentPrice) * reducedQuantity;
-      const plPercent = reducedQuantity > 0
-        ? ((pl / (position.entryPrice * reducedQuantity)) * 100)
-        : 0;
-      return {
-        ...position,
-        quantity: reducedQuantity,
-        pl,
-        plPercent,
-      };
-    }));
+    const position = positions.find(p => p.id === id);
+    if (!position) return;
+    if (position.journalEntryId) { setSyncError('This position is linked to Journal. Record changes in its journal entry.'); return; }
+    const entered = window.prompt('Record a paper close for 50% of the quantity. Enter the actual close price (before fees):', String(position.currentPrice));
+    if (entered == null || entered.trim() === '') return;
+    try {
+      const result = splitPosition(position, 0.5, Number(entered), new Date().toISOString(), Date.now());
+      setPositions(prev => prev.map(p => p.id === id ? result.remaining! : p));
+      setClosedPositions(prev => [...prev, result.closed]);
+    } catch { setSyncError('Enter a valid non-negative close price.'); }
   };
 
   const moveStopToBreakeven = (id: number) => {
@@ -1287,7 +1266,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Update single position: auto-fetch, then fall back to manual entry via modal
   const updateSinglePrice = async (position: Position) => {
     setUpdatingId(position.id);
-    const fetched = await fetchAutoPrice(position.symbol);
+    const fetched = position.tradeType === 'Options' || position.tradeType === 'Futures' || position.strategy === 'options' ? null : await fetchAutoPrice(position.symbol);
     setUpdatingId(null);
     
     if (fetched !== null && !isNaN(fetched)) {
@@ -2210,14 +2189,15 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               {riskAnalytics ? (
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
                   <div className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Analytics</div>
+                  <p className="mb-3 text-xs text-slate-400">{riskAnalyticsMeta?.note}</p>
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Ann. Sharpe</div>
-                      <div className={`text-sm font-bold ${riskAnalytics.annualizedSharpe >= 1 ? 'text-emerald-400' : riskAnalytics.annualizedSharpe >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{riskAnalytics.annualizedSharpe.toFixed(2)}</div>
+                      <div className={`text-sm font-bold ${(riskAnalytics.annualizedSharpe ?? -1) >= 1 ? 'text-emerald-400' : (riskAnalytics.annualizedSharpe ?? -1) >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{riskAnalytics.annualizedSharpe?.toFixed(2) ?? 'Unavailable'}</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">VaR (95%)</div>
-                      <div className="text-sm font-bold text-red-400">{riskAnalytics.var95.toFixed(2)}%</div>
+                      <div className="text-sm font-bold text-red-400">{riskAnalytics.var95 == null ? 'Insufficient sample' : `${riskAnalytics.var95.toFixed(2)}%`}</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Max Drawdown</div>
@@ -2229,7 +2209,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Ann. Vol</div>
-                      <div className="text-sm font-bold text-slate-100">{(riskAnalytics.dailyVolatility * Math.sqrt(252)).toFixed(2)}%</div>
+                      <div className="text-sm font-bold text-slate-100">{riskAnalytics.annualizedVolatility.toFixed(2)}%</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Avg Daily</div>

@@ -84,7 +84,7 @@ export function buildBacktestAssumptionsMetadata(args: {
   const warnings = [
     sampleWarning(quality, args.totalTrades),
     `Adverse slippage of ${BACKTEST_SLIPPAGE_BPS} bps is applied to every simulated entry and exit.`,
-    'Bid/ask spread, commissions, exchange fees, borrow costs, taxes, latency, queue priority, depth, and market impact are not modeled.',
+    'Commission uses a fixed per-leg research assumption, not a verified broker fee schedule. Additional exchange fees, spread, borrow costs, taxes, latency, queue priority, depth, and market impact are not modeled.',
     'Intrabar stop/target checks use historical high/low bars; when stop and target are both touched, the engine currently resolves stop before target.',
     'Results use the fetched provider universe and do not correct survivorship, symbol-selection, or regime-sampling bias.',
   ];

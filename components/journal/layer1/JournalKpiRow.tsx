@@ -29,23 +29,23 @@ export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
   const data: JournalKpisModel =
     kpis ||
     {
-      equity: 0,
+      equity: null,
       realizedPnl30d: 0,
       unrealizedPnlOpen: 0,
-      winRate30d: 0,
-      profitFactor30d: 0,
-      maxDrawdown90d: 0,
+      winRate30d: null,
+      profitFactor30d: null,
+      maxDrawdown90d: null,
     };
 
   return (
     <>
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-9">
-      <KpiCard label="Equity / Balance" value={`$${data.equity.toFixed(2)}`} />
+      <KpiCard label="Recorded realized P&L (all time)" value={`$${(data.realizedPnlTotal ?? 0).toFixed(2)}`} />
       <KpiCard label="Realized P&L (30d)" value={`$${data.realizedPnl30d.toFixed(2)}`} delta={data.realizedPnl30d} />
-      <KpiCard label="Unrealized P&L (Open)" value={`$${data.unrealizedPnlOpen.toFixed(2)}`} delta={data.unrealizedPnlOpen} />
-      <KpiCard label="Win Rate (30d)" value={(data.winRate30d * 100).toFixed(1)} suffix="%" />
-      <KpiCard label="Profit Factor (30d)" value={data.profitFactor30d.toFixed(2)} />
-      <KpiCard label="Max Drawdown (90d)" value={(data.maxDrawdown90d * 100).toFixed(1)} suffix="%" delta={data.maxDrawdown90d * 100} />
+      <KpiCard label="Estimated open P&L" value={data.unrealizedPnlOpen == null ? 'Unavailable' : `$${data.unrealizedPnlOpen.toFixed(2)}`} delta={data.unrealizedPnlOpen ?? undefined} />
+      <KpiCard label="Win Rate (30d)" value={data.winRate30d == null ? 'Unavailable' : `${(data.winRate30d * 100).toFixed(1)}%`} />
+      <KpiCard label="Profit Factor (30d)" value={data.profitFactor30d == null ? data.profitFactorLabel || 'Unavailable' : data.profitFactor30d.toFixed(2)} />
+      <KpiCard label="Closed P&L drawdown (90d)" value={data.maxDrawdown90dUsd == null ? 'Unavailable' : `$${data.maxDrawdown90dUsd.toFixed(2)}`} />
       {typeof data.avgMfe30d === 'number' && (
         <KpiCard label="Avg MFE (30d)" value={`$${data.avgMfe30d.toFixed(2)}`} delta={data.avgMfe30d} />
       )}
@@ -56,6 +56,7 @@ export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
         <KpiCard label="Avg R (30d)" value={data.avgR30d.toFixed(2)} suffix="R" delta={data.avgR30d} />
       )}
     </div>
+    <p className="mt-2 text-xs text-slate-400">Summaries include all loaded journal records, including automated research records. Periods use close dates. Open P&amp;L is an estimate before fees; these figures are not account equity. {data.unpricedOpenTrades ? `${data.unpricedOpenTrades} open records have no usable quote; a complete open P&L total is unavailable.` : ''} {data.excludedClosedTrades ? `${data.excludedClosedTrades} closed records lack a valid close date or P&L and are excluded.` : ''}</p>
     {data.behavioralFlags && data.behavioralFlags.length > 0 && (
       <div className="mt-3 space-y-1.5">
         {data.behavioralFlags.map((flag, i) => (

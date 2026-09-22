@@ -232,6 +232,8 @@ function BacktestContent() {
   
   // Query params from Options Scanner
   const urlSymbol = searchParams.get('symbol');
+  const urlAssetType = searchParams.get('type');
+  const urlTimeframe = searchParams.get('timeframe');
   const urlDirection = searchParams.get('direction');
   const urlStrategy = searchParams.get('strategy');
   const fromOptionsScanner = searchParams.get('from') === 'options-scanner';
@@ -245,7 +247,8 @@ function BacktestContent() {
   const [initialCapital, setInitialCapital] = useState('10000');
   const [strategy, setStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
   const [edgeGroup, setEdgeGroup] = useState<EdgeGroupId>('msp_aio_systems');
-  const [timeframe, setTimeframe] = useState('daily');
+  const [timeframe, setTimeframe] = useState(parseBacktestTimeframe(urlTimeframe || 'daily')?.normalized || 'daily');
+  const [assetType, setAssetType] = useState<'stock' | 'crypto' | ''>(urlAssetType === 'crypto' ? 'crypto' : urlAssetType === 'equity' || urlAssetType === 'stock' ? 'stock' : '');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -564,15 +567,16 @@ function BacktestContent() {
 
   // Update symbol if URL param changes
   useEffect(() => {
-    if (urlSymbol) {
-      setSymbol(urlSymbol.toUpperCase());
-    }
-  }, [urlSymbol]);
+    if (urlSymbol) setSymbol(urlSymbol.toUpperCase());
+    if (urlTimeframe) setTimeframe(parseBacktestTimeframe(urlTimeframe)?.normalized || urlTimeframe);
+    setAssetType(urlAssetType === 'crypto' ? 'crypto' : urlAssetType === 'equity' || urlAssetType === 'stock' ? 'stock' : '');
+  }, [urlSymbol, urlTimeframe, urlAssetType]);
 
   useEffect(() => {
     const normalizedSymbol = symbol.trim().toUpperCase();
     if (!normalizedSymbol) return;
-    if (normalizedSymbol === lastResolvedSymbolRef.current) return;
+    const identityKey = `${assetType}:${normalizedSymbol}`;
+    if (identityKey === lastResolvedSymbolRef.current) return;
 
     let cancelled = false;
     setAvailableDateRange(null);
@@ -586,12 +590,12 @@ function BacktestContent() {
       let coverageEndDate: string | null = null;
 
       try {
-        const rangeResponse = await fetch(`/api/backtest/symbol-range?symbol=${encodeURIComponent(normalizedSymbol)}`, {
+        const rangeResponse = await fetch(`/api/backtest/symbol-range?symbol=${encodeURIComponent(normalizedSymbol)}${assetType ? `&type=${assetType}` : ''}`, {
           cache: 'no-store',
         });
 
         const rangePayload = rangeResponse.ok ? await rangeResponse.json() : null;
-        const assetType = String(rangePayload?.assetType || '').toLowerCase();
+        const resolvedAssetType = assetType || String(rangePayload?.assetType || '').toLowerCase();
         coverageStartDate = typeof rangePayload?.coverage?.startDate === 'string'
           ? rangePayload.coverage.startDate
           : null;
@@ -599,7 +603,7 @@ function BacktestContent() {
           ? rangePayload.coverage.endDate
           : null;
 
-        if (!cancelled && assetType === 'crypto') {
+        if (!cancelled && resolvedAssetType === 'crypto') {
           const resolvedStart = coverageStartDate || fallbackStartDate;
           const resolvedEnd = coverageEndDate || today;
           setStartDate(resolvedStart);
@@ -610,7 +614,7 @@ function BacktestContent() {
             startDate: resolvedStart,
             assetType: 'crypto',
           });
-          lastResolvedSymbolRef.current = normalizedSymbol;
+          lastResolvedSymbolRef.current = identityKey;
           return;
         }
 
@@ -633,7 +637,7 @@ function BacktestContent() {
               startDate: fallbackStartForEquity,
               assetType: 'stock',
             });
-            lastResolvedSymbolRef.current = normalizedSymbol;
+            lastResolvedSymbolRef.current = identityKey;
           }
           return;
         }
@@ -663,7 +667,7 @@ function BacktestContent() {
         }
 
         setEndDate(coverageEndDate || today);
-        lastResolvedSymbolRef.current = normalizedSymbol;
+        lastResolvedSymbolRef.current = identityKey;
       } catch {
         if (cancelled) return;
         const fallbackStartForEquity =
@@ -679,7 +683,7 @@ function BacktestContent() {
           startDate: fallbackStartForEquity,
           assetType: 'unknown',
         });
-        lastResolvedSymbolRef.current = normalizedSymbol;
+        lastResolvedSymbolRef.current = identityKey;
       }
     }, 350);
 
@@ -687,7 +691,16 @@ function BacktestContent() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [symbol]);
+  }, [symbol, assetType]);
+
+  const resultRequestRef = useRef(0);
+  useEffect(() => {
+    resultRequestRef.current += 1;
+    setResults(null);
+    setIsLoading(false);
+    setBacktestError(null);
+    setAiText(null);
+  }, [symbol, assetType, timeframe, strategy, startDate, endDate, initialCapital, replayMinSignalScore]);
 
   // Tier gate - Pro Trader only
   if (tierLoading) {
@@ -844,11 +857,13 @@ function BacktestContent() {
     replayMinSignalScore: number;
     symbol?: string;
   }): Promise<BacktestResult> => {
+    if (urlAssetType === 'futures' && (params.symbol ?? symbol) === urlSymbol) throw new Error('Futures contract backtesting is not connected. Select a supported stock or crypto instrument.');
     const response = await fetch(resolveBacktestEndpoint(params.strategy), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         symbol: params.symbol ?? symbol,
+        assetType: !params.symbol || params.symbol === symbol ? assetType || undefined : undefined,
         strategy: params.strategy,
         startDate: params.startDate,
         endDate: params.endDate,
@@ -1113,6 +1128,7 @@ function BacktestContent() {
       return;
     }
 
+    const requestId = ++resultRequestRef.current;
     setIsLoading(true);
     setBacktestError(null);
     setResults(null);
@@ -1129,13 +1145,15 @@ function BacktestContent() {
         endDate: effectiveEndDate,
         replayMinSignalScore: effectiveReplayMinSignalScore,
       });
+      if (requestId !== resultRequestRef.current) return;
       setResults(result);
     } catch (error) {
+      if (requestId !== resultRequestRef.current) return;
       console.error('Backtest error:', error);
       const errMsg = error instanceof Error ? error.message : 'Failed to run backtest';
       setBacktestError(errMsg);
     } finally {
-      setIsLoading(false);
+      if (requestId === resultRequestRef.current) setIsLoading(false);
     }
   };
 
@@ -1447,7 +1465,7 @@ function BacktestContent() {
               <input
                 type="text"
                 value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                onChange={(e) => { setSymbol(e.target.value.toUpperCase()); setAssetType(''); }}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -1459,6 +1477,11 @@ function BacktestContent() {
                 }}
                 placeholder="e.g., SPY, AAPL"
               />
+              <label className="mt-2 block text-xs text-slate-400">Asset type
+                <select aria-label="Backtest asset type" value={assetType} onChange={e => setAssetType(e.target.value as typeof assetType)} className="mt-1 w-full rounded border border-slate-700 bg-slate-800 p-2 text-sm text-white">
+                  <option value="">Detect from symbol</option><option value="stock">Stock / ETF</option><option value="crypto">Crypto</option>
+                </select>
+              </label>
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
@@ -1568,7 +1591,7 @@ function BacktestContent() {
                 }}
               />
               <datalist id="backtest-timeframe-options">
-                {Array.from(new Set(BACKTEST_TIMEFRAME_GROUPS.flatMap((group) => group.timeframes))).map((value) => (
+                {Array.from(new Set([timeframe, ...BACKTEST_TIMEFRAME_GROUPS.flatMap((group) => group.timeframes)])).map((value) => (
                   <option key={value} value={value} />
                 ))}
                 {['2min', '3min', '6min', '10min', '12min', '20min', '45min', '2h', '4h'].map((value) => (
@@ -1685,7 +1708,7 @@ function BacktestContent() {
                 </span>
                 <span style={{ color: 'var(--msp-flat)' }}>•</span>
                 <span>
-                  Asset: {dateAnchorInfo?.assetType || 'unknown'}
+                  Asset: {assetType || dateAnchorInfo?.assetType || 'unknown'}
                 </span>
               </div>
               {availableDateRange && (

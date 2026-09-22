@@ -6,7 +6,7 @@ import { isLoss, isWin, toPnlUsd } from '@/lib/journal/tradeMath';
  */
 function detectBehavioralFlags(trades: TradeRowModel[]): BehavioralFlag[] {
   const flags: BehavioralFlag[] = [];
-  const closed = trades.filter(t => t.status === 'closed' && t.entry?.ts);
+  const closed = orderedClosedTrades(trades);
 
   if (closed.length < 3) return flags;
 
@@ -18,25 +18,8 @@ function detectBehavioralFlags(trades: TradeRowModel[]): BehavioralFlag[] {
     byDate[day].push(t);
   }
 
-  // Revenge trading: loss followed by another trade within same day
-  let revengeCount = 0;
-  for (const dayTrades of Object.values(byDate)) {
-    const sorted = dayTrades.sort((a, b) => a.entry.ts.localeCompare(b.entry.ts));
-    for (let i = 1; i < sorted.length; i++) {
-      if (isLoss(sorted[i - 1])) {
-        revengeCount++;
-      }
-    }
-  }
-  if (revengeCount >= 2) {
-    flags.push({
-      type: 'revenge_trading',
-      severity: revengeCount >= 5 ? 'alert' : 'warning',
-      message: `${revengeCount} trades entered after a same-day loss — potential revenge trading pattern`,
-      occurrences: revengeCount,
-    });
-  }
-
+  // Date-only records cannot establish whether an entry followed a known loss.
+  // Do not infer revenge trading from entry order alone.
   // Overtrading: days with 4+ trades
   let overtradeDays = 0;
   for (const [, dayTrades] of Object.entries(byDate)) {
@@ -74,51 +57,60 @@ function detectBehavioralFlags(trades: TradeRowModel[]): BehavioralFlag[] {
   return flags;
 }
 
-/**
- * @param trades - All journal trade rows
- * @param startingEquity - User's starting account equity (from portfolio_performance or user input).
- *                         Defaults to 0 so equity = pure realized + unrealized P&L.
- */
-export function computeKpis(trades: TradeRowModel[], startingEquity = 0): JournalKpisModel {
-  const closed = trades.filter((trade) => trade.status === 'closed');
-  const open = trades.filter((trade) => trade.status === 'open');
+/** Closed outcomes require a known close time and a finite recorded P&L. */
+export function orderedClosedTrades(trades: TradeRowModel[], nowMs = Date.now()): TradeRowModel[] {
+  return trades.filter(t => t.status === 'closed' && t.exit?.ts
+    && Number.isFinite(t.pnlUsd)
+    && Number.isFinite(Date.parse(t.exit.ts)) && Date.parse(t.exit.ts) <= nowMs)
+    .sort((a, b) => Date.parse(a.exit!.ts) - Date.parse(b.exit!.ts) || a.id.localeCompare(b.id));
+}
 
-  const realizedPnl30d = closed.reduce((sum, trade) => sum + toPnlUsd(trade), 0);
-  const unrealizedPnlOpen = open.reduce((sum, trade) => sum + toPnlUsd(trade), 0);
+/** Periods use close time. Account equity is unknown without an explicit opening balance. */
+export function computeKpis(trades: TradeRowModel[], startingEquity: number | null = null, nowMs = Date.now()): JournalKpisModel {
+  const closed = orderedClosedTrades(trades, nowMs);
+  const since = (days: number) => nowMs - days * 86_400_000;
+  const closed30d = closed.filter(t => Date.parse(t.exit!.ts) >= since(30));
+  const closed90d = closed.filter(t => Date.parse(t.exit!.ts) >= since(90));
+  const open = trades.filter(t => t.status === 'open');
+  const sum = (rows: TradeRowModel[]) => rows.reduce((total, t) => total + toPnlUsd(t), 0);
+  const realizedPnlTotal = sum(closed);
+  const unpricedOpenTrades = open.filter(t => !t.mark || !Number.isFinite(t.pnlUsd)).length;
+  const unrealizedPnlOpen = unpricedOpenTrades ? null : sum(open);
+  const grossWin = sum(closed30d.filter(isWin));
+  const grossLoss = -sum(closed30d.filter(isLoss));
+  const profitFactor30d = grossLoss > 0 ? grossWin / grossLoss : null;
 
-  const wins = closed.filter(isWin).length;
-  const losses = closed.filter(isLoss).length;
-  const winRate30d = closed.length ? wins / closed.length : 0;
-
-  const grossWin = closed.filter(isWin).reduce((sum, trade) => sum + toPnlUsd(trade), 0);
-  const grossLossAbs = Math.abs(closed.filter(isLoss).reduce((sum, trade) => sum + toPnlUsd(trade), 0));
-  const profitFactor30d = grossLossAbs > 0 ? grossWin / grossLossAbs : grossWin > 0 ? 9.99 : 0;
-
-  const curve = closed.reduce<number[]>((acc, trade) => {
-    const next = (acc[acc.length - 1] || 0) + toPnlUsd(trade);
-    acc.push(next);
-    return acc;
-  }, []);
-  let peak = 0;
-  let maxDrawdown = 0;
-  for (const point of curve) {
-    peak = Math.max(peak, point);
-    if (peak > 0) {
-      maxDrawdown = Math.min(maxDrawdown, (point - peak) / peak);
-    }
+  const hasEquity = startingEquity != null && Number.isFinite(startingEquity) && startingEquity > 0;
+  let curve = hasEquity ? startingEquity! + sum(closed.filter(t => Date.parse(t.exit!.ts) < since(90))) : 0;
+  let peak = curve;
+  let maxDrawdown90dUsd = 0;
+  let maxDrawdown90d = hasEquity && curve > 0 ? 0 : null;
+  for (const trade of closed90d) {
+    curve += toPnlUsd(trade);
+    peak = Math.max(peak, curve);
+    maxDrawdown90dUsd = Math.max(maxDrawdown90dUsd, peak - curve);
+    if (maxDrawdown90d != null && peak > 0) maxDrawdown90d = Math.max(maxDrawdown90d, (peak - curve) / peak);
   }
-
-  const equity = startingEquity + realizedPnl30d + unrealizedPnlOpen;
-
-  const behavioralFlags = detectBehavioralFlags(trades);
-
+  const averageKnown = (key: 'mfe' | 'mae' | 'rMultiple') => {
+    const values = closed30d.map(t => t[key]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : undefined;
+  };
   return {
-    equity,
-    realizedPnl30d,
+    equity: hasEquity && unrealizedPnlOpen != null ? startingEquity! + realizedPnlTotal + unrealizedPnlOpen : null,
+    realizedPnlTotal,
+    realizedPnl30d: sum(closed30d),
     unrealizedPnlOpen,
-    winRate30d,
+    unpricedOpenTrades,
+    winRate30d: closed30d.length ? closed30d.filter(isWin).length / closed30d.length : null,
     profitFactor30d,
-    maxDrawdown90d: maxDrawdown,
-    behavioralFlags,
+    profitFactorLabel: closed30d.length === 0 ? 'No closed trades' : grossLoss === 0 ? (grossWin > 0 ? 'No losing trades' : 'No gains or losses') : undefined,
+    maxDrawdown90d,
+    maxDrawdown90dUsd,
+    closedTrades30d: closed30d.length,
+    excludedClosedTrades: trades.filter(t => t.status === 'closed').length - closed.length,
+    avgMfe30d: averageKnown('mfe'),
+    avgMae30d: averageKnown('mae'),
+    avgR30d: averageKnown('rMultiple'),
+    behavioralFlags: detectBehavioralFlags(closed90d),
   };
 }

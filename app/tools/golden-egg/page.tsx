@@ -631,7 +631,7 @@ export default function GoldenEggPage() {
         actions={[
           { label: 'Open Terminal', variant: 'primary', href: `/tools/terminal?symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}` },
           { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner' },
-          { label: 'Open Backtest', variant: 'ghost', href: '/tools/workspace?tab=backtest' },
+          { label: 'Open Backtest', variant: 'ghost', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}` },
         ]}
         metrics={[
           { label: 'Symbol', value: sym, tone: 'warn', detail: 'Single-symbol validation' },
