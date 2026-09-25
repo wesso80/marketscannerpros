@@ -9,6 +9,9 @@ import { isEodDataCurrent } from './equityDataHealth';
 
 export type FlowBias = 'bullish' | 'bearish' | 'neutral';
 export type MarketMode = 'pin' | 'launch' | 'chop';
+export type MarketModeBasis = 'gamma' | 'price_structure_adx' | 'unknown_default_chop';
+/** Wilder ADX at/above which a gamma-less market is treated as trending ('launch'); the scanner's trend threshold. */
+export const MARKET_MODE_ADX_TREND = 25;
 export type GammaState = 'Positive' | 'Negative' | 'Mixed' | 'Unavailable';
 
 export interface FlowKeyStrike {
@@ -34,6 +37,8 @@ export interface CapitalFlowResult {
   market_type: 'equity' | 'crypto';
   spot: number;
   market_mode: MarketMode;
+  /** Which rule produced market_mode: signed gamma, price structure (ADX), or the no-evidence default. */
+  market_mode_basis: MarketModeBasis;
   gamma_state: GammaState;
   bias: FlowBias;
   conviction: number;
@@ -650,7 +655,6 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const cryptoOiChange = input.cryptoPositioning?.oiChangePercent ?? 0;
   const cryptoLs = input.cryptoPositioning?.longShortRatio ?? 1;
   const extremeFunding = Math.abs(cryptoFunding) >= 0.04;
-  const highCrowding = Math.abs(cryptoOiChange) >= 3 || cryptoLs >= 1.3 || cryptoLs <= 0.77;
 
   const centeredMixed = keyStrikes.slice(0, 2).every((strike) => strike.type === 'mixed');
   const oneSidedEquity = pcrBand < 0.7 || pcrBand > 1.3;
@@ -659,19 +663,30 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   // A signed, expiry-scoped gamma source is required.
   const gammaState = 'Unavailable' as GammaState;
 
-  const marketMode: MarketMode = marketType === 'crypto'
-    ? (extremeFunding && highCrowding ? 'launch' : 'chop')
-    : gammaState === 'Positive'
-      ? 'pin'
-      : gammaState === 'Negative'
+  // Market mode. Dealer gamma is not available from any current feed (gammaState is hard-wired 'Unavailable'), and
+  // perpetual funding is absent from the crypto feed, so the old rule left EVERY equity and crypto row in 'chop'.
+  // Without gamma the mode now comes from observed price structure: Wilder ADX ≥ 25 → 'launch' (trending), else
+  // 'chop'. 'pin' can only come from a real signed gamma source. `market_mode_basis` says which rule applied.
+  const trendAdx = input.trendMetrics?.adx;
+  const hasGamma = gammaState === 'Positive' || gammaState === 'Negative';
+  const marketModeBasis: MarketModeBasis = hasGamma ? 'gamma'
+    : Number.isFinite(trendAdx) ? 'price_structure_adx' : 'unknown_default_chop';
+  const marketMode: MarketMode = gammaState === 'Positive'
+    ? 'pin'
+    : gammaState === 'Negative'
+      ? 'launch'
+      : Number.isFinite(trendAdx) && (trendAdx as number) >= MARKET_MODE_ADX_TREND
         ? 'launch'
         : 'chop';
 
+  // Crypto funding is contrarian and only at extremes: normal (small positive) funding is neutral; crowded longs
+  // (extreme positive funding with long-heavy L/S) lean bearish, crowded shorts lean bullish — the same rule
+  // mirrored. Previously any funding > 0.01 with price above VWAP read as BULLISH.
   const bias: FlowBias = marketType === 'crypto'
-    ? (cryptoFunding > 0.01 && cryptoLs >= 1 && (!vwap || spot >= vwap)
-        ? 'bullish'
-        : cryptoFunding < -0.01 && cryptoLs <= 1 && (!vwap || spot <= vwap)
-          ? 'bearish'
+    ? (extremeFunding && cryptoFunding > 0 && cryptoLs >= 1.3
+        ? 'bearish'
+        : extremeFunding && cryptoFunding < 0 && cryptoLs <= 0.77
+          ? 'bullish'
           : 'neutral')
     : hasNearSpotOi && pcrBand < 0.8 && (!vwap || spot >= vwap * 0.998)
       ? 'bullish'
@@ -1186,6 +1201,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     market_type: marketType,
     spot: Number(spot.toFixed(2)),
     market_mode: marketMode,
+    market_mode_basis: marketModeBasis,
     gamma_state: gammaState,
     bias,
     conviction,
