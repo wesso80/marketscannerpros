@@ -117,19 +117,21 @@ describe('signal formation — source code invariants', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('intrabar exit priority — stop resolves before target', () => {
-  it('when both SL and TP touch the same bar, stop exit is recorded (not target)', () => {
-    const runner = read('lib/backtest/runStrategy.ts');
-    // The priority resolution: hitSL wins. Both MSP strategies use this pattern.
-    // Pattern: exitReason = hitSL ? 'stop' : hitTP ? 'target' : ...
-    expect(runner).toContain("hitSL ? 'stop' : hitTP ? 'target'");
+  it('when both SL and TP touch the same bar, the stop wins for both the exit price and the reason', async () => {
+    // The old check only asserted the exitReason ternary; the exit PRICE was then
+    // overwritten by the target. Assert the behaviour through the shared helper.
+    const { resolveBarExit } = await import('../lib/backtest/barExit');
+    expect(resolveBarExit({ side: 'LONG', open: 100, high: 112, low: 94, stop: 95, target: 110 }))
+      .toMatchObject({ exitPrice: 95, exitReason: 'stop' });
+    expect(resolveBarExit({ side: 'SHORT', open: 100, high: 106, low: 88, stop: 105, target: 90 }))
+      .toMatchObject({ exitPrice: 105, exitReason: 'stop' });
   });
 
-  it('checkHitSLTP evaluates both SL and TP independently without short-circuit', () => {
+  it('every bracket strategy resolves stops/targets through the shared resolveBarExit helper', () => {
     const runner = read('lib/backtest/runStrategy.ts');
-    // Both hitSL and hitTP are computed before the ternary — no early return
-    expect(runner).toContain('const hitSL = side === \'LONG\' ? low <= sl : high >= sl');
-    expect(runner).toContain('const hitTP = side === \'LONG\' ? high >= tp : low <= tp');
-    expect(runner).toContain('return { hitSL, hitTP }');
+    expect(runner).toContain("import { resolveBarExit } from './barExit'");
+    expect(runner.match(/resolveBarExit\(/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(runner).not.toContain('checkHitSLTP');
   });
 
   it('assumptions metadata documents the intrabar stop-first rule', async () => {
