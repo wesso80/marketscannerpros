@@ -905,6 +905,8 @@ interface AVOptionContract {
   ask_size: string;
   volume: string;
   open_interest: string;
+  /** Snapshot (trading) date of the quote, YYYY-MM-DD — AV puts it on every contract, not at the top level. */
+  date?: string;
   implied_volatility: string;
   delta?: string;
   gamma?: string;
@@ -998,7 +1000,45 @@ function getSpreadLeg(
   return uniqueSorted[targetIndex];
 }
 
-async function fetchOptionsChain(symbol: string, targetExpiration?: string): Promise<{
+const isRealYmd = (v: unknown): v is string => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(v)) return false;
+  const ymd = v.slice(0, 10);
+  const d = new Date(`${ymd}T00:00:00Z`);
+  return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === ymd;
+};
+
+/**
+ * Data date of an Alpha Vantage options chain. AV REALTIME_OPTIONS(_FMV) / HISTORICAL_OPTIONS responses are
+ * `{ endpoint, message, data: [...] }` with NO top-level date — the snapshot date is on each contract (`date`).
+ * Top-level fields are still honoured if present; otherwise the newest valid contract date is used.
+ * Invalid dates (e.g. AV's artificial premium sample "2049-99-99") yield null.
+ */
+export function chainDataDate(payload: any, contracts: Array<{ date?: unknown }>): string | null {
+  for (const v of [payload?.date, payload?.lastRefreshed, payload?.last_refreshed]) {
+    if (isRealYmd(v)) return v;
+  }
+  let newest: string | null = null;
+  for (const c of contracts) {
+    const d = c?.date;
+    if (isRealYmd(d) && (newest === null || d.slice(0, 10) > newest)) newest = d.slice(0, 10);
+  }
+  return newest;
+}
+
+/** dataQuality fields derived from a fetched chain (shared by analyzeForOptions and tests). */
+export function chainDataQualityFields(chain: { dataDate: string | null; freshness: 'REALTIME' | 'EOD' }): {
+  optionsChainSource: 'alpha_vantage';
+  freshness: 'REALTIME' | 'EOD' | 'STALE';
+  lastUpdated: string;
+} {
+  return {
+    optionsChainSource: 'alpha_vantage',
+    freshness: chain.dataDate ? chain.freshness : 'STALE',
+    lastUpdated: chain.dataDate || (chain.freshness === 'REALTIME' ? 'UNKNOWN_REALTIME' : 'UNKNOWN_EOD'),
+  };
+}
+
+export async function fetchOptionsChain(symbol: string, targetExpiration?: string): Promise<{
   calls: AVOptionContract[];
   puts: AVOptionContract[];
   selectedExpiry: string;
@@ -1053,6 +1093,13 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
       const providerOptions = payload?.['data'] || [];
       if (!Array.isArray(providerOptions) || providerOptions.length === 0) {
         console.warn(`⚠️ ${provider.fn} returned no options data`);
+        continue;
+      }
+
+      // Non-entitled premium endpoints return an artificial sample chain (symbol "XXYYZZ"); never treat it as data.
+      const want = symbol.toUpperCase();
+      if (!providerOptions.some((c: any) => String(c?.symbol ?? '').toUpperCase() === want)) {
+        console.warn(`⚠️ ${provider.fn} returned contracts for a different/sample symbol — skipping`);
         continue;
       }
 
@@ -1122,13 +1169,7 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
       }
     }
     
-    const dataDate = typeof data?.date === 'string'
-      ? data.date
-      : typeof data?.lastRefreshed === 'string'
-      ? data.lastRefreshed
-      : typeof data?.last_refreshed === 'string'
-      ? data.last_refreshed
-      : null;
+    const dataDate = chainDataDate(data, options);
 
     console.log(`✅ Filtered to ${bestExpiry}: ${calls.length} calls, ${puts.length} puts`);
     return {
@@ -4035,8 +4076,9 @@ export class OptionsConfluenceAnalyzer {
             dataConfidenceCaps.push('Missing executable option quotes; research only.');
           }
           // Update data quality
-          dataQuality.optionsChainSource = 'alpha_vantage';
-          dataQuality.freshness = optionsChain.dataDate ? optionsChain.freshness : 'STALE';
+          const chainFields = chainDataQualityFields(optionsChain);
+          dataQuality.optionsChainSource = chainFields.optionsChainSource;
+          dataQuality.freshness = chainFields.freshness;
           dataQuality.contractsCount = { 
             calls: optionsChain.calls.length, 
             puts: optionsChain.puts.length 
@@ -4046,7 +4088,7 @@ export class OptionsConfluenceAnalyzer {
             ...optionsChain.puts.map(p => parseFloat(p.strike || '0'))
           ])].filter(s => s > 0).sort((a, b) => a - b);
           dataQuality.chainExpiryUsed = optionsChain.selectedExpiry;
-          dataQuality.lastUpdated = optionsChain.dataDate || (optionsChain.freshness === 'REALTIME' ? 'UNKNOWN_REALTIME' : 'UNKNOWN_EOD');
+          dataQuality.lastUpdated = chainFields.lastUpdated;
           
           // Check if API provided Greeks (numeric validation, not truthy string check)
           const samplePool = [...optionsChain.calls, ...optionsChain.puts].slice(0, 50);
