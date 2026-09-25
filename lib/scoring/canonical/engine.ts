@@ -5,14 +5,15 @@
  *     → every setup type × {long, short} scored on its own factor set   (./setups.ts)
  *     → each eligible candidate is calibrated (./calibration: P(target first), expected net R, from the Phase 3
  *       walk-forward validation; daily equity/crypto bars only)
- *     → best ELIGIBLE candidate wins: highest calibrated expected-R percentile (within its direction), then factor
- *       score, then coverage. Uncalibrated contexts rank by factor score.
+ *     → best ELIGIBLE candidate wins: those meeting the minimum reward:risk first, then highest calibrated expected-R
+ *       percentile (within its direction), then factor score, then coverage. Uncalibrated contexts rank by factor score.
  *     → permission: hard/data blocks, too little history or no eligible setup → BLOCK. Otherwise WATCH, with the
  *       reasons. PASS only when the setup × direction has a VALIDATED out-of-sample edge (none does as of Sep 2026:
  *       NO_VALIDATED_EDGE) and nothing else caps it (coverage < 0.6, extreme volatility, reward:risk < 1.0, adverse
  *       regime, unresolved direction). The factor score never BLOCKs (it was not predictive out of sample).
  *     → grade: calibrated → A ≥ 85th / B ≥ 60th percentile of calibrated expected R, else C; uncalibrated → per-setup
- *       factor-score thresholds (labelled uncalibrated); F when BLOCK.
+ *       factor-score thresholds (labelled uncalibrated); capped at C below the minimum reward:risk; F when BLOCK.
+ *       The grade ranks a setup against same-direction setups — it is not an absolute quality or edge claim.
  *
  * Pure: no I/O. Callers supply hard blocks (lib/scanner/hardBlocks), flags, trust and optional regime overlay.
  */
@@ -85,7 +86,10 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   const cal = new Map<SetupCandidate, CanonicalCalibration | null>(
     all.map((c) => [c, c.eligible && calibrated ? calibrateCandidate(input.assetClass, input.timeframe, f.mode, c.setupType, c.direction, c.levels.riskReward) : null]));
   const pct = (c: SetupCandidate) => cal.get(c)?.percentile ?? -1;
-  const ranked = [...all].sort((a, b) => Number(b.eligible) - Number(a.eligible) || pct(b) - pct(a) || b.score - a.score || b.coverage - a.coverage);
+  // Among eligible candidates, those meeting the minimum reward:risk come first (a target 0.1R away has a high hit
+  // rate but is an already-finished move), then calibrated percentile, factor score, coverage.
+  const meetsRR = (c: SetupCandidate) => c.levels.targetBasis === 'projected' || c.levels.riskReward >= CANONICAL_MIN_RR;
+  const ranked = [...all].sort((a, b) => Number(b.eligible) - Number(a.eligible) || Number(meetsRR(b)) - Number(meetsRR(a)) || pct(b) - pct(a) || b.score - a.score || b.coverage - a.coverage);
   const candidates = ranked.map((c) => ({ setupType: c.setupType, direction: c.direction, eligible: c.eligible, ...(c.ineligibleReason ? { ineligibleReason: c.ineligibleReason } : {}), score: c.score, coverage: c.coverage,
     ...(cal.get(c) ? { expectedR: cal.get(c)!.expectedR, pTargetFirst: cal.get(c)!.pTargetFirst } : {}) }));
   const best = ranked[0];
@@ -134,6 +138,7 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
 
   const score = calibration ? Math.round(calibration.percentile) : best.score;
   const grade = permission === 'BLOCK' ? 'F'
+    : !meetsRR(best) ? 'C' // below the minimum reward:risk → never graded A/B
     : calibration ? (calibration.percentile >= 85 ? 'A' : calibration.percentile >= 60 ? 'B' : 'C')
     : best.score >= th.gradeA ? 'A' : best.score >= th.gradeB ? 'B' : 'C';
   return {

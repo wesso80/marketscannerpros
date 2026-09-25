@@ -50,12 +50,12 @@ describe('calibrated context (daily equity/crypto bars)', () => {
       expect(r.calibration!.validatedEdge).toBe(false);
       expect(r.watchReasons[0].code).toBe('NO_VALIDATED_EDGE');
       expect(r.score).toBe(Math.round(r.calibration!.percentile));
-      expect(r.grade).toBe(r.calibration!.percentile >= 85 ? 'A' : r.calibration!.percentile >= 60 ? 'B' : 'C');
+      const lowRR = r.watchReasons.some((x) => x.code === 'RR_BELOW_MIN');
+      expect(r.grade).toBe(lowRR ? 'C' : r.calibration!.percentile >= 85 ? 'A' : r.calibration!.percentile >= 60 ? 'B' : 'C');
       expect(r.calibration!.pTargetFirst).toBeGreaterThan(0);
       expect(r.calibration!.pTargetFirst).toBeLessThan(1);
       expect(r.calibration!.horizonBars).toBe(20);
       expect(r.thresholds).toBeNull();
-      // Best candidate = highest calibrated percentile among eligible candidates.
       const elig = r.candidates.filter((c) => c.eligible && c.expectedR !== undefined);
       expect(elig[0].setupType).toBe(r.setupType);
     }
@@ -64,5 +64,30 @@ describe('calibrated context (daily equity/crypto bars)', () => {
   it('forex and snapshot mode are uncalibrated', () => {
     expect(evaluateCanonical({ symbol: 'EURUSD', assetClass: 'forex', timeframe: 'daily', features }).scoreBasis).toBe('factor_alignment_uncalibrated');
     expect(evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features: { ...features, mode: 'snapshot' } }).calibration).toBeNull();
+  });
+});
+
+describe('minimum reward:risk in calibrated ranking', () => {
+  it('prefers an eligible candidate meeting the minimum R:R and never grades a below-minimum pick above C', async () => {
+    const { evaluateSetup, SETUP_TYPES, CANONICAL_MIN_RR } = await import('@/lib/scoring/canonical');
+    let checked = 0;
+    for (let k = 0; k < 60; k++) {
+      const b: CanonicalBar[] = Array.from({ length: 420 }, (_, i) => {
+        const c = 100 * (1 + (k % 3 - 1) * 0.001 * i + 0.04 * Math.sin(i / (5 + (k % 7))) + 0.02 * Math.sin(i / 23 + k));
+        return { t: new Date(Date.UTC(2024, 0, 1) + i * 86_400_000).toISOString(), open: c * 0.997, high: c * 1.012, low: c * 0.988, close: c, volume: 1e6 * (1 + (i % 5) / 10) };
+      });
+      const f = computeFeatures(b);
+      const r = evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features: f });
+      if (r.permission === 'BLOCK') continue;
+      const anyMeets = SETUP_TYPES.some((s) => (['long', 'short'] as const).some((d) => {
+        const c = evaluateSetup(f, s, d);
+        return c.eligible && (c.levels.targetBasis === 'projected' || c.levels.riskReward >= CANONICAL_MIN_RR);
+      }));
+      const lowRR = r.watchReasons.some((x) => x.code === 'RR_BELOW_MIN');
+      if (anyMeets && !r.watchReasons.some((x) => x.code === 'DIRECTION_UNRESOLVED')) expect(lowRR).toBe(false);
+      if (lowRR) expect(r.grade).toBe('C');
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(10);
   });
 });
