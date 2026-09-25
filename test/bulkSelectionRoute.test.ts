@@ -18,12 +18,12 @@ const request = (body: Record<string, unknown>) => new NextRequest('https://exam
 });
 
 const DAY_MS = 86_400_000;
-/** 260 completed daily bars with a gentle uptrend and real volume (synthetic, not market data). */
+/** 260 completed daily bars ending yesterday, gentle uptrend, liquid volume (synthetic, not market data). */
 function syntheticSeries(symbol: string, coinId: string) {
-  const start = Date.UTC(2026, 0, 1);
+  const start = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) - 260 * DAY_MS; // ends yesterday (fresh)
   const bars = Array.from({ length: 260 }, (_, i) => {
     const close = 100 + i * 0.4 + Math.sin(i / 3) * 1.5;
-    return { t: new Date(start + i * DAY_MS).toISOString(), open: close - 0.5, high: close + 1.2, low: close - 1.2, close, volume: 5_000_000 + (i % 7) * 100_000 };
+    return { t: new Date(start + i * DAY_MS).toISOString(), open: close - 0.5, high: close + 1.2, low: close - 1.2, close, volume: 50_000_000 + (i % 7) * 1_000_000 };
   });
   return { symbol, bars, barInterval: '1d', lastCompletedBarAt: bars[bars.length - 1].t, volumeBasis: 'market_chart_24h', coinId };
 }

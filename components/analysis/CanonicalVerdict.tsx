@@ -9,6 +9,7 @@
  */
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import { NO_EDGE_BANNER, calibrationSummary, scoreLabel } from '@/lib/scoring/canonical/display';
+import { canonicalRowStatus } from '@/lib/scoring/canonical/scannerAdapter';
 
 const SETUP_LABEL: Record<string, string> = {
   TREND_CONTINUATION: 'Trend continuation', PULLBACK: 'Pullback', SQUEEZE: 'Squeeze', EXHAUSTION_FADE: 'Exhaustion fade', NONE: 'No setup',
@@ -34,14 +35,17 @@ export function canonicalHeadline(c: CanonicalResult): string {
 }
 
 export default function CanonicalVerdict({ c, compact = false, legacyScore }: { c: CanonicalResult; compact?: boolean; legacyScore?: number | null }) {
-  const color = PERMISSION_COLOR[c.permission] ?? '#94a3b8';
+  // "No setup" is the engine finding nothing tradeable on this bar, not a data block — label it as such.
+  const noSetup = canonicalRowStatus(c) === 'NO_SETUP';
+  const badge = noSetup ? 'NO SETUP' : c.permission;
+  const color = noSetup ? '#94a3b8' : PERMISSION_COLOR[c.permission] ?? '#94a3b8';
   const reasons = [...c.blockReasons, ...c.watchReasons];
   const calib = calibrationSummary(c);
   const noEdge = !!c.scoreBasis && c.permission !== 'PASS' && c.permission !== 'BLOCK';
   return (
     <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2 text-[11px] text-slate-300" data-testid="canonical-verdict">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded border px-1.5 py-0.5 font-black" style={{ color, borderColor: color + '66', backgroundColor: color + '14' }}>{c.permission}</span>
+        <span className="rounded border px-1.5 py-0.5 font-black" style={{ color, borderColor: color + '66', backgroundColor: color + '14' }} data-testid="canonical-permission">{badge}</span>
         <span className="font-bold text-white">{SETUP_LABEL[c.setupType] ?? c.setupType}</span>
         <span>{c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side'}</span>
         <span className="font-black text-white">Grade {c.grade}</span>

@@ -1957,6 +1957,14 @@ async function runForexBulkScan(startTime: number, timeframe: string) {
 
     const result = analyzeAssetByTimeframe(pair, candles, timeframe);
     if (result) {
+      // Bar time for the data-trust check. Without it every forex row read as "freshness unknown" → institutional
+      // DATA_UNRELIABLE hard block → no side → 0/4 factor agreement → no forex results. AV FX timestamps are UTC.
+      const last = candles[candles.length - 1]?.date;
+      const lastIso = last ? (last.length <= 10 ? `${last}T00:00:00.000Z` : `${last.replace(' ', 'T')}Z`) : null;
+      (result as any).dataBasis = {
+        barInterval: timeframe, lastCompletedBarAt: lastIso && Number.isFinite(Date.parse(lastIso)) ? lastIso : null,
+        historyBars: candles.length, volumeBasis: 'not_applicable_forex', source: 'alpha_vantage_fx',
+      };
       scored.push(result);
     }
   }

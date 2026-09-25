@@ -1100,7 +1100,7 @@ export default function ScannerPage() {
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
     }
     items.sort((a, b) => {
-      if (sortKey === 'mspScore' && sortDir === 'desc' && a.canonical && b.canonical) return compareCanonicalRows(a, b);
+      if (sortKey === 'mspScore' && sortDir === 'desc' && a.canonical && b.canonical) { const c = compareCanonicalRows(a, b); if (c) return c; }
       if (sortKey === 'mspScore' && sortDir === 'desc' && a.compositeV2?.version && b.compositeV2?.version) return compareScannerScores(a, b);
       let av: any, bv: any;
       switch (sortKey) {
@@ -1369,8 +1369,10 @@ export default function ScannerPage() {
           : trendOk ? 'Trend alignment'
           : 'Mixed evidence';
         const enginePermission = scoreV2?.execution?.permission;
+        // A canonical "No setup" row is not blocked: it keeps its factor-bias side and reads NO SETUP (mixed), not NOT ALIGNED.
+        const noSetup = pick.canonicalStatus === 'NO_SETUP';
         const primaryPermission = pick.canonical?.permission ?? pick.compositeV2?.permission;
-        const perm = primaryPermission ? ({PASS: 'COMPLIANT', WATCH: 'TIGHT', BLOCK: 'BLOCKED'} as const)[primaryPermission as 'PASS' | 'WATCH' | 'BLOCK'] : enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
+        const perm = noSetup ? 'TIGHT' : primaryPermission ? ({PASS: 'COMPLIANT', WATCH: 'TIGHT', BLOCK: 'BLOCKED'} as const)[primaryPermission as 'PASS' | 'WATCH' | 'BLOCK'] : enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
             ? 'BLOCKED'
             : rangeConfirmationNeeded && dataQuality === 'GOOD'
               ? 'TIGHT'
@@ -1381,7 +1383,7 @@ export default function ScannerPage() {
               : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
-          scorePermission: primaryPermission, factorCoverage: pick.canonical?.coverage ?? pick.compositeV2?.coverage, canonical: pick.canonical,
+          scorePermission: noSetup ? 'NO SETUP' : primaryPermission, factorCoverage: pick.canonical?.coverage ?? pick.compositeV2?.coverage, canonical: pick.canonical,
           scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: coverage-adjusted magnitude ${(pick.compositeV2.coverageAdjustedMagnitude ?? pick.compositeV2.conservativeMagnitude).toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
