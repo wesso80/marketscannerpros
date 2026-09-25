@@ -94,7 +94,7 @@ describe('GET /api/options/gex', () => {
   const rows = [95, 100, 105, 110].map((k) => row('call', k)).concat([90, 95, 100, 105].map((k) => row('put', k, 400)));
 
   it('returns a labelled estimate (expiry, asOf, convention) from one chain call + one realtime quote — no analyzer run', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: chain(rows), GLOBAL_QUOTE: quote };
+    m.av = { REALTIME_OPTIONS: chain(rows), GLOBAL_QUOTE: quote };
     const body = await (await call()).json();
     expect(body.success).toBe(true);
     expect(body.data.available).toBe(true);
@@ -106,7 +106,7 @@ describe('GET /api/options/gex', () => {
     expect(body.data.dealerGamma.regime).toMatch(/LONG_GAMMA|SHORT_GAMMA|NEUTRAL/);
     expect(body.data.dealerGamma.netGexUsd).toBeGreaterThan(0); // call OI 1000 vs put OI 400
     expect(body.data.strikesUsed).toBe(5);
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV', 'GLOBAL_QUOTE:realtime']);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS', 'GLOBAL_QUOTE:realtime']);
 
     // Second view within the TTL reuses the cached chain: only the spot quote is fetched.
     m.calls = [];
@@ -115,18 +115,18 @@ describe('GET /api/options/gex', () => {
   });
 
   it('unusable chain → "unavailable" without spending the quote call', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: sample, HISTORICAL_OPTIONS: { data: [] }, GLOBAL_QUOTE: quote };
+    m.av = { REALTIME_OPTIONS: sample, HISTORICAL_OPTIONS: { data: [] }, GLOBAL_QUOTE: quote };
     const body = await (await call()).json();
     expect(body.data.available).toBe(false);
     expect(body.data.dealerGamma).toBeNull();
     expect(m.calls).not.toContain('GLOBAL_QUOTE:realtime');
 
     clearSharedOptionsChainCache(); m.calls = [];
-    m.av = { REALTIME_OPTIONS_FMV: chain([row('call', 100), row('put', 100)]), GLOBAL_QUOTE: quote }; // too few strikes
+    m.av = { REALTIME_OPTIONS: chain([row('call', 100), row('put', 100)]), GLOBAL_QUOTE: quote }; // too few strikes
     const thin = await (await call()).json();
     expect(thin.data.available).toBe(false);
     expect(thin.data.reason).toMatch(/Not enough strikes/);
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV']);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS']);
   });
 });
 

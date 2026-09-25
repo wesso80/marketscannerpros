@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     if (assetClass === 'equity') {
       optsData = await fetchOptionsSnapshot(symbol, priceData.price);
       if (!optsData) {
-        console.warn(`[DVE] ${symbol} — options data unavailable (REALTIME_OPTIONS_FMV returned null)`);
+        console.warn(`[DVE] ${symbol} — options data unavailable (no usable REALTIME_OPTIONS/HISTORICAL_OPTIONS chain)`);
       }
     }
 

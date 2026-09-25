@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avFetch } from '@/lib/avRateGovernor';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
-import { fetchSharedOptionsChain } from '@/lib/options/chainCache';
+import { defaultChainProviders, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { chainDataDate } from '@/lib/options-confluence-analyzer';
 import {
   DEALER_GAMMA_CONVENTION,
@@ -16,7 +16,6 @@ import {
 } from '@/lib/options-gex';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
-const AV_REALTIME = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
 function nyTodayYmd(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -79,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     const chain = await fetchSharedOptionsChain<RawChainRowForGex>(symbol, {
       apiKey: AV_KEY,
-      providers: AV_REALTIME ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'] : ['HISTORICAL_OPTIONS'],
+      providers: defaultChainProviders(),
       fetchPayload: (fn, url) => avFetch(url, `${fn} ${symbol}`),
     });
     if (!chain) return unavailable('No usable options chain for this symbol.');

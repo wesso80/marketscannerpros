@@ -9,7 +9,7 @@
  * 5. IV skew analysis (descriptive only — equities normally carry put skew)
  * 6. Smart money scoring with premium-size tiers
  *
- * Data source: Alpha Vantage REALTIME_OPTIONS_FMV contract-level data
+ * Data source: Alpha Vantage REALTIME_OPTIONS contract-level data (shared chain)
  * (bid, ask, last, mark, volume, OI, IV, Greeks per contract)
  */
 

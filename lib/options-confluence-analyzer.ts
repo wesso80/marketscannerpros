@@ -14,7 +14,7 @@ import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseC
 import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from './coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { fetchSharedOptionsChain } from '@/lib/options/chainCache';
+import { defaultChainProviders, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { measuredIvRank } from '@/lib/options/ivRank';
 export { measuredIvRank };
 import { bridgeFromScanData, computeAllDecompressionStates } from '@/lib/time/decompressionEngine';
@@ -929,7 +929,6 @@ interface AVOptionContract {
 
 type AVOptionsFunction = 'REALTIME_OPTIONS_FMV' | 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
 
-const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
 // Get the nearest coming Friday in NY date space (YYYY-MM-DD)
 // - Friday: use today (0 days)
@@ -1064,9 +1063,8 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
   }
   
   try {
-    const providers: AVOptionsFunction[] = AV_OPTIONS_REALTIME_ENABLED
-      ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']
-      : ['HISTORICAL_OPTIONS'];
+    // REALTIME_OPTIONS (live bid/ask) → HISTORICAL_OPTIONS (previous session) when the live chain is thin.
+    const providers: AVOptionsFunction[] = defaultChainProviders();
 
     // Shared short-TTL chain cache: the Options Scanner strike picker, expiry dropdown, Golden Egg and
     // GEX estimate reuse this download instead of pulling the same chain again.
@@ -1086,7 +1084,7 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
     });
 
     if (!shared) {
-      console.warn('⚠️ No options data returned from REALTIME_OPTIONS_FMV/HISTORICAL_OPTIONS providers');
+      console.warn('⚠️ No options data returned from REALTIME_OPTIONS/HISTORICAL_OPTIONS providers');
       return null;
     }
     const options: AVOptionContract[] = shared.rows;

@@ -62,7 +62,7 @@ function stubAv(opts: { realtime?: unknown; historical?: unknown }) {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     calls.push(url);
     const fn = new URL(url).searchParams.get('function');
-    const body = fn === 'REALTIME_OPTIONS_FMV' ? (opts.realtime ?? { Information: 'not entitled' }) : fn === 'HISTORICAL_OPTIONS' ? (opts.historical ?? { data: [] }) : {};
+    const body = fn === 'REALTIME_OPTIONS' ? (opts.realtime ?? { Information: 'not entitled' }) : fn === 'HISTORICAL_OPTIONS' ? (opts.historical ?? { data: [] }) : {};
     return { status: 200, json: async () => body } as Response;
   }));
   return calls;
@@ -117,7 +117,7 @@ describe('fetchOptionsChain (real) on Alpha Vantage-shaped payloads', () => {
     const calls = stubAv({ realtime: samplePayload, historical: histPayload('2026-09-24') });
     const { fetchOptionsChain } = await import('@/lib/options-confluence-analyzer');
     const chain = await fetchOptionsChain('COST');
-    expect(calls.some((u) => u.includes('REALTIME_OPTIONS_FMV'))).toBe(true);
+    expect(calls.some((u) => u.includes('REALTIME_OPTIONS'))).toBe(true);
     expect(chain?.sourceFunction).toBe('HISTORICAL_OPTIONS');
     expect(chain?.calls.every((c) => c.symbol === 'COST')).toBe(true);
   });

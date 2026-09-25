@@ -8,14 +8,15 @@
  *   symbol      — required ticker (e.g. AAPL)
  *   expiration  — optional ISO date filter (e.g. 2026-03-20)
  *
- * Data source: Alpha Vantage REALTIME_OPTIONS_FMV (require_greeks=true)
- * Caching: Redis 60s by ticker, filtered client-side by expiration.
+ * Data source: shared chain (lib/options/chainCache) — Alpha Vantage REALTIME_OPTIONS (live bid/ask + greeks),
+ * falling back to HISTORICAL_OPTIONS (previous session close) when the live chain has too few two-sided quotes.
+ * Caching: Redis 120s by ticker, filtered client-side by expiration.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { avFetch } from '@/lib/avRateGovernor';
 import { checkOptionsAccess } from '@/lib/options/access';
-import { usableOptionRows } from '@/lib/options/avChain';
+import { describeChainSource, fetchSharedOptionsChain, type ChainQuoteBasis } from '@/lib/options/chainCache';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 export const runtime = 'nodejs';
@@ -23,7 +24,6 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
-const AV_REALTIME = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
 /* ── Alpha Vantage raw row shape ─────────────────────────────────── */
 interface AVRaw {
@@ -80,6 +80,14 @@ export interface OptionsChainResponse {
   expirations: ExpirationMeta[];
   contracts: OptionsContract[];
   provider: string;
+  /** realtime = live bid/ask; previous_session = HISTORICAL_OPTIONS close; marks_only = no usable bid/ask. */
+  quoteBasis?: ChainQuoteBasis;
+  /** Session date the quotes belong to (YYYY-MM-DD). */
+  asOfDate?: string | null;
+  /** Share (0-100) of contracts in the whole chain with a two-sided quote. */
+  quoteCoveragePct?: number;
+  /** Plain-English source + as-of label. */
+  sourceLabel?: string;
   cachedAt: number;
   error?: string;
   /** Why each Alpha Vantage options function returned nothing usable (no secrets). */
@@ -94,6 +102,8 @@ export interface ExpirationMeta {
   puts: number;
   totalOI: number;
 }
+
+type SourceMeta = Pick<OptionsChainResponse, 'quoteBasis' | 'asOfDate' | 'quoteCoveragePct' | 'sourceLabel'>;
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
 function num(v: string | number | undefined, fallback = 0): number {
@@ -232,8 +242,10 @@ export async function GET(request: NextRequest) {
 
   try {
     /* ── 1. Check cache ──────────────────────────────────────────── */
-    const cacheKey = CACHE_KEYS.optionsChain(symbol);
-    const cached = await getCached<{ contracts: OptionsContract[]; provider: string; spot: number; ts: number }>(cacheKey);
+    // v2: entries written before the quote-source fix (FMV marks, no bid/ask) are ignored.
+    const cacheKey = `${CACHE_KEYS.optionsChain(symbol)}:v2`;
+    type CachedChain = { contracts: OptionsContract[]; provider: string; spot: number; ts: number; source: SourceMeta };
+    const cached = await getCached<CachedChain>(cacheKey);
 
     if (cached && cached.contracts?.length) {
       const eligibleCachedContracts = cached.contracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
@@ -248,47 +260,29 @@ export async function GET(request: NextRequest) {
           expirations: computeExpirations(cached.contracts), // always full list
           contracts,
           provider: cached.provider,
+          ...cached.source,
           cachedAt: cached.ts,
         } satisfies OptionsChainResponse);
       }
     }
 
-    /* ── 2. Fetch from Alpha Vantage ─────────────────────────────── */
-    const providers = AV_REALTIME
-      ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']
-      : ['HISTORICAL_OPTIONS'];
-
-    let allContracts: OptionsContract[] = [];
-    let usedProvider = 'none';
+    /* ── 2. Fetch (shared raw-chain cache → Alpha Vantage) ───────── */
     const providerIssues: string[] = [];
-
-    for (const fn of providers) {
-      const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
-      let payload: { data?: AVRaw[] } | null;
-      try {
-        payload = await avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`);
-      } catch (err) {
-        providerIssues.push(`${fn}: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
-        continue;
-      }
-
-      // Skips empty chains and Alpha Vantage's artificial "premium endpoint" sample (key not entitled).
-      const rows = usableOptionRows(payload, symbol);
-      if (!rows) {
-        providerIssues.push(`${fn}: ${payload?.data?.length ? 'artificial sample / wrong-symbol chain (API key not entitled to this endpoint)' : 'no contracts returned'}`);
-        continue;
-      }
-
-      const normalised = rows.map(normalise).filter(Boolean) as OptionsContract[];
-      if (!normalised.length) {
-        providerIssues.push(`${fn}: contracts could not be parsed`);
-        continue;
-      }
-
-      allContracts = normalised;
-      usedProvider = fn;
-      break;
-    }
+    const shared = await fetchSharedOptionsChain<AVRaw>(symbol, {
+      apiKey: AV_KEY,
+      fetchPayload: (fn, url) => avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`),
+      issues: providerIssues,
+    });
+    const allContracts: OptionsContract[] = shared ? (shared.rows.map(normalise).filter(Boolean) as OptionsContract[]) : [];
+    const usedProvider = shared && allContracts.length ? shared.provider : 'none';
+    const source: SourceMeta = shared
+      ? {
+          quoteBasis: shared.quoteBasis,
+          asOfDate: shared.asOfDate,
+          quoteCoveragePct: Math.round(shared.quoteCoverage * 100),
+          sourceLabel: describeChainSource(shared),
+        }
+      : {};
 
     if (!allContracts.length) {
       return NextResponse.json({
@@ -308,7 +302,7 @@ export async function GET(request: NextRequest) {
     const spot = (await fetchSpot(symbol)) || inferSpot(allContracts);
     const ts = Date.now();
 
-    await setCached(cacheKey, { contracts: allContracts, provider: usedProvider, spot, ts }, CACHE_TTL.optionsChain).catch(() => {});
+    await setCached(cacheKey, { contracts: allContracts, provider: usedProvider, spot, ts, source } satisfies CachedChain, CACHE_TTL.optionsChain).catch(() => {});
 
     /* ── 4. Filter + respond ─────────────────────────────────────── */
     const eligibleContracts = allContracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
@@ -320,6 +314,7 @@ export async function GET(request: NextRequest) {
         expirations: [],
         contracts: [],
         provider: usedProvider,
+        ...source,
         cachedAt: ts,
         error: 'Options provider returned no current or future expirations',
       } satisfies OptionsChainResponse, { status: 422 });
@@ -335,6 +330,8 @@ export async function GET(request: NextRequest) {
       expirations: computeExpirations(eligibleContracts),
       contracts,
       provider: usedProvider,
+      ...source,
+      ...(providerIssues.length ? { providerIssues } : {}),
       cachedAt: ts,
     } satisfies OptionsChainResponse);
 

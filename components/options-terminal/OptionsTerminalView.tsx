@@ -4,7 +4,7 @@
  * OptionsTerminalView — Full options desk with live Alpha Vantage data.
  *
  * Visual scaffold adapted from the user's UI blueprint, data powered by
- * the useOptionsChain hook → /api/options-chain → AV REALTIME_OPTIONS_FMV.
+ * the useOptionsChain hook → /api/options-chain → AV REALTIME_OPTIONS (else HISTORICAL_OPTIONS, previous session).
  */
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
@@ -33,7 +33,7 @@ function evidenceStatus(value: boolean) {
 function riskSeverity(label: string): RiskFlag['severity'] {
   const lower = label.toLowerCase();
   if (lower.includes('error') || lower.includes('unavailable') || lower.includes('extreme') || lower.includes('no contracts')) return 'critical';
-  if (lower.includes('delayed') || lower.includes('stale') || lower.includes('wide') || lower.includes('thin') || lower.includes('high')) return 'warning';
+  if (lower.includes('delayed') || lower.includes('previous session') || lower.includes('no live bid/ask') || lower.includes('stale') || lower.includes('wide') || lower.includes('thin') || lower.includes('high')) return 'warning';
   return 'info';
 }
 
@@ -175,7 +175,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       'Provider quote observation time unavailable. Retrieval age does not establish live quotes.',
       chain.error ? `Options chain error: ${chain.error}` : null,
       chain.contracts.length === 0 && ticker ? 'No option contracts loaded.' : null,
-      chain.provider === 'HISTORICAL_OPTIONS' ? 'Historical options provider is delayed context.' : null,
+      chain.quoteBasis === 'previous_session' ? `Live option quotes unavailable; showing previous session close${chain.asOfDate ? ` (as of ${chain.asOfDate})` : ''}.` : null,
+      chain.quoteBasis === 'marks_only' ? 'Provider returned marks only (no usable bid/ask).' : null,
       chainIsStale ? 'Options chain data is older than 15 minutes.' : null,
       avgSpreadPct > 12 ? `Average contract spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
     ].filter(Boolean) as string[],
@@ -226,8 +227,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     {
       label: 'Provider',
       value: chain.provider || 'Unknown',
-      status: chain.provider === 'REALTIME_OPTIONS_FMV' ? 'supportive' as const : chain.provider ? 'neutral' as const : 'missing' as const,
-      detail: updatedLabel || 'No fetch timestamp available.',
+      status: chain.quoteBasis === 'realtime' ? 'supportive' as const : chain.quoteBasis === 'marks_only' ? 'conflicting' as const : chain.provider ? 'neutral' as const : 'missing' as const,
+      detail: [chain.sourceLabel, updatedLabel].filter(Boolean).join(' · ') || 'No fetch timestamp available.',
     },
     {
       label: 'Liquidity',
@@ -246,7 +247,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     chain.contracts.some((contract) => !(contract.bid > 0 && contract.ask >= contract.bid)) ? `${chain.contracts.filter((contract) => !(contract.bid > 0 && contract.ask >= contract.bid)).length}/${chain.contracts.length} contracts lack valid two-sided quotes. Spread and liquidity assessment are incomplete.` : null,
     chain.error ? `Options chain error: ${chain.error}` : null,
     chain.contracts.length === 0 && ticker ? 'No contracts loaded for selected ticker.' : null,
-    chain.provider === 'HISTORICAL_OPTIONS' ? 'Delayed provider context.' : null,
+    chain.quoteBasis === 'previous_session' ? `Quotes are the previous session close${chain.asOfDate ? ` (as of ${chain.asOfDate})` : ''}, not live.` : null,
+    chain.quoteBasis === 'marks_only' ? 'Only fair-value marks available; no live bid/ask.' : null,
     chainIsStale ? 'Options chain is stale.' : null,
     avgSpreadPct > 12 ? `Average spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
     chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV environment.' : null,
@@ -349,7 +351,13 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
               </div>
               <div className="hidden md:block text-xs text-zinc-400">{updatedLabel}</div>
               <Badge tone="neutral">
-                {chain.provider === 'REALTIME_OPTIONS_FMV' ? 'FMV · QUOTE TIME UNVERIFIED' : chain.provider === 'HISTORICAL_OPTIONS' ? 'DELAYED' : '—'}
+                {chain.quoteBasis === 'realtime'
+                  ? `LIVE BID/ASK · ${chain.provider}`
+                  : chain.quoteBasis === 'previous_session'
+                    ? `PREVIOUS SESSION CLOSE${chain.asOfDate ? ` · AS OF ${chain.asOfDate}` : ''}`
+                    : chain.quoteBasis === 'marks_only'
+                      ? `MARKS ONLY · NO BID/ASK · ${chain.provider}`
+                      : chain.provider || '—'}
               </Badge>
             </div>
 

@@ -44,19 +44,18 @@ describe('fetchOptionsSnapshot provider fallback', () => {
 
   it('realtime not entitled (Information note) → still uses HISTORICAL_OPTIONS', async () => {
     m.av = {
-      REALTIME_OPTIONS_FMV: new Error('AV info error: premium endpoint'),
       REALTIME_OPTIONS: new Error('AV info error: premium endpoint'),
       HISTORICAL_OPTIONS: hist,
     };
     const snap = await fetchOptionsSnapshot('SPY', 500);
     vi.useRealTimers();
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV', 'REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']);
     expect(snap).not.toBeNull();
-    expect(snap?.canonical?.notes.join(' ')).toMatch(/HISTORICAL_OPTIONS/);
+    expect(snap?.canonical?.notes.join(' ')).toMatch(/HISTORICAL_OPTIONS — previous session close \(as of 2026-09-24\)/);
   });
 
   it('artificial sample chain is skipped, never summarised', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: sample, REALTIME_OPTIONS: sample, HISTORICAL_OPTIONS: hist };
+    m.av = { REALTIME_OPTIONS: sample, HISTORICAL_OPTIONS: hist };
     const snap = await fetchOptionsSnapshot('SPY', 500);
     vi.useRealTimers();
     expect(snap).not.toBeNull();
@@ -64,10 +63,10 @@ describe('fetchOptionsSnapshot provider fallback', () => {
   });
 
   it('entitled realtime chain is used first (one call)', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: hist };
+    m.av = { REALTIME_OPTIONS: hist };
     const snap = await fetchOptionsSnapshot('SPY', 500);
     vi.useRealTimers();
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV']);
-    expect(snap?.canonical?.notes.join(' ')).toMatch(/REALTIME_OPTIONS_FMV/);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS']);
+    expect(snap?.canonical?.notes.join(' ')).toMatch(/REALTIME_OPTIONS — live bid\/ask/);
   });
 });

@@ -11,14 +11,13 @@ import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { AVOptionRow, scoreOptionCandidatesV21WithDiagnostics } from '@/lib/scoring/options-v21';
 import { avFetch } from '@/lib/avRateGovernor';
-import { fetchSharedOptionsChain } from '@/lib/options/chainCache';
+import { defaultChainProviders, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/correlation-regime-engine';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { assessOptionsChainQuality } from '@/lib/options/dataQuality';
 import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
-const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
 async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Promise<{
   rows: AVOptionRow[];
@@ -33,7 +32,7 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
   // so the strike picker no longer downloads the chain a second time.
   const shared = await fetchSharedOptionsChain<AVOptionRow>(symbol, {
     apiKey: ALPHA_VANTAGE_KEY,
-    providers: AV_OPTIONS_REALTIME_ENABLED ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'] : ['HISTORICAL_OPTIONS'],
+    providers: defaultChainProviders(),
     fetchPayload: (fn, url) => avFetch(url, `${fn} ${symbol}`),
   });
   if (!shared) return { rows: [], provider: 'none', warnings: ['no_usable_chain'] };

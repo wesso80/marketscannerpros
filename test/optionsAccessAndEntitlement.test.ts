@@ -52,6 +52,7 @@ vi.mock('@/lib/avRateGovernor', () => ({
 import { usableOptionRows, isAlphaVantageSampleChain } from '@/lib/options/avChain';
 import { checkOptionsAccess } from '@/lib/options/access';
 import { GET as chainGET } from '../app/api/options-chain/route';
+import { clearSharedOptionsChainCache } from '../lib/options/chainCache';
 import { GET as flowGET } from '../app/api/options-flow/route';
 import { hasPaidTier } from '../app/v2/_components/ui';
 
@@ -79,6 +80,7 @@ const quote = { 'Global Quote': { '05. price': '500.00' } };
 
 beforeEach(() => {
   m.session = null; m.admin = false; m.effectiveTier = 'free'; m.av = {}; m.calls = [];
+  clearSharedOptionsChainCache();
 });
 
 describe('usableOptionRows / isAlphaVantageSampleChain', () => {
@@ -126,12 +128,12 @@ describe('GET /api/options-chain', () => {
   it('a Pro subscriber is no longer refused as "requires Pro Trader"', async () => {
     m.session = { cid: 'cus_1', tier: 'pro', workspaceId: 'w1', exp: 0 };
     m.effectiveTier = 'pro';
-    m.av = { REALTIME_OPTIONS_FMV: realChain(), GLOBAL_QUOTE: quote };
+    m.av = { REALTIME_OPTIONS: realChain(), GLOBAL_QUOTE: quote };
     const res = await call();
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.provider).toBe('REALTIME_OPTIONS_FMV');
+    expect(body.provider).toBe('REALTIME_OPTIONS');
   });
 
   it('free user → 403 without spending Alpha Vantage calls', async () => {
@@ -144,7 +146,7 @@ describe('GET /api/options-chain', () => {
   it('realtime returns the artificial sample → falls back to HISTORICAL_OPTIONS (no fake 2099-99-99 chain)', async () => {
     m.session = { cid: 'cus_1', tier: 'pro', workspaceId: 'w1', exp: 0 };
     m.effectiveTier = 'pro';
-    m.av = { REALTIME_OPTIONS_FMV: samplePayload, HISTORICAL_OPTIONS: realChain(), GLOBAL_QUOTE: quote };
+    m.av = { REALTIME_OPTIONS: samplePayload, HISTORICAL_OPTIONS: realChain(), GLOBAL_QUOTE: quote };
     const res = await call();
     const body = await res.json();
     expect(res.status).toBe(200);
@@ -156,7 +158,7 @@ describe('GET /api/options-chain', () => {
   it('realtime answers an entitlement "Information" note → falls back to HISTORICAL_OPTIONS', async () => {
     m.admin = true;
     m.session = { cid: 'free_owner@example.com', tier: 'free', workspaceId: 'w-owner', exp: 0 };
-    m.av = { REALTIME_OPTIONS_FMV: new Error('AV info error: premium endpoint'), HISTORICAL_OPTIONS: realChain(), GLOBAL_QUOTE: quote };
+    m.av = { REALTIME_OPTIONS: new Error('AV info error: premium endpoint'), HISTORICAL_OPTIONS: realChain(), GLOBAL_QUOTE: quote };
     const res = await call();
     expect(res.status).toBe(200);
     expect((await res.json()).provider).toBe('HISTORICAL_OPTIONS');
@@ -165,12 +167,12 @@ describe('GET /api/options-chain', () => {
   it('when nothing is usable, says why per provider instead of a bare "no data"', async () => {
     m.admin = true;
     m.session = { cid: 'free_owner@example.com', tier: 'free', workspaceId: 'w-owner', exp: 0 };
-    m.av = { REALTIME_OPTIONS_FMV: samplePayload, HISTORICAL_OPTIONS: new Error('AV info error: premium endpoint') };
+    m.av = { REALTIME_OPTIONS: samplePayload, HISTORICAL_OPTIONS: new Error('AV info error: premium endpoint') };
     const res = await call();
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.providerIssues).toHaveLength(2);
-    expect(body.providerIssues[0]).toMatch(/REALTIME_OPTIONS_FMV: artificial sample/);
+    expect(body.providerIssues[0]).toMatch(/REALTIME_OPTIONS: artificial sample/);
     expect(body.providerIssues[1]).toMatch(/HISTORICAL_OPTIONS: AV info error/);
     expect(JSON.stringify(body)).not.toMatch(/apikey/i);
   });
@@ -182,7 +184,7 @@ describe('GET /api/options-flow', () => {
   it('Pro subscriber passes the gate; sample (not entitled) chain gets a clear 503, not fake flow', async () => {
     m.session = { cid: 'cus_1', tier: 'pro', workspaceId: 'w1', exp: 0 };
     m.effectiveTier = 'pro';
-    m.av = { REALTIME_OPTIONS_FMV: samplePayload, GLOBAL_QUOTE: quote };
+    m.av = { REALTIME_OPTIONS: samplePayload, GLOBAL_QUOTE: quote };
     const res = await call();
     expect(res.status).toBe(503);
     expect((await res.json()).error).toMatch(/Realtime options data is not enabled on the Alpha Vantage API key/);
