@@ -1,5 +1,18 @@
 import type { DerivativeTicker } from '@/lib/coingecko';
 
+/**
+ * Is there a live, comparable crypto funding-rate feed? Not today: the CoinGecko derivatives snapshot does not state
+ * each contract's funding period, so `summarizeDerivativeSnapshot` always returns `fundingRate: undefined`. While this
+ * is false, POSITIONING is structurally unavailable for crypto (not applicable → weight redistributed) instead of
+ * "applicable but missing" on every crypto row, which capped crypto coverage below 100% forever.
+ */
+export const CRYPTO_FUNDING_FEED_LIVE = false;
+
+/** POSITIONING applies when the asset is crypto AND funding is either observed on this row or expected from a live feed. */
+export function cryptoPositioningExpected(asset: string, fundingRate: unknown): boolean {
+  return asset === 'crypto' && (CRYPTO_FUNDING_FEED_LIVE || (typeof fundingRate === 'number' && Number.isFinite(fundingRate)));
+}
+
 /** Sum observed USD OI without reconverting it using a different spot price. */
 export function summarizeDerivativeSnapshot(symbol: string, snapshot: DerivativeTicker[]) {
   const base = symbol.toUpperCase().replace(/[-/]?(USDT|USD)$/, '');

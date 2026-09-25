@@ -849,7 +849,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
         <div className="md:col-span-3">
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Quality</div>
           <div className="mt-1 text-[1.25rem] font-black text-white md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
-          <div className="text-[0.72rem] font-semibold text-slate-400" title="Evidence-weighted confidence: score × evidence coverage × freshness × liquidity. Not a probability of profit.">{confidence} / 100 · {quality}</div>
+          <div className="text-[0.72rem] font-semibold text-slate-400" title="Evidence-weighted confidence: directional strength × factor coverage (missing factors count as neutral) × freshness × liquidity. Not a probability of profit.">{confidence} / 100 · {quality}</div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={confidence} aria-valuemin={0} aria-valuemax={100} aria-label={`Setup confidence: ${confidence}%`}>
             <div style={{ width: `${confidence}%`, background: confBarColor, height: '100%' }} />
           </div>
@@ -1381,7 +1381,7 @@ export default function ScannerPage() {
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
           scorePermission: pick.compositeV2?.permission, factorCoverage: pick.compositeV2?.coverage,
-          scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: conservative magnitude ${pick.compositeV2.conservativeMagnitude.toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} evidence/freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
+          scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: coverage-adjusted magnitude ${(pick.compositeV2.coverageAdjustedMagnitude ?? pick.compositeV2.conservativeMagnitude).toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,

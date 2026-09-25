@@ -41,7 +41,13 @@ export interface DataTrustResult {
   freshness: 'fresh' | 'delayed' | 'stale' | 'unknown';
   /** True when `barInterval` does not match the requested timeframe. */
   intervalMismatch: boolean;
+  /** Inputs that are genuinely unusable (no price, wrong bar interval, split-contaminated series). Missing optional
+   *  indicators are NOT here: they are neutral + flagged (`missingInputs`), never a block. */
   eligibilityBlockers: string[];
+  /** Missing inputs (indicators / volume / history). Informational: the scorer counts them once as neutral. */
+  missingInputs: string[];
+  /** Trust problems that are not missing data (interval mismatch, delayed/unknown bar time, provider degraded). */
+  qualityIssues: string[];
 }
 
 const INTERVAL_MINUTES: Record<string, number> = { '5m': 5, '15m': 15, '30m': 30, '1h': 60, '60m': 60, '4h': 240, '1d': 1440, daily: 1440, '1w': 10_080, weekly: 10_080 };
@@ -127,6 +133,18 @@ export function evaluateDataTrust(input: DataTrustInput): DataTrustResult {
 
   let level: DataTrustLevel = 'GOOD';
   let factor = 1;
+  const missingInputs: string[] = missingCritical.filter(n => n !== 'price');
+  if (ind.ema200 === false) missingInputs.push('EMA200');
+  if (ind.macd === false) missingInputs.push('MACD');
+  if (input.volumeAvailable === false) missingInputs.push('volume');
+  if (input.historyBars != null && input.historyBars < 30) missingInputs.push('history');
+  const qualityIssues: string[] = [];
+  if (intervalMismatch) qualityIssues.push('interval_mismatch');
+  if (freshness === 'delayed') qualityIssues.push('delayed');
+  if (freshness === 'unknown') qualityIssues.push('bar_time_unknown');
+  if (freshness === 'stale' || input.providerStale) qualityIssues.push('stale');
+  if (input.providerDegraded) qualityIssues.push('provider_degraded');
+  if (input.priceDiscontinuity) qualityIssues.push('price_discontinuity');
 
   if (missingCritical.includes('price') || missingCritical.length >= 2 || (input.historyBars != null && input.historyBars < 30)) {
     level = 'INSUFFICIENT_DATA';
@@ -155,11 +173,13 @@ export function evaluateDataTrust(input: DataTrustInput): DataTrustResult {
   }
   if (freshness === 'unknown' && level === 'GOOD') { level = 'DEGRADED'; factor = 0.85; reasons.push('bar time unknown'); }
 
+  // Only unusable data blocks. A missing ATR/RSI/ADX is a missing vote (neutral, flagged), not a reason to block.
   const eligibilityBlockers = [
-    ...missingCritical.map(name => `Required input missing: ${name}.`),
+    ...(missingCritical.includes('price') ? ['Required input missing: price.'] : []),
     ...(intervalMismatch ? [`Requested ${requested}, received ${actual} bars.`] : []),
+    ...(input.priceDiscontinuity ? ['Price series has an unadjusted split-like discontinuity.'] : []),
   ];
-  return { level, reasons, factor, freshness, intervalMismatch, eligibilityBlockers };
+  return { level, reasons, factor, freshness, intervalMismatch, eligibilityBlockers, missingInputs, qualityIssues };
 }
 
 export const DATA_TRUST_LABEL: Record<DataTrustLevel, string> = {

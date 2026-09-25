@@ -12,7 +12,7 @@ const factors: FactorInput[] = ['TREND', 'MOMENTUM', 'VOLUME', 'RELATIVE_STRENGT
   .map((f) => ({ factor: f as FactorInput['factor'], signed: 0.8, available: true }));
 const base = { factors, regime: 'trending' as const, freshness: 'live' as const, trustLevel: 'GOOD' as const };
 
-describe('scanner score contract v2.2', () => {
+describe('scanner score contract v2.2+', () => {
   it('a regime-gated row keeps its honest composite; the block is carried by permission + reason code', () => {
     const open = buildScannerScore(base);
     const gated = buildScannerScore({ ...base, gateBlocks: [{ code: 'REGIME_GATE', message: 'TA=40 < gate 50' }] });
@@ -34,14 +34,19 @@ describe('scanner score contract v2.2', () => {
     expect(buildScannerScore({ ...base, trustLevel: 'STALE', trustReasons: ['Last bar 5 days old'] }).blockReasons)
       .toEqual([{ code: 'DATA_TRUST_STALE', message: 'Last bar 5 days old' }]);
     expect(buildScannerScore({ ...base, trustLevel: undefined }).blockReasons.map((r) => r.code)).toContain('DATA_TRUST_UNEVALUATED');
-    expect(buildScannerScore({ ...base, freshness: 'unknown' }).blockReasons.map((r) => r.code)).toContain('DATA_FRESHNESS');
+    expect(buildScannerScore({ ...base, freshness: 'stale' }).blockReasons.map((r) => r.code)).toContain('DATA_FRESHNESS');
+    // v2.3: an unknown bar time is missing information → WATCH flag, not a block.
+    const unknown = buildScannerScore({ ...base, freshness: 'unknown' });
+    expect(unknown.permission).toBe('WATCH');
+    expect(unknown.watchReasons.map((r) => r.code)).toEqual(['DATA_TIMESTAMP_UNKNOWN']);
     const watch = buildScannerScore({ ...base, trustLevel: 'DEGRADED' });
     expect(watch.permission).toBe('WATCH');
     expect(watch.watchReasons.map((r) => r.code)).toEqual(['DATA_TRUST_DEGRADED']);
   });
 
   it('version helper accepts cached v2.1 rows', () => {
-    expect(SCANNER_SCORE_VERSION).toBe('msp.scanner.v2.2');
+    expect(SCANNER_SCORE_VERSION).toBe('msp.scanner.v2.3');
+    expect(isVersionedScannerScore('msp.scanner.v2.2')).toBe(true);
     expect(isVersionedScannerScore('msp.scanner.v2.1')).toBe(true);
     expect(isVersionedScannerScore(undefined)).toBe(false);
   });

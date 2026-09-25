@@ -7,11 +7,13 @@ import {computeStructureQuality,computeMomentumQuality,computeConfluenceScore,co
 
 const factors: FactorInput[] = ['TREND','MOMENTUM','VOLUME','RELATIVE_STRENGTH','VOLATILITY'].map(f=>({factor:f as FactorInput['factor'],signed:f==='VOLUME'?-1:.8,available:true}));
 describe('scoring audit regression contracts',()=>{
- it('does not reward removal of an opposing factor',()=>{
-  const base=computeCompositeV2({factors,regime:'neutral',evidenceQuality:'MEDIUM'});
+ it('treats a missing factor exactly like an observed neutral vote, and flags it via coverage',()=>{
   const removed=computeCompositeV2({factors:factors.map(f=>({...f,available:f.factor!=='VOLUME'})),regime:'neutral',evidenceQuality:'MEDIUM'});
-  expect(removed.composite).toBeLessThanOrEqual(base.composite);
-  expect(removed.coverage).toBeLessThan(base.coverage);
+  const neutral=computeCompositeV2({factors:factors.map(f=>f.factor==='VOLUME'?{...f,signed:0}:f),regime:'neutral',evidenceQuality:'MEDIUM'});
+  expect(removed.composite).toBe(neutral.composite);
+  expect(removed.coverage).toBeLessThan(neutral.coverage);
+  const contract=buildScannerScore({factors:factors.map(f=>({...f,available:f.factor!=='VOLUME'})),regime:'neutral',freshness:'live',trustLevel:'GOOD'});
+  expect(contract.missingFactors).toContain('VOLUME');
  });
  it('counts applicable equity factors and reaches high coverage without crypto positioning or catalyst feeds',()=>{
   const f=deriveFactorSignals({price:110,ema200:100,adx:30,rsi:60,mfi:60,rsIndexRatio:1.1,bbwp:10});
@@ -27,8 +29,13 @@ describe('scoring audit regression contracts',()=>{
   rows[0].compositeV2.permission='BLOCK';rows[0].compositeV2.composite=36;
   expect(rows.sort(compareScannerScores).slice(0,10).some(r=>r.symbol==='S10')).toBe(true);
   expect(computeMspScore({...rows.find(r=>r.symbol==='S0')!,scoreV2:{regimeScore:{gated:true}}} as any,'trend')).toBe(36);
+  // v2.3: INSUFFICIENT_DATA is WATCH, and missing inputs are not capped a second time.
   const bad=buildScannerScore({factors,regime:'neutral',freshness:'live',trustLevel:'INSUFFICIENT_DATA'});
-  expect(bad.composite).toBeLessThanOrEqual(40);expect(bad.permission).toBe('BLOCK');
+  const good=buildScannerScore({factors,regime:'neutral',freshness:'live',trustLevel:'GOOD'});
+  expect(bad.composite).toBe(good.composite);expect(bad.permission).toBe('WATCH');
+  expect(bad.watchReasons.map(r=>r.code)).toContain('INSUFFICIENT_DATA');
+  // Unusable data (e.g. no price) still blocks.
+  expect(buildScannerScore({factors,regime:'neutral',freshness:'live',trustLevel:'INSUFFICIENT_DATA',criticalBlockers:['Required input missing: price.']}).permission).toBe('BLOCK');
  });
  it('converts shares once and leaves crypto dollar volume unchanged',()=>{
   expect(dollarVolume(.01,1e9,'crypto')).toBe(1e9);expect(dollarVolume(1000,1e7,'crypto')).toBe(1e7);

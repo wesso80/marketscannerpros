@@ -215,6 +215,12 @@ export interface BuildPayloadExtras {
 }
 
 const TRUST_CAP: Record<DataTrustResult['level'], number> = { GOOD: 99, DEGRADED: 80, STALE: 60, INSUFFICIENT_DATA: 40 };
+/** Missing inputs are already counted once (neutral 50 in the confluence, flagged). They must not also lower the cap. */
+function trustCapFor(level: DataTrustResult['level'], degradedByQuality: boolean): number {
+  if (level === 'DEGRADED' && !degradedByQuality) return TRUST_CAP.GOOD;
+  if (level === 'INSUFFICIENT_DATA' && !degradedByQuality) return TRUST_CAP.GOOD;
+  return TRUST_CAP[level];
+}
 
 function barsPerDayFor(tfLabel: string, assetClass: 'equity' | 'crypto' | 'forex'): number {
   if (tfLabel === '15m') return assetClass === 'crypto' ? 96 : 26;
@@ -280,20 +286,24 @@ function buildPayload(
     nowMs,
   });
   const trust: DataTrustResult = { ...trustBase, reasons: [...trustBase.reasons] };
+  // True when trust is lowered for a reason other than missing inputs (interval, delay, liquidity, unusable chain…).
+  let degradedByQuality = trustBase.qualityIssues.length > 0 || trustBase.eligibilityBlockers.length > 0;
   if (assetClass !== 'forex' && advUsd != null && advUsd < 5_000_000 && trust.level === 'GOOD') {
+    degradedByQuality = true;
     trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85);
     trust.reasons.push(`thin liquidity — average dollar volume ${formatUsdShort(advUsd)}`);
   }
   // Options chains that look pre-split or illiquid are display-only, never flow evidence.
   const optsUsable = optsIn && optsIn.canonical.quality.level !== 'UNUSABLE';
   const opts = optsUsable ? optsIn : null;
-  if (((assetClass === 'equity' && !optsIn) || (assetClass === 'crypto' && cryptoDerivs?.fundingRatePercent == null)) && trust.level === 'GOOD') {
-    trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85);
-    trust.reasons.push('Flow evidence unavailable; price and indicators remain separately inspectable.');
+  // Missing Flow is a missing input: it is scored once (neutral / not applicable) and flagged here, without also
+  // downgrading trust (which used to cap the score at 80 and add a "must" flip condition for every crypto row).
+  if (assetClass === 'equity' && !optsIn) {
+    trust.reasons.push('Flow evidence unavailable (counted as neutral); price and indicators remain separately inspectable.');
   }
   if (optsIn && !optsUsable) {
     trust.reasons.push(`options chain unusable: ${optsIn.canonical.quality.reasons[0] ?? 'quality check failed'}`);
-    if (trust.level === 'GOOD') { trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85); }
+    if (trust.level === 'GOOD') { degradedByQuality = true; trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85); }
   }
 
   // ── Direction (needs ≥3 directional layers and a 2-vote gap) ───────────────────────────────────────
@@ -390,7 +400,7 @@ function buildPayload(
     { key: 'Momentum', weight: 0.20, value: momentumScore, present: ind != null },
     { key: 'Risk', weight: 0.25, value: riskScore, present: ind != null },
   ];
-  const scoreCalculation = computeConfluenceScore(components, TRUST_CAP[trust.level]);
+  const scoreCalculation = computeConfluenceScore(components, trustCapFor(trust.level, degradedByQuality));
   const confidence = scoreCalculation.finalScore;
   const grade = scoreToGrade(confidence);
 
@@ -403,7 +413,8 @@ function buildPayload(
   // ── Permission ──────────────────────────────────────────────────────────────────────────────────────
   let permission: InternalPermission = 'WATCH';
   if (confidence >= 70 && direction !== 'NEUTRAL' && (trust.level === 'GOOD' || trust.level === 'DEGRADED')) permission = 'TRADE';
-  else if (confidence < 40 || trust.level === 'INSUFFICIENT_DATA' || trust.level === 'STALE') permission = 'NO_TRADE';
+  // INSUFFICIENT_DATA (missing inputs / short history) stays WATCH; only stale or unusable data is NO_TRADE.
+  else if (confidence < 40 || trust.level === 'STALE' || trust.eligibilityBlockers.length > 0) permission = 'NO_TRADE';
   if (permission === 'TRADE' && timeConfluenceHardConflict) permission = 'WATCH';
   if (macroRegime?.riskState === 'risk_off' && direction === 'LONG' && permission === 'TRADE') permission = 'WATCH';
 

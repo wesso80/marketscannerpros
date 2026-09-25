@@ -2,6 +2,7 @@
 import { deriveFactorSignals, type UniverseContext } from '@/lib/analysis/scannerFactorSignals';
 import type { ScoreRegime } from '@/lib/analysis/scannerScoreV2';
 import { evaluateDataTrust, type TrustAssetClass } from './dataTrust';
+import { cryptoPositioningExpected } from './derivativeSnapshot';
 import { buildScannerScore, dollarVolume, scoreFreshness, type ScoreReason } from './scoreContract';
 
 /** `gated`: independent gate failures (preferred: reason list) — never pass a block derived from this pick's own score. */
@@ -26,7 +27,7 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     bbwp: ind.bbwp, volatilityObserved: typeof ind.squeeze === 'boolean',
     // Being in a squeeze is not evidence that a squeeze has fired.
     dveFlags: ind.dveFlags, fundingRate: pick.fundingRate ?? ind.fundingRate,
-    derivativesExpected: asset === 'crypto', dollarVolume: dollarVolume(price, ind.volume, asset),
+    derivativesExpected: cryptoPositioningExpected(asset, pick.fundingRate ?? ind.fundingRate), dollarVolume: dollarVolume(price, ind.volume, asset),
   }, universe);
   const atrPct = Number.isFinite(ind.atr) && price > 0 ? ind.atr / price * 100 : undefined;
   const regime: ScoreRegime = Number.isFinite(ind.adx) && ind.adx >= 25 ? 'trending'
@@ -34,6 +35,7 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     : Number.isFinite(ind.adx) && ind.adx < 20 ? 'ranging' : 'neutral';
   const compositeV2 = buildScannerScore({factors: signals.factors, regime, freshness: scoreFreshness(dataTrust.freshness),
     trustLevel: dataTrust.level, trustReasons: dataTrust.reasons, criticalBlockers: dataTrust.eligibilityBlockers,
+    trustQualityIssues: dataTrust.qualityIssues, missingInputs: dataTrust.missingInputs,
     liquidityMultiplier: signals.liquidityMultiplier, catalyst: signals.catalyst,
     ...(Array.isArray(gated) ? {gateBlocks: gated} : {regimeGated: gated})});
   return {dataTrust, compositeV2};
