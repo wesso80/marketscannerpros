@@ -3,7 +3,9 @@
 // engine reports FORMULA_VALIDATED; because this path is fed LIVE provider data,
 // the pipeline downgrades the result's parityStatus to DATA_PARITY_PENDING.
 
-import { computeGlobalM2, GLOBAL_M2_CONFIG, type GlobalM2Result } from '../engines/globalM2';
+import {
+  computeGlobalM2, GLOBAL_M2_CONFIG, GLOBAL_M2_EXCLUDED_BLOCS, type GlobalM2Result, type GlobalM2ExcludedBloc,
+} from '../engines/globalM2';
 import {
   normalizeM2BlocFull, UNIT_TRANSFORMS, type NormalizedM2Bloc, type DailyFxPoint,
 } from './globalM2Normalize';
@@ -78,6 +80,8 @@ export interface Wave1Bundle {
   blocs: NormalizedM2Bloc[];              // normalized (present) blocs, full provenance
   providerStatus: { id: string; ok: boolean; latestObservationMonth: string | null; stale: boolean; staleReason: string | null; error?: string; health?: ProviderHealth }[];
   missingBlocIds: string[];
+  /** Blocs excluded from weighted coverage/eligibility (still listed in missingBlocIds when absent). */
+  excludedBlocs: GlobalM2ExcludedBloc[];
   eligibility: GlobalM2Eligibility;
   calculatedAt: string;
 }
@@ -93,7 +97,15 @@ export interface GlobalM2Eligibility {
 
 // Below this estimated weighted coverage, the headline Global M2 regime/cycle is
 // NOT production-interpretable (the engine still returns its math for diagnostics).
+// Coverage is measured over the blocs NOT in GLOBAL_M2_EXCLUDED_BLOCS (IN, KR),
+// so an outage of any other bloc still counts against this threshold.
 export const INTERPRETATION_MIN_WEIGHTED_COVERAGE = 95;
+
+/** Excluded-bloc descriptors (id, name, reason) matching the result's coverage accounting. */
+function excludedBlocsFor(result: GlobalM2Result): GlobalM2ExcludedBloc[] {
+  const ids = new Set(result.quality.excludedBlocIds ?? []);
+  return GLOBAL_M2_EXCLUDED_BLOCS.filter((b) => ids.has(b.id)).map((b) => ({ ...b }));
+}
 
 export interface Wave1Options {
   interpretationThreshold?: number;
@@ -176,7 +188,7 @@ export async function buildWave1Bundle(deps: Wave1Deps = {}, options: Wave1Optio
 
   const presentIds = new Set(blocs.map((b) => b.id));
   const missingBlocIds = ALL_IDS.filter((id) => !presentIds.has(id));
-  return { result, blocs, providerStatus, missingBlocIds, eligibility, calculatedAt };
+  return { result, blocs, providerStatus, missingBlocIds, excludedBlocs: excludedBlocsFor(result), eligibility, calculatedAt };
 }
 
 /* ── Wave 2: add Euro Area (ECB), Japan (BOJ), United Kingdom (BOE) ─────────── */
@@ -278,7 +290,7 @@ export async function buildWave2Bundle(deps: Wave2Deps = {}, options: Wave1Optio
 
   const presentIds = new Set(blocs.map((b) => b.id));
   const missingBlocIds = ALL_IDS.filter((id) => !presentIds.has(id));
-  return { result, blocs, providerStatus, missingBlocIds, eligibility, calculatedAt };
+  return { result, blocs, providerStatus, missingBlocIds, excludedBlocs: excludedBlocsFor(result), eligibility, calculatedAt };
 }
 
 /* ── Wave 3: add Canada, Australia, India, South Korea, Brazil ──────────────── */
@@ -420,7 +432,7 @@ export async function buildWave3Bundle(deps: Wave3Deps = {}, options: Wave3Optio
 
   const presentIds = new Set(blocs.map((b) => b.id));
   const missingBlocIds = ALL_IDS.filter((id) => !presentIds.has(id));
-  return { result, blocs, providerStatus, missingBlocIds, eligibility, calculatedAt };
+  return { result, blocs, providerStatus, missingBlocIds, excludedBlocs: excludedBlocsFor(result), eligibility, calculatedAt };
 }
 
 /**

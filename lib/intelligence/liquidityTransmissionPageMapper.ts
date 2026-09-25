@@ -94,6 +94,8 @@ export interface LiquidityM2UpstreamDto {
   blocsTotal: number;
   blocAvailabilityPercent: number;
   estimatedWeightedCoveragePercent: number | null;
+  /** Blocs excluded from the weighted coverage denominator (e.g. IN, KR). */
+  coverageExcludedBlocs: string[];
   missingBlocs: string[];
   providersUsed: string[];
   stale: boolean;
@@ -310,6 +312,7 @@ function buildM2Upstream(resolved: LiquidityTransmissionResolved): LiquidityM2Up
     blocsTotal,
     blocAvailabilityPercent: round2(blocAvailabilityPercent),
     estimatedWeightedCoveragePercent: weighted == null ? null : round2(weighted),
+    coverageExcludedBlocs: m.coverageExcludedBlocIds ?? [],
     missingBlocs: m.missingBlocs ?? [],
     providersUsed: m.providersUsed ?? [],
     stale: m.stale ?? false,

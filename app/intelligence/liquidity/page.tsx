@@ -384,7 +384,7 @@ function M2UpstreamPanel({ data }: { data: LiquidityTransmissionPageDto }) {
         <Metric
           label="Estimated weighted coverage"
           value={weighted == null ? '—' : `${weighted.toFixed(1)}%`}
-          hint={`Threshold ${m.interpretationThreshold}% for interpretation`}
+          hint={`Threshold ${m.interpretationThreshold}% for interpretation${m.coverageExcludedBlocs?.length ? ` · excl. ${m.coverageExcludedBlocs.join(', ')} (sources unavailable)` : ''}`}
           tone={weighted != null && weighted >= m.interpretationThreshold ? 'positive' : 'warning'}
         />
         <Metric label="Upstream status" value={m.status} tone="neutral" />

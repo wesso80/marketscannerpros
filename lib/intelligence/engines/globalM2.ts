@@ -52,6 +52,13 @@ export interface GlobalM2Config {
    * Never used in the actual M2 calculation.
    */
   nominalWeights: Record<string, number>;
+  /**
+   * Bloc ids removed from COVERAGE ACCOUNTING only (weighted + estimated
+   * coverage are re-normalised over the remaining blocs). Never used in the
+   * actual M2 calculation: if an excluded bloc does supply data it is still
+   * summed into totals/growth exactly like any other bloc.
+   */
+  excludedBlocIds?: string[];
 }
 
 /** The locked 11-bloc universe (US, CN, EU, JP, GB, CA, AU, IN, CH, KR, BR). */
@@ -69,12 +76,35 @@ export const GLOBAL_M2_BLOCS: { id: string; name: string; nativeCurrency: string
   { id: 'BR', name: 'Brazil', nativeCurrency: 'BRL' },
 ];
 
+export interface GlobalM2ExcludedBloc { id: string; name: string; reason: string }
+
+/**
+ * Blocs PERMANENTLY excluded from Global M2 coverage/eligibility accounting.
+ *
+ * This is an explicit, named list on purpose (not "exclude whatever is
+ * DEFINITION_UNAVAILABLE / CREDENTIAL_REQUIRED"): a new credential or
+ * definition problem on any other bloc must still count as missing and keep
+ * the result PARTIAL until someone deliberately decides to exclude it here.
+ * Approved by brad, 2026-09-25. Remove an entry if its source becomes available.
+ */
+export const GLOBAL_M2_EXCLUDED_BLOCS: readonly GlobalM2ExcludedBloc[] = [
+  {
+    id: 'IN', name: 'India',
+    reason: 'No genuine current national M2: RBI discontinued M2/M4 in 2017 (DEFINITION_UNAVAILABLE); M1/M3 are never substituted.',
+  },
+  {
+    id: 'KR', name: 'South Korea',
+    reason: 'BoK ECOS M2 requires an ECOS API key that is not available for this deployment (CREDENTIAL_REQUIRED); no IMF/OECD substitute.',
+  },
+];
+
 // Approximate USD M2 shares (coverage accounting only; see Phase 3A.1).
 export const GLOBAL_M2_CONFIG: GlobalM2Config = {
   lagMonths: 1,
   nominalWeights: {
     US: 19, CN: 37, EU: 15, JP: 7.5, GB: 3.3, CA: 1.5, AU: 1.6, IN: 2.6, CH: 1.1, KR: 2.6, BR: 0.9,
   },
+  excludedBlocIds: GLOBAL_M2_EXCLUDED_BLOCS.map((b) => b.id),
 };
 
 export interface GlobalM2BlocResult {
@@ -92,7 +122,14 @@ export interface GlobalM2BlocResult {
 }
 
 export interface GlobalM2Quality {
+  /** Raw bloc-count coverage over the FULL 11-bloc universe (excluded blocs count as missing here). */
   coveragePercent: number;
+  /**
+   * Bloc ids excluded from weighted/estimated coverage (config.excludedBlocIds).
+   * Weighted shares and estimatedWeightedCoveragePercent are re-normalised over
+   * the remaining blocs. Absent/empty = no exclusions.
+   */
+  excludedBlocIds?: string[];
   /**
    * ACTUAL USD share (of the observed total) of the present blocs, by
    * classification. Exact/measured — null when nothing is present.
@@ -286,9 +323,17 @@ export function computeGlobalM2(
   }));
 
   // ── Data quality (counts + nominal-weighted coverage) ──────────────────────
-  const totalNominal = Object.values(config.nominalWeights).reduce((s, w) => s + w, 0) || 1;
-  const nomShare = (id: string) => (100 * (config.nominalWeights[id] ?? 0)) / totalNominal;
+  // Excluded blocs are removed from the weighted-coverage numerator AND
+  // denominator (re-normalised over the remaining blocs). Counts, totals and
+  // growth math are unaffected.
+  const excluded = new Set(config.excludedBlocIds ?? []);
+  const coverageUniverse = GLOBAL_M2_BLOCS.filter((m) => !excluded.has(m.id));
+  const totalNominal = Object.entries(config.nominalWeights)
+    .filter(([id]) => !excluded.has(id))
+    .reduce((s, [, w]) => s + w, 0) || 1;
+  const nomShare = (id: string) => (excluded.has(id) ? 0 : (100 * (config.nominalWeights[id] ?? 0)) / totalNominal);
   const validIds = new Set(valid.map((b) => b.input.id));
+  const validIncludedCount = coverageUniverse.filter((m) => validIds.has(m.id)).length;
 
   const exactBlocCount = valid.filter((b) => b.input.classification === 'EXACT').length;
   const alternativeBlocCount = valid.filter((b) => b.input.classification === 'ALTERNATIVE').length;
@@ -298,7 +343,7 @@ export function computeGlobalM2(
   const exactWeightedShare = valid.filter((b) => b.input.classification === 'EXACT').reduce((s, b) => s + nomShare(b.input.id), 0);
   const alternativeWeightedShare = valid.filter((b) => b.input.classification === 'ALTERNATIVE').reduce((s, b) => s + nomShare(b.input.id), 0);
   const proxyWeightedShare = valid.filter((b) => b.input.classification === 'PROXY').reduce((s, b) => s + nomShare(b.input.id), 0);
-  const missingWeightedShare = GLOBAL_M2_BLOCS.filter((m) => !validIds.has(m.id)).reduce((s, m) => s + nomShare(m.id), 0);
+  const missingWeightedShare = coverageUniverse.filter((m) => !validIds.has(m.id)).reduce((s, m) => s + nomShare(m.id), 0);
 
   const months = valid.map((b) => b.observationMonth).sort();
   const blocMonths: Record<string, string> = {};
@@ -315,16 +360,18 @@ export function computeGlobalM2(
       }
     : null;
 
-  const hasReferenceWeights = Object.values(config.nominalWeights ?? {}).some((w) => w > 0);
+  const hasReferenceWeights = Object.entries(config.nominalWeights ?? {}).some(([id, w]) => w > 0 && !excluded.has(id));
   const coveragePct = (100 * valid.length) / GLOBAL_M2_BLOCS.length;
   const estimatedWeightedCoveragePercent = hasReferenceWeights
     ? exactWeightedShare + alternativeWeightedShare + proxyWeightedShare
-    : coveragePct;
+    : coverageUniverse.length > 0 ? (100 * validIncludedCount) / coverageUniverse.length : 0;
+  // Complete = every bloc in the coverage universe (all 11 when nothing is excluded) is present.
   const weightedCoverageBasis: GlobalM2Quality['weightedCoverageBasis'] =
-    valid.length === GLOBAL_M2_BLOCS.length ? 'LIVE_COMPLETE_SNAPSHOT' : hasReferenceWeights ? 'REFERENCE_WEIGHTS' : 'UNAVAILABLE';
+    validIncludedCount === coverageUniverse.length ? 'LIVE_COMPLETE_SNAPSHOT' : hasReferenceWeights ? 'REFERENCE_WEIGHTS' : 'UNAVAILABLE';
 
   const quality: GlobalM2Quality = {
     coveragePercent: coveragePct,
+    excludedBlocIds: GLOBAL_M2_BLOCS.filter((m) => excluded.has(m.id)).map((m) => m.id),
     observedWeightedShare,
     estimatedWeightedCoveragePercent,
     weightedCoverageBasis,

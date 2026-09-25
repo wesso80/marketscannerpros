@@ -160,6 +160,7 @@ export async function resolveLiquidityTransmission(
   const m2MetaWithWeighted = {
     ...built.m2Meta,
     estimatedWeightedCoveragePercent: m2Result?.quality.estimatedWeightedCoveragePercent,
+    coverageExcludedBlocIds: m2Result?.quality.excludedBlocIds ?? [],
   };
 
   const resolved: LiquidityTransmissionResolved = {

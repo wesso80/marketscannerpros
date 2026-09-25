@@ -183,13 +183,16 @@ describe('BOJ Japan M2 provider (public API)', () => {
 
 /* ── Six-bloc partial integration (frozen engine) ────────────────────────── */
 describe('Wave-2 six-bloc partial integration', () => {
-  it('all six injected → 6 valid blocs; coverage < 95% keeps interpretation ineligible', async () => {
+  it('all six injected → 6 valid blocs; weighted coverage is measured over the non-excluded blocs', async () => {
+    // IN/KR are excluded from coverage accounting (GLOBAL_M2_EXCLUDED_BLOCS), so the six
+    // Wave-2 blocs carry 82.9 of the remaining 86.9 reference weight (95.4%) — only
+    // CA/AU/BR (4.6%) are missing, which clears the 95% threshold.
     const b = await buildWave2Bundle(sixDeps());
     expect(b.result.validBlocCount).toBe(6);
     expect(b.result.quality.missingBlocCount).toBe(5);
-    expect(b.result.quality.estimatedWeightedCoveragePercent).toBeLessThan(95);
-    expect(b.eligibility.interpretationEligible).toBe(false);
-    expect(b.eligibility.calculationStatus).toBe('PARTIAL');
+    expect(b.result.quality.estimatedWeightedCoveragePercent).toBeCloseTo((100 * 82.9) / 86.9, 6);
+    expect(b.eligibility.interpretationEligible).toBe(true);
+    expect(b.eligibility.calculationStatus).toBe('COMPLETE');
     expect(b.result.quality.parityStatus).toBe('DATA_PARITY_PENDING');
   });
   it('drops Japan when the BOJ provider fails closed → 5 valid blocs', async () => {
@@ -198,6 +201,9 @@ describe('Wave-2 six-bloc partial integration', () => {
     expect(b.result.validBlocCount).toBe(5);
     expect(b.providerStatus.find((p) => p.id === 'JP')?.ok).toBe(false);
     expect(b.missingBlocIds).toContain('JP');
+    // Japan (~8.6% of the non-excluded reference weight) missing → below 95% → PARTIAL.
+    expect(b.result.quality.estimatedWeightedCoveragePercent).toBeLessThan(95);
+    expect(b.eligibility.calculationStatus).toBe('PARTIAL');
   });
   it('flags a stale bloc without dropping it (provider publication lag policy)', async () => {
     const stale = m2raw('EU', 'ECB', 'millions-EUR', 16_000_000, 30_000, 15);

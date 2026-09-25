@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { buildWave3Bundle } from '@/lib/intelligence/data/globalM2Pipeline';
+import { GLOBAL_M2_EXCLUDED_BLOCS } from '@/lib/intelligence/engines/globalM2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,8 @@ export const dynamic = 'force-dynamic';
 // until keys are set. Result is cached in-process (M2 is monthly) to avoid
 // hammering ~20 external endpoints per request. The engine stays frozen and the
 // result is DATA_PARITY_PENDING; interpretation is ineligible below 95% coverage.
+// Weighted coverage excludes the permanently unavailable blocs listed in
+// `excludedBlocs` (India, South Korea); `coveragePercent` stays the raw count over all 11.
 
 export interface GlobalM2BlocDto {
   id: string; name: string; classification: string; provider: string;
@@ -22,7 +25,9 @@ export interface GlobalM2Dto {
   totalUsd: number;
   validBlocCount: number;
   missingBlocCount: number;
+  /** Weighted coverage over the included blocs (excludedBlocs removed from numerator and denominator). */
   estimatedWeightedCoveragePercent: number;
+  /** Raw bloc-count coverage over all 11 blocs (excluded blocs count as missing). */
   coveragePercent: number;
   weightedCoverageThreshold: number;
   interpretationEligible: boolean;
@@ -36,6 +41,8 @@ export interface GlobalM2Dto {
   turnState: string;
   blocs: GlobalM2BlocDto[];
   missing: { id: string; reason: string; health: string }[];
+  /** Blocs excluded from weighted coverage / interpretation eligibility, with the reason. */
+  excludedBlocs: { id: string; name: string; reason: string }[];
 }
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6h — M2 is a monthly aggregate.
@@ -72,6 +79,7 @@ async function computeDto(): Promise<GlobalM2Dto> {
     missing: b.providerStatus
       .filter((p) => !p.ok)
       .map((p) => ({ id: p.id, reason: p.error ?? p.staleReason ?? 'unavailable', health: p.health ?? 'DATA_UNAVAILABLE' })),
+    excludedBlocs: b.excludedBlocs.map(({ id, name, reason }) => ({ id, name, reason })),
   };
 }
 
@@ -82,6 +90,7 @@ function disabledDto(): GlobalM2Dto {
     coveragePercent: 0, weightedCoverageThreshold: 95, interpretationEligible: false, calculationStatus: 'PARTIAL',
     oneMonthPct: null, threeMonthPct: null, threeMonthAnnualizedPct: null, yoyPct: null,
     accelerationState: 'n/a', liquidityCycle: 'n/a', turnState: 'n/a', blocs: [], missing: [],
+    excludedBlocs: GLOBAL_M2_EXCLUDED_BLOCS.map(({ id, name, reason }) => ({ id, name, reason })),
   };
 }
 
