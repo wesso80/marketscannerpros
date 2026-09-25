@@ -6,6 +6,7 @@ import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { fxQuoteUrl, parseFxAlertQuote, quoteSourceFor } from '@/lib/alerts/assetTypes';
 
 /**
  * Alert Price Checker
@@ -89,6 +90,12 @@ async function checkAlerts(req: NextRequest) {
       const [assetType, symbol] = key.split(':');
       
       try {
+        if (quoteSourceFor(assetType) === 'unsupported') {
+          // e.g. commodity alerts: there is no live feed for them here, so say so instead of
+          // pricing the symbol as a stock (TR-18).
+          errors.push(`No price feed for ${assetType} alerts (${symbol}); not checked`);
+          continue;
+        }
         // Fetch current price (and the % change the same quote reports)
         const quote = await fetchQuote(symbol, assetType);
         console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
@@ -150,11 +157,24 @@ async function checkAlerts(req: NextRequest) {
 // Fetch current price and % change based on asset type
 async function fetchQuote(symbol: string, assetType: string): Promise<AlertQuote | null> {
   try {
-    if (assetType === 'crypto') {
+    const source = quoteSourceFor(assetType);
+    if (source === 'crypto') {
       // Use CoinGecko commercial API for crypto prices (24h change comes with the same call)
       const result = await getPriceBySymbol(symbol);
       if (!result || !Number.isFinite(result.price)) return null;
       return { price: result.price, changePercent: Number.isFinite(result.change24h) ? result.change24h : null };
+    } else if (source === 'forex') {
+      // Forex pairs: Alpha Vantage exchange rate (rate only; forex % alerts are refused at creation)
+      const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+      if (!apiKey) return null;
+      const url = fxQuoteUrl(symbol, apiKey);
+      if (!url) return null;
+      await avTakeToken();
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return parseFxAlertQuote(await res.json());
+    } else if (source === 'unsupported') {
+      return null;
     } else {
       // Use Alpha Vantage for stocks
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;

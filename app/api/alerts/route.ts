@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 
 /**
  * Price Alerts API
@@ -268,6 +269,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Basic price / % change alerts must say which market the symbol is in, so the checker
+    // prices it from the right feed (no silent crypto default; commodity alerts can't be
+    // priced yet). Smart alerts keep their existing default.
+    let assetType: string = body.assetType || 'crypto';
+    if (!isSmartAlert) {
+      const assetCheck = validateBasicAlertAssetType(body.assetType, body.conditionType, body.symbol);
+      if (!assetCheck.ok) {
+        return NextResponse.json({ error: assetCheck.error, message: assetCheck.message }, { status: 400 });
+      }
+      assetType = assetCheck.assetType;
+    }
+
     // Check quota
     
     const activeResult = await q(
@@ -311,7 +324,7 @@ export async function POST(req: NextRequest) {
       [
         session.workspaceId,
         body.symbol.toUpperCase(),
-        body.assetType || 'crypto',
+        assetType,
         isMultiCondition ? 'multi' : body.conditionType,
         isMultiCondition ? 0 : body.conditionValue,
         body.conditionTimeframe || null,
