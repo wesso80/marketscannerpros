@@ -296,6 +296,8 @@ export interface CapitalFlowResult {
     options_chain: 'fresh' | 'delayed' | 'stale' | 'none';
     last_chain_update_sec: number | null;
     fallback_active: boolean;
+    /** Inputs this run had to default (scored neutral, never as a bearish/bad signal). */
+    missing_inputs: string[];
   };
   session_overlay: {
     phase: string;
@@ -349,8 +351,15 @@ export interface CapitalFlowInput {
   liquidityLevels?: Array<{ level: number; label: string }>;
   trendMetrics?: {
     adx?: number;
-    emaAligned?: boolean;
+    /**
+     * Direction-neutral fact: price is above its trend reference (EMA200 / VWAP).
+     * The engine resolves whether that supports the flow bias (above for bullish, below for bearish).
+     */
+    priceAboveTrend?: boolean;
+    /** Recent structure printed higher highs and higher lows (supports a bullish bias). */
     structureHigherHighs?: boolean;
+    /** Recent structure printed lower highs and lower lows (supports a bearish bias). */
+    structureLowerLows?: boolean;
   };
   dataHealth?: {
     freshness?: 'REALTIME' | 'LIVE' | 'DELAYED' | 'CACHED' | 'EOD' | 'STALE' | 'NONE';
@@ -515,8 +524,18 @@ function dedupeLiquidity(levels: Array<{ level: number; label: string }>): Array
   return deduped;
 }
 
+/**
+ * Put/call skew that is mirror-symmetric in ratio space: skew(1/p) === -skew(p).
+ * Positive = call-heavy, negative = put-heavy. Identical to (1 - p) for p <= 1, so bullish readings are unchanged;
+ * a put-heavy p > 1 is measured as its call-heavy mirror 1/p (plain 1 - p overstated puts: 2.5 → -1.5 vs 0.4 → +0.6).
+ */
+function mirroredPcrSkew(pcr: number): number {
+  return pcr > 1 ? -(1 - 1 / pcr) : 1 - pcr;
+}
+
 function normalizedPcr(pcr: number): number {
-  return clamp((pcr - 0.6) / (1.4 - 0.6), 0, 1);
+  // 0.6 → 0, 1.0 → 0.5, 1/0.6 → 1 (was linear 0.6 → 1.4, which saturated bearish readings early).
+  return clamp(0.5 - mirroredPcrSkew(pcr) / 0.8, 0, 1);
 }
 
 function buildCryptoClusters(input: CapitalFlowInput): FlowKeyStrike[] {
@@ -624,6 +643,8 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     .filter(([strike]) => Math.abs(strike - spot) <= spot * 0.01)
     .reduce((sum, [, value]) => sum + value.putOi, 0);
   const pcrBand = putBand / Math.max(1, callBand);
+  // No open interest within ±1% of spot means the near-spot put/call ratio is unknown, not 0 (which reads as call-heavy).
+  const hasNearSpotOi = callBand + putBand > 0;
 
   const cryptoFunding = input.cryptoPositioning?.fundingRate ?? 0;
   const cryptoOiChange = input.cryptoPositioning?.oiChangePercent ?? 0;
@@ -652,9 +673,9 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
         : cryptoFunding < -0.01 && cryptoLs <= 1 && (!vwap || spot <= vwap)
           ? 'bearish'
           : 'neutral')
-    : pcrBand < 0.8 && (!vwap || spot >= vwap * 0.998)
+    : hasNearSpotOi && pcrBand < 0.8 && (!vwap || spot >= vwap * 0.998)
       ? 'bullish'
-      : pcrBand > 1.2 && (!vwap || spot <= vwap * 1.002)
+      : hasNearSpotOi && pcrBand > 1 / 0.8 && (!vwap || spot <= vwap * 1.002)
         ? 'bearish'
         : 'neutral';
 
@@ -691,7 +712,16 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const trendBias: FlowBias = vwap ? (spot >= vwap ? 'bullish' : 'bearish') : 'neutral';
   const adx = input.trendMetrics?.adx;
   const atrPercent = (atr / Math.max(spot, 0.0001)) * 100;
-  const structureHigherHighs = input.trendMetrics?.structureHigherHighs ?? (marketMode === 'launch');
+  // Trend/structure support is resolved against the bias so a clean bearish setup scores like its bullish mirror.
+  // Unknown inputs score at the neutral midpoint instead of as "not aligned".
+  const priceAboveTrend = input.trendMetrics?.priceAboveTrend;
+  const trendAligned: boolean = priceAboveTrend === undefined
+    ? (vwap ? (bias === 'bullish' ? spot >= vwap : bias === 'bearish' ? spot <= vwap : true) : true)
+    : bias === 'bearish' ? !priceAboveTrend : priceAboveTrend;
+  const structureInput = bias === 'bearish'
+    ? input.trendMetrics?.structureLowerLows
+    : input.trendMetrics?.structureHigherHighs;
+  const structureSupport: boolean | null = structureInput ?? (marketMode === 'launch' ? true : null);
 
   const modeScore = marketMode === 'pin'
     ? clamp(100 - (pinDistancePercent * 120), 20, 98)
@@ -730,10 +760,9 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const liquidityScore = liquidityScored.score;
 
   const regimeScore = (() => {
-    const emaAligned = input.trendMetrics?.emaAligned ?? (vwap ? (bias === 'bullish' ? spot >= vwap : bias === 'bearish' ? spot <= vwap : true) : true);
-    const trend = emaAligned ? 40 : 20;
+    const trend = trendAligned ? 40 : 20;
     const vol = atrPercent >= (marketType === 'crypto' ? 2 : 1) ? 30 : 10;
-    const structure = structureHigherHighs ? 30 : 15;
+    const structure = structureSupport === null ? 22.5 : structureSupport ? 30 : 15;
     const adxBonus = Number.isFinite(adx) ? clamp((adx! - 18) * 1.2, 0, 10) : 0;
     return clamp(trend + vol + structure + adxBonus, 5, 100);
   })();
@@ -768,7 +797,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const conviction = Math.round(clamp(convictionRaw, 0, 100));
 
   const trendStructure = clamp(
-    ((input.trendMetrics?.emaAligned ? 65 : 35) + (input.trendMetrics?.structureHigherHighs ? 35 : 15)),
+    ((trendAligned ? 65 : 35) + (structureSupport === null ? 25 : structureSupport ? 35 : 15)),
     0,
     100
   );
@@ -836,7 +865,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   );
   const flowImbalance = clamp(
     marketType === 'equity'
-      ? Math.abs(1 - (pcrBand || 1)) * 115
+      ? Math.abs(mirroredPcrSkew(pcrBand || 1)) * 115
       : (Math.abs(input.cryptoPositioning?.fundingRate ?? 0) * 850) + (Math.abs(input.cryptoPositioning?.oiChangePercent ?? 0) * 6),
     0,
     100
@@ -900,7 +929,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       : false;
 
   const flowImbalanceShort = marketType === 'equity'
-    ? clamp((1 - (pcrBand || 1)) * 100, -100, 100)
+    ? clamp(mirroredPcrSkew(pcrBand || 1) * 100, -100, 100)
     : clamp(
         ((input.cryptoPositioning?.fundingRate ?? 0) * 900) +
         ((input.cryptoPositioning?.oiChangePercent ?? 0) * 3),
@@ -909,7 +938,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       );
 
   const flowImbalanceLong = marketType === 'equity'
-    ? clamp((1 - (input.openInterest?.pcRatio ?? (pcrBand || 1))) * 80, -100, 100)
+    ? clamp(mirroredPcrSkew(input.openInterest?.pcRatio ?? (pcrBand || 1)) * 80, -100, 100)
     : clamp(((input.cryptoPositioning?.basisPercent ?? 0) * 20), -100, 100);
 
   const vwapSlopeProxy = vwap
@@ -1138,6 +1167,14 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       ? Math.max(0, Math.round((Date.now() - new Date(input.dataHealth.lastUpdatedIso).getTime()) / 1000))
       : null,
     fallback_active: !!input.dataHealth?.fallbackActive,
+    missing_inputs: [
+      'dealer_gamma',
+      ...(marketType === 'equity' && !hasNearSpotOi ? ['near_spot_open_interest'] : []),
+      ...(!vwap ? ['vwap'] : []),
+      ...(priceAboveTrend === undefined ? ['trend_reference'] : []),
+      ...(structureInput === undefined ? ['price_structure'] : []),
+      ...(!Number.isFinite(adx) ? ['adx'] : []),
+    ],
   };
 
   const chopLow = nearestBelow?.strike ?? null;

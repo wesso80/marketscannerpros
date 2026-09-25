@@ -115,7 +115,10 @@ export function computeInstitutionalFlowState(input: InstitutionalFlowStateInput
 
   const flowVelocityRaw = normalizeMinusOneToOne(input.flow.flowImbalanceShort - input.flow.flowImbalanceLong, 65);
   const flowVelocityUp = sigmoid(flowVelocityRaw * 3);
-  const flowVelocityDown = 1 - flowVelocityUp;
+  // Flow accelerating in the bias direction builds positioning; accelerating against it signals exhaustion.
+  // (Bearish flow acceleration behind a bearish bias is positioning for a short, not exhaustion.)
+  const flowVelocityWithBias = input.bias === 'bearish' ? 1 - flowVelocityUp : flowVelocityUp;
+  const flowVelocityAgainstBias = 1 - flowVelocityWithBias;
 
   const dPExpansion = Math.max(-1, Math.min(1, (input.probabilityShift.deltaExpansion ?? 0) / 30));
   const dPTrendDown = Math.max(0, -(input.probabilityShift.deltaTrend ?? 0) / 30);
@@ -131,7 +134,7 @@ export function computeInstitutionalFlowState(input: InstitutionalFlowStateInput
 
   const posScore =
     (Math.max(0, dPExpansion) * 0.35) +
-    (flowVelocityUp * 0.30) +
+    (flowVelocityWithBias * 0.30) +
     (compression * 0.20) +
     (trendStructure * 0.15);
 
@@ -144,7 +147,7 @@ export function computeInstitutionalFlowState(input: InstitutionalFlowStateInput
   const exhScore =
     ((liquidityTargetHit ? 1 : 0) * 0.30) +
     (dPTrendDown * 0.25) +
-    (flowVelocityDown * 0.25) +
+    (flowVelocityAgainstBias * 0.25) +
     ((momentumDivergence ? 1 : 0) * 0.20);
 
   const [accP, posP, launchP, exhP] = softmax([accScore, posScore, launchScore, exhScore]).map((v) => Math.round(v * 100));

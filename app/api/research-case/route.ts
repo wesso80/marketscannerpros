@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         atr: atr || undefined,
         trendMetrics: indicators ? {
           adx: adx,
-          emaAligned: indicators.ema200 ? price > indicators.ema200 : undefined,
+          priceAboveTrend: indicators.ema200 ? price > indicators.ema200 : undefined,
         } : undefined,
       });
     } catch { /* CFE may fail without full data */ }

@@ -350,7 +350,7 @@ export async function GET(request: NextRequest) {
             liquidityLevels: crypto.levels,
             cryptoPositioning: crypto.positioning,
             trendMetrics: {
-              emaAligned: crypto.vwap ? crypto.spot >= crypto.vwap : undefined,
+              priceAboveTrend: crypto.vwap ? crypto.spot >= crypto.vwap : undefined,
             },
             dataHealth: {
               freshness: 'LIVE',
