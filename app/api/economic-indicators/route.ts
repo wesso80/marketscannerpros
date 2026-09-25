@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { isAvRateInterval, latestObservation, monthlyAverages, numericObservations } from '@/lib/macro/avRateSeries';
 
 // Cache for 1 hour (economic data updates infrequently)
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -63,7 +64,12 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
     
-    const cacheKey = `${indicator}_${maturity}`;
+    // Rate series default to monthly at Alpha Vantage (latest = last month's average); use daily unless asked.
+    const isRateSeries = indicator === 'TREASURY_YIELD' || indicator === 'FEDERAL_FUNDS_RATE';
+    const intervalParam = searchParams.get('interval');
+    const interval = isRateSeries ? (isAvRateInterval(intervalParam) ? intervalParam : 'daily') : null;
+
+    const cacheKey = `${indicator}_${maturity}_${interval ?? ''}`;
     const cached = cache.get(cacheKey);
     if (cached && (now - cached.timestamp) < CACHE_DURATION) {
       return NextResponse.json(cached.data, {
@@ -75,6 +81,7 @@ export async function GET(req: NextRequest) {
     if (indicator === 'TREASURY_YIELD') {
       url += `&maturity=${maturity}`;
     }
+    if (interval) url += `&interval=${interval}`;
     
     await avTakeToken();
     const response = await fetch(url);
@@ -100,13 +107,14 @@ async function fetchAllIndicators(apiKey: string, now: number) {
   }
   
   // Fetch key indicators sequentially with delays to avoid rate limits
-  const indicatorsToFetch = [
-    { func: 'TREASURY_YIELD', maturity: '10year' },
-    { func: 'TREASURY_YIELD', maturity: '2year' },
-    { func: 'TREASURY_YIELD', maturity: '3month' },
-    { func: 'TREASURY_YIELD', maturity: '5year' },
-    { func: 'TREASURY_YIELD', maturity: '30year' },
-    { func: 'FEDERAL_FUNDS_RATE' },
+  const indicatorsToFetch: Array<{ func: string; maturity?: string; interval?: string }> = [
+    // Rate series: interval=daily (AV defaults to monthly, whose newest row is last month's average).
+    { func: 'TREASURY_YIELD', maturity: '10year', interval: 'daily' },
+    { func: 'TREASURY_YIELD', maturity: '2year', interval: 'daily' },
+    { func: 'TREASURY_YIELD', maturity: '3month', interval: 'daily' },
+    { func: 'TREASURY_YIELD', maturity: '5year', interval: 'daily' },
+    { func: 'TREASURY_YIELD', maturity: '30year', interval: 'daily' },
+    { func: 'FEDERAL_FUNDS_RATE', interval: 'daily' },
     { func: 'CPI' },
     { func: 'INFLATION' },
     { func: 'UNEMPLOYMENT' },
@@ -119,6 +127,7 @@ async function fetchAllIndicators(apiKey: string, now: number) {
     try {
       let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
       if (ind.maturity) url += `&maturity=${ind.maturity}`;
+      if (ind.interval) url += `&interval=${ind.interval}`;
       
       await avTakeToken();
       const response = await fetch(url);
@@ -165,11 +174,23 @@ async function fetchAllIndicators(apiKey: string, now: number) {
     }));
   };
   
-  const t10y = getValue(treasury10y);
-  const t2y = getValue(treasury2y);
-  const t3m = getValue(treasury3m);
-  const t5y = getValue(treasury5y);
-  const t30y = getValue(treasury30y);
+  // Daily rate series: latest numeric observation (skips '.' holiday rows) + its date; history stays
+  // 12 monthly averages rebuilt from the same daily payload so sparklines/trends keep a monthly shape.
+  const rate = (result: any) => {
+    const latest = latestObservation(result?.data);
+    return {
+      value: latest?.value ?? null,
+      date: latest?.date ?? null,
+      history: monthlyAverages(numericObservations(result?.data), 12, now),
+    };
+  };
+  const r10y = rate(treasury10y), r2y = rate(treasury2y), r3m = rate(treasury3m), r5y = rate(treasury5y), r30y = rate(treasury30y);
+  const rFed = rate(fedFunds);
+  const t10y = r10y.value;
+  const t2y = r2y.value;
+  const t3m = r3m.value;
+  const t5y = r5y.value;
+  const t30y = r30y.value;
   const yieldCurve = t10y && t2y ? t10y - t2y : null;
   const yieldCurve3m10y = t10y && t3m ? t10y - t3m : null;
   
@@ -177,11 +198,11 @@ async function fetchAllIndicators(apiKey: string, now: number) {
     timestamp: new Date().toISOString(),
     
     rates: {
-      treasury3m: { value: t3m, history: getHistory(treasury3m) },
-      treasury2y: { value: t2y, history: getHistory(treasury2y) },
-      treasury5y: { value: t5y, history: getHistory(treasury5y) },
-      treasury10y: { value: t10y, history: getHistory(treasury10y) },
-      treasury30y: { value: t30y, history: getHistory(treasury30y) },
+      treasury3m: r3m,
+      treasury2y: r2y,
+      treasury5y: r5y,
+      treasury10y: r10y,
+      treasury30y: r30y,
       yieldCurve: { 
         value: yieldCurve ? Math.round(yieldCurve * 100) / 100 : null,
         inverted: yieldCurve !== null && yieldCurve < 0,
@@ -192,7 +213,7 @@ async function fetchAllIndicators(apiKey: string, now: number) {
         inverted: yieldCurve3m10y !== null && yieldCurve3m10y < 0,
         label: yieldCurve3m10y !== null ? (yieldCurve3m10y < 0 ? '⚠️ Inverted' : 'Normal') : 'N/A',
       },
-      fedFunds: { value: getValue(fedFunds), history: getHistory(fedFunds) },
+      fedFunds: rFed,
     },
     
     inflation: {
@@ -224,13 +245,14 @@ async function fetchAllIndicators(apiKey: string, now: number) {
 }
 
 function formatIndicator(indicator: string, data: any, maturity?: string) {
-  const dataPoints = data.data || [];
+  // Numeric rows only, newest first (daily rate series carry '.' on non-trading days).
+  const dataPoints = numericObservations(data);
   const info = INDICATORS[indicator as keyof typeof INDICATORS] || { name: indicator, category: 'other' };
   
   const latest = dataPoints[0];
   const previous = dataPoints[1];
   const change = latest && previous 
-    ? Math.round((parseFloat(latest.value) - parseFloat(previous.value)) * 100) / 100 
+    ? Math.round((latest.value - previous.value) * 100) / 100 
     : null;
   
   return {
@@ -242,18 +264,12 @@ function formatIndicator(indicator: string, data: any, maturity?: string) {
     interval: data.interval,
     maturity: maturity || null,
     
-    latest: latest ? {
-      date: latest.date,
-      value: parseFloat(latest.value),
-    } : null,
+    latest: latest ? { date: latest.date, value: latest.value } : null,
     
     change,
     trend: change !== null ? (change > 0 ? 'rising' : change < 0 ? 'falling' : 'flat') : null,
     
-    history: dataPoints.slice(0, 24).map((d: any) => ({
-      date: d.date,
-      value: parseFloat(d.value),
-    })),
+    history: dataPoints.slice(0, 24),
   };
 }
 

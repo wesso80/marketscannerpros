@@ -18,6 +18,8 @@ type Driver = {
 
 interface IndicatorValue {
   value: number | null;
+  /** Observation date of `value` (daily rate series). */
+  date?: string | null;
   history?: { date: string; value: number }[];
 }
 
@@ -502,7 +504,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <Sparkline data={data.rates.treasury10y.history} stroke="#60a5fa" />
                 </div>
                 <div className="text-2xl font-semibold">{toPct(data.rates.treasury10y.value)}</div>
-                <div className="mt-1 text-xs text-white/60">10Y Treasury • {gate.ratesRegime}</div>
+                <div className="mt-1 text-xs text-white/60">10Y Treasury{data.rates.treasury10y.date ? ` (as of ${data.rates.treasury10y.date})` : ''} • {gate.ratesRegime}</div>
               </div>
 
               <div id="inflation" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">

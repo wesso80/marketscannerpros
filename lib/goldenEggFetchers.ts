@@ -19,6 +19,7 @@ import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/
 import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
+import { latestObservation } from '@/lib/macro/avRateSeries';
 import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -721,19 +722,22 @@ export async function fetchMacroRegime(): Promise<MacroRegime | null> {
   try {
     // Fetch two key signals: 10Y yield + Fed Funds + Inflation
     const indicators = [
-      { func: 'TREASURY_YIELD', maturity: '10year' },
-      { func: 'TREASURY_YIELD', maturity: '2year' },
+      // interval=daily: AV defaults rate series to monthly (newest row = last month's average).
+      { func: 'TREASURY_YIELD', maturity: '10year', interval: 'daily' },
+      { func: 'TREASURY_YIELD', maturity: '2year', interval: 'daily' },
       { func: 'INFLATION' },
-    ];
+    ] as Array<{ func: string; maturity?: string; interval?: string }>;
 
     const values: Record<string, number | null> = {};
     for (const ind of indicators) {
       let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
       if (ind.maturity) url += `&maturity=${ind.maturity}`;
+      if (ind.interval) url += `&interval=${ind.interval}`;
       await avTakeToken();
       const res = await fetch(url);
       const json = await res.json();
-      const val = json?.data?.[0]?.value ? parseFloat(json.data[0].value) : null;
+      // Most recent NUMERIC observation (daily series carry '.' on non-trading days).
+      const val = latestObservation(json)?.value ?? null;
       values[ind.func + (ind.maturity || '')] = val;
       await new Promise(r => setTimeout(r, 250));
     }
