@@ -510,7 +510,9 @@ describe('layout and flow audit regressions', () => {
     expect(optionsFlowPage).toContain('{!embeddedInTerminal && <ComplianceDisclaimer variant="options" />}');
     expect(optionsFlowPage).toContain('function patternCode');
     expect(optionsFlowPage).toContain("if (p === 'block') return 'BLK';");
-    expect(optionsFlowPage).toContain("return { label: 'Bullish Demand', color: 'var(--msp-bull)' };");
+    // Skew is descriptive: normal equity put skew is not labelled bearish.
+    expect(optionsFlowPage).toContain("return { label: 'Normal Put Skew', color: 'var(--msp-text-muted)' };");
+    expect(optionsFlowPage).not.toContain('Bearish Hedging');
     expect(optionsFlowPage).toContain("{loading ? 'Analyzing...' : 'Analyze Flow'}");
     expect(optionsFlowPage).toContain('Net Premium Flow');
     expect(optionsFlowPage).toContain('Large Flow Estimate');

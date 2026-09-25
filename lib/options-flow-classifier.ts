@@ -6,7 +6,7 @@
  * 2. Block vs sweep pattern detection
  * 3. Opening vs closing trade inference
  * 4. Net premium flow computation with directional weighting
- * 5. IV skew analysis for directional sentiment
+ * 5. IV skew analysis (descriptive only — equities normally carry put skew)
  * 6. Smart money scoring with premium-size tiers
  *
  * Data source: Alpha Vantage REALTIME_OPTIONS_FMV contract-level data
@@ -67,9 +67,15 @@ export interface FlowPatternResult {
 }
 
 export interface IVSkewAnalysis {
-  /** Put skew: avg OTM put IV - avg OTM call IV (positive = put-heavy hedging) */
+  /** Put skew: avg OTM put IV - avg OTM call IV (positive = puts priced richer than calls) */
   skew: number;
-  skewSignal: 'bearish_hedging' | 'bullish_demand' | 'neutral';
+  /** skew ÷ ATM IV — how rich puts are relative to the vol level (null when ATM IV unknown) */
+  relativeSkew: number | null;
+  /**
+   * Descriptive, not directional. Equities almost always carry put skew, so that is 'normal_put_skew';
+   * only an unusually steep put skew or an inverted (call-rich) skew is called out.
+   */
+  skewSignal: 'normal_put_skew' | 'steep_put_skew' | 'flat' | 'call_skew';
   /** IV term structure: near-term IV vs far-term IV */
   termStructure: 'backwardation' | 'contango' | 'flat';
   termReason: string;
@@ -227,6 +233,23 @@ function detectFlowPattern(contracts: ContractFlow[]): FlowPatternResult {
 
 /* ── IV Skew Analysis ── */
 
+/** Relative-skew thresholds (skew ÷ ATM IV). */
+export const STEEP_PUT_SKEW_REL = 0.5;
+export const FLAT_SKEW_REL = 0.05;
+
+/**
+ * Put skew is the normal state for equities (portfolio hedging), so it is NOT read as bearish.
+ * Relative to ATM IV: > +50% → steep put skew; within ±5% → flat; below −5% → call skew; else normal put skew.
+ */
+export function classifySkew(skew: number, atmIV: number): IVSkewAnalysis['skewSignal'] {
+  if (!Number.isFinite(skew) || !(atmIV > 0)) return 'flat';
+  const rel = skew / atmIV;
+  if (rel > STEEP_PUT_SKEW_REL) return 'steep_put_skew';
+  if (rel < -FLAT_SKEW_REL) return 'call_skew';
+  if (rel <= FLAT_SKEW_REL) return 'flat';
+  return 'normal_put_skew';
+}
+
 function analyzeIVSkew(contracts: ContractFlow[], currentPrice: number): IVSkewAnalysis {
   const otmCalls = contracts.filter(c => c.type === 'call' && c.moneyness === 'OTM' && c.iv > 0);
   const otmPuts = contracts.filter(c => c.type === 'put' && c.moneyness === 'OTM' && c.iv > 0);
@@ -238,9 +261,8 @@ function analyzeIVSkew(contracts: ContractFlow[], currentPrice: number): IVSkewA
 
   const skew = avgOTMPutIV - avgOTMCallIV;
 
-  let skewSignal: IVSkewAnalysis['skewSignal'] = 'neutral';
-  if (skew > 0.03) skewSignal = 'bearish_hedging';
-  else if (skew < -0.03) skewSignal = 'bullish_demand';
+  const relativeSkew = atmIV > 0 ? skew / atmIV : null;
+  const skewSignal = classifySkew(skew, atmIV);
 
   // 25-delta skew: find puts/calls near 0.25 delta
   const calls25d = otmCalls.filter(c => Math.abs(Math.abs(c.delta) - 0.25) < 0.1);
@@ -256,6 +278,7 @@ function analyzeIVSkew(contracts: ContractFlow[], currentPrice: number): IVSkewA
   const nearATM = atmContracts.length > 0;
   return {
     skew,
+    relativeSkew,
     skewSignal,
     termStructure: 'flat',
     termReason: nearATM ? 'Single expiration snapshot — term structure requires multi-expiry data' : 'Insufficient ATM data',

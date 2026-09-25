@@ -158,6 +158,7 @@ interface UnusualActivity {
   hasUnusualActivity: boolean;
   unusualStrikes: UnusualActivityStrike[];
   smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  volumeTilt?: 'calls' | 'puts' | 'mixed' | 'none';
   alertLevel: 'high' | 'moderate' | 'low' | 'none';
 }
 
@@ -896,7 +897,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         result.tradeLevels?.target3?.price,
       ].filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
       riskScore,
-      volatilityRegime: (result.ivAnalysis?.ivRank ?? 50) >= 70 ? 'high' : (result.ivAnalysis?.ivRank ?? 50) <= 30 ? 'low' : 'moderate',
+      // Unknown IV rank (no IV history) is not recorded as 'moderate'.
+      volatilityRegime: result.ivAnalysis?.ivRank == null ? undefined : result.ivAnalysis.ivRank >= 70 ? 'high' : result.ivAnalysis.ivRank <= 30 ? 'low' : 'moderate',
       status: 'candidate',
     });
 
@@ -1808,7 +1810,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
   const marketRegimeIntel = useMemo(() => {
     if (!result) return null;
 
-    const ivRank = result.ivAnalysis?.ivRank ?? 50;
+    const ivRank = result.ivAnalysis?.ivRank ?? null; // null = no IV history → IV rules don't fire
     const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
     const directionScoreAbs = Math.abs(result.compositeScore?.directionScore ?? 0);
     const confidenceScore = result.compositeScore?.confidence ?? 0;
@@ -1822,9 +1824,9 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     const flowMatchesDirection = flowAlignment === 'neutral' || flowAlignment === 'mixed' || flowAlignment === result.direction;
 
     const volatilityState: 'normal' | 'elevated' | 'extreme' =
-      ivRank >= 85 || movePct >= 7 || unusualLevel === 'high'
+      (ivRank != null && ivRank >= 85) || movePct >= 7 || unusualLevel === 'high'
         ? 'extreme'
-        : ivRank >= 70 || movePct >= 4.5 || unusualLevel === 'moderate'
+        : (ivRank != null && ivRank >= 70) || movePct >= 4.5 || unusualLevel === 'moderate'
           ? 'elevated'
           : 'normal';
 
@@ -1976,8 +1978,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     );
 
     const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
-    const ivRank = result.ivAnalysis?.ivRank ?? 50;
-    const volatilityScore = clampScore((movePct * 11) + (Math.abs(ivRank - 50) * 0.9) + 26);
+    const ivRank = result.ivAnalysis?.ivRank ?? null;
+    const volatilityScore = clampScore((movePct * 11) + (ivRank == null ? 0 : Math.abs(ivRank - 50) * 0.9) + 26);
 
     const sentimentScore = clampScore(
       (result.openInterestAnalysis?.sentiment === 'bullish' || result.openInterestAnalysis?.sentiment === 'bearish' ? 62 : 44) +
@@ -2065,8 +2067,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     },
     {
       label: 'Volatility Regime',
-      score: Math.round(Math.max(0, Math.min(100, ((result.expectedMove?.selectedExpiryPercent ?? 0) * 11) + (Math.abs((result.ivAnalysis?.ivRank ?? 50) - 50) * 0.8) + 24))),
-      state: `${result.ivAnalysis?.ivRank != null ? `IV ${result.ivAnalysis.ivRank == null ? 'Unavailable' : `${result.ivAnalysis.ivRank}%`}` : 'IV N/A'}`,
+      score: Math.round(Math.max(0, Math.min(100, ((result.expectedMove?.selectedExpiryPercent ?? 0) * 11) + (result.ivAnalysis?.ivRank == null ? 0 : Math.abs(result.ivAnalysis.ivRank - 50) * 0.8) + 24))),
+      state: result.ivAnalysis?.ivRank != null ? `IV rank ${result.ivAnalysis.ivRank}%` : 'IV rank n/a',
       summary: result.expectedMove ? `Expected ±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'Expected move unavailable',
     },
     {
@@ -2094,12 +2096,12 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       const directionScoreAbs = Math.abs(result.compositeScore?.directionScore ?? 0);
       const confidence = result.compositeScore?.confidence ?? 0;
       const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
-      const ivRank = result.ivAnalysis?.ivRank ?? 50;
+      const ivRank = result.ivAnalysis?.ivRank ?? null;
       const flowBurst = result.unusualActivity?.alertLevel === 'high';
       const hasEventFlag = (result.disclaimerFlags || []).some((flag) => /earnings|fomc|fed|cpi|news|event|halt|gap/i.test(flag));
       const conflictCount = result.compositeScore?.conflicts?.length ?? 0;
 
-      const highVol = movePct >= 4.8 || ivRank >= 72 || flowBurst || hasEventFlag;
+      const highVol = movePct >= 4.8 || (ivRank != null && ivRank >= 72) || flowBurst || hasEventFlag;
       const trendStrong = result.direction !== 'neutral' && directionScoreAbs >= 35 && confidence >= 62 && result.confluenceStack >= 3;
       const chop = result.direction === 'neutral' || directionScoreAbs < 22 || conflictCount >= 2 || result.signalStrength === 'no_signal';
 
@@ -4028,7 +4030,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     <h4 className="mb-3 mt-0 text-[0.9rem] text-violet-500">IV Rank / Percentile</h4>
                     <div className="mb-3 flex flex-wrap gap-4">
                       <div className="text-center">
-                        <div className={`text-[1.75rem] font-bold ${(result.ivAnalysis.ivRank ?? 50) >= 70 ? 'text-red-500' : (result.ivAnalysis.ivRank ?? 50) <= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                        <div className={`text-[1.75rem] font-bold ${result.ivAnalysis.ivRank == null ? 'text-slate-400' : result.ivAnalysis.ivRank >= 70 ? 'text-red-500' : result.ivAnalysis.ivRank <= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>
                           {result.ivAnalysis.ivRank == null ? 'Unavailable' : `${result.ivAnalysis.ivRank}%`}
                         </div>
                         <div className="text-[0.7rem] text-slate-400">IV Rank</div>
@@ -4084,7 +4086,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                 {result.unusualActivity && (
                   <div className={`rounded-xl bg-slate-800/80 p-4 ${result.unusualActivity.alertLevel === 'high' ? 'border border-red-500/50' : result.unusualActivity.alertLevel === 'moderate' ? 'border border-amber-500/50' : 'border border-slate-500/30'}`}>
                     <h4 className="mb-3 mt-0 text-[0.9rem] text-amber-500">
-                      Unusual Activity
+                      High volume vs open interest
                       {result.unusualActivity.alertLevel === 'high' && (
                         <span className="ml-2 rounded-full bg-red-500/30 px-2 py-[2px] text-[0.65rem] text-red-300">
                           HIGH ALERT
@@ -4094,8 +4096,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     
                     {result.unusualActivity.hasUnusualActivity ? (
                       <>
-                        <div className={`mb-2 text-[0.85rem] ${result.unusualActivity.smartMoneyDirection === 'bullish' ? 'text-emerald-500' : result.unusualActivity.smartMoneyDirection === 'bearish' ? 'text-red-500' : 'text-slate-400'}`}>
-                          Institutional Flow: {result.unusualActivity.smartMoneyDirection.toUpperCase()}
+                        <div className="mb-2 text-[0.85rem] text-slate-400">
+                          {result.unusualActivity.volumeTilt === 'calls' ? 'Mostly calls' : result.unusualActivity.volumeTilt === 'puts' ? 'Mostly puts' : 'Calls and puts'} — info only (no buy/sell side, not bullish/bearish)
                         </div>
                         <div className="max-h-[120px] overflow-y-auto">
                           {result.unusualActivity.unusualStrikes.slice(0, 3).map((strike, idx) => (
@@ -4112,7 +4114,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                       </>
                     ) : (
                       <div className="text-[0.8rem] text-slate-500">
-                        No unusual options activity detected
+                        No high volume vs open interest detected
                       </div>
                     )}
                   </div>

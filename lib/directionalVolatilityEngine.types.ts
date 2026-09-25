@@ -39,9 +39,9 @@ export interface DVEIndicatorInput {
 
 export interface DVEOptionsInput {
   putCallRatio?: number;
-  ivRank?: number;
+  ivRank?: number | null;      // null = unknown (no IV history)
   dealerGamma?: string;
-  maxPain?: number;
+  maxPain?: number | null;     // null = chain could not establish max pain
   highestOICallStrike?: number | null;
   highestOIPutStrike?: number | null;
   unusualActivity?: string;

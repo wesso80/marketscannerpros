@@ -50,6 +50,10 @@ interface AVQuoteResult {
     '05. price'?: string;
     '10. change percent'?: string;
   };
+  'Global Quote - DATA DELAYED BY 15 MINUTES'?: {
+    '05. price'?: string;
+    '10. change percent'?: string;
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -99,14 +103,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Get current price
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${AV_KEY}`;
+    // entitlement=realtime: without it Alpha Vantage returns the previous close, so intraday moneyness/ATM
+    // would be judged against a stale price (same request the Options Terminal makes).
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${AV_KEY}`;
     let quoteData: AVQuoteResult | null;
     try {
       quoteData = await avFetch<AVQuoteResult>(quoteUrl, `QUOTE_${symbol}`);
     } catch {
       return NextResponse.json({ error: `Price data unavailable for ${symbol}` }, { status: 502 });
     }
-    const currentPrice = parseFloat(quoteData?.['Global Quote']?.['05. price'] || '0');
+    const quote = quoteData?.['Global Quote'] ?? quoteData?.['Global Quote - DATA DELAYED BY 15 MINUTES'];
+    const currentPrice = parseFloat(quote?.['05. price'] || '0');
 
     if (currentPrice <= 0) {
       return NextResponse.json({ error: `Could not get price for ${symbol}` }, { status: 404 });
@@ -179,7 +186,7 @@ export async function GET(req: NextRequest) {
       success: true,
       symbol,
       currentPrice,
-      changePct: parseFloat(quoteData?.['Global Quote']?.['10. change percent']?.replace('%', '') || '0'),
+      changePct: parseFloat(quote?.['10. change percent']?.replace('%', '') || '0'),
       expiration: selectedExpiry,
       availableExpirations: expirations,
       contractCount: expiryContracts.length,

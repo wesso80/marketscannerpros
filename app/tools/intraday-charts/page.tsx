@@ -6,6 +6,7 @@ import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useV2 } from '@/app/v2/_lib/V2Context';
+import { dealerOverlayFromGexPayload, type DealerOverlayData } from '@/lib/options/gexOverlay';
 
 interface IntradayBar {
   timestamp: string;
@@ -23,19 +24,6 @@ interface IntradayData {
   lastRefreshed: string;
   timeZone: string;
   data: IntradayBar[];
-}
-
-interface DealerStructure {
-  callWall: number | null;
-  putWall: number | null;
-  gammaFlip: number | null;
-  topNodes: Array<{ strike: number; netGexUsd: number }>;
-}
-
-interface DealerOverlayData {
-  regime: 'LONG_GAMMA' | 'SHORT_GAMMA' | 'NEUTRAL';
-  structure: DealerStructure;
-  attentionTriggered: boolean;
 }
 
 type Interval = '1min' | '5min' | '15min' | '30min' | '60min';
@@ -267,21 +255,21 @@ function CandlestickChart({
     {
       key: 'call-wall',
       level: dealerOverlay.structure.callWall,
-      label: 'Dealer Call Wall',
+      label: 'Call GEX Wall (est.)',
       color: 'var(--msp-bull)',
       dashed: false,
     },
     {
       key: 'put-wall',
       level: dealerOverlay.structure.putWall,
-      label: 'Dealer Put Wall',
+      label: 'Put GEX Wall (est.)',
       color: 'var(--msp-bear)',
       dashed: false,
     },
     {
       key: 'gamma-flip',
       level: dealerOverlay.structure.gammaFlip,
-      label: 'Gamma Flip',
+      label: 'Gamma Flip (est.)',
       color: '#38bdf8',
       dashed: true,
     },
@@ -741,21 +729,7 @@ export default function IntradayChartsPage({
       );
       if (!response.ok) { setDealerOverlay(null); return; }
       const payload = await response.json();
-      if (!payload?.success || payload.data?.dealerPositionVerified !== true) {
-        setDealerOverlay(null);
-        return;
-      }
-
-      setDealerOverlay({
-        regime: payload.data?.dealerGamma?.regime || 'NEUTRAL',
-        structure: payload.data?.dealerIntelligence?.dealerStructure || {
-          callWall: null,
-          putWall: null,
-          gammaFlip: null,
-          topNodes: [],
-        },
-        attentionTriggered: Boolean(payload.data?.dealerIntelligence?.attention?.triggered),
-      });
+      setDealerOverlay(dealerOverlayFromGexPayload(payload));
     } catch {
       setDealerOverlay(null);
     }
@@ -925,10 +899,10 @@ export default function IntradayChartsPage({
   const liquidityState = !stats || stats.avgVolume == null ? 'Unavailable' : stats.avgVolume >= 500000 ? 'Strong' : stats.avgVolume >= 100000 ? 'Stable' : 'Thin';
   const dealerState = dealerOverlay
     ? dealerOverlay.regime === 'LONG_GAMMA'
-      ? 'Supportive'
+      ? 'Supportive (est.)'
       : dealerOverlay.regime === 'SHORT_GAMMA'
-        ? 'Hostile'
-        : 'Neutral'
+        ? 'Hostile (est.)'
+        : 'Neutral (est.)'
     : 'Unavailable';
 
   const reviewState: 'Clear' | 'Caution' | 'Blocked' = !stats
@@ -992,14 +966,14 @@ export default function IntradayChartsPage({
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] text-[var(--msp-text-muted)]">Dealer context</div>
                 <div className={`mt-1 text-lg font-semibold ${
-                  dealerState === 'Supportive' ? 'text-emerald-300' : dealerState === 'Hostile' ? 'text-rose-300' : 'text-slate-200'
+                  dealerState.startsWith('Supportive') ? 'text-emerald-300' : dealerState.startsWith('Hostile') ? 'text-rose-300' : 'text-slate-200'
                 }`}>
                   {dealerState}
                 </div>
                 <div className="mt-1 text-xs text-slate-400">
                   {dealerOverlay
-                    ? `Flip ${dealerOverlay.structure.gammaFlip ? `$${formatPrice(dealerOverlay.structure.gammaFlip)}` : 'N/A'}`
-                    : 'Overlay unavailable'}
+                    ? `GEX estimate · ${dealerOverlay.expirationDate ?? 'expiry n/a'} expiry · Flip ${dealerOverlay.structure.gammaFlip ? `$${formatPrice(dealerOverlay.structure.gammaFlip)}` : 'N/A'}`
+                    : 'GEX estimate unavailable'}
                 </div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
@@ -1380,9 +1354,13 @@ export default function IntradayChartsPage({
 
                 {dealerOverlay && (
                   <div className="mt-3 rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-xs text-slate-300">
-                    <div className="font-medium text-slate-200">Dealer Structure</div>
+                    <div className="font-medium text-slate-200">Dealer Gamma (estimate)</div>
                     <div className="mt-1">
-                      Regime {dealerOverlay.regime === 'LONG_GAMMA' ? 'Long Gamma' : dealerOverlay.regime === 'SHORT_GAMMA' ? 'Short Gamma' : 'Neutral'}
+                      Regime {dealerOverlay.regime === 'LONG_GAMMA' ? 'Long Gamma' : dealerOverlay.regime === 'SHORT_GAMMA' ? 'Short Gamma' : 'Neutral'} (est.)
+                    </div>
+                    <div className="mt-1 text-slate-500">
+                      Estimated from open interest assuming dealers are long calls and short puts (standard convention; real dealer positions aren&apos;t available).
+                      Expiry {dealerOverlay.expirationDate ?? 'n/a'}{dealerOverlay.asOf ? ` · as of ${dealerOverlay.asOf}` : ''}
                     </div>
                     <div className="mt-1 text-slate-400">
                       Flip {dealerOverlay.structure.gammaFlip ? `$${formatPrice(dealerOverlay.structure.gammaFlip)}` : 'N/A'} •

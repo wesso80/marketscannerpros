@@ -52,11 +52,39 @@ export interface DealerIntelligence {
 const REGIME_THRESHOLD_USD = 50_000_000;
 const PIN_ZONE_PCT = 0.0025; // 0.25%
 
+/**
+ * Alpha Vantage has no dealer positions, so every GEX/DEX number here is an ESTIMATE under the
+ * standard public convention: customers sell calls and buy puts, i.e. dealers are LONG calls and
+ * SHORT puts. Gamma and delta use the same assumption so the two never contradict each other.
+ */
+export const DEALER_GAMMA_CONVENTION =
+  'Estimate from open interest under the standard convention (dealers long calls, short puts). Alpha Vantage has no dealer positions, so this is not verified dealer positioning.';
+
+export interface GexContractInput {
+  strike: number;
+  openInterest: number;
+  type: 'call' | 'put';
+  gamma?: number;
+  delta?: number;
+}
+
 export function calculateDealerGammaSnapshot(
   openInterestAnalysis: OpenInterestData | null | undefined,
   currentPrice: number
 ): DealerGammaSnapshot {
-  if (!openInterestAnalysis || !Number.isFinite(currentPrice) || currentPrice <= 0) {
+  // Prefer every strike of the analysed expiry (gexStrikes); older payloads only carry the ~10 top-OI strikes.
+  const contracts = openInterestAnalysis
+    ? (openInterestAnalysis.gexStrikes?.length ? openInterestAnalysis.gexStrikes : openInterestAnalysis.highOIStrikes || [])
+    : null;
+  return calculateDealerGammaFromContracts(contracts, currentPrice, openInterestAnalysis?.expirationDate ?? null);
+}
+
+export function calculateDealerGammaFromContracts(
+  contracts: GexContractInput[] | null | undefined,
+  currentPrice: number,
+  expirationDate: string | null,
+): DealerGammaSnapshot {
+  if (!contracts || !Number.isFinite(currentPrice) || currentPrice <= 0) {
     return {
       regime: 'NEUTRAL',
       netGexUsd: 0,
@@ -68,7 +96,7 @@ export function calculateDealerGammaSnapshot(
       pinZone: 'UNKNOWN',
       topPositiveStrikes: [],
       topNegativeStrikes: [],
-      basedOnExpiration: openInterestAnalysis?.expirationDate ?? null,
+      basedOnExpiration: expirationDate,
       coverage: 'none',
     };
   }
@@ -76,7 +104,7 @@ export function calculateDealerGammaSnapshot(
   const byStrike = new Map<number, { callGexUsd: number; putGexUsd: number }>();
   let netDexUsd = 0;
 
-  for (const contract of openInterestAnalysis.highOIStrikes || []) {
+  for (const contract of contracts) {
     const strike = Number(contract.strike);
     const openInterest = Number(contract.openInterest);
     const gamma = Math.abs(Number(contract.gamma ?? 0));
@@ -86,15 +114,12 @@ export function calculateDealerGammaSnapshot(
       continue;
     }
 
-    // DEX: Net Delta Exposure in USD
-    // Dealers are short calls / long puts → net delta exposure = -call_delta + put_delta (dealer perspective)
+    // DEX (dealer delta, USD) under the SAME convention as GEX below: dealers long calls, short puts.
+    // Long call: +|call delta|. Short put: −(put delta) = −(−|put delta|) = +|put delta|.
     if (Number.isFinite(delta) && delta !== 0) {
-      const dexContractUsd = Math.abs(delta) * openInterest * 100 * currentPrice;
-      if (contract.type === 'call') {
-        netDexUsd -= dexContractUsd;  // Dealer short calls → negative delta
-      } else {
-        netDexUsd += dexContractUsd;  // Dealer long puts → positive delta (short stock)
-      }
+      const contractDelta = contract.type === 'call' ? Math.abs(delta) : -Math.abs(delta);
+      const dealerSide = contract.type === 'call' ? 1 : -1;
+      netDexUsd += dealerSide * contractDelta * openInterest * 100 * currentPrice;
     }
 
     // GEX: skip if gamma missing
@@ -104,9 +129,9 @@ export function calculateDealerGammaSnapshot(
     const bucket = byStrike.get(strike) || { callGexUsd: 0, putGexUsd: 0 };
 
     if (contract.type === 'call') {
-      bucket.callGexUsd += exposure;
+      bucket.callGexUsd += exposure;   // dealers long calls → long gamma
     } else {
-      bucket.putGexUsd -= exposure;
+      bucket.putGexUsd -= exposure;    // dealers short puts → short gamma
     }
 
     byStrike.set(strike, bucket);
@@ -155,7 +180,7 @@ export function calculateDealerGammaSnapshot(
     pinZone: flipDistancePct == null ? 'UNKNOWN' : (flipDistancePct <= PIN_ZONE_PCT ? 'IN' : 'OUT'),
     topPositiveStrikes,
     topNegativeStrikes,
-    basedOnExpiration: openInterestAnalysis.expirationDate,
+    basedOnExpiration: expirationDate,
     coverage: strikeRows.length >= 4 ? 'partial' : 'none',
   };
 }
@@ -267,4 +292,74 @@ function getSetupMultiplier(
   if (regime === 'LONG_GAMMA') return setupType === 'momentum' ? 0.75 : 1.2;
   if (regime === 'SHORT_GAMMA') return setupType === 'momentum' ? 1.2 : 0.85;
   return 1;
+}
+
+// ── GEX estimate straight from a raw Alpha Vantage chain (used by /api/options/gex) ─────────────
+
+export interface RawChainRowForGex {
+  expiration?: string;
+  strike?: string | number;
+  type?: string;
+  open_interest?: string | number;
+  gamma?: string | number;
+  delta?: string | number;
+}
+
+function addDaysYmd(ymd: string, days: number): string {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function daysBetweenYmd(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * The expiry the estimate is built on: the requested one if the chain has it, otherwise the listed
+ * expiry (today or later) closest to this week's Friday — the same default the Options Scanner uses.
+ */
+export function pickGexExpiry(rows: RawChainRowForGex[], todayYmd: string, requested?: string | null): string | null {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const exp = String(row.expiration || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(exp) || exp < todayYmd) continue;
+    counts.set(exp, (counts.get(exp) || 0) + 1);
+  }
+  if (requested && counts.has(requested)) return requested;
+  if (!counts.size) return null;
+  const dow = new Date(`${todayYmd}T12:00:00Z`).getUTCDay();
+  const friday = addDaysYmd(todayYmd, dow === 6 ? 6 : (5 - dow + 7) % 7);
+  let best: string | null = null;
+  for (const [exp, n] of counts) {
+    if (best === null) { best = exp; continue; }
+    const d = Math.abs(daysBetweenYmd(friday, exp));
+    const bd = Math.abs(daysBetweenYmd(friday, best));
+    if (d < bd || (d === bd && n > (counts.get(best) || 0))) best = exp;
+  }
+  return best;
+}
+
+/** Contracts of one expiry with open interest and a usable gamma. Every strike is kept. */
+export function gexContractsForExpiry(rows: RawChainRowForGex[], expiration: string): GexContractInput[] {
+  const out: GexContractInput[] = [];
+  for (const row of rows) {
+    if (String(row.expiration || '') !== expiration) continue;
+    const type = String(row.type || '').toLowerCase();
+    if (type !== 'call' && type !== 'put') continue;
+    const strike = Number(row.strike);
+    const openInterest = Number(row.open_interest);
+    const gamma = Number(row.gamma);
+    const delta = Number(row.delta);
+    if (!(strike > 0) || !(openInterest > 0) || !(Math.abs(gamma) > 0)) continue;
+    out.push({ strike, openInterest, type, gamma: Math.abs(gamma), delta: Number.isFinite(delta) ? delta : undefined });
+  }
+  return out;
+}
+
+/** Minimum strikes (with OI and gamma) before an estimate is shown instead of "unavailable". */
+export const MIN_GEX_STRIKES = 4;
+
+export function countGexStrikes(contracts: GexContractInput[]): number {
+  return new Set(contracts.map((c) => c.strike)).size;
 }

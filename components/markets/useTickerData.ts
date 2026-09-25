@@ -289,7 +289,8 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
         options = {
           symbol: sym,
           iv: ivRaw * (ivRaw > 1 ? 1 : 100),
-          ivRank: Number(ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic ?? 0),
+          // No IV history → null ('n/a'), never 0 or 50.
+          ivRank: typeof (ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic) === 'number' ? Number(ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic) : null,
           expectedMove: Number(d.expectedMove?.selectedExpiryPercent ?? 0),
           putCallRatio: Number(oiAnalysis?.pcRatio ?? 0),
           maxPain: Number(oiAnalysis?.maxPainStrike ?? dealerGamma?.maxPainStrike ?? 0),

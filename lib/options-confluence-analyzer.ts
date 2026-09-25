@@ -14,6 +14,9 @@ import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseC
 import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from './coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { fetchSharedOptionsChain } from '@/lib/options/chainCache';
+import { measuredIvRank } from '@/lib/options/ivRank';
+export { measuredIvRank };
 import { bridgeFromScanData, computeAllDecompressionStates } from '@/lib/time/decompressionEngine';
 import { computeDecompressionStack, type DecompressionStackResult } from '@/lib/time/decompressionStack';
 
@@ -703,6 +706,8 @@ export interface OpenInterestData {
     reliable: boolean;
   };
   highOIStrikes: { strike: number; openInterest: number; volume: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number }[];
+  /** Every contract with open interest in the analysed expiry (strike range ±30%), for GEX estimates. */
+  gexStrikes?: { strike: number; openInterest: number; type: 'call' | 'put'; delta?: number; gamma?: number }[];
   expirationDate: string;       // The expiration date being analyzed
 }
 
@@ -738,7 +743,13 @@ export interface UnusualActivity {
     signal: 'bullish' | 'bearish';
     reason: string;
   }[];
+  /**
+   * Always 'neutral'. Alpha Vantage chains carry no buy/sell side, so heavy call or put volume is not a
+   * bullish/bearish signal. Kept for payload compatibility; see `volumeTilt` for the descriptive info.
+   */
   smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  /** Which side the high volume-vs-OI strikes are on (descriptive only, not a direction vote). */
+  volumeTilt?: 'calls' | 'puts' | 'mixed' | 'none';
   alertLevel: 'high' | 'moderate' | 'low' | 'none';
   // Aggregate premium flow estimates
   callPremiumTotal: number;
@@ -752,6 +763,7 @@ export interface ExpectedMove {
   monthlyPercent: number;
   selectedExpiry: number;         // Expected move for user-selected expiry
   selectedExpiryPercent: number;
+  selectedExpiryDTE?: number;     // Calendar DTE the selected-expiry move was computed for
   calculation: string;            // How it was calculated
 }
 
@@ -915,7 +927,7 @@ interface AVOptionContract {
   rho?: string;
 }
 
-type AVOptionsFunction = 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS';
+type AVOptionsFunction = 'REALTIME_OPTIONS_FMV' | 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
 
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
@@ -1052,67 +1064,37 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
   }
   
   try {
-    const providers: Array<{ fn: AVOptionsFunction; freshness: 'REALTIME' | 'EOD'; requireGreeks: boolean }> = AV_OPTIONS_REALTIME_ENABLED
-      ? [
-          { fn: 'REALTIME_OPTIONS_FMV', freshness: 'REALTIME', requireGreeks: true },
-          { fn: 'HISTORICAL_OPTIONS', freshness: 'EOD', requireGreeks: false },
-        ]
-      : [{ fn: 'HISTORICAL_OPTIONS', freshness: 'EOD', requireGreeks: false }];
+    const providers: AVOptionsFunction[] = AV_OPTIONS_REALTIME_ENABLED
+      ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']
+      : ['HISTORICAL_OPTIONS'];
 
-    let data: any = null;
-    let options: AVOptionContract[] = [];
-    let selectedProvider: { fn: AVOptionsFunction; freshness: 'REALTIME' | 'EOD' } | null = null;
+    // Shared short-TTL chain cache: the Options Scanner strike picker, expiry dropdown, Golden Egg and
+    // GEX estimate reuse this download instead of pulling the same chain again.
+    const shared = await fetchSharedOptionsChain<AVOptionContract>(symbol, {
+      apiKey: ALPHA_VANTAGE_KEY,
+      providers,
+      fetchPayload: async (fn, url) => {
+        console.log(`📊 Fetching options chain via ${fn} for ${symbol}${targetExpiration ? ` (target expiry ${targetExpiration})` : ''}...`);
+        await avTakeToken();
+        const response = await fetch(url);
+        const payload = await response.json();
+        if (payload?.['Error Message']) { console.error(`❌ ${fn} Error Message:`, payload['Error Message']); return null; }
+        if (payload?.['Note']) { console.warn(`⚠️ ${fn} Note (likely rate limit):`, payload['Note']); return null; }
+        if (payload?.['Information']) { console.warn(`⚠️ ${fn} Information (tier/entitlement):`, payload['Information']); return null; }
+        return payload;
+      },
+    });
 
-    for (const provider of providers) {
-      const requireGreeks = provider.requireGreeks ? '&require_greeks=true' : '';
-      const url = `https://www.alphavantage.co/query?function=${provider.fn}&symbol=${symbol}${requireGreeks}&apikey=${ALPHA_VANTAGE_KEY}`;
-      console.log(`📊 Fetching ${provider.freshness} options chain via ${provider.fn} for ${symbol}${targetExpiration ? ` (target expiry ${targetExpiration})` : ''}...`);
-
-      await avTakeToken();
-      const response = await fetch(url);
-      const payload = await response.json();
-
-      console.log(`📊 ${provider.fn} response status: ${response.status}`);
-      console.log(`📊 ${provider.fn} response keys: ${Object.keys(payload || {}).join(', ')}`);
-
-      if (payload?.['Error Message']) {
-        console.error(`❌ ${provider.fn} Error Message:`, payload['Error Message']);
-        continue;
-      }
-
-      if (payload?.['Note']) {
-        console.warn(`⚠️ ${provider.fn} Note (likely rate limit):`, payload['Note']);
-        continue;
-      }
-
-      if (payload?.['Information']) {
-        console.warn(`⚠️ ${provider.fn} Information (tier/entitlement):`, payload['Information']);
-        continue;
-      }
-
-      const providerOptions = payload?.['data'] || [];
-      if (!Array.isArray(providerOptions) || providerOptions.length === 0) {
-        console.warn(`⚠️ ${provider.fn} returned no options data`);
-        continue;
-      }
-
-      // Non-entitled premium endpoints return an artificial sample chain (symbol "XXYYZZ"); never treat it as data.
-      const want = symbol.toUpperCase();
-      if (!providerOptions.some((c: any) => String(c?.symbol ?? '').toUpperCase() === want)) {
-        console.warn(`⚠️ ${provider.fn} returned contracts for a different/sample symbol — skipping`);
-        continue;
-      }
-
-      data = payload;
-      options = providerOptions;
-      selectedProvider = { fn: provider.fn, freshness: provider.freshness };
-      break;
-    }
-
-    if (!selectedProvider || !data || options.length === 0) {
+    if (!shared) {
       console.warn('⚠️ No options data returned from REALTIME_OPTIONS_FMV/HISTORICAL_OPTIONS providers');
       return null;
     }
+    const options: AVOptionContract[] = shared.rows;
+    const data = shared.payloadMeta;
+    const selectedProvider: { fn: AVOptionsFunction; freshness: 'REALTIME' | 'EOD' } = {
+      fn: shared.provider,
+      freshness: shared.provider === 'HISTORICAL_OPTIONS' ? 'EOD' : 'REALTIME',
+    };
     
     // Log first contract to debug field names
     if (options.length > 0) {
@@ -1493,6 +1475,9 @@ function analyzeOpenInterest(
       reliable: isReliableMaxPain,
     },
     highOIStrikes: topStrikes,
+    gexStrikes: contractsWithGreeks
+      .filter((c) => c.openInterest > 0)
+      .map((c) => ({ strike: c.strike, openInterest: c.openInterest, type: c.type, delta: c.delta, gamma: c.gamma })),
     expirationDate,
   };
 }
@@ -1538,7 +1523,7 @@ function analyzeIV(
 // PRO TRADER: UNUSUAL OPTIONS ACTIVITY DETECTION
 // ═══════════════════════════════════════════════════════════════════════════
 
-function detectUnusualActivity(
+export function detectUnusualActivity(
   calls: AVOptionContract[],
   puts: AVOptionContract[],
   currentPrice: number
@@ -1644,16 +1629,18 @@ function detectUnusualActivity(
     }
   }
   
-  let smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  // Descriptive tilt only: volume on calls vs puts says nothing about who bought or sold them.
+  let volumeTilt: 'calls' | 'puts' | 'mixed' | 'none';
   if (bullishWeight > bearishWeight * 1.5) {
-    smartMoneyDirection = 'bullish';
+    volumeTilt = 'calls';
   } else if (bearishWeight > bullishWeight * 1.5) {
-    smartMoneyDirection = 'bearish';
+    volumeTilt = 'puts';
   } else if (bullishWeight > 0 && bearishWeight > 0) {
-    smartMoneyDirection = 'mixed';
+    volumeTilt = 'mixed';
   } else {
-    smartMoneyDirection = 'neutral';
+    volumeTilt = 'none';
   }
+  const smartMoneyDirection = 'neutral' as const;
   
   // Alert level
   let alertLevel: 'high' | 'moderate' | 'low' | 'none';
@@ -1669,12 +1656,13 @@ function detectUnusualActivity(
     alertLevel = 'none';
   }
   
-  console.log(`📊 Unusual Activity: ${unusualStrikes.length} strikes flagged, Alert=${alertLevel}, Smart Money=${smartMoneyDirection}`);
+  console.log(`📊 High volume vs OI: ${unusualStrikes.length} strikes flagged, Alert=${alertLevel}, Tilt=${volumeTilt}`);
   
   return {
     hasUnusualActivity: unusualStrikes.length > 0,
     unusualStrikes: unusualStrikes.slice(0, 5),  // Top 5 most unusual
     smartMoneyDirection,
+    volumeTilt,
     alertLevel,
     callPremiumTotal: Math.round(callPremiumTotal),
     putPremiumTotal: Math.round(putPremiumTotal),
@@ -1714,6 +1702,7 @@ function calculateExpectedMove(
     monthlyPercent,
     selectedExpiry: selectedMove,
     selectedExpiryPercent: selectedPercent,
+    selectedExpiryDTE,
     calculation: `Price × IV × √(DTE/365) = $${currentPrice.toFixed(2)} × ${(avgIV * 100).toFixed(0)}% × √(${selectedExpiryDTE}/365)`,
   };
 }
@@ -1880,7 +1869,7 @@ function calculateTradeLevels(
  * 
  * Confidence = weighted agreement of directional signals with final direction
  */
-function calculateCompositeScore(
+export function calculateCompositeScore(
   confluenceResult: HierarchicalScanResult,
   oiAnalysis: OISummary | null,
   unusualActivity: UnusualActivity | null,
@@ -1997,77 +1986,20 @@ function calculateCompositeScore(
   directionTotalWeight += patternWeight;
   
   // Helper: Smooth score mapping with clamping
-  // 1. UNUSUAL ACTIVITY (12% of direction) - Flow confirmation, not primary trigger
-  const unusualWeight = 0.12;
-  let unusualScore = 0;
-  let unusualDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  
-  if (unusualActivity && unusualActivity.hasUnusualActivity) {
-    const callPremium = unusualActivity.callPremiumTotal || 0;
-    const putPremium = unusualActivity.putPremiumTotal || 0;
-    const totalPremium = callPremium + putPremium;
-    
-    // Guardrail: Require minimum premium to trust the signal
-    const MIN_PREMIUM_THRESHOLD = 50000; // $50k minimum to avoid noise
-    
-    if (totalPremium >= MIN_PREMIUM_THRESHOLD) {
-      // Calculate net flow ratio: (calls - puts) / total
-      // Range: -1 (all puts) to +1 (all calls)
-      const netFlowRatio = totalPremium > 0 ? (callPremium - putPremium) / totalPremium : 0;
-      
-      // Winsorize: Cap extreme ratios to prevent single whale from dominating
-      const cappedRatio = Math.max(-0.8, Math.min(0.8, netFlowRatio));
-      
-      // Map to score: -80 to +80 (capped, not full ±100)
-      unusualScore = cappedRatio * 100;
-      
-      // Calculate raw premium ratio for dead zone check
-      const premiumRatio = putPremium > 0 ? callPremium / putPremium : (callPremium > 0 ? 10 : 1);
-      const isInDeadZone = (premiumRatio >= 0.9 && premiumRatio <= 1.1) || Math.abs(unusualScore) < 15;
-      
-      if (isInDeadZone) {
-        // PRECISE DEAD ZONE: balanced flow or tiny imbalance = neutral
-        unusualDirection = 'neutral';
-        unusualScore = 0;
-      } else if (cappedRatio > 0.15) {
-        unusualDirection = 'bullish';
-      } else if (cappedRatio < -0.15) {
-        unusualDirection = 'bearish';
-      } else {
-        // Fallback for edge cases
-        unusualDirection = 'neutral';
-        unusualScore = 0;
-      }
-      
-      components.push({
-        name: 'Unusual Activity',
-        kind: 'directional',
-        direction: unusualDirection,
-        weight: unusualWeight,
-        score: unusualScore,
-        reason: `Net flow: $${((callPremium - putPremium) / 1000).toFixed(0)}k (${(netFlowRatio * 100).toFixed(0)}% call bias)`
-      });
-      
-      directionWeightedScore += unusualScore * unusualWeight;
-      directionTotalWeight += unusualWeight;
-    } else {
-      components.push({
-        name: 'Unusual Activity',
-        kind: 'directional',
-        direction: 'neutral',
-        weight: unusualWeight,
-        score: 0,
-        reason: `Insufficient volume ($${(totalPremium / 1000).toFixed(0)}k < $50k threshold)`
-      });
-    }
-  } else {
+  // 1. HIGH VOLUME VS OPEN INTEREST — info only, NOT a direction vote. The chain has no buy/sell side
+  // (calls can be sold, puts bought as hedges), so it adds no points to bullish or bearish.
+  {
+    const callPremium = unusualActivity?.callPremiumTotal || 0;
+    const putPremium = unusualActivity?.putPremiumTotal || 0;
     components.push({
-      name: 'Unusual Activity',
-      kind: 'directional',
+      name: 'High volume vs open interest',
+      kind: 'meta',
       direction: 'neutral',
-      weight: unusualWeight,
+      weight: 0,
       score: 0,
-      reason: 'No unusual activity detected'
+      reason: unusualActivity?.hasUnusualActivity
+        ? `Volume/OI spike, ${unusualActivity.volumeTilt === 'calls' ? 'mostly calls' : unusualActivity.volumeTilt === 'puts' ? 'mostly puts' : 'calls and puts'} (est. premium calls $${(callPremium / 1000).toFixed(0)}k / puts $${(putPremium / 1000).toFixed(0)}k) — info only, no buy/sell side`
+        : 'No high volume vs open interest detected',
     });
   }
 
@@ -2218,8 +2150,10 @@ function calculateCompositeScore(
   const ivQualityWeight = 0.35;
   let ivScore = 0;
   
-  if (ivAnalysis) {
-    const ivRankValue = ivAnalysis.ivRankHeuristic ?? ivAnalysis.ivRank ?? 50;
+  // Unknown IV rank (no IV history) is neutral: the component is left out entirely, no points either way.
+  const qualityIvRank = measuredIvRank(ivAnalysis);
+  if (ivAnalysis && qualityIvRank != null) {
+    const ivRankValue = qualityIvRank;
 
     const iv = clamp(ivRankValue, 0, 100);
     const dist = Math.abs(iv - 50) / 50;
@@ -2235,7 +2169,7 @@ function calculateCompositeScore(
       direction: 'neutral', // IV is never directional
       weight: ivQualityWeight,
       score: ivScore,
-      reason: `Historical IV rank unavailable; neutral model input: ${ivRankValue.toFixed(0)}% → ${ivStrategy}`
+      reason: `IV rank ${ivRankValue.toFixed(0)}% → ${ivStrategy}`
     });
     
     qualityScore += ivScore * ivQualityWeight;
@@ -2356,7 +2290,8 @@ function calculateCompositeScore(
     ? clamp(upstreamStructureScore, 0, 100)
     : clamp(Math.abs(structureScore), 0, 100);
   const timeEdge = clamp(timingActivation, 0, 100);
-  const flowEdge = clamp((Math.abs(unusualScore) + Math.abs(oiScore)) / 2, 0, 100);
+  // High volume vs OI is info only (no buy/sell side) and contributes 0 to the flow edge.
+  const flowEdge = clamp(Math.abs(oiScore) / 2, 0, 100);
   const edgeBlendConfidence = (timeEdge * 0.40) + (structureEdge * 0.35) + (flowEdge * 0.25);
   confidence = clamp(confidence * 0.60 + edgeBlendConfidence * 0.40, 0, 100);
   
@@ -2388,8 +2323,8 @@ function calculateCompositeScore(
   }
   
   // IV warning
-  const ivRankValue = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
-  if (ivAnalysis && ivRankValue > 70 && finalDirection !== 'neutral') {
+  const ivRankValue = measuredIvRank(ivAnalysis);
+  if (ivRankValue != null && ivRankValue > 70 && finalDirection !== 'neutral') {
     conflicts.push(`⚠️ HIGH IV (${ivRankValue.toFixed(0)}%): Consider spreads instead of naked ${finalDirection === 'bullish' ? 'calls' : 'puts'}`);
   }
   
@@ -2541,11 +2476,12 @@ function computeInstitutionalIntent(args: {
 
   const ces = clampIntentScore(confluenceScore * 0.75 + Math.min(25, clusteredCount * 6));
 
-  const ivRank = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+  const ivRank = measuredIvRank(ivAnalysis);
   const pcr = openInterestAnalysis?.pcRatio ?? 1;
   const unusualWeight = unusualActivity?.alertLevel === 'high' ? 30 : unusualActivity?.alertLevel === 'moderate' ? 18 : 8;
   const pcrSignal = Math.min(30, Math.abs(pcr - 0.85) * 55);
-  const ivSignal = ivRank >= 70 || ivRank <= 30 ? 22 : 10;
+  // Unknown IV rank → baseline only (no extreme-IV bonus).
+  const ivSignal = ivRank != null && (ivRank >= 70 || ivRank <= 30) ? 22 : 10;
   const ops = clampIntentScore(unusualWeight + pcrSignal + ivSignal + (unusualActivity?.hasUnusualActivity ? 12 : 0));
 
   const nearestOiWall = openInterestAnalysis?.highOIStrikes?.slice(0, 1)?.[0] ?? null;
@@ -2742,7 +2678,7 @@ function calculateAIMarketState(
   const regimeCharacteristics: string[] = [];
   
   const dirStrength = Math.abs(compositeScore.directionScore);
-  const ivRank = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+  const ivRank = measuredIvRank(ivAnalysis);
   const signalAlignment = compositeScore.confidence;
   
   // TREND: Strong directional signals + aligned
@@ -2759,7 +2695,7 @@ function calculateAIMarketState(
     }
   }
   // EXPANSION: High IV + mixed signals = volatility breakout
-  else if (ivRank > 70 && signalAlignment < 50) {
+  else if (ivRank != null && ivRank > 70 && signalAlignment < 50) {
     regime = 'EXPANSION';
     regimeConfidence = Math.min(90, 40 + ivRank * 0.4);
     regimeReason = 'High volatility with uncertain direction = potential breakout';
@@ -2782,7 +2718,7 @@ function calculateAIMarketState(
     regimeReason = 'No strong directional edge detected';
     regimeCharacteristics.push('Low directional momentum');
     regimeCharacteristics.push('Price likely range-bound');
-    if (ivRank > 50) {
+    if (ivRank != null && ivRank > 50) {
       regimeCharacteristics.push('Elevated IV favors premium selling');
     }
   }
@@ -2810,23 +2746,26 @@ function calculateAIMarketState(
   let volEdgeSignal: 'SELL_VOL' | 'BUY_VOL' | 'NEUTRAL' = 'NEUTRAL';
   const volEdgeFactors: string[] = [];
   
-  if (ivAnalysis) {
+  if (ivAnalysis && ivRank == null) {
+    // No IV history → no volatility edge can be measured (not scored either way).
+    volEdgeFactors.push('IV rank unavailable (no IV history) — volatility edge not scored');
+  } else if (ivAnalysis && ivRank != null) {
     // High IV rank = strong sell vol edge
     // Low IV rank = strong buy vol edge
     if (ivRank >= 70) {
       volEdgeScore = Math.min(100, 50 + (ivRank - 70) * 1.5);
       volEdgeSignal = 'SELL_VOL';
-      volEdgeFactors.push(`Historical IV rank unavailable; neutral model input: ${ivRank}% (elevated)`);
+      volEdgeFactors.push(`IV rank ${ivRank}% (elevated)`);
       volEdgeFactors.push('Premium overpriced vs realized');
     } else if (ivRank <= 30) {
       volEdgeScore = Math.min(100, 50 + (30 - ivRank) * 1.5);
       volEdgeSignal = 'BUY_VOL';
-      volEdgeFactors.push(`Historical IV rank unavailable; neutral model input: ${ivRank}% (depressed)`);
+      volEdgeFactors.push(`IV rank ${ivRank}% (depressed)`);
       volEdgeFactors.push('Options cheap relative to history');
     } else {
       volEdgeScore = 30;
       volEdgeSignal = 'NEUTRAL';
-      volEdgeFactors.push(`Historical IV rank unavailable; neutral model input: ${ivRank}% (neutral zone)`);
+      volEdgeFactors.push(`IV rank ${ivRank}% (neutral zone)`);
     }
   }
   
@@ -3069,18 +3008,19 @@ function buildProfessionalTradeStack(
       ? 'Timing building'
       : 'No timing activation';
 
-  const unusualComponent = compositeScore.components.find(c => c.name === 'Unusual Activity');
   const oiComponent = compositeScore.components.find(c => c.name === 'O/I Sentiment');
-  const ivRank = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
-  const ivSuitability = ivRank >= 70 || ivRank <= 30 ? 80 : 55;
+  const ivRank = measuredIvRank(ivAnalysis);
+  // Unknown IV rank → the non-extreme baseline (no bonus).
+  const ivSuitability = ivRank != null && (ivRank >= 70 || ivRank <= 30) ? 80 : 55;
+  const ivText = ivRank == null ? 'IV rank n/a' : `IV ${ivRank.toFixed(0)}`;
   const optionsScore = clamp(
-    (Math.abs(unusualComponent?.score ?? 0) * 0.4) +
+    // High volume vs OI no longer contributes (no buy/sell side); only OI + IV suitability remain.
     (Math.abs(oiComponent?.score ?? 0) * 0.3) +
     (ivSuitability * 0.3)
   );
   const optionsState = unusualActivity?.hasUnusualActivity
-    ? `Flow ${unusualActivity.smartMoneyDirection.toUpperCase()} + IV ${ivRank.toFixed(0)}`
-    : `OI ${openInterestAnalysis?.sentiment ?? 'neutral'} + IV ${ivRank.toFixed(0)}`;
+    ? `High vol/OI (${unusualActivity.volumeTilt ?? 'n/a'}) + ${ivText}`
+    : `OI ${openInterestAnalysis?.sentiment ?? 'neutral'} + ${ivText}`;
 
   const rr = tradeLevels?.riskRewardRatio ?? 0;
   const rrScore = rr <= 0 ? 0 : rr <= 1 ? 35 : rr <= 2 ? 60 : rr <= 3 ? 80 : 92;
@@ -3274,8 +3214,6 @@ function buildTradeSnapshot(args: {
     why.push(`TIME: weak clustering (${decompCount} TF)`);
   }
 
-  const flowComp = composite.components.find(component => component.name === 'Unusual Activity' && component.direction !== 'neutral');
-  if (flowComp) why.push(`FLOW: ${flowComp.reason}`);
 
   const oiComp = composite.components.find(component => component.name === 'O/I Sentiment' && component.direction !== 'neutral');
   if (oiComp) why.push(`POSITIONING: ${oiComp.reason}`);
@@ -3346,8 +3284,10 @@ function recommendStrategy(
   availableStrikes: number[] = []
 ): StrategyRecommendation {
   const direction = compositeScore.finalDirection;
-  const ivPercentile = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+  const ivPercentile = measuredIvRank(ivAnalysis);
   const confidence = compositeScore.confidence;
+  // Unknown IV rank → no high/low-IV playbook; the balanced (medium) branch is used and labelled honestly.
+  const midIvLabel = ivPercentile == null ? 'IV rank n/a' : `Medium IV (${ivPercentile.toFixed(0)}%)`;
   
   const strike = atmStrike || Math.round(currentPrice);
   const downLeg = getSpreadLeg(strike, 'down', availableStrikes);
@@ -3356,7 +3296,7 @@ function recommendStrategy(
   const upWidth = Math.max(0.01, Math.abs(upLeg - strike));
 
   // High IV environment (>70%) - SELL premium
-  if (ivPercentile > 70) {
+  if (ivPercentile != null && ivPercentile > 70) {
     if (direction === 'bullish') {
       return {
         strategy: 'Bull Put Spread',
@@ -3391,7 +3331,7 @@ function recommendStrategy(
   }
   
   // Low IV environment (<30%) - BUY premium
-  if (ivPercentile < 30) {
+  if (ivPercentile != null && ivPercentile < 30) {
     if (direction === 'bullish') {
       if (confidence > 70) {
         return {
@@ -3455,7 +3395,7 @@ function recommendStrategy(
       return {
         strategy: 'Call Debit Spread',
         strategyType: 'buy_premium',
-        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Bullish → Balanced risk/reward with spread`,
+        reason: `${midIvLabel} + Bullish → Balanced risk/reward with spread`,
         strikes: { long: strike, short: upLeg },
         riskProfile: 'defined',
         maxRisk: `Net debit paid`,
@@ -3465,7 +3405,7 @@ function recommendStrategy(
       return {
         strategy: 'Bull Put Spread',
         strategyType: 'sell_premium',
-        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Weak Bullish → Collect some premium while bullish`,
+        reason: `${midIvLabel} + Weak Bullish → Collect some premium while bullish`,
         strikes: { short: strike, long: downLeg },
         riskProfile: 'defined',
         maxRisk: `$${(downWidth * 100).toFixed(0)} per contract (spread width)`,
@@ -3477,7 +3417,7 @@ function recommendStrategy(
       return {
         strategy: 'Put Debit Spread',
         strategyType: 'buy_premium',
-        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Bearish → Balanced risk/reward with spread`,
+        reason: `${midIvLabel} + Bearish → Balanced risk/reward with spread`,
         strikes: { long: strike, short: downLeg },
         riskProfile: 'defined',
         maxRisk: `Net debit paid`,
@@ -3487,7 +3427,7 @@ function recommendStrategy(
       return {
         strategy: 'Bear Call Spread',
         strategyType: 'sell_premium',
-        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Weak Bearish → Collect some premium while bearish`,
+        reason: `${midIvLabel} + Weak Bearish → Collect some premium while bearish`,
         strikes: { short: strike, long: upLeg },
         riskProfile: 'defined',
         maxRisk: `$${(upWidth * 100).toFixed(0)} per contract (spread width)`,
@@ -4410,11 +4350,11 @@ export class OptionsConfluenceAnalyzer {
     // if (hasMacroEvent(7)) disclaimerFlags.push('⚠️ FOMC/CPI within 7 days');
     
     // Add analysis notes based on market conditions
-    const ivRankHeuristic = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
-    if (ivAnalysis && ivRankHeuristic > 70) {
+    const ivRankHeuristic = measuredIvRank(ivAnalysis);
+    if (ivRankHeuristic != null && ivRankHeuristic > 70) {
       executionNotes.push('High IV environment - credit strategies historically favoured');
     }
-    if (ivAnalysis && ivRankHeuristic < 30) {
+    if (ivRankHeuristic != null && ivRankHeuristic < 30) {
       executionNotes.push('Low IV environment - debit strategies historically favourable');
     }
     if (openInterestAnalysis && openInterestAnalysis.pcRatio > 1.5) {

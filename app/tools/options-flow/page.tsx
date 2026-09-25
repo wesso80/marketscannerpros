@@ -31,7 +31,7 @@ interface FlowPatternResult {
 
 interface IVSkewResult {
   skew: number;
-  skewSignal: 'bearish_hedging' | 'bullish_demand' | 'neutral';
+  skewSignal: 'normal_put_skew' | 'steep_put_skew' | 'flat' | 'call_skew';
   termStructure: string;
   termReason: string;
   atmIV: number;
@@ -117,9 +117,11 @@ function tierBadge(tier: string): { bg: string; color: string } {
 }
 
 function skewLabel(signal: string): { label: string; color: string } {
-  if (signal === 'bearish_hedging') return { label: 'Bearish Hedging', color: 'var(--msp-bear)' };
-  if (signal === 'bullish_demand') return { label: 'Bullish Demand', color: 'var(--msp-bull)' };
-  return { label: 'Neutral', color: 'var(--msp-text-muted)' };
+  // Skew is descriptive, not a direction call: equities normally price puts above calls.
+  if (signal === 'steep_put_skew') return { label: 'Steep Put Skew (heavy hedging)', color: 'var(--msp-warn)' };
+  if (signal === 'normal_put_skew') return { label: 'Normal Put Skew', color: 'var(--msp-text-muted)' };
+  if (signal === 'call_skew') return { label: 'Call Skew (upside demand)', color: 'var(--msp-info)' };
+  return { label: 'Flat Skew', color: 'var(--msp-text-muted)' };
 }
 
 /* ── Page ── */
