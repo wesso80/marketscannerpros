@@ -2,43 +2,66 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import type { Regime } from '@/lib/risk-governor-hard';
+import { classifyMarketRegime, type MarketRegimeResult } from '@/lib/marketRegime';
+import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/regime
- * 
- * Unified regime endpoint — single source of truth for the entire platform.
- * Aggregates all regime signals into one canonical response that all tools can consume.
- * 
- * Returns:
- * - regime: canonical Regime type (TREND_UP, TREND_DOWN, RANGE_NEUTRAL, VOL_EXPANSION, VOL_CONTRACTION, RISK_OFF_STRESS)
- * - riskLevel: 'low' | 'moderate' | 'elevated' | 'extreme'
- * - permission: 'YES' | 'CONDITIONAL' | 'NO'
- * - sizing: 'full' | 'reduced' | 'probe' | 'none'
- * - signals: array of individual signal sources
- * - updatedAt: ISO timestamp
+ *
+ * Market regime for the whole platform.
+ *
+ * Basis, in order:
+ *  1. market: VIX, SPY/QQQ trend and credit spreads already stored by the app
+ *     (lib/marketRegime.ts). When available this decides the regime; account
+ *     signals are still listed but marked `counted: false`.
+ *  2. workspace: only when market data is unavailable, the account's own signals
+ *     (operator context, risk governor snapshot, journal drawdown) are combined.
+ *  3. neither: `available: false` with `regime: null` and a reason. There is no
+ *     default regime.
+ *
+ * Returns (available): regime, riskLevel, permission (informational only),
+ * basis, signals, asOf (time of the underlying data), updatedAt.
+ * The error path returns HTTP 503 with `available: false`.
  */
 
 type RiskLevel = 'low' | 'moderate' | 'elevated' | 'extreme';
 type Permission = 'YES' | 'CONDITIONAL' | 'NO';
-type Sizing = 'full' | 'reduced' | 'probe' | 'none';
 
 interface RegimeSignal {
   source: string;
   regime: string;
   weight: number;
   stale: boolean;
+  kind: 'market' | 'workspace';
+  /** False when the signal is shown for context but did not decide the regime. */
+  counted: boolean;
+  asOf: string | null;
+  detail?: string;
 }
 
-interface UnifiedRegimeResponse {
-  regime: Regime;
-  riskLevel: RiskLevel;
-  permission: Permission;
-  sizing: Sizing;
-  signals: RegimeSignal[];
-  updatedAt: string;
-}
+type UnifiedRegimeResponse =
+  | {
+    available: true;
+    basis: 'market' | 'workspace';
+    regime: Regime;
+    riskLevel: RiskLevel;
+    permission: Permission;
+    signals: RegimeSignal[];
+    asOf: string | null;
+    updatedAt: string;
+  }
+  | {
+    available: false;
+    regime: null;
+    riskLevel: null;
+    permission: null;
+    signals: RegimeSignal[];
+    asOf: null;
+    reason: string;
+    updatedAt: string;
+  };
 
 function mapToCanonicalRegime(riskEnv: string): Regime {
   const n = (riskEnv || '').toLowerCase();
@@ -71,13 +94,6 @@ function derivePermission(_regime: Regime, riskLevel: RiskLevel): Permission {
   return 'YES';
 }
 
-function deriveSizing(permission: Permission, riskLevel: RiskLevel): Sizing {
-  if (permission === 'NO') return 'none';
-  if (riskLevel === 'elevated') return 'probe';
-  if (permission === 'CONDITIONAL') return 'reduced';
-  return 'full';
-}
-
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
@@ -85,9 +101,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const signals: RegimeSignal[] = [];
+    const workspaceSignals: RegimeSignal[] = [];
     const now = Date.now();
     const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
+    const iso = (value: unknown) => {
+      const d = value ? new Date(value as string) : null;
+      return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
+    };
+
+    // Market data (shared, cached 15 minutes; reads only stored series).
+    let market: MarketRegimeResult;
+    try {
+      market = classifyMarketRegime(await loadRegimeOverlayInputs(), now);
+    } catch (err) {
+      console.warn('[regime] market inputs unavailable:', err);
+      market = { available: false, reason: 'Market data unavailable: stored VIX/SPY series could not be read.' };
+    }
 
     // Signal 1: Operator context state (from DB — written by tools like Macro, Commodities, etc.)
     try {
@@ -102,11 +131,14 @@ export async function GET(req: NextRequest) {
         const row = rows[0];
         const age = now - new Date(row.updated_at).getTime();
         const regimeStr = row.risk_environment || row.context_state?.regime || 'neutral';
-        signals.push({
+        workspaceSignals.push({
           source: 'operator_context',
           regime: regimeStr,
           weight: 3,
           stale: age > STALE_THRESHOLD_MS,
+          kind: 'workspace',
+          counted: true,
+          asOf: iso(row.updated_at),
         });
       }
     } catch { /* context_state table may not exist */ }
@@ -123,11 +155,14 @@ export async function GET(req: NextRequest) {
       if (riskRows.length > 0) {
         const row = riskRows[0];
         const age = now - new Date(row.updated_at).getTime();
-        signals.push({
+        workspaceSignals.push({
           source: 'risk_governor',
           regime: row.risk_mode || 'neutral',
           weight: 2,
           stale: age > STALE_THRESHOLD_MS,
+          kind: 'workspace',
+          counted: true,
+          asOf: iso(row.updated_at),
         });
       }
     } catch { /* table may not exist */ }
@@ -144,58 +179,97 @@ export async function GET(req: NextRequest) {
         const losses = journalRows.filter((r: any) => r.outcome === 'loss' || (r.r_multiple && r.r_multiple < 0));
         const consecutiveLosses = journalRows.findIndex((r: any) => r.outcome !== 'loss' && !(r.r_multiple && r.r_multiple < 0));
         if (consecutiveLosses >= 3 || losses.length > journalRows.length * 0.7) {
-          signals.push({
+          workspaceSignals.push({
             source: 'journal_drawdown',
             regime: 'risk_off',
             weight: 2,
             stale: false,
+            kind: 'workspace',
+            counted: true,
+            asOf: null,
           });
         }
       }
     } catch { /* journal may not exist */ }
 
-    // Compute weighted regime consensus
-    let canonicalRegime: Regime = 'RANGE_NEUTRAL';
-    if (signals.length > 0) {
+    const headers = { 'Cache-Control': 'private, max-age=15, stale-while-revalidate=30' };
+    const updatedAt = new Date().toISOString();
+
+    if (market.available) {
+      // Market data decides the market regime; account signals are context only.
+      const marketSignal: RegimeSignal = {
+        source: 'market_data',
+        regime: market.regime,
+        weight: 1,
+        stale: market.stale,
+        kind: 'market',
+        counted: true,
+        asOf: market.asOf,
+        detail: market.reasons.join('; '),
+      };
+      const signals = [marketSignal, ...workspaceSignals.map((sig) => ({ ...sig, counted: false }))];
+      const riskLevel = deriveRiskLevel(market.regime, [marketSignal]);
+      const response: UnifiedRegimeResponse = {
+        available: true,
+        basis: 'market',
+        regime: market.regime,
+        riskLevel,
+        permission: derivePermission(market.regime, riskLevel),
+        signals,
+        asOf: market.asOf,
+        updatedAt,
+      };
+      return NextResponse.json(response, { headers });
+    }
+
+    if (workspaceSignals.length > 0) {
+      // No market data: fall back to this account's own signals (weighted consensus).
       const regimeCounts: Record<Regime, number> = {
         'TREND_UP': 0, 'TREND_DOWN': 0, 'RANGE_NEUTRAL': 0,
         'VOL_EXPANSION': 0, 'VOL_CONTRACTION': 0, 'RISK_OFF_STRESS': 0,
       };
-      for (const sig of signals) {
-        const mapped = mapToCanonicalRegime(sig.regime);
-        regimeCounts[mapped] += sig.weight;
+      for (const sig of workspaceSignals) {
+        regimeCounts[mapToCanonicalRegime(sig.regime)] += sig.weight;
       }
-      const maxEntry = Object.entries(regimeCounts).reduce((a, b) => b[1] > a[1] ? b : a);
-      canonicalRegime = maxEntry[0] as Regime;
+      const canonicalRegime = Object.entries(regimeCounts).reduce((a, b) => b[1] > a[1] ? b : a)[0] as Regime;
+      const riskLevel = deriveRiskLevel(canonicalRegime, workspaceSignals);
+      const dated = workspaceSignals.map((sig) => sig.asOf).filter((v): v is string => Boolean(v)).sort();
+      const response: UnifiedRegimeResponse = {
+        available: true,
+        basis: 'workspace',
+        regime: canonicalRegime,
+        riskLevel,
+        permission: derivePermission(canonicalRegime, riskLevel),
+        signals: workspaceSignals,
+        asOf: dated.length ? dated[dated.length - 1] : null,
+        updatedAt,
+      };
+      return NextResponse.json(response, { headers });
     }
 
-    const riskLevel = deriveRiskLevel(canonicalRegime, signals);
-    const permission = derivePermission(canonicalRegime, riskLevel);
-    const sizing = deriveSizing(permission, riskLevel);
-
     const response: UnifiedRegimeResponse = {
-      regime: canonicalRegime,
-      riskLevel,
-      permission,
-      sizing,
-      signals,
-      updatedAt: new Date().toISOString(),
+      available: false,
+      regime: null,
+      riskLevel: null,
+      permission: null,
+      signals: [],
+      asOf: null,
+      reason: `${market.reason} No account signals are available either.`,
+      updatedAt,
     };
-
-    return NextResponse.json(response, {
-      headers: { 'Cache-Control': 'private, max-age=15, stale-while-revalidate=30' },
-    });
+    return NextResponse.json(response, { headers });
   } catch (error) {
     console.error('Unified regime error:', error);
-    // Return safe defaults on error
     return NextResponse.json({
-      regime: 'RANGE_NEUTRAL' as Regime,
-      riskLevel: 'moderate' as RiskLevel,
-      permission: 'CONDITIONAL' as Permission,
-      sizing: 'reduced' as Sizing,
+      available: false,
+      regime: null,
+      riskLevel: null,
+      permission: null,
       signals: [],
+      asOf: null,
+      reason: 'Regime could not be computed.',
       updatedAt: new Date().toISOString(),
-      error: 'Failed to compute regime — using safe defaults',
-    });
+      error: 'Failed to compute regime',
+    }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 }

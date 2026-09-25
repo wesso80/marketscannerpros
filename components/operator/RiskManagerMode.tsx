@@ -152,7 +152,7 @@ export default function RiskManagerMode({ onExit }: { onExit?: () => void } = {}
                     {regime.regime}
                   </div>
                   <div className="text-xs text-slate-400">
-                    Risk: {regime.riskLevel} • {regime.sizing}
+                    Risk: {regime.riskLevel}
                   </div>
                 </div>
                 <div className="text-xs text-slate-400">

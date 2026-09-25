@@ -1,0 +1,99 @@
+/**
+ * Market regime from market data the app already stores (no new provider or key):
+ *   - VIX level and 5-session change (FRED VIXCLS in macro_series)
+ *   - SPY and QQQ daily close vs their 50- and 200-day averages (ohlcv_bars)
+ *   - high-yield credit spread change (FRED BAMLH0A0HYM2), when present
+ * These are the same inputs the scanner's regime overlay uses
+ * (lib/scoring/canonical/regimeOverlayData.ts).
+ *
+ * VIX and the SPY trend are both required. If either is missing, or the data is
+ * too old, there is no market regime: callers must say "unavailable" rather than
+ * fall back to a default.
+ */
+import type { Regime } from '@/lib/risk-governor-hard';
+import type { IndexTrend, RegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlay';
+
+export const MARKET_REGIME_POLICY = {
+  /** VIX at or above this is a stress reading on its own. */
+  vixStress: 30,
+  /** VIX at or above this is elevated volatility (same threshold as the scanner overlay). */
+  vixElevated: 25,
+  /** A 5-session VIX rise of this many percent is a volatility shock. */
+  vixShockPct: 20,
+  /** VIX below this, with no clear index trend, is volatility contraction. */
+  vixLow: 13,
+  /** HY OAS widening (percentage points over 20 observations) that counts as credit stress. */
+  hyOasStressPp: 0.5,
+  /** Inputs older than this are flagged stale (covers weekends and a holiday; FRED lags a day). */
+  staleAfterDays: 4,
+  /** Inputs older than this are not used at all. */
+  unavailableAfterDays: 14,
+} as const;
+
+export type MarketRegimeResult =
+  | { available: true; regime: Regime; asOf: string; stale: boolean; reasons: string[] }
+  | { available: false; reason: string };
+
+const DAY_MS = 86_400_000;
+const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+function trendSide(t: IndexTrend | null | undefined): 'above' | 'below' | 'mixed' | null {
+  if (!t || !fin(t.close) || !fin(t.sma50) || !fin(t.sma200)) return null;
+  if (t.close > t.sma50 && t.close > t.sma200) return 'above';
+  if (t.close < t.sma50 && t.close < t.sma200) return 'below';
+  return 'mixed';
+}
+
+function toMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value.length === 10 ? `${value}T00:00:00Z` : value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+const describeTrend = (key: string, side: 'above' | 'below' | 'mixed') =>
+  side === 'above' ? `${key} above its 50- and 200-day averages`
+    : side === 'below' ? `${key} below its 50- and 200-day averages`
+      : `${key} between its 50- and 200-day averages`;
+
+export function classifyMarketRegime(inputs: RegimeOverlayInputs | null | undefined, now = Date.now()): MarketRegimeResult {
+  const P = MARKET_REGIME_POLICY;
+  const vix = inputs?.vix;
+  const spySide = trendSide(inputs?.spy);
+  const missing = [!vix || !fin(vix.level) ? 'VIX' : null, spySide === null ? 'SPY trend' : null].filter(Boolean);
+  if (missing.length) return { available: false, reason: `Market data unavailable: ${missing.join(' and ')} missing.` };
+
+  const vixAt = toMs(inputs?.asOf ?? null);
+  const spyAt = toMs(inputs?.spy?.asOf ?? null);
+  if (vixAt == null || spyAt == null) return { available: false, reason: 'Market data unavailable: observation dates are missing.' };
+  const asOfMs = Math.min(vixAt, spyAt);
+  const ageDays = (now - asOfMs) / DAY_MS;
+  if (ageDays > P.unavailableAfterDays) {
+    return { available: false, reason: `Market data unavailable: latest VIX/SPY observation is ${Math.floor(ageDays)} days old.` };
+  }
+
+  const level = vix!.level;
+  const shock = fin(vix!.change5dPct) ? vix!.change5dPct : null;
+  const hyWidening = fin(inputs?.hyOas?.change20dPp) ? inputs!.hyOas!.change20dPp! : null;
+  const qqqSide = trendSide(inputs?.qqq);
+
+  const reasons = [`VIX ${level.toFixed(1)}${shock != null ? ` (${shock >= 0 ? '+' : ''}${shock.toFixed(0)}% over 5 sessions)` : ''}`, describeTrend('SPY', spySide!)];
+  if (qqqSide) reasons.push(describeTrend('QQQ', qqqSide));
+  if (hyWidening != null) reasons.push(`HY credit spread ${hyWidening >= 0 ? '+' : ''}${hyWidening.toFixed(2)}pp over 20 observations`);
+
+  let regime: Regime;
+  if (level >= P.vixStress || (level >= P.vixElevated && shock != null && shock >= P.vixShockPct) || (hyWidening != null && hyWidening >= P.hyOasStressPp && spySide === 'below')) {
+    regime = 'RISK_OFF_STRESS';
+  } else if (level >= P.vixElevated || (shock != null && shock >= P.vixShockPct)) {
+    regime = 'VOL_EXPANSION';
+  } else if (spySide === 'above' && qqqSide !== 'below') {
+    regime = 'TREND_UP';
+  } else if (spySide === 'below' && qqqSide !== 'above') {
+    regime = 'TREND_DOWN';
+  } else if (level < P.vixLow) {
+    regime = 'VOL_CONTRACTION';
+  } else {
+    regime = 'RANGE_NEUTRAL';
+  }
+
+  return { available: true, regime, asOf: new Date(asOfMs).toISOString(), stale: ageDays > P.staleAfterDays, reasons };
+}

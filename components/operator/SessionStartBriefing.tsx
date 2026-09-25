@@ -111,7 +111,7 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
             )}
             {regime && (
               <div className="mt-1 text-[10px] text-slate-400">
-                Risk: {regime.riskLevel} • Sizing: {regime.sizing}
+                Risk: {regime.riskLevel}
               </div>
             )}
           </div>

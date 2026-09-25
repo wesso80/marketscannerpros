@@ -44,9 +44,6 @@ export default function RegimeBanner() {
       <span className={`font-semibold ${reviewColors[data.permission] || 'text-slate-400'}`}>
         {data.permission === 'YES' ? 'CLEAR' : data.permission === 'CONDITIONAL' ? 'CAUTION' : 'BLOCKED'}
       </span>
-      <span className="text-slate-600">|</span>
-      <span className="text-slate-500">Risk Context:</span>
-      <span className="text-slate-300 font-medium">{data.sizing}</span>
       {data.signals.some(s => s.stale) && (
         <>
           <span className="text-slate-600">|</span>

@@ -244,7 +244,7 @@ export function useAnalystContext(): UseAnalystContextReturn {
       regimeLabel: regimeData ? regimeLabel(regimeData.regime) : 'Unknown',
       riskLevel: regimeData?.riskLevel ?? null,
       permission: regimeData?.permission ?? null,
-      sizing: regimeData?.sizing ?? null,
+      sizing: null, // /api/regime no longer returns position-sizing wording
       volatilityState: regimeData?.riskLevel === 'extreme' ? 'extreme'
         : regimeData?.riskLevel === 'elevated' ? 'elevated'
         : regimeData?.riskLevel === 'low' ? 'low' : 'normal',

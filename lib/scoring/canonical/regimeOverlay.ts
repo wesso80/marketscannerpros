@@ -32,7 +32,7 @@ export const REGIME_OVERLAY_POLICY = {
   sizeFloor: 0.4,
 } as const;
 
-export interface IndexTrend { close: number; sma50: number; sma200: number }
+export interface IndexTrend { close: number; sma50: number; sma200: number; /** Latest bar time (ISO), when known. */ asOf?: string | null }
 
 export interface RegimeOverlayInputs {
   asOf?: string | null;

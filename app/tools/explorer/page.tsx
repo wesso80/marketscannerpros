@@ -124,7 +124,7 @@ export default function ExplorerPage() {
         badges={[
           { label: `${TABS.length} lenses` },
           { label: `Tier ${tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}` },
-          ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
+          ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : regime.loading ? [] : [{ label: 'Regime unavailable' }]),
         ]}
         title="Markets."
         subtitle="Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens."
@@ -406,44 +406,60 @@ export default function ExplorerPage() {
         <Card>
           <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence Map</h3>
 
-          {/* Dynamic regime signals */}
-          {regime.data?.signals && regime.data.signals.length > 0 && (
+          {/* Regime signals (market data first; account signals shown for context) */}
+          {!regime.data && !regime.loading && (
+            <div className="mb-4 rounded-lg bg-[var(--msp-panel-2)] p-3 text-[12px] text-slate-400">
+              <div className="text-[11px] text-slate-500 uppercase mb-1">Market Regime Signals</div>
+              Regime unavailable — no stored market data (VIX, SPY trend) or account signals to classify it.
+            </div>
+          )}
+          {regime.data?.signals && regime.data.signals.length > 0 && (() => {
+            const countedWeight = regime.data.signals.filter((s: any) => s.counted !== false).reduce((sum: number, s: any) => sum + (Number(s.weight) || 0), 0);
+            return (
             <div className="mb-4">
-              <div className="text-[11px] text-slate-500 uppercase mb-2">Live Market Regime Signals</div>
+              <div className="text-[11px] text-slate-500 uppercase mb-2">
+                Market Regime Signals
+                {regime.data.asOf ? <span className="ml-2 normal-case text-slate-600">data as of {new Date(regime.data.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}</span> : null}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {regime.data.signals.map((sig: any, i: number) => {
                   const r = sig.regime?.toLowerCase() || '';
-                  const isHeadwind = r === 'risk_off' || r === 'compression';
-                  const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';
+                  const isHeadwind = r === 'risk_off' || r === 'compression' || r.includes('stress') || r.includes('trend_down');
+                  const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on' || r.includes('trend_up');
                   const color = isHeadwind ? 'var(--msp-bear)' : isTailwind ? 'var(--msp-bull)' : 'var(--msp-flat)';
+                  const counted = sig.counted !== false;
+                  const share = counted && countedWeight > 0 ? Math.round(((Number(sig.weight) || 0) / countedWeight) * 100) : 0;
                   return (
                     <div key={i} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">{sig.source}</span>
+                        <span className="text-sm font-semibold text-white">{sig.kind === 'market' ? 'Market data' : humanizeEnum(sig.source)}</span>
                         <div className="flex items-center gap-1">
-                          <Badge label={sig.regime} color={REGIME_COLORS[r as RegimePriority] || 'var(--msp-text-muted)'} small />
+                          <Badge label={humanizeEnum(sig.regime)} color={REGIME_COLORS[r as RegimePriority] || 'var(--msp-text-muted)'} small />
                           {sig.stale && <span role="status" className="text-[11px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
                         </div>
                       </div>
+                      {sig.detail ? <div className="mt-1 text-[11px] text-slate-400">{sig.detail}</div> : null}
                       <div className="flex items-center gap-2 mt-1.5">
                         <div
                           role="progressbar"
-                          aria-valuenow={Math.round(Math.min(sig.weight * 100, 100))}
+                          aria-valuenow={share}
                           aria-valuemin={0}
                           aria-valuemax={100}
-                          aria-label={`${sig.source} signal weight`}
+                          aria-label={`${sig.source} share of the regime decision`}
                           className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden"
                         >
-                          <div className="h-full rounded-full" style={{ width: `${Math.min(sig.weight * 100, 100)}%`, backgroundColor: color }} />
+                          <div className="h-full rounded-full" style={{ width: `${share}%`, backgroundColor: color }} />
                         </div>
-                        <span className="text-[11px] font-semibold" style={{ color }}>{isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral'}</span>
+                        <span className="text-[11px] font-semibold" style={{ color }}>{counted ? (isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral') : 'Context only'}</span>
                       </div>
+                      {sig.kind === 'workspace' ? <div className="mt-1 text-[10px] text-slate-500">Your account signal{counted ? '' : ' — not counted while market data is available'}</div> : null}
                     </div>
                   );
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Static known relationships */}
           <div className="text-[11px] text-slate-500 uppercase mb-2">Known Relationships</div>
