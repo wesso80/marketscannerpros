@@ -6,6 +6,7 @@ import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 
 /**
  * Alert Price Checker
@@ -330,7 +331,13 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
   }
 
   // A user's alert is private: it is delivered only to that user's own channels
-  // (email / push above). It is not posted to the shared site-wide Discord channel.
+  // (email / push above, plus their own Discord webhook if they turned it on in
+  // Account Settings). It is never posted to the shared site-wide Discord channel.
+  // Discord runs last and never throws, so it can't block email or push.
+  await deliverAlertToUserDiscord(alert.workspace_id, {
+    title: `${alert.symbol} alert${alert.name ? `: ${alert.name}` : ''}`,
+    detail: conditionMet,
+  });
 
   console.log(`🔔 Alert triggered: ${alert.name || alert.symbol} - ${conditionMet}`);
 }
