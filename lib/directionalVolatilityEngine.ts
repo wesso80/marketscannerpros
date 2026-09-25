@@ -41,6 +41,7 @@ import {
   MIN_DATA,
   INVALIDATION,
 } from './directionalVolatilityEngine.constants';
+import { stochSeries } from './ta/core';
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -506,7 +507,7 @@ export function computePhasePersistence(args: {
   stochK?: number | null;
   stochKSlope?: number | null;
 }): PhasePersistence {
-  const { bbwp, bbwpSma5, volatility, contractionStats, expansionStats, direction, stochK, stochKSlope } = args;
+  const { bbwp, bbwpSma5, volatility, contractionStats, expansionStats, direction, stochKSlope } = args;
 
   // ── Contraction (bbwp < 15) ──
   let contractionCont = 0;
@@ -518,7 +519,10 @@ export function computePhasePersistence(args: {
     contractionCont += 40; // base
     if (bbwpSma5 <= VOL_REGIME.COMPRESSION_THRESHOLD) contractionCont += 15;
     if (contractionStats.currentBars < contractionStats.averageBars) contractionCont += 15;
-    if (stochKSlope == null || stochKSlope <= 0) contractionCont += 10;
+    // (No stochastic-slope term here. The ported rule added +10 whenever %K was not rising — and, because no caller
+    // supplied the slope, on every reading. Contraction has no side yet, so "K not rising → continuation" and
+    // "K rising → exit" below would favour upside breakouts only; slopes stay neutral in contraction until a
+    // direction-symmetric rule is chosen. Expansion uses the slope relative to the bias, which is symmetric.)
     if (direction.bias === 'neutral') contractionCont += 10;
     if (volatility.rateDirection === 'flat' || volatility.rateDirection === 'decelerating') contractionCont += 10;
 
@@ -529,11 +533,6 @@ export function computePhasePersistence(args: {
     if (volatility.rateDirection === 'accelerating') contractionExit += 15;
     // Check if sma5 turning up (sma5 > bbwp could mean lagging below — use rate direction)
     if (bbwpSma5 > bbwp && volatility.rateOfChange > 0) contractionExit += 15;
-    if (stochKSlope != null && stochKSlope > 0 && stochK != null && stochK > (args as { stochD?: number }).stochD!) {
-      contractionExit += 15;
-    } else if (stochKSlope != null && stochKSlope > 0) {
-      contractionExit += 10;
-    }
     if (bbwp > VOL_REGIME.COMPRESSION_THRESHOLD - 2) contractionExit += 15; // approaching 15
   }
 
@@ -1362,9 +1361,37 @@ function buildSummary(
 }
 
 /**
+ * One-bar change of stochastic %K and %D (TradingView `k - k[1]`, the "K rising / falling" the engine reads), from the
+ * same Stochastic(14, 1, 3) the indicator layer uses (lib/ta/core stochSeries via scanner indicatorMath.stochastic).
+ * null when there are too few clean bars — never a default.
+ */
+export function deriveStochSlopes(price: DVEInput['price']): { stochKSlope: number | null; stochDSlope: number | null } {
+  const { highs, lows, closes } = price;
+  const none = { stochKSlope: null, stochDSlope: null };
+  if (!highs || !lows || highs.length !== closes.length || lows.length !== closes.length || closes.length < 18) return none;
+  const { k, d } = stochSeries(highs, lows, closes, 14, 1, 3);
+  const n = closes.length;
+  const slope = (xs: number[]) => (Number.isFinite(xs[n - 1]) && Number.isFinite(xs[n - 2]) ? Number((xs[n - 1] - xs[n - 2]).toFixed(4)) : null);
+  return { stochKSlope: slope(k), stochDSlope: slope(d) };
+}
+
+/** Callers pass stochastic %K/%D but none supplied the slopes, so every reading lost the slope terms (and 6 points of
+ *  data quality). Derive them from the price bars when the caller has %K but no slopes. */
+function withStochSlopes(input: DVEInput): DVEInput {
+  const ind = input.indicators;
+  if (!ind || ind.stochK == null || (ind.stochKSlope != null && ind.stochDSlope != null)) return input;
+  const derived = deriveStochSlopes(input.price);
+  return {
+    ...input,
+    indicators: { ...ind, stochKSlope: ind.stochKSlope ?? derived.stochKSlope, stochDSlope: ind.stochDSlope ?? derived.stochDSlope },
+  };
+}
+
+/**
  * 17. computeDVE — Main orchestrator. Calls all layers in order.
  */
-export function computeDVE(input: DVEInput, symbol: string): DVEReading {
+export function computeDVE(rawInput: DVEInput, symbol: string): DVEReading {
+  const input = withStochSlopes(rawInput);
   // LAYER 1: Linear Volatility State
   const bbwpResult = computeBBWP(input.price.closes, BBWP.BB_LENGTH, BBWP.LOOKBACK);
   const vhm = computeVHMHistogram(bbwpResult.bbwpSeries, VHM.SMOOTH_PERIOD);
