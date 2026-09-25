@@ -43,7 +43,9 @@ export async function GET(req: NextRequest) {
         il.in_squeeze,
         il.mfi14,
         ql.price AS current_price,
-        ql.change_percent
+        ql.change_percent,
+        ql.fetched_at AS quote_fetched_at,
+        ql.latest_trading_day AS quote_trading_day
       FROM watchlist_items wi
       LEFT JOIN indicators_latest il ON il.symbol = wi.symbol AND il.timeframe = 'daily'
       LEFT JOIN quotes_latest ql ON ql.symbol = wi.symbol
