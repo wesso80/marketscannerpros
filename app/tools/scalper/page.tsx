@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { scalpVolumeCell } from '@/lib/scalper/volume';
 import { useUserTier, canAccessScalper } from '@/lib/useUserTier';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
@@ -16,7 +17,8 @@ interface ScalpSignalData {
   vwapDev: number | null;
   vwapSignal: string;
   volSpike: boolean;
-  volRatio: number;
+  /** null when the source bars carry no volume */
+  volRatio: number | null;
   bbSqueeze: boolean;
   bbBreakout: 'upper' | 'lower' | null;
   bbWidth: number | null;
@@ -388,7 +390,10 @@ export default function ScalperPage() {
                         </td>
                         <td className="py-2.5 px-2 text-center">{signalDot(r.signals.vwapSignal)}</td>
                         <td className="py-2.5 px-2 text-center">
-                          {r.signals.volSpike ? <span title={`${r.signals.volRatio}x avg`}>🔥</span> : <span className="text-slate-600">—</span>}
+                          {(() => {
+                            const cell = scalpVolumeCell(r.signals.volRatio, r.signals.volSpike);
+                            return <span title={cell.title} className={r.signals.volSpike ? 'font-bold text-amber-300' : 'text-slate-400'}>{cell.text}</span>;
+                          })()}
                         </td>
                         <td className="py-2.5 px-2 text-center">
                           {r.signals.bbSqueeze ? '🔶' : r.signals.bbBreakout ? (r.signals.bbBreakout === 'upper' ? '🟢' : '🔴') : <span className="text-slate-600">—</span>}
@@ -492,7 +497,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <SignalRow icon={signalDot(s.emaCross)} label="EMA Crossover" value={s.emaDetail} color={dirColor(s.emaCross)} />
           <SignalRow icon={signalDot(s.rsiSignal)} label="RSI(7)" value={s.rsi7 != null ? `${s.rsi7.toFixed(1)} — ${s.rsiSignal}` : '—'} color={dirColor(s.rsiSignal)} />
           <SignalRow icon={signalDot(s.vwapSignal)} label="VWAP" value={s.vwapDev != null ? `${s.vwapDev > 0 ? '+' : ''}${s.vwapDev.toFixed(2)}% ${s.vwapSignal}` : '—'} color={dirColor(s.vwapSignal)} />
-          <SignalRow icon={s.volSpike ? '🔥' : '⚪'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
+          <SignalRow icon={s.volSpike ? '🔥' : '⚪'} label="Volume" value={s.volRatio == null ? 'n/a (no volume in source bars)' : `${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
           <SignalRow icon={s.bbSqueeze ? '🔶' : s.bbBreakout ? '💥' : '⚪'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? 'var(--msp-warn)' : s.bbBreakout === 'upper' ? 'var(--msp-bull)' : s.bbBreakout === 'lower' ? 'var(--msp-bear)' : 'var(--msp-flat)'} />
           <SignalRow icon={signalDot(s.macdSignal)} label="MACD" value={s.macdHist != null ? `Hist: ${s.macdHist > 0 ? '+' : ''}${s.macdHist.toFixed(4)} — ${s.macdSignal}` : '—'} color={dirColor(s.macdSignal)} />
           <SignalRow icon="📏" label="ATR(14)" value={s.atr != null ? fmtP(s.atr) : '—'} color="#94A3B8" />
