@@ -108,6 +108,8 @@ interface Indicators {
   cci?: number;
   change24h?: number;
   volume?: number;
+  /** Open time (ISO-8601 UTC) of the last daily bar used; read by lib/scanner/dailyPickTrust for staleness. */
+  lastBarAt?: string;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -345,7 +347,8 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
     aroonUp: isNaN(aroon.up) ? undefined : aroon.up,
     aroonDown: isNaN(aroon.down) ? undefined : aroon.down,
     cci: isNaN(cci) ? undefined : cci,
-    change24h
+    change24h,
+    lastBarAt: `${ohlcv[ohlcv.length - 1].date}T00:00:00.000Z`,
   };
   
   const { score, direction, signals } = computeScore(indicators);

@@ -282,58 +282,23 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
 async function scanForex(symbol: string, apiKey: string): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
-    const pair = `${symbol}/USD`;
     
-    // Fetch daily forex prices
-    const priceUrl = `${baseUrl}?function=FX_DAILY&from_symbol=${symbol}&to_symbol=USD&apikey=${apiKey}`;
+    // Fetch daily forex bars (full history so EMA200 is real) and compute the same lib/ta/core indicator set as the
+    // equity and crypto paths. Before Sep 2026 this path stored EMA50 under `ema200` ("proxy for scoring") and used a
+    // simple-average RSI, so forex daily picks were scored on a different, mislabeled trend line.
+    const priceUrl = `${baseUrl}?function=FX_DAILY&from_symbol=${symbol}&to_symbol=USD&outputsize=full&apikey=${apiKey}`;
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
-    
-    const timeSeries = priceData["Time Series FX (Daily)"];
-    if (!timeSeries) return null;
-    
-    const dates = Object.keys(timeSeries).sort().reverse();
-    const latestDate = dates[0];
-    const latest = timeSeries[latestDate];
-    const prevDate = dates[1];
-    const prev = timeSeries[prevDate];
-    
-    const price = parseFloat(latest["4. close"]);
-    const prevClose = parseFloat(prev["4. close"]);
+
+    const bars = parseAlphaVantageDailyBars(priceData);
+    if (bars.length < 2) return null;
+
+    const price = bars[bars.length - 1].close;
+    const prevClose = bars[bars.length - 2].close;
     const changePercent = ((price - prevClose) / prevClose) * 100;
 
-    // Calculate indicators from price history
-    const closes: number[] = [];
-    for (let i = 0; i < Math.min(200, dates.length); i++) {
-      closes.push(parseFloat(timeSeries[dates[i]]["4. close"]));
-    }
-
-    const indicators: Record<string, any> = { price };
-    
-    // Calculate RSI
-    if (closes.length >= 15) {
-      let gains = 0, losses = 0;
-      for (let i = 1; i <= 14; i++) {
-        const change = closes[i - 1] - closes[i];
-        if (change > 0) gains += change;
-        else losses -= change;
-      }
-      const avgGain = gains / 14;
-      const avgLoss = losses / 14;
-      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-      indicators.rsi = 100 - (100 / (1 + rs));
-    }
-
-    // Calculate EMA 50 for forex (shorter timeframe)
-    if (closes.length >= 50) {
-      const multiplier = 2 / (50 + 1);
-      let ema = closes[closes.length - 1];
-      for (let i = closes.length - 2; i >= 0; i--) {
-        ema = (closes[i] - ema) * multiplier + ema;
-      }
-      indicators.ema50 = ema;
-      indicators.ema200 = ema; // Use as proxy for scoring
-    }
+    // EMA200 is omitted (not substituted) when fewer than 200 bars exist.
+    const indicators: Record<string, any> = { price, ...computeDailyIndicators(bars) };
 
     const { score, direction, signals } = computeScore(indicators);
 

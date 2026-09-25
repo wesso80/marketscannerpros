@@ -30,6 +30,8 @@ export interface CryptoDailyIndicators {
   aroonUp?: number;
   aroonDown?: number;
   cci?: number;
+  /** Open time (ISO-8601 UTC) of the last daily bar the indicators were computed on. Read by dailyPickTrust. */
+  lastBarAt?: string;
 }
 
 const finite = (v: number): number | undefined => (Number.isFinite(v) ? v : undefined);
@@ -66,6 +68,7 @@ export function computeCryptoDailyIndicators(bars: Bar[]): CryptoDailyIndicators
   for (const key of Object.keys(out) as (keyof CryptoDailyIndicators)[]) {
     if (out[key] === undefined) delete out[key];
   }
+  if (Object.keys(out).length > 0) out.lastBarAt = bars[bars.length - 1].t;
   return out;
 }
 

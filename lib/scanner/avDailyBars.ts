@@ -9,7 +9,8 @@ import type { Bar } from '@/lib/scanner/barAggregation';
 
 export function parseAlphaVantageDailyBars(payload: unknown, maxBars = 1000): Bar[] {
   const data = payload as Record<string, any> | null;
-  const ts = data?.['Time Series (Daily)'];
+  // Equity TIME_SERIES_DAILY(_ADJUSTED) or FX_DAILY (no volume, no split coefficient → factor stays 1).
+  const ts = data?.['Time Series (Daily)'] ?? data?.['Time Series FX (Daily)'];
   if (!ts || typeof ts !== 'object') return [];
   const newestFirst = Object.keys(ts).sort().reverse();
   const factor = new Map<string, number>();
