@@ -8,7 +8,8 @@ import UpgradeGate from "@/components/UpgradeGate";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
-import { alertConditionLabel, alertThreshold } from '@/lib/alertPresentation';
+import { alertConditionLabel } from '@/lib/alertPresentation';
+import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts } from '@/lib/alerts/consoleStatus';
 import RegimeBanner from '@/components/RegimeBanner';
 import { PageHero } from '@/components/ui';
 
@@ -69,13 +70,6 @@ function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
   return 'Basic';
 }
 
-function deriveStatus(alert: AlertItem): 'Armed' | 'Cooldown' | 'Disabled' | 'Incomplete' {
-  if (!alert.is_active) return 'Disabled';
-  if (alert.condition_type.startsWith('price_') && (alertThreshold(alert.condition_value) ?? 0) <= 0) return 'Incomplete';
-  if (!alert.triggered_at || !alert.cooldown_minutes) return 'Armed';
-  const ms = Date.now() - new Date(alert.triggered_at).getTime();
-  return ms < alert.cooldown_minutes * 60_000 ? 'Cooldown' : 'Armed';
-}
 
 function fmtDateTime(value?: string) {
   if (!value) return '—';
@@ -112,7 +106,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [zone3Open, setZone3Open] = useState(true);
   const [zone4Open, setZone4Open] = useState(false);
-  const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy' | 'multi'>('basic');
+  const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy'>('basic');
   const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'cleaning' | 'done'>('idle');
   const [cleanupCount, setCleanupCount] = useState(0);
 
@@ -165,7 +159,9 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     void fetchAll();
   }, []);
 
-  const activeAlerts = useMemo(() => alerts.filter((a) => a.is_active), [alerts]);
+  // "Active" = alerts a checker actually evaluates; legacy multi-condition alerts are never checked (TR-25).
+  const activeAlerts = useMemo(() => checkedActiveAlerts(alerts), [alerts]);
+  const multiAlerts = useMemo(() => legacyMultiAlerts(alerts), [alerts]);
   const triggeredToday = useMemo(() => {
     const today = new Date();
     return history.filter((h) => {
@@ -208,8 +204,9 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       if (consoleTab === 'smart') return isSmart;
       return alert.trigger_count > 0;
     });
-    return filtered.slice(0, 12);
-  }, [activeAlerts, consoleTab]);
+    // Legacy multi-condition alerts are listed under Basic with a "Not checked" status so they can be seen and removed.
+    return (consoleTab === 'basic' ? [...filtered, ...multiAlerts] : filtered).slice(0, 12);
+  }, [activeAlerts, multiAlerts, consoleTab]);
 
   // If every alert is smart/strategy, an empty "Basic" default contradicts the "N active" header — open the tab that has rows.
   const autoTabbedRef = useRef(false);
@@ -217,8 +214,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     if (autoTabbedRef.current || activeAlerts.length === 0) return;
     autoTabbedRef.current = true;
     const hasBasic = activeAlerts.some((a) => !a.is_smart_alert && !a.is_multi_condition && !(a.condition_type ?? '').startsWith('strategy_') && !(a.condition_type ?? '').startsWith('scanner_'));
-    if (!hasBasic) setConsoleTab('smart');
-  }, [activeAlerts]);
+    if (!hasBasic && multiAlerts.length === 0) setConsoleTab('smart');
+  }, [activeAlerts, multiAlerts]);
 
   const toggleAlert = async (alert: AlertItem) => {
     await fetch('/api/alerts', {
@@ -236,7 +233,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
   const editAlert = (alert: AlertItem) => {
     const type = classifyAlertType(alert);
-    setActiveZone4Tab(type === 'Multi' ? 'multi' : type === 'Strategy' ? 'strategy' : 'basic');
+    setActiveZone4Tab(type === 'Strategy' ? 'strategy' : 'basic');
     setZone4Open(true);
   };
 
@@ -290,7 +287,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           title="Alert radar console"
           subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
           actions={[
-            { label: 'New alert', variant: 'primary', onClick: () => { setActiveZone4Tab('multi'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'New alert', variant: 'primary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Quick alert', variant: 'secondary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
           ]}
@@ -334,14 +331,11 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               <button type="button" role="tab" aria-selected={activeZone4Tab === 'strategy'} onClick={() => { setActiveZone4Tab('strategy'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
                 Strategy
               </button>
-              <button type="button" role="tab" aria-selected={activeZone4Tab === 'multi'} onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'multi' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
-                Multi
-              </button>
             </div>
             <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 disabled:opacity-50">
               Quick Alert
             </button>
-            <button type="button" onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
+            <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
               + New Alert
             </button>
           </div>
@@ -403,7 +397,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
                         <div className="flex items-center gap-2 sm:ml-auto md:opacity-0 md:transition md:group-hover:opacity-100">
                           <span className="hidden text-xs text-slate-400 sm:inline">Triggered {alert.trigger_count}x</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' || status === 'Not checked' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`} title={status === 'Not checked' ? 'Multi-condition alerts are not evaluated by the alert checker, so this alert will not fire.' : undefined}>
                             {status}
                           </span>
                           <button type="button" onClick={() => editAlert(alert)} className="rounded bg-indigo-500/15 px-2 py-1 text-[11px] text-indigo-200">Edit</button>
@@ -518,7 +512,6 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               <div className="mb-2 flex flex-wrap gap-2">
                 <button type="button" aria-pressed={activeZone4Tab === 'basic'} onClick={() => setActiveZone4Tab('basic')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'basic' ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>Basic</button>
                 <button type="button" aria-pressed={activeZone4Tab === 'strategy'} onClick={() => setActiveZone4Tab('strategy')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'strategy' ? 'bg-indigo-500/15 text-indigo-200' : 'bg-white/10 text-slate-200'}`}>Strategy</button>
-                <button type="button" aria-pressed={activeZone4Tab === 'multi'} onClick={() => setActiveZone4Tab('multi')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'multi' ? 'bg-purple-500/15 text-purple-200' : 'bg-white/10 text-slate-200'}`}>Multi</button>
               </div>
               <AlertsWidget compact={false} className="!border-slate-800 !bg-transparent" />
             </div>
