@@ -1,6 +1,5 @@
 'use client';
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
-import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 
 /* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
@@ -17,6 +16,7 @@ import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/u
 import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useRankedQueue } from '@/hooks/useRankedQueue';
+import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
