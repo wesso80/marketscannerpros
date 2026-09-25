@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
 import { ScanMode } from '@/lib/confluence-learning-agent';
-import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { checkOptionsAccess } from '@/lib/options/access';
+import { usableOptionRows } from '@/lib/options/avChain';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { canonicalFromBarStore } from '@/lib/scoring/canonical/barStore';
@@ -53,7 +53,8 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
     let payload: any;
     try {
       payload = await avFetch(url, `${fn} ${symbol}`);
-    } catch {
+    } catch (err) {
+      console.warn(`[options-scan] ${fn} ${symbol} failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
       warnings.push(`${fn}:fetch_failed`);
       continue;
     }
@@ -63,9 +64,11 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
       continue;
     }
 
-    const data = Array.isArray(payload?.data) ? payload.data as AVOptionRow[] : [];
+    const hasRows = Array.isArray(payload?.data) && payload.data.length > 0;
+    // Rejects Alpha Vantage's artificial "premium endpoint" sample chain (key not entitled).
+    const data = (usableOptionRows(payload, symbol) ?? []) as AVOptionRow[];
     if (!data.length) {
-      warnings.push(`${fn}:empty_data`);
+      warnings.push(hasRows ? `${fn}:not_entitled_sample_data` : `${fn}:empty_data`);
       continue;
     }
 
@@ -95,17 +98,15 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
 
 export async function POST(request: NextRequest) {
   try {
-    // Pro Trader tier required
-    const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
-      return NextResponse.json({ success: false, error: 'Please log in to use the Options Scanner' }, { status: 401 });
+    // Paid (Pro) plan or admin required — same effective-tier rule as /api/me.
+    const access = await checkOptionsAccess(request);
+    if (!access.ok) {
+      return access.status === 401
+        ? NextResponse.json({ success: false, error: 'Please log in to use the Options Scanner' }, { status: 401 })
+        : NextResponse.json({ success: false, error: 'Options Scanner requires a Pro subscription' }, { status: 403 });
     }
 
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Options Scanner requires Pro Trader access' }, { status: 403 });
-    }
-
-    const workspaceId = session.workspaceId;
+    const workspaceId = access.workspaceId;
 
     const body = await request.json();
     const { symbol, scanMode = 'intraday_1h', expirationDate } = body;

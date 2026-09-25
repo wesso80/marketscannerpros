@@ -2,6 +2,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { isFreeForAllMode } from './entitlements';
+import { hashWorkspaceId } from './workspaceHash';
 
 const isProductionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
@@ -80,12 +81,9 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
   return verify(c);
 }
 
-export function hashWorkspaceId(customerId: string): string {
-  // Deterministic, stable workspace id derived from Stripe customer id (UUID format)
-  const hashBytes = crypto.createHash("sha256").update(customerId).digest();
-  // Format as UUID: 8-4-4-4-12 characters
-  return `${hashBytes.subarray(0, 4).toString('hex')}-${hashBytes.subarray(4, 6).toString('hex')}-${hashBytes.subarray(6, 8).toString('hex')}-${hashBytes.subarray(8, 10).toString('hex')}-${hashBytes.subarray(10, 16).toString('hex')}`;
-}
+// hashWorkspaceId lives in lib/workspaceHash.ts (pure, no cookie/secret dependency) so access
+// helpers can use it without loading this module; re-exported here for existing imports.
+export { hashWorkspaceId };
 
 export function signSessionToken(payload: object): string {
   const iat = Math.floor(Date.now() / 1000);

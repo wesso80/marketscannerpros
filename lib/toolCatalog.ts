@@ -5,7 +5,7 @@ export interface ToolPage {
   description: string;  // short description
   icon: string;         // short visual code for quick scanning
   category: string;     // grouping
-  tier?: 'free' | 'pro' | 'pro_trader';  // minimum tier required (undefined = free)
+  tier?: 'free' | 'pro';  // minimum tier required (undefined = free); two access levels only
 }
 
 export const TOOL_CATALOG: ToolPage[] = [
@@ -33,9 +33,9 @@ export const TOOL_CATALOG: ToolPage[] = [
   { key: 'crypto-intel',       href: '/tools/explorer?tab=crypto-intel', label: 'Crypto Intelligence',  description: 'GT Score, whale tracker, treasury & crypto news (in Markets)', icon: 'CI', category: 'Crypto' },
 
   // ─── Options (all canonical via /tools/terminal tabs) ───
-  { key: 'options-terminal',   href: '/tools/terminal?tab=options-terminal',  label: 'Options Terminal',  description: 'Chain, strikes, spreads, IV, and chain data truth',   icon: 'OT', category: 'Options', tier: 'pro_trader' },
-  { key: 'options-confluence', href: '/tools/terminal?tab=options-confluence', label: 'Options Confluence', description: 'Strike and expiry alignment against research scenario', icon: 'OC', category: 'Options', tier: 'pro_trader' },
-  { key: 'options-flow',       href: '/tools/terminal?tab=options-flow',       label: 'Options Flow',       description: 'Premium flow classification, skew, and large-flow estimates', icon: 'OF', category: 'Options', tier: 'pro_trader' },
+  { key: 'options-terminal',   href: '/tools/terminal?tab=options-terminal',  label: 'Options Terminal',  description: 'Chain, strikes, spreads, IV, and chain data truth',   icon: 'OT', category: 'Options', tier: 'pro' },
+  { key: 'options-confluence', href: '/tools/terminal?tab=options-confluence', label: 'Options Confluence', description: 'Strike and expiry alignment against research scenario', icon: 'OC', category: 'Options', tier: 'pro' },
+  { key: 'options-flow',       href: '/tools/terminal?tab=options-flow',       label: 'Options Flow',       description: 'Premium flow classification, skew, and large-flow estimates', icon: 'OF', category: 'Options', tier: 'pro' },
 
   // ─── Research ───
   { key: 'ai-analyst',         href: '/tools/scanner',            label: 'ARCA AI Panel',         description: 'AI research support from live scanner context',     icon: 'AI', category: 'Research' },
@@ -58,8 +58,8 @@ export const TOOL_CATALOG: ToolPage[] = [
 
   // ─── Portfolio & Journal ───
   { key: 'portfolio',          href: '/tools/workspace?tab=portfolio', label: 'Portfolio',       description: 'Review positions and exposure in Workspace',       icon: 'PF', category: 'Portfolio' },
-  { key: 'journal',            href: '/tools/workspace?tab=journal', label: 'Trade Journal',     description: 'Log and review trades in Workspace',               icon: 'JR', category: 'Portfolio', tier: 'pro_trader' },
-  { key: 'backtest',           href: '/tools/workspace?tab=backtest', label: 'Backtester',       description: 'Test strategies inside Workspace',                 icon: 'BT', category: 'Portfolio', tier: 'pro_trader' },
+  { key: 'journal',            href: '/tools/workspace?tab=journal', label: 'Trade Journal',     description: 'Log and review trades in Workspace',               icon: 'JR', category: 'Portfolio', tier: 'pro' },
+  { key: 'backtest',           href: '/tools/workspace?tab=backtest', label: 'Backtester',       description: 'Test strategies inside Workspace',                 icon: 'BT', category: 'Portfolio', tier: 'pro' },
   { key: 'alerts',             href: '/tools/workspace?tab=alerts', label: 'Alerts',             description: 'Manage condition alerts in Workspace',             icon: 'AL', category: 'Portfolio' },
   { key: 'watchlists',         href: '/tools/workspace?tab=watchlists', label: 'Watchlists',      description: 'Organise symbol lists in Workspace',              icon: 'WL', category: 'Portfolio' },
 ];

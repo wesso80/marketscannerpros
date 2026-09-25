@@ -428,7 +428,7 @@ function ScannerBacktestContent() {
     return <div className="flex min-h-[60vh] items-center justify-center text-slate-500">Loading…</div>;
   }
   if (!canAccessBacktest(tier)) {
-    return <UpgradeGate requiredTier="pro_trader" feature="Scanner Backtest" />;
+    return <UpgradeGate requiredTier="pro" feature="Scanner Backtest" />;
   }
 
   return (

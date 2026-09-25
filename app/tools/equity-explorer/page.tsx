@@ -461,7 +461,7 @@ function EquityExplorerContent() {
     }
   };
 
-  // Gate Pro Trader features
+  // Gate Pro features
   if (!tierLoading && tier !== 'pro_trader' && tier !== 'pro') {
     return (
       <div className="min-h-screen bg-slate-950 px-3 py-6 sm:p-8">

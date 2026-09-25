@@ -8,7 +8,7 @@ export default function Page() {
   const { tier, isLoading } = useUserTier();
   if (isLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
   if (!canAccessVolatilityEngine(tier)) {
-    return <UpgradeGate requiredTier="pro_trader" feature="Directional Volatility Engine" />;
+    return <UpgradeGate requiredTier="pro" feature="Directional Volatility Engine" />;
   }
   return <VolatilityEnginePage />;
 }

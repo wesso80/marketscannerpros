@@ -14,7 +14,7 @@ export const TOOL_GUIDES: ToolGuide[] = [
     title: 'Plans & Upgrades',
     summary: 'Choose the plan that matches your workflow intensity and AI usage needs.',
     steps: [
-      'Compare Free, Pro, and Pro Trader features.',
+      'Compare Free and Pro features.',
       'Select monthly or yearly billing.',
       'Start checkout and complete activation with your email.',
     ],

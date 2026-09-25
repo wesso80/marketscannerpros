@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 type TaskDecision = 'accepted' | 'rejected';
 
@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    // S6 FIX: Enforce Pro Trader tier
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ error: 'Pro Trader subscription required' }, { status: 403 });
+    // S6 FIX: Enforce Pro tier
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
     }
 
     const url = new URL(req.url);

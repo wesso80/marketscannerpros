@@ -4,7 +4,7 @@
  */
 
 import crypto from 'crypto';
-import { hashWorkspaceId } from '../auth';
+import { hashWorkspaceId } from '../workspaceHash';
 
 const OPERATOR_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')

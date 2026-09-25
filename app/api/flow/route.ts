@@ -2,7 +2,7 @@ import { atrSeries, lastFinite } from '@/lib/ta/core';
 import { closedCandles } from '@/lib/market/candleIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from '@/lib/coingecko';
@@ -303,8 +303,8 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ success: false, error: 'Pro subscription required' }, { status: 403 });
     }
     const url = new URL(request.url);
     const symbol = (url.searchParams.get('symbol') || '').toUpperCase().trim();

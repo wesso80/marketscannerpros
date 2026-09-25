@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { TickerContext } from '../types';
 import type { CatalystEvent, CatalystSubtype, EventStudyResult } from '@/lib/catalyst/types';
-import { useUserTier } from '@/lib/useUserTier';
+import { useUserTier, canAccessCatalystStudy } from '@/lib/useUserTier';
 import CatalystImpactCard from '@/components/catalyst/CatalystImpactCard';
 import CatalystDetailsDrawer from '@/components/catalyst/CatalystDetailsDrawer';
 import { useCatalystRisk, catalystRiskSummary } from '@/lib/catalyst/useCatalystRisk';
@@ -12,7 +12,7 @@ import { useCatalystRisk, catalystRiskSummary } from '@/lib/catalyst/useCatalyst
    CatalystTab — 7th tab in TickerTabs. Shows recent catalyst events
    for the selected ticker, their classified subtypes, and impact
    study cards for each unique subtype discovered.
-   Pro Trader only — gated at the tab level.
+   Pro only (legacy pro_trader and admins included) — gated at the tab level.
    ──────────────────────────────────────────────────────────────── */
 
 const SUBTYPE_LABELS: Record<string, string> = {
@@ -66,19 +66,19 @@ export default function CatalystTab({ ctx }: { ctx: TickerContext }) {
     return () => { cancelled = true; };
   }, [symbol]);
 
-  // Pro Trader gate
-  if (tier !== 'pro_trader') {
+  // Pro gate
+  if (!canAccessCatalystStudy(tier)) {
     return (
       <div className="flex flex-col items-center justify-center rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-8 text-center">
         <p className="text-[11px] font-bold text-[var(--msp-text)]">Catalyst Event Studies</p>
         <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">
-          Professional-level event study analysis is available on the <span className="font-bold text-emerald-400">Pro Trader</span> plan.
+          Professional-level event study analysis is available on the <span className="font-bold text-emerald-400">Pro</span> plan.
         </p>
         <a
           href="/pricing"
           className="mt-3 rounded-md bg-emerald-500 px-4 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-600 transition-colors"
         >
-          Upgrade to Pro Trader →
+          Upgrade to Pro →
         </a>
       </div>
     );

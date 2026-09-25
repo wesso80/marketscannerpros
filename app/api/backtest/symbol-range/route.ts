@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 type AssetType = 'equity' | 'crypto' | 'forex' | 'commodity';
 
@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!hasProTraderAccess(session.tier)) {
-    return NextResponse.json({ error: 'Pro Trader subscription required' }, { status: 403 });
+  if (!hasPaidSessionAccess(session)) {
+    return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
 
   try {

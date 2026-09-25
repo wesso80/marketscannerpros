@@ -14,7 +14,7 @@ import { confluenceLearningAgent, getScanModes, type ScanMode, type CloseCalenda
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
@@ -60,13 +60,13 @@ function setCache(key: string, data: any): void {
 
 export async function POST(request: NextRequest): Promise<NextResponse<ScanResponse>> {
   try {
-    // Pro Trader tier required
+    // Pro tier required (legacy pro_trader and admins included)
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in to use the AI Confluence Scanner' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ success: false, error: 'Pro subscription required' }, { status: 403 });
     }
     const body: ScanRequest = await request.json();
     const { symbol, mode = 'forecast', forceRefresh = false } = body;

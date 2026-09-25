@@ -32,7 +32,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { buildBacktestEngineResult } from '@/lib/backtest/engine';
 import { getBacktestStrategy } from '@/lib/strategies/registry';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { verifyCronAuth } from '@/lib/adminAuth';
 import {
   parseBacktestTimeframe,
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Pro Trader tier required
+    // Pro tier required (legacy pro_trader and admins included)
     // Allow internal cron jobs to bypass auth via x-cron-secret header
     const isCronBypass = verifyCronAuth(req);
 
@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
       if (!session?.workspaceId) {
         return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
       }
-      if (!hasProTraderAccess(session.tier)) {
-        return NextResponse.json({ error: 'Pro Trader subscription required for Backtesting' }, { status: 403 });
+      if (!hasPaidSessionAccess(session)) {
+        return NextResponse.json({ error: 'Pro subscription required for Backtesting' }, { status: 403 });
       }
     }
 

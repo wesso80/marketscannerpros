@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { computeEdgeProfile, isValidDimension } from '@/lib/intelligence/edgeProfile';
 import type { EdgeProfile } from '@/lib/intelligence/edgeProfile';
 
@@ -34,11 +35,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Entitlement gate: full edge profile is Pro / Pro Trader only
-  const tier = session.tier ?? 'free';
-  if (tier !== 'pro' && tier !== 'pro_trader') {
+  // Entitlement gate: full edge profile is Pro only (legacy pro_trader and admins included)
+  if (!hasPaidSessionAccess(session)) {
     return NextResponse.json({
-      error: 'Edge Profile requires a Pro or Pro Trader subscription',
+      error: 'Edge Profile requires a Pro subscription',
       requiredTier: 'pro',
     }, { status: 403 });
   }

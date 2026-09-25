@@ -18,8 +18,7 @@
  * 
  * @rateLimit
  * - Free: 10 requests/day
- * - Pro: 50 requests/day
- * - Pro Trader: 50 requests/day
+ * - Pro (incl. legacy pro_trader): 50 requests/day
  * 
  * @example
  * POST /api/msp-analyst
@@ -324,7 +323,7 @@ export async function POST(req: NextRequest) {
           });
           
           const upgradeMsg = tier === 'free' 
-            ? 'Upgrade to Pro for 50/day or Pro Trader for 50/day with GPT-4.1.' 
+            ? 'Upgrade to Pro for 50/day with GPT-4.1.' 
             : 'Limit resets at midnight UTC.';
           
           return new Response(

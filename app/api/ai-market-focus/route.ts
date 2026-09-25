@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
-import { hasProAccess, isFreeForAllMode } from "@/lib/entitlements";
+import { isFreeForAllMode } from '@/lib/entitlements';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,7 +117,7 @@ export async function GET(_req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const isPro = hasProAccess(session.tier);
+  const isPro = hasPaidSessionAccess(session);
 
   if (!isPro) {
     return NextResponse.json(

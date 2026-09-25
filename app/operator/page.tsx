@@ -1766,7 +1766,7 @@ function OperatorDashboard() {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
         <ToolsNavBar />
-        <UpgradeGate requiredTier="pro_trader" feature="Operator Dashboard">
+        <UpgradeGate requiredTier="pro" feature="Operator Dashboard">
           <ul style={{ textAlign: 'left', color: 'var(--msp-text-muted)', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
             <li>📊 Real-time risk governance & permission matrix</li>
             <li>🧠 AI-powered consciousness loop & operator coaching</li>

@@ -105,28 +105,23 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
   return sendEmail({ to, subject, html });
 }
 
+// Two access levels only (Free / Pro). Legacy `pro_trader` subscribers get the same Pro email.
 const PRO_FEATURES = [
   ['SCAN', 'Unlimited Scanner', 'Run unlimited technical scans across the full market'],
-  ['AI', 'AI Analyst (50/day)', 'GPT-powered market analysis and research tools'],
-  ['OPT', 'Options Confluence', 'Multi-signal options flow analysis'],
+  ['AI', 'AI Analyst (50/day)', 'GPT-4.1 powered market analysis and research tools'],
+  ['OPT', 'Options Terminal & Confluence', 'Options chain, Greeks, IV and multi-signal options flow analysis'],
+  ['BT', 'Strategy Backtester', 'Test strategies against historical data'],
+  ['JRNL', 'Trade Journal', 'Log, review, and analyze every trade'],
+  ['CRYP', 'Crypto Derivatives', 'Perpetuals, funding rates, and open interest'],
+  ['OPS', 'Operator Intelligence', 'Workflow automation and decision packets'],
   ['CSV', 'CSV Exports', 'Download scan results and journal data'],
   ['NEWS', 'Real-Time News', 'Curated market news feed with alerts'],
 ];
 
-const PRO_TRADER_FEATURES = [
-  ['PRO', 'Everything in Pro', 'Full access to all Pro features'],
-  ['BT', 'Strategy Backtester', 'Test strategies against historical data'],
-  ['JRNL', 'Trade Journal', 'Log, review, and analyze every trade'],
-  ['OPT', 'Options Terminal', 'Full options chain with Greeks and IV analysis'],
-  ['CRYP', 'Crypto Derivatives', 'Perpetuals, funding rates, and open interest'],
-  ['AI', 'Unlimited AI', 'No daily limit on AI Analyst questions'],
-  ['OPS', 'Operator Intelligence', 'Workflow automation and decision packets'],
-];
-
 export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
-  const isPT = tier === 'pro_trader';
-  const planName = isPT ? 'Pro Trader' : 'Pro';
-  const features = isPT ? PRO_TRADER_FEATURES : PRO_FEATURES;
+  void tier; // 'pro' and legacy 'pro_trader' get the same Pro welcome
+  const planName = 'Pro';
+  const features = PRO_FEATURES;
   const accent = 'var(--msp-bull)';
 
   const featureRows = features
@@ -146,7 +141,8 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
     ['Scanner', '/tools/scanner'],
     ['Portfolio', '/tools/workspace?tab=portfolio'],
     ['ARCA AI Panel', '/tools/scanner'],
-    ...(isPT ? [['Journal', '/tools/workspace?tab=journal'], ['Backtester', '/tools/workspace?tab=backtest']] : []),
+    ['Journal', '/tools/workspace?tab=journal'],
+    ['Backtester', '/tools/workspace?tab=backtest'],
   ]
     .map(
       ([label, path]) =>

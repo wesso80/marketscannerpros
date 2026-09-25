@@ -5,7 +5,7 @@ import TradeSuggestionCard, { type TradeSuggestion } from './TradeSuggestionCard
 import { useUserTier } from '@/lib/useUserTier';
 
 /**
- * SuggestionsWidget — Renders pending scenario ideas for Pro Trader users.
+ * SuggestionsWidget — Renders pending scenario ideas for Pro users.
  *
  * Drop into any dashboard or tools page:
  *   <SuggestionsWidget />

@@ -343,7 +343,7 @@ export async function collectTickerCatalysts(nowMs: number, symbols: string[]): 
 
 export function collectUnavailable(): Dataset<null>[] {
   return [
-    missing('options', 'Options flow / IV / skew', 'Alpha Vantage REALTIME_OPTIONS_FMV', false, 'Single-symbol on-demand only (Pro Trader gated, AV quota); options_metrics_latest has 0 rows. Not ingested.'),
+    missing('options', 'Options flow / IV / skew', 'Alpha Vantage REALTIME_OPTIONS_FMV', false, 'Single-symbol on-demand only (Pro gated, AV quota); options_metrics_latest has 0 rows. Not ingested.'),
     missing('news', 'News / sentiment', 'Alpha Vantage NEWS_SENTIMENT + CryptoCompare', false, 'Per-ticker only, rate-limited, OpenAI-costly; no market-wide news service exists. Not ingested.'),
     missing('credit', 'Credit (HYG/LQD price)', 'quotes_latest', false, 'HYG/LQD/TLT not in symbol_universe; only FRED HY OAS (stale) available.'),
     missing('leadLag', 'Cross-asset lead/lag, NQ pressure, auction, master', '/api/intelligence/status', false, 'UNDER_CONSTRUCTION per production status — excluded by rule.'),

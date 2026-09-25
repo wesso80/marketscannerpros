@@ -1,4 +1,6 @@
 import { isFreeForAllMode, isProductionAccessBypassAllowed } from './entitlements';
+import { isPaidTier } from './tiers';
+import { isOperator } from './quant/operatorAuth';
 
 export function isTemporaryProTraderBypassActive(nowMs: number = Date.now()): boolean {
   const freeForAllMode = isFreeForAllMode();
@@ -59,6 +61,21 @@ function logBypassStatusOnce(): void {
 // should prefer `hasProAccess()` from `lib/entitlements`.
 export function hasProTraderAccess(tier: string | null | undefined): boolean {
   logBypassStatusOnce();
-  if (tier === 'pro' || tier === 'pro_trader') return true;
+  if (isPaidTier(tier)) return true;
   return isTemporaryProTraderBypassActive();
+}
+
+/**
+ * Server-side paid gate for a signed session: Pro (or legacy pro_trader) tier, OR an admin/owner.
+ * Admins are recognised by the signed `is_admin` login flag or by ADMIN_EMAILS (via the session cid /
+ * workspace hash), so an owner whose login cookie says `free` (no Stripe subscription of their own)
+ * still gets every Pro feature — matching what /api/me shows in the UI.
+ */
+export function hasPaidSessionAccess(
+  session: { tier?: string | null; is_admin?: boolean; cid?: string | null; workspaceId?: string | null } | null | undefined,
+): boolean {
+  if (!session) return false;
+  if (session.is_admin === true) return true;
+  if (session.cid && isOperator(session.cid, session.workspaceId || undefined)) return true;
+  return hasProTraderAccess(session.tier);
 }

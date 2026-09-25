@@ -1,3 +1,4 @@
+import { isPaidTier } from "./tiers";
 export type AppTier = "free" | "pro" | "pro_trader";
 
 export const AI_DAILY_LIMITS: Record<AppTier, number> = {
@@ -6,10 +7,10 @@ export const AI_DAILY_LIMITS: Record<AppTier, number> = {
   pro_trader: 50,
 };
 
-/** Model selection per tier — Pro Trader gets GPT-4.1 for superior analysis */
+/** Model selection per tier — Pro (incl. legacy pro_trader) gets GPT-4.1; Free stays on gpt-4o-mini */
 export const AI_MODEL_BY_TIER: Record<AppTier, string> = {
   free: 'gpt-4o-mini',
-  pro: 'gpt-4o-mini',
+  pro: 'gpt-4.1',
   pro_trader: 'gpt-4.1',
 };
 
@@ -72,7 +73,7 @@ export function getDailyAiLimit(tier: string | null | undefined): number {
 }
 
 export function hasProAccess(tier: string | null | undefined): boolean {
-  return normalizeTier(tier) !== "free";
+  return isPaidTier(tier);
 }
 
 /**

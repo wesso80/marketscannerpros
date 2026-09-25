@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProAccess } from '@/lib/entitlements';
+
 import { hasValidInternalServiceSecret } from '@/lib/internalServiceAuth';
 import { getCached, setCached } from '@/lib/redis';
 import {
@@ -9,6 +9,7 @@ import {
   COINGECKO_ID_MAP,
   type DerivativeTicker,
 } from '@/lib/coingecko';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 /* ─── helpers ──────────────────────────────────── */
 
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!hasProAccess(session.tier)) {
+    if (!hasPaidSessionAccess(session)) {
       return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
     }
   }

@@ -117,7 +117,7 @@ function PremiumGate() {
   return (
     <div className="py-4 text-center">
       <div className="text-xs text-slate-400 mb-3">
-        Edge Profile insights require a Pro or Pro Trader subscription.
+        Edge Profile insights require a Pro subscription.
       </div>
       <a
         href="/pricing"

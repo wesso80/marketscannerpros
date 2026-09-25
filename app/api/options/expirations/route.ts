@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { usableOptionRows } from '@/lib/options/avChain';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -72,8 +73,12 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      const providerOptions = payload?.['data'] || [];
-      if (!Array.isArray(providerOptions) || providerOptions.length === 0) {
+      // Rejects empty chains and Alpha Vantage's artificial "premium endpoint" sample (key not entitled).
+      const providerOptions = usableOptionRows(payload, normalizedSymbol);
+      if (!providerOptions) {
+        if (Array.isArray(payload?.['data']) && payload['data'].length) {
+          console.warn(`[options/expirations] ${provider.fn} returned sample/wrong-symbol data (key not entitled) — skipping`);
+        }
         continue;
       }
 

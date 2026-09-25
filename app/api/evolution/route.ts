@@ -6,7 +6,7 @@ import {
   loadEvolutionSamples,
   saveEvolutionAdjustment,
 } from '@/lib/evolution-store';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 const BASELINE_WEIGHTS = {
   regimeFit: 0.25,
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ success: false, error: 'Pro subscription required' }, { status: 403 });
     }
 
     const body = await request.json().catch(() => ({}));

@@ -706,7 +706,7 @@ function BacktestContent() {
     setAiText(null);
   }, [symbol, assetType, timeframe, strategy, startDate, endDate, initialCapital, replayMinSignalScore]);
 
-  // Tier gate - Pro Trader only
+  // Tier gate - Pro only
   if (tierLoading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--msp-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -737,7 +737,7 @@ function BacktestContent() {
           icon="BT"
           backHref="/dashboard"
         />
-        <UpgradeGate requiredTier="pro_trader" feature="Elite Strategy Backtesting">
+        <UpgradeGate requiredTier="pro" feature="Elite Strategy Backtesting">
           <ul style={{ textAlign: 'left', color: 'var(--msp-flat)', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
             <li>25+ historical strategy templates (MSP, scalping, swing)</li>
             <li>Multi-timeframe testing (15m, 30m, 1h, daily)</li>

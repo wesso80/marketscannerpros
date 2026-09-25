@@ -2238,7 +2238,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     );
   }
 
-  // Pro Trader feature gate
+  // Pro feature gate
   if (!canAccessOptionsConfluence(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
@@ -2250,7 +2250,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           <p className="text-sm text-slate-400">Strike & Expiration Analysis Based on Time Confluence</p>
         </header>
         <main className="max-w-none px-4 pb-8">
-          <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
+          <UpgradeGate requiredTier="pro" feature="Options Confluence Scanner" />
         </main>
       </div>
     );

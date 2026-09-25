@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import type { ScanMode } from '@/lib/confluence-learning-agent';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 const VALID_SCAN_MODES: ScanMode[] = [
   'scalping',
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in to use GEX' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for GEX' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ success: false, error: 'Pro subscription required for GEX' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

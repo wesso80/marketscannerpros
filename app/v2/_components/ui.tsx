@@ -6,6 +6,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import React from 'react';
+import { isPaidTier } from '@/lib/tiers';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
@@ -123,24 +124,28 @@ export function AuthPrompt() {
 
 // ─── Upgrade Gate ─────────────────────────────────────────────────────────────
 
+export function hasPaidTier(tier: string | null | undefined): boolean {
+  return isPaidTier(tier);
+}
+
 export function UpgradeGate({
   requiredTier,
   currentTier,
   feature,
   children,
 }: {
-  requiredTier: 'pro' | 'pro_trader';
+  requiredTier: 'pro';
   currentTier: string;
   feature: string;
   children: React.ReactNode;
 }) {
-  const tierRank: Record<string, number> = { anonymous: 0, free: 1, pro: 2, pro_trader: 3 };
-  const hasAccess = (tierRank[currentTier] || 0) >= (tierRank[requiredTier] || 0);
+  // Two access levels only: Free and Pro. Legacy `pro_trader` tiers and admins count as Pro
+  // (see lib/tiers.ts). `requiredTier` is kept for call-site readability; there is only one paid plan.
+  void requiredTier;
+  if (hasPaidTier(currentTier)) return <>{children}</>;
 
-  if (hasAccess) return <>{children}</>;
-
-  const tierLabel = requiredTier === 'pro_trader' ? 'Pro Trader' : 'Pro';
-  const tierColor = requiredTier === 'pro_trader' ? 'var(--msp-warn)' : 'var(--msp-info)';
+  const tierLabel = 'Pro';
+  const tierColor = 'var(--msp-info)';
 
   return (
     <div className="relative">

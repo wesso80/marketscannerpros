@@ -7,7 +7,7 @@
  * How it works:
  * 1. User gets unique referral code (hash of their workspace ID)
  * 2. Friend signs up with referral code in URL (?ref=CODE)
- * 3. When friend completes PAID subscription, both get 1 month Pro Trader free
+ * 3. When friend completes PAID subscription, both get 1 month Pro free
  * 4. Rewards are applied via Stripe subscription credits/coupons
  */
 

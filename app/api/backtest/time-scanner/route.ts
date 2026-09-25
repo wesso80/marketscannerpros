@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { logger } from '@/lib/logger';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { brainBacktestRequestSchema } from '@/lib/backtest/signalSnapshots';
 import { runSignalReplayBacktest } from '@/lib/backtest/signalReplay';
 
@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ error: 'Pro Trader subscription required for Backtesting' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ error: 'Pro subscription required for Backtesting' }, { status: 403 });
     }
 
     const body = brainBacktestRequestSchema.parse(await req.json());

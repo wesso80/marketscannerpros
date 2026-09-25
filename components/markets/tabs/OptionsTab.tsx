@@ -20,7 +20,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
       return (
         <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-6 text-center">
           <p className="text-sm font-semibold text-[var(--msp-text-muted)]">No derivatives data available</p>
-          <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Derivatives data requires Pro Trader tier for {symbol}</p>
+          <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Derivatives data requires the Pro plan for {symbol}</p>
         </div>
       );
     }
@@ -161,7 +161,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
     return (
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-6 text-center">
         <p className="text-sm font-semibold text-[var(--msp-text-muted)]">No options data available</p>
-        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Options data requires Pro Trader tier for {symbol}</p>
+        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Options data requires the Pro plan for {symbol}</p>
       </div>
     );
   }

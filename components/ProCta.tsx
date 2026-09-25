@@ -1,5 +1,6 @@
 'use client'
 import {useEffect,useState} from 'react'
+import { isPaidTier } from '@/lib/tiers'
 type T='free'|'pro'|'pro_trader'
 export default function ProCta(){
   const [t,setT]=useState<T>('free')
@@ -12,10 +13,10 @@ export default function ProCta(){
       }).catch(()=>{})
   },[])
   const appUrl = wid ? `/tools/scanner?wid=${wid}` : '/tools/scanner'
-  return t==='pro_trader'
+  return isPaidTier(t)
     ? <a href={appUrl} target="_blank" rel="noopener noreferrer"
          className="inline-block mt-2 rounded bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">
-         Open Pro Trader App
+         Open Pro App
        </a>
     : <a href="/pricing" className="inline-block mt-2 text-emerald-300 underline">View Pricing</a>
 }

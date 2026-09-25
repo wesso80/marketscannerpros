@@ -5,7 +5,7 @@ import type { TickerContext } from '../types';
 /**
  * Flow Tab — Volume spikes, OI, funding rate, liquidity, capital flow.
  * Absorbs the Crypto Dashboard derivatives data + CapitalFlowCard intelligence.
- * Gated to Pro Trader tier.
+ * Gated to Pro (legacy pro_trader and admins included).
  */
 export default function FlowTab({ ctx }: { ctx: TickerContext }) {
   const { symbol, assetClass, flow, loading } = ctx;
@@ -20,7 +20,7 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-6 text-center">
         <p className="text-sm font-semibold text-[var(--msp-text-muted)]">No flow data available</p>
         <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">
-          {isCrypto ? 'Capital flow / leverage data' : 'Capital flow / options flow data'} requires Pro Trader tier for {symbol}
+          {isCrypto ? 'Capital flow / leverage data' : 'Capital flow / options flow data'} requires the Pro plan for {symbol}
         </p>
       </div>
     );

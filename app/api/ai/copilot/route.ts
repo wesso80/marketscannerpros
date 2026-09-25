@@ -97,9 +97,7 @@ export async function POST(req: NextRequest) {
     const quota = await checkTierQuota(session.workspaceId, tier);
     if (!quota.allowed) {
       const upgradeMsg = tier === 'free' 
-        ? 'Upgrade to Pro for 50/day or Pro Trader for 50/day with GPT-4.1.' 
-        : tier === 'pro'
-        ? 'Upgrade to Pro Trader for GPT-4.1 powered analysis.'
+        ? 'Upgrade to Pro for 50/day with GPT-4.1.' 
         : 'Limit resets at midnight UTC.';
       
       return NextResponse.json({ 
@@ -371,7 +369,7 @@ Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
     // Get tools for this skill
     const tools = getOpenAITools(skill);
 
-    // Tier-based model selection: Pro Trader gets GPT-4.1
+    // Tier-based model selection: Pro (incl. legacy pro_trader) gets GPT-4.1
     const aiModel = AI_MODEL_BY_TIER[normalizeTier(tier)] || 'gpt-4o-mini';
 
     // Call OpenAI

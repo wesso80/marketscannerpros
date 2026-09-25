@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       const currentUsage = parseInt(usageResult[0]?.count || "0");
       if (currentUsage >= dailyLimit) {
         return NextResponse.json({
-          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for 200/day.' : 'Upgrade to Pro Trader for 200/day.'}`,
+          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day.' : 'Limit resets at midnight UTC.'}`,
           limitReached: true
         }, { status: 429 });
       }

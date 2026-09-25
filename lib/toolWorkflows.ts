@@ -1,4 +1,4 @@
-export type ToolTier = 'free' | 'pro' | 'pro_trader';
+export type ToolTier = 'free' | 'pro'; // two access levels only
 export type WorkflowTool = { href: string; label: string; description: string; tier: ToolTier; role: 'primary' | 'advanced' | 'specialist' };
 export type WorkflowArea = 'overview' | 'scanner' | 'research' | 'backtest' | 'track';
 export type ToolWorkflow = { id: 'find' | 'validate' | 'mechanics' | 'test' | 'track' | 'advanced'; title: string; subtitle: string; outcome: string; tools: WorkflowTool[] };

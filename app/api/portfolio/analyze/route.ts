@@ -12,6 +12,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getDailyAiLimit, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
+import { hasPaidSessionAccess } from "@/lib/proTraderAccess";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // Allow longer for comprehensive analysis
@@ -113,10 +114,10 @@ export async function POST(req: NextRequest) {
     const workspaceId = session?.workspaceId || "free-mode";
     const tier = normalizeTier(session?.tier);
 
-    // Tier gate — portfolio AI analysis requires Pro or Pro Trader
-    if (tier === 'free' && !freeForAll) {
+    // Tier gate — portfolio AI analysis requires Pro (legacy pro_trader and admins included)
+    if (!hasPaidSessionAccess(session) && !freeForAll) {
       return NextResponse.json({
-        error: 'Portfolio AI analysis requires a Pro or Pro Trader subscription.',
+        error: 'Portfolio AI analysis requires a Pro subscription.',
         upgradeRequired: true,
       }, { status: 403 });
     }
@@ -136,7 +137,7 @@ export async function POST(req: NextRequest) {
       const currentUsage = parseInt(usageResult[0]?.count || "0");
       if (currentUsage >= dailyLimit) {
         return NextResponse.json({
-          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for 200/day.' : 'Upgrade to Pro Trader for 200/day.'}`,
+          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day.' : 'Limit resets at midnight UTC.'}`,
           limitReached: true
         }, { status: 429 });
       }

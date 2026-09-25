@@ -16,11 +16,12 @@ import { closedCandles } from '@/lib/market/candleIntegrity';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProAccess } from '@/lib/entitlements';
+
 import { getOHLC, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { avFetch } from '@/lib/avRateGovernor';
 import { atr as calcATR, OHLCVBar } from '@/lib/indicators';
 import { scanPatterns, type Candle, type DetectedPattern, type KeyLine } from '@/lib/patterns/pattern-engine';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -317,7 +318,7 @@ export async function POST(req: NextRequest) {
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!hasProAccess(session.tier)) {
+  if (!hasPaidSessionAccess(session)) {
     return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
 

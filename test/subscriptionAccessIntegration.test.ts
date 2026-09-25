@@ -52,7 +52,7 @@ describe('getVerifiedTier: expired subscription â€” static analysis', () =>
     expect(content).toContain('workspace_id');
   });
 
-  it('Pro Trader API gate: gated routes call hasProTraderAccess before parsing body', () => {
+  it('Pro API gate: gated routes call hasPaidSessionAccess before parsing body', () => {
     const gatedRoutes = [
       'app/api/backtest/route.ts',
       'app/api/golden-egg/route.ts',
@@ -61,8 +61,8 @@ describe('getVerifiedTier: expired subscription â€” static analysis', () =>
 
     for (const path of gatedRoutes) {
       const content = read(path);
-      expect(content, `${path} must import hasProTraderAccess`).toContain('hasProTraderAccess');
-      const gateIdx = content.indexOf('hasProTraderAccess');
+      expect(content, `${path} must call hasPaidSessionAccess`).toContain('hasPaidSessionAccess(session)');
+      const gateIdx = content.indexOf('hasPaidSessionAccess(session)');
       const bodyIdx = content.indexOf('await req.json');
       if (bodyIdx !== -1) {
         expect(gateIdx, `${path}: gate must appear before body parse`).toBeLessThan(bodyIdx);

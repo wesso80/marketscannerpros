@@ -18,7 +18,7 @@ import { getIndicators } from '@/lib/onDemandFetch';
 import { getAggregatedFundingRates, getAggregatedOpenInterest } from '@/lib/coingecko';
 import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import { calculateDealerGammaSnapshot } from '@/lib/options-gex';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 // ── Asset class detection ──────────────────────────────────────────────
 const CRYPTO_SUFFIXES = ['USD', 'USDT', 'USDC', 'BTC', 'ETH', 'BUSD'];
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
 
     // ── 4. OPTIONS PRESSURE — live from Alpha Vantage (equity only) ─
     const optPressure: Partial<OptionsPressureInput> = {};
-    if (assetClass === 'equity' && hasProTraderAccess(session.tier)) {
+    if (assetClass === 'equity' && hasPaidSessionAccess(session)) {
       try {
         const analysis = await optionsAnalyzer.analyzeForOptions(symbol, scanMode);
 

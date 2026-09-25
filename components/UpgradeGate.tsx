@@ -4,9 +4,8 @@ import Link from "next/link";
 import { PLAN_PRICES } from '@/lib/planPrices';
 
 interface UpgradeGateProps {
-  // Both values are accepted for backward compatibility with existing call sites.
-  // In the simplified 2-plan pricing there is only one upgrade path: Pro.
-  requiredTier: "pro" | "pro_trader";
+  // Two access levels only (Free / Pro): the only upgrade path is Pro.
+  requiredTier: "pro";
   feature: string;
   children?: React.ReactNode;
 }

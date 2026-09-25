@@ -857,7 +857,7 @@ export default function GoldenEggPage() {
 
       {/* Main content */}
       {ge && !loading && (
-        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Golden Egg Deep Analysis">
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Golden Egg Deep Analysis">
         <>
           {geLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">

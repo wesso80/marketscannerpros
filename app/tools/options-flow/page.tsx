@@ -158,7 +158,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
   }, [symbol]);
 
   if (!canAccessOptionsTerminal(tier)) {
-    return <UpgradeGate requiredTier="pro_trader" feature="Options Flow Intelligence" />;
+    return <UpgradeGate requiredTier="pro" feature="Options Flow Intelligence" />;
   }
 
   const lastUpdated = data ? new Date(data.timestamp).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '—';
