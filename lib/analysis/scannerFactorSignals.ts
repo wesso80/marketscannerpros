@@ -102,7 +102,10 @@ const CCI_FULL = 150;
 const OBV_FULL = 5;
 const VWAP_FULL = 3;
 const RS_RATIO_FULL = 0.15;
-const FUNDING_FULL = 0.05;
+// Perp funding (% per funding period). |funding| ≤ FUNDING_NORMAL_MAX is the market's resting state (longs usually
+// pay a small premium) and is NEUTRAL; beyond it the contrarian vote ramps to full at FUNDING_EXTREME_FULL.
+const FUNDING_NORMAL_MAX = 0.05;
+const FUNDING_EXTREME_FULL = 0.10;
 const PROVISIONAL_BAND = 0.1;
 
 interface SubSignal {
@@ -154,8 +157,12 @@ export function deriveRelativeStrengthSignal(i: FactorSignalInput, u?: UniverseC
 
 export function derivePositioningSignal(i: FactorSignalInput): SubSignal {
   if (!i.derivativesExpected || !fin(i.fundingRate)) return { available: false, signed: 0 };
-  // Crowded longs (positive funding) = squeeze/mean-reversion risk → bearish tilt.
-  const signed = -bounded(i.fundingRate!, FUNDING_FULL);
+  // Only EXTREME funding is evidence, and it is contrarian and mirror-symmetric: crowded longs (extreme positive)
+  // → bearish, crowded shorts (extreme negative) → bullish. Normal positive funding is neutral (it used to count as
+  // a linear bearish vote from the first basis point).
+  const f = i.fundingRate!;
+  const excess = Math.max(0, Math.abs(f) - FUNDING_NORMAL_MAX) / (FUNDING_EXTREME_FULL - FUNDING_NORMAL_MAX);
+  const signed = excess > 0 ? -Math.sign(f) * Math.min(1, excess) : 0;
   return { available: true, signed: clamp(signed, -1, 1) };
 }
 

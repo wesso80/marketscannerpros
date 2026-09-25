@@ -183,7 +183,9 @@ function derivePositioning(i: ScannerInsightInput): { signal: FactorSignal; caut
   // Extreme funding is a crowding caution regardless of direction.
   const extreme = num(i.fundingRate) && Math.abs(i.fundingRate) >= 0.05;
   let signal: FactorSignal = 'neutral';
-  if (num(i.fundingRate)) signal = i.fundingRate > 0.005 ? 'bullish' : i.fundingRate < -0.005 ? 'bearish' : 'neutral';
+  // Contrarian and only at extremes (mirror-symmetric): crowded longs lean bearish, crowded shorts lean bullish.
+  // Normal funding is neutral (it used to read any funding > 0.005 as bullish).
+  if (num(i.fundingRate) && extreme) signal = i.fundingRate > 0 ? 'bearish' : 'bullish';
   return { signal, caution: Boolean(extreme) };
 }
 

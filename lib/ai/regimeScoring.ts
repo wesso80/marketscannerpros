@@ -381,24 +381,37 @@ export function estimateComponentsFromContext(opts: {
   oiChange24h?: number;
   fearGreed?: number;
   ivRank?: number;
+  /**
+   * Setup direction the alignment is measured against. When omitted, the side implied by RSI (≥ 50 bullish) is used,
+   * so the estimate is still mirror-symmetric. (Before Sep 2026 TA was bullish-absolute: RSI 60 scored +15 but the
+   * mirrored bearish RSI 40 scored −10, so bearish setups failed the TREND_EXPANSION TA ≥ 50 gate far more often.)
+   */
+  direction?: 'bullish' | 'bearish' | 'neutral';
 }): ConfluenceComponents {
   // SQ: Signal Quality from scanner score
   const SQ = clamp(opts.scannerScore ?? 50);
 
-  // TA: Technical Alignment estimate
+  // TA: Technical Alignment WITH the setup direction (mirror-symmetric: a bearish reading is scored on 100 − RSI and −CCI)
+  const fin = (v: number | undefined): v is number => typeof v === 'number' && Number.isFinite(v);
+  const side = opts.direction === 'bearish' ? -1
+    : opts.direction === 'bullish' ? 1
+    : opts.direction === 'neutral' ? 0
+    : fin(opts.rsi) ? (opts.rsi >= 50 ? 1 : -1) : 0;
   let TA = 50;
-  if (opts.rsi !== undefined) {
-    if (opts.rsi > 50 && opts.rsi < 70) TA += 15; // Bullish confirmation
-    else if (opts.rsi < 50 && opts.rsi > 30) TA -= 10; // Bearish pressure
-    else if (opts.rsi >= 70 || opts.rsi <= 30) TA -= 5; // Overbought/oversold
+  if (fin(opts.rsi) && side !== 0) {
+    const r = side > 0 ? opts.rsi : 100 - opts.rsi;
+    if (r > 50 && r < 70) TA += 15; // momentum confirms the setup side
+    else if (r < 50 && r > 30) TA -= 10; // momentum against the setup side
+    else if (r >= 70 || r <= 30) TA -= 5; // stretched either way
   }
-  if (opts.adx !== undefined) {
-    if (opts.adx > 25) TA += 10; // Trend strength
+  if (fin(opts.adx)) {
+    if (opts.adx > 25) TA += 10; // Trend strength (direction-free)
     else if (opts.adx < 15) TA -= 10; // No trend
   }
-  if (opts.cci !== undefined) {
-    if (opts.cci > 0) TA += 5;
-    else if (opts.cci < -100) TA -= 10;
+  if (fin(opts.cci) && side !== 0) {
+    const c = side * opts.cci;
+    if (c > 0) TA += 5;
+    else if (c < -100) TA -= 10;
   }
   TA = clamp(TA);
 

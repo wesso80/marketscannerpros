@@ -67,10 +67,21 @@ describe('derivePositioningSignal', () => {
   it('is unavailable without derivatives', () => {
     expect(derivePositioningSignal({ fundingRate: 0.03 }).available).toBe(false);
   });
-  it('treats crowded longs (high positive funding) as bearish tilt', () => {
-    const s = derivePositioningSignal({ fundingRate: 0.05, derivativesExpected: true });
+  it('treats crowded longs (extreme positive funding) as bearish tilt', () => {
+    const s = derivePositioningSignal({ fundingRate: 0.08, derivativesExpected: true });
     expect(s.available).toBe(true);
     expect(s.signed).toBeLessThan(0);
+  });
+  it('treats normal positive funding as neutral (observed, zero vote)', () => {
+    const s = derivePositioningSignal({ fundingRate: 0.01, derivativesExpected: true });
+    expect(s.available).toBe(true);
+    expect(s.signed).toBe(0);
+  });
+  it('is mirror-symmetric: crowded shorts lean bullish by the same amount', () => {
+    const long = derivePositioningSignal({ fundingRate: 0.08, derivativesExpected: true }).signed;
+    const short = derivePositioningSignal({ fundingRate: -0.08, derivativesExpected: true }).signed;
+    expect(short).toBeCloseTo(-long, 12);
+    expect(derivePositioningSignal({ fundingRate: 0.2, derivativesExpected: true }).signed).toBe(-1);
   });
 });
 
