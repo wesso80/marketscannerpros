@@ -1,12 +1,14 @@
 /**
  * Options Flow API — /api/options-flow
  *
- * Enhanced options flow analysis with:
- * - Trade direction classification (bid/ask inference)
- * - Block vs sweep pattern detection
- * - Net premium flow with directional conviction
- * - IV skew analysis
- * - Smart money scoring
+ * Options chain flow facts for the nearest usable expiry:
+ * - Call/put premium, volume, open interest and volume vs OI
+ * - IV skew and ATM IV
+ * - Buy/sell premium split estimated from bid/ask (approximate, labelled as such)
+ *
+ * The chain is a snapshot, not trade prints, so directional scores (conviction, large-flow direction/confidence),
+ * block/sweep labels and whale/institutional tiers are NOT returned: `inferenceAvailable: false` and those
+ * fields are null. See toSnapshotFlowView in lib/options-flow-classifier.
  *
  * Query params:
  *   symbol — required ticker (e.g. AAPL, SPY)
@@ -18,7 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { avFetch } from '@/lib/avRateGovernor';
 import { checkOptionsAccess } from '@/lib/options/access';
 import { describeChainSource, fetchSharedOptionsChain, type ChainQuoteBasis } from '@/lib/options/chainCache';
-import { classifyOptionsFlow, type OptionsFlowClassification } from '@/lib/options-flow-classifier';
+import { classifyOptionsFlow, toSnapshotFlowView, type OptionsFlowClassification, type SnapshotFlowView } from '@/lib/options-flow-classifier';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -148,9 +150,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No expirations found' }, { status: 404 });
     }
 
+    // Previous-session data describes yesterday's trading; an expiry that settles today (0DTE, US time) is about
+    // to vanish, so prefer the next expiry with dte >= 1 when one exists.
+    const skippedZeroDte = shared.quoteBasis === 'previous_session' && expirations[0] === todayKey && expirations.length > 1;
+    const candidateExpirations = skippedZeroDte ? expirations.filter((expiration) => expiration > todayKey) : expirations;
+
     // Select nearest expiration with decent contract count
-    let selectedExpiry = expirations[0];
-    for (const exp of expirations) {
+    let selectedExpiry = candidateExpirations[0];
+    for (const exp of candidateExpirations) {
       const group = byExpiry.get(exp) || [];
       if (group.length >= 20) {
         selectedExpiry = exp;
@@ -186,6 +193,9 @@ export async function GET(req: NextRequest) {
       selectedExpiry,
     );
 
+    const view = toSnapshotFlowView(classification);
+    const onPreviousSession = shared.quoteBasis === 'previous_session';
+
     // Build response (trim contracts to reduce payload)
     const response: OptionsFlowResponse = {
       success: true,
@@ -195,30 +205,19 @@ export async function GET(req: NextRequest) {
       expiration: selectedExpiry,
       availableExpirations: expirations,
       contractCount: expiryContracts.length,
+      expiryNote: skippedZeroDte
+        ? `Skipped ${todayKey} (expires today) because this is previous-session data; showing the next expiry.`
+        : null,
       ...source,
-      aggregate: classification.aggregate,
-      flowPattern: classification.flowPattern,
+      factsLabel: onPreviousSession ? 'Previous session estimate' : 'Snapshot estimate',
+      inferenceAvailable: view.inferenceAvailable,
+      inferenceNote: view.inferenceNote,
+      facts: view.facts,
+      aggregate: view.aggregate,
+      flowPattern: view.flowPattern,
       ivSkew: classification.ivSkew,
-      smartMoney: {
-        direction: classification.smartMoney.direction,
-        confidence: classification.smartMoney.confidence,
-        signals: classification.smartMoney.signals,
-        whaleCount: classification.smartMoney.whaleFlows.length,
-        institutionalCount: classification.smartMoney.institutionalFlows.length,
-      },
-      topFlows: classification.topFlows.map(f => ({
-        strike: f.strike,
-        type: f.type,
-        direction: f.direction,
-        directionConfidence: f.directionConfidence,
-        volume: f.volume,
-        openInterest: f.openInterest,
-        estimatedPremium: f.estimatedPremium,
-        premiumTier: f.premiumTier,
-        moneyness: f.moneyness,
-        iv: f.iv,
-        delta: f.delta,
-      })),
+      smartMoney: view.smartMoney,
+      topFlows: view.topFlows,
       timestamp: classification.timestamp,
       duration: `${Date.now() - start}ms`,
     };
@@ -240,34 +239,24 @@ interface OptionsFlowResponse {
   expiration: string;
   availableExpirations: string[];
   contractCount: number;
+  /** Set when a same-day (0DTE) expiry was skipped because the data is from the previous session */
+  expiryNote: string | null;
   provider: string;
   /** previous_session = HISTORICAL_OPTIONS close — this is the prior session's flow, not live. */
   quoteBasis: ChainQuoteBasis;
   asOfDate: string | null;
   sourceLabel: string;
-  aggregate: OptionsFlowClassification['aggregate'];
-  flowPattern: OptionsFlowClassification['flowPattern'];
+  /** 'Previous session estimate' on the HISTORICAL_OPTIONS fallback */
+  factsLabel: string;
+  /** false: snapshot data, so conviction/confidence, block/sweep and whale/institutional tiers are withheld (null) */
+  inferenceAvailable: boolean;
+  inferenceNote: string;
+  facts: SnapshotFlowView['facts'];
+  aggregate: SnapshotFlowView['aggregate'];
+  flowPattern: SnapshotFlowView['flowPattern'];
   ivSkew: OptionsFlowClassification['ivSkew'];
-  smartMoney: {
-    direction: string;
-    confidence: number;
-    signals: string[];
-    whaleCount: number;
-    institutionalCount: number;
-  };
-  topFlows: Array<{
-    strike: number;
-    type: string;
-    direction: string;
-    directionConfidence: number;
-    volume: number;
-    openInterest: number;
-    estimatedPremium: number;
-    premiumTier: string;
-    moneyness: string;
-    iv: number;
-    delta: number;
-  }>;
+  smartMoney: SnapshotFlowView['smartMoney'];
+  topFlows: SnapshotFlowView['topFlows'];
   timestamp: string;
   duration: string;
 }
