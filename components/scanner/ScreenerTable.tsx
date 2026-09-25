@@ -226,15 +226,23 @@ const COLUMNS: Column[] = [
   },
   {
     key: 'permission', label: 'Research', width: '105px', align: 'center',
-    render: (r) => (
-      <span style={{
-        fontSize: 11, fontWeight: 700, color: permColor(r.permission),
-        background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
-      }}>
-        {r.scorePermission ?? (r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014')}
-        {r.canonical ? <span className="ml-1 text-[10px] font-bold opacity-80" title={`${r.canonical.setupType} · ${r.canonical.direction} · score ${r.canonical.score}`}>{r.canonical.grade}</span> : null}
-      </span>
-    ),
+    render: (r) => {
+      const capFlag = r.canonical?.flags?.find((f) => f.code === 'SNAPSHOT_GRADE_CAP');
+      return (
+        <>
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: permColor(r.permission),
+            background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
+          }}>
+            {r.scorePermission ?? (r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014')}
+            {r.canonical ? <span className="ml-1 text-[10px] font-bold opacity-80" title={`${r.canonical.setupType} · ${r.canonical.direction} · score ${r.canonical.score}${capFlag ? ` · ${capFlag.message}` : ''}`}>{r.canonical.grade}</span> : null}
+          </span>
+          {r.canonical && r.canonical.permission !== 'BLOCK'
+            ? <div style={{ fontSize: 9, color: 'var(--msp-text-muted)', marginTop: 1 }}>Setup {r.canonical.score}</div>
+            : null}
+        </>
+      );
+    },
   },
 ];
 
