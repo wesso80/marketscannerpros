@@ -1252,7 +1252,7 @@ function BacktestContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, realised balance drawdown ${results.maxDrawdown}% (open risk excluded), realised balance sharpe ${results.sharpeRatio}, profit factor ${formatProfitFactor(results.profitFactor, results.profitFactorLabel)}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
+          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, ${results.statisticsBasis?.equity === 'bar_close_mark_to_market' ? `max drawdown ${results.maxDrawdown}% (open positions marked at bar closes), sharpe ${results.sharpeRatio}` : `realised balance drawdown ${results.maxDrawdown}% (open risk excluded), realised balance sharpe ${results.sharpeRatio}`}, profit factor ${formatProfitFactor(results.profitFactor, results.profitFactorLabel)}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
           context: {
             symbol,
             timeframe: `${startDate} to ${endDate}`,
@@ -3041,7 +3041,7 @@ function BacktestContent() {
 
                         {/* Equity Curve Section */}
                         <text x={padding.left} y={padding.top - 5} fill="#94a3b8" fontSize="12" fontWeight="600">
-                          Realised Balance
+                          {results.statisticsBasis?.equity === 'bar_close_mark_to_market' ? 'Marked Equity' : 'Realised Balance'}
                         </text>
 
                         {/* Equity grid lines */}
