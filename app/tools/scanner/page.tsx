@@ -12,6 +12,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
+import { legacyExecutionReason } from '@/lib/scanner/legacyReason';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
@@ -1359,15 +1360,13 @@ export default function ScannerPage() {
           && !strategyKey.includes('range_fade')
           && !strategyKey.includes('mean_reversion');
         const reason = pick.compositeV2?.blockers?.length ? pick.compositeV2.blockers.join(' ') : dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
-          : blockReasons.includes('risk_mode_block') ? 'Risk mode blocks escalation'
-          : blockReasons.includes('tf_alignment_low') ? 'Alignment below threshold'
-          : strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
+          : legacyExecutionReason(blockReasons) ?? (strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
           : rangeConfirmationNeeded ? 'Directional setup inside range — confirm break/fade'
           : tfA != null && tfA >= 4 && qual !== 'low' ? 'Four-factor agreement'
           : atrPct != null && atrPct < 1.5 ? 'Compression setup'
           : ind.momentumAccel ? 'Momentum acceleration'
           : trendOk ? 'Trend alignment'
-          : 'Mixed evidence';
+          : 'Mixed evidence');
         const enginePermission = scoreV2?.execution?.permission;
         // A canonical "No setup" row is not blocked: it keeps its factor-bias side and reads NO SETUP (mixed), not NOT ALIGNED.
         const noSetup = pick.canonicalStatus === 'NO_SETUP';
