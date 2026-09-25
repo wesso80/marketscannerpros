@@ -13,7 +13,12 @@ import { computeCompositeV2, type CompositeV2Input, type ScoreFactor, type Score
  * multiplier, a lower trust cap and a BLOCK. Rows whose factor coverage is below COVERAGE_MIN are WATCH with
  * INSUFFICIENT_DATA instead of BLOCK. Unusable data (no price, wrong interval, split-contaminated series) still blocks.
  */
-export const SCANNER_SCORE_VERSION = 'msp.scanner.v2.3' as const;
+/*
+ * v2.4 (Sep 2026): explicit HARD BLOCKS (lib/scanner/hardBlocks.ts) — STALE_DATA by bar timestamp, PRICE_SANITY,
+ * EARNINGS_IN_WINDOW, LIQUIDITY_MIN — plus informational `flags` (MACRO_EVENT, EARNINGS_UNKNOWN, …). Staleness is a
+ * block, not a score discount: the STALE cap (60) and stale/delayed freshness multipliers are removed.
+ */
+export const SCANNER_SCORE_VERSION = 'msp.scanner.v2.4' as const;
 /**
  * Minimum applicable-factor coverage (share of the asset's applicable factor weight actually observed) for a row to be
  * eligible for PASS. Below it the row is WATCH / INSUFFICIENT_DATA. 0.6 means the observed factors must carry at least
@@ -32,9 +37,11 @@ export type ScorePermission = 'PASS' | 'WATCH' | 'BLOCK';
 /** Stable, machine-readable reason codes. UI copy lives in `message`; logic must only branch on `code`. */
 export type ScoreReasonCode =
   | 'DATA_ELIGIBILITY'        // unusable data: no price, wrong bar interval, split-contaminated series
-  | 'DATA_TRUST_STALE'
+  | 'STALE_DATA'              // last completed bar is behind the market (bar timestamp, session-aware)
+  | 'PRICE_SANITY'            // live price vs second feed disagree beyond max(15%, 6×ATR%)
+  | 'EARNINGS_IN_WINDOW'      // earnings report inside the timeframe's holding window
+  | 'LIQUIDITY_MIN'           // avg daily $ volume (equity) / 24h USD volume (crypto) below minimum
   | 'DATA_TRUST_UNEVALUATED'
-  | 'DATA_FRESHNESS'          // underlying bars are stale
   | 'REGIME_GATE'             // a (non-circular) regime component gate failed
   | 'REGIME_CHAOS'            // shock / chaos regime (ATR > 4% daily-equivalent or news shock)
   | 'REGIME_STRATEGY_CONFLICT'
@@ -43,14 +50,16 @@ export type ScoreReasonCode =
   | 'INSUFFICIENT_DATA'       // WATCH: coverage < COVERAGE_MIN, < MIN_OBSERVED_FACTORS, or < 30 bars of history
   | 'DATA_TIMESTAMP_UNKNOWN'  // WATCH: bar time unknown, so staleness cannot be verified
   | 'DATA_TRUST_DEGRADED'     // WATCH: interval/provider/delay quality issue (not missing data)
-  | 'DATA_DELAYED';           // WATCH
+  | 'DATA_DELAYED'            // WATCH
+  // Flags (informational, never change permission):
+  | 'MACRO_EVENT' | 'EARNINGS_UNKNOWN' | 'LIQUIDITY_UNKNOWN' | 'PRICE_CHECK_UNAVAILABLE' | 'PRICE_CHECK_SAME_PROVIDER';
 /** Retired codes still found in cached v2.1/v2.2 payloads. Never emitted by v2.3. */
-export type LegacyScoreReasonCode = 'INSUFFICIENT_FACTORS' | 'DATA_TRUST_INSUFFICIENT' | 'COVERAGE_INCOMPLETE';
+export type LegacyScoreReasonCode = 'INSUFFICIENT_FACTORS' | 'DATA_TRUST_INSUFFICIENT' | 'COVERAGE_INCOMPLETE' | 'DATA_TRUST_STALE' | 'DATA_FRESHNESS';
 export interface ScoreReason { code: ScoreReasonCode; message: string }
 export type ScoreTrust = 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA';
 /** Score ceilings by trust level. DEGRADED / INSUFFICIENT_DATA are NOT capped any more: the only trust problem they can
  *  carry into the score is missing inputs, which coverage already counted once; their permission impact is WATCH. */
-export const SCORE_TRUST_CAP: Record<ScoreTrust, number> = { GOOD: 100, DEGRADED: 100, STALE: 60, INSUFFICIENT_DATA: 100 };
+export const SCORE_TRUST_CAP: Record<ScoreTrust, number> = { GOOD: 100, DEGRADED: 100, STALE: 100, INSUFFICIENT_DATA: 100 };
 
 export function scoreFreshness(value?: string | null): ScoreFreshness {
   if (value === 'fresh' || value === 'live') return 'live';
@@ -79,6 +88,10 @@ export function buildScannerScore(input: Omit<CompositeV2Input, 'evidenceQuality
   gateBlocks?: ScoreReason[];
   criticalBlockers?: string[];
   catalyst?: { earningsInDays: number | null; imminent: boolean };
+  /** From `evaluateHardBlocks().blocks`. */
+  hardBlocks?: ScoreReason[];
+  /** From `evaluateHardBlocks().flags`. Informational only. */
+  flags?: ScoreReason[];
 }) {
   const applicable = input.factors.filter(f => f.applicable !== false);
   const available = applicable.filter(f => f.available && Number.isFinite(f.signed));
@@ -86,11 +99,11 @@ export function buildScannerScore(input: Omit<CompositeV2Input, 'evidenceQuality
   const evidence = assessEvidenceQuality({availableFactors: available.length, totalFactors: applicable.length, freshness});
   const result = computeCompositeV2({...input, freshness, evidenceQuality: evidence.level});
   const blockReasons: ScoreReason[] = (input.criticalBlockers ?? []).map(message => ({code: 'DATA_ELIGIBILITY' as const, message}));
-  if (input.trustLevel === 'STALE') {
-    const messages = input.trustReasons?.length ? input.trustReasons : ['Data trust STALE.'];
-    blockReasons.push(...messages.map(message => ({code: 'DATA_TRUST_STALE' as const, message})));
+  if (input.hardBlocks?.length) blockReasons.push(...input.hardBlocks);
+  // One STALE_DATA reason whether staleness came from the bar time (hard blocks), trust, or freshness.
+  if ((input.trustLevel === 'STALE' || freshness === 'stale') && !blockReasons.some(r => r.code === 'STALE_DATA')) {
+    blockReasons.push({code: 'STALE_DATA', message: input.trustLevel === 'STALE' && input.trustReasons?.length ? input.trustReasons[0] : 'Underlying data is stale.'});
   }
-  if (freshness === 'stale') blockReasons.push({code: 'DATA_FRESHNESS', message: 'Underlying data is stale.'});
   if (input.gateBlocks?.length) blockReasons.push(...input.gateBlocks);
   else if (input.regimeGated) blockReasons.push({code: 'REGIME_GATE', message: 'Setup is blocked by its regime gate.'});
   if (!input.trustLevel) blockReasons.push({code: 'DATA_TRUST_UNEVALUATED', message: 'Data trust has not been evaluated.'});
@@ -129,6 +142,7 @@ export function buildScannerScore(input: Omit<CompositeV2Input, 'evidenceQuality
     blockers,
     blockReasons,
     watchReasons,
+    flags: input.flags ?? [],
     freshness,
     evidenceQuality: evidence.level,
     coverage: result.coverage,

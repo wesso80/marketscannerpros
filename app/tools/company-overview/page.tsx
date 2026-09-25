@@ -47,6 +47,7 @@ interface CompanyData {
   valuationBasis?: string;
   multiple?: { label: string; detail: string; rule: string };
   nextEarningsDate?: string | null;
+  nextEarningsStatus?: 'SCHEDULED' | 'NONE_IN_HORIZON' | 'UNKNOWN';
   nextEarningsEstimate?: number | null;
   daysToEarnings?: number | null;
   lastReportedQuarter?: string | null;
@@ -585,7 +586,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard
                   label="Next earnings"
-                  value={data.nextEarningsDate ?? 'Not scheduled (3-month horizon)'}
+                  value={data.nextEarningsDate ?? (data.nextEarningsStatus === 'NONE_IN_HORIZON' ? 'None in next 3 months' : 'UNKNOWN (calendar unavailable)')}
                   valueColor={data.daysToEarnings != null && data.daysToEarnings >= 0 && data.daysToEarnings <= 14 ? 'var(--msp-warn)' : undefined}
                   subValue={data.daysToEarnings != null ? <span style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>in {data.daysToEarnings} day{data.daysToEarnings === 1 ? '' : 's'}{data.nextEarningsEstimate != null ? ` · est. EPS $${data.nextEarningsEstimate.toFixed(2)}` : ''} — event risk</span> : undefined}
                 />

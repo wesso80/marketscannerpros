@@ -32,9 +32,9 @@ describe('scanner score contract v2.2+', () => {
 
   it('data problems produce machine-readable codes', () => {
     expect(buildScannerScore({ ...base, trustLevel: 'STALE', trustReasons: ['Last bar 5 days old'] }).blockReasons)
-      .toEqual([{ code: 'DATA_TRUST_STALE', message: 'Last bar 5 days old' }]);
+      .toEqual([{ code: 'STALE_DATA', message: 'Last bar 5 days old' }]);
     expect(buildScannerScore({ ...base, trustLevel: undefined }).blockReasons.map((r) => r.code)).toContain('DATA_TRUST_UNEVALUATED');
-    expect(buildScannerScore({ ...base, freshness: 'stale' }).blockReasons.map((r) => r.code)).toContain('DATA_FRESHNESS');
+    expect(buildScannerScore({ ...base, freshness: 'stale' }).blockReasons.map((r) => r.code)).toEqual(['STALE_DATA']);
     // v2.3: an unknown bar time is missing information → WATCH flag, not a block.
     const unknown = buildScannerScore({ ...base, freshness: 'unknown' });
     expect(unknown.permission).toBe('WATCH');
@@ -45,7 +45,7 @@ describe('scanner score contract v2.2+', () => {
   });
 
   it('version helper accepts cached v2.1 rows', () => {
-    expect(SCANNER_SCORE_VERSION).toBe('msp.scanner.v2.3');
+    expect(SCANNER_SCORE_VERSION).toBe('msp.scanner.v2.4');
     expect(isVersionedScannerScore('msp.scanner.v2.2')).toBe(true);
     expect(isVersionedScannerScore('msp.scanner.v2.1')).toBe(true);
     expect(isVersionedScannerScore(undefined)).toBe(false);
