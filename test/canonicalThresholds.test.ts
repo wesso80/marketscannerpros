@@ -53,7 +53,8 @@ describe('calibrated context (daily equity/crypto bars)', () => {
       expect(r.watchReasons[0].code).toBe('NO_VALIDATED_EDGE');
       expect(r.score).toBe(Math.round(r.calibration!.percentile));
       const lowRR = r.watchReasons.some((x) => x.code === 'RR_BELOW_MIN');
-      expect(r.grade).toBe(lowRR ? 'C' : r.calibration!.percentile >= 85 ? 'A' : r.calibration!.percentile >= 60 ? 'B' : 'C');
+      // Graded on the displayed (rounded) score, so the grade always matches the number shown.
+      expect(r.grade).toBe(lowRR ? 'C' : r.score >= 85 ? 'A' : r.score >= 60 ? 'B' : 'C');
       expect(r.calibration!.pTargetFirst).toBeGreaterThan(0);
       expect(r.calibration!.pTargetFirst).toBeLessThan(1);
       expect(r.calibration!.horizonBars).toBe(20);
