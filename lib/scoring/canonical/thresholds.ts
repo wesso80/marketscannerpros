@@ -33,3 +33,9 @@ export const CANONICAL_MIN_RR = 1.0;
 export const CANONICAL_COVERAGE_MIN = 0.6;
 /** ATR% percentile at/above which volatility is extreme for the symbol (both directions → at most WATCH). */
 export const CANONICAL_VOL_EXTREME_PCTL = 97;
+/**
+ * Highest grade a SNAPSHOT-mode verdict can get. An indicator snapshot scores only ~3 of the 6 factors (≈65% of the
+ * weight, rescaled to 100), has no swing structure and volatility-only stops, so its factor score is mostly ADX and
+ * nearly every trending row cleared the A cutoff. A needs bar data (swing structure, percentiles).
+ */
+export const SNAPSHOT_GRADE_MAX = 'B' as const;

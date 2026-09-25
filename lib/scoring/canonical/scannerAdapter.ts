@@ -89,19 +89,38 @@ export function canonicalRowLabel(c: CanonicalResult): string {
   return `Blocked: ${c.blockReasons.filter((r) => r.code !== 'NO_SETUP').map((r) => r.code).join(', ')}`;
 }
 
-type RankableCanonical = (Pick<CanonicalResult, 'permission' | 'grade' | 'score'> & { factorScore?: number; blockReasons?: CanonicalReason[] | null }) | null;
+type RankableCanonical = (Pick<CanonicalResult, 'permission' | 'grade' | 'score'> & { factorScore?: number; direction?: CanonicalResult['direction']; blockReasons?: CanonicalReason[] | null }) | null;
+/** The row's legacy MSP composite (0–100, scannerScoreV2) and its side. */
+type RankableComposite = { composite?: number | null; direction?: string | null } | null;
+type RankableRow = { symbol: string; canonical?: RankableCanonical; compositeV2?: RankableComposite };
+
 /**
- * Ranking: permission, then setup status (setup > no setup > hard block), then grade, then (calibrated) score, then raw
- * factor score; rows without a canonical result sort last. Two no-setup (or two hard-blocked) rows carry no canonical
- * ordering information, so they compare equal and callers chain their own order (e.g. factor-bias strength).
+ * The MSP composite when it points the same way as the canonical setup (long ↔ bullish, short ↔ bearish), else 0.
+ * A disagreeing or neutral MSP read, a missing composite, or a setup without a side all count as 0 — so an MSP score
+ * only lifts a setup it supports. Symmetric by construction: a mirrored short/bearish row scores the same as its long.
  */
-export function compareCanonicalRows(a: { symbol: string; canonical?: RankableCanonical }, b: typeof a): number {
+export function agreeingMspScore(row: { canonical?: RankableCanonical; compositeV2?: RankableComposite }): number {
+  const side = row.canonical?.direction;
+  const msp = row.compositeV2;
+  const v = msp?.composite;
+  if (typeof v !== 'number' || !Number.isFinite(v)) return 0;
+  const agrees = (side === 'long' && msp?.direction === 'bullish') || (side === 'short' && msp?.direction === 'bearish');
+  return agrees ? Math.max(0, v) : 0;
+}
+
+/**
+ * Ranking: permission, then setup status (setup > no setup > hard block), then grade, then the agreeing MSP score
+ * (agreeingMspScore), then (calibrated) setup score, then raw factor score; rows without a canonical result sort last.
+ * Two no-setup (or two hard-blocked) rows carry no canonical ordering information, so they compare equal and callers
+ * chain their own order (e.g. factor-bias strength).
+ */
+export function compareCanonicalRows(a: RankableRow, b: RankableRow): number {
   const ca = a.canonical, cb = b.canonical;
   if (!ca || !cb) return (cb ? 1 : 0) - (ca ? 1 : 0); // both missing → 0 so callers can chain a fallback order
   const sa = canonicalRowStatus(ca), sb = canonicalRowStatus(cb);
   const byVerdict = (PERM_ORDER[cb.permission] - PERM_ORDER[ca.permission]) || (STATUS_ORDER[sb] - STATUS_ORDER[sa]);
   if (byVerdict || (sa !== 'SETUP' && sb !== 'SETUP')) return byVerdict;
-  return (GRADE_ORDER[cb.grade] - GRADE_ORDER[ca.grade]) || (cb.score - ca.score)
+  return (GRADE_ORDER[cb.grade] - GRADE_ORDER[ca.grade]) || (agreeingMspScore(b) - agreeingMspScore(a)) || (cb.score - ca.score)
     || ((cb.factorScore ?? 0) - (ca.factorScore ?? 0)) || a.symbol.localeCompare(b.symbol);
 }
 

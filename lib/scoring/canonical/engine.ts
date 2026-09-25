@@ -19,7 +19,7 @@
  *       regime, unresolved direction). The factor score never BLOCKs (it was not predictive out of sample).
  *     → grade: calibrated → A ≥ 85th / B ≥ 60th percentile of calibrated expected R, else C; uncalibrated → per-setup
  *       factor-score thresholds (labelled uncalibrated); capped at C below the minimum reward:risk or with a caution;
- *       F when BLOCK.
+ *       capped at B in snapshot mode (flag SNAPSHOT_GRADE_CAP); F when BLOCK.
  *       The grade ranks a setup against same-direction setups — it is not an absolute quality or edge claim.
  *
  * Pure: no I/O. Callers supply hard blocks (lib/scanner/hardBlocks), flags, trust and optional regime overlay.
@@ -27,7 +27,7 @@
 import { computeFeatures, featuresFromSnapshot, type CanonicalSnapshot } from './features';
 import { evaluateSetup, SETUP_POLICY } from './setups';
 import { calibrateCandidate, isCalibratedContext } from './calibration';
-import { CANONICAL_COVERAGE_MIN, CANONICAL_MIN_RR, CANONICAL_THRESHOLDS, CANONICAL_VOL_EXTREME_PCTL } from './thresholds';
+import { CANONICAL_COVERAGE_MIN, CANONICAL_MIN_RR, CANONICAL_THRESHOLDS, CANONICAL_VOL_EXTREME_PCTL, SNAPSHOT_GRADE_MAX } from './thresholds';
 import {
   CANONICAL_VERSION, SETUP_TYPES,
   type CanonicalAssetClass, type CanonicalBar, type CanonicalCalibration, type CanonicalFeatures, type CanonicalReason, type CanonicalResult,
@@ -163,11 +163,16 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   else permission = watchReasons.length ? 'WATCH' : 'PASS';
 
   const score = calibration ? Math.round(calibration.percentile) : best.score;
-  const grade = permission === 'BLOCK' ? 'F'
+  const uncappedGrade: CanonicalResult['grade'] = permission === 'BLOCK' ? 'F'
     : !meetsRR(best) ? 'C' // below the minimum reward:risk → never graded A/B
     : cautions.length ? 'C' // at an opposing level / momentum against the setup → never graded A/B
     : calibration ? (calibration.percentile >= 85 ? 'A' : calibration.percentile >= 60 ? 'B' : 'C')
     : best.score >= th.gradeA ? 'A' : best.score >= th.gradeB ? 'B' : 'C';
+  // Snapshot mode (indicator values only: no swing structure, ATR-only stops, ~65% of the factor weight) is capped at
+  // B — its factor score is mostly ADX, so an A there is not comparable to a bars-mode A. Score/permission unchanged.
+  const snapshotCapped = f.mode === 'snapshot' && uncappedGrade === 'A';
+  const grade: CanonicalResult['grade'] = snapshotCapped ? SNAPSHOT_GRADE_MAX : uncappedGrade;
+  if (snapshotCapped) flags.push({ code: 'SNAPSHOT_GRADE_CAP', message: 'Capped at B: snapshot data, no swing structure' });
   return {
     ...base, setupType: best.setupType, direction: unresolved ? 'neutral' : best.direction, score, factorScore: best.score,
     scoreBasis: calibration ? 'calibrated_expectancy_percentile' : 'factor_alignment_uncalibrated', calibration: unresolved ? null : calibration,
