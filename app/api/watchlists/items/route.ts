@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       INSERT INTO watchlist_items (watchlist_id, workspace_id, symbol, asset_type, notes, added_price, sort_order)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (watchlist_id, symbol) DO UPDATE SET
-        notes = EXCLUDED.notes,
+        notes = COALESCE(EXCLUDED.notes, watchlist_items.notes),
         added_price = COALESCE(EXCLUDED.added_price, watchlist_items.added_price)
       RETURNING *
     `, [
