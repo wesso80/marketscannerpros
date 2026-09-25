@@ -203,7 +203,7 @@ export function deriveLiquidityMultiplier(i: FactorSignalInput, u?: UniverseCont
     }
   }
   if (i.isDerivativeSecurity) m *= 0.5;
-  if (i.earningsInDays != null && i.earningsInDays >= 0 && i.earningsInDays <= 2) m *= 0.9;
+  // Imminent earnings are a hard block (EARNINGS_IN_WINDOW, lib/scanner/hardBlocks) — not also a score discount.
   return clamp(m, 0.3, 1);
 }
 

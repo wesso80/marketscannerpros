@@ -104,12 +104,12 @@ export const EVIDENCE_MULTIPLIER: Record<EvidenceQualityLevel, number> = {
 
 export type ScoreFreshness = 'live' | 'delayed' | 'stale' | 'missing' | 'unknown';
 
-/** Old data is discounted; an UNKNOWN bar time is missing information, not old data, so it is neutral (1.0) here and
- *  surfaces as a WATCH flag in the score contract instead of a hidden ×0.5. */
+/** Freshness is a PERMISSION matter since msp.scanner.v2.4 (stale → STALE_DATA block, delayed → DATA_DELAYED watch,
+ *  unknown → DATA_TIMESTAMP_UNKNOWN watch), not a hidden score discount, so every level is neutral here. */
 export const FRESHNESS_MULTIPLIER: Record<ScoreFreshness, number> = {
   live: 1.0,
-  delayed: 0.92,
-  stale: 0.75,
+  delayed: 1.0,
+  stale: 1.0,
   missing: 1.0,
   unknown: 1.0,
 };

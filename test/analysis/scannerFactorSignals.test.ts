@@ -106,10 +106,10 @@ describe('deriveCatalystSignal', () => {
 });
 
 describe('deriveLiquidityMultiplier', () => {
-  it('penalises nano-caps and warrants and imminent earnings', () => {
+  it('penalises nano-caps and warrants; imminent earnings is a hard block, not a multiplier', () => {
     expect(deriveLiquidityMultiplier({ marketCap: 20_000_000 })).toBeCloseTo(0.6, 5);
     expect(deriveLiquidityMultiplier({ isDerivativeSecurity: true })).toBeCloseTo(0.5, 5);
-    expect(deriveLiquidityMultiplier({ earningsInDays: 1 })).toBeCloseTo(0.9, 5);
+    expect(deriveLiquidityMultiplier({ earningsInDays: 1 })).toBe(1);
     expect(deriveLiquidityMultiplier({ marketCap: 500_000_000 })).toBe(1);
   });
   it('uses cross-sectional dollar-volume percentile when supplied', () => {
@@ -144,10 +144,10 @@ describe('deriveFactorSignals', () => {
     expect(vol?.signed).toBeGreaterThan(0);
   });
 
-  it('flags imminent earnings and reduces the multiplier', () => {
+  it('flags imminent earnings without a score multiplier (EARNINGS_IN_WINDOW blocks instead)', () => {
     const out = deriveFactorSignals({ ...bullish, earningsInDays: 1 });
     expect(out.catalyst.imminent).toBe(true);
-    expect(out.liquidityMultiplier).toBeCloseTo(0.9, 5);
+    expect(out.liquidityMultiplier).toBe(1);
   });
 
   it('produces a neutral provisional direction when core votes cancel', () => {

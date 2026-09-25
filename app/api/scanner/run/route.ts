@@ -20,6 +20,7 @@ import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institu
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
 import { scannerTimeframe } from '@/lib/scanner/timeframes';
 import { cryptoPositioningExpected, summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
+import { evaluateHardBlocks, macroEventFlags, type HardBlockResult } from '@/lib/scanner/hardBlocks';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
@@ -187,6 +188,13 @@ interface ScanResult {
   coverage?: number;
   /** Applicable factor groups with no data on this row (counted as neutral votes, never double-penalised). */
   missingFactors?: string[];
+  /** Informational flags (MACRO_EVENT, EARNINGS_UNKNOWN, …); never change permission. */
+  flags?: ScoreReason[];
+  /** Hard-block evidence: earnings status (UNKNOWN ≠ none scheduled), price cross-check, liquidity minimum. */
+  hardBlockDetail?: Pick<HardBlockResult, 'earnings' | 'priceCheck' | 'liquidity'>;
+  /** Last completed bar close when the row's price came from a separate live quote (price sanity reference). */
+  referenceClose?: number;
+  referenceSource?: string;
   timeframe: string;
   type: string;
   price?: number;
@@ -1839,6 +1847,7 @@ export async function POST(req: NextRequest) {
             vwap: vwapVal,
             avgVolume: avgVolume20,
             lastCandleTime,
+            ...(series.currentPrice != null && Number.isFinite(series.currentPrice) ? { referenceClose: close, referenceSource: 'last completed bar close (CoinGecko OHLC)' } : {}),
             barInterval: series.barInterval,
             dataBasis: {
               barInterval: series.barInterval,
@@ -2266,6 +2275,7 @@ export async function POST(req: NextRequest) {
               vwap: vwapValEq,
               avgVolume: avgVolume20 ?? lastVolume,
               lastCandleTime,
+              ...(Number.isFinite(bulkPrice) ? { referenceClose: closes[last], referenceSource: 'last completed bar close' } : {}),
               barInterval: equityBarInterval,
               dataBasis: {
                 barInterval: equityBarInterval,
@@ -2417,6 +2427,8 @@ export async function POST(req: NextRequest) {
     const dollarVolumes = results.map(r => dollarVolume(r.price, r.avgVolume, type)).filter((v): v is number => v != null);
     let earningsMap: Map<string, string> = new Map();
     if (type === 'equity') { warmEarningsMap(); earningsMap = peekEarningsMap(); }
+    // Macro event days are a warning flag on every row, never a block. Computed once per request.
+    const macroFlags = macroEventFlags();
 
     const enriched = results.map((result) => {
       const adxValue = Number(result.adx ?? Number.NaN);
@@ -2454,7 +2466,22 @@ export async function POST(req: NextRequest) {
           : undefined,
       });
 
+      // Hard blocks (lib/scanner/hardBlocks): stale bars, price sanity vs the bar close, earnings in the holding window,
+      // liquidity minimum. Unknown inputs are flags. Independent of this row's score.
+      const hard = evaluateHardBlocks({
+        asset: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity', timeframe,
+        freshness: result.dataTrust?.freshness, lastBarAt: result.lastCandleTime ?? null,
+        price: result.price ?? null, referencePrice: result.referenceClose ?? null, referenceSource: result.referenceSource ?? null,
+        referenceIndependent: false, atrPct: atrPct ?? null,
+        earningsDate: type === 'equity' ? earningsMap.get(result.symbol.toUpperCase()) ?? null : null,
+        earningsCalendarLoaded: earningsMap.size > 0,
+        dollarVolumeDaily: (() => { const dv = dollarVolume(result.price, result.avgVolume, type); return dv != null ? dv * barsPerDayFor(result.barInterval) : null; })(),
+      }, macroFlags);
+      result.flags = hard.flags;
+      result.hardBlockDetail = { earnings: hard.earnings, priceCheck: hard.priceCheck, liquidity: hard.liquidity };
+
       const scoreInput = {
+        hardBlocks: hard.blocks, flags: hard.flags,
         factors: signals.factors, regime: resolveScoreRegime(unifiedRegime.scoring, unifiedRegime.institutional),
         freshness: scoreFreshness(result.dataTrust?.freshness), liquidityMultiplier: signals.liquidityMultiplier,
         trustLevel: result.dataTrust?.level, trustReasons: result.dataTrust?.reasons, criticalBlockers: result.dataTrust?.eligibilityBlockers, catalyst: signals.catalyst,

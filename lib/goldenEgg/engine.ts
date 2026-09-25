@@ -31,6 +31,7 @@ import { recordEngineEvent } from '@/lib/brain/engineBridge';
 import type { GoldenEggPayload, Direction, Verdict, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
 import { evaluateDataTrust, isEquitySessionOpen, type DataTrustResult } from '@/lib/scanner/dataTrust';
+import { holdingWindowDays } from '@/lib/scanner/hardBlocks';
 import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
 import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
@@ -440,6 +441,11 @@ function buildPayload(
   else if (macroOpposes) primaryBlocker = macroRegime!.riskState === 'risk_off' ? `Macro regime RISK_OFF (${macroRegime!.concerns.join(', ')})` : 'Macro regime RISK_ON opposes the short scenario';
 
   if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
+  // HARD BLOCK (same rule as the scanner, lib/scanner/hardBlocks): earnings inside the holding window → NO_TRADE.
+  const earningsWindowDays = holdingWindowDays(timeframeKey);
+  const earningsDte = extras.fundamentals?.daysToEarnings;
+  const earningsInWindow = assetClass === 'equity' && earningsDte != null && earningsDte >= 0 && earningsDte <= earningsWindowDays;
+  if (earningsInWindow) permission = 'NO_TRADE';
 
   // ── Flip conditions ─────────────────────────────────────────────────────────────────────────────────
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
@@ -453,6 +459,7 @@ function buildPayload(
     if (riskScore < 50) flipConditions.push({ id: 'f9', text: `Risk conditions need to improve — ${riskQ.reasons.slice(0, 2).join('; ')}`, severity: 'should' });
     if (direction === 'NEUTRAL') flipConditions.push({ id: 'f10', text: `Direction is neutral (${bullish} bullish vs ${bearish} bearish layers of ${directionalLayers}) — a directional resolution is required`, severity: 'must' });
     if (setup.extended) flipConditions.push({ id: 'extension', text: `Extension must resolve: ${setup.note}`, severity: 'must' });
+    if (earningsInWindow) flipConditions.push({ id: 'earnings', text: `Earnings ${extras.fundamentals?.nextEarningsDate} (in ${earningsDte}d) fall inside the ${earningsWindowDays}-day holding window — wait until after the report`, severity: 'must' });
     if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall score below threshold — waiting for improved confluence', severity: 'must' });
   }
 
@@ -612,6 +619,7 @@ function buildPayload(
   if (timing.relation === 'conflict') narrativeRisks.push(`Time confluence ${timing.effectiveDirection} opposes the ${direction.toLowerCase()} thesis${timeConfluenceHardConflict ? ' (hard gate applied)' : ' (below hard-gate thresholds — noted, not gating)'}.`);
   if (tcRaw?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
   if (extras.fundamentals?.daysToEarnings != null && extras.fundamentals.daysToEarnings >= 0 && extras.fundamentals.daysToEarnings <= 14) narrativeRisks.push(`Earnings scheduled ${extras.fundamentals.nextEarningsDate} (${extras.fundamentals.daysToEarnings} days) — event risk.`);
+  else if (assetClass === 'equity' && (!extras.fundamentals || extras.fundamentals.nextEarningsStatus === 'UNKNOWN')) narrativeRisks.push('Earnings date UNKNOWN — calendar unavailable; not verified clear of the holding window.');
   if (narrativeRisks.length === 0) narrativeRisks.push('No major risk flags at current levels.');
 
   const timeConfluenceVerdict: Verdict | undefined = tcRaw ? timingVerdict(timing) : undefined;
