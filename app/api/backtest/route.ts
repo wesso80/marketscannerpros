@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     const coverage = computeCoverage(priceData, startDate, endDate);
 
     // Run backtest with real indicators
-    const { trades, dates } = runStrategy(
+    const { trades, dates, markedBalances } = runStrategy(
       strategyDefinition.id,
       priceData,
       initialCapital,
@@ -145,7 +145,8 @@ export async function POST(req: NextRequest) {
       isCrypto ? 'crypto' : 'stock'
     );
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
-    const result = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: parsedTimeframe.minutes });
+    // Drawdown and risk ratios use bar-close marked equity (open losses included), not closed trades only.
+    const result = buildBacktestEngineResult(trades, dates, initialCapital, { sourceBarMinutes: parsedTimeframe.minutes, markedBalances });
     const strategyDirection = strategyDefinition.direction ?? inferStrategyDirection(strategyDefinition.id, result.trades);
     const diagnostics = buildBacktestDiagnostics(
       result,

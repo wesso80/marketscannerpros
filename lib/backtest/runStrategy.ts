@@ -53,6 +53,12 @@ export interface StrategyResult {
   trades: Trade[];
   dates: string[];
   closes: number[];
+  /**
+   * Account balance marked to market at every bar close (realised P&L plus the
+   * open position valued at that close, net of estimated exit slippage and
+   * commission). Pass to buildBacktestEngineResult so drawdown includes open losses.
+   */
+  markedBalances: Map<string, number>;
 }
 
 type Position = {
@@ -145,6 +151,48 @@ function inferAssetType(symbol: string): 'stock' | 'crypto' | 'forex' {
 function calcCommissionCost(entry: number, exit: number, qty: number, assetType: 'stock' | 'crypto' | 'forex'): number {
   const bps = BACKTEST_COMMISSION_BPS[assetType];
   return (entry * qty + Math.abs(exit * qty)) * (bps / 10_000);
+}
+
+// ─── Mark-to-market balances ──────────────────────────────────────────────
+/**
+ * Bar-close marked account balance for every date, mirroring the scanner
+ * backtest (lib/backtest/scannerBacktest.ts): realised P&L of closed trades
+ * plus open positions valued at the bar close with the same exit slippage,
+ * commission and 95%-of-initial-capital sizing used for the final trade P&L.
+ * On a trade's exit bar its actual realised return is used, so the final mark
+ * equals the closed-trade balance.
+ */
+export function computeMarkedBalances(
+  trades: Pick<Trade, 'entryDate' | 'exitDate' | 'side' | 'entry' | 'return'>[],
+  dates: string[],
+  closes: number[],
+  initialCapital: number,
+  assetType: 'stock' | 'crypto' | 'forex',
+): Map<string, number> {
+  const index = new Map(dates.map((date, i) => [date, i]));
+  const realisedAt = new Array<number>(dates.length).fill(0);
+  const unrealisedAt = new Array<number>(dates.length).fill(0);
+
+  for (const t of trades) {
+    const exitIdx = index.get(t.exitDate);
+    if (exitIdx === undefined) continue;
+    realisedAt[exitIdx] += t.return;
+    const entryIdx = index.get(t.entryDate);
+    if (entryIdx === undefined || !(t.entry > 0)) continue;
+    const shares = (initialCapital * 0.95) / t.entry;
+    for (let d = entryIdx; d < exitIdx; d++) {
+      const markExit = applyExitSlippage(closes[d], t.side);
+      unrealisedAt[d] += calcReturnDollars(t.side, t.entry, markExit, shares, calcCommissionCost(t.entry, markExit, shares, assetType));
+    }
+  }
+
+  const marks = new Map<string, number>();
+  let realised = initialCapital;
+  for (let d = 0; d < dates.length; d++) {
+    realised += realisedAt[d];
+    marks.set(dates[d], realised + unrealisedAt[d]);
+  }
+  return marks;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
@@ -1158,5 +1206,6 @@ export function runStrategy(
   }
 
   const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);
-  return { trades: enrichedTrades, dates, closes };
+  const markedBalances = computeMarkedBalances(enrichedTrades, dates, closes, initialCapital, assetType);
+  return { trades: enrichedTrades, dates, closes, markedBalances };
 }
