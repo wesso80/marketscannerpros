@@ -45,6 +45,10 @@ export async function loadRegimeOverlayInputs(opts: { macroRiskState?: RegimeOve
     m2: m2 && m2.length >= 4 ? { change3mPct: (m2[0].value / m2[3].value - 1) * 100 } : null,
     spy, qqq,
     macroRiskState: opts.macroRiskState ?? null,
+    // Fragility stays unavailable (reported as such by the overlay). The only source is lib/intelligence/fragilityService,
+    // which needs INTELLIGENCE_LIVE_DATA + provider keys, fetches ~20 Alpha Vantage / FRED / CoinGecko daily series
+    // (competing with the scan crons' Alpha Vantage quota) and falls back to a MOCK fixture; there is also no
+    // historical fragility series to validate a cap against (Phase 3). Wire it only after both are solved.
     fragility: null,
   };
   cache = { at: Date.now(), data };

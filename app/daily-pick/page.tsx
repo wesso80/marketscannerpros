@@ -66,11 +66,12 @@ async function loadLatest(): Promise<DayData | null> {
     shares_float: string | null;
     short_pct_float: string | null;
     canonical?: unknown;
+    legacy_score?: string | null;
   }>;
   try {
     rows = await q(
       `SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
-              dp.price, dp.change_percent, dp.indicators->'canonical' AS canonical,
+              dp.price, dp.change_percent, dp.indicators->'canonical' AS canonical, dp.indicators->'legacy'->>'score' AS legacy_score,
               co.sector, co.shares_float, co.short_pct_float
          FROM daily_picks dp
          LEFT JOIN company_overview co ON co.symbol = dp.symbol
@@ -89,8 +90,9 @@ async function loadLatest(): Promise<DayData | null> {
       price: string | null;
       change_percent: string | null;
       canonical?: unknown;
+      legacy_score?: string | null;
     }>(
-      `SELECT asset_class, symbol, score, direction, price, change_percent, indicators->'canonical' AS canonical
+      `SELECT asset_class, symbol, score, direction, price, change_percent, indicators->'canonical' AS canonical, indicators->'legacy'->>'score' AS legacy_score
          FROM daily_picks
         WHERE scan_date = $1
         ORDER BY score DESC
@@ -114,7 +116,7 @@ async function loadLatest(): Promise<DayData | null> {
       asset_class: r.asset_class,
       symbol: r.symbol,
       score: r.canonical ? r.canonical.score : r.score,
-      legacyScore: r.score,
+      legacyScore: r.legacy_score != null ? Number(r.legacy_score) : r.score, // columns hold canonical values from Phase 3
       canonical: r.canonical,
       direction: r.canonical
         ? (r.canonical.direction === 'long' ? 'bullish' : r.canonical.direction === 'short' ? 'bearish' : 'neutral')

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { pickView } from '@/lib/scoring/canonical/dailyPick';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
@@ -34,15 +35,17 @@ interface FeedRow {
   direction: string;
   price: string | null;
   change_percent: string | null;
+  canonical?: unknown;
 }
 
 export async function GET() {
   let rows: FeedRow[] = [];
   try {
     rows = await q<FeedRow>(
-      `SELECT scan_date, asset_class, symbol, score, direction, price, change_percent
+      `SELECT scan_date, asset_class, symbol, score, direction, price, change_percent, indicators->'canonical' AS canonical
          FROM daily_picks
         WHERE scan_date >= CURRENT_DATE - INTERVAL '14 days'
+          AND score > 0 -- canonical BLOCK rows are stored with score 0 (legacy scores are 1-100)
         ORDER BY scan_date DESC, score DESC
         LIMIT 100`,
     );
@@ -54,16 +57,19 @@ export async function GET() {
 
   const items = rows.map((r) => {
     const dateStr = toDateString(r.scan_date);
-    const side = r.direction === 'bullish' ? 'LONG' : r.direction === 'bearish' ? 'SHORT' : 'WATCH';
+    const view = pickView(r); // canonical verdict first; legacy fallback for pre-canonical rows
+    const side = view.side;
     const price = r.price != null ? Number(r.price).toFixed(2) : null;
     const chg = r.change_percent != null ? Number(r.change_percent).toFixed(2) : null;
     const link = `${SITE}/share/scan/${encodeURIComponent(r.symbol)}`;
     const guid = `${SITE}/share/scan/${r.symbol}#${dateStr}`;
-    const title = `${r.symbol} · ${side} · score ${r.score} (${dateStr})`;
+    const title = view.label ? `${r.symbol} · ${side} · ${view.label} (${dateStr})` : `${r.symbol} · ${side} · score ${r.score} (${dateStr})`;
     const descLines = [
       `Asset class: ${r.asset_class}`,
       `Side: ${side}`,
-      `Score: ${r.score}`,
+      view.label ? `Verdict: ${view.label}` : null,
+      `Score: ${view.score ?? r.score}`,
+      view.basisNote,
       price ? `Price: $${price}` : null,
       chg ? `Change: ${chg}%` : null,
       `Scan date: ${dateStr}`,
@@ -85,7 +91,7 @@ export async function GET() {
     <title>MarketScanner Pros — Daily Picks</title>
     <link>${SITE}/daily-pick</link>
     <atom:link href="${SITE}/daily-pick/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Top scanner-ranked equities and crypto from MarketScanner Pros, updated daily. Educational research only — not investment advice.</description>
+    <description>Top canonical-ranked equity and crypto setups from MarketScanner Pros, updated daily. Factors only — no setup has a validated edge. Educational research only — not investment advice.</description>
     <language>en-au</language>
     <lastBuildDate>${latestDate}</lastBuildDate>
     <ttl>60</ttl>

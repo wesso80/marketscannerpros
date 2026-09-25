@@ -25,6 +25,7 @@ import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { alertCronFailure } from '@/lib/opsAlerting';
 import { postToDiscord, buildScannerEmbed, buildGoldenEggEmbed, buildTimeConfluenceEmbed } from '@/lib/discord-bridge';
 import { evaluateGoldenEgg } from '@/lib/goldenEggScoring';
+import { canonicalLabel, readStoredCanonical, SETUP_LABEL, type CanonicalResult } from '@/lib/scoring/canonical';
 import { computeCryptoTimeConfluence } from '@/lib/time/cryptoTimeConfluence';
 import { computeEquityTimeConfluence } from '@/lib/time/equityTimeConfluence';
 import {
@@ -79,8 +80,10 @@ interface DailyPick {
   direction: 'bullish' | 'bearish' | 'neutral';
   price: number | null;
   change_percent: number | null;
-  indicators: Record<string, number | null> | null;
+  indicators: Record<string, any> | null;
   rank_type: string;
+  /** Canonical verdict stored by scan-universe/scan-daily (score/direction columns already carry its values). */
+  canonical?: CanonicalResult | null;
 }
 
 interface IndicatorRow {
@@ -157,6 +160,7 @@ async function runOpportunityScan(req: NextRequest) {
       if (typeof p.indicators === 'string') {
         try { p.indicators = JSON.parse(p.indicators); } catch { p.indicators = null; }
       }
+      p.canonical = readStoredCanonical(p.indicators);
     }
 
     push(`Loaded ${picks.length} daily picks`);
@@ -222,7 +226,8 @@ async function runOpportunityScan(req: NextRequest) {
 
         for (const pick of picks) {
           if (pick.direction === 'neutral') continue;
-          if (pick.score < MIN_SCANNER_SCORE) continue;
+          if (pick.canonical?.permission === 'BLOCK') continue;
+          if (pick.score < MIN_SCANNER_SCORE) continue; // canonical display score (grade B+) when a verdict exists
 
           const ind = indicatorMap.get(pick.symbol);
           const edgeMatch = computeEdgeMatch(pick, hints, edgeProfile);
@@ -307,8 +312,8 @@ async function runOpportunityScan(req: NextRequest) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     push(`Done in ${duration}s — ${totalInserted} suggestions created`);
 
-    // Post top picks to Discord scanner channel — only quality setups (score ≥ 70)
-    const qualityPicks = picks.filter(p => (p.score ?? 0) >= 70);
+    // Post top picks to Discord scanner channel — canonical score ≥ 70 (non-BLOCK); labelled factors-only in the embed
+    const qualityPicks = picks.filter(p => (p.score ?? 0) >= 70 && p.canonical?.permission !== 'BLOCK' && p.direction !== 'neutral');
     if (qualityPicks.length > 0) {
       postToDiscord('msp-scanner', buildScannerEmbed(
         qualityPicks.slice(0, 10).map(p => {
@@ -356,7 +361,8 @@ async function runOpportunityScan(req: NextRequest) {
         push(`Golden Egg ${ge.permission}: ${pick.symbol} — ${ge.verdict}`);
         postToDiscord('golden-egg', buildGoldenEggEmbed({
           symbol: pick.symbol,
-          verdict: ge.permission === 'TRADE' ? 'TRADE' : 'WATCH',
+          // No canonical setup has a validated edge, so a legacy TRADE is posted as WATCH unless canonical says PASS.
+          verdict: ge.permission === 'TRADE' && pick.canonical?.permission === 'PASS' ? 'TRADE' : 'WATCH',
           bias: ge.direction === 'LONG' ? 'bullish' : ge.direction === 'SHORT' ? 'bearish' : 'neutral',
           confluenceScore: ge.confidence,
           reasoning: ge.verdict,
@@ -512,6 +518,15 @@ function classifySetup(
   const adx = ind?.adx14 != null ? Number(ind.adx14) : null;
   const squeeze = ind?.in_squeeze;
 
+  // Canonical setup when available (the engine's own setup type; no validated edge → labelled as factors only).
+  const c = pick.canonical;
+  if (c && c.setupType !== 'NONE') {
+    return {
+      strategy: c.setupType.toLowerCase(),
+      setup: `${SETUP_LABEL[c.setupType] ?? c.setupType} (${c.direction}) — ${canonicalLabel(c)}. Factors only; no validated edge.`,
+    };
+  }
+
   // Squeeze breakout
   if (squeeze) {
     return {
@@ -566,6 +581,12 @@ function computeLevels(
   const price = pick.price;
   if (!price || price <= 0) {
     return { suggestedEntry: null, suggestedStop: null, suggestedTarget: null, riskReward: null };
+  }
+
+  // Canonical structural levels when available (entry / invalidation / nearest opposing level).
+  const lv = pick.canonical?.levels;
+  if (lv && lv.entry > 0 && lv.invalidation > 0 && lv.target > 0) {
+    return { suggestedEntry: round8(lv.entry), suggestedStop: round8(lv.invalidation), suggestedTarget: round8(lv.target), riskReward: Math.round(lv.riskReward * 100) / 100 };
   }
 
   const atr = ind?.atr14 ?? price * 0.02; // fallback 2%

@@ -35,10 +35,10 @@ describe('hard blocks', () => {
   });
 
   it('earnings inside the holding window block; unknown is UNKNOWN (flag), never "not scheduled"', () => {
-    expect(holdingWindowDays('daily')).toBe(7);
+    expect(holdingWindowDays('daily')).toBe(9);
     const inWindow = evaluateHardBlocks({ ...base, earningsDate: '2026-09-28' });
     expect(codes(inWindow.blocks)).toEqual(['EARNINGS_IN_WINDOW']);
-    expect(inWindow.earnings).toMatchObject({ status: 'IN_WINDOW', daysUntil: 5, holdingWindowDays: 7 });
+    expect(inWindow.earnings).toMatchObject({ status: 'IN_WINDOW', daysUntil: 5, holdingWindowDays: 9 });
     expect(evaluateHardBlocks({ ...base, earningsDate: '2026-10-20' }).earnings.status).toBe('SCHEDULED');
     const unknown = evaluateHardBlocks({ ...base, earningsCalendarLoaded: false });
     expect(unknown.blocks).toEqual([]);

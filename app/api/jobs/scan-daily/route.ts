@@ -14,7 +14,7 @@ import { avTakeToken } from "@/lib/avRateGovernor";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
 import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
-import { canonicalForDailyPick, compactCanonical, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
+import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
 import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
 
@@ -394,8 +394,9 @@ async function runDailyScan(req: NextRequest) {
     // Delete old entries for today (in case of re-run)
     await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [today]);
 
-    // Insert new results
-    for (const r of results) {
+    // Insert new results. score/direction columns carry the canonical verdict (0 = BLOCK); the legacy signal-count
+    // values are kept in indicators.legacy (see lib/scoring/canonical/dailyPick).
+    for (const r of results.map(withCanonicalColumns)) {
       await q(`
         INSERT INTO daily_picks (
           asset_class, symbol, score, direction,
@@ -425,11 +426,10 @@ async function runDailyScan(req: NextRequest) {
       scanned: results.length,
       errors: errors.length,
       errorSymbols: errors,
-      topPicks: {
-        equity: results.filter(r => r.asset_class === 'equity').sort((a, b) => b.score - a.score)[0],
-        crypto: results.filter(r => r.asset_class === 'crypto').sort((a, b) => b.score - a.score)[0],
-        forex: results.filter(r => r.asset_class === 'forex').sort((a, b) => b.score - a.score)[0]
-      }
+      topPicks: Object.fromEntries((['equity', 'crypto', 'forex'] as const).map((ac) => {
+        const rows = results.filter(r => r.asset_class === ac).map((r) => ({ ...r, canonical: r.indicators?.canonical ?? null }));
+        return [ac, selectDailyPicks(rows, 1).top[0] ?? null];
+      })),
     });
 
   } catch (error) {

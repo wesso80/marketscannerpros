@@ -1,8 +1,14 @@
 /**
  * Canonical verdict for the daily-pick writers (scan-daily, scan-universe) and readers (daily-picks, top-cached).
  * Pure (client-safe). The verdict is stored inside the existing `daily_picks.indicators` JSONB as
- * `indicators.canonical` (no schema change). The legacy signal-count `score`/`direction` columns are kept as-is
- * (secondary); readers surface the canonical permission/grade/setup as the primary label.
+ * `indicators.canonical` (no schema change).
+ *
+ * Phase 3: the `score` / `direction` COLUMNS now carry the canonical values (score = canonical display score, 0 when
+ * BLOCK; direction = canonical side as bullish/bearish/neutral) whenever a verdict exists, marked by
+ * `indicators.scoreColumn = 'canonical'`, and the legacy signal-count values move to `indicators.legacy`. Every reader
+ * that orders or labels by those columns (share card, RSS, morning brief, candidates, opportunity scan, daily-pick
+ * page) therefore ranks on the canonical engine without a schema change. Selection is symmetric: top = best canonical
+ * long setups, bottom = best canonical short setups (see selectDailyPicks).
  */
 import { evaluateCanonicalFromBars } from './engine';
 import { evaluateRegimeOverlay, overlayForDirection, type RegimeOverlayInputs } from './regimeOverlay';
@@ -79,4 +85,77 @@ export function canonicalLabel(c: (Pick<CanonicalResult, 'permission' | 'grade' 
   if (!c) return null;
   const tag = c.scoreBasis === 'factor_alignment_uncalibrated' ? ' · uncalibrated' : c.scoreBasis && c.permission === 'WATCH' ? ' · factors only' : '';
   return `${c.permission} · ${c.grade} · ${SETUP_LABEL[c.setupType] ?? c.setupType}${tag}`;
+}
+
+export type LegacyDirection = 'bullish' | 'bearish' | 'neutral';
+
+export interface DailyPickColumns {
+  score: number;
+  direction: LegacyDirection;
+  /** Values for indicators.scoreColumn / indicators.legacy. */
+  scoreColumn: 'canonical' | 'legacy';
+  legacy: { score: number; direction: string };
+}
+
+/** Score/direction column values for a daily_picks row: canonical when a verdict exists, legacy otherwise. */
+export function dailyPickColumns(c: CanonicalResult | null | undefined, legacy: { score: number; direction: string }): DailyPickColumns {
+  if (!c) return { score: legacy.score, direction: (legacy.direction as LegacyDirection), scoreColumn: 'legacy', legacy };
+  const direction: LegacyDirection = c.permission === 'BLOCK' || c.direction === 'neutral' ? 'neutral' : c.direction === 'long' ? 'bullish' : 'bearish';
+  return { score: c.permission === 'BLOCK' ? 0 : Math.max(0, Math.min(100, Math.round(c.score))), direction, scoreColumn: 'canonical', legacy };
+}
+
+/**
+ * Symmetric daily-pick selection. With canonical verdicts: top = non-BLOCK canonical LONG setups ranked by
+ * permission → grade → calibrated score → factor score; bottom = the same for canonical SHORT setups. Rows without a
+ * verdict are used only when no row has one (legacy fallback: highest / lowest legacy score).
+ */
+export function selectDailyPicks<T extends { symbol: string; score: number; canonical?: CanonicalResult | null }>(rows: T[], n: number): { top: T[]; bottom: T[]; basis: 'canonical' | 'legacy' } {
+  const withC = rows.filter((r) => r.canonical);
+  if (!withC.length) {
+    const top = [...rows].sort((a, b) => b.score - a.score || a.symbol.localeCompare(b.symbol)).slice(0, n);
+    const topSet = new Set(top.map((r) => r.symbol));
+    const bottom = [...rows].sort((a, b) => a.score - b.score || a.symbol.localeCompare(b.symbol)).filter((r) => !topSet.has(r.symbol)).slice(0, n);
+    return { top, bottom, basis: 'legacy' };
+  }
+  const side = (d: 'long' | 'short') => rankDailyPicks(withC.filter((r) => r.canonical!.permission !== 'BLOCK' && r.canonical!.direction === d)).slice(0, n);
+  return { top: side('long'), bottom: side('short'), basis: 'canonical' };
+}
+
+/** Legacy score stored with a row (indicators.legacy when the columns hold canonical values). */
+export function storedLegacyScore(indicators: unknown, columnScore: number): number {
+  let ind: any = indicators;
+  if (typeof ind === 'string') { try { ind = JSON.parse(ind); } catch { return columnScore; } }
+  return ind?.scoreColumn === 'canonical' && typeof ind?.legacy?.score === 'number' ? ind.legacy.score : columnScore;
+}
+
+/** Return a copy of a daily-pick writer row with canonical score/direction columns and legacy values in indicators. */
+export function withCanonicalColumns<T extends { score: number; direction: string; indicators: Record<string, any> }>(row: T): T {
+  const c = readStoredCanonical(row.indicators);
+  const cols = dailyPickColumns(c, { score: row.score, direction: row.direction });
+  return { ...row, score: cols.score, direction: cols.direction, indicators: { ...row.indicators, scoreColumn: cols.scoreColumn, legacy: cols.legacy } };
+}
+
+export interface PickView {
+  side: 'LONG' | 'SHORT' | 'WATCH';
+  score: number | null;
+  /** e.g. "WATCH · B · Pullback · factors only"; null without a canonical verdict. */
+  label: string | null;
+  /** Honest one-liner about what the score means. */
+  basisNote: string;
+}
+
+/** Public-facing view of a stored daily pick (share card, RSS): canonical first, legacy fallback. */
+export function pickView(row: { score: number | null; direction: string | null; canonical?: unknown }): PickView {
+  const c = readStoredCanonical({ canonical: row.canonical });
+  if (!c) {
+    const side = row.direction === 'bullish' ? 'LONG' : row.direction === 'bearish' ? 'SHORT' : 'WATCH';
+    return { side, score: row.score, label: null, basisNote: 'Legacy signal-count score (not a probability).' };
+  }
+  const side = c.permission === 'BLOCK' || c.direction === 'neutral' ? 'WATCH' : c.direction === 'long' ? 'LONG' : 'SHORT';
+  const basisNote = c.scoreBasis === 'calibrated_expectancy_percentile'
+    ? 'Score = percentile of calibrated expected R among same-side setups. Factors only — no validated edge.'
+    : c.scoreBasis === 'factor_alignment_uncalibrated'
+      ? 'Score = factor alignment (uncalibrated, not a probability).'
+      : 'Canonical setup score (not a probability).';
+  return { side, score: c.permission === 'BLOCK' ? 0 : c.score, label: canonicalLabel(c), basisNote };
 }
