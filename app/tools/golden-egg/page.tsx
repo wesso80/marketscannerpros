@@ -29,7 +29,7 @@ import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
-import { NO_EDGE_BANNER, calibrationSummary, scoreLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, calibrationSummary, cautionTags, scoreLabel } from '@/lib/scoring/canonical/display';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -905,7 +905,7 @@ export default function GoldenEggPage() {
                   {geEngine ? (
                     <div className="text-center max-w-xs" title="Canonical setup: calibrated percentile of expected R (daily equity/crypto) or uncalibrated factor alignment; legacy confluence is shown underneath as a secondary read">
                       <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{scoreLabel(geEngine)}</div>
-                      <div className="text-[11px] text-slate-500 uppercase">Canonical · {geSetupLabel}</div>
+                      <div className="text-[11px] text-slate-500 uppercase">Canonical · {geSetupLabel}{cautionTags(geEngine).map((t) => ` · ${t}`).join('')}</div>
                       {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{NO_EDGE_BANNER}</div> : null}
                       {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{calibrationSummary(geEngine)}</div> : null}
                       <div className="text-[10px] text-slate-500">Legacy confluence {geConfluenceScore}/100</div>

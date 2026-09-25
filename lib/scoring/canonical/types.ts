@@ -115,6 +115,8 @@ export interface CanonicalLevels {
   riskReward: number;
   /** How invalidation was set: a confirmed swing, a fade's prior-bar exhaustion extreme, or (snapshot mode only) an ATR fallback. */
   invalidationBasis: 'swing' | 'recent_extreme' | 'atr_fallback';
+  /** opposing_level = a prior confirmed swing ≥ 0.5 ATR away; ema20 = fade target; projected = no opposing swing in
+   *  the ~120-bar lookback, so the target is entry ± 2R (1R for fades) — a projection, not a chart level. */
   targetBasis: 'opposing_level' | 'ema20' | 'projected';
   /** Stop and target distance from entry in ATR (display / sanity). */
   riskAtr?: number;
@@ -131,6 +133,8 @@ export interface SetupCandidate {
   coverage: number;
   factors: FactorResult[];
   levels: CanonicalLevels;
+  /** Flags on an ELIGIBLE setup (AT_OPPOSING_LEVEL, MOMENTUM_DISAGREES): WATCH reasons that cap the grade at C. */
+  cautions?: CanonicalReason[];
 }
 
 export interface CanonicalThreshold { pass: number; watch: number; gradeA: number; gradeB: number }

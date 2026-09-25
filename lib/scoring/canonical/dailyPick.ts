@@ -13,6 +13,7 @@
 import { evaluateCanonicalFromBars } from './engine';
 import { evaluateRegimeOverlay, overlayForDirection, type RegimeOverlayInputs } from './regimeOverlay';
 import { compareCanonicalRows, SETUP_LABEL } from './scannerAdapter';
+import { cautionTags } from './display';
 import type { CanonicalAssetClass, CanonicalBar, CanonicalReason, CanonicalResult } from './types';
 
 /** A completed daily bar older than this (calendar days) is treated as stale (covers weekends + a holiday). */
@@ -80,11 +81,12 @@ export function rankDailyPicks<T extends { symbol: string; score?: number | null
   return [...rows].sort((a, b) => compareCanonicalRows(a, b) || (Number(b.score ?? 0) - Number(a.score ?? 0)) || a.symbol.localeCompare(b.symbol));
 }
 
-/** Short display label, e.g. "PASS · A · Pullback". */
-export function canonicalLabel(c: (Pick<CanonicalResult, 'permission' | 'grade' | 'setupType'> & Partial<Pick<CanonicalResult, 'scoreBasis'>>) | null | undefined): string | null {
+/** Short display label, e.g. "PASS · A · Pullback", "WATCH · C · Squeeze · factors only · at resistance". */
+export function canonicalLabel(c: (Pick<CanonicalResult, 'permission' | 'grade' | 'setupType'> & Partial<Pick<CanonicalResult, 'scoreBasis' | 'direction' | 'watchReasons'>>) | null | undefined): string | null {
   if (!c) return null;
   const tag = c.scoreBasis === 'factor_alignment_uncalibrated' ? ' · uncalibrated' : c.scoreBasis && c.permission === 'WATCH' ? ' · factors only' : '';
-  return `${c.permission} · ${c.grade} · ${SETUP_LABEL[c.setupType] ?? c.setupType}${tag}`;
+  const cautions = c.permission === 'BLOCK' ? [] : cautionTags(c);
+  return `${c.permission} · ${c.grade} · ${SETUP_LABEL[c.setupType] ?? c.setupType}${tag}${cautions.map((t) => ` · ${t}`).join('')}`;
 }
 
 export type LegacyDirection = 'bullish' | 'bearish' | 'neutral';

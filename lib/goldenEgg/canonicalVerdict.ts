@@ -10,6 +10,7 @@ import type { PriceData } from '@/lib/goldenEggFetchers';
 import { evaluateCanonicalFromBars } from '@/lib/scoring/canonical/engine';
 import { evaluateRegimeOverlay, overlayForDirection, type RegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlay';
 import { SETUP_LABEL } from '@/lib/scoring/canonical/scannerAdapter';
+import { targetBasisLabel } from '@/lib/scoring/canonical/display';
 import type { CanonicalAssetClass, CanonicalBar, CanonicalReason, CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { Direction, GoldenEggPayload, PublicAssessment } from '@/src/features/goldenEgg/types';
 
@@ -111,7 +112,7 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
       packet.levels = {
         reference: { price: lv.entry, basis: 'structural', label: 'Canonical entry (last close)' },
         invalidation: { price: lv.invalidation, basis: mech ? 'mechanical' : 'structural', label: `Canonical invalidation (${lv.invalidationBasis.replace('_', ' ')})`, distanceAtr: null },
-        zones: [{ price: lv.target, basis: lv.targetBasis === 'projected' ? 'mechanical' : 'structural', label: `Canonical target (${lv.targetBasis.replace('_', ' ')})`, rMultiple: lv.riskReward }],
+        zones: [{ price: lv.target, basis: lv.targetBasis === 'projected' ? 'mechanical' : 'structural', label: `Canonical target (${targetBasisLabel(lv)})`, rMultiple: lv.riskReward }],
         illustrativeR: lv.riskReward,
       };
     }

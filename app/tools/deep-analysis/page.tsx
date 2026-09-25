@@ -12,7 +12,7 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
-import { calibrationSummary, scoreLabel } from "@/lib/scoring/canonical/display";
+import { calibrationSummary, cautionTags, scoreLabel } from "@/lib/scoring/canonical/display";
 
 interface PriceData {
   price: number;
@@ -94,7 +94,7 @@ interface GoldenEggSummary {
   barInterval: string | null;
   timeframe: string;
   /** Canonical engine verdict (primary). Absent on packets built before the canonical engine. */
-  canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; coverage: number } | null;
+  canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; coverage: number; watchReasons?: Array<{ code: string; message: string }> } | null;
   /** Legacy confluence read (secondary). */
   legacyConfluence?: { assessment: string; direction: string; grade: string; confluenceScore: number } | null;
 }
@@ -941,7 +941,7 @@ export default function DeepAnalysisPage({
                 ['Golden Egg verdict', `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${ge.verdict.direction}`, geColor],
                 ...(ge.canonicalVerdict
                   ? [
-                      ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}`, geColor] as [string, string, string],
+                      ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}${cautionTags(ge.canonicalVerdict).map((t) => ` · ${t}`).join('')}`, geColor] as [string, string, string],
                       ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', calibrationSummary(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
                       ['Legacy confluence (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
                     ]
