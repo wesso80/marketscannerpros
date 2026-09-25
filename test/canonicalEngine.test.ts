@@ -32,14 +32,17 @@ function flip(bars: CanonicalBar[]): CanonicalBar[] {
 }
 
 const input = { symbol: 'TEST', assetClass: 'equity' as const, timeframe: 'daily' };
+// Engine-level (setup selection) symmetry is a property of the factor model; calibrated contexts rank candidates by
+// empirical expected R, which is legitimately not mirror-symmetric, so the symmetry tests use an uncalibrated timeframe.
+const uncal = { ...input, timeframe: 'weekly' };
 
 describe('canonical engine: symmetry', () => {
   it('a flipped chart scores the same with the opposite direction', () => {
     let compared = 0;
     for (let seed = 1; seed <= 40; seed++) {
       const bars = synth(420, seed, seed % 2 ? 0.0012 : -0.0012);
-      const a = evaluateCanonicalFromBars(bars, input);
-      const b = evaluateCanonicalFromBars(flip(bars), input);
+      const a = evaluateCanonicalFromBars(bars, uncal);
+      const b = evaluateCanonicalFromBars(flip(bars), uncal);
       // Every setup × direction candidate mirrors: long(original) ≡ short(flipped).
       for (const c of a.candidates) {
         const m = b.candidates.find((x) => x.setupType === c.setupType && x.direction === (c.direction === 'long' ? 'short' : 'long'))!;
@@ -61,8 +64,8 @@ describe('canonical engine: symmetry', () => {
       const bars = synth(420, seed, 0.001);
       const fa = { ...computeFeatures(bars), atrPctPercentile: 50 };
       const fb = { ...computeFeatures(flip(bars)), atrPctPercentile: 50 };
-      const a = evaluateCanonical({ ...input, features: fa });
-      const b = evaluateCanonical({ ...input, features: fb });
+      const a = evaluateCanonical({ ...uncal, features: fa });
+      const b = evaluateCanonical({ ...uncal, features: fb });
       expect(b.score).toBe(a.score);
       expect(b.setupType).toBe(a.setupType);
       expect(b.direction === 'neutral').toBe(a.direction === 'neutral');

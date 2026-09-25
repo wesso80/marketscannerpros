@@ -53,7 +53,7 @@ export function evaluateGoldenEggCanonical(bars: CanonicalBar[], ctx: GoldenEggC
   const dataWatchReasons: CanonicalReason[] = ctx.trustLevel === 'DEGRADED' || ctx.trustLevel === 'INSUFFICIENT_DATA'
     ? [{ code: 'DATA_TRUST_DEGRADED', message: `Golden Egg data trust is ${ctx.trustLevel}` }] : [];
   const flags: CanonicalReason[] = ctx.timeframe.toLowerCase() !== 'daily'
-    ? [{ code: 'THRESHOLDS_DAILY_CALIBRATED', message: `Canonical thresholds were calibrated on daily bars; ${ctx.timeframe} verdicts use the same cut-offs` }] : [];
+    ? [{ code: 'UNCALIBRATED_TIMEFRAME', message: `Outcome calibration covers daily bars only; this ${ctx.timeframe} verdict is uncalibrated factor alignment (no probability or expected-R claim)` }] : [];
   return evaluateCanonicalFromBars(bars.slice(-500), {
     symbol: ctx.symbol, assetClass: ctx.assetClass, timeframe: ctx.timeframe,
     hardBlocks, dataWatchReasons, flags, trust: ctx.trustLevel ?? null, dataTimestamp: ctx.dataTimestamp ?? bars[bars.length - 1]?.t ?? null,

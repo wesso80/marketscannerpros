@@ -1,20 +1,15 @@
 /**
- * Per-setup permission and grade thresholds (0–100 canonical score). PROVISIONAL — calibrated Sep 2026 from a
- * point-in-time daily replay (17 US equities/ETFs + BTC/ETH/SOL, ~Sep 2023–Sep 2026, 10,087 rows; the best eligible
- * setup's score on each bar, before caps):
+ * Per-setup FACTOR-SCORE thresholds — used only for UNCALIBRATED contexts (intraday / weekly timeframes, forex,
+ * indicator snapshots), where they set the A/B/C grade of the raw factor alignment. They no longer decide
+ * PASS/WATCH/BLOCK anywhere: Phase 3 validation (Sep 2026, 141 symbols, walk-forward) found the factor score has no
+ * out-of-sample relationship with outcomes, so permission is driven by hard blocks, eligibility and the validated-edge
+ * gate (./calibration). Original derivation (Phase 2, distribution percentiles of a 20-symbol replay):
  *
- *   setup               n      PASS ≥ p80   WATCH ≥ p50   A ≥ p85   B ≥ p60
- *   TREND_CONTINUATION  4452   77           69            79        72
- *   PULLBACK            2497   80           72            82        74
- *   SQUEEZE             1213   81           75            83        76
- *   EXHAUSTION_FADE      453   54           48            56        50
- *
- * i.e. PASS ≈ the top 20% of each setup type's own distribution, WATCH the next 30%, and the bottom half is BLOCK
- * (SCORE_BELOW_WATCH — a product decision; see the PR). Grades: A ≈ top 15%, B ≈ next 25%, C the rest (F = BLOCK).
- * Thresholds are per setup because the setups' factor sets differ (a fade never scores like a trend continuation).
- * Caps (coverage, VOL_EXTREME, RR_BELOW_MIN, REGIME_ADVERSE, DIRECTION_UNRESOLVED) apply after, so realised PASS
- * rates are lower. Distribution-based only — not fitted to forward returns (no edge has been demonstrated).
- * Recalibrate on a wider universe/out-of-sample window before treating these as final.
+ *   setup               PASS ≥ p80   WATCH ≥ p50   A ≥ p85   B ≥ p60
+ *   TREND_CONTINUATION  77           69            79        72
+ *   PULLBACK            80           72            82        74
+ *   SQUEEZE             81           75            83        76
+ *   EXHAUSTION_FADE     54           48            56        50
  */
 import type { CanonicalThreshold, SetupType } from './types';
 
@@ -26,9 +21,10 @@ export const CANONICAL_THRESHOLDS: Record<SetupType, CanonicalThreshold> = {
 };
 
 /**
- * Minimum structural reward:risk (to the nearest major opposing level) for PASS; below it the row is at most WATCH.
- * 1.0 = "reward at least equals risk". 1.5 capped ~57% of replay rows (continuation median R:R to the nearest major
- * level is ~0.5), so the stricter value is left as a product decision; structureRoom still grades R:R continuously.
+ * Minimum structural reward:risk (to the nearest major opposing level); below it the row carries RR_BELOW_MIN
+ * (WATCH). Phase 3 decision: 1.0. Walk-forward results with R:R ≥ 1.5 were not better than ≥ 1.0 out of sample
+ * (equity +0.09R vs −0.00R, crypto −0.04R vs +0.07R per PASS-candidate trade, all CIs spanning zero) — a higher
+ * minimum only lowers the target-first rate (P(target first) ≈ 1/(1+R:R), as a random walk would give).
  */
 export const CANONICAL_MIN_RR = 1.0;
 /** Minimum weighted factor coverage for PASS (below it: WATCH INSUFFICIENT_DATA). Same as the scanner contract. */

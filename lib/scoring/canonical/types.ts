@@ -118,6 +118,28 @@ export interface SetupCandidate {
 
 export interface CanonicalThreshold { pass: number; watch: number; gradeA: number; gradeB: number }
 
+/** Empirical statistics for the chosen setup (Phase 3 calibration; daily equity/crypto only). */
+export interface CanonicalCalibration {
+  /** Share of historical trades in this setup × direction × R:R band that reached the target before invalidation. */
+  pTargetFirst: number;
+  /** Mean realised R per trade after costs (entry next open, engine's own invalidation/target, time stop). */
+  expectedR: number;
+  /** Percentile (0–100) of expectedR within its direction's reference distribution — the display score. */
+  percentile: number;
+  horizonBars: number;
+  /** Trades in the R:R-band cell / in the whole setup × direction bucket. */
+  sample: number;
+  bucketSample: number;
+  bucketMeanR: number;
+  bucketCi90: [number, number];
+  /** Same-direction buy/short-everything bracket baseline (net R). */
+  baselineR: number;
+  costsBps: number;
+  /** True only when out-of-sample walk-forward validation showed positive net R with CI above zero. */
+  validatedEdge: boolean;
+  version: string;
+}
+
 export interface CanonicalResult {
   version: typeof CANONICAL_VERSION;
   symbol: string;
@@ -128,7 +150,13 @@ export interface CanonicalResult {
   dataTimestamp: string | null;
   setupType: SetupType | 'NONE';
   direction: CanonicalDirection | 'neutral';
+  /** Display score 0–100. Calibrated context: percentile of calibrated expected R (monotone display only).
+   *  Uncalibrated context: the raw factor-alignment score (see scoreBasis). */
   score: number;
+  /** Raw weighted factor alignment 0–100 of the chosen setup (not a probability; not predictive on its own). */
+  factorScore: number;
+  scoreBasis: 'calibrated_expectancy_percentile' | 'factor_alignment_uncalibrated';
+  calibration: CanonicalCalibration | null;
   grade: CanonicalGrade;
   permission: CanonicalPermission;
   blockReasons: CanonicalReason[];
@@ -142,7 +170,7 @@ export interface CanonicalResult {
   sizeMultiplier: number;
   thresholds: CanonicalThreshold | null;
   /** Every setup × direction evaluated, best first. */
-  candidates: Array<Pick<SetupCandidate, 'setupType' | 'direction' | 'eligible' | 'ineligibleReason' | 'score' | 'coverage'>>;
+  candidates: Array<Pick<SetupCandidate, 'setupType' | 'direction' | 'eligible' | 'ineligibleReason' | 'score' | 'coverage'> & { expectedR?: number; pTargetFirst?: number }>;
   /** Headline raw values for display. */
   raw: Record<string, number | string | null>;
 }

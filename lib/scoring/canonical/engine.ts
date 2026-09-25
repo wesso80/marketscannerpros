@@ -3,19 +3,26 @@
  *
  *   features (bars → lib/ta/core, or an indicator snapshot)
  *     → every setup type × {long, short} scored on its own factor set   (./setups.ts)
- *     → best ELIGIBLE candidate wins (ties: higher coverage)
- *     → permission: hard/data blocks → BLOCK; coverage < 0.6 → WATCH; score vs per-setup thresholds;
- *       caps to WATCH for extreme volatility, reward:risk < 1.5, and adverse regime overlays
- *     → grade: A / B / C from per-setup thresholds; F when BLOCK.
+ *     → each eligible candidate is calibrated (./calibration: P(target first), expected net R, from the Phase 3
+ *       walk-forward validation; daily equity/crypto bars only)
+ *     → best ELIGIBLE candidate wins: highest calibrated expected-R percentile (within its direction), then factor
+ *       score, then coverage. Uncalibrated contexts rank by factor score.
+ *     → permission: hard/data blocks, too little history or no eligible setup → BLOCK. Otherwise WATCH, with the
+ *       reasons. PASS only when the setup × direction has a VALIDATED out-of-sample edge (none does as of Sep 2026:
+ *       NO_VALIDATED_EDGE) and nothing else caps it (coverage < 0.6, extreme volatility, reward:risk < 1.0, adverse
+ *       regime, unresolved direction). The factor score never BLOCKs (it was not predictive out of sample).
+ *     → grade: calibrated → A ≥ 85th / B ≥ 60th percentile of calibrated expected R, else C; uncalibrated → per-setup
+ *       factor-score thresholds (labelled uncalibrated); F when BLOCK.
  *
  * Pure: no I/O. Callers supply hard blocks (lib/scanner/hardBlocks), flags, trust and optional regime overlay.
  */
 import { computeFeatures, featuresFromSnapshot, type CanonicalSnapshot } from './features';
 import { evaluateSetup } from './setups';
+import { calibrateCandidate, isCalibratedContext } from './calibration';
 import { CANONICAL_COVERAGE_MIN, CANONICAL_MIN_RR, CANONICAL_THRESHOLDS, CANONICAL_VOL_EXTREME_PCTL } from './thresholds';
 import {
   CANONICAL_VERSION, SETUP_TYPES,
-  type CanonicalAssetClass, type CanonicalBar, type CanonicalFeatures, type CanonicalReason, type CanonicalResult,
+  type CanonicalAssetClass, type CanonicalBar, type CanonicalCalibration, type CanonicalFeatures, type CanonicalReason, type CanonicalResult,
   type CanonicalThreshold, type SetupCandidate, type SetupType,
 } from './types';
 
@@ -68,27 +75,33 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
 
   if (!fin(f.close) || !fin(f.atr) || f.atr <= 0 || !fin(f.ema50)) {
     blockReasons.push({ code: 'INSUFFICIENT_HISTORY', message: 'Not enough bars for ATR / EMA50' });
-    return { ...base, setupType: 'NONE', direction: 'neutral', score: 0, grade: 'F', permission: 'BLOCK', blockReasons, watchReasons, flags,
-      factors: [], coverage: 0, levels: null, sizeMultiplier: 0, thresholds: null, candidates: [] };
+    return { ...base, setupType: 'NONE', direction: 'neutral', score: 0, factorScore: 0, scoreBasis: 'factor_alignment_uncalibrated', calibration: null,
+      grade: 'F', permission: 'BLOCK', blockReasons, watchReasons, flags, factors: [], coverage: 0, levels: null, sizeMultiplier: 0, thresholds: null, candidates: [] };
   }
+  const calibrated = isCalibratedContext(input.assetClass, input.timeframe, f.mode);
 
   const all: SetupCandidate[] = [];
   for (const s of SETUP_TYPES) for (const d of ['long', 'short'] as const) all.push(evaluateSetup(f, s, d, { catalystPending: input.catalystPending }));
-  const ranked = [...all].sort((a, b) => Number(b.eligible) - Number(a.eligible) || b.score - a.score || b.coverage - a.coverage);
-  const candidates = ranked.map(({ setupType, direction, eligible, ineligibleReason, score, coverage }) => ({ setupType, direction, eligible, ...(ineligibleReason ? { ineligibleReason } : {}), score, coverage }));
+  const cal = new Map<SetupCandidate, CanonicalCalibration | null>(
+    all.map((c) => [c, c.eligible && calibrated ? calibrateCandidate(input.assetClass, input.timeframe, f.mode, c.setupType, c.direction, c.levels.riskReward) : null]));
+  const pct = (c: SetupCandidate) => cal.get(c)?.percentile ?? -1;
+  const ranked = [...all].sort((a, b) => Number(b.eligible) - Number(a.eligible) || pct(b) - pct(a) || b.score - a.score || b.coverage - a.coverage);
+  const candidates = ranked.map((c) => ({ setupType: c.setupType, direction: c.direction, eligible: c.eligible, ...(c.ineligibleReason ? { ineligibleReason: c.ineligibleReason } : {}), score: c.score, coverage: c.coverage,
+    ...(cal.get(c) ? { expectedR: cal.get(c)!.expectedR, pTargetFirst: cal.get(c)!.pTargetFirst } : {}) }));
   const best = ranked[0];
 
   if (!best?.eligible) {
     blockReasons.push({ code: 'NO_SETUP', message: 'No setup type is eligible on this bar' });
-    return { ...base, setupType: 'NONE', direction: 'neutral', score: 0, grade: 'F', permission: 'BLOCK', blockReasons, watchReasons, flags,
-      factors: [], coverage: 1, levels: null, sizeMultiplier: 0, thresholds: null, candidates };
+    return { ...base, setupType: 'NONE', direction: 'neutral', score: 0, factorScore: 0, scoreBasis: calibrated ? 'calibrated_expectancy_percentile' : 'factor_alignment_uncalibrated', calibration: null,
+      grade: 'F', permission: 'BLOCK', blockReasons, watchReasons, flags, factors: [], coverage: 1, levels: null, sizeMultiplier: 0, thresholds: null, candidates };
   }
 
   const th = input.thresholds?.[best.setupType] ?? CANONICAL_THRESHOLDS[best.setupType];
   // Long and short of the same setup tie → no directional edge (e.g. a squeeze with a split bias). Report the setup
   // without a side and cap at WATCH; picking one side would make the result depend on evaluation order.
   const runnerUp = ranked[1];
-  const unresolved = !!runnerUp?.eligible && runnerUp.setupType === best.setupType && runnerUp.score === best.score && runnerUp.direction !== best.direction;
+  const unresolved = !!runnerUp?.eligible && runnerUp.setupType === best.setupType && runnerUp.score === best.score && runnerUp.direction !== best.direction && pct(runnerUp) === pct(best);
+  const calibration = cal.get(best) ?? null;
   if (unresolved) watchReasons.push({ code: 'DIRECTION_UNRESOLVED', message: `${best.setupType} scores the same long and short — wait for the break` });
   if (best.coverage < CANONICAL_COVERAGE_MIN) {
     watchReasons.push({ code: 'INSUFFICIENT_DATA', message: `Factor coverage ${Math.round(best.coverage * 100)}% is below ${Math.round(CANONICAL_COVERAGE_MIN * 100)}%` });
@@ -107,21 +120,27 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
     flags.push(...(overlay.flags ?? []));
   }
 
+  // Edge gate (Phase 3): PASS needs a validated out-of-sample edge for this setup × direction. The factor score
+  // alone never blocks — it did not predict outcomes — so a present, unblocked setup is at least WATCH (both sides).
+  if (!calibration) {
+    watchReasons.unshift({ code: 'UNCALIBRATED', message: `No validated calibration for ${input.assetClass} ${input.timeframe}${f.mode === 'snapshot' ? ' (snapshot)' : ''} — factors only, score is raw factor alignment` });
+  } else if (!calibration.validatedEdge || calibration.expectedR <= 0) {
+    watchReasons.unshift({ code: 'NO_VALIDATED_EDGE', message: `${best.setupType} ${best.direction}: no out-of-sample edge after costs (historical ${calibration.expectedR >= 0 ? '+' : ''}${calibration.expectedR}R per trade, target-first ${Math.round(calibration.pTargetFirst * 100)}%, n=${calibration.sample}) — factors only` });
+  }
+
   let permission: CanonicalResult['permission'];
   if (blockReasons.length) permission = 'BLOCK';
-  else if (best.score < th.watch) {
-    permission = 'BLOCK';
-    blockReasons.push({ code: 'SCORE_BELOW_WATCH', message: `Score ${best.score} < WATCH threshold ${th.watch} for ${best.setupType}` });
-  } else if (best.score < th.pass) {
-    permission = 'WATCH';
-    watchReasons.unshift({ code: 'SCORE_BELOW_PASS', message: `Score ${best.score} < PASS threshold ${th.pass} for ${best.setupType}` });
-  } else permission = watchReasons.length ? 'WATCH' : 'PASS';
+  else permission = watchReasons.length ? 'WATCH' : 'PASS';
 
-  const grade = permission === 'BLOCK' ? 'F' : best.score >= th.gradeA ? 'A' : best.score >= th.gradeB ? 'B' : 'C';
+  const score = calibration ? Math.round(calibration.percentile) : best.score;
+  const grade = permission === 'BLOCK' ? 'F'
+    : calibration ? (calibration.percentile >= 85 ? 'A' : calibration.percentile >= 60 ? 'B' : 'C')
+    : best.score >= th.gradeA ? 'A' : best.score >= th.gradeB ? 'B' : 'C';
   return {
-    ...base, setupType: best.setupType, direction: unresolved ? 'neutral' : best.direction, score: best.score, grade, permission,
-    blockReasons, watchReasons, flags, factors: best.factors, coverage: best.coverage, levels: unresolved ? null : best.levels,
-    sizeMultiplier: permission === 'BLOCK' ? 0 : sizeMultiplier, thresholds: th, candidates,
+    ...base, setupType: best.setupType, direction: unresolved ? 'neutral' : best.direction, score, factorScore: best.score,
+    scoreBasis: calibration ? 'calibrated_expectancy_percentile' : 'factor_alignment_uncalibrated', calibration: unresolved ? null : calibration,
+    grade, permission, blockReasons, watchReasons, flags, factors: best.factors, coverage: best.coverage, levels: unresolved ? null : best.levels,
+    sizeMultiplier: permission === 'BLOCK' ? 0 : sizeMultiplier, thresholds: calibration ? null : th, candidates,
   };
 }
 

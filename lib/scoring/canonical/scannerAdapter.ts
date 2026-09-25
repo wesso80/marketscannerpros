@@ -57,11 +57,12 @@ export function dataWatchFrom(reasons: Array<{ code: string; message: string }> 
 const PERM_ORDER: Record<string, number> = { PASS: 2, WATCH: 1, BLOCK: 0 };
 const GRADE_ORDER: Record<string, number> = { A: 3, B: 2, C: 1, F: 0 };
 
-/** Ranking: permission, then grade, then canonical score; rows without a canonical result sort last. */
-export function compareCanonicalRows(a: { symbol: string; canonical?: Pick<CanonicalResult, 'permission' | 'grade' | 'score'> | null }, b: typeof a): number {
+/** Ranking: permission, then grade, then (calibrated) score, then raw factor score; rows without a canonical result sort last. */
+export function compareCanonicalRows(a: { symbol: string; canonical?: (Pick<CanonicalResult, 'permission' | 'grade' | 'score'> & { factorScore?: number }) | null }, b: typeof a): number {
   const ca = a.canonical, cb = b.canonical;
   if (!ca || !cb) return (cb ? 1 : 0) - (ca ? 1 : 0); // both missing → 0 so callers can chain a fallback order
-  return (PERM_ORDER[cb.permission] - PERM_ORDER[ca.permission]) || (GRADE_ORDER[cb.grade] - GRADE_ORDER[ca.grade]) || (cb.score - ca.score) || a.symbol.localeCompare(b.symbol);
+  return (PERM_ORDER[cb.permission] - PERM_ORDER[ca.permission]) || (GRADE_ORDER[cb.grade] - GRADE_ORDER[ca.grade]) || (cb.score - ca.score)
+    || ((cb.factorScore ?? 0) - (ca.factorScore ?? 0)) || a.symbol.localeCompare(b.symbol);
 }
 
 export function scannerDirection(c: Pick<CanonicalResult, 'direction'>): 'bullish' | 'bearish' | 'neutral' {

@@ -75,7 +75,8 @@ export function rankDailyPicks<T extends { symbol: string; score?: number | null
 }
 
 /** Short display label, e.g. "PASS · A · Pullback". */
-export function canonicalLabel(c: Pick<CanonicalResult, 'permission' | 'grade' | 'setupType'> | null | undefined): string | null {
+export function canonicalLabel(c: (Pick<CanonicalResult, 'permission' | 'grade' | 'setupType'> & Partial<Pick<CanonicalResult, 'scoreBasis'>>) | null | undefined): string | null {
   if (!c) return null;
-  return `${c.permission} · ${c.grade} · ${SETUP_LABEL[c.setupType] ?? c.setupType}`;
+  const tag = c.scoreBasis === 'factor_alignment_uncalibrated' ? ' · uncalibrated' : c.scoreBasis && c.permission === 'WATCH' ? ' · factors only' : '';
+  return `${c.permission} · ${c.grade} · ${SETUP_LABEL[c.setupType] ?? c.setupType}${tag}`;
 }

@@ -4,9 +4,11 @@
  * CanonicalVerdict — the canonical engine's verdict for one symbol (lib/scoring/canonical): permission, setup type,
  * direction, grade, score, the bar it was computed on, factor pass/fail with RAW values, structural levels, and the
  * reasons for any block/watch. Primary everywhere; the legacy composite may be shown underneath as a secondary label.
- * Research output, not a probability and not a trade instruction.
+ * Phase 3: no setup has a validated edge, so the card shows a "factors only" banner plus the calibrated probability of
+ * target-before-invalidation and expected R (daily equity/crypto) or an "uncalibrated" label (other contexts).
  */
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
+import { NO_EDGE_BANNER, calibrationSummary, scoreLabel } from '@/lib/scoring/canonical/display';
 
 const SETUP_LABEL: Record<string, string> = {
   TREND_CONTINUATION: 'Trend continuation', PULLBACK: 'Pullback', SQUEEZE: 'Squeeze', EXHAUSTION_FADE: 'Exhaustion fade', NONE: 'No setup',
@@ -28,12 +30,14 @@ function fmt(v: number | string | null | undefined): string {
 
 export function canonicalHeadline(c: CanonicalResult): string {
   const side = c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side';
-  return `${c.permission} · ${SETUP_LABEL[c.setupType] ?? c.setupType} · ${side} · Grade ${c.grade} · ${c.score}/100`;
+  return `${c.permission} · ${SETUP_LABEL[c.setupType] ?? c.setupType} · ${side} · Grade ${c.grade} · ${scoreLabel(c)}`;
 }
 
 export default function CanonicalVerdict({ c, compact = false, legacyScore }: { c: CanonicalResult; compact?: boolean; legacyScore?: number | null }) {
   const color = PERMISSION_COLOR[c.permission] ?? '#94a3b8';
   const reasons = [...c.blockReasons, ...c.watchReasons];
+  const calib = calibrationSummary(c);
+  const noEdge = !!c.scoreBasis && c.permission !== 'PASS' && c.permission !== 'BLOCK';
   return (
     <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2 text-[11px] text-slate-300" data-testid="canonical-verdict">
       <div className="flex flex-wrap items-center gap-2">
@@ -41,10 +45,12 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
         <span className="font-bold text-white">{SETUP_LABEL[c.setupType] ?? c.setupType}</span>
         <span>{c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side'}</span>
         <span className="font-black text-white">Grade {c.grade}</span>
-        <span>{c.score}/100</span>
+        <span title={c.scoreBasis === 'calibrated_expectancy_percentile' ? 'Percentile of calibrated expected R among same-direction setups (display only)' : 'Factor alignment, not a probability'}>{scoreLabel(c)}</span>
         {c.sizeMultiplier < 1 && c.permission !== 'BLOCK' ? <span className="text-amber-300">size ×{c.sizeMultiplier}</span> : null}
         <span className="text-slate-500">bar {c.barDate ? c.barDate.slice(0, 10) : 'unknown'} · coverage {Math.round(c.coverage * 100)}%</span>
       </div>
+      {noEdge ? <div className="mt-1 font-semibold text-amber-300/90" data-testid="canonical-no-edge">{NO_EDGE_BANNER}</div> : null}
+      {calib ? <div className="mt-0.5 text-slate-400" data-testid="canonical-calibration">{calib}</div> : null}
       {reasons.length ? (
         <ul className="mt-1 list-disc pl-4 text-slate-400">
           {reasons.slice(0, compact ? 2 : 6).map((r) => <li key={r.code + r.message}><span className="font-mono text-slate-500">{r.code}</span> {r.message}</li>)}

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CANONICAL_THRESHOLDS, SETUP_TYPES, computeFeatures, evaluateCanonical, type CanonicalBar } from '@/lib/scoring/canonical';
 
-describe('canonical thresholds (provisional, distribution-calibrated)', () => {
+const bars: CanonicalBar[] = Array.from({ length: 420 }, (_, i) => {
+  const c = 100 * (1 + 0.0015 * i + 0.03 * Math.sin(i / 9));
+  return { t: new Date(Date.UTC(2024, 0, 1) + i * 86_400_000).toISOString(), open: c * 0.998, high: c * 1.01, low: c * 0.99, close: c, volume: 1e6 };
+});
+const features = computeFeatures(bars);
+
+describe('factor-score thresholds (uncalibrated contexts only)', () => {
   it('are ordered watch < pass ≤ A and watch ≤ B ≤ A for every setup', () => {
     for (const s of SETUP_TYPES) {
       const t = CANONICAL_THRESHOLDS[s];
@@ -12,28 +18,51 @@ describe('canonical thresholds (provisional, distribution-calibrated)', () => {
     }
   });
 
-  it('maps score bands to BLOCK / WATCH / PASS and grades', () => {
-    const bars: CanonicalBar[] = Array.from({ length: 420 }, (_, i) => {
-      const c = 100 * (1 + 0.0015 * i + 0.03 * Math.sin(i / 9));
-      return { t: new Date(Date.UTC(2024, 0, 1) + i * 86_400_000).toISOString(), open: c * 0.998, high: c * 1.01, low: c * 0.99, close: c, volume: 1e6 };
-    });
-    const features = computeFeatures(bars);
-    const base = evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features });
+  it('set the grade of an uncalibrated result but never BLOCK on score; the result is labelled UNCALIBRATED', () => {
+    const at = (t?: { pass: number; watch: number; gradeA: number; gradeB: number }) => {
+      const base = evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: '1h', features });
+      return t ? evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: '1h', features, thresholds: { [base.setupType]: t } }) : base;
+    };
+    const base = at();
     expect(base.setupType).not.toBe('NONE');
-    if (base.setupType === 'NONE') return;
-    const s = base.score;
-    const at = (t: { pass: number; watch: number; gradeA: number; gradeB: number }) =>
-      evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features, thresholds: { [base.setupType]: t } });
-    const below = at({ pass: s + 10, watch: s + 1, gradeA: s + 20, gradeB: s + 15 });
-    expect(below.permission).toBe('BLOCK');
-    expect(below.grade).toBe('F');
-    expect(below.blockReasons.map((r) => r.code)).toContain('SCORE_BELOW_WATCH');
-    const mid = at({ pass: s + 1, watch: s, gradeA: s + 5, gradeB: s });
-    expect(mid.permission).toBe('WATCH');
-    expect(mid.watchReasons[0].code).toBe('SCORE_BELOW_PASS');
-    expect(mid.grade).toBe('B');
-    const top = at({ pass: s, watch: s - 5, gradeA: s, gradeB: s - 5 });
-    expect(top.grade).toBe('A');
-    expect(['PASS', 'WATCH']).toContain(top.permission); // WATCH only through a cap (R:R, volatility, …)
+    expect(base.scoreBasis).toBe('factor_alignment_uncalibrated');
+    expect(base.calibration).toBeNull();
+    expect(base.score).toBe(base.factorScore);
+    expect(base.watchReasons[0].code).toBe('UNCALIBRATED');
+    const s = base.factorScore;
+    const low = at({ pass: s + 10, watch: s + 1, gradeA: s + 20, gradeB: s + 15 });
+    expect(low.permission).toBe('WATCH');
+    expect(low.grade).toBe('C');
+    expect(low.blockReasons.map((r) => r.code)).not.toContain('SCORE_BELOW_WATCH');
+    expect(at({ pass: s, watch: s - 5, gradeA: s + 5, gradeB: s }).grade).toBe('B');
+    expect(at({ pass: s, watch: s - 5, gradeA: s, gradeB: s - 5 }).grade).toBe('A');
+  });
+});
+
+describe('calibrated context (daily equity/crypto bars)', () => {
+  it('never PASSes without a validated edge; score is the calibrated percentile and grade follows it', () => {
+    for (const assetClass of ['equity', 'crypto'] as const) {
+      const r = evaluateCanonical({ symbol: 'X', assetClass, timeframe: 'daily', features });
+      expect(r.setupType).not.toBe('NONE');
+      expect(r.permission).toBe('WATCH');
+      expect(r.scoreBasis).toBe('calibrated_expectancy_percentile');
+      expect(r.calibration).not.toBeNull();
+      expect(r.calibration!.validatedEdge).toBe(false);
+      expect(r.watchReasons[0].code).toBe('NO_VALIDATED_EDGE');
+      expect(r.score).toBe(Math.round(r.calibration!.percentile));
+      expect(r.grade).toBe(r.calibration!.percentile >= 85 ? 'A' : r.calibration!.percentile >= 60 ? 'B' : 'C');
+      expect(r.calibration!.pTargetFirst).toBeGreaterThan(0);
+      expect(r.calibration!.pTargetFirst).toBeLessThan(1);
+      expect(r.calibration!.horizonBars).toBe(20);
+      expect(r.thresholds).toBeNull();
+      // Best candidate = highest calibrated percentile among eligible candidates.
+      const elig = r.candidates.filter((c) => c.eligible && c.expectedR !== undefined);
+      expect(elig[0].setupType).toBe(r.setupType);
+    }
+  });
+
+  it('forex and snapshot mode are uncalibrated', () => {
+    expect(evaluateCanonical({ symbol: 'EURUSD', assetClass: 'forex', timeframe: 'daily', features }).scoreBasis).toBe('factor_alignment_uncalibrated');
+    expect(evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features: { ...features, mode: 'snapshot' } }).calibration).toBeNull();
   });
 });

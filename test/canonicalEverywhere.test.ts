@@ -87,7 +87,9 @@ describe('daily picks: canonical verdict stored and read back', () => {
     const c = result({ permission: 'WATCH', grade: 'B', setupType: 'PULLBACK', direction: 'long', score: 73 });
     expect(canonicalPickFields(c)).toMatchObject({ permission: 'WATCH', grade: 'B', setupType: 'PULLBACK', canonicalDirection: 'long', canonicalScore: 73 });
     expect(canonicalPickFields(null)).toMatchObject({ canonical: null, permission: null, grade: null });
-    expect(canonicalLabel(c)).toBe('WATCH · B · Pullback');
+    expect(canonicalLabel({ ...c, scoreBasis: undefined })).toBe('WATCH · B · Pullback'); // pre-Phase-3 stored verdict
+    expect(canonicalLabel({ ...c, scoreBasis: 'calibrated_expectancy_percentile' })).toBe('WATCH · B · Pullback · factors only');
+    expect(canonicalLabel({ ...c, scoreBasis: 'factor_alignment_uncalibrated' })).toBe('WATCH · B · Pullback · uncalibrated');
     expect(canonicalLabel(null)).toBeNull();
   });
 
@@ -133,7 +135,9 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     if (d.permission !== 'BLOCK') expect(d.permission).toBe('WATCH');
     expect(d.watchReasons.map((r) => r.code)).toContain('DATA_TRUST_DEGRADED');
     const h = evaluateGoldenEggCanonical(gb, { symbol: 'TEST', assetClass: 'equity', timeframe: '1h' })!;
-    expect(h.flags.map((f) => f.code)).toContain('THRESHOLDS_DAILY_CALIBRATED');
+    expect(h.flags.map((f) => f.code)).toContain('UNCALIBRATED_TIMEFRAME');
+    expect(h.scoreBasis).toBe('factor_alignment_uncalibrated');
+    expect(h.watchReasons.map((r) => r.code)).toContain('UNCALIBRATED');
     expect(evaluateGoldenEggCanonical(gb.slice(0, 10), { symbol: 'TEST', assetClass: 'equity', timeframe: 'daily' })).toBeNull();
   });
 
