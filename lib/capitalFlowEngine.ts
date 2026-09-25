@@ -5,6 +5,7 @@ import { computeBrainDecision } from './institutional-brain';
 import { detectSessionPhase } from './ai/sessionPhase';
 import { computeSessionLiquidityFromPhase, SessionLiquidityProfile } from './session-liquidity-engine';
 import { computeSessionPermissionOverlayFromPhase, SessionPermissionOverlay } from './session-permission-overlay';
+import { isEodDataCurrent } from './equityDataHealth';
 
 export type FlowBias = 'bullish' | 'bearish' | 'neutral';
 export type MarketMode = 'pin' | 'launch' | 'chop';
@@ -448,7 +449,7 @@ function dataFreshnessBucket(freshness?: NonNullable<CapitalFlowInput['dataHealt
   return 'none';
 }
 
-function dataScoreFromHealth(dataHealth?: CapitalFlowInput['dataHealth']): number {
+function dataScoreFromHealth(dataHealth?: CapitalFlowInput['dataHealth'], nowMs: number = Date.now()): number {
   const freshness = dataHealth?.freshness;
   let score = freshness === 'REALTIME' || freshness === 'LIVE'
     ? 100
@@ -463,8 +464,14 @@ function dataScoreFromHealth(dataHealth?: CapitalFlowInput['dataHealth']): numbe
   if (dataHealth?.fallbackActive) score -= 25;
   if ((dataHealth?.missingFieldsCount ?? 0) > 0) score -= Math.min(30, (dataHealth?.missingFieldsCount ?? 0) * 8);
   if (dataHealth?.lastUpdatedIso) {
-    const ageSec = Math.max(0, Math.round((Date.now() - new Date(dataHealth.lastUpdatedIso).getTime()) / 1000));
-    if (ageSec > 60) score -= 20;
+    if (freshness === 'EOD') {
+      // EOD data is dated, not timestamped: judge it against the trading calendar (previous session), never
+      // against a 60s wall clock it can't pass. A chain older than the previous session is genuinely stale.
+      if (!isEodDataCurrent(dataHealth.lastUpdatedIso, nowMs)) score -= 20;
+    } else {
+      const ageSec = Math.max(0, Math.round((nowMs - new Date(dataHealth.lastUpdatedIso).getTime()) / 1000));
+      if (ageSec > 60) score -= 20;
+    }
   }
   return clamp(score, 5, 100);
 }
@@ -731,7 +738,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     return clamp(trend + vol + structure + adxBonus, 5, 100);
   })();
 
-  const dataScore = dataScoreFromHealth(input.dataHealth);
+  const dataScore = dataScoreFromHealth(input.dataHealth, sessionNow.getTime());
 
   let convictionRaw =
     (modeScore * 0.25) +

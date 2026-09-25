@@ -9,6 +9,7 @@ import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-s
 import { avFetch } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
+import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -381,7 +382,8 @@ export async function GET(request: NextRequest) {
             liquidityLevels: liquidity.levels,
             dataHealth: {
               freshness: analysis.dataQuality?.freshness,
-              fallbackActive: !!analysis.dataConfidenceCaps?.length,
+              // Only a real data fallback counts; informational dataConfidenceCaps notes are display-only.
+              fallbackActive: isGenuineOptionsDataFallback(analysis.dataQuality),
               lastUpdatedIso: analysis.dataQuality?.lastUpdated,
             },
             riskGovernorContext: {
