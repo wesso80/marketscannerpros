@@ -6,6 +6,7 @@ import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { isPaidTier, watchlistLimitsFor } from '@/lib/tiers';
+import { fetchWatchlistQuotes, formatQuoteAsOf, type WatchlistQuote } from '@/lib/watchlist/quotes';
 
 interface Watchlist {
   id: string;
@@ -30,14 +31,11 @@ interface WatchlistItem {
   confluenceSignals?: string[];
   current_price?: number;
   change_percent?: number;
+  quote_fetched_at?: string | null;
+  quote_trading_day?: string | null;
 }
 
-interface QuoteData {
-  symbol: string;
-  price: number;
-  change: number;
-  changePercent: number;
-}
+type QuoteData = WatchlistQuote;
 
 type IdeaStage = 'Pre-Staging' | 'Structure Building' | 'Trigger Watch' | 'Conditions Met' | 'Conflict' | 'Invalidated';
 type WatchlistMode = 'PRE-STAGING' | 'ACTIVE' | 'RISK-CONTROL';
@@ -133,9 +131,10 @@ export default function WatchlistWidget() {
       const data = await res.json();
       setItems(data.items || []);
       
-      // Fetch quotes for symbols
+      // Fetch quotes for every item, by its saved asset type
+      setQuotes({});
       if (data.items?.length > 0) {
-        fetchQuotes(data.items.map((i: WatchlistItem) => i.symbol));
+        fetchQuotes(data.items);
       }
     } catch (err) {
       console.error('Error fetching items:', err);
@@ -144,23 +143,13 @@ export default function WatchlistWidget() {
     }
   }, []);
 
-  // Fetch quotes for symbols
-  const fetchQuotes = async (symbols: string[]) => {
+  // Fetch quotes for items: uses each item's asset type, batches lists over 20, and falls
+  // back to the cached price (marked "cached"). Results merge into existing quotes.
+  const fetchQuotes = async (forItems: WatchlistItem[]) => {
     try {
-      // Use scanner API to get quotes
-      const res = await fetch('/api/scanner/quotes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols }),
+      await fetchWatchlistQuotes(forItems, undefined, (partial) => {
+        setQuotes((prev) => ({ ...prev, ...partial }));
       });
-      if (res.ok) {
-        const data = await res.json();
-        const quotesMap: Record<string, QuoteData> = {};
-        data.quotes?.forEach((q: QuoteData) => {
-          quotesMap[q.symbol] = q;
-        });
-        setQuotes(quotesMap);
-      }
     } catch (err) {
       console.error('Error fetching quotes:', err);
     }
@@ -266,7 +255,7 @@ export default function WatchlistWidget() {
       ));
       
       // Fetch quote for new symbol
-      fetchQuotes([data.item.symbol]);
+      fetchQuotes([data.item]);
     } catch (err: any) {
       setError(err.message);
     }
@@ -364,7 +353,8 @@ export default function WatchlistWidget() {
         stage,
         structureState,
         edgeTemperature,
-        updatedAt: quote ? Date.now() : new Date(item.created_at).getTime(),
+        // The quote's own time (provider timestamp or trading day); 0 when unknown.
+        updatedAt: quote?.asOf && Number.isFinite(Date.parse(quote.asOf)) ? Date.parse(quote.asOf) : 0,
       };
     });
   }, [items, quotes]);
@@ -432,7 +422,7 @@ export default function WatchlistWidget() {
 
   const runConfluenceCheck = () => {
     if (items.length === 0) return;
-    void fetchQuotes(items.map((i) => i.symbol));
+    void fetchQuotes(items);
   };
 
   const exportWatchlist = () => {
@@ -447,7 +437,7 @@ export default function WatchlistWidget() {
       row.quality,
       row.momentumState,
       row.volatilityState,
-      new Date(row.updatedAt).toISOString(),
+      row.quote?.asOf ?? '',
     ]);
     const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -709,7 +699,12 @@ export default function WatchlistWidget() {
                         <div>Momentum: <span className="font-bold text-white">{row.momentumState}</span></div>
                         <div>Volatility: <span className="font-bold text-white">{row.volatilityState}</span></div>
                         <div>Structure: <span className="font-bold text-white">{row.structureState}</span></div>
-                        <div>Price: <span className="font-mono font-bold text-slate-100">{formatPrice(quote?.price)}</span></div>
+                        <div>
+                          Price: <span className="font-mono font-bold text-slate-100">{formatPrice(quote?.price)}</span>
+                          {quote?.source === 'cached' && <span className="ml-1 rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-300" title="No live quote right now; showing the last stored price">cached</span>}
+                          {quote?.note && <span className="ml-1 text-[10px] text-slate-400">({quote.note})</span>}
+                        </div>
+                        <div className="text-[11px] text-slate-500">Updated: {formatQuoteAsOf(quote) ?? '—'}</div>
                       </div>
 
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-700">
