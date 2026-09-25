@@ -10,20 +10,37 @@ import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 /* ── Types matching API response ── */
 
 interface FlowAggregate {
-  netPremium: number;
+  /** null when direction inference is unavailable (snapshot data) */
+  netPremium: number | null;
   callPremiumBought: number;
   callPremiumSold: number;
   putPremiumBought: number;
   putPremiumSold: number;
   totalPremium: number;
-  conviction: number;
+  /** null when direction inference is unavailable (snapshot data) */
+  conviction: number | null;
   boughtCount: number;
   soldCount: number;
   neutralCount: number;
+  splitLabel?: string;
+}
+
+interface FlowFacts {
+  callPremium: number;
+  putPremium: number;
+  totalPremium: number;
+  callVolume: number;
+  putVolume: number;
+  callOpenInterest: number;
+  putOpenInterest: number;
+  putCallVolumeRatio: number | null;
+  volumeToOpenInterest: number | null;
+  contractsVolumeAboveOI: number;
 }
 
 interface FlowPatternResult {
-  pattern: 'block' | 'sweep' | 'scattered';
+  /** null when inference is unavailable: block/sweep can't be seen in a snapshot */
+  pattern: 'block' | 'sweep' | 'scattered' | null;
   reason: string;
   activeStrikes: number;
   concentrationRatio: number;
@@ -39,22 +56,22 @@ interface IVSkewResult {
 }
 
 interface SmartMoneyResult {
-  direction: string;
-  confidence: number;
+  direction: string | null;
+  confidence: number | null;
   signals: string[];
-  whaleCount: number;
-  institutionalCount: number;
+  whaleCount: number | null;
+  institutionalCount: number | null;
 }
 
 interface TopFlow {
   strike: number;
   type: string;
   direction: string;
-  directionConfidence: number;
+  directionConfidence: number | null;
   volume: number;
   openInterest: number;
   estimatedPremium: number;
-  premiumTier: string;
+  premiumTier: string | null;
   moneyness: string;
   iv: number;
   delta: number;
@@ -68,10 +85,17 @@ interface FlowResponse {
   expiration: string;
   availableExpirations: string[];
   contractCount: number;
+  expiryNote?: string | null;
   provider?: string;
   quoteBasis?: 'realtime' | 'previous_session' | 'marks_only';
   asOfDate?: string | null;
   sourceLabel?: string;
+  /** 'Previous session estimate' on the HISTORICAL_OPTIONS fallback */
+  factsLabel?: string;
+  /** false → hide conviction/confidence, block/sweep labels and whale/institutional tiers */
+  inferenceAvailable?: boolean;
+  inferenceNote?: string;
+  facts?: FlowFacts;
   aggregate: FlowAggregate;
   flowPattern: FlowPatternResult;
   ivSkew: IVSkewResult;
@@ -92,6 +116,8 @@ function fmtUSD(n: number): string {
 function fmtPrice(n: number): string {
   return n >= 1 ? `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : `$${n.toFixed(4)}`;
 }
+
+const DIRECTION_NOT_INFERRED = 'Direction not inferred (snapshot data)';
 
 function convictionColor(c: number): string {
   if (c > 30) return 'var(--msp-bull)';
@@ -173,7 +199,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {!embeddedInTerminal && <ComplianceDisclaimer variant="options" />}
           <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', color: '#BFDBFE', lineHeight: 1.55 }}>
-            Flow classifications are estimates derived from public options-chain data. “Large flow” labels may not reflect actual institutional positioning, hedging intent, or future price direction.
+            Figures are estimates from options-chain snapshots, not trade prints. They do not show who bought or sold, institutional positioning, hedging intent, or future price direction.
           </div>
 
           {/* Symbol input + scan */}
@@ -217,6 +243,9 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   Live option quotes unavailable — this is the previous session&apos;s flow (close as of {data.asOfDate ?? 'unknown date'}), not live flow.
                 </span>
               )}
+              {data?.expiryNote && (
+                <span style={{ fontSize: '11px', color: 'var(--msp-text-muted)', width: '100%' }}>{data.expiryNote}</span>
+              )}
             </div>
           </div>
 
@@ -232,12 +261,18 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
             <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
               <div style={{ margin: '0 auto 12px', width: '40px', height: '40px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '14px', fontWeight: 600 }}>Analyzing options flow for {symbol}...</div>
-              <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px' }}>Classifying trade direction, detecting flow patterns, computing IV skew</div>
+              <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px' }}>Totalling premium and volume, computing IV skew</div>
             </div>
           )}
 
           {/* Results */}
-          {!loading && data && (
+          {!loading && data && (() => {
+            // Directional scores, block/sweep labels and size tiers only render when the API says inference is
+            // backed by trade prints. Snapshot chains (live or previous session) never are.
+            const inferred = data.inferenceAvailable === true;
+            const factsLabel = data.factsLabel ?? (data.quoteBasis === 'previous_session' ? 'Previous session estimate' : 'Snapshot estimate');
+            const splitLabel = data.aggregate.splitLabel ?? 'Estimated from bid/ask, approximate';
+            return (
             <>
               {/* Header strip: price + conviction */}
               <div className="msp-elite-panel" style={{ padding: '14px 20px' }}>
@@ -249,6 +284,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                       {data.changePct >= 0 ? '+' : ''}{data.changePct.toFixed(2)}%
                     </span>
                   </div>
+                  {inferred && data.aggregate.conviction !== null && data.smartMoney.direction ? (
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Conviction</div>
@@ -263,6 +299,14 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                       </div>
                     </div>
                   </div>
+                  ) : (
+                  <div style={{ maxWidth: '420px', textAlign: 'right' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--msp-text-muted)' }}>{DIRECTION_NOT_INFERRED}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--msp-text-faint)', lineHeight: 1.4, marginTop: '2px' }}>
+                      Chain snapshots are not trade prints, so no buy/sell conviction, sweep/block or large-order calls are made.
+                    </div>
+                  </div>
+                  )}
                 </div>
               </div>
 
@@ -271,42 +315,69 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                 {/* Net Premium Flow */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    Net Premium Flow
+                    {inferred ? 'Net Premium Flow' : 'Premium & Volume'}
+                    <span style={{ marginLeft: '6px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· {factsLabel}</span>
                   </div>
+                  {inferred && data.aggregate.netPremium !== null && (
                   <div style={{ fontSize: '24px', fontWeight: 800, color: data.aggregate.netPremium >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', marginBottom: '8px' }}>
                     {data.aggregate.netPremium >= 0 ? '+' : ''}{fmtUSD(data.aggregate.netPremium)}
                   </div>
+                  )}
+                  {data.facts && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', marginBottom: '10px' }}>
+                      {([
+                        ['Call premium', fmtUSD(data.facts.callPremium)],
+                        ['Put premium', fmtUSD(data.facts.putPremium)],
+                        ['Call / put volume', `${data.facts.callVolume.toLocaleString()} / ${data.facts.putVolume.toLocaleString()}`],
+                        ['Put/call volume ratio', data.facts.putCallVolumeRatio !== null ? data.facts.putCallVolumeRatio.toFixed(2) : '—'],
+                        ['Volume vs open interest', data.facts.volumeToOpenInterest !== null ? `${(data.facts.volumeToOpenInterest * 100).toFixed(0)}% of OI` : '—'],
+                        ['Contracts with volume > OI', String(data.facts.contractsVolumeAboveOI)],
+                      ] as const).map(([k, v]) => (
+                        <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--msp-text-faint)' }}>{k}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--msp-text)' }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!inferred && (
+                    <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', marginBottom: '6px' }}>
+                      Buy/sell split — {splitLabel.toLowerCase()}:
+                    </div>
+                  )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '11px' }}>
-                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls bought</span>
-                      <div style={{ fontWeight: 700, color: 'var(--msp-bull)' }}>{fmtUSD(data.aggregate.callPremiumBought)}</div>
+                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(16,185,129,0.08)' : 'rgba(100,116,139,0.08)' }}>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls bought{inferred ? '' : ' (est.)'}</span>
+                      <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bull)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.callPremiumBought)}</div>
                     </div>
-                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(239,68,68,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls sold</span>
-                      <div style={{ fontWeight: 700, color: 'var(--msp-bear)' }}>{fmtUSD(data.aggregate.callPremiumSold)}</div>
+                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(239,68,68,0.08)' : 'rgba(100,116,139,0.08)' }}>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls sold{inferred ? '' : ' (est.)'}</span>
+                      <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bear)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.callPremiumSold)}</div>
                     </div>
-                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(239,68,68,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts bought</span>
-                      <div style={{ fontWeight: 700, color: 'var(--msp-bear)' }}>{fmtUSD(data.aggregate.putPremiumBought)}</div>
+                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(239,68,68,0.08)' : 'rgba(100,116,139,0.08)' }}>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts bought{inferred ? '' : ' (est.)'}</span>
+                      <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bear)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.putPremiumBought)}</div>
                     </div>
-                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts sold</span>
-                      <div style={{ fontWeight: 700, color: 'var(--msp-bull)' }}>{fmtUSD(data.aggregate.putPremiumSold)}</div>
+                    <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(16,185,129,0.08)' : 'rgba(100,116,139,0.08)' }}>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts sold{inferred ? '' : ' (est.)'}</span>
+                      <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bull)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.putPremiumSold)}</div>
                     </div>
                   </div>
                   <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--msp-text-faint)' }}>
-                    {data.aggregate.boughtCount} bought • {data.aggregate.soldCount} sold • {data.aggregate.neutralCount} neutral
+                    {data.aggregate.boughtCount} bought • {data.aggregate.soldCount} sold • {data.aggregate.neutralCount} neutral{inferred ? '' : ' (contracts, bid/ask estimate)'}
                   </div>
                 </div>
 
                 {/* Flow Pattern */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    {patternCode(data.flowPattern.pattern)} Flow Pattern
+                    {inferred && data.flowPattern.pattern ? `${patternCode(data.flowPattern.pattern)} Flow Pattern` : 'Strike Distribution'}
                   </div>
+                  {inferred && data.flowPattern.pattern && (
                   <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--msp-text)', textTransform: 'uppercase', marginBottom: '6px' }}>
                     {data.flowPattern.pattern}
                   </div>
+                  )}
                   <div style={{ fontSize: '12px', color: 'var(--msp-text-muted)', lineHeight: 1.5, marginBottom: '8px' }}>
                     {data.flowPattern.reason}
                   </div>
@@ -320,6 +391,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
                     IV Skew Analysis
+                    <span style={{ marginLeft: '6px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>· {factsLabel}</span>
                   </div>
                   {(() => {
                     const { label, color } = skewLabel(data.ivSkew.skewSignal);
@@ -347,13 +419,14 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   </div>
                 </div>
 
-                {/* Large flow estimate */}
+                {/* Large flow estimate — only when inference is backed by trade prints */}
+                {inferred && (
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
                     Large Flow Estimate
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '18px', fontWeight: 800, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 800, color: dirColor(data.smartMoney.direction ?? ''), textTransform: 'uppercase' }}>
                       {data.smartMoney.direction}
                     </span>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--msp-text-muted)' }}>
@@ -361,12 +434,12 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontSize: '11px' }}>
-                    {data.smartMoney.whaleCount > 0 && (
+                    {(data.smartMoney.whaleCount ?? 0) > 0 && (
                       <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(139,92,246,0.12)', color: '#8b5cf6', fontWeight: 700 }}>
                         {data.smartMoney.whaleCount} large-flow estimate
                       </span>
                     )}
-                    {data.smartMoney.institutionalCount > 0 && (
+                    {(data.smartMoney.institutionalCount ?? 0) > 0 && (
                       <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: 'var(--msp-info)', fontWeight: 700 }}>
                         {data.smartMoney.institutionalCount} institutional proxy
                       </span>
@@ -378,19 +451,23 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                     ))}
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Top Flows Table */}
               {data.topFlows.length > 0 && (
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
-                    Top Flows by Premium
+                    {inferred ? 'Top Flows by Premium' : `Top Contracts by Premium · ${factsLabel}`}
                   </div>
                   <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                     <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--msp-border)' }}>
-                          {['Strike', 'Type', 'Direction', 'Volume', 'OI', 'Premium', 'Tier', 'IV', 'Delta', 'Moneyness'].map(h => (
+                          {(inferred
+                            ? ['Strike', 'Type', 'Direction', 'Volume', 'OI', 'Premium', 'Tier', 'IV', 'Delta', 'Moneyness']
+                            : ['Strike', 'Type', 'Side (bid/ask est.)', 'Volume', 'OI', 'Premium', 'IV', 'Delta', 'Moneyness']
+                          ).map(h => (
                             <th key={h} scope="col" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--msp-text-faint)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               {h}
                             </th>
@@ -399,7 +476,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                       </thead>
                       <tbody>
                         {data.topFlows.map((f, i) => {
-                          const tb = tierBadge(f.premiumTier);
+                          const tb = tierBadge(f.premiumTier ?? '');
                           return (
                             <tr key={i} style={{ borderBottom: '1px solid rgba(51,65,85,0.3)' }}>
                               <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--msp-text)' }}>${f.strike}</td>
@@ -407,8 +484,8 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                               <td style={{ padding: '6px 8px' }}>
                                 <span style={{
                                   padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700,
-                                  background: f.direction === 'bought' ? 'rgba(16,185,129,0.1)' : f.direction === 'sold' ? 'rgba(239,68,68,0.1)' : 'rgba(100,116,139,0.1)',
-                                  color: dirColor(f.direction), textTransform: 'uppercase',
+                                  background: !inferred ? 'rgba(100,116,139,0.1)' : f.direction === 'bought' ? 'rgba(16,185,129,0.1)' : f.direction === 'sold' ? 'rgba(239,68,68,0.1)' : 'rgba(100,116,139,0.1)',
+                                  color: inferred ? dirColor(f.direction) : 'var(--msp-text-muted)', textTransform: 'uppercase',
                                 }}>
                                   {f.direction}
                                 </span>
@@ -416,11 +493,13 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                               <td style={{ padding: '6px 8px', color: 'var(--msp-text)' }}>{f.volume.toLocaleString()}</td>
                               <td style={{ padding: '6px 8px', color: 'var(--msp-text-muted)' }}>{f.openInterest.toLocaleString()}</td>
                               <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--msp-text)' }}>{fmtUSD(f.estimatedPremium)}</td>
+                              {inferred && (
                               <td style={{ padding: '6px 8px' }}>
                                 <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, background: tb.bg, color: tb.color, textTransform: 'uppercase' }}>
                                   {f.premiumTier}
                                 </span>
                               </td>
+                              )}
                               <td style={{ padding: '6px 8px', color: 'var(--msp-text-muted)' }}>{(f.iv * 100).toFixed(1)}%</td>
                               <td style={{ padding: '6px 8px', color: 'var(--msp-text-muted)' }}>{f.delta.toFixed(2)}</td>
                               <td style={{ padding: '6px 8px', color: 'var(--msp-text-faint)', fontSize: '10px' }}>{f.moneyness}</td>
@@ -433,7 +512,8 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                 </div>
               )}
             </>
-          )}
+            );
+          })()}
 
           {/* Empty state */}
           {!loading && !data && !error && (
@@ -441,9 +521,9 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
               <div style={{ margin: '0 auto 12px', width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--msp-text)' }}>Options Flow Intelligence</div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px', maxWidth: '520px', margin: '6px auto 0' }}>
-                Enter a symbol to analyze real-money options flow. Classifies trade direction (bought/sold at bid/ask),
-                detects block vs sweep patterns, computes net premium flow with IV skew analysis,
-                and scores institutional flow activity by premium tier.
+                Enter a symbol to see call/put premium, volume vs open interest, IV skew and ATM IV for the nearest
+                expiry. Buy/sell splits are rough bid/ask estimates from chain snapshots; no trade-direction,
+                sweep/block or large-order calls are made.
               </div>
             </div>
           )}
@@ -466,9 +546,9 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
       identity={
         <ToolIdentityHeader
           toolName="Options Flow Intelligence"
-          description="Research bias classification, block/sweep detection, net premium flow, IV skew analysis, and large-flow estimation."
+          description="Call/put premium, volume vs open interest, IV skew and ATM IV from options-chain snapshots."
           modeLabel="Flow Analysis"
-          confidenceLabel={data ? `${data.smartMoney.direction}` : '—'}
+          confidenceLabel={data ? (data.inferenceAvailable === true && data.smartMoney.direction ? data.smartMoney.direction : DIRECTION_NOT_INFERRED) : '—'}
           lastUpdatedLabel={lastUpdated}
         />
       }

@@ -11,6 +11,9 @@
  *
  * Data source: Alpha Vantage REALTIME_OPTIONS contract-level data (shared chain)
  * (bid, ask, last, mark, volume, OI, IV, Greeks per contract)
+ *
+ * NOTE: that data is a snapshot, not trade prints. The API serves toSnapshotFlowView(), which withholds the
+ * directional scores, block/sweep labels and premium tiers computed here (see FLOW_DIRECTION_INFERENCE_AVAILABLE).
  */
 
 /* ── Types ── */
@@ -473,6 +476,163 @@ export function classifyOptionsFlow(
     flowPattern,
     ivSkew,
     smartMoney,
+    topFlows,
+  };
+}
+
+/* ── Snapshot-safe public view ── */
+
+/**
+ * Every chain we have (Alpha Vantage REALTIME_OPTIONS or the previous-session HISTORICAL_OPTIONS fallback) is a
+ * bid/ask/last SNAPSHOT, never a tape of trade prints. From a snapshot you cannot tell who initiated a trade, whether
+ * volume was a sweep or a block, or whether a large premium was one "whale" order or thousands of small ones. So the
+ * directional scores (conviction, large-flow direction/confidence), the block/sweep labels and the whale /
+ * institutional tiers are withheld. Plain facts (premium, volume, OI, skew, ATM IV) are kept.
+ *
+ * Flip this only if a trade-print (time & sales) feed is wired in AND the inference is walk-forward tested.
+ */
+export const FLOW_DIRECTION_INFERENCE_AVAILABLE = false as const;
+
+export const DIRECTION_NOT_INFERRED_NOTE =
+  'Direction not inferred (snapshot data): option chain snapshots are not trade prints, so buyer/seller intent, sweeps, blocks and "whale" orders cannot be detected.';
+
+export const BID_ASK_SPLIT_LABEL = 'Estimated from bid/ask, approximate';
+
+export interface FlowFacts {
+  /** Mid-price × volume × 100, all contracts on the expiry (no direction guess) */
+  callPremium: number;
+  putPremium: number;
+  totalPremium: number;
+  callVolume: number;
+  putVolume: number;
+  callOpenInterest: number;
+  putOpenInterest: number;
+  /** put volume ÷ call volume (null when no call volume) */
+  putCallVolumeRatio: number | null;
+  /** total volume ÷ total open interest (null when OI unknown) */
+  volumeToOpenInterest: number | null;
+  /** contracts whose volume exceeded their open interest */
+  contractsVolumeAboveOI: number;
+}
+
+export function computeFlowFacts(contracts: ContractFlow[]): FlowFacts {
+  let callPremium = 0, putPremium = 0, callVolume = 0, putVolume = 0, callOI = 0, putOI = 0, aboveOI = 0;
+  for (const c of contracts) {
+    if (c.type === 'call') { callPremium += c.estimatedPremium; callVolume += c.volume; callOI += c.openInterest; }
+    else { putPremium += c.estimatedPremium; putVolume += c.volume; putOI += c.openInterest; }
+    if (c.openInterest > 0 && c.volume > c.openInterest) aboveOI++;
+  }
+  const totalVolume = callVolume + putVolume;
+  const totalOI = callOI + putOI;
+  return {
+    callPremium,
+    putPremium,
+    totalPremium: callPremium + putPremium,
+    callVolume,
+    putVolume,
+    callOpenInterest: callOI,
+    putOpenInterest: putOI,
+    putCallVolumeRatio: callVolume > 0 ? putVolume / callVolume : null,
+    volumeToOpenInterest: totalOI > 0 ? totalVolume / totalOI : null,
+    contractsVolumeAboveOI: aboveOI,
+  };
+}
+
+export interface SnapshotFlowView {
+  inferenceAvailable: boolean;
+  inferenceNote: string;
+  facts: FlowFacts;
+  aggregate: Omit<FlowAggregate, 'netPremium' | 'conviction'> & {
+    /** Withheld: a net of guessed buys minus guessed sells is a direction call */
+    netPremium: number | null;
+    /** Withheld: directional score from bid/ask guesses */
+    conviction: number | null;
+    splitLabel: string;
+  };
+  flowPattern: {
+    /** Withheld: block/sweep cannot be seen in a snapshot */
+    pattern: FlowPattern | null;
+    reason: string;
+    activeStrikes: number;
+    concentrationRatio: number;
+  };
+  smartMoney: {
+    direction: SmartMoneySignal['direction'] | null;
+    confidence: number | null;
+    signals: string[];
+    whaleCount: number | null;
+    institutionalCount: number | null;
+  };
+  topFlows: Array<{
+    strike: number;
+    type: 'call' | 'put';
+    /** bid/ask side estimate — approximate, not a trade print */
+    direction: TradeDirection;
+    directionConfidence: number | null;
+    volume: number;
+    openInterest: number;
+    estimatedPremium: number;
+    premiumTier: PremiumTier | null;
+    moneyness: ContractFlow['moneyness'];
+    iv: number;
+    delta: number;
+  }>;
+}
+
+/**
+ * Public view of a classification. With inference unavailable (always, for snapshot chains) the directional
+ * scores, pattern labels and size tiers are nulled out; facts and the labelled bid/ask split remain.
+ */
+export function toSnapshotFlowView(
+  c: OptionsFlowClassification,
+  inferenceAvailable: boolean = FLOW_DIRECTION_INFERENCE_AVAILABLE,
+): SnapshotFlowView {
+  const facts = computeFlowFacts(c.contracts);
+  const topFlows = c.topFlows.map((f) => ({
+    strike: f.strike,
+    type: f.type,
+    direction: f.direction,
+    directionConfidence: inferenceAvailable ? f.directionConfidence : null,
+    volume: f.volume,
+    openInterest: f.openInterest,
+    estimatedPremium: f.estimatedPremium,
+    premiumTier: inferenceAvailable ? f.premiumTier : null,
+    moneyness: f.moneyness,
+    iv: f.iv,
+    delta: f.delta,
+  }));
+  const { activeStrikes, concentrationRatio } = c.flowPattern;
+  if (inferenceAvailable) {
+    return {
+      inferenceAvailable: true,
+      inferenceNote: '',
+      facts,
+      aggregate: { ...c.aggregate, splitLabel: BID_ASK_SPLIT_LABEL },
+      flowPattern: { ...c.flowPattern },
+      smartMoney: {
+        direction: c.smartMoney.direction,
+        confidence: c.smartMoney.confidence,
+        signals: c.smartMoney.signals,
+        whaleCount: c.smartMoney.whaleFlows.length,
+        institutionalCount: c.smartMoney.institutionalFlows.length,
+      },
+      topFlows,
+    };
+  }
+  return {
+    inferenceAvailable: false,
+    inferenceNote: DIRECTION_NOT_INFERRED_NOTE,
+    facts,
+    aggregate: { ...c.aggregate, netPremium: null, conviction: null, splitLabel: BID_ASK_SPLIT_LABEL },
+    flowPattern: {
+      pattern: null,
+      reason: activeStrikes > 0
+        ? `Volume on ${activeStrikes} strike${activeStrikes === 1 ? '' : 's'}; top 2 strikes hold ${Math.round(concentrationRatio * 100)}% of it`
+        : 'No significant volume on this expiry',
+      activeStrikes,
+      concentrationRatio,
+    },
+    smartMoney: { direction: null, confidence: null, signals: [], whaleCount: null, institutionalCount: null },
     topFlows,
   };
 }
