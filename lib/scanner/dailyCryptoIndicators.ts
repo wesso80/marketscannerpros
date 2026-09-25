@@ -94,7 +94,7 @@ export function ema200SanityFailure(
 }
 
 export type CryptoDailyScanOutcome =
-  | { ok: true; price: number; indicators: CryptoDailyIndicators; barCount: number; source: string }
+  | { ok: true; price: number; indicators: CryptoDailyIndicators; barCount: number; source: string; /** Completed daily bars used (oldest first), for the canonical engine. */ bars: Bar[] }
   | { ok: false; reason: string };
 
 /**
@@ -134,5 +134,6 @@ export async function scanCryptoDailyIndicators(
     indicators: { price, ...indicators },
     barCount: series.bars.length,
     source: series.source,
+    bars: series.bars,
   };
 }

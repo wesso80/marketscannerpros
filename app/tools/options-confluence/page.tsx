@@ -459,6 +459,8 @@ interface OptionsSetup {
     reasoning: string;
   } | null;
   tradeSnapshot?: TradeSnapshot;
+  /** Canonical engine verdict for the underlying (daily bars) — the primary setup grade; null when unavailable. */
+  canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; timeframe: string } | null;
   locationContext?: LocationContext | null;
   // DATA QUALITY & COMPLIANCE
   dataQuality?: DataQuality;
@@ -2309,7 +2311,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         {result && !optionsAnalysisBlocked && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
-            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'SCENARIO ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WATCH'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confluence: {unifiedConfidence.toFixed(0)}%</div></div>}
+            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'SCENARIO ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WATCH'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted" title="Canonical engine verdict for the underlying on daily bars (primary setup grade)">Canonical (daily): {result.canonicalVerdict ? <span className="font-bold text-[var(--msp-text)]">{result.canonicalVerdict.permission} · {result.canonicalVerdict.grade} · {result.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()}{result.canonicalVerdict.direction !== 'neutral' ? ` ${result.canonicalVerdict.direction}` : ''}</span> : 'unavailable'}</div><div className="msp-muted">Options confluence (secondary): {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
@@ -3658,7 +3660,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                       Institutional Filters
                     </div>
                     <div className={`text-[0.76rem] font-extrabold ${result.institutionalFilter.noTrade ? 'text-red-500' : 'text-emerald-500'}`}>
-                      FINAL QUALITY: {result.institutionalFilter.finalGrade} ({Number(result.institutionalFilter.finalScore ?? 0).toFixed(0)})
+                      {result.canonicalVerdict ? `CANONICAL: ${result.canonicalVerdict.permission} · ${result.canonicalVerdict.grade} · ` : ''}OPTIONS FILTER (LEGACY): {result.institutionalFilter.finalGrade} ({Number(result.institutionalFilter.finalScore ?? 0).toFixed(0)})
                     </div>
                   </div>
 
@@ -4701,7 +4703,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   </div>
                   
                   <div className="mb-2">
-                    <span className="text-slate-500">Quality:</span>
+                    <span className="text-slate-500" title="Options trade quality (legacy options read). The canonical daily verdict is shown in the cockpit.">Options quality (legacy):</span>
                     <span className={`ml-2 font-bold ${gradeClass(result.tradeQuality)}`}>
                       {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
                     </span>

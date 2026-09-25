@@ -1,3 +1,4 @@
+import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 export type PublicAssessment = 'ALIGNED' | 'NOT_ALIGNED' | 'WATCH';
 export type Direction = 'LONG' | 'SHORT' | 'NEUTRAL';
 export type Verdict = 'agree' | 'disagree' | 'neutral' | 'unknown';
@@ -164,7 +165,8 @@ export interface GoldenEggPayload {
     direction: Direction;
     confluenceScore: number;
     confidence: number;
-    grade: 'A' | 'B' | 'C' | 'D';
+    /** Canonical engine grade (A/B/C, F = blocked) when `canonicalVerdict` is present; legacy confluence grade (A–D) otherwise. */
+    grade: 'A' | 'B' | 'C' | 'D' | 'F';
     primaryDriver: string;
     primaryBlocker?: string;
     flipConditions: Array<{ id: string; text: string; severity: 'must' | 'should' | 'nice' }>;
@@ -308,6 +310,19 @@ export interface GoldenEggPayload {
   };
   /** Canonical facts (Part C). Present on every live packet. */
   canonical?: GoldenEggCanonical;
+  /** Canonical engine verdict (lib/scoring/canonical) — the PRIMARY permission/grade/setup/direction. */
+  canonicalVerdict?: CanonicalResult;
+  /** The v2 confluence read this packet had before the canonical verdict was applied (secondary, "legacy confluence"). */
+  legacyConfluence?: {
+    label: 'legacy confluence (secondary)';
+    assessment: PublicAssessment;
+    direction: Direction;
+    grade: string;
+    confluenceScore: number;
+    primaryBlocker: string | null;
+    flipConditions: Array<{ id: string; text: string; severity: 'must' | 'should' | 'nice' }>;
+    levels: GoldenEggCanonical['levels'] | null;
+  };
   doctrine?: {
     id: string;
     label: string;

@@ -25,6 +25,8 @@ import {
   calculateADX, calculateStochastic, calculateAroon, calculateCCI,
 } from "@/lib/scanner-indicators";
 import { alertCronFailure } from "@/lib/opsAlerting";
+import { canonicalForDailyPick, compactCanonical, type CanonicalResult, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
+import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -110,6 +112,8 @@ interface Indicators {
   volume?: number;
   /** Open time (ISO-8601 UTC) of the last daily bar used; read by lib/scanner/dailyPickTrust for staleness. */
   lastBarAt?: string;
+  /** Canonical engine verdict (primary label for daily picks); the signal-count score stays as the legacy value. */
+  canonical?: CanonicalResult;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -310,7 +314,7 @@ async function fetchCryptoData(symbol: string): Promise<OHLCV[] | null> {
 }
 
 // Analyze a single asset and return scored result
-function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
+function analyzeAsset(symbol: string, ohlcv: OHLCV[], canonicalOpts?: { assetClass: 'equity' | 'crypto'; overlay: RegimeOverlayInputs | null; displaySymbol?: string }): {
   symbol: string;
   score: number;
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -351,6 +355,14 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
     lastBarAt: `${ohlcv[ohlcv.length - 1].date}T00:00:00.000Z`,
   };
   
+  if (canonicalOpts) {
+    const canonical = canonicalForDailyPick(
+      ohlcv.map((d) => ({ t: `${d.date}T00:00:00.000Z`, open: d.open, high: d.high, low: d.low, close: d.close, volume: d.volume > 0 ? d.volume : null })),
+      { symbol: canonicalOpts.displaySymbol ?? symbol, assetClass: canonicalOpts.assetClass, overlay: canonicalOpts.overlay },
+    );
+    if (canonical) indicators.canonical = compactCanonical(canonical);
+  }
+
   const { score, direction, signals } = computeScore(indicators);
   
   return {
@@ -385,6 +397,8 @@ export async function POST(req: NextRequest) {
   };
   
   const errors: string[] = [];
+  // Regime overlay inputs once per run (fails soft to "no overlay").
+  const overlay = await loadRegimeOverlayInputs().catch(() => null);
   
   // ==========================================================================
   // SCAN EQUITIES (Yahoo Finance)
@@ -405,7 +419,7 @@ export async function POST(req: NextRequest) {
           errors.push(`${symbol}: No data`);
           return null;
         }
-        return analyzeAsset(symbol, ohlcv);
+        return analyzeAsset(symbol, ohlcv, { assetClass: 'equity', overlay });
       } catch (e: any) {
         errors.push(`${symbol}: ${e.message}`);
         return null;
@@ -442,7 +456,7 @@ export async function POST(req: NextRequest) {
           errors.push(`${symbol}: No data`);
           return null;
         }
-        const result = analyzeAsset(symbol, ohlcv);
+        const result = analyzeAsset(symbol, ohlcv, { assetClass: 'crypto', overlay, displaySymbol: symbol.replace("-USD", "") });
         if (result) {
           // Convert Yahoo format (BTC-USD) to display format (BTC)
           result.symbol = symbol.replace("-USD", "");

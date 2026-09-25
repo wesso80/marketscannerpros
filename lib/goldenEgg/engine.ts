@@ -41,6 +41,8 @@ import { adxStrength, rsiRead, stochasticRead, dveStrengthLabel, classifySetup, 
 import { buildNetworkContext, type NetworkContext } from './networkContext';
 import { trendFromLevels, relate, summarizeCrossMarket, SECTOR_ETF, type CrossMarketItem, type CrossMarketContext } from './crossMarket';
 import { getFundamentalsSummary, type FundamentalsSummary } from './companyOverview';
+import { applyCanonicalToGoldenEgg, evaluateGoldenEggCanonical, goldenEggCanonicalBars } from './canonicalVerdict';
+import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
 
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
 const cache = new Map<string, { data: GoldenEggPayload; ts: number }>();
@@ -1041,13 +1043,31 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   // Direction is needed to relate cross-market items; build the payload once without cross-market, then attach.
   const provisional = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, timeframeKey: timeframe });
   const crossMarket = await buildCrossMarket(assetClass, provisional.layer1.direction, fundamentals?.sector ?? null, base, benchSeries).catch(() => null);
-  const payload = crossMarket ? buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, crossMarket, timeframeKey: timeframe }) : provisional;
+  let payload = crossMarket ? buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, crossMarket, timeframeKey: timeframe }) : provisional;
+
+  // Canonical engine verdict is PRIMARY (permission/grade/setup/direction); the confluence read above is kept as the
+  // secondary "legacy confluence" (payload.legacyConfluence). Same hard-block rules as the scanner.
+  try {
+    const earningsWindow = holdingWindowDays(timeframe);
+    const dte = fundamentals?.daysToEarnings;
+    const overlay = await loadRegimeOverlayInputs({ macroRiskState: macroRegime?.riskState ?? null }).catch(() => null);
+    const canonicalVerdict = evaluateGoldenEggCanonical(goldenEggCanonicalBars(priceData), {
+      symbol, assetClass, timeframe,
+      trustLevel: payload.canonical?.dataTrust.level ?? null,
+      earningsInWindow: assetClass === 'equity' && dte != null && dte >= 0 && dte <= earningsWindow ? { date: fundamentals?.nextEarningsDate ?? null, days: dte, windowDays: earningsWindow } : null,
+      overlay,
+      dataTimestamp: priceData.lastCompletedBarAt ?? null,
+    });
+    if (canonicalVerdict) payload = applyCanonicalToGoldenEgg(payload, canonicalVerdict);
+  } catch (e) {
+    console.warn('[golden-egg] canonical verdict unavailable:', e instanceof Error ? e.message : e);
+  }
 
   if (payload.layer1.direction !== 'NEUTRAL') {
     recordSignal({
-      symbol, signalType: 'golden_egg', direction: payload.layer1.direction === 'LONG' ? 'bullish' : 'bearish', score: payload.layer1.confidence,
+      symbol, signalType: 'golden_egg', direction: payload.layer1.direction === 'LONG' ? 'bullish' : 'bearish', score: payload.canonicalVerdict?.score ?? payload.layer1.confidence,
       priceAtSignal: priceData.price, timeframe: tfLabel,
-      features: { assessment: payload.layer1.assessment, rsi: indData?.rsi ?? undefined, macd_hist: indData?.macdHist ?? undefined, adx: indData?.adx ?? undefined, mpe_composite: mpeData?.composite ?? undefined, macro_regime: macroRegime?.riskState ?? undefined },
+      features: { assessment: payload.layer1.assessment, canonical_permission: payload.canonicalVerdict?.permission, canonical_grade: payload.canonicalVerdict?.grade, canonical_setup: payload.canonicalVerdict?.setupType, legacy_confluence: payload.layer1.confidence, rsi: indData?.rsi ?? undefined, macd_hist: indData?.macdHist ?? undefined, adx: indData?.adx ?? undefined, mpe_composite: mpeData?.composite ?? undefined, macro_regime: macroRegime?.riskState ?? undefined },
     }).catch(() => {});
   }
   if (params.workspaceId) {
@@ -1056,7 +1076,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
       assetClass: assetClass === 'crypto' ? 'crypto' : assetClass === 'forex' ? 'fx' : 'equities', timeframe: tfLabel, source: 'golden_egg',
       dataFreshness: payload.canonical?.dataTrust.freshness === 'stale' ? 'stale' : 'unknown',
       inputs: { symbol, assetClass, timeframe: tfLabel, price: priceData.price, rsi: indData?.rsi, macdHist: indData?.macdHist, adx: indData?.adx, mpeComposite: mpeData?.composite, macroRegime: macroRegime?.riskState },
-      scoreSnapshot: { direction: payload.layer1.direction, assessment: payload.layer1.assessment, confidence: payload.layer1.confidence, invalidation: payload.canonical?.levels.invalidation.price ?? null, trust: payload.canonical?.dataTrust.level ?? null },
+      scoreSnapshot: { direction: payload.layer1.direction, assessment: payload.layer1.assessment, confidence: payload.layer1.confidence, canonicalPermission: payload.canonicalVerdict?.permission ?? null, canonicalGrade: payload.canonicalVerdict?.grade ?? null, canonicalScore: payload.canonicalVerdict?.score ?? null, invalidation: payload.canonical?.levels.invalidation.price ?? null, trust: payload.canonical?.dataTrust.level ?? null },
       meta: { primaryBlocker: payload.layer1.primaryBlocker, timing: payload.canonical?.timing.relation ?? null },
       adminOnly: true,
     }).catch(() => {});

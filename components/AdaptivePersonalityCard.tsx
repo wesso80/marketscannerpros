@@ -134,12 +134,12 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
             <span style={{ color: 'var(--msp-text-faint)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800 }}>
               Analytical Filter Engine
             </span>
-            <span style={{
+            <span title="Legacy filter grade on the adaptive base score — the canonical verdict (scanner / Golden Egg) is the primary setup grade" style={{
               color: data.institutionalFilter.noTrade ? 'var(--msp-bear)' : 'var(--msp-bull)',
               fontSize: '0.75rem',
               fontWeight: 800,
             }}>
-              {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {data.institutionalFilter.recommendation === LEGACY_MULTI_FACTOR_STATUS ? 'MULTI-FACTOR' : data.institutionalFilter.recommendation === LEGACY_LOW_ALIGNMENT_STATUS ? 'LOW ALIGNMENT' : data.institutionalFilter.recommendation === 'CAUTION' ? 'CONDITIONAL' : 'UNKNOWN'}
+              Legacy filter {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {data.institutionalFilter.recommendation === LEGACY_MULTI_FACTOR_STATUS ? 'MULTI-FACTOR' : data.institutionalFilter.recommendation === LEGACY_LOW_ALIGNMENT_STATUS ? 'LOW ALIGNMENT' : data.institutionalFilter.recommendation === 'CAUTION' ? 'CONDITIONAL' : 'UNKNOWN'}
             </span>
           </div>
 

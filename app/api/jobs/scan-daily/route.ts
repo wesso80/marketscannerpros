@@ -14,6 +14,8 @@ import { avTakeToken } from "@/lib/avRateGovernor";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
 import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
+import { canonicalForDailyPick, compactCanonical, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
+import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
 
 export const runtime = "nodejs";
@@ -187,7 +189,7 @@ function computeScore(indicators: Record<string, any>): { score: number; directi
   };
 }
 
-async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
+async function scanEquity(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
 
@@ -212,6 +214,9 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
       console.error(`Dropping equity ${symbol}: EMA200 sanity check failed: ${sanity}`);
       return null;
     }
+    // Canonical verdict (primary label; the signal-count score below stays as the legacy/secondary value).
+    const canonical = canonicalForDailyPick(bars, { symbol, assetClass: 'equity', overlay });
+    if (canonical) indicators.canonical = compactCanonical(canonical);
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -233,7 +238,7 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
   }
 }
 
-async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
+async function scanCrypto(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
 
@@ -257,7 +262,10 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
       console.error(`Dropping crypto ${symbol}: ${outcome.reason}`);
       return null;
     }
-    const { price, indicators } = outcome;
+    const { price } = outcome;
+    const indicators: Record<string, any> = { ...outcome.indicators };
+    const canonical = canonicalForDailyPick(outcome.bars, { symbol, assetClass: 'crypto', overlay });
+    if (canonical) indicators.canonical = compactCanonical(canonical);
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -279,7 +287,7 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
   }
 }
 
-async function scanForex(symbol: string, apiKey: string): Promise<any | null> {
+async function scanForex(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
     
@@ -299,6 +307,8 @@ async function scanForex(symbol: string, apiKey: string): Promise<any | null> {
 
     // EMA200 is omitted (not substituted) when fewer than 200 bars exist.
     const indicators: Record<string, any> = { price, ...computeDailyIndicators(bars) };
+    const canonical = canonicalForDailyPick(bars, { symbol: `${symbol}/USD`, assetClass: 'forex', overlay });
+    if (canonical) indicators.canonical = compactCanonical(canonical);
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -345,13 +355,15 @@ async function runDailyScan(req: NextRequest) {
     const errors: string[] = [];
     const deadline = Date.now() + 250_000; // 250s hard budget (curl max-time is 290s)
     const hasTime = () => Date.now() < deadline;
+    // Regime overlay inputs (VIX / credit / M2 / SPY-QQQ trend) once per run; fails soft to "no overlay".
+    const overlay = await loadRegimeOverlayInputs().catch(() => null);
 
     // Scan equities (top 15 — bail early if approaching timeout)
     console.log("Starting equity scan...");
     const equitiesToScan = EQUITY_UNIVERSE.slice(0, 15);
     for (const symbol of equitiesToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at equity:${symbol}`); break; }
-      const result = await scanEquity(symbol, apiKey);
+      const result = await scanEquity(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`equity:${symbol}`);
     }
@@ -361,7 +373,7 @@ async function runDailyScan(req: NextRequest) {
     const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 5);
     for (const symbol of cryptoToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at crypto:${symbol}`); break; }
-      const result = await scanCrypto(symbol, apiKey);
+      const result = await scanCrypto(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`crypto:${symbol}`);
     }
@@ -371,7 +383,7 @@ async function runDailyScan(req: NextRequest) {
     const forexToScan = FOREX_UNIVERSE.slice(0, 5);
     for (const symbol of forexToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at forex:${symbol}`); break; }
-      const result = await scanForex(symbol, apiKey);
+      const result = await scanForex(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`forex:${symbol}`);
     }

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } from "@/lib/scanner/dailyPickTrust";
+import { canonicalPickFields, rankDailyPicks, readStoredCanonical } from "@/lib/scoring/canonical/dailyPick";
 
 export const runtime = "nodejs";
 
@@ -91,6 +92,9 @@ export async function GET(req: NextRequest) {
         trusts.push(trust);
         target[pick.asset_class].push({
           ...pick,
+          // Canonical verdict (primary: permission / grade / setup / direction); `score` + `direction` are the
+          // legacy signal-count values, kept for compatibility.
+          ...canonicalPickFields(readStoredCanonical(pick.indicators)),
           trust,
           dataTimestamp: trust.dataTimestamp,
           signals: {
@@ -101,6 +105,9 @@ export async function GET(req: NextRequest) {
         });
       }
     }
+
+    // Within the stored top picks, order canonical-first (rows from older scans without a verdict keep score order).
+    for (const k of Object.keys(topPicks)) topPicks[k] = rankDailyPicks(topPicks[k] as any[]) as typeof picks;
 
     return NextResponse.json({
       success: true,
