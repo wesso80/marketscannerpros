@@ -35,6 +35,8 @@ export interface CanonicalInput {
   /** Hard blocks from lib/scanner/hardBlocks (stale data, price sanity, earnings in window, liquidity). */
   hardBlocks?: CanonicalReason[];
   flags?: CanonicalReason[];
+  /** Data-quality WATCH reasons from the data-trust contract (delayed, timestamp unknown, degraded). */
+  dataWatchReasons?: CanonicalReason[];
   /** Data-trust level label (GOOD / DEGRADED / STALE / INSUFFICIENT_DATA). */
   trust?: string | null;
   dataTimestamp?: string | null;
@@ -50,7 +52,7 @@ const r2 = (v: number, dp = 2) => (fin(v) ? Number(v.toFixed(dp)) : null);
 export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   const f = input.features;
   const blockReasons: CanonicalReason[] = [...(input.hardBlocks ?? [])];
-  const watchReasons: CanonicalReason[] = [];
+  const watchReasons: CanonicalReason[] = [...(input.dataWatchReasons ?? [])];
   const flags: CanonicalReason[] = [...(input.flags ?? [])];
   if (f.mode === 'snapshot') flags.push({ code: 'SNAPSHOT_MODE', message: 'Indicator snapshot only — swing structure and percentiles unavailable' });
 

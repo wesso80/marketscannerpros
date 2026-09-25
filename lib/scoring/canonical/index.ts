@@ -4,3 +4,4 @@ export * from './setups';
 export * from './thresholds';
 export * from './engine';
 export * from './regimeOverlay';
+export * from './scannerAdapter';

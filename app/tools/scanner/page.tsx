@@ -26,6 +26,8 @@ import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
 import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
+import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
+import { compareCanonicalRows } from '@/lib/scoring/canonical/scannerAdapter';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -425,7 +427,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
             </div>
 
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
-            {row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
+            {row.canonical ? <CanonicalVerdict c={row.canonical} compact legacyScore={row.compositeV2?.composite ?? null} /> : row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
             {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
@@ -500,7 +502,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               )}
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
-            {row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
+            {row.canonical ? <CanonicalVerdict c={row.canonical} compact legacyScore={row.compositeV2?.composite ?? null} /> : row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
             {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
@@ -1097,6 +1099,7 @@ export default function ScannerPage() {
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
     }
     items.sort((a, b) => {
+      if (sortKey === 'mspScore' && sortDir === 'desc' && a.canonical && b.canonical) return compareCanonicalRows(a, b);
       if (sortKey === 'mspScore' && sortDir === 'desc' && a.compositeV2?.version && b.compositeV2?.version) return compareScannerScores(a, b);
       let av: any, bv: any;
       switch (sortKey) {
@@ -1369,7 +1372,8 @@ export default function ScannerPage() {
           : trendOk ? 'Trend alignment'
           : 'Mixed evidence';
         const enginePermission = scoreV2?.execution?.permission;
-        const perm = pick.compositeV2?.permission ? ({PASS: 'COMPLIANT', WATCH: 'TIGHT', BLOCK: 'BLOCKED'} as const)[pick.compositeV2.permission as 'PASS' | 'WATCH' | 'BLOCK'] : enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
+        const primaryPermission = pick.canonical?.permission ?? pick.compositeV2?.permission;
+        const perm = primaryPermission ? ({PASS: 'COMPLIANT', WATCH: 'TIGHT', BLOCK: 'BLOCKED'} as const)[primaryPermission as 'PASS' | 'WATCH' | 'BLOCK'] : enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
             ? 'BLOCKED'
             : rangeConfirmationNeeded && dataQuality === 'GOOD'
               ? 'TIGHT'
@@ -1380,7 +1384,7 @@ export default function ScannerPage() {
               : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
-          scorePermission: pick.compositeV2?.permission, factorCoverage: pick.compositeV2?.coverage,
+          scorePermission: primaryPermission, factorCoverage: pick.canonical?.coverage ?? pick.compositeV2?.coverage, canonical: pick.canonical,
           scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: coverage-adjusted magnitude ${(pick.compositeV2.coverageAdjustedMagnitude ?? pick.compositeV2.conservativeMagnitude).toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
@@ -1721,14 +1725,18 @@ export default function ScannerPage() {
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600" title="Setup / regime label from the scoring engine">{r.setup ?? regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center">
                             <span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span>
-                            {r.compositeV2 ? <details className="text-left" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                            {r.canonical ? <div className="text-[10px] font-bold text-slate-400" title="Canonical grade (A/B/C, F = blocked)">Grade {r.canonical.grade}</div> : null}
+                            {r.canonical || r.compositeV2 ? <details className="text-left" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                               <summary className="cursor-pointer text-[10px] text-emerald-300">Why</summary>
-                              <div className="min-w-80 max-w-md whitespace-normal"><CompositeBreakdown v2={r.compositeV2} expanded /></div>
+                              <div className="min-w-80 max-w-md whitespace-normal">
+                                {r.canonical ? <CanonicalVerdict c={r.canonical} legacyScore={r.compositeV2?.composite ?? null} /> : null}
+                                {r.compositeV2 ? <details><summary className="cursor-pointer text-[10px] text-slate-500">Legacy composite (secondary)</summary><CompositeBreakdown v2={r.compositeV2} expanded /></details> : null}
+                              </div>
                             </details> : null}
                           </td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(r.direction)} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.compositeV2?.coverage != null ? `${Math.round(r.compositeV2.coverage * 100)}% · ${r.compositeV2.evidenceQuality}` : 'Unavailable'}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.canonical ? `${Math.round(r.canonical.coverage * 100)}% · ${r.canonical.mode}` : r.compositeV2?.coverage != null ? `${Math.round(r.compositeV2.coverage * 100)}% · ${r.compositeV2.evidenceQuality}` : 'Unavailable'}</td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap" style={{ color: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust), borderColor: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust) + '55', backgroundColor: dataQualityColor(trust === 'INSUFFICIENT DATA' ? 'MISSING' : trust === 'STALE' ? 'DEGRADED' : trust) + '15' }}>

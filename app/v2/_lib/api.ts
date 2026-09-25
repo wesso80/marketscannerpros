@@ -1,3 +1,4 @@
+import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
 /**
@@ -149,6 +150,9 @@ export interface ScanResult {
   capitalFlow?: any;
   insight?: ScannerInsight;
   compositeV2?: ScannerScorePayload;
+  /** Canonical engine verdict (lib/scoring/canonical): the primary permission / setup / grade / levels. */
+  canonical?: CanonicalResult;
+  grade?: string;
   scoreV2?: {
     regime: { label: string; confidence: number };
     regimeScore: { weightedScore: number; tradeBias: string; gated: boolean };
