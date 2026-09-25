@@ -67,9 +67,19 @@ function sigmoid(value: number): number {
   return 1 / (1 + Math.exp(-value));
 }
 
-function softmax(values: number[]): number[] {
-  const max = Math.max(...values);
-  const exp = values.map((value) => Math.exp(value - max));
+/**
+ * State scores live in [0, 1]. A plain softmax over [0, 1] can never exceed e/(e+3) ≈ 47.5% for the winning state,
+ * so the downstream gates (hysteresis persistThreshold 55, session minimumConfidence 55/60/65/75) were unreachable
+ * and every session-gated trade permission was forced below its TPS threshold.
+ * Temperature T = 0.25 (i.e. softmax(score / 0.25)) maps a clean win (1, 0, 0, 0) to ≈ 95% and a four-way tie to 25%.
+ * It is monotonic, so WHICH state wins is unchanged — only how confident the engine reports being.
+ */
+export const FLOW_STATE_SOFTMAX_TEMPERATURE = 0.25;
+
+function softmax(values: number[], temperature = 1): number[] {
+  const scaled = values.map((value) => value / temperature);
+  const max = Math.max(...scaled);
+  const exp = scaled.map((value) => Math.exp(value - max));
   const sum = exp.reduce((acc, value) => acc + value, 0);
   return exp.map((value) => value / Math.max(sum, 1e-9));
 }
@@ -150,7 +160,7 @@ export function computeInstitutionalFlowState(input: InstitutionalFlowStateInput
     (flowVelocityAgainstBias * 0.25) +
     ((momentumDivergence ? 1 : 0) * 0.20);
 
-  const [accP, posP, launchP, exhP] = softmax([accScore, posScore, launchScore, exhScore]).map((v) => Math.round(v * 100));
+  const [accP, posP, launchP, exhP] = softmax([accScore, posScore, launchScore, exhScore], FLOW_STATE_SOFTMAX_TEMPERATURE).map((v) => Math.round(v * 100));
 
   const states: InstitutionalFlowState[] = ['ACCUMULATION', 'POSITIONING', 'LAUNCH', 'EXHAUSTION'];
   const probs = [accP, posP, launchP, exhP];
