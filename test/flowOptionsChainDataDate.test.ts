@@ -75,7 +75,7 @@ async function flowFor(symbol: string) {
   const fd = body.data;
   const perm = fd.flow_trade_permission;
   // Same text the Terminal Capital Pressure card renders (app/tools/terminal/page.tsx).
-  const cardText = `${!perm ? 'Permission unavailable.' : perm.blocked ? `Blocked: ${perm.noTradeMode?.reason || 'permission conditions not met'}` : 'Permission conditions met.'}`;
+  const cardText = `${!perm ? 'Permission unavailable.' : perm.blocked ? (perm.sessionLimited ? `${perm.noTradeMode?.reason}.` : `Blocked: ${perm.noTradeMode?.reason || 'permission conditions not met'}`) : 'Permission conditions met.'}`;
   return { fd, perm, cardText, gate: fd.brain_decision_v1.state_machine.gates.data_health };
 }
 
