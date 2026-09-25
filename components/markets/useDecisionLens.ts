@@ -106,7 +106,7 @@ export function useDecisionLens(ctx: TickerContext): DecisionLensData | null {
 
     // ── Liquidity Grade ──
     let liquidityGrade: 'A' | 'B' | 'C' | 'D' = 'B';
-    if (opts?.iv && opts.ivRank !== undefined) {
+    if (opts?.iv && opts.ivRank != null) {
       if (opts.ivRank < 20) liquidityGrade = 'A';
       else if (opts.ivRank < 50) liquidityGrade = 'B';
       else if (opts.ivRank < 80) liquidityGrade = 'C';

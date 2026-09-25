@@ -367,24 +367,23 @@ export function calculateOptionsProbability(
   // Process each signal
   // ─────────────────────────────────────────────────────────────────────────
   
-  // 1. Unusual Activity (Smart Money)
-  if (signals.unusualActivity) {
+  // 1. High volume vs open interest — INFO ONLY. The chain has no buy/sell side (a call can be sold,
+  // a put bought as a hedge), so it is never a bullish/bearish vote and adds nothing either way.
+  totalSignals++;
+  {
     const ua = signals.unusualActivity;
-    const callBias = (ua.callPremium || 0) > (ua.putPremium || 0);
-    const uaDirection = callBias ? 'bullish' : (ua.putPremium || 0) > 0 ? 'bearish' : 'neutral';
-    const premiumFlow = Math.max(ua.callPremium || 0, ua.putPremium || 0);
-    
-    addSignal(
-      'Unusual Activity',
-      ua,
-      SIGNAL_WEIGHTS.unusualActivity,
-      uaDirection,
-      premiumFlow > 0 
-        ? `$${premiumFlow.toLocaleString()} ${callBias ? 'call' : 'put'} premium (${ua.alertLevel} alert)`
-        : 'Smart money detected'
-    );
-  } else {
-    addSignal('Unusual Activity', undefined, SIGNAL_WEIGHTS.unusualActivity, 'neutral', '');
+    const calls = ua?.callPremium || 0;
+    const puts = ua?.putPremium || 0;
+    components.push({
+      name: 'High volume vs open interest',
+      direction: 'neutral',
+      triggered: false,
+      confidence: 0,
+      contribution: 0,
+      reason: ua?.triggered
+        ? `${calls >= puts ? 'Mostly calls' : 'Mostly puts'} (${ua.alertLevel ?? 'n/a'} level) — info only, no buy/sell side`
+        : 'Not detected',
+    });
   }
   
   // 2. Put/Call Ratio

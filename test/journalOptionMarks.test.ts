@@ -40,8 +40,9 @@ function stubAv(historical: unknown) {
   return calls;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules();
+  (await import('@/lib/options/chainCache')).clearSharedOptionsChainCache();
   vi.stubEnv('ALPHA_VANTAGE_API_KEY', 'test-key');
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
@@ -171,6 +172,7 @@ describe('GET /api/journal/option-quote (real fetchOptionsChain on an AV-shaped 
     expect((await GET(url('symbol=XYZ&strike=100&right=call'))).status).toBe(400);
 
     vi.resetModules();
+    (await import('@/lib/options/chainCache')).clearSharedOptionsChainCache(); // fresh server: no shared chain cache either
     stubAv(histPayload('2026-09-21'));
     ({ GET } = await import('../app/api/journal/option-quote/route'));
     expect(await (await GET(url(`symbol=XYZ&expiration=${EXP}&strike=100&right=call`))).json()).toMatchObject({ ok: false, reason: 'stale_quote' });

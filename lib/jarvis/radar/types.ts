@@ -91,7 +91,7 @@ export interface DeepDive {
   symbol: string;
   overview: { sector: string | null; industry: string | null; marketCap: number | null; beta: number | null; high52w: number | null; low52w: number | null; distFrom52wHighPct: number | null } | null;
   news: { count48h: number; namedCount48h: number; avgSentiment: number | null; topHeadline: string | null; topSource: string | null; publishedAt: string | null } | null;
-  options: { putCallRatio: number; ivRank: number; unusualActivity: string; sentiment: string; dealerGamma: string } | null;
+  options: { putCallRatio: number; ivRank: number | null; unusualActivity: string; sentiment: string; dealerGamma: string } | null;
   cryptoVolume: { avgVol30d: number; volRatio: number; volPctile30: number } | null;
   indicatorsDb: { ema200: number | null; adx14: number | null; rsi14: number | null; inSqueeze: boolean | null; computedAt: string } | null;
   notes: string[];

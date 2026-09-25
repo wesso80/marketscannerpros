@@ -60,6 +60,8 @@ export const CACHE_KEYS = {
   indicators: (symbol: string, timeframe: string) => `ind:${symbol.toUpperCase()}:${timeframe}`,
   
   // Options data
+  // Options Terminal's normalised chain + spot. Raw chains shared by the other options tools live under
+  // `opt:raw:SYM` (lib/options/chainCache.ts) — a different shape, so never reuse this key for them.
   optionsChain: (symbol: string) => `opt:chain:${symbol.toUpperCase()}`,
   optionsMetrics: (symbol: string) => `opt:metrics:${symbol.toUpperCase()}`,
   

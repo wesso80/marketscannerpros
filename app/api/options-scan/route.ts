@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
+import { measuredIvRank } from '@/lib/options/ivRank';
 import { ScanMode } from '@/lib/confluence-learning-agent';
 import { checkOptionsAccess } from '@/lib/options/access';
-import { usableOptionRows } from '@/lib/options/avChain';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { canonicalFromBarStore } from '@/lib/scoring/canonical/barStore';
@@ -11,7 +11,7 @@ import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { AVOptionRow, scoreOptionCandidatesV21WithDiagnostics } from '@/lib/scoring/options-v21';
 import { avFetch } from '@/lib/avRateGovernor';
-import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
+import { fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/correlation-regime-engine';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { assessOptionsChainQuality } from '@/lib/options/dataQuality';
@@ -22,76 +22,31 @@ const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 
 
 async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Promise<{
   rows: AVOptionRow[];
-  provider: 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS' | 'none';
+  provider: 'REALTIME_OPTIONS_FMV' | 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS' | 'none';
   warnings: string[];
 }> {
   if (!ALPHA_VANTAGE_KEY) {
     return { rows: [], provider: 'none', warnings: ['missing_alpha_vantage_key'] };
   }
 
-  // Check Redis cache first (saves AV calls for repeat views)
-  const cacheKey = CACHE_KEYS.optionsChain(symbol);
-  const cached = await getCached<{ rows: AVOptionRow[]; provider: string }>(cacheKey);
-  if (cached && Array.isArray(cached.rows) && cached.rows.length > 0) {
-    const rows = expirationDate
-      ? cached.rows.filter((row) => String(row.expiration || '') === expirationDate)
-      : cached.rows;
-    if (rows.length > 0) {
-      console.log(`[options-scan] ${symbol} served from Redis cache (${rows.length} rows)`);
-      return { rows, provider: cached.provider as any, warnings: ['cache_hit'] };
-    }
+  // Shared short-TTL chain cache (opt:raw:SYM): usually already filled by the analyzer run for this scan,
+  // so the strike picker no longer downloads the chain a second time.
+  const shared = await fetchSharedOptionsChain<AVOptionRow>(symbol, {
+    apiKey: ALPHA_VANTAGE_KEY,
+    providers: AV_OPTIONS_REALTIME_ENABLED ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'] : ['HISTORICAL_OPTIONS'],
+    fetchPayload: (fn, url) => avFetch(url, `${fn} ${symbol}`),
+  });
+  if (!shared) return { rows: [], provider: 'none', warnings: ['no_usable_chain'] };
+
+  // A cache hit is not a data problem; don't let it mark the provider status as degraded.
+  const warnings = shared.warnings.filter((w) => w !== 'cache_hit');
+  const rows = expirationDate
+    ? shared.rows.filter((row) => String(row.expiration || '') === expirationDate)
+    : shared.rows;
+  if (!rows.length) {
+    return { rows: [], provider: 'none', warnings: [...warnings, `${shared.provider}:expiry_filter_empty`] };
   }
-
-  // REALTIME_OPTIONS_FMV (FMV) is primary with 600 RPM plan
-  const providers = AV_OPTIONS_REALTIME_ENABLED
-    ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']
-    : ['HISTORICAL_OPTIONS'];
-
-  const warnings: string[] = [];
-  for (const fn of providers) {
-    const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_KEY}`;
-    let payload: any;
-    try {
-      payload = await avFetch(url, `${fn} ${symbol}`);
-    } catch (err) {
-      console.warn(`[options-scan] ${fn} ${symbol} failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
-      warnings.push(`${fn}:fetch_failed`);
-      continue;
-    }
-
-    if (!payload) {
-      warnings.push(`${fn}:no_data`);
-      continue;
-    }
-
-    const hasRows = Array.isArray(payload?.data) && payload.data.length > 0;
-    // Rejects Alpha Vantage's artificial "premium endpoint" sample chain (key not entitled).
-    const data = (usableOptionRows(payload, symbol) ?? []) as AVOptionRow[];
-    if (!data.length) {
-      warnings.push(hasRows ? `${fn}:not_entitled_sample_data` : `${fn}:empty_data`);
-      continue;
-    }
-
-    // Cache the full chain for subsequent requests
-    await setCached(cacheKey, { rows: data, provider: fn }, CACHE_TTL.optionsChain).catch(() => {});
-
-    const rows = expirationDate
-      ? data.filter((row) => String(row.expiration || '') === expirationDate)
-      : data;
-
-    if (!rows.length) {
-      warnings.push(`${fn}:expiry_filter_empty`);
-      continue;
-    }
-
-    return {
-      rows,
-      provider: fn as 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS',
-      warnings,
-    };
-  }
-
-  return { rows: [], provider: 'none', warnings };
+  return { rows, provider: shared.provider, warnings };
 }
 
 // Rate governed + Redis cached — 600 RPM premium plan
@@ -332,8 +287,12 @@ export async function POST(request: NextRequest) {
       symbol: symbol.toUpperCase(),
       timeframe: scanMode,
       spot: Number(analysis.currentPrice || 0),
-      expectedMovePct: Number(analysis.expectedMove?.selectedExpiryPercent || 3),
-      ivRank: Number(analysis.ivAnalysis?.ivRank ?? analysis.ivAnalysis?.ivRankHeuristic ?? 50),
+      // 0-DTE (or no ATM IV) gives no selected-expiry move: pass null instead of a silent 3%; the picker then
+      // uses each expiry's own ATM IV × √DTE, or skips expiries it can't size.
+      expectedMovePct: Number(analysis.expectedMove?.selectedExpiryPercent) > 0 ? Number(analysis.expectedMove?.selectedExpiryPercent) : null,
+      expectedMoveDte: analysis.expectedMove?.selectedExpiryDTE ?? null,
+      // No IV history → null (neutral), never a fake 50.
+      ivRank: measuredIvRank(analysis.ivAnalysis),
       marketDirection: analysis.direction === 'bullish' ? 'bullish' : analysis.direction === 'bearish' ? 'bearish' : 'neutral',
       marketRegimeAlignment: regimeAlignment,
       tfConfluenceScore,

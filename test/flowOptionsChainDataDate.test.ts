@@ -79,8 +79,9 @@ async function flowFor(symbol: string) {
   return { fd, perm, cardText, gate: fd.brain_decision_v1.state_machine.gates.data_health };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules();
+  (await import('@/lib/options/chainCache')).clearSharedOptionsChainCache();
   vi.stubEnv('ALPHA_VANTAGE_API_KEY', 'test-key');
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);

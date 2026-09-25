@@ -21,6 +21,7 @@ vi.mock('@/lib/avRateGovernor', () => ({
 }));
 
 import { fetchOptionsSnapshot } from '../lib/goldenEggFetchers';
+import { clearSharedOptionsChainCache } from '../lib/options/chainCache';
 
 function contract(symbol: string, type: 'call' | 'put', strike: number, expiration: string) {
   return {
@@ -36,6 +37,7 @@ const sample = { message: 'This is a premium endpoint. ***THE SAMPLE DATA SCHEMA
 describe('fetchOptionsSnapshot provider fallback', () => {
   beforeEach(() => {
     m.av = {}; m.calls = [];
+    clearSharedOptionsChainCache();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-25T14:00:00Z'));
   });

@@ -544,7 +544,7 @@ function buildPayload(
         { label: 'Expected move (±1σ to expiry)', value: c.expectedMovePct != null ? `±${c.expectedMovePct.toFixed(1)}%` : 'n/a' },
         { label: 'IV Rank', value: 'n/a (no IV history)' },
         { label: 'Dealer Gamma', value: c.dealerGamma },
-        { label: 'Unusual Activity', value: c.unusualActivity },
+        { label: 'Volume vs open interest', value: c.unusualActivity },
         { label: 'Max Pain', value: c.maxPain != null ? fmtLevel(c.maxPain) : 'n/a' },
         { label: 'Call wall', value: c.callWall ? `${fmtLevel(c.callWall.strike)} (${c.callWall.relation} spot)` : 'n/a' },
         { label: 'Put wall', value: c.putWall ? `${fmtLevel(c.putWall.strike)} (${c.putWall.relation} spot)` : 'n/a' },
@@ -824,7 +824,7 @@ function buildPayload(
 
 
 // ── Scoring functions ───────────────────────────────────────────────────
-function computeFlowScore(
+export function computeFlowScore(
   opts: OptionsSnapshot | null,
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
   cryptoDerivs: CryptoDerivatives | null = null,
@@ -840,8 +840,10 @@ function computeFlowScore(
     else if (opts.putCallRatio > 1.3) { score -= 15 * side; notes.push(`put-heavy positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
     else if (opts.putCallRatio > 1.1) { score -= 5 * side; notes.push(`mildly put-tilted (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`); }
     else notes.push(`balanced positioning (P/C ${opts.putCallRatio.toFixed(2)} on ${c.expiry})`);
-    if (opts.unusualActivity === 'Very High') { score += 10; notes.push('volume/OI very high — unusual activity'); }
-    else if (opts.unusualActivity === 'Elevated') { score += 5; notes.push('volume/OI elevated'); }
+    // High volume vs open interest has no buy/sell side, so it adds nothing to LONG or SHORT (info only).
+    if (opts.unusualActivity === 'Very High' || opts.unusualActivity === 'Elevated') {
+      notes.push(`high volume vs open interest (${opts.unusualActivity.toLowerCase()}) — info only, no buy/sell side`);
+    }
     if (opts.dealerGamma.includes('Long')) { score += 5; notes.push('dealers long gamma (stabilising)'); }
     else if (opts.dealerGamma.includes('Short')) { score -= 3; notes.push('dealers short gamma (amplifying)'); }
     if (c.quality.level === 'DEGRADED') { score -= 5; notes.push('chain quality degraded — flow read discounted'); }

@@ -20,8 +20,8 @@ import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
 import { latestObservation } from '@/lib/macro/avRateSeries';
+import { fetchSharedOptionsChain, type AvChainFunction } from '@/lib/options/chainCache';
 import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
-import { usableOptionRows } from '@/lib/options/avChain';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -95,7 +95,8 @@ export interface Indicators {
 }
 
 export interface OptionsSnapshot {
-  putCallRatio: number; ivRank: number; maxPain: number;
+  /** ivRank: null — no IV history is stored, so it is unknown (never a fake 50). maxPain: null when the chain can't establish it. */
+  putCallRatio: number; ivRank: number | null; maxPain: number | null;
   unusualActivity: string; sentiment: string;
   highestOICallStrike: number | null; highestOIPutStrike: number | null;
   totalCallOI: number; totalPutOI: number;
@@ -407,27 +408,19 @@ export async function fetchOptionsSnapshot(
     // Try each provider independently: a non-entitled realtime endpoint must not stop the fallback
     // to HISTORICAL_OPTIONS (included in every premium plan). avFetch throws on AV "Information"
     // (e.g. premium/entitlement) notes, and non-entitled keys can instead get an artificial sample chain.
-    const providers: Array<{ fn: string; label: string; provider: string }> = [
-      { fn: 'REALTIME_OPTIONS_FMV', label: `OPTIONS_FMV ${symbol}`, provider: 'alpha_vantage REALTIME_OPTIONS_FMV' },
-      { fn: 'REALTIME_OPTIONS', label: `REALTIME_OPTIONS ${symbol}`, provider: 'alpha_vantage REALTIME_OPTIONS' },
-      { fn: 'HISTORICAL_OPTIONS', label: `HISTORICAL_OPTIONS ${symbol}`, provider: 'alpha_vantage HISTORICAL_OPTIONS (previous session)' },
-    ];
-    let rawData: RawContract[] | null = null;
-    let provider = '';
-    for (const p of providers) {
-      const url = `https://www.alphavantage.co/query?function=${p.fn}&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
-      try {
-        const payload = await avFetch<any>(url, p.label);
-        const rows = usableOptionRows<RawContract>(payload, symbol);
-        if (rows) {
-          rawData = rows;
-          provider = p.provider;
-          break;
-        }
-      } catch (err) {
-        console.warn(`[goldenEgg] ${p.fn} ${symbol} unavailable: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
-      }
-    }
+    const providerLabels: Record<AvChainFunction, string> = {
+      REALTIME_OPTIONS_FMV: 'alpha_vantage REALTIME_OPTIONS_FMV',
+      REALTIME_OPTIONS: 'alpha_vantage REALTIME_OPTIONS',
+      HISTORICAL_OPTIONS: 'alpha_vantage HISTORICAL_OPTIONS (previous session)',
+    };
+    // Shared short-TTL chain cache (opt:raw:SYM) — reuses a chain another options tool just downloaded.
+    const shared = await fetchSharedOptionsChain<RawContract>(symbol, {
+      apiKey: AV_KEY,
+      providers: ['REALTIME_OPTIONS_FMV', 'REALTIME_OPTIONS', 'HISTORICAL_OPTIONS'],
+      fetchPayload: (fn, url) => avFetch<any>(url, `${fn === 'REALTIME_OPTIONS_FMV' ? 'OPTIONS_FMV' : fn} ${symbol}`),
+    });
+    const rawData: RawContract[] | null = shared?.rows ?? null;
+    const provider = shared ? providerLabels[shared.provider] : '';
     if (!rawData?.length) return null;
 
     // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.
@@ -438,9 +431,10 @@ export async function fetchOptionsSnapshot(
 
     return {
       putCallRatio: canonical.putCallOi,
-      // No IV history is available from the chain alone; ivRank is intentionally not fabricated (50 = "unknown" placeholder for legacy math).
-      ivRank: 50,
-      maxPain: canonical.maxPain ?? price,
+      // No IV history is available from the chain alone: IV rank is unknown (null), never a placeholder 50.
+      ivRank: null,
+      // Missing max pain stays missing — substituting the spot price read as "pinned at max pain" in DVE.
+      maxPain: canonical.maxPain ?? null,
       unusualActivity: canonical.unusualActivity,
       sentiment: canonical.sentiment,
       highestOICallStrike: canonical.callWall?.strike ?? null,

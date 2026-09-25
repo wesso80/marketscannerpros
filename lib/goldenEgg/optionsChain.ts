@@ -37,10 +37,12 @@ export interface CanonicalOptionsSnapshot {
   totalVolume: number;
   /** Average implied volatility across the chain, decimal (0.35 = 35%). */
   avgIv: number | null;
+  /** At-the-money IV (strikes within 2% of spot, else the nearest strike), decimal. Drives the expected move. */
+  atmIv: number | null;
   /** IV rank needs an IV history; the chain alone cannot produce it. */
   ivRank: null;
-  ivBasis: 'chain_average' | 'unavailable';
-  /** ±1σ expected move to expiry in price units, from avgIv. */
+  ivBasis: 'atm' | 'chain_average' | 'unavailable';
+  /** ±1σ expected move to expiry in price units, from ATM IV (the smile's wings would overstate it). */
   expectedMove: number | null;
   expectedMovePct: number | null;
   maxPain: number | null;
@@ -84,6 +86,21 @@ export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now
   return { expiry: best, reason: 'highest open interest overall (only near-dated expiries available)', available };
 }
 
+/** ATM implied volatility: mean IV of contracts within 2% of spot; if none, of the strike nearest spot. */
+export function atmImpliedVol(chain: RawContract[], spot: number): number | null {
+  if (!(spot > 0)) return null;
+  const withIv = chain
+    .map((c) => ({ strike: num(c.strike), iv: num(c.implied_volatility) }))
+    .filter((c) => c.strike > 0 && c.iv > 0.02 && c.iv < 3);
+  if (!withIv.length) return null;
+  let atm = withIv.filter((c) => Math.abs(c.strike - spot) / spot <= 0.02);
+  if (!atm.length) {
+    const nearest = Math.min(...withIv.map((c) => Math.abs(c.strike - spot)));
+    atm = withIv.filter((c) => Math.abs(c.strike - spot) === nearest);
+  }
+  return atm.reduce((sum, c) => sum + c.iv, 0) / atm.length;
+}
+
 export function summarizeChain(
   contracts: RawContract[],
   spot: number,
@@ -108,7 +125,9 @@ export function summarizeChain(
   const ivs = chain.map((c) => num(c.implied_volatility)).filter((iv) => iv > 0.02 && iv < 3);
   const avgIv = ivs.length ? ivs.reduce((a, b) => a + b, 0) / ivs.length : null;
   const daysToExpiry = Math.max(0, Math.round((Date.parse(`${sel.expiry}T20:00:00Z`) - nowMs) / 86_400_000));
-  const expectedMove = avgIv != null && spot > 0 ? spot * avgIv * Math.sqrt(Math.max(1, daysToExpiry) / 365) : null;
+  const atmIv = atmImpliedVol(chain, spot);
+  // ATM IV, not the all-strike average: far OTM wings carry higher IV (the smile) and overstate the move.
+  const expectedMove = atmIv != null && spot > 0 ? spot * atmIv * Math.sqrt(Math.max(1, daysToExpiry) / 365) : null;
 
   const strikes = [...new Set(chain.map((c) => num(c.strike)).filter((k) => k > 0))].sort((a, b) => a - b);
   let maxPain: number | null = null;
@@ -169,7 +188,8 @@ export function summarizeChain(
     totalCallOi, totalPutOi, totalVolume,
     avgIv: avgIv != null ? Math.round(avgIv * 10000) / 10000 : null,
     ivRank: null,
-    ivBasis: avgIv != null ? 'chain_average' : 'unavailable',
+    atmIv: atmIv != null ? Math.round(atmIv * 10000) / 10000 : null,
+    ivBasis: atmIv != null ? 'atm' : avgIv != null ? 'chain_average' : 'unavailable',
     expectedMove: expectedMove != null ? Math.round(expectedMove * 100) / 100 : null,
     expectedMovePct: expectedMove != null && spot > 0 ? Math.round((expectedMove / spot) * 1000) / 10 : null,
     maxPain,

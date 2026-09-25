@@ -506,7 +506,7 @@ export function estimateComponentsFromContext(opts: {
       if (opts.fearGreed < 25 || opts.fearGreed > 75) FD += 10; // Extreme sentiment
     }
   }
-  if (opts.ivRank !== undefined) {
+  if (fin(opts.ivRank)) {
     if (opts.ivRank > 70) FD += 5; // Elevated IV = important data
     if (opts.ivRank < 30) FD += 5;
   }

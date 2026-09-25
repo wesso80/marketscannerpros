@@ -31,8 +31,12 @@ interface ScoreInput {
   symbol: string;
   timeframe: string;
   spot: number;
-  expectedMovePct: number;
-  ivRank: number;
+  /** Expected move (%) of the analysed expiry; null/0 when unavailable (never a made-up default). */
+  expectedMovePct: number | null;
+  /** DTE of the expiry `expectedMovePct` refers to — lets it be rescaled by √time for other expiries. */
+  expectedMoveDte?: number | null;
+  /** Measured IV rank 0-100, or null when there is no IV history (treated as neutral, not 50). */
+  ivRank: number | null;
   marketDirection: 'bullish' | 'bearish' | 'neutral';
   marketRegimeAlignment: number;
   tfConfluenceScore: number;
@@ -154,7 +158,47 @@ function dteFromExpiry(expiry: string): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expectedMovePct: number): MSPOptionCandidate[] {
+/** ATM IV (decimal) of one expiry: strikes within 2% of spot, else the strike nearest spot. null if no IV. */
+export function atmIvForExpiry(rows: AVOptionRow[], spot: number): number | null {
+  const withIv = rows
+    .map((row) => ({ strike: toNum(row.strike, 0), iv: toNum(row.implied_volatility, 0) }))
+    .map((v) => ({ ...v, iv: v.iv > 5 ? v.iv / 100 : v.iv }))
+    .filter((v) => v.strike > 0 && v.iv > 0 && v.iv < 5);
+  if (!withIv.length || !(spot > 0)) return null;
+  let atm = withIv.filter((v) => Math.abs(v.strike - spot) / spot <= 0.02);
+  if (!atm.length) {
+    const nearest = Math.min(...withIv.map((v) => Math.abs(v.strike - spot)));
+    atm = withIv.filter((v) => Math.abs(v.strike - spot) === nearest);
+  }
+  return atm.reduce((sum, v) => sum + v.iv, 0) / atm.length;
+}
+
+/**
+ * Expected move (%) for ONE expiry. A move scales with √time, so a weekly move must not be applied to a
+ * 60-DTE contract: prefer that expiry's own ATM IV × √(DTE/365); else rescale the analysed expiry's move
+ * by √(DTE / its DTE); null when neither is known.
+ */
+export function expectedMoveForExpiry(
+  expiryRows: AVOptionRow[],
+  spot: number,
+  dte: number,
+  fallback: { expectedMovePct: number | null | undefined; expectedMoveDte?: number | null },
+): number | null {
+  const years = Math.max(1, dte) / 365;
+  const atmIv = atmIvForExpiry(expiryRows, spot);
+  if (atmIv != null) return atmIv * Math.sqrt(years) * 100;
+  const base = toNum(fallback.expectedMovePct, 0);
+  if (!(base > 0)) return null;
+  const baseDte = toNum(fallback.expectedMoveDte, 0);
+  return baseDte > 0 ? base * Math.sqrt(Math.max(1, dte) / Math.max(1, baseDte)) : base;
+}
+
+function buildCandidates(
+  rows: AVOptionRow[],
+  symbol: string,
+  spot: number,
+  fallbackMove: { expectedMovePct: number | null | undefined; expectedMoveDte?: number | null },
+): MSPOptionCandidate[] {
   const byExpiry = new Map<string, { calls: AVOptionRow[]; puts: AVOptionRow[] }>();
   for (const row of rows) {
     const expiry = String(row.expiration || '').trim();
@@ -168,11 +212,15 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
   }
 
   const candidates: MSPOptionCandidate[] = [];
-  const band = Math.max(0.8, expectedMovePct || 3);
 
   for (const [expiry, group] of byExpiry.entries()) {
     const dte = dteFromExpiry(expiry);
     if (dte < 0 || dte > 90) continue;
+
+    // Per-expiry expected move (√time); skip the expiry when no expected move can be established.
+    const expectedMovePct = expectedMoveForExpiry([...group.calls, ...group.puts], spot, dte, fallbackMove);
+    if (expectedMovePct == null || !(expectedMovePct > 0)) continue;
+    const band = Math.max(0.8, expectedMovePct);
 
     const withDistance = (arr: AVOptionRow[]) => arr
       .map((row) => ({ row, strike: toNum(row.strike, 0), distPct: Math.abs((toNum(row.strike, 0) - spot) / spot) * 100 }))
@@ -348,7 +396,7 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
     .reduce((sum, value) => sum + value, 0);
   const fillQuality = 1 - norm(fillSlippagePct, 0.0, 1.5);
 
-  const emPct = Math.max(0.01, toNum(candidate.expectedMovePct, input.expectedMovePct || 3));
+  const emPct = Math.max(0.01, toNum(candidate.expectedMovePct, toNum(input.expectedMovePct, 0)));
   const beDistPct = candidate.breakeven ? Math.abs(candidate.breakeven - candidate.spot) / candidate.spot * 100 : emPct;
 
   const shortLeg = candidate.legs.find((leg) => leg.side === 'short');
@@ -375,8 +423,12 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
     return norm(Math.abs(toNum(longLeg?.delta, 0.45)), 0.35, 0.7);
   })();
 
-  const ivRankNorm = norm(input.ivRank, 20, 80);
-  const volFit = candidate.strategyType.includes('CREDIT') ? ivRankNorm : (1 - ivRankNorm);
+  // IV rank unknown (no IV history) → volFit is left out of the context score (no points either way).
+  const hasIvRank = typeof input.ivRank === 'number' && Number.isFinite(input.ivRank);
+  const ivRankNorm = hasIvRank ? norm(input.ivRank as number, 20, 80) : 0;
+  const volFit = !hasIvRank ? 0 : candidate.strategyType.includes('CREDIT') ? ivRankNorm : (1 - ivRankNorm);
+  const volFitWeight = hasIvRank ? 0.3 : 0;
+  const contextWeightTotal = volFitWeight + 0.7;
 
   const directionalAgreement = input.marketDirection === 'neutral'
     ? 0.5
@@ -418,11 +470,11 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
   };
 
   const context = clamp100(
-    (contextFeatures.volFit * 0.3 +
+    ((contextFeatures.volFit * volFitWeight +
       contextFeatures.underlyingRegimeAlignment * 0.2 +
       contextFeatures.liquidityHealth * 0.2 +
       contextFeatures.dataFreshness * 0.15 +
-      contextFeatures.macroRisk * 0.15) * 100,
+      contextFeatures.macroRisk * 0.15) / contextWeightTotal) * 100,
   );
 
   const setup = clamp100(
@@ -483,7 +535,7 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
   const tfAlignment = tfAlignmentFromScore(input.tfConfluenceScore);
 
   const layers = [
-    {layer: 'context' as const, outer: 0.3, features: contextFeatures, weights: {volFit: .3, underlyingRegimeAlignment: .2, liquidityHealth: .2, dataFreshness: .15, macroRisk: .15}},
+    {layer: 'context' as const, outer: 0.3, features: contextFeatures, weights: {volFit: volFitWeight / contextWeightTotal, underlyingRegimeAlignment: .2 / contextWeightTotal, liquidityHealth: .2 / contextWeightTotal, dataFreshness: .15 / contextWeightTotal, macroRisk: .15 / contextWeightTotal}},
     {layer: 'setup' as const, outer: 0.45, features: setupFeatures, weights: {directionalAgreement: .2, emBufferFit: .25, payoff: .2, tfConfluenceScore: .2, pWinProxy: .15}},
     {layer: 'execution' as const, outer: 0.25, features: executionFeatures, weights: {spreadLiquidity: .35, fillQuality: .22, dteSuitability: .18, riskGeometry: .15, timeWindowFit: .1}},
   ];
@@ -558,7 +610,10 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
 }
 
 export function scoreOptionCandidatesV21WithDiagnostics(input: ScoreInput): OptionsCandidateScoringResult {
-  const candidates = buildCandidates(input.optionsRows, input.symbol, input.spot, input.expectedMovePct);
+  const candidates = buildCandidates(input.optionsRows, input.symbol, input.spot, {
+    expectedMovePct: input.expectedMovePct,
+    expectedMoveDte: input.expectedMoveDte,
+  });
   const scored = candidates.map((candidate) => scoreCandidate(input, candidate));
   const sorted = scored
     .sort((a, b) => {

@@ -96,7 +96,8 @@ export interface EconomicEvent {
 export interface OptionsData {
   symbol: string;
   iv: number;
-  ivRank: number;
+  /** null when there is no IV history (shown as n/a) */
+  ivRank: number | null;
   expectedMove: number;
   putCallRatio: number;
   maxPain: number;
