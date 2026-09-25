@@ -13,6 +13,7 @@ import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/correlation-regime-engine';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { assessOptionsChainQuality } from '@/lib/options/dataQuality';
+import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
               : analysis.dataQuality?.freshness === 'STALE'
                 ? 'STALE'
                 : 'NONE',
-        fallbackActive: !!(analysis.dataConfidenceCaps && analysis.dataConfidenceCaps.length > 0),
+        fallbackActive: isGenuineOptionsDataFallback(analysis.dataQuality),
       },
       riskEnvironment: {
         stressLevel: newsEventSoon ? 'high' : (typeof atrPercent === 'number' && atrPercent > 6 ? 'high' : 'medium'),
@@ -262,7 +263,7 @@ export async function POST(request: NextRequest) {
       liquidityLevels,
       dataHealth: {
         freshness: analysis.dataQuality?.freshness,
-        fallbackActive: !!(analysis.dataConfidenceCaps && analysis.dataConfidenceCaps.length > 0),
+        fallbackActive: isGenuineOptionsDataFallback(analysis.dataQuality),
         lastUpdatedIso: analysis.dataQuality?.lastUpdated,
       },
       riskGovernorContext: {
