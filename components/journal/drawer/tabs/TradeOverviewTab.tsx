@@ -1,4 +1,5 @@
 import { TradeModel } from '@/types/journal';
+import { formatTradeDate } from '@/lib/journal/tradeDate';
 
 export default function TradeOverviewTab({ trade }: { trade?: TradeModel }) {
   if (!trade) return <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300">Create a new trade from this drawer.</div>;
@@ -6,8 +7,8 @@ export default function TradeOverviewTab({ trade }: { trade?: TradeModel }) {
     <div className="space-y-3 text-sm text-slate-200">
       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
         <div className="text-slate-400">Lifecycle</div>
-        <div>Entry: {trade.entry.price.toFixed(2)} · {new Date(trade.entry.ts).toLocaleString()}</div>
-        <div>Exit: {trade.exit ? `${trade.exit.price.toFixed(2)} · ${new Date(trade.exit.ts).toLocaleString()}` : 'Open'}</div>
+        <div>Entry: {trade.entry.price.toFixed(2)} · {formatTradeDate(trade.entry.ts)}</div>
+        <div>Exit: {trade.exit ? `${trade.exit.price.toFixed(2)} · ${formatTradeDate(trade.exit.ts)}` : 'Open'}</div>
         <div>Qty: {trade.qty}</div>
       </div>
       <div className="rounded-xl border border-white/10 bg-white/5 p-3">

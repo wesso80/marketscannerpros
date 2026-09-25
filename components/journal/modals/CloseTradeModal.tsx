@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { localDateTimeInputValue } from '@/lib/journal/tradeDate';
 import { TradeModel } from '@/types/journal';
 
 type CloseTradeModalProps = {
@@ -32,7 +33,7 @@ type CloseTradeModalProps = {
 
 export default function CloseTradeModal({ open, trade, onClose, onSubmit }: CloseTradeModalProps) {
   const [exitPrice, setExitPrice] = useState('');
-  const [exitTs, setExitTs] = useState(new Date().toISOString().slice(0, 16));
+  const [exitTs, setExitTs] = useState(() => localDateTimeInputValue());
   const [closeReason, setCloseReason] = useState<'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off'>('manual');
   const [outcome, setOutcome] = useState<'win' | 'loss' | 'breakeven'>('breakeven');
   const [setupQuality, setSetupQuality] = useState<'A' | 'B' | 'C' | 'D'>('B');
@@ -58,7 +59,7 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
       // Pre-fill with current/live price when available (enrichment sets exit.price for open trades)
       const livePrice = trade?.exit?.price;
       setExitPrice(livePrice ? String(livePrice) : '');
-      setExitTs(new Date().toISOString().slice(0, 16));
+      setExitTs(localDateTimeInputValue());
       setCloseReason('manual');
       setOutcome('breakeven');
       setSetupQuality('B');

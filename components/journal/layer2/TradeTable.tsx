@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useState } from 'react';
+import { formatTradeDate } from '@/lib/journal/tradeDate';
 import TradeRowExpanded from '@/components/journal/layer2/TradeRowExpanded';
 import { SortModel, TradeRowModel } from '@/types/journal';
 
@@ -62,7 +63,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
             </summary>
             <div className="border-t border-white/5 px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
               <div><span className="text-slate-500">Entry</span> <span className="text-slate-200 font-mono">{fmtPrice(row.entry.price)}</span></div>
-              <div><span className="text-slate-500">Date</span> <span className="text-slate-200">{new Date(row.entry.ts).toLocaleDateString()}</span></div>
+              <div><span className="text-slate-500">Date</span> <span className="text-slate-200">{formatTradeDate(row.entry.ts)}</span></div>
               <div><span className="text-slate-500">Stop</span> <span className="text-slate-200 font-mono">{row.stop != null ? fmtPrice(row.stop) : '—'}</span></div>
               <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono">{row.mark ? `Est. ${fmtPrice(row.mark.price)}` : row.exit?.price != null ? fmtPrice(row.exit.price) : 'Unmarked'}</span></div>
               <div><span className="text-slate-500">P&L %</span> <span className={`font-mono ${Number(row.pnlPct || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{row.pnlPct == null ? 'Unavailable' : `${row.pnlPct.toFixed(2)}%`}</span></div>
@@ -136,7 +137,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 <td className="px-3 py-2 font-semibold text-slate-100">{row.symbol}</td>
                 <td className="px-3 py-2 text-slate-300">{row.status}</td>
                 <td className="px-3 py-2 text-slate-300">{row.side}</td>
-                <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)} · {new Date(row.entry.ts).toLocaleDateString()}</td>
+                <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)} · {formatTradeDate(row.entry.ts)}</td>
                 <td className="px-3 py-2 text-slate-300">{row.stop != null ? fmtPrice(row.stop) : '—'}</td>
                 <td className="px-3 py-2 text-slate-300">
                   {row.status === 'open' && row.mark ? (
