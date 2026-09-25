@@ -159,7 +159,7 @@ export async function fetchIntelligenceContext(
           atr: sd.atr ?? ind?.atr14 ?? undefined,
           trendMetrics: {
             adx: sd.adx ?? ind?.adx14 ?? undefined,
-            emaAligned: sd.ema200 ? spot > Number(sd.ema200) : undefined,
+            priceAboveTrend: sd.ema200 ? spot > Number(sd.ema200) : undefined,
           },
           cryptoPositioning: assetClass === 'crypto' ? {
             fundingRate: sd.fundingRate ?? undefined,

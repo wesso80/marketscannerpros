@@ -415,26 +415,29 @@ function computeScannerDVE(
   }
 }
 
-function inferStructureHigherHighs(candles: Array<{ h?: number; l?: number; c?: number }>): boolean {
-  if (!candles.length) return false;
+/** Higher highs + higher lows ('higher') or lower highs + lower lows ('lower'); undefined when there are too few bars. */
+function inferStructureTrend(candles: Array<{ h?: number; l?: number; c?: number }>, direction: 'higher' | 'lower'): boolean | undefined {
+  if (!candles.length) return undefined;
   const recent = candles.slice(-12);
-  if (recent.length < 4) return false;
+  if (recent.length < 4) return undefined;
   const highs = recent.map((c) => Number(c.h)).filter(Number.isFinite);
   const lows = recent.map((c) => Number(c.l)).filter(Number.isFinite);
-  if (highs.length < 4 || lows.length < 4) return false;
+  if (highs.length < 4 || lows.length < 4) return undefined;
   const firstHigh = highs.slice(0, Math.floor(highs.length / 2));
   const secondHigh = highs.slice(Math.floor(highs.length / 2));
   const firstLow = lows.slice(0, Math.floor(lows.length / 2));
   const secondLow = lows.slice(Math.floor(lows.length / 2));
-  return (Math.max(...secondHigh) > Math.max(...firstHigh)) && (Math.min(...secondLow) > Math.min(...firstLow));
+  return direction === 'higher'
+    ? (Math.max(...secondHigh) > Math.max(...firstHigh)) && (Math.min(...secondLow) > Math.min(...firstLow))
+    : (Math.max(...secondHigh) < Math.max(...firstHigh)) && (Math.min(...secondLow) < Math.min(...firstLow));
 }
 
 function buildScannerLiquidityLevels(
   candles: Array<{ t: string; o: number; h: number; l: number; c: number; volume?: number }> | undefined,
   spot: number
-): { levels: Array<{ level: number; label: string }>; vwap?: number; structureHigherHighs: boolean } {
+): { levels: Array<{ level: number; label: string }>; vwap?: number; structureHigherHighs?: boolean; structureLowerLows?: boolean } {
   if (!candles || candles.length === 0 || !Number.isFinite(spot)) {
-    return { levels: [], structureHigherHighs: false };
+    return { levels: [] };
   }
 
   const sorted = [...candles].sort((a, b) => a.t.localeCompare(b.t));
@@ -500,12 +503,14 @@ function buildScannerLiquidityLevels(
   const roundLevel = spot >= 1000 ? Math.round(spot / 100) * 100 : spot >= 100 ? Math.round(spot / 10) * 10 : spot >= 10 ? Math.round(spot) : Number((Math.round(spot * 10) / 10).toFixed(1));
   levels.push({ level: roundLevel, label: 'ROUND' });
 
-  const structureHigherHighs = inferStructureHigherHighs(recent);
+  const structureHigherHighs = inferStructureTrend(recent, 'higher');
+  const structureLowerLows = inferStructureTrend(recent, 'lower');
 
   return {
     levels,
     vwap,
     structureHigherHighs,
+    structureLowerLows,
   };
 }
 
@@ -2528,10 +2533,11 @@ export async function POST(req: NextRequest) {
               : undefined,
             trendMetrics: {
               adx: result.adx,
-              emaAligned: Number.isFinite(result.price) && Number.isFinite(result.ema200)
+              priceAboveTrend: Number.isFinite(result.price) && Number.isFinite(result.ema200)
                 ? (result.price! >= result.ema200!)
                 : undefined,
               structureHigherHighs: liquidityContext.structureHigherHighs,
+              structureLowerLows: liquidityContext.structureLowerLows,
             },
             dataHealth: {
               freshness: result.dataTrust?.freshness === 'fresh' ? 'LIVE' : result.dataTrust?.freshness === 'delayed' ? 'DELAYED' : result.dataTrust?.freshness === 'stale' ? 'STALE' : 'NONE',
