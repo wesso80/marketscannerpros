@@ -989,7 +989,9 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     throw new Error(`Unable to fetch price data for ${symbol}`);
   }
 
-  const indData = await fetchIndicators(symbol, assetClass, priceData.historicalCloses, priceData.historicalHighs, priceData.historicalLows, avInterval);
+  // Indicators use the longer indicator history when the fetcher provides it (EMA200 convergence), else the display bars.
+  const indHist = priceData.indicatorHistory && priceData.indicatorHistory.closes.length > priceData.historicalCloses.length ? priceData.indicatorHistory : null;
+  const indData = await fetchIndicators(symbol, assetClass, indHist?.closes ?? priceData.historicalCloses, indHist?.highs ?? priceData.historicalHighs, indHist?.lows ?? priceData.historicalLows, avInterval);
 
   let optsData: OptionsSnapshot | null = null;
   let cryptoDerivsData: CryptoDerivatives | null = null;

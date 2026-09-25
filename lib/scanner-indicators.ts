@@ -1,13 +1,15 @@
 /**
  * Scanner Indicator Library
  *
- * Shared technical-indicator calculations used by scanner/bulk and scan-universe.
- * Series-returning SMA/EMA with Wilder-smoothed RSI, proper MACD, and
- * OHLCV-struct-based oscillators (Stochastic, ADX, Aroon, CCI).
+ * Shared technical-indicator calculations used by scanner/bulk, scan-universe and the crypto daily scan.
+ * SMA/EMA/RSI/MACD/ADX/ATR/Stochastic delegate to the canonical lib/ta/core (TradingView-equivalent, Wilder
+ * ADX/ATR); Aroon and CCI stay here.
  *
  * Created to eliminate ~200 LOC of identical indicator code duplicated
  * across scanner routes.
  */
+
+import { atrSeries, dmi, emaSeries, lastFinite, macdSeries, rsiSeries, smaSeries, stochSeries } from '@/lib/ta/core';
 
 // ─── OHLCV Type ─────────────────────────────────────────────────────────────
 
@@ -20,157 +22,53 @@ export interface OHLCV {
   volume: number;
 }
 
-// ─── SMA (series) ───────────────────────────────────────────────────────────
+// ─── SMA / EMA (series) — canonical lib/ta/core (TradingView ta.sma / ta.ema, SMA-seeded) ───────────────
 
 export function calculateSMA(data: number[], period: number): number[] {
-  const result: number[] = [];
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) {
-      result.push(NaN);
-    } else {
-      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
-      result.push(sum / period);
-    }
-  }
-  return result;
+  return smaSeries(data, period);
 }
-
-// ─── EMA (series) ───────────────────────────────────────────────────────────
 
 export function calculateEMA(data: number[], period: number): number[] {
-  const result: number[] = [];
-  const multiplier = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) {
-      result.push(NaN);
-    } else if (i === period - 1) {
-      result.push(ema);
-    } else {
-      ema = (data[i] - ema) * multiplier + ema;
-      result.push(ema);
-    }
-  }
-  return result;
+  return emaSeries(data, period);
 }
 
-// ─── RSI (Wilder smoothing, scalar return) ──────────────────────────────────
+// ─── RSI (Wilder, scalar return) ────────────────────────────────────────────
 
 export function calculateRSI(closes: number[], period: number = 14): number {
-  if (closes.length < period + 1) return NaN;
-
-  const changes: number[] = [];
-  for (let i = 1; i < closes.length; i++) {
-    changes.push(closes[i] - closes[i - 1]);
-  }
-
-  let avgGain = 0, avgLoss = 0;
-
-  for (let i = 0; i < period; i++) {
-    if (changes[i] > 0) avgGain += changes[i];
-    else avgLoss += Math.abs(changes[i]);
-  }
-  avgGain /= period;
-  avgLoss /= period;
-
-  for (let i = period; i < changes.length; i++) {
-    if (changes[i] > 0) {
-      avgGain = (avgGain * (period - 1) + changes[i]) / period;
-      avgLoss = (avgLoss * (period - 1)) / period;
-    } else {
-      avgGain = (avgGain * (period - 1)) / period;
-      avgLoss = (avgLoss * (period - 1) + Math.abs(changes[i])) / period;
-    }
-  }
-
-  if (avgLoss === 0) return 100;
-  return 100 - (100 / (1 + avgGain / avgLoss));
+  return lastFinite(rsiSeries(closes, period));
 }
 
 // ─── MACD (scalar return) ───────────────────────────────────────────────────
 
 export function calculateMACD(closes: number[]): { macd: number; signal: number; histogram: number } {
-  const ema12 = calculateEMA(closes, 12);
-  const ema26 = calculateEMA(closes, 26);
-
-  const macdLine: number[] = [];
-  for (let i = 0; i < closes.length; i++) {
-    if (isNaN(ema12[i]) || isNaN(ema26[i])) macdLine.push(NaN);
-    else macdLine.push(ema12[i] - ema26[i]);
-  }
-
-  const validMacd = macdLine.filter(v => !isNaN(v));
-  if (validMacd.length < 9) return { macd: NaN, signal: NaN, histogram: NaN };
-
-  const signalLine = calculateEMA(validMacd, 9);
-  const macd = validMacd[validMacd.length - 1];
-  const signal = signalLine[signalLine.length - 1];
-
+  const s = macdSeries(closes, 12, 26, 9);
+  const macd = lastFinite(s.macd);
+  const signal = lastFinite(s.signal);
+  if (!Number.isFinite(macd) || !Number.isFinite(signal)) return { macd: NaN, signal: NaN, histogram: NaN };
   return { macd, signal, histogram: macd - signal };
 }
 
-// ─── ADX ────────────────────────────────────────────────────────────────────
+// ─── ADX (Wilder) ───────────────────────────────────────────────────────────
+// Was EMA(2/(n+1))-smoothed, which read 10–30 points higher than Wilder/TradingView (META 69 vs 37, ADBE 40 vs 23 on
+// 24 Sep 2026) and flipped the trend/range regime on bulk scans and daily picks.
 
 export function calculateADX(ohlcv: OHLCV[], period: number = 14): number {
   if (ohlcv.length < period * 2) return NaN;
-
-  const tr: number[] = [], dmPlus: number[] = [], dmMinus: number[] = [];
-
-  for (let i = 1; i < ohlcv.length; i++) {
-    const { high, low } = ohlcv[i];
-    const { high: prevHigh, low: prevLow, close: prevClose } = ohlcv[i - 1];
-
-    tr.push(Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose)));
-
-    const upMove = high - prevHigh;
-    const downMove = prevLow - low;
-    dmPlus.push(upMove > downMove && upMove > 0 ? upMove : 0);
-    dmMinus.push(downMove > upMove && downMove > 0 ? downMove : 0);
-  }
-
-  const smoothTR = calculateEMA(tr, period);
-  const smoothDMPlus = calculateEMA(dmPlus, period);
-  const smoothDMMinus = calculateEMA(dmMinus, period);
-
-  const dx: number[] = [];
-  for (let i = 0; i < smoothTR.length; i++) {
-    if (smoothTR[i] === 0 || isNaN(smoothTR[i])) {
-      dx.push(0);
-    } else {
-      const dip = (smoothDMPlus[i] / smoothTR[i]) * 100;
-      const dim = (smoothDMMinus[i] / smoothTR[i]) * 100;
-      const diSum = dip + dim;
-      dx.push(diSum === 0 ? 0 : (Math.abs(dip - dim) / diSum) * 100);
-    }
-  }
-
-  const adx = calculateEMA(dx.filter(v => !isNaN(v)), period);
-  const result = adx.length > 0 ? adx[adx.length - 1] : NaN;
-  return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : NaN;
+  return dmi(ohlcv.map(d => d.high), ohlcv.map(d => d.low), ohlcv.map(d => d.close), period, period).adx;
 }
 
-// ─── Stochastic ─────────────────────────────────────────────────────────────
+/** Wilder ADX with +DI / −DI. */
+export function calculateDMI(ohlcv: OHLCV[], period: number = 14): { adx: number; plusDI: number; minusDI: number } {
+  return dmi(ohlcv.map(d => d.high), ohlcv.map(d => d.low), ohlcv.map(d => d.close), period, period);
+}
 
-export function calculateStochastic(ohlcv: OHLCV[], period: number = 14, smoothK: number = 3): { k: number; d: number } {
+// ─── Stochastic (TradingView built-in 14 / smoothK / 3) ─────────────────────
+// `smoothK` defaults to 1 (TradingView default). The old version SMA-smoothed %K and turned a genuine 0 into NaN.
+
+export function calculateStochastic(ohlcv: OHLCV[], period: number = 14, smoothK: number = 1): { k: number; d: number } {
   if (ohlcv.length < period + smoothK) return { k: NaN, d: NaN };
-
-  const rawK: number[] = [];
-  for (let i = period - 1; i < ohlcv.length; i++) {
-    const slice = ohlcv.slice(i - period + 1, i + 1);
-    const high = Math.max(...slice.map(d => d.high));
-    const low = Math.min(...slice.map(d => d.low));
-    const close = ohlcv[i].close;
-    rawK.push(high === low ? 50 : ((close - low) / (high - low)) * 100);
-  }
-
-  const kSmoothed = calculateSMA(rawK, smoothK);
-  const d = calculateSMA(kSmoothed.filter(v => !isNaN(v)), 3);
-
-  return {
-    k: kSmoothed[kSmoothed.length - 1] || NaN,
-    d: d[d.length - 1] || NaN,
-  };
+  const s = stochSeries(ohlcv.map(d => d.high), ohlcv.map(d => d.low), ohlcv.map(d => d.close), period, smoothK, 3);
+  return { k: lastFinite(s.k), d: lastFinite(s.d) };
 }
 
 // ─── Aroon ──────────────────────────────────────────────────────────────────
@@ -210,18 +108,10 @@ export function calculateCCI(ohlcv: OHLCV[], period: number = 20): number {
   return (typicalPrices[typicalPrices.length - 1] - lastSMA) / (0.015 * meanDev);
 }
 
-// ─── ATR ────────────────────────────────────────────────────────────────────
+// ─── ATR (Wilder) ───────────────────────────────────────────────────────────
+// Was a simple average of the last `period` true ranges and returned 0 when history was short (a fake "no volatility").
 
 export function calculateATR(highs: number[], lows: number[], closes: number[], period: number): number {
-  if (highs.length < period + 1) return 0;
-  const trueRanges: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const tr = Math.max(
-      highs[i] - lows[i],
-      Math.abs(highs[i] - closes[i - 1]),
-      Math.abs(lows[i] - closes[i - 1])
-    );
-    trueRanges.push(tr);
-  }
-  return trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
+  if (highs.length < period + 1) return NaN;
+  return lastFinite(atrSeries(highs, lows, closes, period));
 }

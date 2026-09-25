@@ -13,7 +13,8 @@ import { q } from "@/lib/db";
 import { avTakeToken } from "@/lib/avRateGovernor";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
-import { scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
+import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
+import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -189,99 +190,27 @@ function computeScore(indicators: Record<string, any>): { score: number; directi
 async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
-    
-    // Fetch daily prices
-    const priceUrl = `${baseUrl}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&entitlement=realtime&apikey=${apiKey}`;
+
+    // One request: full daily history (split-adjusted locally). Indicators are computed with the canonical
+    // lib/ta/core maths (Wilder ADX/ATR, TradingView EMA/Stochastic) — the same functions the scanner, bulk
+    // scanner, scan-universe and Golden Egg use — instead of seven separate Alpha Vantage indicator endpoints
+    // whose Stochastic (5/3/3 slow) and warm-up rules differed from every other page.
+    const priceUrl = `${baseUrl}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${apiKey}`;
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
-    
-    const timeSeries = priceData["Time Series (Daily)"];
-    if (!timeSeries) return null;
-    
-    const dates = Object.keys(timeSeries).sort().reverse();
-    const latestDate = dates[0];
-    const latest = timeSeries[latestDate];
-    const prevDate = dates[1];
-    const prev = timeSeries[prevDate];
-    
-    const price = parseFloat(latest["4. close"]);
-    const prevClose = parseFloat(prev["4. close"]);
+
+    const bars = parseAlphaVantageDailyBars(priceData);
+    if (bars.length < 2) return null;
+
+    const price = bars[bars.length - 1].close;
+    const prevClose = bars[bars.length - 2].close;
     const changePercent = ((price - prevClose) / prevClose) * 100;
 
-    // Fetch key indicators
-    const indicators: Record<string, any> = { price };
-    
-    // RSI
-    const rsiUrl = `${baseUrl}?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${apiKey}`;
-    const rsiData = await fetchWithRetry(rsiUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const rsiSeries = rsiData["Technical Analysis: RSI"];
-    if (rsiSeries) {
-      const rsiDate = Object.keys(rsiSeries)[0];
-      indicators.rsi = parseFloat(rsiSeries[rsiDate]["RSI"]);
-    }
-
-    // MACD
-    const macdUrl = `${baseUrl}?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${apiKey}`;
-    const macdData = await fetchWithRetry(macdUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const macdSeries = macdData["Technical Analysis: MACD"];
-    if (macdSeries) {
-      const macdDate = Object.keys(macdSeries)[0];
-      indicators.macd = parseFloat(macdSeries[macdDate]["MACD"]);
-      indicators.macdSignal = parseFloat(macdSeries[macdDate]["MACD_Signal"]);
-    }
-
-    // EMA 200
-    const emaUrl = `${baseUrl}?function=EMA&symbol=${symbol}&interval=daily&time_period=200&series_type=close&apikey=${apiKey}`;
-    const emaData = await fetchWithRetry(emaUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const emaSeries = emaData["Technical Analysis: EMA"];
-    if (emaSeries) {
-      const emaDate = Object.keys(emaSeries)[0];
-      indicators.ema200 = parseFloat(emaSeries[emaDate]["EMA"]);
-    }
-
-    // ADX
-    const adxUrl = `${baseUrl}?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
-    const adxData = await fetchWithRetry(adxUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const adxSeries = adxData["Technical Analysis: ADX"];
-    if (adxSeries) {
-      const adxDate = Object.keys(adxSeries)[0];
-      indicators.adx = parseFloat(adxSeries[adxDate]["ADX"]);
-    }
-
-    // Stochastic
-    const stochUrl = `${baseUrl}?function=STOCH&symbol=${symbol}&interval=daily&apikey=${apiKey}`;
-    const stochData = await fetchWithRetry(stochUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const stochSeries = stochData["Technical Analysis: STOCH"];
-    if (stochSeries) {
-      const stochDate = Object.keys(stochSeries)[0];
-      indicators.stochK = parseFloat(stochSeries[stochDate]["SlowK"]);
-      indicators.stochD = parseFloat(stochSeries[stochDate]["SlowD"]);
-    }
-
-    // Aroon
-    const aroonUrl = `${baseUrl}?function=AROON&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
-    const aroonData = await fetchWithRetry(aroonUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const aroonSeries = aroonData["Technical Analysis: AROON"];
-    if (aroonSeries) {
-      const aroonDate = Object.keys(aroonSeries)[0];
-      indicators.aroonUp = parseFloat(aroonSeries[aroonDate]["Aroon Up"]);
-      indicators.aroonDown = parseFloat(aroonSeries[aroonDate]["Aroon Down"]);
-    }
-
-    // CCI
-    const cciUrl = `${baseUrl}?function=CCI&symbol=${symbol}&interval=daily&time_period=20&apikey=${apiKey}`;
-    const cciData = await fetchWithRetry(cciUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const cciSeries = cciData["Technical Analysis: CCI"];
-    if (cciSeries) {
-      const cciDate = Object.keys(cciSeries)[0];
-      indicators.cci = parseFloat(cciSeries[cciDate]["CCI"]);
+    const indicators: Record<string, any> = { price, ...computeDailyIndicators(bars) };
+    const sanity = ema200SanityFailure(price, indicators.ema200);
+    if (sanity) {
+      console.error(`Dropping equity ${symbol}: EMA200 sanity check failed: ${sanity}`);
+      return null;
     }
 
     const { score, direction, signals } = computeScore(indicators);

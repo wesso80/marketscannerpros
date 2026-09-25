@@ -4,6 +4,7 @@
  * Attribution required: "Data provided by Finnhub"
  */
 
+import { atrSeries, lastFinite, rsiSeries } from '@/lib/ta/core';
 import { validateFinnhubCandles } from './dataQuality';
 import { TokenBucket } from './rateLimiter';
 
@@ -378,23 +379,9 @@ export function calculateIndicators(candles: FinnhubCandle) {
 }
 
 export function calculateRSI(closes: number[], period: number = 14): number {
-  if (closes.length < period + 1) return 50;
-  
-  let gains = 0;
-  let losses = 0;
-  
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const change = closes[i] - closes[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-  
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
+  // Wilder RSI (TradingView ta.rsi) via lib/ta/core. Was a simple-average (Cutler) RSI that returned 50 when short.
+  if (closes.length < period + 1) return NaN;
+  return lastFinite(rsiSeries(closes, period));
 }
 
 export function calculateMACD(closes: number[]): { macd: number; signal: number; histogram: number } | null {
@@ -452,20 +439,9 @@ export function calculateEMASeries(data: number[], period: number): number[] {
 }
 
 function calculateATR(highs: number[], lows: number[], closes: number[], period: number = 14): number {
-  if (highs.length < period + 1) return 0;
-  
-  const trueRanges: number[] = [];
-  
-  for (let i = 1; i < highs.length; i++) {
-    const tr = Math.max(
-      highs[i] - lows[i],
-      Math.abs(highs[i] - closes[i - 1]),
-      Math.abs(lows[i] - closes[i - 1])
-    );
-    trueRanges.push(tr);
-  }
-  
-  return trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
+  // Wilder ATR — canonical lib/ta/core (TradingView ta.atr). NaN when history is short (was 0 = "no volatility").
+  if (highs.length < period + 1) return NaN;
+  return lastFinite(atrSeries(highs, lows, closes, period));
 }
 
 /**

@@ -1,3 +1,4 @@
+import { atrSeries } from '@/lib/ta/core';
 /**
  * Scanner Enhancement Functions
  * Cross-TF alignment, volatility squeeze detection, relative strength scoring.
@@ -22,20 +23,8 @@ function emaCalc(values: number[], period: number): number[] {
 
 // ─── ATR helper (standalone) ────────────────────────────────────────────────
 function atrCalc(highs: number[], lows: number[], closes: number[], period = 14): number[] {
-  const trs: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const h = highs[i], l = lows[i], pc = closes[i - 1];
-    const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
-    trs.push(tr);
-  }
-  const out: number[] = new Array(trs.length).fill(NaN);
-  let sum = 0;
-  for (let i = 0; i < trs.length; i++) {
-    sum += trs[i];
-    if (i >= period) sum -= trs[i - period];
-    out[i] = i + 1 >= period ? sum / period : NaN;
-  }
-  return out;
+  // Wilder ATR (lib/ta/core). Array starts at bar 1 like the previous helper; last element = latest ATR.
+  return atrSeries(highs, lows, closes, period).slice(1);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

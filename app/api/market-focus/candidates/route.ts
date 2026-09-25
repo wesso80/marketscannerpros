@@ -3,6 +3,7 @@ import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from "@/lib/coingecko";
 import { getSessionFromCookie } from '@/lib/auth';
 import { verifyCronAuth } from '@/lib/adminAuth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { atr, ema, macd, rsi } from '@/lib/scanner/indicatorMath';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,67 +117,13 @@ async function fetchAlphaJson(url: string, tag: string, retries = 2): Promise<an
 }
 
 // ============ INDICATOR CALCULATIONS ============
-function ema(values: number[], period: number): number[] {
-  const k = 2 / (period + 1);
-  const out: number[] = [];
-  let prev: number | undefined;
-  for (let i = 0; i < values.length; i++) {
-    const v = values[i];
-    if (i === 0) prev = v;
-    const cur = (v * k) + (prev! * (1 - k));
-    out.push(cur);
-    prev = cur;
-  }
-  return out;
-}
+// EMA / RSI / MACD / ATR come from the canonical lib/ta/core via the scanner adapters (TradingView-equivalent,
+// Wilder RSI/ATR) so Market Focus agrees with the scanner. Warm-up values are NaN; `fin` keeps the old fallbacks.
+const fin = (v: number | undefined, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 
-function rsi(values: number[], period = 14): number[] {
-  const out: number[] = new Array(values.length).fill(NaN);
-  if (values.length <= period) return out;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const ch = values[i] - values[i - 1];
-    if (ch >= 0) gains += ch; else losses -= ch;
-  }
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
-  out[period] = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
-  for (let i = period + 1; i < values.length; i++) {
-    const ch = values[i] - values[i - 1];
-    const gain = Math.max(0, ch);
-    const loss = Math.max(0, -ch);
-    avgGain = ((avgGain * (period - 1)) + gain) / period;
-    avgLoss = ((avgLoss * (period - 1)) + loss) / period;
-    out[i] = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
-  }
-  return out;
-}
 
-function macd(values: number[], fast = 12, slow = 26, signal = 9) {
-  const emaFast = ema(values, fast);
-  const emaSlow = ema(values, slow);
-  const macdLine = emaFast.map((v, i) => v - (emaSlow[i] ?? v));
-  const signalLine = ema(macdLine, signal);
-  const hist = macdLine.map((v, i) => v - (signalLine[i] ?? v));
-  return { macdLine, signalLine, hist };
-}
 
-function atr(highs: number[], lows: number[], closes: number[], period = 14): number[] {
-  const trs: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const h = highs[i], l = lows[i], pc = closes[i - 1];
-    const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
-    trs.push(tr);
-  }
-  const out: number[] = new Array(trs.length).fill(NaN);
-  let sum = 0;
-  for (let i = 0; i < trs.length; i++) {
-    sum += trs[i];
-    if (i >= period) sum -= trs[i - period];
-    out[i] = (i + 1 >= period) ? (sum / period) : NaN;
-  }
-  return out;
-}
+
 
 // ============ DATA FETCHERS ============
 async function fetchEquityDaily(symbol: string): Promise<Candle[]> {
@@ -237,14 +184,14 @@ function computeIndicators(candles: Candle[]) {
   const last = candles.length - 1;
   return {
     price: closes[last],
-    rsi: rsiArr[last] ?? 50,
-    macdHist: macdData.hist[last] ?? 0,
-    macdLine: macdData.macdLine[last] ?? 0,
-    signalLine: macdData.signalLine[last] ?? 0,
-    ema200: ema200Arr[last] ?? closes[last],
-    ema50: ema50Arr[last] ?? closes[last],
-    ema20: ema20Arr[last] ?? closes[last],
-    atr: atrArr[last - 1] ?? 0, // ATR array is offset by 1
+    rsi: fin(rsiArr[last], 50),
+    macdHist: fin(macdData.hist[last], 0),
+    macdLine: fin(macdData.macdLine[last], 0),
+    signalLine: fin(macdData.signalLine[last], 0),
+    ema200: fin(ema200Arr[last], closes[last]),
+    ema50: fin(ema50Arr[last], closes[last]),
+    ema20: fin(ema20Arr[last], closes[last]),
+    atr: fin(atrArr[last - 1], 0), // ATR array is offset by 1
     prevClose: closes[last - 1] ?? closes[last],
   };
 }

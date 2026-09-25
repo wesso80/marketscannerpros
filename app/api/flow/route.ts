@@ -1,3 +1,4 @@
+import { atrSeries, lastFinite } from '@/lib/ta/core';
 import { closedCandles } from '@/lib/market/candleIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -276,8 +277,9 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
   const longShortRatio = undefined;
   const liquidationLevels = undefined; // Requires actual positions/leverage, not a spot offset.
 
-  const trueRanges = candles.slice(1).map((bar,i) => Math.max(bar.h-bar.l, Math.abs(bar.h-candles[i].c), Math.abs(bar.l-candles[i].c)));
-  const atr = trueRanges.length >= 14 ? trueRanges.slice(-14).reduce((a,b)=>a+b,0)/14 : undefined;
+  // Wilder ATR(14) — canonical lib/ta/core (TradingView ta.atr), same as the scanner.
+  const atrWilder = candles.length >= 15 ? lastFinite(atrSeries(candles.map(b => b.h), candles.map(b => b.l), candles.map(b => b.c), 14)) : NaN;
+  const atr = Number.isFinite(atrWilder) ? atrWilder : undefined;
 
   return {
     spot,

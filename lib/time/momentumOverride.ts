@@ -17,6 +17,8 @@
  *   - Keeps midpoints visible but labelled LOW PRIORITY
  */
 
+import { atrSeries, lastFinite } from '@/lib/ta/core';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -73,8 +75,8 @@ function clamp01(x: number): number {
 }
 
 /**
- * Compute ATR(period) from high/low/close arrays.
- * Falls back to 0 if insufficient data.
+ * Compute ATR(period) from high/low/close arrays — Wilder / TradingView ta.atr (lib/ta/core) once ≥ period+1 bars
+ * exist; with fewer bars, the mean of the available true ranges. Falls back to 0 if insufficient data.
  */
 export function computeATR(
   highs: number[],
@@ -84,19 +86,15 @@ export function computeATR(
 ): number {
   const n = highs.length;
   if (n < 2) return 0;
-
+  if (n >= period + 1) {
+    const v = lastFinite(atrSeries(highs, lows, closes, period));
+    if (Number.isFinite(v)) return v;
+  }
   let trSum = 0;
   const count = Math.min(period, n - 1);
-
   for (let i = n - count; i < n; i++) {
-    const tr = Math.max(
-      highs[i] - lows[i],
-      Math.abs(highs[i] - closes[i - 1]),
-      Math.abs(lows[i] - closes[i - 1])
-    );
-    trSum += tr;
+    trSum += Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1]));
   }
-
   return count > 0 ? trSum / count : 0;
 }
 

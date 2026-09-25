@@ -17,121 +17,15 @@
  */
 
 import { computeTechnicalProxy, TECHNICAL_PROXY_VERSION } from '@/lib/scanner/technicalProxy';
+import { atrSeries, dmiSeries, emaSeries, macdSeries, rsiSeries, stochSeries } from '@/lib/ta/core';
 import type { BacktestTrade } from './engine';
 import { buildBacktestEngineResult, type BacktestEngineResult } from './engine';
 import { BACKTEST_SLIPPAGE_BPS, BACKTEST_COMMISSION_BPS, buildBacktestAssumptionsMetadata } from './assumptions';
 
-// ─── Indicator helpers (same as /api/scanner/run) ─────────────────────────
-
-function ema(values: number[], period: number): number[] {
-  const out: number[] = new Array(values.length).fill(NaN);
-  if (values.length < period || period <= 0) return out;
-  const k = 2 / (period + 1);
-  let sum = 0;
-  for (let i = 0; i < period; i++) sum += values[i];
-  out[period - 1] = sum / period;
-  for (let i = period; i < values.length; i++) {
-    out[i] = values[i] * k + out[i - 1] * (1 - k);
-  }
-  return out;
-}
-
-function rsi(values: number[], period = 14): number[] {
-  const out: number[] = new Array(values.length).fill(NaN);
-  if (values.length <= period) return out;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const ch = values[i] - values[i - 1];
-    if (ch >= 0) gains += ch; else losses -= ch;
-  }
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
-  out[period] = Math.min(100, Math.max(0, 100 - 100 / (1 + avgGain / (avgLoss || 1e-9))));
-  for (let i = period + 1; i < values.length; i++) {
-    const ch = values[i] - values[i - 1];
-    avgGain = ((avgGain * (period - 1)) + Math.max(0, ch)) / period;
-    avgLoss = ((avgLoss * (period - 1)) + Math.max(0, -ch)) / period;
-    out[i] = Math.min(100, Math.max(0, 100 - 100 / (1 + avgGain / (avgLoss || 1e-9))));
-  }
-  return out;
-}
-
-function macd(values: number[], fast = 12, slow = 26, signal = 9) {
-  const emaFast = ema(values, fast);
-  const emaSlow = ema(values, slow);
-  const macdLine = emaFast.map((v, i) => v - (emaSlow[i] ?? v));
-  const signalLine = ema(macdLine.map(v => Number.isFinite(v) ? v : 0), signal);
-  const hist = macdLine.map((v, i) => v - (signalLine[i] ?? v));
-  return { macdLine, signalLine, hist };
-}
-
-function atr(highs: number[], lows: number[], closes: number[], period = 14): number[] {
-  const trs: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    trs.push(Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1])));
-  }
-  const out: number[] = new Array(trs.length).fill(NaN);
-  if (trs.length < period) return out;
-  // Seed: SMA of first `period` true ranges (Wilder convention)
-  let atrVal = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  out[period - 1] = atrVal;
-  for (let i = period; i < trs.length; i++) {
-    // Wilder smoothing: ATR = (prev * (n-1) + TR) / n
-    atrVal = (atrVal * (period - 1) + trs[i]) / period;
-    out[i] = atrVal;
-  }
-  return out;
-}
-
-function adx(highs: number[], lows: number[], closes: number[], period = 14) {
-  const plusDM: number[] = [], minusDM: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const up = highs[i] - highs[i - 1];
-    const down = lows[i - 1] - lows[i];
-    plusDM.push(up > down && up > 0 ? up : 0);
-    minusDM.push(down > up && down > 0 ? down : 0);
-  }
-  const trs: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    trs.push(Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1])));
-  }
-  let trSum = 0, pdmSum = 0, mdmSum = 0;
-  const dx: number[] = [];
-  for (let i = 0; i < trs.length; i++) {
-    trSum += trs[i]; pdmSum += plusDM[i]; mdmSum += minusDM[i];
-    if (i >= period - 1) {
-      const diP = trSum > 0 ? (pdmSum / trSum) * 100 : 0;
-      const diM = trSum > 0 ? (mdmSum / trSum) * 100 : 0;
-      const diSum = diP + diM;
-      dx.push(diSum === 0 ? 0 : (Math.abs(diP - diM) / diSum) * 100);
-      if (i > period - 1) { trSum -= trs[i - period]; pdmSum -= plusDM[i - period]; mdmSum -= minusDM[i - period]; }
-    }
-  }
-  const adxArr: number[] = [];
-  let adxSum = 0;
-  for (let i = 0; i < dx.length; i++) {
-    adxSum += dx[i];
-    if (i >= period - 1) {
-      adxArr.push(adxSum / period);
-      adxSum -= dx[i - period + 1];
-    }
-  }
-  return adxArr.length > 0 ? adxArr[adxArr.length - 1] : NaN;
-}
-
-function stochastic(highs: number[], lows: number[], closes: number[], period = 14, smooth = 3) {
-  const kVals: number[] = [];
-  for (let i = period - 1; i < closes.length; i++) {
-    const hMax = Math.max(...highs.slice(i - period + 1, i + 1));
-    const lMin = Math.min(...lows.slice(i - period + 1, i + 1));
-    const range = hMax - lMin;
-    // Flat-candle guard: zero range means no price movement — return NaN, not inflated %K
-    const k = range === 0 ? NaN : ((closes[i] - lMin) / range) * 100;
-    kVals.push(Number.isFinite(k) ? k : 50);
-  }
-  const kSmooth = ema(kVals, smooth);
-  return kSmooth.length > 0 ? Math.min(100, Math.max(0, kSmooth[kSmooth.length - 1])) : NaN;
-}
+// ─── Indicator helpers ─────────────────────────────────────────────────────
+// EMA / RSI / MACD / ATR / ADX / Stochastic come from the canonical lib/ta/core (Wilder, TradingView-equivalent) —
+// the same maths the live scanner uses. The old local copies included a rolling-SUM ADX that was not Wilder.
+// Every series value at bar i depends only on bars ≤ i, so precomputing full series stays point-in-time.
 
 function cci(highs: number[], lows: number[], closes: number[], period = 20) {
   const tp = closes.map((c, i) => (highs[i] + lows[i] + c) / 3);
@@ -270,10 +164,13 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
   const volumes = bars.map(b => b.volume);
 
   // Pre-compute full indicator arrays
-  const rsiArr = rsi(closes, 14);
-  const macObj = macd(closes, 12, 26, 9);
-  const ema200Arr = ema(closes, 200);
-  const atrArr = atr(highs, lows, closes, 14);
+  const rsiArr = rsiSeries(closes, 14);
+  const macS = macdSeries(closes, 12, 26, 9);
+  const macObj = { macdLine: macS.macd, signalLine: macS.signal, hist: macS.hist };
+  const ema200Arr = emaSeries(closes, 200);
+  const atrArr = atrSeries(highs, lows, closes, 14);
+  const adxArr = dmiSeries(highs, lows, closes, 14, 14).adx;
+  const stochKArr = stochSeries(highs, lows, closes, 14, 1, 3).k;
   const obvArr = obv(closes, volumes);
 
   const assetType = params.assetType ?? 'stock';
@@ -302,8 +199,8 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
     const windowHighs = highs.slice(0, i + 1);
     const windowLows = lows.slice(0, i + 1);
 
-    const adxVal = adx(windowHighs, windowLows, windowCloses, 14);
-    const stochK = stochastic(windowHighs, windowLows, windowCloses, 14, 3);
+    const adxVal = adxArr[i] ?? NaN;
+    const stochK = stochKArr[i] ?? NaN;
     const cciVal = cci(windowHighs, windowLows, windowCloses, 20);
     const aroonVal = aroon(windowHighs, windowLows, 25);
 
@@ -313,7 +210,7 @@ export function runScannerBacktest(params: ScannerBacktestParams): ScannerBackte
     const sigLine = macObj.signalLine[i] ?? NaN;
     const macHist = macObj.hist[i] ?? NaN;
     const ema200Val = ema200Arr[i] ?? NaN;
-    const atrVal = atrArr[i - 1] ?? NaN; // ATR array is offset by 1
+    const atrVal = atrArr[i] ?? NaN;
     const obvCurr = obvArr[i] ?? NaN;
     const obvPrev = obvArr[i - 1] ?? NaN;
 

@@ -9,6 +9,8 @@
 
 import type { OhlcBar, IndicatorSnapshot, BarTimeframe } from './types';
 
+import { atrSeries, dmi, lastFinite } from '@/lib/ta/core';
+
 function safeNum(x: number | undefined | null): number | null {
   return typeof x === 'number' && Number.isFinite(x) ? x : null;
 }
@@ -77,55 +79,16 @@ function macd(values: number[]): { line: number | null; signal: number | null; h
   return { line, signal: s, hist: line - s };
 }
 
+// ATR / ADX: canonical Wilder maths (lib/ta/core — TradingView ta.atr / ta.dmi).
 function atr(bars: OhlcBar[], period = 14): number | null {
   if (bars.length < period + 1) return null;
-  const trs: number[] = [];
-  for (let i = 1; i < bars.length; i++) {
-    const h = bars[i].high, l = bars[i].low, pc = bars[i - 1].close;
-    trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
-  }
-  // Wilder smoothing
-  let a = trs.slice(0, period).reduce((x, y) => x + y, 0) / period;
-  for (let i = period; i < trs.length; i++) a = (a * (period - 1) + trs[i]) / period;
-  return a;
+  return safeNum(lastFinite(atrSeries(bars.map((b) => b.high), bars.map((b) => b.low), bars.map((b) => b.close), period)));
 }
 
 function adx(bars: OhlcBar[], period = 14): { adx: number | null; plusDI: number | null; minusDI: number | null } {
   if (bars.length < period * 2 + 1) return { adx: null, plusDI: null, minusDI: null };
-  const plusDM: number[] = [], minusDM: number[] = [], tr: number[] = [];
-  for (let i = 1; i < bars.length; i++) {
-    const up = bars[i].high - bars[i - 1].high;
-    const dn = bars[i - 1].low - bars[i].low;
-    plusDM.push(up > dn && up > 0 ? up : 0);
-    minusDM.push(dn > up && dn > 0 ? dn : 0);
-    const h = bars[i].high, l = bars[i].low, pc = bars[i - 1].close;
-    tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
-  }
-  const smooth = (arr: number[]): number[] => {
-    const out: number[] = [];
-    let s = arr.slice(0, period).reduce((x, y) => x + y, 0);
-    out.push(s);
-    for (let i = period; i < arr.length; i++) {
-      s = s - s / period + arr[i];
-      out.push(s);
-    }
-    return out;
-  };
-  const sTr = smooth(tr), sP = smooth(plusDM), sM = smooth(minusDM);
-  const dx: number[] = [];
-  for (let i = 0; i < sTr.length; i++) {
-    const pdi = (sP[i] / sTr[i]) * 100;
-    const mdi = (sM[i] / sTr[i]) * 100;
-    dx.push((Math.abs(pdi - mdi) / (pdi + mdi || 1)) * 100);
-  }
-  if (dx.length < period) return { adx: null, plusDI: null, minusDI: null };
-  let a = dx.slice(0, period).reduce((x, y) => x + y, 0) / period;
-  for (let i = period; i < dx.length; i++) a = (a * (period - 1) + dx[i]) / period;
-  return {
-    adx: a,
-    plusDI: (sP[sP.length - 1] / sTr[sTr.length - 1]) * 100,
-    minusDI: (sM[sM.length - 1] / sTr[sTr.length - 1]) * 100,
-  };
+  const r = dmi(bars.map((b) => b.high), bars.map((b) => b.low), bars.map((b) => b.close), period, period);
+  return { adx: safeNum(r.adx), plusDI: safeNum(r.plusDI), minusDI: safeNum(r.minusDI) };
 }
 
 function bbands(values: number[], period = 20, mult = 2): { upper: number | null; middle: number | null; lower: number | null } {

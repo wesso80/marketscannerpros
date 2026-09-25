@@ -60,8 +60,8 @@ describe('SMA (yahoo-finance)', () => {
     expect(calculateSMA(data, 3)).toBeCloseTo(20, 10);
   });
 
-  it('returns last value when data shorter than period', () => {
-    expect(calculateSMA([42], 5)).toBe(42);
+  it('returns NaN (missing) when data shorter than period — no made-up value', () => {
+    expect(calculateSMA([42], 5)).toBeNaN();
   });
 });
 
@@ -120,9 +120,9 @@ describe('calculateEMASeries (finnhub)', () => {
 
 // ─── RSI ────────────────────────────────────────────────────────────────────
 describe('RSI', () => {
-  it('returns 50 when data is too short', () => {
-    expect(finnhubRSI([100, 101], 14)).toBe(50);
-    expect(yahooRSI([100, 101], 14)).toBe(50);
+  it('returns NaN (missing) when data is too short — never a neutral 50 default', () => {
+    expect(finnhubRSI([100, 101], 14)).toBeNaN();
+    expect(yahooRSI([100, 101], 14)).toBeNaN();
   });
 
   it('returns 100 when all changes are positive (no losses)', () => {
@@ -236,10 +236,10 @@ describe('MACD (finnhub)', () => {
 
 // ─── Stochastic ─────────────────────────────────────────────────────────────
 describe('Stochastic (yahoo-finance)', () => {
-  it('returns 50/50 when data is too short', () => {
+  it('returns NaN/NaN (missing) when data is too short', () => {
     const result = calculateStochastic([100], [90], [95], 14, 3);
-    expect(result.k).toBe(50);
-    expect(result.d).toBe(50);
+    expect(result.k).toBeNaN();
+    expect(result.d).toBeNaN();
   });
 
   it('%K is 100 when close is at highest high', () => {
@@ -301,11 +301,11 @@ describe('Stochastic (yahoo-finance)', () => {
     expect(result.d).toBeCloseTo(50, 5);
   });
 
-  it('flat price produces %K = 50 (zero range)', () => {
+  it('flat price has no defined %K (zero range) → NaN, not 50', () => {
     const flat = flatPrices(20);
     const result = calculateStochastic(flat, flat, flat, 14, 3);
-    expect(result.k).toBe(50);
-    expect(result.d).toBe(50);
+    expect(result.k).toBeNaN();
+    expect(result.d).toBeNaN();
   });
 });
 

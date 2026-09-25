@@ -9,6 +9,8 @@
  *   - All indicators are precomputed once — never inside the per-bar loop
  */
 
+import { atrSeries, dmiSeries } from '@/lib/ta/core';
+
 // ─── EMA ──────────────────────────────────────────────────────────────────
 export function calculateEMA(prices: number[], period: number): number[] {
   if (period <= 0 || prices.length === 0) return [];
@@ -133,39 +135,24 @@ export function calculateMACD(prices: number[]): MACDResult {
   return { macd, signal, histogram };
 }
 
-// ─── ATR ──────────────────────────────────────────────────────────────────
+// ─── ATR / ADX — canonical Wilder maths (lib/ta/core, TradingView ta.atr / ta.dmi) ──────────────────────
+// Warm-up slots stay `undefined` (sparse) to preserve this module's existing contract.
+
+function sparse(values: number[]): number[] {
+  const out: number[] = new Array(values.length);
+  for (let i = 0; i < values.length; i++) if (Number.isFinite(values[i])) out[i] = values[i];
+  return out;
+}
+
 export function calculateATR(
   highs: number[],
   lows: number[],
   closes: number[],
   period: number = 14,
 ): number[] {
-  const atr: number[] = new Array(closes.length);
-  const tr: number[] = new Array(closes.length);
-
-  for (let i = 1; i < closes.length; i++) {
-    const hl = highs[i] - lows[i];
-    const hc = Math.abs(highs[i] - closes[i - 1]);
-    const lc = Math.abs(lows[i] - closes[i - 1]);
-    tr[i] = Math.max(hl, hc, lc);
-  }
-
-  let sum = 0;
-  for (let i = 1; i <= period && i < closes.length; i++) {
-    sum += tr[i] || 0;
-  }
-  if (closes.length > period) {
-    atr[period] = sum / period;
-  }
-
-  for (let i = period + 1; i < closes.length; i++) {
-    atr[i] = (atr[i - 1] * (period - 1) + tr[i]) / period;
-  }
-
-  return atr;
+  return sparse(atrSeries(highs, lows, closes, period));
 }
 
-// ─── ADX ──────────────────────────────────────────────────────────────────
 export interface ADXResult {
   adx: number[];
   diPlus: number[];
@@ -178,61 +165,8 @@ export function calculateADX(
   closes: number[],
   period: number = 14,
 ): ADXResult {
-  const adx: number[] = new Array(closes.length);
-  const diPlus: number[] = new Array(closes.length);
-  const diMinus: number[] = new Array(closes.length);
-  const tr: number[] = new Array(closes.length);
-  const dmPlus: number[] = new Array(closes.length);
-  const dmMinus: number[] = new Array(closes.length);
-
-  for (let i = 1; i < closes.length; i++) {
-    const hl = highs[i] - lows[i];
-    const hc = Math.abs(highs[i] - closes[i - 1]);
-    const lc = Math.abs(lows[i] - closes[i - 1]);
-    tr[i] = Math.max(hl, hc, lc);
-
-    const upMove = highs[i] - highs[i - 1];
-    const downMove = lows[i - 1] - lows[i];
-
-    dmPlus[i] = upMove > downMove && upMove > 0 ? upMove : 0;
-    dmMinus[i] = downMove > upMove && downMove > 0 ? downMove : 0;
-  }
-
-  let smoothedTR = 0;
-  let smoothedDMPlus = 0;
-  let smoothedDMMinus = 0;
-
-  for (let i = 1; i <= period; i++) {
-    smoothedTR += tr[i] || 0;
-    smoothedDMPlus += dmPlus[i] || 0;
-    smoothedDMMinus += dmMinus[i] || 0;
-  }
-
-  for (let i = period; i < closes.length; i++) {
-    if (i > period) {
-      smoothedTR = smoothedTR - smoothedTR / period + (tr[i] || 0);
-      smoothedDMPlus = smoothedDMPlus - smoothedDMPlus / period + (dmPlus[i] || 0);
-      smoothedDMMinus = smoothedDMMinus - smoothedDMMinus / period + (dmMinus[i] || 0);
-    }
-
-    diPlus[i] = smoothedTR > 0 ? (smoothedDMPlus / smoothedTR) * 100 : 0;
-    diMinus[i] = smoothedTR > 0 ? (smoothedDMMinus / smoothedTR) * 100 : 0;
-
-    const diDiff = Math.abs(diPlus[i] - diMinus[i]);
-    const diSum = diPlus[i] + diMinus[i];
-    const dx = diSum > 0 ? (diDiff / diSum) * 100 : 0;
-
-    if (i === period) {
-      adx[i] = dx;
-    } else if (adx[i - 1] !== undefined && Number.isFinite(adx[i - 1])) {
-      adx[i] = (adx[i - 1] * (period - 1) + dx) / period;
-    } else {
-      // Recover from NaN in prior bar by restarting ADX with current dx
-      adx[i] = dx;
-    }
-  }
-
-  return { adx, diPlus, diMinus };
+  const s = dmiSeries(highs, lows, closes, period, period);
+  return { adx: sparse(s.adx), diPlus: sparse(s.plusDI), diMinus: sparse(s.minusDI) };
 }
 
 // ─── Bollinger Bands ──────────────────────────────────────────────────────

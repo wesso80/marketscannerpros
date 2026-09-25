@@ -1715,7 +1715,7 @@ export async function POST(req: NextRequest) {
           const macHist = macObj.hist[last];
           const macLine = macObj.macdLine[last];
           const sigLine = macObj.signalLine[last];
-          // The local ema() seeds from bar 0 and always returns a number; a 200-period EMA is only real with ≥200 bars.
+          // ema() is SMA-seeded (TradingView ta.ema) and NaN before 200 bars; keep the explicit guard for clarity.
           const ema200Val = closes.length >= 200 ? emaArr[last] : NaN;
           const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
           const close = closes[last];
