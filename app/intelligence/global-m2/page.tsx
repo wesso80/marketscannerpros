@@ -4,6 +4,7 @@ import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import IntelligenceTable, { type IntelColumn, type IntelRow } from '@/components/intelligence/IntelligenceTable';
 import { MetricCell, SectionHeader, LastUpdatedBadge } from '@/components/intelligence/primitives';
 import type { GlobalM2Dto } from '@/app/api/intelligence/global-m2/route';
+import { excludedBlocsLabel } from '@/lib/intelligence/globalM2Exclusions';
 
 const T = (n: number) => `$${(n / 1e12).toFixed(3)}T`;
 const pct = (n: number | null) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`);
@@ -78,14 +79,20 @@ export default function GlobalM2Page() {
             </div>
           )}
 
+          {excludedBlocsLabel(data.excludedBlocs) && (
+            <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>
+              {excludedBlocsLabel(data.excludedBlocs)}: weighted coverage and interpretation eligibility are measured over the remaining blocs.
+            </p>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
             <Metric label="Total M2 (USD)" value={T(data.totalUsd)} />
             <Metric label="Blocs" value={`${data.validBlocCount} available · ${data.missingBlocCount} missing`} />
-            <Metric label="Est. weighted coverage" value={`${data.estimatedWeightedCoveragePercent.toFixed(1)}%`} />
+            <Metric label={data.excludedBlocs?.length ? 'Est. weighted coverage (included blocs)' : 'Est. weighted coverage'} value={`${data.estimatedWeightedCoveragePercent.toFixed(1)}%`} />
             <Metric label="1M" value={pct(data.oneMonthPct)} />
             <Metric label="3M annualised" value={pct(data.threeMonthAnnualizedPct)} />
             <Metric label="YoY" value={pct(data.yoyPct)} />
-            <Metric label="Cycle (diagnostic)" value={data.liquidityCycle} />
+            <Metric label={data.interpretationEligible ? 'Cycle' : 'Cycle (diagnostic)'} value={data.liquidityCycle} />
             <Metric label="Acceleration" value={data.accelerationState} />
           </div>
 
@@ -101,7 +108,7 @@ export default function GlobalM2Page() {
               <SectionHeader title="Missing Blocs" subtitle="Fail-closed — no aggregate is ever silently substituted." />
               <ul style={{ margin: 0, padding: '4px 0 0 18px', fontSize: '0.78rem', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
                 {data.missing.map((m) => (
-                  <li key={m.id}><strong style={{ color: 'var(--msp-text)' }}>{m.id}</strong> <span style={{ color: 'var(--msp-text-faint)' }}>[{m.health}]</span>: {m.reason}</li>
+                  <li key={m.id}><strong style={{ color: 'var(--msp-text)' }}>{m.id}</strong> <span style={{ color: 'var(--msp-text-faint)' }}>[{m.health}]{data.excludedBlocs?.some((x) => x.id === m.id) ? ' · excluded from coverage' : ''}</span>: {m.reason}</li>
                 ))}
               </ul>
             </div>

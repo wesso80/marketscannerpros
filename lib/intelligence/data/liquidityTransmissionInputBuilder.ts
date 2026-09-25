@@ -43,6 +43,8 @@ export interface BuiltLiquidityInput {
     status: string;
     coveragePercent?: number;
     estimatedWeightedCoveragePercent?: number;
+    /** Global M2 blocs excluded from weighted coverage (e.g. IN, KR). Diagnostic only. */
+    coverageExcludedBlocIds?: string[];
     interpretationEligible: boolean;
     parityStatus: string;
     validBlocCount: number;

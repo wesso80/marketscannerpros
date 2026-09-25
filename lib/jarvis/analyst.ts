@@ -10,6 +10,7 @@ import type {
   FragilityLabel, IndicatorRow, IntelligenceBundle, JarvisBrief, LiquidityLabel, MacroRegimeLabel, MacroSeriesPoint, MicroRegimeRow,
   QuoteRow, RegimeSnapshotRow, ResearchCandidate, ResearchStatus, SectorPerf, WhatChanged, BreadthAggregate,
 } from './types';
+import { excludedBlocsSuffix } from '../intelligence/globalM2Exclusions';
 
 export interface Inputs {
   nowMs: number;
@@ -34,6 +35,8 @@ const fresh = (d: Dataset<unknown>) => usable(d) && d.freshness !== 'STALE';
 const prov = (d: Dataset<unknown>) => `${d.label} [${d.freshness}${d.ageMinutes !== null ? `, ${d.ageMinutes}m` : ''}, ${d.environment}]`;
 const pct = (n: number | null | undefined, digits = 1) => (n === null || n === undefined || !Number.isFinite(n) ? 'n/a' : `${n > 0 ? '+' : ''}${n.toFixed(digits)}%`);
 const f1 = (n: number | null | undefined) => (n === null || n === undefined || !Number.isFinite(n) ? 'n/a' : n.toFixed(1));
+// Global M2 calculation status from the production DTO; older payloads without it were always PARTIAL.
+const m2Status = (m: Record<string, any>) => (m.calculationStatus === 'COMPLETE' ? 'COMPLETE' : 'PARTIAL');
 
 function assess<L extends string>(label: L, evidence: string[], conflicts: string[], provenance: string[], confidence: number): Assessment<L> {
   return { label, evidence, conflicts, provenance, confidence: Math.max(0, Math.min(100, Math.round(confidence))) };
@@ -67,10 +70,10 @@ export function assessMacroRegime(i: Inputs): Assessment<MacroRegimeLabel> {
     else ev.push(`Liquidity Transmission flow "${h.flow}".`);
   }
   if (intel?.globalM2) {
-    votes++; pv.push('Global M2 [PRODUCTION_LIVE, PARTIAL]');
+    votes++; pv.push(`Global M2 [PRODUCTION_LIVE, ${m2Status(intel.globalM2)}]`);
     const m = intel.globalM2;
     const slowing = m.accelerationState === 'SLOWING' || m.liquidityCycle === 'DECELERATION';
-    if (slowing) { riskOff += 0.5; ev.push(`Global M2 ${m.accelerationState} / ${m.liquidityCycle} / turn ${m.turnState} (1m ${pct(m.oneMonthPct, 2)}, 3m ${pct(m.threeMonthPct, 2)}, YoY ${pct(m.yoyPct, 2)}); coverage ${f1(m.estimatedWeightedCoveragePercent)}% — interpretation ${m.interpretationEligible ? 'eligible' : 'NOT eligible'}.`); }
+    if (slowing) { riskOff += 0.5; ev.push(`Global M2 ${m.accelerationState} / ${m.liquidityCycle} / turn ${m.turnState} (1m ${pct(m.oneMonthPct, 2)}, 3m ${pct(m.threeMonthPct, 2)}, YoY ${pct(m.yoyPct, 2)}); coverage ${f1(m.estimatedWeightedCoveragePercent)}%${excludedBlocsSuffix(m.excludedBlocs)} — interpretation ${m.interpretationEligible ? 'eligible' : 'NOT eligible'}.`); }
     else { riskOn += 0.5; ev.push(`Global M2 ${m.accelerationState} (YoY ${pct(m.yoyPct, 2)}).`); }
     if (!m.interpretationEligible) cf.push('Global M2 below the 95% weighted-coverage threshold; treated as half-weight evidence.');
   }
@@ -151,7 +154,7 @@ export function assessLiquidity(i: Inputs): Assessment<LiquidityLabel> {
     if (m.accelerationState === 'SLOWING') { score -= 1 * w; ev.push(`Global M2 total $${(Number(m.totalUsd) / 1e12).toFixed(1)}T, 1m ${pct(m.oneMonthPct, 2)}, 3m ann. ${pct(m.threeMonthAnnualizedPct, 2)}, YoY ${pct(m.yoyPct, 2)} — acceleration SLOWING, cycle ${m.liquidityCycle}, turn ${m.turnState}.`); }
     else if (m.accelerationState === 'ACCELERATING') { score += 1 * w; ev.push(`Global M2 accelerating (YoY ${pct(m.yoyPct, 2)}).`); }
     else ev.push(`Global M2 ${m.accelerationState} (YoY ${pct(m.yoyPct, 2)}).`);
-    if (!m.interpretationEligible) cf.push(`M2 coverage ${f1(m.estimatedWeightedCoveragePercent)}% (${m.validBlocCount}/${m.validBlocCount + m.missingBlocCount} blocs) — half weight.`);
+    if (!m.interpretationEligible) cf.push(`M2 coverage ${f1(m.estimatedWeightedCoveragePercent)}%${excludedBlocsSuffix(m.excludedBlocs)} (${m.validBlocCount}/${m.validBlocCount + m.missingBlocCount} blocs) — half weight.`);
   }
   if (intel?.liquidity?.headline) {
     const h = intel.liquidity.headline; n++; pv.push('Liquidity Transmission [PRODUCTION_LIVE]');
@@ -445,7 +448,7 @@ export function rankDrivers(i: Inputs, state: JarvisBrief['marketState']): Jarvi
   if (usable(i.regime)) { const r = i.regime.data!.latest; d.push({ driver: `Equity internals: ${r.regime.replace('_', '-')} regime with ${r.volatility_state} volatility and ${r.liquidity_state} liquidity`, evidence: `UPE close snapshot ${r.created_at.slice(0, 16)}Z, breadth ${f1(Number(r.components.breadthPercent))}%, avg |move| ${f1(Number(r.components.avgAbsChangePercent))}%`, weight: 5 }); }
   if (intel?.fragility) d.push({ driver: `Systemic fragility ${f1(Number(intel.fragility.fragility))} with credit the weakest component`, evidence: (intel.fragility.components ?? []).map((c: any) => `${c.label} ${Number(c.value).toFixed(0)}`).join(', '), weight: 4 });
   if (intel?.liquidity?.headline) d.push({ driver: `Liquidity transmission ${intel.liquidity.headline.flow} at clock ${intel.liquidity.headline.clock} (${intel.liquidity.headline.clockName})`, evidence: `master ${intel.liquidity.headline.masterLink}, validated ${intel.liquidity.headline.validated}, downstream ${intel.liquidity.headline.downstream}`, weight: 4 });
-  if (intel?.globalM2) d.push({ driver: `Global M2 ${intel.globalM2.accelerationState} (${intel.globalM2.liquidityCycle})`, evidence: `YoY ${pct(intel.globalM2.yoyPct, 2)}, 3m ann. ${pct(intel.globalM2.threeMonthAnnualizedPct, 2)}, coverage ${f1(intel.globalM2.estimatedWeightedCoveragePercent)}%`, weight: 3 });
+  if (intel?.globalM2) d.push({ driver: `Global M2 ${intel.globalM2.accelerationState} (${intel.globalM2.liquidityCycle})`, evidence: `YoY ${pct(intel.globalM2.yoyPct, 2)}, 3m ann. ${pct(intel.globalM2.threeMonthAnnualizedPct, 2)}, coverage ${f1(intel.globalM2.estimatedWeightedCoveragePercent)}%${excludedBlocsSuffix(intel.globalM2.excludedBlocs)}`, weight: 3 });
   if (usable(i.crypto)) { const c = i.crypto.data!; d.push({ driver: `Crypto participation ${(c.breadth24hPct ?? 0) >= 60 ? 'broad' : 'narrow'} (${f1(c.breadth24hPct)}% up) with total cap ${pct(c.marketCapChange24hPct)}`, evidence: `BTC ${pct(c.btc24h, 2)}, ETH ${pct(c.eth24h, 2)}, BTC dominance ${f1(c.btcDominance)}%, BTC funding ${c.funding.BTC ? c.funding.BTC.fundingRatePct.toFixed(3) + '%' : 'n/a'}`, weight: 3 }); }
   if (usable(i.sectors)) { const s = [...i.sectors.data!].sort((a, b) => a.persistenceRank - b.persistenceRank); d.push({ driver: `Sector persistence leadership: ${s.slice(0, 2).map((x) => x.name).join(', ')}; lagging: ${s.slice(-2).map((x) => x.name).join(', ')}`, evidence: s.slice(0, 2).map((x) => `${x.name} 1m ${pct(x.m1)} 3m ${pct(x.m3)}`).join('; '), weight: 2 }); }
   if (usable(i.calendar) && i.calendar.data!.nextMajorEvent) { const e = i.calendar.data!.nextMajorEvent; d.push({ driver: `Event risk: next high-impact catalyst ${e.eventName} (${e.country}) at ${e.releaseTimeLocal}`, evidence: `${e.timingStatus} timing, ${e.sourceAuthority} source`, weight: 2 }); }

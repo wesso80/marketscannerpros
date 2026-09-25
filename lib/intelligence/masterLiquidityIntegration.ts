@@ -18,6 +18,7 @@
 import type { MasterEngineInput } from './engines/master';
 import type { EngineResult, EngineStatusFlag, SemanticState } from './types';
 import type { LiquidityTransmissionResolved } from './liquidityTransmissionService';
+import { excludedBlocsSuffix } from './globalM2Exclusions';
 
 /** Source label appended to the Master API response when native Liquidity replaces mock. */
 export type MasterLiquiditySource =
@@ -192,7 +193,7 @@ function buildLiveComponents(resolved: LiquidityTransmissionResolved): EngineRes
       state: upstreamSemantic(m),
       detail: `${m.validBlocCount}/11 blocs · est. weighted ${
         m.estimatedWeightedCoveragePercent != null
-          ? `${m.estimatedWeightedCoveragePercent.toFixed(1)}%`
+          ? `${m.estimatedWeightedCoveragePercent.toFixed(1)}%${excludedBlocsSuffix(m.coverageExcludedBlocIds)}`
           : '—'
       }`,
     },
