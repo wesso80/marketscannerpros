@@ -26,6 +26,7 @@ import BuildingInterestPanel from '@/components/analysis/BuildingInterestPanel';
 import LeverageStatePanel from '@/components/analysis/LeverageStatePanel';
 import CrossAssetPanel from '@/components/analysis/CrossAssetPanel';
 import { useCryptoDerivatives } from '@/hooks/useCryptoDerivatives';
+import { applyFeedHealth, assessSessionFreshness, degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import {
   describeRegime,
   rankSectorStrength,
@@ -184,17 +185,40 @@ export default function CommandCenterPage() {
     moverList.length > 0,
     !calendarWarning,
   ].filter(Boolean).length;
-  const evidence = assessEvidenceQuality({
+  // Shared freshness rule (lib/analysis/sessionDataHealth.ts): "current" needs a provider
+  // as-of time within cadence. The sectors and crypto responses only carry their own
+  // response time and movers carry none, so those layers count as recency unknown.
+  const sessionFreshness = assessSessionFreshness([
+    { name: 'regime', available: Boolean(regime.data?.regime) && reg.available, asOf: reg.asOf, stale: reg.stale },
+    { name: 'sectors', available: sectorData.length > 0, asOf: null },
+    { name: 'crypto', available: Boolean(cryptoData), asOf: null },
+    { name: 'movers', available: moverList.length > 0, asOf: null },
+  ]);
+  // Same degraded-feed list and wording as the Market dashboard, for the feeds this page reads.
+  const degradedFeeds = degradedFeedList({
+    feeds: [
+      { label: 'Regime', error: regime.error },
+      { label: 'Sectors', error: sectors.error },
+      { label: 'Crypto overview', error: crypto.error },
+      { label: 'Movers', error: movers.error },
+      { label: 'Calendar', error: calendar.error },
+    ],
+    calendarWarning: calendar.loading ? null : calendarWarning,
+  });
+  const baseEvidence = assessEvidenceQuality({
     availableFactors,
     totalFactors: 5,
-    freshness: reg.stale ? 'stale' : availableFactors >= 4 ? 'live' : 'delayed',
+    freshness: sessionFreshness.freshness,
     missing: [
       !sectorData.length ? 'sectors' : null,
       !cryptoData ? 'crypto' : null,
       !moverList.length ? 'movers' : null,
-      calendarWarning,
     ].filter(Boolean) as string[],
   });
+  const evidence = applyFeedHealth(
+    { ...baseEvidence, reasons: [...baseEvidence.reasons, ...sessionFreshness.notes] },
+    degradedFeeds,
+  );
 
   const anyLoading = regime.loading || sectors.loading || crypto.loading || movers.loading;
 
@@ -409,6 +433,7 @@ export default function CommandCenterPage() {
         <ul className="mt-2 list-disc pl-5 text-xs text-slate-500">
           {evidence.reasons.map((r, i) => <li key={i}>{r}</li>)}
         </ul>
+        <p className="mt-2 text-[11px] text-slate-600">Covers the layers on this page (regime, sectors, crypto, movers, calendar). Scanner feed health is shown in the Market dashboard&rsquo;s Data health strip.</p>
       </Card>
 
       <p className="px-1 text-[11px] text-slate-600">{EDUCATIONAL_DISCLOSURE}</p>
