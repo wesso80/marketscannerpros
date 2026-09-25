@@ -7,6 +7,8 @@
  * All functions expect arrays sorted from oldest to newest (chronological order).
  */
 
+import { atrSeries, dmi, emaSeries as coreEmaSeries, lastFinite, stochSeries } from './ta/core';
+
 export interface OHLCVBar {
   timestamp: string | Date;
   open: number;
@@ -149,38 +151,16 @@ export function sma(data: number[], period: number): number | null {
  */
 export function ema(data: number[], period: number): number | null {
   if (data.length < period) return null;
-  
-  const k = 2 / (period + 1);
-  
-  // Start with SMA for first EMA value
-  let emaValue = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  
-  // Calculate EMA for remaining values
-  for (let i = period; i < data.length; i++) {
-    emaValue = data[i] * k + emaValue * (1 - k);
-  }
-  
-  return emaValue;
+  const v = lastFinite(coreEmaSeries(data, period));
+  return Number.isFinite(v) ? v : null;
 }
 
 /**
  * Calculate full EMA series aligned to input length.
- * Values prior to first valid EMA are NaN.
+ * Values prior to first valid EMA are NaN. (TradingView ta.ema: SMA-seeded — lib/ta/core.)
  */
 export function emaSeries(data: number[], period: number): number[] {
-  const output = Array(data.length).fill(Number.NaN);
-  if (data.length < period) return output;
-
-  const k = 2 / (period + 1);
-  let emaValue = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  output[period - 1] = emaValue;
-
-  for (let i = period; i < data.length; i++) {
-    emaValue = data[i] * k + emaValue * (1 - k);
-    output[i] = emaValue;
-  }
-
-  return output;
+  return coreEmaSeries(data, period);
 }
 
 /**
@@ -251,106 +231,22 @@ export function macd(closes: number[], fastPeriod = 12, slowPeriod = 26, signalP
 }
 
 /**
- * Calculate ATR (Average True Range)
+ * Calculate ATR (Average True Range) — Wilder / TradingView ta.atr via lib/ta/core.
  */
 export function atr(bars: OHLCVBar[], period = 14): number | null {
   if (bars.length < period + 1) return null;
-  
-  const trueRanges: number[] = [];
-  
-  for (let i = 1; i < bars.length; i++) {
-    const high = bars[i].high;
-    const low = bars[i].low;
-    const prevClose = bars[i - 1].close;
-    
-    const tr = Math.max(
-      high - low,
-      Math.abs(high - prevClose),
-      Math.abs(low - prevClose)
-    );
-    trueRanges.push(tr);
-  }
-  
-  // Use Wilder's smoothing (similar to RSI smoothing)
-  let atrValue = trueRanges.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  
-  for (let i = period; i < trueRanges.length; i++) {
-    atrValue = (atrValue * (period - 1) + trueRanges[i]) / period;
-  }
-  
-  return atrValue;
+  const v = lastFinite(atrSeries(bars.map(b => b.high), bars.map(b => b.low), bars.map(b => b.close), period));
+  return Number.isFinite(v) ? v : null;
 }
 
 /**
- * Calculate ADX (Average Directional Index) with +DI and -DI
+ * Calculate ADX (Average Directional Index) with +DI and -DI — Wilder / TradingView ta.dmi via lib/ta/core.
  */
 export function adx(bars: OHLCVBar[], period = 14): { adx: number; plusDI: number; minusDI: number } | null {
   if (bars.length < period * 2 + 1) return null;
-  
-  const plusDMs: number[] = [];
-  const minusDMs: number[] = [];
-  const trueRanges: number[] = [];
-  
-  for (let i = 1; i < bars.length; i++) {
-    const high = bars[i].high;
-    const low = bars[i].low;
-    const prevHigh = bars[i - 1].high;
-    const prevLow = bars[i - 1].low;
-    const prevClose = bars[i - 1].close;
-    
-    // True Range
-    const tr = Math.max(
-      high - low,
-      Math.abs(high - prevClose),
-      Math.abs(low - prevClose)
-    );
-    trueRanges.push(tr);
-    
-    // Directional Movement
-    const upMove = high - prevHigh;
-    const downMove = prevLow - low;
-    
-    plusDMs.push(upMove > downMove && upMove > 0 ? upMove : 0);
-    minusDMs.push(downMove > upMove && downMove > 0 ? downMove : 0);
-  }
-  
-  // Smoothed values using Wilder's smoothing
-  let smoothedTR = trueRanges.slice(0, period).reduce((a, b) => a + b, 0);
-  let smoothedPlusDM = plusDMs.slice(0, period).reduce((a, b) => a + b, 0);
-  let smoothedMinusDM = minusDMs.slice(0, period).reduce((a, b) => a + b, 0);
-  
-  const dxValues: number[] = [];
-  
-  for (let i = period; i < trueRanges.length; i++) {
-    smoothedTR = smoothedTR - (smoothedTR / period) + trueRanges[i];
-    smoothedPlusDM = smoothedPlusDM - (smoothedPlusDM / period) + plusDMs[i];
-    smoothedMinusDM = smoothedMinusDM - (smoothedMinusDM / period) + minusDMs[i];
-    
-    const plusDI = smoothedTR > 0 ? (smoothedPlusDM / smoothedTR) * 100 : 0;
-    const minusDI = smoothedTR > 0 ? (smoothedMinusDM / smoothedTR) * 100 : 0;
-    
-    const diSum = plusDI + minusDI;
-    const dx = diSum > 0 ? (Math.abs(plusDI - minusDI) / diSum) * 100 : 0;
-    dxValues.push(dx);
-  }
-  
-  if (dxValues.length < period) return null;
-  
-  // ADX is smoothed DX
-  let adxValue = dxValues.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < dxValues.length; i++) {
-    adxValue = (adxValue * (period - 1) + dxValues[i]) / period;
-  }
-  
-  // Calculate final +DI and -DI
-  const finalPlusDI = smoothedTR > 0 ? (smoothedPlusDM / smoothedTR) * 100 : 0;
-  const finalMinusDI = smoothedTR > 0 ? (smoothedMinusDM / smoothedTR) * 100 : 0;
-  
-  return {
-    adx: adxValue,
-    plusDI: finalPlusDI,
-    minusDI: finalMinusDI,
-  };
+  const r = dmi(bars.map(b => b.high), bars.map(b => b.low), bars.map(b => b.close), period, period);
+  if (!Number.isFinite(r.adx) || !Number.isFinite(r.plusDI) || !Number.isFinite(r.minusDI)) return null;
+  return r;
 }
 
 /**
@@ -358,27 +254,12 @@ export function adx(bars: OHLCVBar[], period = 14): { adx: number; plusDI: numbe
  */
 export function stochastic(bars: OHLCVBar[], kPeriod = 14, dPeriod = 3): { k: number; d: number } | null {
   if (bars.length < kPeriod + dPeriod - 1) return null;
-  
-  const kValues: number[] = [];
-  
-  for (let i = kPeriod - 1; i < bars.length; i++) {
-    const slice = bars.slice(i - kPeriod + 1, i + 1);
-    const highestHigh = Math.max(...slice.map(b => b.high));
-    const lowestLow = Math.min(...slice.map(b => b.low));
-    const currentClose = bars[i].close;
-    
-    const k = highestHigh !== lowestLow 
-      ? ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100 
-      : 50;
-    kValues.push(k);
-  }
-  
-  if (kValues.length < dPeriod) return null;
-  
-  const k = kValues[kValues.length - 1];
-  const d = sma(kValues, dPeriod);
-  
-  return { k, d: d ?? k };
+  // TradingView built-in Stochastic (%K unsmoothed, %D = SMA) via lib/ta/core. A flat window has no %K (null), not 50.
+  const s = stochSeries(bars.map(b => b.high), bars.map(b => b.low), bars.map(b => b.close), kPeriod, 1, dPeriod);
+  const k = lastFinite(s.k);
+  if (!Number.isFinite(k)) return null;
+  const d = lastFinite(s.d);
+  return { k, d: Number.isFinite(d) ? d : k };
 }
 
 /**

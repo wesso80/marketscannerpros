@@ -37,7 +37,7 @@ const finite = (v: number): number | undefined => (Number.isFinite(v) ? v : unde
 /**
  * Compute the scan-daily indicator set from completed daily bars (ascending).
  * Periods match the previous Alpha Vantage requests: RSI 14, MACD 12/26/9,
- * EMA 200, ADX 14, Aroon 25, CCI 20. Stochastic uses the shared 14/3 helper.
+ * EMA 200, ADX 14 (Wilder), Aroon 25, CCI 20, Stochastic 14/1/3 (TradingView default) — lib/ta/core maths.
  */
 export function computeCryptoDailyIndicators(bars: Bar[]): CryptoDailyIndicators {
   const ohlcv: OHLCV[] = bars.map((b) => ({
@@ -48,7 +48,7 @@ export function computeCryptoDailyIndicators(bars: Bar[]): CryptoDailyIndicators
 
   const ema200Series = calculateEMA(closes, 200);
   const macd = calculateMACD(closes);
-  const stoch = calculateStochastic(ohlcv, 14, 3);
+  const stoch = calculateStochastic(ohlcv, 14);
   const aroon = calculateAroon(ohlcv, 25);
 
   const out: CryptoDailyIndicators = {
@@ -68,6 +68,9 @@ export function computeCryptoDailyIndicators(bars: Bar[]): CryptoDailyIndicators
   }
   return out;
 }
+
+/** Same indicator set for any asset's completed daily bars (scan-daily uses it for equities too). */
+export const computeDailyIndicators = computeCryptoDailyIndicators;
 
 /**
  * Returns a reason string when price and EMA200 are implausibly far apart

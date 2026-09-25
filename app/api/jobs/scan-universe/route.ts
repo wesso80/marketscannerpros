@@ -221,8 +221,8 @@ async function sleep(ms: number) {
 // Yahoo Finance - Get historical data for a symbol
 async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
   try {
-    // Yahoo Finance chart API - 6 months of daily data
-    const period1 = Math.floor(Date.now() / 1000) - (180 * 24 * 60 * 60);
+    // Yahoo Finance chart API - 3 years of daily data (EMA200 needs ~3-4x200 bars to converge)
+    const period1 = Math.floor(Date.now() / 1000) - (3 * 365 * 24 * 60 * 60); // 3y so EMA200 converges to TradingView
     const period2 = Math.floor(Date.now() / 1000);
     
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
@@ -267,8 +267,8 @@ async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
 // Yahoo Finance - Get market data for crypto (same method as equities)
 async function fetchCryptoData(symbol: string): Promise<OHLCV[] | null> {
   try {
-    // Yahoo Finance chart API - 6 months of daily data
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=6mo`;
+    // Yahoo Finance chart API - 3 years of daily data (EMA200 needs ~3-4x200 bars to converge)
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3y`;
     
     const res = await fetch(url, {
       headers: {
@@ -329,7 +329,7 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
   const rsi = calculateRSI(closes, 14);
   const macdData = calculateMACD(closes);
   const adx = calculateADX(ohlcv, 14);
-  const stoch = calculateStochastic(ohlcv, 14, 3);
+  const stoch = calculateStochastic(ohlcv, 14);
   const aroon = calculateAroon(ohlcv, 25);
   const cci = calculateCCI(ohlcv, 20);
   

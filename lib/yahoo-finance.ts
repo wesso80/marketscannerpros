@@ -5,6 +5,7 @@
  * Data provided by Yahoo Finance - used under fair use with attribution
  */
 
+import { atrSeries, dmi, emaSeries, lastFinite, rsiSeries, smaSeries, stochSeries } from '@/lib/ta/core';
 import { validateYahooBars } from './dataQuality';
 
 export interface YahooQuote {
@@ -371,118 +372,37 @@ export function calculateIndicators(bars: YahooHistoricalBar[]) {
   };
 }
 
-// Helper functions
+// Helper functions — thin adapters over the canonical lib/ta/core (TradingView-equivalent, Wilder RSI/ATR/ADX).
+// Missing history returns NaN, never a made-up default (the old helpers returned RSI 50, ATR 0, %K 50 and a
+// "simplified" unsmoothed ADX that defaulted to exactly 25 — the trend threshold).
 
 /** Returns full EMA series (same length as input). First `period-1` values are NaN. */
 export function calculateEMASeries(data: number[], period: number): number[] {
-  const result: number[] = [];
-  const k = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) { result.push(NaN); }
-    else if (i === period - 1) { result.push(ema); }
-    else { ema = data[i] * k + ema * (1 - k); result.push(ema); }
-  }
-  return result;
+  return emaSeries(data, period);
 }
 
 export function calculateSMA(data: number[], period: number): number {
-  if (data.length < period) return data[data.length - 1];
-  const slice = data.slice(-period);
-  return slice.reduce((a, b) => a + b, 0) / period;
+  return lastFinite(smaSeries(data, period));
 }
 
 export function calculateEMA(data: number[], period: number): number {
-  if (data.length < period) return data[data.length - 1];
-  const k = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < data.length; i++) {
-    ema = data[i] * k + ema * (1 - k);
-  }
-  return ema;
+  return lastFinite(emaSeries(data, period));
 }
 
 export function calculateRSI(data: number[], period: number): number {
-  if (data.length < period + 1) return 50;
-  
-  let gains = 0, losses = 0;
-  for (let i = data.length - period; i < data.length; i++) {
-    const change = data[i] - data[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-  
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  
-  const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
+  return lastFinite(rsiSeries(data, period));
 }
 
 export function calculateATR(highs: number[], lows: number[], closes: number[], period: number): number {
-  if (highs.length < period + 1) return 0;
-  
-  const trueRanges: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const tr = Math.max(
-      highs[i] - lows[i],
-      Math.abs(highs[i] - closes[i - 1]),
-      Math.abs(lows[i] - closes[i - 1])
-    );
-    trueRanges.push(tr);
-  }
-  
-  return calculateSMA(trueRanges, period);
+  if (highs.length < period + 1) return NaN;
+  return lastFinite(atrSeries(highs, lows, closes, period));
 }
 
 export function calculateStochastic(highs: number[], lows: number[], closes: number[], kPeriod: number, dPeriod: number) {
-  if (closes.length < kPeriod + dPeriod - 1) return { k: 50, d: 50 };
-  
-  // Build %K series over the full window needed for %D smoothing
-  const kValues: number[] = [];
-  for (let i = kPeriod - 1; i < closes.length; i++) {
-    const sliceHighs = highs.slice(i - kPeriod + 1, i + 1);
-    const sliceLows = lows.slice(i - kPeriod + 1, i + 1);
-    const highestHigh = Math.max(...sliceHighs);
-    const lowestLow = Math.min(...sliceLows);
-    const range = highestHigh - lowestLow;
-    kValues.push(range > 0 ? ((closes[i] - lowestLow) / range) * 100 : 50);
-  }
-  
-  const k = kValues[kValues.length - 1];
-  
-  // %D = dPeriod-SMA of %K values
-  const dSlice = kValues.slice(-dPeriod);
-  const d = dSlice.reduce((a, b) => a + b, 0) / dSlice.length;
-  
-  return { k, d };
+  const st = stochSeries(highs, lows, closes, kPeriod, 1, dPeriod);
+  return { k: lastFinite(st.k), d: lastFinite(st.d) };
 }
 
 function calculateADX(highs: number[], lows: number[], closes: number[], period: number): number {
-  // Simplified ADX calculation
-  if (highs.length < period * 2) return 25;
-  
-  let sumDX = 0;
-  let validCount = 0;
-  for (let i = highs.length - period; i < highs.length; i++) {
-    const upMove = highs[i] - highs[i - 1];
-    const downMove = lows[i - 1] - lows[i];
-    const plusDM = upMove > downMove && upMove > 0 ? upMove : 0;
-    const minusDM = downMove > upMove && downMove > 0 ? downMove : 0;
-    const tr = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1]));
-    if (tr > 0) {
-      const dmSum = plusDM + minusDM;
-      // Only calculate DX when there's directional movement
-      if (dmSum > 0) {
-        const dx = Math.abs(plusDM - minusDM) / dmSum * 100;
-        sumDX += dx;
-        validCount++;
-      }
-    }
-  }
-  
-  const result = validCount > 0 ? sumDX / validCount : 25;
-  // Clamp to 0-100 range as ADX should never exceed 100
-  return Math.min(100, Math.max(0, result));
+  return dmi(highs, lows, closes, period, period).adx;
 }

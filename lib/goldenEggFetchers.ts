@@ -65,6 +65,12 @@ export interface PriceData {
   barInterval?: string;
   lastCompletedBarAt?: string | null;
   historicalDates?: string[];
+  /**
+   * Longer oldest-first history used ONLY for indicator maths (EMA200 needs ~3–4×200 bars to converge to TradingView;
+   * a 300-bar first-value-seeded EMA read ADBE 267.10 vs TradingView 270.16 on 24 Sep 2026). Other consumers keep the
+   * 300-bar `historical*` arrays.
+   */
+  indicatorHistory?: { closes: number[]; highs: number[]; lows: number[] };
   priceTs?: string;
   source?: string;
   volumeBasis?: string;
@@ -285,6 +291,8 @@ export async function fetchPrice(
     // DVE needs 252+ bars oldest-first for BBWP; take up to 300 when historicals required
     const histLen = opts?.requireHistoricals ? 300 : 50;
     const histDates = dates.slice(0, histLen).reverse(); // oldest-first
+    // Indicator history: up to 1000 completed bars so EMA200/ADX converge to TradingView (AV 'full' returns decades).
+    const indicatorDates = opts?.requireHistoricals ? dates.slice(0, 1000).reverse() : histDates;
     const barInterval = isIntraday ? (interval === '60min' ? '1h' : interval.replace('min', 'm')) : interval === 'weekly' ? '1w' : '1d';
     // AV *_ADJUSTED only adjusts '5. adjusted close'; raw O/H/L/C keep pre-split prices. Walk newest→oldest and divide
     // older bars by the cumulative '8. split coefficient' so highs/lows/closes are on today's share basis (NFLX 10:1 etc.).
@@ -314,6 +322,11 @@ export async function fetchPrice(
       historicalHighs: histDates.map(d => adj(d, '2. high')),
       historicalLows: histDates.map(d => adj(d, '3. low')),
       historicalDates: histDates,
+      indicatorHistory: {
+        closes: indicatorDates.map(d => adj(d, '4. close')),
+        highs: indicatorDates.map(d => adj(d, '2. high')),
+        lows: indicatorDates.map(d => adj(d, '3. low')),
+      },
       barInterval,
       lastCompletedBarAt: lastKey ?? null,
       priceTs: lastKey,
