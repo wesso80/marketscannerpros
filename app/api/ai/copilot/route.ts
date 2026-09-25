@@ -14,7 +14,7 @@ import { SKILL_CONFIGS, CONTEXT_VERSION, SKILL_VERSION_PREFIX } from '@/lib/ai/t
 import type { PageContext, PageSkill, AIToolCall, CopilotMessage, SuggestedAction, PromptMode } from '@/lib/ai/types';
 import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from '@/lib/prompts/mspAnalystV2';
 import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from '@/lib/prompts/pineScriptEngineerV2';
-import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsWithAvailability, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
@@ -227,24 +227,23 @@ export async function POST(req: NextRequest) {
           context.marketState?.regime === 'risk-on' ? 'TREND_UP' :
           context.marketState?.regime === 'transitioning' ? 'TRANSITION' : 'RANGE_NEUTRAL'
         );
-    const components = estimateComponentsFromContext({
+    // SQ is the scanner score itself (gating it is circular); components without a real input are unavailable, not defaults.
+    const { components, unavailable: unavailableComponents } = estimateComponentsWithAvailability({
       scannerScore: typeof pageData?.scannerScore === 'number' ? pageData.scannerScore
         : typeof pageData?.score === 'number' ? pageData.score
-        : typeof pageData?.averageConfidence === 'number' ? pageData.averageConfidence : 50,
+        : typeof pageData?.averageConfidence === 'number' ? pageData.averageConfidence : undefined,
       regime: scoringRegime,
-      session: 'regular',
       rsi: typeof pageData?.rsi === 'number' ? pageData.rsi : undefined,
       adx: typeof pageData?.adx === 'number' ? pageData.adx : undefined,
       volumeRatio: typeof pageData?.volumeRatio === 'number' ? pageData.volumeRatio : undefined,
-      mtfAlignment: typeof pageData?.mtfAlignment === 'number' ? pageData.mtfAlignment
-        : (Array.isArray(pageData?.topPicks) ? 3 : undefined),
+      mtfAlignment: typeof pageData?.mtfAlignment === 'number' ? pageData.mtfAlignment : undefined,
       derivativesAvailable: !!(pageData?.derivatives || pageData?.fundingRates || pageData?.openInterest),
       fundingRate: typeof pageData?.fundingRate === 'number' ? pageData.fundingRate : undefined,
       oiChange24h: typeof pageData?.oiChange24h === 'number' ? pageData.oiChange24h : undefined,
       fearGreed: typeof (context.marketState as any)?.fearGreedIndex === 'number'
         ? (context.marketState as any).fearGreedIndex : undefined,
     });
-    const regimeScoring = computeRegimeScore(components, scoringRegime);
+    const regimeScoring = computeRegimeScore(components, scoringRegime, { ignoreGates: ['SQ'], unavailable: unavailableComponents });
 
     // If the page already computed IDL authorization + confidence, use those
     // instead of re-deriving from raw regime data (which loses page-level signals)

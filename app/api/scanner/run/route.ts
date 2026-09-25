@@ -26,8 +26,8 @@ import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, re
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
 import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
 import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustResult } from "@/lib/scanner/dataTrust";
-import { classifyRegime } from "@/lib/regime-classifier";
-import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
+import { classifyRegime, volatilityThresholds } from "@/lib/regime-classifier";
+import { estimateComponentsWithAvailability, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
 import { detectMomentumAcceleration } from "@/lib/indicators";
@@ -2464,6 +2464,7 @@ export async function POST(req: NextRequest) {
         ema200Above: Number.isFinite(result.price) && Number.isFinite(result.ema200)
           ? result.price! >= result.ema200!
           : undefined,
+        assetClass: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity',
       });
 
       // Hard blocks (lib/scanner/hardBlocks): stale bars, price sanity vs the bar close, earnings in the holding window,
@@ -2492,12 +2493,16 @@ export async function POST(req: NextRequest) {
       result.score = result.compositeV2.composite;
       result.confidence = result.score;
       const regime = unifiedRegime.institutional;
+      const volBands = volatilityThresholds(type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity');
       const volatilityState = typeof atrPct === 'number'
-        ? (atrPct > 7 ? 'extreme' : atrPct > 4 ? 'expanded' : atrPct < 1 ? 'compressed' : 'normal')
+        ? (atrPct > volBands.extreme ? 'extreme' : atrPct > volBands.expanded ? 'expanded' : atrPct < volBands.compressed ? 'compressed' : 'normal')
         : 'normal';
 
       // === ACL PIPELINE (wired into scanner response) ===
-      const components = estimateComponentsFromContext({
+      // Only components with a real input are scored/gated. VA uses the bar volume ratio; LL, MTF and FD (equities)
+      // have no input in this route, so they are marked unavailable instead of passing/failing gates on constants.
+      const volumeRatioInput = result.liquidity?.volumeRatio;
+      const { components, unavailable } = estimateComponentsWithAvailability({
         scannerScore: result.score,
         direction: result.compositeV2.direction,
         regime: unifiedRegime.governor,
@@ -2506,13 +2511,13 @@ export async function POST(req: NextRequest) {
         cci: result.cci,
         aroonUp: result.aroon_up,
         aroonDown: result.aroon_down,
-        session: 'regular',
+        volumeRatio: typeof volumeRatioInput === 'number' && Number.isFinite(volumeRatioInput) ? volumeRatioInput : undefined,
         derivativesAvailable: !!(result as any).derivatives,
         fundingRate: (result as any).derivatives?.fundingRate,
         oiChange24h: (result as any).derivatives?.oiChangePercent,
       });
       // SQ is the scanner composite itself, so its gate is skipped (it would block a row for the score it gates).
-      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring, { ignoreGates: ['SQ'] });
+      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring, { ignoreGates: ['SQ'], unavailable });
       const regimeConfResult = deriveRegimeConfidence({
         adx: adxValue,
         rsi: result.rsi,

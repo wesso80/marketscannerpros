@@ -44,7 +44,7 @@ import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { AI_DAILY_LIMITS, AI_MODEL_BY_TIER, isFreeForAllMode, normalizeTier } from '@/lib/entitlements';
 import { getVerifiedTier } from '@/lib/apiMiddleware';
-import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsWithAvailability, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
@@ -437,8 +437,9 @@ export async function POST(req: NextRequest) {
     const scoringRegime = mapToScoringRegime(regimeInferred);
     
     // Estimate confluence components from available data
-    const components = estimateComponentsFromContext({
-      scannerScore: Number(scanner?.score ?? 50),
+    // SQ is the scanner score itself (gating it is circular); components without a real input are unavailable, not defaults.
+    const { components, unavailable: unavailableComponents } = estimateComponentsWithAvailability({
+      scannerScore: Number.isFinite(Number(scanner?.score)) && scanner?.score != null ? Number(scanner.score) : undefined,
       regime: regimeInferred,
       rsi: scanner?.scanData?.rsi,
       cci: scanner?.scanData?.cci,
@@ -446,11 +447,10 @@ export async function POST(req: NextRequest) {
       aroonUp: scanner?.scanData?.aroon_up,
       aroonDown: scanner?.scanData?.aroon_down,
       obv: scanner?.scanData?.obv,
-      session: 'regular',
       derivativesAvailable: false, // Will be set to true if crypto data fetched
     });
     
-    const regimeScoring = computeRegimeScore(components, scoringRegime);
+    const regimeScoring = computeRegimeScore(components, scoringRegime, { ignoreGates: ['SQ'], unavailable: unavailableComponents });
     
     // ===== GAP 1: AGREEMENT-DERIVED REGIME CONFIDENCE =====
     const regimeAgreement = deriveRegimeConfidence({

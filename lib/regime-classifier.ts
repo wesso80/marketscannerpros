@@ -43,6 +43,17 @@ export interface UnifiedRegime {
  * Classify regime from raw indicator data.
  * This is the SINGLE source of truth — all consumers use this.
  */
+/**
+ * Daily ATR% thresholds by asset class. Equity keeps the original 4% / 7% (≈ p90 / p99 of the 17-name replay).
+ * Crypto uses its own p90 / p99 (7.5% / 10%): with the equity numbers 65% of crypto days were "ATR > 4%" and ~18% of
+ * crypto rows were hard-blocked as REGIME_CHAOS, mostly shorts, just for being crypto. Forex is far calmer (≈ 0.5–0.8%).
+ */
+export function volatilityThresholds(assetClass?: 'equity' | 'crypto' | 'forex'): { compressed: number; expanded: number; extreme: number } {
+  if (assetClass === 'crypto') return { compressed: 2.5, expanded: 7.5, extreme: 10 };
+  if (assetClass === 'forex') return { compressed: 0.35, expanded: 1.5, extreme: 2.5 };
+  return { compressed: 1.5, expanded: 4, extreme: 7 };
+}
+
 export function classifyRegime(indicators: {
   adx?: number;
   rsi?: number;
@@ -51,8 +62,17 @@ export function classifyRegime(indicators: {
   aroonDown?: number;
   direction?: 'bullish' | 'bearish' | 'neutral';
   ema200Above?: boolean;
+  /** Asset class selects the volatility thresholds (crypto's normal ATR% is equity's "chaos"). Default: equity. */
+  assetClass?: 'equity' | 'crypto' | 'forex';
+  /** Percentile (0–100) of the current ATR% within the symbol's own trailing history. When supplied it replaces the
+   *  absolute thresholds: ≥ 97 = extreme, ≥ 90 = expanded. */
+  atrPercentile?: number;
 }): UnifiedRegime {
   const { adx, rsi, atrPercent, aroonUp, aroonDown, direction, ema200Above } = indicators;
+  const vol = volatilityThresholds(indicators.assetClass);
+  const hasAtrPct = Number.isFinite(indicators.atrPercentile);
+  const volExtreme = hasAtrPct ? indicators.atrPercentile! >= 97 : Number.isFinite(atrPercent) && atrPercent! > vol.extreme;
+  const volExpanded = hasAtrPct ? indicators.atrPercentile! >= 90 : Number.isFinite(atrPercent) && atrPercent! > vol.expanded;
   const hasAdx = Number.isFinite(adx);
   const hasRsi = Number.isFinite(rsi);
   const hasAtr = Number.isFinite(atrPercent);
@@ -63,7 +83,7 @@ export function classifyRegime(indicators: {
   let agreements = 0;
 
   // === Volatility Extremes (check first — overrides trend) ===
-  if (hasAtr && atrPercent! > 7) {
+  if (volExtreme) {
     confidence = 65 + (hasAdx ? 10 : 0);
     return {
       governor: 'VOL_EXPANSION',
@@ -124,7 +144,7 @@ export function classifyRegime(indicators: {
     if (rangingAdx) agreements++;
     if (aroonRanging) agreements++;
 
-    const isCompressed = hasAtr && atrPercent! < 1.5;
+    const isCompressed = hasAtr && atrPercent! < vol.compressed;
     confidence = 45 + (agreements / Math.max(1, checks)) * 35;
     confidence = Math.min(85, confidence);
 
@@ -148,7 +168,7 @@ export function classifyRegime(indicators: {
   }
 
   // === VOLATILITY EXPANSION (moderate) ===
-  if (hasAtr && atrPercent! > 4) {
+  if (volExpanded) {
     confidence = 50 + (hasAdx ? 10 : 0);
     return {
       governor: 'VOL_EXPANSION',
