@@ -216,7 +216,7 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
   let reason = 'Permission granted';
   if (autoNoTrade && staleData) reason = 'NO-TRADE MODE: data health stale';
   else if (autoNoTrade) reason = 'NO-TRADE MODE: accumulation + low volatility + unclear liquidity';
-  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${Math.round(tps * 100)} below threshold (${Math.round(tpsThreshold * 100)})`;
+  else if (tps < tpsThreshold) reason = `Trade Permission Score ${Math.round(tps * 100)} below threshold (${Math.round(tpsThreshold * 100)})`;
 
   let scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
 
