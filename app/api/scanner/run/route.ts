@@ -1,6 +1,6 @@
 import { computeTechnicalProxy, type TechnicalProxyResult } from '@/lib/scanner/technicalProxy';
 import { buildScannerScore, compareScannerScores, dollarVolume, scoreFreshness, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
-import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
+import type { ScannerScorePayload, ScorePermission, ScoreReason } from '@/lib/scanner/scoreContract';
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q as dbQuery } from "@/lib/db";
@@ -177,6 +177,10 @@ interface ScanResult {
   insight?: ScannerInsight;
   // MSP Composite v2 — cross-sectional, regime-conditional score (additive).
   compositeV2?: ScannerScorePayload;
+  /** Top-level copy of compositeV2.permission so API consumers never have to infer a block from the score. */
+  permission?: ScorePermission;
+  /** Machine-readable reasons behind a BLOCK (empty when PASS/WATCH). */
+  blockReasons?: ScoreReason[];
   timeframe: string;
   type: string;
   price?: number;
@@ -2472,7 +2476,8 @@ export async function POST(req: NextRequest) {
         fundingRate: (result as any).derivatives?.fundingRate,
         oiChange24h: (result as any).derivatives?.oiChangePercent,
       });
-      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring);
+      // SQ is the scanner composite itself, so its gate is skipped (it would block a row for the score it gates).
+      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring, { ignoreGates: ['SQ'] });
       const regimeConfResult = deriveRegimeConfidence({
         adx: adxValue,
         rsi: result.rsi,
@@ -2505,9 +2510,18 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      result.compositeV2 = buildScannerScore({...scoreInput, regimeGated: regimeScoreResult.gated || institutionalFilter.noTrade});
+      // Gate only on evidence that is independent of this row's score: the regime component gates (SQ excluded) and
+      // the institutional HARD blocks. `institutionalFilter.noTrade` also fires when baseScore × weights < 40, and
+      // baseScore is this row's score, so using it made the gate circular (low score → gated → ×0.4 → lower score).
+      const gateBlocks: ScoreReason[] = [
+        ...regimeScoreResult.gateViolations.map((v) => ({ code: 'REGIME_GATE' as const, message: `Regime ${unifiedRegime.scoring} gate: ${v}` })),
+        ...institutionalFilter.hardBlockReasons,
+      ];
+      result.compositeV2 = buildScannerScore({...scoreInput, gateBlocks});
       result.score = result.compositeV2.composite;
       result.confidence = result.score;
+      result.permission = result.compositeV2.permission;
+      result.blockReasons = result.compositeV2.blockReasons;
       result.rankWarnings = [...(result.rankWarnings ?? []), ...(result.compositeV2.blockers ?? [])];
       const spot = Number(result.price ?? Number.NaN);
       const liquidityContext = buildScannerLiquidityLevels(result.chartData?.candles as any, spot);

@@ -2190,9 +2190,12 @@ function applyInstitutionalFilterToTopPicks(
     const neutralSignals = Number(pick?.signals?.neutral || 0);
     const bullishSignals = Number(pick?.signals?.bullish || 0);
     const bearishSignals = Number(pick?.signals?.bearish || 0);
+    // Regime from market structure (ADX), never from this pick's own score (was `score >= 70 → trending`, which let
+    // the score decide the regime that then filtered the score).
+    const pickAdx = Number(pick?.indicators?.adx ?? Number.NaN);
     const regime = neutralSignals >= Math.max(bullishSignals, bearishSignals)
       ? 'ranging'
-      : (pick?.score ?? 0) >= 70
+      : Number.isFinite(pickAdx) && pickAdx >= 25
         ? 'trending'
         : 'unknown';
 
@@ -2266,8 +2269,10 @@ function applyInstitutionalFilterToTopPicks(
       enrichedConfidence = scoreV2.final.confidence;
     }
 
-    const final = scoreProSnapshot(pick, params.type, params.timeframe, universe,
-      institutionalFilter.noTrade || scoreV2.execution?.permission === 'blocked');
+    // Gate on institutional HARD blocks only. `noTrade` also fires on baseScore × weights < 40 and the legacy
+    // scoreV2.execution permission is a threshold on a second blend of the same indicators — both made the permission
+    // depend on the score being gated. They stay in the response (institutionalFilter / scoreV2) as diagnostics.
+    const final = scoreProSnapshot(pick, params.type, params.timeframe, universe, institutionalFilter.hardBlockReasons);
     const {dataTrust, compositeV2} = final;
     const matchConfidence = initial.compositeV2.composite;
     const confidence = compositeV2.composite;
@@ -2281,6 +2286,8 @@ function applyInstitutionalFilterToTopPicks(
       scoreV2,
       score: confidence,
       compositeV2,
+      permission: compositeV2.permission,
+      blockReasons: compositeV2.blockReasons,
       institutionalFilter,
       entry: enrichedEntry,
       stop: enrichedStop,

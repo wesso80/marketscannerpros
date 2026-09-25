@@ -131,9 +131,19 @@ function clamp(v: number, min = 0, max = 100): number {
  * Formula: Σ(weight_i × component_i) then apply gates + penalties
  * Trade Bias: <55 Neutral, 55-70 Conditional, 70-85 Valid, 85+ High Confluence
  */
+export interface RegimeScoreOptions {
+  /**
+   * Components whose gate must NOT be applied because the component is not independent evidence for this caller.
+   * The scanner passes ['SQ'] — its SQ component IS the scanner composite, so an SQ gate would block a setup for
+   * having the score it is gating (circular). The component still contributes to the weighted score.
+   */
+  ignoreGates?: Array<keyof ConfluenceComponents>;
+}
+
 export function computeRegimeScore(
   components: ConfluenceComponents,
-  regime: ScoringRegime
+  regime: ScoringRegime,
+  options: RegimeScoreOptions = {},
 ): RegimeScoringResult {
   const matrix = REGIME_MATRICES[regime];
   const weights = matrix.weights;
@@ -180,8 +190,10 @@ export function computeRegimeScore(
 
   // Check gates
   const gateViolations: string[] = [];
+  const ignored = new Set(options.ignoreGates ?? []);
   for (const [comp, minValue] of Object.entries(matrix.gates)) {
     const key = comp as keyof ConfluenceComponents;
+    if (ignored.has(key)) continue;
     if (clamped[key] < (minValue as number)) {
       gateViolations.push(`${key}=${clamped[key].toFixed(0)} < gate ${minValue}`);
     }

@@ -2,9 +2,10 @@
 import { deriveFactorSignals, type UniverseContext } from '@/lib/analysis/scannerFactorSignals';
 import type { ScoreRegime } from '@/lib/analysis/scannerScoreV2';
 import { evaluateDataTrust, type TrustAssetClass } from './dataTrust';
-import { buildScannerScore, dollarVolume, scoreFreshness } from './scoreContract';
+import { buildScannerScore, dollarVolume, scoreFreshness, type ScoreReason } from './scoreContract';
 
-export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: string, universe: UniverseContext = {}, gated = false) {
+/** `gated`: independent gate failures (preferred: reason list) — never pass a block derived from this pick's own score. */
+export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: string, universe: UniverseContext = {}, gated: boolean | ScoreReason[] = false) {
   const ind = pick.indicators ?? {};
   const basis = pick.dataBasis;
   const price = ind.price ?? pick.price;
@@ -33,6 +34,7 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     : Number.isFinite(ind.adx) && ind.adx < 20 ? 'ranging' : 'neutral';
   const compositeV2 = buildScannerScore({factors: signals.factors, regime, freshness: scoreFreshness(dataTrust.freshness),
     trustLevel: dataTrust.level, trustReasons: dataTrust.reasons, criticalBlockers: dataTrust.eligibilityBlockers,
-    liquidityMultiplier: signals.liquidityMultiplier, regimeGated: gated, catalyst: signals.catalyst});
+    liquidityMultiplier: signals.liquidityMultiplier, catalyst: signals.catalyst,
+    ...(Array.isArray(gated) ? {gateBlocks: gated} : {regimeGated: gated})});
   return {dataTrust, compositeV2};
 }
