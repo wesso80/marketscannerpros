@@ -54,12 +54,16 @@ describe('cross-page scoring audit regressions',()=>{
       for(const p of candidates){expect(p.contrib).toHaveLength(15);expect(Math.round(p.contrib.reduce((s,c)=>s+c.points,0))).toBe(p.scores.confidence);}
     }
   });
-  it('blocks a Pro snapshot with missing ATR even if its other indicators agree',()=>{
+  it('holds a Pro snapshot with missing ATR at WATCH (no risk geometry) without penalising its score',()=>{
     vi.useFakeTimers();vi.setSystemTime(new Date('2026-09-22T15:00:00Z'));
     const pick={indicators:{price:110,ema200:100,rsi:65,adx:30,macd:1,macdSignal:0,mfi:70,volume:1e6,squeeze:false,rsIndexRatio:1.1},dataBasis:{lastCompletedBarAt:'2026-09-21',barInterval:'1d',historyBars:250}};
     const score=scoreProSnapshot(pick,'equity','1d');
-    expect(score.compositeV2.direction).toBe('bullish');expect(score.compositeV2.permission).toBe('BLOCK');
-    expect(score.compositeV2.blockers).toContain('Required input missing: ATR.');
+    expect(score.compositeV2.direction).toBe('bullish');expect(score.compositeV2.permission).toBe('WATCH');
+    expect(score.compositeV2.blockReasons).toEqual([]);
+    expect(score.compositeV2.watchReasons.map(r=>r.code)).toContain('INSUFFICIENT_DATA');
+    expect(score.compositeV2.missingInputs).toContain('ATR');
+    const withAtr=scoreProSnapshot({...pick,indicators:{...pick.indicators,atr:2}},'equity','1d');
+    expect(score.compositeV2.composite).toBe(withAtr.compositeV2.composite);
   });
   it('rejects future data times and ages intraday bars within the same session',()=>{
     const nowMs=Date.parse('2026-09-22T19:00:00Z');

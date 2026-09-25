@@ -19,7 +19,7 @@ import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
 import { scannerTimeframe } from '@/lib/scanner/timeframes';
-import { summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
+import { cryptoPositioningExpected, summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
@@ -181,6 +181,12 @@ interface ScanResult {
   permission?: ScorePermission;
   /** Machine-readable reasons behind a BLOCK (empty when PASS/WATCH). */
   blockReasons?: ScoreReason[];
+  /** Machine-readable reasons behind a WATCH (e.g. INSUFFICIENT_DATA when coverage < COVERAGE_MIN). */
+  watchReasons?: ScoreReason[];
+  /** Share (0–1) of this asset's applicable factor weight actually observed. Missing factors count as neutral. */
+  coverage?: number;
+  /** Applicable factor groups with no data on this row (counted as neutral votes, never double-penalised). */
+  missingFactors?: string[];
   timeframe: string;
   type: string;
   price?: number;
@@ -2428,7 +2434,7 @@ export async function POST(req: NextRequest) {
         relativeVolume: result.liquidity?.volumeRatio ?? undefined,
         rsIndexRatio: result.enhancements?.relativeStrength?.benchmarkMissing ? undefined : result.enhancements?.relativeStrength?.rs ?? undefined,
         bbwp: result.dveBbwp, dveFlags: result.dveFlags,
-        fundingRate: result.derivatives?.fundingRate, derivativesExpected: type === 'crypto',
+        fundingRate: result.derivatives?.fundingRate, derivativesExpected: cryptoPositioningExpected(type, result.derivatives?.fundingRate),
         earningsInDays: type === 'equity' ? daysUntilEarnings(earningsMap.get(result.symbol.toUpperCase())) : undefined,
         dollarVolume: dollarVolume(result.price, result.avgVolume, type),
       }, {rsIndexRatios, dollarVolumes});
@@ -2452,6 +2458,7 @@ export async function POST(req: NextRequest) {
         factors: signals.factors, regime: resolveScoreRegime(unifiedRegime.scoring, unifiedRegime.institutional),
         freshness: scoreFreshness(result.dataTrust?.freshness), liquidityMultiplier: signals.liquidityMultiplier,
         trustLevel: result.dataTrust?.level, trustReasons: result.dataTrust?.reasons, criticalBlockers: result.dataTrust?.eligibilityBlockers, catalyst: signals.catalyst,
+        trustQualityIssues: result.dataTrust?.qualityIssues, missingInputs: result.dataTrust?.missingInputs,
       };
       result.compositeV2 = buildScannerScore(scoreInput);
       synchronizeScannerScenario(result, result.compositeV2.direction);
@@ -2523,6 +2530,9 @@ export async function POST(req: NextRequest) {
       result.confidence = result.score;
       result.permission = result.compositeV2.permission;
       result.blockReasons = result.compositeV2.blockReasons;
+      result.watchReasons = result.compositeV2.watchReasons;
+      result.coverage = result.compositeV2.coverage;
+      result.missingFactors = result.compositeV2.missingFactors;
       result.rankWarnings = [...(result.rankWarnings ?? []), ...(result.compositeV2.blockers ?? [])];
       const spot = Number(result.price ?? Number.NaN);
       const liquidityContext = buildScannerLiquidityLevels(result.chartData?.candles as any, spot);
