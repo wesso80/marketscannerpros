@@ -20,6 +20,8 @@ import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
+import { PageHero } from '@/components/ui';
 import {
   buildPortfolioSyncPayload,
   gateAfterDelete,
@@ -32,8 +34,6 @@ import {
   type PortfolioSyncPayload,
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
-import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
-import { PageHero } from '@/components/ui';
 
 interface Position {
   id: number;
