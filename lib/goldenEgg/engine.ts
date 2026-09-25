@@ -382,11 +382,12 @@ function buildPayload(
   });
   const riskScore = riskQ.score;
 
-  // ── Weighted confluence (fixed applicable denominator; missing components contribute zero) ───────
+  // ── Weighted confluence (applicable weights renormalised; missing-but-applicable = neutral 50, flagged) ───
   const components = [
     { key: 'Structure', weight: 0.30, value: structureScore, present: ind != null },
-    // Absolute crypto OI is context; no directional flow score without a comparable supported contract.
-    { key: 'Flow', weight: 0.25, value: flowScore, present: assetClass !== 'crypto' && (opts != null || mpe != null), applicable: assetClass !== 'forex' },
+    // Crypto/forex have no comparable options-flow contract, so Flow is structurally NOT APPLICABLE there and its
+    // 25% is redistributed (was: applicable-but-absent for crypto → 0 points → crypto capped at 75/100).
+    { key: 'Flow', weight: 0.25, value: flowScore, present: opts != null || mpe != null, applicable: assetClass === 'equity' },
     { key: 'Momentum', weight: 0.20, value: momentumScore, present: ind != null },
     { key: 'Risk', weight: 0.25, value: riskScore, present: ind != null },
   ];
@@ -405,14 +406,17 @@ function buildPayload(
   if (confidence >= 70 && direction !== 'NEUTRAL' && (trust.level === 'GOOD' || trust.level === 'DEGRADED')) permission = 'TRADE';
   else if (confidence < 40 || trust.level === 'INSUFFICIENT_DATA' || trust.level === 'STALE') permission = 'NO_TRADE';
   if (permission === 'TRADE' && timeConfluenceHardConflict) permission = 'WATCH';
-  if (macroRegime?.riskState === 'risk_off' && direction === 'LONG' && permission === 'TRADE') permission = 'WATCH';
+  // Macro regime rule is mirror-symmetric: it only demotes a setup that fights the macro tape (RISK_OFF long or
+  // RISK_ON short). Previously only longs were ever demoted, so RISK_OFF silently favoured shorts.
+  const macroOpposes = (macroRegime?.riskState === 'risk_off' && direction === 'LONG') || (macroRegime?.riskState === 'risk_on' && direction === 'SHORT');
+  if (macroOpposes && permission === 'TRADE') permission = 'WATCH';
 
   // ── Driver / blocker (Risk is never a driver) ───────────────────────────────────────────────────────
   const drivers = [
     { key: 'Structure', val: structureScore },
     { key: 'Flow', val: flowScore },
     { key: 'Momentum', val: momentumScore },
-  ].filter(d => components.some(c => c.key === d.key && c.present)).sort((a, b) => b.val - a.val);
+  ].filter(d => components.some(c => c.key === d.key && c.present && c.applicable !== false)).sort((a, b) => b.val - a.val);
   if (!drivers.length) drivers.push({key: 'Evidence unavailable', val: 0});
   const primaryDriver = `${drivers[0].key} leads at ${drivers[0].val.toFixed(0)}/100 — ${describeScore(drivers[0].key, drivers[0].val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   const weakest = drivers[drivers.length - 1];
@@ -422,7 +426,7 @@ function buildPayload(
   else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100 — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   else if (riskScore < 50) primaryBlocker = `Risk conditions ${riskScore}/100 — ${riskQ.reasons[0]}`;
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
-  else if (macroRegime?.riskState === 'risk_off' && direction === 'LONG') primaryBlocker = `Macro regime RISK_OFF (${macroRegime.concerns.join(', ')})`;
+  else if (macroOpposes) primaryBlocker = macroRegime!.riskState === 'risk_off' ? `Macro regime RISK_OFF (${macroRegime!.concerns.join(', ')})` : 'Macro regime RISK_ON opposes the short scenario';
 
   if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
 
@@ -431,7 +435,7 @@ function buildPayload(
   if (permission !== 'TRADE') {
     if (trust.level !== 'GOOD') flipConditions.push({ id: 'f8', text: `Data trust is ${trust.level.toLowerCase().replace('_', ' ')} (${trust.reasons.join('; ')}) — inputs need to be clean before the packet can be relied on`, severity: 'must' });
     if (timeConfluenceHardConflict) flipConditions.push({ id: 'f6', text: `Time confluence is ${timing.effectiveDirection} while the setup is ${direction.toLowerCase()} — wait for timing to agree or for the conflict to clear`, severity: 'must' });
-    if (macroRegime?.riskState === 'risk_off' && direction === 'LONG') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
+    if (macroOpposes) flipConditions.push({ id: 'f5', text: macroRegime!.riskState === 'risk_off' ? `Macro regime is RISK_OFF (${macroRegime!.concerns.join(', ')}) — wait for macro environment to improve` : 'Macro regime is RISK_ON — a short needs the macro tape to turn before it can align', severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options positioning needs to confirm direction (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry})`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
@@ -705,12 +709,12 @@ function buildPayload(
       primaryDriver,
       primaryBlocker,
       flipConditions,
-      scoreCalculation: {version: scoreCalculation.version, coverage: scoreCalculation.coverage, rawTotal: scoreCalculation.rawTotal,
+      scoreCalculation: {version: scoreCalculation.version, coverage: scoreCalculation.coverage, rawTotal: scoreCalculation.rawTotal, missingComponents: scoreCalculation.missingComponents,
         trustCap: scoreCalculation.trustCap, capAdjustment: scoreCalculation.capAdjustment, finalScore: confidence},
       scoreBreakdown: scoreCalculation.rows.map(c => ({
-        key: c.key, weight: c.weight * 100, value: Math.round(c.value), available: c.available,
-        applicable: c.applicable !== false, effectiveWeight: c.effectiveWeight * 100, points: c.points,
-        note: !c.available ? (c.applicable === false ? 'Not applicable to this asset' : c.key === 'Flow' && optsIn ? 'Options chain unusable; excluded' : 'Evidence unavailable; excluded')
+        key: c.key, weight: c.weight * 100, value: Math.round(c.available ? c.value : 50), available: c.available,
+        applicable: c.applicable !== false, imputedNeutral: c.imputedNeutral, effectiveWeight: c.appliedWeight * 100, points: c.points,
+        note: !c.available ? (c.applicable === false ? 'Not applicable to this asset; weight redistributed' : c.key === 'Flow' && optsIn ? 'Options chain unusable; counted as neutral 50' : 'Evidence unavailable; counted as neutral 50')
           : c.key === 'Structure' ? `${direction} structure alignment`
           : c.key === 'Momentum' ? `${direction} momentum alignment; ${rsi.label}`
           : c.key === 'Risk' ? `Risk quality — ${riskQ.reasons[0]}`

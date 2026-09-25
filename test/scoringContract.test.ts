@@ -48,7 +48,8 @@ describe('scoring audit regression contracts',()=>{
  });
  it('exposes the exact FIVN missing-flow arithmetic',()=>{
   const c=computeConfluenceScore([{key:'Structure',weight:.3,value:85,present:true},{key:'Flow',weight:.25,value:50,present:false},{key:'Momentum',weight:.2,value:85,present:true},{key:'Risk',weight:.25,value:57,present:true}],80);
-  expect(c.rawTotal).toBe(56.75);expect(c.finalScore).toBe(57);expect(c.coverage).toBe(.75);expect(c.rows[1].points).toBe(0);expect(c.rows[1].available).toBe(false);
+  // Missing-but-applicable Flow counts as a flagged neutral 50 (was 0 = double penalty with the trust cap).
+  expect(c.rawTotal).toBeCloseTo(69.25,10);expect(c.finalScore).toBe(69);expect(c.coverage).toBe(.75);expect(c.rows[1].points).toBe(12.5);expect(c.rows[1].available).toBe(false);expect(c.rows[1].imputedNeutral).toBe(true);expect(c.missingComponents).toEqual(['Flow']);
  });
  it('scales weekly ATR to the same daily-equivalent risk bucket',()=>{
   const r={barsPerDay:.2,atrPct:8,rsi:50,stochK:50,exhaustionRisk:0,trapDetected:false,advUsd:1e8,dataTrustLevel:'GOOD' as const,fundingRatePercent:null,eventWithinDays:null,stopDistanceAtr:1.5,assetClass:'equity' as const};

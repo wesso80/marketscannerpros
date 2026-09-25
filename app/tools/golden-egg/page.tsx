@@ -1019,7 +1019,7 @@ export default function GoldenEggPage() {
                     <div key={sb.key} className="bg-[var(--msp-panel-2)] rounded-lg p-2">
                       <div className="text-[11px] text-slate-500">{sb.key} (w:{sb.weight})</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{sb.available === false ? 'Unavailable' : sb.value.toFixed(1)}</span>
+                        <span className="text-sm font-bold text-white">{sb.available === false ? (sb.imputedNeutral ? 'Missing (50)' : 'N/A') : sb.value.toFixed(1)}</span>
                         {sb.available !== false && <ScoreBar value={Math.min(sb.value, 100)} color="#10B981" />}
                       </div>
                       {sb.points != null && <div className="text-[11px] text-slate-400">{sb.points.toFixed(2)} points · {(sb.effectiveWeight ?? sb.weight).toFixed(0)}% effective weight</div>}

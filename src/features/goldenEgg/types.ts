@@ -168,8 +168,8 @@ export interface GoldenEggPayload {
     primaryDriver: string;
     primaryBlocker?: string;
     flipConditions: Array<{ id: string; text: string; severity: 'must' | 'should' | 'nice' }>;
-    scoreBreakdown: Array<{ key: string; weight: number; value: number; note?: string; available?: boolean; applicable?: boolean; effectiveWeight?: number; points?: number }>;
-    scoreCalculation?: {version: string; coverage: number; rawTotal: number; trustCap: number; capAdjustment: number; finalScore: number};
+    scoreBreakdown: Array<{ key: string; weight: number; value: number; note?: string; available?: boolean; applicable?: boolean; imputedNeutral?: boolean; effectiveWeight?: number; points?: number }>;
+    scoreCalculation?: {version: string; coverage: number; rawTotal: number; missingComponents?: string[]; trustCap: number; capAdjustment: number; finalScore: number};
     cta: { primary: 'OPEN_SCANNER' | 'SET_ALERT' | 'ADD_WATCHLIST'; secondary?: 'OPEN_OPTIONS' | 'OPEN_TIME' };
   };
   layer2: {
