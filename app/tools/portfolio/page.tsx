@@ -19,6 +19,8 @@ import { detectAssetClass } from '@/lib/detectAssetClass';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
+import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
 import { PageHero } from '@/components/ui';
 
 interface Position {
@@ -26,6 +28,10 @@ interface Position {
   journalEntryId?: number;
   tradeType?: string;
   assetClass?: string;
+  /** Recorded option contract (from the linked journal entry); prices are premium per share. */
+  optionType?: string;
+  strikePrice?: number;
+  expirationDate?: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
   quantity: number;
@@ -607,7 +613,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   useEffect(() => {
     if (positions.length > 0 || closedPositions.length > 0) {
-      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
       const totalPL = positions.reduce((sum, p) => sum + p.pl, 0);
       const topPositions = [...positions]
         .sort((a, b) => Math.abs(b.pl) - Math.abs(a.pl))
@@ -720,6 +726,19 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     return tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=${type}&market=USD`);
   }
 
+  // Option positions: mark the recorded contract itself (EOD unless premium realtime); never the underlying.
+  async function fetchOptionMark(contract: NonNullable<ReturnType<typeof positionOptionContract>>): Promise<number | null> {
+    try {
+      const r = await fetch(optionQuoteUrl(contract), { cache: 'no-store' });
+      if (!r.ok) return null;
+      const j = await r.json();
+      if (j?.ok && typeof j.price === 'number' && Number.isFinite(j.price) && j.price > 0 && isOptionMarkCurrent(j.asOfDate)) return j.price as number;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   // Track if data has been loaded from server
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -730,9 +749,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   function emitTradeUpdatedEvent(position: Position, newPrice: number, source: 'manual' | 'auto' = 'manual') {
     const pl = position.side === 'LONG'
-      ? (newPrice - position.entryPrice) * position.quantity
-      : (position.entryPrice - newPrice) * position.quantity;
-    const plPercent = ((pl / (position.entryPrice * position.quantity)) * 100);
+      ? (newPrice - position.entryPrice) * positionUnits(position)
+      : (position.entryPrice - newPrice) * positionUnits(position);
+    const plPercent = ((pl / (position.entryPrice * positionUnits(position))) * 100);
     const parentEventId = tradeExecutionEventMapRef.current[position.id] || null;
 
     const tradeUpdatedEvent = createWorkflowEvent<TradePayload>({
@@ -781,7 +800,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       const batch = positionsToUpdate.slice(i, i + BATCH_SIZE);
       const results = await Promise.all(
         batch.map(async (position) => {
-          const fetched = position.tradeType === 'Options' || position.tradeType === 'Futures' || position.strategy === 'options' ? null : await fetchAutoPrice(position.symbol);
+          const contract = positionOptionContract(position);
+          const fetched = contract
+            ? await fetchOptionMark(contract)
+            : position.tradeType === 'Options' || position.tradeType === 'Futures' || position.strategy === 'options' ? null : await fetchAutoPrice(position.symbol);
           return { id: position.id, price: fetched };
         })
       );
@@ -804,9 +826,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         const update = updates.find(u => u.id === p.id);
         if (update) {
           const pl = p.side === 'LONG' 
-            ? (update.price - p.entryPrice) * p.quantity 
-            : (p.entryPrice - update.price) * p.quantity;
-          const denom = p.entryPrice * p.quantity;
+            ? (update.price - p.entryPrice) * positionUnits(p) 
+            : (p.entryPrice - update.price) * positionUnits(p);
+          const denom = p.entryPrice * positionUnits(p);
           const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
           return { ...p, currentPrice: update.price, pl, plPercent };
         }
@@ -984,13 +1006,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   useEffect(() => {
     if (!dataLoaded) return;
     if (positions.length > 0 || closedPositions.length > 0) {
-      const positionMarketValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+      const positionMarketValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
       const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
       const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
       const totalPL = unrealizedPL + realizedPL;
       const startingCapitalForSnapshot = Number(startingCapitalInput || 0);
       const netDepositsForSnapshot = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
-      const investedNotionalForSnapshot = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
+      const investedNotionalForSnapshot = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
       const cashForSnapshot = startingCapitalForSnapshot + netDepositsForSnapshot + realizedPL - investedNotionalForSnapshot;
       const totalValue = cashForSnapshot + positionMarketValue;
 
@@ -1173,7 +1195,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     const entered = window.prompt('Record a full paper close. Enter the actual close price (before fees):', String(position.currentPrice));
     if (entered == null || entered.trim() === '') return;
     let closedPos: ClosedPosition;
-    try { closedPos = splitPosition(position, 1, Number(entered), new Date().toISOString(), Date.now()).closed; }
+    try { closedPos = splitPosition(position, 1, Number(entered), new Date().toISOString(), Date.now(), positionMultiplier(position)).closed; }
     catch { setSyncError('Enter a valid non-negative close price.'); return; }
 
     const parentEventId = tradeExecutionEventMapRef.current[id] || null;
@@ -1225,9 +1247,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     setPositions(prev => prev.map(p => {
       if (p.id === id) {
         const pl = p.side === 'LONG' 
-          ? (newPrice - p.entryPrice) * p.quantity 
-          : (p.entryPrice - newPrice) * p.quantity;
-        const denom = p.entryPrice * p.quantity;
+          ? (newPrice - p.entryPrice) * positionUnits(p) 
+          : (p.entryPrice - newPrice) * positionUnits(p);
+        const denom = p.entryPrice * positionUnits(p);
         const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
         
         return {
@@ -1248,7 +1270,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     const entered = window.prompt('Record a paper close for 50% of the quantity. Enter the actual close price (before fees):', String(position.currentPrice));
     if (entered == null || entered.trim() === '') return;
     try {
-      const result = splitPosition(position, 0.5, Number(entered), new Date().toISOString(), Date.now());
+      const result = splitPosition(position, 0.5, Number(entered), new Date().toISOString(), Date.now(), positionMultiplier(position));
       setPositions(prev => prev.map(p => p.id === id ? result.remaining! : p));
       setClosedPositions(prev => [...prev, result.closed]);
     } catch { setSyncError('Enter a valid non-negative close price.'); }
@@ -1425,14 +1447,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   };
 
   // Calculate metrics
-  const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
-  const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
+  const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
+  const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
   const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
   const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
   const totalPL = unrealizedPL + realizedPL;
   const startingCapital = Number(startingCapitalInput || 0);
   const netDeposits = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
-  const investedNotional = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
+  const investedNotional = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
   const accountCash = startingCapital + netDeposits + realizedPL - investedNotional;
   const accountEquity = accountCash + totalValue;
   const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
@@ -1441,8 +1463,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Allocation data for visualization
   const allocationData = positions.map(p => ({
     symbol: p.symbol,
-    value: p.currentPrice * p.quantity,
-    percentage: totalValue > 0 ? ((p.currentPrice * p.quantity) / totalValue * 100) : 0
+    value: p.currentPrice * positionUnits(p),
+    percentage: totalValue > 0 ? ((p.currentPrice * positionUnits(p)) / totalValue * 100) : 0
   })).sort((a, b) => b.value - a.value);
 
   const topAllocation = allocationData[0];
@@ -1509,14 +1531,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Color palette for pie chart
   const colors = ['var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-bear)', 'var(--msp-accent)', '#f97316', 'var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-bull)', 'var(--msp-bear)'];
 
-  const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
-  const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+  const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
+  const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
   const grossExposureValue = longExposureValue + shortExposureValue;
   const capitalBase = accountEquity > 0 ? accountEquity : Math.max(totalValue, 1000);
   const deploymentPct = capitalBase > 0 ? (grossExposureValue / capitalBase) * 100 : 0;
   const availableCash = accountCash;
   const largestPositionPct = totalValue > 0
-    ? Math.max(...positions.map((p) => ((p.currentPrice * p.quantity) / totalValue) * 100), 0)
+    ? Math.max(...positions.map((p) => ((p.currentPrice * positionUnits(p)) / totalValue) * 100), 0)
     : 0;
 
   const classifySector = (symbol: string) => {
@@ -1531,7 +1553,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   const sectorExposure = positions.reduce((acc, position) => {
     const sector = classifySector(position.symbol);
-    const value = position.currentPrice * position.quantity;
+    const value = position.currentPrice * positionUnits(position);
     acc[sector] = (acc[sector] || 0) + value;
     return acc;
   }, {} as Record<string, number>);
@@ -1612,13 +1634,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   const riskContributors = [...positions]
     .map((position) => {
-      const value = position.currentPrice * position.quantity;
+      const value = position.currentPrice * positionUnits(position);
       const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
       const stopPrice = positionStopMap[position.id];
       const riskPerUnit = stopPrice == null ? null : position.side === 'LONG'
         ? Math.max(0, position.currentPrice - stopPrice)
         : Math.max(0, stopPrice - position.currentPrice);
-      const dollarRisk = riskPerUnit == null ? null : riskPerUnit * position.quantity;
+      const dollarRisk = riskPerUnit == null ? null : riskPerUnit * positionUnits(position);
       return {
         ...position,
         concentrationPct,
@@ -1648,21 +1670,21 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   const avgR = closedPositions.length > 0
     ? closedPositions.reduce((sum, trade) => {
-        const notional = trade.entryPrice * trade.quantity;
+        const notional = trade.entryPrice * positionUnits(trade);
         const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
         return sum + (trade.realizedPL / Math.max(1, riskUnit));
       }, 0) / closedPositions.length
     : 0;
   const bestR = closedPositions.length > 0
     ? Math.max(...closedPositions.map((trade) => {
-        const notional = trade.entryPrice * trade.quantity;
+        const notional = trade.entryPrice * positionUnits(trade);
         const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
         return trade.realizedPL / Math.max(1, riskUnit);
       }))
     : 0;
   const worstR = closedPositions.length > 0
     ? Math.min(...closedPositions.map((trade) => {
-        const notional = trade.entryPrice * trade.quantity;
+        const notional = trade.entryPrice * positionUnits(trade);
         const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
         return trade.realizedPL / Math.max(1, riskUnit);
       }))
@@ -2160,7 +2182,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       {positions.map((position) => (
                         <div key={position.id} className="flex justify-between">
                           <span>{position.symbol}</span>
-                          <span className="font-bold text-slate-200">{formatMoney(position.currentPrice * position.quantity)}</span>
+                          <span className="font-bold text-slate-200">{formatMoney(position.currentPrice * positionUnits(position))}</span>
                         </div>
                       ))}
                       {riskContributors.length === 0 && <div className="text-slate-500">No contributors yet</div>}
@@ -2495,7 +2517,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </thead>
                   <tbody>
                     {positions.map((position) => {
-                      const notional = position.currentPrice * position.quantity;
+                      const notional = position.currentPrice * positionUnits(position);
                       const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
                       const stop = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
                       const initialRiskUnit = Math.abs(position.entryPrice - stop);
@@ -2642,7 +2664,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </thead>
                   <tbody>
                     {closedPositions.map((trade) => {
-                      const notional = trade.entryPrice * trade.quantity;
+                      const notional = trade.entryPrice * positionUnits(trade);
                       const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
                       const r = trade.realizedPL / Math.max(1, riskUnit);
                       const holdDays = Math.max(0, Math.round((new Date(trade.closeDate).getTime() - new Date(trade.entryDate).getTime()) / 86_400_000));

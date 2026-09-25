@@ -5,6 +5,8 @@ import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 
 import { computePortfolioRisk, type ExternalFlow } from '@/lib/portfolio/riskAnalytics';
+import { positionUnits } from '@/lib/portfolio/positionValue';
+import { normalizeExpiration } from '@/lib/options/contractQuote';
 
 interface Position {
   id: number;
@@ -68,7 +70,7 @@ export async function GET(req: NextRequest) {
     // Fetch open positions
     const positionsRaw = await q(
       `SELECT p.id, p.symbol, p.side, p.quantity, p.entry_price, p.current_price, p.entry_date, p.journal_entry_id,
-              j.trade_type, j.asset_class
+              j.trade_type, j.asset_class, j.option_type, j.strike_price, j.expiration_date
        FROM portfolio_positions p
        LEFT JOIN journal_entries j ON j.id = p.journal_entry_id AND j.workspace_id = p.workspace_id
        WHERE p.workspace_id = $1
@@ -106,9 +108,11 @@ export async function GET(req: NextRequest) {
       const qty = parseFloat(p.quantity);
       const entry = parseFloat(p.entry_price);
       const current = parseFloat(p.current_price);
+      // Option prices are premium per share: value/P&L use the contract multiplier.
+      const units = positionUnits({ quantity: qty, tradeType: p.trade_type || undefined });
       const pl = p.side === 'LONG' 
-        ? (current - entry) * qty 
-        : (entry - current) * qty;
+        ? (current - entry) * units 
+        : (entry - current) * units;
       const plPercent = ((current - entry) / entry) * 100 * (p.side === 'LONG' ? 1 : -1);
 
       return {
@@ -124,6 +128,11 @@ export async function GET(req: NextRequest) {
         journalEntryId: p.journal_entry_id || undefined,
         tradeType: p.trade_type || undefined,
         assetClass: p.asset_class || undefined,
+        ...(p.trade_type === 'Options' ? {
+          optionType: p.option_type || undefined,
+          strikePrice: p.strike_price != null ? parseFloat(p.strike_price) : undefined,
+          expirationDate: normalizeExpiration(p.expiration_date) ?? undefined,
+        } : {}),
       };
     });
 
