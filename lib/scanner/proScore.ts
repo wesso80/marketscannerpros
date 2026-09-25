@@ -42,6 +42,10 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     : atrPct !== undefined && atrPct > 4 ? 'expansion' : atrPct !== undefined && atrPct < 1 ? 'compression'
     : Number.isFinite(ind.adx) && ind.adx < 20 ? 'ranging' : 'neutral';
   const dv = dollarVolume(price, ind.volume, asset);
+  // Equity liquidity = price × 20-session average daily volume (completed sessions) when the scan supplies it. The live
+  // quote volume is only the session so far — mid-morning it is a fraction of a normal day and wrongly failed liquid
+  // stocks — so it is used only when no average is available.
+  const adv = asset === 'equity' ? dollarVolume(price, basis?.avgDailyVolume20, asset) : undefined;
   const volume24h = Number(pick.marketSnapshot?.volume24hUsd);
   const hard = evaluateHardBlocks({
     asset, timeframe, freshness: dataTrust.freshness, lastBarAt: basis?.lastCompletedBarAt ?? null,
@@ -49,7 +53,8 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     atrPct: atrPct ?? null,
     earningsDate: asset === 'equity' ? hardCtx.earningsMap?.get(String(pick.symbol ?? '').toUpperCase()) ?? null : null,
     earningsCalendarLoaded: Boolean(hardCtx.earningsMap && hardCtx.earningsMap.size > 0),
-    dollarVolumeDaily: asset === 'crypto' && Number.isFinite(volume24h) && volume24h > 0 ? volume24h : dv != null ? dv * barsPerDay(timeframe, asset) : null,
+    dollarVolumeDaily: asset === 'crypto' && Number.isFinite(volume24h) && volume24h > 0 ? volume24h
+      : adv != null ? adv : dv != null ? dv * barsPerDay(timeframe, asset) : null,
     nowMs: hardCtx.nowMs,
   }, hardCtx.macroFlags ?? macroEventFlags(hardCtx.nowMs));
   const compositeV2 = buildScannerScore({factors: signals.factors, regime, hardBlocks: hard.blocks, flags: hard.flags, freshness: scoreFreshness(dataTrust.freshness),

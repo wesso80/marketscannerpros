@@ -72,6 +72,6 @@ describe('canonical no-setup rows on the scanner', () => {
     expect(rows.map((r) => r.symbol)).toEqual(['SET', 'FLAT', 'NS1', 'NS2', 'HB']);
     const sel = selectProCandidates(rows, parseProFilters({ minAlignment: 2 }));
     expect(sel.topPicks.map((r) => r.symbol)).toEqual(['SET', 'NS1', 'NS2']);
-    expect(sel.selection.exclusions).toEqual({ 'Factor agreement': 1, 'Blocked (data, earnings or liquidity)': 1 });
+    expect(sel.selection.exclusions).toEqual({ 'Factor agreement': 1, 'Blocked: stale data': 1 });
   });
 });

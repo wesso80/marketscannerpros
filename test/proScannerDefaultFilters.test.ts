@@ -135,7 +135,7 @@ describe('Pro Scanner returns candidates at default filters', () => {
     });
     const data = await post({ type: 'crypto', mode: 'deep' });
     expect(data.topPicks).toEqual([]);
-    expect(data.selection.exclusions).toEqual({ 'Blocked (data, earnings or liquidity)': 4 });
+    expect(data.selection.exclusions).toEqual({ 'Blocked: liquidity': 4 });
   });
 
   it('forex (bar time attached, so rows are no longer "data unreliable")', async () => {

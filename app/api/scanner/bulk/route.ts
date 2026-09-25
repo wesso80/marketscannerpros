@@ -43,6 +43,7 @@ import { atrResearchLevels } from '@/lib/scanner/atrResearchLevels';
 import { parseProFilters, selectProCandidates, type ProScanFilters, type ProScanSort } from '@/lib/scanner/proSelection';
 import { isRetiredFastCryptoRequest, resolveBulkScanMode, type BulkScanMode } from '@/lib/scanner/proScanMode';
 import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
+import { cachedMoversToAdd, completedSessionAvgVolume, parseEquityQuote } from '@/lib/scanner/equityScanInputs';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -1249,11 +1250,6 @@ function enrichCryptoPickFromAV(pick: any, avInd: Partial<Indicators>): any {
   };
 }
 
-function parseAlphaNumber(value: unknown): number {
-  const parsed = Number(String(value ?? '').replace(/,/g, '').replace('%', ''));
-  return Number.isFinite(parsed) ? parsed : Number.NaN;
-}
-
 function normalizeTicker(value: unknown): string {
   return String(value ?? '').trim().toUpperCase();
 }
@@ -1379,11 +1375,8 @@ function scoreLightEquityCandidate(
   signals: { bullish: number; bearish: number; neutral: number };
   indicators: { price: number; volume?: number };
 } | null {
-  const price = parseAlphaNumber(quote?.['05. price'] || quote?.price);
-  const open = parseAlphaNumber(quote?.['02. open'] || quote?.open);
-  const prevClose = parseAlphaNumber(quote?.['08. previous close'] || quote?.['previous_close']);
-  const dayChangePercent = parseAlphaNumber(quote?.['10. change percent'] || quote?.['change_percent']);
-  const volume = parseAlphaNumber(quote?.['06. volume'] || quote?.volume);
+  // REALTIME_BULK_QUOTES rows carry close / previous_close / change_percent; GLOBAL_QUOTE rows carry '05. price' etc.
+  const { price, open, prevClose, changePct: dayChangePercent, volume } = parseEquityQuote(quote);
 
   if (!Number.isFinite(price) || price <= 0) return null;
 
@@ -1419,8 +1412,10 @@ function scoreLightEquityCandidate(
   else if (momentumChange <= bearishThreshold) bearish += 1;
   else neutral += 1;
 
-  if (Number.isFinite(volume) && volume > 2_000_000) bullish += 1;
-  else if (Number.isFinite(volume) && volume < 300_000) bearish += 1;
+  // Heavy volume confirms the momentum side (either way); it is not a bullish vote on its own.
+  const heavyVolume = Number.isFinite(volume) && volume > 2_000_000;
+  if (heavyVolume && momentumChange >= bullishThreshold) bullish += 1;
+  else if (heavyVolume && momentumChange <= bearishThreshold) bearish += 1;
   else neutral += 1;
 
   if (moverBias > 0) bullish += 1;
@@ -1590,10 +1585,23 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     if (ticker && !moverBiasMap.has(ticker)) moverBiasMap.set(ticker, 0.4);
   }
 
-  // Movers can fill a short universe without exceeding the requested or tier cap.
-  for (const ticker of moverBiasMap.keys()) {
-    if (symbolsToScan.length >= universeSize) break;
-    if (!symbolsToScan.includes(ticker)) symbolsToScan.push(ticker);
+  // Movers can fill a short universe without exceeding the requested or tier cap — but only movers the worker cache
+  // already has a full row for. Uncached movers (mostly penny stocks / warrants outside the universe) have no indicators
+  // or bar history: they used to be appended here and then silently dropped, inflating noCachedRow. They still feed the
+  // bias map above.
+  const room = Math.max(0, universeSize - symbolsToScan.length);
+  const scanning = new Set(symbolsToScan);
+  const moverCandidates = Array.from(moverBiasMap.keys()).filter((t) => !scanning.has(t));
+  if (room > 0 && moverCandidates.length > 0) {
+    try {
+      const moverCache = await getBulkCachedScanDataFast(moverCandidates);
+      for (const ticker of cachedMoversToAdd(moverCandidates, scanning, moverCache, room)) {
+        symbolsToScan.push(ticker);
+        cacheMap.set(ticker, moverCache.get(ticker)!);
+      }
+    } catch (moverErr) {
+      console.warn('[bulk-scan/cached] mover cache lookup failed (non-fatal):', (moverErr as any)?.message);
+    }
   }
 
   // If cache didn't have enough data, fall back to light scan
@@ -1604,7 +1612,9 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
 
   // EMA200 + volume history from the worker bar store in ONE query (the indicators_latest row stores EMA200 = null).
   // Never 0 for a missing EMA200: symbols with < 200 bars keep NaN and are labelled DEGRADED downstream.
-  const barStats = new Map<string, { ema200: number; bars: number; lastBar: string; avgVol: number | null; lastVol: number | null; discontinuity: { date: string | null; ratio: number } | null }>();
+  // avgDailyVol20 = average over the last 20 COMPLETED sessions (today's unfinished bar excluded) — the liquidity basis.
+  const barStats = new Map<string, { ema200: number; bars: number; lastBar: string; avgVol: number | null; avgDailyVol20: number | null; lastVol: number | null; discontinuity: { date: string | null; ratio: number } | null }>();
+  const statsNowMs = Date.now();
   try {
     const cachedSymbols = Array.from(cacheMap.keys());
     const rows = await dbQuery<{ symbol: string; ts: string; close: string; volume: string | null }>(
@@ -1627,6 +1637,7 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
         bars: closes.length,
         lastBar: arr[arr.length - 1].ts.slice(0, 10),
         avgVol: vols.length >= 5 ? vols.reduce((s, v) => s + v, 0) / vols.length : null,
+        avgDailyVol20: completedSessionAvgVolume(arr, statsNowMs, 20),
         lastVol: arr[arr.length - 1].volume,
         discontinuity: disc ? { date: disc.date, ratio: disc.ratio } : null,
       });
@@ -1652,23 +1663,17 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
       historyBars: stats?.bars ?? null,
       volumeBasis: stats?.avgVol ? `exchange_volume_${Math.min(20, stats.bars)}_bars` : cached.volume ? 'session_volume_only' : 'unavailable',
       volumeRatio: stats?.avgVol && cached.volume ? Math.round((cached.volume / stats.avgVol) * 100) / 100 : null,
+      // Liquidity minimum reads price × this (lib/scanner/proScore), never today's partial session volume.
+      avgDailyVolume20: stats?.avgDailyVol20 ?? null,
       source: 'ohlcv_bars + quotes_latest + indicators_latest',
       priceDiscontinuity: stats?.discontinuity ?? null,
     };
     scored.push({ ...result, symbol, change24h, dataBasis });
   }
 
-  // Also score movers that weren't in cache using bulk quotes fallback
-  let apiCallsUsed = moverData.apiCallsUsed;
-  const uncachedMovers = Array.from(moverBiasMap.keys()).filter(t => symbolsToScan.includes(t) && !cacheMap.has(t));
-  if (uncachedMovers.length > 0) {
-    const quoteResult = await fetchAlphaBulkQuotes(uncachedMovers, Math.max(0, 3));
-    apiCallsUsed += quoteResult.apiCallsUsed;
-    for (const [sym, quote] of quoteResult.priceMap.entries()) {
-      const light = scoreLightEquityCandidate(sym, quote, timeframe, moverBiasMap.get(sym) ?? 0);
-      if (light) scored.push({ ...light, indicators: { ...light.indicators } });
-    }
-  }
+  // Uncached movers are no longer scanned here (see above): a price-only quote row has no indicators or bar history,
+  // so it could only ever hard-block. The light fallback scan (runLightEquityScan) still quotes them.
+  const apiCallsUsed = moverData.apiCallsUsed;
 
   // Sector relative strength + SPY benchmark (one DB query, 0 API calls).
   let benchmarkChange: number | undefined;

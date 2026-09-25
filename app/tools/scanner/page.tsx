@@ -9,7 +9,7 @@ import { compareScannerScores } from '@/lib/scanner/scoreContract';
    --------------------------------------------------------------------------- */
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
+import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
 import Link from 'next/link';
@@ -1977,7 +1977,7 @@ export default function ScannerPage() {
                 <span>Scanned: {proScanResults.scanned ?? '—'}</span>
                 <span>Evaluated: {proScanResults.selection?.evaluated ?? '—'} · Matched: {proScanResults.selection?.matched ?? '—'} · Returned: {proScreenerRows.length}</span>
                 {proScanResults.selection?.beyondLimit > 0 && <span>{proScanResults.selection.beyondLimit} additional matches beyond the {proScanResults.selection.limit}-result limit</span>}
-                {proScanResults.selection?.unavailable > 0 && <span>{proScanResults.selection.unavailable} candidates lack data required by these filters</span>}
+                {proScanResults.selection?.unavailable > 0 && <span>{proScanResults.selection.unavailable} candidates lack usable data (stale, too little history or missing inputs)</span>}
                 <span>Duration: {proScanResults.duration ?? '—'}</span>
                 <span>Requested: {proScanResults.requestedType} · {proScanResults.requestedTimeframe} · {proScanResults.requestedDepth}</span>
                 <span>Executed: {proScanResults.mode ?? 'Unavailable'}</span>
@@ -1986,7 +1986,7 @@ export default function ScannerPage() {
               </div>
               {Object.keys(proFilterDrops).length > 0 && (
                 <div className="mb-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-                  {proScanResults.selection?.excluded ?? 0} excluded before ranking limit · first exclusion reason per candidate: {Object.entries(proFilterDrops).map(([k, n]) => `${k} (${n})`).join(', ')}. Adjust filters and run again; unavailable inputs need a deeper scan or provider recovery.
+                  {proScanResults.selection?.excluded ?? 0} excluded before ranking limit · first exclusion reason per candidate: {formatExclusionBreakdown(proFilterDrops).join('; ')}. Adjust filters and run again; unavailable inputs need a deeper scan or provider recovery.
                 </div>
               )}
               {proBulkViewMode === 'cards'
