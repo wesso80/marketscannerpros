@@ -6,7 +6,7 @@
  * the target printing before the invalidation and the expected R after costs, with horizon and sample size;
  * everything else is labelled uncalibrated. Results stored before Phase 3 (no scoreBasis) render as before.
  */
-import type { CanonicalResult } from './types';
+import type { CanonicalLevels, CanonicalResult } from './types';
 
 type C = Pick<CanonicalResult, 'score' | 'permission'> & Partial<Pick<CanonicalResult, 'scoreBasis' | 'calibration' | 'factorScore'>>;
 
@@ -38,4 +38,21 @@ export function ordinal(n: number): string {
   const v = Math.round(n), m100 = v % 100, m10 = v % 10;
   const suf = m100 >= 11 && m100 <= 13 ? 'th' : m10 === 1 ? 'st' : m10 === 2 ? 'nd' : m10 === 3 ? 'rd' : 'th';
   return `${v}${suf}`;
+}
+
+/** Short tags for the cautions on a verdict (the AT_OPPOSING_LEVEL / MOMENTUM_DISAGREES watch reasons), e.g.
+ *  ['at resistance', 'momentum disagrees']. Empty for results without them (including pre-v3 stored results). */
+export function cautionTags(c: { direction?: string; watchReasons?: Array<{ code: string }> | null } | null | undefined): string[] {
+  const codes = new Set((c?.watchReasons ?? []).map((r) => r.code));
+  const out: string[] = [];
+  if (codes.has('AT_OPPOSING_LEVEL')) out.push(c?.direction === 'short' ? 'at support' : 'at resistance');
+  if (codes.has('MOMENTUM_DISAGREES')) out.push('momentum disagrees');
+  return out;
+}
+
+/** How the target was set, for display: "swing level", "EMA20", or "projected 2R (no swing level)". */
+export function targetBasisLabel(lv: Pick<CanonicalLevels, 'targetBasis' | 'riskReward'> | null | undefined): string {
+  if (!lv) return '';
+  if (lv.targetBasis === 'projected') return `projected ${Number(lv.riskReward.toFixed(2))}R (no swing level)`;
+  return lv.targetBasis === 'ema20' ? 'EMA20' : 'swing level';
 }

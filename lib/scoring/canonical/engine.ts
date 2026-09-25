@@ -7,20 +7,25 @@
  *       walk-forward validation; daily equity/crypto bars only)
  *       (eligibility includes an established same-side trend for trend/pullback, real compression + a trend/structure
  *       direction for squeeze, a confirmed structural stop 0.5–3 ATR away, and structural reward:risk ≥ the minimum)
- *     → best ELIGIBLE candidate wins: those meeting the minimum reward:risk first, then highest calibrated expected-R
- *       percentile (within its direction), then factor score, then coverage. Uncalibrated contexts rank by factor score.
+ *     → best ELIGIBLE candidate wins: those meeting the minimum reward:risk first, then those without cautions, then
+ *       highest calibrated expected-R percentile (within its direction), then factor score, then coverage.
+ *       Uncalibrated contexts rank by factor score.
+ *     → cautions on the chosen setup (AT_OPPOSING_LEVEL: entry within 0.5 ATR of a prior opposing swing;
+ *       MOMENTUM_DISAGREES: squeeze with DI or close-vs-EMA20 against it) are WATCH reasons and cap the grade at C.
+ *       A projected target (no opposing swing in the lookback) is flagged PROJECTED_TARGET.
  *     → permission: hard/data blocks, too little history or no eligible setup → BLOCK. Otherwise WATCH, with the
  *       reasons. PASS only when the setup × direction has a VALIDATED out-of-sample edge (none does as of Sep 2026:
  *       NO_VALIDATED_EDGE) and nothing else caps it (coverage < 0.6, extreme volatility, reward:risk < 1.0, adverse
  *       regime, unresolved direction). The factor score never BLOCKs (it was not predictive out of sample).
  *     → grade: calibrated → A ≥ 85th / B ≥ 60th percentile of calibrated expected R, else C; uncalibrated → per-setup
- *       factor-score thresholds (labelled uncalibrated); capped at C below the minimum reward:risk; F when BLOCK.
+ *       factor-score thresholds (labelled uncalibrated); capped at C below the minimum reward:risk or with a caution;
+ *       F when BLOCK.
  *       The grade ranks a setup against same-direction setups — it is not an absolute quality or edge claim.
  *
  * Pure: no I/O. Callers supply hard blocks (lib/scanner/hardBlocks), flags, trust and optional regime overlay.
  */
 import { computeFeatures, featuresFromSnapshot, type CanonicalSnapshot } from './features';
-import { evaluateSetup } from './setups';
+import { evaluateSetup, SETUP_POLICY } from './setups';
 import { calibrateCandidate, isCalibratedContext } from './calibration';
 import { CANONICAL_COVERAGE_MIN, CANONICAL_MIN_RR, CANONICAL_THRESHOLDS, CANONICAL_VOL_EXTREME_PCTL } from './thresholds';
 import {
@@ -94,7 +99,10 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   // Among eligible candidates, those meeting the minimum reward:risk come first (a target 0.1R away has a high hit
   // rate but is an already-finished move), then calibrated percentile, factor score, coverage.
   const meetsRR = (c: SetupCandidate) => c.levels.targetBasis === 'projected' || c.levels.riskReward >= CANONICAL_MIN_RR;
-  const ranked = [...all].sort((a, b) => Number(b.eligible) - Number(a.eligible) || Number(meetsRR(b)) - Number(meetsRR(a)) || pct(b) - pct(a) || b.score - a.score || b.coverage - a.coverage);
+  // A clean setup outranks one carrying a caution (at an opposing level / momentum against it) — the latter is capped at C.
+  const clean = (c: SetupCandidate) => !c.cautions?.length;
+  const ranked = [...all].sort((a, b) => Number(b.eligible) - Number(a.eligible) || Number(meetsRR(b)) - Number(meetsRR(a)) || Number(clean(b)) - Number(clean(a))
+    || pct(b) - pct(a) || b.score - a.score || b.coverage - a.coverage);
   const candidates = ranked.map((c) => ({ setupType: c.setupType, direction: c.direction, eligible: c.eligible, ...(c.ineligibleReason ? { ineligibleReason: c.ineligibleReason } : {}), score: c.score, coverage: c.coverage,
     ...(cal.get(c) ? { expectedR: cal.get(c)!.expectedR, pTargetFirst: cal.get(c)!.pTargetFirst } : {}) }));
   const best = ranked[0];
@@ -117,6 +125,12 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   const runnerUp = ranked[1];
   const unresolved = !!runnerUp?.eligible && runnerUp.setupType === best.setupType && runnerUp.score === best.score && runnerUp.direction !== best.direction && pct(runnerUp) === pct(best);
   const calibration = cal.get(best) ?? null;
+  const cautions = unresolved ? [] : best.cautions ?? [];
+  watchReasons.push(...cautions);
+  if (!unresolved && best.levels.targetBasis === 'projected' && best.levels.invalidationBasis !== 'atr_fallback') {
+    const r = best.setupType === 'EXHAUSTION_FADE' ? '1R' : `${SETUP_POLICY.projectedTargetR}R`;
+    flags.push({ code: 'PROJECTED_TARGET', message: `Target ${r2(best.levels.target, 6)} is projected (entry ± ${r}): no opposing swing ${best.setupType === 'EXHAUSTION_FADE' ? 'or EMA20 ' : ''}in the lookback — not a chart level` });
+  }
   if (unresolved) watchReasons.push({ code: 'DIRECTION_UNRESOLVED', message: `${best.setupType} scores the same long and short — wait for the break` });
   if (best.coverage < CANONICAL_COVERAGE_MIN) {
     watchReasons.push({ code: 'INSUFFICIENT_DATA', message: `Factor coverage ${Math.round(best.coverage * 100)}% is below ${Math.round(CANONICAL_COVERAGE_MIN * 100)}%` });
@@ -151,6 +165,7 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   const score = calibration ? Math.round(calibration.percentile) : best.score;
   const grade = permission === 'BLOCK' ? 'F'
     : !meetsRR(best) ? 'C' // below the minimum reward:risk → never graded A/B
+    : cautions.length ? 'C' // at an opposing level / momentum against the setup → never graded A/B
     : calibration ? (calibration.percentile >= 85 ? 'A' : calibration.percentile >= 60 ? 'B' : 'C')
     : best.score >= th.gradeA ? 'A' : best.score >= th.gradeB ? 'B' : 'C';
   return {

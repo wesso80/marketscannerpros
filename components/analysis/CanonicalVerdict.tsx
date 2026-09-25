@@ -8,7 +8,7 @@
  * target-before-invalidation and expected R (daily equity/crypto) or an "uncalibrated" label (other contexts).
  */
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
-import { NO_EDGE_BANNER, calibrationSummary, scoreLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, calibrationSummary, cautionTags, scoreLabel, targetBasisLabel } from '@/lib/scoring/canonical/display';
 import { canonicalRowStatus } from '@/lib/scoring/canonical/scannerAdapter';
 
 const SETUP_LABEL: Record<string, string> = {
@@ -50,6 +50,7 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
         <span>{c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side'}</span>
         <span className="font-black text-white">Grade {c.grade}</span>
         <span title={c.scoreBasis === 'calibrated_expectancy_percentile' ? 'Percentile of calibrated expected R among same-direction setups (display only)' : 'Factor alignment, not a probability'}>{scoreLabel(c)}</span>
+        {(c.permission === 'BLOCK' ? [] : cautionTags(c)).map((t) => <span key={t} className="rounded border border-amber-400/40 px-1 text-amber-300" data-testid="canonical-caution">{t}</span>)}
         {c.sizeMultiplier < 1 && c.permission !== 'BLOCK' ? <span className="text-amber-300">size ×{c.sizeMultiplier}</span> : null}
         <span className="text-slate-500">bar {c.barDate ? c.barDate.slice(0, 10) : 'unknown'} · coverage {Math.round(c.coverage * 100)}%</span>
       </div>
@@ -62,7 +63,7 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
       ) : null}
       {c.levels && !compact ? (
         <div className="mt-1 text-slate-400">
-          Entry {fmt(c.levels.entry)} · Invalidation {fmt(c.levels.invalidation)} ({c.levels.invalidationBasis.replace('_', ' ')}) · Target {fmt(c.levels.target)} ({c.levels.targetBasis.replace('_', ' ')}) · R:R {c.levels.riskReward}
+          Entry {fmt(c.levels.entry)} · Invalidation {fmt(c.levels.invalidation)} ({c.levels.invalidationBasis.replace('_', ' ')}) · Target {fmt(c.levels.target)} ({targetBasisLabel(c.levels)}) · R:R {c.levels.riskReward}
         </div>
       ) : null}
       {!compact && c.factors.length ? (

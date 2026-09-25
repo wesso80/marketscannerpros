@@ -4,7 +4,10 @@ import { zigzagTrend } from './fixtures/canonicalBars';
 
 // An established zig-zag uptrend with a structural trend-continuation long (see test/fixtures/canonicalBars).
 const bars: CanonicalBar[] = zigzagTrend();
-const features = computeFeatures(bars);
+// Its close sits 0.15 ATR under the last zig-zag high, which is an AT_OPPOSING_LEVEL caution (grade capped at C). That
+// high is inside the target's 0.5-ATR noise band anyway, so drop it here to test the thresholds on a clean setup.
+const raw = computeFeatures(bars);
+const features = { ...raw, targetHighsAbove: raw.targetHighsAbove.filter((p) => p - raw.close >= 0.5 * raw.atr) };
 
 describe('factor-score thresholds (uncalibrated contexts only)', () => {
   it('are ordered watch < pass ≤ A and watch ≤ B ≤ A for every setup', () => {

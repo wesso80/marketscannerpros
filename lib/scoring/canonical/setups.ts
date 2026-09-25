@@ -6,14 +6,35 @@
  *  - Overbought/oversold never boosts the trade direction: RSI past 70 (long) / 30 (short) scores LOWER.
  *  - Stretch > 2 ATR from EMA20, or a close beyond the outer Bollinger band, kills continuation entry location.
  *  - A setup whose defining level has already broken (long below the last swing low) is ineligible.
- *  - Invalidation = nearest confirmed swing beyond price ± 0.1 ATR (0.5–3 ATR away, never artificially widened);
- *    target = nearest prior opposing swing ≥ 0.5 ATR away. No structural stop → no setup.
- *  - Trend continuation / pullback need an established trend on their side (ADX ≥ 20, DI agreeing, price on that side
- *    of a SMA200 sloping the same way). Squeeze needs Bollinger width ≤ 20th percentile (~120 bars) and takes its
- *    direction from trend/structure (net vote ≥ 2), never by default.
+ *  - Invalidation = the nearest confirmed 3-bar swing beyond price that is still UNBROKEN (no later bar has traded
+ *    through it), ± 0.1 ATR, 0.5–3 ATR away and never artificially widened. A broken swing is skipped even if it is
+ *    nearer (MU 16 Sep: the 3 Sep low 918.88 was taken out, so the stop is the 24 Aug low 887.61 − 0.1 ATR); a swing
+ *    closer than 0.5 ATR is skipped for the next one out. No such swing within 3 ATR → no structural stop → no setup.
+ *  - Target = the nearest prior confirmed swing on the opposing side at least 0.5 ATR from entry (~120-bar lookback).
+ *    If there is none (e.g. price at a 120-bar low for a short), the target is PROJECTED at entry ± 2R (fades: 1R) and
+ *    flagged PROJECTED_TARGET / labelled "projected" — it is a projection, not a chart level (NKE 9 Sep: 32.07).
+ *    Minimum structural reward:risk 1.0 (projected targets are 2R by construction).
+ *  - Trend continuation / pullback need an established trend on their side: ADX ≥ 20, DI agreeing, price on that side
+ *    of SMA200 AND SMA200 sloping the same way (20-bar change in SMA200 in ATR: must be > 0 for longs, < 0 for shorts;
+ *    flat counts as against). Being on the right side of SMA200 is not enough: UPS 23 Sep is below SMA200 but SMA200
+ *    is still rising (+0.29 ATR) → short "counter-trend: SMA200 rising"; MDT 4 Sep is above SMA200 but it is edging
+ *    down (−0.07 ATR) → trend/pullback long "counter-trend: SMA200 falling".
+ *  - Squeeze needs Bollinger width ≤ 20th percentile (~120 bars) and takes its direction from a trend/structure vote
+ *    (side of SMA200, SMA200 slope, EMA20/50, EMA50/200, DI, swing structure; net ≥ 2 of 6), never by default
+ *    (MDT 4 Sep: the vote pointed long, so the squeeze short was refused; the squeeze long then failed the min R:R).
+ *  - Cautions (Sep 2026 v3 spot-check), on an otherwise eligible setup:
+ *    AT_OPPOSING_LEVEL — entry within 0.5 ATR of a prior opposing swing (long just under a swing high = "at resistance",
+ *    short just above a swing low = "at support"; MU 0.09 ATR under 930.88, FCX 0.04 ATR under 72.28).
+ *    MOMENTUM_DISAGREES — squeeze only: DI or close vs EMA20 points against the squeeze direction (ORCL short with
+ *    +DI > −DI and close above EMA20; MU / FCX long with −DI > +DI). Mirrored long/short.
+ *    Mode 'flag' (default): the setup stays, gets a WATCH reason and its grade is capped at C. Mode 'block': not a
+ *    setup. Walk-forward results for both modes: scoring-validation.md (Addendum 2).
  */
 import { CANONICAL_MIN_RR } from './thresholds';
-import type { CanonicalDirection, CanonicalFeatures, CanonicalLevels, FactorResult, SetupCandidate, SetupType } from './types';
+import type { CanonicalDirection, CanonicalFeatures, CanonicalLevels, CanonicalReason, FactorResult, SetupCandidate, SetupType } from './types';
+
+/** How a caution is applied: 'flag' = eligible, WATCH reason + grade capped at C; 'block' = not a setup. */
+export type CautionMode = 'flag' | 'block';
 
 export const SETUP_POLICY = {
   swingBufferAtr: 0.1,
@@ -34,6 +55,13 @@ export const SETUP_POLICY = {
   trendMinAdx: 20,
   /** Squeeze direction needs at least this net vote from trend/structure (SMA200 side & slope, EMA stack, DI, swings). */
   squeezeMinBias: 2,
+  /** A prior opposing swing (long: swing high above, short: swing low below) closer than this to the entry means
+   *  the setup enters straight into resistance / support. Same distance the target selection treats as noise. */
+  atLevelAtr: 0.5,
+  /** AT_OPPOSING_LEVEL handling. 'flag' chosen from the walk-forward (Sep 2026 v3; scoring-validation.md). */
+  atLevelMode: 'flag' as CautionMode,
+  /** MOMENTUM_DISAGREES (squeeze only) handling. 'flag' chosen from the walk-forward (Sep 2026 v3). */
+  momentumMode: 'flag' as CautionMode,
 } as const;
 
 const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -41,6 +69,7 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 /** Linear 0→1 as x goes a→b (a > b allowed for descending ramps). */
 const ramp = (x: number, a: number, b: number) => clamp01((x - a) / (b - a));
 const round = (v: number, dp = 2) => (fin(v) ? Number(v.toFixed(dp)) : null);
+const px = (v: number) => String(Number(v.toPrecision(6)));
 
 function factor(name: string, weight: number, value: number | null, raw: FactorResult['raw'], note?: string): FactorResult {
   const v = value === null || !fin(value) ? null : Number(clamp01(value).toFixed(3));
@@ -337,6 +366,45 @@ function exhaustionFade(f: CanonicalFeatures, d: 1 | -1): Eval {
   };
 }
 
+// ── Cautions (flags on an otherwise eligible setup) ────────────────────────────────────────────────────────────────
+export const AT_OPPOSING_LEVEL = 'AT_OPPOSING_LEVEL';
+export const MOMENTUM_DISAGREES = 'MOMENTUM_DISAGREES';
+
+/**
+ * Entry at an opposing level: the nearest prior confirmed swing on the opposing side (long: a swing high above the
+ * close; short: a swing low below) is less than atLevelAtr away. This is the same prior-swing list the target is
+ * picked from: the target skips such a level (it is inside the noise), but the trade still has to get through it first
+ * (MU 16 Sep: 0.09 ATR under the 31 Jul high 930.88; FCX 21 Sep: 0.04 ATR under the 17 Jun high 72.28). It is NOT the
+ * stop's "unbroken" list: both of those highs were traded through intraday (MU and FCX even on the entry bar) and the
+ * close fell back under them, which is exactly a level acting as resistance. Bars mode only (snapshots have no swings).
+ */
+export function opposingLevelCaution(f: CanonicalFeatures, d: 1 | -1): CanonicalReason | null {
+  if (f.mode !== 'bars' || !fin(f.atr) || f.atr <= 0) return null;
+  const lvl = (d > 0 ? f.targetHighsAbove : f.targetLowsBelow)[0];
+  if (!fin(lvl)) return null;
+  const dist = (d * (lvl - f.close)) / f.atr;
+  if (dist < 0 || dist >= SETUP_POLICY.atLevelAtr) return null;
+  return {
+    code: AT_OPPOSING_LEVEL,
+    message: `${d > 0 ? 'At resistance' : 'At support'}: entry is ${dist.toFixed(2)} ATR ${d > 0 ? 'below the prior swing high' : 'above the prior swing low'} ${px(lvl)} — the ${d > 0 ? 'long' : 'short'} has to get through it first; grade capped at C`,
+  };
+}
+
+/**
+ * Momentum against the squeeze direction: DI (+DI vs −DI) or the close vs EMA20 points the other way. The squeeze side
+ * comes from a slower trend/structure vote, so a short can still have a bouncing tape (ORCL 31 Aug: +DI > −DI, close
+ * above EMA20) and a long a falling one (MU, FCX: −DI > +DI). Mirrored for long/short.
+ */
+export function momentumCaution(f: CanonicalFeatures, d: 1 | -1): CanonicalReason | null {
+  const parts: string[] = [];
+  if (fin(f.plusDI) && fin(f.minusDI) && d * (f.plusDI - f.minusDI) < 0) {
+    parts.push(d > 0 ? `−DI ${f.minusDI.toFixed(1)} > +DI ${f.plusDI.toFixed(1)}` : `+DI ${f.plusDI.toFixed(1)} > −DI ${f.minusDI.toFixed(1)}`);
+  }
+  if (fin(f.ema20) && fin(f.close) && d * (f.close - f.ema20) < 0) parts.push(`close ${d > 0 ? 'below' : 'above'} EMA20 ${px(f.ema20)}`);
+  if (!parts.length) return null;
+  return { code: MOMENTUM_DISAGREES, message: `Momentum disagrees with the ${d > 0 ? 'long' : 'short'} squeeze: ${parts.join(', ')}; grade capped at C` };
+}
+
 export function scoreFactors(factors: FactorResult[]): { score: number; coverage: number } {
   const total = factors.reduce((s, x) => s + x.weight, 0);
   const avail = factors.filter((x) => x.value !== null);
@@ -348,7 +416,8 @@ export function scoreFactors(factors: FactorResult[]): { score: number; coverage
 /** A structural reward:risk below the minimum is not a setup (the move is already done, or the stop is too far). */
 export const RR_BELOW_MIN = 'RR_BELOW_MIN';
 
-export function evaluateSetup(f: CanonicalFeatures, setupType: SetupType, direction: CanonicalDirection, ctx: { catalystPending?: boolean; /** Default CANONICAL_MIN_RR; 0 disables (research replays). */ minRR?: number } = {}): SetupCandidate {
+export function evaluateSetup(f: CanonicalFeatures, setupType: SetupType, direction: CanonicalDirection, ctx: { catalystPending?: boolean; /** Default CANONICAL_MIN_RR; 0 disables (research replays). */ minRR?: number;
+  /** Override the caution handling (research replays / tests). Default SETUP_POLICY.atLevelMode / momentumMode. */ cautionMode?: { atLevel?: CautionMode; momentum?: CautionMode } } = {}): SetupCandidate {
   const d: 1 | -1 = direction === 'long' ? 1 : -1;
   const e = setupType === 'TREND_CONTINUATION' ? trendContinuation(f, d)
     : setupType === 'PULLBACK' ? pullback(f, d)
@@ -359,6 +428,18 @@ export function evaluateSetup(f: CanonicalFeatures, setupType: SetupType, direct
     e.eligible = false;
     e.reason = `${RR_BELOW_MIN}: structural reward:risk ${e.levels.riskReward} < ${minRR} (target ${e.levels.targetAtr ?? '?'} ATR, stop ${e.levels.riskAtr ?? '?'} ATR away)`;
   }
+  const cautions: CanonicalReason[] = [];
+  if (e.eligible) {
+    const lvl = opposingLevelCaution(f, d);
+    if (lvl) cautions.push(lvl);
+    const mom = setupType === 'SQUEEZE' ? momentumCaution(f, d) : null;
+    if (mom) cautions.push(mom);
+    const atLevelMode = ctx.cautionMode?.atLevel ?? SETUP_POLICY.atLevelMode;
+    const momentumMode = ctx.cautionMode?.momentum ?? SETUP_POLICY.momentumMode;
+    const blocking = cautions.find((c) => (c.code === AT_OPPOSING_LEVEL ? atLevelMode : momentumMode) === 'block');
+    if (blocking) { e.eligible = false; e.reason = `${blocking.code}: ${blocking.message.replace(/; grade capped at C$/, '')}`; }
+  }
   const { score, coverage } = scoreFactors(e.factors);
-  return { setupType, direction, eligible: e.eligible, ...(e.reason ? { ineligibleReason: e.reason } : {}), score, coverage, factors: e.factors, levels: e.levels };
+  return { setupType, direction, eligible: e.eligible, ...(e.reason ? { ineligibleReason: e.reason } : {}), score, coverage, factors: e.factors, levels: e.levels,
+    ...(e.eligible && cautions.length ? { cautions } : {}) };
 }

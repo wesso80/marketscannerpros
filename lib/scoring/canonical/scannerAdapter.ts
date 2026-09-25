@@ -4,6 +4,7 @@
  * The canonical result is the PRIMARY verdict on scanner rows (row.canonical): permission, setup, direction, grade,
  * score and levels. The v2.4 composite (row.compositeV2) stays attached as a secondary "legacy composite" label.
  */
+import { cautionTags } from './display';
 import { computeFeatures, featuresFromSnapshot } from './features';
 import type { CanonicalBar, CanonicalFeatures, CanonicalReason, CanonicalResult } from './types';
 
@@ -79,10 +80,11 @@ export function noSetupReason(c: { blockReasons?: CanonicalReason[] | null }): s
   return m ? m[1] : null;
 }
 
-/** One-line row label: "WATCH · Pullback", "No setup: <closest reason>", "Blocked: STALE_DATA". */
+/** One-line row label: "WATCH · Pullback", "WATCH · Squeeze · at resistance" (setup cautions appended),
+ *  "No setup: <closest reason>", "Blocked: STALE_DATA". */
 export function canonicalRowLabel(c: CanonicalResult): string {
   const status = canonicalRowStatus(c);
-  if (status === 'SETUP') return `${c.permission} · ${SETUP_LABEL[c.setupType] ?? c.setupType}`;
+  if (status === 'SETUP') return [`${c.permission} · ${SETUP_LABEL[c.setupType] ?? c.setupType}`, ...cautionTags(c)].join(' · ');
   if (status === 'NO_SETUP') { const why = noSetupReason(c); return why ? `No setup: ${why}` : 'No setup'; }
   return `Blocked: ${c.blockReasons.filter((r) => r.code !== 'NO_SETUP').map((r) => r.code).join(', ')}`;
 }
