@@ -6,7 +6,6 @@ import { useUserTier } from '@/lib/useUserTier';
 import { isPaidTier } from '@/lib/tiers';
 import { readOperatorState } from '@/lib/operatorState';
 import PushNotificationSettings from './PushNotificationSettings';
-import MultiConditionAlertBuilder from './MultiConditionAlertBuilder';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface AlertCondition {
@@ -90,7 +89,6 @@ export default function AlertsWidget({
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [showSmartCreate, setShowSmartCreate] = useState(false);
-  const [showMultiCreate, setShowMultiCreate] = useState(false);
   const [loggingHistoryId, setLoggingHistoryId] = useState<string | null>(null);
   const [loggedHistoryEntries, setLoggedHistoryEntries] = useState<Record<string, number | null>>({});
   const [historyActionError, setHistoryActionError] = useState('');
@@ -1128,7 +1126,7 @@ export default function AlertsWidget({
           <div>
             <div className="mb-4 p-3 rounded-lg border border-slate-700 bg-slate-900/40">
               <p className="text-xs text-slate-400">
-                Strategy layer combines scanner/strategy setup alerts with multi-condition chains.
+                Strategy layer lists scanner/strategy setup alerts. Multi-condition alerts are not available yet.
               </p>
             </div>
 
@@ -1181,99 +1179,18 @@ export default function AlertsWidget({
               </div>
             )}
 
-            {/* Multi-Condition Alert Create Form */}
-            {tier !== 'free' ? (
-              <>
-                {!showMultiCreate ? (
-                  <button
-                    onClick={() => setShowMultiCreate(true)}
-                    className="w-full p-4 border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 rounded-lg text-slate-400 hover:text-purple-400 transition-colors mb-4"
-                  >
-                    + Create Multi-Condition Alert
-                  </button>
-                ) : (
-                  <div className="mb-4">
-                    <MultiConditionAlertBuilder
-                      symbol={newAlert.symbol || 'BTC'}
-                      assetType={newAlert.assetType}
-                      onCancel={() => setShowMultiCreate(false)}
-                      creating={creating}
-                      onSave={async (alertData) => {
-                        setCreating(true);
-                        setError('');
-                        try {
-                          const res = await fetch('/api/alerts', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              symbol: alertData.symbol,
-                              assetType: alertData.assetType,
-                              conditionType: 'multi',
-                              conditionValue: 0,
-                              name: alertData.name,
-                              isMultiCondition: true,
-                              conditionLogic: alertData.conditionLogic,
-                              conditions: alertData.conditions.map(c => ({
-                                conditionType: c.conditionType,
-                                conditionValue: parseFloat(c.conditionValue),
-                                conditionTimeframe: c.conditionTimeframe,
-                                conditionIndicator: c.conditionIndicator,
-                                conditionPeriod: c.conditionPeriod,
-                              })),
-                              isRecurring: alertData.isRecurring,
-                              notifyEmail: alertData.notifyEmail,
-                              notifyPush: true,
-                            }),
-                          });
-                          const data = await res.json();
-                          if (data.error) {
-                            setError(data.message || data.error);
-                          } else {
-                            setShowMultiCreate(false);
-                            fetchAlerts();
-                          }
-                        } catch (err) {
-                          setError('Failed to create alert');
-                        } finally {
-                          setCreating(false);
-                        }
-                      }}
-                    />
-                    {error && (
-                      <p className="text-red-400 text-sm mt-2">{error}</p>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/20 mb-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">🔗</span>
-                  <div>
-                    <h4 className="font-semibold text-white">Multi-Condition Alerts - Pro Required</h4>
-                    <p className="text-sm text-slate-400">
-                      Create alerts with multiple conditions (e.g., Price above $50K AND RSI below 30)
-                    </p>
-                  </div>
-                </div>
-                <a 
-                  href="/pricing" 
-                  className="inline-block mt-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  Upgrade to Pro
-                </a>
-              </div>
-            )}
+            {/* Multi-Condition alerts: no checker evaluates them yet, so creating them is disabled. */}
+            <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 mb-4">
+              <h4 className="font-semibold text-amber-200">Multi-condition alerts are not available yet</h4>
+              <p className="text-sm text-slate-300 mt-1">
+                The alert checker doesn&apos;t evaluate combined conditions yet, so these alerts would never fire.
+                Use single price or % change alerts on the Basic tab instead.
+              </p>
+            </div>
 
             {/* Multi-Condition Alerts List */}
             {(() => {
-              return multiConditionAlerts.length === 0 ? (
-                tier !== 'free' ? (
-                  <div className="text-center py-6">
-                    <p className="text-slate-500 text-sm">No strategy chain alerts yet. Create one above!</p>
-                  </div>
-                ) : null
-              ) : (
+              return multiConditionAlerts.length === 0 ? null : (
                 <div className="space-y-2">
                   {multiConditionAlerts.map(alert => (
                     <div
@@ -1302,6 +1219,12 @@ export default function AlertsWidget({
                               🔄
                             </span>
                           )}
+                          <span
+                            className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded"
+                            title="Multi-condition alerts are not evaluated by the alert checker, so this alert will not fire."
+                          >
+                            Not checked
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
@@ -1348,6 +1271,9 @@ export default function AlertsWidget({
                       )}
                       <p className="text-xs text-slate-500 mt-2 pl-7">
                         {alert.name}
+                      </p>
+                      <p className="text-xs text-amber-300/80 mt-1 pl-7">
+                        Not supported yet: multi-condition alerts are never checked, so this one will not fire. You can delete it and use single price or % change alerts.
                       </p>
                     </div>
                   ))}
