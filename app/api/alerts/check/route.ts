@@ -5,7 +5,6 @@ import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { postToDiscord, buildAlertEmbed } from '@/lib/discord-bridge';
 
 /**
  * Alert Price Checker
@@ -345,12 +344,8 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
     }
   }
 
-  // Post to Discord bridge (msp-alerts channel)
-  postToDiscord('msp-alerts', buildAlertEmbed({
-    symbol: alert.symbol,
-    condition: conditionMet,
-    triggeredAt: new Date().toISOString(),
-  })).catch(() => {});
+  // A user's alert is private: it is delivered only to that user's own channels
+  // (email / push above). It is not posted to the shared site-wide Discord channel.
 
   console.log(`🔔 Alert triggered: ${alert.name || alert.symbol} - ${conditionMet}`);
 }
