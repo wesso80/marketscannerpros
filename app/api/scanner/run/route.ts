@@ -1,6 +1,6 @@
 import { computeTechnicalProxy, type TechnicalProxyResult } from '@/lib/scanner/technicalProxy';
 import { buildScannerScore, compareScannerScores, dollarVolume, scoreFreshness, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
-import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
+import type { ScannerScorePayload, ScorePermission, ScoreReason } from '@/lib/scanner/scoreContract';
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q as dbQuery } from "@/lib/db";
@@ -19,7 +19,8 @@ import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
 import { scannerTimeframe } from '@/lib/scanner/timeframes';
-import { summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
+import { cryptoPositioningExpected, summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
+import { evaluateHardBlocks, macroEventFlags, type HardBlockResult } from '@/lib/scanner/hardBlocks';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
@@ -177,6 +178,23 @@ interface ScanResult {
   insight?: ScannerInsight;
   // MSP Composite v2 — cross-sectional, regime-conditional score (additive).
   compositeV2?: ScannerScorePayload;
+  /** Top-level copy of compositeV2.permission so API consumers never have to infer a block from the score. */
+  permission?: ScorePermission;
+  /** Machine-readable reasons behind a BLOCK (empty when PASS/WATCH). */
+  blockReasons?: ScoreReason[];
+  /** Machine-readable reasons behind a WATCH (e.g. INSUFFICIENT_DATA when coverage < COVERAGE_MIN). */
+  watchReasons?: ScoreReason[];
+  /** Share (0–1) of this asset's applicable factor weight actually observed. Missing factors count as neutral. */
+  coverage?: number;
+  /** Applicable factor groups with no data on this row (counted as neutral votes, never double-penalised). */
+  missingFactors?: string[];
+  /** Informational flags (MACRO_EVENT, EARNINGS_UNKNOWN, …); never change permission. */
+  flags?: ScoreReason[];
+  /** Hard-block evidence: earnings status (UNKNOWN ≠ none scheduled), price cross-check, liquidity minimum. */
+  hardBlockDetail?: Pick<HardBlockResult, 'earnings' | 'priceCheck' | 'liquidity'>;
+  /** Last completed bar close when the row's price came from a separate live quote (price sanity reference). */
+  referenceClose?: number;
+  referenceSource?: string;
   timeframe: string;
   type: string;
   price?: number;
@@ -1829,6 +1847,7 @@ export async function POST(req: NextRequest) {
             vwap: vwapVal,
             avgVolume: avgVolume20,
             lastCandleTime,
+            ...(series.currentPrice != null && Number.isFinite(series.currentPrice) ? { referenceClose: close, referenceSource: 'last completed bar close (CoinGecko OHLC)' } : {}),
             barInterval: series.barInterval,
             dataBasis: {
               barInterval: series.barInterval,
@@ -2256,6 +2275,7 @@ export async function POST(req: NextRequest) {
               vwap: vwapValEq,
               avgVolume: avgVolume20 ?? lastVolume,
               lastCandleTime,
+              ...(Number.isFinite(bulkPrice) ? { referenceClose: closes[last], referenceSource: 'last completed bar close' } : {}),
               barInterval: equityBarInterval,
               dataBasis: {
                 barInterval: equityBarInterval,
@@ -2407,6 +2427,8 @@ export async function POST(req: NextRequest) {
     const dollarVolumes = results.map(r => dollarVolume(r.price, r.avgVolume, type)).filter((v): v is number => v != null);
     let earningsMap: Map<string, string> = new Map();
     if (type === 'equity') { warmEarningsMap(); earningsMap = peekEarningsMap(); }
+    // Macro event days are a warning flag on every row, never a block. Computed once per request.
+    const macroFlags = macroEventFlags();
 
     const enriched = results.map((result) => {
       const adxValue = Number(result.adx ?? Number.NaN);
@@ -2424,7 +2446,7 @@ export async function POST(req: NextRequest) {
         relativeVolume: result.liquidity?.volumeRatio ?? undefined,
         rsIndexRatio: result.enhancements?.relativeStrength?.benchmarkMissing ? undefined : result.enhancements?.relativeStrength?.rs ?? undefined,
         bbwp: result.dveBbwp, dveFlags: result.dveFlags,
-        fundingRate: result.derivatives?.fundingRate, derivativesExpected: type === 'crypto',
+        fundingRate: result.derivatives?.fundingRate, derivativesExpected: cryptoPositioningExpected(type, result.derivatives?.fundingRate),
         earningsInDays: type === 'equity' ? daysUntilEarnings(earningsMap.get(result.symbol.toUpperCase())) : undefined,
         dollarVolume: dollarVolume(result.price, result.avgVolume, type),
       }, {rsIndexRatios, dollarVolumes});
@@ -2444,10 +2466,26 @@ export async function POST(req: NextRequest) {
           : undefined,
       });
 
+      // Hard blocks (lib/scanner/hardBlocks): stale bars, price sanity vs the bar close, earnings in the holding window,
+      // liquidity minimum. Unknown inputs are flags. Independent of this row's score.
+      const hard = evaluateHardBlocks({
+        asset: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity', timeframe,
+        freshness: result.dataTrust?.freshness, lastBarAt: result.lastCandleTime ?? null,
+        price: result.price ?? null, referencePrice: result.referenceClose ?? null, referenceSource: result.referenceSource ?? null,
+        referenceIndependent: false, atrPct: atrPct ?? null,
+        earningsDate: type === 'equity' ? earningsMap.get(result.symbol.toUpperCase()) ?? null : null,
+        earningsCalendarLoaded: earningsMap.size > 0,
+        dollarVolumeDaily: (() => { const dv = dollarVolume(result.price, result.avgVolume, type); return dv != null ? dv * barsPerDayFor(result.barInterval) : null; })(),
+      }, macroFlags);
+      result.flags = hard.flags;
+      result.hardBlockDetail = { earnings: hard.earnings, priceCheck: hard.priceCheck, liquidity: hard.liquidity };
+
       const scoreInput = {
+        hardBlocks: hard.blocks, flags: hard.flags,
         factors: signals.factors, regime: resolveScoreRegime(unifiedRegime.scoring, unifiedRegime.institutional),
         freshness: scoreFreshness(result.dataTrust?.freshness), liquidityMultiplier: signals.liquidityMultiplier,
         trustLevel: result.dataTrust?.level, trustReasons: result.dataTrust?.reasons, criticalBlockers: result.dataTrust?.eligibilityBlockers, catalyst: signals.catalyst,
+        trustQualityIssues: result.dataTrust?.qualityIssues, missingInputs: result.dataTrust?.missingInputs,
       };
       result.compositeV2 = buildScannerScore(scoreInput);
       synchronizeScannerScenario(result, result.compositeV2.direction);
@@ -2461,6 +2499,7 @@ export async function POST(req: NextRequest) {
       // === ACL PIPELINE (wired into scanner response) ===
       const components = estimateComponentsFromContext({
         scannerScore: result.score,
+        direction: result.compositeV2.direction,
         regime: unifiedRegime.governor,
         adx: adxValue,
         rsi: result.rsi,
@@ -2472,7 +2511,8 @@ export async function POST(req: NextRequest) {
         fundingRate: (result as any).derivatives?.fundingRate,
         oiChange24h: (result as any).derivatives?.oiChangePercent,
       });
-      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring);
+      // SQ is the scanner composite itself, so its gate is skipped (it would block a row for the score it gates).
+      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring, { ignoreGates: ['SQ'] });
       const regimeConfResult = deriveRegimeConfidence({
         adx: adxValue,
         rsi: result.rsi,
@@ -2505,9 +2545,21 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      result.compositeV2 = buildScannerScore({...scoreInput, regimeGated: regimeScoreResult.gated || institutionalFilter.noTrade});
+      // Gate only on evidence that is independent of this row's score: the regime component gates (SQ excluded) and
+      // the institutional HARD blocks. `institutionalFilter.noTrade` also fires when baseScore × weights < 40, and
+      // baseScore is this row's score, so using it made the gate circular (low score → gated → ×0.4 → lower score).
+      const gateBlocks: ScoreReason[] = [
+        ...regimeScoreResult.gateViolations.map((v) => ({ code: 'REGIME_GATE' as const, message: `Regime ${unifiedRegime.scoring} gate: ${v}` })),
+        ...institutionalFilter.hardBlockReasons,
+      ];
+      result.compositeV2 = buildScannerScore({...scoreInput, gateBlocks});
       result.score = result.compositeV2.composite;
       result.confidence = result.score;
+      result.permission = result.compositeV2.permission;
+      result.blockReasons = result.compositeV2.blockReasons;
+      result.watchReasons = result.compositeV2.watchReasons;
+      result.coverage = result.compositeV2.coverage;
+      result.missingFactors = result.compositeV2.missingFactors;
       result.rankWarnings = [...(result.rankWarnings ?? []), ...(result.compositeV2.blockers ?? [])];
       const spot = Number(result.price ?? Number.NaN);
       const liquidityContext = buildScannerLiquidityLevels(result.chartData?.candles as any, spot);

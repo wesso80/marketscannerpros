@@ -31,6 +31,7 @@ import { recordEngineEvent } from '@/lib/brain/engineBridge';
 import type { GoldenEggPayload, Direction, Verdict, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
 import { evaluateDataTrust, isEquitySessionOpen, type DataTrustResult } from '@/lib/scanner/dataTrust';
+import { holdingWindowDays } from '@/lib/scanner/hardBlocks';
 import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
 import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
@@ -215,6 +216,12 @@ export interface BuildPayloadExtras {
 }
 
 const TRUST_CAP: Record<DataTrustResult['level'], number> = { GOOD: 99, DEGRADED: 80, STALE: 60, INSUFFICIENT_DATA: 40 };
+/** Missing inputs are already counted once (neutral 50 in the confluence, flagged). They must not also lower the cap. */
+function trustCapFor(level: DataTrustResult['level'], degradedByQuality: boolean): number {
+  if (level === 'DEGRADED' && !degradedByQuality) return TRUST_CAP.GOOD;
+  if (level === 'INSUFFICIENT_DATA' && !degradedByQuality) return TRUST_CAP.GOOD;
+  return TRUST_CAP[level];
+}
 
 function barsPerDayFor(tfLabel: string, assetClass: 'equity' | 'crypto' | 'forex'): number {
   if (tfLabel === '15m') return assetClass === 'crypto' ? 96 : 26;
@@ -280,20 +287,24 @@ function buildPayload(
     nowMs,
   });
   const trust: DataTrustResult = { ...trustBase, reasons: [...trustBase.reasons] };
+  // True when trust is lowered for a reason other than missing inputs (interval, delay, liquidity, unusable chain…).
+  let degradedByQuality = trustBase.qualityIssues.length > 0 || trustBase.eligibilityBlockers.length > 0;
   if (assetClass !== 'forex' && advUsd != null && advUsd < 5_000_000 && trust.level === 'GOOD') {
+    degradedByQuality = true;
     trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85);
     trust.reasons.push(`thin liquidity — average dollar volume ${formatUsdShort(advUsd)}`);
   }
   // Options chains that look pre-split or illiquid are display-only, never flow evidence.
   const optsUsable = optsIn && optsIn.canonical.quality.level !== 'UNUSABLE';
   const opts = optsUsable ? optsIn : null;
-  if (((assetClass === 'equity' && !optsIn) || (assetClass === 'crypto' && cryptoDerivs?.fundingRatePercent == null)) && trust.level === 'GOOD') {
-    trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85);
-    trust.reasons.push('Flow evidence unavailable; price and indicators remain separately inspectable.');
+  // Missing Flow is a missing input: it is scored once (neutral / not applicable) and flagged here, without also
+  // downgrading trust (which used to cap the score at 80 and add a "must" flip condition for every crypto row).
+  if (assetClass === 'equity' && !optsIn) {
+    trust.reasons.push('Flow evidence unavailable (counted as neutral); price and indicators remain separately inspectable.');
   }
   if (optsIn && !optsUsable) {
     trust.reasons.push(`options chain unusable: ${optsIn.canonical.quality.reasons[0] ?? 'quality check failed'}`);
-    if (trust.level === 'GOOD') { trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85); }
+    if (trust.level === 'GOOD') { degradedByQuality = true; trust.level = 'DEGRADED'; trust.factor = Math.min(trust.factor, 0.85); }
   }
 
   // ── Direction (needs ≥3 directional layers and a 2-vote gap) ───────────────────────────────────────
@@ -382,15 +393,16 @@ function buildPayload(
   });
   const riskScore = riskQ.score;
 
-  // ── Weighted confluence (fixed applicable denominator; missing components contribute zero) ───────
+  // ── Weighted confluence (applicable weights renormalised; missing-but-applicable = neutral 50, flagged) ───
   const components = [
     { key: 'Structure', weight: 0.30, value: structureScore, present: ind != null },
-    // Absolute crypto OI is context; no directional flow score without a comparable supported contract.
-    { key: 'Flow', weight: 0.25, value: flowScore, present: assetClass !== 'crypto' && (opts != null || mpe != null), applicable: assetClass !== 'forex' },
+    // Crypto/forex have no comparable options-flow contract, so Flow is structurally NOT APPLICABLE there and its
+    // 25% is redistributed (was: applicable-but-absent for crypto → 0 points → crypto capped at 75/100).
+    { key: 'Flow', weight: 0.25, value: flowScore, present: opts != null || mpe != null, applicable: assetClass === 'equity' },
     { key: 'Momentum', weight: 0.20, value: momentumScore, present: ind != null },
     { key: 'Risk', weight: 0.25, value: riskScore, present: ind != null },
   ];
-  const scoreCalculation = computeConfluenceScore(components, TRUST_CAP[trust.level]);
+  const scoreCalculation = computeConfluenceScore(components, trustCapFor(trust.level, degradedByQuality));
   const confidence = scoreCalculation.finalScore;
   const grade = scoreToGrade(confidence);
 
@@ -403,16 +415,20 @@ function buildPayload(
   // ── Permission ──────────────────────────────────────────────────────────────────────────────────────
   let permission: InternalPermission = 'WATCH';
   if (confidence >= 70 && direction !== 'NEUTRAL' && (trust.level === 'GOOD' || trust.level === 'DEGRADED')) permission = 'TRADE';
-  else if (confidence < 40 || trust.level === 'INSUFFICIENT_DATA' || trust.level === 'STALE') permission = 'NO_TRADE';
+  // INSUFFICIENT_DATA (missing inputs / short history) stays WATCH; only stale or unusable data is NO_TRADE.
+  else if (confidence < 40 || trust.level === 'STALE' || trust.eligibilityBlockers.length > 0) permission = 'NO_TRADE';
   if (permission === 'TRADE' && timeConfluenceHardConflict) permission = 'WATCH';
-  if (macroRegime?.riskState === 'risk_off' && direction === 'LONG' && permission === 'TRADE') permission = 'WATCH';
+  // Macro regime rule is mirror-symmetric: it only demotes a setup that fights the macro tape (RISK_OFF long or
+  // RISK_ON short). Previously only longs were ever demoted, so RISK_OFF silently favoured shorts.
+  const macroOpposes = (macroRegime?.riskState === 'risk_off' && direction === 'LONG') || (macroRegime?.riskState === 'risk_on' && direction === 'SHORT');
+  if (macroOpposes && permission === 'TRADE') permission = 'WATCH';
 
   // ── Driver / blocker (Risk is never a driver) ───────────────────────────────────────────────────────
   const drivers = [
     { key: 'Structure', val: structureScore },
     { key: 'Flow', val: flowScore },
     { key: 'Momentum', val: momentumScore },
-  ].filter(d => components.some(c => c.key === d.key && c.present)).sort((a, b) => b.val - a.val);
+  ].filter(d => components.some(c => c.key === d.key && c.present && c.applicable !== false)).sort((a, b) => b.val - a.val);
   if (!drivers.length) drivers.push({key: 'Evidence unavailable', val: 0});
   const primaryDriver = `${drivers[0].key} leads at ${drivers[0].val.toFixed(0)}/100 — ${describeScore(drivers[0].key, drivers[0].val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   const weakest = drivers[drivers.length - 1];
@@ -422,22 +438,28 @@ function buildPayload(
   else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100 — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   else if (riskScore < 50) primaryBlocker = `Risk conditions ${riskScore}/100 — ${riskQ.reasons[0]}`;
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
-  else if (macroRegime?.riskState === 'risk_off' && direction === 'LONG') primaryBlocker = `Macro regime RISK_OFF (${macroRegime.concerns.join(', ')})`;
+  else if (macroOpposes) primaryBlocker = macroRegime!.riskState === 'risk_off' ? `Macro regime RISK_OFF (${macroRegime!.concerns.join(', ')})` : 'Macro regime RISK_ON opposes the short scenario';
 
   if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
+  // HARD BLOCK (same rule as the scanner, lib/scanner/hardBlocks): earnings inside the holding window → NO_TRADE.
+  const earningsWindowDays = holdingWindowDays(timeframeKey);
+  const earningsDte = extras.fundamentals?.daysToEarnings;
+  const earningsInWindow = assetClass === 'equity' && earningsDte != null && earningsDte >= 0 && earningsDte <= earningsWindowDays;
+  if (earningsInWindow) permission = 'NO_TRADE';
 
   // ── Flip conditions ─────────────────────────────────────────────────────────────────────────────────
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
   if (permission !== 'TRADE') {
     if (trust.level !== 'GOOD') flipConditions.push({ id: 'f8', text: `Data trust is ${trust.level.toLowerCase().replace('_', ' ')} (${trust.reasons.join('; ')}) — inputs need to be clean before the packet can be relied on`, severity: 'must' });
     if (timeConfluenceHardConflict) flipConditions.push({ id: 'f6', text: `Time confluence is ${timing.effectiveDirection} while the setup is ${direction.toLowerCase()} — wait for timing to agree or for the conflict to clear`, severity: 'must' });
-    if (macroRegime?.riskState === 'risk_off' && direction === 'LONG') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
+    if (macroOpposes) flipConditions.push({ id: 'f5', text: macroRegime!.riskState === 'risk_off' ? `Macro regime is RISK_OFF (${macroRegime!.concerns.join(', ')}) — wait for macro environment to improve` : 'Macro regime is RISK_ON — a short needs the macro tape to turn before it can align', severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options positioning needs to confirm direction (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry})`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
     if (riskScore < 50) flipConditions.push({ id: 'f9', text: `Risk conditions need to improve — ${riskQ.reasons.slice(0, 2).join('; ')}`, severity: 'should' });
     if (direction === 'NEUTRAL') flipConditions.push({ id: 'f10', text: `Direction is neutral (${bullish} bullish vs ${bearish} bearish layers of ${directionalLayers}) — a directional resolution is required`, severity: 'must' });
     if (setup.extended) flipConditions.push({ id: 'extension', text: `Extension must resolve: ${setup.note}`, severity: 'must' });
+    if (earningsInWindow) flipConditions.push({ id: 'earnings', text: `Earnings ${extras.fundamentals?.nextEarningsDate} (in ${earningsDte}d) fall inside the ${earningsWindowDays}-day holding window — wait until after the report`, severity: 'must' });
     if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall score below threshold — waiting for improved confluence', severity: 'must' });
   }
 
@@ -597,6 +619,7 @@ function buildPayload(
   if (timing.relation === 'conflict') narrativeRisks.push(`Time confluence ${timing.effectiveDirection} opposes the ${direction.toLowerCase()} thesis${timeConfluenceHardConflict ? ' (hard gate applied)' : ' (below hard-gate thresholds — noted, not gating)'}.`);
   if (tcRaw?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
   if (extras.fundamentals?.daysToEarnings != null && extras.fundamentals.daysToEarnings >= 0 && extras.fundamentals.daysToEarnings <= 14) narrativeRisks.push(`Earnings scheduled ${extras.fundamentals.nextEarningsDate} (${extras.fundamentals.daysToEarnings} days) — event risk.`);
+  else if (assetClass === 'equity' && (!extras.fundamentals || extras.fundamentals.nextEarningsStatus === 'UNKNOWN')) narrativeRisks.push('Earnings date UNKNOWN — calendar unavailable; not verified clear of the holding window.');
   if (narrativeRisks.length === 0) narrativeRisks.push('No major risk flags at current levels.');
 
   const timeConfluenceVerdict: Verdict | undefined = tcRaw ? timingVerdict(timing) : undefined;
@@ -705,12 +728,12 @@ function buildPayload(
       primaryDriver,
       primaryBlocker,
       flipConditions,
-      scoreCalculation: {version: scoreCalculation.version, coverage: scoreCalculation.coverage, rawTotal: scoreCalculation.rawTotal,
+      scoreCalculation: {version: scoreCalculation.version, coverage: scoreCalculation.coverage, rawTotal: scoreCalculation.rawTotal, missingComponents: scoreCalculation.missingComponents,
         trustCap: scoreCalculation.trustCap, capAdjustment: scoreCalculation.capAdjustment, finalScore: confidence},
       scoreBreakdown: scoreCalculation.rows.map(c => ({
-        key: c.key, weight: c.weight * 100, value: Math.round(c.value), available: c.available,
-        applicable: c.applicable !== false, effectiveWeight: c.effectiveWeight * 100, points: c.points,
-        note: !c.available ? (c.applicable === false ? 'Not applicable to this asset' : c.key === 'Flow' && optsIn ? 'Options chain unusable; excluded' : 'Evidence unavailable; excluded')
+        key: c.key, weight: c.weight * 100, value: Math.round(c.available ? c.value : 50), available: c.available,
+        applicable: c.applicable !== false, imputedNeutral: c.imputedNeutral, effectiveWeight: c.appliedWeight * 100, points: c.points,
+        note: !c.available ? (c.applicable === false ? 'Not applicable to this asset; weight redistributed' : c.key === 'Flow' && optsIn ? 'Options chain unusable; counted as neutral 50' : 'Evidence unavailable; counted as neutral 50')
           : c.key === 'Structure' ? `${direction} structure alignment`
           : c.key === 'Momentum' ? `${direction} momentum alignment; ${rsi.label}`
           : c.key === 'Risk' ? `Risk quality — ${riskQ.reasons[0]}`

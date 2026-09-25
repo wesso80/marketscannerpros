@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
+import { computeQuickScore } from '@/lib/scanner/topCachedScore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,56 +63,6 @@ function isCrypto(sym: string): boolean {
   if (CRYPTO_SYMBOLS.has(s)) return true;
   if (s.endsWith('USD') && !['AUDUSD','EURUSD','NZDUSD','GBPUSD','USDCAD','USDJPY','USDCHF'].includes(s)) return true;
   return false;
-}
-
-/* Simple score from cached indicators (0–100 scale) */
-function computeQuickScore(row: Record<string, unknown>): { score: number; direction: string } {
-  let bullish = 0;
-  let bearish = 0;
-
-  const rsi = Number(row.rsi14) || 0;
-  const macdHist = Number(row.macd_hist) || 0;
-  const adx = Number(row.adx14) || 0;
-  const price = Number(row.price) || 0;
-  const ema200 = Number(row.ema200) || 0;
-  const stochK = Number(row.stoch_k) || 0;
-  const changePct = Number(row.change_percent) || 0;
-
-  // RSI momentum
-  if (rsi > 50 && rsi < 70) bullish += 15;
-  else if (rsi >= 70) bullish += 5;  // overbought = less upside
-  else if (rsi < 30) bullish += 10;  // oversold bounce
-  else if (rsi < 50) bearish += 10;
-
-  // MACD histogram direction
-  if (macdHist > 0) bullish += 15;
-  else if (macdHist < 0) bearish += 15;
-
-  // Trend: price vs EMA200
-  if (ema200 > 0) {
-    if (price > ema200) bullish += 20;
-    else bearish += 20;
-  }
-
-  // ADX is trend strength, not direction. It only amplifies the side already supported by directional evidence.
-  if (adx > 25) {
-    if (bullish > bearish) bullish += 10;
-    else if (bearish > bullish) bearish += 10;
-  }
-
-  // Stochastic
-  if (stochK > 20 && stochK < 80) bullish += 10;
-  else bearish += 5;
-
-  // Recent change
-  if (changePct > 0) bullish += 5;
-  else if (changePct < 0) bearish += 5;
-
-  const total = bullish + bearish || 1;
-  const score = Math.round((bullish / total) * 100);
-  const direction = bullish > bearish ? 'bullish' : bullish < bearish ? 'bearish' : 'neutral';
-
-  return { score, direction };
 }
 
 export async function GET(req: NextRequest) {

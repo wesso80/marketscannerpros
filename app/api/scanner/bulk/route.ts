@@ -30,7 +30,9 @@ import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institu
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
 import { crossSectionalPercentiles } from '@/lib/analysis';
-import { scoreProSnapshot } from '@/lib/scanner/proScore';
+import { scoreProSnapshot, type ProHardBlockContext } from '@/lib/scanner/proScore';
+import { macroEventFlags } from '@/lib/scanner/hardBlocks';
+import { peekEarningsMap, warmEarningsMap } from '@/lib/scanner/earningsCalendar';
 import { compareScannerScores, dollarVolume, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
@@ -1875,7 +1877,9 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     }
   }
   const context = proScoreUniverse(scored, 'equity');
-  for (const item of scored) Object.assign(item, scoreProSnapshot(item, 'equity', timeframe, context));
+  warmEarningsMap();
+  const hardCtx: ProHardBlockContext = { earningsMap: peekEarningsMap(), macroFlags: macroEventFlags() };
+  for (const item of scored) Object.assign(item, scoreProSnapshot(item, 'equity', timeframe, context, false, hardCtx));
 
   // Fetch chartData from ohlcv_bars — ONLY for the top candidates (bounded I/O).
   // Scoring already ranks from the cached snapshot, so we enrich the leaders
@@ -2166,6 +2170,8 @@ function applyInstitutionalFilterToTopPicks(
   }
 ) {
   const universe = proScoreUniverse(topPicks, params.type);
+  if (params.type === 'equity') warmEarningsMap();
+  const hardCtx: ProHardBlockContext = { earningsMap: params.type === 'equity' ? peekEarningsMap() : undefined, macroFlags: macroEventFlags() };
   const withFilter = topPicks.map((original) => {
     const initial = scoreProSnapshot(original, params.type, params.timeframe, universe);
     const pick = {...original, ...initial, price: original.indicators?.price ?? original.price, atr: original.indicators?.atr ?? original.atr};
@@ -2190,9 +2196,12 @@ function applyInstitutionalFilterToTopPicks(
     const neutralSignals = Number(pick?.signals?.neutral || 0);
     const bullishSignals = Number(pick?.signals?.bullish || 0);
     const bearishSignals = Number(pick?.signals?.bearish || 0);
+    // Regime from market structure (ADX), never from this pick's own score (was `score >= 70 → trending`, which let
+    // the score decide the regime that then filtered the score).
+    const pickAdx = Number(pick?.indicators?.adx ?? Number.NaN);
     const regime = neutralSignals >= Math.max(bullishSignals, bearishSignals)
       ? 'ranging'
-      : (pick?.score ?? 0) >= 70
+      : Number.isFinite(pickAdx) && pickAdx >= 25
         ? 'trending'
         : 'unknown';
 
@@ -2266,9 +2275,11 @@ function applyInstitutionalFilterToTopPicks(
       enrichedConfidence = scoreV2.final.confidence;
     }
 
-    const final = scoreProSnapshot(pick, params.type, params.timeframe, universe,
-      institutionalFilter.noTrade || scoreV2.execution?.permission === 'blocked');
-    const {dataTrust, compositeV2} = final;
+    // Gate on institutional HARD blocks only. `noTrade` also fires on baseScore × weights < 40 and the legacy
+    // scoreV2.execution permission is a threshold on a second blend of the same indicators — both made the permission
+    // depend on the score being gated. They stay in the response (institutionalFilter / scoreV2) as diagnostics.
+    const final = scoreProSnapshot(pick, params.type, params.timeframe, universe, institutionalFilter.hardBlockReasons, hardCtx);
+    const {dataTrust, compositeV2, hardBlockDetail} = final;
     const matchConfidence = initial.compositeV2.composite;
     const confidence = compositeV2.composite;
     // Legacy container remains for diagnostics; every headline uses the same final result.
@@ -2281,6 +2292,13 @@ function applyInstitutionalFilterToTopPicks(
       scoreV2,
       score: confidence,
       compositeV2,
+      permission: compositeV2.permission,
+      blockReasons: compositeV2.blockReasons,
+      watchReasons: compositeV2.watchReasons,
+      coverage: compositeV2.coverage,
+      missingFactors: compositeV2.missingFactors,
+      flags: compositeV2.flags,
+      hardBlockDetail,
       institutionalFilter,
       entry: enrichedEntry,
       stop: enrichedStop,

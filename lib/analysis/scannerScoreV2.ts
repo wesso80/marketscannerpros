@@ -59,8 +59,9 @@ export const SCORE_FACTOR_LABEL: Record<ScoreFactor, string> = {
 };
 
 /** A single normalized factor signal. `signed` is direction+strength in [-1, 1]
- *  (bullish positive). Observed direction uses available votes. Missing applicable
- *  votes reduce the conservative magnitude; they never become neutral evidence. */
+ *  (bullish positive). Observed direction uses available votes. A missing applicable
+ *  vote counts exactly once, as a neutral (0) vote at its applicable weight, and is
+ *  flagged via `coverage` / missing factors; it is never penalised a second time. */
 export interface FactorInput {
   factor: ScoreFactor;
   /** Directional strength in [-1, 1]; produced by upstream normalization. */
@@ -89,7 +90,11 @@ export const REGIME_WEIGHTS_V2: Record<ScoreRegime, Record<ScoreFactor, number>>
   neutral: { TREND: 0.20, MOMENTUM: 0.18, VOLUME: 0.14, RELATIVE_STRENGTH: 0.16, VOLATILITY: 0.12, POSITIONING: 0.08, QUALITY: 0.08, CATALYST: 0.04 },
 };
 
-/** Evidence quality as a hard multiplier on the composite. */
+/**
+ * Evidence-quality multipliers. DESCRIPTIVE ONLY since msp.scanner.v2.3: evidence quality is a function of factor
+ * coverage, and coverage already dilutes the composite once (missing = neutral vote). Multiplying by this as well
+ * penalised the same missing factor twice (e.g. 5/7 factors: ×0.71 coverage and ×0.85 again). Kept for labels/tests.
+ */
 export const EVIDENCE_MULTIPLIER: Record<EvidenceQualityLevel, number> = {
   HIGH: 1.0,
   MEDIUM: 0.85,
@@ -99,12 +104,14 @@ export const EVIDENCE_MULTIPLIER: Record<EvidenceQualityLevel, number> = {
 
 export type ScoreFreshness = 'live' | 'delayed' | 'stale' | 'missing' | 'unknown';
 
+/** Freshness is a PERMISSION matter since msp.scanner.v2.4 (stale → STALE_DATA block, delayed → DATA_DELAYED watch,
+ *  unknown → DATA_TIMESTAMP_UNKNOWN watch), not a hidden score discount, so every level is neutral here. */
 export const FRESHNESS_MULTIPLIER: Record<ScoreFreshness, number> = {
   live: 1.0,
-  delayed: 0.92,
-  stale: 0.75,
-  missing: 0.5,
-  unknown: 0.5,
+  delayed: 1.0,
+  stale: 1.0,
+  missing: 1.0,
+  unknown: 1.0,
 };
 
 export interface CompositeV2Input {
@@ -137,7 +144,7 @@ export interface CompositeV2Result {
   direction: 'bullish' | 'bearish' | 'neutral';
   /** Directional aggregate in [-1, 1] before magnitude/scaling. */
   directional: number;
-  /** Raw magnitude 0–100 before evidence/freshness/liquidity multipliers. */
+  /** Raw magnitude 0–100 over OBSERVED factors only, before coverage and freshness/liquidity multipliers. */
   rawMagnitude: number;
   regime: ScoreRegime;
   appliedMultiplier: number;
@@ -145,7 +152,10 @@ export interface CompositeV2Result {
   availableFactors: number;
   applicableFactors: number;
   coverage: number;
-  /** Worst-case directional magnitude if unknown applicable votes oppose the observed side. */
+  /** |directional| × coverage × 100: magnitude with every missing applicable factor counted as a neutral vote. */
+  coverageAdjustedMagnitude: number;
+  /** @deprecated alias of `coverageAdjustedMagnitude` (v2.2 and earlier used a worst-case bound here that treated
+   *  every missing vote as opposing, i.e. max(0, |d|·cov − (1−cov)), then multiplied by evidence quality as well). */
   conservativeMagnitude: number;
 }
 
@@ -210,15 +220,15 @@ export function computeCompositeV2(input: CompositeV2Input): CompositeV2Result {
     : 0;
 
   const rawMagnitude = Math.abs(directional) * 100;
-  // Missing evidence is not a neutral observation. Bound the unknown signed votes
-  // pessimistically. Removing any observed vote cannot improve this lower bound.
-  const conservativeMagnitude = Math.max(0, Math.abs(directional) * coverage - (1 - coverage)) * 100;
-  const evidenceMult = EVIDENCE_MULTIPLIER[input.evidenceQuality];
+  // Missing applicable votes count once, as neutral votes at their applicable weight: the observed aggregate is
+  // diluted by coverage. (v2.2 assumed every missing vote opposed the observed side AND multiplied by an evidence
+  // factor derived from the same coverage, so one missing factor was penalised twice; 50% coverage scored 0.)
+  const coverageAdjustedMagnitude = Math.abs(directional) * coverage * 100;
   const freshnessMult = FRESHNESS_MULTIPLIER[input.freshness ?? 'live'];
   const liquidityMult = clamp(input.liquidityMultiplier ?? 1, 0, 1);
-  const appliedMultiplier = evidenceMult * freshnessMult * liquidityMult;
+  const appliedMultiplier = freshnessMult * liquidityMult;
 
-  const composite = Math.round(clamp(conservativeMagnitude * appliedMultiplier, 0, 100));
+  const composite = Math.round(clamp(coverageAdjustedMagnitude * appliedMultiplier, 0, 100));
   const direction: CompositeV2Result['direction'] =
     directional > band ? 'bullish' : directional < -band ? 'bearish' : 'neutral';
 
@@ -233,7 +243,8 @@ export function computeCompositeV2(input: CompositeV2Input): CompositeV2Result {
     availableFactors: available.length,
     applicableFactors: applicableFactors.length,
     coverage,
-    conservativeMagnitude,
+    coverageAdjustedMagnitude,
+    conservativeMagnitude: coverageAdjustedMagnitude,
   };
 }
 

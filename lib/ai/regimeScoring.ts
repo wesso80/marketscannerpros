@@ -131,9 +131,19 @@ function clamp(v: number, min = 0, max = 100): number {
  * Formula: Σ(weight_i × component_i) then apply gates + penalties
  * Trade Bias: <55 Neutral, 55-70 Conditional, 70-85 Valid, 85+ High Confluence
  */
+export interface RegimeScoreOptions {
+  /**
+   * Components whose gate must NOT be applied because the component is not independent evidence for this caller.
+   * The scanner passes ['SQ'] — its SQ component IS the scanner composite, so an SQ gate would block a setup for
+   * having the score it is gating (circular). The component still contributes to the weighted score.
+   */
+  ignoreGates?: Array<keyof ConfluenceComponents>;
+}
+
 export function computeRegimeScore(
   components: ConfluenceComponents,
-  regime: ScoringRegime
+  regime: ScoringRegime,
+  options: RegimeScoreOptions = {},
 ): RegimeScoringResult {
   const matrix = REGIME_MATRICES[regime];
   const weights = matrix.weights;
@@ -180,8 +190,10 @@ export function computeRegimeScore(
 
   // Check gates
   const gateViolations: string[] = [];
+  const ignored = new Set(options.ignoreGates ?? []);
   for (const [comp, minValue] of Object.entries(matrix.gates)) {
     const key = comp as keyof ConfluenceComponents;
+    if (ignored.has(key)) continue;
     if (clamped[key] < (minValue as number)) {
       gateViolations.push(`${key}=${clamped[key].toFixed(0)} < gate ${minValue}`);
     }
@@ -381,24 +393,37 @@ export function estimateComponentsFromContext(opts: {
   oiChange24h?: number;
   fearGreed?: number;
   ivRank?: number;
+  /**
+   * Setup direction the alignment is measured against. When omitted, the side implied by RSI (≥ 50 bullish) is used,
+   * so the estimate is still mirror-symmetric. (Before Sep 2026 TA was bullish-absolute: RSI 60 scored +15 but the
+   * mirrored bearish RSI 40 scored −10, so bearish setups failed the TREND_EXPANSION TA ≥ 50 gate far more often.)
+   */
+  direction?: 'bullish' | 'bearish' | 'neutral';
 }): ConfluenceComponents {
   // SQ: Signal Quality from scanner score
   const SQ = clamp(opts.scannerScore ?? 50);
 
-  // TA: Technical Alignment estimate
+  // TA: Technical Alignment WITH the setup direction (mirror-symmetric: a bearish reading is scored on 100 − RSI and −CCI)
+  const fin = (v: number | undefined): v is number => typeof v === 'number' && Number.isFinite(v);
+  const side = opts.direction === 'bearish' ? -1
+    : opts.direction === 'bullish' ? 1
+    : opts.direction === 'neutral' ? 0
+    : fin(opts.rsi) ? (opts.rsi >= 50 ? 1 : -1) : 0;
   let TA = 50;
-  if (opts.rsi !== undefined) {
-    if (opts.rsi > 50 && opts.rsi < 70) TA += 15; // Bullish confirmation
-    else if (opts.rsi < 50 && opts.rsi > 30) TA -= 10; // Bearish pressure
-    else if (opts.rsi >= 70 || opts.rsi <= 30) TA -= 5; // Overbought/oversold
+  if (fin(opts.rsi) && side !== 0) {
+    const r = side > 0 ? opts.rsi : 100 - opts.rsi;
+    if (r > 50 && r < 70) TA += 15; // momentum confirms the setup side
+    else if (r < 50 && r > 30) TA -= 10; // momentum against the setup side
+    else if (r >= 70 || r <= 30) TA -= 5; // stretched either way
   }
-  if (opts.adx !== undefined) {
-    if (opts.adx > 25) TA += 10; // Trend strength
+  if (fin(opts.adx)) {
+    if (opts.adx > 25) TA += 10; // Trend strength (direction-free)
     else if (opts.adx < 15) TA -= 10; // No trend
   }
-  if (opts.cci !== undefined) {
-    if (opts.cci > 0) TA += 5;
-    else if (opts.cci < -100) TA -= 10;
+  if (fin(opts.cci) && side !== 0) {
+    const c = side * opts.cci;
+    if (c > 0) TA += 5;
+    else if (c < -100) TA -= 10;
   }
   TA = clamp(TA);
 

@@ -130,8 +130,8 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
             Factor votes use the current regime weights. These research scores are not probabilities; the factor groups can still be correlated.
           </p>
           {v2.version ? <div className="text-[11px] text-slate-400 space-y-1">
-            <p>Observed magnitude {v2.observedMagnitude?.toFixed(2)} → conservative magnitude {v2.conservativeMagnitude?.toFixed(2)} after accounting for missing factors.</p>
-            <p>Round(conservative magnitude × {v2.appliedMultiplier?.toFixed(4)} evidence/freshness/liquidity) × {v2.gateMultiplier} gate; cap {v2.trustCap} → {v2.composite}/100.</p>
+            <p>Observed magnitude {v2.observedMagnitude?.toFixed(2)} × {Math.round((v2.coverage ?? 0) * 100)}% coverage → {(v2.coverageAdjustedMagnitude ?? v2.conservativeMagnitude)?.toFixed(2)} (missing factors count as neutral{v2.missingFactors?.length ? `: ${v2.missingFactors.join(', ')}` : ''}).</p>
+            <p>Round(magnitude × {v2.appliedMultiplier?.toFixed(4)} freshness/liquidity) × {v2.gateMultiplier} gate; cap {v2.trustCap} → {v2.composite}/100.</p>
             <p>{v2.freshness} data · {v2.evidenceQuality} evidence · {v2.version}</p>
           </div> : null}
         </div>

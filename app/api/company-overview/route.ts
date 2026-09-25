@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { getQuote } from '@/lib/onDemandFetch';
-import { getCompanyOverviewRaw, getEarningsHistory, getNextEarnings } from '@/lib/goldenEgg/companyOverview';
+import { getCompanyOverviewRaw, getEarningsHistory, getNextEarningsWithStatus } from '@/lib/goldenEgg/companyOverview';
 import { describeMultiple, periodLabels, daysUntil } from '@/lib/goldenEgg/fundamentalsContext';
 
 export const runtime = 'nodejs';
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
     const [earnings, nextEarnings, quote] = await Promise.all([
       getEarningsHistory(symbol).catch(() => null),
-      getNextEarnings(symbol).catch(() => null),
+      getNextEarningsWithStatus(symbol).catch(() => ({ status: 'UNKNOWN' as const, row: null })),
       getQuote(symbol).catch(() => null),
     ]);
 
@@ -113,9 +113,11 @@ export async function GET(request: NextRequest) {
         // Transparent multiple wording (Part K2)
         multiple,
         // Earnings (Part K3)
-        nextEarningsDate: nextEarnings?.reportDate ?? null,
-        nextEarningsEstimate: nextEarnings?.estimate ?? null,
-        daysToEarnings: daysUntil(nextEarnings?.reportDate ?? null),
+        nextEarningsDate: nextEarnings.row?.reportDate ?? null,
+        // UNKNOWN (calendar unreadable) is distinct from NONE_IN_HORIZON; the page must not show "Not scheduled" for it.
+        nextEarningsStatus: nextEarnings.status,
+        nextEarningsEstimate: nextEarnings.row?.estimate ?? null,
+        daysToEarnings: daysUntil(nextEarnings.row?.reportDate ?? null),
         lastReportedQuarter: earnings?.lastReported?.fiscalDateEnding ?? period.latestQuarter,
         lastReportedDate: earnings?.lastReported?.reportedDate ?? null,
         lastReportedEPS: earnings?.lastReported?.reportedEPS ?? null,

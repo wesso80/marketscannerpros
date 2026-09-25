@@ -54,22 +54,34 @@ export async function getEarningsHistory(symbol: string): Promise<EarningsHistor
   return out;
 }
 
-/** Next scheduled report from EARNINGS_CALENDAR (CSV, 3-month horizon). null = none scheduled inside the horizon. */
-export async function getNextEarnings(symbol: string): Promise<EarningsCalendarRow | null> {
+/** SCHEDULED = a report inside the 3-month horizon; NONE_IN_HORIZON = the calendar loaded and lists none;
+ *  UNKNOWN = the calendar could not be read (no key, provider error / rate-limit JSON, network). UNKNOWN must never be
+ *  shown as "not scheduled". */
+export type NextEarningsStatus = 'SCHEDULED' | 'NONE_IN_HORIZON' | 'UNKNOWN';
+
+export async function getNextEarningsWithStatus(symbol: string): Promise<{ status: NextEarningsStatus; row: EarningsCalendarRow | null }> {
   const key = symbol.toUpperCase();
   const hit = calendarCache.get(key);
-  if (hit && Date.now() - hit.ts < CALENDAR_TTL) return hit.data;
-  if (!AV_KEY) return null;
+  if (hit && Date.now() - hit.ts < CALENDAR_TTL) return { status: hit.data ? 'SCHEDULED' : 'NONE_IN_HORIZON', row: hit.data };
+  if (!AV_KEY) return { status: 'UNKNOWN', row: null };
   try {
     await avTakeToken();
     const res = await fetch(`https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&symbol=${encodeURIComponent(key)}&horizon=3month&apikey=${AV_KEY}`);
     const text = await res.text();
-    const row = text.trim().startsWith('{') ? null : nextEarningsFromCalendar(parseEarningsCalendarCsv(text), key);
+    // A JSON body is a provider note / error (e.g. rate limit), not an empty calendar: do not cache it as "none".
+    if (!res.ok || text.trim().startsWith('{')) return { status: 'UNKNOWN', row: null };
+    const row = nextEarningsFromCalendar(parseEarningsCalendarCsv(text), key);
     calendarCache.set(key, { ts: Date.now(), data: row });
-    return row;
+    return { status: row ? 'SCHEDULED' : 'NONE_IN_HORIZON', row };
   } catch {
-    return null;
+    return { status: 'UNKNOWN', row: null };
   }
+}
+
+/** Next scheduled report from EARNINGS_CALENDAR (CSV, 3-month horizon). null = none scheduled OR unknown; use
+ *  `getNextEarningsWithStatus` when the difference matters. */
+export async function getNextEarnings(symbol: string): Promise<EarningsCalendarRow | null> {
+  return (await getNextEarningsWithStatus(symbol)).row;
 }
 
 export interface FundamentalsSummary {
@@ -95,6 +107,8 @@ export interface FundamentalsSummary {
   multiple: ReturnType<typeof describeMultiple>;
   period: ReturnType<typeof periodLabels>;
   nextEarningsDate: string | null;
+  /** SCHEDULED / NONE_IN_HORIZON / UNKNOWN (calendar unreadable). Optional for older cached payloads. */
+  nextEarningsStatus?: NextEarningsStatus;
   daysToEarnings: number | null;
   lastReportedQuarter: string | null;
   lastEpsBeat: boolean | null;
@@ -108,14 +122,14 @@ export async function getFundamentalsSummary(symbol: string, opts: { includeEarn
   if (!raw) return null;
   const [earnings, next, quote] = await Promise.all([
     opts.includeEarnings === false ? null : getEarningsHistory(symbol).catch(() => null),
-    opts.includeEarnings === false ? null : getNextEarnings(symbol).catch(() => null),
+    opts.includeEarnings === false ? null : getNextEarningsWithStatus(symbol).catch(() => ({ status: 'UNKNOWN' as const, row: null })),
     getQuote(symbol).catch(() => null),
   ]);
   const valuation = valuationAtPrice(quote?.price, raw.EPS, raw.SharesOutstanding, raw.MarketCapitalization);
   const pe = valuation.pe, fwd = numOrNull(raw.ForwardPE), peg = numOrNull(raw.PEGRatio);
   const ratings = { strongBuy: Number(raw.AnalystRatingStrongBuy) || 0, buy: Number(raw.AnalystRatingBuy) || 0, hold: Number(raw.AnalystRatingHold) || 0, sell: Number(raw.AnalystRatingSell) || 0, strongSell: Number(raw.AnalystRatingStrongSell) || 0 };
   const analystCount = ratings.strongBuy + ratings.buy + ratings.hold + ratings.sell + ratings.strongSell;
-  const nextDate = next?.reportDate ?? null;
+  const nextDate = next?.row?.reportDate ?? null;
   return {
     symbol: raw.Symbol,
     name: raw.Name ?? null,
@@ -137,6 +151,7 @@ export async function getFundamentalsSummary(symbol: string, opts: { includeEarn
     multiple: describeMultiple(pe, fwd, peg),
     period: periodLabels(raw),
     nextEarningsDate: nextDate,
+    nextEarningsStatus: next?.status ?? 'UNKNOWN',
     daysToEarnings: daysUntil(nextDate),
     lastReportedQuarter: earnings?.lastReported?.fiscalDateEnding ?? raw.LatestQuarter ?? null,
     lastEpsBeat: earnings?.lastReported?.beat ?? null,

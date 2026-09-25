@@ -50,11 +50,9 @@ export function computeScannerDerivativesContribution(input: ScannerDerivativesC
     } else if (fundingRate < -0.05) {
       bullishSignal += 0.8;
       boost += 2;
-    } else if (fundingRate > 0.01) {
-      bullishSignal += 0.3;
-    } else if (fundingRate < -0.01) {
-      bearishSignal += 0.3;
     }
+    // |funding| ≤ 0.05 is normal and neutral. (A 0.01–0.05 band used to read positive funding as BULLISH, the
+    // opposite of the extreme-funding rule above.)
   }
 
   if (hasOpenInterest) {

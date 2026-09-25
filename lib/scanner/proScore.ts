@@ -2,9 +2,19 @@
 import { deriveFactorSignals, type UniverseContext } from '@/lib/analysis/scannerFactorSignals';
 import type { ScoreRegime } from '@/lib/analysis/scannerScoreV2';
 import { evaluateDataTrust, type TrustAssetClass } from './dataTrust';
-import { buildScannerScore, dollarVolume, scoreFreshness } from './scoreContract';
+import { cryptoPositioningExpected } from './derivativeSnapshot';
+import { buildScannerScore, dollarVolume, scoreFreshness, type ScoreReason } from './scoreContract';
+import { barsPerDay, evaluateHardBlocks, macroEventFlags } from './hardBlocks';
 
-export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: string, universe: UniverseContext = {}, gated = false) {
+export interface ProHardBlockContext {
+  /** Upcoming earnings map (symbol → YYYY-MM-DD). Omitted/empty → earnings UNKNOWN (flag, not block). */
+  earningsMap?: Map<string, string>;
+  macroFlags?: ScoreReason[];
+  nowMs?: number;
+}
+
+/** `gated`: independent gate failures (preferred: reason list) — never pass a block derived from this pick's own score. */
+export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: string, universe: UniverseContext = {}, gated: boolean | ScoreReason[] = false, hardCtx: ProHardBlockContext = {}) {
   const ind = pick.indicators ?? {};
   const basis = pick.dataBasis;
   const price = ind.price ?? pick.price;
@@ -25,14 +35,27 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     bbwp: ind.bbwp, volatilityObserved: typeof ind.squeeze === 'boolean',
     // Being in a squeeze is not evidence that a squeeze has fired.
     dveFlags: ind.dveFlags, fundingRate: pick.fundingRate ?? ind.fundingRate,
-    derivativesExpected: asset === 'crypto', dollarVolume: dollarVolume(price, ind.volume, asset),
+    derivativesExpected: cryptoPositioningExpected(asset, pick.fundingRate ?? ind.fundingRate), dollarVolume: dollarVolume(price, ind.volume, asset),
   }, universe);
   const atrPct = Number.isFinite(ind.atr) && price > 0 ? ind.atr / price * 100 : undefined;
   const regime: ScoreRegime = Number.isFinite(ind.adx) && ind.adx >= 25 ? 'trending'
     : atrPct !== undefined && atrPct > 4 ? 'expansion' : atrPct !== undefined && atrPct < 1 ? 'compression'
     : Number.isFinite(ind.adx) && ind.adx < 20 ? 'ranging' : 'neutral';
-  const compositeV2 = buildScannerScore({factors: signals.factors, regime, freshness: scoreFreshness(dataTrust.freshness),
+  const dv = dollarVolume(price, ind.volume, asset);
+  const volume24h = Number(pick.marketSnapshot?.volume24hUsd);
+  const hard = evaluateHardBlocks({
+    asset, timeframe, freshness: dataTrust.freshness, lastBarAt: basis?.lastCompletedBarAt ?? null,
+    price, referencePrice: pick.referenceClose ?? null, referenceSource: pick.referenceSource ?? null, referenceIndependent: false,
+    atrPct: atrPct ?? null,
+    earningsDate: asset === 'equity' ? hardCtx.earningsMap?.get(String(pick.symbol ?? '').toUpperCase()) ?? null : null,
+    earningsCalendarLoaded: Boolean(hardCtx.earningsMap && hardCtx.earningsMap.size > 0),
+    dollarVolumeDaily: asset === 'crypto' && Number.isFinite(volume24h) && volume24h > 0 ? volume24h : dv != null ? dv * barsPerDay(timeframe, asset) : null,
+    nowMs: hardCtx.nowMs,
+  }, hardCtx.macroFlags ?? macroEventFlags(hardCtx.nowMs));
+  const compositeV2 = buildScannerScore({factors: signals.factors, regime, hardBlocks: hard.blocks, flags: hard.flags, freshness: scoreFreshness(dataTrust.freshness),
     trustLevel: dataTrust.level, trustReasons: dataTrust.reasons, criticalBlockers: dataTrust.eligibilityBlockers,
-    liquidityMultiplier: signals.liquidityMultiplier, regimeGated: gated, catalyst: signals.catalyst});
-  return {dataTrust, compositeV2};
+    trustQualityIssues: dataTrust.qualityIssues, missingInputs: dataTrust.missingInputs,
+    liquidityMultiplier: signals.liquidityMultiplier, catalyst: signals.catalyst,
+    ...(Array.isArray(gated) ? {gateBlocks: gated} : {regimeGated: gated})});
+  return {dataTrust, compositeV2, hardBlockDetail: {earnings: hard.earnings, priceCheck: hard.priceCheck, liquidity: hard.liquidity}};
 }

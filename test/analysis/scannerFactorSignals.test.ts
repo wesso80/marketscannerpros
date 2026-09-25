@@ -67,10 +67,21 @@ describe('derivePositioningSignal', () => {
   it('is unavailable without derivatives', () => {
     expect(derivePositioningSignal({ fundingRate: 0.03 }).available).toBe(false);
   });
-  it('treats crowded longs (high positive funding) as bearish tilt', () => {
-    const s = derivePositioningSignal({ fundingRate: 0.05, derivativesExpected: true });
+  it('treats crowded longs (extreme positive funding) as bearish tilt', () => {
+    const s = derivePositioningSignal({ fundingRate: 0.08, derivativesExpected: true });
     expect(s.available).toBe(true);
     expect(s.signed).toBeLessThan(0);
+  });
+  it('treats normal positive funding as neutral (observed, zero vote)', () => {
+    const s = derivePositioningSignal({ fundingRate: 0.01, derivativesExpected: true });
+    expect(s.available).toBe(true);
+    expect(s.signed).toBe(0);
+  });
+  it('is mirror-symmetric: crowded shorts lean bullish by the same amount', () => {
+    const long = derivePositioningSignal({ fundingRate: 0.08, derivativesExpected: true }).signed;
+    const short = derivePositioningSignal({ fundingRate: -0.08, derivativesExpected: true }).signed;
+    expect(short).toBeCloseTo(-long, 12);
+    expect(derivePositioningSignal({ fundingRate: 0.2, derivativesExpected: true }).signed).toBe(-1);
   });
 });
 
@@ -95,10 +106,10 @@ describe('deriveCatalystSignal', () => {
 });
 
 describe('deriveLiquidityMultiplier', () => {
-  it('penalises nano-caps and warrants and imminent earnings', () => {
+  it('penalises nano-caps and warrants; imminent earnings is a hard block, not a multiplier', () => {
     expect(deriveLiquidityMultiplier({ marketCap: 20_000_000 })).toBeCloseTo(0.6, 5);
     expect(deriveLiquidityMultiplier({ isDerivativeSecurity: true })).toBeCloseTo(0.5, 5);
-    expect(deriveLiquidityMultiplier({ earningsInDays: 1 })).toBeCloseTo(0.9, 5);
+    expect(deriveLiquidityMultiplier({ earningsInDays: 1 })).toBe(1);
     expect(deriveLiquidityMultiplier({ marketCap: 500_000_000 })).toBe(1);
   });
   it('uses cross-sectional dollar-volume percentile when supplied', () => {
@@ -133,10 +144,10 @@ describe('deriveFactorSignals', () => {
     expect(vol?.signed).toBeGreaterThan(0);
   });
 
-  it('flags imminent earnings and reduces the multiplier', () => {
+  it('flags imminent earnings without a score multiplier (EARNINGS_IN_WINDOW blocks instead)', () => {
     const out = deriveFactorSignals({ ...bullish, earningsInDays: 1 });
     expect(out.catalyst.imminent).toBe(true);
-    expect(out.liquidityMultiplier).toBeCloseTo(0.9, 5);
+    expect(out.liquidityMultiplier).toBe(1);
   });
 
   it('produces a neutral provisional direction when core votes cancel', () => {

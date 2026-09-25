@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
+import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } from "@/lib/scanner/dailyPickTrust";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
         change_percent,
         indicators,
         scan_date,
+        created_at,
         COALESCE(rank_type, 'top') as rank_type
       FROM ranked_picks
       WHERE rank <= $1
@@ -79,11 +81,18 @@ export async function GET(req: NextRequest) {
       forex: []
     };
 
+    // Per-ticker trust from what was actually stored (indicator coverage + data age), not a blanket "fresh, 100%".
+    const nowMs = Date.now();
+    const trusts: DailyPickTrust[] = [];
     for (const pick of picks) {
       const target = pick.rank_type === 'bottom' ? bottomPicks : topPicks;
       if (target[pick.asset_class]) {
+        const trust = evaluateDailyPickTrust(pick, nowMs);
+        trusts.push(trust);
         target[pick.asset_class].push({
           ...pick,
+          trust,
+          dataTimestamp: trust.dataTimestamp,
           signals: {
             bullish: pick.signals_bullish,
             bearish: pick.signals_bearish,
@@ -109,13 +118,22 @@ export async function GET(req: NextRequest) {
         crypto: bottomPicks.crypto,
         forex: bottomPicks.forex
       },
-      dataQuality: scannerDataQualityMetadata({
-        source: 'daily_picks_database',
-        computedAt: scanDate,
-        stale: false,
-        coverageScore: picks.length ? 100 : 0,
-        warnings: picks.length ? [] : ['No daily research observations are available yet.'],
-      }),
+      dataQuality: (() => {
+        const summary = summarizeDailyPickTrust(trusts);
+        return {
+          ...scannerDataQualityMetadata({
+            source: 'daily_picks_database',
+            computedAt: scanDate,
+            stale: summary.stale,
+            coverageScore: summary.coverageScore,
+            warnings: picks.length ? [
+              ...(summary.staleCount ? [`${summary.staleCount} observation(s) are based on stale data.`] : []),
+              ...(summary.insufficientCount ? [`${summary.insufficientCount} observation(s) have insufficient indicator coverage.`] : []),
+            ] : ['No daily research observations are available yet.'],
+          }),
+          oldestDataTimestamp: summary.oldestDataTimestamp,
+        };
+      })(),
       // Quick access to #1 research observations
       featured: {
         topEquity: topPicks.equity[0] || null,

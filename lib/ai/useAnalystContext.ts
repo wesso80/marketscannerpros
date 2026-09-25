@@ -178,8 +178,11 @@ function assessAuthorization(opts: {
 }): { auth: AnalystAuthorization; reason: string | null } {
   if (!opts.isLoggedIn) return { auth: 'BLOCKED', reason: 'Not authenticated — sign in to access analyst.' };
   if (opts.tier === 'free' || opts.tier === 'anonymous') return { auth: 'BLOCKED', reason: 'ARCA AI requires Pro or higher tier.' };
-  if (opts.permission === 'NO') return { auth: 'BLOCKED', reason: `Trading blocked by risk governor (risk level: ${opts.riskLevel}).` };
-  if (opts.permission === 'CONDITIONAL') return { auth: 'CONDITIONAL', reason: 'Conditional authorization — reduced sizing indicated.' };
+  // The per-user /api/regime posture is context, not a gate: it is built from workspace state (and defaults to YES
+  // when nothing is stored), so it must not authorise or block the analyst. It is surfaced as a note only.
+  if (opts.permission === 'NO' || opts.permission === 'CONDITIONAL') {
+    return { auth: 'AUTHORIZED', reason: `Regime context: ${opts.permission === 'NO' ? 'high' : 'elevated'} risk (${opts.riskLevel ?? 'unknown'}) — informational, not a gate.` };
+  }
   return { auth: 'AUTHORIZED', reason: null };
 }
 

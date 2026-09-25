@@ -69,20 +69,20 @@ describe('computeCompositeV2', () => {
     expect(r.availableFactors).toBe(8);
   });
 
-  it('evidence quality multiplies the headline down', () => {
+  it('evidence quality is descriptive only (coverage already counts missing factors once)', () => {
     const high = computeCompositeV2({ factors: allBullish, regime: 'trending', evidenceQuality: 'HIGH' });
     const insuf = computeCompositeV2({ factors: allBullish, regime: 'trending', evidenceQuality: 'INSUFFICIENT' });
-    expect(insuf.composite).toBeLessThan(high.composite);
-    expect(insuf.appliedMultiplier).toBeCloseTo(0.45, 5);
+    expect(insuf.composite).toBe(high.composite);
+    expect(insuf.appliedMultiplier).toBe(1);
   });
 
-  it('stale freshness and thin liquidity reduce the composite', () => {
+  it('thin liquidity reduces the composite; staleness is a permission block, not a discount', () => {
     const clean = computeCompositeV2({ factors: allBullish, regime: 'trending', evidenceQuality: 'HIGH' });
     const degraded = computeCompositeV2({
       factors: allBullish, regime: 'trending', evidenceQuality: 'HIGH', freshness: 'stale', liquidityMultiplier: 0.6,
     });
     expect(degraded.composite).toBeLessThan(clean.composite);
-    expect(degraded.appliedMultiplier).toBeCloseTo(0.75 * 0.6, 5);
+    expect(degraded.appliedMultiplier).toBeCloseTo(0.6, 5);
   });
 
   it('redistributes weight across available factors when some are missing', () => {

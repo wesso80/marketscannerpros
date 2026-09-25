@@ -194,18 +194,31 @@ export function computeMomentumQuality(ind: {rsi?: number | null; macd?: number 
 }
 
 export interface ConfluenceComponent {key: string; weight: number; value: number; present: boolean; applicable?: boolean}
-/** Fixed applicable weights preserve the missing-data penalty and an exact additive explanation. */
+/** Neutral value imputed for an applicable component whose evidence is missing (flagged, never scored as 0). */
+export const CONFLUENCE_NEUTRAL = 50;
+/**
+ * Weighted confluence over APPLICABLE components (weights renormalised to 1).
+ *   • applicable: false → structurally unavailable for this asset (e.g. crypto Flow: no comparable options/flow feed);
+ *     its weight is redistributed, so the other pillars can still reach 100.
+ *   • applicable but not present → counted at a neutral 50 and flagged `imputedNeutral`; `coverage` reports the
+ *     observed share. (Previously it counted as 0 — a missing feed read as maximally bearish evidence AND the
+ *     row was trust-capped again: a double penalty.)
+ */
 export function computeConfluenceScore(components: ConfluenceComponent[], trustCap: number) {
   const applicableWeight = components.filter(c => c.applicable !== false).reduce((s,c) => s+c.weight,0);
   const rows = components.map(c => {
-    const available = c.applicable !== false && c.present && Number.isFinite(c.value);
-    const weight = c.applicable !== false && applicableWeight > 0 ? c.weight/applicableWeight : 0;
-    return {...c, available, effectiveWeight: available ? weight : 0, points: available ? Math.max(0,Math.min(100,c.value))*weight : 0};
+    const applicable = c.applicable !== false;
+    const available = applicable && c.present && Number.isFinite(c.value);
+    const imputedNeutral = applicable && !available;
+    const weight = applicable && applicableWeight > 0 ? c.weight/applicableWeight : 0;
+    const value = available ? Math.max(0,Math.min(100,c.value)) : CONFLUENCE_NEUTRAL;
+    return {...c, available, imputedNeutral, effectiveWeight: available ? weight : 0, appliedWeight: weight, points: applicable ? value*weight : 0};
   });
   const rawTotal = rows.reduce((s,c) => s+c.points,0);
   const coverage = rows.reduce((s,c) => s+c.effectiveWeight,0);
   const finalScore = Math.round(Math.min(rawTotal, trustCap));
-  return {version: 'msp.golden-egg.v2.1', rows, rawTotal, coverage, trustCap, capAdjustment: Math.min(0,trustCap-rawTotal), finalScore};
+  const missingComponents = rows.filter(r => r.imputedNeutral).map(r => r.key);
+  return {version: 'msp.golden-egg.v2.2', rows, rawTotal, coverage, missingComponents, trustCap, capAdjustment: Math.min(0,trustCap-rawTotal), finalScore};
 }
 
 export function formatUsdShort(v: number): string {

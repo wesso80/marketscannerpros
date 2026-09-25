@@ -849,7 +849,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
         <div className="md:col-span-3">
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Quality</div>
           <div className="mt-1 text-[1.25rem] font-black text-white md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
-          <div className="text-[0.72rem] font-semibold text-slate-400" title="Evidence-weighted confidence: score × evidence coverage × freshness × liquidity. Not a probability of profit.">{confidence} / 100 · {quality}</div>
+          <div className="text-[0.72rem] font-semibold text-slate-400" title="Evidence-weighted confidence: directional strength × factor coverage (missing factors count as neutral) × freshness × liquidity. Not a probability of profit.">{confidence} / 100 · {quality}</div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={confidence} aria-valuemin={0} aria-valuemax={100} aria-label={`Setup confidence: ${confidence}%`}>
             <div style={{ width: `${confidence}%`, background: confBarColor, height: '100%' }} />
           </div>
@@ -1381,7 +1381,7 @@ export default function ScannerPage() {
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
           scorePermission: pick.compositeV2?.permission, factorCoverage: pick.compositeV2?.coverage,
-          scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: conservative magnitude ${pick.compositeV2.conservativeMagnitude.toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} evidence/freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
+          scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: coverage-adjusted magnitude ${(pick.compositeV2.coverageAdjustedMagnitude ?? pick.compositeV2.conservativeMagnitude).toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,
@@ -1518,10 +1518,11 @@ export default function ScannerPage() {
         : '#A5B4FC';
   const riskLevel = regime.data?.riskLevel || 'moderate';
   const riskColor = riskLevel === 'low' ? 'var(--msp-bull)' : riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)';
-  const permission = regime.data?.permission || 'YES';
-  // /api/regime returns YES | CONDITIONAL | NO — this is the EXECUTION gate derived from the regime, not a data state.
-  const permissionLabel = permission === 'YES' || permission === 'full' ? 'Allowed' : permission === 'CONDITIONAL' || permission === 'reduced' ? 'Conditional' : 'Blocked';
-  const permissionColor = permission === 'YES' || permission === 'full' ? 'var(--msp-bull)' : permission === 'CONDITIONAL' || permission === 'reduced' ? 'var(--msp-warn)' : 'var(--msp-bear)';
+  // /api/regime returns YES | CONDITIONAL | NO from workspace context. It is informational only (not an execution
+  // gate — rows carry their own PASS/WATCH/BLOCK), and when it is missing we say so instead of defaulting to YES.
+  const permission = regime.data?.permission ?? null;
+  const permissionLabel = permission == null ? 'Unknown' : permission === 'YES' || permission === 'full' ? 'Normal' : permission === 'CONDITIONAL' || permission === 'reduced' ? 'Elevated' : 'High';
+  const permissionColor = permission == null ? '#94A3B8' : permission === 'YES' || permission === 'full' ? 'var(--msp-bull)' : permission === 'CONDITIONAL' || permission === 'reduced' ? 'var(--msp-warn)' : 'var(--msp-bear)';
   const weightTooltip = Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
 
   /* ═══════════════════════════════════════════════════════════════════════ */
@@ -1544,7 +1545,7 @@ export default function ScannerPage() {
                   <span className="text-slate-600">·</span>
                   <span className="text-slate-400">Risk <span style={{ color: riskColor }}>{riskLevel}</span></span>
                   <span className="text-slate-600">·</span>
-                  <span className="text-slate-400" title="Execution gate derived from the market regime. Scanner rows are research candidates regardless.">Execution gate <span style={{ color: permissionColor }}>{permissionLabel}</span></span>
+                  <span className="text-slate-400" title="Regime risk context from your workspace (informational only — not a gate). Each row's own permission is PASS / WATCH / BLOCK.">Regime risk <span style={{ color: permissionColor }}>{permissionLabel}</span></span>
                 </span>
               )}
             </div>
