@@ -3,6 +3,7 @@ import {
   computeFeatures, evaluateCanonical, evaluateCanonicalFromBars, evaluateCanonicalFromSnapshot, evaluateSetup, findPivots,
   percentileRankAt, type CanonicalBar,
 } from '@/lib/scoring/canonical';
+import { flipBars, zigzagTrend } from './fixtures/canonicalBars';
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -41,8 +42,12 @@ describe('canonical engine: symmetry', () => {
     let compared = 0;
     for (let seed = 1; seed <= 40; seed++) {
       const bars = synth(420, seed, seed % 2 ? 0.0012 : -0.0012);
-      const a = evaluateCanonicalFromBars(bars, uncal);
-      const b = evaluateCanonicalFromBars(flip(bars), uncal);
+      // Bollinger width is a % of price (like ATR%), so its percentile is not mirror-invariant; share it so the squeeze
+      // gate sees the same compression on both charts. Everything else is computed independently from each chart.
+      const fa = computeFeatures(bars);
+      const fb = { ...computeFeatures(flip(bars)), bbwPercentile120: fa.bbwPercentile120 };
+      const a = evaluateCanonical({ ...uncal, features: fa });
+      const b = evaluateCanonical({ ...uncal, features: fb });
       // Every setup × direction candidate mirrors: long(original) ≡ short(flipped).
       for (const c of a.candidates) {
         const m = b.candidates.find((x) => x.setupType === c.setupType && x.direction === (c.direction === 'long' ? 'short' : 'long'))!;
@@ -56,25 +61,38 @@ describe('canonical engine: symmetry', () => {
         expect(b.direction).toBe(a.direction === 'long' ? 'short' : 'long');
       }
     }
-    expect(compared).toBeGreaterThan(10);
+    // The trend / structure / R:R gates make eligible setups rarer on random-walk-like charts than before.
+    expect(compared).toBeGreaterThan(3);
   });
 
-  it('is exactly symmetric when the volatility percentile is neutralised', () => {
+  it('is exactly symmetric when the volatility percentiles are neutralised', () => {
+    let withSetup = 0;
     for (let seed = 1; seed <= 20; seed++) {
       const bars = synth(420, seed, 0.001);
       const fa = { ...computeFeatures(bars), atrPctPercentile: 50 };
-      const fb = { ...computeFeatures(flip(bars)), atrPctPercentile: 50 };
+      const fb = { ...computeFeatures(flip(bars)), atrPctPercentile: 50, bbwPercentile120: fa.bbwPercentile120 };
       const a = evaluateCanonical({ ...uncal, features: fa });
       const b = evaluateCanonical({ ...uncal, features: fb });
       expect(b.score).toBe(a.score);
       expect(b.setupType).toBe(a.setupType);
       expect(b.direction === 'neutral').toBe(a.direction === 'neutral');
       if (a.direction !== 'neutral') {
+        withSetup++;
         expect(b.direction).toBe(a.direction === 'long' ? 'short' : 'long');
         expect(b.levels!.riskReward).toBeCloseTo(a.levels!.riskReward, 6);
         expect(b.permission).toBe(a.permission);
       }
     }
+    // plus the clean zig-zag trend and its mirror
+    const za = { ...computeFeatures(zigzagTrend()), atrPctPercentile: 50 };
+    const zb = { ...computeFeatures(flipBars(zigzagTrend())), atrPctPercentile: 50, bbwPercentile120: za.bbwPercentile120 };
+    const a = evaluateCanonical({ ...uncal, features: za }), b = evaluateCanonical({ ...uncal, features: zb });
+    expect(a.direction).toBe('long');
+    expect(b.direction).toBe('short');
+    expect(b.setupType).toBe(a.setupType);
+    expect(b.score).toBe(a.score);
+    expect(b.levels!.riskReward).toBeCloseTo(a.levels!.riskReward, 6);
+    expect(withSetup + 1).toBeGreaterThan(0);
   });
 });
 
@@ -104,13 +122,16 @@ describe('canonical engine: factors', () => {
     expect(c.ineligibleReason).toMatch(/LEVEL_BROKEN/);
   });
 
-  it('long invalidation sits at the recent swing low minus 0.1 ATR; ATR fallback is flagged', () => {
-    const f = computeFeatures(synth(420, 9, 0.002));
-    const swing = { index: f.bars - 8, price: f.close - 1.5 * f.atr, t: '' };
-    const c = evaluateSetup({ ...f, lastPivotLow: swing }, 'TREND_CONTINUATION', 'long');
+  it('long invalidation sits at the nearest confirmed swing low minus 0.1 ATR; no swing → no setup; snapshot ATR fallback is flagged', () => {
+    const f = computeFeatures(zigzagTrend());
+    const swing = f.close - 1.5 * f.atr;
+    const c = evaluateSetup({ ...f, stopLowsBelow: [swing] }, 'TREND_CONTINUATION', 'long');
     expect(c.levels.invalidationBasis).toBe('swing');
-    expect(c.levels.invalidation).toBeCloseTo(swing.price - 0.1 * f.atr, 8);
-    const nf = evaluateSetup({ ...f, lastPivotLow: null, low10: Number.NaN }, 'TREND_CONTINUATION', 'long');
+    expect(c.levels.invalidation).toBeCloseTo(swing - 0.1 * f.atr, 8);
+    const none = evaluateSetup({ ...f, stopLowsBelow: [] }, 'TREND_CONTINUATION', 'long');
+    expect(none.eligible).toBe(false);
+    expect(none.ineligibleReason).toMatch(/NO_STRUCTURAL_STOP/);
+    const nf = evaluateSetup({ ...f, mode: 'snapshot' }, 'TREND_CONTINUATION', 'long');
     expect(nf.levels.invalidationBasis).toBe('atr_fallback');
     expect(nf.levels.flags).toContain('atr_fallback');
     expect(nf.levels.invalidation).toBeCloseTo(f.close - 2 * f.atr, 8);

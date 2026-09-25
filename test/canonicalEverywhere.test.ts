@@ -6,6 +6,7 @@ import {
 import { applyCanonicalToGoldenEgg, evaluateGoldenEggCanonical, goldenEggCanonicalBars } from '@/lib/goldenEgg/canonicalVerdict';
 import { scanCryptoDailyIndicators } from '@/lib/scanner/dailyCryptoIndicators';
 import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
+import { zigzagTrend } from './fixtures/canonicalBars';
 
 const DAY = 86_400_000;
 const START = Date.UTC(2025, 0, 1);
@@ -105,7 +106,8 @@ describe('daily picks: canonical verdict stored and read back', () => {
 });
 
 describe('Golden Egg: canonical verdict is primary, confluence is secondary', () => {
-  const series = bars(300);
+  // An established zig-zag uptrend (structural trend-continuation long), so the verdict has a setup to label.
+  const series = zigzagTrend({ n: 300, startMs: START });
   const priceData = {
     historicalCloses: series.map((b) => b.close), historicalOpens: series.map((b) => b.open),
     historicalHighs: series.map((b) => b.high), historicalLows: series.map((b) => b.low),

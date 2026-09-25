@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CANONICAL_THRESHOLDS, SETUP_TYPES, computeFeatures, evaluateCanonical, type CanonicalBar } from '@/lib/scoring/canonical';
+import { zigzagTrend } from './fixtures/canonicalBars';
 
-const bars: CanonicalBar[] = Array.from({ length: 420 }, (_, i) => {
-  const c = 100 * (1 + 0.0015 * i + 0.03 * Math.sin(i / 9));
-  return { t: new Date(Date.UTC(2024, 0, 1) + i * 86_400_000).toISOString(), open: c * 0.998, high: c * 1.01, low: c * 0.99, close: c, volume: 1e6 };
-});
+// An established zig-zag uptrend with a structural trend-continuation long (see test/fixtures/canonicalBars).
+const bars: CanonicalBar[] = zigzagTrend();
 const features = computeFeatures(bars);
 
 describe('factor-score thresholds (uncalibrated contexts only)', () => {
@@ -67,27 +66,32 @@ describe('calibrated context (daily equity/crypto bars)', () => {
   });
 });
 
-describe('minimum reward:risk in calibrated ranking', () => {
-  it('prefers an eligible candidate meeting the minimum R:R and never grades a below-minimum pick above C', async () => {
+describe('minimum reward:risk', () => {
+  it('a structural reward:risk below the minimum is never a setup (not even a C-grade WATCH)', async () => {
     const { evaluateSetup, SETUP_TYPES, CANONICAL_MIN_RR } = await import('@/lib/scoring/canonical');
-    let checked = 0;
+    let checked = 0, belowSeen = 0;
     for (let k = 0; k < 60; k++) {
       const b: CanonicalBar[] = Array.from({ length: 420 }, (_, i) => {
         const c = 100 * (1 + (k % 3 - 1) * 0.001 * i + 0.04 * Math.sin(i / (5 + (k % 7))) + 0.02 * Math.sin(i / 23 + k));
         return { t: new Date(Date.UTC(2024, 0, 1) + i * 86_400_000).toISOString(), open: c * 0.997, high: c * 1.012, low: c * 0.988, close: c, volume: 1e6 * (1 + (i % 5) / 10) };
       });
       const f = computeFeatures(b);
-      const r = evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features: f });
-      if (r.permission === 'BLOCK') continue;
-      const anyMeets = SETUP_TYPES.some((s) => (['long', 'short'] as const).some((d) => {
+      for (const s of SETUP_TYPES) for (const d of ['long', 'short'] as const) {
         const c = evaluateSetup(f, s, d);
-        return c.eligible && (c.levels.targetBasis === 'projected' || c.levels.riskReward >= CANONICAL_MIN_RR);
-      }));
-      const lowRR = r.watchReasons.some((x) => x.code === 'RR_BELOW_MIN');
-      if (anyMeets && !r.watchReasons.some((x) => x.code === 'DIRECTION_UNRESOLVED')) expect(lowRR).toBe(false);
-      if (lowRR) expect(r.grade).toBe('C');
+        if (c.eligible) expect(c.levels.targetBasis === 'projected' || c.levels.riskReward >= CANONICAL_MIN_RR).toBe(true);
+        const raw = evaluateSetup(f, s, d, { minRR: 0 });
+        if (raw.eligible && raw.levels.targetBasis !== 'projected' && raw.levels.riskReward < CANONICAL_MIN_RR) {
+          belowSeen++;
+          expect(c.eligible).toBe(false);
+          expect(c.ineligibleReason).toMatch(/^RR_BELOW_MIN/);
+        }
+      }
+      const r = evaluateCanonical({ symbol: 'X', assetClass: 'equity', timeframe: 'daily', features: f });
+      expect(r.watchReasons.some((x) => x.code === 'RR_BELOW_MIN')).toBe(false);
+      if (r.levels) expect(r.levels.targetBasis === 'projected' || r.levels.riskReward >= CANONICAL_MIN_RR).toBe(true);
       checked++;
     }
-    expect(checked).toBeGreaterThan(10);
+    expect(checked).toBe(60);
+    expect(belowSeen).toBeGreaterThan(0);
   });
 });
