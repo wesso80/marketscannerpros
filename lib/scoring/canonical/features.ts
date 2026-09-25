@@ -18,6 +18,12 @@ export const FEATURE_POLICY = {
   /** A level within this many ATR of the close is being tested, not ahead — the next one is the target. */
   levelSkipAtr: 0.25,
   swingRecency: 60,
+  /** Stop / target levels: confirmed 3-bar pivots within this many bars. */
+  levelLookback: 120,
+  /** Bollinger-width percentile window for squeeze detection (≈ 6 months, as external checks measure it). */
+  squeezeLookback: 120,
+  /** SMA200 slope measured over this many bars. */
+  sma200SlopeBars: 20,
   climaxVolume: 2.5,
   climaxRangeAtr: 1.5,
 } as const;
@@ -126,6 +132,29 @@ export function computeFeatures(bars: CanonicalBar[]): CanonicalFeatures {
   const skip = fin(atrNow) ? FEATURE_POLICY.levelSkipAtr * atrNow : 0;
   const above = major.highs.filter((p) => p.index >= minIdx && p.price > close + skip).map((p) => p.price);
   const below = major.lows.filter((p) => p.index >= minIdx && p.price < close - skip).map((p) => p.price);
+  // Stop / target candidates from CONFIRMED 3-bar pivots in the last levelLookback bars.
+  //  stop*: pivots on the far side of the close that no later bar has traded through (still-valid structure),
+  //         nearest first. target*: any prior swing on the opposing side (a prior high is resistance even if old).
+  const lvMin = last - FEATURE_POLICY.levelLookback;
+  const laterMinLow = new Array<number>(n + 1).fill(Number.POSITIVE_INFINITY);
+  const laterMaxHigh = new Array<number>(n + 1).fill(Number.NEGATIVE_INFINITY);
+  for (let i = n - 1; i >= 0; i--) { laterMinLow[i] = Math.min(L[i], laterMinLow[i + 1]); laterMaxHigh[i] = Math.max(H[i], laterMaxHigh[i + 1]); }
+  const lvLows = lows.filter((p) => p.index >= lvMin), lvHighs = highs.filter((p) => p.index >= lvMin);
+  const stopLowsBelow = lvLows.filter((p) => p.price < close && laterMinLow[p.index + 1] >= p.price).map((p) => p.price).sort((a, b) => b - a);
+  const stopHighsAbove = lvHighs.filter((p) => p.price > close && laterMaxHigh[p.index + 1] <= p.price).map((p) => p.price).sort((a, b) => a - b);
+  const targetHighsAbove = [...new Set(lvHighs.filter((p) => p.price > close).map((p) => p.price))].sort((a, b) => a - b);
+  const targetLowsBelow = [...new Set(lvLows.filter((p) => p.price < close).map((p) => p.price))].sort((a, b) => b - a);
+  const sb = FEATURE_POLICY.sma200SlopeBars;
+  const sma200Slope = fin(atrNow) && atrNow > 0 ? (at(sma200, last) - at(sma200, last - sb)) / atrNow : Number.NaN;
+
+  // Exhaustion extreme for fades: the 5-bar high/low, only when a PRIOR bar printed it (the signal bar did not trade
+  // through it). The signal bar's own extreme is never used as a stop.
+  const priorExt = (arr: number[], hi: boolean) => {
+    if (n < 2) return Number.NaN;
+    const prior = arr.slice(Math.max(0, n - 5), last);
+    const ext = hi ? Math.max(...prior) : Math.min(...prior);
+    return hi ? (arr[last] < ext ? ext : Number.NaN) : (arr[last] > ext ? ext : Number.NaN);
+  };
   const bbMid = at(sma20, last), sd = at(sd20, last);
   const bbUpper = bbMid + 2 * sd, bbLower = bbMid - 2 * sd;
   const win = (arr: number[], k: number) => arr.slice(Math.max(0, n - k));
@@ -137,7 +166,7 @@ export function computeFeatures(bars: CanonicalBar[]): CanonicalFeatures {
     close,
     open: n ? bars[last].open : Number.NaN,
     ema20: at(ema20, last), ema50: at(ema50, last), ema200: n >= 200 ? at(ema200, last) : Number.NaN,
-    sma50: at(sma50, last), sma200: at(sma200, last),
+    sma50: at(sma50, last), sma200: at(sma200, last), sma200Slope,
     adx: at(dmi.adx, last), plusDI: at(dmi.plusDI, last), minusDI: at(dmi.minusDI, last),
     adxSlope: at(dmi.adx, last) - at(dmi.adx, last - 3),
     atr: atrNow,
@@ -145,6 +174,7 @@ export function computeFeatures(bars: CanonicalBar[]): CanonicalFeatures {
     atrPctPercentile: percentileRankAt(atrPctSeries, last),
     bbwPct: at(bbwSeries, last),
     bbwPercentile: percentileRankAt(bbwSeries, last),
+    bbwPercentile120: percentileRankAt(bbwSeries, last, FEATURE_POLICY.squeezeLookback),
     bbUpper: fin(bbUpper) ? bbUpper : Number.NaN,
     bbLower: fin(bbLower) ? bbLower : Number.NaN,
     squeezeRatio: at(sqzSeries, last),
@@ -166,6 +196,8 @@ export function computeFeatures(bars: CanonicalBar[]): CanonicalFeatures {
     supportBelow: below.length ? Math.max(...below) : null,
     high5: Math.max(...win(H, 5)), low5: Math.min(...win(L, 5)),
     high10: Math.max(...win(H, 10)), low10: Math.min(...win(L, 10)),
+    exhaustionHigh: priorExt(H, true), exhaustionLow: priorExt(L, false),
+    stopLowsBelow, stopHighsAbove, targetHighsAbove, targetLowsBelow,
   };
 }
 
@@ -188,10 +220,10 @@ export function featuresFromSnapshot(s: CanonicalSnapshot): CanonicalFeatures {
   const bbMid = (bbU + bbL) / 2;
   return {
     mode: 'snapshot', barDate: s.barDate ?? null, bars: 0, close, open: Number.NaN,
-    ema20: n(s.ema20), ema50: n(s.ema50), ema200: n(s.ema200), sma50: Number.NaN, sma200: Number.NaN,
+    ema20: n(s.ema20), ema50: n(s.ema50), ema200: n(s.ema200), sma50: Number.NaN, sma200: Number.NaN, sma200Slope: Number.NaN,
     adx: n(s.adx), plusDI: n(s.plusDI), minusDI: n(s.minusDI), adxSlope: Number.NaN,
     atr, atrPct: fin(atr) && close > 0 ? (atr / close) * 100 : Number.NaN, atrPctPercentile: Number.NaN,
-    bbwPct: fin(bbMid) && bbMid > 0 ? ((bbU - bbL) / bbMid) * 100 : Number.NaN, bbwPercentile: Number.NaN,
+    bbwPct: fin(bbMid) && bbMid > 0 ? ((bbU - bbL) / bbMid) * 100 : Number.NaN, bbwPercentile: Number.NaN, bbwPercentile120: Number.NaN,
     bbUpper: bbU, bbLower: bbL, squeezeRatio: Number.NaN, squeezeRatioPercentile: Number.NaN,
     rsi: n(s.rsi), rsiMax5: Number.NaN, rsiMin5: Number.NaN, rsiSlope: Number.NaN,
     volumeRatio: fin(s.volumeRatio) ? s.volumeRatio : null, volumeTrend5: null, climax: null,
@@ -199,6 +231,7 @@ export function featuresFromSnapshot(s: CanonicalSnapshot): CanonicalFeatures {
     distEma50Atr: fin(atr) && atr > 0 ? (close - n(s.ema50)) / atr : Number.NaN,
     beyondBand: fin(bbU) && close > bbU ? 1 : fin(bbL) && close < bbL ? -1 : 0,
     structure: 'unknown', lastPivotHigh: null, lastPivotLow: null, resistanceAbove: null, supportBelow: null,
-    high5: Number.NaN, low5: Number.NaN, high10: Number.NaN, low10: Number.NaN,
+    high5: Number.NaN, low5: Number.NaN, high10: Number.NaN, low10: Number.NaN, exhaustionHigh: Number.NaN, exhaustionLow: Number.NaN,
+    stopLowsBelow: [], stopHighsAbove: [], targetHighsAbove: [], targetLowsBelow: [],
   };
 }
