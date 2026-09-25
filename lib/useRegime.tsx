@@ -6,14 +6,30 @@ import type { Regime } from '@/lib/risk-governor-hard';
 
 type RiskLevel = 'low' | 'moderate' | 'elevated' | 'extreme';
 type Permission = 'YES' | 'CONDITIONAL' | 'NO';
-type Sizing = 'full' | 'reduced' | 'probe' | 'none';
 
+export interface RegimeSignal {
+  source: string;
+  regime: string;
+  weight: number;
+  stale: boolean;
+  /** 'market' = stored market data (VIX, SPY/QQQ trend); 'workspace' = this account's own signals. */
+  kind?: 'market' | 'workspace';
+  /** False when shown for context only (did not decide the regime). */
+  counted?: boolean;
+  asOf?: string | null;
+  detail?: string;
+}
+
+/** An available regime. When /api/regime has no regime, `data` is null and `unavailableReason` says why. */
 export interface UnifiedRegime {
+  available?: true;
+  basis?: 'market' | 'workspace';
   regime: Regime;
   riskLevel: RiskLevel;
   permission: Permission;
-  sizing: Sizing;
-  signals: Array<{ source: string; regime: string; weight: number; stale: boolean }>;
+  signals: RegimeSignal[];
+  /** Time of the underlying data (not the response time). */
+  asOf?: string | null;
   updatedAt: string;
 }
 
@@ -21,48 +37,52 @@ interface RegimeContextValue {
   data: UnifiedRegime | null;
   loading: boolean;
   error: string | null;
+  /** Set when the regime is unavailable (no market data and no account signals, or an error). */
+  unavailableReason: string | null;
   refresh: () => void;
 }
-
-const DEFAULT_REGIME: UnifiedRegime = {
-  regime: 'RANGE_NEUTRAL',
-  riskLevel: 'moderate',
-  permission: 'CONDITIONAL',
-  sizing: 'reduced',
-  signals: [],
-  updatedAt: new Date().toISOString(),
-};
 
 const RegimeContext = createContext<RegimeContextValue>({
   data: null,
   loading: true,
   error: null,
+  unavailableReason: null,
   refresh: () => {},
 });
+
+/** Normalise an /api/regime body: anything without a regime is "unavailable", never a default. */
+export function parseRegimeResponse(json: any): { data: UnifiedRegime | null; unavailableReason: string | null } {
+  if (!json || json.available === false || typeof json.regime !== 'string' || !json.regime) {
+    return { data: null, unavailableReason: typeof json?.reason === 'string' && json.reason ? json.reason : 'Regime unavailable.' };
+  }
+  return { data: json as UnifiedRegime, unavailableReason: null };
+}
 
 export function RegimeProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<UnifiedRegime | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
 
   const fetchRegime = useCallback(async () => {
     try {
       const res = await fetch('/api/regime');
-      if (!res.ok) {
-        if (res.status === 401) {
-          // Not logged in — use defaults
-          setData(DEFAULT_REGIME);
-          setLoading(false);
-          return;
-        }
-        throw new Error(`Regime API returned ${res.status}`);
+      if (res.status === 401) {
+        // Not logged in: no regime (never a made-up default).
+        setData(null);
+        setUnavailableReason('Sign in to see the market regime.');
+        setError(null);
+        return;
       }
-      const json = await res.json();
-      setData(json);
-      setError(null);
+      const json = await res.json().catch(() => null);
+      const parsed = parseRegimeResponse(json);
+      setData(parsed.data);
+      setUnavailableReason(parsed.unavailableReason);
+      setError(res.ok ? null : `Regime API returned ${res.status}`);
     } catch (err) {
-      console.warn('Regime fetch failed, using defaults:', err);
-      setData(DEFAULT_REGIME);
+      console.warn('Regime fetch failed:', err);
+      setData(null);
+      setUnavailableReason('Regime unavailable: the regime service could not be reached.');
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -72,7 +92,7 @@ export function RegimeProvider({ children }: { children: ReactNode }) {
   usePolling(fetchRegime, 30_000, { immediate: true });
 
   return (
-    <RegimeContext.Provider value={{ data, loading, error, refresh: fetchRegime }}>
+    <RegimeContext.Provider value={{ data, loading, error, unavailableReason, refresh: fetchRegime }}>
       {children}
     </RegimeContext.Provider>
   );

@@ -15,9 +15,10 @@ import { humanizeEnum } from '@/lib/presentation/labels';
 export default function RegimeBar() {
   const { data: regime, loading } = useRegime();
 
-  const regimeLabel = regime?.regime || 'neutral';
+  // No regime means "unavailable" — never a default such as neutral.
+  const regimeLabel = regime?.regime ?? null;
   const signals = regime?.signals || [];
-  const nonStaleSignals = signals.filter(s => !s.stale);
+  const nonStaleSignals = signals.filter(s => !s.stale && s.counted !== false);
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-[var(--msp-panel-2)] border-b border-[var(--msp-border)] overflow-x-auto">
@@ -26,13 +27,15 @@ export default function RegimeBar() {
         <span className="text-[10px] text-slate-600 animate-pulse">Loading...</span>
       ) : (
         <>
-          <Badge label={humanizeEnum(regimeLabel)} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
+          {regimeLabel
+            ? <Badge label={humanizeEnum(regimeLabel)} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
+            : <Badge label="Unavailable" color="var(--msp-text-muted)" small />}
           {nonStaleSignals.length > 0 && (
             <>
               <div className="h-3 w-px bg-slate-700" />
               {nonStaleSignals.map(s => (
                 <span key={s.source} className="text-[10px] text-slate-500 whitespace-nowrap">
-                  <span style={{ color: REGIME_COLORS[s.regime as RegimePriority] || 'var(--msp-text-muted)' }}>{s.source}</span>
+                  <span style={{ color: REGIME_COLORS[s.regime as RegimePriority] || 'var(--msp-text-muted)' }}>{s.kind === 'market' ? 'market data' : s.source}</span>
                   <span className="text-slate-600 ml-1">{humanizeEnum(s.regime)}</span>
                 </span>
               ))}

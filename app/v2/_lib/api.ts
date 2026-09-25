@@ -48,12 +48,16 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 /* ------------------------------------------------------------------ */
 
 // --- Regime ---
+/** An available regime from /api/regime. An unavailable regime is returned as `null` by fetchRegime(). */
 export interface RegimeResponse {
+  available?: true;
+  basis?: 'market' | 'workspace';
   regime: string;
   riskLevel: string;
   permission: string;
-  sizing: string;
-  signals: Array<{ source: string; regime: string; weight: number; stale: boolean }>;
+  signals: Array<{ source: string; regime: string; weight: number; stale: boolean; kind?: 'market' | 'workspace'; counted?: boolean; asOf?: string | null; detail?: string }>;
+  /** Time of the underlying data (not the response time). */
+  asOf?: string | null;
   updatedAt: string;
 }
 
@@ -569,11 +573,14 @@ export interface OptionsScanResponse {
 
 // --- Regime ---
 // Several independent widgets on every page call this; share one in-flight request for a few seconds.
-let regimeInflight: { at: number; promise: Promise<RegimeResponse> } | null = null;
-export function fetchRegime(): Promise<RegimeResponse> {
+// When /api/regime reports `available: false` this resolves to null (never a default regime).
+let regimeInflight: { at: number; promise: Promise<RegimeResponse | null> } | null = null;
+export function fetchRegime(): Promise<RegimeResponse | null> {
   const now = Date.now();
   if (regimeInflight && now - regimeInflight.at < 5000) return regimeInflight.promise;
-  const promise = apiFetch<RegimeResponse>('/api/regime').catch((err) => { regimeInflight = null; throw err; });
+  const promise = apiFetch<Omit<RegimeResponse, 'available'> & { available?: boolean }>('/api/regime')
+    .then((body) => (body && body.available !== false && typeof body.regime === 'string' && body.regime ? body as RegimeResponse : null))
+    .catch((err) => { regimeInflight = null; throw err; });
   regimeInflight = { at: now, promise };
   return promise;
 }

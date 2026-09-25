@@ -21,11 +21,12 @@ async function macroSeries(key: string, limit: number): Promise<Array<{ on: stri
 }
 
 async function indexTrend(symbol: string): Promise<IndexTrend | null> {
-  const rows = await q<{ close: string | number }>(`SELECT close FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 200`, [symbol]);
+  const rows = await q<{ ts: Date | string; close: string | number }>(`SELECT ts, close FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 200`, [symbol]);
   const closes = rows.map((r) => num(r.close)).filter((v): v is number => v !== null);
   if (closes.length < 200) return null;
   const avg = (k: number) => closes.slice(0, k).reduce((a, b) => a + b, 0) / k;
-  return { close: closes[0], sma50: avg(50), sma200: avg(200) };
+  const latest = rows[0]?.ts ? new Date(rows[0].ts) : null;
+  return { close: closes[0], sma50: avg(50), sma200: avg(200), asOf: latest && !Number.isNaN(latest.getTime()) ? latest.toISOString() : null };
 }
 
 export async function loadRegimeOverlayInputs(opts: { macroRiskState?: RegimeOverlayInputs['macroRiskState'] } = {}): Promise<RegimeOverlayInputs> {

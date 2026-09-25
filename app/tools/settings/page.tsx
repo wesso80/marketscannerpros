@@ -10,7 +10,7 @@ import Link from 'next/link';
 export default function ToolsSettingsPage() {
   const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
   const { guardEnabled, setGuardEnabled, snapshot, loading, guardPendingDisable, guardCooldownRemainingMs, guardRBudgetHalved, cancelGuardDisable } = useRiskPermission();
-  const { data: regime, loading: regimeLoading } = useRegime();
+  const { data: regime, loading: regimeLoading, unavailableReason: regimeUnavailableReason } = useRegime();
 
   const cooldownSec = Math.ceil(guardCooldownRemainingMs / 1000);
   const cooldownMin = Math.floor(cooldownSec / 60);
@@ -122,7 +122,7 @@ export default function ToolsSettingsPage() {
           <div className="mb-4">
             <h2 className="text-base font-bold text-slate-100">Unified Regime Status</h2>
             <p className="mt-1 text-xs text-slate-400">
-              Real-time market regime from aggregated signals. Updates every 30 seconds.
+              Market regime from stored market data (VIX, SPY/QQQ trend), or your account signals when market data is unavailable. Checked every 30 seconds.
             </p>
           </div>
 
@@ -145,12 +145,12 @@ export default function ToolsSettingsPage() {
                 <div className="mt-1 font-semibold text-slate-100">{regime.permission}</div>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500">Sizing Indicator</div>
-                <div className="mt-1 font-semibold text-slate-100">{regime.sizing}</div>
+                <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500">Data as of</div>
+                <div className="mt-1 font-semibold text-slate-100">{regime.asOf ? new Date(regime.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'Unknown'}</div>
               </div>
             </div>
           ) : (
-            <div className="text-xs text-slate-500">No regime data available</div>
+            <div className="text-xs text-slate-500">Regime unavailable{regimeUnavailableReason ? ` — ${regimeUnavailableReason}` : ''}</div>
           )}
 
           {regime && regime.signals.length > 0 && (

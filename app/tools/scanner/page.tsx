@@ -1068,7 +1068,7 @@ export default function ScannerPage() {
   const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const currentRegimeRaw = regime.data?.regime || 'trend';
+  const currentRegimeRaw = regime.data?.regime || 'RANGE_NEUTRAL'; // unavailable regime → neutral weights (what /api/regime used to return with no signals)
   const currentRegime = normalizeRegimeKey(currentRegimeRaw);
 
   function isRegimeCompatible(r: ScanResult): boolean {
