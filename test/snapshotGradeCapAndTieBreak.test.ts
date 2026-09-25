@@ -109,3 +109,37 @@ describe('agreeing MSP tie-break', () => {
     }
   });
 });
+
+describe('reproduction: snapshot rows whose score was basically ADX', () => {
+  // Identical cached-equity snapshots except ADX (the PFE/HON pattern). On main they graded A 100/98/95/93.
+  const snapLong = (adx: number) => ({ price: 100, ema20: 98, ema50: 95, ema200: 88, adx, plusDI: 28, minusDI: 14, atr: 2, rsi: 50, volumeRatio: null });
+  const snapShort = (adx: number) => ({ price: 100, ema20: 102, ema50: 105, ema200: 112, adx, plusDI: 14, minusDI: 28, atr: 2, rsi: 50, volumeRatio: null });
+  const daily = { symbol: 'X', assetClass: 'equity' as const, timeframe: '1d' };
+  const adxs = [31, 27, 23, 20.5];
+
+  it('keeps the scores but grades every one B with the cap flag (was A)', () => {
+    const res = adxs.map((adx) => evaluateCanonicalFromSnapshot(snapLong(adx), daily));
+    expect(res.map((r) => r.score)).toEqual([100, 98, 95, 93]);
+    for (const r of res) {
+      expect(r.setupType).toBe('TREND_CONTINUATION');
+      expect(r.direction).toBe('long');
+      expect(r.permission).toBe('WATCH');
+      expect(r.grade).toBe('B');
+      expect(r.flags.map((f) => f.code)).toContain('SNAPSHOT_GRADE_CAP');
+    }
+  });
+
+  it('caps mirrored short snapshots identically', () => {
+    const longs = adxs.map((adx) => evaluateCanonicalFromSnapshot(snapLong(adx), daily));
+    const shorts = adxs.map((adx) => evaluateCanonicalFromSnapshot(snapShort(adx), daily));
+    expect(shorts.map((r) => r.direction)).toEqual(['short', 'short', 'short', 'short']);
+    expect(shorts.map((r) => [r.score, r.grade, r.permission])).toEqual(longs.map((r) => [r.score, r.grade, r.permission]));
+    for (const r of shorts) expect(r.flags.map((f) => f.code)).toContain('SNAPSHOT_GRADE_CAP');
+  });
+
+  it('within the (now shared) B grade, an agreeing MSP outranks a higher ADX', () => {
+    const msp = [6, 1, 64, 48]; // PFE-like 6, HON-like 1
+    const rows = adxs.map((adx, i) => ({ symbol: `ADX${adx}`, canonical: evaluateCanonicalFromSnapshot(snapLong(adx), daily), compositeV2: { composite: msp[i], direction: 'bullish' } }));
+    expect([...rows].sort(compareCanonicalRows).map((r) => r.symbol)).toEqual(['ADX23', 'ADX20.5', 'ADX31', 'ADX27']);
+  });
+});
