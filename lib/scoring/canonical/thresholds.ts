@@ -21,10 +21,12 @@ export const CANONICAL_THRESHOLDS: Record<SetupType, CanonicalThreshold> = {
 };
 
 /**
- * Minimum structural reward:risk (to the nearest major opposing level); below it the row carries RR_BELOW_MIN
- * (WATCH). Phase 3 decision: 1.0. Walk-forward results with R:R ≥ 1.5 were not better than ≥ 1.0 out of sample
- * (equity +0.09R vs −0.00R, crypto −0.04R vs +0.07R per PASS-candidate trade, all CIs spanning zero) — a higher
- * minimum only lowers the target-first rate (P(target first) ≈ 1/(1+R:R), as a random walk would give).
+ * Minimum structural reward:risk (stop at the nearest confirmed swing, target at the nearest opposing swing ≥ 0.5 ATR
+ * away). Below it the candidate is NOT a setup (ineligible, reason RR_BELOW_MIN) — a target 0.4 ATR away or a stop
+ * 4 ATR away is not a trade. Projected targets (no opposing level) always qualify.
+ * Decision 1.0, re-tested after the Sep 2026 levels fix: walk-forward OOS equity +0.18R [−0.15, +0.45] at ≥ 1.0 vs
+ * +0.07R [−0.27, +0.60] at ≥ 1.5 (crypto −0.26 vs −0.30), and the 1.0–1.5 band on its own is no worse than ≥ 1.5
+ * (equity −0.05R vs −0.08/−0.11R per trade) — raising it to 1.5 halves the setups without improving them.
  */
 export const CANONICAL_MIN_RR = 1.0;
 /** Minimum weighted factor coverage for PASS (below it: WATCH INSUFFICIENT_DATA). Same as the scanner contract. */
