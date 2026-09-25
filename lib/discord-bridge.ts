@@ -297,7 +297,7 @@ export function buildScannerEmbed(picks: Array<{
   return {
     embeds: [{
       title: 'Scanner — Top Setups',
-      description: `${picks.length} high-confluence setup${picks.length !== 1 ? 's' : ''} detected across all markets.`,
+      description: `${picks.length} top-ranked setup${picks.length !== 1 ? 's' : ''} across all markets. Factors only — no setup has a validated edge; research, not trade signals.`,
       color: MSP_BLUE,
       fields,
       url: `${APP_BASE}/tools/scanner`,

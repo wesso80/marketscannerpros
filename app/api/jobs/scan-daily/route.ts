@@ -14,6 +14,8 @@ import { avTakeToken } from "@/lib/avRateGovernor";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
 import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
+import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
+import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
 
 export const runtime = "nodejs";
@@ -187,7 +189,7 @@ function computeScore(indicators: Record<string, any>): { score: number; directi
   };
 }
 
-async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
+async function scanEquity(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
 
@@ -212,6 +214,9 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
       console.error(`Dropping equity ${symbol}: EMA200 sanity check failed: ${sanity}`);
       return null;
     }
+    // Canonical verdict (primary label; the signal-count score below stays as the legacy/secondary value).
+    const canonical = canonicalForDailyPick(bars, { symbol, assetClass: 'equity', overlay });
+    if (canonical) indicators.canonical = compactCanonical(canonical);
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -233,7 +238,7 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
   }
 }
 
-async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
+async function scanCrypto(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
 
@@ -257,7 +262,10 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
       console.error(`Dropping crypto ${symbol}: ${outcome.reason}`);
       return null;
     }
-    const { price, indicators } = outcome;
+    const { price } = outcome;
+    const indicators: Record<string, any> = { ...outcome.indicators };
+    const canonical = canonicalForDailyPick(outcome.bars, { symbol, assetClass: 'crypto', overlay });
+    if (canonical) indicators.canonical = compactCanonical(canonical);
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -279,61 +287,28 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
   }
 }
 
-async function scanForex(symbol: string, apiKey: string): Promise<any | null> {
+async function scanForex(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
-    const pair = `${symbol}/USD`;
     
-    // Fetch daily forex prices
-    const priceUrl = `${baseUrl}?function=FX_DAILY&from_symbol=${symbol}&to_symbol=USD&apikey=${apiKey}`;
+    // Fetch daily forex bars (full history so EMA200 is real) and compute the same lib/ta/core indicator set as the
+    // equity and crypto paths. Before Sep 2026 this path stored EMA50 under `ema200` ("proxy for scoring") and used a
+    // simple-average RSI, so forex daily picks were scored on a different, mislabeled trend line.
+    const priceUrl = `${baseUrl}?function=FX_DAILY&from_symbol=${symbol}&to_symbol=USD&outputsize=full&apikey=${apiKey}`;
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
-    
-    const timeSeries = priceData["Time Series FX (Daily)"];
-    if (!timeSeries) return null;
-    
-    const dates = Object.keys(timeSeries).sort().reverse();
-    const latestDate = dates[0];
-    const latest = timeSeries[latestDate];
-    const prevDate = dates[1];
-    const prev = timeSeries[prevDate];
-    
-    const price = parseFloat(latest["4. close"]);
-    const prevClose = parseFloat(prev["4. close"]);
+
+    const bars = parseAlphaVantageDailyBars(priceData);
+    if (bars.length < 2) return null;
+
+    const price = bars[bars.length - 1].close;
+    const prevClose = bars[bars.length - 2].close;
     const changePercent = ((price - prevClose) / prevClose) * 100;
 
-    // Calculate indicators from price history
-    const closes: number[] = [];
-    for (let i = 0; i < Math.min(200, dates.length); i++) {
-      closes.push(parseFloat(timeSeries[dates[i]]["4. close"]));
-    }
-
-    const indicators: Record<string, any> = { price };
-    
-    // Calculate RSI
-    if (closes.length >= 15) {
-      let gains = 0, losses = 0;
-      for (let i = 1; i <= 14; i++) {
-        const change = closes[i - 1] - closes[i];
-        if (change > 0) gains += change;
-        else losses -= change;
-      }
-      const avgGain = gains / 14;
-      const avgLoss = losses / 14;
-      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-      indicators.rsi = 100 - (100 / (1 + rs));
-    }
-
-    // Calculate EMA 50 for forex (shorter timeframe)
-    if (closes.length >= 50) {
-      const multiplier = 2 / (50 + 1);
-      let ema = closes[closes.length - 1];
-      for (let i = closes.length - 2; i >= 0; i--) {
-        ema = (closes[i] - ema) * multiplier + ema;
-      }
-      indicators.ema50 = ema;
-      indicators.ema200 = ema; // Use as proxy for scoring
-    }
+    // EMA200 is omitted (not substituted) when fewer than 200 bars exist.
+    const indicators: Record<string, any> = { price, ...computeDailyIndicators(bars) };
+    const canonical = canonicalForDailyPick(bars, { symbol: `${symbol}/USD`, assetClass: 'forex', overlay });
+    if (canonical) indicators.canonical = compactCanonical(canonical);
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -380,13 +355,15 @@ async function runDailyScan(req: NextRequest) {
     const errors: string[] = [];
     const deadline = Date.now() + 250_000; // 250s hard budget (curl max-time is 290s)
     const hasTime = () => Date.now() < deadline;
+    // Regime overlay inputs (VIX / credit / M2 / SPY-QQQ trend) once per run; fails soft to "no overlay".
+    const overlay = await loadRegimeOverlayInputs().catch(() => null);
 
     // Scan equities (top 15 — bail early if approaching timeout)
     console.log("Starting equity scan...");
     const equitiesToScan = EQUITY_UNIVERSE.slice(0, 15);
     for (const symbol of equitiesToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at equity:${symbol}`); break; }
-      const result = await scanEquity(symbol, apiKey);
+      const result = await scanEquity(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`equity:${symbol}`);
     }
@@ -396,7 +373,7 @@ async function runDailyScan(req: NextRequest) {
     const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 5);
     for (const symbol of cryptoToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at crypto:${symbol}`); break; }
-      const result = await scanCrypto(symbol, apiKey);
+      const result = await scanCrypto(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`crypto:${symbol}`);
     }
@@ -406,7 +383,7 @@ async function runDailyScan(req: NextRequest) {
     const forexToScan = FOREX_UNIVERSE.slice(0, 5);
     for (const symbol of forexToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at forex:${symbol}`); break; }
-      const result = await scanForex(symbol, apiKey);
+      const result = await scanForex(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`forex:${symbol}`);
     }
@@ -417,8 +394,9 @@ async function runDailyScan(req: NextRequest) {
     // Delete old entries for today (in case of re-run)
     await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [today]);
 
-    // Insert new results
-    for (const r of results) {
+    // Insert new results. score/direction columns carry the canonical verdict (0 = BLOCK); the legacy signal-count
+    // values are kept in indicators.legacy (see lib/scoring/canonical/dailyPick).
+    for (const r of results.map(withCanonicalColumns)) {
       await q(`
         INSERT INTO daily_picks (
           asset_class, symbol, score, direction,
@@ -448,11 +426,10 @@ async function runDailyScan(req: NextRequest) {
       scanned: results.length,
       errors: errors.length,
       errorSymbols: errors,
-      topPicks: {
-        equity: results.filter(r => r.asset_class === 'equity').sort((a, b) => b.score - a.score)[0],
-        crypto: results.filter(r => r.asset_class === 'crypto').sort((a, b) => b.score - a.score)[0],
-        forex: results.filter(r => r.asset_class === 'forex').sort((a, b) => b.score - a.score)[0]
-      }
+      topPicks: Object.fromEntries((['equity', 'crypto', 'forex'] as const).map((ac) => {
+        const rows = results.filter(r => r.asset_class === ac).map((r) => ({ ...r, canonical: r.indicators?.canonical ?? null }));
+        return [ac, selectDailyPicks(rows, 1).top[0] ?? null];
+      })),
     });
 
   } catch (error) {

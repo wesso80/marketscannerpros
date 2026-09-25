@@ -34,6 +34,8 @@ import { scoreProSnapshot, type ProHardBlockContext } from '@/lib/scanner/proSco
 import { macroEventFlags } from '@/lib/scanner/hardBlocks';
 import { peekEarningsMap, warmEarningsMap } from '@/lib/scanner/earningsCalendar';
 import { compareScannerScores, dollarVolume, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
+import { applyCanonicalToScannerRow, canonicalFeaturesFromCandles, canonicalFeaturesFromRow, compareCanonicalRows, dataWatchFrom, evaluateCanonical, evaluateRegimeOverlay, hardBlocksFrom, overlayForDirection, type CanonicalFeatures, type RegimeOverlayInputs } from '@/lib/scoring/canonical';
+import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
 import { q as dbQuery } from '@/lib/db';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
@@ -626,6 +628,8 @@ function analyzeAssetByTimeframe(
     fundingRate?: number;
     longShortRatio?: number;
   };
+  /** Canonical engine features from the full bar history (consumed and removed by applyInstitutionalFilterToTopPicks). */
+  canonicalFeatures?: CanonicalFeatures | null;
 } | null {
   if (!ohlcv || ohlcv.length < 20) return null;
 
@@ -741,7 +745,8 @@ function analyzeAssetByTimeframe(
   }
   
   const { score, direction, signals } = computeScore(indicators);
-  return { symbol, score, direction, signals, indicators, change24h };
+  const canonicalFeatures = canonicalFeaturesFromCandles(ohlcv.map((b) => ({ t: b.date, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume })));
+  return { symbol, score, direction, signals, indicators, change24h, canonicalFeatures };
 }
 
 // =============================================================================
@@ -2167,9 +2172,14 @@ function applyInstitutionalFilterToTopPicks(
     timeframe: string;
     mode: BulkScanMode;
     traderRiskDNA?: 'aggressive' | 'balanced' | 'defensive';
+    /** Asset class for the canonical engine (forex rides the equity institutional filter). */
+    canonicalAssetClass?: 'equity' | 'crypto' | 'forex';
+    regimeOverlayInputs?: RegimeOverlayInputs | null;
   }
 ) {
   const universe = proScoreUniverse(topPicks, params.type);
+  const canonicalAssetClass = params.canonicalAssetClass ?? params.type;
+  const regimeOverlay = params.regimeOverlayInputs ? overlayForDirection(evaluateRegimeOverlay(params.regimeOverlayInputs, canonicalAssetClass)) : undefined;
   if (params.type === 'equity') warmEarningsMap();
   const hardCtx: ProHardBlockContext = { earningsMap: params.type === 'equity' ? peekEarningsMap() : undefined, macroFlags: macroEventFlags() };
   const withFilter = topPicks.map((original) => {
@@ -2287,8 +2297,18 @@ function applyInstitutionalFilterToTopPicks(
     scoreV2.final.rankScore = confidence;
     scoreV2.final.qualityTier = compositeV2.permission === 'PASS' && confidence >= 70 ? 'high' : confidence >= 50 ? 'medium' : 'low';
 
-    return {
-      ...pick,
+    // Canonical verdict (primary): bars mode when the pick carries features from its OHLCV, snapshot mode otherwise.
+    const { canonicalFeatures, ...pickOut } = pick as typeof pick & { canonicalFeatures?: CanonicalFeatures | null };
+    const features = canonicalFeatures ?? canonicalFeaturesFromRow(pick);
+    const canonical = features
+      ? evaluateCanonical({
+          symbol: pick.symbol, assetClass: canonicalAssetClass, timeframe: params.timeframe, features,
+          hardBlocks: hardBlocksFrom(compositeV2.blockReasons), dataWatchReasons: dataWatchFrom(compositeV2.watchReasons),
+          flags: compositeV2.flags, trust: dataTrust?.level ?? null, regimeOverlay,
+        })
+      : null;
+    const row = {
+      ...pickOut,
       scoreV2,
       score: confidence,
       compositeV2,
@@ -2309,14 +2329,15 @@ function applyInstitutionalFilterToTopPicks(
       dataTrust,
       confidence,
     };
+    return canonical ? applyCanonicalToScannerRow(row, canonical) : row;
   });
 
   // Don't remove results from discovery — tag them with warnings but keep them visible.
   // Users need to SEE what's out there, then the institutional filter badge guides decisions.
-  const blockedCount = withFilter.filter(pick => pick.compositeV2.permission === 'BLOCK').length;
+  const blockedCount = withFilter.filter(pick => ((pick as any).canonical?.permission ?? pick.compositeV2.permission) === 'BLOCK').length;
   const percentiles = crossSectionalPercentiles(withFilter.map(p => ({composite: p.compositeV2.composite})));
   withFilter.forEach((p, i) => { p.compositeV2.percentileRank = percentiles[i].percentileRank; });
-  const ranked = [...withFilter].sort(compareScannerScores);
+  const ranked = [...withFilter].sort((a: any, b: any) => compareCanonicalRows(a, b) || compareScannerScores(a, b));
   return {
     topPicks: ranked,
     blockedCount,
@@ -2399,6 +2420,7 @@ export async function POST(req: NextRequest) {
         timeframe: selectedTimeframe,
         mode,
         traderRiskDNA: adaptive?.profile?.riskDNA,
+        regimeOverlayInputs: await loadRegimeOverlayInputs().catch(() => null),
       });
 
       return NextResponse.json({
@@ -2437,6 +2459,7 @@ export async function POST(req: NextRequest) {
         timeframe: selectedTimeframe,
         mode: cachedResult ? 'deep' : (isLightMode ? 'hybrid' : mode),
         traderRiskDNA: adaptive?.profile?.riskDNA,
+        regimeOverlayInputs: await loadRegimeOverlayInputs().catch(() => null),
       });
 
       return NextResponse.json({
@@ -2484,6 +2507,8 @@ export async function POST(req: NextRequest) {
         timeframe: selectedTimeframe,
         mode: 'hybrid',
         traderRiskDNA: adaptive?.profile?.riskDNA,
+        canonicalAssetClass: 'forex',
+        regimeOverlayInputs: await loadRegimeOverlayInputs().catch(() => null),
       });
 
       return NextResponse.json({
@@ -2564,6 +2589,7 @@ export async function POST(req: NextRequest) {
       timeframe: selectedTimeframe,
       mode,
       traderRiskDNA: adaptive?.profile?.riskDNA,
+      regimeOverlayInputs: await loadRegimeOverlayInputs().catch(() => null),
     });
     
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);

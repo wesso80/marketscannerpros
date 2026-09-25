@@ -47,6 +47,8 @@ export interface RegimeScoringResult {
   tradeBias: TradeBias;
   /** Breakdown: component → weighted contribution */
   breakdown: Record<keyof ConfluenceComponents, number>;
+  /** Components with no real input: excluded from gates and from the weighted score (weights renormalised). */
+  unavailableComponents: Array<keyof ConfluenceComponents>;
 }
 
 // =====================================================
@@ -138,7 +140,17 @@ export interface RegimeScoreOptions {
    * having the score it is gating (circular). The component still contributes to the weighted score.
    */
   ignoreGates?: Array<keyof ConfluenceComponents>;
+  /**
+   * Components with no real input behind them (their value is a placeholder default). They are excluded from the gates
+   * AND from the weighted score; the remaining weights are renormalised to sum to 1. Before Sep 2026 the scanner
+   * scored VA on a default 50, LL on a hard-coded 'regular' session (70), MTF on an assumed 3 timeframes (60) and FD on
+   * 45 — so the TREND_MATURE / VOL_EXPANSION gates (VA, LL, FD) were testing constants, never the market.
+   * Use estimateComponentsWithAvailability() to get this list.
+   */
+  unavailable?: Array<keyof ConfluenceComponents>;
 }
+
+const COMPONENT_KEYS: Array<keyof ConfluenceComponents> = ['SQ', 'TA', 'VA', 'LL', 'MTF', 'FD'];
 
 export function computeRegimeScore(
   components: ConfluenceComponents,
@@ -146,7 +158,12 @@ export function computeRegimeScore(
   options: RegimeScoreOptions = {},
 ): RegimeScoringResult {
   const matrix = REGIME_MATRICES[regime];
-  const weights = matrix.weights;
+  const unavailable = new Set(options.unavailable ?? []);
+  // Renormalise over available components (all unavailable → keep the matrix weights; nothing to renormalise onto).
+  const availableWeight = COMPONENT_KEYS.reduce((sum, k) => sum + (unavailable.has(k) ? 0 : matrix.weights[k]), 0);
+  const weights: Record<keyof ConfluenceComponents, number> = unavailable.size === 0 || availableWeight <= 0
+    ? matrix.weights
+    : Object.fromEntries(COMPONENT_KEYS.map((k) => [k, unavailable.has(k) ? 0 : Number((matrix.weights[k] / availableWeight).toFixed(4))])) as Record<keyof ConfluenceComponents, number>;
 
   // Clamp all components to 0-100
   const clamped: ConfluenceComponents = {
@@ -193,7 +210,7 @@ export function computeRegimeScore(
   const ignored = new Set(options.ignoreGates ?? []);
   for (const [comp, minValue] of Object.entries(matrix.gates)) {
     const key = comp as keyof ConfluenceComponents;
-    if (ignored.has(key)) continue;
+    if (ignored.has(key) || unavailable.has(key)) continue;
     if (clamped[key] < (minValue as number)) {
       gateViolations.push(`${key}=${clamped[key].toFixed(0)} < gate ${minValue}`);
     }
@@ -234,6 +251,7 @@ export function computeRegimeScore(
       MTF: Number(breakdown.MTF.toFixed(2)),
       FD: Number(breakdown.FD.toFixed(2)),
     },
+    unavailableComponents: COMPONENT_KEYS.filter((k) => unavailable.has(k)),
   };
 }
 
@@ -376,6 +394,30 @@ export function deriveRegimeConfidence(input: RegimeAgreementInput): {
  * Estimate components from scanner/institutional-filter data
  * Used when full component scores are not available (backward compatibility)
  */
+export type ComponentContext = Parameters<typeof estimateComponentsFromContext>[0];
+
+/**
+ * Same estimate plus the list of components that had no real input (their value is only a default). Pass
+ * `unavailable` to computeRegimeScore so a default can neither pass nor fail a gate.
+ *   SQ  — scannerScore supplied          TA  — any of RSI / ADX / CCI
+ *   VA  — finite volumeRatio             LL  — session supplied
+ *   MTF — mtfAlignment supplied          FD  — derivativesAvailable or ivRank supplied
+ */
+export function estimateComponentsWithAvailability(opts: ComponentContext): {
+  components: ConfluenceComponents;
+  unavailable: Array<keyof ConfluenceComponents>;
+} {
+  const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+  const unavailable: Array<keyof ConfluenceComponents> = [];
+  if (!fin(opts.scannerScore)) unavailable.push('SQ');
+  if (!fin(opts.rsi) && !fin(opts.adx) && !fin(opts.cci)) unavailable.push('TA');
+  if (!fin(opts.volumeRatio)) unavailable.push('VA');
+  if (!opts.session) unavailable.push('LL');
+  if (!fin(opts.mtfAlignment)) unavailable.push('MTF');
+  if (!opts.derivativesAvailable && !fin(opts.ivRank)) unavailable.push('FD');
+  return { components: estimateComponentsFromContext(opts), unavailable };
+}
+
 export function estimateComponentsFromContext(opts: {
   scannerScore?: number;
   regime?: string;
@@ -429,7 +471,7 @@ export function estimateComponentsFromContext(opts: {
 
   // VA: Volume/Activity
   let VA = 50;
-  if (opts.volumeRatio !== undefined) {
+  if (typeof opts.volumeRatio === 'number' && Number.isFinite(opts.volumeRatio)) {
     if (opts.volumeRatio > 1.5) VA += 20;
     else if (opts.volumeRatio > 1.0) VA += 10;
     else if (opts.volumeRatio < 0.6) VA -= 15;

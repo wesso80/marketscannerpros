@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q } from '@/lib/db';
+import { pickView } from '@/lib/scoring/canonical/dailyPick';
 
 export const runtime = 'nodejs';
 export const revalidate = 600; // ISR — 10 min freshness is fine for share cards
@@ -18,6 +19,9 @@ interface ShareData {
   shortPct: number | null;
   sector: string | null;
   headline: string;
+  /** Canonical verdict label and what the score means (null without a daily-pick row). */
+  verdict: string | null;
+  basisNote: string | null;
   fetchedAt: string;
   source: 'daily_picks' | 'company_overview' | 'symbol_only';
 }
@@ -43,8 +47,9 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
     change_percent: string | null;
     scan_date: Date | string;
     asset_class: string;
+    canonical: unknown;
   }>(
-    `SELECT symbol, score, direction, price, change_percent, scan_date, asset_class
+    `SELECT symbol, score, direction, price, change_percent, scan_date, asset_class, indicators->'canonical' AS canonical
      FROM daily_picks
      WHERE symbol = $1
      ORDER BY scan_date DESC
@@ -84,13 +89,9 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
   const f = fund[0];
   if (!pick && !f) return null;
 
-  const side: Side = pick
-    ? pick.direction === 'bullish'
-      ? 'LONG'
-      : pick.direction === 'bearish'
-        ? 'SHORT'
-        : 'WATCH'
-    : 'WATCH';
+  // Canonical verdict first (legacy signal-count fallback for rows written before the canonical engine).
+  const view = pick ? pickView(pick) : null;
+  const side: Side = view ? view.side : 'WATCH';
 
   const sharesFloat = f?.shares_float ? Number(f.shares_float) : null;
   const shortPct = f?.short_pct_float ? Number(f.short_pct_float) : null;
@@ -99,7 +100,10 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
   if (sharesFloat && sharesFloat < 20_000_000) {
     headline = `${symbol} flagged as low-float (${formatFloat(sharesFloat)} shares${shortPct ? `, ${shortPct.toFixed(1)}% short` : ''})`;
   } else if (pick) {
-    headline = `${symbol} scored ${pick.score}/100 ${side === 'LONG' ? 'long' : side === 'SHORT' ? 'short' : 'watch'} on ${pick.scan_date}`;
+    const when = pick.scan_date instanceof Date ? pick.scan_date.toISOString().slice(0, 10) : String(pick.scan_date).slice(0, 10);
+    headline = view?.label
+      ? `${symbol}: ${view.label} (${side.toLowerCase()} side) on ${when}`
+      : `${symbol} scored ${pick.score}/100 ${side === 'LONG' ? 'long' : side === 'SHORT' ? 'short' : 'watch'} on ${when}`;
   } else if (f?.name) {
     headline = `${f.name} — fundamentals snapshot`;
   }
@@ -113,7 +117,9 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
   return {
     symbol,
     side,
-    score: pick?.score ?? null,
+    score: view ? view.score : null,
+    verdict: view?.label ?? null,
+    basisNote: view?.basisNote ?? null,
     price: pick?.price ? Number(pick.price) : null,
     changePct: pick?.change_percent ? Number(pick.change_percent) : null,
     float: formatFloat(sharesFloat),
@@ -187,9 +193,11 @@ export default async function ShareScanPage(
           {data.side}
         </div>
         <p style={{ fontSize: 22, color: 'var(--msp-text)', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
+        {data.basisNote && <p style={{ fontSize: 13, color: 'var(--msp-text-muted)', marginTop: 6 }}>{data.basisNote}</p>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginTop: 28 }}>
-          {data.score != null && <Stat label="Opp Score" value={`${data.score}/100`} />}
+          {data.score != null && <Stat label={data.verdict ? 'Setup score' : 'Opp Score'} value={`${data.score}/100`} />}
+          {data.verdict && <Stat label="Verdict" value={data.verdict} />}
           {data.price != null && <Stat label="Last Price" value={`$${data.price.toFixed(2)}`} />}
           {data.changePct != null && <Stat label="Change" value={`${data.changePct >= 0 ? '+' : ''}${data.changePct.toFixed(2)}%`} />}
           {data.float && <Stat label="Float" value={data.float} />}

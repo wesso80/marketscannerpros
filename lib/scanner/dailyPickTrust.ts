@@ -85,7 +85,7 @@ export function evaluateDailyPickTrust(row: DailyPickRow, nowMs: number = Date.n
     level = 'INSUFFICIENT_DATA';
     reasons.push(`indicator coverage ${Math.round(coverage * 100)}% is below the ${Math.round(DAILY_PICK_COVERAGE_MIN * 100)}% minimum`);
   }
-  // The forex writer stores its EMA(≤200 closes) under `ema200` alongside `ema50`; identical values mean a proxy.
+  // Legacy forex rows (written before Sep 2026) stored an EMA50 under `ema200` alongside `ema50`; identical values = proxy.
   if (num(ind.ema50) !== undefined && num(ind.ema50) === num(ind.ema200)) {
     if (level === 'GOOD') level = 'DEGRADED';
     reasons.push('EMA200 is an EMA50 proxy on this row');

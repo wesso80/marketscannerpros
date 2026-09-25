@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import type { StrategyTag, Direction } from '@/lib/risk-governor-hard';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
+import { canonicalLabel, rankDailyPicks, readStoredCanonical, SETUP_LABEL, type CanonicalResult } from '@/lib/scoring/canonical';
 
 interface DailyPick {
   asset_class: string;
@@ -20,7 +21,7 @@ interface DailyPick {
   direction: string;
   price: number;
   change_percent: number;
-  indicators: Record<string, number>;
+  indicators: Record<string, any>;
 }
 
 interface LiveCandidate {
@@ -36,6 +37,8 @@ interface LiveCandidate {
   stop_price: number;
   atr: number;
   event_severity: 'none' | 'medium' | 'high';
+  /** Canonical verdict label (e.g. "WATCH · B · Pullback · factors only"); null for pre-canonical rows. */
+  verdict: string | null;
 }
 
 /**
@@ -99,8 +102,11 @@ export async function GET() {
       JOIN latest l ON dp.scan_date = l.d
       WHERE dp.asset_class IN ('equity', 'crypto')
       ORDER BY dp.score DESC
-      LIMIT 10
+      LIMIT 40
     `);
+    // Canonical verdict first: drop BLOCK / no-side rows, rank permission → grade → score; legacy rows keep score order.
+    const withC = rows.map((r) => ({ ...r, canonical: readStoredCanonical(r.indicators) as CanonicalResult | null }));
+    const ranked = rankDailyPicks(withC.filter((r) => !r.canonical || (r.canonical.permission !== 'BLOCK' && r.canonical.direction !== 'neutral'))).slice(0, 10);
 
     if (!rows.length) {
       return NextResponse.json({
@@ -116,25 +122,27 @@ export async function GET() {
       });
     }
 
-    const candidates: LiveCandidate[] = rows
-      .filter(r => Number.isFinite(r.price) && r.price > 0)
+    const candidates: LiveCandidate[] = ranked
+      .filter(r => Number.isFinite(Number(r.price)) && Number(r.price) > 0)
       .map((pick) => {
+        const c = pick.canonical;
         const ind = pick.indicators || {};
         const atr = Number(ind.atr);
         const price = Number(pick.price);
-        const direction: Direction = pick.direction === 'bearish' ? 'SHORT' : 'LONG';
+        const direction: Direction = c ? (c.direction === 'short' ? 'SHORT' : 'LONG') : pick.direction === 'bearish' ? 'SHORT' : 'LONG';
         const safeAtr = Number.isFinite(atr) && atr > 0
           ? atr
           : price * 0.02; // fallback: 2% of price
         const strategy_tag = deriveStrategy(pick);
-        const stopPrice = computeStop(price, safeAtr, direction);
+        // Canonical structural invalidation when available; ATR stop for pre-canonical rows.
+        const stopPrice = c?.levels?.invalidation ?? computeStop(price, safeAtr, direction);
 
-        // Confidence reflects signal conviction (distance from neutral 50), not direction.
-        // Capped at 90 to avoid implying certainty; minimum 30 for weak signals.
+        // Canonical rows: the canonical display score (calibrated percentile / factor alignment — not a probability),
+        // clamped 30–90. Legacy rows: signal conviction (distance from neutral 50), same clamp.
         const rawScore = Number(pick.score || 50);
-        const confidence = Math.round(
-          Math.min(90, Math.max(30, 50 + (Math.abs(rawScore - 50) * 0.8)))
-        );
+        const confidence = Math.round(c
+          ? Math.min(90, Math.max(30, c.score))
+          : Math.min(90, Math.max(30, 50 + (Math.abs(rawScore - 50) * 0.8))));
 
         const assetClass: 'equities' | 'crypto' = pick.asset_class === 'crypto' ? 'crypto' : 'equities';
         const sym = assetClass === 'crypto'
@@ -143,17 +151,18 @@ export async function GET() {
 
         return {
           symbol: sym,
-          structure: deriveStructure(pick),
+          structure: c ? `${SETUP_LABEL[c.setupType] ?? c.setupType}` : deriveStructure(pick),
           strategy_tag,
           direction,
           confidence,
           asset_class: assetClass,
           reference_price: price,
           invalidation_price: stopPrice,
-          entry_price: price,
+          entry_price: c?.levels?.entry ?? price,
           stop_price: stopPrice,
           atr: Math.round(safeAtr * 100) / 100,
           event_severity: 'none' as const,
+          verdict: canonicalLabel(c),
         };
       })
       .slice(0, 8); // Cap at 8 candidates

@@ -2,6 +2,8 @@ import { cache } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { q } from '@/lib/db';
+import { canonicalLabel, rankDailyPicks, readStoredCanonical } from '@/lib/scoring/canonical/dailyPick';
+import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 
 export const runtime = 'nodejs';
 // Database-backed observations are resolved at request time, not during builds.
@@ -18,6 +20,10 @@ interface Pick {
   sector: string | null;
   shares_float: number | null;
   short_pct_float: number | null;
+  /** Canonical engine verdict (primary). Null for scans written before the canonical engine. */
+  canonical: CanonicalResult | null;
+  /** Legacy signal-count score (secondary). */
+  legacyScore: number;
 }
 
 interface DayData {
@@ -59,17 +65,19 @@ async function loadLatest(): Promise<DayData | null> {
     sector: string | null;
     shares_float: string | null;
     short_pct_float: string | null;
+    canonical?: unknown;
+    legacy_score?: string | null;
   }>;
   try {
     rows = await q(
       `SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
-              dp.price, dp.change_percent,
+              dp.price, dp.change_percent, dp.indicators->'canonical' AS canonical, dp.indicators->'legacy'->>'score' AS legacy_score,
               co.sector, co.shares_float, co.short_pct_float
          FROM daily_picks dp
          LEFT JOIN company_overview co ON co.symbol = dp.symbol
         WHERE dp.scan_date = $1
         ORDER BY dp.score DESC
-        LIMIT 10`,
+        LIMIT 60`,
       [scan_date],
     );
   } catch (err) {
@@ -81,12 +89,14 @@ async function loadLatest(): Promise<DayData | null> {
       direction: string;
       price: string | null;
       change_percent: string | null;
+      canonical?: unknown;
+      legacy_score?: string | null;
     }>(
-      `SELECT asset_class, symbol, score, direction, price, change_percent
+      `SELECT asset_class, symbol, score, direction, price, change_percent, indicators->'canonical' AS canonical, indicators->'legacy'->>'score' AS legacy_score
          FROM daily_picks
         WHERE scan_date = $1
         ORDER BY score DESC
-        LIMIT 10`,
+        LIMIT 60`,
       [scan_date],
     );
     rows = fallback.map((r) => ({
@@ -97,14 +107,20 @@ async function loadLatest(): Promise<DayData | null> {
     }));
   }
 
+  // Canonical verdict first (permission → grade → score); older rows without one fall back to the legacy score.
+  const ranked = rankDailyPicks(rows.map((r) => ({ ...r, canonical: readStoredCanonical({ canonical: r.canonical }) }))).slice(0, 10);
   return {
     scan_date,
-    picks: rows.map((r, i) => ({
+    picks: ranked.map((r, i) => ({
       rank: i + 1,
       asset_class: r.asset_class,
       symbol: r.symbol,
-      score: r.score,
-      direction: r.direction,
+      score: r.canonical ? r.canonical.score : r.score,
+      legacyScore: r.legacy_score != null ? Number(r.legacy_score) : r.score, // columns hold canonical values from Phase 3
+      canonical: r.canonical,
+      direction: r.canonical
+        ? (r.canonical.direction === 'long' ? 'bullish' : r.canonical.direction === 'short' ? 'bearish' : 'neutral')
+        : r.direction,
       price: r.price ? Number(r.price) : null,
       change_percent: r.change_percent ? Number(r.change_percent) : null,
       sector: r.sector,
@@ -173,7 +189,7 @@ export default async function DailyPickPage() {
       '@type': 'ListItem',
       position: p.rank,
       url: `https://marketscannerpros.app/share/scan/${p.symbol}`,
-      name: `${p.symbol} (${p.direction}, score ${p.score})`,
+      name: `${p.symbol} (${p.direction}, ${canonicalLabel(p.canonical) ?? `score ${p.score}`})`,
     })),
   };
 
@@ -186,7 +202,8 @@ export default async function DailyPickPage() {
         </div>
         <h1 style={h1Style}>Top {data.picks.length} picks · {data.scan_date}</h1>
         <p style={{ color: 'var(--msp-text)', fontSize: 17, lineHeight: 1.6, marginTop: 6, maxWidth: 760 }}>
-          Highest-scoring symbols across our equity and crypto scanners for the most recent session.
+          Symbols from the most recent daily scan, ordered by the canonical verdict (PASS / WATCH / BLOCK, then grade
+          and setup score). The older signal-count score is shown underneath as a secondary figure.
           Each row is a technical research snapshot — not a recommendation. Click any row for the full
           shareable card.
         </p>
@@ -196,6 +213,7 @@ export default async function DailyPickPage() {
             <div style={{ ...cellStyle, width: 60 }}>#</div>
             <div style={{ ...cellStyle, flex: 1 }}>Symbol</div>
             <div style={{ ...cellStyle, width: 90 }}>Side</div>
+            <div style={{ ...cellStyle, width: 150 }}>Verdict</div>
             <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const }}>Score</div>
             <div style={{ ...cellStyle, width: 110, textAlign: 'right' as const }}>Price</div>
             <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const }}>Chg %</div>
@@ -203,7 +221,8 @@ export default async function DailyPickPage() {
             <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const }}>Short %</div>
           </div>
           {data.picks.map((p) => {
-            const side = p.direction === 'bullish' ? 'LONG' : p.direction === 'bearish' ? 'SHORT' : 'WATCH';
+            // Neutral is not labelled WATCH: WATCH is a canonical permission, shown in the Verdict column.
+            const side = p.direction === 'bullish' ? 'LONG' : p.direction === 'bearish' ? 'SHORT' : 'NEUTRAL';
             const sideColor = side === 'LONG' ? 'var(--msp-bull)' : side === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-warn)';
             return (
               <Link
@@ -219,7 +238,13 @@ export default async function DailyPickPage() {
                 <div style={{ ...cellStyle, width: 90 }}>
                   <span style={{ color: sideColor, fontWeight: 700, fontSize: 12, letterSpacing: '0.1em' }}>{side}</span>
                 </div>
-                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, fontWeight: 700 }}>{p.score}</div>
+                <div style={{ ...cellStyle, width: 150, fontSize: 12, fontWeight: 700, color: p.canonical?.permission === 'PASS' ? 'var(--msp-bull)' : p.canonical?.permission === 'BLOCK' ? 'var(--msp-bear)' : 'var(--msp-warn)' }}>
+                  {canonicalLabel(p.canonical) ?? '—'}
+                </div>
+                <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, fontWeight: 700, flexDirection: 'column' as const, alignItems: 'flex-end' }}>
+                  <span>{p.score}</span>
+                  {p.canonical && <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--msp-text-muted)' }}>legacy {p.legacyScore}</span>}
+                </div>
                 <div style={{ ...cellStyle, width: 110, textAlign: 'right' as const }}>
                   {p.price != null ? `$${p.price.toFixed(2)}` : '—'}
                 </div>

@@ -11,6 +11,8 @@ export interface ScreenerRow {
   scoreExplanation?: string;
   scorePermission?: 'PASS' | 'WATCH' | 'BLOCK';
   factorCoverage?: number;
+  /** Canonical engine verdict (primary): setup, grade, permission, levels. */
+  canonical?: import('@/lib/scoring/canonical/types').CanonicalResult;
   quality: string; // 'high' | 'medium' | 'low'
   strategy: string;
   rsi?: number;
@@ -230,6 +232,7 @@ const COLUMNS: Column[] = [
         background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
       }}>
         {r.scorePermission ?? (r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014')}
+        {r.canonical ? <span className="ml-1 text-[10px] font-bold opacity-80" title={`${r.canonical.setupType} · ${r.canonical.direction} · score ${r.canonical.score}`}>{r.canonical.grade}</span> : null}
       </span>
     ),
   },

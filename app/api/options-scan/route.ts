@@ -5,6 +5,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
+import { canonicalFromBarStore } from '@/lib/scoring/canonical/barStore';
+import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { AVOptionRow, scoreOptionCandidatesV21WithDiagnostics } from '@/lib/scoring/options-v21';
@@ -358,10 +360,17 @@ export async function POST(request: NextRequest) {
       warnings: providerWarnings,
     });
     
+    // Canonical engine verdict for the underlying on DAILY bars (worker bar store; no extra provider calls). This is
+    // the primary setup grade in the cockpit; the options filter grade / trade quality stay as secondary options reads.
+    const canonicalVerdict = await canonicalFromBarStore(
+      symbol.toUpperCase(), 'equity', await loadRegimeOverlayInputs().catch(() => null),
+    ).catch(() => null);
+
     return NextResponse.json({
       success: true,
       data: {
         ...analysis,
+        canonicalVerdict,
         dataQuality: {
           ...(analysis.dataQuality || {}),
           providerStatus: optionsProviderStatus,

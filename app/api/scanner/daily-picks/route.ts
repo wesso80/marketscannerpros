@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } from "@/lib/scanner/dailyPickTrust";
+import { canonicalPickFields, rankDailyPicks, readStoredCanonical, storedLegacyScore } from "@/lib/scoring/canonical/dailyPick";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,8 @@ export async function GET(req: NextRequest) {
           ROW_NUMBER() OVER (
             PARTITION BY dp.asset_class, COALESCE(dp.rank_type, 'top')
             ORDER BY 
-              CASE WHEN COALESCE(dp.rank_type, 'top') = 'top' THEN dp.score ELSE -dp.score END DESC
+              -- canonical score columns rank both sides high-is-better; legacy bottom rows rank low-is-better
+              CASE WHEN COALESCE(dp.rank_type, 'top') = 'top' OR dp.indicators->>'scoreColumn' = 'canonical' THEN dp.score ELSE -dp.score END DESC
           ) as rank
         FROM daily_picks dp
         CROSS JOIN latest_date ld
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest) {
       FROM ranked_picks
       WHERE rank <= $1
       ORDER BY asset_class, rank_type, 
-        CASE WHEN COALESCE(rank_type, 'top') = 'top' THEN score ELSE -score END DESC
+        CASE WHEN COALESCE(rank_type, 'top') = 'top' OR indicators->>'scoreColumn' = 'canonical' THEN score ELSE -score END DESC
     `, [limit]);
 
     // Get the scan date
@@ -91,6 +93,11 @@ export async function GET(req: NextRequest) {
         trusts.push(trust);
         target[pick.asset_class].push({
           ...pick,
+          // Canonical verdict (primary: permission / grade / setup / direction). From Phase 3 the `score` + `direction`
+          // columns hold the canonical values too (indicators.scoreColumn = 'canonical'); legacyScore is the old
+          // signal-count score.
+          ...canonicalPickFields(readStoredCanonical(pick.indicators)),
+          legacyScore: storedLegacyScore(pick.indicators, Number(pick.score)),
           trust,
           dataTimestamp: trust.dataTimestamp,
           signals: {
@@ -100,6 +107,12 @@ export async function GET(req: NextRequest) {
           }
         });
       }
+    }
+
+    // Within the stored top picks, order canonical-first (rows from older scans without a verdict keep score order).
+    for (const k of Object.keys(topPicks)) topPicks[k] = rankDailyPicks(topPicks[k] as any[]) as typeof picks;
+    for (const k of Object.keys(bottomPicks)) {
+      if ((bottomPicks[k] as any[]).some((p) => p.canonical)) bottomPicks[k] = rankDailyPicks(bottomPicks[k] as any[]) as typeof picks;
     }
 
     return NextResponse.json({

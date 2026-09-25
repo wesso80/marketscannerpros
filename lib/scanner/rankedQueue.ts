@@ -49,8 +49,9 @@ export function isRegimeCompatibleForRegime(r: ScanResult, regime: string): bool
   return compatible.some((c) => setupType.includes(c));
 }
 
-/** Regime-weighted MSP score (0–100). Composite v2 from the route when present; legacy blend otherwise. */
+/** MSP score (0–100): the canonical engine score when present; composite v2; legacy blend otherwise. */
 export function computeMspScore(r: ScanResult, regime: string): number {
+  if (r.canonical && Number.isFinite(r.canonical.score)) return Math.round(Math.min(100, Math.max(0, r.canonical.score)));
   if (r.compositeV2 && Number.isFinite(r.compositeV2.composite)) {
     const base = Math.min(100, Math.max(0, r.compositeV2.composite));
     // v2.x composites already encode blocks in `permission`; only pre-contract rows keep the legacy ×0.4.
@@ -74,6 +75,12 @@ export function computeMspScore(r: ScanResult, regime: string): number {
 export function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
   const msp = computeMspScore(r, regime);
   const conf = r.confidence ?? 0;
+  if (r.canonical) {
+    // Canonical rows: permission (incl. hard blocks, caps and the regime overlay) is the single source of truth.
+    if (r.canonical.permission === 'BLOCK') return 'INVALIDATED';
+    if (r.canonical.permission === 'PASS') return 'READY';
+    return 'SETTING_UP';
+  }
   if (isVersionedScannerScore(r.compositeV2?.version)) {
     // Versioned rows: the explicit permission is the single source of truth (it already includes regime gates).
     if (r.compositeV2!.permission === 'BLOCK') return 'INVALIDATED';
@@ -104,6 +111,8 @@ export interface RankedQueueRow {
   confidence: number | null;
   setup: string | null;
   permission?: ScorePermission;
+  /** Canonical grade (A/B/C, F = blocked) when the row carries a canonical result. */
+  grade?: string;
 }
 
 /** Tag results with their asset class exactly as Scanner does. */
@@ -134,7 +143,7 @@ export function buildRankedQueue(results: RankedResult[], regime: string): Ranke
       symbol: r.symbol,
       assetClass: r._assetClass,
       mspScore: computeMspScore(r, regime),
-      direction: r.compositeV2?.direction ?? r.direction ?? 'neutral',
+      direction: r.canonical ? (r.canonical.direction === 'long' ? 'bullish' : r.canonical.direction === 'short' ? 'bearish' : 'neutral') : r.compositeV2?.direction ?? r.direction ?? 'neutral',
       price: typeof r.price === 'number' ? r.price : null,
       changePct: lastBarChangePct(r),
       adx: typeof r.adx === 'number' && Number.isFinite(r.adx) ? r.adx : null,
@@ -142,10 +151,15 @@ export function buildRankedQueue(results: RankedResult[], regime: string): Ranke
       lifecycle: deriveLifecycleState(r, regime),
       confidence: typeof r.confidence === 'number' ? r.confidence : null,
       setup: r.setup ?? null,
-      permission: r.compositeV2?.permission,
+      permission: r.canonical?.permission ?? r.compositeV2?.permission,
+      grade: r.canonical?.grade,
     }))
     .sort((a, b) => {
       const order = {PASS: 2, WATCH: 1, BLOCK: 0};
-      return order[b.permission ?? 'BLOCK'] - order[a.permission ?? 'BLOCK'] || b.mspScore - a.mspScore || a.symbol.localeCompare(b.symbol);
+      // Canonical scores are calibrated per setup type, so within a permission the grade ranks first.
+      const gradeOrder: Record<string, number> = {A: 3, B: 2, C: 1, F: 0};
+      return order[b.permission ?? 'BLOCK'] - order[a.permission ?? 'BLOCK']
+        || (gradeOrder[b.grade ?? ''] ?? -1) - (gradeOrder[a.grade ?? ''] ?? -1)
+        || b.mspScore - a.mspScore || a.symbol.localeCompare(b.symbol);
     });
 }

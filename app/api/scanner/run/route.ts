@@ -26,8 +26,10 @@ import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, re
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
 import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
 import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustResult } from "@/lib/scanner/dataTrust";
-import { classifyRegime } from "@/lib/regime-classifier";
-import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
+import { classifyRegime, volatilityThresholds } from "@/lib/regime-classifier";
+import { applyCanonicalToScannerRow, canonicalFeaturesFromCandles, compareCanonicalRows, dataWatchFrom, evaluateCanonical, evaluateRegimeOverlay, hardBlocksFrom, overlayForDirection, type CanonicalFeatures, type CanonicalResult } from "@/lib/scoring/canonical";
+import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
+import { estimateComponentsWithAvailability, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
 import { detectMomentumAcceleration } from "@/lib/indicators";
@@ -178,7 +180,13 @@ interface ScanResult {
   insight?: ScannerInsight;
   // MSP Composite v2 — cross-sectional, regime-conditional score (additive).
   compositeV2?: ScannerScorePayload;
-  /** Top-level copy of compositeV2.permission so API consumers never have to infer a block from the score. */
+  /** Canonical engine verdict (lib/scoring/canonical) — the PRIMARY permission/setup/grade/levels for this row. */
+  canonical?: CanonicalResult;
+  grade?: string;
+  legacyScenario?: Record<string, unknown>;
+  /** Internal: canonical features computed from the full candle history (removed before the response). */
+  _canonicalFeatures?: CanonicalFeatures | null;
+  /** Top-level copy of the canonical permission (compositeV2.permission is the legacy composite's own) so API consumers never have to infer a block from the score. */
   permission?: ScorePermission;
   /** Machine-readable reasons behind a BLOCK (empty when PASS/WATCH). */
   blockReasons?: ScoreReason[];
@@ -1892,6 +1900,7 @@ export async function POST(req: NextRequest) {
             console.warn('[scanner] Enhancement computation failed for', baseSym, enhErr);
           }
 
+          item._canonicalFeatures = canonicalFeaturesFromCandles(candles, { volumeAvailable });
           results.push(item);
         } else if (type === "forex") {
           // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
@@ -2059,6 +2068,7 @@ export async function POST(req: NextRequest) {
           // DVE flags for forex (already computed before scoring)
           if (dveForex) Object.assign(item, dveForex);
 
+          item._canonicalFeatures = canonicalFeaturesFromCandles(candles, { volumeAvailable: false });
           results.push(item);
         } else {
           // EQUITIES — one candle-based computation for every source, so cached rows carry the same evidence as live rows.
@@ -2335,6 +2345,7 @@ export async function POST(req: NextRequest) {
             if (dveAV) Object.assign(item, dveAV);
             if (cachedData) { (item as any)._fromCache = true; (item as any)._cacheSource = equitySource; }
 
+            item._canonicalFeatures = canonicalFeaturesFromCandles(candles, { volumeAvailable });
             results.push(item);
           }
         }
@@ -2429,6 +2440,10 @@ export async function POST(req: NextRequest) {
     if (type === 'equity') { warmEarningsMap(); earningsMap = peekEarningsMap(); }
     // Macro event days are a warning flag on every row, never a block. Computed once per request.
     const macroFlags = macroEventFlags();
+    // Direction-aware regime overlay (gates/sizes the canonical verdict; never blended into the score). Fails soft.
+    const assetClassForCanonical = type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity';
+    const overlayInputs = await loadRegimeOverlayInputs().catch(() => null);
+    const regimeOverlay = overlayInputs ? overlayForDirection(evaluateRegimeOverlay(overlayInputs, assetClassForCanonical)) : undefined;
 
     const enriched = results.map((result) => {
       const adxValue = Number(result.adx ?? Number.NaN);
@@ -2464,6 +2479,7 @@ export async function POST(req: NextRequest) {
         ema200Above: Number.isFinite(result.price) && Number.isFinite(result.ema200)
           ? result.price! >= result.ema200!
           : undefined,
+        assetClass: type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity',
       });
 
       // Hard blocks (lib/scanner/hardBlocks): stale bars, price sanity vs the bar close, earnings in the holding window,
@@ -2492,12 +2508,16 @@ export async function POST(req: NextRequest) {
       result.score = result.compositeV2.composite;
       result.confidence = result.score;
       const regime = unifiedRegime.institutional;
+      const volBands = volatilityThresholds(type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity');
       const volatilityState = typeof atrPct === 'number'
-        ? (atrPct > 7 ? 'extreme' : atrPct > 4 ? 'expanded' : atrPct < 1 ? 'compressed' : 'normal')
+        ? (atrPct > volBands.extreme ? 'extreme' : atrPct > volBands.expanded ? 'expanded' : atrPct < volBands.compressed ? 'compressed' : 'normal')
         : 'normal';
 
       // === ACL PIPELINE (wired into scanner response) ===
-      const components = estimateComponentsFromContext({
+      // Only components with a real input are scored/gated. VA uses the bar volume ratio; LL, MTF and FD (equities)
+      // have no input in this route, so they are marked unavailable instead of passing/failing gates on constants.
+      const volumeRatioInput = result.liquidity?.volumeRatio;
+      const { components, unavailable } = estimateComponentsWithAvailability({
         scannerScore: result.score,
         direction: result.compositeV2.direction,
         regime: unifiedRegime.governor,
@@ -2506,13 +2526,13 @@ export async function POST(req: NextRequest) {
         cci: result.cci,
         aroonUp: result.aroon_up,
         aroonDown: result.aroon_down,
-        session: 'regular',
+        volumeRatio: typeof volumeRatioInput === 'number' && Number.isFinite(volumeRatioInput) ? volumeRatioInput : undefined,
         derivativesAvailable: !!(result as any).derivatives,
         fundingRate: (result as any).derivatives?.fundingRate,
         oiChange24h: (result as any).derivatives?.oiChangePercent,
       });
       // SQ is the scanner composite itself, so its gate is skipped (it would block a row for the score it gates).
-      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring, { ignoreGates: ['SQ'] });
+      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring, { ignoreGates: ['SQ'], unavailable });
       const regimeConfResult = deriveRegimeConfidence({
         adx: adxValue,
         rsi: result.rsi,
@@ -2649,8 +2669,16 @@ export async function POST(req: NextRequest) {
         console.warn('[scanner] structure-aware stop refinement failed for', result.symbol, stopErr);
       }
 
-      return {
-        ...result,
+      const { _canonicalFeatures: canonicalFeatures, ...resultOut } = result;
+      const canonical = canonicalFeatures
+        ? evaluateCanonical({
+            symbol: result.symbol, assetClass: assetClassForCanonical, timeframe, features: canonicalFeatures,
+            hardBlocks: hardBlocksFrom(result.compositeV2?.blockReasons), dataWatchReasons: dataWatchFrom(result.compositeV2?.watchReasons),
+            flags: hard.flags, trust: result.dataTrust?.level ?? null, dataTimestamp: result.lastCandleTime ?? null, regimeOverlay,
+          })
+        : null;
+      const enrichedRow = {
+        ...resultOut,
         institutionalFilter,
         capitalFlow: capitalFlow ?? undefined,
         // === V2 Scoring: Full ACL pipeline output ===
@@ -2678,9 +2706,10 @@ export async function POST(req: NextRequest) {
           },
         },
       };
+      return canonical ? applyCanonicalToScannerRow(enrichedRow, canonical) : enrichedRow;
     });
 
-    const blockedCount = enriched.filter(item => item.compositeV2?.permission === 'BLOCK').length;
+    const blockedCount = enriched.filter(item => (item.canonical?.permission ?? item.compositeV2?.permission) === 'BLOCK').length;
     results.length = 0;
     results.push(...enriched);
 
@@ -2699,13 +2728,14 @@ export async function POST(req: NextRequest) {
     // raw conviction score. Return the top 10.
     const percentiles = crossSectionalPercentiles(results.map(r => ({composite: r.compositeV2?.composite ?? 0})));
     results.forEach((r, i) => { if (r.compositeV2) r.compositeV2.percentileRank = percentiles[i].percentileRank; });
-    results.sort(compareScannerScores);
+    // Canonical verdict first (permission → grade → score); rows without one fall back to the legacy composite order.
+    results.sort((a, b) => compareCanonicalRows(a, b) || compareScannerScores(a, b));
     const evaluatedResults = [...results];
     if (results.length > 10) {
       results.length = 10;
     }
 
-    const rankValueOf = (r: ScanResult) => r.compositeV2?.composite ?? r.score;
+    const rankValueOf = (r: ScanResult) => r.canonical?.score ?? r.compositeV2?.composite ?? r.score;
     const leaderScore = results[0] ? rankValueOf(results[0]) : 0;
     results.forEach((result, index) => {
       result.rankExplanation = buildScannerRankExplanation({
@@ -2790,7 +2820,7 @@ export async function POST(req: NextRequest) {
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0 && !rgLocked) {
       const signalsToRecord: RecordSignalParams[] = results
-        .filter(r => r.compositeV2?.permission === 'PASS' && r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
+        .filter(r => (r.canonical?.permission ?? r.compositeV2?.permission) === 'PASS' && r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
         .map(r => {
           const learningScore = (r as any).rawScore ?? r.score; // anti-bias: never feed personalized score back into the brain
           return {
@@ -2872,7 +2902,8 @@ export async function POST(req: NextRequest) {
               },
               scoreSnapshot: {
                 score: learningScore,
-                modelVersion: r.compositeV2?.version,
+                modelVersion: r.canonical?.version ?? r.compositeV2?.version,
+                canonical: r.canonical,
                 scoreContract: r.compositeV2,
                 personalized: r.score,           // post-personalization
                 confidence: r.confidence,

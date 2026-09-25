@@ -65,6 +65,8 @@ export interface PriceData {
   barInterval?: string;
   lastCompletedBarAt?: string | null;
   historicalDates?: string[];
+  /** Per-bar volume aligned with historicalCloses (null = provider gave none). Used by the canonical engine. */
+  historicalVolumes?: Array<number | null>;
   /**
    * Longer oldest-first history used ONLY for indicator maths (EMA200 needs ~3–4×200 bars to converge to TradingView;
    * a 300-bar first-value-seeded EMA read ADBE 267.10 vs TradingView 270.16 on 24 Sep 2026). Other consumers keep the
@@ -225,6 +227,7 @@ export async function fetchPrice(
         historicalHighs: tail.map((b) => b.high),
         historicalLows: tail.map((b) => b.low),
         historicalDates: tail.map((b) => b.t),
+        historicalVolumes: tail.map((b) => (b.volume != null && b.volume > 0 ? b.volume : null)),
         barInterval: series.barInterval,
         lastCompletedBarAt: series.lastCompletedBarAt,
         priceTs: detail?.last_updated || md?.last_updated || series.partialBar?.t || series.lastCompletedBarAt || undefined,
@@ -322,6 +325,7 @@ export async function fetchPrice(
       historicalHighs: histDates.map(d => adj(d, '2. high')),
       historicalLows: histDates.map(d => adj(d, '3. low')),
       historicalDates: histDates,
+      historicalVolumes: histDates.map(d => { const v = parseFloat(ts[d]['6. volume'] ?? ts[d]['5. volume']); const f = splitFactor.get(d) ?? 1; return Number.isFinite(v) && v > 0 ? v * f : null; }),
       indicatorHistory: {
         closes: indicatorDates.map(d => adj(d, '4. close')),
         highs: indicatorDates.map(d => adj(d, '2. high')),

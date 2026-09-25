@@ -12,6 +12,7 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
+import { calibrationSummary, scoreLabel } from "@/lib/scoring/canonical/display";
 
 interface PriceData {
   price: number;
@@ -92,6 +93,10 @@ interface GoldenEggSummary {
   lastCompletedBarAt: string | null;
   barInterval: string | null;
   timeframe: string;
+  /** Canonical engine verdict (primary). Absent on packets built before the canonical engine. */
+  canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; coverage: number } | null;
+  /** Legacy confluence read (secondary). */
+  legacyConfluence?: { assessment: string; direction: string; grade: string; confluenceScore: number } | null;
 }
 
 interface AnalystOutput {
@@ -934,7 +939,13 @@ export default function DeepAnalysisPage({
               const trustColor = ge ? (ge.dataTrust.level === 'GOOD' ? 'var(--msp-bull)' : ge.dataTrust.level === 'DEGRADED' ? 'var(--msp-warn)' : 'var(--msp-bear)') : deepDataQualityColor(dataQuality.label);
               const cards: Array<[string, string, string]> = ge ? [
                 ['Golden Egg verdict', `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${ge.verdict.direction}`, geColor],
-                ['Confluence (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor],
+                ...(ge.canonicalVerdict
+                  ? [
+                      ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}`, geColor] as [string, string, string],
+                      ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', calibrationSummary(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
+                      ['Legacy confluence (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
+                    ]
+                  : [['Confluence (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
                 ['Bias & setup', `${ge.verdict.direction === 'LONG' ? 'Bullish' : ge.verdict.direction === 'SHORT' ? 'Bearish' : 'Neutral'} · ${ge.verdict.setupType.replace('_', ' ')}`, geDirColor],
                 ['Primary blocker', ge.verdict.primaryBlocker ?? 'None flagged', ge.verdict.primaryBlocker ? 'var(--msp-warn)' : 'var(--msp-bull)'],
                 ['What confirms next', ge.confirmation[0] ?? 'n/a', 'var(--msp-info)'],

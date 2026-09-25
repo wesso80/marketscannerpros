@@ -27,8 +27,11 @@ export const HARD_BLOCK_POLICY = {
    *  errors (unadjusted splits, wrong symbol mapping, unit errors) without blocking ordinary big-move days. */
   priceSanityMinPct: 15,
   priceSanityAtrMultiple: 6,
-  /** Holding window (calendar days) per timeframe: an earnings date within [0, window] blocks. */
-  holdingWindowDays: { '5m': 1, '15m': 1, '30m': 1, '1h': 2, '4h': 3, daily: 7, '1d': 7, weekly: 28, '1w': 28 } as Record<string, number>,
+  /** Holding window (calendar days) per timeframe: an earnings date within [0, window] blocks.
+   *  daily = 9: Phase 3 validation (Sep 2026) — canonical daily setups resolve (target or invalidation) in a median of
+   *  3 trading days, 75th pct 6 (≈ 9 calendar days), 90th pct 11; 12% reach the 20-bar time stop. 9 covers ¾ of trades.
+   *  Intraday and weekly windows are unvalidated defaults (no calibration data for those timeframes). */
+  holdingWindowDays: { '5m': 1, '15m': 1, '30m': 1, '1h': 2, '4h': 3, daily: 9, '1d': 9, weekly: 28, '1w': 28 } as Record<string, number>,
   /** Macro flag: US high-importance events on the evaluation date or the next calendar day (ET). */
   macroLookaheadDays: 1,
 } as const;

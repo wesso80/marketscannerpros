@@ -12,6 +12,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 import { computeQuickScore } from '@/lib/scanner/topCachedScore';
+import { canonicalPickFields, readStoredCanonical } from '@/lib/scoring/canonical/dailyPick';
+import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -154,7 +156,24 @@ export async function GET(req: NextRequest) {
       rsi: number;
       adx: number;
       type: string;
-    }> = [];
+    } & ReturnType<typeof canonicalPickFields>> = [];
+
+    // Canonical verdicts from the latest daily scan (bars-based). The worker cache only has an indicator snapshot
+    // (no EMA20/50, no history), which the canonical engine cannot score, so rows without a daily-scan verdict carry
+    // canonical = null and the list stays ordered by the legacy quick score (`scoreBasis`).
+    const canonicalBySymbol = new Map<string, CanonicalResult>();
+    try {
+      const stored = await q<{ symbol: string; canonical: unknown }>(`
+        SELECT symbol, indicators->'canonical' AS canonical
+        FROM daily_picks
+        WHERE scan_date = (SELECT MAX(scan_date) FROM daily_picks)
+          AND indicators->'canonical' IS NOT NULL
+      `);
+      for (const r of stored) {
+        const c = readStoredCanonical({ canonical: r.canonical });
+        if (c) canonicalBySymbol.set(String(r.symbol).toUpperCase(), c);
+      }
+    } catch { /* canonical lookup is best-effort */ }
 
     for (const row of rows) {
       const sym = String(row.symbol);
@@ -174,6 +193,7 @@ export async function GET(req: NextRequest) {
         rsi: Number(row.rsi14) || 0,
         adx: Number(row.adx14) || 0,
         type: assetType,
+        ...canonicalPickFields(canonicalBySymbol.get(sym.toUpperCase()) ?? null),
       });
     }
 
@@ -188,6 +208,7 @@ export async function GET(req: NextRequest) {
       compliance: scannerComplianceMetadata(),
       equity,
       crypto,
+      scoreBasis: 'legacy_quick_score',
       source: 'worker_cache',
       cached_at: rows[0]?.fetched_at || null,
       stale,

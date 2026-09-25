@@ -18,7 +18,7 @@ import { AI_DAILY_LIMITS, isFreeForAllMode, normalizeTier } from '@/lib/entitlem
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
-import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsWithAvailability, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 
 export const runtime = 'nodejs';
 
@@ -167,8 +167,9 @@ export async function POST(req: NextRequest) {
   // Regime scoring
   const regimeRaw = ctx.regime || 'RANGE_NEUTRAL';
   const scoringRegime = mapToScoringRegime(regimeRaw);
-  const components = estimateComponentsFromContext({
-    scannerScore: ctx.pageData?.score ?? ctx.pageData?.confluenceScore ?? 50,
+  // SQ is the scanner score itself (gating it is circular); components without a real input are unavailable, not defaults.
+  const { components, unavailable: unavailableComponents } = estimateComponentsWithAvailability({
+    scannerScore: ctx.pageData?.score ?? ctx.pageData?.confluenceScore ?? undefined,
     regime: regimeRaw,
     rsi: ctx.pageData?.rsi,
     cci: ctx.pageData?.cci,
@@ -176,10 +177,9 @@ export async function POST(req: NextRequest) {
     aroonUp: ctx.pageData?.aroon_up,
     aroonDown: ctx.pageData?.aroon_down,
     obv: ctx.pageData?.obv,
-    session: 'regular',
     derivativesAvailable: false,
   });
-  const regimeScoring = computeRegimeScore(components, scoringRegime);
+  const regimeScoring = computeRegimeScore(components, scoringRegime, { ignoreGates: ['SQ'], unavailable: unavailableComponents });
 
   // Regime confidence
   const regimeAgreement = deriveRegimeConfidence({

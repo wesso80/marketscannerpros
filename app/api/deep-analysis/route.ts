@@ -122,7 +122,14 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
   const L: string[] = [];
   L.push(`GOLDEN EGG CANONICAL PACKET — ${c.symbol} (${c.assetClass}, timeframe ${c.timeframe}, bars ${c.barInterval ?? 'n/a'})`);
   L.push(`Price ${fmtPx(c.price)} as of ${c.priceTs}; last completed bar ${c.lastCompletedBarAt ?? 'n/a'}; history ${c.historyBars} bars; source ${c.source ?? 'n/a'}.`);
-  L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · confluence ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
+  const cv = ge.canonicalVerdict;
+  if (cv) {
+    const why = [...(cv.permission === 'BLOCK' ? cv.blockReasons : cv.watchReasons)].map((r) => `${r.code} (${r.message})`).join('; ');
+    L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): ${cv.permission} · ${cv.setupType} · direction ${cv.direction} · setup score ${cv.score}/100 · grade ${cv.grade}${why ? ` · reasons: ${why}` : ''}${cv.levels ? ` · levels entry ${fmtPx(cv.levels.entry)} / invalidation ${fmtPx(cv.levels.invalidation)} / target ${fmtPx(cv.levels.target)} (R:R ${cv.levels.riskReward})` : ''}.`);
+    L.push(`Legacy confluence (secondary, do not present as the verdict): ${ge.legacyConfluence?.assessment ?? 'n/a'} ${ge.legacyConfluence?.direction ?? ''} · ${c.verdict.confluence}/100 evidence alignment (NOT a probability) · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}.`);
+  } else {
+    L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · confluence ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
+  }
   L.push(`Setup: ${c.verdict.setupType} — ${c.verdict.setupNote}`);
   L.push(`Primary driver: ${c.verdict.primaryDriver}`);
   L.push(`Primary blocker: ${c.verdict.primaryBlocker ?? 'none flagged'}`);
@@ -323,6 +330,19 @@ export async function GET(request: NextRequest) {
         barInterval: c.barInterval,
         timeframe: c.timeframe,
         flipConditions: ge.layer1.flipConditions,
+        // Canonical engine verdict (primary). `verdict` above already carries its assessment/direction/grade; the
+        // confluence number there is the secondary legacy read (see legacyConfluence).
+        canonicalVerdict: ge.canonicalVerdict ? {
+          version: ge.canonicalVerdict.version, permission: ge.canonicalVerdict.permission, grade: ge.canonicalVerdict.grade,
+          setupType: ge.canonicalVerdict.setupType, direction: ge.canonicalVerdict.direction, score: ge.canonicalVerdict.score,
+          coverage: ge.canonicalVerdict.coverage, levels: ge.canonicalVerdict.levels, sizeMultiplier: ge.canonicalVerdict.sizeMultiplier,
+          blockReasons: ge.canonicalVerdict.blockReasons, watchReasons: ge.canonicalVerdict.watchReasons, flags: ge.canonicalVerdict.flags,
+          thresholds: ge.canonicalVerdict.thresholds,
+        } : null,
+        legacyConfluence: ge.legacyConfluence ? {
+          assessment: ge.legacyConfluence.assessment, direction: ge.legacyConfluence.direction,
+          grade: ge.legacyConfluence.grade, confluenceScore: ge.legacyConfluence.confluenceScore,
+        } : null,
       },
       analyst: {
         sections: deterministic,

@@ -25,6 +25,8 @@ import {
   calculateADX, calculateStochastic, calculateAroon, calculateCCI,
 } from "@/lib/scanner-indicators";
 import { alertCronFailure } from "@/lib/opsAlerting";
+import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type CanonicalResult, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
+import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -108,6 +110,10 @@ interface Indicators {
   cci?: number;
   change24h?: number;
   volume?: number;
+  /** Open time (ISO-8601 UTC) of the last daily bar used; read by lib/scanner/dailyPickTrust for staleness. */
+  lastBarAt?: string;
+  /** Canonical engine verdict (primary label for daily picks); the signal-count score stays as the legacy value. */
+  canonical?: CanonicalResult;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -308,7 +314,7 @@ async function fetchCryptoData(symbol: string): Promise<OHLCV[] | null> {
 }
 
 // Analyze a single asset and return scored result
-function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
+function analyzeAsset(symbol: string, ohlcv: OHLCV[], canonicalOpts?: { assetClass: 'equity' | 'crypto'; overlay: RegimeOverlayInputs | null; displaySymbol?: string }): {
   symbol: string;
   score: number;
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -345,9 +351,18 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
     aroonUp: isNaN(aroon.up) ? undefined : aroon.up,
     aroonDown: isNaN(aroon.down) ? undefined : aroon.down,
     cci: isNaN(cci) ? undefined : cci,
-    change24h
+    change24h,
+    lastBarAt: `${ohlcv[ohlcv.length - 1].date}T00:00:00.000Z`,
   };
   
+  if (canonicalOpts) {
+    const canonical = canonicalForDailyPick(
+      ohlcv.map((d) => ({ t: `${d.date}T00:00:00.000Z`, open: d.open, high: d.high, low: d.low, close: d.close, volume: d.volume > 0 ? d.volume : null })),
+      { symbol: canonicalOpts.displaySymbol ?? symbol, assetClass: canonicalOpts.assetClass, overlay: canonicalOpts.overlay },
+    );
+    if (canonical) indicators.canonical = compactCanonical(canonical);
+  }
+
   const { score, direction, signals } = computeScore(indicators);
   
   return {
@@ -382,6 +397,8 @@ export async function POST(req: NextRequest) {
   };
   
   const errors: string[] = [];
+  // Regime overlay inputs once per run (fails soft to "no overlay").
+  const overlay = await loadRegimeOverlayInputs().catch(() => null);
   
   // ==========================================================================
   // SCAN EQUITIES (Yahoo Finance)
@@ -402,7 +419,7 @@ export async function POST(req: NextRequest) {
           errors.push(`${symbol}: No data`);
           return null;
         }
-        return analyzeAsset(symbol, ohlcv);
+        return analyzeAsset(symbol, ohlcv, { assetClass: 'equity', overlay });
       } catch (e: any) {
         errors.push(`${symbol}: ${e.message}`);
         return null;
@@ -439,7 +456,7 @@ export async function POST(req: NextRequest) {
           errors.push(`${symbol}: No data`);
           return null;
         }
-        const result = analyzeAsset(symbol, ohlcv);
+        const result = analyzeAsset(symbol, ohlcv, { assetClass: 'crypto', overlay, displaySymbol: symbol.replace("-USD", "") });
         if (result) {
           // Convert Yahoo format (BTC-USD) to display format (BTC)
           result.symbol = symbol.replace("-USD", "");
@@ -466,24 +483,18 @@ export async function POST(req: NextRequest) {
   // RANK AND SELECT TOP 10
   // ==========================================================================
   
-  // Sort by score (highest first) and take top 10
-  const topEquities = results.equities
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
-  
-  const topCrypto = results.crypto
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
-  
-  // Also get bottom 10 (bearish opportunities for shorts)
-  const bottomEquities = results.equities
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 10);
-  
-  const bottomCrypto = results.crypto
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 10);
-  
+  // Symmetric canonical selection: top = best canonical LONG setups, bottom = best canonical SHORT setups (permission →
+  // grade → calibrated score → factor score). Falls back to the legacy score only when no row has a canonical verdict.
+  const pickSel = <T extends { symbol: string; score: number; indicators: Record<string, any> }>(rows: T[]) =>
+    selectDailyPicks(rows.map((r) => ({ ...r, canonical: (r.indicators?.canonical ?? null) as CanonicalResult | null })), 10);
+  const eqSel = pickSel(results.equities);
+  const crSel = pickSel(results.crypto);
+  const topEquities = eqSel.top;
+  const topCrypto = crSel.top;
+  const bottomEquities = eqSel.bottom;
+  const bottomCrypto = crSel.bottom;
+  console.log(`[scan-universe] selection basis: equity=${eqSel.basis} crypto=${crSel.basis}`);
+
   console.log(`[scan-universe] Top equities:`, topEquities.map(e => `${e.symbol}:${e.score}`).join(', '));
   console.log(`[scan-universe] Top crypto:`, topCrypto.map(c => `${c.symbol}:${c.score}`).join(', '));
   
@@ -498,7 +509,9 @@ export async function POST(req: NextRequest) {
     await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [scanDate]);
     
     // Helper to insert a pick
-    const insertPick = async (pick: any, assetClass: string, rankType: string) => {
+    const insertPick = async (rawPick: any, assetClass: string, rankType: string) => {
+      // score/direction columns carry the canonical verdict; legacy values go to indicators.legacy.
+      const pick = withCanonicalColumns(rawPick);
       await q(`
         INSERT INTO daily_picks (
           scan_date, asset_class, symbol, score, direction, 
