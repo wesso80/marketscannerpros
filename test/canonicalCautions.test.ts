@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  AT_OPPOSING_LEVEL, MOMENTUM_DISAGREES, SETUP_POLICY, canonicalLabel, cautionTags, computeFeatures, evaluateCanonical, evaluateSetup,
+  AT_OPPOSING_LEVEL, MOMENTUM_DISAGREES, SETUP_POLICY, applyCanonicalToScannerRow, canonicalLabel, canonicalRowLabel, cautionTags, computeFeatures, evaluateCanonical, evaluateSetup,
   momentumCaution, opposingLevelCaution, targetBasisLabel, type CanonicalFeatures,
 } from '@/lib/scoring/canonical';
 import { flipBars, zigzagTrend } from './fixtures/canonicalBars';
@@ -83,6 +83,9 @@ describe('AT_OPPOSING_LEVEL: entry within 0.5 ATR of a prior opposing swing', ()
     expect(r.grade).toBe('C');
     expect(cautionTags(r)).toEqual(['at resistance']);
     expect(canonicalLabel(r)).toMatch(/ · at resistance$/);
+    // Scanner rows (#52 row labels) surface the same caution.
+    expect(canonicalRowLabel(r)).toMatch(/^WATCH · .+ · at resistance$/);
+    expect(applyCanonicalToScannerRow({ symbol: 'MU' }, r).canonicalLabel).toBe(canonicalRowLabel(r));
   });
 
   it('engine short: "at support", grade C', () => {
@@ -161,5 +164,9 @@ describe('display: caution tags', () => {
     expect(cautionTags(null)).toEqual([]);
     expect(cautionTags({ direction: 'short', watchReasons: [{ code: AT_OPPOSING_LEVEL }, { code: MOMENTUM_DISAGREES }] })).toEqual(['at support', 'momentum disagrees']);
     expect(canonicalLabel({ permission: 'BLOCK', grade: 'F', setupType: 'NONE', direction: 'long', watchReasons: [{ code: AT_OPPOSING_LEVEL, message: '' }] })).toBe('BLOCK · F · No setup');
+    const squeeze = { permission: 'WATCH', grade: 'C', setupType: 'SQUEEZE', direction: 'long', blockReasons: [], watchReasons: [{ code: AT_OPPOSING_LEVEL, message: '' }, { code: MOMENTUM_DISAGREES, message: '' }] } as any;
+    expect(canonicalRowLabel(squeeze)).toBe('WATCH · Squeeze · at resistance · momentum disagrees');
+    const noSetup = { permission: 'BLOCK', grade: 'F', setupType: 'NONE', direction: 'none', blockReasons: [{ code: 'NO_SETUP', message: 'No setup' }], watchReasons: [{ code: AT_OPPOSING_LEVEL, message: '' }] } as any;
+    expect(canonicalRowLabel(noSetup)).toBe('No setup');
   });
 });

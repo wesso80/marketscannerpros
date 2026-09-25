@@ -4,6 +4,7 @@
  * The canonical result is the PRIMARY verdict on scanner rows (row.canonical): permission, setup, direction, grade,
  * score and levels. The v2.4 composite (row.compositeV2) stays attached as a secondary "legacy composite" label.
  */
+import { cautionTags } from './display';
 import { computeFeatures, featuresFromSnapshot } from './features';
 import type { CanonicalBar, CanonicalFeatures, CanonicalReason, CanonicalResult } from './types';
 
@@ -56,12 +57,51 @@ export function dataWatchFrom(reasons: Array<{ code: string; message: string }> 
 
 const PERM_ORDER: Record<string, number> = { PASS: 2, WATCH: 1, BLOCK: 0 };
 const GRADE_ORDER: Record<string, number> = { A: 3, B: 2, C: 1, F: 0 };
+const STATUS_ORDER: Record<CanonicalRowStatus, number> = { SETUP: 2, NO_SETUP: 1, HARD_BLOCK: 0 };
 
-/** Ranking: permission, then grade, then (calibrated) score, then raw factor score; rows without a canonical result sort last. */
-export function compareCanonicalRows(a: { symbol: string; canonical?: (Pick<CanonicalResult, 'permission' | 'grade' | 'score'> & { factorScore?: number }) | null }, b: typeof a): number {
+/**
+ * What a canonical verdict means for a scanner row:
+ *  - SETUP: an eligible setup (WATCH; PASS only with a validated edge).
+ *  - NO_SETUP: the ONLY block is NO_SETUP — nothing tradeable on this bar by the engine's rules. Not a data problem:
+ *    the row stays in the scanner, its side comes from the indicator factor bias.
+ *  - HARD_BLOCK: a data/eligibility block (stale data, too little history, earnings in window, liquidity, price sanity).
+ */
+export type CanonicalRowStatus = 'SETUP' | 'NO_SETUP' | 'HARD_BLOCK';
+export function canonicalRowStatus(c: Pick<CanonicalResult, 'permission'> & { blockReasons?: CanonicalReason[] | null }): CanonicalRowStatus {
+  if (c.permission !== 'BLOCK') return 'SETUP';
+  const reasons = c.blockReasons ?? [];
+  return reasons.length > 0 && reasons.every((r) => r.code === 'NO_SETUP') ? 'NO_SETUP' : 'HARD_BLOCK';
+}
+
+/** "closest: Trend continuation long — counter-trend: −DI ≥ +DI" from the engine's NO_SETUP message, if present. */
+export function noSetupReason(c: { blockReasons?: CanonicalReason[] | null }): string | null {
+  const msg = (c.blockReasons ?? []).find((r) => r.code === 'NO_SETUP')?.message ?? '';
+  const m = /\(closest: (.+)\)\s*$/.exec(msg);
+  return m ? m[1] : null;
+}
+
+/** One-line row label: "WATCH · Pullback", "WATCH · Squeeze · at resistance" (setup cautions appended),
+ *  "No setup: <closest reason>", "Blocked: STALE_DATA". */
+export function canonicalRowLabel(c: CanonicalResult): string {
+  const status = canonicalRowStatus(c);
+  if (status === 'SETUP') return [`${c.permission} · ${SETUP_LABEL[c.setupType] ?? c.setupType}`, ...cautionTags(c)].join(' · ');
+  if (status === 'NO_SETUP') { const why = noSetupReason(c); return why ? `No setup: ${why}` : 'No setup'; }
+  return `Blocked: ${c.blockReasons.filter((r) => r.code !== 'NO_SETUP').map((r) => r.code).join(', ')}`;
+}
+
+type RankableCanonical = (Pick<CanonicalResult, 'permission' | 'grade' | 'score'> & { factorScore?: number; blockReasons?: CanonicalReason[] | null }) | null;
+/**
+ * Ranking: permission, then setup status (setup > no setup > hard block), then grade, then (calibrated) score, then raw
+ * factor score; rows without a canonical result sort last. Two no-setup (or two hard-blocked) rows carry no canonical
+ * ordering information, so they compare equal and callers chain their own order (e.g. factor-bias strength).
+ */
+export function compareCanonicalRows(a: { symbol: string; canonical?: RankableCanonical }, b: typeof a): number {
   const ca = a.canonical, cb = b.canonical;
   if (!ca || !cb) return (cb ? 1 : 0) - (ca ? 1 : 0); // both missing → 0 so callers can chain a fallback order
-  return (PERM_ORDER[cb.permission] - PERM_ORDER[ca.permission]) || (GRADE_ORDER[cb.grade] - GRADE_ORDER[ca.grade]) || (cb.score - ca.score)
+  const sa = canonicalRowStatus(ca), sb = canonicalRowStatus(cb);
+  const byVerdict = (PERM_ORDER[cb.permission] - PERM_ORDER[ca.permission]) || (STATUS_ORDER[sb] - STATUS_ORDER[sa]);
+  if (byVerdict || (sa !== 'SETUP' && sb !== 'SETUP')) return byVerdict;
+  return (GRADE_ORDER[cb.grade] - GRADE_ORDER[ca.grade]) || (cb.score - ca.score)
     || ((cb.factorScore ?? 0) - (ca.factorScore ?? 0)) || a.symbol.localeCompare(b.symbol);
 }
 
@@ -87,7 +127,17 @@ export function applyCanonicalToScannerRow<T extends Record<string, any>>(row: T
   out.score = c.score;
   out.grade = c.grade;
   out.setup = SETUP_LABEL[c.setupType] ?? c.setupType;
-  out.direction = scannerDirection(c);
+  // Side: the canonical setup's side when it has one. A no-setup row keeps the indicator factor bias (the pre-canonical
+  // trend/momentum/structure read) so it is still filterable and displayed with a side — "no tradeable setup on this
+  // bar" is not "no directional evidence". A hard-blocked row (bad/stale/short data, earnings, liquidity) has no side.
+  const status = canonicalRowStatus(c);
+  const factorBias = row.direction === 'bullish' || row.direction === 'bearish' ? row.direction : 'neutral';
+  out.factorBias = factorBias; // kept for the Pro Scanner's Factor agreement filter (lib/scanner/proSelection.ts)
+  out.canonicalStatus = status;
+  out.canonicalLabel = canonicalRowLabel(c);
+  if (c.direction !== 'neutral') { out.direction = scannerDirection(c); out.directionBasis = 'canonical_setup'; }
+  else if (status === 'HARD_BLOCK') { out.direction = 'neutral'; out.directionBasis = 'hard_block'; }
+  else { out.direction = factorBias; out.directionBasis = 'factor_bias'; }
   if (c.levels && c.direction !== 'neutral') {
     out.entry = c.levels.entry;
     out.stop = c.levels.invalidation;

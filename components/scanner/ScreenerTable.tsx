@@ -9,7 +9,7 @@ export interface ScreenerRow {
   direction: 'LONG' | 'SHORT' | 'NEUTRAL';
   confidence: number;
   scoreExplanation?: string;
-  scorePermission?: 'PASS' | 'WATCH' | 'BLOCK';
+  scorePermission?: 'PASS' | 'WATCH' | 'BLOCK' | 'NO SETUP';
   factorCoverage?: number;
   /** Canonical engine verdict (primary): setup, grade, permission, levels. */
   canonical?: import('@/lib/scoring/canonical/types').CanonicalResult;
