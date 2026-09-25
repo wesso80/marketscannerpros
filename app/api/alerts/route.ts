@@ -157,9 +157,11 @@ export async function GET(req: NextRequest) {
       }));
     }
 
-    // Get quota info
-    const quotaResult = await q(
-      `SELECT max_alerts, active_alerts, total_triggers_today FROM alert_quotas WHERE workspace_id = $1`,
+    // Triggers in the last 24h, counted from alert history. (alert_quotas.total_triggers_today
+    // is only ever incremented and never reset, so it is a lifetime total, not "today".)
+    const triggers24hResult = await q(
+      `SELECT COUNT(*) AS count FROM alert_history
+       WHERE workspace_id = $1 AND triggered_at > NOW() - INTERVAL '24 hours'`,
       [session.workspaceId]
     );
 
@@ -172,7 +174,7 @@ export async function GET(req: NextRequest) {
         used: activeCount,
         max: maxAlerts,
         tier,
-        triggersToday: quotaResult[0]?.total_triggers_today || 0,
+        triggersToday: Number(triggers24hResult[0]?.count ?? 0) || 0,
       },
     });
   } catch (error) {

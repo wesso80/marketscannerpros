@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
+import { avgRetriggerInterval, pushBadgeState, triggersLast24h, type PushBadgeState } from '@/lib/alerts/summaryStats';
+import { getNotificationPermission, isPushSupported, isSubscribedToPush } from '@/lib/push';
 import AlertsWidget from "@/components/AlertsWidget";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -27,6 +29,7 @@ type AlertItem = {
 
 type AlertHistoryItem = {
   id: string;
+  alert_id?: string | null;
   symbol: string;
   triggered_at: string;
   condition_met: string;
@@ -84,22 +87,8 @@ function fmtDateTime(value?: string) {
   return d.toLocaleString();
 }
 
-function avgTriggerInterval(history: AlertHistoryItem[]) {
-  if (history.length < 2) return 'N/A';
-  const sorted = [...history]
-    .map((h) => new Date(h.triggered_at).getTime())
-    .filter((t) => Number.isFinite(t))
-    .sort((a, b) => b - a);
-  if (sorted.length < 2) return 'N/A';
-  let total = 0;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    total += Math.abs(sorted[i] - sorted[i + 1]);
-  }
-  const avgMin = Math.round(total / (sorted.length - 1) / 60000);
-  if (avgMin < 60) return `${avgMin}m`;
-  const hours = (avgMin / 60).toFixed(1);
-  return `${hours}h`;
-}
+// Avg interval between re-triggers of the same alert (not across all alerts/symbols): see lib/alerts/summaryStats.
+const avgTriggerInterval = avgRetriggerInterval;
 
 export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { tier, isLoading } = useUserTier();
@@ -107,6 +96,10 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [history, setHistory] = useState<AlertHistoryItem[]>([]);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  // Server's rolling 24h trigger count (all history, not just the rows loaded here).
+  const [serverLast24h, setServerLast24h] = useState<number | null>(null);
+  // Real push status for this browser (permission + saved subscription).
+  const [pushState, setPushState] = useState<PushBadgeState>('Checking');
   const [loadingData, setLoadingData] = useState(true);
   const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
@@ -148,6 +141,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
       setAlerts(Array.isArray(alertsJson?.alerts) ? alertsJson.alerts : []);
       setHistory(Array.isArray(historyJson?.history) ? historyJson.history : []);
+      setServerLast24h(typeof historyJson?.stats?.last24h === 'number' ? historyJson.stats.last24h : null);
       setPrefs(prefsJson?.prefs || null);
 
       const failed = results
@@ -165,14 +159,26 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     void fetchAll();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const supported = isPushSupported();
+        const permission = getNotificationPermission();
+        const subscribed = supported ? await isSubscribedToPush() : false;
+        if (!cancelled) setPushState(pushBadgeState({ supported, permission, subscribed }));
+      } catch {
+        if (!cancelled) setPushState('Unsupported');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const activeAlerts = useMemo(() => alerts.filter((a) => a.is_active), [alerts]);
   const triggeredToday = useMemo(() => {
-    const today = new Date();
-    return history.filter((h) => {
-      const d = new Date(h.triggered_at);
-      return d.toDateString() === today.toDateString();
-    }).length;
-  }, [history]);
+    // Rolling last 24h, from the server's count over all history (TR-20).
+    return triggersLast24h(history, serverLast24h);
+  }, [history, serverLast24h]);
 
   const smartPct = useMemo(() => {
     if (activeAlerts.length === 0) return 0;
@@ -265,7 +271,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         activeAlerts: activeAlerts.length,
         triggeredToday,
       },
-      summary: `Alert Radar Console: ${activeAlerts.length} active, ${triggeredToday} triggered today`,
+      summary: `Alert Radar Console: ${activeAlerts.length} active, ${triggeredToday} triggered in the last 24h`,
     });
   }, [tier, setPageData, activeAlerts, triggeredToday]);
 
@@ -285,7 +291,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           eyebrow="Alerts review"
           badges={[
             { label: `${activeAlerts.length} active` },
-            { label: `${triggeredToday} today` },
+            { label: `${triggeredToday} in 24h` },
           ]}
           title="Alert radar console"
           subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
@@ -296,7 +302,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           ]}
           metrics={[
             { label: 'Active', value: `${activeAlerts.length}`, tone: 'bull', detail: 'Open notifications' },
-            { label: 'Triggered today', value: `${triggeredToday}`, tone: 'warn', detail: 'Fired in last 24h' },
+            { label: 'Last 24h', value: `${triggeredToday}`, tone: 'warn', detail: 'Triggers in the last 24 hours' },
             { label: 'Smart %', value: `${smartPct}%`, tone: 'info', detail: 'Smart alert share' },
             { label: 'Tracking', value: riskLocked ? 'Locked' : 'Open', tone: riskLocked ? 'bear' : 'bull', detail: riskLocked ? 'Rule guard active' : 'No guard active' },
           ]}
@@ -317,12 +323,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
           <div className="flex gap-2 lg:gap-3">
             <MetricPill label="Active" value={`${activeAlerts.length}`} />
-            <MetricPill label="Triggered Today" value={`${triggeredToday}`} />
+            <MetricPill label="Last 24h" value={`${triggeredToday}`} />
             <MetricPill label="Smart %" value={`${smartPct}%`} />
           </div>
 
           <div className="flex justify-start gap-2 lg:justify-center">
-            <StatusBadge label="Push" state={prefs?.in_app_enabled ? 'Enabled' : 'Disabled'} />
+            <StatusBadge label="Push (this browser)" state={pushState} />
             <StatusBadge label="Webhook" state={prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Connected' : 'Not Set'} />
           </div>
 
@@ -423,7 +429,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
             <div className="mt-3 space-y-2 text-sm text-slate-300">
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Last Trigger: <span className="text-slate-100">{fmtDateTime(history[0]?.triggered_at)}</span></div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Most Active Symbol: <span className="text-slate-100">{mostActiveSymbol}</span></div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Trigger Interval: <span className="text-slate-100">{avgTriggerInterval(history)}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Re-trigger Interval (same alert): <span className="text-slate-100">{avgTriggerInterval(history)}</span></div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Pending Cooldowns: <span className="text-slate-100">{pendingCooldowns}</span></div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
