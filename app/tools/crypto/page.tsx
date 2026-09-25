@@ -1,6 +1,6 @@
 'use client';
 
-import { cryptoReviewMissing, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
 
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
@@ -185,13 +185,21 @@ function CryptoCommandCenterContent() {
 
   const morningDecision = useMemo(() => {
     const missing = cryptoReviewMissing(marketData);
-    if (missing.length) return {
-      dataComplete: false, verdict: 'CONDITIONAL' as const, adaptiveConfidence: null,
-      hardBlocks: missing, longsAllowed: false, shortsAllowed: false,
-      riskContext: 'Data unavailable — refresh to reassess', riskState: 'Unavailable', leadership: 'Unavailable',
-      liquidity: 'Unavailable', volatility: 'Unavailable', breadthScore: null, breadthLabel: 'Unavailable',
-      subClusters: [] as Array<{ name: string; review: string }>, explanation: missing.join('; '),
-    };
+    if (missing.length) {
+      // Risk state, liquidity, hard blocks and the verdict need funding and open
+      // interest, so they stay unavailable. Leadership, volatility and breadth use
+      // only spot market data, so show them whenever that data loaded.
+      const spot = cryptoSpotContext(marketData);
+      const spotParts = [spot.breadthScore != null && 'breadth', spot.leadership !== 'Unavailable' && 'leadership', spot.volatility !== 'Unavailable' && 'volatility'].filter(Boolean);
+      return {
+        dataComplete: false, verdict: 'CONDITIONAL' as const, adaptiveConfidence: null,
+        hardBlocks: missing, longsAllowed: false, shortsAllowed: false,
+        riskContext: 'Data unavailable — refresh to reassess', riskState: 'Unavailable', leadership: spot.leadership,
+        liquidity: 'Unavailable', volatility: spot.volatility, breadthScore: spot.breadthScore, breadthLabel: spot.breadthLabel,
+        subClusters: [] as Array<{ name: string; review: string }>,
+        explanation: `${missing.join('; ')}.${spotParts.length ? ` Shown from spot market data only: ${spotParts.join(', ')}.` : ''}`,
+      };
+    }
 
     const market = marketData?.market;
     const trendingCoins = marketData?.trending?.coins || [];

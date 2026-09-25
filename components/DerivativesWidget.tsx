@@ -133,12 +133,12 @@ export default function DerivativesWidget({
   const [lsMeta, setLsMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
   const [fundingMeta, setFundingMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
-  const lsTooltipText = `Long/Short (funding-implied) = estimated from aggregated funding rates, not observed exchange long/short account data.
+  const lsTooltipText = `Long/Short (OKX accounts) = OKX's reported ratio of accounts net long to accounts net short. It counts accounts, not position size.
 
-GREEN: Implied ratio > 1 — funding skews toward longs (bullish-leaning positioning)
-RED: Implied ratio < 1 — funding skews toward shorts (bearish-leaning positioning)
+GREEN: Ratio > 1 — more accounts are long than short
+RED: Ratio < 1 — more accounts are short than long
 
-Research context: this is a derived proxy. Extreme readings often precede reversals.
+Research context: this is one exchange's account count. Extreme readings often precede reversals.
 Very high → crowded-long context → vulnerable to a long squeeze
 Very low → crowded-short context → vulnerable to a short squeeze`;
 
@@ -353,7 +353,7 @@ Research context:
         {/* Long/Short Ratio */}
         {lsData && (
           <div className="bg-slate-900/50 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-2" title="Estimated from aggregated funding rates, not observed exchange long/short account data.">Long/Short (funding-implied)</div>
+            <div className="text-sm text-slate-400 mb-2" title="OKX-reported ratio of accounts net long to accounts net short (counts accounts, not position size).">Long/Short (OKX accounts)</div>
             <div className="text-2xl font-bold text-white mb-1">
               {lsData.average.longShortRatio}
             </div>

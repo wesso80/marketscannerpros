@@ -129,9 +129,9 @@ export default function MethodologyPage() {
             <section>
               <h2 className="text-emerald-400">Derived vs observed data</h2>
               <p className="text-sm leading-6 text-slate-300">
-                Some readings are <em>estimated</em>, not directly observed, and are labelled as such. For example, a
-                &ldquo;Long/Short (funding-implied)&rdquo; reading is derived from aggregated funding rates — it is a
-                proxy for positioning, not exchange long/short account data. We label derived, delayed, estimated, and
+                Some readings are <em>estimated</em>, not directly observed, and are labelled as such. Where a reading
+                comes from a single venue it says so: for example, &ldquo;Long/Short (OKX accounts)&rdquo; is OKX&rsquo;s
+                reported count of accounts net long versus net short, not position size and not the whole market. We label derived, delayed, estimated, and
                 simulated data so you can weight it accordingly.
               </p>
             </section>

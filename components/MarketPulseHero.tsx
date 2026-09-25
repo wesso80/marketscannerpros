@@ -303,7 +303,7 @@ export default function MarketPulseHero() {
               <div className="space-y-3">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Long/Short Ratio</div>
-                  {derivatives.longShortRatio == null ? <p className="text-sm text-slate-400">Unavailable — observed account ratios are not connected.</p> : <>
+                  {derivatives.longShortRatio == null ? <p className="text-sm text-slate-400">Unavailable — OKX account ratios could not be loaded.</p> : <>
                   <div className="flex items-baseline gap-2">
                     <span className={`text-2xl font-bold ${derivatives.longShortRatio > 1 ? 'text-green-400' : 'text-red-400'}`}>
                       {derivatives.longShortRatio.toFixed(2)}
