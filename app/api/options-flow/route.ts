@@ -15,8 +15,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromCookie } from '@/lib/auth';
 import { avFetch } from '@/lib/avRateGovernor';
+import { checkOptionsAccess } from '@/lib/options/access';
+import { isAlphaVantageSampleChain, usableOptionRows } from '@/lib/options/avChain';
 import { classifyOptionsFlow, type OptionsFlowClassification } from '@/lib/options-flow-classifier';
 
 export const runtime = 'nodejs';
@@ -52,12 +53,11 @@ interface AVQuoteResult {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.tier !== 'pro_trader') {
-    return NextResponse.json({ error: 'Options Flow requires Pro Trader subscription' }, { status: 403 });
+  const access = await checkOptionsAccess(req);
+  if (!access.ok) {
+    return access.status === 401
+      ? NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      : NextResponse.json({ error: 'Options Flow requires a Pro subscription' }, { status: 403 });
   }
 
   const symbol = req.nextUrl.searchParams.get('symbol')?.toUpperCase().trim();
@@ -77,15 +77,26 @@ export async function GET(req: NextRequest) {
     let payload: { data?: AVContract[] } | null;
     try {
       payload = await avFetch<{ data?: AVContract[] }>(url, `OPTIONS_FLOW_${symbol}`);
-    } catch {
-      return NextResponse.json({ error: `Options data unavailable for ${symbol}` }, { status: 502 });
+    } catch (err) {
+      const detail = (err instanceof Error ? err.message : String(err)).slice(0, 200);
+      console.warn(`[options-flow] ${symbol} REALTIME_OPTIONS_FMV failed: ${detail}`);
+      return NextResponse.json({ error: `Options data unavailable for ${symbol}`, providerIssue: detail }, { status: 502 });
     }
 
-    if (!payload?.data?.length) {
+    // Options flow needs the realtime chain. A key without the realtime-options entitlement gets
+    // Alpha Vantage's artificial sample chain here — never classify that as flow.
+    if (isAlphaVantageSampleChain(payload)) {
+      console.warn(`[options-flow] ${symbol} REALTIME_OPTIONS_FMV returned the artificial premium sample (key not entitled to realtime options)`);
+      return NextResponse.json({
+        error: 'Realtime options data is not enabled on the Alpha Vantage API key (Alpha Vantage returned its sample data). Options Flow needs realtime options.',
+        providerIssue: 'REALTIME_OPTIONS_FMV: artificial sample (not entitled)',
+      }, { status: 503 });
+    }
+
+    const contracts = usableOptionRows(payload, symbol);
+    if (!contracts) {
       return NextResponse.json({ error: `No options data for ${symbol}` }, { status: 404 });
     }
-
-    const contracts = payload.data;
 
     // Get current price
     const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${AV_KEY}`;

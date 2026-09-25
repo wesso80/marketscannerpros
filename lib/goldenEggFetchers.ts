@@ -21,6 +21,7 @@ import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/crypt
 import * as scannerMath from '@/lib/scanner/indicatorMath';
 import { latestObservation } from '@/lib/macro/avRateSeries';
 import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
+import { usableOptionRows } from '@/lib/options/avChain';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -403,20 +404,30 @@ export async function fetchOptionsSnapshot(
 ): Promise<OptionsSnapshot | null> {
   if (!AV_KEY) return null;
   try {
-    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
-    let optData = await avFetch<any>(realtimeUrl, `OPTIONS_FMV ${symbol}`);
-    let provider = 'alpha_vantage REALTIME_OPTIONS_FMV';
-    if (!optData?.data?.length) {
-      const documentedRealtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
-      optData = await avFetch<any>(documentedRealtimeUrl, `REALTIME_OPTIONS ${symbol}`);
-      provider = 'alpha_vantage REALTIME_OPTIONS';
+    // Try each provider independently: a non-entitled realtime endpoint must not stop the fallback
+    // to HISTORICAL_OPTIONS (included in every premium plan). avFetch throws on AV "Information"
+    // (e.g. premium/entitlement) notes, and non-entitled keys can instead get an artificial sample chain.
+    const providers: Array<{ fn: string; label: string; provider: string }> = [
+      { fn: 'REALTIME_OPTIONS_FMV', label: `OPTIONS_FMV ${symbol}`, provider: 'alpha_vantage REALTIME_OPTIONS_FMV' },
+      { fn: 'REALTIME_OPTIONS', label: `REALTIME_OPTIONS ${symbol}`, provider: 'alpha_vantage REALTIME_OPTIONS' },
+      { fn: 'HISTORICAL_OPTIONS', label: `HISTORICAL_OPTIONS ${symbol}`, provider: 'alpha_vantage HISTORICAL_OPTIONS (previous session)' },
+    ];
+    let rawData: RawContract[] | null = null;
+    let provider = '';
+    for (const p of providers) {
+      const url = `https://www.alphavantage.co/query?function=${p.fn}&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
+      try {
+        const payload = await avFetch<any>(url, p.label);
+        const rows = usableOptionRows<RawContract>(payload, symbol);
+        if (rows) {
+          rawData = rows;
+          provider = p.provider;
+          break;
+        }
+      } catch (err) {
+        console.warn(`[goldenEgg] ${p.fn} ${symbol} unavailable: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
+      }
     }
-    if (!optData?.data?.length) {
-      const histUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
-      optData = await avFetch<any>(histUrl, `HISTORICAL_OPTIONS ${symbol}`);
-      provider = 'alpha_vantage HISTORICAL_OPTIONS (previous session)';
-    }
-    const rawData: RawContract[] | undefined = optData?.data;
     if (!rawData?.length) return null;
 
     // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.

@@ -13,8 +13,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromCookie } from '@/lib/auth';
 import { avFetch } from '@/lib/avRateGovernor';
+import { checkOptionsAccess } from '@/lib/options/access';
+import { usableOptionRows } from '@/lib/options/avChain';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 export const runtime = 'nodejs';
@@ -81,6 +82,8 @@ export interface OptionsChainResponse {
   provider: string;
   cachedAt: number;
   error?: string;
+  /** Why each Alpha Vantage options function returned nothing usable (no secrets). */
+  providerIssues?: string[];
 }
 
 export interface ExpirationMeta {
@@ -206,13 +209,11 @@ function inferSpot(contracts: OptionsContract[]): number {
 
 /* ── Main handler ────────────────────────────────────────────────── */
 export async function GET(request: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ success: false, error: 'Please log in to access the Options Terminal' } as Partial<OptionsChainResponse>, { status: 401 });
-  }
-
-  if (session.tier !== 'pro_trader') {
-    return NextResponse.json({ success: false, error: 'Options Terminal requires a Pro Trader subscription' } as Partial<OptionsChainResponse>, { status: 403 });
+  const access = await checkOptionsAccess(request);
+  if (!access.ok) {
+    return access.status === 401
+      ? NextResponse.json({ success: false, error: 'Please log in to access the Options Terminal' } as Partial<OptionsChainResponse>, { status: 401 })
+      : NextResponse.json({ success: false, error: 'Options Terminal requires a Pro subscription' } as Partial<OptionsChainResponse>, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -259,20 +260,30 @@ export async function GET(request: NextRequest) {
 
     let allContracts: OptionsContract[] = [];
     let usedProvider = 'none';
+    const providerIssues: string[] = [];
 
     for (const fn of providers) {
       const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
       let payload: { data?: AVRaw[] } | null;
       try {
         payload = await avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`);
-      } catch {
+      } catch (err) {
+        providerIssues.push(`${fn}: ${(err instanceof Error ? err.message : String(err)).slice(0, 200)}`);
         continue;
       }
 
-      if (!payload?.data?.length) continue;
+      // Skips empty chains and Alpha Vantage's artificial "premium endpoint" sample (key not entitled).
+      const rows = usableOptionRows(payload, symbol);
+      if (!rows) {
+        providerIssues.push(`${fn}: ${payload?.data?.length ? 'artificial sample / wrong-symbol chain (API key not entitled to this endpoint)' : 'no contracts returned'}`);
+        continue;
+      }
 
-      const normalised = payload.data.map(normalise).filter(Boolean) as OptionsContract[];
-      if (!normalised.length) continue;
+      const normalised = rows.map(normalise).filter(Boolean) as OptionsContract[];
+      if (!normalised.length) {
+        providerIssues.push(`${fn}: contracts could not be parsed`);
+        continue;
+      }
 
       allContracts = normalised;
       usedProvider = fn;
@@ -289,6 +300,7 @@ export async function GET(request: NextRequest) {
         provider: 'none',
         cachedAt: 0,
         error: 'No options data available for this symbol',
+        providerIssues,
       } satisfies OptionsChainResponse, { status: 404 });
     }
 

@@ -123,6 +123,10 @@ export function AuthPrompt() {
 
 // ─── Upgrade Gate ─────────────────────────────────────────────────────────────
 
+export function hasPaidTier(tier: string | null | undefined): boolean {
+  return tier === 'pro' || tier === 'pro_trader';
+}
+
 export function UpgradeGate({
   requiredTier,
   currentTier,
@@ -134,13 +138,13 @@ export function UpgradeGate({
   feature: string;
   children: React.ReactNode;
 }) {
-  const tierRank: Record<string, number> = { anonymous: 0, free: 1, pro: 2, pro_trader: 3 };
-  const hasAccess = (tierRank[currentTier] || 0) >= (tierRank[requiredTier] || 0);
+  // 2026 pricing: ONE paid plan (Pro). Legacy `pro_trader` is kept as an equal paid tier, so a
+  // `requiredTier="pro_trader"` gate must admit Pro subscribers (see lib/useUserTier.ts).
+  void requiredTier;
+  if (hasPaidTier(currentTier)) return <>{children}</>;
 
-  if (hasAccess) return <>{children}</>;
-
-  const tierLabel = requiredTier === 'pro_trader' ? 'Pro Trader' : 'Pro';
-  const tierColor = requiredTier === 'pro_trader' ? 'var(--msp-warn)' : 'var(--msp-info)';
+  const tierLabel = 'Pro';
+  const tierColor = 'var(--msp-info)';
 
   return (
     <div className="relative">

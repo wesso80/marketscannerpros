@@ -16,7 +16,6 @@ const proTraderRoutes = [
   'app/api/evolution/route.ts',
   'app/api/flow/route.ts',
   'app/api/golden-egg/route.ts',
-  'app/api/options-scan/route.ts',
   'app/api/trade-proposal/route.ts',
   'app/api/workflow/decision-packet/route.ts',
   'app/api/workflow/events/route.ts',
@@ -43,6 +42,21 @@ describe('Pro API gate sweep (legacy `hasProTraderAccess` helper — now grants 
     if (bodyIndex > -1) {
       expect(gateIndex).toBeLessThan(bodyIndex);
     }
+  });
+
+  it.each([
+    'app/api/options-scan/route.ts',
+    'app/api/options-chain/route.ts',
+    'app/api/options-flow/route.ts',
+  ])('%s gates on the shared options access rule (effective tier + admin) before doing work', (path) => {
+    const content = read(path);
+    const gateIndex = content.indexOf('await checkOptionsAccess(');
+    expect(content).toContain('@/lib/options/access');
+    expect(gateIndex).toBeGreaterThan(-1);
+    // No literal legacy-tier gate: Pro is the only paid plan sold.
+    expect(content).not.toMatch(/tier\s*!==\s*['"]pro_trader['"]/);
+    const bodyIndex = content.indexOf('await request.json');
+    if (bodyIndex > -1) expect(gateIndex).toBeLessThan(bodyIndex);
   });
 
   it('documents Volatility Engine as paid-gated in both API and UI helper layers', () => {
