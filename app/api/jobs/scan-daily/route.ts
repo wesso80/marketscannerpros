@@ -13,6 +13,7 @@ import { q } from "@/lib/db";
 import { avTakeToken } from "@/lib/avRateGovernor";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
+import { scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -306,101 +307,28 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
 async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
-    const indicators: Record<string, any> = {};
-    
-    // Use same approach as regular scanner - fetch technical indicators directly
-    // These work for crypto when using the symbol format
-    
-    // Fetch RSI
-    const rsiUrl = `${baseUrl}?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${apiKey}`;
-    const rsiData = await fetchWithRetry(rsiUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const rsiSeries = rsiData["Technical Analysis: RSI"];
-    if (rsiSeries) {
-      const rsiDate = Object.keys(rsiSeries)[0];
-      indicators.rsi = parseFloat(rsiSeries[rsiDate]["RSI"]);
-    }
 
-    // Fetch MACD
-    const macdUrl = `${baseUrl}?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${apiKey}`;
-    const macdData = await fetchWithRetry(macdUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const macdSeries = macdData["Technical Analysis: MACD"];
-    if (macdSeries) {
-      const macdDate = Object.keys(macdSeries)[0];
-      indicators.macd = parseFloat(macdSeries[macdDate]["MACD"]);
-      indicators.macdSignal = parseFloat(macdSeries[macdDate]["MACD_Signal"]);
-    }
+    // Indicators are computed locally from the real coin's daily OHLC history
+    // (CoinGecko daily candles, same source as the main scanner). Do NOT call
+    // Alpha Vantage indicator endpoints (RSI/MACD/EMA/...) with a bare crypto
+    // symbol: AV resolves e.g. symbol=ETH as a US equity (Grayscale Ethereum
+    // Mini Trust ETF), so the indicators would describe an ETF, not the coin.
 
-    // Fetch Stochastic
-    const stochUrl = `${baseUrl}?function=STOCH&symbol=${symbol}&interval=daily&apikey=${apiKey}`;
-    const stochData = await fetchWithRetry(stochUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const stochSeries = stochData["Technical Analysis: STOCH"];
-    if (stochSeries) {
-      const stochDate = Object.keys(stochSeries)[0];
-      indicators.stochK = parseFloat(stochSeries[stochDate]["SlowK"]);
-      indicators.stochD = parseFloat(stochSeries[stochDate]["SlowD"]);
-    }
-
-    // Fetch ADX
-    const adxUrl = `${baseUrl}?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
-    const adxData = await fetchWithRetry(adxUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const adxSeries = adxData["Technical Analysis: ADX"];
-    if (adxSeries) {
-      const adxDate = Object.keys(adxSeries)[0];
-      indicators.adx = parseFloat(adxSeries[adxDate]["ADX"]);
-    }
-
-    // Fetch EMA 200 (major weight in scoring - worth 2 signals!)
-    const emaUrl = `${baseUrl}?function=EMA&symbol=${symbol}&interval=daily&time_period=200&series_type=close&apikey=${apiKey}`;
-    const emaData = await fetchWithRetry(emaUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const emaSeries = emaData["Technical Analysis: EMA"];
-    if (emaSeries) {
-      const emaDate = Object.keys(emaSeries)[0];
-      indicators.ema200 = parseFloat(emaSeries[emaDate]["EMA"]);
-    }
-
-    // Fetch Aroon
-    const aroonUrl = `${baseUrl}?function=AROON&symbol=${symbol}&interval=daily&time_period=25&apikey=${apiKey}`;
-    const aroonData = await fetchWithRetry(aroonUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const aroonSeries = aroonData["Technical Analysis: AROON"];
-    if (aroonSeries) {
-      const aroonDate = Object.keys(aroonSeries)[0];
-      indicators.aroonUp = parseFloat(aroonSeries[aroonDate]["Aroon Up"]);
-      indicators.aroonDown = parseFloat(aroonSeries[aroonDate]["Aroon Down"]);
-    }
-
-    // Fetch CCI
-    const cciUrl = `${baseUrl}?function=CCI&symbol=${symbol}&interval=daily&time_period=20&apikey=${apiKey}`;
-    const cciData = await fetchWithRetry(cciUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const cciSeries = cciData["Technical Analysis: CCI"];
-    if (cciSeries) {
-      const cciDate = Object.keys(cciSeries)[0];
-      indicators.cci = parseFloat(cciSeries[cciDate]["CCI"]);
-    }
-
-    // Fetch price from crypto endpoint for price display
+    // Spot price from the crypto exchange-rate endpoint (the real coin) for display
     const priceUrl = `${baseUrl}?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=USD&apikey=${apiKey}`;
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
-    const exchangeRate = priceData["Realtime Currency Exchange Rate"];
-    let price = null;
-    let changePercent = null;
-    if (exchangeRate) {
-      price = parseFloat(exchangeRate["5. Exchange Rate"]);
-      indicators.price = price;
-    }
+    const exchangeRate = priceData?.["Realtime Currency Exchange Rate"];
+    const spotPrice = exchangeRate ? parseFloat(exchangeRate["5. Exchange Rate"]) : null;
+    const changePercent = null;
 
-    // If we got no indicators, this crypto isn't supported
-    if (Object.keys(indicators).length < 2) {
-      console.error(`Insufficient data for crypto ${symbol}`);
+    const outcome = await scanCryptoDailyIndicators(symbol, spotPrice);
+    if (!outcome.ok) {
+      // Includes the EMA200 sanity guard (price vs EMA200 more than 5x apart)
+      console.error(`Dropping crypto ${symbol}: ${outcome.reason}`);
       return null;
     }
+    const { price, indicators } = outcome;
 
     const { score, direction, signals } = computeScore(indicators);
 
@@ -534,7 +462,7 @@ async function runDailyScan(req: NextRequest) {
       else errors.push(`equity:${symbol}`);
     }
 
-    // Scan crypto (top 5 — AV indicator endpoints can be slow for crypto)
+    // Scan crypto (top 5 — indicators from CoinGecko daily OHLC, computed locally)
     console.log("Starting crypto scan...");
     const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 5);
     for (const symbol of cryptoToScan) {
