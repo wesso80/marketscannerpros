@@ -30,7 +30,7 @@ interface ScalpResult {
   timeframe: ScalpTimeframe;
   price: number;
   direction: 'long' | 'short' | 'neutral';
-  strength: number;
+  strength: number | null;
   entry: number;
   stop: number;
   target1: number;
@@ -39,10 +39,12 @@ interface ScalpResult {
   signals: ScalpSignalData;
   barCount: number;
   lastBar: string;
+  stale?: boolean;
+  barAgeMinutes?: number | null;
 }
 
 /* ─── Default Watchlists ─── */
-const CRYPTO_DEFAULTS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'MATIC', 'DOT'];
+const CRYPTO_DEFAULTS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'POL', 'DOT'];
 const EQUITY_DEFAULTS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'META', 'GOOGL', 'AMD', 'SPY', 'QQQ'];
 
 /* ─── Helpers ─── */
@@ -255,6 +257,9 @@ export default function AdminScalperPage() {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
                             {r.direction === 'long' ? '▲' : r.direction === 'short' ? '▼' : '—'} {r.direction.toUpperCase()}
                           </span>
+                          {r.stale && (
+                            <span className="ml-1 rounded border border-rose-400/35 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">STALE</span>
+                          )}
                         </td>
                         <td className="py-2.5 px-2 text-right">
                           <StrengthBar value={r.strength} />
@@ -305,7 +310,10 @@ export default function AdminScalperPage() {
 
 /* ═══════════ Sub-Components ═══════════ */
 
-function StrengthBar({ value }: { value: number }) {
+function StrengthBar({ value }: { value: number | null }) {
+  if (value == null) {
+    return <div className="text-right text-[10px] text-slate-500" title="No score: latest bar is stale">—</div>;
+  }
   const color = value >= 60 ? 'var(--msp-bull)' : value >= 30 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   return (
     <div className="flex items-center gap-1.5 justify-end">
