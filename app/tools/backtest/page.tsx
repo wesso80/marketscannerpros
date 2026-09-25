@@ -32,7 +32,7 @@ import {
 import { parseBacktestTimeframe } from '@/lib/backtest/timeframe';
 import { buildInverseComparisonSnapshot } from '@/lib/backtest/inverseComparison';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
-import type { JournalDraft, TradePlan } from '@/lib/workflow/types';
+import type { JournalDraft } from '@/lib/workflow/types';
 
 interface BacktestResult {
   initialCapital?: number;
@@ -228,7 +228,6 @@ function formatProfitFactor(value: number | null | undefined, label?: string) {
 }
 
 function BacktestContent() {
-  const lastPlanEventKeyRef = useRef('');
   const previousEdgeGroupRef = useRef<EdgeGroupId | null>(null);
   const lastResolvedSymbolRef = useRef('');
   const searchParams = useSearchParams();
@@ -280,7 +279,6 @@ function BacktestContent() {
   });
   const [recommendationEndDate, setRecommendationEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [recommendationMinSignalScore, setRecommendationMinSignalScore] = useState(60);
-  const [planEventId, setPlanEventId] = useState<string | null>(null);
   const [dateAnchorInfo, setDateAnchorInfo] = useState<DateAnchorInfo | null>(null);
   const [availableDateRange, setAvailableDateRange] = useState<AvailableDateRange | null>(null);
 
@@ -335,11 +333,10 @@ function BacktestContent() {
       score: String(score),
       assetClass: getWorkflowAssetClass(results.dataSources?.assetType),
       workflowId,
-      parentEventId: planEventId || '',
     });
 
     return `/tools/workspace?tab=journal&${params.toString()}`;
-  }, [results, symbol, strategy, strategyMeta, timeframe, workflowId, planEventId]);
+  }, [results, symbol, strategy, strategyMeta, timeframe, workflowId]);
 
   useEffect(() => {
     if (!urlStrategy) return;
@@ -441,75 +438,10 @@ function BacktestContent() {
     });
   }, [results, symbol]);
 
-  useEffect(() => {
-    if (!results) return;
-
-    const eventKey = `${symbol}:${strategy}:${timeframe}:${results.totalTrades}:${results.winRate}:${results.totalReturn}`;
-    if (lastPlanEventKeyRef.current === eventKey) return;
-    lastPlanEventKeyRef.current = eventKey;
-
-    const direction = results.totalReturn >= 0 ? 'long' : 'short';
-    const entry = results.trades[0]?.entry ?? 0;
-    const stop = direction === 'long' ? entry * 0.99 : entry * 1.01;
-    const target = direction === 'long' ? entry * 1.02 : entry * 0.98;
-    const riskAmount = Number(initialCapital) * 0.0025;
-    const unitRisk = Math.max(Math.abs(entry - stop), 0.01);
-    const quantity = Math.max(1, Math.floor(riskAmount / unitRisk));
-    const workflowAssetClass = getWorkflowAssetClass(results.dataSources?.assetType);
-
-    const tradePlan: TradePlan = {
-      plan_id: `plan_${symbol}_${Date.now()}`,
-      created_at: new Date().toISOString(),
-      symbol,
-      asset_class: workflowAssetClass,
-      direction,
-      timeframe,
-      setup: {
-        strategy,
-        label: strategyMeta?.label || strategy,
-        tags: [activeEdgeGroup?.label || 'edge_group'],
-      },
-      entry: {
-        type: 'market',
-        price: Number(entry.toFixed(4)),
-      },
-      risk: {
-        stop: { type: 'price', price: Number(stop.toFixed(4)) },
-        take_profit: [{ type: 'rr', rr: 2, price: Number(target.toFixed(4)), size_pct: 100 }],
-        invalidate_if: [{ type: 'max_drawdown', value: Number(results.maxDrawdown.toFixed(2)) }],
-      },
-      position_sizing: {
-        account_value: Number(initialCapital),
-        risk_per_trade_pct: 0.25,
-        risk_amount: Number(riskAmount.toFixed(2)),
-        unit_risk: Number(unitRisk.toFixed(4)),
-        quantity,
-      },
-      links: {
-        symbol,
-        strategy,
-      },
-    };
-
-    const event = createWorkflowEvent({
-      eventType: 'trade.plan.created',
-      workflowId,
-      route: '/tools/workspace?tab=backtest',
-      module: 'backtest',
-      entity: {
-        entity_type: 'trade_plan',
-        entity_id: tradePlan.plan_id,
-        symbol,
-        asset_class: tradePlan.asset_class,
-      },
-      payload: {
-        trade_plan: tradePlan,
-      },
-    });
-
-    setPlanEventId(event.event_id);
-    emitWorkflowEvents([event]);
-  }, [results, symbol, strategy, timeframe, strategyMeta, activeEdgeGroup?.label, initialCapital, workflowId]);
+  // Running a backtest must stay read-only. Do NOT emit trade.plan.created (or any
+  // other event that makes /api/workflow/events create alerts or journal entries)
+  // when results arrive: backtest trades are historical, so a plan built from them
+  // would use a stale entry price. Plans are created only by explicit user actions.
 
   const handleAutoJournalDraftClick = () => {
     if (!results) return;
@@ -544,15 +476,11 @@ function BacktestContent() {
         entry_reason: { status: 'required', prompt: 'Why did you enter?' },
         emotions: { status: 'required', prompt: 'How did you feel at entry?' },
       },
-      links: {
-        plan_event_id: planEventId,
-      },
     };
 
     const event = createWorkflowEvent({
       eventType: 'journal.draft.created',
       workflowId,
-      parentEventId: planEventId,
       route: '/tools/workspace?tab=backtest',
       module: 'backtest',
       entity: {
