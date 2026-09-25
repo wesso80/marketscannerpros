@@ -32,7 +32,7 @@ import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from
 import { crossSectionalPercentiles } from '@/lib/analysis';
 import { scoreProSnapshot, type ProHardBlockContext } from '@/lib/scanner/proScore';
 import { macroEventFlags } from '@/lib/scanner/hardBlocks';
-import { peekEarningsMap, warmEarningsMap } from '@/lib/scanner/earningsCalendar';
+import { peekEarningsMap, peekUnreadableEarningsSymbols, warmEarningsMap } from '@/lib/scanner/earningsCalendar';
 import { compareScannerScores, dollarVolume, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
 import { applyCanonicalToScannerRow, canonicalFeaturesFromCandles, canonicalFeaturesFromRow, compareCanonicalRows, dataWatchFrom, evaluateCanonical, evaluateRegimeOverlay, hardBlocksFrom, overlayForDirection, type CanonicalFeatures, type RegimeOverlayInputs } from '@/lib/scoring/canonical';
 import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
@@ -1705,7 +1705,7 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   }
   const context = proScoreUniverse(scored, 'equity');
   warmEarningsMap();
-  const hardCtx: ProHardBlockContext = { earningsMap: peekEarningsMap(), macroFlags: macroEventFlags() };
+  const hardCtx: ProHardBlockContext = { earningsMap: peekEarningsMap(), earningsUnreadable: peekUnreadableEarningsSymbols(), macroFlags: macroEventFlags() };
   for (const item of scored) Object.assign(item, scoreProSnapshot(item, 'equity', timeframe, context, false, hardCtx));
 
   // Fetch chartData from ohlcv_bars — ONLY for the top candidates (bounded I/O).
@@ -2011,7 +2011,7 @@ function applyInstitutionalFilterToTopPicks(
   const canonicalAssetClass = params.canonicalAssetClass ?? params.type;
   const regimeOverlay = params.regimeOverlayInputs ? overlayForDirection(evaluateRegimeOverlay(params.regimeOverlayInputs, canonicalAssetClass)) : undefined;
   if (params.type === 'equity') warmEarningsMap();
-  const hardCtx: ProHardBlockContext = { earningsMap: params.type === 'equity' ? peekEarningsMap() : undefined, macroFlags: macroEventFlags() };
+  const hardCtx: ProHardBlockContext = { earningsMap: params.type === 'equity' ? peekEarningsMap() : undefined, earningsUnreadable: params.type === 'equity' ? peekUnreadableEarningsSymbols() : undefined, macroFlags: macroEventFlags() };
   const withFilter = topPicks.map((original) => {
     const initial = scoreProSnapshot(original, params.type, params.timeframe, universe);
     const pick = {...original, ...initial, price: original.indicators?.price ?? original.price, atr: original.indicators?.atr ?? original.atr};

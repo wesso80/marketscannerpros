@@ -3,6 +3,8 @@
  * Never says "overvalued"/"undervalued"; describes the multiple and the rule that produced the label.
  */
 
+import { parseAlphaVantageEarningsCalendar, type EarningsCalendarRow } from '../earningsCalendarCsv';
+
 export interface MultipleRead {
   label: 'Premium multiple' | 'Elevated multiple' | 'Moderate multiple' | 'Low multiple' | 'Multiple unavailable';
   detail: string;
@@ -52,24 +54,13 @@ export function periodLabels(overview: { LatestQuarter?: string | null; FiscalYe
   return { latestQuarter, fiscalYearEnd, basis, summary };
 }
 
-export interface EarningsCalendarRow { symbol: string; name: string; reportDate: string; fiscalDateEnding: string; estimate: number | null; currency: string }
+export type { EarningsCalendarRow } from '../earningsCalendarCsv';
 
-/** Parse Alpha Vantage EARNINGS_CALENDAR CSV (symbol,name,reportDate,fiscalDateEnding,estimate,currency). */
+/** Parse Alpha Vantage EARNINGS_CALENDAR CSV (symbol,name,reportDate,fiscalDateEnding,estimate,currency).
+ *  Quote-aware (names like "FLAGSTAR BANK, N.A." keep their date); rows with an unreadable date are skipped and logged.
+ *  Use `parseAlphaVantageEarningsCalendar` when you need to know whether any rows were skipped. */
 export function parseEarningsCalendarCsv(csv: string): EarningsCalendarRow[] {
-  const lines = csv.split(/\r?\n/).filter((l) => l.trim().length);
-  if (lines.length < 2) return [];
-  const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
-  const idx = (k: string) => header.indexOf(k);
-  const iSym = idx('symbol'), iName = idx('name'), iRep = idx('reportdate'), iFde = idx('fiscaldateending'), iEst = idx('estimate'), iCur = idx('currency');
-  const rows: EarningsCalendarRow[] = [];
-  for (const line of lines.slice(1)) {
-    const cols = line.split(',');
-    const reportDate = (cols[iRep] ?? '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) continue;
-    const est = parseFloat(cols[iEst] ?? '');
-    rows.push({ symbol: (cols[iSym] ?? '').trim().toUpperCase(), name: (cols[iName] ?? '').trim(), reportDate, fiscalDateEnding: (cols[iFde] ?? '').trim(), estimate: Number.isFinite(est) ? est : null, currency: (cols[iCur] ?? '').trim() });
-  }
-  return rows;
+  return parseAlphaVantageEarningsCalendar(csv, { source: 'golden-egg' }).rows;
 }
 
 export function nextEarningsFromCalendar(rows: EarningsCalendarRow[], symbol: string, nowMs = Date.now()): EarningsCalendarRow | null {

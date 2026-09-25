@@ -136,7 +136,12 @@ export function evaluateHardBlocks(input: HardBlockInput, macroFlags: ScoreReaso
   let earnings: HardBlockResult['earnings'] = { status: 'NOT_APPLICABLE', date: null, daysUntil: null, holdingWindowDays: null };
   if (input.asset === 'equity') {
     const window = holdingWindowDays(input.timeframe);
-    if (input.earningsDate) {
+    const earningsDateReadable = Boolean(input.earningsDate && /^\d{4}-\d{2}-\d{2}/.test(input.earningsDate) && daysBetween(input.earningsDate, nowMs) != null);
+    if (input.earningsDate && !earningsDateReadable) {
+      // A garbage date (e.g. a mis-split CSV cell) is not "clear of earnings": flag it, never skip silently.
+      earnings = { status: 'UNKNOWN', date: null, daysUntil: null, holdingWindowDays: window };
+      flags.push({ code: 'EARNINGS_UNKNOWN', message: 'Earnings date UNKNOWN (calendar row unreadable); not verified clear of the holding window.' });
+    } else if (input.earningsDate) {
       const daysUntil = daysBetween(input.earningsDate, nowMs);
       const inWindow = daysUntil != null && daysUntil >= 0 && daysUntil <= window;
       earnings = { status: inWindow ? 'IN_WINDOW' : daysUntil != null && daysUntil >= 0 ? 'SCHEDULED' : 'UNKNOWN', date: input.earningsDate.slice(0, 10), daysUntil, holdingWindowDays: window };
