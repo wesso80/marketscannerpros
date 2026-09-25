@@ -45,7 +45,7 @@ beforeEach(() => { m.av = {}; m.urls = []; });
 
 describe('Options Flow spot quote', () => {
   it('requests the realtime quote (entitlement=realtime) and accepts the delayed-quote key', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: realtimeChain, GLOBAL_QUOTE: { 'Global Quote - DATA DELAYED BY 15 MINUTES': { '05. price': '100.00', '10. change percent': '1.5%' } } };
+    m.av = { REALTIME_OPTIONS: realtimeChain, GLOBAL_QUOTE: { 'Global Quote - DATA DELAYED BY 15 MINUTES': { '05. price': '100.00', '10. change percent': '1.5%' } } };
     const res = await flowGET(new NextRequest('http://localhost/api/options-flow?symbol=XYZ'));
     const body = await res.json();
     expect(res.status).toBe(200);

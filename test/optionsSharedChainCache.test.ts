@@ -55,26 +55,26 @@ describe('shared options chain cache', () => {
   });
 
   it('second consumer within the TTL costs zero Alpha Vantage calls; rows always carry greeks', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: realChain() };
+    m.av = { REALTIME_OPTIONS: realChain() };
     const a = await fetchSharedOptionsChain('SPY', viaAvFetch as any);
     const b = await fetchSharedOptionsChain('spy', viaAvFetch as any);
     expect(a?.rows).toHaveLength(6);
     expect(a?.cacheHit).toBe(false);
     expect(b?.cacheHit).toBe(true);
-    expect(b?.provider).toBe('REALTIME_OPTIONS_FMV');
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV+greeks']);
+    expect(b?.provider).toBe('REALTIME_OPTIONS');
+    expect(m.calls).toEqual(['REALTIME_OPTIONS+greeks']);
     expect(m.redisSets).toEqual(['opt:raw:SPY']);
   });
 
   it('concurrent requests share one download', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: realChain() };
+    m.av = { REALTIME_OPTIONS: realChain() };
     const [a, b, c] = await Promise.all([1, 2, 3].map(() => fetchSharedOptionsChain('SPY', viaAvFetch as any)));
     expect([a, b, c].every((r) => r?.rows.length === 6)).toBe(true);
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV+greeks']);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS+greeks']);
   });
 
   it('never caches the artificial sample chain; falls through to HISTORICAL_OPTIONS', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: sample, HISTORICAL_OPTIONS: realChain() };
+    m.av = { REALTIME_OPTIONS: sample, HISTORICAL_OPTIONS: realChain() };
     const r = await fetchSharedOptionsChain('SPY', viaAvFetch as any);
     expect(r?.provider).toBe('HISTORICAL_OPTIONS');
     expect(r?.rows.every((x: any) => x.symbol === 'SPY')).toBe(true);
@@ -84,7 +84,7 @@ describe('shared options chain cache', () => {
   });
 
   it('Golden Egg reuses a chain another options tool just downloaded (no extra call)', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: realChain() };
+    m.av = { REALTIME_OPTIONS: realChain() };
     await fetchSharedOptionsChain('SPY', viaAvFetch as any);
     m.calls = [];
     const snap = await fetchOptionsSnapshot('SPY', 500);
@@ -93,14 +93,14 @@ describe('shared options chain cache', () => {
   });
 
   it('expiry dropdown and the scan that follows share one chain download', async () => {
-    m.av = { REALTIME_OPTIONS_FMV: realChain() };
+    m.av = { REALTIME_OPTIONS: realChain() };
     const res = await expirationsGET(new Request('http://localhost/api/options/expirations?symbol=SPY') as any);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(body.expirations.map((e: { date: string }) => e.date)).toEqual(['2030-01-18']);
-    expect(body.sourceFunction).toBe('REALTIME_OPTIONS_FMV');
+    expect(body.sourceFunction).toBe('REALTIME_OPTIONS');
     await fetchOptionsSnapshot('SPY', 500);
     await expirationsGET(new Request('http://localhost/api/options/expirations?symbol=SPY') as any);
-    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV+greeks']);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS+greeks']);
   });
 });

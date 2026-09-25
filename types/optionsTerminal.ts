@@ -38,6 +38,13 @@ export interface OptionsChainResponse {
   expirations: ExpirationMeta[];
   contracts: OptionsContract[];
   provider: string;
+  /** realtime = live bid/ask; previous_session = HISTORICAL_OPTIONS close; marks_only = no usable bid/ask. */
+  quoteBasis?: 'realtime' | 'previous_session' | 'marks_only';
+  /** Session date the quotes belong to (YYYY-MM-DD). */
+  asOfDate?: string | null;
+  quoteCoveragePct?: number;
+  sourceLabel?: string;
+  providerIssues?: string[];
   cachedAt: number;
   error?: string;
 }

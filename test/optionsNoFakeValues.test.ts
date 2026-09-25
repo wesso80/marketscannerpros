@@ -44,7 +44,7 @@ describe('5. IV rank stays null (no fake 50)', () => {
 
   it('Golden Egg / DVE options snapshot: ivRank null, not 50', async () => {
     const row = (type: 'call' | 'put', k: number) => ({ contractID: `XYZ${type}${k}`, symbol: 'XYZ', expiration: '2030-01-18', strike: String(k), type, open_interest: '1000', volume: '10', implied_volatility: '0.3', date: '2026-09-25' });
-    m.av = { REALTIME_OPTIONS_FMV: { data: [95, 100, 105].flatMap((k) => [row('call', k), row('put', k)]) } };
+    m.av = { REALTIME_OPTIONS: { data: [95, 100, 105].flatMap((k) => [row('call', k), row('put', k)]) } };
     const snap = await fetchOptionsSnapshot('XYZ', 100);
     expect(snap?.ivRank).toBeNull();
     expect(snap?.maxPain).toBe(100);
@@ -54,7 +54,7 @@ describe('5. IV rank stays null (no fake 50)', () => {
 describe('6. missing max pain is not "price is at max pain"', () => {
   it('snapshot keeps maxPain null when the chain cannot establish it', async () => {
     const row = (type: 'call' | 'put') => ({ contractID: `XYZ${type}`, symbol: 'XYZ', expiration: '2030-01-18', strike: 'n/a', type, open_interest: '1000', volume: '10', implied_volatility: '0.3', date: '2026-09-25' });
-    m.av = { REALTIME_OPTIONS_FMV: { data: [row('call'), row('put')] } };
+    m.av = { REALTIME_OPTIONS: { data: [row('call'), row('put')] } };
     const snap = await fetchOptionsSnapshot('XYZ', 100);
     expect(snap).not.toBeNull();
     expect(snap?.maxPain).toBeNull();

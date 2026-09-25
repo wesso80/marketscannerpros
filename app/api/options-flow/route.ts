@@ -11,13 +11,13 @@
  * Query params:
  *   symbol — required ticker (e.g. AAPL, SPY)
  *
- * Data source: Alpha Vantage REALTIME_OPTIONS_FMV
+ * Data source: shared chain — Alpha Vantage REALTIME_OPTIONS, else HISTORICAL_OPTIONS (previous session, labelled)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { avFetch } from '@/lib/avRateGovernor';
 import { checkOptionsAccess } from '@/lib/options/access';
-import { isAlphaVantageSampleChain, usableOptionRows } from '@/lib/options/avChain';
+import { describeChainSource, fetchSharedOptionsChain, type ChainQuoteBasis } from '@/lib/options/chainCache';
 import { classifyOptionsFlow, type OptionsFlowClassification } from '@/lib/options-flow-classifier';
 
 export const runtime = 'nodejs';
@@ -76,31 +76,35 @@ export async function GET(req: NextRequest) {
   const start = Date.now();
 
   try {
-    // Fetch options chain
-    const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${symbol}&require_greeks=true&apikey=${AV_KEY}`;
-    let payload: { data?: AVContract[] } | null;
-    try {
-      payload = await avFetch<{ data?: AVContract[] }>(url, `OPTIONS_FLOW_${symbol}`);
-    } catch (err) {
-      const detail = (err instanceof Error ? err.message : String(err)).slice(0, 200);
-      console.warn(`[options-flow] ${symbol} REALTIME_OPTIONS_FMV failed: ${detail}`);
-      return NextResponse.json({ error: `Options data unavailable for ${symbol}`, providerIssue: detail }, { status: 502 });
+    // Shared chain: REALTIME_OPTIONS (live bid/ask) first; HISTORICAL_OPTIONS (previous session close) when the
+    // live chain is missing, not entitled, or has too few two-sided quotes. FMV marks carry no bid/ask, so they
+    // can never be classified as flow.
+    const providerIssues: string[] = [];
+    const shared = await fetchSharedOptionsChain<AVContract>(symbol, {
+      apiKey: AV_KEY,
+      fetchPayload: (fn, url) => avFetch<{ data?: AVContract[] }>(url, `OPTIONS_FLOW_${fn}_${symbol}`),
+      issues: providerIssues,
+    });
+    if (!shared) {
+      // A key without the realtime-options entitlement gets Alpha Vantage's artificial sample chain — never
+      // classify that as flow; say so plainly when no previous-session chain was available either.
+      const notEntitled = providerIssues.find((i) => /^REALTIME_OPTIONS: .*(not entitled|artificial sample)/i.test(i));
+      if (notEntitled) {
+        console.warn(`[options-flow] ${symbol} realtime options not entitled and no fallback chain: ${providerIssues.join(' | ')}`);
+        return NextResponse.json({
+          error: 'Realtime options data is not enabled on the Alpha Vantage API key (Alpha Vantage returned its sample data). Options Flow needs realtime options.',
+          providerIssue: notEntitled,
+        }, { status: 503 });
+      }
+      return NextResponse.json({ error: `Options data unavailable for ${symbol}`, providerIssue: providerIssues.join(' | ').slice(0, 400) }, { status: 502 });
     }
-
-    // Options flow needs the realtime chain. A key without the realtime-options entitlement gets
-    // Alpha Vantage's artificial sample chain here — never classify that as flow.
-    if (isAlphaVantageSampleChain(payload)) {
-      console.warn(`[options-flow] ${symbol} REALTIME_OPTIONS_FMV returned the artificial premium sample (key not entitled to realtime options)`);
-      return NextResponse.json({
-        error: 'Realtime options data is not enabled on the Alpha Vantage API key (Alpha Vantage returned its sample data). Options Flow needs realtime options.',
-        providerIssue: 'REALTIME_OPTIONS_FMV: artificial sample (not entitled)',
-      }, { status: 503 });
-    }
-
-    const contracts = usableOptionRows(payload, symbol);
-    if (!contracts) {
-      return NextResponse.json({ error: `No options data for ${symbol}` }, { status: 404 });
-    }
+    const contracts = shared.rows;
+    const source = {
+      provider: shared.provider,
+      quoteBasis: shared.quoteBasis,
+      asOfDate: shared.asOfDate,
+      sourceLabel: describeChainSource(shared),
+    };
 
     // Get current price
     // entitlement=realtime: without it Alpha Vantage returns the previous close, so intraday moneyness/ATM
@@ -167,6 +171,7 @@ export async function GET(req: NextRequest) {
         code: 'INSUFFICIENT_QUOTE_COVERAGE',
         expiration: selectedExpiry,
         quoteCoveragePct: Math.round(quoteCoverage * 100),
+        ...source,
       }, { status: 422 });
     }
     const calls = expiryContracts.filter(c => c.type?.toLowerCase() === 'call');
@@ -190,6 +195,7 @@ export async function GET(req: NextRequest) {
       expiration: selectedExpiry,
       availableExpirations: expirations,
       contractCount: expiryContracts.length,
+      ...source,
       aggregate: classification.aggregate,
       flowPattern: classification.flowPattern,
       ivSkew: classification.ivSkew,
@@ -234,6 +240,11 @@ interface OptionsFlowResponse {
   expiration: string;
   availableExpirations: string[];
   contractCount: number;
+  provider: string;
+  /** previous_session = HISTORICAL_OPTIONS close — this is the prior session's flow, not live. */
+  quoteBasis: ChainQuoteBasis;
+  asOfDate: string | null;
+  sourceLabel: string;
   aggregate: OptionsFlowClassification['aggregate'];
   flowPattern: OptionsFlowClassification['flowPattern'];
   ivSkew: OptionsFlowClassification['ivSkew'];

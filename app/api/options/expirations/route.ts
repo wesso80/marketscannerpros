@@ -6,10 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avFetch } from '@/lib/avRateGovernor';
-import { fetchSharedOptionsChain } from '@/lib/options/chainCache';
+import { defaultChainProviders, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
-const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
 export async function GET(request: NextRequest) {
   // Auth guard: AV license requires authenticated users only
@@ -43,7 +42,7 @@ export async function GET(request: NextRequest) {
     // dropdown reuses the same download instead of pulling the whole chain again.
     const shared = await fetchSharedOptionsChain<any>(normalizedSymbol, {
       apiKey: ALPHA_VANTAGE_KEY,
-      providers: AV_OPTIONS_REALTIME_ENABLED ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'] : ['HISTORICAL_OPTIONS'],
+      providers: defaultChainProviders(),
       fetchPayload: (fn, url) => avFetch(url, `${fn} ${normalizedSymbol}`),
     });
 

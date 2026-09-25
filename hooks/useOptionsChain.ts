@@ -18,6 +18,11 @@ export interface UseOptionsChainState {
   expirations: ExpirationMeta[];
   underlyingPrice: number;
   provider: string;
+  /** realtime | previous_session | marks_only (see /api/options-chain). */
+  quoteBasis: string;
+  /** Session date the quotes belong to (YYYY-MM-DD) or ''. */
+  asOfDate: string;
+  sourceLabel: string;
 
   /* derived */
   strikeGroups: StrikeGroup[];
@@ -141,6 +146,9 @@ export function useOptionsChain(): UseOptionsChainState {
   const [expirations, setExpirations] = useState<ExpirationMeta[]>([]);
   const [underlyingPrice, setUnderlyingPrice] = useState(0);
   const [provider, setProvider] = useState('');
+  const [quoteBasis, setQuoteBasis] = useState('');
+  const [asOfDate, setAsOfDate] = useState('');
+  const [sourceLabel, setSourceLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState(0);
@@ -160,6 +168,9 @@ export function useOptionsChain(): UseOptionsChainState {
     setUnderlyingPrice(0);
     setExpirations([]);
     setProvider('');
+    setQuoteBasis('');
+    setAsOfDate('');
+    setSourceLabel('');
     setLastFetchedAt(0);
     setError(null);
 
@@ -179,6 +190,9 @@ export function useOptionsChain(): UseOptionsChainState {
         setExpirations(json.expirations);
         setUnderlyingPrice(json.underlyingPrice);
         setProvider(json.provider);
+        setQuoteBasis(json.quoteBasis ?? '');
+        setAsOfDate(json.asOfDate ?? '');
+        setSourceLabel(json.sourceLabel ?? '');
         setLastFetchedAt(json.cachedAt || Date.now());
         setError(null);
       })
@@ -208,6 +222,9 @@ export function useOptionsChain(): UseOptionsChainState {
     expirations,
     underlyingPrice,
     provider,
+    quoteBasis,
+    asOfDate,
+    sourceLabel,
     strikeGroups,
     bestStrikes,
     ivMetrics,

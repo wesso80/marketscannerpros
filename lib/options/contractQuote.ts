@@ -3,7 +3,7 @@
  *
  * Positions record the contract as underlying + expiration + strike + right, with entry/stop in PREMIUM per share
  * (the standard option quote). Value and P&L therefore need the contract multiplier; R stays in premium terms.
- * The site's option source is Alpha Vantage REALTIME_OPTIONS_FMV (premium entitlement) → HISTORICAL_OPTIONS (EOD,
+ * The site's option source is Alpha Vantage REALTIME_OPTIONS (live bid/ask, premium entitlement) → HISTORICAL_OPTIONS (EOD,
  * previous session), so a mark is usually an end-of-day value and must be labelled as such.
  */
 import { isEodDataCurrent } from '@/lib/equityDataHealth';

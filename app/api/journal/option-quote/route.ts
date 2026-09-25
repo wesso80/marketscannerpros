@@ -2,7 +2,7 @@
  * /api/journal/option-quote?symbol=XYZ&expiration=2026-10-16&strike=100&right=call
  *
  * Marks ONE recorded option contract (journal / portfolio positions) from the Alpha Vantage chain
- * (REALTIME_OPTIONS_FMV when entitled, otherwise HISTORICAL_OPTIONS = previous-session EOD).
+ * (REALTIME_OPTIONS when entitled and quoted, otherwise HISTORICAL_OPTIONS = previous-session EOD).
  * Returns the contract's premium per share plus its data date and basis; the caller applies the contract multiplier.
  * A contract that is not in the chain, unpriced, or not from the current/previous session returns ok:false
  * so the position keeps an honest "no usable quote" state (never the underlying's price, never the entry price).

@@ -68,6 +68,10 @@ interface FlowResponse {
   expiration: string;
   availableExpirations: string[];
   contractCount: number;
+  provider?: string;
+  quoteBasis?: 'realtime' | 'previous_session' | 'marks_only';
+  asOfDate?: string | null;
+  sourceLabel?: string;
   aggregate: FlowAggregate;
   flowPattern: FlowPatternResult;
   ivSkew: IVSkewResult;
@@ -205,6 +209,12 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
               {data && (
                 <span style={{ fontSize: '11px', color: 'var(--msp-text-faint)', marginLeft: 'auto' }}>
                   {data.contractCount} contracts • {data.expiration} expiry • {data.duration}
+                  {data.sourceLabel ? ` • ${data.sourceLabel}` : ''}
+                </span>
+              )}
+              {data?.quoteBasis === 'previous_session' && (
+                <span style={{ fontSize: '11px', color: 'var(--msp-warn, #f59e0b)', width: '100%' }}>
+                  Live option quotes unavailable — this is the previous session&apos;s flow (close as of {data.asOfDate ?? 'unknown date'}), not live flow.
                 </span>
               )}
             </div>

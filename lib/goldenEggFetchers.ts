@@ -20,7 +20,7 @@ import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
 import { latestObservation } from '@/lib/macro/avRateSeries';
-import { fetchSharedOptionsChain, type AvChainFunction } from '@/lib/options/chainCache';
+import { describeChainSource, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -408,19 +408,15 @@ export async function fetchOptionsSnapshot(
     // Try each provider independently: a non-entitled realtime endpoint must not stop the fallback
     // to HISTORICAL_OPTIONS (included in every premium plan). avFetch throws on AV "Information"
     // (e.g. premium/entitlement) notes, and non-entitled keys can instead get an artificial sample chain.
-    const providerLabels: Record<AvChainFunction, string> = {
-      REALTIME_OPTIONS_FMV: 'alpha_vantage REALTIME_OPTIONS_FMV',
-      REALTIME_OPTIONS: 'alpha_vantage REALTIME_OPTIONS',
-      HISTORICAL_OPTIONS: 'alpha_vantage HISTORICAL_OPTIONS (previous session)',
-    };
     // Shared short-TTL chain cache (opt:raw:SYM) — reuses a chain another options tool just downloaded.
+    // Default order: REALTIME_OPTIONS (live bid/ask) → HISTORICAL_OPTIONS (previous session close) when the
+    // live chain is missing or has too few two-sided quotes.
     const shared = await fetchSharedOptionsChain<RawContract>(symbol, {
       apiKey: AV_KEY,
-      providers: ['REALTIME_OPTIONS_FMV', 'REALTIME_OPTIONS', 'HISTORICAL_OPTIONS'],
-      fetchPayload: (fn, url) => avFetch<any>(url, `${fn === 'REALTIME_OPTIONS_FMV' ? 'OPTIONS_FMV' : fn} ${symbol}`),
+      fetchPayload: (fn, url) => avFetch<any>(url, `${fn} ${symbol}`),
     });
     const rawData: RawContract[] | null = shared?.rows ?? null;
-    const provider = shared ? providerLabels[shared.provider] : '';
+    const provider = shared ? describeChainSource(shared) : '';
     if (!rawData?.length) return null;
 
     // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.
