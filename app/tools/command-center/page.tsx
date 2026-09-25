@@ -374,7 +374,7 @@ export default function CommandCenterPage() {
                 <span className="min-w-0 truncate text-slate-200">{e.event}</span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400">
                   <span>{e.market}</span>
-                  <span>{e.when}</span>
+                  <span title={e.whenTitle}>{e.when}</span>
                   <Badge label={e.importance.toUpperCase()} small color={e.importance === 'high' ? 'var(--msp-bear)' : e.importance === 'medium' ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
                 </span>
               </li>
