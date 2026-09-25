@@ -503,6 +503,32 @@ describe('curated seed', () => {
     expect(fomc).not.toContain('2026-11-04');
   });
 
+  it('uses the BEA/BLS/Census/Fed published US dates for Sep-Dec 2026 (PCE was listed on Sep 25, BEA says Sep 30)', () => {
+    const datesOf = (id: string) => CURATED_EVENTS
+      .filter((e) => e.canonicalIndicatorId === id && e.localDate >= '2026-09-16' && e.localDate < '2027-01-01')
+      .map((e) => e.localDate);
+    // BEA release schedule (bea.gov/news/schedule): Personal Income and Outlays + GDP.
+    expect(datesOf('US_PCE_HEADLINE_YOY')).toEqual(['2026-09-30', '2026-10-29', '2026-11-25', '2026-12-23']);
+    expect(datesOf('US_PCE_CORE_YOY')).toEqual(['2026-09-30', '2026-10-29', '2026-11-25', '2026-12-23']);
+    expect(datesOf('US_PCE_CORE_MOM')).toEqual(['2026-09-30']);
+    expect(datesOf('US_GDP_QOQ_FINAL')).toEqual(['2026-09-30', '2026-12-23']);
+    expect(datesOf('US_GDP_QOQ_ADVANCE')).toEqual(['2026-10-29']);
+    expect(datesOf('US_GDP_QOQ_SECOND')).toEqual(['2026-11-25']);
+    // BLS schedules (CPI, Employment Situation).
+    for (const id of ['US_CPI_HEADLINE_YOY', 'US_CPI_HEADLINE_MOM', 'US_CPI_CORE_YOY', 'US_CPI_CORE_MOM']) {
+      expect(datesOf(id), id).toEqual(['2026-10-14', '2026-11-10', '2026-12-10']);
+    }
+    expect(datesOf('US_NFP')).toEqual(['2026-10-02', '2026-11-06', '2026-12-04']);
+    // Census advance retail sales.
+    expect(datesOf('US_RETAIL_SALES_MOM')).toEqual(['2026-09-16', '2026-10-15', '2026-11-17', '2026-12-16']);
+    // Official-schedule rows are CONFIRMED at 08:30 ET; nothing US high-impact left on Fri Sep 25.
+    const pce = CURATED_EVENTS.filter((e) => e.canonicalIndicatorId.startsWith('US_PCE_') && e.localDate >= '2026-09-16');
+    expect(pce.every((e) => e.timingStatus === 'CONFIRMED' && e.sourceAuthority === 'OFFICIAL' && e.localTime === '08:30')).toBe(true);
+    expect(CURATED_EVENTS.filter((e) => e.countryCode === 'US' && e.localDate === '2026-09-25')).toEqual([]);
+    const aug = normalizeEvent(CURATED_EVENTS.find((e) => e.canonicalIndicatorId === 'US_PCE_HEADLINE_YOY' && e.localDate === '2026-09-30')!, { nowUtcMs: NOW })!;
+    expect(aug.releaseTimeUtc).toBe('2026-09-30T12:30:00.000Z'); // 08:30 EDT
+  });
+
   it('marks estimated rows as unconfirmed so the UI cannot present them as scheduled', () => {
     const estimated = CURATED_EVENTS.filter((e) => e.timingStatus === 'ESTIMATED');
     expect(estimated.length).toBeGreaterThan(0);
