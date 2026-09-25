@@ -2107,7 +2107,7 @@ function BacktestContent() {
                       </div>
                     </div>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Max Drawdown</div>
+                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Max Drawdown ({inverseComparison.drawdownBasis === 'bar_close_mark_to_market' ? 'bar-close, both' : 'closed trades, both'})</div>
                       <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {results.maxDrawdown.toFixed(2)}%</div>
                       <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
                         Inverse: {inverseComparison.inverse.maxDrawdown.toFixed(2)}%
