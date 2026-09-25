@@ -83,13 +83,45 @@ export function proCandidateMetrics(pick: any) {
   };
 }
 
+/** Hard-block codes → plain labels, in the order used to pick ONE reason per row (data problems first: a stale or
+ *  unreliable row's liquidity/earnings read can't be trusted). `unavailable` = the row lacked usable data. */
+const HARD_BLOCK_LABELS: ReadonlyArray<readonly [code: string, label: string, unavailable: boolean]> = [
+  ['DATA_ELIGIBILITY', 'data eligibility', true],
+  ['STALE_DATA', 'stale data', true],
+  ['DATA_UNRELIABLE', 'unreliable data', true],
+  ['INSUFFICIENT_HISTORY', 'short history', true],
+  ['PRICE_SANITY', 'price check', true],
+  ['EARNINGS_IN_WINDOW', 'earnings', false],
+  ['LIQUIDITY_MIN', 'liquidity', false],
+];
+export const BLOCKED_PREFIX = 'Blocked: ';
+
+/** The one named reason a hard-blocked row is excluded for, e.g. { reason: 'Blocked: liquidity', unavailable: false }. */
+export function hardBlockExclusion(pick: any): { reason: string; unavailable: boolean } {
+  const codes: string[] = (pick?.canonical?.blockReasons ?? []).map((r: { code?: string }) => String(r?.code ?? '')).filter((c: string) => c && c !== 'NO_SETUP');
+  for (const [code, label, unavailable] of HARD_BLOCK_LABELS) if (codes.includes(code)) return { reason: BLOCKED_PREFIX + label, unavailable };
+  return codes.length ? { reason: BLOCKED_PREFIX + codes[0].toLowerCase().replace(/_/g, ' '), unavailable: false } : { reason: BLOCKED_PREFIX + 'unspecified', unavailable: true };
+}
+
+/** Exclusion counts as display segments; hard blocks grouped: ['Blocked: liquidity 3, earnings 5, stale data 2', 'Factor agreement (4)']. */
+export function formatExclusionBreakdown(exclusions: Record<string, number> | null | undefined): string[] {
+  const entries = Object.entries(exclusions ?? {}).filter(([, n]) => n > 0);
+  const blocked = entries.filter(([k]) => k.startsWith(BLOCKED_PREFIX)).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const rest = entries.filter(([k]) => !k.startsWith(BLOCKED_PREFIX));
+  return [
+    ...(blocked.length ? [BLOCKED_PREFIX + blocked.map(([k, n]) => `${k.slice(BLOCKED_PREFIX.length)} ${n}`).join(', ')] : []),
+    ...rest.map(([k, n]) => `${k} (${n})`),
+  ];
+}
+
 function exclusion(pick: any, f: ProScanFilters): { reason: string; unavailable: boolean } | null {
   const m = proCandidateMetrics(pick);
   const reject = (reason: string, unavailable = false) => ({ reason, unavailable });
   if (m.confidence === null) return reject('Score unavailable', true);
   // Hard canonical blocks (stale/short/unreliable data, earnings in window, liquidity, price sanity) have no usable
-  // side; name them instead of letting them fall through as "Factor agreement". No-setup rows are NOT excluded here.
-  if (pick.canonicalStatus === 'HARD_BLOCK') return reject('Blocked (data, earnings or liquidity)', true);
+  // side; name the actual block (liquidity / earnings / stale data ...) instead of letting them fall through as "Factor
+  // agreement" or calling them all "data unavailable". No-setup rows are NOT excluded here.
+  if (pick.canonicalStatus === 'HARD_BLOCK') return hardBlockExclusion(pick);
   if (f.direction !== 'all' && m.direction !== (f.direction === 'long' ? 'LONG' : 'SHORT')) return reject('Bias');
   if (f.quality !== 'all' && m.quality !== f.quality) return reject('Quality');
   if (m.confidence < f.minConfidence) return reject('Minimum confidence');
