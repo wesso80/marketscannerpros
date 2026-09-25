@@ -40,6 +40,8 @@ export interface CanonicalFeatures {
   open: number;
   ema20: number; ema50: number; ema200: number;
   sma50: number; sma200: number;
+  /** SMA200 change over the last 20 bars, in ATR units (> 0 rising). NaN in snapshot mode / short history. */
+  sma200Slope: number;
   adx: number; plusDI: number; minusDI: number;
   /** ADX change over the last 3 bars (rising trend strength > 0). */
   adxSlope: number;
@@ -50,6 +52,8 @@ export interface CanonicalFeatures {
   /** Bollinger(20, 2σ) width as % of the middle band (display) and its percentile over ~252 bars. */
   bbwPct: number;
   bbwPercentile: number;
+  /** Bollinger width percentile over the last ~120 bars — the squeeze gate (≤ 20 = compressed). */
+  bbwPercentile120: number;
   bbUpper: number; bbLower: number;
   /** TTM-style squeeze ratio: Bollinger width / Keltner(20, 1.5 ATR) width (< 1 = squeeze on) and its percentile. */
   squeezeRatio: number;
@@ -80,6 +84,16 @@ export interface CanonicalFeatures {
   high5: number; low5: number;
   /** Extremes of the last 10 bars. */
   high10: number; low10: number;
+  /** Fade stops: the 5-bar high / low when a bar BEFORE the signal bar printed it and the signal bar stayed inside it;
+   *  NaN otherwise (the signal bar's own extreme is never a stop). */
+  exhaustionHigh: number; exhaustionLow: number;
+  /** Confirmed 3-bar pivot lows below / highs above the close that no later bar has traded through (valid stops),
+   *  nearest first, last ~120 bars. */
+  stopLowsBelow: number[];
+  stopHighsAbove: number[];
+  /** Any confirmed 3-bar pivot high above / low below the close in the last ~120 bars (targets), nearest first. */
+  targetHighsAbove: number[];
+  targetLowsBelow: number[];
 }
 
 export interface FactorResult {
@@ -99,9 +113,12 @@ export interface CanonicalLevels {
   invalidation: number;
   target: number;
   riskReward: number;
-  /** How invalidation was set: swing structure, recent extreme, or an ATR fallback. */
+  /** How invalidation was set: a confirmed swing, a fade's prior-bar exhaustion extreme, or (snapshot mode only) an ATR fallback. */
   invalidationBasis: 'swing' | 'recent_extreme' | 'atr_fallback';
   targetBasis: 'opposing_level' | 'ema20' | 'projected';
+  /** Stop and target distance from entry in ATR (display / sanity). */
+  riskAtr?: number;
+  targetAtr?: number;
   flags: string[];
 }
 

@@ -5,6 +5,8 @@
  *     → every setup type × {long, short} scored on its own factor set   (./setups.ts)
  *     → each eligible candidate is calibrated (./calibration: P(target first), expected net R, from the Phase 3
  *       walk-forward validation; daily equity/crypto bars only)
+ *       (eligibility includes an established same-side trend for trend/pullback, real compression + a trend/structure
+ *       direction for squeeze, a confirmed structural stop 0.5–3 ATR away, and structural reward:risk ≥ the minimum)
  *     → best ELIGIBLE candidate wins: those meeting the minimum reward:risk first, then highest calibrated expected-R
  *       percentile (within its direction), then factor score, then coverage. Uncalibrated contexts rank by factor score.
  *     → permission: hard/data blocks, too little history or no eligible setup → BLOCK. Otherwise WATCH, with the
@@ -55,6 +57,7 @@ export interface CanonicalInput {
 }
 
 const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const SETUP_NAME: Record<SetupType, string> = { TREND_CONTINUATION: 'Trend continuation', PULLBACK: 'Pullback', SQUEEZE: 'Squeeze', EXHAUSTION_FADE: 'Exhaustion fade' };
 const r2 = (v: number, dp = 2) => (fin(v) ? Number(v.toFixed(dp)) : null);
 
 export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
@@ -68,6 +71,8 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
     close: r2(f.close, 6), rsi: r2(f.rsi, 1), adx: r2(f.adx, 1), atrPct: r2(f.atrPct), atrPctPercentile: r2(f.atrPctPercentile, 0),
     distEma20Atr: r2(f.distEma20Atr), volumeRatio: f.volumeRatio === null ? null : r2(f.volumeRatio), structure: f.structure,
     bbwPercentile: r2(f.bbwPercentile, 0), squeezeRatio: r2(f.squeezeRatio), ema20: r2(f.ema20, 6), ema50: r2(f.ema50, 6), ema200: r2(f.ema200, 6),
+    // Trend / squeeze gate inputs, so a label can be checked against a chart.
+    plusDI: r2(f.plusDI, 1), minusDI: r2(f.minusDI, 1), sma200: r2(f.sma200, 6), sma200SlopeAtr: r2(f.sma200Slope), bbwPercentile120: r2(f.bbwPercentile120, 0),
   };
   const base = {
     version: CANONICAL_VERSION, symbol: input.symbol, assetClass: input.assetClass, timeframe: input.timeframe, mode: f.mode,
@@ -95,7 +100,13 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   const best = ranked[0];
 
   if (!best?.eligible) {
-    blockReasons.push({ code: 'NO_SETUP', message: 'No setup type is eligible on this bar' });
+    // Say why the closest candidate failed (e.g. "Trend continuation long — counter-trend: −DI ≥ +DI"), so a no-setup
+    // row reads as counter-trend / no structure rather than a silent blank.
+    // Priority: a setup that exists but has bad levels, then one on the wrong side of the trend, then anything.
+    const near = [/RR_BELOW_MIN|NO_STRUCTURAL_STOP/, /counter-trend|no established trend|squeeze direction/]
+      .map((re) => ranked.find((c) => re.test(c.ineligibleReason ?? ''))).find(Boolean) ?? best;
+    const closest = near?.ineligibleReason ? ` (closest: ${SETUP_NAME[near.setupType]} ${near.direction} — ${near.ineligibleReason})` : '';
+    blockReasons.push({ code: 'NO_SETUP', message: `No setup type is eligible on this bar${closest}` });
     return { ...base, setupType: 'NONE', direction: 'neutral', score: 0, factorScore: 0, scoreBasis: calibrated ? 'calibrated_expectancy_percentile' : 'factor_alignment_uncalibrated', calibration: null,
       grade: 'F', permission: 'BLOCK', blockReasons, watchReasons, flags, factors: [], coverage: 1, levels: null, sizeMultiplier: 0, thresholds: null, candidates };
   }
@@ -113,6 +124,7 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   if (fin(f.atrPctPercentile) && f.atrPctPercentile >= CANONICAL_VOL_EXTREME_PCTL) {
     watchReasons.push({ code: 'VOL_EXTREME', message: `ATR% at the ${Math.round(f.atrPctPercentile)}th percentile of its own history` });
   }
+  // Unreachable for engine-evaluated candidates (below-minimum R:R is ineligible in ./setups); kept for safety.
   if (best.levels.targetBasis !== 'projected' && best.levels.riskReward < CANONICAL_MIN_RR) {
     watchReasons.push({ code: 'RR_BELOW_MIN', message: `Structural reward:risk ${best.levels.riskReward} < ${CANONICAL_MIN_RR}` });
   }
