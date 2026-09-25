@@ -62,15 +62,21 @@ export function proCandidateMetrics(pick: any) {
   const atr = positive(pick.atr) ?? positive(ind.atr);
   const price = positive(pick.price) ?? positive(ind.price);
   const atrPct = price !== null && price > 0 && atr !== null && atr > 0 ? atr / price * 100 : positive(ind.atr_percent);
-  const direction = pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL';
+  const side = (d: unknown) => d === 'bullish' ? 'LONG' : d === 'bearish' ? 'SHORT' : 'NEUTRAL';
+  const direction = side(pick.direction);
+  // Factor agreement reads the indicator factor bias (trend/momentum/structure), not the canonical setup side: a
+  // counter-trend setup (e.g. exhaustion fade) or a "No setup" row is scored on what its indicators agree on. Falls back
+  // to the row side when the factor read is neutral/absent (e.g. a squeeze setup in a range). Hard blocks are neutral.
+  const factorSide = side(pick.factorBias);
+  const bias = pick.canonicalStatus === 'HARD_BLOCK' ? 'NEUTRAL' : factorSide !== 'NEUTRAL' ? factorSide : direction;
   const bull = finite(pick.signals?.bullish), bear = finite(pick.signals?.bearish), neutral = finite(pick.signals?.neutral);
-  const trend = bull !== null && bear !== null && (direction === 'LONG' ? bull > bear : direction === 'SHORT' ? bear > bull : false);
-  const momentum = rsi !== null && (direction === 'LONG' ? rsi > 45 : direction === 'SHORT' ? rsi < 55 : false);
-  const flow = neutral !== null && (direction === 'LONG' ? bull !== null && bull >= neutral : direction === 'SHORT' ? bear !== null && bear >= neutral : false);
+  const trend = bull !== null && bear !== null && (bias === 'LONG' ? bull > bear : bias === 'SHORT' ? bear > bull : false);
+  const momentum = rsi !== null && (bias === 'LONG' ? rsi > 45 : bias === 'SHORT' ? rsi < 55 : false);
+  const flow = neutral !== null && (bias === 'LONG' ? bull !== null && bull >= neutral : bias === 'SHORT' ? bear !== null && bear >= neutral : false);
   return {
     confidence, rsi, adx, atrPct, price, direction,
     quality: pick.scoreV2?.final?.qualityTier ?? (confidence === null ? null : confidence >= 70 ? 'high' : confidence >= 50 ? 'medium' : 'low'),
-    alignment: [trend, momentum, flow, direction !== 'NEUTRAL'].filter(Boolean).length,
+    alignment: [trend, momentum, flow, bias !== 'NEUTRAL'].filter(Boolean).length,
     alignmentAvailable: rsi !== null && bull !== null && bear !== null && neutral !== null,
     squeeze: typeof ind.squeeze === 'boolean' ? ind.squeeze : null,
     relativeStrength: finite(ind.sectorRelStr),
@@ -81,6 +87,9 @@ function exclusion(pick: any, f: ProScanFilters): { reason: string; unavailable:
   const m = proCandidateMetrics(pick);
   const reject = (reason: string, unavailable = false) => ({ reason, unavailable });
   if (m.confidence === null) return reject('Score unavailable', true);
+  // Hard canonical blocks (stale/short/unreliable data, earnings in window, liquidity, price sanity) have no usable
+  // side; name them instead of letting them fall through as "Factor agreement". No-setup rows are NOT excluded here.
+  if (pick.canonicalStatus === 'HARD_BLOCK') return reject('Blocked (data, earnings or liquidity)', true);
   if (f.direction !== 'all' && m.direction !== (f.direction === 'long' ? 'LONG' : 'SHORT')) return reject('Bias');
   if (f.quality !== 'all' && m.quality !== f.quality) return reject('Quality');
   if (m.confidence < f.minConfidence) return reject('Minimum confidence');

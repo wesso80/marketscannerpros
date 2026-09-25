@@ -41,6 +41,7 @@ import { getEffectiveTier } from '@/lib/entitlements';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 import { atrResearchLevels } from '@/lib/scanner/atrResearchLevels';
 import { parseProFilters, selectProCandidates, type ProScanFilters, type ProScanSort } from '@/lib/scanner/proSelection';
+import { isRetiredFastCryptoRequest, resolveBulkScanMode, type BulkScanMode } from '@/lib/scanner/proScanMode';
 import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 
 export const runtime = "nodejs";
@@ -192,7 +193,13 @@ const SYMBOL_TO_COINGECKO: Record<string, string> = {
 
 interface Indicators {
   price: number;
+  ema20?: number;
+  ema50?: number;
   ema200?: number;
+  bbUpper?: number;
+  bbLower?: number;
+  plusDI?: number;
+  minusDI?: number;
   rsi?: number;
   macd?: number;
   macdSignal?: number;
@@ -761,8 +768,6 @@ interface DerivativesData {
   longShortRatio?: number;     // L/S ratio
 }
 
-type BulkScanMode = 'deep' | 'light' | 'hybrid';
-
 type Permission = 'allowed' | 'watch' | 'blocked';
 type DirectionV2 = 'long' | 'short' | 'neutral';
 
@@ -833,8 +838,6 @@ const STABLECOINS = new Set([
   // Gold-pegged (no directional signals)
   'XAUT', 'PAXG'
 ]);
-const LIGHT_SCAN_PER_PAGE = 250;
-const LIGHT_SCAN_MAX_API_CALLS = Math.max(1, Number(process.env.SCANNER_LIGHT_MAX_CG_CALLS || 30));
 const LIGHT_EQUITY_MAX_API_CALLS = Math.max(2, Number(process.env.SCANNER_LIGHT_MAX_AV_CALLS || 8));
 
 function isLocalBulkDemoAllowed(): boolean {
@@ -1185,82 +1188,6 @@ function buildInstitutionalPickScoreV2(
   };
 }
 
-function scoreLightCryptoCandidate(coin: {
-  symbol: string;
-  current_price: number;
-  market_cap: number;
-  market_cap_rank: number;
-  total_volume: number;
-  price_change_percentage_24h: number;
-  price_change_percentage_1h_in_currency?: number;
-  price_change_percentage_7d_in_currency?: number;
-}, timeframe: string): {
-  symbol: string;
-  score: number;
-  direction: 'bullish' | 'bearish' | 'neutral';
-  change24h: number;
-  signals: { bullish: number; bearish: number; neutral: number };
-  indicators: { price: number; volume?: number };
-} | null {
-  const symbol = coin.symbol.toUpperCase();
-  const price = Number(coin.current_price);
-  const marketCap = Number(coin.market_cap);
-  const volume = Number(coin.total_volume);
-  const rank = Number(coin.market_cap_rank || 99999);
-  const change1h = Number(coin.price_change_percentage_1h_in_currency || 0);
-  const change24h = Number(coin.price_change_percentage_24h || 0);
-  const change7d = Number(coin.price_change_percentage_7d_in_currency || 0);
-
-  const momentumChange = timeframe === '1d'
-    ? change7d
-    : (timeframe === '1h' ? change24h : change1h);
-
-  const momentumRange = timeframe === '1d' ? 60 : (timeframe === '1h' ? 30 : 15);
-  const bullishThreshold = timeframe === '1d' ? 4 : (timeframe === '1h' ? 2 : 0.7);
-  const bearishThreshold = -bullishThreshold;
-
-  if (!Number.isFinite(price) || price <= 0) return null;
-  if (!Number.isFinite(marketCap) || marketCap <= 0) return null;
-  if (!Number.isFinite(volume) || volume <= 0) return null;
-
-  const momentumScore = clamp(((momentumChange + momentumRange) / (momentumRange * 2)) * 100, 0, 100);
-  const turnover = volume / marketCap;
-  const liquidityScore = clamp((Math.log10(volume + 1) / 11) * 100, 0, 100);
-  const turnoverScore = clamp(turnover * 250, 0, 100);
-  const rankScore = clamp(((1200 - rank) / 1200) * 100, 0, 100);
-
-  const scoreRaw =
-    momentumScore * 0.45 +
-    liquidityScore * 0.25 +
-    turnoverScore * 0.20 +
-    rankScore * 0.10;
-
-  const score = Math.round(clamp(scoreRaw, 0, 100));
-
-  let bullish = 0;
-  let bearish = 0;
-  let neutral = 0;
-
-  if (momentumChange >= bullishThreshold) bullish += 1;
-  else if (momentumChange <= bearishThreshold) bearish += 1;
-  else neutral += 1;
-  if (turnover >= 0.08) bullish += 1; else if (turnover < 0.025) bearish += 1; else neutral += 1;
-  if (rank <= 250) bullish += 1; else if (rank > 1200) bearish += 1; else neutral += 1;
-
-  let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  if (bullish > bearish) direction = 'bullish';
-  if (bearish > bullish) direction = 'bearish';
-
-  return {
-    symbol,
-    score,
-    direction,
-    change24h,
-    signals: { bullish, bearish, neutral },
-    indicators: { price, volume: Number.isFinite(volume) && volume > 0 ? volume : undefined }
-  };
-}
-
 // ── Shared enrichment helpers for crypto picks ──────────────────────────────
 
 /** Classify strategy label from indicator values */
@@ -1291,27 +1218,6 @@ function computeTradeParams(price: number, atrVal: number | undefined, direction
   return atrResearchLevels(price, atrVal, direction);
 }
 
-/** Enrich a crypto pick with full CoinGecko OHLC-derived indicators */
-function enrichCryptoPick(pick: any, enriched: any): any {
-  const ind = enriched.indicators as Indicators;
-  const setup = classifyStrategy(ind, enriched.direction);
-  const trade = computeTradeParams(ind.price, ind.atr, enriched.direction);
-
-  return {
-    ...pick,
-    score: enriched.score,
-    direction: enriched.direction,
-    signals: enriched.signals,
-    change24h: enriched.change24h,
-    indicators: {
-      ...enriched.indicators,
-      volume: pick.indicators.volume ?? enriched.indicators.volume,
-    },
-    setup,
-    ...trade,
-  };
-}
-
 /** Enrich a crypto pick with Alpha Vantage individual indicator values (fallback) */
 function enrichCryptoPickFromAV(pick: any, avInd: Partial<Indicators>): any {
   const price = pick.indicators.price ?? 0;
@@ -1340,105 +1246,6 @@ function enrichCryptoPickFromAV(pick: any, avInd: Partial<Indicators>): any {
     indicators: merged,
     setup,
     ...trade,
-  };
-}
-
-async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe: string) {
-  const maxCoinsByApiCap = LIGHT_SCAN_MAX_API_CALLS * LIGHT_SCAN_PER_PAGE;
-  const cappedCoins = clamp(maxCoins, 1, Math.min(15000, maxCoinsByApiCap));
-  const pageCount = Math.ceil(cappedCoins / LIGHT_SCAN_PER_PAGE);
-  const markets: any[] = [];
-  let apiCallsUsed = 0;
-
-  for (let page = 1; page <= pageCount; page++) {
-    if (Date.now() - startTime > 15_000) {
-      console.log('[bulk-scan/light] Time limit reached while fetching CoinGecko pages');
-      break;
-    }
-
-    const remaining = cappedCoins - markets.length;
-    if (remaining <= 0) break;
-
-    const pageData = await getMarketData({
-      order: 'market_cap_desc',
-      per_page: Math.min(LIGHT_SCAN_PER_PAGE, remaining),
-      page,
-      sparkline: false,
-      price_change_percentage: ['1h', '24h', '7d'],
-    }, { retries: 0, timeoutMs: 5_000 });
-    apiCallsUsed += 1;
-
-    if (!pageData || pageData.length === 0) {
-      break;
-    }
-
-    markets.push(...pageData);
-
-    if (pageData.length < Math.min(LIGHT_SCAN_PER_PAGE, remaining)) {
-      break;
-    }
-  }
-
-  const dedupedBySymbol = new Map<string, any>();
-  let droppedNonAscii = 0;
-  let droppedStable = 0;
-  for (const coin of markets) {
-    const symbol = String(coin.symbol || '').toUpperCase();
-    if (!symbol) continue;
-    if (STABLECOINS.has(symbol)) { droppedStable += 1; continue; }
-    if (!isAsciiCryptoTicker(symbol)) {
-      droppedNonAscii += 1;
-      continue;
-    }
-    if (!dedupedBySymbol.has(symbol)) {
-      dedupedBySymbol.set(symbol, coin);
-    }
-  }
-  if (droppedNonAscii > 0) {
-    console.info(`[bulk-scan/light] dropped ${droppedNonAscii} non-ASCII ticker(s) from CoinGecko universe`);
-  }
-
-  const ranked = Array.from(dedupedBySymbol.values())
-    .map((coin) => scoreLightCryptoCandidate(coin, timeframe))
-    .filter((item): item is NonNullable<ReturnType<typeof scoreLightCryptoCandidate>> => item !== null)
-    .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
-
-  // Enrich ten leaders with bounded genuine-timeframe histories. Do not make
-  // seven more AV calls to fill a missing MFI: those inputs can have a different
-  // venue/interval and must not silently replace the CoinGecko candle evidence.
-  const top10 = ranked.slice(0, 10);
-  const reads = await boundedBatch(top10, async pick => {
-    const coinId = dedupedBySymbol.get(pick.symbol)?.id;
-    const outcome = await fetchCoinGeckoSeries(pick.symbol, timeframe, {
-      coinId, requestOptions: { retries: 0, timeoutMs: 4_000 },
-    });
-    const enriched = outcome.ohlcv ? analyzeAssetByTimeframe(pick.symbol, outcome.ohlcv, timeframe) : null;
-    if (!enriched) throw new Error(outcome.excludedReason ?? 'insufficient_history');
-    const result = enrichCryptoPick(pick, enriched);
-    if (outcome.basis) result.dataBasis = outcome.basis;
-    return result;
-  }, { concurrency: 5, budgetMs: Math.max(0, 35_000 - (Date.now() - startTime)) });
-  const enrichedPicks = reads.map((read, index) => read.status === 'fulfilled' ? read.value : top10[index]);
-  const enrichmentUnavailable = reads.filter(read => read.status === 'rejected').length;
-  // Count the upper bound of requested OHLC/volume reads, including failures.
-  apiCallsUsed += top10.length * (timeframe === '1d' ? 3 : 1);
-
-  return {
-    scanned: ranked.length,
-    topPicks: ranked.map(pick => enrichedPicks.find(enriched => enriched.symbol === pick.symbol) ?? pick),
-    sourceCoinsFetched: markets.length,
-    apiCallsUsed,
-    apiCallsCap: LIGHT_SCAN_MAX_API_CALLS,
-    effectiveUniverseSize: cappedCoins,
-    universe: {
-      mode: 'light' as const,
-      source: 'coingecko /coins/markets (top by market cap)',
-      input: markets.length,
-      valid: ranked.length,
-      enrichment: { attempted: top10.length, completed: top10.length - enrichmentUnavailable, unavailable: enrichmentUnavailable },
-      excludedCounts: { stablecoin: droppedStable, nonAsciiTicker: droppedNonAscii, duplicateSymbol: markets.length - droppedStable - droppedNonAscii - dedupedBySymbol.size, unscorable: dedupedBySymbol.size - ranked.length },
-      note: `${top10.length - enrichmentUnavailable}/${top10.length} technical enrichments completed. Fast ranks the whole market-cap universe on market data (price change, turnover, rank) and enriches the top 10 with genuine-timeframe indicators. Deep scans the curated symbol_universe list with full indicators for every symbol.`,
-    },
   };
 }
 
@@ -1639,6 +1446,8 @@ function scoreLightEquityCandidate(
 // Zero AV API calls — reads pre-cached data with full 9-signal scoring.
 // Falls back to light (AV bulk quotes) if cache has < 10 symbols.
 // ─────────────────────────────────────────────────────────────────────────────
+const finiteOrUndefined = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+
 function computeFullScore(data: CachedScanData): {
   score: number;
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -1730,6 +1539,14 @@ function computeFullScore(data: CachedScanData): {
       adx: Number.isFinite(adxVal) ? Math.round(adxVal * 10) / 10 : undefined,
       atr: Number.isFinite(atr) ? atr : undefined,
       ema200: Number.isFinite(ema200) ? ema200 : undefined,
+      // The canonical engine (snapshot mode) needs EMA20/EMA50, Bollinger bands and DI+/DI-. Dropping them made every
+      // cached equity row BLOCK "INSUFFICIENT_HISTORY" with a neutral direction → 0/4 factor agreement → 0 results.
+      ema20: finiteOrUndefined(data.ema20),
+      ema50: finiteOrUndefined(data.ema50),
+      bbUpper: finiteOrUndefined(data.bbUpper),
+      bbLower: finiteOrUndefined(data.bbLower),
+      plusDI: finiteOrUndefined(data.plusDI),
+      minusDI: finiteOrUndefined(data.minusDI),
       macd: Number.isFinite(macdLine) ? macdLine : undefined,
       macdSignal: Number.isFinite(macdSignal) ? macdSignal : undefined,
       stochK: Number.isFinite(stochK) ? stochK : undefined,
@@ -2140,6 +1957,14 @@ async function runForexBulkScan(startTime: number, timeframe: string) {
 
     const result = analyzeAssetByTimeframe(pair, candles, timeframe);
     if (result) {
+      // Bar time for the data-trust check. Without it every forex row read as "freshness unknown" → institutional
+      // DATA_UNRELIABLE hard block → no side → 0/4 factor agreement → no forex results. AV FX timestamps are UTC.
+      const last = candles[candles.length - 1]?.date;
+      const lastIso = last ? (last.length <= 10 ? `${last}T00:00:00.000Z` : `${last.replace(' ', 'T')}Z`) : null;
+      (result as any).dataBasis = {
+        barInterval: timeframe, lastCompletedBarAt: lastIso && Number.isFinite(Date.parse(lastIso)) ? lastIso : null,
+        historyBars: candles.length, volumeBasis: 'not_applicable_forex', source: 'alpha_vantage_fx',
+      };
       scored.push(result);
     }
   }
@@ -2372,12 +2197,9 @@ export async function POST(req: NextRequest) {
     try { timeframe = proTimeframe(body.timeframe); }
     catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); } // 'equity', 'crypto', or 'forex'
     const validTimeframes = ['15m', '30m', '1h', '1d'];
-    const requestedMode = String(body?.mode || '').toLowerCase();
-    const mode: BulkScanMode = requestedMode === 'hybrid'
-      ? 'hybrid'
-      : requestedMode === 'light'
-        ? 'light'
-        : 'deep';
+    // Crypto Fast (light) scan is retired: crypto always runs Deep, including leftover `mode: 'light'` requests.
+    const mode: BulkScanMode = resolveBulkScanMode(type, body?.mode);
+    const retiredFastRequested = isRetiredFastCryptoRequest(type, body?.mode);
     const isLightMode = mode === 'light' || mode === 'hybrid';
     const universeSizeRaw = Number(body?.universeSize ?? body?.maxCoins ?? 0);
     const requestedUniverseSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
@@ -2410,44 +2232,6 @@ export async function POST(req: NextRequest) {
     }
     
     const selectedTimeframe = validTimeframes.includes(timeframe) ? timeframe : '1d';
-
-    if (type === 'crypto' && isLightMode) {
-      console.log(`[bulk-scan/light] Scanning up to ${universeSize} crypto assets using market-data ranking...`);
-      const lightResult = await runLightCryptoScan(universeSize, startTime, selectedTimeframe);
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      const institutional = applyInstitutionalFilterToTopPicks(lightResult.topPicks, {
-        type,
-        timeframe: selectedTimeframe,
-        mode,
-        traderRiskDNA: adaptive?.profile?.riskDNA,
-        regimeOverlayInputs: await loadRegimeOverlayInputs().catch(() => null),
-      });
-
-      return NextResponse.json({
-        success: true,
-        compliance: scannerComplianceMetadata(),
-        type,
-        timeframe: selectedTimeframe,
-        mode,
-        scanned: lightResult.scanned,
-        duration: `${duration}s`,
-        ...selectProCandidates(institutional.topPicks, filters, sort),
-        sourceCoinsFetched: lightResult.sourceCoinsFetched,
-        blockedByInstitutionalFilter: institutional.blockedCount,
-        apiCallsUsed: lightResult.apiCallsUsed,
-        apiCallsCap: lightResult.apiCallsCap,
-        effectiveUniverseSize: lightResult.effectiveUniverseSize,
-        universe: lightResult.universe,
-        dataQuality: scannerDataQualityMetadata({
-          source: 'coingecko_market_data',
-          computedAt: new Date(),
-          stale: false,
-          coverageScore: lightResult.scanned ? Math.min(100, Math.round((lightResult.scanned / Math.max(1, lightResult.effectiveUniverseSize)) * 100)) : 0,
-          warnings: universeSize < requestedUniverseSize ? [`Universe capped at ${universeSize} for ${effectiveTier}.`] : [],
-        }),
-        errors: [],
-      });
-    }
 
     if (type === 'equity') {
       // Try cache-first scan (reads worker-populated DB, 0–1 AV calls)
@@ -2601,6 +2385,7 @@ export async function POST(req: NextRequest) {
       type,
       timeframe: selectedTimeframe,
       mode,
+      ...(retiredFastRequested ? { modeNote: 'Fast scan has been retired; this request ran as a Deep scan.' } : {}),
       scanned: results.length,
       duration: `${duration}s`,
       ...selectProCandidates(institutional.topPicks, filters, sort),
@@ -2613,7 +2398,7 @@ export async function POST(req: NextRequest) {
         valid: results.length,
         providerMisses: excluded.filter((x) => x.reason === 'provider_no_data').length,
         excluded,
-        note: type === 'crypto' ? 'Deep scans the curated symbol_universe list with full OHLC indicators; Fast ranks the CoinGecko top-N by market data. Different universes by design.' : undefined,
+        note: type === 'crypto' ? 'Deep scans the curated symbol_universe list with full OHLC indicators for every symbol.' : undefined,
       },
       dataQuality: scannerDataQualityMetadata({
         source: type === 'crypto' ? 'coingecko_ohlc' : 'alpha_vantage',
