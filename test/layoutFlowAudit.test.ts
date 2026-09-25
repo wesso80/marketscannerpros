@@ -1238,7 +1238,9 @@ describe('layout and flow audit regressions', () => {
     expect(marketMoversPage).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(marketMoversPage).not.toContain('⚠ No Aligned Movers');
     expect(newsPage).toContain('icon="NI"');
-    expect(newsPage).toContain('!embeddedInResearch && <ComplianceDisclaimer compact />');
+    // RS-6: the disclaimer stays visible when News is embedded in Research (Research has none of its own).
+    expect(newsPage).toContain('<ComplianceDisclaimer compact />');
+    expect(newsPage).not.toContain('!embeddedInResearch && <ComplianceDisclaimer');
     expect(newsPage).toContain("label: 'TOP 10'");
     expect(newsPage).toContain('News & Sentiment');
     expect(newsPage).toContain('Earnings Calendar');
