@@ -492,7 +492,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Multi-Condition</div>
-                <div className="text-sm text-slate-300">AND/OR condition chains with up to 5 combined rules.</div>
+                <div className="text-sm text-slate-300">Not available yet: combined conditions are not checked, so they can&apos;t be created.</div>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Smart Alerts</div>
