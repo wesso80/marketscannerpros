@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { localDateInputValue } from '@/lib/journal/tradeDate';
 
 export interface TradeEntryPayload {
   symbol: string;
@@ -65,7 +66,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
   const [strategy, setStrategy] = useState(iv?.strategy || '');
   const [setup, setSetup] = useState(iv?.setup || '');
   const [notes, setNotes] = useState(iv?.notes || '');
-  const [tradeDate, setTradeDate] = useState(new Date().toISOString().slice(0, 10));
+  const [tradeDate, setTradeDate] = useState(() => localDateInputValue());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
