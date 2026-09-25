@@ -85,7 +85,7 @@ export function buildBacktestAssumptionsMetadata(args: {
     sampleWarning(quality, args.totalTrades),
     `Adverse slippage of ${BACKTEST_SLIPPAGE_BPS} bps is applied to every simulated entry and exit.`,
     'Commission uses a fixed per-leg research assumption, not a verified broker fee schedule. Additional exchange fees, spread, borrow costs, taxes, latency, queue priority, depth, and market impact are not modeled.',
-    'Intrabar stop/target checks use historical high/low bars; when stop and target are both touched, the engine currently resolves stop before target.',
+    'Intrabar stop/target checks use historical high/low bars; when stop and target are both touched, the engine resolves stop before target, and a stop gapped through at the open fills at the open.',
     'Results use the fetched provider universe and do not correct survivorship, symbol-selection, or regime-sampling bias.',
   ];
 
@@ -104,8 +104,8 @@ export function buildBacktestAssumptionsMetadata(args: {
     fillModel: {
       label: 'historical_bar_simulation',
       entryTiming: 'Signals are evaluated from historical bars; fills are simulated, not venue-confirmed.',
-      exitTiming: 'Stops, targets, signal flips, timeouts, and end-of-data exits are simulated from historical OHLC data.',
-      intrabarPriority: 'If a bar touches both stop and target, stop is resolved before target.',
+      exitTiming: 'Stops, targets, signal flips, timeouts, and end-of-data exits are simulated from historical OHLC data. Stop and target levels are fixed at entry from completed bars. A stop gapped through at the open fills at the open; targets fill at the target level (favourable gaps are not credited).',
+      intrabarPriority: 'If a bar touches both stop and target, stop is resolved before target and the trade exits at the stop.',
       intrabarAmbiguity: 'Intrabar path is unknown; high/low ordering inside each candle is not observed.',
       endOfDataExit: 'Open positions are closed at the final available close for reporting.',
     },

@@ -37,7 +37,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
           <div className="rounded-xl border border-white/10 bg-black/10 p-3">
             <div className="text-xs font-semibold text-white/80 mb-2">Long / Short Ratio</div>
             <div className="grid gap-2">
-              {!data.longShort && <p className="text-xs text-white/50">Unavailable — exchange-reported account ratios are not connected. Funding is not an account-positioning measurement.</p>}
+              {!data.longShort && <p className="text-xs text-white/50">Unavailable — OKX long/short account ratios could not be loaded. Funding is not an account-positioning measurement.</p>}
               {(data.longShort?.coins || []).slice(0, 6).map((ls) => (
                 <div key={ls.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="flex items-center justify-between text-xs">

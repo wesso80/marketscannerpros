@@ -21,7 +21,10 @@ export interface RegimeLike {
   riskLevel?: string;
   permission?: string;
   updatedAt?: string;
-  signals?: Array<{ stale: boolean }>;
+  /** Time of the underlying data. */
+  asOf?: string | null;
+  basis?: 'market' | 'workspace';
+  signals?: Array<{ stale: boolean; counted?: boolean }>;
 }
 
 export interface MoverLike {
@@ -94,8 +97,12 @@ export interface RegimeDescription {
   /** True when the regime differs from the previously observed regime. */
   changed: boolean;
   previousLabel: string | null;
-  /** True when any contributing signal is stale. */
+  /** False when there is no regime to show (no market data and no account signals). */
+  available: boolean;
+  /** True when any contributing signal is stale, or no signal contributed. */
   stale: boolean;
+  /** Time of the underlying data, when known. */
+  asOf: string | null;
   summary: string;
 }
 
@@ -108,16 +115,18 @@ const RISK_LEVEL_LABEL: Record<string, string> = {
   extreme: 'Extreme volatility stress',
 };
 
-export function describeRegime(current: RegimeLike | null, previousRegime?: string | null): RegimeDescription {
+export function describeRegime(current: RegimeLike | null, previousRegime?: string | null, unavailableReason?: string | null): RegimeDescription {
   if (!current || !current.regime) {
     return {
-      regimeLabel: 'Unknown',
+      regimeLabel: 'Regime unavailable',
       stance: 'unknown',
       riskLabel: 'Volatility stress unavailable',
       changed: false,
       previousLabel: null,
+      available: false,
       stale: true,
-      summary: 'Insufficient evidence to classify the current market regime.',
+      asOf: null,
+      summary: `Insufficient evidence to classify the current market regime.${unavailableReason ? ` ${unavailableReason}` : ''}`,
     };
   }
   const regimeLabel = REGIME_LABEL[current.regime] ?? current.regime;
@@ -125,11 +134,14 @@ export function describeRegime(current: RegimeLike | null, previousRegime?: stri
   const riskLabel = RISK_LEVEL_LABEL[(current.riskLevel ?? '').toLowerCase()] ?? 'Volatility stress unclassified';
   const changed = Boolean(previousRegime && previousRegime !== current.regime);
   const previousLabel = previousRegime ? (REGIME_LABEL[previousRegime] ?? previousRegime) : null;
-  const stale = Boolean(current.signals?.some((s) => s.stale));
+  // Only signals that decided the regime count. With none, the regime cannot be "current".
+  const counted = (current.signals ?? []).filter((s) => s.counted !== false);
+  const stale = counted.length === 0 || counted.some((s) => s.stale);
   const changeNote = changed && previousLabel ? ` Recently shifted from ${previousLabel.toLowerCase()}.` : '';
-  const staleNote = stale ? ' Some contributing signals are stale — interpret with caution.' : '';
-  const summary = `Conditions are consistent with a ${regimeLabel.toLowerCase()} environment. ${riskLabel}.${changeNote}${staleNote}`;
-  return { regimeLabel, stance, riskLabel, changed, previousLabel, stale, summary };
+  const staleNote = stale ? ' Some contributing signals are stale or missing — interpret with caution.' : '';
+  const basisNote = current.basis === 'workspace' ? ' Based on your account signals only; market data was unavailable.' : '';
+  const summary = `Conditions are consistent with a ${regimeLabel.toLowerCase()} environment. ${riskLabel}.${changeNote}${staleNote}${basisNote}`;
+  return { regimeLabel, stance, riskLabel, changed, previousLabel, available: true, stale, asOf: current.asOf ?? null, summary };
 }
 
 /* ── Strength / weakness ── */

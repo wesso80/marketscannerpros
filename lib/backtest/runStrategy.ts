@@ -12,6 +12,7 @@ import type { BacktestTrade } from './engine';
 import { runCoreStrategyStep } from './strategyExecutors';
 import { parseBacktestTimeframe } from './timeframe';
 import { enrichTradesWithMetadata } from './tradeForensics';
+import { resolveBarExit } from './barExit';
 import { BACKTEST_SLIPPAGE_BPS, BACKTEST_COMMISSION_BPS } from './assumptions';
 import {
   calculateEMA,
@@ -52,6 +53,12 @@ export interface StrategyResult {
   trades: Trade[];
   dates: string[];
   closes: number[];
+  /**
+   * Account balance marked to market at every bar close (realised P&L plus the
+   * open position valued at that close, net of estimated exit slippage and
+   * commission). Pass to buildBacktestEngineResult so drawdown includes open losses.
+   */
+  markedBalances: Map<string, number>;
 }
 
 type Position = {
@@ -59,6 +66,9 @@ type Position = {
   entry: number;
   entryDate: string;
   entryIdx: number;
+  /** Bracket levels, fixed when the position is opened and never recomputed while it is open. */
+  stop?: number;
+  target?: number;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -92,22 +102,30 @@ function computeSLTP(
   return { sl, tp };
 }
 
-function checkHitSLTP(
+/**
+ * Opens a bracket position filled at the next bar's open. Stop and target are
+ * fixed here from the ATR known at the signal bar's close (the entry decision),
+ * so they never use the range of a bar they are later tested against and they
+ * do not drift while the trade is open.
+ */
+function openBracketPosition(
   side: 'LONG' | 'SHORT',
-  high: number,
-  low: number,
-  sl: number,
-  tp: number,
-) {
-  const hitSL = side === 'LONG' ? low <= sl : high >= sl;
-  const hitTP = side === 'LONG' ? high >= tp : low <= tp;
-  return { hitSL, hitTP };
+  entry: number,
+  entryDate: string,
+  entryIdx: number,
+  signalAtr: number,
+  slATR: number,
+  tpATR: number,
+): Position {
+  const { sl, tp } = computeSLTP(side, entry, signalAtr, slATR, tpATR);
+  return { side, entry, entryDate, entryIdx, stop: sl, target: tp };
 }
 
 // ─── Slippage Model ───────────────────────────────────────────────────────
 // Applies realistic execution slippage (configurable basis points).
 // Entry: long fills higher, short fills lower (adverse).
-// Exit: SL/TP price already set, but signal-flip exits get adverse slippage.
+// Exit: every exit (stop, target, signal flip, timeout, end of data) gets adverse slippage.
+// Stop/target fill prices before slippage come from resolveBarExit (lib/backtest/barExit.ts).
 function applyEntrySlippage(price: number, side: 'LONG' | 'SHORT'): number {
   const slip = price * (BACKTEST_SLIPPAGE_BPS / 10_000);
   return side === 'LONG' ? price + slip : price - slip;
@@ -133,6 +151,48 @@ function inferAssetType(symbol: string): 'stock' | 'crypto' | 'forex' {
 function calcCommissionCost(entry: number, exit: number, qty: number, assetType: 'stock' | 'crypto' | 'forex'): number {
   const bps = BACKTEST_COMMISSION_BPS[assetType];
   return (entry * qty + Math.abs(exit * qty)) * (bps / 10_000);
+}
+
+// ─── Mark-to-market balances ──────────────────────────────────────────────
+/**
+ * Bar-close marked account balance for every date, mirroring the scanner
+ * backtest (lib/backtest/scannerBacktest.ts): realised P&L of closed trades
+ * plus open positions valued at the bar close with the same exit slippage,
+ * commission and 95%-of-initial-capital sizing used for the final trade P&L.
+ * On a trade's exit bar its actual realised return is used, so the final mark
+ * equals the closed-trade balance.
+ */
+export function computeMarkedBalances(
+  trades: Pick<Trade, 'entryDate' | 'exitDate' | 'side' | 'entry' | 'return'>[],
+  dates: string[],
+  closes: number[],
+  initialCapital: number,
+  assetType: 'stock' | 'crypto' | 'forex',
+): Map<string, number> {
+  const index = new Map(dates.map((date, i) => [date, i]));
+  const realisedAt = new Array<number>(dates.length).fill(0);
+  const unrealisedAt = new Array<number>(dates.length).fill(0);
+
+  for (const t of trades) {
+    const exitIdx = index.get(t.exitDate);
+    if (exitIdx === undefined) continue;
+    realisedAt[exitIdx] += t.return;
+    const entryIdx = index.get(t.entryDate);
+    if (entryIdx === undefined || !(t.entry > 0)) continue;
+    const shares = (initialCapital * 0.95) / t.entry;
+    for (let d = entryIdx; d < exitIdx; d++) {
+      const markExit = applyExitSlippage(closes[d], t.side);
+      unrealisedAt[d] += calcReturnDollars(t.side, t.entry, markExit, shares, calcCommissionCost(t.entry, markExit, shares, assetType));
+    }
+  }
+
+  const marks = new Map<string, number>();
+  let realised = initialCapital;
+  for (let d = 0; d < dates.length; d++) {
+    realised += realisedAt[d];
+    marks.set(dates[d], realised + unrealisedAt[d]);
+  }
+  return marks;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
@@ -360,23 +420,19 @@ export function runStrategy(
       const tpATR = 3.0;
 
       if (!position && longSignal) {
-        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+        position = openBracketPosition('LONG', nextOpen, nextDate, i + 1, atr[i] || close * 0.02, slATR, tpATR);
       } else if (!position && shortSignal) {
-        position = { side: 'SHORT', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+        position = openBracketPosition('SHORT', nextOpen, nextDate, i + 1, atr[i] || close * 0.02, slATR, tpATR);
       } else if (position) {
         const side = position.side;
         const entryPrice = position.entry;
-        const atrVal = atr[i] || close * 0.02;
-        const { sl, tp } = computeSLTP(side, entryPrice, atrVal, slATR, tpATR);
-        const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+        const barExit = resolveBarExit({ side, open: opens[i], high: highs[i], low: lows[i], stop: position.stop, target: position.target });
         const biasReversal = side === 'LONG' ? totalBias <= 0 : totalBias >= 0;
         const barsHeld = i - position.entryIdx;
 
-        if (hitSL || hitTP || biasReversal) {
-          let exitPrice = close;
-          if (hitSL) exitPrice = sl;
-          if (hitTP) exitPrice = tp;
-          const exitReason: BacktestTrade['exitReason'] = hitSL ? 'stop' : hitTP ? 'target' : 'signal_flip';
+        if (barExit || biasReversal) {
+          const exitPrice = barExit ? barExit.exitPrice : close;
+          const exitReason: BacktestTrade['exitReason'] = barExit ? barExit.exitReason : 'signal_flip';
           const shares = (initialCapital * 0.95) / entryPrice;
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side,
@@ -474,15 +530,15 @@ export function runStrategy(
       const tpATR = 3.5;
 
       if (!position && longSignal) {
-        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+        position = openBracketPosition('LONG', nextOpen, nextDate, i + 1, atr[i] || close * 0.02, slATR, tpATR);
       } else if (!position && shortSignal) {
-        position = { side: 'SHORT', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+        position = openBracketPosition('SHORT', nextOpen, nextDate, i + 1, atr[i] || close * 0.02, slATR, tpATR);
       } else if (position) {
         const side = position.side;
         const entryPrice = position.entry;
+        // Used only for the close-based time exit below (decided at this bar's close).
         const atrVal = atr[i] || close * 0.02;
-        const { sl, tp } = computeSLTP(side, entryPrice, atrVal, slATR, tpATR);
-        const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+        const barExit = resolveBarExit({ side, open: opens[i], high: highs[i], low: lows[i], stop: position.stop, target: position.target });
         const trendFlip = side === 'LONG'
           ? bearTrend && adx[i] > 25
           : bullTrend && adx[i] > 25;
@@ -491,11 +547,9 @@ export function runStrategy(
           ? barsHeld >= 20 && close < entryPrice + atrVal * 0.5
           : barsHeld >= 20 && close > entryPrice - atrVal * 0.5;
 
-        if (hitSL || hitTP || trendFlip || timeExit) {
-          let exitPrice = close;
-          if (hitSL) exitPrice = sl;
-          if (hitTP) exitPrice = tp;
-          const exitReason: BacktestTrade['exitReason'] = hitSL ? 'stop' : hitTP ? 'target' : timeExit ? 'timeout' : 'signal_flip';
+        if (barExit || trendFlip || timeExit) {
+          const exitPrice = barExit ? barExit.exitPrice : close;
+          const exitReason: BacktestTrade['exitReason'] = barExit ? barExit.exitReason : timeExit ? 'timeout' : 'signal_flip';
           const shares = (initialCapital * 0.95) / entryPrice;
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side,
@@ -551,15 +605,15 @@ export function runStrategy(
       const breakoutUp = close > orbHigh && volumes[i] > (volSMA[i] || 0) * 1.2;
 
       if (!position && breakoutUp && i > 3) {
-        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+        // Opening range is fixed from the completed signal bars; levels do not move after entry.
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1, target: nextOpen + orbRange, stop: nextOpen - orbRange * 0.5 };
       } else if (position) {
-        const target = position.entry + orbRange;
-        const stop = position.entry - orbRange * 0.5;
+        const barExit = resolveBarExit({ side: 'LONG', open: opens[i], high: highs[i], low: lows[i], stop: position.stop, target: position.target });
         const barsHeld = i - position.entryIdx;
-        if (highs[i] >= target || lows[i] <= stop || barsHeld >= 15) {
-          const exitPrice = highs[i] >= target ? target : lows[i] <= stop ? stop : close;
+        if (barExit || barsHeld >= 15) {
+          const exitPrice = barExit ? barExit.exitPrice : close;
           const shares = (initialCapital * 0.95) / position.entry;
-          const exitReason: BacktestTrade['exitReason'] = highs[i] >= target ? 'target' : lows[i] <= stop ? 'stop' : 'timeout';
+          const exitReason: BacktestTrade['exitReason'] = barExit ? barExit.exitReason : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: exitPrice,
@@ -959,28 +1013,30 @@ export function runStrategy(
         const isLoneDailyEvent = stackCount <= 1 && !dailyNear && Math.abs(distToDailyMidPct) > 0.3;
 
         if (!position && isLoneDailyEvent) {
-          // Enter toward the daily 50%
+          // Enter toward the daily 50% of the SIGNAL bar. The target is fixed at
+          // entry: the nearer of that midpoint and the 2.5 ATR target (if the
+          // entry already gapped past the midpoint, only the ATR target is used).
+          // Previously the midpoint of the bar being tested was used, which is
+          // always inside that bar, so every trade "hit" it on the entry bar.
           const side: 'LONG' | 'SHORT' = priceBelowDailyMid ? 'LONG' : 'SHORT';
-          position = { side, entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+          const bracket = openBracketPosition(side, nextOpen, nextDate, i + 1, atrVal, 1.5, 2.5);
+          const midIsAhead = side === 'LONG' ? dailyMid > nextOpen : dailyMid < nextOpen;
+          if (midIsAhead && bracket.target != null) {
+            bracket.target = side === 'LONG' ? Math.min(dailyMid, bracket.target) : Math.max(dailyMid, bracket.target);
+          }
+          position = bracket;
         } else if (position) {
           const side = position.side;
           const entryPrice = position.entry;
           const barsHeld = i - position.entryIdx;
 
           // Exit conditions
-          const reachedDailyMid = side === 'LONG'
-            ? highs[i] >= dailyMid
-            : lows[i] <= dailyMid;
-          const { sl, tp } = computeSLTP(side, entryPrice, atrVal, 1.5, 2.5);
-          const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+          const barExit = resolveBarExit({ side, open: opens[i], high: highs[i], low: lows[i], stop: position.stop, target: position.target });
           const timeExit = barsHeld >= 10;
 
-          if (reachedDailyMid || hitSL || hitTP || timeExit) {
-            let exitPrice = close;
-            if (reachedDailyMid) exitPrice = dailyMid;
-            if (hitSL) exitPrice = sl;
-            if (hitTP) exitPrice = tp;
-            const exitReason: BacktestTrade['exitReason'] = reachedDailyMid ? 'target' : hitSL ? 'stop' : hitTP ? 'target' : 'timeout';
+          if (barExit || timeExit) {
+            const exitPrice = barExit ? barExit.exitPrice : close;
+            const exitReason: BacktestTrade['exitReason'] = barExit ? barExit.exitReason : 'timeout';
             const shares = (initialCapital * 0.95) / entryPrice;
             trades.push({
               entryDate: position.entryDate, exitDate: date, symbol, side,
@@ -1005,22 +1061,20 @@ export function runStrategy(
         if (!position && isLowStack) {
           const side: 'LONG' | 'SHORT' = emaBullish ? 'LONG' : emaBearish ? 'SHORT' : 'LONG';
           if (emaBullish || emaBearish) {
-            position = { side, entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+            position = openBracketPosition(side, nextOpen, nextDate, i + 1, atrVal, 1.2, 3.0);
           }
         } else if (position) {
           const side = position.side;
           const entryPrice = position.entry;
           const barsHeld = i - position.entryIdx;
           const stackReturned = stackCount >= 3; // Confluence returning = exit drift
-          const { sl, tp } = computeSLTP(side, entryPrice, atrVal, 1.2, 3.0);
-          const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+          const barExit = resolveBarExit({ side, open: opens[i], high: highs[i], low: lows[i], stop: position.stop, target: position.target });
           const timeExit = barsHeld >= 15;
 
-          if (stackReturned || hitSL || hitTP || timeExit) {
-            let exitPrice = close;
-            if (hitSL) exitPrice = sl;
-            if (hitTP) exitPrice = tp;
-            const exitReason: BacktestTrade['exitReason'] = stackReturned ? 'signal_flip' : hitSL ? 'stop' : hitTP ? 'target' : 'timeout';
+          if (barExit || stackReturned || timeExit) {
+            // An intrabar stop/target happens before a close-based exit signal.
+            const exitPrice = barExit ? barExit.exitPrice : close;
+            const exitReason: BacktestTrade['exitReason'] = barExit ? barExit.exitReason : stackReturned ? 'signal_flip' : 'timeout';
             const shares = (initialCapital * 0.95) / entryPrice;
             trades.push({
               entryDate: position.entryDate, exitDate: date, symbol, side,
@@ -1047,24 +1101,22 @@ export function runStrategy(
         if (!position && isHighStack) {
           // Breakout direction from MACD momentum
           if (macdBullish && close > dailyMid) {
-            position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+            position = openBracketPosition('LONG', nextOpen, nextDate, i + 1, atrVal, 1.0, 3.5);
           } else if (macdBearish && close < dailyMid) {
-            position = { side: 'SHORT', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
+            position = openBracketPosition('SHORT', nextOpen, nextDate, i + 1, atrVal, 1.0, 3.5);
           }
         } else if (position) {
           const side = position.side;
           const entryPrice = position.entry;
           const barsHeld = i - position.entryIdx;
           const stackDissipated = stackCount <= 2; // Breakout completed
-          const { sl, tp } = computeSLTP(side, entryPrice, atrVal, 1.0, 3.5);
-          const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+          const barExit = resolveBarExit({ side, open: opens[i], high: highs[i], low: lows[i], stop: position.stop, target: position.target });
           const timeExit = barsHeld >= 12;
 
-          if (stackDissipated || hitSL || hitTP || timeExit) {
-            let exitPrice = close;
-            if (hitSL) exitPrice = sl;
-            if (hitTP) exitPrice = tp;
-            const exitReason: BacktestTrade['exitReason'] = stackDissipated ? 'signal_flip' : hitSL ? 'stop' : hitTP ? 'target' : 'timeout';
+          if (barExit || stackDissipated || timeExit) {
+            // An intrabar stop/target happens before a close-based exit signal.
+            const exitPrice = barExit ? barExit.exitPrice : close;
+            const exitReason: BacktestTrade['exitReason'] = barExit ? barExit.exitReason : stackDissipated ? 'signal_flip' : 'timeout';
             const shares = (initialCapital * 0.95) / entryPrice;
             trades.push({
               entryDate: position.entryDate, exitDate: date, symbol, side,
@@ -1154,5 +1206,6 @@ export function runStrategy(
   }
 
   const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);
-  return { trades: enrichedTrades, dates, closes };
+  const markedBalances = computeMarkedBalances(enrichedTrades, dates, closes, initialCapital, assetType);
+  return { trades: enrichedTrades, dates, closes, markedBalances };
 }

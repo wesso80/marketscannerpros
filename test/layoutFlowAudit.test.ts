@@ -1002,7 +1002,8 @@ describe('layout and flow audit regressions', () => {
     expect(commoditiesPage).not.toContain('Trading Implications');
     expect(regimeBanner).toContain('const reviewColors');
     expect(regimeBanner).toContain('Review:');
-    expect(regimeBanner).toContain('Risk Context:');
+    // OV-1: the regime no longer carries a position-sizing value, so the banner has no sizing/"Risk Context" slot.
+    expect(regimeBanner).not.toContain('data.sizing');
     expect(regimeBanner).toContain('Stale signals');
     expect(regimeBanner).not.toContain('permissionColors');
     expect(regimeBanner).not.toContain('Sizing:');

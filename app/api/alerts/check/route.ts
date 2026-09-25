@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
+import { checkPriceAlertCondition, describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { postToDiscord, buildAlertEmbed } from '@/lib/discord-bridge';
 
 /**
  * Alert Price Checker
@@ -89,23 +89,24 @@ async function checkAlerts(req: NextRequest) {
       const [assetType, symbol] = key.split(':');
       
       try {
-        // Fetch current price
-        const price = await fetchPrice(symbol, assetType);
-        console.log(`[Alert Check] ${symbol} price: ${price}`);
+        // Fetch current price (and the % change the same quote reports)
+        const quote = await fetchQuote(symbol, assetType);
+        console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
         
-        if (price === null) {
+        if (quote === null) {
           errors.push(`Failed to fetch price for ${symbol}`);
           continue;
         }
+        const price = quote.price;
 
         // Check each alert for this symbol
         for (const alert of groupAlerts) {
-          const shouldTrigger = checkCondition(alert, price);
-          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} = ${shouldTrigger ? 'TRIGGER' : 'no'}`);
+          const shouldTrigger = checkPriceAlertCondition(alert.condition_type, alert.condition_value, quote);
+          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} (${quote.changePercent ?? 'n/a'}%) = ${shouldTrigger ? 'TRIGGER' : 'no'}`);
           
           if (shouldTrigger) {
             try {
-              await triggerAlert(alert, price);
+              await triggerAlert(alert, quote);
               triggered.push(alert.id);
               console.log(`[Alert Check] ✅ Alert ${alert.id} triggered successfully`);
             } catch (triggerErr) {
@@ -146,13 +147,14 @@ async function checkAlerts(req: NextRequest) {
   }
 }
 
-// Fetch current price based on asset type
-async function fetchPrice(symbol: string, assetType: string): Promise<number | null> {
+// Fetch current price and % change based on asset type
+async function fetchQuote(symbol: string, assetType: string): Promise<AlertQuote | null> {
   try {
     if (assetType === 'crypto') {
-      // Use CoinGecko commercial API for crypto prices
+      // Use CoinGecko commercial API for crypto prices (24h change comes with the same call)
       const result = await getPriceBySymbol(symbol);
-      return result?.price ?? null;
+      if (!result || !Number.isFinite(result.price)) return null;
+      return { price: result.price, changePercent: Number.isFinite(result.change24h) ? result.change24h : null };
     } else {
       // Use Alpha Vantage for stocks
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
@@ -164,36 +166,21 @@ async function fetchPrice(symbol: string, assetType: string): Promise<number | n
       );
       if (!res.ok) return null;
       const data = await res.json();
-      // Handle both realtime and delayed response formats
-      const globalQuote = data['Global Quote'] || data['Global Quote - DATA DELAYED BY 15 MINUTES'];
-      const price = globalQuote?.['05. price'];
-      return price ? parseFloat(price) : null;
+      // Handles both realtime and delayed response formats; % change is vs previous close
+      return parseGlobalQuote(data);
     }
   } catch {
     return null;
   }
 }
 
-// Check if alert condition is met
-function checkCondition(alert: Alert, currentPrice: number): boolean {
-  const { condition_type, condition_value } = alert;
-  
-  switch (condition_type) {
-    case 'price_above':
-      return currentPrice >= condition_value;
-    case 'price_below':
-      return currentPrice <= condition_value;
-    // TODO: percent_change requires historical price tracking
-    default:
-      return false;
-  }
-}
-
 // Trigger an alert - record history and send notifications
-async function triggerAlert(alert: Alert, triggerPrice: number) {
+async function triggerAlert(alert: Alert, quote: AlertQuote) {
+  const triggerPrice = quote.price;
   console.log(`[Alert] Triggering alert ${alert.id} for ${alert.symbol} at $${triggerPrice}`);
   
-  const conditionMet = formatConditionMet(alert, triggerPrice);
+  const conditionMet = describeConditionMet(alert.symbol, alert.condition_type, alert.condition_value, quote, alert.asset_type);
+  const isPercentAlert = alert.condition_type.startsWith('percent_change_');
   
   // Get user email for notifications
   let userEmail: string | null = null;
@@ -291,7 +278,7 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
                 </div>
                 <div>
                   <span style="color: #64748b; font-size: 12px;">TARGET</span>
-                  <p style="color: #fff; font-size: 28px; font-weight: bold; margin: 5px 0;">$${alert.condition_value}</p>
+                  <p style="color: #fff; font-size: 28px; font-weight: bold; margin: 5px 0;">${isPercentAlert ? `${alert.condition_type === 'percent_change_down' ? '-' : '+'}${Math.abs(Number(alert.condition_value))}%` : `$${alert.condition_value}`}</p>
                 </div>
               </div>
               
@@ -325,12 +312,9 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
   // Send push notification
   if (alert.notify_push) {
     try {
-      const formattedPrice = triggerPrice >= 1 ? triggerPrice.toFixed(2) : triggerPrice.toFixed(6);
-      const condition = alert.condition_type === 'price_above' ? 'crossed above' : 'dropped below';
-      
       await sendPushToUser(alert.workspace_id, {
         title: `📊 ${alert.symbol} Alert`,
-        body: `${alert.symbol} ${condition} $${alert.condition_value} (now $${formattedPrice})`,
+        body: conditionMet,
         tag: `price-alert-${alert.symbol}`,
         data: {
           url: '/tools/scanner',
@@ -345,25 +329,8 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
     }
   }
 
-  // Post to Discord bridge (msp-alerts channel)
-  postToDiscord('msp-alerts', buildAlertEmbed({
-    symbol: alert.symbol,
-    condition: conditionMet,
-    triggeredAt: new Date().toISOString(),
-  })).catch(() => {});
+  // A user's alert is private: it is delivered only to that user's own channels
+  // (email / push above). It is not posted to the shared site-wide Discord channel.
 
   console.log(`🔔 Alert triggered: ${alert.name || alert.symbol} - ${conditionMet}`);
-}
-
-function formatConditionMet(alert: Alert, price: number): string {
-  const formattedPrice = price >= 1 ? price.toFixed(2) : price.toFixed(6);
-  
-  switch (alert.condition_type) {
-    case 'price_above':
-      return `${alert.symbol} crossed above $${alert.condition_value} (now $${formattedPrice})`;
-    case 'price_below':
-      return `${alert.symbol} dropped below $${alert.condition_value} (now $${formattedPrice})`;
-    default:
-      return `${alert.symbol} alert triggered at $${formattedPrice}`;
-  }
 }

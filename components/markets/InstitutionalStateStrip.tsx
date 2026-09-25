@@ -16,11 +16,13 @@ export default function InstitutionalStateStrip() {
   const loading = regimeLoading || riskLoading;
 
   // Derive vol state from regime
-  const volState = regime?.regime === 'VOL_EXPANSION'
+  const volState = !regime
+    ? 'Unavailable'
+    : regime.regime === 'VOL_EXPANSION'
     ? 'Expansion'
-    : regime?.regime === 'VOL_CONTRACTION'
+    : regime.regime === 'VOL_CONTRACTION'
       ? 'Contraction'
-      : regime?.regime === 'RISK_OFF_STRESS'
+      : regime.regime === 'RISK_OFF_STRESS'
         ? 'Stress'
         : 'Normal';
 
@@ -50,14 +52,14 @@ export default function InstitutionalStateStrip() {
   const dataColor = dataHealth === 'OK' ? 'text-emerald-400' : dataHealth === 'DEGRADED' ? 'text-amber-400' : 'text-red-400';
 
   // Stale signal count
-  const staleCount = regime?.signals?.filter(s => s.stale).length ?? 0;
+  const staleCount = regime?.signals?.filter(s => s.stale && s.counted !== false).length ?? 0;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-2 py-1.5 text-[10px] md:sticky md:top-0 md:z-40 md:text-[11px]">
       {/* Regime */}
       <Pill label="Regime" loading={loading}>
         <span className={regimeBadgeColor(regime?.regime)}>
-          {regimeLabel(regime?.regime)}
+          {regime ? regimeLabel(regime.regime) : 'Unavailable'}
         </span>
       </Pill>
 

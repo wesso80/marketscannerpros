@@ -349,8 +349,17 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                   <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : 'var(--msp-info)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()}</span>
                   <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
                   <span>risk <span style={{ color: regime.data.riskLevel === 'low' ? 'var(--msp-bull)' : regime.data.riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{regime.data.riskLevel}</span></span>
-                  <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
-                  <span>sizing <span style={{ color: 'var(--msp-text)' }}>{regime.data.sizing}</span></span>
+                  {regime.data.asOf ? (
+                    <>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                      <span>as of {new Date(regime.data.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+                    </>
+                  ) : null}
+                </span>
+              )}
+              {!regime.data && !regime.loading && (
+                <span className="inline-flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
+                  <span style={{ color: 'var(--msp-text-muted)' }}>regime unavailable</span>
                 </span>
               )}
             </div>
@@ -589,7 +598,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                 </div>
               </>
             ) : (
-              <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Regime loading…</div>
+              <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>{regime.loading ? 'Regime loading…' : 'Regime unavailable'}</div>
             )}
             <a href="/tools/time-scanner" style={{ display: 'block', background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-info)', textDecoration: 'none', fontWeight: 500 }}>
               Open Time Scanner for close calendar ›
@@ -612,7 +621,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>
                 {regime.data
                   ? `Regime is ${regime.data.regime.replace(/_/g, ' ').toLowerCase()}. ${regime.data.riskLevel === 'high' ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}`
-                  : 'Loading regime context…'}
+                  : regime.loading ? 'Loading regime context…' : 'Regime unavailable. Review evidence for each queued symbol.'}
               </div>
             </div>
             <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>

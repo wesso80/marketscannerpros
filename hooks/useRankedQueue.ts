@@ -33,7 +33,7 @@ export function useRankedQueue(timeframe: ScanTimeframe = 'daily'): RankedQueueR
   const equity = useScannerResults('equity', timeframe);
   const crypto = useScannerResults('crypto', timeframe);
   const regime = useRegime();
-  const regimeRaw = regime.data?.regime || 'trend';
+  const regimeRaw = regime.data?.regime || 'RANGE_NEUTRAL'; // unavailable regime → neutral weights (what /api/regime used to return with no signals)
 
   const rows = useMemo(
     () => buildRankedQueue(mergeScanResults(equity.data?.results, crypto.data?.results), regimeRaw),

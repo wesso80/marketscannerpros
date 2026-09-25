@@ -245,7 +245,7 @@ export default function CommandCenterPage() {
         ariaLabel="Command Center header"
         eyebrow="Market intelligence"
         badges={[
-          { label: `Regime ${reg.regimeLabel}` },
+          { label: regime.loading && !regime.data ? 'Regime loading' : reg.available ? `Regime ${reg.regimeLabel}` : 'Regime unavailable' },
           { label: `Evidence ${evidence.level}` },
           ...(reg.changed ? [{ label: 'Regime changed' }] : []),
           ...(anyLoading ? [{ label: 'Updating…' }] : []),
@@ -281,12 +281,19 @@ export default function CommandCenterPage() {
 
       {/* LAYER 1 — MARKET REGIME (dominant) */}
       <Card className="p-4" style={{ borderColor: stanceColor(reg.stance), borderWidth: 1 }}>
-        <SectionTitle n="01" title="Market Regime" hint={reg.stale ? 'contains stale inputs' : undefined} />
+        <SectionTitle n="01" title="Market Regime" hint={reg.available && reg.stale ? 'contains stale inputs' : undefined} />
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-2xl font-black" style={{ color: stanceColor(reg.stance) }}>{reg.regimeLabel}</div>
           <Badge label={reg.riskLabel} color="var(--msp-text-muted)" small />
           {reg.changed && reg.previousLabel ? <Badge label={`Was: ${reg.previousLabel}`} color="var(--msp-warn)" small /> : null}
-          {reg.stale ? <Badge label="Stale inputs" color="var(--msp-bear)" small /> : <Badge label="Current" color="var(--msp-bull)" small />}
+          {regime.loading && !regime.data
+            ? <Badge label="Loading" color="var(--msp-text-muted)" small />
+            : !reg.available
+              ? <Badge label="Unavailable" color="var(--msp-text-muted)" small />
+              : reg.stale
+                ? <Badge label="Stale inputs" color="var(--msp-bear)" small />
+                : <Badge label="Current" color="var(--msp-bull)" small />}
+          {reg.asOf ? <span className="text-[11px] text-slate-500">Data as of {new Date(reg.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}</span> : null}
         </div>
         <p className="mt-2 text-sm leading-6 text-slate-300">{reg.summary}</p>
       </Card>

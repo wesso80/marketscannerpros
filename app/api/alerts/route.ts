@@ -202,6 +202,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Multi-condition alerts are not evaluated by any alert checker yet (their rows can
+    // mix RSI/MACD/moving-average/volume/OI/funding rules the checkers don't compute),
+    // so they would sit "armed" forever without ever firing. Refuse to create them
+    // rather than accept an alert that can never trigger.
+    if (body.isMultiCondition || (body.conditionType as string) === 'multi') {
+      return NextResponse.json(
+        {
+          error: 'Multi-condition alerts are not available yet',
+          message: 'Multi-condition alerts are not checked yet, so they would never fire. Create single price or % change alerts instead.',
+        },
+        { status: 400 }
+      );
+    }
+
     // For single-condition alerts, require conditionType and conditionValue
     if (!isMultiCondition && (!body.conditionType || body.conditionValue === undefined)) {
       return NextResponse.json(
