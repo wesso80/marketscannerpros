@@ -68,56 +68,54 @@ export function atr(highs: number[], lows: number[], closes: number[], period=14
   return out;
 }
 
+/**
+ * Wilder ADX(period) — the standard definition (Wilder 1978; TradingView/TA-Lib `ADX`).
+ * +DM/−DM/TR are smoothed with Wilder's recursive smoothing (S = S − S/n + x, seeded with the first n-bar sum), and
+ * ADX is Wilder's running average of DX (seeded with the mean of the first n DX values). Needs ≥ 2·period bars;
+ * returns NaN ADX otherwise. Inputs are oldest-first.
+ *
+ * The previous implementation used a simple 14-bar rolling SUM for DI and a 14-bar SMA of DX (no Wilder smoothing),
+ * which overstated ADX by 10–24 points on daily equities (ADBE 33 vs 22.8, COST 42 vs 18 on 24 Sep 2026).
+ */
 export function adx(highs: number[], lows: number[], closes: number[], period=14) {
-  const plus_dm: number[] = [], minus_dm: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
+  const n = Math.min(highs.length, lows.length, closes.length);
+  const plus_dm: number[] = [], minus_dm: number[] = [], trs: number[] = [];
+  for (let i = 1; i < n; i++) {
     const upMove = highs[i] - highs[i-1];
     const downMove = lows[i-1] - lows[i];
     plus_dm.push(upMove > downMove && upMove > 0 ? upMove : 0);
     minus_dm.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    const pc = closes[i-1];
+    trs.push(Math.max(highs[i] - lows[i], Math.abs(highs[i] - pc), Math.abs(lows[i] - pc)));
   }
-  const trs: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const h = highs[i], l = lows[i], pc = closes[i-1];
-    const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
-    trs.push(tr);
-  }
-  const plus_di: number[] = [], minus_di: number[] = [];
-  let tr_sum = 0, pdm_sum = 0, mdm_sum = 0;
-  for (let i = 0; i < trs.length; i++) {
-    tr_sum += trs[i]; pdm_sum += plus_dm[i]; mdm_sum += minus_dm[i];
-    if (i >= period - 1) {
-      // Both numerator and denominator should be sums (or both averages)
-      // DI+ = (sum of +DM / sum of TR) * 100
-      // DI- = (sum of -DM / sum of TR) * 100
-      const diPlus = tr_sum > 0 ? (pdm_sum / tr_sum) * 100 : 0;
-      const diMinus = tr_sum > 0 ? (mdm_sum / tr_sum) * 100 : 0;
-      plus_di.push(diPlus);
-      minus_di.push(diMinus);
-      if (i > period - 1) { tr_sum -= trs[i-period]; pdm_sum -= plus_dm[i-period]; mdm_sum -= minus_dm[i-period]; }
-    }
-  }
+  if (period < 1 || trs.length < period) return { adx: NaN, plus_di: NaN, minus_di: NaN };
+
+  let trS = 0, pdmS = 0, mdmS = 0;
+  for (let i = 0; i < period; i++) { trS += trs[i]; pdmS += plus_dm[i]; mdmS += minus_dm[i]; }
+  let diPlus = NaN, diMinus = NaN;
   const dx: number[] = [];
-  for (let i = 0; i < plus_di.length; i++) {
-    const diSum = plus_di[i] + minus_di[i];
-    const diDiff = Math.abs(plus_di[i] - minus_di[i]);
-    dx.push(diSum === 0 ? 0 : (diDiff / diSum) * 100);
+  const pushDx = () => {
+    diPlus = trS > 0 ? (pdmS / trS) * 100 : 0;
+    diMinus = trS > 0 ? (mdmS / trS) * 100 : 0;
+    const diSum = diPlus + diMinus;
+    dx.push(diSum === 0 ? 0 : (Math.abs(diPlus - diMinus) / diSum) * 100);
+  };
+  pushDx();
+  for (let i = period; i < trs.length; i++) {
+    trS = trS - trS / period + trs[i];
+    pdmS = pdmS - pdmS / period + plus_dm[i];
+    mdmS = mdmS - mdmS / period + minus_dm[i];
+    pushDx();
   }
-  const adx_out: number[] = [];
-  let adx_sum = 0;
-  for (let i = 0; i < dx.length; i++) {
-    adx_sum += dx[i];
-    if (i >= period - 1) {
-      adx_out.push(adx_sum / period);
-      adx_sum -= dx[i - period + 1];
-    } else {
-      adx_out.push(NaN);
-    }
+
+  let finalAdx = NaN;
+  if (dx.length >= period) {
+    finalAdx = dx.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    for (let i = period; i < dx.length; i++) finalAdx = (finalAdx * (period - 1) + dx[i]) / period;
   }
-  const finalAdx = adx_out.length > 0 ? adx_out[adx_out.length - 1] : NaN;
   // Clamp to 0-100 range as a safety measure
   const clampedAdx = Number.isFinite(finalAdx) ? Math.min(100, Math.max(0, finalAdx)) : NaN;
-  return { adx: clampedAdx, plus_di: plus_di[plus_di.length - 1] ?? NaN, minus_di: minus_di[minus_di.length - 1] ?? NaN };
+  return { adx: clampedAdx, plus_di: diPlus, minus_di: diMinus };
 }
 
 export function stochastic(highs: number[], lows: number[], closes: number[], period=14, smooth=3) {
