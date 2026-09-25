@@ -378,8 +378,9 @@ export function computeDirectionalPressure(input: DVEInput): DirectionalPressure
   // Funding Rate (-10 to +10) — crypto only
   let fundingScore = 0;
   if (liq?.fundingRatePercent != null) {
-    if (liq.fundingRatePercent > 0.03) { fundingScore = 10; details.push('Funding positive (+10)'); }
-    else if (liq.fundingRatePercent < -0.03) { fundingScore = -10; details.push('Funding negative (-10)'); }
+    // Contrarian, extremes only (mirror-symmetric). Normal positive funding is neutral; it used to add +10 bullish.
+    if (liq.fundingRatePercent >= 0.05) { fundingScore = -10; details.push('Funding extreme positive — crowded longs (-10)'); }
+    else if (liq.fundingRatePercent <= -0.05) { fundingScore = 10; details.push('Funding extreme negative — crowded shorts (+10)'); }
   }
   fundingScore = clamp(fundingScore, -DIRECTION_WEIGHTS.fundingRate.max, DIRECTION_WEIGHTS.fundingRate.max);
 

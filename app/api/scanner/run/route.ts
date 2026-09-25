@@ -2465,6 +2465,7 @@ export async function POST(req: NextRequest) {
       // === ACL PIPELINE (wired into scanner response) ===
       const components = estimateComponentsFromContext({
         scannerScore: result.score,
+        direction: result.compositeV2.direction,
         regime: unifiedRegime.governor,
         adx: adxValue,
         rsi: result.rsi,

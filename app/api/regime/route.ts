@@ -60,9 +60,14 @@ function deriveRiskLevel(regime: Regime, signals: RegimeSignal[]): RiskLevel {
   return 'low';
 }
 
-function derivePermission(regime: Regime, riskLevel: RiskLevel): Permission {
+/**
+ * Informational regime posture — NOT a trade gate (no scoring or authorization path may consume it).
+ * Direction-neutral: a down-trend is not riskier than an up-trend for a strategy that can go short, so TREND_DOWN no
+ * longer implies CONDITIONAL. Only the risk level (stress / volatility / drawdown signals) tightens it.
+ */
+function derivePermission(_regime: Regime, riskLevel: RiskLevel): Permission {
   if (riskLevel === 'extreme') return 'NO';
-  if (riskLevel === 'elevated' || regime === 'TREND_DOWN') return 'CONDITIONAL';
+  if (riskLevel === 'elevated') return 'CONDITIONAL';
   return 'YES';
 }
 
