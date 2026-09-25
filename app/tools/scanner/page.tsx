@@ -255,7 +255,8 @@ type SortDir = 'asc' | 'desc';
 type ScannerMode = 'ranked' | 'pro';
 type ScannerStage = ScannerMode | 'analysis';
 type AssetClass = 'crypto' | 'equity' | 'forex';
-type ScanDepth = 'light' | 'deep';
+/** Requested Pro Scanner universe; the server caps it per plan. */
+const PRO_SCAN_UNIVERSE_SIZE = 500;
 
 function ScannerFlowRail({
   activeStage,
@@ -1023,8 +1024,8 @@ export default function ScannerPage() {
   /* ─── Pro Scan state ─── */
   const [proAsset, setProAsset] = useState<AssetClass>('crypto');
   const [proTimeframe, setProTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
-  const [proDepth, setProDepth] = useState<ScanDepth>('light');
-  const [proUniverseSize, setProUniverseSize] = useState(500);
+  // Fast (light) crypto scan retired — Pro Scanner always runs Deep (the server enforces this too).
+  const proUniverseSize = PRO_SCAN_UNIVERSE_SIZE;
   const [proMinConfidence, setProMinConfidence] = useState<number>(0);
   const [proMtfAlignment, setProMtfAlignment] = useState<number>(2);
   const [proVolState, setProVolState] = useState<ProScanFilters['volatility']>('all');
@@ -1042,7 +1043,7 @@ export default function ScannerPage() {
     minAdx: proPresetConditions.minAdx, maxAdx: proPresetConditions.maxAdx, rsiBand: proPresetConditions.rsiBand,
     preset: proPresetConditions.id === 'momentum' || proPresetConditions.id === 'mean_reversion' ? proPresetConditions.id : undefined,
   }), [proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions]);
-  const proRequestKey = JSON.stringify([proAsset, proTimeframe, proDepth, proUniverseSize, proFilters, proSort]);
+  const proRequestKey = JSON.stringify([proAsset, proTimeframe, proUniverseSize, proFilters, proSort]);
   const [proResponse, setProScanResults] = useState<any>(null);
   const proScanResults = proResponse?.requestKey === proRequestKey ? proResponse : null;
   const proAbortRef = useRef<AbortController | null>(null);
@@ -1271,11 +1272,7 @@ export default function ScannerPage() {
     setSymbolDetail(null);
     try {
       const payload: any = { type: proAsset, timeframe: proTimeframe, universeSize: proUniverseSize, filters: proFilters, sort: proSort };
-      if (proAsset === 'crypto') {
-        payload.mode = proDepth;
-      } else {
-        payload.mode = 'hybrid';
-      }
+      payload.mode = proAsset === 'crypto' ? 'deep' : 'hybrid';
       const { response: res, body: data } = await boundedJsonFetch<any>('/api/scanner/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1288,13 +1285,13 @@ export default function ScannerPage() {
         setProScanError(data?.error || `Server returned ${res.status}`);
         return;
       }
-      setProScanResults({ ...data, requestKey: proRequestKey, requestedType: proAsset, requestedTimeframe: proTimeframe, requestedDepth: proDepth });
+      setProScanResults({ ...data, requestKey: proRequestKey, requestedType: proAsset, requestedTimeframe: proTimeframe, requestedDepth: payload.mode });
     } catch (e: any) {
       if (!controller.signal.aborted) setProScanError(e?.message || 'Network error');
     } finally {
       if (!controller.signal.aborted) setProScanLoading(false);
     }
-  }, [proAsset, proTimeframe, proDepth, proUniverseSize, proRequestKey, proFilters, proSort]);
+  }, [proAsset, proTimeframe, proUniverseSize, proRequestKey, proFilters, proSort]);
 
   /* ─── Pro Scan: template apply ─── */
   const applyTemplate = useCallback((tmpl: ScanTemplate) => {
@@ -1826,19 +1823,6 @@ export default function ScannerPage() {
                     ))}
                   </div>
                 </div>
-                {proAsset === 'crypto' && proDepth === 'light' && (
-                  <div className="mb-3">
-                    <label htmlFor="scanner-universe-select" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Universe</label>
-                    <select id="scanner-universe-select" value={proUniverseSize} onChange={e => setProUniverseSize(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
-                      <option value={100}>100</option>
-                      <option value={250}>250</option>
-                      <option value={500}>500</option>
-                      <option value={1000}>1000</option>
-                      <option value={5000}>5000</option>
-                    </select>
-                  </div>
-                )}
                 <div>
                   <label htmlFor="pro-sector-filter" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Sector Filter</label>
                   <select id="pro-sector-filter" className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
@@ -1895,12 +1879,9 @@ export default function ScannerPage() {
               <div>
                 <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Mode</div>
                 <div className="flex gap-1.5">
-                  {(['light', 'deep'] as const).map(d => (
-                    <button key={d} type="button" aria-pressed={proDepth === d} onClick={() => setProDepth(d)}
-                      className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${proDepth === d ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
-                      {d === 'light' ? 'Fast' : 'Deep'}
-                    </button>
-                  ))}
+                  <span data-testid="pro-scan-mode" className="rounded-md border border-slate-500 bg-slate-800 px-3 py-1.5 text-xs font-bold uppercase text-white" title="Deep scan is the only Pro Scanner mode">
+                    Deep
+                  </span>
                 </div>
               </div>
               <div className="flex gap-1.5">
@@ -1960,7 +1941,7 @@ export default function ScannerPage() {
                 <button type="button" onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
               </div>
             </div>
-          <p className="text-xs text-slate-400">Run Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Fast mode enriches up to 10 leaders; candidates missing a required input are counted as unavailable.</p>
+          <p className="text-xs text-slate-400">Run Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as unavailable.</p>
 
           {/* Pro Scan Error */}
           {proScanError && (
