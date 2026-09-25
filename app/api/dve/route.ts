@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import {
   detectAssetClass,
   fetchPrice,
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
+    if (!hasPaidSessionAccess(session)) {
       return NextResponse.json({ success: false, error: 'Pro subscription required for Volatility Engine' }, { status: 403 });
     }
 

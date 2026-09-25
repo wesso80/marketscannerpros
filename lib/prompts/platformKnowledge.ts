@@ -127,14 +127,14 @@ ANALYSIS & RISK
     Auth-gated internal research cockpit. Session phases, correlation matrix, and pipeline stages.
     Risk context, condition review, and workflow state. No public recommendation or broker execution.
 
-27. /tools/workspace?tab=backtest — Backtester (Pro Trader)
+27. /tools/workspace?tab=backtest — Backtester (Pro)
     Strategy backtesting with edge groups, performance metrics, win rate, drawdown, inverse comparison.
 
 28. /tools/workspace?tab=portfolio — Portfolio Tracker
     Live position tracking with P&L, closed trade history, performance snapshots.
     Multi-device sync via database. Tracks open and closed positions.
 
-29. /tools/workspace?tab=journal — Trade Journal (Pro Trader)
+29. /tools/workspace?tab=journal — Trade Journal (Pro)
     Trade journal with entry/exit logging, analytics, learning notes, performance review.
 
 30. /tools/workspace?tab=alerts — Alerts
@@ -154,8 +154,8 @@ AI & ANALYSIS
 SUBSCRIPTION TIERS
 -------------------
 - Free: Limited scans, 10 AI questions/day, basic features
-- Pro ($25/mo or $225/yr): Unlimited scanning, 50 AI questions/day, CSV exports
-- Pro Trader ($50/mo or $550/yr): Backtesting, trade journal, TradingView scripts, 50 AI questions/day powered by GPT-4.1
+- Pro ($24.99/mo or $249/yr): Everything — unlimited scanning, backtesting, trade journal, options/crypto terminals, TradingView scripts, CSV exports, 50 AI questions/day powered by GPT-4.1
+(There are only two plans: Free and Pro. "Pro Trader" was retired; legacy Pro Trader subscribers are simply Pro.)
 
 NAVIGATION RULES
 -----------------
@@ -172,7 +172,7 @@ COMMON QUESTION MAPPING
 "Where is GEX?" → /tools/terminal?tab=options-confluence (Gamma Exposure analysis with dealer positioning)
 "Show me options flow" → /tools/terminal?tab=options-flow (Options flow detection)
 "Where are funding rates?" → /tools/dashboard?tab=crypto (Crypto derivatives with funding rates)
-"How do I backtest?" → /tools/workspace?tab=backtest (Strategy backtester, requires Pro Trader tier)
+"How do I backtest?" → /tools/workspace?tab=backtest (Strategy backtester, requires Pro)
 "Where is open interest?" → /tools/dashboard?tab=crypto (Crypto OI) or /tools/terminal?tab=options-confluence (Equity options OI)
 "Where do I track my trades?" → /tools/workspace?tab=portfolio (Position tracking) and /tools/workspace?tab=journal (Trade logging)
 "What sectors are strong?" → /tools/explorer?tab=heatmap (Sector performance heatmap)

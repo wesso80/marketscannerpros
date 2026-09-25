@@ -41,7 +41,7 @@ export default function TimeScannerPage({ symbol: propSymbol, assetType, embedde
   };
 
   if (isLoading) return <div className={`${embeddedInTerminal ? 'min-h-[12rem]' : 'min-h-screen'} bg-[var(--msp-bg)] flex items-center justify-center`}><div className="text-slate-500 text-sm">Loading…</div></div>;
-  if (!canAccessTimeScanner(tier)) return <div className={`${embeddedInTerminal ? 'min-h-[12rem]' : 'min-h-screen'} bg-[var(--msp-bg)] flex items-center justify-center`}><UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Scanner"><div /></UpgradeGate></div>;
+  if (!canAccessTimeScanner(tier)) return <div className={`${embeddedInTerminal ? 'min-h-[12rem]' : 'min-h-screen'} bg-[var(--msp-bg)] flex items-center justify-center`}><UpgradeGate requiredTier="pro" currentTier={tier} feature="Time Scanner"><div /></UpgradeGate></div>;
 
   return (
     <div className={`${embeddedInTerminal ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>

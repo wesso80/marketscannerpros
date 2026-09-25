@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { watchlistLimitsFor } from '@/lib/tiers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,9 +60,7 @@ export async function POST(req: NextRequest) {
       [watchlistId, session.workspaceId],
     );
     const currentCount = countResult[0]?.count || 0;
-    const tier = session.tier || 'free';
-    const limits: Record<string, number> = { free: 10, pro: 50, pro_trader: 500 };
-    const maxItems = limits[tier] || 10;
+    const maxItems = watchlistLimitsFor(hasPaidSessionAccess(session)).items;
 
     // Allow the insert through when the symbol already exists (ON CONFLICT update);
     // only block genuinely new symbols beyond the limit.

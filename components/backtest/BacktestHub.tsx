@@ -6,7 +6,7 @@ import StatisticsBasisNote from './StatisticsBasisNote';
    SURFACE 8: BACKTEST — Strategy + Scanner Backtesting (Combined)
    Real APIs: /api/backtest, /api/backtest/brain, /api/backtest/time-scanner,
               /api/backtest/scanner, /api/backtest/symbol-range
-   Pro Trader only.
+   Pro only (legacy pro_trader and admins included).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { useState, useMemo, useCallback } from 'react';
@@ -180,7 +180,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
     <div className="space-y-6">
       <SectionHeader title="Backtest Lab" subtitle="Strategy & scanner backtesting engine" />
 
-      <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Strategy Backtesting Engine">
+      <UpgradeGate requiredTier="pro" currentTier={tier} feature="Strategy Backtesting Engine">
         {/* ── Mode Toggle ──────────────────────────────────────── */}
         {!embeddedInWorkspace && <div className="flex gap-1 mb-4">
           {(['strategy', 'scanner'] as const).map(m => (

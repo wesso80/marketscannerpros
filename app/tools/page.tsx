@@ -5,8 +5,6 @@ import { toolWorkflows, type ToolWorkflow, type WorkflowTool } from '@/lib/toolW
 const tierLabel = {
   free: 'Free',
   pro: 'Pro',
-  // Legacy label collapses into "Pro" for the simplified 2-plan pricing.
-  pro_trader: 'Pro',
 };
 
 const roleTone = {
@@ -18,7 +16,6 @@ const roleTone = {
 const tierTone = {
   free: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200',
   pro: 'border-sky-400/25 bg-sky-400/10 text-sky-200',
-  pro_trader: 'border-amber-400/25 bg-amber-400/10 text-amber-200',
 };
 
 const nextStepByWorkflow: Record<ToolWorkflow['id'], string> = {

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
-import { hasProAccess } from '@/lib/entitlements';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 /**
  * Price Alerts API
@@ -13,12 +12,16 @@ import { hasProAccess } from '@/lib/entitlements';
  * DELETE - Delete alert
  */
 
-// Alert limits by tier
+// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get the
+// effectively-unlimited allowance; Free stays at 3.
 const ALERT_LIMITS = {
   free: 3,
-  pro: 25,
-  pro_trader: 999, // effectively unlimited
+  pro: 999, // effectively unlimited
 };
+function alertPlan(session: Parameters<typeof hasPaidSessionAccess>[0]): { tier: 'free' | 'pro'; maxAlerts: number } {
+  const tier = hasPaidSessionAccess(session) ? 'pro' : 'free';
+  return { tier, maxAlerts: ALERT_LIMITS[tier] };
+}
 
 // Multi-condition alert condition types
 const MULTI_CONDITION_TYPES = [
@@ -62,7 +65,7 @@ interface AlertPayload {
   conditions?: AlertCondition[];
 }
 
-// Smart alert condition types (Pro Trader only)
+// Smart alert condition types (Pro only)
 const SMART_ALERT_TYPES = [
   'oi_surge', 'oi_drop',
   'funding_extreme_pos', 'funding_extreme_neg',
@@ -160,8 +163,7 @@ export async function GET(req: NextRequest) {
       [session.workspaceId]
     );
 
-    const tier = session.tier || 'free';
-    const maxAlerts = ALERT_LIMITS[tier as keyof typeof ALERT_LIMITS] || 3;
+    const { tier, maxAlerts } = alertPlan(session);
     const activeCount = alerts.filter((a: any) => a.is_active).length;
 
     return NextResponse.json({
@@ -229,31 +231,30 @@ export async function POST(req: NextRequest) {
     // Check if this is a smart alert
     const isSmartAlert = SMART_ALERT_TYPES.includes(body.conditionType) || body.isSmartAlert;
     
-    // Smart alerts and multi-condition alerts require Pro or Pro Trader
-    const tier = session.tier || 'free';
-    if (isSmartAlert && !hasProTraderAccess(tier)) {
+    // Smart alerts and multi-condition alerts require Pro (legacy pro_trader and admins included)
+    const { tier, maxAlerts } = alertPlan(session);
+    if (isSmartAlert && tier !== 'pro') {
       return NextResponse.json(
         { 
-          error: 'Smart alerts require Pro Trader',
-          message: 'Upgrade to Pro Trader to create AI-powered smart alerts.',
+          error: 'Smart alerts require Pro',
+          message: 'Upgrade to Pro to create AI-powered smart alerts.',
         },
         { status: 403 }
       );
     }
 
-    // Multi-condition alerts require Pro or Pro Trader
-    if (isMultiCondition && !hasProAccess(tier)) {
+    // Multi-condition alerts require Pro
+    if (isMultiCondition && tier !== 'pro') {
       return NextResponse.json(
         { 
           error: 'Multi-condition alerts require Pro',
-          message: 'Upgrade to Pro or Pro Trader to create multi-condition alerts.',
+          message: 'Upgrade to Pro to create multi-condition alerts.',
         },
         { status: 403 }
       );
     }
 
     // Check quota
-    const maxAlerts = ALERT_LIMITS[tier as keyof typeof ALERT_LIMITS] || 3;
     
     const activeResult = await q(
       `SELECT COUNT(*) as count FROM alerts WHERE workspace_id = $1 AND is_active = true`,

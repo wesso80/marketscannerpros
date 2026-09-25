@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProAccess } from '@/lib/entitlements';
+
 import { hasValidInternalServiceSecret } from '@/lib/internalServiceAuth';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 export async function GET(req: NextRequest) {
   if (!hasValidInternalServiceSecret(req)) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!hasProAccess(session.tier)) return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
   // Funding is a payment rate, not an observation of account/position counts.
   return NextResponse.json({

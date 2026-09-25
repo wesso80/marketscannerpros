@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { logger } from '@/lib/logger';
 import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { fetchPriceData, isCryptoSymbol, normalizeSymbol } from '@/lib/backtest/providers';
@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
       if (!session?.workspaceId) {
         return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
       }
-      if (!hasProTraderAccess(session.tier)) {
-        return NextResponse.json({ error: 'Pro Trader subscription required' }, { status: 403 });
+      if (!hasPaidSessionAccess(session)) {
+        return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
       }
     }
 

@@ -6,6 +6,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import React from 'react';
+import { isPaidTier } from '@/lib/tiers';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ export function AuthPrompt() {
 // ─── Upgrade Gate ─────────────────────────────────────────────────────────────
 
 export function hasPaidTier(tier: string | null | undefined): boolean {
-  return tier === 'pro' || tier === 'pro_trader';
+  return isPaidTier(tier);
 }
 
 export function UpgradeGate({
@@ -133,13 +134,13 @@ export function UpgradeGate({
   feature,
   children,
 }: {
-  requiredTier: 'pro' | 'pro_trader';
+  requiredTier: 'pro';
   currentTier: string;
   feature: string;
   children: React.ReactNode;
 }) {
-  // 2026 pricing: ONE paid plan (Pro). Legacy `pro_trader` is kept as an equal paid tier, so a
-  // `requiredTier="pro_trader"` gate must admit Pro subscribers (see lib/useUserTier.ts).
+  // Two access levels only: Free and Pro. Legacy `pro_trader` tiers and admins count as Pro
+  // (see lib/tiers.ts). `requiredTier` is kept for call-site readability; there is only one paid plan.
   void requiredTier;
   if (hasPaidTier(currentTier)) return <>{children}</>;
 

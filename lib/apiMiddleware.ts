@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiLimiter, scannerLimiter, aiLimiter, loginLimiter, getClientIP, createRateLimiter } from '@/lib/rateLimit';
 import { getSessionFromCookie, SessionPayload } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 export type RateLimitPreset = 'api' | 'scanner' | 'ai' | 'login';
 
@@ -65,7 +66,7 @@ export interface ApiMiddlewareOptions {
   /** Require a valid session cookie. Default: false */
   requireAuth?: boolean;
   /** Require a specific tier (implies requireAuth). Default: undefined */
-  requireTier?: 'pro' | 'pro_trader';
+  requireTier?: 'pro';
 }
 
 type RouteHandler = (req: NextRequest, ctx?: any) => Promise<NextResponse | Response>;
@@ -111,20 +112,12 @@ export function withApiMiddleware(
         // Refresh tier from user_subscriptions table (cached 5 min)
         const verifiedTier = await getVerifiedTier(session);
 
-        if (requireTier === 'pro_trader') {
-          if (verifiedTier !== 'pro_trader') {
-            return NextResponse.json(
-              { error: 'Pro Trader subscription required' },
-              { status: 403 },
-            );
-          }
-        } else if (requireTier === 'pro') {
-          if (verifiedTier !== 'pro' && verifiedTier !== 'pro_trader') {
-            return NextResponse.json(
-              { error: 'Pro subscription required' },
-              { status: 403 },
-            );
-          }
+        // Two access levels only: any required tier means Pro (legacy pro_trader and admins pass).
+        if (requireTier && !hasPaidSessionAccess({ ...session, tier: verifiedTier })) {
+          return NextResponse.json(
+            { error: 'Pro subscription required' },
+            { status: 403 },
+          );
         }
       }
 

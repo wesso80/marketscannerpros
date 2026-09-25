@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { q } from '@/lib/db';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function hasAccess(tier: string | undefined): boolean {
-  return tier === 'pro' || tier === 'pro_trader';
-}
+// Pro required (legacy pro_trader and admins included).
 
 /**
  * GET /api/scanner/low-float
@@ -35,7 +34,7 @@ export async function GET(req: NextRequest) {
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Please log in' }, { status: 401 });
   }
-  if (!hasAccess(session.tier)) {
+  if (!hasPaidSessionAccess(session)) {
     return NextResponse.json(
       { error: 'Pro subscription required for low-float scanning' },
       { status: 403 },

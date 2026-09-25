@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { q } from '@/lib/db';
 import type { MSPEvent, WorkflowEventType } from '@/lib/workflow/types';
 import {
@@ -1337,8 +1337,8 @@ export async function POST(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ error: 'Pro Trader access required' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ error: 'Pro access required' }, { status: 403 });
     }
 
     const body = await req.json();

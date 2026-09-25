@@ -3,6 +3,7 @@
 import { alertConditionLabel } from '@/lib/alertPresentation';
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import { isPaidTier } from '@/lib/tiers';
 import { readOperatorState } from '@/lib/operatorState';
 import PushNotificationSettings from './PushNotificationSettings';
 import MultiConditionAlertBuilder from './MultiConditionAlertBuilder';
@@ -776,7 +777,7 @@ export default function AlertsWidget({
           // Smart Alerts Tab
           <div>
             {/* Smart Alert Create Form */}
-            {tier === 'pro_trader' ? (
+            {isPaidTier(tier) ? (
               <>
                 {!showSmartCreate ? (
                   <button
@@ -1037,7 +1038,7 @@ export default function AlertsWidget({
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl">🧠</span>
                   <div>
-                    <h4 className="font-semibold text-white">Smart Alerts - Pro Trader Only</h4>
+                    <h4 className="font-semibold text-white">Smart Alerts - Pro Only</h4>
                     <p className="text-sm text-slate-400">
                       Get AI-powered alerts on OI spikes, funding extremes, and sentiment shifts
                     </p>
@@ -1047,7 +1048,7 @@ export default function AlertsWidget({
                   href="/pricing" 
                   className="inline-block mt-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  Upgrade to Pro Trader
+                  Upgrade to Pro
                 </a>
               </div>
             )}
@@ -1055,7 +1056,7 @@ export default function AlertsWidget({
             {/* Smart Alerts List */}
             {(() => {
               return contextualSmartAlerts.length === 0 ? (
-                tier === 'pro_trader' ? (
+                isPaidTier(tier) ? (
                   <div className="text-center py-6">
                     <p className="text-slate-500 text-sm">No contextual AI alerts yet. Create one above!</p>
                   </div>
@@ -1439,7 +1440,7 @@ export default function AlertsWidget({
       {quota && quota.used >= quota.max && (
         <div className="p-3 bg-amber-500/10 border-t border-amber-500/20">
           <p className="text-sm text-amber-400">
-            ⚠️ Alert limit reached. Upgrade to {quota.tier === 'free' ? 'Pro' : 'Pro Trader'} for more alerts.
+            ⚠️ Alert limit reached.{quota.tier === 'free' ? ' Upgrade to Pro for more alerts.' : ' Delete an alert to add a new one.'}
           </p>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { getQuote } from '@/lib/onDemandFetch';
 import { getCompanyOverviewRaw, getEarningsHistory, getNextEarningsWithStatus } from '@/lib/goldenEgg/companyOverview';
@@ -9,10 +10,7 @@ import { describeMultiple, periodLabels, daysUntil } from '@/lib/goldenEgg/funda
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Inline tier check — Pro or Pro Trader required (mirrors canAccessPortfolioInsights)
-function hasFundamentalsAccess(tier: string | undefined): boolean {
-  return tier === 'pro' || tier === 'pro_trader';
-}
+// Pro required (legacy pro_trader and admins included) — mirrors canAccessPortfolioInsights
 
 const numOrNull = (v: unknown): number | null => { if (v == null || v === 'None' || v === '-' || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
 
@@ -21,7 +19,7 @@ export async function GET(request: NextRequest) {
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Please log in to access company data' }, { status: 401 });
   }
-  if (!hasFundamentalsAccess(session.tier)) {
+  if (!hasPaidSessionAccess(session)) {
     return NextResponse.json({ error: 'Pro subscription required for company fundamentals' }, { status: 403 });
   }
   const ip = getClientIP(request);

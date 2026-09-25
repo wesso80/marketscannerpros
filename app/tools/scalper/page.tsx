@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useUserTier } from '@/lib/useUserTier';
+import { useUserTier, canAccessScalper } from '@/lib/useUserTier';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 /* ─── Types (mirror API response) ─── */
@@ -97,7 +97,7 @@ function formatBarAge(lastBar: string): string {
 /* ─── Component ─── */
 export default function ScalperPage() {
   const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
-  const canAccess = tier === 'pro_trader';
+  const canAccess = canAccessScalper(tier);
 
   const [assetClass, setAssetClass] = useState<AssetClass>('crypto');
   const [timeframe, setTimeframe] = useState<ScalpTimeframe>('5min');

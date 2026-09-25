@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import OpenAI from "openai";
 import { q } from "@/lib/db";
-import { hasProAccess, isFreeForAllMode } from "@/lib/entitlements";
+import { isFreeForAllMode } from '@/lib/entitlements';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // Allow up to 60 seconds for generation
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     authorized = true;
   } else {
     const session = await getSessionFromCookie();
-    if (hasProAccess(session?.tier)) {
+    if (hasPaidSessionAccess(session)) {
       authorized = true;
     }
   }

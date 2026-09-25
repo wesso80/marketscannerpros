@@ -3,7 +3,7 @@ import { getPriceBySymbol } from '@/lib/coingecko';
 import { closedCandles, aggregateClosedCandles, type ClosedCandle } from '@/lib/market/candleIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { computeTimeGravityMap, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import { TF_WEIGHTS, type MidpointRecord } from '@/lib/time/midpointDebt';
 import { getMidpointService } from '@/lib/midpointService';
@@ -438,8 +438,8 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ error: 'Time Gravity Map requires Pro Trader subscription' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ error: 'Time Gravity Map requires a Pro subscription' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

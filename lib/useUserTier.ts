@@ -1,6 +1,7 @@
 "use client";
 
 import { useUserTierContext } from "./UserTierProvider";
+import { isPaidTier } from "./tiers";
 
 export type UserTier = "free" | "pro" | "pro_trader" | "anonymous";
 
@@ -26,7 +27,7 @@ export function useUserTier(): TierInfo {
 // row still reads `pro_trader` keep full access. Every gate below treats
 // `pro` and `pro_trader` identically (`hasProAccess`). Free/anonymous stay
 // gated as before. Do not add new `pro_trader`-only gates.
-const isPaid = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
+const isPaid = (tier: UserTier) => isPaidTier(tier);
 
 // Feature access helpers
 export const canAccessBacktest = (tier: UserTier) => isPaid(tier);

@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg, tfLabelFor, buildLocalDemoGoldenEggPayload, goldenEggDemoDataQuality, isLocalGoldenEggDemoAllowed } from '@/lib/goldenEgg/engine';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader access required' }, { status: 403 });
+    if (!hasPaidSessionAccess(session)) {
+      return NextResponse.json({ success: false, error: 'Pro access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

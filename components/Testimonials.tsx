@@ -8,7 +8,7 @@ const testimonials = [
   },
   {
     quote: "Cut my chart-watching from 4 hours a day to 15 minutes. More time, better trades.",
-    author: "Pro Trader",
+    author: "Pro Member",
     handle: "@swingking"
   },
   {

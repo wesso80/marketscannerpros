@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { isPaidTier, watchlistLimitsFor } from '@/lib/tiers';
 
 interface Watchlist {
   id: string;
@@ -307,12 +308,7 @@ export default function WatchlistWidget() {
     return COLORS.find(c => c.name === colorName)?.text || 'text-emerald-400';
   };
 
-  const limits: Record<string, { watchlists: number; items: number }> = {
-    free: { watchlists: 3, items: 10 },
-    pro: { watchlists: 10, items: 50 },
-    pro_trader: { watchlists: 100, items: 500 },
-  };
-  const currentLimits = limits[tier] || limits.free;
+  const currentLimits = watchlistLimitsFor(isPaidTier(tier));
   const activeSymbols = items.length;
 
   const ideaRows = useMemo(() => {

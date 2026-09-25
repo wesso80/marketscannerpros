@@ -143,7 +143,7 @@ export const scannerLimiter = createRateLimiter("scanner", {
 /** AI Analyst: Separate from daily DB limits, prevents spam */
 export const aiLimiter = createRateLimiter("ai", {
   windowMs: 60 * 1000,  // 1 minute
-  max: 10,              // 10 requests per minute max (even for pro_trader)
+  max: 10,              // 10 requests per minute max (even for Pro)
 });
 
 /** Deep analysis: 5 per minute per IP (expensive - multiple AV calls) */

@@ -522,7 +522,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
     { label: 'Window Quality', score: input.execution.entryWindowQuality * 100 },
   ];
 
-  // Tier gate: require Pro Trader
+  // Tier gate: require Pro
   if (tierLoading) {
     return (
       <TimeScannerShell embedded={embeddedInTerminal}>
@@ -533,7 +533,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
   if (!canAccessTimeScanner(tier)) {
     return (
       <TimeScannerShell embedded={embeddedInTerminal}>
-        <UpgradeGate requiredTier="pro_trader" feature="Time Scanner" />
+        <UpgradeGate requiredTier="pro" feature="Time Scanner" />
       </TimeScannerShell>
     );
   }

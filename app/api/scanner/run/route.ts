@@ -576,7 +576,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ─── Daily scan limit enforcement ───
-    // Free: 5/day, Anonymous: 3/day, Pro/Pro Trader: unlimited
+    // Free: 5/day, Anonymous: 3/day, Pro (incl. legacy pro_trader): unlimited
     const SCAN_DAILY_LIMITS: Record<string, number | null> = {
       anonymous: 3,
       free: 5,

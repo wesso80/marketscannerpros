@@ -15,7 +15,7 @@ const TIER_BADGE: Record<UserTier, { label: string; color: string } | null> = {
   anonymous: null,
   free: { label: 'Free', color: 'var(--msp-text-muted)' },
   pro: { label: '✨ Pro', color: 'var(--msp-info)' },
-  pro_trader: { label: '⭐ Pro Trader', color: 'var(--msp-warn)' },
+  pro_trader: { label: '✨ Pro', color: 'var(--msp-info)' }, // legacy tier shown as Pro
 };
 
 export default function TopNav() {

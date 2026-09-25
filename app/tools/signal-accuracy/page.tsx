@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import { isPaidTier } from '@/lib/tiers';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 type Stat = {
@@ -100,8 +101,8 @@ export default function SignalAccuracyPage() {
     });
   }, [stats]);
 
-  // Gate: Pro Trader only
-  if (!tierLoading && isLoggedIn && tier !== 'pro_trader') {
+  // Gate: Pro (legacy pro_trader and admins included)
+  if (!tierLoading && isLoggedIn && !isPaidTier(tier)) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">

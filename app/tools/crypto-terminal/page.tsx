@@ -13,7 +13,7 @@ function CryptoTerminalInner() {
   }
 
   if (!canAccessOptionsTerminal(tier)) {
-    return <UpgradeGate requiredTier="pro_trader" feature="Crypto Derivatives Terminal" />;
+    return <UpgradeGate requiredTier="pro" feature="Crypto Derivatives Terminal" />;
   }
 
   return <CryptoTerminalView />;

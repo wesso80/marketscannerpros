@@ -71,8 +71,8 @@ export const APPROVED_TIERS = [
     summary: 'Time-limited full access to evaluate the platform before committing.',
   },
   {
-    key: 'pro_trader',
-    name: 'Pro Trader',
+    key: 'pro',
+    name: 'Pro',
     summary: 'Full access to scanner, opportunity board, morning brief, learning engine, journal, and operator terminal.',
   },
 ];

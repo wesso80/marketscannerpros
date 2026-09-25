@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { watchlistLimitsFor } from '@/lib/tiers';
 
 // GET /api/watchlists/items - Get items for a specific watchlist
 export async function GET(req: NextRequest) {
@@ -102,16 +104,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Watchlist not found' }, { status: 404 });
     }
 
-    // Check item limit per watchlist (free: 10, pro: 50, pro_trader: unlimited)
+    // Check item limit per watchlist (free: 10, pro: 500)
     const countResult = await q(
       'SELECT COUNT(*)::int as count FROM watchlist_items WHERE watchlist_id = $1 AND workspace_id = $2',
       [watchlistId, session.workspaceId]
     );
     const currentCount = countResult[0]?.count || 0;
 
-    const tier = session.tier || 'free';
-    const limits: Record<string, number> = { free: 10, pro: 50, pro_trader: 500 };
-    const maxItems = limits[tier] || 10;
+    const maxItems = watchlistLimitsFor(hasPaidSessionAccess(session)).items;
 
     if (currentCount >= maxItems) {
       return NextResponse.json({ 

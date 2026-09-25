@@ -25,7 +25,7 @@ export default function ReferralBanner() {
             fontWeight: 500,
             color: 'var(--msp-accent)'
           }}>
-            Invite a friend → when they subscribe, you both get <strong style={{ color: 'var(--msp-accent)' }}>1 month Pro Trader free</strong>
+            Invite a friend → when they subscribe, you both get <strong style={{ color: 'var(--msp-accent)' }}>1 month Pro free</strong>
           </span>
         </div>
       </div>

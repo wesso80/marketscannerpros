@@ -103,7 +103,7 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
                 </div>
                 <span className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{tool.description}</span>
                 {tool.tier && (
-                  <span className="text-[9px] uppercase tracking-wider mt-auto" style={{ color: tool.tier === 'pro_trader' ? '#A78BFA' : 'var(--msp-bull)' }}>
+                  <span className="text-[9px] uppercase tracking-wider mt-auto" style={{ color: 'var(--msp-bull)' }}>
                     {tool.tier.replace('_', ' ')}
                   </span>
                 )}

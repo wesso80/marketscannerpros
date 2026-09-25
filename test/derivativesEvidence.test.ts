@@ -4,7 +4,7 @@ import { buildOiObservation, compareOi24h, HOUR_MS, OI_METHOD, totalOiChange, ty
 
 const auth = vi.hoisted(() => ({ session: vi.fn(), internal: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: auth.session }));
-vi.mock('@/lib/entitlements', () => ({ hasProAccess: (tier: string) => tier === 'pro' }));
+vi.mock('@/lib/entitlements', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/lib/entitlements')>()), hasProAccess: (tier: string) => tier === 'pro' }));
 vi.mock('@/lib/internalServiceAuth', () => ({ hasValidInternalServiceSecret: auth.internal }));
 import { GET as ratios } from '@/app/api/long-short-ratio/route';
 import { GET as liquidations } from '@/app/api/crypto/liquidations/route';

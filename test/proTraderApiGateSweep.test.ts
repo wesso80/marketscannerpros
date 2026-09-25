@@ -28,14 +28,15 @@ function read(path: string) {
   return readFileSync(join(root, path), 'utf8');
 }
 
-describe('Pro API gate sweep (legacy `hasProTraderAccess` helper — now grants both `pro` and `pro_trader`)', () => {
+describe('Pro API gate sweep (shared `hasPaidSessionAccess` — pro, legacy pro_trader and admins pass)', () => {
   it.each(proTraderRoutes)('%s uses the canonical paid-access helper', (path) => {
     const content = read(path);
     const sessionIndex = content.indexOf('getSessionFromCookie');
-    const gateIndex = content.indexOf('hasProTraderAccess');
+    const gateIndex = content.indexOf('hasPaidSessionAccess(session)');
     const bodyIndex = content.indexOf('await request.json');
 
-    expect(content).toContain('hasProTraderAccess');
+    expect(content).toContain('hasPaidSessionAccess(session)');
+    expect(content).not.toContain('hasProTraderAccess(');
     expect(content).toContain('@/lib/proTraderAccess');
     expect(gateIndex).toBeGreaterThan(-1);
     expect(sessionIndex).toBeGreaterThan(-1);
@@ -64,7 +65,7 @@ describe('Pro API gate sweep (legacy `hasProTraderAccess` helper — now grants 
     const helpers = read('lib/useUserTier.ts');
 
     expect(route).toContain('Pro subscription required for Volatility Engine');
-    expect(route).toContain('hasProTraderAccess');
+    expect(route).toContain('hasPaidSessionAccess(session)');
     expect(helpers).toContain('canAccessVolatilityEngine');
     // In the simplified pricing model both pro and pro_trader grant access via
     // the shared `isPaid` helper — the literal `tier === "pro_trader"` string

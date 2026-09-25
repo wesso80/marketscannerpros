@@ -775,13 +775,13 @@ export default function DeepAnalysisPage({
     });
   }, [result]);
 
-  // Pro Trader feature gate
+  // Pro feature gate
   if (!canAccessDeepAnalysis(tier)) {
     return (
       <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
         {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
         <main className={`max-w-none ${embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'}`}>
-          <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
+          <UpgradeGate requiredTier="pro" feature="Deep Analysis" />
         </main>
       </div>
     );

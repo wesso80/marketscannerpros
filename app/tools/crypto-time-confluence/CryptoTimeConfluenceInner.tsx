@@ -18,7 +18,7 @@ export default function CryptoTimeConfluenceInner() {
   if (!canAccessTimeScanner(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
-        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Time Confluence"><div /></UpgradeGate>
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Time Confluence"><div /></UpgradeGate>
       </div>
     );
   }

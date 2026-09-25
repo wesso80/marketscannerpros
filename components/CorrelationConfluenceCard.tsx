@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier, type UserTier } from '@/lib/useUserTier';
+import { isPaidTier } from '@/lib/tiers';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -178,7 +179,7 @@ function CorrelationChart({ chart, targetSymbol, compareSymbol }: {
 
 export default function CorrelationConfluenceCard({ symbol, type, className = '', maxResults = 5 }: Props) {
   const { tier } = useUserTier();
-  const isInstitutional = tier === 'pro_trader';
+  const isInstitutional = isPaidTier(tier);
 
   const [window, setWindow] = useState<number>(30);
   const [data, setData] = useState<CorrelationData | null>(null);
@@ -392,7 +393,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
               );
             })}
 
-            {/* Lead/lag hints (Pro Trader only) */}
+            {/* Lead/lag hints (Pro only) */}
             {isInstitutional && topCorrelations.some(c => c.leadLag) && (
               <div className="mt-2 space-y-1 border-t border-white/5 pt-2">
                 {topCorrelations

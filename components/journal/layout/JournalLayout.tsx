@@ -89,10 +89,10 @@ export default function JournalLayout(props: JournalLayoutProps) {
 
       {!props.dockSummary && !props.dockModules && (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
-          <p className="text-sm font-semibold text-amber-300">Intelligence Dock — Pro Trader Feature</p>
-          <p className="mt-1 text-xs text-slate-400">Upgrade to Pro Trader for automated trade data analysis, risk scoring, labeling, evidence snapshots, and AI-powered summaries.</p>
+          <p className="text-sm font-semibold text-amber-300">Intelligence Dock — Pro Feature</p>
+          <p className="mt-1 text-xs text-slate-400">Upgrade to Pro for automated trade data analysis, risk scoring, labeling, evidence snapshots, and AI-powered summaries.</p>
           <a href="/pricing" className="mt-2 inline-block rounded-lg bg-emerald-500/20 px-4 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/30 transition-colors">
-            Upgrade to Pro Trader
+            Upgrade to Pro
           </a>
         </div>
       )}

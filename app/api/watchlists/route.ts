@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { watchlistLimitsFor } from '@/lib/tiers';
 
 // GET /api/watchlists - List all watchlists with item counts
 export async function GET(req: NextRequest) {
@@ -99,17 +101,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name too long (max 50 chars)' }, { status: 400 });
     }
 
-    // Check watchlist limit (free: 3, pro: 10, pro_trader: unlimited)
+    // Check watchlist limit (free: 3, pro: 100)
     const countResult = await q(
       'SELECT COUNT(*)::int as count FROM watchlists WHERE workspace_id = $1',
       [session.workspaceId]
     );
     const currentCount = countResult[0]?.count || 0;
 
-    // Get user tier
-    const tier = session.tier || 'free';
-    const limits: Record<string, number> = { free: 3, pro: 10, pro_trader: 100 };
-    const maxWatchlists = limits[tier] || 3;
+    // Two plans: Free / Pro (legacy pro_trader and admins count as Pro)
+    const maxWatchlists = watchlistLimitsFor(hasPaidSessionAccess(session)).watchlists;
 
     if (currentCount >= maxWatchlists) {
       return NextResponse.json({ 

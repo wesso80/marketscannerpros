@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
@@ -384,6 +385,10 @@ export async function POST(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  // Scalper is a Pro feature (legacy pro_trader and admins included) — matches the /tools/scalper gate.
+  if (!hasPaidSessionAccess(session)) {
+    return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
 
   // Rate limit
