@@ -61,9 +61,11 @@ export type TradeRowModel = {
   side: TradeSide;
   status: TradeStatus;
   tradeType?: 'Spot' | 'Options' | 'Futures' | 'Margin';
+  /** Recorded option contract (Options trades). Entry/stop/exit are premium per share. */
+  option?: { right?: 'call' | 'put'; strike?: number; expiration?: string };
   entry: { price: number; ts: string };
   exit?: { price: number; ts: string };
-  mark?: { price: number; observedAt: string | null; retrievedAt: string };
+  mark?: { price: number; observedAt: string | null; retrievedAt: string; basis?: 'EOD' | 'REALTIME'; asOfDate?: string };
   qty: number;
   stop?: number;
   targets?: number[];

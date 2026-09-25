@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { TradeRowModel } from '@/types/journal';
-import { journalQuoteRequest, parseJournalQuote, type LivePriceMap } from '@/lib/journal/markToMarket';
+import { journalQuoteRequest, parseJournalQuoteFor, type JournalQuoteRequest, type LivePriceMap } from '@/lib/journal/markToMarket';
 export { enrichTradesWithLivePrices } from '@/lib/journal/markToMarket';
 export type { LivePriceMap } from '@/lib/journal/markToMarket';
 
@@ -12,7 +12,7 @@ export function useLivePrices(trades: TradeRowModel[]) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const requestKey = JSON.stringify(Array.from(new Map(trades.filter(t => t.status === 'open')
     .map(journalQuoteRequest).filter(r => r != null).map(r => [r.key, r])).values()).sort((a, b) => a.key.localeCompare(b.key)));
-  const requests = useMemo(() => JSON.parse(requestKey) as NonNullable<ReturnType<typeof journalQuoteRequest>>[], [requestKey]);
+  const requests = useMemo(() => JSON.parse(requestKey) as JournalQuoteRequest[], [requestKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,9 +27,9 @@ export function useLivePrices(trades: TradeRowModel[]) {
       for (let i = 0; i < requests.length; i += 5) {
         await Promise.all(requests.slice(i, i + 5).map(async request => {
           try {
-            const response = await fetch(`/api/quote?symbol=${encodeURIComponent(request.symbol)}&type=${request.type}&market=USD`, { cache: 'no-store', signal: controller.signal });
+            const response = await fetch(request.url, { cache: 'no-store', signal: controller.signal });
             if (!response.ok) return;
-            const quote = parseJournalQuote(await response.json());
+            const quote = parseJournalQuoteFor(request, await response.json());
             if (quote) next[request.key] = quote;
           } catch { /* No successful quote: do not retain an older mark as fresh. */ }
         }));

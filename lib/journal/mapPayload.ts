@@ -1,5 +1,6 @@
 import { computeKpis, orderedClosedTrades } from '@/lib/journal/computeKpis';
 import { computePlaybookExpectancy } from '@/lib/journal/playbookExpectancy';
+import { normalizeExpiration, normalizeOptionRight } from '@/lib/options/contractQuote';
 import { JournalPayload, TradeAssetClass, TradeRowModel } from '@/types/journal';
 
 function normalizeAssetClass(raw?: string): TradeAssetClass {
@@ -21,6 +22,13 @@ function mapEntry(entry: any): TradeRowModel {
     side: String(entry?.side || 'LONG').toUpperCase() === 'SHORT' ? 'short' : 'long',
     status: entry?.isOpen ? 'open' : 'closed',
     tradeType,
+    ...(tradeType === 'Options' ? {
+      option: {
+        right: normalizeOptionRight(entry?.optionType) ?? undefined,
+        strike: Number.isFinite(Number(entry?.strikePrice)) && Number(entry?.strikePrice) > 0 ? Number(entry.strikePrice) : undefined,
+        expiration: normalizeExpiration(entry?.expirationDate) ?? undefined,
+      },
+    } : {}),
     entry: {
       price: Number(entry?.entryPrice || 0),
       ts: entry?.date || '',

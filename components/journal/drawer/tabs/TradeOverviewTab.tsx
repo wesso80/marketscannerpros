@@ -12,7 +12,8 @@ export default function TradeOverviewTab({ trade }: { trade?: TradeModel }) {
       </div>
       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
         <div className="text-slate-400">Forensics</div>
-        <div>P&L: {Number(trade.pnlUsd || 0).toFixed(2)} ({Number(trade.pnlPct || 0).toFixed(2)}%)</div>
+        <div>P&L: {trade.pnlUsd == null || !Number.isFinite(trade.pnlUsd) ? 'Unavailable (no usable quote)' : `${trade.pnlUsd.toFixed(2)} (${Number(trade.pnlPct || 0).toFixed(2)}%)`}</div>
+        {trade.mark && <div>Mark: {trade.mark.price.toFixed(2)}{trade.mark.basis ? ` · ${trade.mark.basis}${trade.mark.asOfDate ? ` ${trade.mark.asOfDate}` : ''}` : ''}</div>}
         <div>R Multiple: {trade.rMultiple != null ? trade.rMultiple.toFixed(2) : 'N/A'}</div>
       </div>
     </div>
