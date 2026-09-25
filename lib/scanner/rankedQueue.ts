@@ -7,7 +7,7 @@
 import type { ScanResult } from '@/app/v2/_lib/api';
 import { REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { LifecycleState, RegimePriority } from '@/app/v2/_lib/types';
-import { SCANNER_SCORE_VERSION, type ScorePermission } from './scoreContract';
+import { isVersionedScannerScore, type ScorePermission } from './scoreContract';
 
 export const REGIME_SETUP_MAP: Record<string, string[]> = {
   trend: ['breakout', 'trend_continuation', 'pullback', 'expansion_continuation'],
@@ -53,7 +53,8 @@ export function isRegimeCompatibleForRegime(r: ScanResult, regime: string): bool
 export function computeMspScore(r: ScanResult, regime: string): number {
   if (r.compositeV2 && Number.isFinite(r.compositeV2.composite)) {
     const base = Math.min(100, Math.max(0, r.compositeV2.composite));
-    if (r.compositeV2.version !== SCANNER_SCORE_VERSION && r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, base * 0.4));
+    // v2.x composites already encode blocks in `permission`; only pre-contract rows keep the legacy ×0.4.
+    if (!isVersionedScannerScore(r.compositeV2.version) && r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, base * 0.4));
     return Math.round(base);
   }
   const regimeKey = normalizeRegimeKey(regime);
@@ -73,11 +74,13 @@ export function computeMspScore(r: ScanResult, regime: string): number {
 export function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
   const msp = computeMspScore(r, regime);
   const conf = r.confidence ?? 0;
-  if (r.compositeV2?.permission === 'BLOCK' || r.scoreV2?.regimeScore?.gated) return 'INVALIDATED';
-  if (r.compositeV2?.version === SCANNER_SCORE_VERSION) {
-    if (msp >= 75 && r.compositeV2.permission === 'PASS') return 'READY';
+  if (isVersionedScannerScore(r.compositeV2?.version)) {
+    // Versioned rows: the explicit permission is the single source of truth (it already includes regime gates).
+    if (r.compositeV2!.permission === 'BLOCK') return 'INVALIDATED';
+    if (msp >= 75 && r.compositeV2!.permission === 'PASS') return 'READY';
     return msp >= 55 ? 'SETTING_UP' : msp >= 35 ? 'WATCHING' : 'DISCOVERED';
   }
+  if (r.compositeV2?.permission === 'BLOCK' || r.scoreV2?.regimeScore?.gated) return 'INVALIDATED';
   if (msp >= 75 && conf >= 65) return 'READY';
   if (msp >= 55 && conf >= 45) return 'SETTING_UP';
   if (msp >= 35) return 'WATCHING';

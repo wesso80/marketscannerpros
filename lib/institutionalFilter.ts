@@ -45,7 +45,14 @@ export interface InstitutionalFilterResult {
   finalScore: number;
   finalGrade: 'A+' | 'A' | 'A-' | 'B' | 'C' | 'D' | 'F';
   recommendation: 'TRADE_READY' | 'CAUTION' | 'NO_TRADE';
+  /** true when finalScore < 40 OR a hard block — `finalScore` is baseScore × weights, so this half is score-derived. */
   noTrade: boolean;
+  /**
+   * Hard blocks only (regime conflict/chaos, closed session or wide spread, stale/no data). Independent of baseScore,
+   * so a caller that feeds its own score in as baseScore can gate on this without gating on its own score.
+   */
+  hardBlock: boolean;
+  hardBlockReasons: Array<{ code: 'REGIME_CHAOS' | 'REGIME_STRATEGY_CONFLICT' | 'LIQUIDITY' | 'DATA_UNRELIABLE'; message: string }>;
   filters: InstitutionalFilterCheck[];
   weights: {
     regimeWeight: number;
@@ -211,9 +218,17 @@ export function computeInstitutionalFilter(input: InstitutionalFilterInput): Ins
     100
   );
 
-  const hardBlock = checks.some((check) =>
+  const hardChecks = checks.filter((check) =>
     check.status === 'block' && (check.key === 'regime' || check.key === 'liquidity' || check.key === 'data_reliability')
   );
+  const hardBlock = hardChecks.length > 0;
+  const hardBlockReasons: InstitutionalFilterResult['hardBlockReasons'] = hardChecks.map((check) => ({
+    code: check.key === 'liquidity' ? 'LIQUIDITY'
+      : check.key === 'data_reliability' ? 'DATA_UNRELIABLE'
+      : (input.regime === 'news_shock' || input.regime === 'high_volatility_chaos') ? 'REGIME_CHAOS'
+      : 'REGIME_STRATEGY_CONFLICT',
+    message: check.reason,
+  }));
   const noTrade = hardBlock || finalScore < 40;
 
   const recommendation: InstitutionalFilterResult['recommendation'] = noTrade
@@ -228,6 +243,8 @@ export function computeInstitutionalFilter(input: InstitutionalFilterInput): Ins
     finalGrade: gradeFromScore(finalScore),
     recommendation,
     noTrade,
+    hardBlock,
+    hardBlockReasons,
     filters: checks,
     weights: {
       regimeWeight: regime.weight,
