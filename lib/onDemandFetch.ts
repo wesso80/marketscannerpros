@@ -15,6 +15,7 @@ import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, IndicatorWarmupStatus, OHLCVBar } from '@/lib/indicators';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 
 // On-demand AV calls now go through the global rate governor (600 RPM shared).
 // avTryToken() is non-blocking — returns false when the quota is exhausted.
@@ -166,7 +167,7 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
       high: parseFloat(v['2. high'] || '0'),
       low: parseFloat(v['3. low'] || '0'),
       close: parseFloat(v['4. close'] || '0'),
-      volume: Math.round(parseFloat(v['5. volume'] || '0')),
+      volume: avRowVolume(v), // TIME_SERIES_DAILY_ADJUSTED puts volume in '6. volume'
     });
   }
 

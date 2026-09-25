@@ -27,6 +27,7 @@ import {
   resolveSymbolToId,
 } from '../lib/coingecko';
 import { fetchCryptoSeries } from '../lib/scanner/cryptoBars';
+import { avRowVolume } from '../lib/scanner/avVolume';
 import { buildObservedCryptoQuote } from '../lib/worker/cryptoQuote';
 
 // ============================================================================
@@ -484,7 +485,7 @@ async function fetchAVTimeSeries(
       high: parseFloat(v['2. high']),
       low: parseFloat(v['3. low']),
       close: parseFloat(v['4. close']),
-      volume: parseInt(v['5. volume'] || '0', 10),
+      volume: avRowVolume(v), // DAILY_ADJUSTED: '6. volume'; INTRADAY: '5. volume'
     });
   }
 
