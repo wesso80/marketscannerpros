@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
-import { checkPriceAlertCondition, describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
+import { describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
 
 /**
  * Alert Price Checker
@@ -32,6 +33,9 @@ interface Alert {
   notify_email: boolean;
   notify_push: boolean;
   name: string;
+  last_price: number | string | null;
+  triggered_at: string | Date | null;
+  cooldown_minutes: number | null;
 }
 
 // GET - also runs the check (for cron services that only support GET)
@@ -59,7 +63,8 @@ async function checkAlerts(req: NextRequest) {
     // Get all active alerts (exclude smart alerts - they have their own check routes)
     const alerts = await q<Alert>(`
       SELECT id, workspace_id, symbol, asset_type, condition_type, 
-             condition_value, is_recurring, notify_email, notify_push, name
+             condition_value, is_recurring, notify_email, notify_push, name,
+             last_price, triggered_at, cooldown_minutes
       FROM alerts 
       WHERE is_active = true 
         AND (expires_at IS NULL OR expires_at > NOW())
@@ -83,6 +88,7 @@ async function checkAlerts(req: NextRequest) {
 
     const triggered: string[] = [];
     const errors: string[] = [];
+    const skippedStale: string[] = [];
 
     // Check each symbol group
     for (const [key, groupAlerts] of Object.entries(symbolGroups)) {
@@ -99,10 +105,17 @@ async function checkAlerts(req: NextRequest) {
         }
         const price = quote.price;
 
-        // Check each alert for this symbol
+        // A stock quote from before the latest session that has opened is stale: fire nothing on it (TR-17).
+        if (assetType !== 'crypto' && isStaleStockQuote(quote)) {
+          skippedStale.push(`${symbol} (quote from ${quote.asOfDate})`);
+          continue;
+        }
+
+        // Check each alert for this symbol: condition met, plus cross / cooldown / once-per-period rules (TR-17)
         for (const alert of groupAlerts) {
-          const shouldTrigger = checkPriceAlertCondition(alert.condition_type, alert.condition_value, quote);
-          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} (${quote.changePercent ?? 'n/a'}%) = ${shouldTrigger ? 'TRIGGER' : 'no'}`);
+          const decision = decideAlert(alert, quote);
+          const shouldTrigger = decision.fire;
+          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} (${quote.changePercent ?? 'n/a'}%) = ${decision.fire ? 'TRIGGER' : `no (${decision.reason})`}`);
           
           if (shouldTrigger) {
             try {
@@ -131,6 +144,7 @@ async function checkAlerts(req: NextRequest) {
       checked: alerts.length,
       triggered: triggered.length,
       triggeredIds: triggered,
+      skippedStale: skippedStale.length > 0 ? skippedStale : undefined,
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     });
