@@ -11,6 +11,7 @@ import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
+import { isElevatedRisk, regimeDataQuality } from '@/lib/regime/riskLevel';
 import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
 import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
@@ -212,6 +213,8 @@ export default function DashboardPage() {
 
   /* -- Real API calls --------------------------------------------------- */
   const regime = useRegime();
+  // Stale inputs are a data-quality caution, separate from the value-based risk level (OV-12).
+  const regimeQuality = regimeDataQuality(regime.data);
   const movers = useMarketMovers();
   const news = useNews();
   const calendar = useEconomicCalendar();
@@ -359,6 +362,12 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                     <>
                       <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
                       <span>as of {new Date(regime.data.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+                    </>
+                  ) : null}
+                  {regimeQuality.stale ? (
+                    <>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                      <span style={{ color: 'var(--msp-warn)' }} title={regimeQuality.note ?? undefined}>stale inputs</span>
                     </>
                   ) : null}
                 </span>
@@ -594,7 +603,8 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <>
                 <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px' }}>
                   <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>Regime context</div>
-                  <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()} · {regime.data.riskLevel} volatility stress</div>
+                  <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()} · risk {regime.data.riskLevel}</div>
+                  {regimeQuality.note ? <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-warn)' }}>{regimeQuality.note}</div> : null}
                 </div>
                 <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
                   <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>What to check</div>
@@ -626,7 +636,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>MSP Analyst</div>
               <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>
                 {regime.data
-                  ? `Regime is ${regime.data.regime.replace(/_/g, ' ').toLowerCase()}. ${regime.data.riskLevel === 'high' ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}`
+                  ? `Regime is ${regime.data.regime.replace(/_/g, ' ').toLowerCase()}. ${isElevatedRisk(regime.data.riskLevel) ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}${regimeQuality.stale ? ' Regime inputs are stale — treat this as a caution.' : ''}`
                   : regime.loading ? 'Loading regime context…' : 'Regime unavailable. Review evidence for each queued symbol.'}
               </div>
             </div>

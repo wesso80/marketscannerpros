@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import type { Regime } from '@/lib/risk-governor-hard';
+import type { RegimeDataQuality } from '@/lib/regime/riskLevel';
 
 type RiskLevel = 'low' | 'moderate' | 'elevated' | 'extreme';
 type Permission = 'YES' | 'CONDITIONAL' | 'NO';
@@ -27,6 +28,8 @@ export interface UnifiedRegime {
   regime: Regime;
   riskLevel: RiskLevel;
   permission: Permission;
+  /** Stale deciding inputs, as a caution (does not change riskLevel). Missing on older responses. */
+  dataQuality?: RegimeDataQuality;
   signals: RegimeSignal[];
   /** Time of the underlying data (not the response time). */
   asOf?: string | null;
