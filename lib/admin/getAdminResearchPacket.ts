@@ -1,3 +1,5 @@
+import { marketForSymbol } from "@/lib/admin/adminMarket";
+import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import type { Bar, Market } from "@/types/operator";
 import { runScan, type MarketDataProvider, type ScanContext, type ScanResult } from "@/lib/operator/orchestrator";
 import { alphaVantageProvider, memoizeProvider } from "@/lib/operator/market-data";
@@ -5,6 +7,7 @@ import { barsToNoSetupIntelligence, pipelineToSymbolIntelligence } from "@/lib/a
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { closedMarketDataTruth, closedSessionForBar } from "@/lib/admin/closedMarket";
+import { barAgeFromClose, formingBarNote } from "@/lib/admin/barAge";
 import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
 import { classifySetup, getSetupDefinition } from "@/lib/engines/setupClassifier";
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
@@ -278,7 +281,8 @@ export async function getAdminResearchPacket(params: AdminResearchPacketParams):
 /** Run the operator pipeline for one symbol and build its research packet, returning the raw scan too. */
 export async function buildAdminResearchScan(params: AdminResearchPacketParams): Promise<AdminResearchScan> {
   const symbol = params.symbol.toUpperCase();
-  const market = (params.market || "CRYPTO").toUpperCase() as Market;
+  // No market given: infer from the symbol, else the admin default (EQUITIES while crypto data is off).
+  const market = (params.market ? String(params.market).toUpperCase() : marketForSymbol(symbol, defaultAdminMarket())) as Market;
   const timeframe = params.timeframe || "15m";
 
   const context = params.scanContext ?? (await buildAdminScanContext()).context;
@@ -331,12 +335,12 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
           targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
         } as AdminSymbolIntelligence);
 
-  // Age from the newest bar. With no bars there is no age (it used to be "now", i.e. fresh) and the
-  // packet is marked as a source error so it ranks as failed/degraded, never as fresh data.
-  const lastBarMs = noBars ? NaN : Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(bars[bars.length - 1].timestamp)
-    ? `${bars[bars.length - 1].timestamp}T00:00:00Z`
-    : bars[bars.length - 1].timestamp);
-  const ageSec = Number.isFinite(lastBarMs) ? Math.max(0, Math.round((Date.now() - lastBarMs) / 1000)) : null;
+  // Age from the newest bar's CLOSE (AV timestamps are bar starts; a just-closed 15m bar used to read 900 s old,
+  // so 15m data was never LIVE). With no bars there is no age, and the packet is marked as a source error so it
+  // ranks as failed/degraded, never as fresh data.
+  const lastBar = noBars ? null : bars[bars.length - 1];
+  const barAge = barAgeFromClose(lastBar?.timestamp, timeframe, market);
+  const ageSec = barAge.ageSec;
   const sourceErrors = result.errors.filter((e) => e.symbol === symbol).map((e) => e.error);
   if (noBars && !sourceErrors.includes("NO_BAR_DATA")) sourceErrors.push("NO_BAR_DATA");
   // US equities while the market is shut: last-session bars are as current as data gets, so they are labelled
@@ -352,6 +356,9 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
         isCached: false,
         sourceErrors,
       });
+  if (barAge.forming && barAge.closeMs != null && !closedSession) {
+    dataTruth.notes = [...dataTruth.notes, formingBarNote(barAge.closeMs)];
+  }
 
   // No pipeline (no setup, or no bars) → explicit NO_SETUP; classifySetup only runs on a real engine snapshot.
   const setup = pipeline ? classifySetup(snapshot) : getSetupDefinition("NO_SETUP");
