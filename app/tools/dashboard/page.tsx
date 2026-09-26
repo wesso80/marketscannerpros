@@ -22,6 +22,7 @@ import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { proDisplaySymbol } from '@/lib/scanner/proDisplay';
+import type { ResearchAsset } from '@/lib/researchContext';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
@@ -336,15 +337,18 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
     return <Card><AuthPrompt /></Card>;
   }
 
-  function openGoldenEgg(symbol: string) {
-    selectSymbol(symbol);
-    navigateTo('golden-egg', symbol);
+  // Pass the row's asset class when known: Golden Egg reads ?type=crypto|equity (as the scanner hand-off does), so a
+  // crypto mover such as HOOD opens the coin rather than the US stock with the same ticker.
+  function openGoldenEgg(symbol: string, assetType?: ResearchAsset) {
+    const selection = assetType ? { assetType } : {};
+    selectSymbol(symbol, selection);
+    navigateTo('golden-egg', symbol, selection);
   }
 
-  function onSymbolRowKey(event: React.KeyboardEvent, symbol: string) {
+  function onSymbolRowKey(event: React.KeyboardEvent, symbol: string, assetType?: ResearchAsset) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      openGoldenEgg(symbol);
+      openGoldenEgg(symbol, assetType);
     }
   }
 
@@ -476,8 +480,8 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                       <button
                         key={`mover-queue-${m.ticker}`}
                         type="button"
-                        aria-label={`Validate ${m.ticker} in Golden Egg`}
-                        onClick={() => openGoldenEgg(m.ticker)}
+                        aria-label={`Validate ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}
+                        onClick={() => openGoldenEgg(m.ticker, m.asset_class)}
                         style={{
                           textAlign: 'left',
                           background: isFocal ? 'var(--msp-card-2)' : 'var(--msp-card)',
@@ -491,7 +495,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                         className="hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{m.ticker}</span>
+                          <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                           <DSBadge tone="info">Mover evidence</DSBadge>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -834,11 +838,11 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
               {eqGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
-              ) : eqGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`eg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
+              ) : eqGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`eg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
               <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
               {eqLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
-              ) : eqLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`el-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
+              ) : eqLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`el-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
             </div>
           </Card>
         )}
@@ -851,11 +855,11 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
               {crGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
-              ) : crGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`cg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
+              ) : crGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`cg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
               <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
               {crLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
-              ) : crLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`cl-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
+              ) : crLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`cl-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
             </div>
           </Card>
         )}

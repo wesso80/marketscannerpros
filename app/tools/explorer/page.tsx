@@ -19,6 +19,7 @@ import { useUserTier } from '@/lib/useUserTier';
 import { filterMoversByFloor } from '@/lib/analysis';
 import { humanizeEnum } from '@/lib/presentation/labels';
 import { proDisplaySymbol } from '@/lib/scanner/proDisplay';
+import type { ResearchAsset } from '@/lib/researchContext';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
@@ -98,9 +99,11 @@ export default function ExplorerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const openGoldenEgg = (symbol: string) => {
-    selectSymbol(symbol);
-    navigateTo('golden-egg', symbol);
+  // Movers pass their asset class so Golden Egg (?type=crypto|equity) opens the coin, not a same-ticker stock.
+  const openGoldenEgg = (symbol: string, assetType?: ResearchAsset) => {
+    const selection = assetType ? { assetType } : {};
+    selectSymbol(symbol, selection);
+    navigateTo('golden-egg', symbol, selection);
   };
 
   const sectors = useSectorsHeatmap();
@@ -213,7 +216,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {eqGainers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Golden Egg`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
@@ -229,7 +232,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {eqLosers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Golden Egg`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
@@ -307,7 +310,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoGainers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
                       <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
@@ -323,7 +326,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoLosers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
                       <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
