@@ -618,7 +618,9 @@ describe('layout and flow audit regressions', () => {
     expect(portfolioPage).toContain('Recorded paper positions, exposure, cash controls, and descriptive risk analytics.');
     expect(portfolioPage).toContain('Kelly Criterion Parameters');
     expect(portfolioPage).toContain('Position Estimate Results');
-    expect(portfolioPage).toContain("? 'Elevated Drawdown'");
+    // Health / risk-load labels now come from lib/portfolio/returnSummary.ts (TR-3: measured drawdown, not return).
+    expect(portfolioPage).toContain('portfolioStateLabels({');
+    expect(read('lib/portfolio/returnSummary.ts')).toContain("? 'Elevated Drawdown'");
     expect(portfolioPage).toContain("const riskStateCode = isRiskEvent ? 'RISK' : isRiskElevated ? 'ELEVATED' : 'STABLE';");
     expect(portfolioPage).toContain('Risk event markers: {isRiskEvent ? \'Active\' : isRiskElevated ? \'Elevated\' : \'Stable\'}');
     expect(portfolioPage).toContain("icon=\"PF\"");
