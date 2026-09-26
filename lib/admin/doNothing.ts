@@ -77,7 +77,9 @@ export function evaluateDoNothing(packet: AdminResearchPacket): DoNothingVerdict
   }
 
   // 5. Volatility not ready.
-  if (dve && !dve.trap && (dve.breakoutReadiness ?? 0) < 50 && dve.state !== "SQUEEZE") {
+  // breakoutReadiness on engine snapshots is a 0..1 feature score (serializer: features.structureScore);
+  // compared raw against 50 it was always "not ready".
+  if (dve && !dve.trap && to100(dve.breakoutReadiness ?? 0) < 50 && dve.state !== "SQUEEZE") {
     if ((ind?.bbwpPercentile ?? 0) > 30) {
       return verdict("VOL_NOT_READY", "Volatility profile not primed for expansion.", [
         `breakoutReadiness=${dve.breakoutReadiness}`,
@@ -90,7 +92,10 @@ export function evaluateDoNothing(packet: AdminResearchPacket): DoNothingVerdict
   // 6. Timeframe conflict — bias vs HTF (no HTF field on snapshot today;
   //    we use evidence axes if present).
   const evidence = snap?.evidence;
-  if (evidence && (evidence.crossMarketConfirmation ?? 50) < 30) {
+  // Evidence axes are 0..1 (scoring-engine clamps them to [0, 1]). Compared raw against 30 this rule fired on
+  // EVERY engine packet (0.9 < 30), so every LONG/SHORT edge packet was persisted with do_nothing=true since
+  // the edge layer shipped; NEUTRAL "no setup" snapshots carry no evidence and skipped it.
+  if (evidence && to100(evidence.crossMarketConfirmation ?? 50) < 30) {
     return verdict("TF_CONFLICT", "Cross-timeframe / cross-market evidence conflicts.", [
       `crossMarketConfirmation=${evidence.crossMarketConfirmation}`,
     ], 2);
@@ -112,6 +117,13 @@ export function evaluateDoNothing(packet: AdminResearchPacket): DoNothingVerdict
   }
 
   return null;
+}
+
+/** Score on a 0..100 scale: 0..1 fractions (engine evidence / feature scores) are scaled up, 0..100 kept. */
+export function to100(x: number): number {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return 0;
+  return n >= 0 && n <= 1 ? n * 100 : n;
 }
 
 function verdict(
