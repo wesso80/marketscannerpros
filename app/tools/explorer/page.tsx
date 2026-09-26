@@ -18,6 +18,7 @@ import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { filterMoversByFloor } from '@/lib/analysis';
 import { humanizeEnum } from '@/lib/presentation/labels';
+import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
@@ -337,6 +338,7 @@ export default function ExplorerPage() {
 
       {/* -- SECTORS -------------------------------------------------- */}
       {tab === 'Sectors' && (
+        <>
         <Card>
           {sectors.loading ? <div className="space-y-3">{[1,2,3,4].map(i => <Skel key={i} h="h-8" />)}</div> : sectorData.length === 0 ? (
             <div className="text-xs text-slate-500 py-8 text-center">No sector data available</div>
@@ -371,6 +373,8 @@ export default function ExplorerPage() {
             </div>
           )}
         </Card>
+        {sectorData.length > 0 && <SectorEtfHoldings etfs={sectorData.map((s: SectorData) => ({ symbol: s.symbol, name: s.name }))} />}
+        </>
       )}
 
       {/* -- COMMODITIES (merged: simple grid for free, deep view for Pro) ------ */}

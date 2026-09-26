@@ -1,0 +1,127 @@
+{
+ "net_assets": "489000000000",
+ "net_expense_ratio": "0.0018",
+ "portfolio_turnover": "n/a",
+ "dividend_yield": "0.0041",
+ "inception_date": "1999-03-10",
+ "last_updated": "2026-09-25 00:01 UTC",
+ "leveraged": "NO",
+ "sectors": [
+  {
+   "sector": "INFORMATION TECHNOLOGY",
+   "weight": "0.569"
+  },
+  {
+   "sector": "COMMUNICATION SERVICES",
+   "weight": "0.143"
+  },
+  {
+   "sector": "CONSUMER DISCRETIONARY",
+   "weight": "0.104"
+  },
+  {
+   "sector": "CONSUMER STAPLES",
+   "weight": "0.06"
+  },
+  {
+   "sector": "HEALTHCARE",
+   "weight": "0.04"
+  },
+  {
+   "sector": "INDUSTRIALS",
+   "weight": "0.032"
+  },
+  {
+   "sector": "UTILITIES",
+   "weight": "0.011"
+  },
+  {
+   "sector": "MATERIALS",
+   "weight": "0.01"
+  },
+  {
+   "sector": "ENERGY",
+   "weight": "0.005"
+  },
+  {
+   "sector": "FINANCIALS",
+   "weight": "0.002"
+  },
+  {
+   "sector": "REAL ESTATE",
+   "weight": "0.00"
+  }
+ ],
+ "holdings": [
+  {
+   "symbol": "NVDA",
+   "description": "NVIDIA CORP",
+   "weight": "0.0851"
+  },
+  {
+   "symbol": "AAPL",
+   "description": "APPLE INC",
+   "weight": "0.0741"
+  },
+  {
+   "symbol": "MSFT",
+   "description": "MICROSOFT CORP",
+   "weight": "0.06"
+  },
+  {
+   "symbol": "MU",
+   "description": "MICRON TECHNOLOGY INC",
+   "weight": "0.0475"
+  },
+  {
+   "symbol": "AMZN",
+   "description": "AMAZON.COM INC",
+   "weight": "0.0445"
+  },
+  {
+   "symbol": "AMD",
+   "description": "ADVANCED MICRO DEVICES INC",
+   "weight": "0.0337"
+  },
+  {
+   "symbol": "GOOGL",
+   "description": "ALPHABET INC CLASS A",
+   "weight": "0.0315"
+  },
+  {
+   "symbol": "TSLA",
+   "description": "TESLA INC",
+   "weight": "0.0293"
+  },
+  {
+   "symbol": "GOOG",
+   "description": "ALPHABET INC CLASS C",
+   "weight": "0.0291"
+  },
+  {
+   "symbol": "AVGO",
+   "description": "BROADCOM INC",
+   "weight": "0.028"
+  },
+  {
+   "symbol": "META",
+   "description": "META PLATFORMS INC CLASS A",
+   "weight": "0.027"
+  },
+  {
+   "symbol": "WMT",
+   "description": "WALMART INC",
+   "weight": "0.0225"
+  },
+  {
+   "symbol": "INTC",
+   "description": "INTEL CORP",
+   "weight": "0.0198"
+  },
+  {
+   "symbol": "CSCO",
+   "description": "CISCO SYSTEMS INC",
+   "weight": "0.0191"
+  }
+ ]
+}
