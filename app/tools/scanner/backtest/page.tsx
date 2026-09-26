@@ -8,6 +8,7 @@ import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 import { formatPrice } from '@/lib/formatPrice';
+import { NO_LOSING_TRADES, NO_WINNING_TRADES, largestGainTrade, largestLossTrade } from '@/lib/backtest/displayMetric';
 
 // NaN/null safety – JSON serialises NaN as null
 function n(v: number | null | undefined, fallback = 0): number {
@@ -639,26 +640,30 @@ function ScannerBacktestContent() {
                 {/* Largest Gain / Loss */}
                 {(result.bestTrade || result.worstTrade) && (
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {result.bestTrade && (
+                    {result.bestTrade && (() => { const g = largestGainTrade(result.bestTrade); return (
                       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2">
                         <div className="text-[10px] uppercase text-emerald-500">Largest Gain</div>
                         <div className="text-xs text-slate-300">
-                          {result.bestTrade.side} {result.bestTrade.symbol} · {result.bestTrade.entryDate?.slice(0, 10)} →
-                          {' '}{result.bestTrade.exitDate?.slice(0, 10)} ·
-                          {' '}<span className="font-semibold text-emerald-400">+{n(result.bestTrade.returnPercent).toFixed(2)}%</span>
+                          {g ? <>
+                            {g.side} {g.symbol} · {g.entryDate?.slice(0, 10)} →
+                            {' '}{g.exitDate?.slice(0, 10)} ·
+                            {' '}<span className="font-semibold text-emerald-400">+{n(g.returnPercent).toFixed(2)}%</span>
+                          </> : NO_WINNING_TRADES}
                         </div>
                       </div>
-                    )}
-                    {result.worstTrade && (
+                    ); })()}
+                    {result.worstTrade && (() => { const l = largestLossTrade(result.worstTrade); return (
                       <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2">
                         <div className="text-[10px] uppercase text-rose-500">Largest Loss</div>
                         <div className="text-xs text-slate-300">
-                          {result.worstTrade.side} {result.worstTrade.symbol} · {result.worstTrade.entryDate?.slice(0, 10)} →
-                          {' '}{result.worstTrade.exitDate?.slice(0, 10)} ·
-                          {' '}<span className="font-semibold text-rose-400">{n(result.worstTrade.returnPercent).toFixed(2)}%</span>
+                          {l ? <>
+                            {l.side} {l.symbol} · {l.entryDate?.slice(0, 10)} →
+                            {' '}{l.exitDate?.slice(0, 10)} ·
+                            {' '}<span className="font-semibold text-rose-400">{n(l.returnPercent).toFixed(2)}%</span>
+                          </> : NO_LOSING_TRADES}
                         </div>
                       </div>
-                    )}
+                    ); })()}
                   </div>
                 )}
               </section>
