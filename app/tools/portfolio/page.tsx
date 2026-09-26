@@ -20,6 +20,7 @@ import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
 import { PageHero } from '@/components/ui';
 
@@ -1658,9 +1659,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     { key: 'trade-ledger', label: 'Trade Ledger' },
   ] as const;
 
-  const formatMoney = (value: number) => `$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  const formatSignedMoney = (value: number) => `${value >= 0 ? '+' : '-'}$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const riskPerTradeFractionForDisplay = Math.max(0.001, riskSettings.maxRiskPerTrade / 100);
   const formatRiskPairText = (amount: number) => {
     const rValue = amountToR(amount, capitalBase, riskPerTradeFractionForDisplay);
@@ -1950,7 +1949,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Value</div>
               <div className="text-2xl font-black text-slate-100">{formatMoney(totalValue)}</div>
-              <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {totalPL >= 0 ? '+' : '-'}{formatMoney(totalPL)}</div>
+              <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {formatSignedMoney(totalPL)}</div>
               <div className="text-xs text-slate-400">Current drawdown {cleanRiskReady ? `${currentDrawdownPct.toFixed(2)}%` : 'N/A — clean equity history building'}</div>
             </div>
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-center">
@@ -2481,7 +2480,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="space-y-3">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Total Exposure</div><div className="text-sm font-bold text-slate-100">{deploymentPct.toFixed(1)}%</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{unrealizedPL >= 0 ? '+' : '-'}{formatMoney(unrealizedPL)}</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div></div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Net R Exposure</div><div className="text-sm font-bold text-slate-100">{(positions.length ? positions.reduce((sum, p) => sum + (p.plPercent / Math.max(1, riskSettings.maxRiskPerTrade)), 0) : 0).toFixed(2)}R</div></div>
               </div>
 
