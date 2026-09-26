@@ -1,5 +1,6 @@
 'use client';
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
+import { formatEventTime } from '@/lib/eventTimeDisplay';
 
 /* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
@@ -849,18 +850,21 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <div className="text-xs text-slate-500 py-4 text-center">No high-impact events this period</div>
             ) : (
               <div className="space-y-2">
-                {highImpactEvents.map((e: EconomicEvent, i: number) => (
+                {highImpactEvents.map((e: EconomicEvent, i: number) => {
+                  const shown = formatEventTime(e);
+                  return (
                   <div key={i} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 min-w-0">
                       <ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />
                       <span className="text-white truncate">{e.event}</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 text-slate-500">
-                      <span>{e.date}</span>
-                      <span>{e.time || '—'}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0 text-slate-500" title={shown.title}>
+                      <span>{shown.date}</span>
+                      <span>{shown.time || '—'}</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <button type="button" onClick={() => navigateTo('research')} className="mt-2 block text-[11px] text-emerald-400 hover:underline">Full Calendar &#x203A;</button>
