@@ -33,3 +33,17 @@ export function paperCloseDateIso(localDate: string, now = new Date()): string |
   const noon = new Date(y, m - 1, d, 12, 0, 0);
   return Number.isFinite(noon.getTime()) && noon.getDate() === d ? noon.toISOString() : null;
 }
+
+/**
+ * TR-37: neutral placeholder while the numbers a label depends on are still loading, so the first paint
+ * never shows fallback wording (e.g. "N/A" before closed trades load, or a free-tier limit before the tier loads).
+ */
+export const LOADING_LABEL = '…';
+
+export function profitFactorWhenReady(realizedPLs: number[], ready: boolean): { value: number | null; label: string; detail?: string } {
+  return ready ? profitFactorDisplay(realizedPLs) : { value: null, label: LOADING_LABEL, detail: 'Loading closed trades…' };
+}
+
+export function positionLimitWhenReady(open: number, limit: number, ready: boolean): string {
+  return ready ? positionLimitLabel(open, limit) : LOADING_LABEL;
+}

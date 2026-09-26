@@ -21,7 +21,7 @@ describe('TR-7: position limit', () => {
   it('never prints Infinity', () => {
     expect(positionLimitLabel(6, Infinity)).toBe('6 open (no limit)');
     expect(positionLimitLabel(3, 5)).toBe('3/5');
-    expect(page).toContain("value: positionLimitLabel(positions.length, getPortfolioLimit(tier))");
+    expect(page).toContain("value: positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading)");
   });
 });
 
