@@ -87,10 +87,12 @@ export async function GET(req: NextRequest) {
 
     // Fetch closed positions
     const closedRaw = await q(
-      `SELECT id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl, journal_entry_id
-       FROM portfolio_closed 
-       WHERE workspace_id = $1 
-       ORDER BY close_date DESC`,
+      `SELECT c.id, c.symbol, c.side, c.quantity, c.entry_price, c.close_price, c.entry_date, c.close_date, c.realized_pl, c.journal_entry_id,
+              j.trade_type, j.asset_class, j.r_multiple, j.stop_loss
+       FROM portfolio_closed c
+       LEFT JOIN journal_entries j ON j.id = c.journal_entry_id AND j.workspace_id = c.workspace_id
+       WHERE c.workspace_id = $1
+       ORDER BY c.close_date DESC`,
       [workspaceId]
     );
 
@@ -169,8 +171,13 @@ export async function GET(req: NextRequest) {
         entryDate: p.entry_date,
         closeDate: p.close_date,
         journalEntryId: p.journal_entry_id || undefined,
+        // Trade type from the linked journal entry (options closes use the x100 contract multiplier).
         tradeType: p.trade_type || undefined,
         assetClass: p.asset_class || undefined,
+        // R (P&L / risk to the recorded stop) from the linked journal entry, only when it has a stop.
+        ...(p.journal_entry_id && positiveOrNull(p.stop_loss) != null && Number.isFinite(parseFloat(p.r_multiple))
+          ? { rMultiple: parseFloat(p.r_multiple), stopPrice: positiveOrNull(p.stop_loss) }
+          : {}),
       };
     });
 
