@@ -17,6 +17,7 @@ import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators 
 import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
 import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
+import { assetsToReplace, DAILY_SCAN_ASSETS, parseDailyScanAssets, type DailyScanAsset } from "@/lib/scanner/dailyScanAssets";
 import { latestUsSessionDate } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
@@ -352,6 +353,15 @@ async function runDailyScan(req: NextRequest) {
       return NextResponse.json({ success: false, error: "API key not configured" });
     }
 
+    // Optional ?assets=crypto (comma list of equity,crypto,forex): refresh only those asset classes for the current
+    // session date, leaving the other rows in place. Crypto's daily candle closes at 00:00 UTC, 2.5 h after the 21:30 UTC
+    // run, so a crypto-only run shortly after 00:00 UTC keeps crypto rows on the latest completed candle.
+    const requested = parseDailyScanAssets(new URL(req.url).searchParams.get('assets'));
+    if (requested && requested.length === 0) {
+      return NextResponse.json({ success: false, error: "assets must list equity, crypto and/or forex" }, { status: 400 });
+    }
+    const wants = (assetClass: DailyScanAsset) => !requested || requested.includes(assetClass);
+
     const results: any[] = [];
     const errors: string[] = [];
     const deadline = Date.now() + 250_000; // 250s hard budget (curl max-time is 290s)
@@ -361,7 +371,7 @@ async function runDailyScan(req: NextRequest) {
 
     // Scan equities (top 15 — bail early if approaching timeout)
     console.log("Starting equity scan...");
-    const equitiesToScan = EQUITY_UNIVERSE.slice(0, 15);
+    const equitiesToScan = wants('equity') ? EQUITY_UNIVERSE.slice(0, 15) : [];
     for (const symbol of equitiesToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at equity:${symbol}`); break; }
       const result = await scanEquity(symbol, apiKey, overlay);
@@ -371,7 +381,7 @@ async function runDailyScan(req: NextRequest) {
 
     // Scan crypto (top 5 — indicators from CoinGecko daily OHLC, computed locally)
     console.log("Starting crypto scan...");
-    const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 5);
+    const cryptoToScan = wants('crypto') ? CRYPTO_UNIVERSE.slice(0, 5) : [];
     for (const symbol of cryptoToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at crypto:${symbol}`); break; }
       const result = await scanCrypto(symbol, apiKey, overlay);
@@ -381,7 +391,7 @@ async function runDailyScan(req: NextRequest) {
 
     // Scan forex (top 5)
     console.log("Starting forex scan...");
-    const forexToScan = FOREX_UNIVERSE.slice(0, 5);
+    const forexToScan = wants('forex') ? FOREX_UNIVERSE.slice(0, 5) : [];
     for (const symbol of forexToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at forex:${symbol}`); break; }
       const result = await scanForex(symbol, apiKey, overlay);
@@ -394,12 +404,19 @@ async function runDailyScan(req: NextRequest) {
     // that session's date instead of inventing a Saturday. (It used to be the server's UTC calendar day.)
     const today = latestUsSessionDate(Date.now());
     
-    // Delete old entries for this session (in case of re-run)
-    await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [today]);
+    // Delete old entries for this session (in case of re-run). A partial (?assets=) run only replaces its own asset
+    // classes, and only when it produced rows, so a provider outage can't wipe the stored picks.
+    if (!requested) {
+      await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [today]);
+    } else {
+      const refreshed: string[] = assetsToReplace(requested, results);
+      if (refreshed.length) await q(`DELETE FROM daily_picks WHERE scan_date = $1 AND asset_class = ANY($2::text[])`, [today, refreshed]);
+      for (const r of results) if (!refreshed.includes(r.asset_class)) r.__skip = true;
+    }
 
     // Insert new results. score/direction columns carry the canonical verdict (0 = BLOCK); the legacy signal-count
     // values are kept in indicators.legacy (see lib/scoring/canonical/dailyPick).
-    for (const r of results.map(withCanonicalColumns)) {
+    for (const r of results.filter((row) => !row.__skip).map(withCanonicalColumns)) {
       await q(`
         INSERT INTO daily_picks (
           asset_class, symbol, score, direction,
@@ -427,10 +444,11 @@ async function runDailyScan(req: NextRequest) {
     return NextResponse.json({
       success: true,
       scanDate: today,
+      assets: requested ?? DAILY_SCAN_ASSETS,
       scanned: results.length,
       errors: errors.length,
       errorSymbols: errors,
-      topPicks: Object.fromEntries((['equity', 'crypto', 'forex'] as const).map((ac) => {
+      topPicks: Object.fromEntries((['equity', 'crypto', 'forex'] as const).filter((ac) => wants(ac)).map((ac) => {
         const rows = results.filter(r => r.asset_class === ac).map((r) => ({ ...r, canonical: r.indicators?.canonical ?? null }));
         return [ac, selectDailyPicks(rows, 1).top[0] ?? null];
       })),
