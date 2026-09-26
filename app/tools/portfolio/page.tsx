@@ -21,6 +21,7 @@ import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
+import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
 import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
 import { PageHero } from '@/components/ui';
 import {
@@ -1514,7 +1515,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const investedNotional = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
   const accountCash = startingCapital + netDeposits + realizedPL - investedNotional;
   const accountEquity = accountCash + totalValue;
-  const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
+  // "Total return" counts realized + unrealized P&L on the capital put in; open return (unrealized / open cost) is shown separately.
+  const { openReturnPct, totalReturnPct } = portfolioReturns({ unrealizedPL, realizedPL, openCost: totalCost, startingCapital, netDeposits });
+  const totalReturn = totalReturnPct ?? 0;
+  // Drawdown from peak account equity (null until clean equity history is ready). Drawdown labels use this, not the return.
+  const drawdownForLabels = measuredDrawdownPct(performanceHistory, riskAnalytics);
   const numPositions = positions.length;
 
   // Allocation data for visualization
@@ -1526,24 +1531,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   const topAllocation = allocationData[0];
   const concentration = topAllocation?.percentage ?? 0;
-  const riskLoadLabel = totalReturn < -20 || concentration > 50
-    ? 'High'
-    : totalReturn < -8 || concentration > 35
-    ? 'Medium'
-    : 'Low';
-  const portfolioHealthLabel = totalReturn < -20
-    ? 'Elevated Drawdown'
-    : totalReturn < -5
-    ? 'Below Baseline'
-    : totalReturn > 12
-    ? 'Above Baseline'
-    : 'Near Baseline';
-  const edgeStateLabel = totalReturn < -10 || concentration > 50
-    ? 'Defensive'
-    : totalReturn > 10 && concentration < 35
-    ? 'Offensive'
-    : 'Neutral';
-  const biasLabel = totalReturn > 2 ? 'Bullish' : totalReturn < -2 ? 'Bearish' : 'Neutral';
+  const { riskLoadLabel, portfolioHealthLabel, edgeStateLabel, biasLabel } = portfolioStateLabels({
+    totalReturnPct: totalReturn,
+    drawdownPct: drawdownForLabels,
+    concentrationPct: concentration,
+  });
 
   useEffect(() => {
     const edge = Math.max(1, Math.min(99, Math.round(50 + totalReturn)));
@@ -1581,7 +1573,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     { label: 'Unrealized P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
     { label: 'Realized P&L', value: `$${realizedPL >= 0 ? '' : '-'}${Math.abs(realizedPL).toFixed(2)}` },
     { label: 'Total P&L', value: `$${totalPL >= 0 ? '' : '-'}${Math.abs(totalPL).toFixed(2)}` },
-    { label: 'Total Return %', value: `${totalReturn.toFixed(2)}%` },
+    { label: 'Total Return %', value: totalReturnPct == null ? 'N/A' : `${totalReturnPct.toFixed(2)}%` },
+    { label: 'Open Return % (unrealized / open cost)', value: `${openReturnPct.toFixed(2)}%` },
     { label: 'Number of Positions', value: numPositions.toString() }
   ];
 
@@ -1817,10 +1810,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       <button
         type="button"
         onClick={() => {
-          const inDrawdown = totalReturn < -20 && positions.length > 0;
+          const inDrawdown = drawdownForLabels != null && drawdownForLabels > 20 && positions.length > 0;
           if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
             const proceed = confirm(
-              'Your portfolio data shows a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+              'Your portfolio data shows a significant drawdown from peak equity (-' + drawdownForLabels.toFixed(1) + '%).\n\n' +
               'Click OK to proceed, or Cancel to go back.'
             );
             if (!proceed) return;
@@ -1900,7 +1893,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           trailing={portfolioHeaderActions}
           metrics={[
             { label: 'Portfolio value', value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, detail: 'Open exposure' },
-            { label: 'Total return', value: `${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`, tone: totalReturn >= 0 ? 'bull' : 'bear', detail: `Unrealized ${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(0)}` },
+            { label: 'Total return', value: totalReturnPct == null ? '—' : `${totalReturnPct >= 0 ? '+' : ''}${totalReturnPct.toFixed(2)}%`, tone: totalReturn >= 0 ? 'bull' : 'bear', detail: `Realized ${formatSignedMoney(realizedPL)} · Open ${openReturnPct >= 0 ? '+' : ''}${openReturnPct.toFixed(2)}%` },
             { label: 'Top allocation', value: topAllocation?.symbol || '—', detail: topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions' },
             { label: 'Risk load', value: riskLoadLabel, tone: riskLoadLabel === 'High' ? 'bear' : riskLoadLabel === 'Medium' ? 'warn' : 'bull', detail: `Bias ${biasLabel}` },
           ]}
@@ -1938,7 +1931,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
         <CommandStrip
           symbol={positions[0]?.symbol || 'PORT'}
-          status={totalReturn >= 0 ? 'GAINING' : 'DRAWDOWN'}
+          status={totalReturn >= 0 ? 'GAINING' : 'NET LOSS'}
           confidence={Math.max(0, Math.min(100, 50 + totalReturn))}
           dataHealth={`${positions.length} open / ${closedPositions.length} closed`}
           mode={tier.toUpperCase()}
@@ -1949,7 +1942,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         <DecisionCockpit
           left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatRiskPairText(totalValue)}</div><div className="msp-muted">Cost Basis: {formatRiskPairText(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
           center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {formatRiskPairText(totalPL)}</div><div className="msp-muted">Unrealized: {formatRiskPairText(unrealizedPL)}</div><div className="msp-muted">Realized: {formatRiskPairText(realizedPL)}</div></div>}
-          right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Return: {totalReturn.toFixed(2)}%</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
+          right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total return: {totalReturnPct == null ? '—' : `${totalReturnPct.toFixed(2)}%`}</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
         />
 
         <SignalRail
