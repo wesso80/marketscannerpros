@@ -4,6 +4,8 @@
 // A breakout at 9:35am != 3:45pm.
 // This module tags the current session phase and applies strategy-specific modifiers.
 
+import { nyDateTime, isUsTradingDay, usSessionCloseMinutes } from '../time/usSession';
+
 export type SessionPhase =
   | 'PRE_MARKET'        // Before open
   | 'OPENING_RANGE'     // First 30 min (9:30-10:00 ET)
@@ -12,6 +14,7 @@ export type SessionPhase =
   | 'POWER_HOUR'        // 14:00-15:50 ET (late push)
   | 'CLOSE_AUCTION'     // Last 10 min (15:50-16:00 ET)
   | 'AFTER_HOURS'       // Post-close
+  | 'MARKET_CLOSED'     // US equities: weekend or NYSE holiday (no session at all)
   | 'CRYPTO_ASIAN'      // 00:00-08:00 UTC
   | 'CRYPTO_EUROPEAN'   // 08:00-14:00 UTC
   | 'CRYPTO_US'         // 14:00-22:00 UTC
@@ -92,6 +95,15 @@ const EQUITY_PHASE_MULTIPLIERS: Record<string, Record<SetupType, number>> = {
     scalp: 0.50,          // Don't scalp after hours
     swing: 0.75,
   },
+  // Weekend / holiday: no session to trade in; same conservative weights as after-hours (analysis is for the next open).
+  MARKET_CLOSED: {
+    breakout: 0.60,
+    mean_reversion: 0.55,
+    momentum: 0.60,
+    trend_follow: 0.60,
+    scalp: 0.50,
+    swing: 0.75,
+  },
 };
 
 // Phase × Setup multipliers for crypto
@@ -150,14 +162,14 @@ export function detectSessionPhase(
     return 'CRYPTO_OVERNIGHT';
   }
 
-  // Equities: Convert to ET using Intl (handles EST/EDT automatically)
-  const etParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: 'numeric', hour12: false, minute: 'numeric',
-  }).formatToParts(d);
-  const etHour = Number(etParts.find(p => p.type === 'hour')?.value ?? 0) % 24;
-  const etMin  = Number(etParts.find(p => p.type === 'minute')?.value ?? 0);
-  const etTotal = etHour * 60 + etMin; // Minutes since midnight ET
+  // Equities: New York calendar date + minutes (Intl handles EST/EDT). Weekends and NYSE holidays have no session at
+  // all (RS-22: Saturday 00:22 ET used to read PRE_MARKET), and early-close days (13:00 ET) end the session early —
+  // the same NYSE calendar the daily-scan session dates use (lib/time/usSession, lib/time/marketHolidays).
+  const { ymd, minutes: etTotal } = nyDateTime(d.getTime());
+  if (!isUsTradingDay(ymd)) return 'MARKET_CLOSED';
+  const closeMin = usSessionCloseMinutes(ymd);
+  if (etTotal >= closeMin) return 'AFTER_HOURS';
+  if (etTotal >= 9 * 60 + 30 && etTotal >= closeMin - 10) return 'CLOSE_AUCTION';
 
   if (etTotal < 9 * 60 + 30) return 'PRE_MARKET';           // Before 9:30
   if (etTotal < 10 * 60) return 'OPENING_RANGE';             // 9:30-10:00
@@ -215,7 +227,10 @@ export function computeSessionPhaseOverlay(
   let favorable = multiplier >= 0.95;
   let reason: string;
 
-  if (multiplier >= 1.05) {
+  if (phase === 'MARKET_CLOSED') {
+    reason = 'MARKET_CLOSED: US equity market closed (weekend or holiday); no live session, analysis is for the next open';
+    favorable = false;
+  } else if (multiplier >= 1.05) {
     reason = `SESSION_BOOST: ${phase} favors ${setupType || 'general'} (×${multiplier.toFixed(2)})`;
   } else if (multiplier < 0.75) {
     reason = `SESSION_PENALTY: ${phase} strongly unfavorable for ${setupType || 'general'} (×${multiplier.toFixed(2)})`;

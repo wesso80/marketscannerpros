@@ -573,9 +573,9 @@ describe('PHASE 25 GAP 2 — Performance Throttle', () => {
 // ================================================================
 describe('PHASE 25 GAP 4 — Session Phase Overlay', () => {
   it('detects equity session phases', () => {
-    const open = detectSessionPhase('equities', new Date('2026-02-22T14:45:00Z')); // 9:45 ET
-    const mid = detectSessionPhase('equities', new Date('2026-02-22T17:00:00Z'));  // noon ET
-    const close = detectSessionPhase('equities', new Date('2026-02-22T20:55:00Z')); // 15:55 ET
+    const open = detectSessionPhase('equities', new Date('2026-02-23T14:45:00Z')); // 9:45 ET
+    const mid = detectSessionPhase('equities', new Date('2026-02-23T17:00:00Z'));  // noon ET
+    const close = detectSessionPhase('equities', new Date('2026-02-23T20:55:00Z')); // 15:55 ET
     expect(open).toBe('OPENING_RANGE');
     expect(mid).toBe('MIDDAY');
     expect(close).toBe('CLOSE_AUCTION');
