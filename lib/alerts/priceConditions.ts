@@ -14,6 +14,8 @@ export interface AlertQuote {
   price: number;
   /** Percent move (e.g. -2.4 for a 2.4% drop). null when the source did not provide one. */
   changePercent: number | null;
+  /** Stocks: the quote's latest trading day (YYYY-MM-DD, New York). Used to skip stale quotes (TR-17). */
+  asOfDate?: string | null;
 }
 
 function finite(value: unknown): number | null {
@@ -35,7 +37,9 @@ export function parseGlobalQuote(data: unknown): AlertQuote | null {
   } else {
     changePercent = finite(gq?.['10. change percent']);
   }
-  return { price, changePercent };
+  const day = gq?.['07. latest trading day'];
+  const asOfDate = typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+  return { price, changePercent, asOfDate };
 }
 
 /** Whether a basic alert's condition is met. Price alerts keep their existing >= / <= test. */
