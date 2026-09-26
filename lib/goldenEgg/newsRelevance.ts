@@ -71,7 +71,7 @@ export function filterRelevantNews(
     if (!Number.isFinite(relevance) || relevance < minRel) continue;
     const text = `${a.title ?? ''} ${a.summary ?? ''}`;
     if (relevance < EQUITY_NEWS_STRONG_RELEVANCE && !mentionsCompany(text, key.replace(/^(CRYPTO|FOREX):/, ''), opts.companyName)) continue;
-    const cat = classifyCatalyst(text);
+    const cat = classifyCatalyst(text, assetClass);
     out.push({
       title: a.title ?? '',
       summary: a.summary ?? '',
@@ -117,21 +117,29 @@ const POSITIVE_PATTERNS: Array<[RegExp, string]> = [
 const EVENT_PATTERNS: Array<[RegExp, string]> = [
   [/earnings (call|date|preview|report(s)? (on|next)|ahead|due|scheduled)|reports? (q[1-4]|quarterly|fiscal) (results|earnings) on|to report/i, 'scheduled earnings'],
   [/(FDA|PDUFA) (decision|date)|advisory committee|adcom/i, 'scheduled regulatory decision'],
-  [/token unlock|unlock schedule|vesting/i, 'token unlock'],
   [/(fed|fomc|cpi|jobs report|payrolls) (decision|meeting|data|print)/i, 'macro event'],
   [/shareholder (vote|meeting)|proxy/i, 'corporate vote'],
   [/hard fork|halving|mainnet launch (scheduled|on)/i, 'scheduled network event'],
 ];
 
-export function classifyCatalyst(text: string): { klass: CatalystClass; reason: string } {
+/** Token unlocks are a crypto supply event. Only crypto news gets this tag (RS-23). */
+const CRYPTO_EVENT_PATTERNS: Array<[RegExp, string]> = [
+  [/token unlock|unlock schedule|vesting/i, 'token unlock'],
+];
+/** Equity insider paperwork (Form 4, RSU/stock vesting). A routine filing is not event risk, so it's labelled NEUTRAL. */
+const INSIDER_FILING_PATTERN = /\bform 4\b|insider (filing|transaction|trade)s?\b|\bvesting\b|restricted stock|\bRSUs?\b/i;
+export const NO_CATALYST_REASON = 'no material catalyst pattern';
+
+export function classifyCatalyst(text: string, assetClass: 'equity' | 'crypto' | 'forex' = 'equity'): { klass: CatalystClass; reason: string } {
   const neg = NEGATIVE_PATTERNS.find(([re]) => re.test(text));
   const pos = POSITIVE_PATTERNS.find(([re]) => re.test(text));
-  const evt = EVENT_PATTERNS.find(([re]) => re.test(text));
+  const evt = EVENT_PATTERNS.find(([re]) => re.test(text)) ?? (assetClass === 'crypto' ? CRYPTO_EVENT_PATTERNS.find(([re]) => re.test(text)) : undefined);
   if (neg && pos) return { klass: 'MIXED', reason: `${pos[1]} vs ${neg[1]}` };
   if (neg) return { klass: 'NEGATIVE', reason: neg[1] };
   if (pos) return { klass: 'POSITIVE', reason: pos[1] };
   if (evt) return { klass: 'EVENT_RISK', reason: evt[1] };
-  return { klass: 'NEUTRAL', reason: 'no material catalyst pattern' };
+  if (assetClass !== 'crypto' && INSIDER_FILING_PATTERN.test(text)) return { klass: 'NEUTRAL', reason: 'insider filing' };
+  return { klass: 'NEUTRAL', reason: NO_CATALYST_REASON };
 }
 
 export function summarizeNews(items: RelevantArticle[]): { headline: string; positive: number; negative: number; eventRisk: number; neutral: number } {

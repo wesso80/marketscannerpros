@@ -31,6 +31,7 @@ import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
+import { lookupAssetType } from '@/lib/lookupAssetType';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -395,7 +396,7 @@ export default function GoldenEggPage() {
   // Resolve asset type: 'auto' uses detectAssetClass, otherwise user override
   const resolvedType = assetType === 'auto' ? undefined : assetType;
   // Scanner hands over crypto as e.g. NEAR-USD; match on the base ticker too.
-  const isCryptoSymbol = CRYPTO_SET.has(sym.toUpperCase()) || CRYPTO_SET.has(sym.toUpperCase().replace(/[-/]?(USDT|USD)$/, ''));
+  const isCryptoSymbol = lookupAssetType(sym, CRYPTO_SET) === 'crypto';
   const quoteType: 'stock' | 'crypto' = assetType === 'crypto' ? 'crypto' : assetType === 'equity' ? 'stock' : isCryptoSymbol ? 'crypto' : 'stock';
   const canonicalTerminalHref = `/tools/terminal?symbol=${encodeURIComponent(sym)}&type=${quoteType === 'crypto' ? 'crypto' : 'equity'}&timeframe=${encodeURIComponent(timeframe)}`;
 
@@ -540,7 +541,10 @@ export default function GoldenEggPage() {
 
   function handleSymbolSubmit() {
     if (symbolInput.trim()) {
-      selectSymbol(symbolInput.trim().toUpperCase(), { timeframe, assetType: assetType === 'auto' ? (CRYPTO_SET.has(symbolInput.trim().toUpperCase()) ? 'crypto' : 'equity') : assetType });
+      // A typed symbol is a new instrument: detect its type from the symbol (BTC-USD → crypto), not from the toggle,
+      // which reflects the previous symbol's type param (RS-24). The toggle can still override it afterwards.
+      const next = symbolInput.trim().toUpperCase();
+      selectSymbol(next, { timeframe, assetType: lookupAssetType(next, CRYPTO_SET) });
       setSymbolInput('');
     }
   }

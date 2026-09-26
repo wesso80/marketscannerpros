@@ -35,7 +35,8 @@ export function detectMarketPath(symbol: string): MarketPath {
     return 'futures';
   }
 
-  if (CRYPTO_CODES.has(normalized) || (normalized.endsWith('USD') && !FX_PAIRS.has(normalized))) {
+  // BTC-USD, BTC/USD and BTCUSD end in USD; stablecoin pairs (BTC-USDT, ETH/USDC) are crypto too (RS-24).
+  if (CRYPTO_CODES.has(normalized) || (normalized.endsWith('USD') && !FX_PAIRS.has(normalized)) || /^[A-Z0-9]{2,10}[-/]?(USDT|USDC)$/.test(normalized)) {
     return 'crypto';
   }
 

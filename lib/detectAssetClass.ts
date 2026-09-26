@@ -24,11 +24,13 @@ const CRYPTO_QUOTE_SUFFIXES = ['USD', 'USDT', 'USDC', 'BUSD', 'BTC', 'ETH'];
 
 export function detectAssetClass(symbol: string): AssetClass {
   const s = symbol.toUpperCase().trim();
+  // Pair separators are not part of the ticker: BTC-USDT and BTC/USDT are BTCUSDT (RS-24).
+  const pair = s.replace(/[-/]/g, '');
 
   // 1. Check if the base (stripping common quote suffixes) is a known crypto
   for (const suffix of CRYPTO_QUOTE_SUFFIXES) {
-    if (s.endsWith(suffix) && s.length > suffix.length) {
-      const base = s.slice(0, -suffix.length);
+    if (pair.endsWith(suffix) && pair.length > suffix.length) {
+      const base = pair.slice(0, -suffix.length);
       if (KNOWN_CRYPTO_BASES.has(base)) return 'crypto';
     }
   }

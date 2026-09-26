@@ -399,7 +399,8 @@ export default function TerminalPage() {
 
   const handleSymSubmit = () => {
     const s = symInput.trim().toUpperCase();
-    if (s) { selectSymbol(s, { assetType: marketPath }); }
+    // Detect the path from the NEW symbol; the current page's path must not carry over (RS-24).
+    if (s) { selectSymbol(s, { assetType: detectMarketPath(s) }); }
   };
 
   /* Quick symbols */
