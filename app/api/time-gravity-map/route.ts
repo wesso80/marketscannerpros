@@ -359,9 +359,10 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       console.log(`[TGM on-demand] Generated ${totalStored} midpoints for equity ${symbol} (${timeframesGenerated.join(', ') || 'none'})`);
     }
 
-    // Add to symbol_universe so the worker maintains it going forward
+    // Add to symbol_universe so the worker maintains it going forward — only once real data was stored for it,
+    // so a partial/typeahead ticker (SC-12: 'AP', 'HB', 'MG') can't become a permanent scanner row.
     const cleanSym = symbol.toUpperCase().replace(/\s+/g, '').trim();
-    if (cleanSym.length >= 2 && cleanSym.length <= 12 && /^[A-Z0-9.\-\/=^]+$/.test(cleanSym)) {
+    if (totalStored > 0 && cleanSym.length >= 2 && cleanSym.length <= 12 && /^[A-Z0-9.\-\/=^]+$/.test(cleanSym)) {
       try {
         await q(
           `INSERT INTO symbol_universe (symbol, asset_type, tier, enabled)
