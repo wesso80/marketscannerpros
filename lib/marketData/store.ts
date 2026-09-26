@@ -6,6 +6,7 @@
  */
 
 import { q } from '@/lib/db';
+import { nextUsTradingDay, usSessionOpenMs } from '@/lib/time/usSession';
 import type {
   OhlcBar,
   BarTimeframe,
@@ -20,6 +21,21 @@ import type {
 // ---------------------------------------------------------------------------
 // Bars
 // ---------------------------------------------------------------------------
+
+/**
+ * "As of" stamp for a stored DAILY equity series whose newest bar is dated `lastBarYmd` (bars are stamped 00:00 UTC of
+ * the session date). The series stays current until the next US session opens (09:30 ET, NYSE calendar): that is when
+ * a newer daily bar starts forming (the ingest worker writes the in-progress bar during the session). So the stamp is
+ * min(now, next session open): age 0 overnight, over weekends and holidays, and while today's bar is being written; it
+ * only starts ageing once a session is under way without its bar.
+ *
+ * Before this, the stamp was the bar's own 00:00 UTC date, so a stored daily series read as > 1 h old for ~23 h a day
+ * and every Redis miss went back to Alpha Vantage even when the worker had written the same bars a minute earlier.
+ */
+export function dailySeriesAsOf(lastBarYmd: string, nowMs: number = Date.now()): string {
+  const staleFrom = usSessionOpenMs(nextUsTradingDay(lastBarYmd));
+  return new Date(Math.min(nowMs, Number.isFinite(staleFrom) ? staleFrom : nowMs)).toISOString();
+}
 
 export async function pgReadBars(symbol: string, timeframe: BarTimeframe, limit = 500): Promise<{ bars: OhlcBar[]; fetchedAt: string } | null> {
   const rows = await q<{
@@ -42,8 +58,12 @@ export async function pgReadBars(symbol: string, timeframe: BarTimeframe, limit 
     close: Number(r.close),
     volume: Number(r.volume),
   }));
-  // freshness uses the most-recent bar timestamp, NOT now() — bars are stamped events
-  const fetchedAt = new Date(bars[bars.length - 1].ts).toISOString();
+  // Freshness is judged from the bar's session, NOT now(): intraday bars are stamped events (age from the bar's
+  // timestamp); a daily bar is current until the next US session opens (see dailySeriesAsOf).
+  const last = bars[bars.length - 1];
+  const fetchedAt = timeframe === 'daily'
+    ? dailySeriesAsOf(new Date(last.ts).toISOString().slice(0, 10))
+    : new Date(last.ts).toISOString();
   return { bars, fetchedAt };
 }
 

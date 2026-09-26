@@ -88,7 +88,8 @@ describe('crypto series timeframe → source mapping', () => {
     getMarketChartRange.mockResolvedValue({ prices: [[now - HOUR, 10], [now - HOUR / 2, 11]], market_caps: [], total_volumes: [] } as any);
     const requestOptions = { retries: 0, timeoutMs: 4000 };
     await fetchCryptoSeries('BTC', timeframe, now, { requestOptions });
-    for (const call of getOHLCRange.mock.calls) expect(call[3]).toEqual(requestOptions);
+    // Completed daily windows also carry a longer fetch-cache lifetime (cacheSeconds); the deadline is still forwarded.
+    for (const call of getOHLCRange.mock.calls) expect(call[3]).toMatchObject(requestOptions);
     for (const call of getMarketChartRange.mock.calls) expect(call[3]).toEqual(requestOptions);
     for (const call of getOHLC.mock.calls) expect(call[2]).toEqual(requestOptions);
   });

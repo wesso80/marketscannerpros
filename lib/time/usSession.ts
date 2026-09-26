@@ -44,6 +44,29 @@ export function previousUsTradingDay(ymd: string): string {
   return d;
 }
 
+/** The first NYSE trading day strictly after `ymd`. */
+export function nextUsTradingDay(ymd: string): string {
+  let d = addDays(ymd, 1);
+  for (let i = 0; i < 15 && !isUsTradingDay(d); i++) d = addDays(d, 1);
+  return d;
+}
+
+/** UTC epoch ms of a New York wall-clock time (minutes after midnight) on `ymd`, DST-aware (EDT −4 h / EST −5 h). */
+export function nyWallTimeMs(ymd: string, minutes: number): number {
+  const [y, m, d] = ymdParts(ymd);
+  for (const offsetHours of [4, 5]) {
+    const candidate = Date.UTC(y, m, d, 0, minutes) + offsetHours * 3_600_000;
+    const got = nyDateTime(candidate);
+    if (got.ymd === ymd && got.minutes === minutes) return candidate;
+  }
+  return Date.UTC(y, m, d, 0, minutes) + 5 * 3_600_000;
+}
+
+/** 09:30 ET session open of `ymd` as UTC epoch ms. */
+export function usSessionOpenMs(ymd: string): number {
+  return nyWallTimeMs(ymd, OPEN_MIN);
+}
+
 /** Session close in NY minutes (13:00 on scheduled early-close days, else 16:00). */
 export function usSessionCloseMinutes(ymd: string): number {
   const [y, m, d] = ymdParts(ymd);

@@ -650,6 +650,8 @@ export async function getMarketData(
     order?: 'market_cap_desc' | 'market_cap_asc' | 'volume_desc' | 'volume_asc';
     sparkline?: boolean;
     price_change_percentage?: Array<'1h' | '24h' | '7d' | '14d' | '30d' | '200d' | '1y'>;
+    /** 'full' returns un-rounded prices (same as /simple/price precision=full), needed for sub-cent coins. */
+    precision?: 'full';
   },
   requestOptions?: { retries?: number; timeoutMs?: number },
 ): Promise<CoinGeckoMarketData[] | null> {
@@ -668,6 +670,10 @@ export async function getMarketData(
 
     if (options?.ids?.length) {
       params.set('ids', options.ids.join(','));
+    }
+
+    if (options?.precision) {
+      params.set('precision', options.precision);
     }
 
     return await cgFetch<CoinGeckoMarketData[]>('/coins/markets', {
@@ -733,6 +739,11 @@ export async function getOHLCRange(
   requestOptions?: {
     retries?: number;
     timeoutMs?: number;
+    /**
+     * Next.js data-cache lifetime (s) for this exact URL. Windows that end on a completed-bar boundary never change, so
+     * callers may cache them longer than the default 900 s. Ignored outside Next (the worker).
+     */
+    cacheSeconds?: number;
   },
   // Pro plan: 'daily' allows ≤180 days per call, 'hourly' ≤31 days per call.
   interval: 'daily' | 'hourly' = 'daily',
@@ -761,7 +772,7 @@ export async function getOHLCRange(
 
     return await cgFetch<number[][]>(`/coins/${coinId}/ohlc/range`, {
       params,
-      init: { next: { revalidate: 900 } },
+      init: { next: { revalidate: requestOptions?.cacheSeconds && requestOptions.cacheSeconds > 0 ? Math.floor(requestOptions.cacheSeconds) : 900 } },
       retries: requestOptions?.retries,
       timeoutMs: requestOptions?.timeoutMs,
     });
