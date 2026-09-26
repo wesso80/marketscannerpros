@@ -284,13 +284,16 @@ export interface NewsArticle {
   summary: string;
   source: string;
   sentiment: { label: string; score: number };
-  tickerSentiments: Array<{ ticker: string; relevance: number; sentimentScore: number; sentimentLabel: string }>;
+  tickerSentiments: Array<{ ticker: string; relevance: number; sentimentScore: number; sentimentLabel: string; relevant?: boolean }>;
+  /** Requested tickers this article passed the shared relevance rule for (MV-2). */
+  relevantTickers?: string[];
 }
 
 export interface NewsResponse {
   success: boolean;
   articlesCount: number;
   articles: NewsArticle[];
+  tickerSummaries?: Array<{ ticker: string; status: 'ok'; articles: number; avgScore: number; label: string } | { ticker: string; status: 'unavailable'; reason: string }>;
   aiAnalysis: string | null;
 }
 

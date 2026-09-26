@@ -15,6 +15,8 @@ import type { DecisionNewsItem, NarrativeGroup, NewsGateModel } from "@/componen
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { NEWS_BRIEF_LABEL } from "@/lib/news/newsBrief";
 import { PageHero } from "@/components/ui";
+import TickerSentimentSummary from "@/components/news/TickerSentimentSummary";
+import type { TickerSentimentSummary as TickerSentimentSummaryItem } from "@/lib/equityNewsRelevance";
 
 interface TickerSentiment {
   ticker: string;
@@ -226,6 +228,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
   const newsRequestId = useRef(0);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [error, setError] = useState("");
+  const [tickerSummaries, setTickerSummaries] = useState<TickerSentimentSummaryItem[]>([]);
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [newsAIAnalysis, setNewsAIAnalysis] = useState<string | null>(null);
   const [newsBucket, setNewsBucket] = useState<'ALL' | 'HIGH_IMPACT' | 'EARNINGS' | 'MACRO' | 'CRYPTO' | 'GEOPOLITICS' | 'AI' | 'COMMODITIES'>('ALL');
@@ -459,6 +462,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
     setLoading(true);
     setError("");
     setArticles([]);
+    setTickerSummaries([]);
     setNewsAIAnalysis(null);
 
     try {
@@ -466,6 +470,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       const result = await response.json();
       if (requestId !== newsRequestId.current) return;
 
+      setTickerSummaries(Array.isArray(result.tickerSummaries) ? result.tickerSummaries : []);
       if (!result.success) {
         setError(result.error || "Failed to fetch news data");
       } else {
@@ -1002,6 +1007,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
             </section>
 
             {error && <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-300">{error}</div>}
+            {!loading && <TickerSentimentSummary items={tickerSummaries} className="mb-4" />}
 
             {!loading && filteredNews.length > 0 && (
               <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-12">

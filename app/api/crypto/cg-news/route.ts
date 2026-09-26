@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { buildCoinGeckoResponseMeta, getCryptoNews } from '@/lib/coingecko';
-import { isCryptoRelevantNews } from '@/lib/crypto/newsRelevance';
+import { dedupeNewsByTitle, isCoinRelevantNews, isCryptoRelevantNews } from '@/lib/crypto/newsRelevance';
 
 /**
  * GET /api/crypto/cg-news?coin_id=bitcoin&type=news&page=1&per_page=20
@@ -37,7 +37,9 @@ export async function GET(req: NextRequest) {
   }
 
   // The general feed (no coin_id) includes general-market and political stories; keep crypto-relevant items only.
-  const articles = coin_id ? fetched : fetched.filter(isCryptoRelevantNews);
+  // Coin feeds are auto-tagged from ordinary words, so keep items whose title names the coin or ticker (MV-2).
+  const relevant = coin_id ? fetched.filter((item: any) => isCoinRelevantNews(item, coin_id)) : fetched.filter(isCryptoRelevantNews);
+  const articles = dedupeNewsByTitle(relevant);
 
   const lastUpdated = articles.reduce<string | null>((latest, article: any) => {
     const published = article?.posted_at ?? article?.published_at ?? article?.created_at ?? null;
@@ -50,7 +52,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     articles,
     count: articles.length,
-    excluded_off_topic: fetched.length - articles.length,
+    excluded_off_topic: fetched.length - relevant.length,
+    excluded_duplicates: relevant.length - articles.length,
     page,
     per_page,
     coin_id: coin_id || null,

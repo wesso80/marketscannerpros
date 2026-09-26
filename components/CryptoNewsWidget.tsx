@@ -18,6 +18,13 @@ interface Props {
   title?: string;
 }
 
+// Placed below the types (not with the React import) so it doesn't touch the lines #155 edits.
+import TickerSentimentSummary from '@/components/news/TickerSentimentSummary';
+import type { TickerSentimentSummary as TickerSentimentSummaryItem } from '@/lib/equityNewsRelevance';
+
+/** Coins with an Alpha Vantage per-ticker sentiment chip on the general Crypto Intel feed (MV-2). */
+const SENTIMENT_TICKERS = 'BTC,ETH,SOL';
+
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -35,6 +42,21 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
   const [filter, setFilter] = useState<'all' | 'news' | 'guides'>('all');
   const [guideCoinId, setGuideCoinId] = useState('bitcoin');
   const effectiveCoinId = coinId || (filter === 'guides' ? guideCoinId : undefined);
+  const [coinSentiment, setCoinSentiment] = useState<TickerSentimentSummaryItem[] | null>(null);
+
+  useEffect(() => {
+    if (coinId) return;
+    let cancelled = false;
+    fetch(`/api/news-sentiment?tickers=${SENTIMENT_TICKERS}&limit=10`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (Array.isArray(data?.tickerSummaries)) setCoinSentiment(data.tickerSummaries);
+        else setCoinSentiment(SENTIMENT_TICKERS.split(',').map((ticker) => ({ ticker, status: 'unavailable' as const, reason: res.status === 429 ? 'rate limited, try again in a minute' : data?.error || `HTTP ${res.status}` })));
+      })
+      .catch(() => { if (!cancelled) setCoinSentiment(SENTIMENT_TICKERS.split(',').map((ticker) => ({ ticker, status: 'unavailable' as const, reason: 'network error' }))); });
+    return () => { cancelled = true; };
+  }, [coinId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +113,8 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
           ))}
         </div>
       </div>
+
+      {!coinId && <TickerSentimentSummary items={coinSentiment} className="mb-3" />}
 
       {filter === 'guides' && !coinId && (
         <label className="mb-3 flex items-center gap-2 text-xs text-slate-300">

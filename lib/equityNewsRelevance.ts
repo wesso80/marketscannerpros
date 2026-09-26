@@ -76,6 +76,40 @@ function toIso(timePublished: string | undefined): string {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : '';
 }
 
+/** Symbol to look for in article text: "CRYPTO:BTC" -> "BTC", "FOREX:EUR" -> "EUR", "AAPL" -> "AAPL". */
+export function newsMatchSymbol(providerTicker: string): string {
+  return providerTicker.trim().toUpperCase().replace(/^(CRYPTO|FOREX):/, '');
+}
+
+export interface TickerRelevance {
+  relevance: number;
+  /** Sentiment for THIS ticker (-1..1), never the article-wide score. */
+  sentimentScore: number;
+  sentimentLabel: string;
+}
+
+/**
+ * The shared rule for one article and one AV ticker key (AAPL, CRYPTO:BTC): null unless the article's
+ * ticker_sentiment entry for that key has relevance >= minRelevance AND the text names the company/coin or ticker,
+ * or relevance >= EQUITY_NEWS_STRONG_RELEVANCE.
+ */
+export function tickerRelevance(
+  item: AvNewsFeedItem,
+  providerTicker: string,
+  companyName?: string | null,
+  minRelevance: number = EQUITY_NEWS_MIN_RELEVANCE,
+): TickerRelevance | null {
+  const key = providerTicker.trim().toUpperCase();
+  const ts = (item.ticker_sentiment ?? []).find((t) => String(t.ticker ?? '').toUpperCase() === key);
+  if (!ts) return null;
+  const relevance = Number(ts.relevance_score);
+  if (!Number.isFinite(relevance) || relevance < minRelevance) return null;
+  const text = `${item.title ?? ''} ${item.summary ?? ''}`;
+  if (relevance < EQUITY_NEWS_STRONG_RELEVANCE && !mentionsCompany(text, newsMatchSymbol(key), companyName)) return null;
+  const score = Number(ts.ticker_sentiment_score);
+  return { relevance, sentimentScore: Number.isFinite(score) ? score : 0, sentimentLabel: ts.ticker_sentiment_label || 'Neutral' };
+}
+
 export function selectTickerNews(
   feed: AvNewsFeedItem[] | null | undefined,
   symbol: string,
@@ -83,31 +117,45 @@ export function selectTickerNews(
   opts: { minRelevance?: number; limit?: number } = {},
 ): TickerNewsItem[] {
   if (!Array.isArray(feed)) return [];
-  const key = symbol.trim().toUpperCase();
-  const minRel = opts.minRelevance ?? EQUITY_NEWS_MIN_RELEVANCE;
   const out: TickerNewsItem[] = [];
   for (const item of feed) {
-    const ts = (item.ticker_sentiment ?? []).find((t) => String(t.ticker ?? '').toUpperCase() === key);
-    if (!ts) continue;
-    const relevance = Number(ts.relevance_score);
-    if (!Number.isFinite(relevance) || relevance < minRel) continue;
-    const text = `${item.title ?? ''} ${item.summary ?? ''}`;
-    if (relevance < EQUITY_NEWS_STRONG_RELEVANCE && !mentionsCompany(text, key, companyName)) continue;
-    const score = Number(ts.ticker_sentiment_score);
+    const rel = tickerRelevance(item, symbol, companyName, opts.minRelevance);
+    if (!rel) continue;
     out.push({
       title: item.title ?? '',
       url: item.url ?? '',
       publishedAt: toIso(item.time_published),
       source: item.source ?? '',
-      sentiment: ts.ticker_sentiment_label || 'Neutral',
-      sentimentScore: Number.isFinite(score) ? score : 0,
-      relevance,
+      sentiment: rel.sentimentLabel,
+      sentimentScore: rel.sentimentScore,
+      relevance: rel.relevance,
       summary: item.summary?.slice(0, 200),
     });
   }
   // Newest first; items without a parseable time go last.
   out.sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''));
   return out.slice(0, opts.limit ?? 10);
+}
+
+/** AV's own label bands for a ticker sentiment score (sentiment_score_definition in the NEWS_SENTIMENT response). */
+export function avSentimentLabel(score: number): string {
+  if (score <= -0.35) return 'Bearish';
+  if (score <= -0.15) return 'Somewhat-Bearish';
+  if (score < 0.15) return 'Neutral';
+  if (score < 0.35) return 'Somewhat-Bullish';
+  return 'Bullish';
+}
+
+export type TickerSentimentSummary =
+  | { ticker: string; status: 'ok'; articles: number; avgScore: number; label: string }
+  | { ticker: string; status: 'unavailable'; reason: string };
+
+/** Per-ticker sentiment from the RELEVANT items only; "unavailable" (with a reason) when none qualify. */
+export function summarizeTickerSentiment(ticker: string, relevant: Array<{ sentimentScore: number }>): TickerSentimentSummary {
+  if (relevant.length === 0) return { ticker, status: 'unavailable', reason: 'no ticker-specific articles in the feed' };
+  const avg = relevant.reduce((sum, r) => sum + r.sentimentScore, 0) / relevant.length;
+  const avgScore = Math.round(avg * 1000) / 1000;
+  return { ticker, status: 'ok', articles: relevant.length, avgScore, label: avSentimentLabel(avgScore) };
 }
 
 /** Deep-Dive date/time for a news item: accepts ISO or AV compact (YYYYMMDDTHHMMSS, UTC). Null when unparseable. */

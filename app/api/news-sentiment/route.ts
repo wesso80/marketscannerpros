@@ -3,6 +3,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 import { buildNewsBriefPrompt, NEWS_BRIEF_SYSTEM_PROMPT, stripAdviceSentences } from '@/lib/news/newsBrief';
+import { avNewsFeedError, buildTickerNews, NEWS_MAX_TICKERS, NEWS_RELEVANCE_RULE, type RequestedNewsTicker, type TickerFeedResult } from '@/lib/news/tickerNewsFeed';
+import { cryptoNewsName } from '@/lib/crypto/newsRelevance';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -78,56 +80,39 @@ export async function GET(request: NextRequest) {
   const includeAI = searchParams.get('includeAI') === 'true';
   
   try {
-    const tickerList = tickers.split(',').map(t => t.trim().toUpperCase());
-    const cryptoTickers = tickerList.filter(isCryptoTicker);
-    const stockTickers = tickerList.filter(t => !isCryptoTicker(t));
-    
-    let allArticles: any[] = [];
-    
-    // Use provider ticker identity for both assets; topic-only news is not candidate evidence.
-    const providerTickers = [...stockTickers, ...cryptoTickers.map(t => `CRYPTO:${t.replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '')}`)];
-    if (providerTickers.length > 0) {
-      const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(providerTickers.join(','))}&limit=${limit}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      
-      await avTakeToken();
-      const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-      const data = await response.json();
-      
-      if (!response.ok || data['Error Message'] || data['Note'] || data['Information'] || !Array.isArray(data.feed)) {
-        return NextResponse.json({ error: 'News provider unavailable; candidate evidence could not be verified.' }, { status: 503 });
-      }
-      if (data.feed) {
-        const stockArticles = data.feed.map((article: any) => ({
-          title: article.title,
-          url: article.url,
-          timePublished: article.time_published,
-          summary: article.summary,
-          source: article.source,
-          sentiment: {
-            label: article.overall_sentiment_label,
-            score: parseFloat(article.overall_sentiment_score),
-          },
-          tickerSentiments: article.ticker_sentiment?.map((ts: any) => ({
-            ticker: ts.ticker,
-            relevance: parseFloat(ts.relevance_score),
-            sentimentScore: parseFloat(ts.ticker_sentiment_score),
-            sentimentLabel: ts.ticker_sentiment_label,
-          })) || [],
-        }));
-        allArticles = [...allArticles, ...stockArticles];
-      }
-    }
-    
-    // Sort by date (newest first)
-    allArticles.sort((a, b) => {
-      const dateA = a.timePublished || '';
-      const dateB = b.timePublished || '';
-      return dateB.localeCompare(dateA);
+    const tickerList = [...new Set(tickers.split(',').map(t => t.trim().toUpperCase()).filter(Boolean))];
+    // One provider ticker identity per requested symbol; topic-only news is not candidate evidence.
+    const requested: RequestedNewsTicker[] = tickerList.slice(0, NEWS_MAX_TICKERS).map((t) => {
+      if (!isCryptoTicker(t)) return { ticker: t, providerKey: t, name: null };
+      const sym = t.replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '');
+      return { ticker: sym, providerKey: `CRYPTO:${sym}`, name: cryptoNewsName(sym) };
     });
-    
-    // Limit results
-    allArticles = allArticles.slice(0, parseInt(limit));
-    
+    const ignoredTickers = tickerList.slice(NEWS_MAX_TICKERS);
+
+    // AV ANDs comma-separated tickers (articles mentioning ALL of them), so each ticker gets its own call (MV-2).
+    const results: Record<string, TickerFeedResult> = {};
+    await Promise.all(requested.map(async (req) => {
+      try {
+        const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(req.providerKey)}&sort=LATEST&limit=50&apikey=${ALPHA_VANTAGE_API_KEY}`;
+        await avTakeToken();
+        const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        const data = await response.json().catch(() => null);
+        const error = avNewsFeedError(response.ok, response.status, data);
+        results[req.providerKey] = error ? { error } : { feed: data.feed };
+      } catch (err: any) {
+        results[req.providerKey] = { error: err?.name === 'TimeoutError' ? 'Alpha Vantage timed out' : 'Alpha Vantage request failed' };
+      }
+    }));
+
+    const { articles: relevantArticles, tickerSummaries, considered } = buildTickerNews(requested, results, parseInt(limit));
+    const filter = { rule: NEWS_RELEVANCE_RULE, considered, kept: relevantArticles.length, ignoredTickers };
+    const failed = requested.filter((req) => 'error' in (results[req.providerKey] ?? { error: '' }));
+    if (requested.length > 0 && failed.length === requested.length) {
+      const reasons = [...new Set(failed.map((req) => (results[req.providerKey] as { error: string }).error))].join('; ');
+      return NextResponse.json({ error: `News provider unavailable (${reasons}); candidate evidence could not be verified.`, tickerSummaries, filter }, { status: 503 });
+    }
+    const allArticles = relevantArticles;
+
     // Generate AI analysis if requested
     let aiAnalysis = null;
     if (includeAI && allArticles.length > 0) {
@@ -138,6 +123,8 @@ export async function GET(request: NextRequest) {
       success: true,
       articlesCount: allArticles.length,
       articles: allArticles,
+      tickerSummaries,
+      filter,
       aiAnalysis,
     });
   } catch (error) {

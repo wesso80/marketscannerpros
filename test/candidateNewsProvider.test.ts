@@ -7,7 +7,7 @@ import { GET } from '../app/api/news-sentiment/route';
 afterEach(() => vi.unstubAllGlobals());
 describe('candidate news provider identity', () => {
   it.each([['ETH','CRYPTO:ETH'],['ETHUSD','CRYPTO:ETH'],['CRYPTO:ETH','CRYPTO:ETH'],['META','META']])('requests %s as %s without broad-topic replacement', async (symbol, expected) => {
-    const fetcher=vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({feed:[{title:'Candidate source',url:'https://example.test/story',time_published:'20260922T040000',overall_sentiment_label:'Neutral',overall_sentiment_score:'0',ticker_sentiment:[{ticker:expected,relevance_score:'.8',ticker_sentiment_score:'0',ticker_sentiment_label:'Neutral'}]}]}),{status:200}));
+    const fetcher=vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({feed:[{title:'Candidate source on '+expected.replace('CRYPTO:',''),url:'https://example.test/story',time_published:'20260922T040000',overall_sentiment_label:'Neutral',overall_sentiment_score:'0',ticker_sentiment:[{ticker:expected,relevance_score:'.8',ticker_sentiment_score:'0',ticker_sentiment_label:'Neutral'}]}]}),{status:200}));
     vi.stubGlobal('fetch',fetcher);
     const result=await GET(new NextRequest('https://example.test/api/news-sentiment?tickers='+encodeURIComponent(symbol)));
     expect(result.status).toBe(200);
