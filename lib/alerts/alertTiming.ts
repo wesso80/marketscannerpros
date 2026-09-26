@@ -100,3 +100,18 @@ export function isStaleStockQuote(quote: AlertQuote, nowMs = Date.now()): boolea
   if (!quote.asOfDate) return false; // no date reported: can't judge; leave to the provider
   return quote.asOfDate < latestOpenedTradingDay(nowMs);
 }
+
+/**
+ * Cooldown stored on a new alert created through POST /api/alerts.
+ * A cooldown the user asked for is kept. Smart alerts keep their 60-minute default.
+ * Recurring basic alerts now also get 60 minutes (they had none, so a price that kept
+ * crossing a level back and forth could alert on every 5-minute check). One-time basic
+ * alerts switch off after firing, so they don't need one.
+ */
+export const DEFAULT_RECURRING_BASIC_COOLDOWN_MINUTES = 60;
+export function newAlertCooldownMinutes(opts: { requested?: number | null; isSmartAlert?: boolean; isRecurring: boolean }): number | null {
+  const requested = num(opts.requested);
+  if (requested != null && requested > 0) return requested;
+  if (opts.isSmartAlert) return 60;
+  return opts.isRecurring ? DEFAULT_RECURRING_BASIC_COOLDOWN_MINUTES : null;
+}

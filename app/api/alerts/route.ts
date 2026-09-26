@@ -4,6 +4,7 @@ import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
 
 /**
  * Price Alerts API
@@ -313,6 +314,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert alert
+    const isRecurring = body.isRecurring ?? (isSmartAlert ? true : false);
     const result = await q(
       `INSERT INTO alerts (
         workspace_id, symbol, asset_type, condition_type, condition_value, condition_timeframe,
@@ -329,12 +331,12 @@ export async function POST(req: NextRequest) {
         body.conditionTimeframe || null,
         alertName,
         body.notes || null,
-        body.isRecurring ?? (isSmartAlert ? true : false),
+        isRecurring,
         body.notifyEmail ?? true,
         body.notifyPush ?? true,
         body.expiresAt ? new Date(body.expiresAt) : null,
         isSmartAlert,
-        body.cooldownMinutes || (isSmartAlert ? 60 : null),
+        newAlertCooldownMinutes({ requested: body.cooldownMinutes, isSmartAlert, isRecurring }),
         isMultiCondition,
         body.conditionLogic || 'AND',
         (body as any).smartAlertContext ? JSON.stringify((body as any).smartAlertContext) : null,
