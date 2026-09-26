@@ -14,11 +14,11 @@ import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMov
 import { CROSS_MARKET, REGIME_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
+import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
 import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { filterMoversByFloor } from '@/lib/analysis';
 import { humanizeEnum } from '@/lib/presentation/labels';
-import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
