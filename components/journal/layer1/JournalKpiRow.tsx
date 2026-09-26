@@ -1,22 +1,13 @@
 import { JournalKpisModel } from '@/types/journal';
+import { formatUsd } from '@/lib/journal/display';
 
-function DeltaBadge({ value }: { value: number }) {
-  const positive = value >= 0;
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs ${positive ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'}`}>
-      {positive ? '+' : ''}{value.toFixed(2)}
-    </span>
-  );
-}
-
-function KpiCard({ label, value, suffix, delta }: { label: string; value: string; suffix?: string; delta?: number }) {
+/** TR-12: one value per card (the old badge repeated the same number with no unit); sign colours the value. */
+function KpiCard({ label, value, suffix, tone }: { label: string; value: string; suffix?: string; tone?: number | null }) {
+  const toneClass = tone == null || tone === 0 ? 'text-slate-100' : tone > 0 ? 'text-emerald-200' : 'text-rose-200';
   return (
     <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-3">
       <div className="text-xs text-slate-400">{label}</div>
-      <div className="mt-1 flex items-center gap-2">
-        <div className="text-base font-semibold text-slate-100">{value}{suffix || ''}</div>
-        {typeof delta === 'number' && <DeltaBadge value={delta} />}
-      </div>
+      <div className={`mt-1 text-base font-semibold ${toneClass}`}>{value}{suffix || ''}</div>
     </div>
   );
 }
@@ -40,20 +31,20 @@ export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
   return (
     <>
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-9">
-      <KpiCard label="Recorded realized P&L (all time)" value={`$${(data.realizedPnlTotal ?? 0).toFixed(2)}`} />
-      <KpiCard label="Realized P&L (30d)" value={`$${data.realizedPnl30d.toFixed(2)}`} delta={data.realizedPnl30d} />
-      <KpiCard label="Estimated open P&L" value={data.unrealizedPnlOpen == null ? 'Unavailable' : `$${data.unrealizedPnlOpen.toFixed(2)}`} delta={data.unrealizedPnlOpen ?? undefined} />
+      <KpiCard label="Recorded realized P&L (all time)" value={formatUsd(data.realizedPnlTotal ?? 0)} tone={data.realizedPnlTotal ?? 0} />
+      <KpiCard label="Realized P&L (30d)" value={formatUsd(data.realizedPnl30d)} tone={data.realizedPnl30d} />
+      <KpiCard label="Estimated open P&L" value={data.unrealizedPnlOpen == null ? 'Unavailable' : formatUsd(data.unrealizedPnlOpen)} tone={data.unrealizedPnlOpen} />
       <KpiCard label="Win Rate (30d)" value={data.winRate30d == null ? 'Unavailable' : `${(data.winRate30d * 100).toFixed(1)}%`} />
       <KpiCard label="Profit Factor (30d)" value={data.profitFactor30d == null ? data.profitFactorLabel || 'Unavailable' : data.profitFactor30d.toFixed(2)} />
-      <KpiCard label="Closed P&L drawdown (90d)" value={data.maxDrawdown90dUsd == null ? 'Unavailable' : `$${data.maxDrawdown90dUsd.toFixed(2)}`} />
+      <KpiCard label="Closed P&L drawdown (90d)" value={data.maxDrawdown90dUsd == null ? 'Unavailable' : formatUsd(data.maxDrawdown90dUsd)} />
       {typeof data.avgMfe30d === 'number' && (
-        <KpiCard label="Avg MFE (30d)" value={`$${data.avgMfe30d.toFixed(2)}`} delta={data.avgMfe30d} />
+        <KpiCard label="Avg MFE (30d)" value={formatUsd(data.avgMfe30d)} />
       )}
       {typeof data.avgMae30d === 'number' && (
-        <KpiCard label="Avg MAE (30d)" value={`$${data.avgMae30d.toFixed(2)}`} delta={-Math.abs(data.avgMae30d)} />
+        <KpiCard label="Avg MAE (30d)" value={formatUsd(data.avgMae30d)} />
       )}
       {typeof data.avgR30d === 'number' && (
-        <KpiCard label="Avg R (30d)" value={data.avgR30d.toFixed(2)} suffix="R" delta={data.avgR30d} />
+        <KpiCard label="Avg R (30d)" value={data.avgR30d.toFixed(2)} suffix="R" tone={data.avgR30d} />
       )}
     </div>
     <p className="mt-2 text-xs text-slate-400">Summaries include all loaded journal records, including automated research records. Periods use close dates. Open P&amp;L is an estimate before fees; these figures are not account equity. {data.unpricedOpenTrades ? `${data.unpricedOpenTrades} open records have no usable quote; a complete open P&L total is unavailable.` : ''} {data.excludedClosedTrades ? `${data.excludedClosedTrades} closed records lack a valid close date or P&L and are excluded.` : ''}</p>

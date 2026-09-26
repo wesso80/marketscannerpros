@@ -4,6 +4,18 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { getKillSwitchState } from '@/lib/universe/personalUniverse';
 import { resolveEntryLevels } from '@/lib/journal/entryLevels';
 
+/** Tags must be a short list of strings (a bare string would break the TEXT[] insert). */
+function sanitizeTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const t of raw) {
+    const tag = typeof t === 'string' ? t.trim().slice(0, 32) : '';
+    if (tag && !out.some((x) => x.toLowerCase() === tag.toLowerCase())) out.push(tag);
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 /**
  * POST /api/journal/add-trade
  * Creates a single journal entry (manual trade).
@@ -116,7 +128,7 @@ export async function POST(req: NextRequest) {
         strategy,
         setup,
         notes,
-        body.tags || [],
+        sanitizeTags(body.tags),
         optionType,
         strikePrice,
         expirationDate,

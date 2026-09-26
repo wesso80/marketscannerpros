@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { entryRiskUsd, entryUnitLabels, optionEntryWarning } from '@/lib/journal/entryUnits';
+import { parseTags } from '@/lib/journal/display';
 
 export interface TradeEntryPayload {
   symbol: string;
@@ -15,6 +16,8 @@ export interface TradeEntryPayload {
   strategy?: string;
   setup?: string;
   notes?: string;
+  /** TR-29: free-form tags (the API already stores them). */
+  tags?: string[];
   tradeDate: string;
   // Options fields
   optionType?: 'CALL' | 'PUT';
@@ -65,6 +68,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
   const [strategy, setStrategy] = useState(iv?.strategy || '');
   const [setup, setSetup] = useState(iv?.setup || '');
   const [notes, setNotes] = useState(iv?.notes || '');
+  const [tagsText, setTagsText] = useState('');
   const [tradeDate, setTradeDate] = useState(new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +119,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         strategy: strategy.trim() || undefined,
         setup: setup.trim() || undefined,
         notes: notes.trim() || undefined,
+        ...(parseTags(tagsText).length ? { tags: parseTags(tagsText) } : {}),
         tradeDate,
         // Options extras
         ...(tradeType === 'Options' && {
@@ -340,10 +345,10 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
           </div>
         </div>
 
-        {/* Row 4: Risk Level + Key Level */}
+        {/* Row 4: Stop + Target (TR-29: plain labels) */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="trade-stop-loss" className={LABEL}>Risk Level</label>
+            <label htmlFor="trade-stop-loss" className={LABEL}>Stop{tradeType === 'Options' ? ' (premium per share)' : ''}</label>
             <input
               id="trade-stop-loss"
               name="stopLoss"
@@ -355,10 +360,10 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               value={stopLoss}
               onChange={(e) => setStopLoss(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-slate-500">Your stop. Leave blank for no stop: R stays unavailable until you set one.</p>
+            <p className="mt-1 text-[11px] text-slate-500">Optional. Leave blank for no stop: R stays unavailable until you set one (you can add it later from the trade drawer).</p>
           </div>
           <div>
-            <label htmlFor="trade-target" className={LABEL}>Key Level</label>
+            <label htmlFor="trade-target" className={LABEL}>Target{tradeType === 'Options' ? ' (premium per share)' : ''}</label>
             <input
               id="trade-target"
               name="target"
@@ -370,7 +375,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-slate-500">Leave blank for no target: none is filled in for you.</p>
+            <p className="mt-1 text-[11px] text-slate-500">Optional. Leave blank for no target: none is filled in for you.</p>
           </div>
         </div>
 
@@ -429,6 +434,21 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               onChange={(e) => setSetup(e.target.value)}
             />
           </div>
+        </div>
+
+        {/* Row 6b: Tags */}
+        <div className="mb-3">
+          <label htmlFor="trade-tags" className={LABEL}>Tags</label>
+          <input
+            id="trade-tags"
+            name="tags"
+            type="text"
+            className={INPUT}
+            placeholder="e.g. earnings, swing, paper"
+            value={tagsText}
+            onChange={(e) => setTagsText(e.target.value)}
+          />
+          <p className="mt-1 text-[11px] text-slate-500">Optional. Separate with commas (up to 10).</p>
         </div>
 
         {/* Row 7: Notes */}

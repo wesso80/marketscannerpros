@@ -46,7 +46,7 @@ type Layer2TradeInventoryProps = {
   onSnapshot?: (id: string) => void;
 };
 
-function SectionHeader({ label, count, open, onToggle, accent }: { label: string; count: number; open: boolean; onToggle: () => void; accent: string }) {
+function SectionHeader({ label, count, loading = false, open, onToggle, accent }: { label: string; count: number; loading?: boolean; open: boolean; onToggle: () => void; accent: string }) {
   return (
     <button
       type="button"
@@ -55,7 +55,8 @@ function SectionHeader({ label, count, open, onToggle, accent }: { label: string
       className="flex w-full items-center gap-2 rounded-lg border border-white/5 bg-white/5 px-4 py-2.5 text-left transition hover:bg-white/10"
     >
       <span className={`text-sm font-semibold ${accent}`}>{label}</span>
-      <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">{count}</span>
+      {/* TR-34: no count until the journal has loaded (it read 0 first). */}
+      <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300" aria-label={loading ? `${label}: loading` : undefined}>{loading ? '…' : count}</span>
       <span className="ml-auto text-slate-400 text-xs">{open ? '▾ Hide' : '▸ Show'}</span>
     </button>
   );
@@ -95,6 +96,7 @@ export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {
         <SectionHeader
           label="My Trades"
           count={manualRows.length}
+          loading={props.loading}
           open={manualOpen}
           onToggle={() => setManualOpen((v) => !v)}
           accent="text-emerald-400"

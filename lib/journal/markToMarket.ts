@@ -8,7 +8,7 @@ import {
   type OptionContractSpec,
 } from '@/lib/options/contractQuote';
 
-export type QuoteObservation = { price: number; observedAt: string | null; retrievedAt: string; basis?: 'EOD' | 'REALTIME'; asOfDate?: string };
+export type QuoteObservation = { price: number; observedAt: string | null; retrievedAt: string; basis?: 'EOD' | 'REALTIME'; asOfDate?: string; /** Stocks: the provider's trading day (no intraday time is given). */ tradingDay?: string | null };
 export type LivePriceMap = Record<string, QuoteObservation>;
 
 type QuoteTrade = Pick<TradeRowModel, 'symbol' | 'assetClass' | 'tradeType'> & Partial<Pick<TradeRowModel, 'option'>>;
@@ -51,7 +51,13 @@ export function parseJournalQuote(raw: any, nowMs = Date.now()): QuoteObservatio
   if (!raw?.ok || typeof raw.price !== 'number' || !Number.isFinite(raw.price) || raw.price <= 0) return null;
   const observedMs = raw.observedAt == null ? null : Date.parse(raw.observedAt);
   if (observedMs != null && (!Number.isFinite(observedMs) || observedMs > nowMs + 60_000 || nowMs - observedMs > 15 * 60_000)) return null;
-  return { price: raw.price, observedAt: observedMs == null ? null : new Date(observedMs).toISOString(), retrievedAt: new Date(nowMs).toISOString() };
+  const tradingDay = typeof raw.observationDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw.observationDate) ? raw.observationDate.slice(0, 10) : null;
+  return {
+    price: raw.price,
+    observedAt: observedMs == null ? null : new Date(observedMs).toISOString(),
+    retrievedAt: new Date(nowMs).toISOString(),
+    ...(tradingDay ? { tradingDay } : {}),
+  };
 }
 
 /** Option marks are dated per session (EOD unless premium realtime): accept current/previous session, keep the label. */
