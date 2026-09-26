@@ -39,6 +39,7 @@ import {
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
 import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
+import { chronologicalCloses, closedLinkLabel, dropServerOwnedRows, realizedByLink, splitClosedBook, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
 import { closedTradeR, formatR as formatStopR, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
 
 interface Position {
@@ -73,6 +74,8 @@ interface ClosedPosition extends Position {
   realizedPL: number;
   /** R against a recorded stop (from the linked journal entry); absent when no stop was recorded. */
   rMultiple?: number;
+  /** How the row relates to the Journal (set by the API; TR-38). Rows not counted are kept out of closedPositions. */
+  journalLink?: ClosedJournalLink;
 }
 
 interface PerformanceSnapshot {
@@ -564,6 +567,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const [positions, setPositions] = useState<Position[]>([]);
   const [density, setDensity] = useState<TerminalDensity>('normal');
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
+  // TR-38: closed rows whose Journal entry was deleted / re-opened, or duplicate copies. Listed, never counted.
+  const [uncountedClosed, setUncountedClosed] = useState<ClosedPosition[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [riskAnalytics, setRiskAnalytics] = useState<{
     dailySharpe: number | null; annualizedSharpe: number | null; var95: number | null;
@@ -940,7 +945,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         if (res.ok && serverHasPortfolioData(data)) {
           // Stops/targets of manual positions live only on this device: re-attach them to the server rows.
           loadedPositions = mergeLocalLevels<Position>(data.positions || [], readLocal<Position[]>('portfolio_positions'));
-          const loadedClosed = data.closedPositions || [];
+          // Only rows the Journal still agrees with (or Portfolio-only closes) count toward the book (TR-38).
+          const { counted: loadedClosed, excluded: loadedUncounted } = splitClosedBook<ClosedPosition>(data.closedPositions || []);
+          setUncountedClosed(loadedUncounted);
           const loadedPerformance = data.performanceHistory || [];
           // Cash state is kept on this device when the server has none (it may never have been saved there);
           // otherwise loading server positions would reset the local cash ledger to empty.
@@ -980,8 +987,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
       // Fallback to localStorage (server empty, server unavailable, or not logged in).
       // Syncing stays off unless the server answered and was empty (nothing there to overwrite).
-      const localPositions = readLocal<Position[]>('portfolio_positions') || [];
-      const localClosed = readLocal<ClosedPosition[]>('portfolio_closed') || [];
+      // Journal-linked rows are owned by the server; when it answered with none, local copies are stale (TR-38).
+      const localPositionsRaw = readLocal<Position[]>('portfolio_positions') || [];
+      const localClosedRaw = readLocal<ClosedPosition[]>('portfolio_closed') || [];
+      const localPositions = serverWasEmpty ? dropServerOwnedRows(localPositionsRaw) : localPositionsRaw;
+      const localClosed = serverWasEmpty ? dropServerOwnedRows(localClosedRaw) : localClosedRaw;
       const localPerformance = readLocal<PerformanceSnapshot[]>('portfolio_performance') || [];
       const localStartingCapital = localStorage.getItem('portfolio_starting_capital');
       const localCashLedger = readLocal<CashLedgerEntry[]>('portfolio_cash_ledger') || [];
@@ -1454,6 +1464,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     enqueuePortfolioDelete(id, 'closed');
   };
 
+  const deleteUncountedClosed = (id: number) => {
+    if (!confirm('Delete this leftover closed row from the Portfolio? The Journal is not changed.')) return;
+    setUncountedClosed((prev) => prev.filter((p) => p.id !== id));
+    enqueuePortfolioDelete(id, 'closed');
+  };
+
   const applyCashFlow = () => {
     const amount = Number(cashFlowDraft.amount || 0);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -1693,7 +1709,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     ? ((winRatePct / 100) * avgWin) - ((1 - (winRatePct / 100)) * avgLossAbs)
     : 0;
 
-  const cumulativeClosedEquity = closedPositions.reduce((acc, trade, index) => {
+  // Oldest close first (the API returns newest first, which drew the curve backwards).
+  const cumulativeClosedEquity = chronologicalCloses(closedPositions).reduce((acc, trade, index) => {
     const prev = index === 0 ? 0 : acc[index - 1].equity;
     acc.push({
       timestamp: trade.closeDate,
@@ -1768,6 +1785,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     riskUnits: toRiskUnits(trade.realizedPL, riskUnitUsd),
   }));
   const closedMeasureById = new Map(closedMeasures.map((m) => [m.id, m]));
+  const realizedBook = realizedByLink(closedPositions);
   const closedRSummary = summarize(closedMeasures.map((m) => m.r));
   const closedRiskUnitSummary = summarize(closedMeasures.map((m) => m.riskUnits));
 
@@ -2867,16 +2885,18 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
-                <table className="w-full text-xs" style={{ minWidth: '600px' }}>
+                <table className="w-full text-xs" style={{ minWidth: '760px' }}>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-500">
                       <th scope="col" className="px-2 py-2 text-left">Open</th>
                       <th scope="col" className="px-2 py-2 text-left">Exit</th>
+                      <th scope="col" className="px-2 py-2 text-right">Realized</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
                       <th scope="col" className="px-2 py-2 text-right">Risk Units</th>
                       <th scope="col" className="px-2 py-2 text-right">Holding Time</th>
                       <th scope="col" className="px-2 py-2 text-left">Setup Tag</th>
                       <th scope="col" className="px-2 py-2 text-left">Outcome</th>
+                      <th scope="col" className="px-2 py-2 text-left">Link</th>
                       <th scope="col" className="px-2 py-2 text-center"></th>
                     </tr>
                   </thead>
@@ -2891,6 +2911,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         <tr key={trade.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2">{trade.symbol} @ {trade.entryPrice.toFixed(2)}</td>
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
+                          <td className={`px-2 py-2 text-right font-semibold ${trade.realizedPL > 0 ? 'text-emerald-400' : trade.realizedPL < 0 ? 'text-red-400' : 'text-slate-400'}`}>{formatSignedMoney(trade.realizedPL)}</td>
                           {r == null
                             ? <td className="px-2 py-2 text-right text-slate-500" title="No stop recorded for this trade, so R is unavailable">—</td>
                             : <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatStopR(r)}</td>}
@@ -2898,16 +2919,47 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
                           <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
+                          <td className="px-2 py-2">
+                            {closedLinkLabel(trade) === 'Journal'
+                              ? <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-300" title="Closed in the Journal; this row mirrors that Journal entry">Journal</span>
+                              : <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300" title="Closed on the Portfolio page only; not in the Journal">Portfolio only</span>}
+                          </td>
                           <td className="px-2 py-2 text-center">
                             <button type="button" onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">Delete</button>
                           </td>
                         </tr>
                       );
                     })}
-                    {closedPositions.length === 0 && <tr><td colSpan={8} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
+                    {closedPositions.length === 0 && <tr><td colSpan={10} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
                   </tbody>
                 </table>
               </div>
+              {closedPositions.length > 0 && (
+                <p className="mt-2 text-[11px] text-slate-400" data-testid="ledger-realized-by-link">
+                  Realized {formatSignedMoney(realizedBook.journal + realizedBook.manual)} = Journal {formatSignedMoney(realizedBook.journal)} ({realizedBook.journalCount} {realizedBook.journalCount === 1 ? 'trade' : 'trades'}) + Portfolio only {formatSignedMoney(realizedBook.manual)} ({realizedBook.manualCount} {realizedBook.manualCount === 1 ? 'trade' : 'trades'}).
+                </p>
+              )}
+              {uncountedClosed.length > 0 && (
+                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3" data-testid="ledger-uncounted">
+                  <p className="text-xs font-semibold text-amber-300">Not counted: {uncountedClosed.length} leftover closed {uncountedClosed.length === 1 ? 'row' : 'rows'}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">These rows came from Journal trades that were later deleted or re-opened, or are duplicate copies. They are left out of realized P&amp;L, equity, return and trade stats. Delete them if you don&apos;t need them (the Journal is not changed).</p>
+                  <table className="mt-2 w-full text-xs">
+                    <tbody>
+                      {uncountedClosed.map((trade) => (
+                        <tr key={trade.id} className="border-t border-slate-800/60 text-slate-400">
+                          <td className="px-2 py-1.5">{trade.symbol}</td>
+                          <td className="px-2 py-1.5">{new Date(trade.closeDate).toLocaleDateString()}</td>
+                          <td className="px-2 py-1.5 text-right">{formatSignedMoney(trade.realizedPL)}</td>
+                          <td className="px-2 py-1.5">{closedLinkLabel(trade)}</td>
+                          <td className="px-2 py-1.5 text-center">
+                            <button type="button" onClick={() => deleteUncountedClosed(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this leftover row from the Portfolio">Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

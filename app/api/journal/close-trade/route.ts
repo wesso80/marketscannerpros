@@ -277,6 +277,13 @@ export async function POST(req: NextRequest) {
           [session.workspaceId, journalEntryId]
         );
 
+        // One closed mirror row per journal entry (TR-38): a re-opened and re-closed entry replaces its
+        // previous copy instead of adding a second closed row to the Portfolio book.
+        await client.query(
+          `DELETE FROM portfolio_closed WHERE workspace_id = $1 AND journal_entry_id = $2`,
+          [session.workspaceId, journalEntryId]
+        );
+
         // Insert into closed positions
         await client.query(
           `INSERT INTO portfolio_closed (workspace_id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl, journal_entry_id)
