@@ -9,7 +9,7 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
-import { formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
+import { equityMoversBasisLabel, formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
 
 interface Mover {
   ticker: string;
@@ -70,6 +70,7 @@ interface MoversData {
   lastUpdated: string;
   /** Alpha Vantage `last_updated` for the equity lists (15-minute delayed feed). */
   equityAsOf?: string | null;
+  equityFeed?: 'delayed' | 'end_of_day' | 'unavailable';
   marketMood: 'bullish' | 'bearish' | 'neutral';
   summary: {
     avgGainerChange: number;
@@ -151,6 +152,7 @@ export default function MarketMoversPage() {
             timestamp: new Date().toISOString(),
             lastUpdated: result.lastUpdated || new Date().toISOString(),
             equityAsOf: result.equityAsOf ?? null,
+            equityFeed: result.equityFeed,
             marketMood: 'neutral',
             summary: {
               avgGainerChange: 0,
@@ -595,7 +597,7 @@ export default function MarketMoversPage() {
             ['Top Loser', data?.summary?.topLoserTicker || 'N/A'],
             ['Data', loading ? 'Refreshing' : error ? 'Degraded' : 'Live'],
             ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : '—'],
-            ['US equities', `15-min delayed${formatEasternAsOf(data?.equityAsOf) ? `, ${formatEasternAsOf(data?.equityAsOf)}` : ''}`],
+            ['US equities', `${equityMoversBasisLabel(data?.equityFeed)}${formatEasternAsOf(data?.equityAsOf) ? `, ${formatEasternAsOf(data?.equityAsOf)}` : ''}`],
           ].map(([k, v]) => (
             <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
               <span className="font-semibold text-slate-100">{k}</span> · {v}

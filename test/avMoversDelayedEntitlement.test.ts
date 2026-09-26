@@ -25,12 +25,14 @@ describe('Alpha Vantage US equity entitlement (OV-14)', () => {
     expect(formatEasternAsOf('nope')).toBeNull();
   });
 
-  it('both TOP_GAINERS_LOSERS calls send the entitlement (market movers route + Pro scan)', () => {
+  it('both TOP_GAINERS_LOSERS users go through lib/avTopMovers, which asks for the delayed entitlement first', () => {
     for (const file of ['app/api/market-movers/route.ts', 'app/api/scanner/bulk/route.ts']) {
       const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
-      const line = src.split('\n').find((l) => l.includes('function=TOP_GAINERS_LOSERS'));
-      expect(line, file).toContain('avEquityEntitlementParam()');
+      expect(src, file).toContain('fetchAvTopMovers(');
+      expect(src, file).not.toContain('function=TOP_GAINERS_LOSERS');
     }
+    const lib = readFileSync(resolve(__dirname, '../lib/avTopMovers.ts'), 'utf8');
+    expect(lib).toContain('const delayed = await call(apiKey, avEquityEntitlementParam(), fetcher);');
   });
 });
 
@@ -59,11 +61,11 @@ describe('movers surfaces show the delayed basis', () => {
   const dashboard = readFileSync(resolve(__dirname, '../app/tools/dashboard/page.tsx'), 'utf8');
   const moversPage = readFileSync(resolve(__dirname, '../app/tools/market-movers/page.tsx'), 'utf8');
   it('dashboard equity movers: "15-min delayed" + as-of; crypto keeps "Live movement"', () => {
-    expect(dashboard).toMatch(/title="Equity movers" eyebrow="15-min delayed" action=\{formatEasternAsOf\(movers\.data\?\.equityAsOf\)/);
+    expect(dashboard).toMatch(/title="Equity movers" eyebrow=\{equityMoversBasisLabel\(movers\.data\?\.equityFeed\)\} action=\{formatEasternAsOf\(movers\.data\?\.equityAsOf\)/);
     expect(dashboard).toContain('<PanelHeader title="Crypto movers" eyebrow="Live movement" />');
   });
   it('Movers tab carries equityAsOf into a "US equities" status chip', () => {
     expect(moversPage).toContain('equityAsOf: result.equityAsOf ?? null');
-    expect(moversPage).toContain("['US equities', `15-min delayed");
+    expect(moversPage).toContain("['US equities', `${equityMoversBasisLabel(data?.equityFeed)}");
   });
 });

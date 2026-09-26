@@ -105,6 +105,7 @@ export function classifyMarketRegime(inputs: RegimeOverlayInputs | null | undefi
   if (qqqSide && inputs?.qqq?.asOf) dated.push(describeInputDate('QQQ', inputs.qqq.asOf, now, inputs.qqq.source));
   if (inputs?.hyOas?.asOf) dated.push(describeInputDate('HY OAS', inputs.hyOas.asOf, now, inputs.hyOas.source));
   reasons.push(`Data: ${dated.join(', ')}`);
+  if (vix?.note) reasons.push(vix.note);
 
   let regime: Regime;
   if (level >= P.vixStress || (level >= P.vixElevated && shock != null && shock >= P.vixShockPct) || (hyWidening != null && hyWidening >= P.hyOasStressPp && spySide === 'below')) {

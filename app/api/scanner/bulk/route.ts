@@ -29,7 +29,7 @@ import {
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { avEquityEntitlementParam } from '@/lib/alphaVantageEntitlement';
+import { fetchAvTopMovers } from '@/lib/avTopMovers';
 import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
 import { crossSectionalPercentiles } from '@/lib/analysis';
 import { scoreProSnapshot, type ProHardBlockContext } from '@/lib/scanner/proScore';
@@ -1277,25 +1277,9 @@ async function fetchAlphaTopMovers(): Promise<{
     return { gainers: [], losers: [], active: [], apiCallsUsed: 0 };
   }
 
-  try {
-    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_KEY}${avEquityEntitlementParam()}`;
-    await avTakeToken();
-    const response = await fetch(url, { cache: 'no-store' });
-    const data = await response.json();
-
-    if (data?.Note || data?.Information || data?.['Error Message']) {
-      return { gainers: [], losers: [], active: [], apiCallsUsed: 1 };
-    }
-
-    return {
-      gainers: data?.top_gainers || [],
-      losers: data?.top_losers || [],
-      active: data?.most_actively_traded || [],
-      apiCallsUsed: 1,
-    };
-  } catch {
-    return { gainers: [], losers: [], active: [], apiCallsUsed: 1 };
-  }
+  // 15-minute delayed list with an end-of-day fallback (lib/avTopMovers, OV-14).
+  const movers = await fetchAvTopMovers(ALPHA_KEY);
+  return { gainers: movers.gainers, losers: movers.losers, active: movers.active, apiCallsUsed: movers.apiCalls };
 }
 
 async function fetchAlphaBulkQuotes(

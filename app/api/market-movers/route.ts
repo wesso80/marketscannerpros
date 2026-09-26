@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
-import { avTakeToken } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
-import { parseAlphaVantageEasternTime } from '@/lib/analysis/providerAsOf';
-import { avEquityEntitlementParam } from '@/lib/alphaVantageEntitlement';
+import { fetchAvTopMovers } from '@/lib/avTopMovers';
 import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -15,33 +13,8 @@ export const revalidate = 300;
 let cachedResponse: { data: any; ts: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-/* ── Alpha Vantage equity movers ───────────────────────────────────── */
-async function fetchEquityMovers(): Promise<{
-  gainers: any[];
-  losers: any[];
-  active: any[];
-  /** Alpha Vantage's `last_updated` as ISO; null if not sent. */
-  asOf?: string | null;
-}> {
-  if (!ALPHA_VANTAGE_API_KEY) return { gainers: [], losers: [], active: [] };
-  try {
-    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_VANTAGE_API_KEY}${avEquityEntitlementParam()}`;
-    await avTakeToken();
-    const res = await fetch(url, { cache: 'no-store' });
-    const data = await res.json();
-    if (data?.Note || data?.Information || data?.['Error Message']) {
-      return { gainers: [], losers: [], active: [] };
-    }
-    return {
-      gainers: data?.top_gainers || [],
-      losers: data?.top_losers || [],
-      active: data?.most_actively_traded || [],
-      asOf: parseAlphaVantageEasternTime(data?.last_updated),
-    };
-  } catch {
-    return { gainers: [], losers: [], active: [] };
-  }
-}
+/* ── Alpha Vantage equity movers (15-min delayed, end-of-day fallback: lib/avTopMovers) ── */
+const fetchEquityMovers = () => fetchAvTopMovers(ALPHA_VANTAGE_API_KEY);
 
 /* Valid equity ticker: 1-6 uppercase letters only (no ^, digits-only, non-ASCII) */
 const VALID_EQ_TICKER = /^[A-Z]{1,6}$/;
@@ -252,6 +225,9 @@ export async function GET(request: NextRequest) {
       lastUpdated: new Date().toISOString(),
       // Provider time of the equity lists (Alpha Vantage last_updated). CoinGecko movers carry no time.
       equityAsOf: equityMovers.asOf ?? null,
+      // 'delayed' (15-minute delayed), 'end_of_day' (fallback) or 'unavailable', with Alpha Vantage's reason (OV-14).
+      equityFeed: equityMovers.feed,
+      equityNote: equityMovers.note,
       topGainers: [...eqGainers, ...cryptoGainers].map(enrich),
       topLosers: [...eqLosers, ...cryptoLosers].map(enrich),
       mostActive: [...eqActive, ...(mostActive || []).slice(0, 10).map(normalizeMostActive)].map(enrich),

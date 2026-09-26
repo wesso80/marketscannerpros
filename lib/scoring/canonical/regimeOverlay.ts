@@ -40,7 +40,7 @@ export interface IndexTrend { close: number; sma50: number; sma200: number; /** 
 export interface RegimeOverlayInputs {
   /** VIX observation date (kept for existing callers; same as vix.asOf). */
   asOf?: string | null;
-  vix?: { level: number; change5dPct?: number | null; asOf?: string | null; source?: RegimeInputSource } | null;
+  vix?: { level: number; change5dPct?: number | null; asOf?: string | null; source?: RegimeInputSource; /** Why the primary (Alpha Vantage) source was not used. */ note?: string | null } | null;
   hyOas?: { level: number; change20dPp?: number | null; asOf?: string | null; source?: RegimeInputSource } | null;
   m2?: { change3mPct: number } | null;
   spy?: IndexTrend | null;

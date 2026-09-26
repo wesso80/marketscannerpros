@@ -21,7 +21,10 @@ describe('monthly commodity freshness rule (OV-16)', () => {
 });
 
 describe('GET /api/commodities keeps current monthly series and does not report them as stale', () => {
-  const monthlyDate: Record<string, string> = { ALUMINUM: '2026-08-01', COTTON: '2026-08-01', COFFEE: '2026-05-01' };
+  // AV's monthly series (26 Sep 2026: COFFEE/ALUMINUM/COTTON latest is Jul 2026). SUGAR is set 4 months back so the
+  // "old monthly value is still dropped" case is covered.
+  const monthlyDate: Record<string, string> = { ALUMINUM: '2026-08-01', COTTON: '2026-08-01', COFFEE: '2026-07-01', SUGAR: '2026-05-01' };
+  const quoteSymbols: string[] = [];
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(SAT_26_SEP);
@@ -31,7 +34,10 @@ describe('GET /api/commodities keeps current monthly series and does not report 
       const fn = u.searchParams.get('function')!;
       const json = (body: unknown) => ({ ok: true, json: async () => body });
       if (fn === 'GLOBAL_QUOTE') {
-        if (u.searchParams.get('symbol') === 'JO') return json({}); // delisted ETN → COFFEE falls back to monthly
+        const sym = u.searchParams.get('symbol')!;
+        quoteSymbols.push(sym);
+        // A dead listing still quoted by AV (JO did this: last trade 2023-06-14) must not be used as a live price.
+        if (sym === 'CANE' || sym === 'JO') return json({ 'Global Quote': { '05. price': '54', '09. change': '0', '10. change percent': '0%', '07. latest trading day': '2023-06-14' } });
         return json({ 'Global Quote': { '05. price': '20', '09. change': '0.2', '10. change percent': '1%', '07. latest trading day': '2026-09-25' } });
       }
       if (fn === 'GOLD_SILVER_SPOT') return json({ price: '2500' });
@@ -48,9 +54,14 @@ describe('GET /api/commodities keeps current monthly series and does not report 
     for (const s of ['ALUMINUM', 'COTTON']) {
       expect(row(s)).toMatchObject({ cadence: 'monthly', asOfLabel: 'monthly, as of Aug 2026', freshnessStatus: 'DELAYED', eligibleForGate: true });
     }
-    expect(row('COFFEE')).toMatchObject({ cadence: 'monthly', freshnessStatus: 'STALE', eligibleForGate: false });
+    // OV-16 reopened: coffee comes from AV's monthly COFFEE series, not the delisted JO ETN.
+    expect(quoteSymbols).not.toContain('JO');
+    expect(row('COFFEE')).toMatchObject({ source: 'LEGACY_MONTHLY', cadence: 'monthly', asOfLabel: 'monthly, as of Jul 2026', freshnessStatus: 'DELAYED', eligibleForGate: true, unit: 'cents/lb' });
+    expect(row('COFFEE').sourceSymbol).toBeUndefined();
+    // A stale proxy quote (CANE here, 2023) falls through to the commodity series; that series is 4 months old, so STALE.
+    expect(row('SUGAR')).toMatchObject({ source: 'LEGACY_MONTHLY', freshnessStatus: 'STALE', eligibleForGate: false });
     expect(row('WTI')).toMatchObject({ cadence: 'live', asOfLabel: null });
-    expect(body.dataHealth.staleSymbols).toEqual(['COFFEE']);
+    expect(body.dataHealth.staleSymbols).toEqual(['SUGAR']);
     expect(body.dataHealth.gateReady).toBe(true);
   }, 20_000);
 });

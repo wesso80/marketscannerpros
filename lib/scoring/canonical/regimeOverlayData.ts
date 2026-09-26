@@ -19,7 +19,7 @@ import { isDailySeriesStale } from '@/lib/time/dataFreshness';
 import { FRED_SERIES } from '@/lib/macro/fred';
 import { getFredCsvCached } from '@/lib/macro/fredCsv';
 import { avFetchDailyBars } from '@/lib/marketData/client';
-import { getAvIndexDailyCached } from '@/lib/macro/avIndexData';
+import { avIndexFailureReason, getAvIndexDailyCached } from '@/lib/macro/avIndexData';
 
 const TTL_MS = 15 * 60 * 1000;
 let cache: { at: number; data: RegimeOverlayInputs } | null = null;
@@ -104,13 +104,17 @@ export async function macroWithFallback(key: keyof typeof FRED_SERIES, limit: nu
  * VIX: Alpha Vantage INDEX_DATA first (same-day close, MV-1), FRED (stored VIXCLS, then its CSV) as the fallback.
  * Alpha Vantage is used when it is current, or when it is at least as new as what FRED has.
  */
-export async function vixWithAlphaVantagePrimary(limit: number, now: number): Promise<Sourced<{ rows: Obs[] }> | null> {
+export async function vixWithAlphaVantagePrimary(limit: number, now: number): Promise<Sourced<{ rows: Obs[]; note?: string }> | null> {
   const av = await getAvIndexDailyCached('VIX', { now }).catch(() => null);
   const fromAv = av?.length ? { rows: av.slice(0, limit), source: 'alpha-vantage' as const } : null;
   if (fromAv && !isOlderThanStaleLimit(fromAv.rows[0].on, now)) return fromAv;
   const fred = await macroWithFallback('VIX', limit, now).catch(() => null);
   if (fromAv && (!fred?.rows.length || fromAv.rows[0].on >= fred.rows[0].on)) return fromAv;
-  return fred;
+  // Say why Alpha Vantage was not used, so a FRED-dated regime is diagnosable without server logs (#157 follow-up).
+  const note = fromAv
+    ? `Alpha Vantage VIX latest ${fromAv.rows[0].on} is older than FRED`
+    : `Alpha Vantage VIX unavailable: ${avIndexFailureReason('VIX') ?? (process.env.ALPHA_VANTAGE_API_KEY ? 'no rows' : 'no Alpha Vantage key configured')}`;
+  return fred ? { ...fred, note } : null;
 }
 
 export async function loadRegimeOverlayInputs(opts: { macroRiskState?: RegimeOverlayInputs['macroRiskState'] } = {}): Promise<RegimeOverlayInputs> {
@@ -128,7 +132,7 @@ export async function loadRegimeOverlayInputs(opts: { macroRiskState?: RegimeOve
   const hy = hyS?.rows ?? null;
   const data: RegimeOverlayInputs = {
     asOf: vix?.[0]?.on ?? null,
-    vix: vix && vix.length ? { level: vix[0].value, change5dPct: vix.length >= 6 ? (vix[0].value / vix[5].value - 1) * 100 : null, asOf: vix[0].on, source: vixS!.source } : null,
+    vix: vix && vix.length ? { level: vix[0].value, change5dPct: vix.length >= 6 ? (vix[0].value / vix[5].value - 1) * 100 : null, asOf: vix[0].on, source: vixS!.source, note: vixS!.note ?? null } : null,
     hyOas: hy && hy.length ? { level: hy[0].value, change20dPp: hy.length >= 21 ? hy[0].value - hy[20].value : null, asOf: hy[0].on, source: hyS!.source } : null,
     m2: m2 && m2.length >= 4 ? { change3mPct: (m2[0].value / m2[3].value - 1) * 100 } : null,
     spy, qqq,

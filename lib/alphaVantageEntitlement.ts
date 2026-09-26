@@ -12,6 +12,13 @@ export function avEquityEntitlementParam(): string {
   return `&entitlement=${AV_US_EQUITY_ENTITLEMENT}`;
 }
 
+/** Basis label for the equity movers list: the licensed delayed feed, or the end-of-day fallback (OV-14). */
+export function equityMoversBasisLabel(feed: string | null | undefined): string {
+  if (feed === 'end_of_day') return 'End of day';
+  if (feed === 'unavailable') return 'Unavailable';
+  return '15-min delayed';
+}
+
 /**
  * "as of 15:45 ET" for a provider timestamp (ISO). Adds the New York date when it is not the same New York day as `nowMs`
  * ("as of 16:15 ET, Fri 25 Sep"). Returns null for missing/invalid input.

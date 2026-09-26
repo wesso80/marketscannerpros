@@ -1,7 +1,7 @@
 'use client';
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 import { formatEventTime } from '@/lib/eventTimeDisplay';
-import { formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
+import { equityMoversBasisLabel, formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
 
 /* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
@@ -834,11 +834,11 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
         {/* -- Equity Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <PanelHeader title="Equity movers" eyebrow="15-min delayed" action={formatEasternAsOf(movers.data?.equityAsOf) ? <span className="text-[10px] text-slate-500">{formatEasternAsOf(movers.data?.equityAsOf)}</span> : null} />
+            <PanelHeader title="Equity movers" eyebrow={equityMoversBasisLabel(movers.data?.equityFeed)} action={formatEasternAsOf(movers.data?.equityAsOf) ? <span className="text-[10px] text-slate-500" title={movers.data?.equityNote ?? undefined}>{formatEasternAsOf(movers.data?.equityAsOf)}</span> : null} />
             <div className="space-y-1">
               <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
               {eqGainers.length === 0 ? (
-                <div className="text-xs text-slate-500 py-1">No equity data</div>
+                <div className="text-xs text-slate-500 py-1" title={movers.data?.equityNote ?? undefined}>No equity data</div>
               ) : eqGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`eg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
               <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
               {eqLosers.length === 0 ? (
