@@ -55,9 +55,10 @@ const nextConfig = {
             : 'no-store, no-cache, must-revalidate' },
         ],
       },
-      // Prevent stale API data — always fetch fresh
+      // Prevent stale API data — always fetch fresh. Everything under /api/ except /api/share/*: the public share-card
+      // PNGs set their own Cache-Control (lib/share/respond.ts) and must stay cacheable for X / Metricool fetches.
       {
-        source: '/api/:path*',
+        source: '/api/:path((?!share/).*)',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
           { key: 'Pragma', value: 'no-cache' },

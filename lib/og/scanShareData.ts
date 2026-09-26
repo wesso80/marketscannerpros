@@ -21,6 +21,8 @@ export interface ShareData {
   /** Canonical verdict label and what the score means (null without a daily-pick row). */
   verdict: string | null;
   basisNote: string | null;
+  /** Score in the share card's wording ("95th pct"); null/absent for legacy rows. */
+  scoreText?: string | null;
   fetchedAt: string;
   source: 'daily_picks' | 'company_overview' | 'symbol_only';
 }
@@ -119,6 +121,7 @@ export async function loadShare(rawSymbol: string): Promise<ShareData | null> {
     score: view ? view.score : null,
     verdict: view?.label ?? null,
     basisNote: view?.basisNote ?? null,
+    scoreText: view?.scoreText ?? null,
     price: pick?.price ? Number(pick.price) : null,
     changePct: pick?.change_percent ? Number(pick.change_percent) : null,
     float: formatShareFloat(sharesFloat),

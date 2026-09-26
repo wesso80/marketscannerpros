@@ -5,6 +5,7 @@
 import { ImageResponse } from 'next/og';
 import type { ReactElement } from 'react';
 import { SHARE_CARD_HEIGHT, SHARE_CARD_WIDTH } from './validate';
+import { shareCardFonts } from './font';
 
 const MAX_ENTRIES = 48;
 const cache = new Map<string, { at: number; ttlMs: number; body: ArrayBuffer; headers: Record<string, string> }>();
@@ -26,7 +27,7 @@ export async function renderPng(
   element: ReactElement,
   opts: { cacheControl: string; filename: string; ttlMs: number },
 ): Promise<Response> {
-  const img = new ImageResponse(element, { width: SHARE_CARD_WIDTH, height: SHARE_CARD_HEIGHT });
+  const img = new ImageResponse(element, { width: SHARE_CARD_WIDTH, height: SHARE_CARD_HEIGHT, fonts: shareCardFonts() });
   const body = await img.arrayBuffer();
   const headers = {
     'Content-Type': 'image/png',

@@ -66,7 +66,10 @@ export function ogSafeText(value: unknown, max: number): string {
 
 export function scanOgModelFromShare(d: ShareData): ScanOgModel {
   const stats: ScanOgModel['stats'] = [];
-  if (d.score != null && Number.isFinite(d.score)) stats.push({ label: d.verdict ? 'Setup score' : 'Opp score', value: `${Math.round(d.score)}/100` });
+  // Same wording as the share card's Score cell ("95th pct", "74/100 factors (uncalibrated)"), never a bare "/100"
+  // that reads like a probability. Legacy rows without a canonical verdict keep their signal-count score.
+  if (d.scoreText) stats.push({ label: 'Score', value: ogSafeText(d.scoreText, 30) });
+  else if (d.score != null && Number.isFinite(d.score)) stats.push({ label: d.verdict ? 'Setup score' : 'Opp score', value: `${Math.round(d.score)}/100` });
   if (d.price != null && Number.isFinite(d.price)) stats.push({ label: 'Price', value: `$${d.price.toFixed(2)}` });
   if (d.float) stats.push({ label: 'Float', value: ogSafeText(d.float, 10) });
   if (d.shortPct != null && Number.isFinite(d.shortPct)) stats.push({ label: 'Short %', value: `${d.shortPct.toFixed(1)}%` });
