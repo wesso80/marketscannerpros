@@ -1,5 +1,6 @@
 import { dmi } from '@/lib/ta/core';
 import { getOHLCRange } from '@/lib/coingecko';
+import { getCached, setCached } from '@/lib/redis';
 
 /** Same minimum as equities (lib/equityTrendMetrics): 14 DI smoothing + 14 ADX smoothing + 2. */
 export const CRYPTO_ADX_MIN_BARS = 30;
@@ -26,12 +27,21 @@ export function cryptoDailyAdx(rows: number[][] | null | undefined, nowMs: numbe
   return Number.isFinite(adx) ? Math.round(adx * 10) / 10 : undefined;
 }
 
-/** One CoinGecko daily OHLC call (~180 days). Fails soft to `undefined`. */
+/** A daily ADX only changes when a UTC day closes; cache it so /api/flow adds at most one call per coin per hour. */
+export const CRYPTO_ADX_CACHE_TTL_S = 3600;
+
+/** One CoinGecko daily OHLC call (~180 days), cached per coin for an hour. Fails soft to `undefined`. */
 export async function fetchCryptoDailyAdx(coinId: string, nowMs: number = Date.now()): Promise<number | undefined> {
+  const key = `crypto-daily-adx:v1:${coinId}`;
   try {
+    const cached = await getCached<{ adx: number | null }>(key).catch(() => null);
+    if (cached && (cached.adx === null || Number.isFinite(cached.adx))) return cached.adx ?? undefined;
     const nowS = Math.floor(nowMs / 1000) - 60; // CoinGecko rejects `to` slightly ahead of its clock
     const rows = await getOHLCRange(coinId, nowS - 180 * 86_400, nowS, { timeoutMs: 8000, retries: 0 }, 'daily');
-    return cryptoDailyAdx(rows, nowMs);
+    const adx = cryptoDailyAdx(rows, nowMs);
+    // Only cache a real read (a failed fetch returns null rows) so an outage doesn't pin "no ADX" for an hour.
+    if (rows && rows.length) await setCached(key, { adx: adx ?? null }, CRYPTO_ADX_CACHE_TTL_S).catch(() => false);
+    return adx;
   } catch {
     return undefined;
   }
