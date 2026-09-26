@@ -11,6 +11,7 @@ import { q } from "@/lib/db";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } from "@/lib/scanner/dailyPickTrust";
 import { canonicalPickFields, rankDailyPicks, readStoredCanonical, storedLegacyScore } from "@/lib/scoring/canonical/dailyPick";
+import { formatSessionDate, toYmd } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
 
@@ -67,8 +68,9 @@ export async function GET(req: NextRequest) {
         CASE WHEN COALESCE(rank_type, 'top') = 'top' OR indicators->>'scoreColumn' = 'canonical' THEN score ELSE -score END DESC
     `, [limit]);
 
-    // Get the scan date
-    const scanDate = picks.length > 0 ? picks[0].scan_date : null;
+    // The scan date is the US market session the data belongs to, returned as a plain YYYY-MM-DD (a DATE serialised as
+    // an ISO midnight timestamp would read as the previous day in US time zones).
+    const scanDate = picks.length > 0 ? toYmd(picks[0].scan_date) : null;
 
     // Group by asset class and rank type
     const topPicks: Record<string, typeof picks> = {
@@ -93,6 +95,7 @@ export async function GET(req: NextRequest) {
         trusts.push(trust);
         target[pick.asset_class].push({
           ...pick,
+          scan_date: toYmd(pick.scan_date),
           // Canonical verdict (primary: permission / grade / setup / direction). From Phase 3 the `score` + `direction`
           // columns hold the canonical values too (indicators.scoreColumn = 'canonical'); legacyScore is the old
           // signal-count score.
@@ -119,6 +122,8 @@ export async function GET(req: NextRequest) {
       success: true,
       compliance: scannerComplianceMetadata(),
       scanDate,
+      scanDateLabel: scanDate ? `US session ${formatSessionDate(scanDate)}` : null,
+      scanDateBasis: 'US equity market session (America/New_York) the scan belongs to. Crypto rows use the latest completed UTC daily candle at scan time; each row carries its own dataTimestamp.',
       // Highest bullish-alignment observations
       topPicks: {
         equity: topPicks.equity,

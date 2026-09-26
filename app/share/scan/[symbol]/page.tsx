@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q } from '@/lib/db';
 import { pickView } from '@/lib/scoring/canonical/dailyPick';
+import { toYmd } from '@/lib/time/usSession';
 
 export const runtime = 'nodejs';
 export const revalidate = 600; // ISR — 10 min freshness is fine for share cards
@@ -100,7 +101,7 @@ async function loadShare(rawSymbol: string): Promise<ShareData | null> {
   if (sharesFloat && sharesFloat < 20_000_000) {
     headline = `${symbol} flagged as low-float (${formatFloat(sharesFloat)} shares${shortPct ? `, ${shortPct.toFixed(1)}% short` : ''})`;
   } else if (pick) {
-    const when = pick.scan_date instanceof Date ? pick.scan_date.toISOString().slice(0, 10) : String(pick.scan_date).slice(0, 10);
+    const when = toYmd(pick.scan_date) ?? String(pick.scan_date).slice(0, 10);
     headline = view?.label
       ? `${symbol}: ${view.label} (${side.toLowerCase()} side) on ${when}`
       : `${symbol} scored ${pick.score}/100 ${side === 'LONG' ? 'long' : side === 'SHORT' ? 'short' : 'watch'} on ${when}`;
