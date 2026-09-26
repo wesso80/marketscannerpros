@@ -277,7 +277,8 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
         {bestTrade && (
           <div className="rounded-xl border border-emerald-500/30 bg-slate-800/50 p-4">
             <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Best trade</div>
-            <div className="text-lg font-bold text-emerald-500">
+            {/* Best/worst are the highest/lowest-return trades: colour by the trade's sign, not the card (BT-8). */}
+            <div className={`text-lg font-bold ${bestTrade.returnPercent < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
               {bestTrade.returnPercent >= 0 ? '+' : ''}{bestTrade.returnPercent.toFixed(2)}% ({bestTrade.symbol})
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
@@ -290,8 +291,8 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
         {worstTrade && (
           <div className="rounded-xl border border-red-500/30 bg-slate-800/50 p-4">
             <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Worst trade</div>
-            <div className="text-lg font-bold text-red-500">
-              {worstTrade.returnPercent.toFixed(2)}% ({worstTrade.symbol})
+            <div className={`text-lg font-bold ${worstTrade.returnPercent < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              {worstTrade.returnPercent > 0 ? '+' : ''}{worstTrade.returnPercent.toFixed(2)}% ({worstTrade.symbol})
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
               {new Date(worstTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
