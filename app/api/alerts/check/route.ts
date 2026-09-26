@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
-import { checkPriceAlertCondition, describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
+import { describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
+import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
+import { fxQuoteUrl, parseFxAlertQuote, quoteSourceFor } from '@/lib/alerts/assetTypes';
 
 /**
  * Alert Price Checker
@@ -32,6 +35,9 @@ interface Alert {
   notify_email: boolean;
   notify_push: boolean;
   name: string;
+  last_price: number | string | null;
+  triggered_at: string | Date | null;
+  cooldown_minutes: number | null;
 }
 
 // GET - also runs the check (for cron services that only support GET)
@@ -59,7 +65,8 @@ async function checkAlerts(req: NextRequest) {
     // Get all active alerts (exclude smart alerts - they have their own check routes)
     const alerts = await q<Alert>(`
       SELECT id, workspace_id, symbol, asset_type, condition_type, 
-             condition_value, is_recurring, notify_email, notify_push, name
+             condition_value, is_recurring, notify_email, notify_push, name,
+             last_price, triggered_at, cooldown_minutes
       FROM alerts 
       WHERE is_active = true 
         AND (expires_at IS NULL OR expires_at > NOW())
@@ -83,12 +90,19 @@ async function checkAlerts(req: NextRequest) {
 
     const triggered: string[] = [];
     const errors: string[] = [];
+    const skippedStale: string[] = [];
 
     // Check each symbol group
     for (const [key, groupAlerts] of Object.entries(symbolGroups)) {
       const [assetType, symbol] = key.split(':');
       
       try {
+        if (quoteSourceFor(assetType) === 'unsupported') {
+          // e.g. commodity alerts: there is no live feed for them here, so say so instead of
+          // pricing the symbol as a stock (TR-18).
+          errors.push(`No price feed for ${assetType} alerts (${symbol}); not checked`);
+          continue;
+        }
         // Fetch current price (and the % change the same quote reports)
         const quote = await fetchQuote(symbol, assetType);
         console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
@@ -99,10 +113,17 @@ async function checkAlerts(req: NextRequest) {
         }
         const price = quote.price;
 
-        // Check each alert for this symbol
+        // A stock quote from before the latest session that has opened is stale: fire nothing on it (TR-17).
+        if (assetType !== 'crypto' && isStaleStockQuote(quote)) {
+          skippedStale.push(`${symbol} (quote from ${quote.asOfDate})`);
+          continue;
+        }
+
+        // Check each alert for this symbol: condition met, plus cross / cooldown / once-per-period rules (TR-17)
         for (const alert of groupAlerts) {
-          const shouldTrigger = checkPriceAlertCondition(alert.condition_type, alert.condition_value, quote);
-          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} (${quote.changePercent ?? 'n/a'}%) = ${shouldTrigger ? 'TRIGGER' : 'no'}`);
+          const decision = decideAlert(alert, quote);
+          const shouldTrigger = decision.fire;
+          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} (${quote.changePercent ?? 'n/a'}%) = ${decision.fire ? 'TRIGGER' : `no (${decision.reason})`}`);
           
           if (shouldTrigger) {
             try {
@@ -131,6 +152,7 @@ async function checkAlerts(req: NextRequest) {
       checked: alerts.length,
       triggered: triggered.length,
       triggeredIds: triggered,
+      skippedStale: skippedStale.length > 0 ? skippedStale : undefined,
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     });
@@ -150,11 +172,24 @@ async function checkAlerts(req: NextRequest) {
 // Fetch current price and % change based on asset type
 async function fetchQuote(symbol: string, assetType: string): Promise<AlertQuote | null> {
   try {
-    if (assetType === 'crypto') {
+    const source = quoteSourceFor(assetType);
+    if (source === 'crypto') {
       // Use CoinGecko commercial API for crypto prices (24h change comes with the same call)
       const result = await getPriceBySymbol(symbol);
       if (!result || !Number.isFinite(result.price)) return null;
       return { price: result.price, changePercent: Number.isFinite(result.change24h) ? result.change24h : null };
+    } else if (source === 'forex') {
+      // Forex pairs: Alpha Vantage exchange rate (rate only; forex % alerts are refused at creation)
+      const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+      if (!apiKey) return null;
+      const url = fxQuoteUrl(symbol, apiKey);
+      if (!url) return null;
+      await avTakeToken();
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return parseFxAlertQuote(await res.json());
+    } else if (source === 'unsupported') {
+      return null;
     } else {
       // Use Alpha Vantage for stocks
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
@@ -330,7 +365,13 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
   }
 
   // A user's alert is private: it is delivered only to that user's own channels
-  // (email / push above). It is not posted to the shared site-wide Discord channel.
+  // (email / push above, plus their own Discord webhook if they turned it on in
+  // Account Settings). It is never posted to the shared site-wide Discord channel.
+  // Discord runs last and never throws, so it can't block email or push.
+  await deliverAlertToUserDiscord(alert.workspace_id, {
+    title: `${alert.symbol} alert${alert.name ? `: ${alert.name}` : ''}`,
+    detail: conditionMet,
+  });
 
   console.log(`🔔 Alert triggered: ${alert.name || alert.symbol} - ${conditionMet}`);
 }

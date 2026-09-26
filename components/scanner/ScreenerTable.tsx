@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { gradeBasis } from '@/lib/scoring/canonical/display';
 
 /* ─── Types ─── */
 export interface ScreenerRow {
@@ -111,6 +112,8 @@ function confColor(c: number): string {
 interface Column {
   key: SortKey;
   label: string;
+  /** Header tooltip */
+  title?: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
   render?: (row: ScreenerRow) => React.ReactNode;
@@ -137,9 +140,10 @@ const COLUMNS: Column[] = [
   },
   {
     key: 'confidence', label: 'MSP', width: '70px', align: 'center',
+    title: 'MSP composite (0–100): the legacy factor blend, capped by data trust. It does not set the Grade; the Setup score under Research does.',
     render: (r) => (
-      <span title={r.scoreExplanation ?? `Condition match ${r.matchConfidence ?? r.confidence}/100${r.matchConfidence != null && r.matchConfidence !== r.confidence ? ` — capped to ${r.confidence} by data trust` : ''}. Strength of match to the selected conditions; not a probability.`} style={{ fontWeight: 700, color: confColor(r.confidence) }}>
-        {r.confidence}<span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}>/100</span>
+      <span title={'MSP composite — does not set the Grade. ' + (r.scoreExplanation ?? `Condition match ${r.matchConfidence ?? r.confidence}/100${r.matchConfidence != null && r.matchConfidence !== r.confidence ? ` — capped to ${r.confidence} by data trust` : ''}. Strength of match to the selected conditions; not a probability.`)} style={{ fontWeight: 700, color: confColor(r.confidence) }}>
+        <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--msp-text-muted)', marginRight: 2 }}>MSP</span>{r.confidence}<span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}>/100</span>
       </span>
     ),
   },
@@ -226,8 +230,9 @@ const COLUMNS: Column[] = [
   },
   {
     key: 'permission', label: 'Research', width: '105px', align: 'center',
+    title: 'Engine verdict and Grade. The Grade comes from the Setup score shown underneath, not from the MSP composite.',
     render: (r) => {
-      const capFlag = r.canonical?.flags?.find((f) => f.code === 'SNAPSHOT_GRADE_CAP');
+      const basis = r.canonical ? gradeBasis(r.canonical) : undefined;
       return (
         <>
           <span style={{
@@ -235,10 +240,10 @@ const COLUMNS: Column[] = [
             background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
           }}>
             {r.scorePermission ?? (r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014')}
-            {r.canonical ? <span className="ml-1 text-[10px] font-bold opacity-80" title={`${r.canonical.setupType} · ${r.canonical.direction} · score ${r.canonical.score}${capFlag ? ` · ${capFlag.message}` : ''}`}>{r.canonical.grade}</span> : null}
+            {r.canonical ? <span className="ml-1 text-[10px] font-bold opacity-80" title={`${r.canonical.setupType} · ${r.canonical.direction} · ${basis}`}>{r.canonical.grade}</span> : null}
           </span>
           {r.canonical && r.canonical.permission !== 'BLOCK'
-            ? <div style={{ fontSize: 9, color: 'var(--msp-text-muted)', marginTop: 1 }}>Setup {r.canonical.score}</div>
+            ? <div style={{ fontSize: 9, color: 'var(--msp-text-muted)', marginTop: 1 }} title={basis}>Setup {r.canonical.score} · sets grade</div>
             : null}
         </>
       );
@@ -323,7 +328,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol, emptyM
                   zIndex: 1,
                 }}
               >
-                {col.label}
+                <span title={col.title}>{col.label}</span>
                 {sortKey === col.key && (
                   <span style={{ marginLeft: 3, fontSize: 9 }}>
                     {sortDir === 'asc' ? '▲' : '▼'}

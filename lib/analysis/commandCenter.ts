@@ -13,6 +13,7 @@
  */
 
 import type { AnalyticalStance } from './terminology';
+import { formatEventTime } from '../eventTimeDisplay';
 
 /* ── Structural input shapes (subset of the v2 API responses we rely on) ── */
 
@@ -51,6 +52,8 @@ export interface EventLike {
   impact?: string;
   date?: string;
   time?: string;
+  /** ISO UTC release instant; preferred for display (rendered in the viewer's zone). */
+  releaseTimeUtc?: string;
   country?: string;
   category?: string;
 }
@@ -225,7 +228,10 @@ export function interpretCryptoParticipation(c: CryptoOverviewLike | null): Flow
 
 export interface EventClockItem {
   event: string;
+  /** Viewer-zone date and time with the zone label, e.g. "2026-09-30 22:30 AEST". */
   when: string;
+  /** Same instant in ET and UTC, for a hover title. */
+  whenTitle: string;
   importance: 'high' | 'medium' | 'low';
   market: string;
 }
@@ -237,11 +243,15 @@ function normalizeImpact(impact?: string): 'high' | 'medium' | 'low' {
   return 'low';
 }
 
-export function summarizeEventClock(events: EventLike[], limit = 5): EventClockItem[] {
-  return events.slice(0, limit).map((e) => ({
-    event: e.event,
-    when: [e.date, e.time].filter(Boolean).join(' ').trim() || 'Scheduled',
-    importance: normalizeImpact(e.impact),
-    market: e.country || e.category || '—',
-  }));
+export function summarizeEventClock(events: EventLike[], limit = 5, timeZone?: string): EventClockItem[] {
+  return events.slice(0, limit).map((e) => {
+    const shown = formatEventTime(e, timeZone);
+    return {
+      event: e.event,
+      when: shown.label,
+      whenTitle: shown.title,
+      importance: normalizeImpact(e.impact),
+      market: e.country || e.category || '—',
+    };
+  });
 }

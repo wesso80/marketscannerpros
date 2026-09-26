@@ -56,10 +56,10 @@ describe('percent change condition (pure)', () => {
 
   it('parses Alpha Vantage quotes: change vs previous close, delayed key, and missing fields', () => {
     expect(parseGlobalQuote({ 'Global Quote': { '05. price': '490.00', '08. previous close': '500.00' } }))
-      .toEqual({ price: 490, changePercent: -2 });
+      .toEqual({ price: 490, changePercent: -2, asOfDate: null });
     expect(parseGlobalQuote({ 'Global Quote - DATA DELAYED BY 15 MINUTES': { '05. price': '10', '10. change percent': '1.5000%' } }))
-      .toEqual({ price: 10, changePercent: 1.5 });
-    expect(parseGlobalQuote({ 'Global Quote': { '05. price': '10' } })).toEqual({ price: 10, changePercent: null });
+      .toEqual({ price: 10, changePercent: 1.5, asOfDate: null });
+    expect(parseGlobalQuote({ 'Global Quote': { '05. price': '10' } })).toEqual({ price: 10, changePercent: null, asOfDate: null });
     expect(parseGlobalQuote({ 'Global Quote': {} })).toBeNull();
     expect(parseGlobalQuote({ Note: 'rate limited' })).toBeNull();
   });

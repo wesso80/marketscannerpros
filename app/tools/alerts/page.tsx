@@ -9,6 +9,7 @@ import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import { alertConditionLabel } from '@/lib/alertPresentation';
+import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts } from '@/lib/alerts/consoleStatus';
 import RegimeBanner from '@/components/RegimeBanner';
 import { PageHero } from '@/components/ui';
@@ -320,7 +321,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
           <div className="flex justify-start gap-2 lg:justify-center">
             <StatusBadge label="Push" state={prefs?.in_app_enabled ? 'Enabled' : 'Disabled'} />
-            <StatusBadge label="Webhook" state={prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Connected' : 'Not Set'} />
+            <StatusBadge label="Webhook" state={prefs?.discord_enabled && isDiscordWebhookUrl(prefs?.discord_webhook_url) ? 'Connected' : prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Not a Discord URL' : 'Not Set'} />
           </div>
 
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">

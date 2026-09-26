@@ -1001,7 +1001,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   const tcSymbol = assetClass === 'crypto' ? `${symbol.replace(/[-/]?(USDT|USD)$/i, '')}USD` : symbol;
   const base = symbol.replace(/[-/]?(USDT|USD)$/i, '');
   const [priceData, tcData, macroRegime] = await Promise.all([
-    fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval }),
+    fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval, cryptoIndicatorHistory: true }),
     fetchTimeConfluence(tcSymbol),
     fetchMacroRegime(),
   ]);

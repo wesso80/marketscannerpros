@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { normalizeDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { ensureNotificationSchema } from '@/lib/notifications/tradeEvents';
@@ -19,12 +20,9 @@ function toSafeEmail(value: unknown): string | null {
   return email.slice(0, 320);
 }
 
+// Only real Discord webhook URLs: the server posts to this URL (TR-26).
 function toSafeWebhook(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const webhook = value.trim();
-  if (!webhook) return null;
-  if (!/^https:\/\//i.test(webhook)) return null;
-  return webhook.slice(0, 1000);
+  return normalizeDiscordWebhookUrl(value);
 }
 
 export async function GET() {
