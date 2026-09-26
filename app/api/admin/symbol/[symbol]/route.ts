@@ -13,7 +13,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { wrapTruth } from "@/lib/admin";
 import type { Market } from "@/types/operator";
-import { getAdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
+import { buildAdminResearchScan } from "@/lib/admin/getAdminResearchPacket";
 
 export const runtime = "nodejs";
 
@@ -37,7 +37,8 @@ export async function GET(
     const market = (searchParams.get("market") || "CRYPTO") as Market;
     const timeframe = searchParams.get("timeframe") || "15m";
     const session = await getSessionFromCookie();
-    const packet = await getAdminResearchPacket({ symbol, market, timeframe, workspaceId: session?.workspaceId });
+    const scan = await buildAdminResearchScan({ symbol, market, timeframe, workspaceId: session?.workspaceId });
+    const packet = scan.packet;
 
     return NextResponse.json({
       ...packet.snapshot,
@@ -47,7 +48,10 @@ export async function GET(
         setup: packet.setup,
       },
       researchPacket: packet,
-      bars: packet.snapshot.bars || [],
+      // The bars the engine scanned (packets don't embed bars); the chart used to get [] and say "No bar data".
+      bars: (packet.snapshot.bars?.length ? packet.snapshot.bars : scan.bars).slice(-300).map((b) => ({
+        timestamp: b.timestamp, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+      })),
       meta: {
         generatedAt: packet.createdAt,
         packetId: packet.packetId,

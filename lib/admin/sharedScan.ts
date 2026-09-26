@@ -248,7 +248,6 @@ async function executeRun(input: {
               : scan.result.pipelines.length === 0 && scan.result.errors.length > 0
                 ? scan.result.errors.map((e) => e.error).join("; ")
                 : null;
-            const noSetup = !failedReason && scan.result.pipelines.length === 0;
 
             if (failedReason && previous?.hasPacket) {
               // Keep the last good result (with its real age); record the failure.
@@ -264,7 +263,8 @@ async function executeRun(input: {
               status: failedReason ? "failed" : "ok",
               dataAsOf: barTimestampToIso(scan.bars[scan.bars.length - 1]?.timestamp),
               price: quote?.price ?? (scan.packet.quote.price > 0 ? scan.packet.quote.price : null),
-              changePct: quote?.changePercent ?? (failedReason || noSetup ? null : scan.packet.quote.changePercent),
+              // A "no setup" packet now carries a real price/change built from its bars.
+              changePct: quote?.changePercent ?? (failedReason ? null : scan.packet.quote.changePercent),
               quoteAt: quote?.quoteAt ?? null,
               packet: scan.packet,
               hits,
