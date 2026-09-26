@@ -61,6 +61,10 @@ describe('GET /api/commodities keeps current monthly series and does not report 
     // A stale proxy quote (CANE here, 2023) falls through to the commodity series; that series is 4 months old, so STALE.
     expect(row('SUGAR')).toMatchObject({ source: 'LEGACY_MONTHLY', freshnessStatus: 'STALE', eligibleForGate: false });
     expect(row('WTI')).toMatchObject({ cadence: 'live', asOfLabel: null });
+    // OV-20: a proxy row is named and priced as the fund, never as the commodity.
+    expect(row('WTI')).toMatchObject({ name: 'USO (WTI Crude Oil proxy)', commodityName: 'WTI Crude Oil', unit: '$ per USO share (fund price)', sourceSymbol: 'USO' });
+    expect(row('BRENT').name).toBe('BNO (Brent Crude Oil proxy)');
+    expect(row('ALUMINUM')).toMatchObject({ name: 'Aluminum', commodityName: 'Aluminum' });
     expect(body.dataHealth.staleSymbols).toEqual(['SUGAR']);
     expect(body.dataHealth.gateReady).toBe(true);
   }, 20_000);

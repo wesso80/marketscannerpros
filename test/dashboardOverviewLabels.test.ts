@@ -9,9 +9,10 @@ describe('Market dashboard labels (OV-5, OV-8, OV-10)', () => {
     expect(page).toContain("{ etf: 'VIXY', label: 'VIX futures ETF', index: 'VIX' }");
     expect(page).not.toContain("label: 'Volatility'");
     expect(page).not.toContain('index levels are end-of-day via Alpha Vantage');
-    // OV-15: US equities are licensed 15-minute delayed, so the footnote no longer says "live or".
+    // OV-15, then 26 Sep 2026: the Alpha Vantage commercial agreement covers realtime US equities.
     expect(page).not.toContain('live or 15-minute-delayed');
-    expect(page).toContain('15-minute-delayed Alpha Vantage quotes');
+    expect(page).not.toContain('15-minute-delayed Alpha Vantage quotes');
+    expect(page).toContain('realtime Alpha Vantage quotes (the last close while the US market is shut)');
   });
 
   it('OV-8: queue wording does not claim validation or evidence strength', () => {

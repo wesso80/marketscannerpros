@@ -110,10 +110,15 @@ export async function vixWithAlphaVantagePrimary(limit: number, now: number): Pr
   if (fromAv && !isOlderThanStaleLimit(fromAv.rows[0].on, now)) return fromAv;
   const fred = await macroWithFallback('VIX', limit, now).catch(() => null);
   if (fromAv && (!fred?.rows.length || fromAv.rows[0].on >= fred.rows[0].on)) return fromAv;
-  // Say why Alpha Vantage was not used, so a FRED-dated regime is diagnosable without server logs (#157 follow-up).
+  // Say plainly why the VIX is FRED's, so a FRED-dated regime is understandable without server logs (#157 follow-up).
+  // The current Alpha Vantage plan has no INDEX_DATA access ("You are not yet entitled to index data access…").
+  const reason = avIndexFailureReason('VIX');
+  const notInPlan = reason != null && /not (yet )?entitled|premium (endpoint|plan)/i.test(reason);
   const note = fromAv
-    ? `Alpha Vantage VIX latest ${fromAv.rows[0].on} is older than FRED`
-    : `Alpha Vantage VIX unavailable: ${avIndexFailureReason('VIX') ?? (process.env.ALPHA_VANTAGE_API_KEY ? 'no rows' : 'no Alpha Vantage key configured')}`;
+    ? `VIX from FRED: the Alpha Vantage VIX (latest ${fromAv.rows[0].on}) is older than FRED's`
+    : notInPlan
+      ? `VIX from FRED, which lags 1–3 days: Alpha Vantage VIX is not included in the current plan (Alpha Vantage says: "${reason!.split(/(?<=\.)\s/)[0]}")`
+      : `VIX from FRED, which lags 1–3 days: Alpha Vantage VIX unavailable (${reason ?? (process.env.ALPHA_VANTAGE_API_KEY ? 'no rows' : 'no Alpha Vantage key configured')})`;
   return fred ? { ...fred, note } : null;
 }
 

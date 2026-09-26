@@ -827,7 +827,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
             })}
           </div>
         )}
-        <p className="mt-2 text-[10px] text-slate-600">Tiles show ETF prices standing in for the indices (SPY, DIA, QQQ, IWM), not index levels: 15-minute-delayed Alpha Vantage quotes (US equities are licensed 15-minute delayed). VIXY is a VIX futures ETF and can move differently from the VIX itself.</p>
+        <p className="mt-2 text-[10px] text-slate-600">Tiles show ETF prices standing in for the indices (SPY, DIA, QQQ, IWM), not index levels: realtime Alpha Vantage quotes (the last close while the US market is shut). VIXY is a VIX futures ETF and can move differently from the VIX itself.</p>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

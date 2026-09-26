@@ -9,7 +9,7 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
-import { equityMoversBasisLabel, formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
+import { equityMoversBasisLabel, formatEasternAsOf, moversDataChipLabel } from '@/lib/alphaVantageEntitlement';
 
 interface Mover {
   ticker: string;
@@ -68,9 +68,9 @@ interface UpeMoverRow {
 interface MoversData {
   timestamp: string;
   lastUpdated: string;
-  /** Alpha Vantage `last_updated` for the equity lists (15-minute delayed feed). */
+  /** Alpha Vantage `last_updated` for the equity lists. */
   equityAsOf?: string | null;
-  equityFeed?: 'delayed' | 'end_of_day' | 'unavailable';
+  equityFeed?: 'realtime' | 'end_of_day' | 'unavailable';
   marketMood: 'bullish' | 'bearish' | 'neutral';
   summary: {
     avgGainerChange: number;
@@ -580,7 +580,7 @@ export default function MarketMoversPage() {
       <ToolsPageHeader
         title="Market Movers"
         subtitle="Status → Action Console → Audit Log → Capabilities"
-        badge="Live"
+        badge={data?.equityFeed === 'end_of_day' ? 'End of day' : data?.equityFeed === 'unavailable' ? 'Crypto live' : 'Live'}
         icon="MM"
       />
 
@@ -595,7 +595,7 @@ export default function MarketMoversPage() {
             ['Status', environment.deploymentMode],
             ['Top Gainer', data?.summary?.topGainerTicker || 'N/A'],
             ['Top Loser', data?.summary?.topLoserTicker || 'N/A'],
-            ['Data', loading ? 'Refreshing' : error ? 'Degraded' : 'Live'],
+            ['Data', loading ? 'Refreshing' : error ? 'Degraded' : moversDataChipLabel(data?.equityFeed)],
             ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : '—'],
             ['US equities', `${equityMoversBasisLabel(data?.equityFeed)}${formatEasternAsOf(data?.equityAsOf) ? `, ${formatEasternAsOf(data?.equityAsOf)}` : ''}`],
           ].map(([k, v]) => (

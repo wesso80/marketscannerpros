@@ -1,22 +1,42 @@
 /**
  * Alpha Vantage `entitlement` for US equity data.
  *
- * MSP's US equities licence (Nasdaq, with Alpha Vantage's permission) is 15-minute DELAYED. Without an entitlement some
- * functions (TOP_GAINERS_LOSERS, GLOBAL_QUOTE) return end-of-day data "for all users"; `entitlement=delayed` returns the
- * 15-minute-delayed feed (https://www.alphavantage.co/documentation/#gainer-loser).
+ * MSP's Alpha Vantage commercial agreement covers REALTIME display of US equities (confirmed by brad, 26 Sep 2026).
+ * The key accepts `entitlement=realtime` (GLOBAL_QUOTE, REALTIME_BULK_QUOTES, TOP_GAINERS_LOSERS, REALTIME_OPTIONS_FMV)
+ * and refuses `entitlement=delayed`. Without an entitlement some functions return end-of-day data "for all users"
+ * (https://www.alphavantage.co/documentation/#gainer-loser).
  */
-export const AV_US_EQUITY_ENTITLEMENT = 'delayed' as const;
+import { isUsTradingDay, nyDateTime, usSessionCloseMinutes } from '@/lib/time/usSession';
+
+export const AV_US_EQUITY_ENTITLEMENT = 'realtime' as const;
 
 /** Query-string fragment to append to an Alpha Vantage URL, e.g. `...&apikey=K${avEquityEntitlementParam()}`. */
 export function avEquityEntitlementParam(): string {
   return `&entitlement=${AV_US_EQUITY_ENTITLEMENT}`;
 }
 
-/** Basis label for the equity movers list: the licensed delayed feed, or the end-of-day fallback (OV-14). */
-export function equityMoversBasisLabel(feed: string | null | undefined): string {
+/** True during the US regular session (09:30 to 16:00 ET, or the early close) on an NYSE trading day. */
+export function isUsRegularSessionOpen(nowMs: number = Date.now()): boolean {
+  const { ymd, minutes } = nyDateTime(nowMs);
+  return isUsTradingDay(ymd) && minutes >= 9 * 60 + 30 && minutes < usSessionCloseMinutes(ymd);
+}
+
+/**
+ * Basis label for the equity movers list: the realtime feed ("Market closed" outside the regular session, since the
+ * list is then the last session's), or the end-of-day fallback (OV-14). Pair it with the as-of time.
+ */
+export function equityMoversBasisLabel(feed: string | null | undefined, nowMs: number = Date.now()): string {
   if (feed === 'end_of_day') return 'End of day';
   if (feed === 'unavailable') return 'Unavailable';
-  return '15-min delayed';
+  return isUsRegularSessionOpen(nowMs) ? 'Realtime' : 'Market closed';
+}
+
+/** Movers "Data" chip: crypto is live (CoinGecko); equities follow the Alpha Vantage feed actually received (OV-21). */
+export function moversDataChipLabel(feed: string | null | undefined, nowMs: number = Date.now()): string {
+  const equities = feed === 'end_of_day' ? 'equities end of day'
+    : feed === 'unavailable' ? 'equities unavailable'
+    : isUsRegularSessionOpen(nowMs) ? 'equities realtime' : 'equities market closed';
+  return `Crypto live · ${equities}`;
 }
 
 /**

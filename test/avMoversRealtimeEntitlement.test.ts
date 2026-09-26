@@ -11,9 +11,9 @@ vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 import { AV_US_EQUITY_ENTITLEMENT, avEquityEntitlementParam, formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
 
 describe('Alpha Vantage US equity entitlement (OV-14)', () => {
-  it('is the licensed 15-minute delayed feed', () => {
-    expect(AV_US_EQUITY_ENTITLEMENT).toBe('delayed');
-    expect(avEquityEntitlementParam()).toBe('&entitlement=delayed');
+  it('is realtime (commercial agreement; the key refuses entitlement=delayed)', () => {
+    expect(AV_US_EQUITY_ENTITLEMENT).toBe('realtime');
+    expect(avEquityEntitlementParam()).toBe('&entitlement=realtime');
   });
 
   it('formats the provider time as "as of HH:MM ET", adding the date when it is not today in New York', () => {
@@ -25,18 +25,18 @@ describe('Alpha Vantage US equity entitlement (OV-14)', () => {
     expect(formatEasternAsOf('nope')).toBeNull();
   });
 
-  it('both TOP_GAINERS_LOSERS users go through lib/avTopMovers, which asks for the delayed entitlement first', () => {
+  it('both TOP_GAINERS_LOSERS users go through lib/avTopMovers, which asks for the realtime entitlement first', () => {
     for (const file of ['app/api/market-movers/route.ts', 'app/api/scanner/bulk/route.ts']) {
       const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
       expect(src, file).toContain('fetchAvTopMovers(');
       expect(src, file).not.toContain('function=TOP_GAINERS_LOSERS');
     }
     const lib = readFileSync(resolve(__dirname, '../lib/avTopMovers.ts'), 'utf8');
-    expect(lib).toContain('const delayed = await call(apiKey, avEquityEntitlementParam(), fetcher);');
+    expect(lib).toContain('const realtime = await call(apiKey, avEquityEntitlementParam(), fetcher);');
   });
 });
 
-describe('GET /api/market-movers requests delayed movers', () => {
+describe('GET /api/market-movers requests realtime movers', () => {
   beforeEach(() => {
     vi.resetModules();
     mocks.q.mockResolvedValue([]);
@@ -48,24 +48,32 @@ describe('GET /api/market-movers requests delayed movers', () => {
     vi.stubGlobal('fetch', mocks.fetch);
   });
 
-  it('sends entitlement=delayed and returns the provider as-of time', async () => {
+  it('sends entitlement=realtime and returns the provider as-of time', async () => {
     const { GET } = await import('@/app/api/market-movers/route');
     const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
     const avUrl = String(mocks.fetch.mock.calls.map((c) => c[0]).find((u) => String(u).includes('TOP_GAINERS_LOSERS')));
-    expect(new URL(avUrl).searchParams.get('entitlement')).toBe('delayed');
+    expect(new URL(avUrl).searchParams.get('entitlement')).toBe('realtime');
+    expect(body.equityFeed).toBe('realtime');
     expect(body.equityAsOf).toBe('2026-09-25T19:44:01.000Z');
   });
 });
 
-describe('movers surfaces show the delayed basis', () => {
+describe('movers surfaces show the feed basis', () => {
   const dashboard = readFileSync(resolve(__dirname, '../app/tools/dashboard/page.tsx'), 'utf8');
   const moversPage = readFileSync(resolve(__dirname, '../app/tools/market-movers/page.tsx'), 'utf8');
-  it('dashboard equity movers: "15-min delayed" + as-of; crypto keeps "Live movement"', () => {
+  it('dashboard equity movers: feed basis + as-of; crypto keeps "Live movement"', () => {
     expect(dashboard).toMatch(/title="Equity movers" eyebrow=\{equityMoversBasisLabel\(movers\.data\?\.equityFeed\)\} action=\{formatEasternAsOf\(movers\.data\?\.equityAsOf\)/);
     expect(dashboard).toContain('<PanelHeader title="Crypto movers" eyebrow="Live movement" />');
   });
   it('Movers tab carries equityAsOf into a "US equities" status chip', () => {
     expect(moversPage).toContain('equityAsOf: result.equityAsOf ?? null');
     expect(moversPage).toContain("['US equities', `${equityMoversBasisLabel(data?.equityFeed)}");
+  });
+  it('no US-equity surface still says "15-minute delayed"', () => {
+    for (const file of ['app/tools/dashboard/page.tsx', 'app/tools/market-movers/page.tsx', 'components/markets/tabs/OverviewTab.tsx', 'app/tools/settings/page.tsx', 'app/disclaimer/page.tsx', 'lib/alphaVantageEntitlement.ts']) {
+      const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
+      expect(src, file).not.toMatch(/15[- ]?min(ute)?s?[- ]delayed|delayed 15|delayed by 15/i);
+    }
+    expect(dashboard).toContain('realtime Alpha Vantage quotes (the last close while the US market is shut)');
   });
 });

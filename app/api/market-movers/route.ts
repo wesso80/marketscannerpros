@@ -13,7 +13,7 @@ export const revalidate = 300;
 let cachedResponse: { data: any; ts: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-/* ── Alpha Vantage equity movers (15-min delayed, end-of-day fallback: lib/avTopMovers) ── */
+/* ── Alpha Vantage equity movers (realtime, end-of-day fallback: lib/avTopMovers) ── */
 const fetchEquityMovers = () => fetchAvTopMovers(ALPHA_VANTAGE_API_KEY);
 
 /* Valid equity ticker: 1-6 uppercase letters only (no ^, digits-only, non-ASCII) */
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
       lastUpdated: new Date().toISOString(),
       // Provider time of the equity lists (Alpha Vantage last_updated). CoinGecko movers carry no time.
       equityAsOf: equityMovers.asOf ?? null,
-      // 'delayed' (15-minute delayed), 'end_of_day' (fallback) or 'unavailable', with Alpha Vantage's reason (OV-14).
+      // 'realtime', 'end_of_day' (fallback) or 'unavailable', with Alpha Vantage's reason (OV-14).
       equityFeed: equityMovers.feed,
       equityNote: equityMovers.note,
       topGainers: [...eqGainers, ...cryptoGainers].map(enrich),

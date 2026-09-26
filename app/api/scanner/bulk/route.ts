@@ -1277,7 +1277,7 @@ async function fetchAlphaTopMovers(): Promise<{
     return { gainers: [], losers: [], active: [], apiCallsUsed: 0 };
   }
 
-  // 15-minute delayed list with an end-of-day fallback (lib/avTopMovers, OV-14).
+  // Realtime list with an end-of-day fallback (lib/avTopMovers, OV-14).
   const movers = await fetchAvTopMovers(ALPHA_KEY);
   return { gainers: movers.gainers, losers: movers.losers, active: movers.active, apiCallsUsed: movers.apiCalls };
 }

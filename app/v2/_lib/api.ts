@@ -345,8 +345,8 @@ export interface MarketMoversResponse {
   lastUpdated?: string;
   /** Provider time of the equity lists; null when not sent. */
   equityAsOf?: string | null;
-  /** 'delayed' | 'end_of_day' | 'unavailable' (lib/avTopMovers), with Alpha Vantage's reason when not delayed. */
-  equityFeed?: 'delayed' | 'end_of_day' | 'unavailable';
+  /** 'realtime' | 'end_of_day' | 'unavailable' (lib/avTopMovers), with Alpha Vantage's reason when not realtime. */
+  equityFeed?: 'realtime' | 'end_of_day' | 'unavailable';
   equityNote?: string | null;
   topGainers: Mover[];
   topLosers: Mover[];

@@ -99,9 +99,10 @@ export default function DisclaimerPage() {
 
         <section>          <h2 id="delay" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Data Delays &amp; Third-Party Sources</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
-            Market data is sourced from Alpha Vantage Premium API and may be delayed by 15 minutes or more 
-            depending on the asset class and exchange. Real-time data availability varies by provider and plan. 
-            Options data, derivatives data, and certain crypto metrics may have additional delays. 
+            Market data is sourced from Alpha Vantage Premium API. US equity quotes are displayed in realtime under 
+            our Alpha Vantage agreement; other asset classes and datasets (for example macro series such as the VIX 
+            from FRED) can lag their source by a day or more. Options data, derivatives data, and certain crypto 
+            metrics may have additional delays. 
             We do not guarantee real-time data delivery and are not responsible for delays, interruptions, 
             or inaccuracies in third-party data feeds.
           </p>
