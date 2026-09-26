@@ -695,14 +695,14 @@ describe('layout and flow audit regressions', () => {
     expect(explorerPage).toContain("tab === 'Crypto Intel'");
     expect(explorerPage).toContain('if (requestedTab) setTab(requestedTab);');
     expect(dashboardPage).toContain('aria-label="Morning research start"');
-    expect(dashboardPage).toContain('Highest-evidence symbols first.');
+    expect(dashboardPage).toContain('Top of the Scanner&apos;s ranked queue.');
     expect(dashboardPage).toContain('Click a symbol to open Golden Egg. Review context only; no trade instructions.');
     expect(dashboardPage).toContain('<ComplianceDisclaimer compact />');
     expect(dashboardPage).toContain('2xl:grid-cols-3');
     expect(dashboardPage).toContain("Data health strip");
     expect(dashboardPage).toContain("Continue workflow");
     expect(dashboardPage).toContain('Next: review in Golden Egg');
-    expect(dashboardPage).toContain('Validated queue');
+    expect(dashboardPage).toContain('Ranked queue (not yet validated)');
     expect(dashboardPage).toContain('Live movement');
     expect(dashboardPage).toContain('Calendar risk');
     expect(dashboardPage).toContain('Context map');
