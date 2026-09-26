@@ -6,6 +6,7 @@
  */
 import { avTakeToken } from '../../avRateGovernor';
 import { budget } from './budget';
+import { parseCsvLine } from '../../csv';
 
 export interface Listing { symbol: string; name: string; exchange: string; type: 'Stock' | 'ETF' }
 export interface BulkQuote { symbol: string; close: number; prevClose: number; changePct: number; volume: number; dollarVolume: number; tradingDay: string }
@@ -14,12 +15,9 @@ const ALLOWED_EXCHANGES = new Set(['NYSE', 'NASDAQ', 'NYSE ARCA', 'AMEX', 'NYSE 
 // Warrants, units, rights, preferreds, notes and test/odd tickers cannot be researched like common stock.
 const EXCLUDE_NAME = /\b(warrant|warrants|units?|rights?|preferred|depositary|notes? due|debentures?|trust preferred|\d+(\.\d+)?%)\b/i;
 
-/** Minimal CSV splitter that respects double-quoted fields (company names contain commas). */
+/** CSV line splitter that respects double-quoted fields (company names contain commas) — shared RFC 4180 reader. */
 function splitCsv(line: string): string[] {
-  const out: string[] = []; let cur = '', q = false;
-  for (const ch of line) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur.trim()); cur = ''; } else cur += ch; }
-  out.push(cur.trim());
-  return out;
+  return parseCsvLine(line).map((f) => f.trim());
 }
 
 export async function loadListings(): Promise<{ listings: Listing[]; total: number; excluded: number }> {

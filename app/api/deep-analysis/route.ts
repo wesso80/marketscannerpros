@@ -19,7 +19,7 @@ import { computeGoldenEgg } from '@/lib/goldenEgg/engine';
 import { getEarningsHistory, getFundamentalsSummary, type EarningsHistory, type FundamentalsSummary } from '@/lib/goldenEgg/companyOverview';
 import { filterRelevantNews, summarizeNews, avTickerKey, type RelevantArticle } from '@/lib/goldenEgg/newsRelevance';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
-import { targetBasisLabel } from '@/lib/scoring/canonical/display';
+import { noSetupDisplay, targetBasisLabel } from '@/lib/scoring/canonical/display';
 import type { GoldenEggPayload, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
 
 export const runtime = 'nodejs';
@@ -126,7 +126,11 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
   const cv = ge.canonicalVerdict;
   if (cv) {
     const why = [...(cv.permission === 'BLOCK' ? cv.blockReasons : cv.watchReasons)].map((r) => `${r.code} (${r.message})`).join('; ');
-    L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): ${cv.permission} · ${cv.setupType} · direction ${cv.direction} · setup score ${cv.score}/100 · grade ${cv.grade}${why ? ` · reasons: ${why}` : ''}${cv.levels ? ` · levels entry ${fmtPx(cv.levels.entry)} / invalidation ${fmtPx(cv.levels.invalidation)} / target ${fmtPx(cv.levels.target)} [${targetBasisLabel(cv.levels)}] (R:R ${cv.levels.riskReward})` : ''}.`);
+    const none = noSetupDisplay(cv);
+    if (none?.kind === 'no_setup') {
+      // No setup: score 0 / grade F are engine placeholders — don't hand them to the model as a score and a grade.
+      L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): NO QUALIFYING SETUP on this bar (no setup score or grade applies; not a data problem)${none.detail ? ` · ${none.detail}` : ''}.`);
+    } else L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): ${cv.permission} · ${cv.setupType} · direction ${cv.direction} · ${none ? 'no setup' : `setup score ${cv.score}/100 · grade ${cv.grade}`}${why ? ` · reasons: ${why}` : ''}${cv.levels ? ` · levels entry ${fmtPx(cv.levels.entry)} / invalidation ${fmtPx(cv.levels.invalidation)} / target ${fmtPx(cv.levels.target)} [${targetBasisLabel(cv.levels)}] (R:R ${cv.levels.riskReward})` : ''}.`);
     L.push(`Legacy confluence (secondary, do not present as the verdict): ${ge.legacyConfluence?.assessment ?? 'n/a'} ${ge.legacyConfluence?.direction ?? ''} · ${c.verdict.confluence}/100 evidence alignment (NOT a probability) · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}.`);
   } else {
     L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · confluence ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);

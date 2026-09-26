@@ -74,6 +74,8 @@ export interface CapitalFlowResult {
       active: boolean;
       reason: string;
     };
+    /** Withheld only by the session's stricter bar; the score clears the standard threshold. */
+    sessionLimited?: boolean;
     riskMode: 'low' | 'medium' | 'high';
     sizeMultiplier: number;
     stopStyle: 'tight_structural' | 'structural' | 'atr_trailing' | 'wider_confirmation';
@@ -650,6 +652,10 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const pcrBand = putBand / Math.max(1, callBand);
   // No open interest within ±1% of spot means the near-spot put/call ratio is unknown, not 0 (which reads as call-heavy).
   const hasNearSpotOi = callBand + putBand > 0;
+  // Near-spot put/call ratio when there is near-spot OI, else the chain-wide ratio (else neutral 1). A call-only band
+  // is pcr 0 (maximum call skew) — it used to fall through `pcrBand || 1` to "no imbalance", while a put-only band read
+  // as maximum put skew, so the same setup scored differently long vs short.
+  const nearSpotPcr = hasNearSpotOi ? pcrBand : (input.openInterest?.pcRatio ?? 1);
 
   const cryptoFunding = input.cryptoPositioning?.fundingRate ?? 0;
   const cryptoOiChange = input.cryptoPositioning?.oiChangePercent ?? 0;
@@ -732,7 +738,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const priceAboveTrend = input.trendMetrics?.priceAboveTrend;
   const trendAligned: boolean = priceAboveTrend === undefined
     ? (vwap ? (bias === 'bullish' ? spot >= vwap : bias === 'bearish' ? spot <= vwap : true) : true)
-    : bias === 'bearish' ? !priceAboveTrend : priceAboveTrend;
+    : bias === 'bearish' ? !priceAboveTrend : bias === 'bullish' ? priceAboveTrend : true; // neutral: no side to align with
   const structureInput = bias === 'bearish'
     ? input.trendMetrics?.structureLowerLows
     : input.trendMetrics?.structureHigherHighs;
@@ -746,7 +752,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
 
   const flowScore = (() => {
     if (marketType === 'equity') {
-      const pcrNorm = normalizedPcr(pcrBand || (input.openInterest?.pcRatio ?? 1));
+      const pcrNorm = normalizedPcr(nearSpotPcr);
       let score = bias === 'bullish'
         ? (1 - pcrNorm) * 100
         : bias === 'bearish'
@@ -860,10 +866,17 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     100
   );
 
-  let pinRaw =
-    (gammaDensity * 0.50) +
-    (proximityToStrike * 0.30) +
-    (lowVolatility * 0.20);
+  // Dealer gamma is not available from any feed (gammaState is hard-wired 'Unavailable'). A missing input must not act
+  // as hidden evidence: the old fixed gammaDensity of 30 added a 15-point pin floor to every row, which capped the
+  // trend probability (and so the Trade Permission Score) near 66-69 whatever the data. Without gamma, pin is scored
+  // only from what we do observe (strike proximity, low volatility) at their existing weights, so it tops out at 50 —
+  // consistent with market mode, where 'pin' can only come from a real signed gamma source. (Re-weighting proximity and
+  // low-vol up to a 0-100 scale was tried and rejected: it doubles the weight of strike proximity, which is high for
+  // almost every liquid name on a $2.50/$5 strike grid, and made pin a stronger hidden penalty, not a weaker one.)
+  const gammaObserved = marketMode === 'pin' || gammaState === 'Positive' || gammaState === 'Negative' || gammaState === 'Mixed';
+  let pinRaw = gammaObserved
+    ? (gammaDensity * 0.50) + (proximityToStrike * 0.30) + (lowVolatility * 0.20)
+    : (proximityToStrike * 0.30) + (lowVolatility * 0.20);
 
   if (marketMode === 'launch' && directionalFlip && ((bias === 'bullish' && spot > directionalFlip.level) || (bias === 'bearish' && spot < directionalFlip.level))) {
     pinRaw -= 18;
@@ -880,7 +893,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   );
   const flowImbalance = clamp(
     marketType === 'equity'
-      ? Math.abs(mirroredPcrSkew(pcrBand || 1)) * 115
+      ? (hasNearSpotOi ? Math.abs(mirroredPcrSkew(pcrBand)) * 115 : 0)
       : (Math.abs(input.cryptoPositioning?.fundingRate ?? 0) * 850) + (Math.abs(input.cryptoPositioning?.oiChangePercent ?? 0) * 6),
     0,
     100
@@ -944,7 +957,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       : false;
 
   const flowImbalanceShort = marketType === 'equity'
-    ? clamp(mirroredPcrSkew(pcrBand || 1) * 100, -100, 100)
+    ? clamp((hasNearSpotOi ? mirroredPcrSkew(pcrBand) : 0) * 100, -100, 100)
     : clamp(
         ((input.cryptoPositioning?.fundingRate ?? 0) * 900) +
         ((input.cryptoPositioning?.oiChangePercent ?? 0) * 3),
@@ -953,7 +966,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       );
 
   const flowImbalanceLong = marketType === 'equity'
-    ? clamp(mirroredPcrSkew(input.openInterest?.pcRatio ?? (pcrBand || 1)) * 80, -100, 100)
+    ? clamp(mirroredPcrSkew(input.openInterest?.pcRatio ?? nearSpotPcr) * 80, -100, 100)
     : clamp(((input.cryptoPositioning?.basisPercent ?? 0) * 20), -100, 100);
 
   const vwapSlopeProxy = vwap
@@ -1117,7 +1130,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     flowState: ifse.state,
     flowStateConfidence: ifse.confidence,
     permission,
-    requiredTrigger: ftpm.noTradeMode.active
+    requiredTrigger: ftpm.noTradeMode.active || ftpm.sessionLimited
       ? ftpm.noTradeMode.reason
       : permission === 'BLOCK'
         ? `TPS ${ftpm.tps.toFixed(0)} below threshold`
@@ -1234,6 +1247,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       tps: ftpm.tps,
       blocked: ftpm.blocked,
       noTradeMode: ftpm.noTradeMode,
+      ...(ftpm.sessionLimited ? { sessionLimited: true } : {}),
       riskMode: ftpm.riskMode,
       sizeMultiplier: ftpm.sizeMultiplier,
       stopStyle: ftpm.stopStyle,

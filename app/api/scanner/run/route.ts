@@ -45,7 +45,7 @@ import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
 import { buildScannerRankExplanation, type ScannerRankExplanation } from "@/lib/scanner/rankExplanation";
 import { buildScannerInsight, assessEvidenceQuality, deriveFactorSignals, computeCompositeV2, crossSectionalPercentiles, resolveScoreRegime, type ScannerInsight, type FreshnessLevel } from "@/lib/analysis";
-import { peekEarningsMap, warmEarningsMap, daysUntilEarnings } from "@/lib/scanner/earningsCalendar";
+import { peekEarningsMap, peekUnreadableEarningsSymbols, warmEarningsMap, daysUntilEarnings } from "@/lib/scanner/earningsCalendar";
 import { computeScannerDerivativesContribution, type ScannerDerivativesEvidenceStatus } from "@/lib/scanner/scoring";
 import { calculateScannerVwapSeries, scannerVwapModeFor } from "@/lib/scanner/vwap";
 
@@ -2437,7 +2437,8 @@ export async function POST(req: NextRequest) {
       .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
     const dollarVolumes = results.map(r => dollarVolume(r.price, r.avgVolume, type)).filter((v): v is number => v != null);
     let earningsMap: Map<string, string> = new Map();
-    if (type === 'equity') { warmEarningsMap(); earningsMap = peekEarningsMap(); }
+    let earningsUnreadable: Set<string> = new Set();
+    if (type === 'equity') { warmEarningsMap(); earningsMap = peekEarningsMap(); earningsUnreadable = peekUnreadableEarningsSymbols(); }
     // Macro event days are a warning flag on every row, never a block. Computed once per request.
     const macroFlags = macroEventFlags();
     // Direction-aware regime overlay (gates/sizes the canonical verdict; never blended into the score). Fails soft.
@@ -2490,7 +2491,7 @@ export async function POST(req: NextRequest) {
         price: result.price ?? null, referencePrice: result.referenceClose ?? null, referenceSource: result.referenceSource ?? null,
         referenceIndependent: false, atrPct: atrPct ?? null,
         earningsDate: type === 'equity' ? earningsMap.get(result.symbol.toUpperCase()) ?? null : null,
-        earningsCalendarLoaded: earningsMap.size > 0,
+        earningsCalendarLoaded: earningsMap.size > 0 && !earningsUnreadable.has(result.symbol.toUpperCase()),
         dollarVolumeDaily: (() => { const dv = dollarVolume(result.price, result.avgVolume, type); return dv != null ? dv * barsPerDayFor(result.barInterval) : null; })(),
       }, macroFlags);
       result.flags = hard.flags;

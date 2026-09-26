@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { TradeModel } from '@/types/journal';
+import { closeExitPrefill, isOptionsTrade } from '@/lib/journal/closePrefill';
 
 type CloseTradeModalProps = {
   open: boolean;
@@ -51,13 +52,16 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
     | 'unknown'
   >('none');
   const [reviewText, setReviewText] = useState('');
+  const [optionMarkMissing, setOptionMarkMissing] = useState(false);
 
   // Reset form state when modal opens or trade changes
   useEffect(() => {
     if (open) {
-      // Pre-fill with current/live price when available (enrichment sets exit.price for open trades)
-      const livePrice = trade?.exit?.price;
-      setExitPrice(livePrice ? String(livePrice) : '');
+      // Pre-fill from the trade's current mark (option premium for options trades).
+      // Options never fall back to the underlying's share price: no option mark → empty field.
+      const prefill = closeExitPrefill(trade);
+      setExitPrice(prefill.kind === 'value' ? String(prefill.price) : '');
+      setOptionMarkMissing(prefill.kind === 'manual' && prefill.reason === 'option_mark_unavailable');
       setExitTs(new Date().toISOString().slice(0, 16));
       setCloseReason('manual');
       setOutcome('breakeven');
@@ -66,23 +70,30 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
       setErrorType('none');
       setReviewText('');
 
-      // If no live price available yet, fetch it directly as fallback
-      if (!livePrice && trade?.symbol) {
-        const sym = trade.symbol.toUpperCase().trim();
-        const isCrypto = /[-_/](USDT?|EUR|PERP)$/i.test(sym) || trade.assetClass === 'crypto';
-        const base = sym.replace(/[-_/]?USDT?$/i, '').replace(/[-_/]?EUR$/i, '').replace(/[-_/]?PERP$/i, '');
-        const type = isCrypto ? 'crypto' : 'stock';
-        fetch(`/api/quote?symbol=${encodeURIComponent(base)}&type=${type}&market=USD&_t=${Date.now()}`, { cache: 'no-store' })
+      // Stocks/crypto with no mark yet: fetch a quote as a fallback (never for options).
+      if (prefill.kind === 'fetch') {
+        let cancelled = false;
+        fetch(prefill.url, { cache: 'no-store' })
           .then(r => r.json())
           .then(j => {
-            if (j?.ok && typeof j.price === 'number' && j.price > 0) {
-              setExitPrice(String(j.price));
+            if (!cancelled && j?.ok && typeof j.price === 'number' && j.price > 0) {
+              // Don't overwrite a price the user has already typed.
+              setExitPrice(prev => (prev === '' ? String(j.price) : prev));
             }
           })
           .catch(() => {});
+        return () => { cancelled = true; };
       }
     }
   }, [open, trade?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live marks load asynchronously: if the mark arrives after the modal opened, fill an empty field with it.
+  const markPrice = trade?.mark?.price;
+  useEffect(() => {
+    if (!open || typeof markPrice !== 'number' || !Number.isFinite(markPrice) || markPrice <= 0) return;
+    setExitPrice(prev => (prev === '' ? String(markPrice) : prev));
+    setOptionMarkMissing(false);
+  }, [open, markPrice]);
 
   const canSubmit = useMemo(() => {
     return Number(exitPrice) > 0 && Boolean(exitTs) && Boolean(closeReason) && Boolean(outcome) && Boolean(setupQuality);
@@ -110,8 +121,11 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
 
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
           <div>
-            <label htmlFor="close-exit-price" className="block text-xs font-medium text-slate-400 mb-1">Exit Price *</label>
-            <input id="close-exit-price" name="exitPrice" value={exitPrice} onChange={(event) => setExitPrice(event.target.value)} placeholder="Exit price" aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+            <label htmlFor="close-exit-price" className="block text-xs font-medium text-slate-400 mb-1">{trade && isOptionsTrade(trade) ? 'Exit Premium (per share) *' : 'Exit Price *'}</label>
+            <input id="close-exit-price" name="exitPrice" value={exitPrice} onChange={(event) => setExitPrice(event.target.value)} placeholder={trade && isOptionsTrade(trade) ? 'Option premium per share' : 'Exit price'} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+            {optionMarkMissing && (
+              <p className="mt-1 text-[11px] text-amber-300">No current option mark. Enter the option premium you closed at.</p>
+            )}
           </div>
           <div>
             <label htmlFor="close-exit-ts" className="block text-xs font-medium text-slate-400 mb-1">Exit Date/Time *</label>

@@ -31,6 +31,7 @@ import {
 } from '@/lib/backtest/edgeGroups';
 import { parseBacktestTimeframe } from '@/lib/backtest/timeframe';
 import { buildInverseComparisonSnapshot } from '@/lib/backtest/inverseComparison';
+import { backtestAction, formatProfitFactorValue, hasNoLosses, hasSufficientSample, isBlockedBySampleSize, MIN_TRADES_FOR_EXECUTE, scoreProfitFactor } from '@/lib/backtest/profitFactorScore';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft } from '@/lib/workflow/types';
 
@@ -219,12 +220,10 @@ const TOP_MARKET_CAP_STOCKS = [
 
 const TOP_MARKET_CAP_CRYPTO = 'BTCUSD';
 
-function scoreProfitFactor(value: number | null | undefined) {
-  return value ?? 0;
-}
-
-function formatProfitFactor(value: number | null | undefined, label?: string) {
-  return value == null ? label ?? 'No losses' : value.toFixed(2);
+// Profit-factor scoring lives in lib/backtest/profitFactorScore.ts: "no losing trades"
+// scores at the top of the scale (not 0), and EXECUTE needs an adequate trade sample.
+function formatProfitFactor(row: { profitFactor: number | null | undefined; totalTrades: number; totalReturn?: number; winningTrades?: number; losingTrades?: number }) {
+  return formatProfitFactorValue(row);
 }
 
 function BacktestContent() {
@@ -319,7 +318,7 @@ function BacktestContent() {
       1,
       Math.min(
         99,
-        Math.round((scoreProfitFactor(results.profitFactor) * 25) + (results.winRate * 0.35) - (results.maxDrawdown * 0.45))
+        Math.round((scoreProfitFactor(results) * 25) + (results.winRate * 0.35) - (results.maxDrawdown * 0.45))
       )
     );
 
@@ -408,7 +407,7 @@ function BacktestContent() {
       1,
       Math.min(
         99,
-        Math.round((scoreProfitFactor(results.profitFactor) * 25) + (results.winRate * 0.35) - (results.maxDrawdown * 0.45))
+        Math.round((scoreProfitFactor(results) * 25) + (results.winRate * 0.35) - (results.maxDrawdown * 0.45))
       )
     );
     const bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = results.totalReturn > 2
@@ -416,11 +415,7 @@ function BacktestContent() {
       : results.totalReturn < -2
       ? 'BEARISH'
       : 'NEUTRAL';
-    const action: 'WAIT' | 'PREP' | 'EXECUTE' = scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20
-      ? 'EXECUTE'
-      : scoreProfitFactor(results.profitFactor) >= 1
-      ? 'PREP'
-      : 'WAIT';
+    const action = backtestAction(results);
     const risk: 'LOW' | 'MODERATE' | 'HIGH' = results.maxDrawdown <= 10
       ? 'LOW'
       : results.maxDrawdown <= 20
@@ -433,7 +428,11 @@ function BacktestContent() {
       bias,
       action,
       risk,
-      next: action === 'EXECUTE' ? 'Evaluation complete — review parameters' : action === 'PREP' ? 'Refine and rerun sample' : 'Reject setup and iterate',
+      next: action === 'EXECUTE'
+        ? 'Evaluation complete — review parameters'
+        : isBlockedBySampleSize(results)
+        ? `Insufficient sample (${results.totalTrades} of ${MIN_TRADES_FOR_EXECUTE} trades) — extend the range and rerun`
+        : action === 'PREP' ? 'Refine and rerun sample' : 'Reject setup and iterate',
       mode: 'EXECUTE',
     });
   }, [results, symbol]);
@@ -469,7 +468,7 @@ function BacktestContent() {
       },
       why_this_trade_auto: [
         `Backtest confluence ${Math.round(results.winRate)}% win rate`,
-        `Profit factor ${formatProfitFactor(results.profitFactor, results.profitFactorLabel)}`,
+        `Profit factor ${formatProfitFactor(results)}`,
         `Max drawdown ${results.maxDrawdown.toFixed(2)}%`,
       ],
       user_inputs_required: {
@@ -866,7 +865,7 @@ function BacktestContent() {
           const score =
             result.totalReturn +
             (result.winRate * 0.15) +
-            (scoreProfitFactor(result.profitFactor) * 8) -
+            (scoreProfitFactor(result) * 8) -
             (result.maxDrawdown * 0.3);
 
           rows.push({
@@ -968,7 +967,7 @@ function BacktestContent() {
             const score =
               result.totalReturn +
               (result.winRate * 0.15) +
-              (scoreProfitFactor(result.profitFactor) * 8) -
+              (scoreProfitFactor(result) * 8) -
               (result.maxDrawdown * 0.3);
 
             return {
@@ -1180,7 +1179,7 @@ function BacktestContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, ${results.statisticsBasis?.equity === 'bar_close_mark_to_market' ? `max drawdown ${results.maxDrawdown}% (open positions marked at bar closes), sharpe ${results.sharpeRatio}` : `realised balance drawdown ${results.maxDrawdown}% (open risk excluded), realised balance sharpe ${results.sharpeRatio}`}, profit factor ${formatProfitFactor(results.profitFactor, results.profitFactorLabel)}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
+          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, ${results.statisticsBasis?.equity === 'bar_close_mark_to_market' ? `max drawdown ${results.maxDrawdown}% (open positions marked at bar closes), sharpe ${results.sharpeRatio}` : `realised balance drawdown ${results.maxDrawdown}% (open risk excluded), realised balance sharpe ${results.sharpeRatio}`}, profit factor ${formatProfitFactor(results)}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
           context: {
             symbol,
             timeframe: `${startDate} to ${endDate}`,
@@ -1235,8 +1234,10 @@ function BacktestContent() {
             ? `Top setup: ${symbol} · ${strategy} · ${results.winRate.toFixed(1)}% win rate`
             : `No validated setup yet for ${symbol}. Run backtest to evaluate strategy statistics.`}
           nextStep={results
-            ? scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20
+            ? backtestAction(results) === 'EXECUTE'
               ? 'Review validated statistics and confluence factors'
+              : isBlockedBySampleSize(results)
+              ? `Insufficient sample (${results.totalTrades} of ${MIN_TRADES_FOR_EXECUTE} trades): extend the range and revalidate`
               : 'Adjust rules/timeframe and revalidate'
             : 'Set strategy + timeframe and run validation'}
         />
@@ -1908,7 +1909,7 @@ function BacktestContent() {
                       {idx + 1}. {row.timeframe}
                     </div>
                     <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
-                      Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {formatProfitFactor(row.profitFactor)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
+                      Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {formatProfitFactor(row)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
                     </div>
                   </div>
                 ))}
@@ -1956,7 +1957,7 @@ function BacktestContent() {
                       {idx + 1}. {row.symbol} · {row.timeframe}
                     </div>
                     <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
-                      Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {formatProfitFactor(row.profitFactor)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
+                      Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {formatProfitFactor(row)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
                     </div>
                   </div>
                 ))}
@@ -2053,8 +2054,8 @@ function BacktestContent() {
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
-                  <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 ? 'var(--msp-bull)' : scoreProfitFactor(results.profitFactor) >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: '14px', fontWeight: 700 }}>
-                    {results.profitFactor == null ? 'Unavailable' : scoreProfitFactor(results.profitFactor) >= 1.25 ? 'Positive' : scoreProfitFactor(results.profitFactor) >= 1 ? 'Marginal' : 'Negative'}
+                  <div style={{ color: results.profitFactor == null && !hasNoLosses(results) ? 'var(--msp-flat)' : scoreProfitFactor(results) >= 1.25 ? 'var(--msp-bull)' : scoreProfitFactor(results) >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: '14px', fontWeight: 700 }}>
+                    {results.profitFactor == null ? (hasNoLosses(results) ? 'Positive (no losses)' : 'Unavailable') : scoreProfitFactor(results) >= 1.25 ? 'Positive' : scoreProfitFactor(results) >= 1 ? 'Marginal' : 'Negative'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
@@ -2065,8 +2066,8 @@ function BacktestContent() {
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Assessment</div>
-                  <div style={{ color: scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'var(--msp-bull)' : scoreProfitFactor(results.profitFactor) >= 1 ? 'var(--msp-warn)' : 'var(--msp-flat)', fontSize: '14px', fontWeight: 700 }}>
-                    {results.profitFactor == null ? 'INSUFFICIENT EVIDENCE' : scoreProfitFactor(results.profitFactor) >= 1.25 && results.maxDrawdown <= 20 ? 'HIGH ALIGNMENT' : scoreProfitFactor(results.profitFactor) >= 1 ? 'NEEDS REVIEW' : 'LOW ALIGNMENT'}
+                  <div style={{ color: backtestAction(results) === 'EXECUTE' ? 'var(--msp-bull)' : scoreProfitFactor(results) >= 1 ? 'var(--msp-warn)' : 'var(--msp-flat)', fontSize: '14px', fontWeight: 700 }}>
+                    {results.profitFactor == null && !hasNoLosses(results) ? 'INSUFFICIENT EVIDENCE' : !hasSufficientSample(results) ? 'INSUFFICIENT SAMPLE' : backtestAction(results) === 'EXECUTE' ? 'HIGH ALIGNMENT' : scoreProfitFactor(results) >= 1 ? 'NEEDS REVIEW' : 'LOW ALIGNMENT'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
@@ -2107,7 +2108,7 @@ function BacktestContent() {
                       </div>
                     </div>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Max Drawdown</div>
+                      <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Max Drawdown ({inverseComparison.drawdownBasis === 'bar_close_mark_to_market' ? 'bar-close, both' : 'closed trades, both'})</div>
                       <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {results.maxDrawdown.toFixed(2)}%</div>
                       <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
                         Inverse: {inverseComparison.inverse.maxDrawdown.toFixed(2)}%
@@ -2115,9 +2116,9 @@ function BacktestContent() {
                     </div>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
                       <div style={{ color: 'var(--msp-flat)', fontSize: '11px' }}>Profit Factor</div>
-                      <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {formatProfitFactor(results.profitFactor, results.profitFactorLabel)}</div>
+                      <div style={{ color: 'var(--msp-text)', fontSize: '12px' }}>Base: {formatProfitFactor(results)}</div>
                       <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
-                        Inverse: {formatProfitFactor(inverseComparison.inverse.profitFactor)}
+                        Inverse: {formatProfitFactor(inverseComparison.inverse)}
                       </div>
                     </div>
                   </div>
@@ -2796,7 +2797,7 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}>
                   {(() => {
-                    const hasPositiveExpectancy = results.totalReturn > 0 && scoreProfitFactor(results.profitFactor) > 1;
+                    const hasPositiveExpectancy = results.totalReturn > 0 && scoreProfitFactor(results) > 1;
                     const hasNeutralExpectancy = results.totalReturn >= -5 && results.totalReturn <= 5;
                     const verdict = hasPositiveExpectancy
                       ? { label: 'Positive Expectancy', color: 'var(--msp-bull)', bg: 'rgba(16,185,129,0.15)' }

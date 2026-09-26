@@ -102,7 +102,9 @@ function equityOverlay(phase: SessionPhase, liq: SessionLiquidityProfile): Omit<
     // Tighten: momentum continuation, breakout entries
     case 'MIDDAY':
       return {
-        tpsAdjustment: -5,
+        // One midday penalty, not two: the higher threshold (70 vs 65) is the midday bar. It used to be combined with
+        // a −5 TPS adjustment (a net 75 bar on the base score), which no realistic equity input could reach.
+        tpsAdjustment: 0,
         sizeMultiplierCap: 0.70,
         ruCapMultiplier: 0.70,
         sessionAllowed: [
@@ -115,7 +117,7 @@ function equityOverlay(phase: SessionPhase, liq: SessionLiquidityProfile): Omit<
         ],
         minimumConfidence: 0,
         minimumLiquidityClarity: 0,
-        minimumTps: 70, // higher bar — need stronger conviction in chop
+        minimumTps: 70, // higher bar — need stronger conviction in chop (the only midday TPS penalty)
         slippageMultiplier: 1.3,
         reason: 'MIDDAY: Low volume chop zone. Prefer mean reversion, block momentum.',
         restrictive: true,

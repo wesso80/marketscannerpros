@@ -14,6 +14,7 @@ import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { deleteSavedResearchCase, listSavedResearchCases, updateSavedResearchCaseOutcome, type SavedResearchCaseOutcome, type SavedResearchCaseSummary } from '@/lib/clientResearchCases';
 import { quickAddToWatchlist } from '@/lib/clientWatchlistQuickAdd';
+import { formatEventTime } from '@/lib/eventTimeDisplay';
 
 /* ─── Dynamic imports: v1 rich components ─── */
 const NewsIntelligence = dynamic(() => import('@/app/tools/news/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading News Intelligence…</div> });
@@ -367,7 +368,7 @@ export default function ResearchPage() {
                 <thead>
                   <tr className="border-b border-[var(--msp-border)]">
                     <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Time</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500" title="Shown in your time zone; hover a row for ET and UTC">Time (your zone)</th>
                     <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Impact</th>
                     <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Event</th>
                     <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Forecast</th>
@@ -376,17 +377,20 @@ export default function ResearchPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {events.map((e: EconomicEvent, i: number) => (
+                  {events.map((e: EconomicEvent, i: number) => {
+                    const shown = formatEventTime(e);
+                    return (
                     <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                      <td className="py-2 px-2 text-slate-300">{e.date}</td>
-                      <td className="py-2 px-2 text-slate-400">{e.time || '—'}</td>
+                      <td className="py-2 px-2 text-slate-300" title={shown.title}>{shown.date}</td>
+                      <td className="py-2 px-2 text-slate-400" title={shown.title}>{shown.time || '—'}</td>
                       <td className="py-2 px-2"><ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />{e.impact}</td>
                       <td className="py-2 px-2 text-white font-medium">{e.event}</td>
                       <td className="py-2 px-2 text-slate-400">{e.display?.consensus && e.display.consensus !== '--' ? e.display.consensus : e.forecast || '—'}</td>
                       <td className="py-2 px-2 text-slate-400">{e.display?.previous && e.display.previous !== '--' ? e.display.previous : e.previous ?? '—'}</td>
                       <td className="py-2 px-2 text-white font-semibold">{e.display?.actual && e.display.actual !== '--' ? e.display.actual : e.actual ?? '—'}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

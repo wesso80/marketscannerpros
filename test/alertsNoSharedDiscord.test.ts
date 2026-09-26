@@ -22,7 +22,7 @@ describe('user alert triggers are not posted to the shared Discord channel', () 
     vi.clearAllMocks();
     mocks.q.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM alerts')) {
-        return [{ id: 'a1', workspace_id: 'ws-1', symbol: 'BTC', asset_type: 'crypto', condition_type: 'price_above', condition_value: '50000', is_recurring: false, notify_email: true, notify_push: true, name: 'BTC 50k' }];
+        return [{ id: 'a1', workspace_id: 'ws-1', symbol: 'BTC', asset_type: 'crypto', condition_type: 'price_above', condition_value: '50000', is_recurring: false, notify_email: true, notify_push: true, name: 'BTC 50k', last_price: '49000' }]; // previous check below the level, so 60000 is a cross (TR-17)
       }
       if (sql.includes('FROM user_subscriptions')) return [{ email: 'user@example.test' }];
       return [];

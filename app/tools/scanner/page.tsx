@@ -10,6 +10,7 @@ import { compareScannerScores } from '@/lib/scanner/scoreContract';
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
+import { RANKED_VERDICT_CLASS, rankedVerdictBadge } from '@/lib/scanner/rankedVerdict';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
 import { legacyExecutionReason } from '@/lib/scanner/legacyReason';
@@ -29,6 +30,8 @@ import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
 import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
 import { compareCanonicalRows } from '@/lib/scoring/canonical/scannerAdapter';
+import { gradeBasis } from '@/lib/scoring/canonical/display';
+import { isNoSetupRow, noSetupRankedReason, rankedBiasTitle, rankedClaimedDirection, rankedScoreLabel } from '@/lib/scanner/rankedDisplay';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -99,6 +102,9 @@ function ScannerMetric({ label, value, tone = 'var(--msp-text)', detail }: { lab
 type ProviderStatus = NonNullable<NonNullable<ReturnType<typeof useScannerResults>['data']>['metadata']['dataQuality']>['providerStatus'];
 
 function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean, activeRegime: string): string {
+  // A canonical "No setup" row has no setup to support: show the engine's closest-candidate reason, not factor praise.
+  const noSetup = noSetupRankedReason(r);
+  if (noSetup) return noSetup;
   // Prefer the real independent-factor evidence (Scanner rework) over the
   // rank-vs-leader summary, which reads as self-referential ("N points behind
   // the leader"). whyRanked names actual factors (trend, relative strength,
@@ -111,7 +117,6 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
   if (r.rankExplanation?.summary) {
     return r.rankExplanation.summary.replace(/;\s*rank is reduced when evidence is missing, stale, or liquidity is thin\.?\s*$/i, '').trim();
   }
-  if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
   if (!regimeCompatible) {
     const setup = r.direction === 'bullish' ? 'Bull trend setup' : r.direction === 'bearish' ? 'Bear trend setup' : 'Directional setup';
     const setupType = setupTypeForRegime(r);
@@ -415,12 +420,12 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
 
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MSP</div>
-                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{msp}</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">{rankedScoreLabel(row)}</div>
+                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{isNoSetupRow(row) ? '—' : msp}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Bias</div>
-                <div className="mt-1 text-xs font-black text-white">{compactBiasLabel(row.direction)}</div>
+                <div className="mt-1 text-xs font-black text-white" title={rankedBiasTitle(row)}>{isNoSetupRow(row) ? 'No setup' : compactBiasLabel(row.direction)}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factor coverage</div>
@@ -474,12 +479,12 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MSP</div>
-                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{msp}</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">{rankedScoreLabel(row)}</div>
+                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{isNoSetupRow(row) ? '—' : msp}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Bias</div>
-                <div className="mt-1 text-xs font-black text-white">{compactBiasLabel(row.direction)}</div>
+                <div className="mt-1 text-xs font-black text-white" title={rankedBiasTitle(row)}>{isNoSetupRow(row) ? 'No setup' : compactBiasLabel(row.direction)}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factor coverage</div>
@@ -1093,8 +1098,8 @@ export default function ScannerPage() {
     switch (activeTab) {
       case 'Equities': items = items.filter(r => (r as any)._assetClass === 'equity'); break;
       case 'Crypto': items = items.filter(r => (r as any)._assetClass === 'crypto'); break;
-      case 'Bullish': items = items.filter(r => r.direction === 'bullish'); break;
-      case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
+      case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish'); break;
+      case 'Bearish': items = items.filter(r => rankedClaimedDirection(r) === 'bearish'); break;
       case 'High Score ≥70': items = items.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE); break;
       case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
       case 'Squeeze': items = items.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')); break;
@@ -1130,8 +1135,8 @@ export default function ScannerPage() {
     All: allResults.length,
     Equities: allResults.filter(r => (r as any)._assetClass === 'equity').length,
     Crypto: allResults.filter(r => (r as any)._assetClass === 'crypto').length,
-    Bullish: allResults.filter(r => r.direction === 'bullish').length,
-    Bearish: allResults.filter(r => r.direction === 'bearish').length,
+    Bullish: allResults.filter(r => rankedClaimedDirection(r) === 'bullish').length,
+    Bearish: allResults.filter(r => rankedClaimedDirection(r) === 'bearish').length,
     'High Score ≥70': allResults.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE).length,
     'DVE Signals': allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length,
     Squeeze: allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length,
@@ -1360,7 +1365,7 @@ export default function ScannerPage() {
           && !strategyKey.includes('range_fade')
           && !strategyKey.includes('mean_reversion');
         const reason = pick.compositeV2?.blockers?.length ? pick.compositeV2.blockers.join(' ') : dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
-          : legacyExecutionReason(blockReasons) ?? (strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
+          : legacyExecutionReason(blockReasons, scoreV2?.context?.riskOffThresholds) ?? (strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
           : rangeConfirmationNeeded ? 'Directional setup inside range — confirm break/fade'
           : tfA != null && tfA >= 4 && qual !== 'low' ? 'Four-factor agreement'
           : atrPct != null && atrPct < 1.5 ? 'Compression setup'
@@ -1635,7 +1640,7 @@ export default function ScannerPage() {
               ['Symbols', String(filtered.length), 'var(--msp-text)'],
               ['Aligned Scenarios', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), 'var(--msp-bull)'],
               ['Developing', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
-              ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), 'var(--msp-bear)'],
+              ['Needs Review', String(filtered.filter(r => rankedVerdictBadge(r).label === 'BLOCK').length), 'var(--msp-bear)'],
               ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), 'var(--msp-warn)'],
             ].map(([label, value, color]) => (
               <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
@@ -1685,14 +1690,14 @@ export default function ScannerPage() {
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
-                      <SortHeader k="mspScore" label="MSP" w="w-14" title="MSP research score (0–100): system ranking of research quality under the current regime. Not a probability." />
+                      <SortHeader k="mspScore" label="Score" w="w-14" title="Setup score (0–100) from the canonical engine: it sets the Grade (A/B/C; F = blocked). Rows without an engine verdict show the MSP composite instead. Not a probability." />
                       <SortHeader k="price" label="Price" w="w-20" />
                       <SortHeader k="direction" label="Bias" w="w-16" />
                       <SortHeader k="confidence" label="Coverage" w="w-16" title="Available factor weight as a percentage of this asset’s applicable factor profile. Data coverage is separate from the MSP score." />
                       <th scope="col" className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Setup stage (where the structure is) and the factors supporting the bias">Setup · Reason</th>
                       <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Data trust: freshness of the last completed bar, interval integrity, indicator coverage, history depth">Trust</th>
                       <th scope="col" className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Extension / volatility state (DVE): where price is in the move — independent of setup and lifecycle">Extension</th>
-                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Whether the setup type is compatible with the current market regime">Regime fit</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Engine verdict: PASS (validated edge), WATCH (setup present, reasons on hover), BLOCK (data / eligibility), No setup. Hover a badge for the reasons.">Verdict</th>
                       <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Research lifecycle: how far this candidate has progressed through validation (discovered → watching → setting up → ready). Describes the research process, not price maturity.">Research stage</th>
                       <th scope="col" className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Review</th>
                     </tr>
@@ -1722,8 +1727,10 @@ export default function ScannerPage() {
                         >
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600" title="Setup / regime label from the scoring engine">{r.setup ?? regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center">
-                            <span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span>
-                            {r.canonical ? <div className="text-[10px] font-bold text-slate-400" title="Canonical grade (A/B/C, F = blocked)">Grade {r.canonical.grade}</div> : null}
+                            <span className="text-sm font-black" style={{ color: mspColor }} title={r.canonical ? 'Setup score (canonical engine)' : 'MSP composite (no engine verdict on this row)'}>{isNoSetupRow(r) ? '—' : msp}</span>
+                            {r.canonical
+                              ? <div className="text-[10px] font-bold text-slate-400" title={gradeBasis(r.canonical)}>{isNoSetupRow(r) ? 'No setup' : `Setup · Grade ${r.canonical.grade}`}</div>
+                              : <div className="text-[10px] text-slate-500">MSP</div>}
                             {r.canonical || r.compositeV2 ? <details className="text-left" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                               <summary className="cursor-pointer text-[10px] text-emerald-300">Why</summary>
                               <div className="min-w-80 max-w-md whitespace-normal">
@@ -1733,7 +1740,7 @@ export default function ScannerPage() {
                             </details> : null}
                           </td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
-                          <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(r.direction)} color={dirColor(r.direction)} small /></td>
+                          <td className="py-2.5 px-2 whitespace-nowrap" title={rankedBiasTitle(r)}><Badge label={isNoSetupRow(r) ? '—' : compactBiasLabel(r.direction)} color={dirColor(rankedClaimedDirection(r))} small /></td>
                           <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.canonical ? `${Math.round(r.canonical.coverage * 100)}% · ${r.canonical.mode}` : r.compositeV2?.coverage != null ? `${Math.round(r.compositeV2.coverage * 100)}% · ${r.compositeV2.evidenceQuality}` : 'Unavailable'}</td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
@@ -1753,11 +1760,11 @@ export default function ScannerPage() {
                             })()}
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
-                            {regimeCompatible
-                              ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Match</span>
-                              : r.scoreV2?.regimeScore?.gated
-                                ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
-                                : <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
+                            {(() => {
+                              const verdict = rankedVerdictBadge(r);
+                              const title = `${verdict.title}\nRegime fit: ${regimeCompatible ? 'setup type matches the current regime' : 'neutral for the current regime'}.`;
+                              return <span title={title} className={`text-[11px] px-1.5 py-0.5 rounded border ${RANKED_VERDICT_CLASS[verdict.tone]}`}>{verdict.label}</span>;
+                            })()}
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span className="text-[11px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
