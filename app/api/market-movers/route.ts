@@ -3,6 +3,7 @@ import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
 import { parseAlphaVantageEasternTime } from '@/lib/analysis/providerAsOf';
+import { avEquityEntitlementParam } from '@/lib/alphaVantageEntitlement';
 import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -24,7 +25,7 @@ async function fetchEquityMovers(): Promise<{
 }> {
   if (!ALPHA_VANTAGE_API_KEY) return { gainers: [], losers: [], active: [] };
   try {
-    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_VANTAGE_API_KEY}${avEquityEntitlementParam()}`;
     await avTakeToken();
     const res = await fetch(url, { cache: 'no-store' });
     const data = await res.json();

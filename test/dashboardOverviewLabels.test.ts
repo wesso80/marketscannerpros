@@ -9,7 +9,9 @@ describe('Market dashboard labels (OV-5, OV-8, OV-10)', () => {
     expect(page).toContain("{ etf: 'VIXY', label: 'VIX futures ETF', index: 'VIX' }");
     expect(page).not.toContain("label: 'Volatility'");
     expect(page).not.toContain('index levels are end-of-day via Alpha Vantage');
-    expect(page).toContain('live or 15-minute-delayed Alpha Vantage quotes');
+    // OV-15: US equities are licensed 15-minute delayed, so the footnote no longer says "live or".
+    expect(page).not.toContain('live or 15-minute-delayed');
+    expect(page).toContain('15-minute-delayed Alpha Vantage quotes');
   });
 
   it('OV-8: queue wording does not claim validation or evidence strength', () => {
