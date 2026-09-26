@@ -13,7 +13,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 import { avFetch } from '@/lib/avRateGovernor';
-import { getGlobalData, symbolToId } from '@/lib/coingecko';
+import { getGlobalData } from '@/lib/coingecko';
+import { cryptoNewsName } from '@/lib/crypto/newsRelevance';
 import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg } from '@/lib/goldenEgg/engine';
 import { getEarningsHistory, getFundamentalsSummary, type EarningsHistory, type FundamentalsSummary } from '@/lib/goldenEgg/companyOverview';
@@ -45,7 +46,7 @@ const NEWS_PROVIDER_LABEL = 'alpha_vantage NEWS_SENTIMENT (ticker-filtered: rele
 /** Name used for the "names the company" check: OVERVIEW name for equities, CoinGecko id for crypto ("bitcoin", "shiba inu"). */
 function newsCompanyName(symbol: string, assetClass: 'equity' | 'crypto' | 'forex', fundamentals: FundamentalsSummary | null): string | null {
   if (assetClass === 'equity') return fundamentals?.name ?? null;
-  if (assetClass === 'crypto') return symbolToId(symbol.replace(/[-/]?(USDT|USD)$/i, ''))?.replace(/-\d+$/, '').replace(/-/g, ' ') ?? null;
+  if (assetClass === 'crypto') return cryptoNewsName(symbol);
   return null;
 }
 

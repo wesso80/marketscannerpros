@@ -77,9 +77,10 @@ describe('/api/crypto/cg-news relevance filter', () => {
     expect(body.timestamp).toBe('2026-09-25T17:00:00.000Z');
   });
 
-  it('a coin-specific request is passed through unchanged (CoinGecko already filtered by coin)', async () => {
+  it('a coin-specific request keeps only items naming that coin or ticker (MV-2: CoinGecko auto-tags coins from ordinary words)', async () => {
     const body = await (await news(new NextRequest('https://example.test/api/crypto/cg-news?coin_id=bitcoin'))).json();
-    expect(body.count).toBe(4);
-    expect(body.excluded_off_topic).toBe(0);
+    expect(body.articles.map((a: CryptoNewsItem) => a.title)).toEqual(['Bitcoin holds $83K']);
+    expect(body.count).toBe(1);
+    expect(body.excluded_off_topic).toBe(3);
   });
 });

@@ -139,7 +139,7 @@ export default function ResearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const articles = (news.data?.articles || []).filter(article => !candidateSymbol || article.tickerSentiments?.some(t => t.ticker.replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '') === candidateSymbol && t.relevance >= 0.35));
+  const articles = (news.data?.articles || []).filter(article => !candidateSymbol || (article.relevantTickers ?? []).includes(candidateSymbol));
   const events = useMemo(() => {
     const all = calendar.data?.events || [];
     if (calFilter === 'all') return all;

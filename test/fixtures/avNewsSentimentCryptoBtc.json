@@ -1,0 +1,891 @@
+{
+ "_source": "Alpha Vantage NEWS_SENTIMENT documented demo query tickers=COIN,CRYPTO:BTC,FOREX:USD (apikey=demo), fetched 26 Sep 2026; banner/author/topic fields trimmed",
+ "sentiment_score_definition": "x <= -0.35: Bearish; -0.35 < x <= -0.15: Somewhat-Bearish; -0.15 < x < 0.15: Neutral; 0.15 <= x < 0.35: Somewhat_Bullish; x >= 0.35: Bullish",
+ "relevance_score_definition": "0 < x <= 1, with a higher score indicating higher relevance.",
+ "feed": [
+  {
+   "title": "BlackRock: AI Agents Could Drive Crypto's Next Demand Wave",
+   "url": "https://decrypt.co/379070/blackrock-ai-agents-crypto-next-demand-wave",
+   "time_published": "20260923T154146",
+   "summary": "The world's largest asset manager argues that autonomous AI agents buying data, paying for services, and renting computing power could quietly become one of the biggest forces pushing money into crypto.",
+   "source": "Decrypt.co",
+   "overall_sentiment_score": 0.097534,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "APG",
+     "relevance_score": "0.100518",
+     "ticker_sentiment_score": "0.001075",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "MSFT",
+     "relevance_score": "0.050359",
+     "ticker_sentiment_score": "-0.187974",
+     "ticker_sentiment_label": "Somewhat-Bearish"
+    },
+    {
+     "ticker": "GOOG",
+     "relevance_score": "0.050359",
+     "ticker_sentiment_score": "-0.010979",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.150278",
+     "ticker_sentiment_score": "-0.027285",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.050359",
+     "ticker_sentiment_score": "0.178289",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.050359",
+     "ticker_sentiment_score": "0.178289",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.050359",
+     "ticker_sentiment_score": "-0.010979",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "1 Popular Cryptocurrency ARK Invest Expects to Surge by 1,480%",
+   "url": "https://www.fool.com/investing/2026/09/04/x-popular-cryptocurrency-ark-invest-expects-to-sur/",
+   "time_published": "20260904T173000",
+   "summary": "Cathie Wood expects Bitcoin to soar to $1.25 million in just five years.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.241927,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.056407",
+     "ticker_sentiment_score": "0.213989",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:EUR",
+     "relevance_score": "0.056407",
+     "ticker_sentiment_score": "0.105012",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.168099",
+     "ticker_sentiment_score": "0.120859",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.880435",
+     "ticker_sentiment_score": "0.40642",
+     "ticker_sentiment_label": "Bullish"
+    }
+   ]
+  },
+  {
+   "title": "Coinbase CEO Brian Armstrong Says Bitcoin Could Soar as High as $400,000 By 2030. Here's Why That's Going to Happen.",
+   "url": "https://www.fool.com/investing/2026/08/28/coinbase-ceo-brian-armstrong-says-bitcoin-could-so/",
+   "time_published": "20260828T191000",
+   "summary": "The world's top cryptocurrency could soar more than 400% over the next four years.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.155535,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.091509",
+     "ticker_sentiment_score": "0.080002",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.091509",
+     "ticker_sentiment_score": "0.065824",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.642187",
+     "ticker_sentiment_score": "0.193879",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "Bitcoin Hits Highest Price Since June as $3 Billion in Shorts Liquidated",
+   "url": "https://decrypt.co/376085/bitcoin-price-high-june-3-billion-shorts-liquidated",
+   "time_published": "20260820T160404",
+   "summary": "Bitcoin punched above $72,000 Thursday, extending a two-day squeeze that's wiped out the most short positions on record and mounted the first real challenge to a bearish chart that's held since November.",
+   "source": "Decrypt.co",
+   "overall_sentiment_score": -0.026313,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.140485",
+     "ticker_sentiment_score": "-0.019942",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.070517",
+     "ticker_sentiment_score": "-0.005037",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.404563",
+     "ticker_sentiment_score": "-0.117568",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Bitcoin's Sharpest Rally in Five Months Flips Markets From Bearish to Coin Flip",
+   "url": "https://decrypt.co/376030/bitcoin-rally-flips-markets-bearish-coin-flip",
+   "time_published": "20260819T221801",
+   "summary": "Bitcoin's steepest daily gain since March caught traders off guard, and Myriad's pump-or-dump market swung from 70-30 odds to nearly even in a single day.",
+   "source": "Decrypt.co",
+   "overall_sentiment_score": 0.016875,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.076358",
+     "ticker_sentiment_score": "0.015245",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.076358",
+     "ticker_sentiment_score": "0.068165",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.749922",
+     "ticker_sentiment_score": "-0.043522",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "OCC approves Trump Family Crypto Company for Trust Charter",
+   "url": "https://cointelegraph.com/news/occ-donald-trump-world-liberty-financial-trust-charter",
+   "time_published": "20260817T211730",
+   "summary": "The US financial regulator gave conditional approval for World Liberty Financial's charter bid as ten Democrats signed onto a bill to \"prevent corruption in banking applications.\" ...",
+   "source": "Cointelegraph",
+   "overall_sentiment_score": 0.354816,
+   "overall_sentiment_label": "Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.077593",
+     "ticker_sentiment_score": "0.321044",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.077593",
+     "ticker_sentiment_score": "0.2718",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.077593",
+     "ticker_sentiment_score": "0.0",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Coldcard Exploit Sparks Bitcoin Flight, 'Bullish' Crypto Consolidation: Hodler's Digest,",
+   "url": "https://cointelegraph.com/magazine/coldcard-exploit-sparks-bitcoin-flight-clarity-act-no-vote-or-no-vote-hodlers-digest-august-2",
+   "time_published": "20260802T234404",
+   "summary": "The \"sickening\" loss of $90 million of Bitcoin from cold storage weighs heavily on sentiment, as the Clarity Act stalls with just five days left to hold a Senate vote.",
+   "source": "Cointelegraph",
+   "overall_sentiment_score": -0.072247,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "CRDD",
+     "relevance_score": "0.025487",
+     "ticker_sentiment_score": "0.163214",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.025487",
+     "ticker_sentiment_score": "-0.135405",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "GLXY",
+     "relevance_score": "0.025487",
+     "ticker_sentiment_score": "-0.126838",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.025487",
+     "ticker_sentiment_score": "0.079611",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.456168",
+     "ticker_sentiment_score": "-0.107752",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.050948",
+     "ticker_sentiment_score": "0.0",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:UNI",
+     "relevance_score": "0.050948",
+     "ticker_sentiment_score": "0.175391",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:ADA",
+     "relevance_score": "0.050948",
+     "ticker_sentiment_score": "0.175391",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "Coinbase CEO Brian Armstrong Says AI Agents Will Expand Crypto Adoption. Here's What That Means for Crypto Investors.",
+   "url": "https://www.fool.com/investing/2026/08/01/coinbase-ceo-brian-armstrong-says-ai-agents-will-e/",
+   "time_published": "20260801T163827",
+   "summary": "As AI agents hold and spend their own money, the crypto market will expand and evolve.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.150444,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.166743",
+     "ticker_sentiment_score": "0.195554",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.166743",
+     "ticker_sentiment_score": "0.189621",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.083833",
+     "ticker_sentiment_score": "0.140973",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.247838",
+     "ticker_sentiment_score": "0.306454",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:SHIB",
+     "relevance_score": "0.083833",
+     "ticker_sentiment_score": "0.030826",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:DOGE",
+     "relevance_score": "0.083833",
+     "ticker_sentiment_score": "0.030826",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:LINK",
+     "relevance_score": "0.083833",
+     "ticker_sentiment_score": "0.131154",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Coinbase  ( COIN )  Q2 2026 Earnings Call Transcript",
+   "url": "https://www.fool.com/earnings/call-transcripts/2026/07/30/coinbase-coin-q2-2026-earnings-call-transcript/",
+   "time_published": "20260731T005535",
+   "summary": "Base network hits $32 trillion volume as subscription revenue gains traction.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.28323,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "PYPL",
+     "relevance_score": "0.015731",
+     "ticker_sentiment_score": "0.102824",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.299384",
+     "ticker_sentiment_score": "0.26405",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "AWON",
+     "relevance_score": "0.007866",
+     "ticker_sentiment_score": "0.087731",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.078534",
+     "ticker_sentiment_score": "0.11721",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.039315",
+     "ticker_sentiment_score": "0.108177",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.039315",
+     "ticker_sentiment_score": "0.109136",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Coinbase CEO Brian Armstrong's Bold Fix for America's $39.7 Trillion Debt Crisis  ( Hint: It Involves Bitcoin. ) ",
+   "url": "https://www.fool.com/investing/2026/07/29/coinbase-ceo-brian-armstrong-bold-fix-for-us-debt/",
+   "time_published": "20260729T144300",
+   "summary": "Can Bitcoin really solve America's debt crisis? Coinbase CEO Brian Armstrong thinks so, but the math tells a different story.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.047615,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.12645",
+     "ticker_sentiment_score": "0.055207",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.188683",
+     "ticker_sentiment_score": "0.119217",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.52612",
+     "ticker_sentiment_score": "0.034167",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Why Analysts Aren't Worried About Coinbase's 30% Drop",
+   "url": "https://decrypt.co/373615/analysts-arent-worried-coinbase-drop",
+   "time_published": "20260715T213843",
+   "summary": "William Blair slashed earnings estimates by 34% and held its Outperform call. But analysts think Bitcoin's chart may already be answering the bigger question.",
+   "source": "Decrypt.co",
+   "overall_sentiment_score": -0.076496,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.340915",
+     "ticker_sentiment_score": "-0.111254",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.050254",
+     "ticker_sentiment_score": "-0.032995",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.340915",
+     "ticker_sentiment_score": "-0.095106",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Bitcoin May Have Just Two 2026 Bear-Market Months Left",
+   "url": "https://cointelegraph.com/markets/btc-price-bull-market-to-begin-in-september-five-things-to-know-in-bitcoin-this-week",
+   "time_published": "20260713T104522",
+   "summary": "Bitcoin price analysis called for the end of the bear market within three months as the US-Iran war sent BTC lower from strengthening $64,000 resistance.",
+   "source": "Cointelegraph",
+   "overall_sentiment_score": -0.10945,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "CME",
+     "relevance_score": "0.056209",
+     "ticker_sentiment_score": "0.0",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.028122",
+     "ticker_sentiment_score": "0.0",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:JPY",
+     "relevance_score": "0.028122",
+     "ticker_sentiment_score": "-0.080084",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.194913",
+     "ticker_sentiment_score": "-0.014046",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.676394",
+     "ticker_sentiment_score": "-0.063911",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Coinbase CEO Brian Armstrong Has a New Solution to America's $39 Trillion Debt Problem.  ( Hint: It Involves Bitcoin. ) ",
+   "url": "https://www.fool.com/investing/2026/07/12/coinbase-solution-trillion-debt-problem-bitcoin/",
+   "time_published": "20260712T083200",
+   "summary": "This plan sounds good in theory, but its chances of being implemented are slim.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": -0.039433,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.090474",
+     "ticker_sentiment_score": "0.189702",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.090474",
+     "ticker_sentiment_score": "-0.00631",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.266828",
+     "ticker_sentiment_score": "0.180849",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "Strategy Sells $216M Bitcoin, Bollinger Bullish on BTC: Hodler's Digest",
+   "url": "https://cointelegraph.com/features/bollinger-is-bullish-on-bitcoin-trumps-ludicrous-crypto-profits-hodlers-digest",
+   "time_published": "20260707T000330",
+   "summary": "Bollinger Bands creator John Bollinger says the charts suggest Bitcoin could take off from here. Vitalik Buterin unveils a new Ethereum strawmap, but why is it taking so long?",
+   "source": "Cointelegraph",
+   "overall_sentiment_score": 0.059758,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "SSNLF",
+     "relevance_score": "0.047231",
+     "ticker_sentiment_score": "0.0",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "GOOG",
+     "relevance_score": "0.023626",
+     "ticker_sentiment_score": "0.14454",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "SHG",
+     "relevance_score": "0.023626",
+     "ticker_sentiment_score": "0.0",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "MA",
+     "relevance_score": "0.047231",
+     "ticker_sentiment_score": "0.103461",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "IUSDF",
+     "relevance_score": "0.023626",
+     "ticker_sentiment_score": "0.09128",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.094297",
+     "ticker_sentiment_score": "0.069951",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.141034",
+     "ticker_sentiment_score": "0.069699",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.656708",
+     "ticker_sentiment_score": "-0.014839",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.164228",
+     "ticker_sentiment_score": "0.010969",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Crypto Biz: Strategy's Bitcoin Shift, Open USD Launch, Fidelity Weighs In",
+   "url": "https://cointelegraph.com/news/crypto-biz-bitcoin-maximalism-meets-capital-markets",
+   "time_published": "20260703T160341",
+   "summary": "Strategy authorizes Bitcoin sales, Open USD takes on USDT and USDC, Fidelity defends Bitcoin security and crypto ramps up political spending for 2026.",
+   "source": "Cointelegraph",
+   "overall_sentiment_score": 0.215274,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "MA",
+     "relevance_score": "0.045655",
+     "ticker_sentiment_score": "0.161012",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.045655",
+     "ticker_sentiment_score": "0.161012",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.13637",
+     "ticker_sentiment_score": "0.12628",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.577173",
+     "ticker_sentiment_score": "0.262546",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "The Trump Administration Wants the Clarity Act Passed By the End of Summer. 3 Cryptocurrencies to Buy Now.",
+   "url": "https://www.fool.com/investing/2026/06/21/the-trump-administration-wants-the-clarity-act-pas/",
+   "time_published": "20260621T110300",
+   "summary": "Bitcoin, Ethereum, and Solana have potential no matter what happens in Washington.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.162802,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.045396",
+     "ticker_sentiment_score": "-0.158036",
+     "ticker_sentiment_label": "Somewhat-Bearish"
+    },
+    {
+     "ticker": "WU",
+     "relevance_score": "0.045396",
+     "ticker_sentiment_score": "0.035958",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.045396",
+     "ticker_sentiment_score": "0.04938",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.351184",
+     "ticker_sentiment_score": "0.247921",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.180124",
+     "ticker_sentiment_score": "0.216199",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "This Billionaire Says Bitcoin Is a Better Investment Than Real Estate. Is He Right?",
+   "url": "https://www.fool.com/investing/2026/06/19/billionaire-says-bitcoin-better-than-real-estate/",
+   "time_published": "20260620T023300",
+   "summary": "Over the past decade, Bitcoin has soared in price to become one of the world's most valuable assets.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.170655,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "GRPI",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "0.106135",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "0.093722",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "AWON",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "0.053466",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "0.036244",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.97146",
+     "ticker_sentiment_score": "0.339512",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "95% Of Short-Term Bitcoin Holders Are Underwater-And The Worst May Not Be Over Yet",
+   "url": "https://www.benzinga.com/crypto/cryptocurrency/26/06/53150339/95-of-short-term-bitcoin-holders-are-underwater-and-the-worst-may-not-be-over-yet",
+   "time_published": "20260611T173509",
+   "summary": "Glassnode's Short-Term Holder MVRV, which tracks how much recent buyers are up or down on average, printed 0.81 at its low before recovering slightly to 0.83. The $78,000 to $82,000 accumulation cluster built during May is now broadly in loss.",
+   "source": "Benzinga",
+   "overall_sentiment_score": -0.0049,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "GOOG",
+     "relevance_score": "0.100729",
+     "ticker_sentiment_score": "0.16446",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.100729",
+     "ticker_sentiment_score": "0.038908",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.199859",
+     "ticker_sentiment_score": "0.090795",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.387374",
+     "ticker_sentiment_score": "-0.103253",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "Trump family got about $500M from crypto venture - but investors saw steep losses",
+   "url": "https://www.cnbc.com/2026/06/09/trump-world-liberty-financial-crypto-alt5-sigma.html",
+   "time_published": "20260609T142408",
+   "summary": "Eric Trump and Donald Trump Jr. celebrated a deal with Alt5 Sigma that generated roughly $500 million for the Trump family. The company's shares are down 93%.",
+   "source": "CNBC",
+   "overall_sentiment_score": 0.138739,
+   "overall_sentiment_label": "Neutral",
+   "ticker_sentiment": [
+    {
+     "ticker": "NXFNF",
+     "relevance_score": "0.015016",
+     "ticker_sentiment_score": "-0.005308",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "VSNTV",
+     "relevance_score": "0.015016",
+     "ticker_sentiment_score": "-0.09486",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRCW",
+     "relevance_score": "0.015016",
+     "ticker_sentiment_score": "0.200145",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.015016",
+     "ticker_sentiment_score": "-0.073549",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.015016",
+     "ticker_sentiment_score": "0.105959",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.015016",
+     "ticker_sentiment_score": "0.159569",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  },
+  {
+   "title": "IBIT vs. FBTC: Which Bitcoin ETF Is Better?",
+   "url": "https://www.fool.com/investing/2026/06/09/ibit-vs-fbtc-which-bitcoin-etf-is-better/",
+   "time_published": "20260609T051500",
+   "summary": "The difference between the two largest Bitcoin ETFs comes down to a few minor details.",
+   "source": "Motley Fool",
+   "overall_sentiment_score": 0.290563,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.169676",
+     "ticker_sentiment_score": "0.177461",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.169676",
+     "ticker_sentiment_score": "0.087722",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.981584",
+     "ticker_sentiment_score": "0.496266",
+     "ticker_sentiment_label": "Bullish"
+    }
+   ]
+  },
+  {
+   "title": "Bitcoin, Ethereum, Solana Down Over 20% In A Month Is The 'Biggest Macro Opportunity,' Expert Claims",
+   "url": "https://www.benzinga.com/crypto/cryptocurrency/26/06/53055550/bitcoin-ethereum-solana-down-over-20-in-a-month-is-the-biggest-macro-opportunity-expert-cla",
+   "time_published": "20260608T123618",
+   "summary": "Speaking on June 7 on Scott Melker's podcast, Tapiero said that stablecoins, tokenized assets and AI agents are pushing finance on chain faster than most investors realize. He said these are no longer theory but instead they are becoming the rails for payments, trading and autonomous AI ...",
+   "source": "Benzinga",
+   "overall_sentiment_score": 0.168578,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "MSFT",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.10132",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "GOOG",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.172054",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.10132",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "FOREX:JPY",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.273404",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:EUR",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.273404",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:IDR",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.273404",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "0.273404",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.33628",
+     "ticker_sentiment_score": "0.029609",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:ETH",
+     "relevance_score": "0.115232",
+     "ticker_sentiment_score": "-0.105675",
+     "ticker_sentiment_label": "Neutral"
+    }
+   ]
+  },
+  {
+   "title": "WTW Acquires Crypto Insurance Platform Redefind",
+   "url": "https://cointelegraph.com/news/wtw-acquires-redefind-to-expand-crypto-asset-recovery-insurance-offering",
+   "time_published": "20260602T070000",
+   "summary": "The global insurance broker acquired crypto insurance platform Redefind and launched a digital asset protection service covering asset tracing and legal recovery costs.",
+   "source": "Cointelegraph",
+   "overall_sentiment_score": 0.272117,
+   "overall_sentiment_label": "Somewhat-Bullish",
+   "ticker_sentiment": [
+    {
+     "ticker": "AON",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "0.159014",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "COIN",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "0.159014",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    },
+    {
+     "ticker": "FOREX:USD",
+     "relevance_score": "0.087185",
+     "ticker_sentiment_score": "-0.062625",
+     "ticker_sentiment_label": "Neutral"
+    },
+    {
+     "ticker": "CRYPTO:BTC",
+     "relevance_score": "0.415927",
+     "ticker_sentiment_score": "0.167262",
+     "ticker_sentiment_label": "Somewhat-Bullish"
+    }
+   ]
+  }
+ ]
+}

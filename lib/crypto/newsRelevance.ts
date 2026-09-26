@@ -1,3 +1,6 @@
+import { COINGECKO_ID_MAP, symbolToId } from '@/lib/coingecko';
+import { mentionsCompany } from '@/lib/equityNewsRelevance';
+
 /**
  * Crypto relevance check for the CoinGecko news feed.
  *
@@ -33,4 +36,44 @@ export interface NewsItemLike {
 export function isCryptoRelevantNews(item: NewsItemLike): boolean {
   if (item.type === 'guide') return true;
   return typeof item.title === 'string' && CRYPTO_TITLE_RE.test(item.title);
+}
+
+/**
+ * Name used by the shared ticker-relevance rule (lib/equityNewsRelevance.ts) for a coin: its CoinGecko id as words
+ * ("BTC" -> "bitcoin", "SHIB" -> "shiba inu"). Accepts a ticker (BTC, BTC-USD, CRYPTO:BTC) or a CoinGecko id.
+ */
+export function cryptoNewsName(symbolOrId: string): string | null {
+  const raw = symbolOrId.trim().replace(/^CRYPTO:/i, '');
+  const id = symbolToId(raw.replace(/[-/]?(USDT|USD)$/i, '')) ?? (Object.values(COINGECKO_ID_MAP).includes(raw.toLowerCase()) ? raw.toLowerCase() : null);
+  return id ? id.replace(/-\d+$/, '').replace(/-/g, ' ') : null;
+}
+
+/** Plain ticker for a CoinGecko id ("bitcoin" -> "BTC"), or null when the id isn't in the map. */
+export function cryptoSymbolForId(coinId: string): string | null {
+  const id = coinId.trim().toLowerCase();
+  const entry = Object.entries(COINGECKO_ID_MAP).find(([sym, v]) => v === id && /^[A-Z0-9]+$/.test(sym) && !/(USDT|USD)$/.test(sym));
+  return entry ? entry[0] : null;
+}
+
+/**
+ * Coin-specific CoinGecko feed (/news?coin_id=...): CoinGecko auto-tags coins from ordinary words, so a news item is
+ * kept only when its title names the coin or its ticker (shared mentionsCompany rule). Guides are coin explainers
+ * and always pass.
+ */
+export function isCoinRelevantNews(item: NewsItemLike, coinId: string): boolean {
+  if (item.type === 'guide') return true;
+  if (typeof item.title !== 'string') return false;
+  return mentionsCompany(item.title, cryptoSymbolForId(coinId) ?? '', cryptoNewsName(coinId));
+}
+
+/** Drop repeats of the same headline, including full-width/half-width punctuation variants (NFKC). */
+export function dedupeNewsByTitle<T extends { title?: string | null }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = String(item.title ?? '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}]+/gu, '');
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
