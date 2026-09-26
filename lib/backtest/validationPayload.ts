@@ -1,27 +1,41 @@
 import type { BacktestValidation } from '@/lib/backtest/engine';
+import { assessBacktestEdge, describeEdgeFlag } from '@/lib/backtest/edgeAssessment';
+import { formatProfitFactorValue } from '@/lib/backtest/profitFactorScore';
 import { getAlternativeBacktestStrategies } from '@/lib/strategies/registry';
 
 export function buildValidationPayload(
   strategyId: string,
   strategyDirection: 'bullish' | 'bearish' | 'both',
-  result: { winRate: number; profitFactor: number | null; totalReturn: number; profitFactorLabel?: string },
+  result: {
+    winRate: number;
+    profitFactor: number | null;
+    totalReturn: number;
+    profitFactorLabel?: string;
+    totalTrades: number;
+    winningTrades?: number;
+    losingTrades?: number;
+  },
 ): BacktestValidation {
-  const profitFactorScore = result.profitFactor ?? 0;
-  const profitFactorText = result.profitFactor == null ? result.profitFactorLabel ?? 'no losing trades in sample' : result.profitFactor.toFixed(2);
-  const invalidated = result.winRate < 40 || (result.profitFactor != null && result.profitFactor < 1) || result.totalReturn <= 0;
-  const validated = result.winRate >= 50 && profitFactorScore >= 1.2 && result.totalReturn > 0;
+  // Same rule as the diagnostics panel (lib/backtest/edgeAssessment.ts): invalidated only
+  // when return < 0% and profit factor < 1; a low win rate is a flag, not invalidation.
+  const input = result;
+  const assessment = assessBacktestEdge(input);
+  const status: BacktestValidation['status'] = assessment.status;
+  const profitFactorText = result.profitFactor != null
+    ? result.profitFactor.toFixed(2)
+    : assessment.profitFactorScore > 0
+      ? formatProfitFactorValue(input)
+      : result.profitFactorLabel ?? 'no losing trades in sample';
 
-  const status: BacktestValidation['status'] = invalidated
-    ? 'invalidated'
-    : validated
-      ? 'validated'
-      : 'mixed';
-
+  const metrics = `WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`;
+  const flagText = assessment.flags.length > 0
+    ? ` Flags: ${assessment.flags.map((flag) => describeEdgeFlag(flag, input)).join('; ')}.`
+    : '';
   const reason = status === 'invalidated'
-    ? `Invalidated: WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`
+    ? `Invalidated: ${metrics}${flagText}`
     : status === 'validated'
-      ? `Validated: WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`
-      : `Mixed: WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`;
+      ? `Validated: ${metrics}`
+      : `Mixed: ${metrics}${flagText}`;
 
   let suggestedAlternatives: BacktestValidation['suggestedAlternatives'] | undefined;
   if (status === 'invalidated' && strategyDirection !== 'both') {

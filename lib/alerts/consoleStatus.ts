@@ -32,6 +32,22 @@ export function checkedActiveAlerts<T extends ConsoleAlert>(alerts: T[]): T[] {
   return alerts.filter((a) => a.is_active && !a.is_multi_condition);
 }
 
+/** Smart/strategy/scanner alert (the console's "Smart" group). */
+export function isSmartConsoleAlert(alert: { is_smart_alert?: boolean; condition_type?: string | null }): boolean {
+  const ct = alert.condition_type ?? '';
+  return Boolean(alert.is_smart_alert || ct.startsWith('strategy_') || ct.startsWith('scanner_'));
+}
+
+/**
+ * "Smart %": smart/strategy alerts as a share of checked active alerts. Multi-condition
+ * alerts are left out of both counts because no checker evaluates them. 0 when none.
+ */
+export function smartAlertShare<T extends ConsoleAlert & { is_smart_alert?: boolean }>(alerts: T[]): number {
+  const checked = checkedActiveAlerts(alerts);
+  if (checked.length === 0) return 0;
+  return Math.round((checked.filter(isSmartConsoleAlert).length / checked.length) * 100);
+}
+
 /** Legacy multi-condition alerts, listed under Basic as "Not checked" so they can be seen and deleted. */
 export function legacyMultiAlerts<T extends ConsoleAlert>(alerts: T[]): T[] {
   return alerts.filter((a) => Boolean(a.is_multi_condition));

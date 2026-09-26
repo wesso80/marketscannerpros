@@ -22,7 +22,7 @@ import { scannerTimeframe } from '@/lib/scanner/timeframes';
 import { cryptoPositioningExpected, summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
 import { evaluateHardBlocks, macroEventFlags, type HardBlockResult } from '@/lib/scanner/hardBlocks';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
-import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
+import { COINGECKO_ID_MAP, getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
 import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
 import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustResult } from "@/lib/scanner/dataTrust";
@@ -40,6 +40,7 @@ import { normalizeSide } from "@/lib/intelligence/edgeProfile";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 import { isAsciiCryptoTicker } from "@/lib/scanner/cryptoTicker";
+import { findCryptoAliases } from "@/lib/scanner/cryptoAliases";
 import { evaluateScannerFreshness } from "@/lib/scanner/dataQuality";
 import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
@@ -1607,6 +1608,7 @@ export async function POST(req: NextRequest) {
     // Read crypto histories concurrently and derivatives once, within the browser's
     // 30-second deadline. A failed/slow coin must not hide other completed reads.
     const cryptoSeries = new Map<string, PromiseSettledResult<CryptoSeries>>();
+    const cryptoAliasOf = new Map<string, string>();
     let derivativeSnapshot: Awaited<ReturnType<typeof getDerivativesForSymbols>> = [];
     if (type === 'crypto') {
       const cryptoSymbols = [...new Set(['BTC', ...limited])];
@@ -1618,6 +1620,11 @@ export async function POST(req: NextRequest) {
         boundedBatch([limited], symbols => getDerivativesForSymbols(symbols), { concurrency: 1, budgetMs }),
       ]);
       cryptoSymbols.forEach((symbol, index) => cryptoSeries.set(symbol, seriesReads[index]));
+      // SC-12: never list the same coin twice under different tickers.
+      for (const [alias, canonical] of findCryptoAliases(cryptoSymbols.map((symbol, index) => {
+        const read = seriesReads[index];
+        return { symbol, coinId: read?.status === 'fulfilled' ? read.value.coinId : null };
+      }), COINGECKO_ID_MAP)) cryptoAliasOf.set(alias, canonical);
       if (derivativeReads[0]?.status === 'fulfilled') derivativeSnapshot = derivativeReads[0].value;
       if (!derivativeSnapshot.length) errors.push('Derivatives unavailable within scan deadline; funding and open interest omitted.');
     }
@@ -1699,6 +1706,8 @@ export async function POST(req: NextRequest) {
       try {
         if (type === "crypto") {
           const baseSym = sym;
+          const aliasCanonical = cryptoAliasOf.get(baseSym);
+          if (aliasCanonical) { errors.push(`${baseSym}: same CoinGecko coin as ${aliasCanonical}; duplicate row skipped`); continue; }
 
           // Genuine-timeframe bars (lib/scanner/cryptoBars): completed bars drive indicators; the open bar supplies price.
           let series: CryptoSeries;

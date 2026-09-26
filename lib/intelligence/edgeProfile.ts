@@ -13,11 +13,12 @@
  */
 
 import { q } from '@/lib/db';
+import { EDGE_PROFILE_UNLOCK_TRADES } from '@/lib/intelligence/edgeProfileUnlock';
 
 /* ── Configuration ─────────────────────────────────────────────────────── */
 
 /** Minimum trades before we consider a dimension statistically meaningful. */
-export const MIN_SAMPLE_SIZE = 10;
+export const MIN_SAMPLE_SIZE = EDGE_PROFILE_UNLOCK_TRADES;
 
 /** Minimum trades for a cross-dimension combo (higher bar than single). */
 export const MIN_COMBO_SIZE = 15;

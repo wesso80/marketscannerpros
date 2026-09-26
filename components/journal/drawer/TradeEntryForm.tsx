@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { entryRiskUsd, entryUnitLabels, optionEntryWarning } from '@/lib/journal/entryUnits';
 
 export interface TradeEntryPayload {
   symbol: string;
@@ -19,7 +20,7 @@ export interface TradeEntryPayload {
   optionType?: 'CALL' | 'PUT';
   strikePrice?: number;
   expirationDate?: string;
-  premium?: number;
+  // (No separate premium field: for options, entryPrice IS the premium per share.)
   // Leverage fields (Futures / Margin)
   leverage?: number;
 }
@@ -37,7 +38,6 @@ export interface TradeEntryInitialValues {
   optionType?: 'CALL' | 'PUT';
   strikePrice?: string;
   expirationDate?: string;
-  premium?: string;
 }
 
 interface TradeEntryFormProps {
@@ -73,7 +73,6 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
   const [optionType, setOptionType] = useState<'CALL' | 'PUT'>(iv?.optionType || 'CALL');
   const [strikePrice, setStrikePrice] = useState(iv?.strikePrice || '');
   const [expirationDate, setExpirationDate] = useState(iv?.expirationDate || '');
-  const [premium, setPremium] = useState(iv?.premium || '');
 
   // Leverage state (Futures / Margin)
   const [leverage, setLeverage] = useState('');
@@ -84,7 +83,10 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
   const tp = parseFloat(target);
   const qty = parseFloat(quantity);
   const riskPerUnit = Number.isFinite(ep) && Number.isFinite(sl) ? Math.abs(ep - sl) : undefined;
-  const riskUsd = riskPerUnit && Number.isFinite(qty) ? riskPerUnit * qty : undefined;
+  // Options: prices are premium per share, so dollar risk applies the contract multiplier.
+  const riskUsd = entryRiskUsd(tradeType, ep, sl, qty);
+  const units = entryUnitLabels(tradeType);
+  const optionWarning = tradeType === 'Options' ? optionEntryWarning(ep, parseFloat(strikePrice)) : null;
   const rewardPerUnit = Number.isFinite(ep) && Number.isFinite(tp) ? Math.abs(tp - ep) : undefined;
   const rrRatio = riskPerUnit && rewardPerUnit && riskPerUnit > 0 ? (rewardPerUnit / riskPerUnit) : undefined;
 
@@ -99,7 +101,6 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
     setSubmitting(true);
     try {
       const sp = parseFloat(strikePrice);
-      const prem = parseFloat(premium);
       const lev = parseFloat(leverage);
 
       await onSubmit({
@@ -120,7 +121,6 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
           optionType,
           strikePrice: Number.isFinite(sp) && sp > 0 ? sp : undefined,
           expirationDate: expirationDate || undefined,
-          premium: Number.isFinite(prem) && prem > 0 ? prem : undefined,
         }),
         // Leverage extras
         ...((tradeType === 'Futures' || tradeType === 'Margin') && {
@@ -265,21 +265,8 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
                   onChange={(e) => setExpirationDate(e.target.value)}
                 />
               </div>
-              <div>
-                <label htmlFor="trade-premium" className={LABEL}>Premium (per contract)</label>
-                <input
-                  id="trade-premium"
-                  name="premium"
-                  type="number"
-                  step="any"
-                  min="0"
-                  className={INPUT}
-                  placeholder="0.00"
-                  value={premium}
-                  onChange={(e) => setPremium(e.target.value)}
-                />
-              </div>
             </div>
+            {units.help && <p className="mt-2 text-[11px] text-purple-200/80">{units.help}</p>}
           </div>
         )}
 
@@ -321,7 +308,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         {/* Row 3: Entry Price + Quantity */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="trade-entry-price" className={LABEL}>Entry Price *</label>
+            <label htmlFor="trade-entry-price" className={LABEL}>{units.entry}</label>
             <input
               id="trade-entry-price"
               name="entryPrice"
@@ -329,14 +316,15 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               step="any"
               min="0"
               className={INPUT}
-              placeholder="0.00"
+              placeholder={units.entryPlaceholder}
               value={entryPrice}
               onChange={(e) => setEntryPrice(e.target.value)}
               aria-required="true"
             />
+            {optionWarning && <p className="mt-1 text-[11px] text-amber-300">{optionWarning}</p>}
           </div>
           <div>
-            <label htmlFor="trade-quantity" className={LABEL}>Quantity *</label>
+            <label htmlFor="trade-quantity" className={LABEL}>{units.quantity}</label>
             <input
               id="trade-quantity"
               name="quantity"

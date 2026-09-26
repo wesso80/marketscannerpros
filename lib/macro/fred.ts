@@ -4,8 +4,9 @@
  * Fetches the latest observations for a set of FRED series IDs and
  * upserts into macro_series. Returns ingest summary.
  *
- * Requires env: FRED_API_KEY. If absent, function reports a no-op
- * with reason='no-api-key' so the caller can degrade gracefully.
+ * Uses the FRED API when FRED_API_KEY is set. Without a key it falls back to
+ * FRED's keyless CSV download (lib/macro/fredCsv.ts), so macro_series keeps
+ * filling instead of silently going stale (OV-1).
  *
  * Reference: https://fred.stlouisfed.org/docs/api/fred/series_observations.html
  *
@@ -14,6 +15,7 @@
  */
 
 import { q } from '@/lib/db';
+import { fetchFredCsv } from '@/lib/macro/fredCsv';
 
 /** Map our internal series_key → FRED series_id + metadata. */
 export const FRED_SERIES: Record<string, {
@@ -39,6 +41,8 @@ export const FRED_SERIES: Record<string, {
 export type FredIngestSummary = {
   ok: boolean;
   reason?: 'no-api-key' | 'fred-error' | 'http-error';
+  /** Which FRED path was used: the keyed API, or the keyless CSV when FRED_API_KEY is missing. */
+  via?: 'api' | 'csv';
   ingested: number;
   failed: number;
   perSeries: { seriesKey: string; rows: number; latest: string | null; error?: string }[];
@@ -119,9 +123,11 @@ async function upsertObservations(seriesKey: string, rows: FredObservation[]): P
 
 export async function ingestFred(opts: { sinceISO?: string; only?: string[] } = {}): Promise<FredIngestSummary> {
   const apiKey = process.env.FRED_API_KEY;
-  if (!apiKey) {
-    return { ok: false, reason: 'no-api-key', ingested: 0, failed: 0, perSeries: [] };
-  }
+  // No key used to mean "ingest nothing" (with HTTP 200, so the cron looked fine while
+  // macro_series went stale). Now the keyless CSV download fills the same rows.
+  const via: 'api' | 'csv' = apiKey ? 'api' : 'csv';
+  const fetchObservations = (fredId: string, since?: string): Promise<FredObservation[]> =>
+    apiKey ? fetchFredSeries(apiKey, fredId, since) : fetchFredCsv(fredId, { sinceISO: since });
   const targets = opts.only && opts.only.length > 0
     ? opts.only.filter((k) => k in FRED_SERIES)
     : Object.keys(FRED_SERIES);
@@ -131,7 +137,7 @@ export async function ingestFred(opts: { sinceISO?: string; only?: string[] } = 
     const meta = FRED_SERIES[seriesKey];
     try {
       await upsertMeta(seriesKey, meta);
-      const obs = await fetchFredSeries(apiKey, meta.fredId, opts.sinceISO);
+      const obs = await fetchObservations(meta.fredId, opts.sinceISO);
       const rows = await upsertObservations(seriesKey, obs);
       const latest = obs.length > 0 ? obs[obs.length - 1].date : null;
       perSeries.push({ seriesKey, rows, latest });
@@ -141,7 +147,7 @@ export async function ingestFred(opts: { sinceISO?: string; only?: string[] } = 
       failed++;
     }
   }
-  return { ok: failed === 0, ingested, failed, perSeries };
+  return { ok: failed === 0, ...(failed > 0 ? { reason: 'fred-error' as const } : {}), via, ingested, failed, perSeries };
 }
 
 export interface MacroSnapshot {

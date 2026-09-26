@@ -21,6 +21,11 @@ interface Position {
   entryDate: string;
 }
 
+function positiveOrNull(value: unknown): number | null {
+  const n = value == null ? NaN : parseFloat(String(value));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 interface ClosedPosition extends Position {
   closeDate: string;
   closePrice: number;
@@ -71,7 +76,8 @@ export async function GET(req: NextRequest) {
     // Fetch open positions
     const positionsRaw = await q(
       `SELECT p.id, p.symbol, p.side, p.quantity, p.entry_price, p.current_price, p.entry_date, p.journal_entry_id,
-              j.trade_type, j.asset_class, j.option_type, j.strike_price, j.expiration_date
+              j.trade_type, j.asset_class, j.option_type, j.strike_price, j.expiration_date,
+              j.stop_loss, j.target
        FROM portfolio_positions p
        LEFT JOIN journal_entries j ON j.id = p.journal_entry_id AND j.workspace_id = p.workspace_id
        WHERE p.workspace_id = $1
@@ -81,10 +87,12 @@ export async function GET(req: NextRequest) {
 
     // Fetch closed positions
     const closedRaw = await q(
-      `SELECT id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl, journal_entry_id
-       FROM portfolio_closed 
-       WHERE workspace_id = $1 
-       ORDER BY close_date DESC`,
+      `SELECT c.id, c.symbol, c.side, c.quantity, c.entry_price, c.close_price, c.entry_date, c.close_date, c.realized_pl, c.journal_entry_id,
+              j.trade_type, j.asset_class, j.r_multiple, j.stop_loss
+       FROM portfolio_closed c
+       LEFT JOIN journal_entries j ON j.id = c.journal_entry_id AND j.workspace_id = c.workspace_id
+       WHERE c.workspace_id = $1
+       ORDER BY c.close_date DESC`,
       [workspaceId]
     );
 
@@ -128,6 +136,11 @@ export async function GET(req: NextRequest) {
         entryDate: p.entry_date,
         journalEntryId: p.journal_entry_id || undefined,
         tradeType: p.trade_type || undefined,
+        // Journal-linked positions show the journal entry's stop/target (read-only on the Portfolio page).
+        ...(p.journal_entry_id ? {
+          stopPrice: positiveOrNull(p.stop_loss),
+          targetPrice: positiveOrNull(p.target),
+        } : {}),
         assetClass: p.asset_class || undefined,
         ...(p.trade_type === 'Options' ? {
           optionType: p.option_type || undefined,
@@ -158,8 +171,13 @@ export async function GET(req: NextRequest) {
         entryDate: p.entry_date,
         closeDate: p.close_date,
         journalEntryId: p.journal_entry_id || undefined,
+        // Trade type from the linked journal entry (options closes use the x100 contract multiplier).
         tradeType: p.trade_type || undefined,
         assetClass: p.asset_class || undefined,
+        // R (P&L / risk to the recorded stop) from the linked journal entry, only when it has a stop.
+        ...(p.journal_entry_id && positiveOrNull(p.stop_loss) != null && Number.isFinite(parseFloat(p.r_multiple))
+          ? { rMultiple: parseFloat(p.r_multiple), stopPrice: positiveOrNull(p.stop_loss) }
+          : {}),
       };
     });
 

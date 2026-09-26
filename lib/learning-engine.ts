@@ -7,7 +7,8 @@ export interface OutcomeTagInput {
   resultR: number;
   mfeR: number;
   maeR: number;
-  ruleAdherence: number; // 0-100
+  /** 0-100, or null when the user didn't say whether they followed the plan (then it is left out). */
+  ruleAdherence: number | null;
 }
 
 export interface OutcomeTag {
@@ -33,7 +34,13 @@ export function tagOutcome(input: OutcomeTagInput): OutcomeTag {
         : 'flat';
 
   const efficiency = Number((input.mfeR - Math.abs(Math.min(0, input.maeR))).toFixed(2));
-  const quality = Number(Math.max(0, Math.min(100, (input.ruleAdherence * 0.7) + (Math.max(-2, Math.min(2, input.resultR)) * 15) + 35)).toFixed(1));
+  const clampedR = Math.max(-2, Math.min(2, input.resultR));
+  // With no adherence answer, quality comes from the result alone on the same 0-100 scale
+  // (0R = 50, ±2R = 100/0) instead of scoring an assumed adherence.
+  const rawQuality = input.ruleAdherence == null
+    ? 50 + clampedR * 25
+    : (input.ruleAdherence * 0.7) + (clampedR * 15) + 35;
+  const quality = Number(Math.max(0, Math.min(100, rawQuality)).toFixed(1));
 
   return {
     key: `${input.symbol.toUpperCase()}|${input.regime}|${input.flowState}|${input.playbook}`,

@@ -151,10 +151,10 @@ function computeLearningFeedback(
       ? -0.3            // winning trades had small adverse excursion
       : resultR * 0.8;  // losing trades saw most of loss before close
 
-  // Rule adherence: followed_plan is the best proxy we have
+  // Rule adherence: followed_plan is the best proxy we have. Unanswered (NULL) is ignored, not scored as a neutral 60.
   const ruleAdherence = entry.followed_plan === true ? 80
     : entry.followed_plan === false ? 40
-    : 60;
+    : null;
 
   const flowState = volatilityRegime || 'NEUTRAL';
   const playbook = entry.strategy?.toLowerCase().trim() || 'unknown';

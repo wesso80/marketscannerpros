@@ -3,6 +3,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
+import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 
 /**
  * Price Alerts API
@@ -13,12 +14,8 @@ import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
  * DELETE - Delete alert
  */
 
-// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get the
-// effectively-unlimited allowance; Free stays at 3.
-const ALERT_LIMITS = {
-  free: 3,
-  pro: 999, // effectively unlimited
-};
+// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get 999
+// active alerts; Free stays at 3. Shared with the Alerts page (lib/alerts/planLimits).
 function alertPlan(session: Parameters<typeof hasPaidSessionAccess>[0]): { tier: 'free' | 'pro'; maxAlerts: number } {
   const tier = hasPaidSessionAccess(session) ? 'pro' : 'free';
   return { tier, maxAlerts: ALERT_LIMITS[tier] };

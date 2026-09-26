@@ -39,9 +39,10 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
     exitPrice: number;
     exitTs: string;
     closeReason: 'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off';
-    followedPlan: boolean;
-    errorType: string;
-    reviewText?: string;
+    /** null = not answered: stored as NULL and ignored by rule adherence. */
+    followedPlan: boolean | null;
+    /** Exit notes (answered review fields only); empty string saves no exit notes. */
+    notes: string;
   }) => {
     const res = await fetch('/api/journal/close-trade', {
       method: 'POST',
@@ -53,7 +54,7 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
         exitReason: req.closeReason === 'invalid' ? 'invalidated' : req.closeReason === 'signal_flip' || req.closeReason === 'risk_off' ? 'manual' : req.closeReason,
         closeSource: 'manual',
         followedPlan: req.followedPlan,
-        notes: `${req.errorType}${req.reviewText ? ` | ${req.reviewText}` : ''}`,
+        notes: req.notes,
       }),
     });
     if (!res.ok) {

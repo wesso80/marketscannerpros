@@ -14,13 +14,15 @@ import CommandStrip, { type TerminalDensity } from '@/components/terminal/Comman
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
-import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
+import { formatDollar } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
+import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
+import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
 import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
 import { PageHero } from '@/components/ui';
 import {
@@ -35,6 +37,8 @@ import {
   type PortfolioSyncPayload,
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
+import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
+import { closedTradeR, formatR as formatStopR, formatRiskUnits, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
 
 interface Position {
   id: number;
@@ -53,6 +57,12 @@ interface Position {
   pl: number;
   plPercent: number;
   entryDate: string;
+  /**
+   * Stop / target (same units as entryPrice). Manual positions: kept on this device only (localStorage),
+   * because portfolio_positions has no columns for them. Journal-linked positions: read from the journal entry.
+   */
+  stopPrice?: number | null;
+  targetPrice?: number | null;
   strategy?: 'swing' | 'longterm' | 'options' | 'breakout' | 'ai_signal' | 'daytrade' | 'dividend';
 }
 
@@ -60,6 +70,8 @@ interface ClosedPosition extends Position {
   closeDate: string;
   closePrice: number;
   realizedPL: number;
+  /** R against a recorded stop (from the linked journal entry); absent when no stop was recorded. */
+  rMultiple?: number;
 }
 
 interface PerformanceSnapshot {
@@ -594,7 +606,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     maxDrawdownThreshold: 12,
     maxPositionSize: 20,
   });
-  const [positionStopMap, setPositionStopMap] = useState<Record<number, number>>({});
+  const [levelEditor, setLevelEditor] = useState<{ id: number; stop: string; target: string } | null>(null);
   const [showDrawdownOverlay, setShowDrawdownOverlay] = useState(true);
 
   // AI Analysis state
@@ -924,7 +936,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         syncGateRef.current = gate;
         setSyncBlocked(gate.blockedMessage);
         if (res.ok && serverHasPortfolioData(data)) {
-          loadedPositions = data.positions || [];
+          // Stops/targets of manual positions live only on this device: re-attach them to the server rows.
+          loadedPositions = mergeLocalLevels<Position>(data.positions || [], readLocal<Position[]>('portfolio_positions'));
           const loadedClosed = data.closedPositions || [];
           const loadedPerformance = data.performanceHistory || [];
           // Cash state is kept on this device when the server has none (it may never have been saved there);
@@ -1211,6 +1224,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       plPercent: 0,
       entryDate: new Date().toISOString(),
       strategy: (deployDraft.strategyTag || undefined) as Position['strategy'] | undefined,
+      stopPrice: validLevel(deployDraft.stop),
+      targetPrice: validLevel(deployDraft.target),
     };
 
     const tradeExecutionEvent = createWorkflowEvent<TradePayload>({
@@ -1248,10 +1263,6 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     void emitWorkflowEvents([tradeExecutionEvent]);
 
     setPositions((prev) => [...prev, position]);
-    const stopValue = parseFloat(deployDraft.stop || '0');
-    if (stopValue > 0) {
-      setPositionStopMap((prev) => ({ ...prev, [position.id]: stopValue }));
-    }
     setDeployDraft({
       symbol: '',
       side: 'LONG',
@@ -1351,13 +1362,22 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     } catch { setSyncError('Enter a valid non-negative close price.'); }
   };
 
-  const moveStopToBreakeven = (id: number) => {
+  const openLevelEditor = (id: number) => {
     const position = positions.find((p) => p.id === id);
     if (!position) return;
-    setPositionStopMap((prev) => ({
-      ...prev,
-      [id]: position.entryPrice,
-    }));
+    const stop = validLevel(position.stopPrice);
+    const target = validLevel(position.targetPrice);
+    setLevelEditor({ id, stop: stop == null ? '' : String(stop), target: target == null ? '' : String(target) });
+  };
+
+  const levelEditorPosition = levelEditor ? positions.find((p) => p.id === levelEditor.id) ?? null : null;
+  const levelEditorCheck = levelEditor && levelEditorPosition ? validateLevels(levelEditor, levelEditorPosition) : null;
+
+  const saveLevels = () => {
+    if (!levelEditor || !levelEditorPosition || !levelEditorCheck || levelEditorCheck.errors.length > 0) return;
+    const { stop, target } = levelEditorCheck;
+    setPositions((prev) => prev.map((p) => (p.id === levelEditor.id ? { ...p, stopPrice: stop, targetPrice: target } : p)));
+    setLevelEditor(null);
   };
 
   // Update single position: auto-fetch, then fall back to manual entry via modal
@@ -1514,7 +1534,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const investedNotional = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
   const accountCash = startingCapital + netDeposits + realizedPL - investedNotional;
   const accountEquity = accountCash + totalValue;
-  const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
+  // "Total return" counts realized + unrealized P&L on the capital put in; open return (unrealized / open cost) is shown separately.
+  const { openReturnPct, totalReturnPct } = portfolioReturns({ unrealizedPL, realizedPL, openCost: totalCost, startingCapital, netDeposits });
+  const totalReturn = totalReturnPct ?? 0;
+  // Drawdown from peak account equity (null until clean equity history is ready). Drawdown labels use this, not the return.
+  const drawdownForLabels = measuredDrawdownPct(performanceHistory, riskAnalytics);
   const numPositions = positions.length;
 
   // Allocation data for visualization
@@ -1526,24 +1550,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   const topAllocation = allocationData[0];
   const concentration = topAllocation?.percentage ?? 0;
-  const riskLoadLabel = totalReturn < -20 || concentration > 50
-    ? 'High'
-    : totalReturn < -8 || concentration > 35
-    ? 'Medium'
-    : 'Low';
-  const portfolioHealthLabel = totalReturn < -20
-    ? 'Elevated Drawdown'
-    : totalReturn < -5
-    ? 'Below Baseline'
-    : totalReturn > 12
-    ? 'Above Baseline'
-    : 'Near Baseline';
-  const edgeStateLabel = totalReturn < -10 || concentration > 50
-    ? 'Defensive'
-    : totalReturn > 10 && concentration < 35
-    ? 'Offensive'
-    : 'Neutral';
-  const biasLabel = totalReturn > 2 ? 'Bullish' : totalReturn < -2 ? 'Bearish' : 'Neutral';
+  const { riskLoadLabel, portfolioHealthLabel, edgeStateLabel, biasLabel } = portfolioStateLabels({
+    totalReturnPct: totalReturn,
+    drawdownPct: drawdownForLabels,
+    concentrationPct: concentration,
+  });
 
   useEffect(() => {
     const edge = Math.max(1, Math.min(99, Math.round(50 + totalReturn)));
@@ -1581,7 +1592,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     { label: 'Unrealized P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
     { label: 'Realized P&L', value: `$${realizedPL >= 0 ? '' : '-'}${Math.abs(realizedPL).toFixed(2)}` },
     { label: 'Total P&L', value: `$${totalPL >= 0 ? '' : '-'}${Math.abs(totalPL).toFixed(2)}` },
-    { label: 'Total Return %', value: `${totalReturn.toFixed(2)}%` },
+    { label: 'Total Return %', value: totalReturnPct == null ? 'N/A' : `${totalReturnPct.toFixed(2)}%` },
+    { label: 'Open Return % (unrealized / open cost)', value: `${openReturnPct.toFixed(2)}%` },
     { label: 'Number of Positions', value: numPositions.toString() }
   ];
 
@@ -1665,15 +1677,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const cleanRiskReady = cleanPerformanceHistory.length >= 5 && Boolean(riskAnalytics);
   const maxDrawdownFromSnapshots = riskAnalytics?.maxDrawdown ?? 0;
 
-  const cagrApprox = (() => {
-    if (cleanPerformanceHistory.length < 2) return null;
-    const first = cleanPerformanceHistory[0];
-    const last = cleanPerformanceHistory[cleanPerformanceHistory.length - 1];
-    const days = Math.max(1, (new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 86_400_000);
-    const years = days / 365;
-    if (years <= 0 || first.totalValue <= 0 || last.totalValue <= 0) return null;
-    return (Math.pow(last.totalValue / first.totalValue, 1 / years) - 1) * 100;
-  })();
+  // N/A (null) until clean equity history is ready (same gate as Sharpe / Max DD) and spans >= 30 days.
+  const cagrApprox = cagrFromEquityHistory(cleanPerformanceHistory, { ready: cleanRiskReady });
 
   const returnsSeries = cleanPerformanceHistory
     .slice(1)
@@ -1693,7 +1698,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     .map((position) => {
       const value = position.currentPrice * positionUnits(position);
       const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
-      const stopPrice = positionStopMap[position.id];
+      const stopPrice = validLevel(position.stopPrice);
       const riskPerUnit = stopPrice == null ? null : position.side === 'LONG'
         ? Math.max(0, position.currentPrice - stopPrice)
         : Math.max(0, stopPrice - position.currentPrice);
@@ -1716,34 +1721,28 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   ] as const;
 
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  const riskPerTradeFractionForDisplay = Math.max(0.001, riskSettings.maxRiskPerTrade / 100);
+  // One risk unit = account equity x max risk per trade % (the same budget Model Allocation sizes with).
+  // Used wherever there is no real stop; never called R.
+  const riskUnitUsd = riskUnitDollars(capitalBase, riskSettings.maxRiskPerTrade);
   const formatRiskPairText = (amount: number) => {
-    const rValue = amountToR(amount, capitalBase, riskPerTradeFractionForDisplay);
     const sign = amount >= 0 ? '+' : '-';
-    return `${formatR(rValue)} (${sign}${formatDollar(amount)})`;
+    return `${sign}${formatDollar(amount)} (${formatRiskUnits(toRiskUnits(amount, riskUnitUsd))})`;
   };
 
-  const avgR = closedPositions.length > 0
-    ? closedPositions.reduce((sum, trade) => {
-        const notional = trade.entryPrice * positionUnits(trade);
-        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-        return sum + (trade.realizedPL / Math.max(1, riskUnit));
-      }, 0) / closedPositions.length
-    : 0;
-  const bestR = closedPositions.length > 0
-    ? Math.max(...closedPositions.map((trade) => {
-        const notional = trade.entryPrice * positionUnits(trade);
-        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-        return trade.realizedPL / Math.max(1, riskUnit);
-      }))
-    : 0;
-  const worstR = closedPositions.length > 0
-    ? Math.min(...closedPositions.map((trade) => {
-        const notional = trade.entryPrice * positionUnits(trade);
-        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-        return trade.realizedPL / Math.max(1, riskUnit);
-      }))
-    : 0;
+  // R only against a real stop (journal-recorded or kept on this device); risk units for every closed trade.
+  const closedMeasures = closedPositions.map((trade) => ({
+    id: trade.id,
+    r: closedTradeR(trade, positionUnits(trade)),
+    riskUnits: toRiskUnits(trade.realizedPL, riskUnitUsd),
+  }));
+  const closedMeasureById = new Map(closedMeasures.map((m) => [m.id, m]));
+  const closedRSummary = summarize(closedMeasures.map((m) => m.r));
+  const closedRiskUnitSummary = summarize(closedMeasures.map((m) => m.riskUnits));
+
+  // Open R: sum of R over open positions that have a stop on the loss side of entry.
+  const openRValues = positions.map((p) => openRiskMetrics({ ...p, stopPrice: validLevel(p.stopPrice) }).rMultiple);
+  const openRSummary = summarize(openRValues);
+  const openRTotal = openRSummary.count > 0 ? openRValues.reduce<number>((sum, v) => sum + (v ?? 0), 0) : null;
 
   const draftEntry = Number(deployDraft.entry || 0);
   const draftStop = Number(deployDraft.stop || 0);
@@ -1817,10 +1816,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       <button
         type="button"
         onClick={() => {
-          const inDrawdown = totalReturn < -20 && positions.length > 0;
+          const inDrawdown = drawdownForLabels != null && drawdownForLabels > 20 && positions.length > 0;
           if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
             const proceed = confirm(
-              'Your portfolio data shows a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+              'Your portfolio data shows a significant drawdown from peak equity (-' + drawdownForLabels.toFixed(1) + '%).\n\n' +
               'Click OK to proceed, or Cancel to go back.'
             );
             if (!proceed) return;
@@ -1900,7 +1899,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           trailing={portfolioHeaderActions}
           metrics={[
             { label: 'Portfolio value', value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, detail: 'Open exposure' },
-            { label: 'Total return', value: `${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`, tone: totalReturn >= 0 ? 'bull' : 'bear', detail: `Unrealized ${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(0)}` },
+            { label: 'Total return', value: totalReturnPct == null ? '—' : `${totalReturnPct >= 0 ? '+' : ''}${totalReturnPct.toFixed(2)}%`, tone: totalReturn >= 0 ? 'bull' : 'bear', detail: `Realized ${formatSignedMoney(realizedPL)} · Open ${openReturnPct >= 0 ? '+' : ''}${openReturnPct.toFixed(2)}%` },
             { label: 'Top allocation', value: topAllocation?.symbol || '—', detail: topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions' },
             { label: 'Risk load', value: riskLoadLabel, tone: riskLoadLabel === 'High' ? 'bear' : riskLoadLabel === 'Medium' ? 'warn' : 'bull', detail: `Bias ${biasLabel}` },
           ]}
@@ -1938,7 +1937,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
         <CommandStrip
           symbol={positions[0]?.symbol || 'PORT'}
-          status={totalReturn >= 0 ? 'GAINING' : 'DRAWDOWN'}
+          status={totalReturn >= 0 ? 'GAINING' : 'NET LOSS'}
           confidence={Math.max(0, Math.min(100, 50 + totalReturn))}
           dataHealth={`${positions.length} open / ${closedPositions.length} closed`}
           mode={tier.toUpperCase()}
@@ -1947,9 +1946,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         />
 
         <DecisionCockpit
-          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatRiskPairText(totalValue)}</div><div className="msp-muted">Cost Basis: {formatRiskPairText(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
+          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatMoney(totalValue)}</div><div className="msp-muted">Cost Basis: {formatMoney(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
           center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {formatRiskPairText(totalPL)}</div><div className="msp-muted">Unrealized: {formatRiskPairText(unrealizedPL)}</div><div className="msp-muted">Realized: {formatRiskPairText(realizedPL)}</div></div>}
-          right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Return: {totalReturn.toFixed(2)}%</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
+          right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total return: {totalReturnPct == null ? '—' : `${totalReturnPct.toFixed(2)}%`}</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
         />
 
         <SignalRail
@@ -1971,6 +1970,61 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           />
         )}
       </div>
+
+      {/* Stop / target editor (manual positions) */}
+      {levelEditor && levelEditorPosition && levelEditorCheck && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="level-editor-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setLevelEditor(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[min(92vw,520px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div id="level-editor-title" className="font-bold text-slate-200">Stop &amp; target for {levelEditorPosition.symbol} ({levelEditorPosition.side})</div>
+              <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
+            </div>
+            <div className="mb-3 text-[12px] text-slate-400">
+              Entry {formatPriceRaw(levelEditorPosition.entryPrice)} · Current {formatPriceRaw(levelEditorPosition.currentPrice)}
+              {levelEditorPosition.tradeType === 'Options' ? ' · option premium per share' : ''}. Leave a field blank for no stop / no target.
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs text-slate-400">
+                Stop
+                <input
+                  autoFocus
+                  value={levelEditor.stop}
+                  onChange={(e) => setLevelEditor({ ...levelEditor, stop: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="No stop"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 outline-none"
+                />
+              </label>
+              <label className="text-xs text-slate-400">
+                Target
+                <input
+                  value={levelEditor.target}
+                  onChange={(e) => setLevelEditor({ ...levelEditor, target: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="No target"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 outline-none"
+                />
+              </label>
+            </div>
+            {levelEditorCheck.errors.map((m) => <div key={m} className="mt-2 text-xs text-red-300">{m}</div>)}
+            {levelEditorCheck.warnings.map((m) => <div key={m} className="mt-2 text-xs text-amber-300">{m}</div>)}
+            <div className="mt-3 text-[11px] text-slate-500">Saved on this device only (with this portfolio&apos;s local copy); stops and targets aren&apos;t stored on the server yet.</div>
+            <div className="mt-3.5 flex justify-end gap-2">
+              <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
+              <button type="button" onClick={saveLevels} disabled={levelEditorCheck.errors.length > 0} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual entry modal (fallback when API has no price) */}
       {manualOpen && manualPosition && (
@@ -2542,8 +2596,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="space-y-3">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Total Exposure</div><div className="text-sm font-bold text-slate-100">{deploymentPct.toFixed(1)}%</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Net R Exposure</div><div className="text-sm font-bold text-slate-100">{(positions.length ? positions.reduce((sum, p) => sum + (p.plPercent / Math.max(1, riskSettings.maxRiskPerTrade)), 0) : 0).toFixed(2)}R</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div><div className="text-[10px] text-slate-500" title="P&L divided by the account risk per trade (account equity x max risk per trade %)">{formatRiskUnits(toRiskUnits(unrealizedPL, riskUnitUsd))}</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2" title="Sum of R (P&L / risk to stop) over open positions with a stop set"><div className="text-[10px] uppercase text-slate-500">Open R (positions with a stop)</div><div className="text-sm font-bold text-slate-100">{formatStopR(openRTotal)}</div><div className="text-[10px] text-slate-500">{openRSummary.count} of {positions.length} positions have a stop</div></div>
               </div>
 
               <div className="flex items-center justify-between mb-2">
@@ -2569,6 +2623,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       <th scope="col" className="px-2 py-2 text-right">Size %</th>
                       <th scope="col" className="px-2 py-2 text-right">Cost</th>
                       <th scope="col" className="px-2 py-2 text-right">Current</th>
+                      <th scope="col" className="px-2 py-2 text-right">Stop</th>
+                      <th scope="col" className="px-2 py-2 text-right">Target</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
                       <th scope="col" className="px-2 py-2 text-right">P&L %</th>
                       <th scope="col" className="px-2 py-2 text-right">Risk Remaining</th>
@@ -2580,23 +2636,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     {positions.map((position) => {
                       const notional = position.currentPrice * positionUnits(position);
                       const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
-                      const stop = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
-                      const initialRiskUnit = Math.abs(position.entryPrice - stop);
-                      // Signed R Multiple: negative when trade moves against you
-                      const isWinning = position.side === 'LONG'
-                        ? position.currentPrice >= position.entryPrice
-                        : position.currentPrice <= position.entryPrice;
-                      const currentMove = Math.abs(position.currentPrice - position.entryPrice);
-                      const rMultipleOpen = initialRiskUnit > 0
-                        ? (isWinning ? 1 : -1) * (currentMove / initialRiskUnit)
-                        : 0;
-                      const stopDistancePct = position.currentPrice > 0 ? (Math.abs(position.currentPrice - stop) / position.currentPrice) * 100 : 0;
-                      // Risk Remaining: how much of initial risk budget is left before stop
-                      // 100% = stop hasn't been approached, 0% = at stop level
-                      const distFromEntry = Math.abs(position.currentPrice - position.entryPrice);
-                      const riskRemainingPct = initialRiskUnit > 0
-                        ? Math.max(0, Math.min(100, ((initialRiskUnit - distFromEntry) / initialRiskUnit) * 100))
-                        : 0;
+                      // No hidden default stop: without a stop, R / Risk Remaining / Inval Dist show '—'.
+                      const stop = validLevel(position.stopPrice);
+                      const target = validLevel(position.targetPrice);
+                      const { rMultiple: rMultipleOpen, riskRemainingPct, stopDistancePct, stopAtOrPastEntry } = openRiskMetrics({ ...position, stopPrice: stop });
+                      const noRiskTitle = stop == null
+                        ? 'No stop set — use Edit Stop'
+                        : stopAtOrPastEntry ? 'Stop is at or past entry, so there is no entry risk to measure against' : undefined;
+                      const levelsFromJournal = Boolean(position.journalEntryId);
 
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
@@ -2607,25 +2654,35 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.currentPrice)}</td>
-                          <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">—</span>}</td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No target set">—</span>}</td>
+                          {rMultipleOpen == null
+                            ? <td className="px-2 py-2 text-right text-slate-500" title={noRiskTitle}>—</td>
+                            : <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>}
                           <td className={`px-2 py-2 text-right font-semibold ${position.plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPct(position.plPercent)}</td>
-                          <td className="px-2 py-2 text-right">{riskRemainingPct.toFixed(0)}%</td>
-                          <td className="px-2 py-2 text-right">{stopDistancePct.toFixed(2)}%</td>
+                          <td className={`px-2 py-2 text-right ${riskRemainingPct == null ? 'text-slate-500' : ''}`} title={riskRemainingPct == null ? noRiskTitle : undefined}>{riskRemainingPct == null ? '—' : `${riskRemainingPct.toFixed(0)}%`}</td>
+                          <td className={`px-2 py-2 text-right ${stopDistancePct == null ? 'text-slate-500' : ''}`} title={stopDistancePct == null ? 'No stop set — use Edit Stop' : undefined}>{stopDistancePct == null ? '—' : `${stopDistancePct.toFixed(2)}%`}</td>
                           <td className="px-2 py-2">
-                            <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
-                              <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
-                            </div>
+                            {riskRemainingPct != null && (
+                              <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
+                                <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-1">
                               <button type="button" onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
                               <button type="button" onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record Partial Close</button>
-                              <button type="button" onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
+                              {levelsFromJournal ? (
+                                <button type="button" disabled className="cursor-not-allowed rounded border border-slate-600/40 bg-slate-700/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500" title="Linked to a Journal trade: its stop and target come from the Journal entry. Edit them in the Journal.">Stop in Journal</button>
+                              ) : (
+                                <button type="button" onClick={() => openLevelEditor(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
+                              )}
                               <button type="button" onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">Delete</button>
                             </div>
                           </td>
                         </tr>
                       );
                     })}
-                    {positions.length === 0 && <tr><td colSpan={12} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
+                    {positions.length === 0 && <tr><td colSpan={14} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -2634,20 +2691,23 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
           {activeTab === 'trade-ledger' && (
             <div className="space-y-4">
-              <div className="grid gap-2 md:grid-cols-5">
+              <div className="grid gap-2 md:grid-cols-6">
                 {[
                   { label: 'Win %', value: `${winRatePct.toFixed(1)}%` },
-                  { label: 'Avg R', value: `${avgR.toFixed(2)}R` },
-                  { label: 'Best R', value: `${bestR.toFixed(2)}R` },
-                  { label: 'Worst R', value: `${worstR.toFixed(2)}R` },
+                  { label: 'Avg R', value: formatStopR(closedRSummary.avg), detail: `${closedRSummary.count} of ${closedPositions.length} trades with a stop` },
+                  { label: 'Best R', value: formatStopR(closedRSummary.best) },
+                  { label: 'Worst R', value: formatStopR(closedRSummary.worst) },
+                  { label: 'Avg Risk Units', value: formatRiskUnits(closedRiskUnitSummary.avg), detail: 'P&L / account risk per trade' },
                   { label: 'Expectancy', value: formatMoney(expectancy) },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
                     <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{metric.label}</div>
                     <div className="text-sm font-bold text-slate-100">{metric.value}</div>
+                    {'detail' in metric && metric.detail ? <div className="text-[10px] text-slate-500">{metric.detail}</div> : null}
                   </div>
                 ))}
               </div>
+              <div className="text-[11px] text-slate-500">R = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ({riskUnitUsd != null ? formatMoney(riskUnitUsd) : '—'} = account equity × {riskSettings.maxRiskPerTrade}%).</div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Closed Trades Equity Curve</div>
@@ -2717,6 +2777,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       <th scope="col" className="px-2 py-2 text-left">Open</th>
                       <th scope="col" className="px-2 py-2 text-left">Exit</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
+                      <th scope="col" className="px-2 py-2 text-right">Risk Units</th>
                       <th scope="col" className="px-2 py-2 text-right">Holding Time</th>
                       <th scope="col" className="px-2 py-2 text-left">Setup Tag</th>
                       <th scope="col" className="px-2 py-2 text-left">Outcome</th>
@@ -2725,16 +2786,19 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </thead>
                   <tbody>
                     {closedPositions.map((trade) => {
-                      const notional = trade.entryPrice * positionUnits(trade);
-                      const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-                      const r = trade.realizedPL / Math.max(1, riskUnit);
+                      const measure = closedMeasureById.get(trade.id);
+                      const r = measure?.r ?? null;
+                      const riskUnits = measure?.riskUnits ?? null;
                       const holdDays = Math.max(0, Math.round((new Date(trade.closeDate).getTime() - new Date(trade.entryDate).getTime()) / 86_400_000));
                       const outcomeType = trade.realizedPL > 0 ? 'Target' : trade.realizedPL < 0 ? 'Stop' : 'Manual';
                       return (
                         <tr key={trade.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2">{trade.symbol} @ {trade.entryPrice.toFixed(2)}</td>
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
-                          <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
+                          {r == null
+                            ? <td className="px-2 py-2 text-right text-slate-500" title="No stop recorded for this trade, so R is unavailable">—</td>
+                            : <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatStopR(r)}</td>}
+                          <td className={`px-2 py-2 text-right ${riskUnits == null ? 'text-slate-500' : riskUnits >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{riskUnits == null ? '—' : riskUnits.toFixed(2)}</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
                           <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
@@ -2744,7 +2808,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         </tr>
                       );
                     })}
-                    {closedPositions.length === 0 && <tr><td colSpan={7} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
+                    {closedPositions.length === 0 && <tr><td colSpan={8} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
                   </tbody>
                 </table>
               </div>

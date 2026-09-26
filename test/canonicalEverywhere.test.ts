@@ -3,7 +3,7 @@ import {
   canonicalForDailyPick, canonicalLabel, canonicalPickFields, compactCanonical, rankDailyPicks, readStoredCanonical,
   type CanonicalBar, type CanonicalResult,
 } from '@/lib/scoring/canonical';
-import { applyCanonicalToGoldenEgg, evaluateGoldenEggCanonical, goldenEggCanonicalBars } from '@/lib/goldenEgg/canonicalVerdict';
+import { applyCanonicalToGoldenEgg, canonicalNarrativeSummary, canonicalSetupLevels, evaluateGoldenEggCanonical, goldenEggCanonicalBars } from '@/lib/goldenEgg/canonicalVerdict';
 import { scanCryptoDailyIndicators } from '@/lib/scanner/dailyCryptoIndicators';
 import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
 import { zigzagTrend } from './fixtures/canonicalBars';
@@ -151,6 +151,14 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
         primaryBlocker: 'legacy blocker', flipConditions: [{ id: 'f1', text: 'legacy flip', severity: 'must' }], scoreBreakdown: [],
         cta: { primary: 'OPEN_SCANNER' },
       },
+      layer2: {
+        setup: { setupType: 'trend', thesis: 'legacy thesis', timeframeAlignment: { score: 2, max: 4, details: [] }, keyLevels: [], invalidation: 'Scenario weakens if price closes below 96 with volume confirmation.' },
+        scenario: {
+          referenceTrigger: 'Close above BB Upper 107', referenceLevel: { type: 'confirmation', price: 107 },
+          invalidationLevel: { price: 96, logic: 'legacy long stop' }, reactionZones: [{ price: 110, rMultiple: 1.5, note: 'legacy long zone' }, { price: 114, rMultiple: 2.5 }],
+          hypotheticalRr: { expectedR: 1.5, minR: 1.5 }, hypotheticalRisk: { riskPct: 0.5 },
+        },
+      },
       layer3: { narrative: { enabled: true, summary: 'legacy summary', bullets: [], risks: [] } },
       canonical: {
         levels: { reference: { price: 99, basis: 'structural', label: 'legacy ref' }, invalidation: { price: 104, basis: 'structural', label: 'legacy inv', distanceAtr: 1 }, zones: [], illustrativeR: 1.2 },
@@ -175,8 +183,7 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     expect(out.canonical!.levels.zones[0]).toMatchObject({ price: 108, rMultiple: 2 });
     expect(out.canonical!.confirmation[0]).toMatch(/long setup holds while price stays above 96/);
     expect(out.legacyConfluence!.levels!.invalidation.price).toBe(104);
-    expect(out.layer3.narrative.summary).toMatch(/canonical verdict PASS · grade A/);
-    expect(out.layer3.narrative.summary).toMatch(/Legacy confluence 41\/100/);
+    expect(out.layer3.narrative.summary).toBe('TEST: a long pullback setup qualifies (grade A). The older confluence model scores it 41/100 with a bearish lean (secondary context only).');
   });
 
   it('BLOCK: reasons become the primary blocker / flip conditions; grade F; lifecycle maps to NOT_ALIGNED', () => {
@@ -187,15 +194,91 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     expect(out.canonical!.verdict.setupType).toBe('trend'); // NONE keeps the legacy setup label
     expect(out.canonical!.confirmation[0]).toMatch(/No canonical setup is eligible/);
     expect(out.canonical!.levels.reference.label).toMatch(/^Legacy confluence: /);
+    // RS-3: a plain sentence, no raw engine labels.
+    expect(out.layer3.narrative.summary).toBe('TEST: there is no qualifying setup right now. The older confluence model scores it 41/100 with a bearish lean (secondary context only).');
+    expect(out.layer3.narrative.summary).not.toMatch(/canonical verdict|BLOCK|grade F|NO_SETUP|·/);
+    // No canonical setup: the scenario is left to the legacy engine.
+    expect(out.layer2.scenario.referenceTrigger).toBe('Close above BB Upper 107');
   });
 
-  it('WATCH with same direction keeps the packet levels', () => {
-    const c = result({ permission: 'WATCH', grade: 'B', direction: 'short', setupType: 'TREND_CONTINUATION', score: 74, blockReasons: [], watchReasons: [{ code: 'SCORE_BELOW_PASS', message: 'below pass' }],
+  it('WATCH with same direction still shows the canonical levels, not the legacy ones', () => {
+    const c = result({ permission: 'WATCH', grade: 'B', direction: 'short', setupType: 'TREND_CONTINUATION', score: 74, blockReasons: [], watchReasons: [{ code: 'SCORE_BELOW_PASS', message: 'Score below the pass line.' }],
       levels: { entry: 100, invalidation: 103, target: 94, riskReward: 2, invalidationBasis: 'swing', targetBasis: 'projected', flags: [] } });
     const out = applyCanonicalToGoldenEgg(payload(), c);
     expect(out.layer1.assessment).toBe('WATCH');
     expect(out.layer1.cta.primary).toBe('SET_ALERT');
-    expect(out.canonical!.levels.invalidation.price).toBe(104);
-    expect(out.canonical!.confirmation).toEqual(['legacy short confirmation']);
+    expect(out.canonical!.levels.invalidation.price).toBe(103);
+    expect(out.canonical!.confirmation).toEqual(['Trend continuation short setup holds while price stays below 103']);
+    expect(out.layer3.narrative.summary).toMatch(/^TEST: a short trend continuation setup is forming but is on watch \(grade B\) because score below the pass line\./);
+  });
+
+  it('RS-13: a canonical short puts the stop above price and targets below it in every level panel', () => {
+    // Live example shape: META SHORT exhaustion fade while the legacy engine built a long (stop below price,
+    // trigger "close above BB Upper").
+    const c = result({ permission: 'PASS', grade: 'A', direction: 'short', setupType: 'EXHAUSTION_FADE', score: 95, blockReasons: [], watchReasons: [],
+      levels: { entry: 100, invalidation: 104.5, target: 93.25, riskReward: 1.5, invalidationBasis: 'recent_extreme', targetBasis: 'ema20', riskAtr: 1.1, flags: [] } });
+    const p = payload();
+    p.layer1.direction = 'NEUTRAL'; // legacy NEUTRAL with bullish tilt → legacy engine built long levels
+    const out = applyCanonicalToGoldenEgg(p, c);
+    const price = p.meta.price;
+    const sc = out.layer2.scenario;
+    // Golden Egg Verdict Packet / Validated scenario levels / Scenario Map
+    expect(sc.invalidationLevel.price).toBeGreaterThan(price);
+    expect(sc.invalidationLevel.price).toBe(104.5);
+    expect(sc.referenceLevel.price).toBe(100);
+    expect(sc.reactionZones.length).toBeGreaterThan(0);
+    for (const z of sc.reactionZones) expect(z.price).toBeLessThan(price);
+    expect(sc.reactionZones[0]).toMatchObject({ price: 93.25, rMultiple: 1.5 });
+    expect(sc.hypotheticalRr.expectedR).toBe(1.5);
+    expect(sc.referenceTrigger).not.toMatch(/BB Upper|close above/i);
+    expect(sc.referenceTrigger).toMatch(/Exhaustion fade short/);
+    expect(sc.invalidationLevel.logic).toMatch(/^Above the recent exhaustion high/);
+    expect(sc.hypotheticalRisk).toEqual({ riskPct: 0.5 });
+    // Setup panel invalidation text
+    expect(out.layer2.setup.invalidation).toBe('The canonical short setup is invalidated by a close above 104.5.');
+    expect(out.layer2.setup.thesis).toBe('legacy thesis');
+    // Deep Analysis packet
+    const pk = out.canonical!;
+    expect(pk.levels.invalidation.price).toBeGreaterThan(price);
+    expect(pk.levels.invalidation.distanceAtr).toBe(1.1);
+    for (const z of pk.levels.zones) expect(z.price).toBeLessThan(price);
+    expect(pk.confirmation[0]).toMatch(/stays below 104.5/);
+    expect(pk.invalidation[0]).toMatch(/close above 104.5/);
+    // Legacy levels stay available as secondary context
+    expect(out.legacyConfluence!.levels!.invalidation.price).toBe(104);
+  });
+
+  it('RS-13: a canonical long puts the stop below price and the target above it', () => {
+    const c = result({ permission: 'WATCH', grade: 'B', direction: 'long', setupType: 'PULLBACK', score: 70, blockReasons: [], watchReasons: [{ code: 'RR_BELOW_MIN', message: 'Structural reward:risk 1.2 < 1.5' }],
+      levels: { entry: 100, invalidation: 97, target: 103.6, riskReward: 1.2, invalidationBasis: 'swing', targetBasis: 'opposing_level', flags: [] } });
+    const out = applyCanonicalToGoldenEgg(payload(), c);
+    expect(out.layer2.scenario.invalidationLevel.price).toBe(97);
+    expect(out.layer2.scenario.reactionZones.map((z) => z.price)).toEqual([103.6]);
+    expect(out.layer2.scenario.referenceLevel).toEqual({ type: 'confirmation', price: 100 });
+    expect(out.layer2.scenario.invalidationLevel.logic).toMatch(/^Below the last confirmed swing low/);
+    expect(out.layer2.setup.invalidation).toMatch(/close below 97\./);
+  });
+
+  it('RS-13: canonical levels whose geometry contradicts the direction are not shown as the setup', () => {
+    const c = result({ permission: 'PASS', grade: 'A', direction: 'short', setupType: 'EXHAUSTION_FADE', score: 90, blockReasons: [], watchReasons: [],
+      levels: { entry: 100, invalidation: 96, target: 108, riskReward: 2, invalidationBasis: 'swing', targetBasis: 'opposing_level', flags: [] } });
+    expect(canonicalSetupLevels(c)).toBeNull();
+    expect(canonicalSetupLevels({ ...c, direction: 'long' })).not.toBeNull();
+    expect(canonicalSetupLevels({ ...c, direction: 'long', setupType: 'NONE' })).toBeNull();
+  });
+
+  it('RS-3: a blocked setup and a hard-blocked no-setup bar read as plain sentences', () => {
+    const blocked = result({ permission: 'BLOCK', grade: 'F', direction: 'short', setupType: 'SQUEEZE', score: 60, watchReasons: [], levels: null,
+      blockReasons: [{ code: 'EARNINGS_IN_WINDOW', message: 'Earnings 2026-10-01 (in 3d) inside the 10-day holding window' }] });
+    const s1 = canonicalNarrativeSummary('AAPL', blocked, { confluenceScore: 62, direction: 'LONG' });
+    expect(s1).toBe('AAPL: a short squeeze setup was found but is blocked — Earnings 2026-10-01 (in 3d) inside the 10-day holding window. The older confluence model scores it 62/100 with a bullish lean (secondary context only).');
+    const hard = result({ permission: 'BLOCK', grade: 'F', direction: 'neutral', setupType: 'NONE', score: 0, watchReasons: [], levels: null,
+      blockReasons: [{ code: 'STALE_DATA', message: 'Golden Egg data trust is STALE' }, { code: 'NO_SETUP', message: 'No eligible setup (closest: pullback long, score 48)' }] });
+    const s2 = canonicalNarrativeSummary('AAPL', hard, { confluenceScore: 50, direction: 'NEUTRAL' });
+    expect(s2).toBe('AAPL: no trade setup is allowed right now — Golden Egg data trust is STALE. The older confluence model scores it 50/100 with no clear lean (secondary context only).');
+    const none = result({ permission: 'BLOCK', grade: 'F', direction: 'neutral', setupType: 'NONE', score: 0, watchReasons: [], levels: null,
+      blockReasons: [{ code: 'NO_SETUP', message: 'No eligible setup (closest: pullback long, score 48)' }] });
+    expect(canonicalNarrativeSummary('AAPL', none, { confluenceScore: 50, direction: 'LONG' })).toBe('AAPL: there is no qualifying setup right now. The closest candidate was pullback long, score 48. The older confluence model scores it 50/100 with a bullish lean (secondary context only).');
+    for (const s of [s1, s2]) expect(s).not.toMatch(/canonical verdict|· grade|STALE_DATA|EARNINGS_IN_WINDOW/);
   });
 });
