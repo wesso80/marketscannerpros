@@ -248,6 +248,8 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
           setPrefillValues(undefined);
         }}
         prefillValues={prefillValues}
+        onUpdateLevels={selectedTrade ? (patch) => actions.updateTrade(selectedTrade.id, patch) : undefined}
+        onAddNote={selectedTrade ? (appendNote, noteDate) => actions.updateTrade(selectedTrade.id, { appendNote, noteDate }) : undefined}
       />
 
       <CloseTradeModal

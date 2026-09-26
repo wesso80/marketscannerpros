@@ -4,7 +4,7 @@ import { useState } from 'react';
 import TradeEntryForm, { type TradeEntryPayload, type TradeEntryInitialValues } from '@/components/journal/drawer/TradeEntryForm';
 import TradeIntelligenceTab from '@/components/journal/drawer/tabs/TradeIntelligenceTab';
 import TradeNotesTab from '@/components/journal/drawer/tabs/TradeNotesTab';
-import TradeOverviewTab from '@/components/journal/drawer/tabs/TradeOverviewTab';
+import TradeOverviewTab, { type TradeLevelsPatch } from '@/components/journal/drawer/tabs/TradeOverviewTab';
 import TradeSnapshotsTab from '@/components/journal/drawer/tabs/TradeSnapshotsTab';
 import { TradeModel } from '@/types/journal';
 
@@ -17,11 +17,14 @@ type TradeDrawerProps = {
   onCreateTrade?: (payload: TradeEntryPayload) => Promise<void>;
   prefillValues?: TradeEntryInitialValues;
   embeddedInWorkspace?: boolean;
+  /** TR-28: edit an open trade's stop/target, or add a note. */
+  onUpdateLevels?: (patch: TradeLevelsPatch) => Promise<void>;
+  onAddNote?: (note: string, noteDate: string) => Promise<void>;
 };
 
 type TabKey = 'overview' | 'intelligence' | 'snapshots' | 'notes';
 
-export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade, onRequestSnapshot, onCreateTrade, prefillValues, embeddedInWorkspace = false }: TradeDrawerProps) {
+export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade, onRequestSnapshot, onCreateTrade, prefillValues, embeddedInWorkspace = false, onUpdateLevels, onAddNote }: TradeDrawerProps) {
   const [tab, setTab] = useState<TabKey>('overview');
   if (!open) return null;
 
@@ -71,10 +74,10 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
               ))}
             </div>
 
-            {tab === 'overview' && <TradeOverviewTab trade={trade} />}
+            {tab === 'overview' && <TradeOverviewTab key={trade?.id} trade={trade} onUpdateLevels={onUpdateLevels} />}
             {tab === 'intelligence' && <TradeIntelligenceTab trade={trade} />}
             {tab === 'snapshots' && <TradeSnapshotsTab trade={trade} />}
-            {tab === 'notes' && <TradeNotesTab trade={trade} />}
+            {tab === 'notes' && <TradeNotesTab key={trade?.id} trade={trade} onAddNote={onAddNote} />}
           </>
         )}
       </div>

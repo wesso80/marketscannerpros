@@ -8,7 +8,7 @@ type TradeRowExpandedProps = {
 export default function TradeRowExpanded({ row }: TradeRowExpandedProps) {
   return (
     <tr className="border-b border-white/5 bg-slate-950/50">
-      <td colSpan={10} className="px-3 py-3">
+      <td colSpan={11} className="px-3 py-3">
         <div className="space-y-2 text-sm text-slate-300">
           <ul className="list-disc pl-5">
             {(row.notesPreview || []).map((note) => (

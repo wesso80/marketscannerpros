@@ -65,7 +65,7 @@ export type TradeRowModel = {
   option?: { right?: 'call' | 'put'; strike?: number; expiration?: string };
   entry: { price: number; ts: string };
   exit?: { price: number; ts: string };
-  mark?: { price: number; observedAt: string | null; retrievedAt: string; basis?: 'EOD' | 'REALTIME'; asOfDate?: string };
+  mark?: { price: number; observedAt: string | null; retrievedAt: string; basis?: 'EOD' | 'REALTIME'; asOfDate?: string; tradingDay?: string | null };
   qty: number;
   stop?: number;
   targets?: number[];
@@ -74,6 +74,8 @@ export type TradeRowModel = {
   rMultiple?: number;
   strategyTag?: string;
   notesPreview?: string[];
+  /** Full saved notes (the drawer's Notes tab). */
+  notes?: string;
   lastAiNoteTs?: string;
   snapshots?: TradeSnapshotMini;
   /** Maximum Favorable Excursion — peak unrealized profit during trade */

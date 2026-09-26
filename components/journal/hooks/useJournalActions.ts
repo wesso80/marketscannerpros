@@ -94,6 +94,7 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
     strategy?: string;
     setup?: string;
     notes?: string;
+    tags?: string[];
     tradeDate: string;
   }) => {
     const response = await fetch('/api/journal/add-trade', {
@@ -110,9 +111,24 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
     await onRefresh();
   };
 
+  /** TR-28: edit an open trade's stop/target, or add a note (appended with a date stamp server-side). */
+  const updateTrade = async (tradeId: string, patch: { stopLoss?: number | null; target?: number | null; appendNote?: string; noteDate?: string }) => {
+    const response = await fetch(`/api/journal/trade/${encodeURIComponent(tradeId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) {
+      const json = await response.json().catch(() => ({}));
+      throw new Error(json?.error || 'Failed to update trade');
+    }
+    await onRefresh();
+  };
+
   return {
     onExport,
     closeTrade,
+    updateTrade,
     captureSnapshot,
     createTrade,
   };

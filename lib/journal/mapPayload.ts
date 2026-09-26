@@ -47,6 +47,7 @@ function mapEntry(entry: any): TradeRowModel {
     rMultiple: entry?.rMultiple == null ? undefined : Number(entry.rMultiple),
     strategyTag: entry?.strategy || undefined,
     notesPreview: notes ? notes.split('\n').slice(0, 3) : [],
+    notes,
     lastAiNoteTs: undefined,
     snapshots: {},
   };
