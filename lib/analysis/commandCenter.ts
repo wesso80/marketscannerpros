@@ -110,7 +110,7 @@ export interface RegimeDescription {
   summary: string;
 }
 
-// Derived from the regime engine (stress / vol-expansion / stale-signal state), NOT from breadth. Named so it cannot be
+// Derived from the regime engine (stress / vol-expansion values; stale inputs are a separate caution), NOT from breadth. Named so it cannot be
 // read as contradicting the breadth-based "Risk tone" panel (e.g. "Low risk environment" beside "Risk-off conditions").
 const RISK_LEVEL_LABEL: Record<string, string> = {
   low: 'Low volatility stress',

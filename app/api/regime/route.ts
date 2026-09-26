@@ -4,6 +4,7 @@ import { q } from '@/lib/db';
 import type { Regime } from '@/lib/risk-governor-hard';
 import { classifyMarketRegime, type MarketRegimeResult } from '@/lib/marketRegime';
 import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
+import { deriveDataQuality, derivePermission, deriveRiskLevel, type RegimeDataQuality } from '@/lib/regime/riskLevel';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,9 @@ export const dynamic = 'force-dynamic';
  *     default regime.
  *
  * Returns (available): regime, riskLevel, permission (informational only),
- * basis, signals, asOf (time of the underlying data), updatedAt.
+ * dataQuality, basis, signals, asOf (time of the underlying data), updatedAt.
+ * riskLevel and permission come from the values only; stale inputs are a
+ * data-quality caution in `dataQuality` and never raise the risk level (OV-12).
  * The error path returns HTTP 503 with `available: false`.
  */
 
@@ -48,6 +51,8 @@ type UnifiedRegimeResponse =
     regime: Regime;
     riskLevel: RiskLevel;
     permission: Permission;
+    /** Stale deciding inputs, as a caution. Does not affect riskLevel or permission. */
+    dataQuality: RegimeDataQuality;
     signals: RegimeSignal[];
     asOf: string | null;
     updatedAt: string;
@@ -72,26 +77,6 @@ function mapToCanonicalRegime(riskEnv: string): Regime {
   if (n.includes('compression') || n.includes('low_vol') || n.includes('vol_contraction')) return 'VOL_CONTRACTION';
   if (n.includes('range') || n.includes('neutral') || n.includes('chop') || n.includes('sideways')) return 'RANGE_NEUTRAL';
   return 'RANGE_NEUTRAL';
-}
-
-function deriveRiskLevel(regime: Regime, signals: RegimeSignal[]): RiskLevel {
-  if (regime === 'RISK_OFF_STRESS') return 'extreme';
-  if (regime === 'VOL_EXPANSION') return 'elevated';
-  const staleCount = signals.filter(s => s.stale).length;
-  if (staleCount > signals.length / 2) return 'elevated'; // too many stale signals
-  if (regime === 'TREND_DOWN') return 'moderate';
-  return 'low';
-}
-
-/**
- * Informational regime posture — NOT a trade gate (no scoring or authorization path may consume it).
- * Direction-neutral: a down-trend is not riskier than an up-trend for a strategy that can go short, so TREND_DOWN no
- * longer implies CONDITIONAL. Only the risk level (stress / volatility / drawdown signals) tightens it.
- */
-function derivePermission(_regime: Regime, riskLevel: RiskLevel): Permission {
-  if (riskLevel === 'extreme') return 'NO';
-  if (riskLevel === 'elevated') return 'CONDITIONAL';
-  return 'YES';
 }
 
 export async function GET(req: NextRequest) {
@@ -208,13 +193,14 @@ export async function GET(req: NextRequest) {
         detail: market.reasons.join('; '),
       };
       const signals = [marketSignal, ...workspaceSignals.map((sig) => ({ ...sig, counted: false }))];
-      const riskLevel = deriveRiskLevel(market.regime, [marketSignal]);
+      const riskLevel = deriveRiskLevel(market.regime);
       const response: UnifiedRegimeResponse = {
         available: true,
         basis: 'market',
         regime: market.regime,
         riskLevel,
-        permission: derivePermission(market.regime, riskLevel),
+        permission: derivePermission(riskLevel),
+        dataQuality: deriveDataQuality([marketSignal]),
         signals,
         asOf: market.asOf,
         updatedAt,
@@ -232,14 +218,15 @@ export async function GET(req: NextRequest) {
         regimeCounts[mapToCanonicalRegime(sig.regime)] += sig.weight;
       }
       const canonicalRegime = Object.entries(regimeCounts).reduce((a, b) => b[1] > a[1] ? b : a)[0] as Regime;
-      const riskLevel = deriveRiskLevel(canonicalRegime, workspaceSignals);
+      const riskLevel = deriveRiskLevel(canonicalRegime);
       const dated = workspaceSignals.map((sig) => sig.asOf).filter((v): v is string => Boolean(v)).sort();
       const response: UnifiedRegimeResponse = {
         available: true,
         basis: 'workspace',
         regime: canonicalRegime,
         riskLevel,
-        permission: derivePermission(canonicalRegime, riskLevel),
+        permission: derivePermission(riskLevel),
+        dataQuality: deriveDataQuality(workspaceSignals),
         signals: workspaceSignals,
         asOf: dated.length ? dated[dated.length - 1] : null,
         updatedAt,

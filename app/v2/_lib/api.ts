@@ -55,6 +55,8 @@ export interface RegimeResponse {
   regime: string;
   riskLevel: string;
   permission: string;
+  /** Stale deciding inputs, as a caution (does not change riskLevel). Missing on older responses. */
+  dataQuality?: { stale: boolean; staleSources: string[]; note: string | null };
   signals: Array<{ source: string; regime: string; weight: number; stale: boolean; kind?: 'market' | 'workspace'; counted?: boolean; asOf?: string | null; detail?: string }>;
   /** Time of the underlying data (not the response time). */
   asOf?: string | null;
