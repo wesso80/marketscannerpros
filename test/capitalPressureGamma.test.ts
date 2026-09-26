@@ -121,6 +121,28 @@ describe('Capital Pressure with a signed gamma input', () => {
     expect(r.market_mode_basis).toBe('gamma');
   });
 
+  it('short dealer gamma adds zero pin evidence: with ADX already trending it scores exactly like Unavailable', () => {
+    const un = computeCapitalFlowEngine(equityInput('bullish', undefined, 30));
+    const neg = computeCapitalFlowEngine(equityInput('bullish', gamma('SHORT_GAMMA'), 30));
+    expect(neg.market_mode).toBe(un.market_mode);
+    expect(neg.probability_matrix.raw.pin).toBe(un.probability_matrix.raw.pin);
+    expect(neg.probability_matrix.raw).toEqual(un.probability_matrix.raw);
+    expect(tps(neg)).toBe(tps(un));
+  });
+
+  it('short dealer gamma never lowers TPS vs Unavailable; long and near-zero gamma still add pin evidence', () => {
+    for (const adx of [12, 15, 30]) {
+      const un = computeCapitalFlowEngine(equityInput('bullish', undefined, adx));
+      const neg = computeCapitalFlowEngine(equityInput('bullish', gamma('SHORT_GAMMA'), adx));
+      const pos = computeCapitalFlowEngine(equityInput('bullish', gamma('LONG_GAMMA'), adx));
+      const mix = computeCapitalFlowEngine(equityInput('bullish', gamma('NEUTRAL'), adx));
+      expect(neg.probability_matrix.raw.pin).toBeLessThanOrEqual(un.probability_matrix.raw.pin);
+      expect(tps(neg)).toBeGreaterThanOrEqual(tps(un));
+      expect(pos.probability_matrix.raw.pin).toBeGreaterThan(un.probability_matrix.raw.pin);
+      expect(mix.probability_matrix.raw.pin).toBeGreaterThan(un.probability_matrix.raw.pin);
+    }
+  });
+
   it('near-zero net gamma → Mixed; market mode still comes from ADX', () => {
     const r = computeCapitalFlowEngine(equityInput('bullish', gamma('NEUTRAL'), 30));
     expect(r.gamma_state).toBe('Mixed');

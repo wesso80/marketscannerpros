@@ -875,14 +875,17 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     continuationRaw += 8;
   }
 
+  // Short (Negative) dealer gamma amplifies moves rather than pinning them, so it contributes no pin density (brad, MV-3).
   const gammaDensity = clamp(
     marketMode === 'pin'
       ? 90
-      : gammaState === 'Positive'
-        ? 75
-        : gammaState === 'Mixed'
-          ? 55
-          : 30,
+      : gammaState === 'Negative'
+        ? 0
+        : gammaState === 'Positive'
+          ? 75
+          : gammaState === 'Mixed'
+            ? 55
+            : 30,
     0,
     100
   );
