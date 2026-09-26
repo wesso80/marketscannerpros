@@ -1,30 +1,28 @@
 /**
- * GET /api/admin/scanner/live — Live scanner feed for admin terminal
- * Runs the operator engine scan pipeline and returns ScannerHit[] for the UI.
+ * GET /api/admin/scanner/live — scanner feed for the admin Operator Terminal / Live Scanner.
+ *
+ * Serves the operator-engine hits saved by the shared admin scan (lib/admin/sharedScan.ts) instead of
+ * running the engine live on every poll (~144 Alpha Vantage calls per minute with the terminal open).
+ * "Rescan now" is POST /api/admin/scan (rate-limited, overlap-protected); it also logs the rescanned
+ * pipelines to ai_signal_log, which this route used to do on every poll.
  *
  * Query params:
- *   ?symbols=ADA,SUI,MATIC,FET (comma-separated)
- *   &market=CRYPTO (default)
+ *   ?symbols=ADA,SUI,MATIC,FET (comma-separated, optional filter)
+ *   &market=CRYPTO (default) | EQUITIES
  *   &timeframe=15m (default)
+ * The default universe follows the market (it used to be the crypto list even for EQUITIES, so crypto
+ * tickers were looked up as US stocks).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { runScan } from "@/lib/operator/orchestrator";
 import { wrapTruth } from "@/lib/admin";
-import type { Market } from "@/types/operator";
-import { alphaVantageProvider } from "@/lib/operator/market-data";
-import { scanResultToHits, scanResultToHealth } from "@/lib/admin/serializer";
-import { recordSignals } from "@/lib/admin/signal-recorder";
+import type { ScannerHit, SystemHealth } from "@/lib/admin/types";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
-import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
+import { readSavedScan, savedScanStaleAfterSec, scanStatusForResponse } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
-
-// Default when no ?symbols= is passed: full deduped crypto universe with
-// the small-cap altcoin anchors (ADA/SUI/MATIC/FET) pinned at the head.
-const DEFAULT_SYMBOLS = unionWatchlistSymbols("CRYPTO", ["ADA", "SUI", "MATIC", "FET", "SOL", "AVAX", "DOT", "LINK"]);
 
 export async function GET(req: NextRequest) {
   // Auth gate
@@ -34,43 +32,50 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
+    const market = (searchParams.get("market") || "CRYPTO").toUpperCase() === "EQUITIES" ? "EQUITIES" : "CRYPTO";
+    const timeframe = searchParams.get("timeframe") || "15m";
     const symbols = searchParams.get("symbols")
       ? searchParams.get("symbols")!.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
-      : DEFAULT_SYMBOLS;
-    const market = (searchParams.get("market") || "CRYPTO") as Market;
-    const timeframe = searchParams.get("timeframe") || "15m";
+      : undefined;
 
-    const { context, risk } = await buildAdminScanContext();
+    const [{ risk }, view] = await Promise.all([
+      buildAdminScanContext(),
+      readSavedScan({ market, timeframe, symbols }),
+    ]);
 
-    const result = await runScan(
-      { symbols, market, timeframe },
-      context,
-      alphaVantageProvider,
-    );
+    const staleAfter = savedScanStaleAfterSec();
+    const current = view.rows.filter((r) => r.status === "ok" && r.ageSec != null && r.ageSec <= staleAfter);
+    const rawHits: ScannerHit[] = current
+      .flatMap((r) => r.hits)
+      .sort((a, b) => b.confidence - a.confidence);
+    const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
+    const errors = view.rows
+      .filter((r) => r.status !== "ok" || r.ageSec == null || r.ageSec > staleAfter)
+      .map((r) => ({ symbol: r.symbol, error: r.status !== "ok" ? r.error ?? r.status : `stale (${r.ageSec == null ? "never scanned" : `${Math.round(r.ageSec / 60)} min old`})` }));
 
-    const hits = await enrichHitsWithExpectancy(
-      scanResultToHits(result).map((hit) => ({ ...hit, riskSource: risk.source })),
-    );
-    const health = scanResultToHealth(result, true);
-
-    // Fire-and-forget: log signals for outcome tracking
-    recordSignals(result.pipelines, market, timeframe).catch((err) =>
-      console.error("[admin:scanner:live] Signal recording error:", err),
-    );
+    const health: SystemHealth = {
+      feed: view.available && current.length > 0 ? "HEALTHY" : "DEGRADED",
+      websocket: "DISCONNECTED",
+      scanner: view.running ? "RUNNING" : "IDLE",
+      cache: "OK",
+      api: "LOW_LATENCY",
+      lastScanAt: view.newestScannedAt ?? undefined,
+      symbolsScanned: current.length,
+      errorsCount: errors.length,
+    };
 
     return NextResponse.json({
       hits,
       health,
+      savedScan: scanStatusForResponse(view),
       meta: {
-        symbolsScanned: result.symbolsScanned,
-        errorsCount: result.errors.length,
-        errors: result.errors,
-        timestamp: result.timestamp,
-        engineVersions: result.engineVersions,
-        environmentMode: result.environmentMode,
+        symbolsScanned: current.length,
+        errorsCount: errors.length,
+        errors,
+        timestamp: view.newestScannedAt,
         risk,
       },
-      truth: wrapTruth({ hits }, { source: 'admin:live-scanner', freshness: 'real-time' }),
+      truth: wrapTruth({ hits }, { source: "admin:shared-saved-scan", freshness: current.length ? "delayed" : "stale", fetchedAt: view.newestScannedAt ?? undefined }),
     });
   } catch (err: unknown) {
     console.error("[admin:scanner:live] Error:", err);

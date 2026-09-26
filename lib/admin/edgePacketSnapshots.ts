@@ -122,6 +122,26 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
   return written;
 }
 
+/**
+ * Drop packets this workspace already has (same packet_id). Saved shared-scan packets keep their id until
+ * the symbol is re-scanned, so re-reading them must not insert duplicate snapshot rows. Best-effort: on a
+ * lookup error every packet is returned (old behaviour).
+ */
+export async function filterNewEdgePackets(workspaceId: string, packets: AdminEdgePacket[]): Promise<AdminEdgePacket[]> {
+  if (!packets.length) return packets;
+  try {
+    await ensureTable();
+    const rows = await q<{ packet_id: string }>(
+      `SELECT packet_id FROM admin_edge_packets WHERE workspace_id = $1 AND packet_id = ANY($2)`,
+      [workspaceId, packets.map((p) => p.packetId)],
+    );
+    const seen = new Set(rows.map((r) => r.packet_id));
+    return packets.filter((p) => !seen.has(p.packetId));
+  } catch {
+    return packets;
+  }
+}
+
 export interface LoadEdgePacketsInput {
   workspaceId: string;
   symbol?: string;

@@ -10,15 +10,57 @@ import type {
   CrossMarketState, EventWindow, Market,
 } from '@/types/operator';
 import type { MarketDataProvider } from './orchestrator';
-import { avTryToken } from '@/lib/avRateGovernor';
+import { avTryToken, avFetch } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
 import { makeEnvelope } from './shared';
 import { getOHLCWithVolume, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { nyWallTimeToUtcMs } from '@/lib/time/nyWallClock';
+import { getBars as getCachedBars } from '@/lib/marketData';
+import { vixWithAlphaVantagePrimary } from '@/lib/scoring/canonical/regimeOverlayData';
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 
 function operatorOutputSize(): 'compact' | 'full' {
   return process.env.OPERATOR_AV_OUTPUTSIZE === 'full' ? 'full' : 'compact';
+}
+
+/* ── Equity entitlement (configurable, with graceful fallback) ─────────
+ * OPERATOR_AV_ENTITLEMENT = realtime | delayed | none (default realtime: what the operator radar has
+ * always requested). If Alpha Vantage answers that the key is not entitled to the requested feed, the
+ * call is retried once without the parameter and the downgrade is remembered for 6 hours so the next
+ * calls do not burn a request on the rejected feed first.
+ */
+export type AvEntitlement = 'realtime' | 'delayed' | 'none';
+const ENTITLEMENT_DOWNGRADE_MS = 6 * 60 * 60 * 1000;
+let entitlementDowngradedUntil = 0;
+
+export function configuredEquityEntitlement(): AvEntitlement {
+  const raw = (process.env.OPERATOR_AV_ENTITLEMENT || '').trim().toLowerCase();
+  return raw === 'delayed' || raw === 'none' ? raw : 'realtime';
+}
+
+/** Entitlement to request right now (configured value, or 'none' while a rejection is remembered). */
+export function effectiveEquityEntitlement(nowMs = Date.now()): AvEntitlement {
+  const wanted = configuredEquityEntitlement();
+  return wanted !== 'none' && nowMs < entitlementDowngradedUntil ? 'none' : wanted;
+}
+
+export function rememberEntitlementRejected(nowMs = Date.now()): void {
+  entitlementDowngradedUntil = nowMs + ENTITLEMENT_DOWNGRADE_MS;
+}
+
+/** Test hook. */
+export function resetEntitlementDowngrade(): void {
+  entitlementDowngradedUntil = 0;
+}
+
+export function isEntitlementError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? '');
+  return /entitle/i.test(msg);
+}
+
+export function entitlementParam(ent: AvEntitlement): string {
+  return ent === 'none' ? '' : `&entitlement=${ent}`;
 }
 
 /* ── Timeframe → AV function mapping ───────────────────────── */
@@ -29,9 +71,14 @@ interface AVFunctionConfig {
   extraParams?: string;
 }
 
+export function isIntradayTimeframe(timeframe: string): boolean {
+  return ['5m', '5min', '15m', '15min', '1h', '60min'].includes(timeframe.toLowerCase());
+}
+
 function resolveAVFunction(
   market: Market,
   timeframe: string,
+  entitlement: AvEntitlement = 'realtime',
 ): AVFunctionConfig {
   const tf = timeframe.toLowerCase();
 
@@ -52,49 +99,84 @@ function resolveAVFunction(
   }
 
   // Equities / Futures / Forex / Options → standard endpoints
+  const ent = entitlementParam(entitlement);
   if (['5m', '5min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (5min)', extraParams: `&interval=5min&outputsize=${operatorOutputSize()}&entitlement=realtime` };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (5min)', extraParams: `&interval=5min&outputsize=${operatorOutputSize()}${ent}` };
   }
   if (['15m', '15min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (15min)', extraParams: `&interval=15min&outputsize=${operatorOutputSize()}&entitlement=realtime` };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (15min)', extraParams: `&interval=15min&outputsize=${operatorOutputSize()}${ent}` };
   }
   if (['1h', '60min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (60min)', extraParams: `&interval=60min&outputsize=${operatorOutputSize()}&entitlement=realtime` };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (60min)', extraParams: `&interval=60min&outputsize=${operatorOutputSize()}${ent}` };
   }
   // Daily, 4H, 1W all use daily adjusted (4H/1W aggregated from daily)
-  return { fn: 'TIME_SERIES_DAILY_ADJUSTED', tsKey: 'Time Series (Daily)', extraParams: `&outputsize=${operatorOutputSize()}&entitlement=realtime` };
+  return { fn: 'TIME_SERIES_DAILY_ADJUSTED', tsKey: 'Time Series (Daily)', extraParams: `&outputsize=${operatorOutputSize()}${ent}` };
 }
 
 /* ── Core Bar Fetcher ───────────────────────────────────────── */
+
+export interface AvCallOptions {
+  /**
+   * true  = wait for a rate-governor token (avFetch). Used by the shared saved scan job.
+   * false = take a token only if one is free right now (avTryToken) and return [] otherwise, so an
+   *         interactive admin request never queues behind the budget.
+   */
+  waitForToken?: boolean;
+  /** Called once per Alpha Vantage request actually sent (for per-run call accounting). */
+  onAvCall?: (label: string) => void;
+}
+
+const SKIPPED = Symbol('av-skipped');
+
+async function avRequestJson(url: string, label: string, opts: AvCallOptions): Promise<any | null | typeof SKIPPED> {
+  if (opts.waitForToken) {
+    opts.onAvCall?.(label);
+    return avFetch(url, label);
+  }
+  if (!(await avTryToken())) return SKIPPED;
+  opts.onAvCall?.(label);
+  const res = await avCircuit.call(() => fetch(url, { signal: AbortSignal.timeout(20_000) }));
+  if (!res.ok) return null;
+  const json = await res.json();
+  if (json['Error Message'] || json['Note']) {
+    console.warn(`[operator:market-data] AV error for ${label}:`, json['Error Message'] || json['Note']);
+    return null;
+  }
+  if (json['Information']) throw new Error(`AV info error: ${json['Information']}`);
+  return json;
+}
 
 async function fetchAVBars(
   symbol: string,
   market: Market,
   timeframe: string,
+  opts: AvCallOptions = {},
 ): Promise<Bar[]> {
   if (!AV_KEY()) return [];
-  if (!(await avTryToken())) return [];
 
-  const cfg = resolveAVFunction(market, timeframe);
   const sym = market === 'CRYPTO'
     ? symbol.replace(/-?USD$/i, '').toUpperCase()
     : encodeURIComponent(symbol);
+  const requested: AvEntitlement = market === 'CRYPTO' ? 'none' : effectiveEquityEntitlement();
 
-  const url = `https://www.alphavantage.co/query?function=${cfg.fn}&symbol=${sym}${cfg.extraParams || ''}&apikey=${AV_KEY()}`;
+  const request = async (ent: AvEntitlement) => {
+    const cfg = resolveAVFunction(market, timeframe, ent);
+    const url = `https://www.alphavantage.co/query?function=${cfg.fn}&symbol=${sym}${cfg.extraParams || ''}&apikey=${AV_KEY()}`;
+    return { cfg, json: await avRequestJson(url, `OPERATOR ${cfg.fn} ${symbol}`, opts) };
+  };
 
   try {
-    const res = await avCircuit.call(() =>
-      fetch(url, { signal: AbortSignal.timeout(20_000) }),
-    );
-    if (!res.ok) return [];
-
-    const json = await res.json();
-
-    // Handle AV error responses
-    if (json['Error Message'] || json['Note']) {
-      console.warn(`[operator:market-data] AV error for ${symbol}:`, json['Error Message'] || json['Note']);
-      return [];
+    let out: Awaited<ReturnType<typeof request>>;
+    try {
+      out = await request(requested);
+    } catch (err) {
+      if (requested === 'none' || !isEntitlementError(err)) throw err;
+      rememberEntitlementRejected();
+      console.warn(`[operator:market-data] AV key not entitled to entitlement=${requested}; retrying ${symbol} without it`);
+      out = await request('none');
     }
+    const { cfg, json } = out;
+    if (!json || json === SKIPPED) return [];
 
     const timeSeries = json[cfg.tsKey];
     if (!timeSeries) {
@@ -106,7 +188,36 @@ async function fetchAVBars(
 
     return parseTimeSeries(timeSeries, symbol, market, timeframe);
   } catch (err) {
-    console.error(`[operator:market-data] Fetch failed for ${symbol}:`, err);
+    console.error(`[operator:market-data] Fetch failed for ${symbol}:`, err instanceof Error ? err.message.replace(/apikey=[^&\s]+/gi, 'apikey=***') : err);
+    return [];
+  }
+}
+
+/**
+ * Equity daily bars from the shared lib/marketData cache (Redis → Postgres → AV TIME_SERIES_DAILY_ADJUSTED,
+ * 1h freshness). Every admin surface asking for the same symbol's daily bars within the hour shares one
+ * Alpha Vantage call instead of each fetching its own.
+ */
+async function fetchCachedEquityDailyBars(symbol: string, market: Market, timeframe: string): Promise<Bar[]> {
+  try {
+    const env = await getCachedBars(symbol, 'daily');
+    const rows = (env.data ?? []).filter(b => Number.isFinite(b.close) && b.close > 0);
+    return rows
+      .slice()
+      .sort((a, b) => a.ts - b.ts)
+      .map(b => ({
+        symbol,
+        market,
+        timeframe,
+        timestamp: String(b.date).slice(0, 10),
+        open: b.open,
+        high: b.high,
+        low: b.low,
+        close: b.close,
+        volume: Math.round(b.volume || 0),
+      }));
+  } catch (err) {
+    console.warn(`[operator:market-data] cached daily bars failed for ${symbol}:`, err instanceof Error ? err.message : err);
     return [];
   }
 }
@@ -151,7 +262,7 @@ const CG_BARS_TTL_MS = (() => {
  * env var OPERATOR_CG_FETCH_ENABLED=true on the web service.
  * When paused, crypto symbols yield no bars and make zero CG calls.
  */
-function operatorCgFetchEnabled(): boolean {
+export function operatorCgFetchEnabled(): boolean {
   const raw = (process.env.OPERATOR_CG_FETCH_ENABLED || '').trim().toLowerCase();
   return ['1', 'true', 'yes', 'on'].includes(raw);
 }
@@ -212,7 +323,21 @@ async function fetchCGBars(
   }
 }
 
-function parseTimeSeries(
+/**
+ * Alpha Vantage stamps US equity intraday bars in New York local time and crypto intraday bars in UTC, both
+ * without an offset. Store an ISO UTC instant so every consumer that does `new Date(bar.timestamp)` gets the
+ * real time on a UTC server (it used to be read as UTC, 4–5 hours off). Daily bars stay "YYYY-MM-DD".
+ */
+export function normalizeAvBarTimestamp(raw: string, market: Market): string {
+  const text = String(raw ?? '').trim();
+  if (!/\d{2}:\d{2}/.test(text)) return text.slice(0, 10);
+  const ms = market === 'CRYPTO'
+    ? Date.parse(`${text.replace(' ', 'T')}Z`)
+    : nyWallTimeToUtcMs(text);
+  return ms != null && Number.isFinite(ms) ? new Date(ms).toISOString() : text;
+}
+
+export function parseTimeSeries(
   ts: Record<string, Record<string, string>>,
   symbol: string,
   market: Market,
@@ -228,7 +353,7 @@ function parseTimeSeries(
       symbol,
       market,
       timeframe,
-      timestamp,
+      timestamp: normalizeAvBarTimestamp(timestamp, market),
       open: parseFloat(v['1. open'] || v['1a. open (USD)'] || '0'),
       high: parseFloat(v['2. high'] || v['2a. high (USD)'] || '0'),
       low: parseFloat(v['3. low'] || v['3a. low (USD)'] || '0'),
@@ -293,53 +418,36 @@ export function computeKeyLevels(bars: Bar[]): KeyLevel[] {
 
 /* ── Cross-Market State ─────────────────────────────────────── */
 
-async function fetchCrossMarketState(): Promise<CrossMarketState> {
-  // Fetch VIX and DXY via compact daily to get current state
+/** A VIX close older than this (calendar days) is treated as unknown rather than current. */
+const VIX_MAX_AGE_DAYS = 5;
+
+/** VIX level → state. Missing / invalid level → 'unknown' (adds no cross-market confidence). */
+export function vixStateFromLevel(level: number | null | undefined): string {
+  if (level == null || !Number.isFinite(level) || level <= 0) return 'unknown';
+  return level > 30 ? 'elevated' : level > 20 ? 'cautious' : 'normal';
+}
+
+/**
+ * VIX via the shared regime reader (Alpha Vantage INDEX_DATA through avRateGovernor, cached 15 min per
+ * instance, FRED as fallback). When no recent VIX is available the state is 'unknown' — it used to default
+ * to a made-up 20 ("normal"), which added +0.2 cross-market confidence to every symbol.
+ */
+async function fetchCrossMarketState(nowMs = Date.now()): Promise<CrossMarketState> {
   const state: CrossMarketState = {
     dxyState: 'neutral',
-    vixState: 'normal',
+    vixState: 'unknown',
     breadthState: 'neutral',
   };
 
   try {
-    // VIX check: prefer Alpha Vantage INDEX_DATA, fallback to legacy daily-adjusted lookup.
-    if (AV_KEY() && (await avTryToken())) {
-      const vixUrl = `https://www.alphavantage.co/query?function=INDEX_DATA&symbol=VIX&interval=daily&apikey=${AV_KEY()}`;
-      const res = await avCircuit.call(() => fetch(vixUrl, { signal: AbortSignal.timeout(15_000) }));
-      if (res.ok) {
-        const json = await res.json();
-        const ts = json['Time Series (Daily)'] || json.data;
-        if (ts) {
-          const rows = Array.isArray(ts)
-            ? ts
-            : Object.keys(ts).sort().reverse().map((date) => ({ date, ...ts[date] }));
-          if (rows.length > 0) {
-            const latest = rows[0];
-            const vix = parseFloat(latest.close || latest['4. close'] || '20');
-            state.vixState = vix > 30 ? 'elevated' : vix > 20 ? 'cautious' : 'normal';
-            return state;
-          }
-        }
-      }
-    }
-
-    if (AV_KEY() && (await avTryToken())) {
-      const fallbackUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=VIX&outputsize=compact&entitlement=realtime&apikey=${AV_KEY()}`;
-      const res = await avCircuit.call(() => fetch(fallbackUrl, { signal: AbortSignal.timeout(15_000) }));
-      if (res.ok) {
-        const json = await res.json();
-        const ts = json['Time Series (Daily)'];
-        if (ts) {
-          const dates = Object.keys(ts).sort().reverse();
-          if (dates.length > 0) {
-            const vix = parseFloat(ts[dates[0]]['4. close'] || '20');
-            state.vixState = vix > 30 ? 'elevated' : vix > 20 ? 'cautious' : 'normal';
-          }
-        }
-      }
+    const vix = await vixWithAlphaVantagePrimary(1, nowMs);
+    const latest = vix?.rows?.[0];
+    const onMs = latest ? Date.parse(`${latest.on}T00:00:00Z`) : NaN;
+    if (latest && Number.isFinite(onMs) && nowMs - onMs <= VIX_MAX_AGE_DAYS * 86_400_000) {
+      state.vixState = vixStateFromLevel(latest.value);
     }
   } catch {
-    // Keep defaults
+    // Keep 'unknown'
   }
 
   return state;
@@ -459,37 +567,86 @@ function getEventWindow(_symbol: string): EventWindow {
 
 /* ── Public Provider ────────────────────────────────────────── */
 
+export type OperatorProviderOptions = AvCallOptions;
+
 /**
- * Live Alpha Vantage market data provider for the Operator Engine.
- * Wired into avRateGovernor and circuit breaker for production safety.
+ * Alpha Vantage market data provider for the Operator Engine. Every AV request goes through
+ * avRateGovernor (avFetch when waitForToken, otherwise avTryToken) and the circuit breaker.
+ * Equity daily bars / key levels come from the shared lib/marketData daily cache.
  */
-export const alphaVantageProvider: MarketDataProvider = {
-  async getBars(symbol: string, market: Market, timeframe: string): Promise<Bar[]> {
+export function createOperatorProvider(opts: OperatorProviderOptions = {}): MarketDataProvider {
+  const bars = async (symbol: string, market: Market, timeframe: string): Promise<Bar[]> => {
     if (market === 'CRYPTO') {
       const cg = await fetchCGBars(symbol, market, timeframe);
       if (cg.length > 0) return cg;
       // CoinGecko miss — fall back to AV crypto endpoints as a secondary
-      return fetchAVBars(symbol, market, timeframe);
+      return fetchAVBars(symbol, market, timeframe, opts);
     }
-    return fetchAVBars(symbol, market, timeframe);
-  },
+    if (!isIntradayTimeframe(timeframe)) return fetchCachedEquityDailyBars(symbol, market, timeframe);
+    return fetchAVBars(symbol, market, timeframe, opts);
+  };
+  return {
+    getBars: bars,
 
-  async getKeyLevels(symbol: string, market: Market): Promise<KeyLevel[]> {
-    // Fetch daily bars and compute levels from them
-    const bars = market === 'CRYPTO'
-      ? await fetchCGBars(symbol, market, '1D')
-      : await fetchAVBars(symbol, market, '1D');
-    return computeKeyLevels(bars);
-  },
+    async getKeyLevels(symbol: string, market: Market): Promise<KeyLevel[]> {
+      // Daily bars → levels
+      const daily = market === 'CRYPTO'
+        ? await fetchCGBars(symbol, market, '1D')
+        : await fetchCachedEquityDailyBars(symbol, market, '1D');
+      return computeKeyLevels(daily);
+    },
 
-  async getCrossMarketState(): Promise<CrossMarketState> {
-    return fetchCrossMarketState();
-  },
+    async getCrossMarketState(): Promise<CrossMarketState> {
+      return fetchCrossMarketState();
+    },
 
-  async getEventWindow(symbol: string): Promise<EventWindow> {
-    return getEventWindow(symbol);
-  },
-};
+    async getEventWindow(symbol: string): Promise<EventWindow> {
+      return getEventWindow(symbol);
+    },
+  };
+}
+
+export const alphaVantageProvider: MarketDataProvider = createOperatorProvider();
+
+/**
+ * Per-run memo around a provider: each (symbol, market, timeframe) bar series, each symbol's key levels and
+ * the cross-market state are fetched at most once for the lifetime of the returned object. Use one per scan
+ * run / request so the research packet can reuse the bars the pipeline already fetched and VIX is read once.
+ */
+export function memoizeProvider(base: MarketDataProvider): MarketDataProvider {
+  const barCache = new Map<string, Promise<Bar[]>>();
+  const levelCache = new Map<string, Promise<KeyLevel[]>>();
+  let cross: Promise<CrossMarketState> | null = null;
+  return {
+    getBars(symbol, market, timeframe) {
+      const key = `${symbol.toUpperCase()}|${market}|${timeframe.toLowerCase()}`;
+      let hit = barCache.get(key);
+      if (!hit) {
+        hit = base.getBars(symbol, market, timeframe).catch(() => [] as Bar[]);
+        barCache.set(key, hit);
+      }
+      return hit;
+    },
+    getKeyLevels(symbol, market) {
+      const key = `${symbol.toUpperCase()}|${market}`;
+      let hit = levelCache.get(key);
+      if (!hit) {
+        hit = base.getKeyLevels(symbol, market).catch(() => [] as KeyLevel[]);
+        levelCache.set(key, hit);
+      }
+      return hit;
+    },
+    getCrossMarketState() {
+      if (!cross) {
+        cross = base.getCrossMarketState().catch(() => ({ dxyState: 'neutral', vixState: 'unknown', breadthState: 'neutral' }));
+      }
+      return cross;
+    },
+    getEventWindow(symbol) {
+      return base.getEventWindow(symbol);
+    },
+  };
+}
 
 /* ── Snapshot helper ────────────────────────────────────────── */
 
@@ -501,7 +658,9 @@ export async function getMarketSnapshot(
         const cg = await fetchCGBars(req.symbol, req.market, req.timeframe);
         return cg.length > 0 ? cg : fetchAVBars(req.symbol, req.market, req.timeframe);
       })()
-    : await fetchAVBars(req.symbol, req.market, req.timeframe);
+    : isIntradayTimeframe(req.timeframe)
+      ? await fetchAVBars(req.symbol, req.market, req.timeframe)
+      : await fetchCachedEquityDailyBars(req.symbol, req.market, req.timeframe);
   const keyLevels = computeKeyLevels(bars);
   const crossMarket = await fetchCrossMarketState();
   const eventWindow = getEventWindow(req.symbol);

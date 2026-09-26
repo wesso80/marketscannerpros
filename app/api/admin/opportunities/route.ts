@@ -1,9 +1,12 @@
 /**
  * GET /api/admin/opportunities — Opportunity Research Board
  *
- * Runs the operator engine across a curated symbol set, scores each
- * with the centralized InternalResearchScore engine, attaches a
- * DataTruth verdict, and returns a ranked list for the admin board.
+ * Reads the shared saved admin scan (lib/admin/sharedScan.ts) — each symbol's
+ * operator-engine packet, InternalResearchScore and DataTruth as saved by the
+ * scan job — and returns a ranked list for the admin board. It no longer runs
+ * the engine live per load (216–990 Alpha Vantage calls per load before).
+ * Each edge packet's underlying research packet carries savedScan { ageLabel,
+ * status, stale }; "Rescan now" is POST /api/admin/scan.
  *
  * Boundary: research analytics only. No execution / order semantics.
  */
@@ -11,25 +14,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
-import type { Market } from "@/types/operator";
 import { wrapTruth } from "@/lib/admin";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
-import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
+import { whatChangedForWorkspace } from "@/lib/admin/getAdminResearchPacket";
 import { projectEdgePacket, deriveCrossAssetConfluence, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { syncQueueFromPacket } from "@/lib/admin/queueStore";
 import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type ChangeTapeEvent, type ChangeTapeSeverity } from "@/lib/admin/changeTape";
-import { persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
+import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
-import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
+import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket, type SavedScanView } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Universe sources — derived from DEFAULT_WATCHLISTS via the shared union
-// helper so every admin surface sees the same broad set. Pinned anchors
-// (SPY/QQQ/BTC/ETH/…) sit at the head for macro consistency.
-const DEFAULT_CRYPTO: string[] = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
-const DEFAULT_EQUITY: string[] = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
+// Universe: the shared scan universe (DEFAULT_WATCHLISTS union, anchors first) — see lib/admin/sharedScanLogic.ts.
 
 export async function GET(req: NextRequest) {
   // Auth gate (mirrors /api/admin/symbol/[symbol] pattern)
@@ -49,29 +47,39 @@ export async function GET(req: NextRequest) {
     const isCrossAsset = marketParam === "ALL" && !symbolsParam;
 
     const workspaceId = session?.workspaceId;
-    let packets: Awaited<ReturnType<typeof getAdminResearchPacketsForSymbols>> = [];
+    let views: SavedScanView[] = [];
     if (isCrossAsset) {
-      const [cryptoPackets, equityPackets] = await Promise.all([
-        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_CRYPTO, market: "CRYPTO" as Market, timeframe, workspaceId }).catch(() => []),
-        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_EQUITY, market: "EQUITIES" as Market, timeframe, workspaceId }).catch(() => []),
+      views = await Promise.all([
+        readSavedScan({ market: "CRYPTO", timeframe }),
+        readSavedScan({ market: "EQUITIES", timeframe }),
       ]);
-      packets = [...cryptoPackets, ...equityPackets];
     } else {
-      const market = (marketParam === "ALL" ? "CRYPTO" : marketParam) as Market;
+      const market = marketParam === "EQUITIES" ? "EQUITIES" : "CRYPTO";
       const symbols = symbolsParam
         ? symbolsParam.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
-        : market === "EQUITIES"
-          ? DEFAULT_EQUITY
-          : DEFAULT_CRYPTO;
-
-      if (symbols.length === 0) {
+        : undefined;
+      if (symbols && symbols.length === 0) {
         return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: new Date().toISOString() });
       }
-      packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe, workspaceId });
+      views = [await readSavedScan({ market, timeframe, symbols })];
     }
+    const savedScan = views.map(scanStatusForResponse);
+    const scanTimestamp = views.map((v) => v.newestScannedAt).filter((t): t is string => !!t).sort().pop() ?? null;
+    let packets: SavedPacket[] = views.flatMap((v) => v.packets);
+    const unavailable = views.filter((v) => !v.available).map((v) => v.message ?? "saved scan unavailable");
 
     if (packets.length === 0) {
-      return NextResponse.json({ rows: [], edgePackets: [], changesBySymbol: {}, errors: [], timestamp: new Date().toISOString() });
+      return NextResponse.json({
+        rows: [], edgePackets: [], changesBySymbol: {}, errors: unavailable, savedScan,
+        timestamp: scanTimestamp ?? new Date().toISOString(),
+      });
+    }
+
+    // whatChanged relative to this admin's workspace snapshots (saved packets are workspace-neutral).
+    if (workspaceId) {
+      const withDelta: SavedPacket[] = [];
+      for (const p of packets) withDelta.push({ ...p, whatChanged: await whatChangedForWorkspace(p, workspaceId) });
+      packets = withDelta;
     }
 
     // Project to canonical AdminEdgePacket[] (Admin Edge Layer contract).
@@ -105,13 +113,20 @@ export async function GET(req: NextRequest) {
     const changesBySymbol: Record<string, Array<{ eventType: string; severity: ChangeTapeSeverity; magnitude: number }>> = {};
     if (session?.workspaceId) {
       const ws = session.workspaceId;
-      await Promise.allSettled(edgePackets.map((p) => syncQueueFromPacket({ workspaceId: ws, packet: p })));
+      // Failed / stale saved rows are shown (with their status) but never queued, persisted or taped.
+      const rankableIds = new Set(packets.filter(isRankable).map((p) => p.packetId));
+      const liveEdge = edgePackets.filter((p) => rankableIds.has(p.packetId));
+      const livePackets = packets.filter((p) => rankableIds.has(p.packetId));
+      await Promise.allSettled(liveEdge.map((p) => syncQueueFromPacket({ workspaceId: ws, packet: p })));
       // Persist canonical edge-packet snapshots (Tier 1 #2). Awaited so
       // any DB error surfaces in logs while still being non-blocking via
       // the outer try/catch — see persistEdgePackets internal swallow.
-      await persistEdgePackets({ workspaceId: ws, packets: edgePackets }).catch(() => 0);
+      // Saved packets keep their id until re-scanned: only store ones this workspace does not have yet.
+      await filterNewEdgePackets(ws, liveEdge)
+        .then((fresh) => persistEdgePackets({ workspaceId: ws, packets: fresh }))
+        .catch(() => 0);
       const allEvents: ChangeTapeEvent[][] = await Promise.all(
-        packets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[])),
+        livePackets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[])),
       );
       const flat = allEvents.flat();
       if (flat.length) await persistChangeTapeEvents(flat).catch(() => 0);
@@ -155,8 +170,10 @@ export async function GET(req: NextRequest) {
       rows,
       edgePackets,
       changesBySymbol,
-      errors: [],
-      timestamp: new Date().toISOString(),
+      errors: unavailable,
+      // When the newest saved result was built — shown as the scan age on the board.
+      timestamp: scanTimestamp ?? new Date().toISOString(),
+      savedScan,
       meta: {
         symbolsRequested: packets.length,
         symbolsScored: rows.length,
@@ -164,7 +181,7 @@ export async function GET(req: NextRequest) {
         timeframe,
         crossAsset: isCrossAsset,
       },
-      truth: wrapTruth({ rows, edgePackets }, { source: 'admin:operator-engine', freshness: 'real-time' }),
+      truth: wrapTruth({ rows, edgePackets }, { source: 'admin:shared-saved-scan', freshness: 'delayed', fetchedAt: scanTimestamp ?? undefined }),
     });
   } catch (err) {
     return NextResponse.json(

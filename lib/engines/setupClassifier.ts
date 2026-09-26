@@ -148,8 +148,11 @@ export function classifySetup(snapshot: AdminSymbolIntelligence): SetupDefinitio
   // 5. Trending tape — ADX gate
   const adx = i.adx ?? 0;
   if (adx >= 25) {
-    const stackedUp = price > i.ema20 && i.ema20 > i.ema50 && i.ema50 > i.ema200;
-    const stackedDown = price < i.ema20 && i.ema20 < i.ema50 && i.ema50 < i.ema200;
+    // EMA200 is null with fewer than 200 bars: judge the stack on the EMAs that exist, the same way for
+    // both directions (a 0 placeholder used to satisfy the long stack and block the short one).
+    const e200 = i.ema200;
+    const stackedUp = price > i.ema20 && i.ema20 > i.ema50 && (e200 == null || i.ema50 > e200);
+    const stackedDown = price < i.ema20 && i.ema20 < i.ema50 && (e200 == null || i.ema50 < e200);
     if ((stackedUp && bias === "LONG") || (stackedDown && bias === "SHORT")) {
       // Pullback if currently between price and the 20-EMA (small distance)
       const distancePct = Math.abs((price - i.ema20) / i.ema20);

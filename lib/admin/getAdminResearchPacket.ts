@@ -1,6 +1,6 @@
-import type { Market } from "@/types/operator";
-import { runScan } from "@/lib/operator/orchestrator";
-import { alphaVantageProvider } from "@/lib/operator/market-data";
+import type { Bar, Market } from "@/types/operator";
+import { runScan, type MarketDataProvider, type ScanContext, type ScanResult } from "@/lib/operator/orchestrator";
+import { alphaVantageProvider, memoizeProvider } from "@/lib/operator/market-data";
 import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
@@ -20,6 +20,8 @@ import type { DataTruth } from "@/lib/engines/dataTruth";
 import type { InternalResearchScore, SetupDefinition } from "@/lib/admin/adminTypes";
 
 export type AdminAssetClass = "equity" | "crypto";
+
+const FIRST_SCAN_WHAT_CHANGED = "First scan in this context - no prior packet for delta comparison.";
 
 export interface AdminResearchPacket {
   packetId: string;
@@ -150,7 +152,8 @@ async function loadJournalCases(symbol: string, market: string): Promise<Journal
 }
 
 function deriveMacroContext(snapshot: AdminSymbolIntelligence) {
-  const trend = snapshot.indicators.ema20 > snapshot.indicators.ema50 && snapshot.indicators.ema50 > snapshot.indicators.ema200;
+  const e200 = snapshot.indicators.ema200;
+  const trend = e200 != null && snapshot.indicators.ema20 > snapshot.indicators.ema50 && snapshot.indicators.ema50 > e200;
   if (trend && snapshot.bias === "LONG") {
     return { regime: "RISK_ON" as const, note: "Trend stack aligned with bullish regime." };
   }
@@ -225,7 +228,7 @@ function assessAlertEligibility(packet: {
   return { eligible: reasons.length === 0, reasons };
 }
 
-export async function getAdminResearchPacket(params: {
+export interface AdminResearchPacketParams {
   symbol: string;
   market?: Market | string;
   timeframe?: string;
@@ -236,18 +239,45 @@ export async function getAdminResearchPacket(params: {
    * fabricated delta (per data-integrity rule).
    */
   workspaceId?: string;
-}): Promise<AdminResearchPacket> {
+  /** Pre-built admin scan context (build once per batch/run instead of once per symbol). */
+  scanContext?: ScanContext;
+  /** Market data provider; wrap in memoizeProvider() and share it across a run so VIX etc. are read once. */
+  provider?: MarketDataProvider;
+  /** Day change from a quote (bulk quote), preferred over the bar-derived day change. */
+  quote?: { changePercent: number | null } | null;
+}
+
+export interface AdminResearchScan {
+  packet: AdminResearchPacket;
+  result: ScanResult;
+  bars: Bar[];
+  /** true when the provider returned no bars — the packet is a failure placeholder, not data. */
+  noBars: boolean;
+}
+
+export async function getAdminResearchPacket(params: AdminResearchPacketParams): Promise<AdminResearchPacket> {
+  return (await buildAdminResearchScan(params)).packet;
+}
+
+/** Run the operator pipeline for one symbol and build its research packet, returning the raw scan too. */
+export async function buildAdminResearchScan(params: AdminResearchPacketParams): Promise<AdminResearchScan> {
   const symbol = params.symbol.toUpperCase();
   const market = (params.market || "CRYPTO").toUpperCase() as Market;
   const timeframe = params.timeframe || "15m";
 
-  const { context } = await buildAdminScanContext();
-  const result = await runScan({ symbols: [symbol], market, timeframe }, context, alphaVantageProvider);
+  const context = params.scanContext ?? (await buildAdminScanContext()).context;
+  // Memoised so the bars the pipeline fetched are reused below instead of fetched a second time.
+  const provider = params.provider ?? memoizeProvider(alphaVantageProvider);
+  const result = await runScan({ symbols: [symbol], market, timeframe }, context, provider);
 
-  const bars = await alphaVantageProvider.getBars(symbol, market, timeframe).catch(() => []);
+  const bars = await provider.getBars(symbol, market, timeframe).catch(() => [] as Bar[]);
+  const noBars = bars.length === 0;
   const pipeline = result.pipelines[0];
   const snapshot = pipeline
-    ? pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp)
+    ? pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp, {
+        market,
+        dayChangePercent: params.quote?.changePercent ?? null,
+      })
     : ({
         symbol,
         timeframe,
@@ -264,20 +294,26 @@ export async function getAdminResearchPacket(params: {
         lastScanAt: result.timestamp,
         blockReasons: result.errors.map((e) => e.error),
         penalties: [],
-        indicators: { ema20: 0, ema50: 0, ema200: 0, vwap: 0, atr: 0, bbwpPercentile: 0, adx: 0, rvol: 0 },
+        indicators: { ema20: 0, ema50: 0, ema200: null, vwap: 0, atr: 0, bbwpPercentile: 0, adx: 0, rvol: 0 },
         dve: { state: "NEUTRAL", direction: "NEUTRAL", persistence: 0, breakoutReadiness: 0, trap: false, exhaustion: false },
         timeConfluence: { score: 0, hotWindow: false, alignmentCount: 0, nextClusterAt: "" },
         levels: { pdh: 0, pdl: 0, weeklyHigh: 0, weeklyLow: 0, monthlyHigh: 0, monthlyLow: 0, midpoint: 0, vwap: 0 },
         targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
       } as AdminSymbolIntelligence);
 
-  const lastBarTime = bars.length > 0 ? new Date(bars[bars.length - 1].timestamp).getTime() : Date.now();
-  const ageSec = Math.max(0, Math.round((Date.now() - lastBarTime) / 1000));
+  // Age from the newest bar. With no bars there is no age (it used to be "now", i.e. fresh) and the
+  // packet is marked as a source error so it ranks as failed/degraded, never as fresh data.
+  const lastBarMs = noBars ? NaN : Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(bars[bars.length - 1].timestamp)
+    ? `${bars[bars.length - 1].timestamp}T00:00:00Z`
+    : bars[bars.length - 1].timestamp);
+  const ageSec = Number.isFinite(lastBarMs) ? Math.max(0, Math.round((Date.now() - lastBarMs) / 1000)) : null;
+  const sourceErrors = result.errors.filter((e) => e.symbol === symbol).map((e) => e.error);
+  if (noBars && !sourceErrors.includes("NO_BAR_DATA")) sourceErrors.push("NO_BAR_DATA");
   const dataTruth = computeDataTruth({
     marketDataAgeSec: ageSec,
     timeframe,
     isCached: false,
-    sourceErrors: result.errors.filter((e) => e.symbol === symbol).map((e) => e.error),
+    sourceErrors,
   });
 
   const setup = classifySetup(snapshot);
@@ -370,48 +406,7 @@ export async function getAdminResearchPacket(params: {
     trapRiskScore: trap.trapRiskScore,
   };
 
-  // Real whatChanged: diff against prior persisted packet snapshot for
-  // this (workspace, symbol, market, timeframe). Honest fallback when
-  // no workspace context or no prior snapshot exists.
-  let whatChanged = "First scan in this context - no prior packet for delta comparison.";
-  if (params.workspaceId) {
-    try {
-      const prior = await loadPriorPacketSnapshot({
-        workspaceId: params.workspaceId,
-        symbol,
-        market,
-        timeframe,
-      });
-      if (prior?.packetJson) {
-        const currentForDelta: Record<string, unknown> = {
-          trustAdjustedScore: internalResearchScore.trustAdjustedScore,
-          dataTrustScore: internalResearchScore.dataTrustScore,
-          lifecycle: internalResearchScore.lifecycle,
-          contradictionFlags: contradictions,
-          risks: trap.reasons,
-          evidence: checks,
-          macroContext,
-          newsContext,
-          earningsContext,
-          volatilityState: {
-            state: snapshot.dve.state,
-            trap: snapshot.dve.trap,
-            exhaustion: snapshot.dve.exhaustion,
-          },
-          timeConfluence: { score: snapshot.timeConfluence.score },
-          optionsIntelligence,
-        };
-        const previousForDelta = prior.packetJson as unknown as Record<string, unknown>;
-        const delta = computeResearchDelta({ previous: previousForDelta, current: currentForDelta });
-        whatChanged = summarizeResearchDelta(delta, prior.createdAt);
-      }
-    } catch {
-      // Loader already logs internally; surface honest fallback rather than fabricating.
-      whatChanged = "Delta comparison unavailable - prior snapshot lookup failed.";
-    }
-  }
-
-  return {
+  const packet: AdminResearchPacket = {
     packetId: `${symbol}:${market}:${timeframe}:${Date.now()}`,
     createdAt: new Date().toISOString(),
     symbol,
@@ -471,10 +466,53 @@ export async function getAdminResearchPacket(params: {
     bias: snapshot.bias,
     primaryReason: internalResearchScore.dominantAxis ? `Dominant evidence axis: ${internalResearchScore.dominantAxis}` : "No dominant evidence axis.",
     mainRisk: trap.reasons[0] ?? "No acute trap signature detected.",
-    whatChanged,
+    whatChanged: FIRST_SCAN_WHAT_CHANGED,
     alertEligibility: eligibility,
     arcaContext,
   };
+  if (params.workspaceId) packet.whatChanged = await whatChangedForWorkspace(packet, params.workspaceId);
+  return { packet, result, bars, noBars };
+}
+
+/**
+ * Real whatChanged: diff a packet against the prior persisted packet snapshot for this
+ * (workspace, symbol, market, timeframe). Honest fallback when there is no prior snapshot.
+ * Used when a packet is built and when a saved (shared-scan) packet is handed to a workspace.
+ */
+export async function whatChangedForWorkspace(packet: AdminResearchPacket, workspaceId: string): Promise<string> {
+  try {
+    const prior = await loadPriorPacketSnapshot({
+      workspaceId,
+      symbol: packet.symbol,
+      market: packet.market,
+      timeframe: packet.timeframe,
+    });
+    if (!prior?.packetJson) return FIRST_SCAN_WHAT_CHANGED;
+    const currentForDelta: Record<string, unknown> = {
+      trustAdjustedScore: packet.internalResearchScore.trustAdjustedScore,
+      dataTrustScore: packet.internalResearchScore.dataTrustScore,
+      lifecycle: packet.internalResearchScore.lifecycle,
+      contradictionFlags: packet.contradictionFlags,
+      risks: packet.trapDetection.reasons,
+      evidence: packet.nextResearchChecks,
+      macroContext: packet.macroContext,
+      newsContext: packet.newsContext,
+      earningsContext: packet.earningsContext,
+      volatilityState: {
+        state: packet.volatilityState.state,
+        trap: packet.volatilityState.trap,
+        exhaustion: packet.volatilityState.exhaustion,
+      },
+      timeConfluence: { score: packet.timeConfluence.score },
+      optionsIntelligence: packet.optionsIntelligence,
+    };
+    const previousForDelta = prior.packetJson as unknown as Record<string, unknown>;
+    const delta = computeResearchDelta({ previous: previousForDelta, current: currentForDelta });
+    return summarizeResearchDelta(delta, prior.createdAt);
+  } catch {
+    // Loader already logs internally; surface honest fallback rather than fabricating.
+    return "Delta comparison unavailable - prior snapshot lookup failed.";
+  }
 }
 
 export async function getAdminResearchPacketsForSymbols(params: {
@@ -484,6 +522,10 @@ export async function getAdminResearchPacketsForSymbols(params: {
   workspaceId?: string;
 }): Promise<AdminResearchPacket[]> {
   const packets: AdminResearchPacket[] = [];
+  if (params.symbols.length === 0) return packets;
+  // One scan context and one memoised provider for the whole batch (was rebuilt per symbol).
+  const { context } = await buildAdminScanContext();
+  const provider = memoizeProvider(alphaVantageProvider);
   for (const symbol of params.symbols) {
     try {
       const packet = await getAdminResearchPacket({
@@ -491,6 +533,8 @@ export async function getAdminResearchPacketsForSymbols(params: {
         market: params.market,
         timeframe: params.timeframe,
         workspaceId: params.workspaceId,
+        scanContext: context,
+        provider,
       });
       packets.push(packet);
     } catch {

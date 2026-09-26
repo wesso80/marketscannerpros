@@ -188,11 +188,14 @@ export async function computeOptionsIntelligence(input: {
     dataTruth,
     missingInputs,
     fallbackScore: synthScore,
+    // PLACEHOLDER: every value above is synthetic (volatility proxy + fixed ratios), not options-chain data.
+    // Needs a real options data source before it can be used as evidence.
     note:
-      synthScore > 70
+      "PLACEHOLDER (synthetic, not real options data): " +
+      (synthScore > 70
         ? "Elevated options pressure detected; elevated volatility profile."
         : synthScore < 40
           ? "Subdued options pressure; quiet volatility regime."
-          : "Neutral options pressure; balanced market structure.",
+          : "Neutral options pressure; balanced market structure."),
   };
 }

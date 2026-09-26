@@ -10,7 +10,7 @@ export default function IndicatorMatrixCard({ data }: { data: AdminSymbolIntelli
   const rows = [
     { label: "EMA 20", val1: i.ema20.toFixed(2), val2: "", val3: "" },
     { label: "EMA 50", val1: i.ema50.toFixed(2), val2: "", val3: "" },
-    { label: "EMA 200", val1: i.ema200.toFixed(2), val2: "", val3: "" },
+    { label: "EMA 200", val1: i.ema200 == null ? "n/a (<200 bars)" : i.ema200.toFixed(2), val2: "", val3: "" },
     { label: "VWAP", val1: i.vwap.toFixed(3), val2: "", val3: "" },
     { label: "ATR", val1: i.atr.toFixed(4), val2: "", val3: "" },
     { label: "BBWP %", val1: `${i.bbwpPercentile}`, val2: "", val3: "" },

@@ -6,12 +6,17 @@
  * to have loaded via /api/admin/opportunities — which is why the cockpit
  * kept cycling the same handful of tickers.
  *
- * For every workspace with an ACTIVE `arca_portfolios` row this route:
- *   1. resolves the symbol universe for the requested market (union of
- *      DEFAULT_WATCHLISTS, deduped),
- *   2. fetches AdminResearchPackets via getAdminResearchPacketsForSymbols,
+ * It no longer runs the operator engine itself (that re-fetched every symbol
+ * from Alpha Vantage once per ACTIVE workspace). It reads the shared saved
+ * admin scan (lib/admin/sharedScan.ts, table admin_scan_results) and, for
+ * every workspace with an ACTIVE `arca_portfolios` row:
+ *   1. takes the current (status ok, not stale) saved packets for the market,
+ *      with the newest bulk-quote price applied,
+ *   2. recomputes whatChanged against that workspace's prior snapshot,
  *   3. projects to canonical AdminEdgePacket[],
- *   4. inserts into `admin_edge_packets`.
+ *   4. inserts the ones the workspace does not already have into `admin_edge_packets`.
+ * It also nudges the shared scan (a no-op when it is fresh or already running),
+ * so edge packets keep flowing even if the radar crons are retired.
  *
  * Body: `{ "market": "CRYPTO" | "EQUITIES", "timeframe"?: string, "limit"?: number }`
  *
@@ -24,10 +29,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { q } from "@/lib/db";
 import type { Market } from "@/types/operator";
-import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
+import { whatChangedForWorkspace } from "@/lib/admin/getAdminResearchPacket";
 import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
-import { persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
-import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
+import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
+import { detachRun, isRankable, readSavedScan, startSharedScan, withFreshQuote } from "@/lib/admin/sharedScan";
+import { sharedScanUniverse } from "@/lib/admin/sharedScanLogic";
 import { notifyAdmin } from "@/lib/admin/notifyAdmin";
 
 export const runtime = "nodejs";
@@ -50,9 +56,6 @@ function authorise(req: NextRequest): boolean {
   return !!cronSecret && timingSafeCompare(headerCron, cronSecret);
 }
 
-const CRYPTO_UNIVERSE = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
-const EQUITY_UNIVERSE = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
-
 export async function POST(req: NextRequest) {
   if (!authorise(req)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -66,11 +69,27 @@ export async function POST(req: NextRequest) {
     }
     const market = marketRaw as Market;
     const timeframe = typeof body.timeframe === "string" ? body.timeframe : "15m";
-    const universe = market === "CRYPTO" ? CRYPTO_UNIVERSE : EQUITY_UNIVERSE;
+    const universe = sharedScanUniverse(market === "CRYPTO" ? "CRYPTO" : "EQUITIES");
     const limit = typeof body.limit === "number" && body.limit > 0
       ? Math.min(body.limit, universe.length)
       : universe.length;
     const symbols = universe.slice(0, limit);
+
+    const scanMarket = market === "CRYPTO" ? "CRYPTO" : "EQUITIES";
+    const view = await readSavedScan({ market: scanMarket, timeframe, symbols });
+    if (!view.available) {
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: "saved_scan_unavailable",
+        message: view.message,
+        durationMs: Date.now() - started,
+      });
+    }
+    // Keep the shared scan moving (no-op when fresh or already running).
+    const scan = await startSharedScan({ market: scanMarket, timeframe, trigger: "edge" });
+    detachRun(scan);
+    const current = view.packets.filter(isRankable).map(withFreshQuote);
 
     // Active workspaces from the same source the arca-cycle cron uses.
     let workspaces: Array<{ workspace_id: string }> = [];
@@ -89,12 +108,21 @@ export async function POST(req: NextRequest) {
         durationMs: Date.now() - started,
       });
     }
-    if (workspaces.length === 0) {
+    const savedScan = {
+      ageLabel: view.ageLabel,
+      currentPackets: current.length,
+      savedPackets: view.packets.length,
+      scanStarted: scan.started,
+      scanNote: scan.started ? scan.runId : scan.message,
+    };
+    if (workspaces.length === 0 || current.length === 0) {
       return NextResponse.json({
         ok: true,
         workspacesProcessed: 0,
         market,
         symbolsRequested: symbols.length,
+        reason: workspaces.length === 0 ? "no_active_workspaces" : "no_current_saved_packets",
+        savedScan,
         durationMs: Date.now() - started,
       });
     }
@@ -102,12 +130,10 @@ export async function POST(req: NextRequest) {
     const results: Array<{ workspaceId: string; written: number; packetsBuilt: number; error?: string }> = [];
     for (const w of workspaces) {
       try {
-        const packets = await getAdminResearchPacketsForSymbols({
-          symbols,
-          market,
-          timeframe,
-          workspaceId: w.workspace_id,
-        });
+        const packets = [];
+        for (const p of current) {
+          packets.push({ ...p, whatChanged: await whatChangedForWorkspace(p, w.workspace_id) });
+        }
         const edgePackets: AdminEdgePacket[] = packets.map((p) => projectEdgePacket(p));
         // Rank by opportunityRankScore desc; pin IGNORE state to bottom.
         edgePackets.sort((a, b) => {
@@ -117,7 +143,8 @@ export async function POST(req: NextRequest) {
           return b.opportunityRankScore - a.opportunityRankScore;
         });
         edgePackets.forEach((p, i) => { p.opportunityRank = i + 1; });
-        const written = await persistEdgePackets({ workspaceId: w.workspace_id, packets: edgePackets });
+        const fresh = await filterNewEdgePackets(w.workspace_id, edgePackets);
+        const written = await persistEdgePackets({ workspaceId: w.workspace_id, packets: fresh });
         results.push({ workspaceId: w.workspace_id, written, packetsBuilt: edgePackets.length });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -138,6 +165,7 @@ export async function POST(req: NextRequest) {
       symbolsRequested: symbols.length,
       workspacesProcessed: results.length,
       totalRowsWritten: totalWritten,
+      savedScan,
       results,
       durationMs: Date.now() - started,
     });

@@ -7,7 +7,7 @@ const AXIS_LABELS: Record<keyof ResearchScoreAxes, string> = {
   momentum: "Momentum",
   volatility: "Volatility",
   time: "Time Confluence",
-  options: "Options Context",
+  options: "Options Context (placeholder proxy)",
   liquidity: "Liquidity / Structure",
   macro: "Macro / Event Safety",
   sentiment: "Symbol Trust / Sentiment",

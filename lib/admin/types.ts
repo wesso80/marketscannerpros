@@ -109,7 +109,8 @@ export type AdminSymbolIntelligence = {
   indicators: {
     ema20: number;
     ema50: number;
-    ema200: number;
+    /** null when there are fewer than 200 bars (no real EMA200). */
+    ema200: number | null;
     vwap: number;
     atr: number;
     bbwpPercentile: number;

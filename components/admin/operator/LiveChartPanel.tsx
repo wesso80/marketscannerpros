@@ -204,7 +204,7 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
         <span className="text-emerald-400">{data.regime}</span>
         <span className="text-blue-400/60">EMA20 {data.indicators.ema20.toFixed(data.price < 1 ? 6 : 2)}</span>
         <span className="text-amber-400/60">EMA50 {data.indicators.ema50.toFixed(data.price < 1 ? 6 : 2)}</span>
-        {data.indicators.ema200 > 0 && (
+        {data.indicators.ema200 != null && data.indicators.ema200 > 0 && (
           <span className="text-white/30">EMA200 {data.indicators.ema200.toFixed(data.price < 1 ? 6 : 2)}</span>
         )}
         <span className="text-white/30">ATR {data.indicators.atr.toFixed(data.price < 1 ? 6 : 4)}</span>
