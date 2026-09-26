@@ -30,6 +30,9 @@ interface Stats {
     neutral: number;
     expired: number;
     accuracyRate: number | null;
+    accuracyLabel?: string;
+    directionalHitRate?: number | null;
+    labeledOldMethod?: number;
     avgMoveCorrect: number | null;
     avgMoveWrong: number | null;
     avgConfluence: number | null;
@@ -54,6 +57,15 @@ interface Stats {
   trend: {
     recent7d: { total: number; correct: number; labeled: number; accuracyRate: number | null };
     prior30d: { total: number; correct: number; labeled: number; accuracyRate: number | null };
+  };
+  sinceFix?: {
+    since: string;
+    note: string;
+    labeled: number;
+    correct: number;
+    wrong: number;
+    accuracyRate: number | null;
+    directionalHitRate: number | null;
   };
 }
 
@@ -269,7 +281,10 @@ export default function OutcomesPage() {
           {/* ── Summary Cards ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
             <StatCard label="Total Signals" value={stats?.overall.totalSignals ?? 0} />
-            <StatCard label="Accuracy" value={stats?.overall.accuracyRate != null ? `${stats.overall.accuracyRate}%` : "—"} color="#10B981" />
+            <StatCard label="Hit rate (all-time, incl. neutral/expired, old method included)" value={stats?.overall.accuracyRate != null ? `${stats.overall.accuracyRate}%` : "—"} color="#10B981" />
+            <StatCard label="Since labeller fix (incl. neutral/expired)" value={stats?.sinceFix?.accuracyRate != null ? `${stats.sinceFix.accuracyRate}% of ${stats.sinceFix.labeled}` : "— (none yet)"} color="#10B981" />
+            <StatCard label="Since fix: correct ÷ (correct + wrong)" value={stats?.sinceFix?.directionalHitRate != null ? `${stats.sinceFix.directionalHitRate}%` : "—"} color="#10B981" />
+            <StatCard label="Old-method labels (before #167)" value={stats?.overall.labeledOldMethod ?? 0} color="#9CA3AF" />
             <StatCard label="Correct" value={stats?.overall.correct ?? 0} color="#10B981" />
             <StatCard label="Wrong" value={stats?.overall.wrong ?? 0} color="#EF4444" />
             <StatCard label="Pending" value={stats?.overall.pending ?? 0} color="#FBBF24" />
@@ -285,6 +300,12 @@ export default function OutcomesPage() {
             />
             <StatCard label="Avg Confluence" value={stats?.overall.avgConfluence ?? "—"} />
           </div>
+
+          {stats?.sinceFix?.note && (
+            <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginBottom: "1rem" }}>
+              {stats.sinceFix.note} Breakdowns below are all-time.
+            </div>
+          )}
 
           {/* ── Trend Comparison ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
