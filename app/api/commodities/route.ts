@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
+import { isMonthlyObservationCurrent, monthlyAsOfLabel } from '@/lib/commodityFreshness';
 
 // Alpha Vantage commodity endpoints
 // https://www.alphavantage.co/documentation/#commodities
@@ -65,6 +66,10 @@ interface CommodityData {
   freshnessStatus: CommodityFreshness;
   dataAgeDays: number;
   eligibleForGate: boolean;
+  /** Publication cadence of the underlying series; 'monthly' rows are judged by month, not day age. */
+  cadence: 'live' | 'daily' | 'monthly';
+  /** "monthly, as of Aug 2026" for monthly series; null otherwise. */
+  asOfLabel: string | null;
 }
 
 function dataAgeDays(date: string): number {
@@ -74,13 +79,14 @@ function dataAgeDays(date: string): number {
 }
 
 function withFreshness(
-  data: Omit<CommodityData, 'source' | 'freshnessStatus' | 'dataAgeDays' | 'eligibleForGate'>,
+  data: Omit<CommodityData, 'source' | 'freshnessStatus' | 'dataAgeDays' | 'eligibleForGate' | 'cadence' | 'asOfLabel'>,
   source: CommoditySource,
   maxAgeDays: number,
   sourceSymbol?: string,
 ): CommodityData {
   const age = dataAgeDays(data.date);
-  const stale = !Number.isFinite(age) || age > maxAgeDays;
+  const monthly = source === 'LEGACY_MONTHLY';
+  const stale = monthly ? !isMonthlyObservationCurrent(data.date) : !Number.isFinite(age) || age > maxAgeDays;
   const freshnessStatus: CommodityFreshness = stale
     ? 'STALE'
     : source === 'ETF_PROXY' || source === 'SPOT'
@@ -93,6 +99,8 @@ function withFreshness(
     freshnessStatus,
     dataAgeDays: Number.isFinite(age) ? age : 9999,
     eligibleForGate: freshnessStatus !== 'STALE',
+    cadence: monthly ? 'monthly' : source === 'LEGACY_DAILY' ? 'daily' : 'live',
+    asOfLabel: monthly ? monthlyAsOfLabel(data.date) : null,
   };
 }
 
@@ -231,6 +239,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     const isSpot = 'isPreciousMetal' in config && config.isPreciousMetal;
     const interval = !isSpot && 'interval' in config ? config.interval : 'monthly';
     const source: CommoditySource = isSpot ? 'SPOT' : interval === 'daily' ? 'LEGACY_DAILY' : 'LEGACY_MONTHLY';
+    // LEGACY_MONTHLY ignores maxAgeDays: it is judged by month (lib/commodityFreshness).
     const maxAgeDays = source === 'SPOT' ? 2 : source === 'LEGACY_DAILY' ? 10 : 45;
     const result = withFreshness({
       symbol,

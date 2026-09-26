@@ -23,6 +23,9 @@ interface CommodityData {
   freshnessStatus: 'LIVE' | 'DELAYED' | 'STALE';
   dataAgeDays: number;
   eligibleForGate: boolean;
+  cadence?: 'live' | 'daily' | 'monthly';
+  /** "monthly, as of Aug 2026" for monthly-only series. */
+  asOfLabel?: string | null;
 }
 
 interface CommoditiesResponse {
@@ -826,9 +829,9 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
 
                       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/40">
                         <span className={commodity.freshnessStatus === 'STALE' ? 'text-rose-300' : commodity.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>
-                          {commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
+                          {commodity.cadence === 'monthly' && commodity.freshnessStatus !== 'STALE' ? 'MONTHLY' : commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
                         </span>
-                        <span>Source date: {commodity.date} · age {commodity.dataAgeDays}d</span>
+                        <span>{commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
                       </div>
                     </article>
                   );
