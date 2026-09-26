@@ -1,7 +1,9 @@
 import AdminOpportunityBoard from "@/components/admin/AdminOpportunityBoard";
+import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 
 export const dynamic = "force-dynamic";
 
 export default function OpportunityBoardPage() {
-  return <AdminOpportunityBoard />;
+  // Opens on EQUITIES while crypto market data (OPERATOR_CG_FETCH_ENABLED) is off.
+  return <AdminOpportunityBoard defaultMarket={defaultAdminMarket()} />;
 }

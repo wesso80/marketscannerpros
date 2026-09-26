@@ -8,9 +8,12 @@ import { useScannerFeed } from "@/lib/admin/hooks";
 import type { ScannerHit } from "@/lib/admin/types";
 import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 
-// Full deduped crypto universe (DEFAULT_WATCHLISTS) — anchors pinned first.
+// Full deduped universe per market (DEFAULT_WATCHLISTS) — anchors pinned first.
 // Admin-only page; safe to leak the wider universe (see no-public-leakage).
-const DEFAULT_SYMBOLS = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "DOT", "SUI", "LINK", "MATIC", "XRP"]);
+const SYMBOLS: Record<"CRYPTO" | "EQUITIES", string[]> = {
+  CRYPTO: unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "DOT", "SUI", "LINK", "MATIC", "XRP"]),
+  EQUITIES: unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]),
+};
 
 function permTone(p: string): "green" | "yellow" | "red" {
   if (p === "GO") return "green";
@@ -33,11 +36,13 @@ function HitRow({ hit }: { hit: ScannerHit }) {
   );
 }
 
-export default function LiveScannerPage() {
+export default function LiveScannerClient({ cryptoEnabled }: { cryptoEnabled: boolean }) {
   const [polling, setPolling] = useState(false);
+  // Crypto only when crypto market data is on; otherwise the equities saved scan (it used to be crypto-only).
+  const [market, setMarket] = useState<"CRYPTO" | "EQUITIES">(cryptoEnabled ? "CRYPTO" : "EQUITIES");
   const { hits, health, loading, error, refetch } = useScannerFeed(
-    DEFAULT_SYMBOLS,
-    "CRYPTO",
+    SYMBOLS[market],
+    market,
     "15m",
     polling ? 60_000 : 0,
   );
@@ -48,18 +53,29 @@ export default function LiveScannerPage() {
 
       <AdminCard title="Scanner Controls" actions={
         <div className="flex items-center gap-2">
+          {(["EQUITIES", "CRYPTO"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMarket(m)}
+              disabled={m === "CRYPTO" && !cryptoEnabled}
+              title={m === "CRYPTO" && !cryptoEnabled ? "Crypto data paused (OPERATOR_CG_FETCH_ENABLED is off)" : undefined}
+              className={`rounded-lg px-3 py-1 text-xs font-medium transition disabled:opacity-40 ${market === m ? "bg-sky-500/20 text-sky-200" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
+            >
+              {m === "EQUITIES" ? "Equities" : "Crypto"}
+            </button>
+          ))}
           <button
             onClick={() => setPolling((p) => !p)}
             className={`rounded-lg px-3 py-1 text-xs font-medium transition ${polling ? "bg-emerald-500/20 text-emerald-300" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
           >
-            {polling ? "⏸ Stop Auto" : "▶ Auto-Scan"}
+            {polling ? "⏸ Stop Auto" : "▶ Auto-Refresh"}
           </button>
           <button
             onClick={refetch}
             disabled={loading}
             className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20 disabled:opacity-40 transition"
           >
-            {loading ? "Scanning…" : "↻ Scan Now"}
+            {loading ? "Loading…" : "↻ Reload saved"}
           </button>
         </div>
       }>
@@ -69,13 +85,14 @@ export default function LiveScannerPage() {
             {hits.length} hit{hits.length !== 1 ? "s" : ""} · {health?.symbolsScanned ?? 0} symbols scanned
           </span>
           {error && <span className="text-red-400 text-xs">{error}</span>}
+          {!cryptoEnabled && <span className="text-amber-300/80 text-xs">Crypto data paused</span>}
         </div>
       </AdminCard>
 
       <AdminCard title="Scanner Results">
         {hits.length === 0 ? (
           <p className="text-white/30 text-sm py-4 text-center">
-            {loading ? "Scanning symbols…" : "No hits. Click \"Scan Now\" or enable Auto-Scan."}
+            {loading ? "Loading saved results…" : "No current setups in the saved admin scan. Results refresh on the shared scan schedule; \"Rescan now\" is on Priority Desk / Operator Terminal."}
           </p>
         ) : (
           <div>

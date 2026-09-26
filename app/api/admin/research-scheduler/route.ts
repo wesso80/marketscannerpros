@@ -1,3 +1,4 @@
+import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const mode = (body?.mode || "WATCHLIST") as SchedulerMode;
-  const market = String(body?.market || "CRYPTO").toUpperCase();
+  const market = resolveAdminMarket(body?.market);
   const timeframe = String(body?.timeframe || "15m");
   const symbols = Array.isArray(body?.symbols)
     ? body.symbols.map((s: string) => String(s || "").trim().toUpperCase()).filter(Boolean)

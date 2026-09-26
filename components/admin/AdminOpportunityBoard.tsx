@@ -41,8 +41,9 @@ function formatBias(b: string): string {
   return b;
 }
 
-export default function AdminOpportunityBoard() {
-  const [market, setMarket] = useState<Market>("CRYPTO");
+/** `defaultMarket` comes from the server page (EQUITIES while crypto market data is off). */
+export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { defaultMarket?: Market } = {}) {
+  const [market, setMarket] = useState<Market>(defaultMarket);
   const [timeframe, setTimeframe] = useState<string>("15m");
   const [minScore, setMinScore] = useState<number>(0);
   const [minTrust, setMinTrust] = useState<number>(0);
@@ -208,7 +209,7 @@ export default function AdminOpportunityBoard() {
         {rows.length > 0 && (
           <> · scores {Math.min(...rows.map(r => r.score.score))}–{Math.max(...rows.map(r => r.score.score))}</>
         )}
-        {timestamp && <> · newest saved result {new Date(timestamp).toLocaleTimeString()}</>}
+        {!loading && <> · newest saved result {timestamp ? new Date(timestamp).toLocaleTimeString() : "none"}</>}
         {rows.length > 0 && filtered.length < rows.length && (
           <span style={{ color: "#F59E0B", marginLeft: 6 }}>
             ({rows.length - filtered.length} hidden by filters)

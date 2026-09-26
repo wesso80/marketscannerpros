@@ -43,9 +43,10 @@ type ScannerResponse = {
   };
 };
 
+/** `market` omitted → the server's admin default (EQUITIES while crypto market data is off). */
 export function useScannerFeed(
   symbols?: string[],
-  market = "CRYPTO",
+  market?: string,
   timeframe = "15m",
   pollInterval = 0, // 0 = no polling
 ) {
@@ -59,7 +60,8 @@ export function useScannerFeed(
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ market, timeframe });
+      const params = new URLSearchParams({ timeframe });
+      if (market) params.set("market", market);
       if (symbols?.length) params.set("symbols", symbols.join(","));
       const data = await adminFetch<ScannerResponse>(
         `/api/admin/scanner/live?${params}`,
@@ -86,9 +88,10 @@ export function useScannerFeed(
 }
 
 /* ── Symbol Intelligence ── */
+/** `market` omitted → the server infers it from the symbol (else the admin default). */
 export function useSymbolIntelligence(
   symbol: string,
-  market = "CRYPTO",
+  market?: string,
   timeframe = "15m",
 ) {
   const [data, setData] = useState<AdminSymbolIntelligence | null>(null);
@@ -100,7 +103,8 @@ export function useSymbolIntelligence(
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ market, timeframe });
+      const params = new URLSearchParams({ timeframe });
+      if (market) params.set("market", market);
       const result = await adminFetch<AdminSymbolIntelligence>(
         `/api/admin/symbol/${encodeURIComponent(symbol)}?${params}`,
       );
