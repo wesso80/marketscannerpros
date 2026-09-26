@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { companyNameCore, formatNewsPublished, mentionsCompany, selectTickerNews } from '@/lib/equityNewsRelevance';
+import { filterRelevantNews } from '@/lib/goldenEgg/newsRelevance';
 
 // Real AV NEWS_SENTIMENT tickers=AAPL feed, fetched 26 Sep 2026 18:5x AEST (the one behind OV-17).
 const feed = JSON.parse(readFileSync(resolve(__dirname, 'fixtures/avNewsSentimentAapl.json'), 'utf8')).feed;
@@ -69,5 +70,23 @@ describe('OV-17 Equity Deep-Dive news: ticker-specific, real dates, ticker senti
     const page = read('app/tools/equity-explorer/page.tsx');
     expect(page).not.toContain('new Date(article.publishedAt)');
     expect(page).toContain('formatNewsPublished(article.publishedAt)');
+  });
+
+  it('Golden Egg news uses the same rule (shared helper): same kept set on the real AAPL feed', () => {
+    const ge = filterRelevantNews(feed, 'AAPL', 'equity', { companyName: 'Apple Inc', limit: 50 }).map((i) => i.title).sort();
+    const dd = selectTickerNews(feed, 'AAPL', 'Apple Inc', { limit: 50 }).map((i) => i.title).sort();
+    expect(ge).toEqual(dd);
+    expect(ge).toHaveLength(30);
+    expect(read('lib/goldenEgg/newsRelevance.ts')).toContain("from '@/lib/equityNewsRelevance'");
+    expect(read('app/api/deep-analysis/route.ts')).toContain('filterRelevantNews(newsRes.feed, symbol, assetClass, { companyName: newsCompanyName(');
+  });
+
+  it('Golden Egg crypto news: keeps articles naming the coin or ticker, drops unrelated mid-relevance ones', () => {
+    const cfeed = [
+      { title: 'Bitcoin slips below $110k as ETF outflows continue', summary: '', source: 'A', ticker_sentiment: [{ ticker: 'CRYPTO:BTC', relevance_score: '0.55', ticker_sentiment_label: 'Bearish' }] },
+      { title: 'Miners add hashrate', summary: 'BTC difficulty hits a record', source: 'B', ticker_sentiment: [{ ticker: 'CRYPTO:BTC', relevance_score: '0.4', ticker_sentiment_label: 'Neutral' }] },
+      { title: 'Form 4 Medpace Holdings Inc', summary: 'Form 4 filing', source: 'C', ticker_sentiment: [{ ticker: 'CRYPTO:BTC', relevance_score: '0.6', ticker_sentiment_label: 'Neutral' }] },
+    ];
+    expect(filterRelevantNews(cfeed as any, 'BTC', 'crypto', { companyName: 'bitcoin' }).map((i) => i.source)).toEqual(['A', 'B']);
   });
 });

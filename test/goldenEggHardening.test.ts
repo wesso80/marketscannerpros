@@ -152,12 +152,16 @@ describe('news relevance & catalysts (Parts E, M)', () => {
     { title: 'FedEx Counts on Polish Billionaire', summary: 'x', source: 'A', ticker_sentiment: [{ ticker: 'FDX', relevance_score: '0.9', ticker_sentiment_label: 'Neutral' }] },
     { title: 'Meta accused in class action of profiting from scam ads', summary: 'lawsuit filed', source: 'B', time_published: '20260919T143000', ticker_sentiment: [{ ticker: 'META', relevance_score: '0.95', ticker_sentiment_label: 'Bearish', ticker_sentiment_score: '-0.3' }] },
     { title: 'Meta mentioned in passing', summary: '', source: 'C', ticker_sentiment: [{ ticker: 'META', relevance_score: '0.1', ticker_sentiment_label: 'Bullish' }] },
-    { title: 'Company prices $1.3B convertible senior notes offering', summary: '', source: 'D', ticker_sentiment: [{ ticker: 'META', relevance_score: '0.8', ticker_sentiment_label: 'Somewhat-Bullish' }] },
+    { title: 'Company prices $1.3B convertible senior notes offering', summary: 'Meta Platforms prices notes', source: 'D', ticker_sentiment: [{ ticker: 'META', relevance_score: '0.8', ticker_sentiment_label: 'Somewhat-Bullish' }] },
+    // AV tags unrelated issuers' filings with 0.5-0.65 relevance for the ticker; they don't name the company (OV-17 rule).
+    { title: 'Form 4 Medpace Holdings Inc For: 26 September', summary: 'Form 4 filing', source: 'F', ticker_sentiment: [{ ticker: 'META', relevance_score: '0.61', ticker_sentiment_label: 'Neutral' }] },
     { title: 'S&P Global buys OpenZeppelin', summary: '', source: 'E', ticker_sentiment: [{ ticker: 'CRYPTO:BTC', relevance_score: '0.2' }] },
   ];
   it('keeps only articles that reference the symbol above the relevance threshold', () => {
-    const items = filterRelevantNews(feed, 'META', 'equity');
+    const items = filterRelevantNews(feed, 'META', 'equity', { companyName: 'Meta Platforms, Inc.' });
     expect(items.map((i) => i.source).sort()).toEqual(['B', 'D']);
+    // Without the company name, D (0.8, names only "Meta Platforms") can't be confirmed; B is kept on relevance >= 0.9.
+    expect(filterRelevantNews(feed, 'META', 'equity').map((i) => i.source)).toEqual(['B']);
     expect(items[0].publishedAt).toBe('2026-09-19T14:30:00Z');
     expect(filterRelevantNews(feed, 'BTC', 'crypto')).toEqual([]);
     expect(avTickerKey('BTC-USD', 'crypto')).toBe('CRYPTO:BTC');
