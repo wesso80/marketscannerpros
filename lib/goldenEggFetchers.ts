@@ -71,9 +71,10 @@ export interface PriceData {
   /**
    * Longer oldest-first history used ONLY for indicator maths (EMA200 needs ~3–4×200 bars to converge to TradingView;
    * a 300-bar first-value-seeded EMA read ADBE 267.10 vs TradingView 270.16 on 24 Sep 2026). Other consumers keep the
-   * 300-bar `historical*` arrays.
+   * 300-bar `historical*` arrays. The canonical verdict engine also runs on this history (opens/dates/volumes are
+   * provided for that) so its own EMA200/ADX converge too.
    */
-  indicatorHistory?: { closes: number[]; highs: number[]; lows: number[] };
+  indicatorHistory?: { closes: number[]; highs: number[]; lows: number[]; opens?: number[]; dates?: string[]; volumes?: Array<number | null> };
   priceTs?: string;
   source?: string;
   volumeBasis?: string;
@@ -227,8 +228,8 @@ export async function fetchPrice(
       const changeBase = series.partialBar || livePrice !== last.close ? last.close : prev.close;
       const histLen = opts?.requireHistoricals ? 360 : 60;
       const tail = bars.slice(-histLen);
-      // Indicator history: up to 1,000 completed daily bars (same rule as equities) so EMA200 converges; display bars,
-      // DVE and the canonical verdict keep the 360-bar tail.
+      // Indicator history: up to 1,000 completed daily bars (same rule as equities) so EMA200 converges for the displayed
+      // indicators AND the canonical verdict; display bars and DVE keep the 360-bar tail.
       const indicatorBars = longHistory && bars.length > tail.length ? bars.slice(-CRYPTO_INDICATOR_BARS) : null;
       const vols = tail.slice(-20).map((b) => b.volume).filter((v): v is number => v != null && v > 0);
       return {
@@ -245,7 +246,11 @@ export async function fetchPrice(
         historicalLows: tail.map((b) => b.low),
         historicalDates: tail.map((b) => b.t),
         historicalVolumes: tail.map((b) => (b.volume != null && b.volume > 0 ? b.volume : null)),
-        ...(indicatorBars ? { indicatorHistory: { closes: indicatorBars.map((b) => b.close), highs: indicatorBars.map((b) => b.high), lows: indicatorBars.map((b) => b.low) } } : {}),
+        ...(indicatorBars ? { indicatorHistory: {
+          closes: indicatorBars.map((b) => b.close), highs: indicatorBars.map((b) => b.high), lows: indicatorBars.map((b) => b.low),
+          opens: indicatorBars.map((b) => b.open), dates: indicatorBars.map((b) => b.t),
+          volumes: indicatorBars.map((b) => (b.volume != null && b.volume > 0 ? b.volume : null)),
+        } } : {}),
         barInterval: series.barInterval,
         lastCompletedBarAt: series.lastCompletedBarAt,
         priceTs: detail?.last_updated || md?.last_updated || series.partialBar?.t || series.lastCompletedBarAt || undefined,
@@ -348,6 +353,9 @@ export async function fetchPrice(
         closes: indicatorDates.map(d => adj(d, '4. close')),
         highs: indicatorDates.map(d => adj(d, '2. high')),
         lows: indicatorDates.map(d => adj(d, '3. low')),
+        opens: indicatorDates.map(d => adj(d, '1. open')),
+        dates: indicatorDates,
+        volumes: indicatorDates.map(d => { const v = parseFloat(ts[d]['6. volume'] ?? ts[d]['5. volume']); const f = splitFactor.get(d) ?? 1; return Number.isFinite(v) && v > 0 ? v * f : null; }),
       },
       barInterval,
       lastCompletedBarAt: lastKey ?? null,

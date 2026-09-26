@@ -14,10 +14,23 @@ import { targetBasisLabel } from '@/lib/scoring/canonical/display';
 import type { CanonicalAssetClass, CanonicalBar, CanonicalReason, CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { Direction, GoldenEggPayload, PublicAssessment } from '@/src/features/goldenEgg/types';
 
-/** Oldest-first canonical bars from the Golden Egg price history (null volume when the provider gave none). */
-export function goldenEggCanonicalBars(priceData: Pick<PriceData, 'historicalCloses' | 'historicalOpens' | 'historicalHighs' | 'historicalLows' | 'historicalDates' | 'historicalVolumes'>): CanonicalBar[] {
-  const c = priceData.historicalCloses ?? [];
-  const o = priceData.historicalOpens, h = priceData.historicalHighs, l = priceData.historicalLows, d = priceData.historicalDates, v = priceData.historicalVolumes;
+/** Most bars the Golden Egg canonical verdict reads: enough for an SMA-seeded EMA200 to converge (1,000 bars leave
+ *  ~0.03% of the seed; 300–360 bars left ~20–37%). */
+export const GOLDEN_EGG_CANONICAL_MAX_BARS = 1000;
+
+/**
+ * Oldest-first canonical bars from the Golden Egg price history (null volume when the provider gave none). Uses the
+ * longer `indicatorHistory` (up to 1,000 bars: equities from AV 'full', crypto daily from 6 × 180-day windows) when it
+ * is complete and longer than the display tail, so the verdict's own EMA200 / ADX converge like the displayed ones (RS-4).
+ */
+export function goldenEggCanonicalBars(priceData: Pick<PriceData, 'historicalCloses' | 'historicalOpens' | 'historicalHighs' | 'historicalLows' | 'historicalDates' | 'historicalVolumes' | 'indicatorHistory'>): CanonicalBar[] {
+  const ih = priceData.indicatorHistory;
+  const n = ih?.closes?.length ?? 0;
+  const useLong = !!ih && n > (priceData.historicalCloses?.length ?? 0)
+    && ih.highs?.length === n && ih.lows?.length === n && ih.opens?.length === n && ih.dates?.length === n;
+  const c = useLong ? ih!.closes : priceData.historicalCloses ?? [];
+  const o = useLong ? ih!.opens : priceData.historicalOpens, h = useLong ? ih!.highs : priceData.historicalHighs, l = useLong ? ih!.lows : priceData.historicalLows;
+  const d = useLong ? ih!.dates : priceData.historicalDates, v = useLong ? ih!.volumes : priceData.historicalVolumes;
   if (!h || !l || h.length !== c.length || l.length !== c.length) return [];
   const bars: CanonicalBar[] = [];
   for (let i = 0; i < c.length; i++) {
@@ -55,7 +68,7 @@ export function evaluateGoldenEggCanonical(bars: CanonicalBar[], ctx: GoldenEggC
     ? [{ code: 'DATA_TRUST_DEGRADED', message: `Golden Egg data trust is ${ctx.trustLevel}` }] : [];
   const flags: CanonicalReason[] = ctx.timeframe.toLowerCase() !== 'daily'
     ? [{ code: 'UNCALIBRATED_TIMEFRAME', message: `Outcome calibration covers daily bars only; this ${ctx.timeframe} verdict is uncalibrated factor alignment (no probability or expected-R claim)` }] : [];
-  return evaluateCanonicalFromBars(bars.slice(-500), {
+  return evaluateCanonicalFromBars(bars.slice(-GOLDEN_EGG_CANONICAL_MAX_BARS), {
     symbol: ctx.symbol, assetClass: ctx.assetClass, timeframe: ctx.timeframe,
     hardBlocks, dataWatchReasons, flags, trust: ctx.trustLevel ?? null, dataTimestamp: ctx.dataTimestamp ?? bars[bars.length - 1]?.t ?? null,
     regimeOverlay: ctx.overlay ? overlayForDirection(evaluateRegimeOverlay(ctx.overlay, ctx.assetClass)) : undefined,

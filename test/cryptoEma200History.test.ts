@@ -42,6 +42,8 @@ import * as cg from '@/lib/coingecko';
 import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
 import { fetchIndicators, fetchPrice } from '@/lib/goldenEggFetchers';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
+import { goldenEggCanonicalBars } from '@/lib/goldenEgg/canonicalVerdict';
+import { computeFeatures } from '@/lib/scoring/canonical/features';
 
 const NOW = Date.parse('2026-09-25T00:05:00Z');
 const ohlcCalls = () => (cg.getOHLCRange as unknown as ReturnType<typeof vi.fn>).mock.calls.length;
@@ -89,7 +91,7 @@ describe('Golden Egg crypto EMA200 uses the long indicator history', () => {
       expect(short.indicatorHistory).toBeUndefined();
       const shortInd = await fetchIndicators('BTC', 'crypto', short.historicalCloses, short.historicalHighs, short.historicalLows, 'daily');
       const long = (await fetchPrice('BTC', 'crypto', { requireHistoricals: true, avInterval: 'daily', cryptoIndicatorHistory: true }))!;
-      expect(long.historicalCloses.length).toBe(360); // display / DVE / canonical bars unchanged
+      expect(long.historicalCloses.length).toBe(360); // display / DVE bars unchanged
       expect(long.indicatorHistory!.closes.length).toBe(1000);
       const longInd = await fetchIndicators('BTC', 'crypto', long.indicatorHistory!.closes, long.indicatorHistory!.highs, long.indicatorHistory!.lows, 'daily');
       const errShort = Math.abs(shortInd!.ema200! / full - 1);
@@ -97,6 +99,15 @@ describe('Golden Egg crypto EMA200 uses the long indicator history', () => {
       expect(errShort).toBeGreaterThan(0.003); // 360 bars: ~20% of the SMA seed still in the value
       expect(errLong).toBeLessThan(errShort / 20);
       expect(longInd!.barsUsed).toBe(1000);
+      // RS-4: the canonical verdict's own EMA200 runs on the same 1,000-bar history, not the 360-bar display tail.
+      const canonShort = goldenEggCanonicalBars(short);
+      const canonLong = goldenEggCanonicalBars(long);
+      expect(canonShort.length).toBe(360);
+      expect(canonLong.length).toBe(1000);
+      expect(canonLong[canonLong.length - 1]).toEqual(canonShort[canonShort.length - 1]); // same last bar
+      const fShort = computeFeatures(canonShort).ema200, fLong = computeFeatures(canonLong).ema200;
+      expect(Math.abs(fShort / full - 1)).toBeGreaterThan(0.003);
+      expect(Math.abs(fLong / full - 1)).toBeLessThan(Math.abs(fShort / full - 1) / 20);
     });
   }
   it('intraday / weekly crypto requests do not fetch the extra windows', async () => {
