@@ -95,6 +95,37 @@ export function parseBulkQuotePayload(payload: unknown): Map<string, BulkQuote> 
   return out;
 }
 
+/**
+ * CoinGecko /coins/markets rows → quotes by admin symbol (crypto bulk quote: every id in one call).
+ * idToSymbols maps a CoinGecko id back to the universe symbol(s) that use it. The 24h change stands in for
+ * the equity "day change" (crypto has no session close).
+ */
+export function parseCgMarketsQuotes(rows: unknown, idToSymbols: Map<string, string[]>): Map<string, BulkQuote> {
+  const out = new Map<string, BulkQuote>();
+  if (!Array.isArray(rows)) return out;
+  for (const row of rows as Array<Record<string, unknown>>) {
+    const symbols = idToSymbols.get(String(row?.id ?? ""));
+    if (!symbols?.length) continue;
+    const price = Number(row?.current_price);
+    if (!Number.isFinite(price) || price <= 0) continue;
+    const pct = row?.price_change_percentage_24h;
+    const change = row?.price_change_24h;
+    const changePercent = pct != null && Number.isFinite(Number(pct)) ? Number(pct) : null;
+    const prev = change != null && Number.isFinite(Number(change)) ? price - Number(change) : NaN;
+    const tsMs = typeof row?.last_updated === "string" ? Date.parse(row.last_updated) : NaN;
+    for (const symbol of symbols) {
+      out.set(symbol, {
+        symbol,
+        price,
+        previousClose: Number.isFinite(prev) && prev > 0 ? prev : null,
+        changePercent,
+        quoteAt: Number.isFinite(tsMs) ? new Date(tsMs).toISOString() : null,
+      });
+    }
+  }
+  return out;
+}
+
 /** Symbols the run should look at: never checked, or last checked longer ago than maxAgeMin. Universe order kept. */
 export function selectDueSymbols(
   symbols: string[],

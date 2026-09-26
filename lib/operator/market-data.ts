@@ -13,7 +13,7 @@ import type { MarketDataProvider } from './orchestrator';
 import { avTryToken, avFetch } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
 import { makeEnvelope } from './shared';
-import { getOHLCWithVolume, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { nyWallTimeToUtcMs } from '@/lib/time/nyWallClock';
 import { getBars as getCachedBars } from '@/lib/marketData';
 import { vixWithAlphaVantagePrimary } from '@/lib/scoring/canonical/regimeOverlayData';
@@ -224,61 +224,77 @@ async function fetchCachedEquityDailyBars(symbol: string, market: Market, timefr
   }
 }
 
-/* ── CoinGecko Bar Fetcher (Crypto) ──────────────────────────
- * Crypto markets are routed through CoinGecko instead of Alpha Vantage.
- * AV's crypto endpoints are restricted on the operator plan and were
- * silently returning empty bars — causing the admin-radar-crypto-*
- * Render crons to exit with HTTP 5xx (curl exit 22). CoinGecko is the
- * canonical crypto provider in this codebase (see lib/coingecko.ts).
+/* ── Crypto key levels (CoinGecko daily OHLC, AV fallback) ────
+ * Crypto price bars come straight from Alpha Vantage (CRYPTO_INTRADAY, DIGITAL_CURRENCY_DAILY for 1D).
+ * CoinGecko OHLC has no candle volume, so it cannot feed the volume-based pipeline — but key levels only
+ * need high/low/close. One CoinGecko daily-OHLC call per coin, cached 6 hours, gives PDH/PDL, midpoint and
+ * weekly/monthly levels (no VWAP without volume).
+ *
+ * If CoinGecko is paused (OPERATOR_CG_FETCH_ENABLED), has no id for the symbol, or fails, levels fall back to
+ * Alpha Vantage DIGITAL_CURRENCY_DAILY bars. A CoinGecko failure is only remembered briefly (the AV-derived
+ * levels are held for CRYPTO_LEVELS_CG_RETRY_MS, then CoinGecko is tried again) and a total miss (both
+ * providers empty) is cached for CRYPTO_LEVELS_MISS_TTL_MS — never for the full 6 hours.
  */
-
-function timeframeToCgDays(timeframe: string): 1 | 7 | 14 | 30 | 90 | 180 | 365 {
-  const tf = timeframe.toLowerCase();
-  if (['5m', '5min', '15m', '15min'].includes(tf)) return 1;
-  if (['1h', '60min', '4h', '240min'].includes(tf)) return 7;
-  if (['1d', 'd', 'daily'].includes(tf)) return 30;
-  if (['1w', 'w', 'weekly'].includes(tf)) return 90;
-  return 7;
+function envSecondsMs(name: string, fallbackSec: number): number {
+  const raw = Number.parseInt(process.env[name] || '', 10);
+  return (Number.isFinite(raw) && raw > 0 ? raw : fallbackSec) * 1000;
 }
+const CRYPTO_LEVELS_TTL_MS = envSecondsMs('OPERATOR_CG_LEVELS_TTL_SECONDS', 6 * 60 * 60);
+/** How long AV-derived levels are held after a CoinGecko failure before CoinGecko is retried. */
+const CRYPTO_LEVELS_CG_RETRY_MS = 15 * 60 * 1000;
+/** How long AV-derived levels are held while CoinGecko is paused by the kill-switch. */
+const CRYPTO_LEVELS_AV_ONLY_TTL_MS = 60 * 60 * 1000;
+/** Negative cache when neither provider returned usable daily bars. */
+const CRYPTO_LEVELS_MISS_TTL_MS = 5 * 60 * 1000;
+const CRYPTO_LEVELS_CACHE_MAX = 500;
 
-/* ── CoinGecko bar cache ──────────────────────────────────────
- * The operator radar runs server-side in the Next web process, so
- * cgFetch's AbortController signal disables Next's fetch revalidate.
- * Each scanned crypto symbol triggers getBars + getKeyLevels (two
- * separate getOHLCWithVolume calls = 4 raw CoinGecko calls/symbol),
- * and the four admin-radar-crypto-* crons share many symbols. This
- * module-level TTL cache collapses those duplicate fetches so the
- * radar stays research-fresh without burning the monthly quota.
- * TTL is env-overridable via OPERATOR_CG_BARS_TTL_SECONDS (default 900s).
- */
-const CG_BARS_CACHE = new Map<string, { bars: Bar[]; expiresAt: number }>();
-const CG_BARS_TTL_MS = (() => {
-  const raw = Number.parseInt(process.env.OPERATOR_CG_BARS_TTL_SECONDS || '', 10);
-  return Number.isFinite(raw) && raw > 0 ? raw * 1000 : 15 * 60 * 1000;
-})();
+type CryptoLevelSource = 'coingecko' | 'alphavantage' | 'none';
+const CRYPTO_LEVEL_BARS_CACHE = new Map<string, { bars: Bar[]; source: CryptoLevelSource; expiresAt: number }>();
+const CRYPTO_LEVEL_BARS_INFLIGHT = new Map<string, Promise<{ bars: Bar[]; source: CryptoLevelSource }>>();
+
+/** @internal test hook */
+export function resetCryptoLevelCache(): void {
+  CRYPTO_LEVEL_BARS_CACHE.clear();
+  CRYPTO_LEVEL_BARS_INFLIGHT.clear();
+}
 
 /* ── Admin/operator CoinGecko kill-switch ─────────────────────
  * Pauses ALL CoinGecko fetches from the operator radar path
  * (admin-radar-crypto-* crons, /admin/live-scanner, etc.) to
  * stop quota burn. Paused by default; re-enable by setting the
  * env var OPERATOR_CG_FETCH_ENABLED=true on the web service.
- * When paused, crypto symbols yield no bars and make zero CG calls.
+ * When paused, the operator path makes zero CG calls: crypto bars
+ * and key levels both come from Alpha Vantage.
  */
 export function operatorCgFetchEnabled(): boolean {
   const raw = (process.env.OPERATOR_CG_FETCH_ENABLED || '').trim().toLowerCase();
   return ['1', 'true', 'yes', 'on'].includes(raw);
 }
 
-async function fetchCGBars(
-  symbol: string,
-  market: Market,
-  timeframe: string,
-): Promise<Bar[]> {
-  // Kill-switch: admin/operator CoinGecko fetches are paused.
-  if (!operatorCgFetchEnabled()) {
-    return [];
+/**
+ * CoinGecko OHLC rows ([ms, o, h, l, c]) → one bar per UTC day, oldest first. interval=daily already returns
+ * daily candles; merging by date keeps the result correct if CoinGecko ever answers with finer candles.
+ */
+export function cgOhlcToDailyBars(rows: number[][] | null | undefined, symbol: string): Bar[] {
+  const byDay = new Map<string, Bar>();
+  const valid = (rows ?? [])
+    .filter(r => Array.isArray(r) && r.length >= 5 && r.slice(0, 5).every(Number.isFinite) && r[4] > 0)
+    .sort((a, b) => a[0] - b[0]);
+  for (const [t, o, h, l, c] of valid) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    const cur = byDay.get(day);
+    if (!cur) {
+      byDay.set(day, { symbol, market: 'CRYPTO', timeframe: '1D', timestamp: day, open: o, high: h, low: l, close: c, volume: 0 });
+    } else {
+      cur.high = Math.max(cur.high, h);
+      cur.low = Math.min(cur.low, l);
+      cur.close = c;
+    }
   }
+  return [...byDay.values()];
+}
 
+async function fetchCgDailyBars(symbol: string): Promise<Bar[]> {
   try {
     const clean = symbol.replace(/-?USD$/i, '').toUpperCase();
     const coinId = COINGECKO_ID_MAP[clean] || (await resolveSymbolToId(clean));
@@ -286,43 +302,46 @@ async function fetchCGBars(
       console.warn(`[operator:market-data] CoinGecko id not found for ${symbol}`);
       return [];
     }
-
-    const days = timeframeToCgDays(timeframe);
-
-    // Serve from cache when fresh — dedupes getBars/getKeyLevels and
-    // overlapping symbols across the crypto radar crons.
-    const cacheKey = `${coinId}:${days}`;
-    const cached = CG_BARS_CACHE.get(cacheKey);
-    const nowMs = Date.now();
-    if (cached && cached.expiresAt > nowMs) {
-      // Re-tag cached bars with the requesting symbol/timeframe label.
-      return cached.bars.map(b => ({ ...b, symbol, timeframe }));
-    }
-
-    const candles = await getOHLCWithVolume(coinId, days);
-    if (!candles || candles.length === 0 || candles.some(c => c.volumeMissing)) return [];
-
-    const bars = candles
-      .filter(c => Number.isFinite(c.c) && c.c > 0)
-      .map(c => ({
-        symbol,
-        market,
-        timeframe,
-        timestamp: new Date(c.t).toISOString(),
-        open: c.o,
-        high: c.h,
-        low: c.l,
-        close: c.c,
-        volume: Math.round(c.v || 0),
-      }))
-      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-
-    CG_BARS_CACHE.set(cacheKey, { bars, expiresAt: nowMs + CG_BARS_TTL_MS });
-    return bars;
+    return cgOhlcToDailyBars(await getOHLC(coinId, 30, { interval: 'daily' }), symbol);
   } catch (err) {
-    console.error(`[operator:market-data] CoinGecko fetch failed for ${symbol}:`, err);
+    console.error(`[operator:market-data] CoinGecko daily OHLC failed for ${symbol}:`, err);
     return [];
   }
+}
+
+/** Daily bars for crypto key levels: CoinGecko daily OHLC (6h cache) → AV daily fallback, briefly negative-cached. */
+async function fetchCryptoLevelBars(symbol: string, opts: AvCallOptions): Promise<Bar[]> {
+  const key = symbol.replace(/-?USD$/i, '').toUpperCase();
+  const now = Date.now();
+  const cached = CRYPTO_LEVEL_BARS_CACHE.get(key);
+  if (cached && cached.expiresAt > now) return cached.bars.map(b => ({ ...b, symbol }));
+
+  let inflight = CRYPTO_LEVEL_BARS_INFLIGHT.get(key);
+  if (!inflight) {
+    inflight = (async () => {
+      const cgEnabled = operatorCgFetchEnabled();
+      const cg = cgEnabled ? await fetchCgDailyBars(symbol) : [];
+      let result: { bars: Bar[]; source: CryptoLevelSource; ttl: number };
+      if (cg.length >= 2) {
+        result = { bars: cg, source: 'coingecko', ttl: CRYPTO_LEVELS_TTL_MS };
+      } else {
+        const av = await fetchAVBars(symbol, 'CRYPTO', '1D', opts);
+        result = av.length >= 2
+          ? { bars: av, source: 'alphavantage', ttl: cgEnabled ? CRYPTO_LEVELS_CG_RETRY_MS : CRYPTO_LEVELS_AV_ONLY_TTL_MS }
+          : { bars: [], source: 'none', ttl: CRYPTO_LEVELS_MISS_TTL_MS };
+      }
+      if (CRYPTO_LEVEL_BARS_CACHE.size >= CRYPTO_LEVELS_CACHE_MAX) {
+        const t = Date.now();
+        for (const [k, v] of CRYPTO_LEVEL_BARS_CACHE) if (v.expiresAt <= t) CRYPTO_LEVEL_BARS_CACHE.delete(k);
+        if (CRYPTO_LEVEL_BARS_CACHE.size >= CRYPTO_LEVELS_CACHE_MAX) CRYPTO_LEVEL_BARS_CACHE.clear();
+      }
+      CRYPTO_LEVEL_BARS_CACHE.set(key, { bars: result.bars, source: result.source, expiresAt: Date.now() + result.ttl });
+      return result;
+    })().finally(() => CRYPTO_LEVEL_BARS_INFLIGHT.delete(key));
+    CRYPTO_LEVEL_BARS_INFLIGHT.set(key, inflight);
+  }
+  const { bars } = await inflight;
+  return bars.map(b => ({ ...b, symbol }));
 }
 
 /**
@@ -578,12 +597,9 @@ export type OperatorProviderOptions = AvCallOptions;
  */
 export function createOperatorProvider(opts: OperatorProviderOptions = {}): MarketDataProvider {
   const bars = async (symbol: string, market: Market, timeframe: string): Promise<Bar[]> => {
-    if (market === 'CRYPTO') {
-      const cg = await fetchCGBars(symbol, market, timeframe);
-      if (cg.length > 0) return cg;
-      // CoinGecko miss — fall back to AV crypto endpoints as a secondary
-      return fetchAVBars(symbol, market, timeframe, opts);
-    }
+    // Crypto: straight to AV CRYPTO_INTRADAY (DIGITAL_CURRENCY_DAILY for 1D). CoinGecko OHLC has no candle
+    // volume, so asking it first only cost a wasted CoinGecko call per bar request.
+    if (market === 'CRYPTO') return fetchAVBars(symbol, market, timeframe, opts);
     if (!isIntradayTimeframe(timeframe)) return fetchCachedEquityDailyBars(symbol, market, timeframe);
     return fetchAVBars(symbol, market, timeframe, opts);
   };
@@ -593,7 +609,7 @@ export function createOperatorProvider(opts: OperatorProviderOptions = {}): Mark
     async getKeyLevels(symbol: string, market: Market): Promise<KeyLevel[]> {
       // Daily bars → levels
       const daily = market === 'CRYPTO'
-        ? await fetchCGBars(symbol, market, '1D')
+        ? await fetchCryptoLevelBars(symbol, opts)
         : await fetchCachedEquityDailyBars(symbol, market, '1D');
       return computeKeyLevels(daily);
     },
@@ -656,10 +672,7 @@ export async function getMarketSnapshot(
   req: MarketDataSnapshotRequest,
 ): Promise<MarketDataSnapshot> {
   const bars = req.market === 'CRYPTO'
-    ? await (async () => {
-        const cg = await fetchCGBars(req.symbol, req.market, req.timeframe);
-        return cg.length > 0 ? cg : fetchAVBars(req.symbol, req.market, req.timeframe);
-      })()
+    ? await fetchAVBars(req.symbol, req.market, req.timeframe)
     : isIntradayTimeframe(req.timeframe)
       ? await fetchAVBars(req.symbol, req.market, req.timeframe)
       : await fetchCachedEquityDailyBars(req.symbol, req.market, req.timeframe);

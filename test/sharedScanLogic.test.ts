@@ -4,6 +4,7 @@ import {
   diffRadar,
   formatScanAge,
   parseBulkQuotePayload,
+  parseCgMarketsQuotes,
   selectDeepScanSymbols,
   selectDueSymbols,
   sharedScanUniverse,
@@ -141,5 +142,21 @@ describe('helpers', () => {
     expect(formatScanAge(30)).toBe('just now');
     expect(formatScanAge(12 * 60)).toBe('12 min ago');
     expect(formatScanAge(3 * 3600)).toBe('3 h ago');
+  });
+});
+
+describe('parseCgMarketsQuotes (crypto bulk quote)', () => {
+  it('maps CoinGecko ids back to universe symbols with price, 24h change, previous price and quote time', () => {
+    const ids = new Map([['bitcoin', ['BTC']], ['ethereum', ['ETH']], ['cortex', ['CTXC']]]);
+    const out = parseCgMarketsQuotes([
+      { id: 'bitcoin', current_price: 65000, price_change_percentage_24h: -2.5, price_change_24h: -1666.67, last_updated: '2026-09-26T14:00:00.000Z' },
+      { id: 'ethereum', current_price: 0, price_change_percentage_24h: 1 }, // no price → dropped
+      { id: 'cortex', current_price: 0.01, price_change_percentage_24h: null, price_change_24h: null, last_updated: 'bad' },
+      { id: 'unknown-coin', current_price: 5 },
+    ], ids);
+    expect([...out.keys()]).toEqual(['BTC', 'CTXC']);
+    expect(out.get('BTC')).toEqual({ symbol: 'BTC', price: 65000, previousClose: 66666.67, changePercent: -2.5, quoteAt: '2026-09-26T14:00:00.000Z' });
+    expect(out.get('CTXC')).toMatchObject({ changePercent: null, previousClose: null, quoteAt: null });
+    expect(parseCgMarketsQuotes(null, ids).size).toBe(0);
   });
 });

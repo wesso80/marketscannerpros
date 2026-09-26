@@ -10,6 +10,7 @@
  * restarts and is the same on every instance.
  *
  * Body: { watchlist: string, timeframe?: string }
+ * Page (non-cron) POSTs only start 15m runs; other timeframes return the saved state without a run.
  * @internal PRIVATE — operator auth required
  */
 
@@ -27,6 +28,8 @@ export const maxDuration = 60;
 
 const DEFAULT_WATCHLIST = 'us-mega-cap';
 const DEFAULT_TIMEFRAME = '15m';
+/** Timeframes a page (non-cron) POST may start a shared scan for. */
+const PAGE_RUN_TIMEFRAMES = new Set(['15m', '15min']);
 
 /** Scan requests handled by this process (display only). */
 let totalScans = 0;
@@ -117,6 +120,29 @@ export async function POST(req: NextRequest) {
         error: 'Unknown watchlist',
         availableWatchlists: Object.keys(DEFAULT_WATCHLISTS),
       }, { status: 400 });
+    }
+
+    // The Operator Engine page auto-loop may only start 15m runs (the admin scan timeframe the crons keep
+    // fresh). Any other timeframe from a page returns the saved state without starting a run, so a tab left
+    // looping on 1H/1D cannot start a whole-universe scan every cycle.
+    if (!isCron && !PAGE_RUN_TIMEFRAMES.has(timeframe.toLowerCase())) {
+      const data = await savedState(watchlistKey, timeframe);
+      return NextResponse.json({
+        ok: true,
+        data: {
+          ...data,
+          scanResult: {
+            requestId: null,
+            started: false,
+            skipped: 'timeframe_not_allowed',
+            message: `The auto-scan loop only starts ${DEFAULT_TIMEFRAME} shared scans; showing saved ${timeframe} results without starting a run.`,
+            symbolsScanned: data.symbolsScanned,
+            radarCount: data.liveRadar.length,
+            errorCount: data.errors.length,
+            durationMs: data.lastScanDurationMs,
+          },
+        },
+      });
     }
 
     const start: StartSharedScanResult = await startSharedScan({
