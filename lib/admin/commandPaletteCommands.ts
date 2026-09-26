@@ -59,7 +59,6 @@ export const ADMIN_COMMANDS: AdminCommand[] = [
   { id: "cmd:risk", label: "Risk Governor", category: "Risk", href: "/admin/risk" },
   { id: "cmd:alerts", shortcut: "A", label: "Alerts", category: "Risk", href: "/admin/alerts" },
   { id: "cmd:discord", label: "Discord Bridge", category: "Risk", href: "/admin/discord-bridge" },
-  { id: "cmd:reporting", label: "Nasdaq Reporting", category: "Risk", href: "/admin/reporting" },
 
   // System
   { id: "cmd:data-health", shortcut: "D", label: "Data Health", description: "Provider feeds, webhooks, scanners", category: "System", href: "/admin/data-health", keywords: ["diagnostics", "system", "feed"] },

@@ -13,6 +13,7 @@
 
 import { q } from '@/lib/db';
 import { readMacroSnapshot, type MacroSnapshot } from '@/lib/macro/fred';
+import { assessMacroFreshness } from '@/lib/dailyPacket/macroFreshness';
 import { buildDriftReport, type DriftReport } from '@/lib/behavioral/drift';
 import { buildCalibrationReport, type CalibrationReport } from '@/lib/calibration/calibration';
 import {
@@ -71,11 +72,6 @@ export interface DailyOperatorPacket {
 function ageDays(iso: string | null): number | null {
   if (!iso) return null;
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400_000);
-}
-
-function freshnessFromAge(days: number | null, staleAfterDays: number): DailyPacketSection['freshness'] {
-  if (days === null) return 'unknown';
-  return days <= staleAfterDays ? 'fresh' : 'stale';
 }
 
 async function readOpenSetups(workspaceId: string, limit = 25): Promise<OpenSetup[]> {
@@ -141,16 +137,17 @@ export async function buildDailyPacket(workspaceId: string): Promise<DailyOperat
   let macroSection: DailyPacketSection = { source: 'macro_series (FRED)', lastUpdated: null, freshness: 'unknown' };
   try {
     macro = await readMacroSnapshot();
-    const newest = macro.reduce<string | null>((acc, m) => {
-      if (!m.latestObservedOn) return acc;
-      return !acc || m.latestObservedOn > acc ? m.latestObservedOn : acc;
-    }, null);
+    // Judged by the OLDEST required daily series (it used to take the newest of all, so one fresh series hid
+    // stale VIX / HY OAS). See lib/dailyPacket/macroFreshness.ts.
+    const mf = assessMacroFreshness(macro);
     macroSection = {
       source: 'macro_series (FRED)',
-      lastUpdated: newest,
-      freshness: freshnessFromAge(ageDays(newest), 4),
+      lastUpdated: mf.lastUpdated,
+      freshness: mf.freshness,
+      ...(mf.notes ? { notes: mf.notes } : {}),
     };
     if (macro.length === 0) warnings.push('No macro series ingested — Macro Pulse pane will be empty.');
+    else if (mf.warning) warnings.push(mf.warning);
   } catch (e: unknown) {
     macroSection.notes = `error: ${e instanceof Error ? e.message : String(e)}`;
   }

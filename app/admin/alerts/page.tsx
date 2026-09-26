@@ -67,7 +67,8 @@ export default function AlertsPage() {
     setError("");
     try {
       const [scanRes, riskRes, alertRes] = await Promise.all([
-        fetch("/api/admin/scanner/live?market=CRYPTO&timeframe=15m", { headers: authHeaders(), credentials: "include" }),
+        // No market param: the server picks the default (EQUITIES while crypto data is switched off).
+        fetch("/api/admin/scanner/live?timeframe=15m", { headers: authHeaders(), credentials: "include" }),
         fetch("/api/admin/risk/state", { headers: authHeaders(), credentials: "include" }),
         fetch("/api/admin/research-alerts?limit=25", { headers: authHeaders(), credentials: "include" }),
       ]);

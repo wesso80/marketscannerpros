@@ -1,6 +1,7 @@
 /**
  * GET /api/admin/system/health — System health status for admin terminal
- * Returns health of all sub-systems: feed, scanner, cache, API.
+ * Returns what is actually measured: DB ping and the shared-scan run log (feed/scanner). Websocket, cache and
+ * API latency are not probed and are reported as NOT MONITORED.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,6 +9,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { feedLabel, loadScannerHealth, NOT_MONITORED, scannerLabel } from "@/lib/admin/healthProbes";
 
 export const runtime = "nodejs";
 
@@ -31,34 +33,29 @@ export async function GET(req: NextRequest) {
       dbOk = false;
     }
 
-    // Check recent scan activity
-    let lastScan: string | null = null;
-    let recentErrors = 0;
-    try {
-      const rows = await q(
-        `SELECT created_at FROM operator_state ORDER BY created_at DESC LIMIT 1`,
-      );
-      lastScan = rows[0]?.created_at ?? null;
-    } catch {
-      // Table may not exist yet
-    }
+    // Scanner state from the shared saved scan's run log (admin_scan_runs). It used to read operator_state,
+    // which the shared scan no longer writes, and called the scanner RUNNING if any row had ever existed.
+    const scanner = dbOk ? await loadScannerHealth() : null;
+    const failedLastRun = scanner?.markets.filter((m) => m.status !== "PAUSED").reduce((n, m) => n + m.failed, 0) ?? 0;
 
     const health = {
-      feed: dbOk ? "HEALTHY" : "DEGRADED",
-      websocket: "DISCONNECTED",
-      scanner: lastScan ? "RUNNING" : "IDLE",
-      cache: dbOk ? "OK" : "DEGRADED",
-      api: "LOW_LATENCY",
-      lastScanAt: lastScan,
-      errorsCount: recentErrors,
+      feed: feedLabel(scanner),
+      // Not measured anywhere: there is no websocket, and API latency / cache are not probed here.
+      websocket: NOT_MONITORED,
+      scanner: scannerLabel(scanner),
+      cache: NOT_MONITORED,
+      api: NOT_MONITORED,
+      lastScanAt: scanner?.lastRunAt ?? null,
+      errorsCount: failedLastRun,
       dbConnected: dbOk,
+      scannerDetail: scanner,
     };
 
     return NextResponse.json(health);
   } catch (err: unknown) {
     console.error("[admin:system:health] Error:", err);
     return NextResponse.json(
-      { feed: "ERROR", websocket: "DISCONNECTED", scanner: "ERROR", cache: "ERROR", api: "ERROR" },
+      { feed: "ERROR", websocket: NOT_MONITORED, scanner: "ERROR", cache: NOT_MONITORED, api: NOT_MONITORED },
       { status: 500 },
     );
   }

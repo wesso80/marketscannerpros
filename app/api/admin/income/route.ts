@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminAuth';
 import { wrapTruth } from '@/lib/admin';
+import { PLAN_PRICES } from '@/lib/planPrices';
 
-// Subscription pricing
-const SUBSCRIPTION_PRICES = {
-  pro: 25,
-  pro_trader: 50,
+// Subscription pricing: the one paid plan (Pro, $24.99/mo list price, from lib/planPrices.ts). Legacy
+// `pro_trader` subscribers are billed as Pro (the 2026 pricing simplification), so they are valued at the Pro
+// price too, not the old $50. user_subscriptions has no price / amount / interval column, so revenue here is a
+// list-price estimate (every paid sub valued at the monthly list price); it is not what Stripe actually charged.
+export const SUBSCRIPTION_PRICES = {
+  pro: PLAN_PRICES.pro.monthlyRaw,
+  pro_trader: PLAN_PRICES.pro.monthlyRaw,
   free: 0,
 };
+
+export const REVENUE_BASIS =
+  'List-price estimate: active Stripe-linked subscriptions × Pro monthly list price. Legacy Pro Trader subs are billed as Pro. ' +
+  'The database stores no charged amount, billing interval, discount or refund, so yearly plans, coupons and refunds are not reflected.';
 
 // Monthly fixed costs
 const FIXED_COSTS = {
@@ -91,12 +99,13 @@ export async function GET(req: NextRequest) {
       GROUP BY tier
     `);
 
-    // Get churn (cancelled) this month
+    // Get churn (cancelled) this month. The Stripe webhook writes 'canceled' (Stripe's spelling); older rows
+    // may say 'cancelled', so count both (it used to count only 'cancelled', i.e. always 0).
     const churnThisMonthRows = await q(`
       SELECT COUNT(*) as count 
       FROM user_subscriptions 
       WHERE updated_at >= date_trunc('month', CURRENT_DATE)
-        AND status = 'cancelled'
+        AND status IN ('canceled', 'cancelled')
     `);
 
     // Get AI costs for this month (from ai_usage table)
@@ -217,6 +226,7 @@ export async function GET(req: NextRequest) {
         cost: aiCost,
       },
       pricing: SUBSCRIPTION_PRICES,
+      revenueBasis: REVENUE_BASIS,
       history: Object.entries(monthlyData).map(([month, data]) => ({
         month,
         ...data,

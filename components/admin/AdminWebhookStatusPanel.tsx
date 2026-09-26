@@ -11,7 +11,7 @@ interface WebhookRow {
   id: string;
   label: string;
   lastReceivedAt?: string | null;
-  lastStatus?: "OK" | "FAILED" | "STALE" | "UNKNOWN";
+  lastStatus?: "OK" | "IDLE" | "FAILED" | "NOT_CONFIGURED" | "NO_DATA" | "NOT_MONITORED" | "UNKNOWN";
   count24h?: number;
   failures24h?: number;
   note?: string;
@@ -29,7 +29,7 @@ function statusColor(status?: WebhookRow["lastStatus"]): string {
       return "#10B981";
     case "FAILED":
       return "#EF4444";
-    case "STALE":
+    case "NOT_CONFIGURED":
       return "#F59E0B";
     default:
       return "#94A3B8";
@@ -72,7 +72,7 @@ export default function AdminWebhookStatusPanel() {
     <section style={{ marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "0.6rem" }}>
         <div style={{ color: "#E5E7EB", fontWeight: 700 }}>Webhook Activity</div>
-        <div style={{ color: "#64748B", fontSize: 11 }}>Receive-only · last 24h</div>
+        <div style={{ color: "#64748B", fontSize: 11 }}>Read-only · last 24h · NOT MONITORED = we do not log it</div>
       </div>
       {loading && rows.length === 0 ? (
         <div style={{ color: "#94A3B8", fontSize: 13 }}>Loading webhook activity…</div>
@@ -101,7 +101,7 @@ export default function AdminWebhookStatusPanel() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ color: "#E5E7EB", fontWeight: 700, fontSize: 13 }}>{row.label}</div>
                 <div style={{ color: statusColor(row.lastStatus), fontSize: 11, fontWeight: 800 }}>
-                  {row.lastStatus ?? "UNKNOWN"}
+                  {(row.lastStatus ?? "UNKNOWN").replace(/_/g, " ")}
                 </div>
               </div>
               <div style={{ color: "#94A3B8", fontSize: 11, marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>

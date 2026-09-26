@@ -22,6 +22,7 @@ interface DriftSignal {
   severity: 'low' | 'medium' | 'high';
   value: number | string | null;
   detail: string;
+  noData?: boolean;
 }
 interface DriftReport {
   workspaceId: string;
@@ -152,8 +153,8 @@ export default function OperatorHealthPage() {
               <div key={s.key} style={{ background: '#0B1220', border: '1px solid #1F2937', borderRadius: 8, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 }}>{s.label}</div>
-                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, color: 'var(--msp-bg)', background: sevColor(s.severity) }}>
-                    {s.severity}
+                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, color: 'var(--msp-bg)', background: s.noData ? '#6B7280' : sevColor(s.severity) }}>
+                    {s.noData ? 'no data' : s.severity}
                   </span>
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: '#F9FAFB', marginTop: 6 }}>{s.value ?? '—'}</div>

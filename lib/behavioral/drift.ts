@@ -23,6 +23,8 @@ export interface DriftSignal {
   severity: 'low' | 'medium' | 'high';
   value: number | string | null;
   detail: string;
+  /** True when there is nothing to measure yet (e.g. no taken setups); UIs show "no data", not a severity. */
+  noData?: boolean;
 }
 
 export interface DriftReport {
@@ -148,7 +150,18 @@ async function detectDiscipline(workspaceId: string, days: number): Promise<Drif
   );
   const taken = Number(rows[0]?.taken ?? '0');
   const withGo = Number(rows[0]?.with_go ?? '0');
-  const pct = taken === 0 ? 0 : (withGo / taken) * 100;
+  if (taken === 0) {
+    // Nothing taken in the window: nothing to judge. It used to compute 0% → 'high', a false drift warning.
+    return {
+      key: 'discipline',
+      label: 'Discipline (taken with go-checklist)',
+      severity: 'low',
+      value: null,
+      detail: 'No taken setups yet — no data.',
+      noData: true,
+    };
+  }
+  const pct = (withGo / taken) * 100;
   const severity: DriftSignal['severity'] = pct >= 80 ? 'low' : pct >= 50 ? 'medium' : 'high';
   return {
     key: 'discipline',

@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 interface ProviderRow {
   id: string;
   label: string;
-  status: "OK" | "DEGRADED" | "DOWN" | "UNKNOWN";
+  status: "OK" | "CONFIGURED" | "PAUSED" | "DEGRADED" | "DOWN" | "UNKNOWN";
   latencyMs?: number | null;
   lastSeen?: string | null;
   note?: string;
@@ -29,6 +29,8 @@ function tone(status: ProviderRow["status"]): { color: string; bg: string; borde
       return { color: "#10B981", bg: "rgba(16,185,129,0.10)", border: "rgba(16,185,129,0.32)" };
     case "DEGRADED":
       return { color: "#F59E0B", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.32)" };
+    case "CONFIGURED":
+      return { color: "#60A5FA", bg: "rgba(96,165,250,0.10)", border: "rgba(96,165,250,0.28)" };
     case "DOWN":
       return { color: "#EF4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.32)" };
     default:
