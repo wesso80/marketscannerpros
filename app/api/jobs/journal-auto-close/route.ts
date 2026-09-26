@@ -5,17 +5,14 @@ import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/trad
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { ingestTradeOutcome, maybeAutoEvolve } from '@/lib/intelligence/ingestOutcome';
 import { alertCronFailure } from '@/lib/opsAlerting';
+import { evaluateCloseReason, isOptionEntry, resolveAutoCloseMark, type ExitReason } from '@/lib/journal/autoClose';
+import { fetchOptionContractMark } from '@/lib/options/contractMarkServer';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 const QUOTE_FETCH_TIMEOUT_MS = 10_000; // 10s max for price fetch
 const WALL_CLOCK_LIMIT_MS = 90_000;     // 90s hard stop (leaves buffer for curl's 120s max-time)
-
-type ExitReason = 'tp' | 'sl' | 'time' | 'drawdown';
-
-/** Emergency drawdown threshold — auto-close if trade loses more than 30% */
-const MAX_DRAWDOWN_PCT = 30;
 
 type OpenJournalRow = {
   id: number;
@@ -31,6 +28,10 @@ type OpenJournalRow = {
   target: string | number | null;
   is_open: boolean;
   status: string | null;
+  trade_type: string | null;
+  option_type: string | null;
+  strike_price: string | number | null;
+  expiration_date: string | Date | null;
 };
 
 function parseNumber(value: unknown): number | null {
@@ -119,43 +120,6 @@ async function fetchCurrentPrice(req: NextRequest, symbol: string, assetClass: '
   return price;
 }
 
-function computeTimeOpenDays(tradeDate: string): number {
-  const openedMs = Date.parse(`${tradeDate}T00:00:00.000Z`);
-  if (!Number.isFinite(openedMs)) return 0;
-  const elapsed = Date.now() - openedMs;
-  return Math.max(0, Math.floor(elapsed / (24 * 60 * 60 * 1000)));
-}
-
-function evaluateCloseReason(entry: OpenJournalRow, currentPrice: number): ExitReason | null {
-  const stop = parseNumber(entry.stop_loss);
-  const target = parseNumber(entry.target);
-  const side = String(entry.side || 'LONG').toUpperCase() as 'LONG' | 'SHORT';
-
-  const stopHit = stop != null && (side === 'LONG' ? currentPrice <= stop : currentPrice >= stop);
-  const targetHit = target != null && (side === 'LONG' ? currentPrice >= target : currentPrice <= target);
-
-  if (stopHit) return 'sl';
-  if (targetHit) return 'tp';
-
-  const timeOpenDays = computeTimeOpenDays(entry.trade_date);
-  if (timeOpenDays >= 5) {
-    return 'time';
-  }
-
-  // Emergency drawdown protection — close trades bleeding > MAX_DRAWDOWN_PCT
-  const entryPrice = parseNumber(entry.entry_price);
-  if (entryPrice && entryPrice > 0) {
-    const pnlPct = side === 'LONG'
-      ? ((currentPrice - entryPrice) / entryPrice) * 100
-      : ((entryPrice - currentPrice) / entryPrice) * 100;
-    if (pnlPct <= -MAX_DRAWDOWN_PCT) {
-      return 'drawdown';
-    }
-  }
-
-  return null;
-}
-
 async function ensureCloseSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'OPEN'`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS close_source VARCHAR(20)`);
@@ -170,6 +134,8 @@ async function closeEntry(args: {
   entryId: number;
   exitPrice: number;
   exitReason: ExitReason;
+  /** Appended to the auto-close note, e.g. "option premium per share, EOD 2026-09-25". */
+  priceNote?: string | null;
 }) {
   const result = await tx(async (client) => {
     const entryRes = await client.query<{
@@ -234,14 +200,16 @@ async function closeEntry(args: {
               status = 'CLOSED',
               close_source = 'mark',
               exit_reason = $9,
-              followed_plan = true,
+              -- Automatic close: whether the plan was followed is unknown, not "yes".
+              followed_plan = NULL,
               notes = CONCAT(
                 COALESCE(notes, ''),
                 CASE WHEN notes IS NULL OR notes = '' THEN '' ELSE E'\n\n' END,
                 'Auto-close sweep: ',
                 UPPER($9::text),
                 ' at ',
-                $3::text
+                $3::text,
+                CASE WHEN $10::text IS NULL THEN '' ELSE CONCAT(' (', $10::text, ')') END
               ),
               updated_at = NOW()
         WHERE workspace_id = $1 AND id = $2
@@ -257,6 +225,7 @@ async function closeEntry(args: {
         rMultiple,
         outcome,
         args.exitReason,
+        args.priceNote ?? null,
       ]
     );
 
@@ -285,7 +254,8 @@ export async function POST(req: NextRequest) {
 
     const openEntries = await q<OpenJournalRow>(
       `SELECT id, workspace_id, symbol, asset_class, side, trade_date, entry_price, quantity,
-              risk_amount, stop_loss, target, is_open, status
+              risk_amount, stop_loss, target, is_open, status,
+              trade_type, option_type, strike_price, expiration_date
          FROM journal_entries
         WHERE is_open = true
           AND COALESCE(status, 'OPEN') <> 'CLOSED'
@@ -299,6 +269,7 @@ export async function POST(req: NextRequest) {
     let closed = 0;
     let alreadyClosed = 0;
     let priceUnavailable = 0;
+    let optionMarkUnavailable = 0;
     const closedTrades: Array<{ workspaceId: string; journalEntryId: number; symbol: string; reason: ExitReason; exitPrice: number }> = [];
     const skipped: Array<{ workspaceId: string; journalEntryId: number; symbol: string; reason: string }> = [];
 
@@ -310,12 +281,24 @@ export async function POST(req: NextRequest) {
       }
       checked += 1;
 
+      // Options are checked against the contract's own premium mark (never the underlying's price);
+      // with no usable mark the trade is skipped, not closed.
       const assetClass = normalizeAssetClass(entry.asset_class || inferAssetClassFromSymbol(entry.symbol));
-      const currentPrice = await fetchCurrentPrice(req, entry.symbol, assetClass).catch(() => null);
-      if (!currentPrice) {
-        priceUnavailable += 1;
+      const mark = await resolveAutoCloseMark(entry, {
+        fetchQuote: () => fetchCurrentPrice(req, entry.symbol, assetClass),
+        fetchOptionMark: fetchOptionContractMark,
+      });
+      if (!mark.ok) {
+        if (isOptionEntry(entry)) {
+          optionMarkUnavailable += 1;
+          skipped.push({ workspaceId: entry.workspace_id, journalEntryId: entry.id, symbol: entry.symbol, reason: mark.reason });
+          console.warn(`[journal-auto-close] skipped option trade ${entry.id} (${entry.symbol}): ${mark.reason}; not closed`);
+        } else {
+          priceUnavailable += 1;
+        }
         continue;
       }
+      const currentPrice = mark.price;
 
       // Sanity check: reject prices wildly inconsistent with entry (cross-contamination guard)
       const ep = parseNumber(entry.entry_price);
@@ -348,6 +331,7 @@ export async function POST(req: NextRequest) {
         entryId: entry.id,
         exitPrice: currentPrice,
         exitReason: closeReason,
+        priceNote: mark.note,
       });
 
       if (closeResult.status === 'already_closed') {
@@ -429,6 +413,7 @@ export async function POST(req: NextRequest) {
       closed,
       alreadyClosed,
       priceUnavailable,
+      optionMarkUnavailable,
       skippedCount: skipped.length,
       closedTrades,
       skipped,
