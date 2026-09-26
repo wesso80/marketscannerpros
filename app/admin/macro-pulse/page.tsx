@@ -118,13 +118,12 @@ export default function MacroPulsePage() {
       {error && (
         <div style={{ background: '#7F1D1D', border: '1px solid #B91C1C', color: '#FECACA', padding: 12, borderRadius: 8, marginBottom: 16 }}>
           <strong>Error:</strong> {error}
-          {error.includes('no-api-key') && <div style={{ marginTop: 6 }}>Set <code>FRED_API_KEY</code> env var to enable ingest.</div>}
         </div>
       )}
 
       {snapshot && snapshot.length === 0 && (
         <div style={{ background: '#0B1220', border: '1px solid #374151', borderRadius: 8, padding: 24, textAlign: 'center', color: '#9CA3AF' }}>
-          No macro series ingested yet. Click <strong>Ingest now</strong> (requires FRED_API_KEY).
+          No macro series ingested yet. Click <strong>Ingest now</strong> (uses the FRED API when FRED_API_KEY works, otherwise FRED&apos;s keyless CSV).
         </div>
       )}
 

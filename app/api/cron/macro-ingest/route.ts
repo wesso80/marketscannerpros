@@ -44,22 +44,36 @@ export async function POST(req: NextRequest) {
   const started = Date.now();
   try {
     const result = await ingestFred({ sinceISO: since, only });
+    const requiredFailed = result.requiredFailed ?? [];
+    const apiFallbacks = result.apiFallbacks ?? [];
     // Series errors used to come back as HTTP 200 with ok:false, which `curl -f` in the
     // Render cron treats as success, so a broken ingest went unnoticed (OV-1). Tell the
-    // admin about any failed series, and fail the request when nothing was ingested.
+    // admin about any failed series, and fail the request when nothing was ingested or
+    // when a series the market regime needs (VIX, HY OAS) could not be fetched.
     if (result.failed > 0) {
       const failedSeries = result.perSeries.filter((s) => s.error).map((s) => `${s.seriesKey}: ${s.error}`);
+      console.error(`[macro-ingest] ${result.failed} series failed (ingested ${result.ingested} rows): ${failedSeries.join(' | ')}`);
       notifyAdmin({
-        subject: 'macro-ingest: some FRED series failed',
+        subject: requiredFailed.length > 0 ? `macro-ingest: regime series failed (${requiredFailed.join(', ')})` : 'macro-ingest: some FRED series failed',
         body: `FRED ingest (${result.via ?? 'api'}) failed for ${result.failed} series:\n${failedSeries.join('\n')}`,
-        severity: result.ingested === 0 ? 'error' : 'warn',
-        context: { since: since ?? null, only: only ? only.join(',') : null, ingested: result.ingested, durationMs: Date.now() - started },
+        severity: result.ingested === 0 || requiredFailed.length > 0 ? 'error' : 'warn',
+        context: { since: since ?? null, only: only ? only.join(',') : null, ingested: result.ingested, requiredFailed: requiredFailed.join(',') || null, durationMs: Date.now() - started },
       }).catch(() => {});
     }
-    const status = result.failed > 0 && result.ingested === 0 ? 502 : 200;
+    // The FRED API failing while the CSV worked usually means FRED_API_KEY on the web service is wrong or revoked.
+    if (apiFallbacks.length > 0) {
+      notifyAdmin({
+        subject: 'macro-ingest: FRED API failed, used keyless CSV',
+        body: `The FRED API failed for ${apiFallbacks.length} series, so the keyless CSV was used. Check FRED_API_KEY on the web service.\nFirst error: ${apiFallbacks[0].seriesKey}: ${apiFallbacks[0].apiError}`,
+        severity: 'warn',
+        context: { series: apiFallbacks.map((f) => f.seriesKey).join(','), durationMs: Date.now() - started },
+      }).catch(() => {});
+    }
+    const status = result.failed > 0 && (result.ingested === 0 || requiredFailed.length > 0) ? 502 : 200;
     return NextResponse.json({ ...result, durationMs: Date.now() - started }, { status });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[macro-ingest] failed: ${msg}`);
     notifyAdmin({
       subject: 'macro-ingest failed',
       body: `FRED ingest failed: ${msg}`,

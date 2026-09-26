@@ -4,9 +4,11 @@
  * Fetches the latest observations for a set of FRED series IDs and
  * upserts into macro_series. Returns ingest summary.
  *
- * Uses the FRED API when FRED_API_KEY is set. Without a key it falls back to
- * FRED's keyless CSV download (lib/macro/fredCsv.ts), so macro_series keeps
- * filling instead of silently going stale (OV-1).
+ * Uses the FRED API when FRED_API_KEY is set. Without a key, or when the API
+ * call for a series fails (e.g. the key is rejected), it falls back to FRED's
+ * keyless CSV download (lib/macro/fredCsv.ts), so macro_series keeps filling
+ * instead of silently going stale (OV-1, OV-12 follow-up). A series is reported
+ * as failed only when both paths fail, with both errors.
  *
  * Reference: https://fred.stlouisfed.org/docs/api/fred/series_observations.html
  *
@@ -38,15 +40,29 @@ export const FRED_SERIES: Record<string, {
   US_M2:          { fredId: 'M2SL', description: 'M2 Money Stock (SA)', units: 'Bil. of $', cadence: 'monthly', category: 'liquidity' },
 };
 
+/** Series the market regime reads from macro_series (lib/scoring/canonical/regimeOverlayData.ts). */
+export const REGIME_REQUIRED_SERIES = ['VIX', 'CREDIT_HY_OAS'] as const;
+
 export type FredIngestSummary = {
   ok: boolean;
   reason?: 'no-api-key' | 'fred-error' | 'http-error';
-  /** Which FRED path was used: the keyed API, or the keyless CSV when FRED_API_KEY is missing. */
-  via?: 'api' | 'csv';
+  /** Which FRED path was used: the keyed API, the keyless CSV, or both (API failed for some series). */
+  via?: 'api' | 'csv' | 'mixed';
   ingested: number;
   failed: number;
-  perSeries: { seriesKey: string; rows: number; latest: string | null; error?: string }[];
+  /** Regime series (REGIME_REQUIRED_SERIES) among the targets that could not be fetched by either path. */
+  requiredFailed?: string[];
+  /** Series where the FRED API failed and the CSV was used instead, with the API error. */
+  apiFallbacks?: { seriesKey: string; apiError: string }[];
+  perSeries: { seriesKey: string; rows: number; latest: string | null; via?: 'api' | 'csv'; apiError?: string; error?: string }[];
 };
+
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** A key problem (HTTP 400/401/403 or an api_key message) will fail every series; stop calling the API after one. */
+function isKeyRejection(message: string): boolean {
+  return /api_key|HTTP 40[013]\b/i.test(message);
+}
 
 interface FredObservation {
   date: string;
@@ -73,7 +89,11 @@ async function fetchFredSeries(apiKey: string, fredId: string, observationStart?
   if (observationStart) params.set('observation_start', observationStart);
   const url = `https://api.stlouisfed.org/fred/series/observations?${params.toString()}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(25_000) });
-  if (!res.ok) throw new Error(`FRED HTTP ${res.status}`);
+  if (!res.ok) {
+    // FRED puts the reason (e.g. "The value for variable api_key is not registered") in the body.
+    const detail = await res.json().then((j: { error_message?: string }) => j?.error_message).catch(() => undefined);
+    throw new Error(`FRED HTTP ${res.status}${detail ? `: ${detail}` : ''}`);
+  }
   const json = await res.json() as { observations?: FredObservation[]; error_message?: string };
   if (json.error_message) throw new Error(`FRED: ${json.error_message}`);
   return json.observations ?? [];
@@ -124,10 +144,27 @@ async function upsertObservations(seriesKey: string, rows: FredObservation[]): P
 export async function ingestFred(opts: { sinceISO?: string; only?: string[] } = {}): Promise<FredIngestSummary> {
   const apiKey = process.env.FRED_API_KEY;
   // No key used to mean "ingest nothing" (with HTTP 200, so the cron looked fine while
-  // macro_series went stale). Now the keyless CSV download fills the same rows.
-  const via: 'api' | 'csv' = apiKey ? 'api' : 'csv';
-  const fetchObservations = (fredId: string, since?: string): Promise<FredObservation[]> =>
-    apiKey ? fetchFredSeries(apiKey, fredId, since) : fetchFredCsv(fredId, { sinceISO: since });
+  // macro_series went stale). Now the keyless CSV download fills the same rows. A key
+  // that FRED rejects used to fail every series the same way; it now falls back too.
+  let apiUsable = Boolean(apiKey);
+  const fetchObservations = async (fredId: string, since?: string): Promise<{ obs: FredObservation[]; via: 'api' | 'csv'; apiError?: string }> => {
+    let apiError: string | undefined;
+    if (apiKey && apiUsable) {
+      try {
+        return { obs: await fetchFredSeries(apiKey, fredId, since), via: 'api' };
+      } catch (e: unknown) {
+        apiError = errMsg(e);
+        if (isKeyRejection(apiError)) apiUsable = false;
+      }
+    } else if (apiKey) {
+      apiError = 'skipped: FRED API key rejected earlier in this run';
+    }
+    try {
+      return { obs: await fetchFredCsv(fredId, { sinceISO: since }), via: 'csv', ...(apiError ? { apiError } : {}) };
+    } catch (e: unknown) {
+      throw new Error(apiError ? `API: ${apiError}; CSV: ${errMsg(e)}` : errMsg(e));
+    }
+  };
   const targets = opts.only && opts.only.length > 0
     ? opts.only.filter((k) => k in FRED_SERIES)
     : Object.keys(FRED_SERIES);
@@ -137,17 +174,31 @@ export async function ingestFred(opts: { sinceISO?: string; only?: string[] } = 
     const meta = FRED_SERIES[seriesKey];
     try {
       await upsertMeta(seriesKey, meta);
-      const obs = await fetchObservations(meta.fredId, opts.sinceISO);
+      const { obs, via, apiError } = await fetchObservations(meta.fredId, opts.sinceISO);
       const rows = await upsertObservations(seriesKey, obs);
       const latest = obs.length > 0 ? obs[obs.length - 1].date : null;
-      perSeries.push({ seriesKey, rows, latest });
+      perSeries.push({ seriesKey, rows, latest, via, ...(apiError ? { apiError } : {}) });
       ingested += rows;
     } catch (e: unknown) {
-      perSeries.push({ seriesKey, rows: 0, latest: null, error: e instanceof Error ? e.message : String(e) });
+      const error = errMsg(e);
+      console.error(`[macro-ingest] ${seriesKey} (${meta.fredId}) failed: ${error}`);
+      perSeries.push({ seriesKey, rows: 0, latest: null, error });
       failed++;
     }
   }
-  return { ok: failed === 0, ...(failed > 0 ? { reason: 'fred-error' as const } : {}), via, ingested, failed, perSeries };
+  const usedVia = new Set(perSeries.map((s) => s.via).filter(Boolean));
+  const via: FredIngestSummary['via'] = usedVia.size > 1 ? 'mixed' : usedVia.has('api') ? 'api' : usedVia.has('csv') ? 'csv' : (apiKey ? 'api' : 'csv');
+  const failedKeys = new Set(perSeries.filter((s) => s.error).map((s) => s.seriesKey));
+  const requiredFailed = REGIME_REQUIRED_SERIES.filter((k) => targets.includes(k) && failedKeys.has(k));
+  const apiFallbacks = perSeries.filter((s) => s.apiError).map((s) => ({ seriesKey: s.seriesKey, apiError: s.apiError! }));
+  if (apiFallbacks.length > 0) {
+    console.warn(`[macro-ingest] FRED API failed for ${apiFallbacks.length} series; used the keyless CSV. First error: ${apiFallbacks[0].apiError}`);
+  }
+  return {
+    ok: failed === 0,
+    ...(failed > 0 ? { reason: 'fred-error' as const } : {}),
+    via, ingested, failed, requiredFailed, apiFallbacks, perSeries,
+  };
 }
 
 export interface MacroSnapshot {
