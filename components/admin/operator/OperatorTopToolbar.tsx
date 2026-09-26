@@ -29,7 +29,7 @@ export default function OperatorTopToolbar({
   onKillSwitch?: () => void;
   scanning?: boolean;
   killActive?: boolean;
-  /** false when crypto market data is off (OPERATOR_CG_FETCH_ENABLED): the crypto workspace is not live. */
+  /** false when admin crypto is switched off (ADMIN_CRYPTO_ENABLED=false): the crypto workspace is not live. */
   cryptoEnabled?: boolean;
 }) {
   const cryptoPaused = market === "CRYPTO" && !cryptoEnabled;
@@ -37,7 +37,7 @@ export default function OperatorTopToolbar({
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#101826] px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill
-          label={cryptoPaused ? "Crypto data paused" : scanning ? "Scanning…" : "Auto-Scan Live"}
+          label={cryptoPaused ? "Crypto switched off" : scanning ? "Scanning…" : "Auto-Scan Live"}
           tone={cryptoPaused ? "yellow" : "green"}
         />
         {/* Timeframe selector */}
@@ -62,7 +62,7 @@ export default function OperatorTopToolbar({
             <button
               key={m.value}
               onClick={() => onMarketChange(m.value)}
-              title={m.value === "CRYPTO" && !cryptoEnabled ? "Crypto market data is paused (OPERATOR_CG_FETCH_ENABLED is off)" : undefined}
+              title={m.value === "CRYPTO" && !cryptoEnabled ? "Admin crypto is switched off (ADMIN_CRYPTO_ENABLED=false)" : undefined}
               className={`px-2.5 py-1 text-xs transition ${
                 market === m.value
                   ? "bg-blue-500/20 text-blue-300 font-medium"

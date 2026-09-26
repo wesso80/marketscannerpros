@@ -17,6 +17,7 @@ import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { nyWallTimeToUtcMs } from '@/lib/time/nyWallClock';
 import { getBars as getCachedBars } from '@/lib/marketData';
 import { vixWithAlphaVantagePrimary } from '@/lib/scoring/canonical/regimeOverlayData';
+import { isCoinGeckoEnabled } from '@/lib/admin/adminCrypto';
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -264,11 +265,11 @@ export function resetCryptoLevelCache(): void {
  * stop quota burn. Paused by default; re-enable by setting the
  * env var OPERATOR_CG_FETCH_ENABLED=true on the web service.
  * When paused, the operator path makes zero CG calls: crypto bars
- * and key levels both come from Alpha Vantage.
+ * and key levels both come from Alpha Vantage. It never switches
+ * admin crypto off (that is ADMIN_CRYPTO_ENABLED, lib/admin/adminCrypto).
  */
 export function operatorCgFetchEnabled(): boolean {
-  const raw = (process.env.OPERATOR_CG_FETCH_ENABLED || '').trim().toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(raw);
+  return isCoinGeckoEnabled();
 }
 
 /**

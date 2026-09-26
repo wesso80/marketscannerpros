@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { adminMarketFor, marketForSymbol, parseAdminMarket } from '@/lib/admin/adminMarket';
+import { marketForSymbol, parseAdminMarket } from '@/lib/admin/adminMarket';
 
-// M2: crypto is not the admin default while crypto market data is off; M3: no fake "newest saved result".
+// M2: EQUITIES is the admin default (crypto is opened explicitly); M3: no fake "newest saved result".
 
 const read = (p: string) => readFileSync(p, 'utf8');
 
 describe('admin market helpers', () => {
-  it('adminMarketFor / parseAdminMarket', () => {
-    expect(adminMarketFor(false)).toBe('EQUITIES');
-    expect(adminMarketFor(true)).toBe('CRYPTO');
+  it('parseAdminMarket', () => {
     expect(parseAdminMarket('equity', 'CRYPTO')).toBe('EQUITIES');
     expect(parseAdminMarket(null, 'EQUITIES')).toBe('EQUITIES');
     expect(parseAdminMarket('crypto', 'EQUITIES')).toBe('CRYPTO');
@@ -47,10 +45,10 @@ describe('wiring (source checks)', () => {
     expect(read('app/admin/opportunity-board/page.tsx')).toContain('defaultMarket={defaultAdminMarket()}');
   });
 
-  it('Live Scanner: server wrapper reads the crypto flag; client is no longer crypto-only', () => {
-    expect(read('app/admin/live-scanner/page.tsx')).toContain('cryptoEnabled={operatorCgFetchEnabled()}');
+  it('Live Scanner: server wrapper reads the admin crypto switch + default market; client is no longer crypto-only', () => {
+    expect(read('app/admin/live-scanner/page.tsx')).toContain('cryptoEnabled={isAdminCryptoEnabled()} defaultMarket={defaultAdminMarket()}');
     const client = read('app/admin/live-scanner/LiveScannerClient.tsx');
-    expect(client).toContain('cryptoEnabled ? "CRYPTO" : "EQUITIES"');
+    expect(client).toContain('cryptoEnabled ? defaultMarket : "EQUITIES"');
     expect(client).not.toContain('Click \\"Scan Now\\"');
     expect(read('app/api/admin/scanner/live/route.ts')).toContain('resolveAdminMarket(searchParams.get("market"))');
   });

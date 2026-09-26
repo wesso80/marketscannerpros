@@ -38,14 +38,20 @@ beforeEach(() => {
 });
 
 describe('admin market default', () => {
-  it('EQUITIES while crypto data is off, CRYPTO when on; explicit values win', () => {
+  it('EQUITIES whether CoinGecko is on or off (the brief email never flips to crypto); explicit values win', () => {
     expect(defaultAdminMarket()).toBe('EQUITIES');
     expect(resolveAdminMarket(undefined)).toBe('EQUITIES');
     expect(resolveAdminMarket('crypto')).toBe('CRYPTO');
     expect(resolveAdminMarket('EQUITY')).toBe('EQUITIES');
     m.cg.mockReturnValue(true);
-    expect(defaultAdminMarket()).toBe('CRYPTO');
-    expect(resolveAdminMarket('junk')).toBe('CRYPTO');
+    process.env.OPERATOR_CG_FETCH_ENABLED = 'true';
+    try {
+      expect(defaultAdminMarket()).toBe('EQUITIES');
+      expect(resolveAdminMarket('junk')).toBe('EQUITIES');
+      expect(resolveAdminMarket('CRYPTO')).toBe('CRYPTO');
+    } finally {
+      delete process.env.OPERATOR_CG_FETCH_ENABLED;
+    }
   });
 });
 

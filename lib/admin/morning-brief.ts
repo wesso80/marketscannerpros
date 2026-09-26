@@ -452,7 +452,7 @@ export async function buildMorningBrief(options: {
   timeframe?: string;
   scanLimit?: number;
 } = {}): Promise<MorningBrief> {
-  // Crypto only when crypto market data is on (OPERATOR_CG_FETCH_ENABLED); otherwise equities. A custom
+  // EQUITIES unless a market is requested (crypto runs on AV data; see lib/admin/adminCrypto). A custom
   // `symbols` list is scanned live (explicit request); otherwise the brief reads the shared saved scan.
   const market = options.market ?? defaultAdminMarket();
   const timeframe = options.timeframe ?? "15m";
