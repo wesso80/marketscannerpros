@@ -6,19 +6,15 @@
  * and refuses `entitlement=delayed`. Without an entitlement some functions return end-of-day data "for all users"
  * (https://www.alphavantage.co/documentation/#gainer-loser).
  */
-import { isUsTradingDay, nyDateTime, usSessionCloseMinutes } from '@/lib/time/usSession';
+import { isUsRegularSessionOpen } from '@/lib/time/usSession';
+
+export { isUsRegularSessionOpen };
 
 export const AV_US_EQUITY_ENTITLEMENT = 'realtime' as const;
 
 /** Query-string fragment to append to an Alpha Vantage URL, e.g. `...&apikey=K${avEquityEntitlementParam()}`. */
 export function avEquityEntitlementParam(): string {
   return `&entitlement=${AV_US_EQUITY_ENTITLEMENT}`;
-}
-
-/** True during the US regular session (09:30 to 16:00 ET, or the early close) on an NYSE trading day. */
-export function isUsRegularSessionOpen(nowMs: number = Date.now()): boolean {
-  const { ymd, minutes } = nyDateTime(nowMs);
-  return isUsTradingDay(ymd) && minutes >= 9 * 60 + 30 && minutes < usSessionCloseMinutes(ymd);
 }
 
 /**

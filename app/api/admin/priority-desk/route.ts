@@ -5,7 +5,7 @@ import { isOperator } from "@/lib/quant/operatorAuth";
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { wrapTruth } from "@/lib/admin";
-import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket } from "@/lib/admin/sharedScan";
+import { isDataDegraded, isRankable, readSavedScan, scanStatusForResponse, type SavedPacket } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
 
@@ -42,8 +42,10 @@ export async function GET(req: NextRequest) {
   ]);
 
   const everything = [...equityView.packets, ...cryptoView.packets];
-  // Only current, successful saved results rank; failed / skipped / stale ones go to the degraded list.
+  // Only current, successful saved results with a detected setup rank; failed / skipped / stale ones go to the
+  // degraded list. While the US market is closed, scans made after the last session's close stay current.
   const all = everything.filter(isRankable);
+  const noSetupCount = everything.filter((p) => p.savedScan.noSetup && !isDataDegraded(p)).length;
 
   const bestEquities = topBy(all, (p) => p.assetClass === "equity");
   const bestCrypto = topBy(all, (p) => p.assetClass === "crypto");
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
   const bestNewsDriven = topBy(all, (p) => p.newsContext.status === "ELEVATED");
   const bestEarningsWatch = topBy(all, (p) => p.earningsContext.riskLevel === "HIGH" || p.earningsContext.riskLevel === "MEDIUM");
   const avoidTrapList = topBy(all, (p) => p.trapDetection.trapRiskScore >= 60, 8);
-  const dataDegradedList = topBy(everything, (p) => !isRankable(p) || ["STALE", "DEGRADED", "MISSING", "ERROR", "SIMULATED"].includes(p.dataTruth.status), 8);
+  const dataDegradedList = topBy(everything, isDataDegraded, 8);
   const arcaTopCandidate = all.slice().sort((a, b) => b.trustAdjustedScore - a.trustAdjustedScore)[0] ?? null;
 
   await appendResearchEvent({
@@ -75,6 +77,11 @@ export async function GET(req: NextRequest) {
     generatedAt: [equityView.newestScannedAt, cryptoView.newestScannedAt].filter(Boolean).sort().pop() ?? null,
     servedAt: new Date().toISOString(),
     savedScan: { equities: scanStatusForResponse(equityView), crypto: scanStatusForResponse(cryptoView) },
+    // Current saved results where the engine found no setup (neither ranked nor data-degraded).
+    noSetupCount,
+    rankedCount: all.length,
+    // "as of Fri 25 Sep 2026 close" while the US market is closed (from the newest ranked equity result).
+    marketClosedAsOf: all.find((p) => p.savedScan.asOfLabel)?.savedScan.asOfLabel ?? null,
     timeframe,
     bestEquities,
     bestCrypto,

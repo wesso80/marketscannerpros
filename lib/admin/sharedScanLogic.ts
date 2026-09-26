@@ -55,6 +55,8 @@ export interface PriorResult {
   /** Price the saved packet was built at. */
   scanPrice: number | null;
   radarCount: number;
+  /** false when the row has no saved packet (a quote-only refresh cannot create one). */
+  hasPacket?: boolean;
 }
 
 export interface BulkQuote {
@@ -177,7 +179,9 @@ export function selectDeepScanSymbols(input: {
   const deferred: string[] = [];
   for (const s of due) {
     if (deepSet.has(s)) continue;
-    if (quotes?.has(s)) quoteOnly.push(s);
+    // A quote-only refresh only updates an existing saved packet; a symbol without one waits for a full scan.
+    const p = prior.get(s);
+    if (quotes?.has(s) && p && p.hasPacket !== false) quoteOnly.push(s);
     else deferred.push(s);
     reasons[s] = rankedSet.has(s) ? `${reasons[s]} (over cap)` : "quiet";
   }

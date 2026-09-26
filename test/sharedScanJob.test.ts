@@ -41,6 +41,7 @@ vi.mock('@/lib/operator/market-data', () => ({
 }));
 
 import {
+  isDataDegraded,
   isRankable,
   requestManualRescan,
   startSharedScan,
@@ -55,6 +56,12 @@ const packet = (symbol: string, price = 100) => ({ symbol, quote: { price, chang
 const scanOk = (symbol: string, radar = true) => ({
   packet: packet(symbol),
   result: { pipelines: [{ verdict: { symbol } }], radar: radar ? [opp(symbol)] : [], errors: [] },
+  bars: [{ timestamp: '2026-09-25T16:45:00.000Z', close: 100 }],
+  noBars: false,
+});
+const scanNoSetup = (symbol: string) => ({
+  packet: packet(symbol),
+  result: { pipelines: [], radar: [], errors: [] },
   bars: [{ timestamp: '2026-09-25T16:45:00.000Z', close: 100 }],
   noBars: false,
 });
@@ -140,6 +147,28 @@ describe('startSharedScan — equities run', () => {
     expect(summary.scanned).toBe(0);
   });
 
+  it('bars but no playbook is a valid "no setup" result: saved ok (hits empty), not a NO_PIPELINE failure', async () => {
+    m.store.loadPriorResults.mockResolvedValue(new Map([['OLD', priorRow('OLD', { status: 'failed', scannedAtMs: NOW - 300 * MIN })]]));
+    m.avFetch.mockResolvedValue({ data: [{ symbol: 'NEW', close: '10', previous_close: '10' }, { symbol: 'OLD', close: '10', previous_close: '10' }] });
+    m.buildScan.mockImplementation(async ({ symbol }: { symbol: string }) => scanNoSetup(symbol));
+    const summary = await run({ market: 'EQUITIES', trigger: 'cron', symbols: ['NEW', 'OLD'] });
+    expect(m.store.saveScanResult).toHaveBeenCalledTimes(2);
+    expect(m.store.saveScanResult.mock.calls.map((c) => c[0])).toEqual([
+      expect.objectContaining({ symbol: 'NEW', status: 'ok', error: null, hits: [], radar: [] }),
+      expect.objectContaining({ symbol: 'OLD', status: 'ok', error: null, hits: [] }),
+    ]);
+    expect(m.store.markResultStatus).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({ scanned: 2, failed: 0 });
+  });
+
+  it('a pipeline error with bars is still a failure', async () => {
+    m.avFetch.mockResolvedValue({ data: [{ symbol: 'ERR', close: '10', previous_close: '10' }] });
+    m.buildScan.mockResolvedValue({ ...scanNoSetup('ERR'), result: { pipelines: [], radar: [], errors: [{ symbol: 'ERR', error: 'boom' }] } });
+    const summary = await run({ market: 'EQUITIES', trigger: 'cron', symbols: ['ERR'] });
+    expect(m.store.saveScanResult.mock.calls[0][0]).toMatchObject({ symbol: 'ERR', status: 'failed', error: 'boom' });
+    expect(summary.failed).toBe(1);
+  });
+
   it('bulk quotes fall back to no entitlement when the key is not entitled', async () => {
     m.avFetch
       .mockRejectedValueOnce(new Error('AV info error: not yet entitled to realtime data'))
@@ -216,7 +245,7 @@ describe('requestManualRescan guards', () => {
 describe('saved packet labelling', () => {
   const row = (over: Record<string, unknown>) => ({
     symbol: 'AAA', market: 'EQUITIES', timeframe: '15m', status: 'ok', scannedAt: '2026-09-25T16:50:00.000Z', checkedAt: null, dataAsOf: null,
-    ageSec: 600, price: null, changePct: null, quoteAt: null, packet: packet('AAA'), hits: [], radar: [], error: null, ...over,
+    ageSec: 600, price: null, changePct: null, quoteAt: null, packet: packet('AAA'), hits: [{ symbol: 'AAA' }], radar: [], error: null, ...over,
   }) as never;
 
   it('fresh ok rows rank; failed rows become ERROR with trust 0; stale/skipped rows become STALE', () => {
@@ -234,6 +263,31 @@ describe('saved packet labelling', () => {
     expect(isRankable(stale)).toBe(false);
 
     expect(toSavedPacket(row({ packet: null }))).toBeNull();
+  });
+
+  it('a current "no setup" row is neither ranked nor data-degraded', () => {
+    const p = toSavedPacket(row({ hits: [] }))!;
+    expect(p.savedScan.noSetup).toBe(true);
+    expect(isRankable(p)).toBe(false);
+    expect(isDataDegraded(p)).toBe(false);
+    expect(isDataDegraded(toSavedPacket(row({ status: 'failed', error: 'x' }))!)).toBe(true);
+  });
+
+  it('US market closed: a scan made after the last close stays current (labelled as of that close); one from before goes stale', () => {
+    const sat = Date.parse('2026-09-26T14:10:00Z'); // Sat 10:10 ET (Sun 00:10 AEST)
+    vi.setSystemTime(sat);
+    const afterClose = toSavedPacket(row({ scannedAt: '2026-09-26T04:00:00.000Z', ageSec: 10 * 3600 }), undefined, sat)!;
+    expect(afterClose.savedScan).toMatchObject({ stale: false, asOfLabel: 'as of Fri 25 Sep 2026 close' });
+    expect(isRankable(afterClose)).toBe(true);
+    const beforeClose = toSavedPacket(row({ scannedAt: '2026-09-25T19:00:00.000Z', ageSec: 19 * 3600 }), undefined, sat)!;
+    expect(beforeClose.savedScan).toMatchObject({ stale: true, asOfLabel: null });
+    expect(isRankable(beforeClose)).toBe(false);
+    // crypto rows keep the wall-clock rule
+    const crypto = toSavedPacket(row({ market: 'CRYPTO', scannedAt: '2026-09-26T04:00:00.000Z', ageSec: 10 * 3600 }), undefined, sat)!;
+    expect(crypto.savedScan.stale).toBe(true);
+    // market open again (Mon 10:00 ET): the 2.5 h rule applies
+    const mon = Date.parse('2026-09-28T14:00:00Z');
+    expect(toSavedPacket(row({ scannedAt: '2026-09-26T04:00:00.000Z', ageSec: 58 * 3600 }), undefined, mon)!.savedScan.stale).toBe(true);
   });
 
   it('withFreshQuote applies a newer bulk-quote price and gives the packet a new id', () => {

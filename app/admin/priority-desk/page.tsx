@@ -16,12 +16,15 @@ type Packet = {
   mainRisk: string;
   whatChanged: string;
   nextResearchChecks: string[];
-  savedScan?: { status: string; ageLabel: string; stale: boolean; error: string | null };
+  savedScan?: { status: string; ageLabel: string; stale: boolean; error: string | null; asOfLabel?: string | null };
 };
 
 type PriorityDeskResponse = {
   generatedAt: string | null;
   savedScan?: { equities: SavedScanStatusData; crypto: SavedScanStatusData };
+  noSetupCount?: number;
+  rankedCount?: number;
+  marketClosedAsOf?: string | null;
   timeframe: string;
   bestEquities: Packet[];
   bestCrypto: Packet[];
@@ -95,8 +98,14 @@ export default function PriorityDeskPage() {
         <SavedScanStatus status={data?.savedScan?.equities} onRescanStarted={afterRescan} />
         <SavedScanStatus status={data?.savedScan?.crypto} onRescanStarted={afterRescan} />
         <div className="text-[10px] text-white/35">
-          Rankings use saved results that are current and succeeded; failed, skipped or stale symbols are listed under Data-Degraded.
+          Rankings use saved results that are current, succeeded and found a setup; failed, skipped or stale symbols are listed under Data-Degraded.
+          {data?.marketClosedAsOf ? ` US market closed: ranking the last session's data (${data.marketClosedAsOf}).` : ""}
         </div>
+        {data && (
+          <div className="text-[10px] text-white/45">
+            {data.rankedCount ?? 0} ranked · {data.noSetupCount ?? 0} scanned with no setup · {data.dataDegradedList?.length ?? 0}{(data.dataDegradedList?.length ?? 0) >= 8 ? "+" : ""} data-degraded
+          </div>
+        )}
       </section>
 
       {error && <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</div>}
@@ -152,7 +161,7 @@ function Row({ packet }: { packet: Packet }) {
           {packet.savedScan && (
             <span className={packet.savedScan.status !== "ok" || packet.savedScan.stale ? "ml-2 text-amber-300" : "ml-2 text-white/40"}>
               {packet.savedScan.status !== "ok" ? `${packet.savedScan.status} · ` : packet.savedScan.stale ? "stale · " : ""}
-              scanned {packet.savedScan.ageLabel}
+              scanned {packet.savedScan.ageLabel}{packet.savedScan.asOfLabel ? ` · ${packet.savedScan.asOfLabel}` : ""}
             </span>
           )}
         </div>

@@ -61,6 +61,12 @@ export function latestUsSessionDate(nowMs: number): string {
   return previousUsTradingDay(ymd);
 }
 
+/** True during the US regular session (09:30 ET to the 16:00 / early close) on an NYSE trading day. */
+export function isUsRegularSessionOpen(nowMs: number = Date.now()): boolean {
+  const { ymd, minutes } = nyDateTime(nowMs);
+  return isUsTradingDay(ymd) && minutes >= OPEN_MIN && minutes < usSessionCloseMinutes(ymd);
+}
+
 /** The most recent US session that has CLOSED by `nowMs` (16:00 ET, or 13:00 ET on early-close days). */
 export function lastCompletedUsSessionDate(nowMs: number): string {
   const { ymd, minutes } = nyDateTime(nowMs);

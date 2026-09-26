@@ -36,6 +36,7 @@ import { pipelineToScannerHit } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
 import { opsAlert } from "@/lib/opsAlerting";
 import * as store from "@/lib/admin/sharedScanStore";
+import { closedUsSession, isCurrentForClosedMarket } from "@/lib/admin/closedMarket";
 import {
   chunk,
   diffRadar,
@@ -239,11 +240,15 @@ async function executeRun(input: {
               symbol, market, timeframe, scanContext: context, provider,
               quote: quote ? { changePercent: quote.changePercent } : null,
             });
+            // Bars but no playbook detected and no error is a valid "no setup" result, saved as ok (it used to
+            // be saved as a NO_PIPELINE failure: hidden from ranking, listed as data-degraded, re-queued first
+            // every run so it crowded the refresh of everything else).
             const failedReason = scan.noBars
               ? "NO_BAR_DATA"
-              : scan.result.pipelines.length === 0
-                ? scan.result.errors.map((e) => e.error).join("; ") || "NO_PIPELINE"
+              : scan.result.pipelines.length === 0 && scan.result.errors.length > 0
+                ? scan.result.errors.map((e) => e.error).join("; ")
                 : null;
+            const noSetup = !failedReason && scan.result.pipelines.length === 0;
 
             if (failedReason && previous?.hasPacket) {
               // Keep the last good result (with its real age); record the failure.
@@ -259,7 +264,7 @@ async function executeRun(input: {
               status: failedReason ? "failed" : "ok",
               dataAsOf: barTimestampToIso(scan.bars[scan.bars.length - 1]?.timestamp),
               price: quote?.price ?? (scan.packet.quote.price > 0 ? scan.packet.quote.price : null),
-              changePct: quote?.changePercent ?? (failedReason ? null : scan.packet.quote.changePercent),
+              changePct: quote?.changePercent ?? (failedReason || noSetup ? null : scan.packet.quote.changePercent),
               quoteAt: quote?.quoteAt ?? null,
               packet: scan.packet,
               hits,
@@ -331,6 +336,10 @@ export interface SavedScanMeta {
   error: string | null;
   /** Newer bulk-quote price / day change (may be newer than the packet). */
   quote: { price: number | null; changePct: number | null; quoteAt: string | null };
+  /** Scanned fine, but no playbook was detected (not a data failure; not ranked as a setup). */
+  noSetup: boolean;
+  /** US market closed and the scan ran after the last session's close: "as of Fri 25 Sep 2026 close". */
+  asOfLabel: string | null;
 }
 
 export type SavedPacket = AdminResearchPacket & { savedScan: SavedScanMeta };
@@ -345,9 +354,12 @@ export function savedScanStaleAfterSec(cfg: SharedScanConfig = sharedScanConfig(
  * (ERROR / STALE, trust 0 for failures) so every existing "data degraded" filter treats it as such and it is
  * never presented as fresh.
  */
-export function toSavedPacket(row: store.SavedScanRow, staleAfterSec = savedScanStaleAfterSec()): SavedPacket | null {
+export function toSavedPacket(row: store.SavedScanRow, staleAfterSec = savedScanStaleAfterSec(), nowMs: number = Date.now()): SavedPacket | null {
   if (!row.packet) return null;
-  const stale = row.ageSec == null || row.ageSec > staleAfterSec;
+  // While the US market is shut, an equity scan made after the last session's close is as current as data gets:
+  // it keeps ranking (labelled "as of <session> close") instead of going stale 2.5 h after it ran.
+  const closedCurrent = row.market === "EQUITIES" && isCurrentForClosedMarket(row.scannedAt, nowMs);
+  const stale = !closedCurrent && (row.ageSec == null || row.ageSec > staleAfterSec);
   const packet = { ...row.packet } as SavedPacket;
   const ageLabel = formatScanAge(row.ageSec);
   packet.savedScan = {
@@ -360,6 +372,8 @@ export function toSavedPacket(row: store.SavedScanRow, staleAfterSec = savedScan
     dataAsOf: row.dataAsOf,
     error: row.error,
     quote: { price: row.price, changePct: row.changePct, quoteAt: row.quoteAt },
+    noSetup: row.status === "ok" && row.hits.length === 0,
+    asOfLabel: closedCurrent ? closedUsSession(nowMs)?.label ?? null : null,
   };
   const dt = packet.dataTruth;
   if (dt && row.status === "failed") {
@@ -389,9 +403,16 @@ export function withFreshQuote(p: SavedPacket): SavedPacket {
   };
 }
 
-/** True when a saved packet is current enough to rank in "best" lists. */
+/** True when a saved packet is current enough to rank in "best" lists and has a detected setup. */
 export function isRankable(p: SavedPacket): boolean {
-  return p.savedScan.status === "ok" && !p.savedScan.stale;
+  return p.savedScan.status === "ok" && !p.savedScan.stale && !p.savedScan.noSetup;
+}
+
+const DEGRADED_TRUTH = ["STALE", "DEGRADED", "MISSING", "ERROR", "SIMULATED"];
+
+/** Failed, skipped or stale saved result, or degraded data. A current "no setup" result is not degraded. */
+export function isDataDegraded(p: SavedPacket): boolean {
+  return p.savedScan.status !== "ok" || p.savedScan.stale || DEGRADED_TRUTH.includes(p.dataTruth.status);
 }
 
 export interface SavedScanView {
@@ -424,7 +445,7 @@ export async function readSavedScan(input: { market: SharedScanMarket; timeframe
       store.loadSavedResults({ market: input.market, timeframe, symbols, nowMs: input.nowMs }),
       store.loadRunStatus(input.market, timeframe),
     ]);
-    const packets = rows.map((r) => toSavedPacket(r)).filter((p): p is SavedPacket => p != null);
+    const packets = rows.map((r) => toSavedPacket(r, savedScanStaleAfterSec(), input.nowMs ?? Date.now())).filter((p): p is SavedPacket => p != null);
     const scanned = rows.map((r) => r.scannedAt).filter((s): s is string => !!s).sort();
     const ages = rows.map((r) => r.ageSec).filter((a): a is number => a != null);
     const newestAge = ages.length ? Math.min(...ages) : null;
