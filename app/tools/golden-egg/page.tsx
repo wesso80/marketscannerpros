@@ -29,7 +29,7 @@ import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
-import { NO_EDGE_BANNER, calibrationSummary, cautionTags, noSetupDisplay, scoreLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -894,7 +894,7 @@ export default function GoldenEggPage() {
                     {formatLevel(ge.meta.price)}
                     {quote.data?.changePercent != null && (
                       <span className={`ml-2 text-sm ${quote.data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}%
+                        {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}% {priceChangeBasisLabel(ge.meta.assetClass, 'rolling_24h')}
                       </span>
                     )}
                   </div>
@@ -924,6 +924,7 @@ export default function GoldenEggPage() {
                       )}
                       {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{NO_EDGE_BANNER}</div> : null}
                       {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{calibrationSummary(geEngine)}</div> : null}
+                      {gradeRelativeNote(geEngine) ? <div className="text-[10px] text-slate-400" data-testid="ge-grade-relative">{gradeRelativeNote(geEngine)}</div> : null}
                       <div className="text-[10px] text-slate-500">Legacy confluence {geConfluenceScore}/100</div>
                     </div>
                   ) : (

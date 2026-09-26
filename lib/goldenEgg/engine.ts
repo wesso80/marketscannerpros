@@ -540,7 +540,9 @@ function buildPayload(
         { label: `Expiry`, value: `${c.expiry} (${c.daysToExpiry} DTE)` },
         { label: 'Snapshot', value: c.snapshotTs ? (/^\d{4}-\d{2}-\d{2}$/.test(c.snapshotTs) ? `${c.snapshotTs} (provider date; time unavailable)` : c.snapshotTs) : 'Unavailable' },
         { label: 'Put/Call OI', value: c.putCallOi.toFixed(2) },
-        { label: 'Avg IV (chain)', value: c.avgIv != null ? `${(c.avgIv * 100).toFixed(0)}%` : 'n/a' },
+        // ATM IV first: it is what other sites quote. The all-strike mean is pulled up by the far wings (the smile). (RS-19)
+        { label: 'ATM IV (strikes within 2% of spot)', value: c.atmIv != null ? `${(c.atmIv * 100).toFixed(0)}%` : 'n/a' },
+        { label: 'Mean IV, all strikes', value: c.avgIv != null ? `${(c.avgIv * 100).toFixed(0)}%` : 'n/a' },
         { label: 'Expected move (±1σ to expiry)', value: c.expectedMovePct != null ? `±${c.expectedMovePct.toFixed(1)}%` : 'n/a' },
         { label: 'IV Rank', value: 'n/a (no IV history)' },
         { label: 'Dealer Gamma', value: c.dealerGamma },
