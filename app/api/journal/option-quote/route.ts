@@ -10,28 +10,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
-import { fetchOptionsChain } from '@/lib/options-confluence-analyzer';
-import { findOptionContractMark, isOptionMarkCurrent, optionContractSpec } from '@/lib/options/contractQuote';
+import { optionContractSpec } from '@/lib/options/contractQuote';
+import { fetchOptionContractMark } from '@/lib/options/contractMarkServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-type Chain = Awaited<ReturnType<typeof fetchOptionsChain>>;
-
-// EOD chains change once a session; cache per underlying+expiry so 60s client refreshes don't spend AV calls.
-const CHAIN_TTL_MS = 10 * 60_000;
-const MISS_TTL_MS = 2 * 60_000;
-const chainCache = new Map<string, { chain: Chain; expires: number }>();
-
-async function getChain(underlying: string, expiration: string): Promise<Chain> {
-  const key = `${underlying}|${expiration}`;
-  const hit = chainCache.get(key);
-  if (hit && hit.expires > Date.now()) return hit.chain;
-  const chain = await fetchOptionsChain(underlying, expiration);
-  chainCache.set(key, { chain, expires: Date.now() + (chain ? CHAIN_TTL_MS : MISS_TTL_MS) });
-  if (chainCache.size > 500) chainCache.delete(chainCache.keys().next().value as string);
-  return chain;
-}
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
@@ -54,31 +37,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'invalid_contract', error: 'symbol, expiration (YYYY-MM-DD), strike and right are required' }, { status: 400 });
   }
 
-  try {
-    const chain = await getChain(spec.underlying, spec.expiration);
-    // fetchOptionsChain falls back to another expiry when the requested one is absent — that is not this contract.
-    if (!chain || chain.selectedExpiry !== spec.expiration) {
-      return NextResponse.json({ ok: false, reason: 'contract_not_found' });
-    }
-    const mark = findOptionContractMark(spec.right === 'call' ? chain.calls : chain.puts, spec);
-    if (!mark) {
-      return NextResponse.json({ ok: false, reason: 'contract_not_found' });
-    }
-    const asOfDate = mark.asOfDate ?? chain.dataDate;
-    if (!isOptionMarkCurrent(asOfDate)) {
-      return NextResponse.json({ ok: false, reason: 'stale_quote', asOfDate });
-    }
-    return NextResponse.json({
-      ok: true,
-      price: mark.price,
-      priceField: mark.priceField,
-      asOfDate,
-      basis: chain.freshness,
-      source: chain.sourceFunction,
-      contractId: mark.contractId,
-    });
-  } catch (error) {
-    console.warn('[journal/option-quote] failed:', error instanceof Error ? error.message : error);
-    return NextResponse.json({ ok: false, reason: 'provider_error' }, { status: 502 });
+  const mark = await fetchOptionContractMark(spec);
+  if (!mark.ok) {
+    if (mark.reason === 'provider_error') return NextResponse.json({ ok: false, reason: 'provider_error' }, { status: 502 });
+    return NextResponse.json(mark.reason === 'stale_quote' ? { ok: false, reason: 'stale_quote', asOfDate: mark.asOfDate } : { ok: false, reason: mark.reason });
   }
+  return NextResponse.json({
+    ok: true,
+    price: mark.price,
+    priceField: mark.priceField,
+    asOfDate: mark.asOfDate,
+    basis: mark.basis,
+    source: mark.source,
+    contractId: mark.contractId,
+  });
 }

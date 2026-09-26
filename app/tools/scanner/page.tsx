@@ -23,6 +23,7 @@ import { computeMspScore, deriveLifecycleState, isRegimeCompatibleForRegime, nor
 import { humanizeEnum } from '@/lib/presentation/labels';
 import { buildAnalysisNarrative, classifySetupFamily } from '@/lib/scanner/analysisNarrative';
 import { DATA_TRUST_LABEL } from '@/lib/scanner/dataTrust';
+import { reconcileFeedStatusWithRows } from '@/lib/scanner/feedStatusFromRows';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
@@ -185,39 +186,14 @@ function rankedTrustDetail(r: ScanResult): string {
 }
 
 /**
- * Consistency rule (live-review H6): the panel-level "LIVE / Coverage" badge must
- * reflect the WEAKEST row, not assert LIVE over degraded/stale rows. If any row in
- * the asset class is DEGRADED/MISSING, downgrade the provider-status badge and
- * explain why. Pure — returns a new object, never mutates.
+ * Panel status for one asset class, reconciled with the row Trust labels (lib/scanner/feedStatusFromRows): the panel,
+ * the "Degraded Data" card and the rows must agree, and a DEGRADED/STALE panel always says why.
  */
 function downgradeProviderStatusForRows(
   status: ProviderStatus | null | undefined,
   rows: ScanResult[] | undefined,
 ): ProviderStatus | null {
-  if (!status) return status ?? null;
-  if (!rows || rows.length === 0) return status;
-  const total = rows.length;
-  // Only genuinely stale / insufficient rows make the feed panel STALE. DEGRADED rows (e.g. EMA200 missing on a
-  // 50-bar weekly series) are disclosed per row and counted here, not presented as a stale feed.
-  const staleRows = rows.filter((r) => { const t = rankedTrustLabel(r); return t === 'STALE' || t === 'INSUFFICIENT DATA'; }).length;
-  const degradedRows = rows.filter((r) => rankedTrustLabel(r) === 'DEGRADED').length;
-  const bars = rows.map((r) => r.dataBasis?.lastCompletedBarAt).filter((x): x is string => Boolean(x)).sort();
-  const newestBar = bars[bars.length - 1];
-  const barNote = newestBar ? `last completed bar ${/^\d{4}-\d{2}-\d{2}$/.test(newestBar) ? newestBar : newestBar.slice(0, 16).replace('T', ' ') + ' UTC'}` : null;
-  if (staleRows === 0 && degradedRows === 0) return barNote ? { ...status, warnings: [barNote, ...(status.warnings ?? [])] } : status;
-  return {
-    ...status,
-    live: staleRows === 0 ? status.live : false,
-    stale: staleRows > 0,
-    degraded: true,
-    alertLevel: status.alertLevel === 'critical' ? 'critical' : staleRows > 0 ? 'warning' : status.alertLevel,
-    warnings: [
-      ...(staleRows > 0 ? [`${staleRows} of ${total} rows stale or insufficient — panel reflects the weakest row.`] : []),
-      ...(degradedRows > 0 ? [`${degradedRows} of ${total} rows degraded (see row Trust for the reason).`] : []),
-      ...(barNote ? [barNote] : []),
-      ...(status.warnings ?? []),
-    ],
-  };
+  return reconcileFeedStatusWithRows(status ?? null, rows, rankedTrustLabel, (r) => r.dataBasis?.lastCompletedBarAt);
 }
 
 function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAligned: boolean; momentumAligned: boolean; flowAligned: boolean; dataQuality: string; direction: string; regime?: string }) {
@@ -1663,7 +1639,8 @@ export default function ScannerPage() {
               source: quality?.source,
               coverageScore: quality?.coverageScore,
               computedAt: quality?.computedAt,
-              warnings: quality?.warnings,
+              // Reasons come from the reconciled status (which already includes the feed's own warnings).
+              notes: quality?.notes,
             }))}
           />
 

@@ -93,6 +93,11 @@ export function ema200SanityFailure(
   return null;
 }
 
+/** scan-daily crypto history: 6 × 180-day CoinGecko windows (~1,080 bars, 4 more OHLC calls per coin than the
+ *  default 2) so the stored EMA200 and the canonical verdict's EMA200 converge (RS-4). The job runs once a day over
+ *  ~50 coins, so this adds ~200 CoinGecko calls per run. */
+export const DAILY_SCAN_CRYPTO_WINDOWS = 6;
+
 export type CryptoDailyScanOutcome =
   | { ok: true; price: number; indicators: CryptoDailyIndicators; barCount: number; source: string; /** Completed daily bars used (oldest first), for the canonical engine. */ bars: Bar[] }
   | { ok: false; reason: string };
@@ -106,7 +111,7 @@ export async function scanCryptoDailyIndicators(
   symbol: string,
   spotPrice: number | null,
   fetchSeries: (symbol: string) => Promise<CryptoSeries> = (s) =>
-    fetchCryptoSeries(s, 'daily', Date.now(), { requestOptions: { retries: 1, timeoutMs: 10_000 } }),
+    fetchCryptoSeries(s, 'daily', Date.now(), { dailyWindows: DAILY_SCAN_CRYPTO_WINDOWS, requestOptions: { retries: 1, timeoutMs: 10_000 } }),
 ): Promise<CryptoDailyScanOutcome> {
   let series: CryptoSeries;
   try {

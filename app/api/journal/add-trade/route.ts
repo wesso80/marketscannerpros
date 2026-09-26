@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { getKillSwitchState } from '@/lib/universe/personalUniverse';
+import { resolveEntryLevels } from '@/lib/journal/entryLevels';
 
 /**
  * POST /api/journal/add-trade
@@ -67,23 +68,16 @@ export async function POST(req: NextRequest) {
     const notes = body.notes || null;
     const tradeDate = body.tradeDate || new Date().toISOString().slice(0, 10);
 
-    // Auto-compute stop-loss & target when not provided
-    let stopLoss = body.stopLoss ? parseFloat(body.stopLoss) : null;
-    let target = body.target ? parseFloat(body.target) : null;
-    if (!stopLoss || !Number.isFinite(stopLoss)) {
-      const ac = String(assetClass).toLowerCase();
-      const pct = ac === 'crypto' ? 0.05 : ac === 'forex' ? 0.015 : 0.02;
-      stopLoss = side === 'LONG'
-        ? +(entryPrice * (1 - pct)).toFixed(8)
-        : +(entryPrice * (1 + pct)).toFixed(8);
-    }
-    if (!target || !Number.isFinite(target)) {
-      const ac = String(assetClass).toLowerCase();
-      const pct = ac === 'crypto' ? 0.10 : ac === 'forex' ? 0.030 : 0.04;
-      target = side === 'LONG'
-        ? +(entryPrice * (1 + pct)).toFixed(8)
-        : +(entryPrice * (1 - pct)).toFixed(8);
-    }
+    // TR-9: a blank stop or target stays blank (nothing invented); risk only from an entered stop,
+    // planned R:R only from an entered stop and target.
+    const { stopLoss, target, riskAmount, plannedRR } = resolveEntryLevels({
+      side: side as 'LONG' | 'SHORT',
+      entryPrice,
+      quantity,
+      assetClass,
+      stopLoss: body.stopLoss,
+      target: body.target,
+    });
 
     // Options-specific fields
     const optionType = tradeType === 'Options' && body.optionType ? String(body.optionType).toUpperCase() : null;
@@ -93,18 +87,6 @@ export async function POST(req: NextRequest) {
 
     // Leverage for Futures / Margin
     const leverage = (tradeType === 'Futures' || tradeType === 'Margin') && body.leverage ? parseFloat(body.leverage) : null;
-
-    // Calculate risk metrics if stop loss provided
-    let riskAmount: number | null = null;
-    let plannedRR: number | null = null;
-    if (stopLoss && Number.isFinite(stopLoss)) {
-      const riskPerUnit = Math.abs(entryPrice - stopLoss);
-      riskAmount = riskPerUnit * quantity;
-      if (target && Number.isFinite(target)) {
-        const rewardPerUnit = Math.abs(target - entryPrice);
-        plannedRR = riskPerUnit > 0 ? rewardPerUnit / riskPerUnit : null;
-      }
-    }
 
     const result = await q(
       `INSERT INTO journal_entries (

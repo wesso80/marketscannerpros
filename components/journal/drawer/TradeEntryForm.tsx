@@ -355,6 +355,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               value={stopLoss}
               onChange={(e) => setStopLoss(e.target.value)}
             />
+            <p className="mt-1 text-[11px] text-slate-500">Your stop. Leave blank for no stop: R stays unavailable until you set one.</p>
           </div>
           <div>
             <label htmlFor="trade-target" className={LABEL}>Key Level</label>
@@ -369,6 +370,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />
+            <p className="mt-1 text-[11px] text-slate-500">Leave blank for no target: none is filled in for you.</p>
           </div>
         </div>
 

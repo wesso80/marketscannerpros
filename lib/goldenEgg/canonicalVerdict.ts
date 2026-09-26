@@ -14,10 +14,23 @@ import { noSetupDisplay, targetBasisLabel } from '@/lib/scoring/canonical/displa
 import type { CanonicalAssetClass, CanonicalBar, CanonicalLevels, CanonicalReason, CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { Direction, GoldenEggPayload, PublicAssessment } from '@/src/features/goldenEgg/types';
 
-/** Oldest-first canonical bars from the Golden Egg price history (null volume when the provider gave none). */
-export function goldenEggCanonicalBars(priceData: Pick<PriceData, 'historicalCloses' | 'historicalOpens' | 'historicalHighs' | 'historicalLows' | 'historicalDates' | 'historicalVolumes'>): CanonicalBar[] {
-  const c = priceData.historicalCloses ?? [];
-  const o = priceData.historicalOpens, h = priceData.historicalHighs, l = priceData.historicalLows, d = priceData.historicalDates, v = priceData.historicalVolumes;
+/** Most bars the Golden Egg canonical verdict reads: enough for an SMA-seeded EMA200 to converge (1,000 bars leave
+ *  ~0.03% of the seed; 300–360 bars left ~20–37%). */
+export const GOLDEN_EGG_CANONICAL_MAX_BARS = 1000;
+
+/**
+ * Oldest-first canonical bars from the Golden Egg price history (null volume when the provider gave none). Uses the
+ * longer `indicatorHistory` (up to 1,000 bars: equities from AV 'full', crypto daily from 6 × 180-day windows) when it
+ * is complete and longer than the display tail, so the verdict's own EMA200 / ADX converge like the displayed ones (RS-4).
+ */
+export function goldenEggCanonicalBars(priceData: Pick<PriceData, 'historicalCloses' | 'historicalOpens' | 'historicalHighs' | 'historicalLows' | 'historicalDates' | 'historicalVolumes' | 'indicatorHistory'>): CanonicalBar[] {
+  const ih = priceData.indicatorHistory;
+  const n = ih?.closes?.length ?? 0;
+  const useLong = !!ih && n > (priceData.historicalCloses?.length ?? 0)
+    && ih.highs?.length === n && ih.lows?.length === n && ih.opens?.length === n && ih.dates?.length === n;
+  const c = useLong ? ih!.closes : priceData.historicalCloses ?? [];
+  const o = useLong ? ih!.opens : priceData.historicalOpens, h = useLong ? ih!.highs : priceData.historicalHighs, l = useLong ? ih!.lows : priceData.historicalLows;
+  const d = useLong ? ih!.dates : priceData.historicalDates, v = useLong ? ih!.volumes : priceData.historicalVolumes;
   if (!h || !l || h.length !== c.length || l.length !== c.length) return [];
   const bars: CanonicalBar[] = [];
   for (let i = 0; i < c.length; i++) {
@@ -55,7 +68,7 @@ export function evaluateGoldenEggCanonical(bars: CanonicalBar[], ctx: GoldenEggC
     ? [{ code: 'DATA_TRUST_DEGRADED', message: `Golden Egg data trust is ${ctx.trustLevel}` }] : [];
   const flags: CanonicalReason[] = ctx.timeframe.toLowerCase() !== 'daily'
     ? [{ code: 'UNCALIBRATED_TIMEFRAME', message: `Outcome calibration covers daily bars only; this ${ctx.timeframe} verdict is uncalibrated factor alignment (no probability or expected-R claim)` }] : [];
-  return evaluateCanonicalFromBars(bars.slice(-500), {
+  return evaluateCanonicalFromBars(bars.slice(-GOLDEN_EGG_CANONICAL_MAX_BARS), {
     symbol: ctx.symbol, assetClass: ctx.assetClass, timeframe: ctx.timeframe,
     hardBlocks, dataWatchReasons, flags, trust: ctx.trustLevel ?? null, dataTimestamp: ctx.dataTimestamp ?? bars[bars.length - 1]?.t ?? null,
     regimeOverlay: ctx.overlay ? overlayForDirection(evaluateRegimeOverlay(ctx.overlay, ctx.assetClass)) : undefined,
@@ -145,6 +158,12 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
     }
     out.canonical = packet;
   }
+  // The Setup panel's free-text thesis is written by the legacy engine from ITS direction; when the canonical direction
+  // differs, lead with the canonical setup and keep the legacy read only as labelled secondary context.
+  const legacyThesis = out.layer2?.setup?.thesis;
+  if (typeof legacyThesis === 'string' && legacyThesis && direction !== l1.direction) {
+    out.layer2 = { ...out.layer2, setup: { ...out.layer2.setup, thesis: canonicalSetupThesis(payload.meta.symbol, c, legacyThesis) } };
+  }
   if (out.layer3?.narrative && (assessment !== l1.assessment || direction !== l1.direction)) {
     out.layer3 = { ...out.layer3, narrative: { ...out.layer3.narrative, summary: canonicalNarrativeSummary(payload.meta.symbol, c, l1) } };
   }
@@ -173,6 +192,39 @@ function invalidationLogic(lv: CanonicalLevels, long: boolean): string {
     : lv.invalidationBasis === 'recent_extreme' ? `the recent exhaustion ${long ? 'low' : 'high'}`
     : 'an ATR-based model stop (no structural level)';
   return `${side} ${basis} (canonical setup${atr})`;
+}
+
+/** Legacy thesis lead: "SYM shows a bullish breakout setup (note)." (the note can contain its own parentheses). */
+const LEGACY_THESIS_LEAD = /^[\s\S]*? shows an? (bullish|bearish|neutral) ([\s\S]*? setup) \(([\s\S]*?)\)\.(?=\s|$)/;
+
+/**
+ * Setup-panel thesis for a canonical direction that differs from the legacy engine's. The lead sentence states the
+ * canonical setup (or that none qualifies); the legacy evidence sentences (ADX, options positioning, DVE, time
+ * confluence) are kept as facts, but anything phrased relative to the legacy direction — "supports the thesis", the
+ * time-confluence relation — is restated against the canonical direction, and the legacy lead is kept last as
+ * labelled secondary context.
+ */
+export function canonicalSetupThesis(symbol: string, c: CanonicalResult, legacyThesis: string): string {
+  const hasSetup = c.setupType !== 'NONE' && c.direction !== 'neutral';
+  const setup = (SETUP_LABEL[c.setupType] ?? c.setupType).toLowerCase();
+  const status = c.permission === 'PASS' ? 'qualifies' : c.permission === 'WATCH' ? 'is on watch' : 'is blocked';
+  const lead = hasSetup
+    ? `${symbol}: the canonical engine reads a ${c.direction} ${setup} setup (score ${c.score}/100, ${status}).`
+    : `${symbol}: no canonical setup qualifies right now, so there is no directional thesis.`;
+  const m = LEGACY_THESIS_LEAD.exec(legacyThesis);
+  const legacyLead = m ? `a ${m[1]} ${m[2]} (${m[3]})` : null;
+  let rest = m ? legacyThesis.slice(m[0].length).trim() : '';
+  rest = rest
+    .replace(/Market pressure at (\d+)\/100 supports the thesis\./, 'Market pressure is $1/100.')
+    .replace(/Time confluence is (bullish|bearish) with (.+?) signal strength \((?:supportive|conflict|neutral|unavailable)\)\./, (_all, dir: string, strength: string) => {
+      const agrees = hasSetup && ((dir === 'bullish') === (c.direction === 'long'));
+      const rel = !hasSetup ? '' : agrees ? `, in line with the canonical ${c.direction}` : `, against the canonical ${c.direction}`;
+      return `Time confluence is ${dir} with ${strength} signal strength${rel}.`;
+    });
+  const secondary = legacyLead
+    ? ` The older confluence model read ${legacyLead} (secondary context only).`
+    : ` Older confluence model (secondary context only): ${legacyThesis.trim()}`;
+  return `${lead}${rest ? ` ${rest}` : ''}${secondary}`;
 }
 
 const LEGACY_LEAN: Record<Direction, string> = { LONG: 'a bullish lean', SHORT: 'a bearish lean', NEUTRAL: 'no clear lean' };

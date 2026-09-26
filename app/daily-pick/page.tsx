@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { q } from '@/lib/db';
 import { canonicalLabel, rankDailyPicks, readStoredCanonical } from '@/lib/scoring/canonical/dailyPick';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
+import { formatSessionDate, toYmd } from '@/lib/time/usSession';
 
 export const runtime = 'nodejs';
 // Database-backed observations are resolved at request time, not during builds.
@@ -39,10 +40,9 @@ function formatFloat(n: number | null): string | null {
   return String(n);
 }
 
+// DATE column → YYYY-MM-DD without a time-zone shift (see lib/time/usSession).
 function toDateString(v: unknown): string {
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (typeof v === 'string') return v.slice(0, 10);
-  return '';
+  return toYmd(v) ?? '';
 }
 
 async function loadLatest(): Promise<DayData | null> {
@@ -143,7 +143,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dateStr = data?.scan_date ?? new Date().toISOString().slice(0, 10);
   const topSymbols = (data?.picks ?? []).slice(0, 3).map((p) => p.symbol).join(', ') || 'today';
   const title = unavailable ? 'Daily Picks unavailable · MarketScanner Pros' : `Daily Picks ${dateStr} · ${topSymbols} · MarketScanner Pros`;
-  const description = `Top scanner-ranked stocks and crypto for ${dateStr}: ${topSymbols}. Educational technical-analysis snapshots updated daily.`;
+  const description = `Top scanner-ranked stocks and crypto for the ${formatSessionDate(dateStr)} US session: ${topSymbols}. Educational technical-analysis snapshots updated daily.`;
   const url = 'https://marketscannerpros.app/daily-pick';
   const og = `https://marketscannerpros.app/api/og/scan?symbol=DAILY&side=WATCH&headline=${encodeURIComponent('Top picks for ' + dateStr)}&sub=${encodeURIComponent(topSymbols)}`;
   return {
@@ -200,7 +200,11 @@ export default async function DailyPickPage() {
         <div style={{ color: 'var(--msp-flat)', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           MarketScanner Pros · Daily Picks
         </div>
-        <h1 style={h1Style}>Top {data.picks.length} picks · {data.scan_date}</h1>
+        <h1 style={h1Style}>Top {data.picks.length} picks · US session {formatSessionDate(data.scan_date)}</h1>
+        <p style={{ color: 'var(--msp-flat)', fontSize: 14, marginTop: 4 }}>
+          Dated by the US market session the data comes from (the last completed session when the scan ran, New York
+          time). Crypto rows use the latest completed daily candle (UTC) at scan time.
+        </p>
         <p style={{ color: 'var(--msp-text)', fontSize: 17, lineHeight: 1.6, marginTop: 6, maxWidth: 760 }}>
           Symbols from the most recent daily scan, ordered by the canonical verdict (PASS / WATCH / BLOCK, then grade
           and setup score). The older signal-count score is shown underneath as a secondary figure.

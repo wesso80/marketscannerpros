@@ -2971,7 +2971,10 @@ export async function POST(req: NextRequest) {
     // Return results with cache-prevention headers
     const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';
     const providerWarnings = errors.slice(0, 5);
-    if (limited.length < symbolsToScan.length) providerWarnings.push(`Ranked sample: ${limited.length} of ${symbolsToScan.length} universe symbols attempted; use Pro for a larger universe.`);
+    // The sample size is a disclosure, not a data problem: it used to be pushed into the warnings, which alone marked
+    // the whole feed DEGRADED while every row was Trust GOOD (SC-13).
+    const providerNotes: string[] = [];
+    if (limited.length < symbolsToScan.length) providerNotes.push(`Ranked sample: ${limited.length} of ${symbolsToScan.length} universe symbols attempted; use Pro for a larger universe.`);
     if (evaluatedCount < limited.length) providerWarnings.push(`${evaluatedCount}/${limited.length} symbols evaluated; ${limited.length - evaluatedCount} unavailable.`);
     // Any row whose real bar interval differs from the requested timeframe is disclosed at response level too.
     const mismatched = [...new Set(results.filter((r) => r.dataTrust?.intervalMismatch).map((r) => r.barInterval).filter((x): x is string => Boolean(x)))];
@@ -3004,12 +3007,14 @@ export async function POST(req: NextRequest) {
           stale: isStale,
           coverageScore: limited.length ? Math.round(100 * evaluatedCount / limited.length) : 0,
           warnings: providerWarnings,
+          notes: providerNotes,
           providerStatus: buildMarketDataProviderStatus({
             source: providerSource,
             provider: providerSource,
             stale: isStale,
             degraded: errors.length > 0,
             warnings: providerWarnings,
+            notes: providerNotes,
           }),
         }),
         scanCoverage: {

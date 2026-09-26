@@ -56,10 +56,12 @@ export interface CapitalFlowResult {
     continuation: number;
     pinReversion: number;
     expansion: number;
-    regime: 'TRENDING' | 'PINNING' | 'EXPANDING' | 'MIXED';
+    /** Largest scenario weight, gated by trend evidence: TRENDING only when market mode is 'launch' (ADX ≥ 25 or
+     *  negative gamma); a continuation-led matrix without a measured trend reads NO_TREND (or MIXED when no ADX). */
+    regime: 'TRENDING' | 'NO_TREND' | 'PINNING' | 'EXPANDING' | 'MIXED';
     deltaExpansion: number;
     acceleration: 'rising' | 'falling' | 'flat';
-    decision: 'allow_trend_setups' | 'avoid_breakouts' | 'prep_breakout_strategies';
+    decision: 'allow_trend_setups' | 'wait_for_trend' | 'avoid_breakouts' | 'prep_breakout_strategies';
     raw: {
       continuation: number;
       pin: number;
@@ -183,7 +185,7 @@ export interface CapitalFlowResult {
       health_score: number;
     };
     market_regime: {
-      regime: 'trend_day' | 'mean_revert_day' | 'vol_expansion' | 'vol_compression' | 'liquidity_vacuum' | 'news_shock';
+      regime: 'trend_day' | 'range_day' | 'mean_revert_day' | 'vol_expansion' | 'vol_compression' | 'liquidity_vacuum' | 'news_shock';
       risk_mode: 'risk_on' | 'risk_off';
       volatility_state: 'low' | 'normal' | 'high' | 'extreme';
       liquidity_state: 'low' | 'normal' | 'high';
@@ -914,8 +916,13 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     (breakoutPressure * 0.25);
 
   const [pTrend, pPin, pExpansion] = normalizeProbabilities(continuationRaw, pinRaw, expansionRaw);
-  const matrixRegime: CapitalFlowResult['probability_matrix']['regime'] = pTrend >= pPin && pTrend >= pExpansion
-    ? 'TRENDING'
+  // The continuation weight is largest on almost every row without gamma (pin cannot pass 50), so on its own it is not
+  // trend evidence: TRENDING is printed only when market mode measured a trend (RS-15: it sat next to Mode "chop" on
+  // ~96% of equity and 100% of crypto rows).
+  const trendLed = pTrend >= pPin && pTrend >= pExpansion;
+  const trendMeasured = marketMode === 'launch';
+  const matrixRegime: CapitalFlowResult['probability_matrix']['regime'] = trendLed
+    ? (trendMeasured ? 'TRENDING' : marketModeBasis === 'unknown_default_chop' ? 'MIXED' : 'NO_TREND')
     : pPin >= pTrend && pPin >= pExpansion
       ? 'PINNING'
       : pExpansion >= pTrend && pExpansion >= pPin
@@ -937,8 +944,8 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       ? 'falling'
       : 'flat';
 
-  const decision: CapitalFlowResult['probability_matrix']['decision'] = pTrend >= pPin && pTrend >= pExpansion
-    ? 'allow_trend_setups'
+  const decision: CapitalFlowResult['probability_matrix']['decision'] = trendLed
+    ? (trendMeasured ? 'allow_trend_setups' : 'wait_for_trend')
     : pPin >= pTrend && pPin >= pExpansion
       ? 'avoid_breakouts'
       : 'prep_breakout_strategies';

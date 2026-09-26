@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { pickView } from '@/lib/scoring/canonical/dailyPick';
+import { toYmd } from '@/lib/time/usSession';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
 
 const SITE = 'https://marketscannerpros.app';
 
+// DATE column → YYYY-MM-DD without a time-zone shift (see lib/time/usSession).
 function toDateString(v: unknown): string {
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (typeof v === 'string') return v.slice(0, 10);
-  return '';
+  return toYmd(v) ?? '';
 }
 
 function toRfc822(v: unknown): string {

@@ -27,6 +27,7 @@ import {
 import { alertCronFailure } from "@/lib/opsAlerting";
 import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type CanonicalResult, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
 import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
+import { latestUsSessionDate } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -503,9 +504,10 @@ export async function POST(req: NextRequest) {
   // ==========================================================================
   
   try {
-    const scanDate = new Date().toISOString().split('T')[0];
+    // Same session-date rule as scan-daily (lib/time/usSession), so both writers agree on which day a row belongs to.
+    const scanDate = latestUsSessionDate(Date.now());
     
-    // Clear old picks for today
+    // Clear old picks for this session
     await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [scanDate]);
     
     // Helper to insert a pick

@@ -12,6 +12,7 @@ import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
 import { equityDailyAdx } from '@/lib/equityTrendMetrics';
+import { fetchCryptoDailyAdx } from '@/lib/cryptoTrendMetrics';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -204,6 +205,8 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
   atr?: number;
   vwap?: number;
   levels: Array<{ level: number; label: string }>;
+  /** Daily Wilder ADX(14) from completed UTC days (RS-15); undefined when unavailable. */
+  dailyAdx?: number;
   positioning: {
     openInterestUsd?: number;
     oiChangePercent?: number;
@@ -217,9 +220,10 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
   const coinId = await resolveSymbolToId(base);
   if (!coinId) throw new Error(`No CoinGecko mapping for ${base}`);
 
-  const [ohlc, derivatives] = await Promise.all([
+  const [ohlc, derivatives, dailyAdx] = await Promise.all([
     getOHLC(coinId, 7, { interval: 'hourly', timeoutMs: 8000, retries: 0 }),
     getDerivativesForSymbols([base]),
+    fetchCryptoDailyAdx(coinId),
   ]);
 
   if (!ohlc || !ohlc.length) {
@@ -292,6 +296,7 @@ async function fetchCryptoFlowContext(symbol: string): Promise<{
     atr,
     vwap,
     levels,
+    dailyAdx,
     positioning: {
       openInterestUsd,
       oiChangePercent,
@@ -359,6 +364,8 @@ export async function GET(request: NextRequest) {
             cryptoPositioning: crypto.positioning,
             trendMetrics: {
               priceAboveTrend: crypto.vwap ? crypto.spot >= crypto.vwap : undefined,
+              // Daily ADX gives crypto the same measured market mode as equities (ADX ≥ 25 → 'launch').
+              ...(crypto.dailyAdx !== undefined ? { adx: crypto.dailyAdx } : {}),
             },
             dataHealth: {
               freshness: 'LIVE',

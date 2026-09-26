@@ -18,10 +18,10 @@ type FlowPayload = {
     continuation: number;
     pinReversion: number;
     expansion: number;
-    regime: 'TRENDING' | 'PINNING' | 'EXPANDING' | 'MIXED';
+    regime: 'TRENDING' | 'NO_TREND' | 'PINNING' | 'EXPANDING' | 'MIXED';
     deltaExpansion: number;
     acceleration: 'rising' | 'falling' | 'flat';
-    decision: 'allow_trend_setups' | 'avoid_breakouts' | 'prep_breakout_strategies';
+    decision: 'allow_trend_setups' | 'wait_for_trend' | 'avoid_breakouts' | 'prep_breakout_strategies';
   };
   flow_state?: {
     state: 'ACCUMULATION' | 'POSITIONING' | 'LAUNCH' | 'EXHAUSTION';
@@ -248,7 +248,7 @@ export default function CapitalFlowCard({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Analytical Probability Matrix</div>
-            <div style={{ color: 'var(--msp-text)', fontSize: '0.68rem', fontWeight: 700 }}>{flow.probability_matrix.regime}</div>
+            <div style={{ color: 'var(--msp-text)', fontSize: '0.68rem', fontWeight: 700 }}>{flow.probability_matrix.regime.replace(/_/g, ' ')}</div>
           </div>
 
           {[

@@ -99,7 +99,7 @@ export interface MSPBrainDecisionObjectV1 {
     health_score: number;
   };
   market_regime: {
-    regime: 'trend_day' | 'mean_revert_day' | 'vol_expansion' | 'vol_compression' | 'liquidity_vacuum' | 'news_shock';
+    regime: 'trend_day' | 'range_day' | 'mean_revert_day' | 'vol_expansion' | 'vol_compression' | 'liquidity_vacuum' | 'news_shock';
     risk_mode: 'risk_on' | 'risk_off';
     volatility_state: 'low' | 'normal' | 'high' | 'extreme';
     liquidity_state: 'low' | 'normal' | 'high';
@@ -314,6 +314,7 @@ export function computeBrainDecision(input: BrainDecisionInput): BrainDecisionOb
   const stateLower = input.flowState.toLowerCase() as MSPBrainDecisionObjectV1['flow_state']['state'];
   const regimeMap: Record<ReturnType<typeof computeRegimeEngine>['regime'], MSPBrainDecisionObjectV1['market_regime']['regime']> = {
     TREND_DAY: 'trend_day',
+    RANGE_DAY: 'range_day',
     MEAN_REVERT_DAY: 'mean_revert_day',
     VOL_EXPANSION: 'vol_expansion',
     VOL_COMPRESSION: 'vol_compression',

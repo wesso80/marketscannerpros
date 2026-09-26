@@ -6,7 +6,7 @@
  * which scoring indicators are present (coverage), how old the underlying data is, and on what basis that age is known.
  * Pure: no DB or network access.
  */
-import { evaluateDataTrust, type DataTrustLevel, type TrustAssetClass } from './dataTrust';
+import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustLevel, type TrustAssetClass } from './dataTrust';
 
 /** Indicator groups the daily-picks scorers (`scan-daily`, `scan-universe`) vote with. Pairs count as one group. */
 export const DAILY_PICK_INDICATOR_GROUPS: Array<{ name: string; keys: string[] }> = [
@@ -79,7 +79,15 @@ export function evaluateDailyPickTrust(row: DailyPickRow, nowMs: number = Date.n
       ema200: present.some(g => g.name === 'EMA200'), macd: present.some(g => g.name === 'MACD') },
     nowMs,
   });
-  const reasons = [...base.reasons];
+  // Say exactly what "one bar behind" means for a stored daily row: a newer daily bar has CLOSED and the row will pick
+  // it up at the next daily scan. (Crypto's daily candle closes at 00:00 UTC, 2.5 h after the 21:30 UTC daily scan, so
+  // crypto rows read this from 00:00 UTC until the next run.)
+  const barDay = dataTimestamp ? dataTimestamp.slice(0, 10) : null;
+  const behindReason = !barDay ? null
+    : assetClass === 'equity'
+      ? `one session behind: last bar ${barDay}; the ${lastCompletedEquitySession(nowMs)} session has closed and arrives with the next daily scan`
+      : `one daily bar behind: last bar ${barDay} (UTC day); a newer daily bar has closed and arrives with the next daily scan`;
+  const reasons = base.reasons.map((r) => (r === 'one bar behind the market' && behindReason ? behindReason : r));
   let level: DataTrustLevel = base.level;
   if (coverage < DAILY_PICK_COVERAGE_MIN && level !== 'STALE') {
     level = 'INSUFFICIENT_DATA';

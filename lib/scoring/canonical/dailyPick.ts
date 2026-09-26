@@ -28,6 +28,9 @@ export interface DailyPickCanonicalOptions {
   hardBlocks?: CanonicalReason[];
 }
 
+/** Most daily bars the canonical engine reads for a daily pick (EMA200 convergence). */
+export const DAILY_PICK_MAX_BARS = 1000;
+
 /** Evaluate the canonical engine on daily bars (oldest first). Returns null when there are too few usable bars. */
 export function canonicalForDailyPick(bars: CanonicalBar[], opts: DailyPickCanonicalOptions): CanonicalResult | null {
   const clean = (bars ?? [])
@@ -42,7 +45,8 @@ export function canonicalForDailyPick(bars: CanonicalBar[], opts: DailyPickCanon
     hardBlocks.push({ code: 'STALE_DATA', message: `Last daily bar ${last.t.slice(0, 10)} is older than ${DAILY_PICK_STALE_DAYS} days` });
   }
   const regimeOverlay = opts.overlay ? overlayForDirection(evaluateRegimeOverlay(opts.overlay, opts.assetClass)) : undefined;
-  return evaluateCanonicalFromBars(clean.slice(-500), {
+  // Up to 1,000 bars so EMA200 converges (500 bars left ~5% of the SMA seed; RS-4).
+  return evaluateCanonicalFromBars(clean.slice(-DAILY_PICK_MAX_BARS), {
     symbol: opts.symbol, assetClass: opts.assetClass, timeframe: 'daily',
     hardBlocks, dataTimestamp: last.t, regimeOverlay,
   });
