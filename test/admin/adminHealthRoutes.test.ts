@@ -4,6 +4,8 @@
  *    Discord from discord_bridge_channels; scanner from admin_scan_runs; crypto paused ≠ error.
  *  - /api/admin/system/health: websocket / cache / API are NOT MONITORED (never a made-up DISCONNECTED/OK).
  *  - /api/admin/scanner/live: crypto rows skipped because crypto is off are "paused", not scan errors.
+ *  - "crypto off" is ADMIN_CRYPTO_ENABLED=false (lib/admin/adminCrypto), not the CoinGecko flag: with CoinGecko off
+ *    crypto scans on Alpha Vantage and is reported like any other market.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -53,6 +55,7 @@ beforeEach(() => {
   m.discord = [];
   m.savedRows = [];
   delete process.env.OPERATOR_CG_FETCH_ENABLED;
+  delete process.env.ADMIN_CRYPTO_ENABLED;
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
 });
 
@@ -73,7 +76,8 @@ describe("GET /api/admin/data-health", () => {
     for (const w of body.webhooks) expect(w.lastStatus).not.toBe("STALE");
   });
 
-  it("shows crypto as paused (not an error) and keys as configuration-only", async () => {
+  it("shows crypto as paused (not an error) when admin crypto is switched off, and keys as configuration-only", async () => {
+    process.env.ADMIN_CRYPTO_ENABLED = "false";
     process.env.ALPHA_VANTAGE_API_KEY = "k";
     m.scanRuns = [{ market: "EQUITIES", timeframe: "15m", status: "completed", started_at: new Date(Date.now() - 120_000).toISOString(), finished_at: new Date(Date.now() - 60_000).toISOString(), symbols_scanned: 40, symbols_failed: 0 }];
     const body = await (await dataHealthGET(req("/api/admin/data-health"))).json();
@@ -83,6 +87,42 @@ describe("GET /api/admin/data-health", () => {
     expect(scannerProvider.status).toBe("OK");
     const av = body.providers.find((p: { id: string }) => p.id === "alpha-vantage");
     expect(av.status).toBe("CONFIGURED");
+  });
+});
+
+describe("crypto with CoinGecko off but admin crypto on (default)", () => {
+  it("data-health reports crypto from its runs, never PAUSED", async () => {
+    const recent = { started_at: new Date(Date.now() - 120_000).toISOString(), finished_at: new Date(Date.now() - 60_000).toISOString() };
+    m.scanRuns = [
+      { market: "EQUITIES", timeframe: "15m", status: "completed", ...recent, symbols_scanned: 40, symbols_failed: 0 },
+      { market: "CRYPTO", timeframe: "15m", status: "completed", ...recent, symbols_scanned: 60, symbols_failed: 1 },
+    ];
+    const body = await (await dataHealthGET(req("/api/admin/data-health"))).json();
+    const crypto = body.scanner.markets.find((x: { market: string }) => x.market === "CRYPTO");
+    expect(crypto.status).toBe("OK");
+    expect(crypto.scanned).toBe(60);
+  });
+
+  it("system health counts crypto failures (crypto is not paused)", async () => {
+    const recent = { started_at: new Date(Date.now() - 120_000).toISOString(), finished_at: new Date(Date.now() - 60_000).toISOString() };
+    m.scanRuns = [{ market: "CRYPTO", timeframe: "15m", status: "completed", ...recent, symbols_scanned: 58, symbols_failed: 2 }];
+    const body = await (await systemHealthGET(req("/api/admin/system/health"))).json();
+    expect(body.scanner).not.toBe("PAUSED");
+    expect(body.scannerDetail.markets.find((x: { market: string }) => x.market === "CRYPTO").status).toBe("OK");
+    expect(body.errorsCount).toBe(2);
+    expect(JSON.stringify(body)).not.toMatch(/OPERATOR_CG_FETCH_ENABLED/);
+  });
+
+  it("scanner/live: crypto feed is not PAUSED; a real crypto failure is an error; leftover skipped rows stay paused", async () => {
+    m.savedRows = [
+      { symbol: "BTC", status: "failed", error: "NO_BAR_DATA", ageSec: 60, hits: [] },
+      { symbol: "ETH", status: "skipped", error: "Crypto market data paused (OPERATOR_CG_FETCH_ENABLED is off)", ageSec: null, hits: [] },
+    ];
+    const body = await (await scannerLiveGET(req("/api/admin/scanner/live?market=CRYPTO&timeframe=15m"))).json();
+    expect(body.health.feed).not.toBe("PAUSED");
+    expect(body.health.scanner).not.toBe("PAUSED");
+    expect(body.meta.errors.map((e: { symbol: string }) => e.symbol)).toEqual(["BTC"]);
+    expect(body.meta.paused).toEqual(["ETH"]);
   });
 });
 
@@ -107,7 +147,8 @@ describe("GET /api/admin/scanner/live", () => {
     expect(body.health.api).toBe("NOT MONITORED");
   });
 
-  it("lists paused crypto rows separately instead of counting them as errors", async () => {
+  it("lists paused crypto rows separately instead of counting them as errors (admin crypto switched off)", async () => {
+    process.env.ADMIN_CRYPTO_ENABLED = "false";
     m.savedRows = [
       { symbol: "BTC", status: "skipped", error: "Crypto market data paused (OPERATOR_CG_FETCH_ENABLED is off)", ageSec: null, hits: [] },
       { symbol: "ETH", status: "skipped", error: "Crypto market data paused (OPERATOR_CG_FETCH_ENABLED is off)", ageSec: null, hits: [] },

@@ -33,8 +33,8 @@ describe('admin crypto switches', () => {
     expect(isAdminCryptoEnabled()).toBe(false);
   });
 
-  it('no admin page or the shared scan decides "crypto off" from the CoinGecko flag', () => {
-    for (const f of ['lib/admin/defaultAdminMarket.ts', 'app/admin/live-scanner/page.tsx', 'app/admin/operator-terminal/page.tsx']) {
+  it('no admin page, health probe or the shared scan decides "crypto off" from the CoinGecko flag', () => {
+    for (const f of ['lib/admin/defaultAdminMarket.ts', 'app/admin/live-scanner/page.tsx', 'app/admin/operator-terminal/page.tsx', 'lib/admin/healthProbes.ts', 'app/api/admin/scanner/live/route.ts', 'app/api/admin/system/health/route.ts', 'app/admin/overview/page.tsx']) {
       expect(readFileSync(f, 'utf8')).not.toContain('operatorCgFetchEnabled');
     }
     const scan = readFileSync('lib/admin/sharedScan.ts', 'utf8');

@@ -84,6 +84,7 @@ export default function AdminOverviewPage() {
   } | null>(null);
   const [riskState, setRiskState] = useState<AdminRiskState | null>(null);
   const [scannerHits, setScannerHits] = useState<AdminScannerHit[]>([]);
+  const [scannerMarket, setScannerMarket] = useState<"EQUITIES" | "CRYPTO">("EQUITIES");
   const [liveUsers, setLiveUsers] = useState<{
     totalOnline: number; loggedIn: number; anonymous: number;
     pages: { path: string; count: number; section: string }[];
@@ -218,13 +219,14 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
   const fetchScannerFeed = async () => {
     const secret = sessionStorage.getItem("admin_secret");
     try {
-      const params = new URLSearchParams({ market: "CRYPTO", timeframe: "15m" });
-      const res = await fetch(`/api/admin/scanner/live?${params}`, {
+      // No market param: the server picks the admin default (EQUITIES; see defaultAdminMarket).
+      const res = await fetch("/api/admin/scanner/live?timeframe=15m", {
         headers: secret ? { Authorization: `Bearer ${secret}` } : {},
       });
       if (res.ok) {
         const data = await res.json();
         setScannerHits(data.hits || []);
+        setScannerMarket(data.meta?.market === "CRYPTO" ? "CRYPTO" : "EQUITIES");
       }
     } catch { /* ignore */ }
   };
@@ -491,7 +493,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", paddingTop: "1rem", marginBottom: "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.55rem" }}>
               <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Best Play Candidates</span>
-              <span style={{ color: "#64748B", fontSize: "0.75rem" }}>15m crypto</span>
+              <span style={{ color: "#64748B", fontSize: "0.75rem" }}>15m {scannerMarket === "CRYPTO" ? "crypto" : "equities"}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
               {(topScannerHits.length ? topScannerHits : ([{ symbol: "No candidates", bias: "WAIT", permission: "WAIT", confidence: 0, symbolTrust: 0, regime: "—" }] as AdminScannerHit[])).slice(0, 4).map((hit) => (

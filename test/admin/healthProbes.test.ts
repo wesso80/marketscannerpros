@@ -34,7 +34,7 @@ const opts = (over: Partial<{ nowMs: number; cryptoEnabled: boolean; staleAfterS
 });
 
 describe("summarizeScannerHealth", () => {
-  it("marks crypto PAUSED (not an error) when the crypto flag is off, and overall status ignores it", () => {
+  it("marks crypto PAUSED (not an error) when admin crypto is off, and overall status ignores it", () => {
     const h = summarizeScannerHealth([run("EQUITIES", 10)], [], opts());
     const crypto = h.markets.find((m) => m.market === "CRYPTO")!;
     expect(crypto.status).toBe("PAUSED");
@@ -89,6 +89,8 @@ describe("isPausedRow", () => {
   it("treats skipped crypto rows as paused while the flag is off", () => {
     expect(isPausedRow({ status: "skipped", error: "anything" }, "CRYPTO", false)).toBe(true);
     expect(isPausedRow({ status: "skipped", error: "Crypto market data paused (OPERATOR_CG_FETCH_ENABLED is off)" }, "CRYPTO", true)).toBe(true);
+    expect(isPausedRow({ status: "skipped", error: "Admin crypto is switched off (ADMIN_CRYPTO_ENABLED=false); crypto is never looked up through stock endpoints." }, "CRYPTO", true)).toBe(true);
+    expect(isPausedRow({ status: "skipped", error: "something else" }, "CRYPTO", true)).toBe(false);
     expect(isPausedRow({ status: "failed", error: "boom" }, "CRYPTO", false)).toBe(false);
     expect(isPausedRow({ status: "skipped", error: "x" }, "EQUITIES", false)).toBe(false);
   });
