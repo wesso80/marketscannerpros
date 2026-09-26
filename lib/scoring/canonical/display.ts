@@ -6,6 +6,7 @@
  * the target printing before the invalidation and the expected R after costs, with horizon and sample size;
  * everything else is labelled uncalibrated. Results stored before Phase 3 (no scoreBasis) render as before.
  */
+import { CANONICAL_MIN_RR } from './thresholds';
 import type { CanonicalLevels, CanonicalResult } from './types';
 
 type C = Pick<CanonicalResult, 'score' | 'permission'> & Partial<Pick<CanonicalResult, 'scoreBasis' | 'calibration' | 'factorScore'>>;
@@ -93,4 +94,32 @@ export function targetBasisLabel(lv: Pick<CanonicalLevels, 'targetBasis' | 'risk
   if (!lv) return '';
   if (lv.targetBasis === 'projected') return `projected ${Number(lv.riskReward.toFixed(2))}R (no swing level)`;
   return lv.targetBasis === 'ema20' ? 'EMA20' : 'swing level';
+}
+
+type GradeInput = Pick<CanonicalResult, 'grade' | 'score' | 'permission'>
+  & Partial<Pick<CanonicalResult, 'scoreBasis' | 'calibration' | 'thresholds' | 'direction' | 'watchReasons' | 'flags'>>;
+
+/**
+ * Plain explanation of where a canonical grade comes from, for tooltips: the Setup score (canonical.score) sets the
+ * grade, then caps apply. The MSP composite (compositeV2) never sets it. Same text for long and short.
+ */
+export function gradeBasis(c: GradeInput): string {
+  if (c.grade === 'F' || c.permission === 'BLOCK') {
+    return 'Grade F: no setup or a data / eligibility block, so the setup is not graded.';
+  }
+  const out: string[] = [];
+  if (isCalibrated(c)) {
+    out.push(`Grade ${c.grade} from the Setup score ${c.score} (${ordinal(c.score)} percentile of calibrated expected R): A ≥ 85, B ≥ 60, C below.`);
+  } else {
+    const a = c.thresholds?.gradeA, b = c.thresholds?.gradeB;
+    out.push(`Grade ${c.grade} from the Setup score ${c.score} (raw factor alignment, uncalibrated)${a != null && b != null ? `: A ≥ ${a}, B ≥ ${b}, C below` : ''}.`);
+  }
+  const cautions = cautionTags(c);
+  if (cautions.length) out.push(`Capped at C: ${cautions.join(', ')}.`);
+  const lowRR = (c.watchReasons ?? []).find((r) => r.code === 'RR_BELOW_MIN');
+  if (lowRR) out.push(`Capped at C: reward:risk below ${CANONICAL_MIN_RR}.`);
+  const snap = (c.flags ?? []).find((f) => f.code === 'SNAPSHOT_GRADE_CAP');
+  if (snap) out.push(snap.message + '.');
+  out.push('The MSP composite does not set the grade.');
+  return out.join(' ');
 }
