@@ -29,12 +29,12 @@ export class AuthError extends Error {
 /*  Generic fetcher                                                    */
 /* ------------------------------------------------------------------ */
 
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
+async function apiFetch<T>(url: string, options?: RequestInit, timeoutMs?: number): Promise<T> {
   const { response: res, body } = await boundedJsonFetch<T & { error?: string; message?: string }>(url, {
     credentials: 'same-origin',          // ensure cookies are sent
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-  });
+  }, timeoutMs);
   if (res.status === 401 || res.status === 403) throw new AuthError(url);
   if (!res.ok) {
     const detail = body?.error || body?.message || '';
@@ -611,15 +611,20 @@ export const SCAN_TIMEFRAMES: { value: ScanTimeframe; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
 ];
 
+export const SCANNER_INTRADAY_TIMEOUT_MS = 60_000;
+
 export function fetchScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily', symbols?: string[]): Promise<ScannerResponse> {
   // When no symbols provided, let the backend pull from symbol_universe DB table
   // for full bi-directional coverage instead of hardcoded 10 symbols
   const body: Record<string, unknown> = { timeframe, type };
   if (symbols?.length) body.symbols = symbols;
+  // Intraday equity rows are read live from the provider one symbol at a time (~17–30s for the Ranked sample), which
+  // the default 30s client bound cut off. Daily/weekly keep the default.
+  const intraday = timeframe === '15m' || timeframe === '30m' || timeframe === '1h';
   return apiFetch('/api/scanner/run', {
     method: 'POST',
     body: JSON.stringify(body),
-  });
+  }, intraday ? SCANNER_INTRADAY_TIMEOUT_MS : undefined);
 }
 
 // --- Golden Egg ---

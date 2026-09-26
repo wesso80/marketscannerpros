@@ -8,6 +8,7 @@
 import { forexOpenMinutesBetween, forexSessionsBetween, lastCompletedForexDailyBar } from '@/lib/time/fxSession';
 import { isNonTradingDay } from '@/lib/time/marketHolidays';
 import { lastCompletedUsSessionDate, usSessionsBetween } from '@/lib/time/usSession';
+import { easternWallTimeToMs } from '@/lib/scanner/intradayEquityBars';
 
 export type DataTrustLevel = 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA';
 export type TrustAssetClass = 'equity' | 'crypto' | 'forex';
@@ -72,9 +73,24 @@ export function lastCompletedEquitySession(nowMs: number): string {
   return lastCompletedUsSessionDate(nowMs);
 }
 
+/**
+ * Bar time → epoch ms. Alpha Vantage intraday equity bars are stamped in US/Eastern wall time with no offset
+ * ("2026-09-25 14:15:00"). `Date.parse` reads such a string as server-local time (UTC on the server), which made every
+ * intraday equity bar look 4–5 hours old and hard-blocked the whole 15m/30m/1H scan as STALE while the market was open.
+ * Naive equity timestamps are therefore read as America/New_York; strings with a Z/offset, date-only strings and other
+ * asset classes parse exactly as before.
+ */
+export function barTimeToMs(lastBarAt: string, assetClass: TrustAssetClass): number {
+  if (assetClass === 'equity') {
+    const eastern = easternWallTimeToMs(lastBarAt);
+    if (Number.isFinite(eastern)) return eastern;
+  }
+  return Date.parse(lastBarAt);
+}
+
 function judgeFreshness(input: DataTrustInput, nowMs: number): DataTrustResult['freshness'] {
   if (!input.lastBarAt) return 'unknown';
-  const lastMs = Date.parse(input.lastBarAt);
+  const lastMs = barTimeToMs(input.lastBarAt, input.assetClass);
   if (!Number.isFinite(lastMs)) return 'unknown';
   if (lastMs > nowMs + 60_000) return 'unknown';
   const interval = normalizeTimeframeInterval(input.barInterval || input.timeframe);

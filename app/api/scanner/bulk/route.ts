@@ -46,6 +46,7 @@ import { isRetiredFastCryptoRequest, resolveBulkScanMode, type BulkScanMode } fr
 import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 import { cachedMoversToAdd, completedSessionAvgVolume, parseEquityQuote } from '@/lib/scanner/equityScanInputs';
 import { riskOffThresholds } from '@/lib/regime-classifier';
+import { easternBarTimeToIso, intradayAvgDailyVolume } from '@/lib/scanner/intradayEquityBars';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -503,7 +504,7 @@ async function fetchCoinGeckoData(symbol: string, timeframe: string = '1d'): Pro
 }
 
 // Fetch equity OHLCV data from Alpha Vantage (Premium licensed - 300 calls/min)
-async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d', outputSize: 'compact' | 'full' = 'compact'): Promise<OHLCV[] | null> {
   try {
     if (!ALPHA_KEY) {
       console.error('[bulk-scan] No Alpha Vantage API key');
@@ -518,7 +519,7 @@ async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d'): 
       url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
       tsKey = 'Time Series (Daily)';
     } else {
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputSize}&entitlement=realtime&apikey=${ALPHA_KEY}`;
       tsKey = `Time Series (${interval})`;
     }
     
@@ -1943,6 +1944,43 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
  * scores via analyzeAssetByTimeframe (same 9-signal scoring as equity).
  * 1 AV call per pair (FX_DAILY/FX_INTRADAY) — very API-efficient.
  */
+const INTRADAY_EQUITY_MAX_SYMBOLS = 40;
+
+/**
+ * Pro equity scan on 15m / 30m / 1H. The cached scan only has DAILY bars, so on intraday timeframes every row carried
+ * barInterval '1d' and was hard-blocked ("Requested 1h, received 1d bars"). This scans a bounded slice of the universe
+ * on real Alpha Vantage intraday bars (last ~30 days, extended hours included) instead.
+ */
+async function runIntradayEquityBulkScan(startTime: number, timeframe: string, universeSize: number) {
+  const symbolsToScan = (await getUniverseFromDB('equity')).slice(0, Math.min(universeSize, INTRADAY_EQUITY_MAX_SYMBOLS));
+  const budgetMs = Math.max(5_000, 45_000 - (Date.now() - startTime));
+  console.log(`[bulk-scan/equity-intraday] Scanning ${symbolsToScan.length} equities on ${timeframe} (budget ${budgetMs}ms)...`);
+  const settled = await boundedBatch(symbolsToScan, (sym) => fetchAlphaVantageData(sym, timeframe, 'full'), { concurrency: 5, budgetMs });
+  const scored: any[] = [];
+  settled.forEach((outcome, i) => {
+    const candles = outcome.status === 'fulfilled' ? outcome.value : null;
+    if (!candles) return;
+    const result = analyzeAssetByTimeframe(symbolsToScan[i], candles, timeframe);
+    if (!result) return;
+    const avgDailyVolume20 = intradayAvgDailyVolume(candles);
+    (result as any).dataBasis = {
+      barInterval: timeframe, lastCompletedBarAt: easternBarTimeToIso(candles[candles.length - 1]?.date),
+      historyBars: candles.length, volumeBasis: avgDailyVolume20 ? 'exchange_volume_intraday_incl_extended_hours' : 'unavailable',
+      avgDailyVolume20, source: `alpha_vantage ${AV_INTERVAL_MAP[timeframe]} (US/Eastern, extended hours)`,
+    };
+    scored.push(result);
+  });
+  scored.sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
+  return {
+    scanned: scored.length,
+    topPicks: scored,
+    sourceSymbols: symbolsToScan.length,
+    apiCallsUsed: settled.filter((o) => o.status === 'fulfilled').length,
+    apiCallsCap: symbolsToScan.length,
+    effectiveUniverseSize: symbolsToScan.length,
+  };
+}
+
 async function runForexBulkScan(startTime: number, timeframe: string) {
   const forexUniverse = await getUniverseFromDB('forex');
   // If DB returned short codes (e.g. "EUR"), convert to pairs vs USD
@@ -2248,6 +2286,47 @@ export async function POST(req: NextRequest) {
     }
     
     const selectedTimeframe = validTimeframes.includes(timeframe) ? timeframe : '1d';
+
+    if (type === 'equity' && selectedTimeframe !== '1d') {
+      // Intraday: the worker cache only holds daily bars, so scan real intraday bars instead of hard-blocking every row.
+      const intraday = await runIntradayEquityBulkScan(startTime, selectedTimeframe, universeSize);
+      const institutional = applyInstitutionalFilterToTopPicks(intraday.topPicks, {
+        type, timeframe: selectedTimeframe, mode: 'deep', traderRiskDNA: adaptive?.profile?.riskDNA,
+        regimeOverlayInputs: await loadRegimeOverlayInputs().catch(() => null),
+      });
+      const partial = intraday.scanned < intraday.effectiveUniverseSize;
+      return NextResponse.json({
+        success: true,
+        compliance: scannerComplianceMetadata(),
+        type,
+        timeframe: selectedTimeframe,
+        mode: 'deep',
+        scanned: intraday.scanned,
+        duration: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+        ...selectProCandidates(institutional.topPicks, filters, sort),
+        sourceSymbols: intraday.sourceSymbols,
+        blockedByInstitutionalFilter: institutional.blockedCount,
+        apiCallsUsed: intraday.apiCallsUsed,
+        apiCallsCap: intraday.apiCallsCap,
+        effectiveUniverseSize: intraday.effectiveUniverseSize,
+        universe: {
+          mode: 'intraday',
+          source: `alpha_vantage ${AV_INTERVAL_MAP[selectedTimeframe]} intraday bars`,
+          input: intraday.effectiveUniverseSize,
+          valid: intraday.scanned,
+          excludedCounts: { noIntradayBars: Math.max(0, intraday.effectiveUniverseSize - intraday.scanned) },
+          note: `Intraday equity scans cover the first ${intraday.effectiveUniverseSize} universe symbols on live intraday bars (extended hours included); the daily scan covers the full cached universe.`,
+        },
+        dataQuality: scannerDataQualityMetadata({
+          source: 'alpha_vantage_intraday',
+          computedAt: new Date(),
+          stale: false,
+          coverageScore: intraday.effectiveUniverseSize ? Math.round((intraday.scanned / intraday.effectiveUniverseSize) * 100) : 0,
+          warnings: partial ? [`${intraday.effectiveUniverseSize - intraday.scanned} of ${intraday.effectiveUniverseSize} symbols returned no intraday bars within the time budget.`] : [],
+        }),
+        errors: [],
+      });
+    }
 
     if (type === 'equity') {
       // Try cache-first scan (reads worker-populated DB, 0–1 AV calls)
