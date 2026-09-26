@@ -573,7 +573,7 @@ function CryptoDetailPageContent() {
               {[
                 ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'N/A'}`],
                 ['Price', formatPrice(coinData.market.price_usd)],
-                ['24h', `${coinData.price_changes['24h'] !== undefined ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h']?.toFixed(2)}%` : 'N/A'}`],
+                ['24h', typeof coinData.price_changes['24h'] === 'number' && Number.isFinite(coinData.price_changes['24h']) ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h'].toFixed(2)}%` : 'N/A'],
                 ['Bias', decision.structureBias],
                 ['Structure score', `${decision.alignmentScore}/100`],
                 // Scopes are named (OV-19): the coin's own 24h range vs the market-wide regime in the gate breakdown,

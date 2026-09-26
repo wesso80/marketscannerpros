@@ -103,3 +103,12 @@ describe('OV-19 crypto deep-dive labels name their scope and share one risk sour
     expect(card).toMatch(/CryptoDecisionGate = \{[^}]*riskState\?: string/);
   });
 });
+
+describe('crypto deep-dive strip: missing 24h change reads N/A, never "+undefined%"', () => {
+  it('guards null/NaN, not just undefined', () => {
+    const page = read('app/tools/crypto-explorer/page.tsx');
+    expect(page).toContain("['24h', typeof coinData.price_changes['24h'] === 'number' && Number.isFinite(coinData.price_changes['24h'])");
+    expect(page).not.toContain("coinData.price_changes['24h'] !== undefined ?");
+  });
+});
+
