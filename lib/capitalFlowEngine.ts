@@ -3,7 +3,7 @@ import { computeFlowTradePermission } from './flow-trade-permission';
 import { computeInstitutionalRiskGovernor } from './institutional-risk-governor';
 import { computeBrainDecision } from './institutional-brain';
 import { detectSessionPhase } from './ai/sessionPhase';
-import { computeSessionLiquidityFromPhase, SessionLiquidityProfile } from './session-liquidity-engine';
+import { computeSessionLiquidityFromPhase, SessionLiquidityProfile, tpsLiquidityWeight } from './session-liquidity-engine';
 import { computeSessionPermissionOverlayFromPhase, SessionPermissionOverlay } from './session-permission-overlay';
 import { isEodDataCurrent } from './equityDataHealth';
 
@@ -1029,7 +1029,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const maxInstitutionalProbability = Math.max(pTrend, pPin, pExpansion);
 
   // Apply session-aware liquidity modifier to the liquidity clarity score
-  const sessionLiquidityWeight = Math.max(0.30, sessionLiquidity.liquidityScore / 100);
+  const sessionLiquidityWeight = tpsLiquidityWeight(sessionLiquidity);
   const sessionAdjustedLiquidityClarity = liquidityScore * sessionLiquidityWeight;
 
   const ftpm = computeFlowTradePermission({

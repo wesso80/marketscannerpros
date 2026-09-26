@@ -94,7 +94,7 @@ function Chip({ children, active, onClick }: { children: React.ReactNode; active
 }
 
 /* ── formatters ───────────────────────────────── */
-const pctColor = (n: number) => n > 0 ? 'text-emerald-400' : n < 0 ? 'text-red-400' : 'text-zinc-400';
+const pctColor = (n: number | null | undefined) => n == null || !Number.isFinite(n) ? 'text-zinc-400' : n > 0 ? 'text-emerald-400' : n < 0 ? 'text-red-400' : 'text-zinc-400';
 const fundingColor = (pct: number) => {
   if (pct > 0.03) return 'text-emerald-400';
   if (pct < -0.01) return 'text-red-400';

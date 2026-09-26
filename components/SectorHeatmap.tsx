@@ -7,13 +7,14 @@ interface SectorData {
   name: string;
   price?: number;
   change?: number;
-  changePercent: number;
-  daily?: number;
-  weekly?: number;
-  monthly?: number;
-  quarterly?: number;
-  ytd?: number;
-  yearly?: number;
+  /** null when the provider sent no change: shown as n/a, never as a flat 0.00% (OV-7). */
+  changePercent: number | null;
+  daily?: number | null;
+  weekly?: number | null;
+  monthly?: number | null;
+  quarterly?: number | null;
+  ytd?: number | null;
+  yearly?: number | null;
   weight: number;
   color: string;
   // Technical overlay
@@ -30,6 +31,11 @@ interface SectorData {
 
 type TimeFrame = 'realtime' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'ytd' | 'yearly';
 
+/** Signed percent, or "n/a" when there is no value. */
+function fmtChange(v: number | null | undefined): string {
+  return v == null || !Number.isFinite(v) ? 'n/a' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+}
+
 export default function SectorHeatmap() {
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +43,8 @@ export default function SectorHeatmap() {
   const [error, setError] = useState<string | null>(null);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('realtime');
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  /** Provider's own time (or quote trading day); the response time is only a fallback labelled as such. */
+  const [dataAsOf, setDataAsOf] = useState<{ asOf: string | null; tradingDay: string | null }>({ asOf: null, tradingDay: null });
   const [hoveredSector, setHoveredSector] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,7 +62,8 @@ export default function SectorHeatmap() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setSectors(Array.isArray(data.sectors) ? data.sectors : []);
-      setLastUpdate(data.timestamp);
+      setLastUpdate(data.fetchedAt ?? data.timestamp ?? null);
+      setDataAsOf({ asOf: data.asOf ?? null, tradingDay: data.asOfTradingDay ?? null });
       setError(null);
     } catch (err) {
       setError('Failed to load sector data');
@@ -64,7 +73,7 @@ export default function SectorHeatmap() {
     }
   }
 
-  function getChangeValue(sector: SectorData): number {
+  function getChangeValue(sector: SectorData): number | null {
     switch (timeFrame) {
       case 'daily': return sector.daily ?? sector.changePercent;
       case 'weekly': return sector.weekly ?? sector.changePercent;
@@ -76,7 +85,8 @@ export default function SectorHeatmap() {
     }
   }
 
-  function getHeatColor(changePercent: number): string {
+  function getHeatColor(changePercent: number | null): string {
+    if (changePercent == null || !Number.isFinite(changePercent)) return 'rgb(60, 60, 70)'; // no data: neutral gray
     // Gradient from deep red to bright green
     const intensity = Math.min(Math.abs(changePercent) / 3, 1);
     
@@ -204,7 +214,8 @@ export default function SectorHeatmap() {
   const layout = calculateLayout(sectors);
 
   // Find best and worst performers
-  const sortedByChange = [...sectors].sort((a, b) => getChangeValue(b) - getChangeValue(a));
+  // Sectors without a change are left out of best/worst instead of ranking as 0%.
+  const sortedByChange = sectors.filter((s) => getChangeValue(s) != null).sort((a, b) => (getChangeValue(b) as number) - (getChangeValue(a) as number));
   const bestPerformer = sortedByChange[0];
   const worstPerformer = sortedByChange[sortedByChange.length - 1];
 
@@ -310,7 +321,7 @@ export default function SectorHeatmap() {
                   {item.sector.name}
                 </span>
                 <span className="text-base sm:text-lg md:text-xl font-bold drop-shadow-lg text-white">
-                  {(change ?? 0) >= 0 ? '+' : ''}{(change ?? 0).toFixed(2)}%
+                  {fmtChange(change)}
                 </span>
                 <span className="text-white/70 text-xs drop-shadow">
                   {item.sector.symbol}
@@ -327,8 +338,8 @@ export default function SectorHeatmap() {
                   </div>
                   <div className="flex justify-between text-white/80 gap-4 mt-1">
                     <span>Change:</span>
-                    <span className={`font-medium ${(change ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {(change ?? 0) >= 0 ? '+' : ''}{(change ?? 0).toFixed(2)}%
+                    <span className={`font-medium ${change == null ? 'text-slate-400' : change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {fmtChange(change)}
                     </span>
                   </div>
                   {item.sector.price && (
@@ -414,7 +425,7 @@ export default function SectorHeatmap() {
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Best:</span>
                 <span className="text-emerald-400 font-medium">
-                  {bestPerformer.name} (+{(getChangeValue(bestPerformer) ?? 0).toFixed(2)}%)
+                  {bestPerformer.name} ({fmtChange(getChangeValue(bestPerformer))})
                 </span>
               </div>
             )}
@@ -422,7 +433,7 @@ export default function SectorHeatmap() {
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Worst:</span>
                 <span className="text-red-400 font-medium">
-                  {worstPerformer.name} ({(getChangeValue(worstPerformer) ?? 0).toFixed(2)}%)
+                  {worstPerformer.name} ({fmtChange(getChangeValue(worstPerformer))})
                 </span>
               </div>
             )}
@@ -430,9 +441,14 @@ export default function SectorHeatmap() {
         </div>
 
         {/* Last Update */}
-        {lastUpdate && (
+        {(dataAsOf.asOf || dataAsOf.tradingDay || lastUpdate) && (
           <p className="text-xs text-slate-500 mt-2">
-            Last updated: {new Date(lastUpdate).toLocaleTimeString()}
+            {dataAsOf.asOf
+              ? <>Data as of {new Date(dataAsOf.asOf).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</>
+              : dataAsOf.tradingDay
+                ? <>Quotes from the {dataAsOf.tradingDay} session (the provider gives no time)</>
+                : <>Provider time unknown</>}
+            {lastUpdate ? <> · fetched {new Date(lastUpdate).toLocaleTimeString()}</> : null}
           </p>
         )}
       </div>
@@ -457,8 +473,8 @@ export default function SectorHeatmap() {
                       }`}>{s.rs_rank ?? '-'}</span>
                       <span className="text-white">{s.symbol}</span>
                     </div>
-                    <span className={`font-medium ${s.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {s.changePercent >= 0 ? '+' : ''}{s.changePercent.toFixed(2)}%
+                    <span className={`font-medium ${s.changePercent == null ? 'text-slate-400' : s.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {fmtChange(s.changePercent)}
                     </span>
                   </div>
                 ))}

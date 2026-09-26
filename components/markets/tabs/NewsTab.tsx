@@ -1,6 +1,7 @@
 'use client';
 
 import type { TickerContext } from '../types';
+import { formatCalendarDay, formatEventTime } from '@/lib/eventTimeDisplay';
 
 /**
  * News & Events Tab — News headlines with sentiment, earnings calendar, economic calendar.
@@ -78,7 +79,7 @@ export default function NewsTab({ ctx }: { ctx: TickerContext }) {
               {earnings.slice(0, 10).map((e, i) => (
                 <tr key={i} className="border-t border-[var(--msp-divider)]">
                   <td className="py-1 pr-2 font-semibold text-[var(--msp-text)]">{e.symbol}</td>
-                  <td className="py-1 pr-2 text-[var(--msp-text-muted)]">{new Date(e.reportDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
+                  <td className="py-1 pr-2 text-[var(--msp-text-muted)]">{formatCalendarDay(e.reportDate)}</td>
                   <td className="py-1 pr-2 text-[var(--msp-text-muted)]">{e.estimate !== undefined ? `$${e.estimate.toFixed(2)}` : '—'}</td>
                   <td className="py-1 pr-2 text-[var(--msp-text)]">{e.actual !== undefined ? `$${e.actual.toFixed(2)}` : '—'}</td>
                   <td className={`py-1 font-semibold ${(e.surprise ?? 0) > 0 ? 'text-emerald-400' : (e.surprise ?? 0) < 0 ? 'text-rose-400' : 'text-slate-400'}`}>
@@ -106,8 +107,9 @@ export default function NewsTab({ ctx }: { ctx: TickerContext }) {
                   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${impactColor}`}>
                     {(ev.impact ?? 'low').toUpperCase()}
                   </span>
-                  <span className="text-[var(--msp-text-muted)]">
-                    {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {/* Release time in the viewer's zone with its label (a bare ET date read as UTC showed the previous day west of UTC). */}
+                  <span className="text-[var(--msp-text-muted)]" title={formatEventTime(ev).title}>
+                    {formatEventTime(ev).label}
                   </span>
                   <span className="flex-1 text-[var(--msp-text)]">{ev.event}</span>
                   {ev.forecast && <span className="text-[10px] text-[var(--msp-text-faint)]">F: {ev.forecast}</span>}

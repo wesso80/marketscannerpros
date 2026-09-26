@@ -66,6 +66,12 @@ function sessionLabel(phase: string): string {
   return phase.toLowerCase().replace(/_session$/, '').replace(/^crypto_/, '').replace(/_/g, ' ');
 }
 
+/** "asian hours", "after hours" (not "after hours hours"). */
+function sessionHours(phase: string): string {
+  const label = sessionLabel(phase);
+  return /\bhours$/.test(label) ? label : `${label} hours`;
+}
+
 function alignmentMap(state: InstitutionalFlowState): Record<TradeArchetype, number> {
   switch (state) {
     case 'ACCUMULATION':
@@ -230,33 +236,46 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
 
   // Use session-specific minimum TPS if provided, otherwise base threshold
   const tpsThreshold = so ? so.minimumTps / 100 : BASE_TPS_THRESHOLD;
-  const blocked = autoNoTrade || tps < tpsThreshold;
+  // Weekend / holiday for US equities: nothing is tradable, so permission is unavailable whatever the score (RS-22).
+  const marketClosed = so?.phase === 'MARKET_CLOSED';
+  const blocked = autoNoTrade || tps < tpsThreshold || marketClosed;
   // "Session-limited" (shown as "Unavailable this session") only when the score itself clears the standard threshold
   // and it is a session requirement that blocks it: the session's higher TPS bar (e.g. midday 70) or one of its
   // confidence/liquidity minimums. A score below the standard threshold is weak data and reads as a normal BLOCKED,
   // whatever the session. Never for crypto: it trades 24/7, so there is no session to be "unavailable" in.
   const sessionGateFailed = !!so && (failsSessionConfidence || failsSessionLiquidity);
   const isCrypto = so?.assetClass === 'crypto';
-  const sessionLimited = !autoNoTrade && blocked && !!so && !isCrypto &&
+  const sessionLimited = !autoNoTrade && blocked && !!so && !isCrypto && (marketClosed || (
     tpsBeforeGate >= BASE_TPS_THRESHOLD &&
-    (sessionGateFailed || tpsThreshold > BASE_TPS_THRESHOLD);
+    (sessionGateFailed || tpsThreshold > BASE_TPS_THRESHOLD)));
 
-  const pct = (v: number) => Math.round(v * 100);
+  // Whole-number score exactly as the cards show it (`tps` is returned to one decimal and displayed with toFixed(0)), so
+  // the reason never quotes a different number from the card.
+  const pct = (v: number) => Math.round(Number((v * 100).toFixed(1)));
+  const tpsThr = pct(tpsThreshold);
+  // A raw score just under the threshold can round up to it: show one (floored) decimal rather than "68 below 68".
+  const scoreBelow = (v: number) => (pct(v) < tpsThr ? String(pct(v)) : (Math.floor(v * 1000) / 10).toFixed(1));
+  // Only a score that rounds ABOVE a threshold "clears" it; one that rounds to it "meets" it.
+  const passVerb = (v: number, threshold: number) => (pct(v) > pct(threshold) ? 'clears' : 'meets');
   const failedGateText = !so ? '' : failsSessionConfidence
     ? `state confidence ${Math.round(input.stateConfidence)} is below the ${so.minimumConfidence} minimum`
     : `liquidity clarity ${Math.round(input.liquidityClarity)} is below the ${so.minimumLiquidityClarity} minimum`;
+  // A failed session gate caps the score just under the session bar; the card shows the capped score.
+  const capNote = pct(tps) !== pct(tpsBeforeGate) ? ` (score capped at ${pct(tps)})` : '';
 
   let reason = 'Permission granted';
   if (autoNoTrade && staleData) reason = 'NO-TRADE MODE: data health stale';
   else if (autoNoTrade) reason = 'NO-TRADE MODE: accumulation + low volatility + unclear liquidity';
-  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tpsBeforeGate)} clears the standard ${pct(BASE_TPS_THRESHOLD)} but ${failedGateText} for this session`;
-  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tps)} clears the standard ${pct(BASE_TPS_THRESHOLD)} but this session requires ${pct(tpsThreshold)}`;
+  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tpsBeforeGate)} ${passVerb(tpsBeforeGate, BASE_TPS_THRESHOLD)} the standard ${pct(BASE_TPS_THRESHOLD)} but ${failedGateText} for this session${capNote}`;
+  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tps)} ${passVerb(tps, BASE_TPS_THRESHOLD)} the standard ${pct(BASE_TPS_THRESHOLD)} but this session requires ${tpsThr}`;
   else if (blocked && sessionGateFailed) {
+    // Weak branch quotes the capped score (what the card shows; always below the bar). Otherwise the gate is the blocker
+    // and the pre-cap score is given with an honest verb.
     reason = tpsBeforeGate < tpsThreshold
-      ? `BLOCKED: Trade Permission Score ${pct(tpsBeforeGate)} below threshold (${pct(tpsThreshold)}); ${failedGateText} for ${sessionLabel(so!.phase)} hours`
-      : `BLOCKED: ${failedGateText} for ${sessionLabel(so!.phase)} hours (Trade Permission Score ${pct(tpsBeforeGate)} would otherwise clear the ${pct(tpsThreshold)} threshold)`;
+      ? `BLOCKED: Trade Permission Score ${pct(tps)} below threshold (${tpsThr}); ${failedGateText} for ${sessionHours(so!.phase)}`
+      : `BLOCKED: ${failedGateText} for ${sessionHours(so!.phase)}, so the Trade Permission Score is capped at ${pct(tps)} (${pct(tpsBeforeGate)} before the cap, which would otherwise ${passVerb(tpsBeforeGate, tpsThreshold) === 'clears' ? 'clear' : 'meet'} the ${tpsThr} threshold)`;
   }
-  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${pct(tps)} below threshold (${pct(tpsThreshold)})`;
+  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${scoreBelow(tps)} below threshold (${tpsThr})`;
 
   let scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
 
@@ -284,6 +303,14 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     }
   }
 
+  // Market closed: say so, and give the score as a next-open read against the standard bar (the closed overlay uses the
+  // standard rules). Kept as its own step so the session-reason wording above stays in one place.
+  if (marketClosed && !autoNoTrade) {
+    const shown = Math.round(Number((tps * 100).toFixed(1)));
+    const bar = Math.round(tpsThreshold * 100);
+    reason = `Unavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score ${shown} ${shown >= bar ? 'meets' : 'is below'} the standard ${bar}`;
+  }
+
   return {
     state: input.state,
     tps: Number((tps * 100).toFixed(1)),
@@ -302,4 +329,19 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     selectedArchetype: input.preferredArchetype,
     ...(sessionAdjustment ? { sessionAdjustment } : {}),
   };
+}
+
+/**
+ * Permission reasons already carry their own prefix ("BLOCKED: …", "NO-TRADE MODE: …"). UI that adds its own
+ * label ("Blocked: ", "Analysis paused: ") uses this so the page never reads "Blocked: BLOCKED: …" (RS-9).
+ */
+export function stripBlockedPrefix(reason: string | null | undefined): string {
+  return String(reason ?? '').replace(/^\s*BLOCKED:\s*/i, '').trim();
+}
+
+/** "Blocked: <reason>" with no doubled prefix; NO-TRADE MODE reasons are shown as they are. */
+export function blockedReasonLabel(reason: string | null | undefined, fallback = 'permission conditions not met'): string {
+  const text = String(reason ?? '').trim();
+  if (/^NO-TRADE MODE\b/i.test(text)) return text;
+  return `Blocked: ${stripBlockedPrefix(text) || fallback}`;
 }

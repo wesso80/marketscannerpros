@@ -25,11 +25,12 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { setupTypeDisplay } from '@/lib/scoring/canonical/scannerAdapter';
 import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
-import { NO_EDGE_BANNER, calibrationSummary, cautionTags, noSetupDisplay, scoreLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -442,7 +443,7 @@ export default function GoldenEggPage() {
   const geAssessmentLabel = geNoQualifyingSetup ? 'No Setup' : assessmentDisplayLabel(geAssessment);
   const geReason = geNoQualifyingSetup
     ? `No canonical setup qualifies on this bar${geNoSetup?.detail ? ` — ${geNoSetup.detail.replace(/^Closest:/, 'closest:')}` : ''}.`
-    : summarizeGEReason({ direction: ge?.layer1?.direction, setupType: ge?.layer2?.setup?.setupType, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
+    : summarizeGEReason({ direction: ge?.layer1?.direction, setupType: setupTypeDisplay(geEngine, ge?.layer2?.setup?.setupType, { withDirection: false }).toLowerCase(), confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geInvalidationConditions = buildGEInvalidationConditions({ confluence: geConfluenceScore, dataQuality: geDataQuality, primaryBlocker: ge?.layer1?.primaryBlocker, crossMarket: crossMarketAlignment.alignment, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
   const geMarketStatusItems = [
@@ -894,7 +895,7 @@ export default function GoldenEggPage() {
                     {formatLevel(ge.meta.price)}
                     {quote.data?.changePercent != null && (
                       <span className={`ml-2 text-sm ${quote.data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}%
+                        {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}% {priceChangeBasisLabel(ge.meta.assetClass, 'rolling_24h')}
                       </span>
                     )}
                   </div>
@@ -924,6 +925,7 @@ export default function GoldenEggPage() {
                       )}
                       {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{NO_EDGE_BANNER}</div> : null}
                       {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{calibrationSummary(geEngine)}</div> : null}
+                      {gradeRelativeNote(geEngine) ? <div className="text-[10px] text-slate-400" data-testid="ge-grade-relative">{gradeRelativeNote(geEngine)}</div> : null}
                       <div className="text-[10px] text-slate-500">Legacy confluence {geConfluenceScore}/100</div>
                     </div>
                   ) : (
@@ -1169,7 +1171,8 @@ export default function GoldenEggPage() {
               <div className="space-y-3">
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase">Setup Type</div>
-                  <div className="text-sm text-white font-semibold capitalize">{ge.layer2.setup.setupType.replace(/_/g, ' ')}</div>
+                  {/* Canonical setup when there is one (the legacy engine's label read "trend" on an exhaustion fade). */}
+                  <div className="text-sm text-white font-semibold" data-testid="ge-setup-type" title={geEngine ? `Canonical setup engine${ge.layer2.setup.setupType ? ` (legacy engine read: ${ge.layer2.setup.setupType.replace(/_/g, ' ')})` : ''}` : undefined}>{setupTypeDisplay(geEngine, ge.layer2.setup.setupType)}</div>
                 </div>
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase">Thesis</div>

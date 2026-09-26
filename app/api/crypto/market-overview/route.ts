@@ -5,6 +5,7 @@ import {
   getGlobalMarketCapChart,
 } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
+import { coinGeckoTimeToIso } from '@/lib/analysis/providerAsOf';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // 5 minutes
@@ -37,7 +38,11 @@ export async function GET() {
 
     const totalMarketCap = globalData.total_market_cap?.usd || 0;
     const totalVolume = globalData.total_volume?.usd || 0;
-    const marketCapChange = globalData.market_cap_change_percentage_24h_usd || 0;
+    // A missing 24h change is n/a (null), not a flat 0.0% ("Stable participation").
+    const rawChange = globalData.market_cap_change_percentage_24h_usd;
+    const marketCapChange = typeof rawChange === 'number' && Number.isFinite(rawChange) ? rawChange : null;
+    // CoinGecko's own update time for /global (unix seconds); null if not sent.
+    const asOf = coinGeckoTimeToIso(globalData.updated_at);
 
     // Format dominance
     const dominance = globalData.market_cap_percentage || {};
@@ -58,9 +63,10 @@ export async function GET() {
       }));
     }
 
+    // Freshness is judged from CoinGecko's own snapshot time when it sends one (OV-7).
     const meta = buildCoinGeckoResponseMeta({
       endpointFamily: 'GLOBAL',
-      lastUpdated: fetchedAt,
+      lastUpdated: asOf ?? fetchedAt,
       maxAgeMs: 300_000,
     });
 
@@ -81,6 +87,8 @@ export async function GET() {
         sparkline,
       },
       timestamp: meta.lastUpdated,
+      asOf,
+      fetchedAt,
       source: meta.provider,
       freshnessStatus: meta.freshnessStatus,
       meta,

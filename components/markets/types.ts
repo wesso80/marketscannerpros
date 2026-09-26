@@ -85,7 +85,12 @@ export interface EarningsEvent {
 }
 
 export interface EconomicEvent {
+  /** Legacy New York (ET) calendar date, YYYY-MM-DD. */
   date: string;
+  /** Legacy New York (ET) wall-clock time, HH:mm. */
+  time?: string;
+  /** Release instant (UTC ISO); shown in the viewer's zone. */
+  releaseTimeUtc?: string;
   event: string;
   impact: 'high' | 'medium' | 'low';
   actual?: string;
