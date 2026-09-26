@@ -5,6 +5,7 @@ import CommandStrip from '@/components/intelligence/CommandStrip';
 import IntelligenceTable, { type IntelColumn } from '@/components/intelligence/IntelligenceTable';
 import { StateCell, ScoreCell, MetricCell, SectionHeader, LastUpdatedBadge } from '@/components/intelligence/primitives';
 import type { FragilityResult } from '@/lib/intelligence/types';
+import { fragilityStatusLabel } from '@/lib/intelligence/overviewStatus';
 
 const INTERNAL_COLUMNS: IntelColumn[] = [
   { key: 'metric', label: 'Metric', align: 'left' },
@@ -214,7 +215,7 @@ function DataSourceBadge({ meta }: { meta?: FragilityResult['meta'] }) {
   // Default to MOCK when meta is absent so we never imply live data.
   const status = meta?.sourceStatus ?? 'MOCK';
   const isStale = meta?.isStale ?? false;
-  const label = isStale ? 'STALE' : status === 'OK' ? 'LIVE' : status === 'PARTIAL' ? 'LIVE · PARTIAL' : status;
+  const label = fragilityStatusLabel(meta);
   const color = isStale
     ? 'var(--msp-warn)'
     : status === 'OK' || status === 'PARTIAL'

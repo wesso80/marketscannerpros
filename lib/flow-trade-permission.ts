@@ -303,3 +303,18 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     ...(sessionAdjustment ? { sessionAdjustment } : {}),
   };
 }
+
+/**
+ * Permission reasons already carry their own prefix ("BLOCKED: …", "NO-TRADE MODE: …"). UI that adds its own
+ * label ("Blocked: ", "Analysis paused: ") uses this so the page never reads "Blocked: BLOCKED: …" (RS-9).
+ */
+export function stripBlockedPrefix(reason: string | null | undefined): string {
+  return String(reason ?? '').replace(/^\s*BLOCKED:\s*/i, '').trim();
+}
+
+/** "Blocked: <reason>" with no doubled prefix; NO-TRADE MODE reasons are shown as they are. */
+export function blockedReasonLabel(reason: string | null | undefined, fallback = 'permission conditions not met'): string {
+  const text = String(reason ?? '').trim();
+  if (/^NO-TRADE MODE\b/i.test(text)) return text;
+  return `Blocked: ${stripBlockedPrefix(text) || fallback}`;
+}
