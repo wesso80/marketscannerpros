@@ -6,6 +6,7 @@ import { detectSessionPhase } from './ai/sessionPhase';
 import { computeSessionLiquidityFromPhase, SessionLiquidityProfile, tpsLiquidityWeight } from './session-liquidity-engine';
 import { computeSessionPermissionOverlayFromPhase, SessionPermissionOverlay } from './session-permission-overlay';
 import { isEodDataCurrent } from './equityDataHealth';
+import { CRYPTO_DEALER_GAMMA_REASON, type DealerGammaInput } from './options/dealerGammaInput';
 
 export type FlowBias = 'bullish' | 'bearish' | 'neutral';
 export type MarketMode = 'pin' | 'launch' | 'chop';
@@ -40,6 +41,21 @@ export interface CapitalFlowResult {
   /** Which rule produced market_mode: signed gamma, price structure (ADX), or the no-evidence default. */
   market_mode_basis: MarketModeBasis;
   gamma_state: GammaState;
+  /** Where gamma_state came from (MV-3): the signed dealer-gamma estimate, its levels, as-of and source — or why not. */
+  gamma_input: {
+    status: 'available' | 'unavailable';
+    reason: string | null;
+    net_gex_usd: number | null;
+    gamma_flip: number | null;
+    call_wall: number | null;
+    put_wall: number | null;
+    expiration: string | null;
+    strikes_used: number | null;
+    as_of: string | null;
+    source: 'realtime' | 'previous_session' | null;
+    greeks: 'api' | 'model' | null;
+    convention: string | null;
+  };
   bias: FlowBias;
   conviction: number;
   conviction_factors: {
@@ -358,6 +374,11 @@ export interface CapitalFlowInput {
     liquidationLevels?: Array<{ level: number; side: 'long_liq' | 'short_liq'; weight?: number }>;
   } | null;
   liquidityLevels?: Array<{ level: number; label: string }>;
+  /**
+   * Signed dealer-gamma estimate from the options chain (lib/options/dealerGammaInput.ts). Omitted or 'unavailable'
+   * keeps gamma_state 'Unavailable' (scored as missing, never as a value).
+   */
+  dealerGamma?: DealerGammaInput | null;
   trendMetrics?: {
     adx?: number;
     /**
@@ -667,14 +688,22 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const centeredMixed = keyStrikes.slice(0, 2).every((strike) => strike.type === 'mixed');
   const oneSidedEquity = pcrBand < 0.7 || pcrBand > 1.3;
 
-  // Open-interest ratios and perpetual funding do not identify dealer gamma.
-  // A signed, expiry-scoped gamma source is required.
-  const gammaState = 'Unavailable' as GammaState;
+  // Open-interest ratios and perpetual funding do not identify dealer gamma. A signed, expiry-scoped gamma source is
+  // required: the GEX estimate from the options chain the caller already fetched (MV-3, input.dealerGamma). Net dealer
+  // GEX above +$50M → 'Positive', below −$50M → 'Negative', in between → 'Mixed' (lib/options-gex.ts thresholds).
+  // No chain / too few strikes / stale chain / crypto → 'Unavailable'. The mapping never looks at the bias.
+  const dealerGamma = marketType === 'equity' && input.dealerGamma?.state === 'available' ? input.dealerGamma : null;
+  const gammaState: GammaState = !dealerGamma
+    ? 'Unavailable'
+    : dealerGamma.regime === 'LONG_GAMMA'
+      ? 'Positive'
+      : dealerGamma.regime === 'SHORT_GAMMA'
+        ? 'Negative'
+        : 'Mixed';
 
-  // Market mode. Dealer gamma is not available from any current feed (gammaState is hard-wired 'Unavailable'), and
-  // perpetual funding is absent from the crypto feed, so the old rule left EVERY equity and crypto row in 'chop'.
-  // Without gamma the mode now comes from observed price structure: Wilder ADX ≥ 25 → 'launch' (trending), else
-  // 'chop'. 'pin' can only come from a real signed gamma source. `market_mode_basis` says which rule applied.
+  // Market mode. With signed gamma: positive → 'pin', negative → 'launch' (basis 'gamma'). Without it (or when it is
+  // 'Mixed') the mode comes from observed price structure: Wilder ADX ≥ 25 → 'launch' (trending), else 'chop'.
+  // 'pin' can only come from a real signed gamma source. `market_mode_basis` says which rule applied.
   const trendAdx = input.trendMetrics?.adx;
   const hasGamma = gammaState === 'Positive' || gammaState === 'Negative';
   const marketModeBasis: MarketModeBasis = hasGamma ? 'gamma'
@@ -846,14 +875,17 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     continuationRaw += 8;
   }
 
+  // Short (Negative) dealer gamma amplifies moves rather than pinning them, so it contributes no pin density (brad, MV-3).
   const gammaDensity = clamp(
     marketMode === 'pin'
       ? 90
-      : gammaState === 'Positive'
-        ? 75
-        : gammaState === 'Mixed'
-          ? 55
-          : 30,
+      : gammaState === 'Negative'
+        ? 0
+        : gammaState === 'Positive'
+          ? 75
+          : gammaState === 'Mixed'
+            ? 55
+            : 30,
     0,
     100
   );
@@ -868,7 +900,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     100
   );
 
-  // Dealer gamma is not available from any feed (gammaState is hard-wired 'Unavailable'). A missing input must not act
+  // When dealer gamma is 'Unavailable' (no chain, crypto, or a caller that does not supply it) a missing input must not act
   // as hidden evidence: the old fixed gammaDensity of 30 added a 15-point pin floor to every row, which capped the
   // trend probability (and so the Trade Permission Score) near 66-69 whatever the data. Without gamma, pin is scored
   // only from what we do observe (strike proximity, low volatility) at their existing weights, so it tops out at 50 —
@@ -1203,7 +1235,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       : null,
     fallback_active: !!input.dataHealth?.fallbackActive,
     missing_inputs: [
-      'dealer_gamma',
+      ...(gammaState === 'Unavailable' ? ['dealer_gamma'] : []),
       ...(marketType === 'equity' && !hasNearSpotOi ? ['near_spot_open_interest'] : []),
       ...(!vwap ? ['vwap'] : []),
       ...(priceAboveTrend === undefined ? ['trend_reference'] : []),
@@ -1223,6 +1255,31 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     market_mode: marketMode,
     market_mode_basis: marketModeBasis,
     gamma_state: gammaState,
+    gamma_input: dealerGamma
+      ? {
+          status: 'available',
+          reason: null,
+          net_gex_usd: dealerGamma.netGexUsd,
+          gamma_flip: dealerGamma.gammaFlip,
+          call_wall: dealerGamma.callWall,
+          put_wall: dealerGamma.putWall,
+          expiration: dealerGamma.expiration,
+          strikes_used: dealerGamma.strikesUsed,
+          as_of: dealerGamma.asOf,
+          source: dealerGamma.source,
+          greeks: dealerGamma.greeks,
+          convention: dealerGamma.convention,
+        }
+      : {
+          status: 'unavailable',
+          reason: input.dealerGamma?.state === 'unavailable'
+            ? input.dealerGamma.reason
+            : marketType === 'crypto'
+              ? CRYPTO_DEALER_GAMMA_REASON
+              : 'dealer gamma not supplied to this view',
+          net_gex_usd: null, gamma_flip: null, call_wall: null, put_wall: null, expiration: null,
+          strikes_used: null, as_of: null, source: null, greeks: null, convention: null,
+        },
     bias,
     conviction,
     conviction_factors: {
