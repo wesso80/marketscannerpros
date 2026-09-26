@@ -17,6 +17,10 @@ import { computeFragility, type FragilityResult as EngineFragilityResult, FRAGIL
 import { loadFragilityInput, PROVIDER_MAP, type DailySeriesResult } from './data/marketDataProvider';
 import type { FragilityDailyBar } from './engines/fragility';
 import { getMarketChartHistory } from '@/lib/coingecko';
+import { avTakeToken } from '@/lib/avRateGovernor';
+
+/** Per-call provider timeout (RS-16): one slow provider must not hold the whole Fragility load. */
+export const FRAGILITY_FETCH_TIMEOUT_MS = 8_000;
 
 /** Representative instruments per rotation sector (display only). */
 const SECTOR_REPRESENTATIVE: Record<string, string> = {
@@ -171,7 +175,9 @@ async function fetchAlphaVantageDaily(symbol: string): Promise<DailySeriesResult
   // (dividend-unadjusted) chart data: empirically, adjusted closes overshoot
   // HYG-driven Credit and Trend, whereas raw closes track TV's component scores.
   const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=full&apikey=${key}`;
-  const r = await fetch(url, { cache: 'no-store' });
+  // Shared Alpha Vantage rate governor (these calls used to bypass it and could hit the per-minute cap → "Note").
+  await avTakeToken();
+  const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(FRAGILITY_FETCH_TIMEOUT_MS) });
   const j = (await r.json()) as AlphaVantageDailyResponse;
   return parseAlphaVantageDaily(j);
 }
@@ -200,7 +206,7 @@ export function parseAlphaVantageDaily(j: AlphaVantageDailyResponse): DailySerie
 async function fetchFredDaily(seriesId: string): Promise<DailySeriesResult> {
   const key = process.env.FRED_API_KEY;
   const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${encodeURIComponent(seriesId)}&api_key=${key}&file_type=json`;
-  const r = await fetch(url, { cache: 'no-store' });
+  const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(FRAGILITY_FETCH_TIMEOUT_MS) });
   const j = (await r.json()) as FredObservationsResponse;
   return parseFredObservations(j);
 }
@@ -226,7 +232,7 @@ export function parseFredObservations(j: FredObservationsResponse): DailySeriesR
 async function fetchCoinGeckoDaily(id: string): Promise<DailySeriesResult> {
   // Reuse the licensed CoinGecko Pro client (pro-api endpoint, x-cg-pro-api-key
   // header, circuit breaker + telemetry) rather than a second raw client.
-  const res = await getMarketChartHistory(id, 365);
+  const res = await getMarketChartHistory(id, 365, { timeoutMs: FRAGILITY_FETCH_TIMEOUT_MS, retries: 0 });
   if (!res?.prices?.length) return { bars: null, provider: 'coingecko', error: 'no-prices' };
   const bars: FragilityDailyBar[] = res.prices
     .map(([ms, price]) => ({ date: new Date(ms).toISOString().slice(0, 10), close: price, high: price }))
@@ -267,29 +273,59 @@ export interface ResolvedFragility {
  * page open. The mock path is cheap and never cached.
  */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h — Fragility source data is daily.
-let liveCache: { at: number; value: ResolvedFragility } | null = null;
+/** A result that is missing series because the time budget ran out is kept only briefly, so the next open refills it. */
+const PARTIAL_TIMEOUT_TTL_MS = 15 * 60 * 1000;
+/** at = when this cache entry was (re)validated; computedAt = when its value was computed. */
+let liveCache: { at: number; computedAt: number; ttl: number; value: ResolvedFragility } | null = null;
+let inFlight: Promise<ResolvedFragility> | null = null;
+
+/** An expired live result is still preferred over a fresh one with fewer series, for up to a day. */
+const MAX_FALLBACK_AGE_MS = 24 * 60 * 60 * 1000;
+const presentSeries = (r: ResolvedFragility | null | undefined) => (r?.engine ? FRAGILITY_SYMBOLS.length - r.engine.missingSymbols.length : 0);
+
+async function computeFresh(): Promise<ResolvedFragility | null> {
+  const input = await loadFragilityInput(LIVE_FETCHERS);
+  if (input.sourceStatus === 'OK' || input.sourceStatus === 'PARTIAL') {
+    const engine = computeFragility(input);
+    const resolved: ResolvedFragility = { ui: mapEngineToUi(engine), engine, isLive: true };
+    const prev = liveCache;
+    if (prev && Date.now() - prev.computedAt < MAX_FALLBACK_AGE_MS && presentSeries(resolved) < presentSeries(prev.value)) {
+      // A degraded refresh (timeouts / provider errors) must not replace a fuller recent result; retry soon.
+      liveCache = { at: Date.now(), computedAt: prev.computedAt, ttl: PARTIAL_TIMEOUT_TTL_MS, value: prev.value };
+      return prev.value;
+    }
+    const degraded = !!input.timedOut?.length || (prev != null && presentSeries(resolved) < presentSeries(prev.value));
+    liveCache = { at: Date.now(), computedAt: Date.now(), ttl: degraded ? PARTIAL_TIMEOUT_TTL_MS : CACHE_TTL_MS, value: resolved };
+    return resolved;
+  }
+  return null;
+}
 
 export async function resolveFragility(): Promise<ResolvedFragility> {
-  if (liveCache && Date.now() - liveCache.at < CACHE_TTL_MS) {
+  if (liveCache && Date.now() - liveCache.at < liveCache.ttl) {
     return liveCache.value;
   }
-  try {
-    const input = await loadFragilityInput(LIVE_FETCHERS);
-    if (input.sourceStatus === 'OK' || input.sourceStatus === 'PARTIAL') {
-      const engine = computeFragility(input);
-      const resolved: ResolvedFragility = { ui: mapEngineToUi(engine), engine, isLive: true };
-      liveCache = { at: Date.now(), value: resolved };
-      return resolved;
-    }
-  } catch {
-    // fall through to mock
+  // One cold load per instance at a time: concurrent opens share it instead of each firing ~27 provider calls.
+  if (!inFlight) {
+    inFlight = (async () => {
+      try {
+        const fresh = await computeFresh();
+        if (fresh) return fresh;
+      } catch {
+        // fall through
+      }
+      // Refresh failed: keep serving the last live result (it carries its own dataAsOf) before falling back to MOCK.
+      if (liveCache && Date.now() - liveCache.computedAt < MAX_FALLBACK_AGE_MS) return liveCache.value;
+      return { ui: getMockFragility(), engine: null, isLive: false };
+    })().finally(() => { inFlight = null; });
   }
-  return { ui: getMockFragility(), engine: null, isLive: false };
+  return inFlight;
 }
 
 /** Clear the live cache — used by tests and after config changes. */
 export function clearFragilityCache(): void {
   liveCache = null;
+  inFlight = null;
 }
 
 // Keep PROVIDER_MAP reachable for callers/reporting without a second import.
