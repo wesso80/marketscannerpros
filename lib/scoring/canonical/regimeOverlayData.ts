@@ -91,7 +91,7 @@ async function indexTrend(symbol: string, now: number): Promise<Sourced<IndexTre
 }
 
 /** Stored macro rows, or FRED's CSV when the stored latest is stale and the CSV is newer. Newest first. */
-async function macroWithFallback(key: keyof typeof FRED_SERIES, limit: number, now: number): Promise<Sourced<{ rows: Obs[] }> | null> {
+export async function macroWithFallback(key: keyof typeof FRED_SERIES, limit: number, now: number): Promise<Sourced<{ rows: Obs[] }> | null> {
   const stored = await macroSeries(key, limit).catch(() => null);
   if (stored?.length && !isOlderThanStaleLimit(stored[0].on, now)) return { rows: stored, source: 'stored' };
   const csv = await getFredCsvCached(FRED_SERIES[key].fredId, { now });

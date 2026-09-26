@@ -1312,7 +1312,7 @@ describe('layout and flow audit regressions', () => {
     expect(economicCalendarPage).not.toContain("inflation: '📈'");
     expect(macroPage).toContain('icon="MAC"');
     expect(macroPage).toContain('<span className="font-bold text-red-200">WARN</span> {error}');
-    expect(macroPage).toContain("correlationRegime.components?.goldSafeHaven ? 'Active' : 'Inactive'");
+    expect(macroPage).toContain("correlationRegime.components?.goldSafeHaven == null ? 'Unavailable' : correlationRegime.components.goldSafeHaven ? 'Active' : 'Inactive'");
     expect(macroPage).not.toContain('icon="🏛️"');
     expect(macroPage).not.toContain('⚠️ {error}');
     expect(macroPage).not.toContain("'⚠️ Active'");

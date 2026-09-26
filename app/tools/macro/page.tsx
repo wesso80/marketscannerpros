@@ -123,7 +123,8 @@ function computeMacroGate(data: MacroData | null): MacroGate | null {
 
   addFactor('Liquidity', liquidity === 'expanding' ? 'pos' : liquidity === 'contracting' ? 'neg' : 'neutral', 25);
   addFactor('Vol Regime', volRegime === 'compression' ? 'pos' : volRegime === 'expansion' ? 'neg' : 'neutral', 20);
-  addFactor('USD Regime', usdRegime === 'bearish' ? 'pos' : usdRegime === 'bullish' ? 'neg' : 'neutral', 15);
+  // USD regime is inferred from the rates regime (no measured dollar input here), so scoring it too counted the same
+  // rates reading twice (Rates −15 and USD −15). It stays as a displayed context label only.
   addFactor('Rates Regime', ratesRegime === 'easing' ? 'pos' : ratesRegime === 'tightening' ? 'neg' : 'neutral', 15);
   addFactor('Growth', growthDeteriorating ? 'neg' : 'pos', 15);
   addFactor('Inflation', inflationReaccelerating ? 'neg' : 'pos', 10);
@@ -374,7 +375,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk State</div>
                 <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.riskState === 'risk_on' ? 'var(--msp-bull)' : gate.riskState === 'risk_off' ? 'var(--msp-bear)' : 'var(--msp-warn)') : 'var(--msp-flat)' }}>{gate ? gate.riskState.replace('_', '-').toUpperCase() : 'Loading'}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500">USD {gate?.usdRegime ?? '—'} · Rates {gate?.ratesRegime ?? '—'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500" title="USD is inferred from rates and is not scored separately">USD {gate?.usdRegime ?? '—'} (from rates) · Rates {gate?.ratesRegime ?? '—'}</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Liquidity</div>
@@ -438,7 +439,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     ['Risk State', gate.riskState.replace('_', '-').toUpperCase()],
                     ['Liquidity', gate.liquidity],
                     ['Volatility', gate.volRegime],
-                    ['USD Regime', gate.usdRegime],
+                    ['USD Regime (inferred from rates, not scored)', gate.usdRegime],
                     ['Rates Regime', gate.ratesRegime],
                   ].map(([label, value]) => (
                     <div key={label} className="h-14 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
@@ -640,9 +641,15 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             {/* ─── Correlation Regime ─── */}
             <section id="correlation" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Cross-Asset Correlation Regime</div>
-              <div className="mt-1 text-xs text-white/50">BTC↔SPY correlation, VIX regime, DXY trend, sector rotation</div>
-              <div className="mt-0.5 text-[11px] text-white/30">Heuristic model · educational context · not a live reading</div>
-              {correlationRegime ? (
+              <div className="mt-1 text-xs text-white/50">BTC↔SPY correlation, VIX regime, USD trend, sector rotation</div>
+              <div className="mt-0.5 text-[11px] text-white/30">Heuristic model · educational context · live inputs, dated below</div>
+              <div className="mt-1 text-[11px] text-white/50">How this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.</div>
+              {correlationRegime && correlationRegime.available === false ? (
+                <div className="mt-3 space-y-2">
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">{correlationRegime.reason ?? 'Cross-asset regime unavailable.'}</div>
+                  <CrossAssetInputList inputs={correlationRegime.inputs} />
+                </div>
+              ) : correlationRegime ? (
                 <div className="mt-3">
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
@@ -659,8 +666,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                         correlationRegime.vixRegime === 'LOW' ? 'text-emerald-400' :
                         correlationRegime.vixRegime === 'EXTREME' ? 'text-rose-400' :
                         correlationRegime.vixRegime === 'ELEVATED' ? 'text-amber-400' :
+                        correlationRegime.vixRegime === 'UNAVAILABLE' ? 'text-white/40' :
                         'text-white'
-                      }`}>{correlationRegime.vixRegime}</div>
+                      }`}>{correlationRegime.vixRegime === 'UNAVAILABLE' ? 'Unavailable' : correlationRegime.vixRegime}</div>
                     </div>
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
                       <div className="text-[11px] text-white/50">Risk Score</div>
@@ -673,20 +681,20 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">DXY Trend</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.dxyTrend}</div>
+                      <div className="text-[11px] text-white/50">USD Trend</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.dxyTrend === 'unavailable' ? 'Unavailable' : correlationRegime.dxyTrend}</div>
                     </div>
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">BTC↔SPY Corr</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.btcSpyCorrelation}</div>
+                      <div className="text-[11px] text-white/50">BTC↔SPY Corr (20d)</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.btcSpyCorrelation == null ? 'Unavailable' : correlationRegime.btcSpyCorrelation}</div>
                     </div>
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
                       <div className="text-[11px] text-white/50">Sector Rotation</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.sectorRotation?.replace('_', ' ') || 'MIXED'}</div>
+                      <div className="mt-1 text-xs text-white/80">{!correlationRegime.sectorRotation || correlationRegime.sectorRotation === 'UNAVAILABLE' ? 'Unavailable' : correlationRegime.sectorRotation.replace('_', ' ')}</div>
                     </div>
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
                       <div className="text-[11px] text-white/50">Gold Safe Haven</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.components?.goldSafeHaven ? 'Active' : 'Inactive'}</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.components?.goldSafeHaven == null ? 'Unavailable' : correlationRegime.components.goldSafeHaven ? 'Active' : 'Inactive'}</div>
                     </div>
                   </div>
                   {correlationRegime.warnings?.length > 0 && (
@@ -699,6 +707,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70">
                     {correlationRegime.recommendation}
                   </div>
+                  <CrossAssetInputList inputs={correlationRegime.inputs} />
                 </div>
               ) : (
                 <div className="mt-3 text-xs text-amber-400/80">{correlationError ? `Feed unavailable: ${correlationError}` : 'Loading correlation regime…'}</div>
@@ -829,6 +838,29 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
           </>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+type CrossAssetInputInfo = { label: string; available: boolean; value: number | null; changePct: number | null; asOf: string | null; source: string | null; note?: string };
+
+/** Per-input values and dates behind the Cross-Asset regime; missing inputs are listed as unavailable (never defaulted). */
+function CrossAssetInputList({ inputs }: { inputs?: Record<string, CrossAssetInputInfo> | null }) {
+  if (!inputs) return null;
+  const fmt = (i: CrossAssetInputInfo) => {
+    if (!i.available) return `unavailable${i.note ? ` (${i.note})` : ''}`;
+    const parts: string[] = [];
+    if (i.value != null) parts.push(Math.abs(i.value) >= 1000 ? i.value.toLocaleString('en-US', { maximumFractionDigits: 0 }) : String(Number(i.value.toFixed(3))));
+    if (i.changePct != null) parts.push(`${i.changePct >= 0 ? '+' : ''}${i.changePct.toFixed(2)}%`);
+    if (i.asOf) parts.push(`as of ${i.asOf.slice(0, 10)}`);
+    return parts.join(' · ') || 'available';
+  };
+  return (
+    <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-white/50">
+      <div className="mb-1 font-semibold text-white/60">Inputs</div>
+      {Object.entries(inputs).map(([k, i]) => (
+        <div key={k} title={i.source ?? ''}><span className="text-white/70">{i.label}:</span> <span className={i.available ? '' : 'text-amber-300/80'}>{fmt(i)}</span></div>
+      ))}
     </div>
   );
 }
