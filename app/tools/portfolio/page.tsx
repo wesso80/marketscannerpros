@@ -20,6 +20,7 @@ import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
+import { localDateInput, paperCloseDateIso, positionLimitLabel, profitFactorDisplay } from '@/lib/portfolio/trackDisplay';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
@@ -607,6 +608,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     maxPositionSize: 20,
   });
   const [levelEditor, setLevelEditor] = useState<{ id: number; stop: string; target: string } | null>(null);
+  const [closeForm, setCloseForm] = useState<{ id: number; fraction: 1 | 0.5; price: string; date: string } | null>(null);
   const [showDrawdownOverlay, setShowDrawdownOverlay] = useState(true);
 
   // AI Analysis state
@@ -1274,14 +1276,24 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     setActiveTab('active-positions');
   };
 
-  const closePosition = (id: number) => {
+  // TR-35: both close actions open an in-page form (price, date, P&L preview) instead of window.prompt.
+  const openCloseForm = (id: number, fraction: 1 | 0.5) => {
     const position = positions.find(p => p.id === id);
     if (!position) return;
-    if (position.journalEntryId) { setSyncError('This position is linked to Journal. Close it from its journal entry.'); return; }
-    const entered = window.prompt('Record a full paper close. Enter the actual close price (before fees):', String(position.currentPrice));
-    if (entered == null || entered.trim() === '') return;
+    if (position.journalEntryId) {
+      setSyncError(fraction === 1 ? 'This position is linked to Journal. Close it from its journal entry.' : 'This position is linked to Journal. Record changes in its journal entry.');
+      return;
+    }
+    setCloseForm({ id, fraction, price: String(position.currentPrice), date: localDateInput() });
+  };
+
+  const closePosition = (id: number) => openCloseForm(id, 1);
+
+  const commitFullClose = (id: number, price: number, closeDateIso: string) => {
+    const position = positions.find(p => p.id === id);
+    if (!position) return;
     let closedPos: ClosedPosition;
-    try { closedPos = splitPosition(position, 1, Number(entered), new Date().toISOString(), Date.now(), positionMultiplier(position)).closed; }
+    try { closedPos = splitPosition(position, 1, price, closeDateIso, Date.now(), positionMultiplier(position)).closed; }
     catch { setSyncError('Enter a valid non-negative close price.'); return; }
 
     const parentEventId = tradeExecutionEventMapRef.current[id] || null;
@@ -1349,17 +1361,36 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     }));
   };
 
-  const reducePositionHalf = (id: number) => {
+  const reducePositionHalf = (id: number) => openCloseForm(id, 0.5);
+
+  const commitHalfClose = (id: number, price: number, closeDateIso: string) => {
     const position = positions.find(p => p.id === id);
     if (!position) return;
-    if (position.journalEntryId) { setSyncError('This position is linked to Journal. Record changes in its journal entry.'); return; }
-    const entered = window.prompt('Record a paper close for 50% of the quantity. Enter the actual close price (before fees):', String(position.currentPrice));
-    if (entered == null || entered.trim() === '') return;
     try {
-      const result = splitPosition(position, 0.5, Number(entered), new Date().toISOString(), Date.now(), positionMultiplier(position));
+      const result = splitPosition(position, 0.5, price, closeDateIso, Date.now(), positionMultiplier(position));
       setPositions(prev => prev.map(p => p.id === id ? result.remaining! : p));
       setClosedPositions(prev => [...prev, result.closed]);
     } catch { setSyncError('Enter a valid non-negative close price.'); }
+  };
+
+  const closeFormPosition = closeForm ? positions.find((p) => p.id === closeForm.id) ?? null : null;
+  const closeFormPrice = closeForm && closeForm.price.trim() !== '' ? Number(closeForm.price) : NaN;
+  const closeFormDateIso = closeForm ? paperCloseDateIso(closeForm.date) : null;
+  const closeFormError = !closeForm ? null
+    : !(Number.isFinite(closeFormPrice) && closeFormPrice >= 0) ? 'Enter the actual close price (0 or more).'
+    : !closeFormDateIso ? 'Close date must be today or earlier.'
+    : null;
+  const closeFormPreview = (() => {
+    if (!closeForm || !closeFormPosition || closeFormError || !closeFormDateIso) return null;
+    try { return splitPosition(closeFormPosition, closeForm.fraction, closeFormPrice, closeFormDateIso, 0, positionMultiplier(closeFormPosition)).closed; }
+    catch { return null; }
+  })();
+
+  const submitCloseForm = () => {
+    if (!closeForm || closeFormError || !closeFormDateIso) return;
+    if (closeForm.fraction === 1) commitFullClose(closeForm.id, closeFormPrice, closeFormDateIso);
+    else commitHalfClose(closeForm.id, closeFormPrice, closeFormDateIso);
+    setCloseForm(null);
   };
 
   const openLevelEditor = (id: number) => {
@@ -1655,11 +1686,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const winRatePct = closedTradesCount > 0 ? (winningTrades.length / closedTradesCount) * 100 : 0;
   const avgWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / winningTrades.length : 0;
   const avgLossAbs = losingTrades.length > 0 ? Math.abs(losingTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / losingTrades.length) : 0;
-  const profitFactor = avgLossAbs > 0
-    ? Math.abs(winningTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / Math.min(-0.01, losingTrades.reduce((sum, trade) => sum + trade.realizedPL, 0)))
-    : winningTrades.length > 0
-    ? 9.99
-    : 0;
+  // TR-6: no ratio without a losing trade (was a hard-coded placeholder ratio that read like a real statistic).
+  const profitFactor = profitFactorDisplay(closedPositions.map((trade) => trade.realizedPL));
   const expectancy = closedTradesCount > 0
     ? ((winRatePct / 100) * avgWin) - ((1 - (winRatePct / 100)) * avgLossAbs)
     : 0;
@@ -1797,22 +1825,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           Export History
         </button>
       )}
-      {(positions.length > 0 || closedPositions.length > 0) && (
+      {/* TR-15: the embedded hero already has "Add position"; show this one only on the standalone page. */}
+      {!embeddedInWorkspace && (
         <button
           type="button"
-          onClick={clearAllData}
-          className="rounded-md border border-slate-500/40 bg-transparent px-3 py-1.5 text-[12px] font-semibold text-red-500"
+          onClick={() => setActiveTab('add-manual')}
+          className="rounded-md border border-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-emerald-400"
         >
-          Clear All Data
+          Add Position
         </button>
       )}
-      <button
-        type="button"
-        onClick={() => setActiveTab('add-manual')}
-        className="rounded-md border border-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-emerald-400"
-      >
-        Add Position
-      </button>
       <button
         type="button"
         onClick={() => {
@@ -1832,6 +1854,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       >
         Model Allocation
       </button>
+      {/* TR-15: destructive action last, set apart from the primary buttons. */}
+      {(positions.length > 0 || closedPositions.length > 0) && (
+        <button
+          type="button"
+          onClick={clearAllData}
+          className="ml-2 rounded-md border border-slate-500/40 bg-transparent px-3 py-1.5 text-[12px] font-semibold text-red-500 sm:ml-6"
+        >
+          Clear All Data
+        </button>
+      )}
     </>
   );
 
@@ -1958,7 +1990,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             { label: 'Unrealized', value: formatRiskPairText(unrealizedPL), tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
             { label: 'Realized', value: formatRiskPairText(realizedPL), tone: realizedPL >= 0 ? 'bull' : 'bear' },
             { label: 'Drawdown', value: cleanRiskReady ? `${currentDrawdownPct.toFixed(1)}%` : 'N/A', tone: cleanRiskReady && currentDrawdownPct > 10 ? 'bear' : 'warn' },
-            { label: 'Limit', value: `${positions.length}/${getPortfolioLimit(tier)}`, tone: positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
+            { label: 'Limit', value: positionLimitLabel(positions.length, getPortfolioLimit(tier)), tone: positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
           ]}
         />
 
@@ -2021,6 +2053,65 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="mt-3.5 flex justify-end gap-2">
               <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
               <button type="button" onClick={saveLevels} disabled={levelEditorCheck.errors.length > 0} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TR-35: record a paper close (full or 50%) */}
+      {closeForm && closeFormPosition && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="close-form-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setCloseForm(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[min(92vw,480px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div id="close-form-title" className="font-bold text-slate-200">
+                {closeForm.fraction === 1 ? 'Record full close' : 'Record 50% close'} · {closeFormPosition.symbol} ({closeFormPosition.side})
+              </div>
+              <button type="button" onClick={() => setCloseForm(null)} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
+            </div>
+            <div className="mb-3 text-[12px] text-slate-400">
+              Entry {formatPriceRaw(closeFormPosition.entryPrice)} · Current {formatPriceRaw(closeFormPosition.currentPrice)} · Closing {closeForm.fraction === 1 ? closeFormPosition.quantity : closeFormPosition.quantity / 2} of {closeFormPosition.quantity}
+              {closeFormPosition.tradeType === 'Options' ? ' contracts (premium per share)' : ''}.
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs text-slate-400">
+                Close price (before fees)
+                <input
+                  autoFocus
+                  value={closeForm.price}
+                  onChange={(e) => setCloseForm({ ...closeForm, price: e.target.value })}
+                  inputMode="decimal"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 outline-none"
+                />
+              </label>
+              <label className="text-xs text-slate-400">
+                Close date
+                <input
+                  type="date"
+                  value={closeForm.date}
+                  max={localDateInput()}
+                  onChange={(e) => setCloseForm({ ...closeForm, date: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 outline-none"
+                />
+              </label>
+            </div>
+            {closeFormError && <div className="mt-2 text-xs text-red-300">{closeFormError}</div>}
+            {closeFormPreview && (
+              <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2 text-[12px] text-slate-300" data-testid="close-form-preview">
+                Realized P&amp;L: <span className={closeFormPreview.realizedPL >= 0 ? 'text-emerald-300' : 'text-red-300'}>{formatSignedMoney(closeFormPreview.realizedPL)}</span> ({closeFormPreview.plPercent >= 0 ? '+' : ''}{closeFormPreview.plPercent.toFixed(2)}%). Fees aren&apos;t recorded here.
+              </div>
+            )}
+            <div className="mt-3.5 flex justify-end gap-2">
+              <button type="button" onClick={() => setCloseForm(null)} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
+              <button type="button" onClick={submitCloseForm} disabled={Boolean(closeFormError)} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50">Record close</button>
             </div>
           </div>
         </div>
@@ -2147,7 +2238,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           ))}
         </div>
 
-        <div className={`mt-3 ${embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1' : 'grid gap-2 md:grid-cols-5'}`}>
+        {/* TR-14: on phones the section tabs wrap onto a second row instead of running off the screen. */}
+        <div className={`mt-3 flex-wrap sm:flex-nowrap ${embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1' : 'grid gap-2 md:grid-cols-5'}`}>
           {modeItems.map((item) => {
             const isActive = activeTab === item.key;
             return (
@@ -2312,11 +2404,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 {[
                   { label: 'CAGR', value: cagrApprox == null ? 'N/A' : `${cagrApprox.toFixed(2)}%` },
                   { label: 'Sharpe', value: sharpeApprox == null ? 'N/A' : `${sharpeApprox.toFixed(2)}` },
-                  { label: 'Profit Factor', value: `${profitFactor.toFixed(2)}` },
+                  { label: 'Profit Factor', value: profitFactor.label, title: profitFactor.detail },
                   { label: 'Max DD', value: cleanRiskReady ? `${maxDrawdownFromSnapshots.toFixed(2)}%` : 'N/A' },
                   { label: 'Win Rate', value: `${winRatePct.toFixed(1)}%` },
                 ].map((metric) => (
-                  <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
+                  <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2" title={'title' in metric ? metric.title : undefined}>
                     <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{metric.label}</div>
                     <div className="text-sm font-bold text-slate-100">{metric.value}</div>
                   </div>
