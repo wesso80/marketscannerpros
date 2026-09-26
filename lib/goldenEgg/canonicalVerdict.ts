@@ -145,6 +145,12 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
     }
     out.canonical = packet;
   }
+  // The Setup panel's free-text thesis is written by the legacy engine from ITS direction; when the canonical direction
+  // differs, lead with the canonical setup and keep the legacy read only as labelled secondary context.
+  const legacyThesis = out.layer2?.setup?.thesis;
+  if (typeof legacyThesis === 'string' && legacyThesis && direction !== l1.direction) {
+    out.layer2 = { ...out.layer2, setup: { ...out.layer2.setup, thesis: canonicalSetupThesis(payload.meta.symbol, c, legacyThesis) } };
+  }
   if (out.layer3?.narrative && (assessment !== l1.assessment || direction !== l1.direction)) {
     out.layer3 = { ...out.layer3, narrative: { ...out.layer3.narrative, summary: canonicalNarrativeSummary(payload.meta.symbol, c, l1) } };
   }
@@ -173,6 +179,39 @@ function invalidationLogic(lv: CanonicalLevels, long: boolean): string {
     : lv.invalidationBasis === 'recent_extreme' ? `the recent exhaustion ${long ? 'low' : 'high'}`
     : 'an ATR-based model stop (no structural level)';
   return `${side} ${basis} (canonical setup${atr})`;
+}
+
+/** Legacy thesis lead: "SYM shows a bullish breakout setup (note)." (the note can contain its own parentheses). */
+const LEGACY_THESIS_LEAD = /^[\s\S]*? shows an? (bullish|bearish|neutral) ([\s\S]*? setup) \(([\s\S]*?)\)\.(?=\s|$)/;
+
+/**
+ * Setup-panel thesis for a canonical direction that differs from the legacy engine's. The lead sentence states the
+ * canonical setup (or that none qualifies); the legacy evidence sentences (ADX, options positioning, DVE, time
+ * confluence) are kept as facts, but anything phrased relative to the legacy direction — "supports the thesis", the
+ * time-confluence relation — is restated against the canonical direction, and the legacy lead is kept last as
+ * labelled secondary context.
+ */
+export function canonicalSetupThesis(symbol: string, c: CanonicalResult, legacyThesis: string): string {
+  const hasSetup = c.setupType !== 'NONE' && c.direction !== 'neutral';
+  const setup = (SETUP_LABEL[c.setupType] ?? c.setupType).toLowerCase();
+  const status = c.permission === 'PASS' ? 'qualifies' : c.permission === 'WATCH' ? 'is on watch' : 'is blocked';
+  const lead = hasSetup
+    ? `${symbol}: the canonical engine reads a ${c.direction} ${setup} setup (score ${c.score}/100, ${status}).`
+    : `${symbol}: no canonical setup qualifies right now, so there is no directional thesis.`;
+  const m = LEGACY_THESIS_LEAD.exec(legacyThesis);
+  const legacyLead = m ? `a ${m[1]} ${m[2]} (${m[3]})` : null;
+  let rest = m ? legacyThesis.slice(m[0].length).trim() : '';
+  rest = rest
+    .replace(/Market pressure at (\d+)\/100 supports the thesis\./, 'Market pressure is $1/100.')
+    .replace(/Time confluence is (bullish|bearish) with (.+?) signal strength \((?:supportive|conflict|neutral|unavailable)\)\./, (_all, dir: string, strength: string) => {
+      const agrees = hasSetup && ((dir === 'bullish') === (c.direction === 'long'));
+      const rel = !hasSetup ? '' : agrees ? `, in line with the canonical ${c.direction}` : `, against the canonical ${c.direction}`;
+      return `Time confluence is ${dir} with ${strength} signal strength${rel}.`;
+    });
+  const secondary = legacyLead
+    ? ` The older confluence model read ${legacyLead} (secondary context only).`
+    : ` Older confluence model (secondary context only): ${legacyThesis.trim()}`;
+  return `${lead}${rest ? ` ${rest}` : ''}${secondary}`;
 }
 
 const LEGACY_LEAN: Record<Direction, string> = { LONG: 'a bullish lean', SHORT: 'a bearish lean', NEUTRAL: 'no clear lean' };
