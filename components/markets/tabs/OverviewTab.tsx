@@ -84,7 +84,7 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
           <SentimentBadge ticker={symbol} />
           {quote?.source && (
             <span className="text-[10px] text-[var(--msp-text-faint)]">
-              {quote.source === 'alphavantage' ? 'delayed 15min' : quote.source === 'coingecko' ? 'live' : 'cached'}
+              {quote.source === 'alphavantage' ? 'realtime' : quote.source === 'coingecko' ? 'live' : 'cached'}
             </span>
           )}
         </div>

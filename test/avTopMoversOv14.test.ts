@@ -37,18 +37,18 @@ describe('parseAvTopMovers', () => {
 describe('fetchAvTopMovers', () => {
   beforeEach(() => { vi.spyOn(console, 'warn').mockImplementation(() => {}); });
 
-  it('uses the delayed list when it has rows (one call)', async () => {
+  it('uses the realtime list when it has rows (one call)', async () => {
     const fetcher = vi.fn(async () => res(eod));
     const m = await fetchAvTopMovers('k', fetcher as unknown as typeof fetch);
-    expect(m).toMatchObject({ feed: 'delayed', note: null, apiCalls: 1, asOf: '2026-09-25T20:15:57.000Z' });
-    expect(entitlementOf(fetcher.mock.calls[0][0])).toBe('delayed');
+    expect(m).toMatchObject({ feed: 'realtime', note: null, apiCalls: 1, asOf: '2026-09-25T20:15:57.000Z' });
+    expect(entitlementOf(fetcher.mock.calls[0][0])).toBe('realtime');
   });
 
   it('falls back to the end-of-day list, labelled, with the reason', async () => {
-    const fetcher = vi.fn(async (url: string) => res(entitlementOf(url) === 'delayed' ? { Information: 'Premium entitlement required.' } : eod));
+    const fetcher = vi.fn(async (url: string) => res(entitlementOf(url) === 'realtime' ? { Information: 'Premium entitlement required.' } : eod));
     const m = await fetchAvTopMovers('k', fetcher as unknown as typeof fetch);
-    expect(m).toMatchObject({ feed: 'end_of_day', apiCalls: 2, gainers: [row], note: '15-minute delayed list unavailable (Premium entitlement required.)' });
-    expect(fetcher.mock.calls.map((c) => entitlementOf(c[0]))).toEqual(['delayed', null]);
+    expect(m).toMatchObject({ feed: 'end_of_day', apiCalls: 2, gainers: [row], note: 'Realtime list unavailable (Premium entitlement required.)' });
+    expect(fetcher.mock.calls.map((c) => entitlementOf(c[0]))).toEqual(['realtime', null]);
   });
 
   it('is unavailable (no fake rows) when both calls fail', async () => {
@@ -57,15 +57,20 @@ describe('fetchAvTopMovers', () => {
     expect(m).toMatchObject({ feed: 'unavailable', gainers: [], asOf: null, note: 'Alpha Vantage movers unavailable (rate limit)' });
   });
 
-  it('labels each basis', () => {
-    expect(equityMoversBasisLabel('delayed')).toBe('15-min delayed');
-    expect(equityMoversBasisLabel(undefined)).toBe('15-min delayed');
-    expect(equityMoversBasisLabel('end_of_day')).toBe('End of day');
-    expect(equityMoversBasisLabel('unavailable')).toBe('Unavailable');
+  it('labels each basis; realtime reads "Market closed" outside the US regular session', () => {
+    const friOpen = Date.parse('2026-09-25T15:00:00Z'); // Fri 11:00 ET
+    const satAest = Date.parse('2026-09-26T13:00:00Z'); // Sat 09:00 ET
+    const friAfterClose = Date.parse('2026-09-25T20:15:00Z'); // Fri 16:15 ET
+    expect(equityMoversBasisLabel('realtime', friOpen)).toBe('Realtime');
+    expect(equityMoversBasisLabel(undefined, friOpen)).toBe('Realtime');
+    expect(equityMoversBasisLabel('realtime', satAest)).toBe('Market closed');
+    expect(equityMoversBasisLabel('realtime', friAfterClose)).toBe('Market closed');
+    expect(equityMoversBasisLabel('end_of_day', friOpen)).toBe('End of day');
+    expect(equityMoversBasisLabel('unavailable', friOpen)).toBe('Unavailable');
   });
 });
 
-describe('GET /api/market-movers returns equity rows, as-of and feed after a delayed refusal', () => {
+describe('GET /api/market-movers returns equity rows, as-of and feed after a realtime refusal', () => {
   beforeEach(() => {
     vi.resetModules();
     mocks.q.mockResolvedValue([]);
@@ -73,13 +78,13 @@ describe('GET /api/market-movers returns equity rows, as-of and feed after a del
     mocks.market.mockResolvedValue([]);
     process.env.ALPHA_VANTAGE_API_KEY = 'test';
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.stubGlobal('fetch', vi.fn(async (url: string) => res(entitlementOf(url) === 'delayed' ? { Information: 'Premium entitlement required.' } : eod)));
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => res(entitlementOf(url) === 'realtime' ? { Information: 'Premium entitlement required.' } : eod)));
   });
 
   it('shows the end-of-day list with its time instead of no equity data', async () => {
     const { GET } = await import('@/app/api/market-movers/route');
     const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
     expect(body.topGainers.filter((m: any) => m.asset_class === 'equity').map((m: any) => m.ticker)).toEqual(['MSGY']);
-    expect(body).toMatchObject({ equityAsOf: '2026-09-25T20:15:57.000Z', equityFeed: 'end_of_day', equityNote: '15-minute delayed list unavailable (Premium entitlement required.)' });
+    expect(body).toMatchObject({ equityAsOf: '2026-09-25T20:15:57.000Z', equityFeed: 'end_of_day', equityNote: 'Realtime list unavailable (Premium entitlement required.)' });
   });
 });

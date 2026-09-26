@@ -244,12 +244,12 @@ export default function ToolsSettingsPage() {
             </div>
             <div className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2">
               <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500">Data Source</div>
-              <div className="mt-1 font-semibold text-slate-100">Alpha Vantage (delayed)</div>
+              <div className="mt-1 font-semibold text-slate-100">Alpha Vantage (realtime US equities)</div>
             </div>
           </div>
 
           <div className="mt-3 rounded-md border border-slate-700 bg-slate-950/40 p-3 text-xs text-slate-500">
-            Educational and analytical tool only. All market data is delayed. No brokerage execution or investment advice.
+            Educational and analytical tool only. US equity quotes are realtime; some other data (e.g. macro series) lags its source. No brokerage execution or investment advice.
             All trading decisions, risk, and compliance are the sole responsibility of the user. See{' '}
             <a href="/disclaimer" className="text-emerald-400 underline">Disclaimer</a> and{' '}
             <a href="/terms" className="text-emerald-400 underline">Terms of Service</a>.

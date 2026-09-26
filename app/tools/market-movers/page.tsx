@@ -68,9 +68,9 @@ interface UpeMoverRow {
 interface MoversData {
   timestamp: string;
   lastUpdated: string;
-  /** Alpha Vantage `last_updated` for the equity lists (15-minute delayed feed). */
+  /** Alpha Vantage `last_updated` for the equity lists. */
   equityAsOf?: string | null;
-  equityFeed?: 'delayed' | 'end_of_day' | 'unavailable';
+  equityFeed?: 'realtime' | 'end_of_day' | 'unavailable';
   marketMood: 'bullish' | 'bearish' | 'neutral';
   summary: {
     avgGainerChange: number;

@@ -1,19 +1,19 @@
 /**
- * Alpha Vantage TOP_GAINERS_LOSERS with the 15-minute-delayed entitlement, and an honest fallback (OV-14).
+ * Alpha Vantage TOP_GAINERS_LOSERS with the realtime entitlement, and an honest fallback (OV-14).
  *
- * After #151 added `entitlement=delayed`, the live /api/market-movers returned no equity rows and no `equityAsOf`
- * (26 Sep 22:25 AEST: every mover was crypto), where the same route without the entitlement had returned equities.
- * The old code dropped any Note / Information / Error Message silently. Alpha Vantage also renames keys on delayed
- * payloads for other functions ("Global Quote - DATA DELAYED BY 15 MINUTES"), so keys are matched by prefix here.
+ * MSP's Alpha Vantage commercial agreement covers realtime display of US equities, and the key accepts
+ * `entitlement=realtime` but refuses `entitlement=delayed` (26 Sep 2026). #151 had sent `delayed`, which returned no
+ * equity rows. Any Note / Information / Error Message is kept as the reason. Alpha Vantage renames keys on some
+ * payloads ("Global Quote - DATA DELAYED BY 15 MINUTES"), so keys are matched by prefix here.
  *
- * Order: the delayed call first; if it carries no rows, the default (end-of-day) call, labelled as such. The reason
- * the delayed call gave nothing is returned so the page and logs can say it.
+ * Order: the realtime call first; if it carries no rows, the default (end-of-day) call, labelled as such. The reason
+ * the realtime call gave nothing is returned so the page and logs can say it.
  */
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { parseAlphaVantageEasternTime } from '@/lib/analysis/providerAsOf';
 import { avEquityEntitlementParam } from '@/lib/alphaVantageEntitlement';
 
-export type AvMoversFeed = 'delayed' | 'end_of_day' | 'unavailable';
+export type AvMoversFeed = 'realtime' | 'end_of_day' | 'unavailable';
 
 export interface AvTopMovers {
   gainers: any[];
@@ -22,7 +22,7 @@ export interface AvTopMovers {
   /** Alpha Vantage `last_updated` as ISO; null if not sent. */
   asOf: string | null;
   feed: AvMoversFeed;
-  /** Why the delayed feed was not used (Alpha Vantage's own message), or null. */
+  /** Why the realtime feed was not used (Alpha Vantage's own message), or null. */
   note: string | null;
   apiCalls: number;
 }
@@ -63,11 +63,11 @@ async function call(apiKey: string, entitlement: string, fetcher: typeof fetch):
 export async function fetchAvTopMovers(apiKey: string, fetcher: typeof fetch = fetch): Promise<AvTopMovers> {
   const empty = { gainers: [], losers: [], active: [], asOf: null };
   if (!apiKey) return { ...empty, feed: 'unavailable', note: 'no Alpha Vantage key', apiCalls: 0 };
-  const delayed = await call(apiKey, avEquityEntitlementParam(), fetcher);
-  if (!('error' in delayed)) return { ...delayed, feed: 'delayed', note: null, apiCalls: 1 };
-  console.warn(`[avTopMovers] delayed TOP_GAINERS_LOSERS gave no rows: ${delayed.error}; trying the end-of-day list`);
+  const realtime = await call(apiKey, avEquityEntitlementParam(), fetcher);
+  if (!('error' in realtime)) return { ...realtime, feed: 'realtime', note: null, apiCalls: 1 };
+  console.warn(`[avTopMovers] realtime TOP_GAINERS_LOSERS gave no rows: ${realtime.error}; trying the end-of-day list`);
   const eod = await call(apiKey, '', fetcher);
-  if (!('error' in eod)) return { ...eod, feed: 'end_of_day', note: `15-minute delayed list unavailable (${delayed.error})`, apiCalls: 2 };
+  if (!('error' in eod)) return { ...eod, feed: 'end_of_day', note: `Realtime list unavailable (${realtime.error})`, apiCalls: 2 };
   console.warn(`[avTopMovers] end-of-day TOP_GAINERS_LOSERS also failed: ${eod.error}`);
-  return { ...empty, feed: 'unavailable', note: `Alpha Vantage movers unavailable (${delayed.error})`, apiCalls: 2 };
+  return { ...empty, feed: 'unavailable', note: `Alpha Vantage movers unavailable (${realtime.error})`, apiCalls: 2 };
 }

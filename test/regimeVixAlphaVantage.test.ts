@@ -93,7 +93,7 @@ describe('regime VIX: Alpha Vantage primary, FRED fallback', () => {
     expect(inputs.vix).toMatchObject({ level: 16, asOf: dayStr(3), source: 'stored' });
     expect((console.warn as any).mock.calls.map((c: unknown[]) => c.join(' ')).join('\n')).toContain('[avIndexData] INDEX_DATA VIX failed: Thank you for using Alpha Vantage! This is a premium endpoint.');
     // #157 follow-up: the reason reaches the regime response (signals[0].detail), not only the server log.
-    expect(inputs.vix!.note).toBe('Alpha Vantage VIX unavailable: Thank you for using Alpha Vantage! This is a premium endpoint.');
+    expect(inputs.vix!.note).toBe('VIX from FRED, which lags 1–3 days: Alpha Vantage VIX is not included in the current plan (Alpha Vantage says: "Thank you for using Alpha Vantage! This is a premium endpoint.")');
     const r = classifyMarketRegime(inputs, NOW);
     if (r.available) expect(r.reasons).toContain(inputs.vix!.note);
   });
@@ -103,8 +103,9 @@ describe('regime VIX: Alpha Vantage primary, FRED fallback', () => {
     const msg = 'You are not yet entitled to index data access. Please subscribe to any of our 150, 300, 600, or 1200 requests per minute premium plans.';
     vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('function=INDEX_DATA') ? new Response(JSON.stringify({ Note: msg })) : new Response('', { status: 404 })));
     const inputs = await (await freshLoader())();
-    expect(inputs.vix).toMatchObject({ source: 'stored', note: `Alpha Vantage VIX unavailable: ${msg}` });
+    expect(inputs.vix).toMatchObject({ source: 'stored', note: 'VIX from FRED, which lags 1–3 days: Alpha Vantage VIX is not included in the current plan (Alpha Vantage says: "You are not yet entitled to index data access.")' });
     expect(inputs.vix!.note).not.toContain('quota');
+    expect(inputs.vix!.note).not.toContain('subscribe');
   });
 
   it('falls back to FRED when there is no Alpha Vantage key (no call made)', async () => {
@@ -113,7 +114,7 @@ describe('regime VIX: Alpha Vantage primary, FRED fallback', () => {
     const fetchMock = vi.fn(async () => new Response('', { status: 404 }));
     vi.stubGlobal('fetch', fetchMock);
     const inputs = await (await freshLoader())();
-    expect(inputs.vix).toMatchObject({ source: 'stored', level: 16, note: 'Alpha Vantage VIX unavailable: no Alpha Vantage key configured' });
+    expect(inputs.vix).toMatchObject({ source: 'stored', level: 16, note: 'VIX from FRED, which lags 1–3 days: Alpha Vantage VIX unavailable (no Alpha Vantage key configured)' });
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('INDEX_DATA'))).toBe(false);
   });
 
@@ -122,7 +123,7 @@ describe('regime VIX: Alpha Vantage primary, FRED fallback', () => {
     const oldAv = indexPayload([['2026-09-10', '20'], ['2026-09-09', '21']]);
     vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('INDEX_DATA') ? new Response(JSON.stringify(oldAv)) : new Response('', { status: 404 })));
     const inputs = await (await freshLoader())();
-    expect(inputs.vix).toMatchObject({ source: 'stored', asOf: dayStr(3), note: 'Alpha Vantage VIX latest 2026-09-10 is older than FRED' });
+    expect(inputs.vix).toMatchObject({ source: 'stored', asOf: dayStr(3), note: "VIX from FRED: the Alpha Vantage VIX (latest 2026-09-10) is older than FRED's" });
   });
 
   it('uses an Alpha Vantage series that is stale but still newer than FRED', async () => {
