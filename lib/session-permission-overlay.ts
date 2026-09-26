@@ -218,6 +218,25 @@ function equityOverlay(phase: SessionPhase, liq: SessionLiquidityProfile): Omit<
         restrictive: true,
       };
 
+    // ── Market closed (weekend / NYSE holiday) ─────────────────────
+    // No session at all (RS-22: a Saturday used to get PRE_MARKET's minimums). Nothing can be traded until the next
+    // open, so the permission is reported as unavailable, and the score is read against the STANDARD session rules
+    // (65 bar, no confidence/liquidity minimums, no adjustment) as a preview for the next open.
+    case 'MARKET_CLOSED':
+      return {
+        tpsAdjustment: 0,
+        sizeMultiplierCap: 1.0,
+        ruCapMultiplier: 1.0,
+        sessionAllowed: ['Research and planning for the next open'],
+        sessionBlocked: ['New orders until the US market reopens'],
+        minimumConfidence: 0,
+        minimumLiquidityClarity: 0,
+        minimumTps: 65,
+        slippageMultiplier: 1.0,
+        reason: 'MARKET_CLOSED: US equity market closed (weekend or holiday). Unavailable until the next open; the score is a next-open read at standard rules.',
+        restrictive: true,
+      };
+
     default:
       return defaultOverlay();
   }

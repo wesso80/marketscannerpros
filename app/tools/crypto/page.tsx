@@ -382,7 +382,7 @@ function CryptoCommandCenterContent() {
         confidence: morningDecision.adaptiveConfidence,
         dataComplete: morningDecision.dataComplete,
       },
-      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`} confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
+      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`} confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${typeof marketData.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(2)}%` : 'n/a'} 24h)`,
     });
   }, [marketData, morningDecision.adaptiveConfidence, morningDecision.verdict, setPageData]);
 

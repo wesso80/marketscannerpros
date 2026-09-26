@@ -288,7 +288,8 @@ export default function ResearchPage() {
             <div className="text-[0.72rem] text-slate-500">Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.</div>
           </div>
         </div>
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+        {/* Wraps instead of scrolling sideways: on a phone the later tabs were off-screen with no scroll cue. */}
+        <div className="flex flex-wrap items-center gap-1 pb-0.5">
           {TABS.map(t => (
             <button
               key={t}

@@ -76,7 +76,7 @@ describe('OV-3: audit scenario (4 of 5 layers, 3 degraded feeds on the dashboard
       'Crypto scan data incomplete',
       'Scanner data stale (42m old)',
       'Movers',
-      'Calendar: 28/28 events have unconfirmed timing or unavailable/stale data',
+      'Calendar: 28/28 events have unconfirmed timing', // OV-6: missing consensus is no longer lumped in
     ]);
     expect(degradedFeedList({ scanner: { warnings: [], error: 'boom', stale: true, ageMinutes: null }, feeds: [] })).toEqual(['Scanner queue', 'Scanner data stale (age unknown)']);
   });

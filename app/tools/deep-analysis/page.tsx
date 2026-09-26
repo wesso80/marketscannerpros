@@ -12,7 +12,7 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
-import { calibrationSummary, cautionTags, noSetupDisplay, scoreLabel } from "@/lib/scoring/canonical/display";
+import { calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from "@/lib/scoring/canonical/display";
 
 interface PriceData {
   price: number;
@@ -839,7 +839,7 @@ export default function DeepAnalysisPage({
 
         {result && !embeddedInGoldenEgg && (
           <DecisionCockpit
-            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.assetType.toUpperCase()}</div><div className="msp-muted">Price: ${result.price.price.toFixed(2)}</div><div className="msp-muted">Vs prior close: {result.price.changePercent.toFixed(2)}%</div></div>}
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.assetType.toUpperCase()}</div><div className="msp-muted">Price: ${result.price.price.toFixed(2)}</div><div className="msp-muted">Change ({result.goldenEgg ? priceChangeBasisLabel(result.assetType, { barInterval: result.goldenEgg.barInterval }) : priceChangeBasisLabel(result.assetType, 'rolling_24h')}): {result.price.changePercent.toFixed(2)}%</div></div>}
             center={<div className="grid gap-1 text-sm"><div className="font-extrabold text-[var(--msp-accent)]">{result.signals.signal}</div><div className="msp-muted">Score: {result.signals.score.toFixed(0)}</div><div className="msp-muted">Response: {result.responseTime}</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">RSI: {result.indicators.rsi?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">MACD: {result.indicators.macdHist?.toFixed(2) ?? 'n/a'}</div><div className="msp-muted">ADX: {result.indicators.adx?.toFixed(1) ?? 'n/a'}</div></div>}
           />
@@ -948,6 +948,7 @@ export default function DeepAnalysisPage({
                         ? ['Canonical setup', `${noSetup.headline}${noSetup.detail ? ` — ${noSetup.detail}` : ''}`, noQualifyingSetup ? 'var(--msp-text-muted)' : geColor] as [string, string, string]
                         : ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}${cautionTags(ge.canonicalVerdict).map((t) => ` · ${t}`).join('')}`, geColor] as [string, string, string],
                       ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', calibrationSummary(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
+                      ...(gradeRelativeNote(ge.canonicalVerdict) ? [['How to read the grade', gradeRelativeNote(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
                       ['Legacy confluence (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
                     ]
                   : [['Confluence (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
@@ -982,7 +983,7 @@ export default function DeepAnalysisPage({
                         <span>{result.symbol} · {result.assetType.toUpperCase()}</span>
                         <span className="font-mono text-slate-300">${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}</span>
                         <span className={result.price.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                          {result.price.changePercent >= 0 ? '+' : ''}{formatNumber(result.price.changePercent)}% {ge ? 'vs prior close' : '24h'}
+                          {result.price.changePercent >= 0 ? '+' : ''}{formatNumber(result.price.changePercent)}% {ge ? priceChangeBasisLabel(result.assetType, { barInterval: ge.barInterval }) : priceChangeBasisLabel(result.assetType, 'rolling_24h')}
                         </span>
                         {ge && <span className="text-[11px] font-normal text-slate-500" title={`Price as of ${ge.priceTs}`}>last completed bar {ge.lastCompletedBarAt ? String(ge.lastCompletedBarAt).slice(0, 16).replace('T', ' ') : 'n/a'}</span>}
                       </div>
@@ -1743,7 +1744,7 @@ export default function DeepAnalysisPage({
                     </div>
                   </div>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
-                    <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Avg IV</div>
+                    <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }} title="Unweighted mean IV of every strike on the selected expiry; higher than at-the-money IV when the wings are rich">Mean IV, all strikes</div>
                     <div style={{ color: "var(--msp-muted)", fontSize: "1.25rem", fontWeight: "bold" }}>
                       {result.optionsData.avgIV ? `${capPercentage(result.optionsData.avgIV * 100, 300)}` : "—"}
                     </div>

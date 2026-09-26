@@ -1,7 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
 import VEHeatmapGauge from '@/src/features/volatilityEngine/components/VEHeatmapGauge';
 import VEDirectionalCompass from '@/src/features/volatilityEngine/components/VEDirectionalCompass';
@@ -45,12 +45,12 @@ export default function VolatilityEnginePage() {
   const params = useSearchParams();
   const requestedSymbol = params.get('symbol')?.toUpperCase() || '';
   const [symbol, setSymbol] = useState(requestedSymbol);
-  useEffect(() => { setSymbol(requestedSymbol); setReading(null); }, [requestedSymbol]);
   const [reading, setReading] = useState<DVEReading | null>(null);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cached, setCached] = useState(false);
+  const [freshness, setFreshness] = useState<Pick<DVEApiResponse, 'computedAt' | 'dataAsOf' | 'dataFreshness'>>({});
 
   const analyze = useCallback(async (sym?: string) => {
     const s = (sym || symbol).trim().toUpperCase();
@@ -61,6 +61,7 @@ export default function VolatilityEnginePage() {
     setReading(null);
     setCurrentPrice(0);
     setCached(false);
+    setFreshness({});
     try {
       const res = await fetch(`/api/dve?symbol=${encodeURIComponent(s)}`);
       const json: DVEApiResponse = await res.json();
@@ -71,6 +72,7 @@ export default function VolatilityEnginePage() {
       setReading(json.data);
       setCurrentPrice(json.price ?? 0);
       setCached(!!json.cached);
+      setFreshness({ computedAt: json.computedAt, dataAsOf: json.dataAsOf, dataFreshness: json.dataFreshness });
     } catch {
       setError('Network error — please try again');
     } finally {
@@ -82,13 +84,27 @@ export default function VolatilityEnginePage() {
     if (e.key === 'Enter') analyze();
   };
 
+  // A ?symbol= link (e.g. from Golden Egg or the Terminal) runs the analysis, instead of only filling the box (RS-18).
+  const analyzeRef = useRef(analyze);
+  analyzeRef.current = analyze;
+  useEffect(() => {
+    setSymbol(requestedSymbol);
+    setReading(null);
+    if (requestedSymbol) void analyzeRef.current(requestedSymbol);
+  }, [requestedSymbol]);
+
+  // Stale comes from the age of the price bars (session-aware, from the API), not from a cache hit: a result cached
+  // inside the 3-minute TTL is as current as the bars it was computed from.
+  const barsAsOf = freshness.dataAsOf ? ` (last bar ${freshness.dataAsOf.slice(0, 16).replace('T', ' ')})` : '';
   const dveProviderStatus = reading ? buildMarketDataProviderStatus({
     source: 'dve',
-    provider: cached ? 'dve cached result' : 'dve live calculation',
-    stale: cached,
+    provider: cached ? `dve cached result${freshness.computedAt ? `, computed ${new Date(freshness.computedAt).toLocaleTimeString()}` : ''}` : 'dve live calculation',
+    stale: freshness.dataFreshness === 'stale',
     degraded: reading.dataQuality.score < 80 || reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0,
     warnings: [
-      cached ? 'DVE result served from cache.' : null,
+      freshness.dataFreshness === 'stale' ? `Price data is stale${barsAsOf}.` : null,
+      freshness.dataFreshness === 'delayed' ? `Price data is delayed${barsAsOf}.` : null,
+      freshness.dataFreshness === 'unknown' ? 'Price bar time unavailable; freshness unknown.' : null,
       reading.dataQuality.score < 80 ? `DVE data quality ${reading.dataQuality.score.toFixed(0)}%.` : null,
       ...reading.dataQuality.missing.map((item) => `Missing input: ${item}.`),
       ...reading.dataQuality.warnings,

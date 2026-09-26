@@ -133,6 +133,23 @@ export const SETUP_LABEL: Record<string, string> = {
 };
 
 /**
+ * Setup type in plain words for panels that used to show the legacy engine's label (RS-13 residual: META's exhaustion
+ * fade read "trend"). With a canonical result: its setup ("Exhaustion fade (short)", or "No qualifying setup");
+ * without one (older payloads): the legacy label with underscores removed.
+ */
+export function setupTypeDisplay(
+  c: Pick<CanonicalResult, 'setupType' | 'direction'> | null | undefined,
+  legacy: string | null | undefined,
+  opts: { withDirection?: boolean } = {},
+): string {
+  if (!c) return (legacy ?? '').replace(/_/g, ' ');
+  if (c.setupType === 'NONE') return 'No qualifying setup';
+  const label = SETUP_LABEL[c.setupType] ?? c.setupType.replace(/_/g, ' ').toLowerCase();
+  const withDirection = opts.withDirection ?? true;
+  return withDirection && (c.direction === 'long' || c.direction === 'short') ? `${label} (${c.direction})` : label;
+}
+
+/**
  * Project the canonical verdict onto the scanner row so every existing field agrees with it. The previous scenario
  * (direction/entry/stop/target/setup from the legacy composite) is kept under `legacyScenario`.
  */

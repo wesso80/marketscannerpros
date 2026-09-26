@@ -127,7 +127,8 @@ export async function GET(req: NextRequest) {
         symbol: s,
         name: mkt?.name ?? s,
         price: mkt?.current_price ?? rows[0]?.price ?? 0,
-        change24h: mkt?.price_change_percentage_24h ?? 0,
+        // Missing 24h change is n/a (null), not 0%.
+        change24h: mkt?.price_change_percentage_24h ?? null,
         exchanges: rows,
         aggregatedFunding: { symbol: s, ...aggregateFunding(rows) },
         aggregatedOI: { symbol: s, ...aggregateOI(rows) },
@@ -174,7 +175,7 @@ export async function GET(req: NextRequest) {
     symbol,
     name: mkt?.name ?? symbol,
     price: mkt?.current_price ?? rows[0]?.price ?? 0,
-    change24h: mkt?.price_change_percentage_24h ?? 0,
+    change24h: mkt?.price_change_percentage_24h ?? null,
     change7d: mkt?.price_change_percentage_7d_in_currency ?? 0,
     marketCap: mkt?.market_cap ?? 0,
     rank: mkt?.market_cap_rank ?? 0,

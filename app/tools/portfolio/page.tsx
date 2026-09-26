@@ -38,7 +38,7 @@ import {
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
 import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
-import { closedTradeR, formatR as formatStopR, formatRiskUnits, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
+import { closedTradeR, formatR as formatStopR, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
 
 interface Position {
   id: number;
@@ -1723,10 +1723,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   // One risk unit = account equity x max risk per trade % (the same budget Model Allocation sizes with).
   // Used wherever there is no real stop; never called R.
-  const riskUnitUsd = riskUnitDollars(capitalBase, riskSettings.maxRiskPerTrade);
+  // No invented base: without starting capital / positive equity, risk units are unavailable (they used to fall back to
+  // max(total value, $1000)).
+  const riskUnitUsd = riskUnitDollars(riskUnitBase({ startingCapital, netDeposits, accountEquity }) ?? 0, riskSettings.maxRiskPerTrade);
+  const riskUnitsText = (amount: number) => (riskUnitUsd == null ? 'risk units: set Starting Capital' : formatRiskUnits(toRiskUnits(amount, riskUnitUsd)));
   const formatRiskPairText = (amount: number) => {
     const sign = amount >= 0 ? '+' : '-';
-    return `${sign}${formatDollar(amount)} (${formatRiskUnits(toRiskUnits(amount, riskUnitUsd))})`;
+    return `${sign}${formatDollar(amount)} (${riskUnitsText(amount)})`;
   };
 
   // R only against a real stop (journal-recorded or kept on this device); risk units for every closed trade.
@@ -2596,7 +2599,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="space-y-3">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Total Exposure</div><div className="text-sm font-bold text-slate-100">{deploymentPct.toFixed(1)}%</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div><div className="text-[10px] text-slate-500" title="P&L divided by the account risk per trade (account equity x max risk per trade %)">{formatRiskUnits(toRiskUnits(unrealizedPL, riskUnitUsd))}</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div><div className="text-[10px] text-slate-500" title={riskUnitUsd == null ? RISK_UNITS_NEED_EQUITY : 'P&L divided by the account risk per trade (account equity x max risk per trade %)'}>{riskUnitsText(unrealizedPL)}</div></div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2" title="Sum of R (P&L / risk to stop) over open positions with a stop set"><div className="text-[10px] uppercase text-slate-500">Open R (positions with a stop)</div><div className="text-sm font-bold text-slate-100">{formatStopR(openRTotal)}</div><div className="text-[10px] text-slate-500">{openRSummary.count} of {positions.length} positions have a stop</div></div>
               </div>
 
@@ -2697,7 +2700,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   { label: 'Avg R', value: formatStopR(closedRSummary.avg), detail: `${closedRSummary.count} of ${closedPositions.length} trades with a stop` },
                   { label: 'Best R', value: formatStopR(closedRSummary.best) },
                   { label: 'Worst R', value: formatStopR(closedRSummary.worst) },
-                  { label: 'Avg Risk Units', value: formatRiskUnits(closedRiskUnitSummary.avg), detail: 'P&L / account risk per trade' },
+                  { label: 'Avg Risk Units', value: formatRiskUnits(closedRiskUnitSummary.avg), detail: riskUnitUsd == null ? RISK_UNITS_NEED_EQUITY : 'P&L / account risk per trade' },
                   { label: 'Expectancy', value: formatMoney(expectancy) },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
@@ -2707,7 +2710,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </div>
                 ))}
               </div>
-              <div className="text-[11px] text-slate-500">R = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ({riskUnitUsd != null ? formatMoney(riskUnitUsd) : '—'} = account equity × {riskSettings.maxRiskPerTrade}%).</div>
+              <div className="text-[11px] text-slate-500">R = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ({riskUnitUsd != null ? formatMoney(riskUnitUsd) : '—'} = account equity × {riskSettings.maxRiskPerTrade}%).{riskUnitUsd == null ? ` Risk units are unavailable: ${RISK_UNITS_NEED_EQUITY} (top of the page).` : ''}</div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Closed Trades Equity Curve</div>

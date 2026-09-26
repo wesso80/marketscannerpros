@@ -26,13 +26,27 @@ import { getAggregatedFundingRates, getAggregatedOpenInterest } from '@/lib/coin
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput } from '@/lib/directionalVolatilityEngine.types';
 import type { DVEReading } from '@/lib/directionalVolatilityEngine.types';
+import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
-const dveCache = new Map<string, { data: DVEReading; price: number; ts: number }>();
+type BarAge = { assetClass: 'equity' | 'crypto' | 'forex'; timeframe: string; lastBarAt: string | null; barInterval: string | null };
+const dveCache = new Map<string, { data: DVEReading; price: number; ts: number; barAge: BarAge }>();
 const DVE_CACHE_TTL = 3 * 60 * 1000;
+
+/**
+ * Freshness of the price bars behind a reading, judged by the same session-aware rule as the scanner's data trust
+ * (a Saturday view of Friday's equity close is fresh; a daily bar two sessions behind is stale). A cache hit inside the
+ * 3-minute TTL is not, by itself, stale: staleness comes from the data's age.
+ */
+function freshnessMeta(barAge: BarAge, computedAtMs: number) {
+  const dataFreshness = evaluateDataTrust({
+    assetClass: barAge.assetClass, timeframe: barAge.timeframe, lastBarAt: barAge.lastBarAt, barInterval: barAge.barInterval, price: 1,
+  }).freshness;
+  return { computedAt: new Date(computedAtMs).toISOString(), dataAsOf: barAge.lastBarAt, dataFreshness };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,7 +73,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${symbol}_${timeframe}`;
     const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return NextResponse.json({ success: true, data: cached.data, price: cached.price, cached: true });
+      return NextResponse.json({ success: true, data: cached.data, price: cached.price, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
     }
 
     // 4. Detect asset class
@@ -183,8 +197,10 @@ export async function GET(request: NextRequest) {
     const reading = computeDVE(dveInput, symbol);
 
     // 12. Cache + return
-    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: Date.now() });
-    return NextResponse.json({ success: true, data: reading, price: priceData.price });
+    const computedAtMs = Date.now();
+    const barAge: BarAge = { assetClass, timeframe, lastBarAt: priceData.lastCompletedBarAt ?? null, barInterval: priceData.barInterval ?? null };
+    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge });
+    return NextResponse.json({ success: true, data: reading, price: priceData.price, cached: false, ...freshnessMeta(barAge, computedAtMs) });
   } catch (error) {
     console.error('[DVE API] Error:', error);
     return NextResponse.json(
