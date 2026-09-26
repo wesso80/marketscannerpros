@@ -92,7 +92,11 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/[0.04] px-4 py-3 text-center text-[11px] text-[var(--msp-text-faint)]">
-        Market data powered by CoinGecko and Alpha Vantage
+        {/* CoinGecko paid-plan attribution: "Data provided by CoinGecko" linked to https://www.coingecko.com/en/api */}
+        <a href="https://www.coingecko.com/en/api" target="_blank" rel="noopener noreferrer" className="underline transition-colors hover:text-[var(--msp-accent)]">
+          Data provided by CoinGecko
+        </a>
+        <span> · Equity data by Alpha Vantage</span>
       </div>
 
       <div className="px-4 pb-4 text-center text-xs text-[var(--msp-text-faint)]">

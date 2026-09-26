@@ -11,8 +11,20 @@
  * - Historical data (10 years on Analyst plan)
  */
 
-// Read API key lazily so dotenv/Render env vars are available at call time
-const getApiKey = () => process.env.COINGECKO_API_KEY || '';
+// Read API key lazily so dotenv/Render env vars are available at call time.
+// COINGECKO_API_KEY is the name declared in render.yaml; COINGECKO_PRO_API_KEY is also accepted because other modules
+// (Radar, lead-lag, liquidity transmission) read it. Without either, the client used to drop SILENTLY to the keyless
+// public API (shared IP limits, no Pro/onchain endpoints) — now it says so loudly, once per process.
+let warnedMissingKey = false;
+export function resolveCoinGeckoApiKey(env: Record<string, string | undefined> = process.env): string {
+  const key = (env.COINGECKO_API_KEY || env.COINGECKO_PRO_API_KEY || '').trim();
+  if (!key && !warnedMissingKey) {
+    warnedMissingKey = true;
+    console.error('[CoinGecko] WARNING: neither COINGECKO_API_KEY nor COINGECKO_PRO_API_KEY is set. Falling back to the keyless PUBLIC CoinGecko API (shared rate limits, Pro/onchain endpoints unavailable). Set COINGECKO_API_KEY to use the paid plan.');
+  }
+  return key;
+}
+const getApiKey = () => resolveCoinGeckoApiKey();
 const BASE_URL = 'https://pro-api.coingecko.com/api/v3';
 const FREE_URL = 'https://api.coingecko.com/api/v3';
 
