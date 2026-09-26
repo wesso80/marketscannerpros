@@ -236,16 +236,18 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
 
   // Use session-specific minimum TPS if provided, otherwise base threshold
   const tpsThreshold = so ? so.minimumTps / 100 : BASE_TPS_THRESHOLD;
-  const blocked = autoNoTrade || tps < tpsThreshold;
+  // Weekend / holiday for US equities: nothing is tradable, so permission is unavailable whatever the score (RS-22).
+  const marketClosed = so?.phase === 'MARKET_CLOSED';
+  const blocked = autoNoTrade || tps < tpsThreshold || marketClosed;
   // "Session-limited" (shown as "Unavailable this session") only when the score itself clears the standard threshold
   // and it is a session requirement that blocks it: the session's higher TPS bar (e.g. midday 70) or one of its
   // confidence/liquidity minimums. A score below the standard threshold is weak data and reads as a normal BLOCKED,
   // whatever the session. Never for crypto: it trades 24/7, so there is no session to be "unavailable" in.
   const sessionGateFailed = !!so && (failsSessionConfidence || failsSessionLiquidity);
   const isCrypto = so?.assetClass === 'crypto';
-  const sessionLimited = !autoNoTrade && blocked && !!so && !isCrypto &&
+  const sessionLimited = !autoNoTrade && blocked && !!so && !isCrypto && (marketClosed || (
     tpsBeforeGate >= BASE_TPS_THRESHOLD &&
-    (sessionGateFailed || tpsThreshold > BASE_TPS_THRESHOLD);
+    (sessionGateFailed || tpsThreshold > BASE_TPS_THRESHOLD)));
 
   // Whole-number score exactly as the cards show it (`tps` is returned to one decimal and displayed with toFixed(0)), so
   // the reason never quotes a different number from the card.
@@ -299,6 +301,14 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     if (so.stopStyleOverride) {
       stopStyle = so.stopStyleOverride;
     }
+  }
+
+  // Market closed: say so, and give the score as a next-open read against the standard bar (the closed overlay uses the
+  // standard rules). Kept as its own step so the session-reason wording above stays in one place.
+  if (marketClosed && !autoNoTrade) {
+    const shown = Math.round(Number((tps * 100).toFixed(1)));
+    const bar = Math.round(tpsThreshold * 100);
+    reason = `Unavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score ${shown} ${shown >= bar ? 'meets' : 'is below'} the standard ${bar}`;
   }
 
   return {
