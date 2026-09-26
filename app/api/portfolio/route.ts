@@ -21,6 +21,11 @@ interface Position {
   entryDate: string;
 }
 
+function positiveOrNull(value: unknown): number | null {
+  const n = value == null ? NaN : parseFloat(String(value));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 interface ClosedPosition extends Position {
   closeDate: string;
   closePrice: number;
@@ -71,7 +76,8 @@ export async function GET(req: NextRequest) {
     // Fetch open positions
     const positionsRaw = await q(
       `SELECT p.id, p.symbol, p.side, p.quantity, p.entry_price, p.current_price, p.entry_date, p.journal_entry_id,
-              j.trade_type, j.asset_class, j.option_type, j.strike_price, j.expiration_date
+              j.trade_type, j.asset_class, j.option_type, j.strike_price, j.expiration_date,
+              j.stop_loss, j.target
        FROM portfolio_positions p
        LEFT JOIN journal_entries j ON j.id = p.journal_entry_id AND j.workspace_id = p.workspace_id
        WHERE p.workspace_id = $1
@@ -128,6 +134,11 @@ export async function GET(req: NextRequest) {
         entryDate: p.entry_date,
         journalEntryId: p.journal_entry_id || undefined,
         tradeType: p.trade_type || undefined,
+        // Journal-linked positions show the journal entry's stop/target (read-only on the Portfolio page).
+        ...(p.journal_entry_id ? {
+          stopPrice: positiveOrNull(p.stop_loss),
+          targetPrice: positiveOrNull(p.target),
+        } : {}),
         assetClass: p.asset_class || undefined,
         ...(p.trade_type === 'Options' ? {
           optionType: p.option_type || undefined,

@@ -35,6 +35,7 @@ import {
   type PortfolioSyncPayload,
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
+import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
 
 interface Position {
   id: number;
@@ -53,6 +54,12 @@ interface Position {
   pl: number;
   plPercent: number;
   entryDate: string;
+  /**
+   * Stop / target (same units as entryPrice). Manual positions: kept on this device only (localStorage),
+   * because portfolio_positions has no columns for them. Journal-linked positions: read from the journal entry.
+   */
+  stopPrice?: number | null;
+  targetPrice?: number | null;
   strategy?: 'swing' | 'longterm' | 'options' | 'breakout' | 'ai_signal' | 'daytrade' | 'dividend';
 }
 
@@ -594,7 +601,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     maxDrawdownThreshold: 12,
     maxPositionSize: 20,
   });
-  const [positionStopMap, setPositionStopMap] = useState<Record<number, number>>({});
+  const [levelEditor, setLevelEditor] = useState<{ id: number; stop: string; target: string } | null>(null);
   const [showDrawdownOverlay, setShowDrawdownOverlay] = useState(true);
 
   // AI Analysis state
@@ -924,7 +931,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         syncGateRef.current = gate;
         setSyncBlocked(gate.blockedMessage);
         if (res.ok && serverHasPortfolioData(data)) {
-          loadedPositions = data.positions || [];
+          // Stops/targets of manual positions live only on this device: re-attach them to the server rows.
+          loadedPositions = mergeLocalLevels<Position>(data.positions || [], readLocal<Position[]>('portfolio_positions'));
           const loadedClosed = data.closedPositions || [];
           const loadedPerformance = data.performanceHistory || [];
           // Cash state is kept on this device when the server has none (it may never have been saved there);
@@ -1211,6 +1219,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       plPercent: 0,
       entryDate: new Date().toISOString(),
       strategy: (deployDraft.strategyTag || undefined) as Position['strategy'] | undefined,
+      stopPrice: validLevel(deployDraft.stop),
+      targetPrice: validLevel(deployDraft.target),
     };
 
     const tradeExecutionEvent = createWorkflowEvent<TradePayload>({
@@ -1248,10 +1258,6 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     void emitWorkflowEvents([tradeExecutionEvent]);
 
     setPositions((prev) => [...prev, position]);
-    const stopValue = parseFloat(deployDraft.stop || '0');
-    if (stopValue > 0) {
-      setPositionStopMap((prev) => ({ ...prev, [position.id]: stopValue }));
-    }
     setDeployDraft({
       symbol: '',
       side: 'LONG',
@@ -1351,13 +1357,22 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     } catch { setSyncError('Enter a valid non-negative close price.'); }
   };
 
-  const moveStopToBreakeven = (id: number) => {
+  const openLevelEditor = (id: number) => {
     const position = positions.find((p) => p.id === id);
     if (!position) return;
-    setPositionStopMap((prev) => ({
-      ...prev,
-      [id]: position.entryPrice,
-    }));
+    const stop = validLevel(position.stopPrice);
+    const target = validLevel(position.targetPrice);
+    setLevelEditor({ id, stop: stop == null ? '' : String(stop), target: target == null ? '' : String(target) });
+  };
+
+  const levelEditorPosition = levelEditor ? positions.find((p) => p.id === levelEditor.id) ?? null : null;
+  const levelEditorCheck = levelEditor && levelEditorPosition ? validateLevels(levelEditor, levelEditorPosition) : null;
+
+  const saveLevels = () => {
+    if (!levelEditor || !levelEditorPosition || !levelEditorCheck || levelEditorCheck.errors.length > 0) return;
+    const { stop, target } = levelEditorCheck;
+    setPositions((prev) => prev.map((p) => (p.id === levelEditor.id ? { ...p, stopPrice: stop, targetPrice: target } : p)));
+    setLevelEditor(null);
   };
 
   // Update single position: auto-fetch, then fall back to manual entry via modal
@@ -1693,7 +1708,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     .map((position) => {
       const value = position.currentPrice * positionUnits(position);
       const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
-      const stopPrice = positionStopMap[position.id];
+      const stopPrice = validLevel(position.stopPrice);
       const riskPerUnit = stopPrice == null ? null : position.side === 'LONG'
         ? Math.max(0, position.currentPrice - stopPrice)
         : Math.max(0, stopPrice - position.currentPrice);
@@ -1971,6 +1986,61 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           />
         )}
       </div>
+
+      {/* Stop / target editor (manual positions) */}
+      {levelEditor && levelEditorPosition && levelEditorCheck && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="level-editor-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setLevelEditor(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[min(92vw,520px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div id="level-editor-title" className="font-bold text-slate-200">Stop &amp; target for {levelEditorPosition.symbol} ({levelEditorPosition.side})</div>
+              <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
+            </div>
+            <div className="mb-3 text-[12px] text-slate-400">
+              Entry {formatPriceRaw(levelEditorPosition.entryPrice)} · Current {formatPriceRaw(levelEditorPosition.currentPrice)}
+              {levelEditorPosition.tradeType === 'Options' ? ' · option premium per share' : ''}. Leave a field blank for no stop / no target.
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs text-slate-400">
+                Stop
+                <input
+                  autoFocus
+                  value={levelEditor.stop}
+                  onChange={(e) => setLevelEditor({ ...levelEditor, stop: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="No stop"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 outline-none"
+                />
+              </label>
+              <label className="text-xs text-slate-400">
+                Target
+                <input
+                  value={levelEditor.target}
+                  onChange={(e) => setLevelEditor({ ...levelEditor, target: e.target.value })}
+                  inputMode="decimal"
+                  placeholder="No target"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 outline-none"
+                />
+              </label>
+            </div>
+            {levelEditorCheck.errors.map((m) => <div key={m} className="mt-2 text-xs text-red-300">{m}</div>)}
+            {levelEditorCheck.warnings.map((m) => <div key={m} className="mt-2 text-xs text-amber-300">{m}</div>)}
+            <div className="mt-3 text-[11px] text-slate-500">Saved on this device only (with this portfolio&apos;s local copy); stops and targets aren&apos;t stored on the server yet.</div>
+            <div className="mt-3.5 flex justify-end gap-2">
+              <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
+              <button type="button" onClick={saveLevels} disabled={levelEditorCheck.errors.length > 0} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual entry modal (fallback when API has no price) */}
       {manualOpen && manualPosition && (
@@ -2569,6 +2639,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       <th scope="col" className="px-2 py-2 text-right">Size %</th>
                       <th scope="col" className="px-2 py-2 text-right">Cost</th>
                       <th scope="col" className="px-2 py-2 text-right">Current</th>
+                      <th scope="col" className="px-2 py-2 text-right">Stop</th>
+                      <th scope="col" className="px-2 py-2 text-right">Target</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
                       <th scope="col" className="px-2 py-2 text-right">P&L %</th>
                       <th scope="col" className="px-2 py-2 text-right">Risk Remaining</th>
@@ -2580,23 +2652,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     {positions.map((position) => {
                       const notional = position.currentPrice * positionUnits(position);
                       const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
-                      const stop = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
-                      const initialRiskUnit = Math.abs(position.entryPrice - stop);
-                      // Signed R Multiple: negative when trade moves against you
-                      const isWinning = position.side === 'LONG'
-                        ? position.currentPrice >= position.entryPrice
-                        : position.currentPrice <= position.entryPrice;
-                      const currentMove = Math.abs(position.currentPrice - position.entryPrice);
-                      const rMultipleOpen = initialRiskUnit > 0
-                        ? (isWinning ? 1 : -1) * (currentMove / initialRiskUnit)
-                        : 0;
-                      const stopDistancePct = position.currentPrice > 0 ? (Math.abs(position.currentPrice - stop) / position.currentPrice) * 100 : 0;
-                      // Risk Remaining: how much of initial risk budget is left before stop
-                      // 100% = stop hasn't been approached, 0% = at stop level
-                      const distFromEntry = Math.abs(position.currentPrice - position.entryPrice);
-                      const riskRemainingPct = initialRiskUnit > 0
-                        ? Math.max(0, Math.min(100, ((initialRiskUnit - distFromEntry) / initialRiskUnit) * 100))
-                        : 0;
+                      // No hidden default stop: without a stop, R / Risk Remaining / Inval Dist show '—'.
+                      const stop = validLevel(position.stopPrice);
+                      const target = validLevel(position.targetPrice);
+                      const { rMultiple: rMultipleOpen, riskRemainingPct, stopDistancePct, stopAtOrPastEntry } = openRiskMetrics({ ...position, stopPrice: stop });
+                      const noRiskTitle = stop == null
+                        ? 'No stop set — use Edit Stop'
+                        : stopAtOrPastEntry ? 'Stop is at or past entry, so there is no entry risk to measure against' : undefined;
+                      const levelsFromJournal = Boolean(position.journalEntryId);
 
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
@@ -2607,25 +2670,35 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.currentPrice)}</td>
-                          <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">—</span>}</td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No target set">—</span>}</td>
+                          {rMultipleOpen == null
+                            ? <td className="px-2 py-2 text-right text-slate-500" title={noRiskTitle}>—</td>
+                            : <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>}
                           <td className={`px-2 py-2 text-right font-semibold ${position.plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPct(position.plPercent)}</td>
-                          <td className="px-2 py-2 text-right">{riskRemainingPct.toFixed(0)}%</td>
-                          <td className="px-2 py-2 text-right">{stopDistancePct.toFixed(2)}%</td>
+                          <td className={`px-2 py-2 text-right ${riskRemainingPct == null ? 'text-slate-500' : ''}`} title={riskRemainingPct == null ? noRiskTitle : undefined}>{riskRemainingPct == null ? '—' : `${riskRemainingPct.toFixed(0)}%`}</td>
+                          <td className={`px-2 py-2 text-right ${stopDistancePct == null ? 'text-slate-500' : ''}`} title={stopDistancePct == null ? 'No stop set — use Edit Stop' : undefined}>{stopDistancePct == null ? '—' : `${stopDistancePct.toFixed(2)}%`}</td>
                           <td className="px-2 py-2">
-                            <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
-                              <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
-                            </div>
+                            {riskRemainingPct != null && (
+                              <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
+                                <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-1">
                               <button type="button" onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
                               <button type="button" onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record Partial Close</button>
-                              <button type="button" onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
+                              {levelsFromJournal ? (
+                                <button type="button" disabled className="cursor-not-allowed rounded border border-slate-600/40 bg-slate-700/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500" title="Linked to a Journal trade: its stop and target come from the Journal entry. Edit them in the Journal.">Stop in Journal</button>
+                              ) : (
+                                <button type="button" onClick={() => openLevelEditor(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
+                              )}
                               <button type="button" onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">Delete</button>
                             </div>
                           </td>
                         </tr>
                       );
                     })}
-                    {positions.length === 0 && <tr><td colSpan={12} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
+                    {positions.length === 0 && <tr><td colSpan={14} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
                   </tbody>
                 </table>
               </div>
