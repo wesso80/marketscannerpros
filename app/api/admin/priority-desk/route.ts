@@ -22,6 +22,14 @@ async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: 
   return { ok: true, workspaceId: session.workspaceId };
 }
 
+/** Last top-candidate key per workspace+timeframe on this instance (tape de-dupe). */
+const lastTopKeys = new Map<string, string>();
+
+/** "MA, NVDA, AAPL" — the best-list symbols in rank order; "" when nothing ranks (no event). */
+export function priorityDeskTopKey(top: Pick<SavedPacket, "symbol">[], max = 5): string {
+  return top.slice(0, max).map((p) => p.symbol).join(", ");
+}
+
 function topBy(packets: SavedPacket[], predicate: (p: SavedPacket) => boolean, max = 6): SavedPacket[] {
   return packets
     .filter(predicate)
@@ -58,18 +66,26 @@ export async function GET(req: NextRequest) {
   const dataDegradedList = topBy(everything, isDataDegraded, 8);
   const arcaTopCandidate = all.slice().sort((a, b) => b.trustAdjustedScore - a.trustAdjustedScore)[0] ?? null;
 
-  await appendResearchEvent({
-    workspaceId: auth.workspaceId,
-    eventType: "NEW_HIGH_PRIORITY",
-    severity: "INFO",
-    message: `Priority Desk read ${all.length} current saved packets across equities and crypto.`,
-    payload: {
-      timeframe,
-      equities: bestEquities.length,
-      crypto: bestCrypto.length,
-      degraded: dataDegradedList.length,
-    },
-  }).catch(() => undefined);
+  // Tape event only when the top candidates change (it used to append one on every load and every 120 s poll).
+  const topKey = priorityDeskTopKey([...bestEquities, ...bestCrypto]);
+  const tapeKey = `${auth.workspaceId}:${timeframe}`;
+  if (topKey && lastTopKeys.get(tapeKey) !== topKey) {
+    lastTopKeys.set(tapeKey, topKey);
+    await appendResearchEvent({
+      workspaceId: auth.workspaceId,
+      eventType: "NEW_HIGH_PRIORITY",
+      severity: "INFO",
+      message: `Priority Desk top candidates changed: ${topKey}.`,
+      payload: {
+        timeframe,
+        top: topKey,
+        ranked: all.length,
+        equities: bestEquities.length,
+        crypto: bestCrypto.length,
+        degraded: dataDegradedList.length,
+      },
+    }).catch(() => undefined);
+  }
 
   return NextResponse.json({
     ok: true,
