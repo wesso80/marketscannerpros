@@ -4,88 +4,83 @@ import { timingSafeEqual } from 'crypto';
 import { alertCronFailure } from '@/lib/opsAlerting';
 import { requireAdmin } from '@/lib/adminAuth';
 import { notifyAdmin } from '@/lib/admin/notifyAdmin';
+import {
+  classifyOutcome,
+  horizonPassed,
+  normalizeAssetClass,
+  normalizeDirection,
+  pctMove,
+  type OutcomeHorizon,
+} from '@/lib/outcomes/aiOutcomeLabel';
+import { createHorizonPriceResolver } from '@/lib/outcomes/aiOutcomePrices';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
+const SUPPORTED_ASSET_SQL = `LOWER(TRIM(asset_type)) IN ('equity','equities','stock','stocks','etf','crypto')`;
+const DIRECTIONAL_SQL = `UPPER(TRIM(COALESCE(trade_bias, ''))) IN ('LONG','SHORT')`;
+const MAX_ROWS_PER_HORIZON = 200;
+const HORIZON_4H_COLUMNS = ['outcome_4h', 'price_after_4h', 'pct_move_4h', 'price_after_4h_at', 'outcome_4h_measured_at'];
 
-/**
- * Fetch current prices for symbols via Alpha Vantage.
- * Uses GLOBAL_QUOTE for equities, CURRENCY_EXCHANGE_RATE for crypto.
- * Falls back to the latest signal's price_at_signal if AV fails.
- */
-async function fetchCurrentPrices(
-  symbols: string[],
-  assetTypeMap: Record<string, string>,
-): Promise<Record<string, number>> {
-  const priceMap: Record<string, number> = {};
+type PendingRow = {
+  id: number;
+  symbol: string;
+  asset_type: string | null;
+  trade_bias: string | null;
+  price_at_signal: string | number | null;
+  signal_at: string | Date;
+};
 
-  const key = AV_KEY();
-  if (key) {
-    // Parallel batches of 5 to stay well within 600 RPM
-    const batchSize = 5;
-    for (let i = 0; i < symbols.length; i += batchSize) {
-      const batch = symbols.slice(i, i + batchSize);
-      const results = await Promise.allSettled(
-        batch.map(async (sym) => {
-          const isCrypto = (assetTypeMap[sym] || 'equity') === 'crypto';
-          let url: string;
-          if (isCrypto) {
-            url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${encodeURIComponent(sym)}&to_currency=USD&apikey=${key}`;
-          } else {
-            url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&apikey=${key}`;
-          }
-          const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-          if (!res.ok) return;
-          const json = await res.json();
-          let price: number | undefined;
-          if (isCrypto) {
-            const rate = json?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
-            if (rate) price = parseFloat(rate);
-          } else {
-            const quote = json?.['Global Quote']?.['05. price'];
-            if (quote) price = parseFloat(quote);
-          }
-          if (price && price > 0) priceMap[sym] = price;
-        }),
-      );
-      // tiny delay between batches to be kind to AV
-      if (i + batchSize < symbols.length) {
-        await new Promise((r) => setTimeout(r, 200));
-      }
-    }
-  }
+type HorizonTally = {
+  labeled: number; correct: number; wrong: number; neutral: number;
+  skippedNoPrice: number; skippedNoDirection: number; skippedUnsupported: number; skippedNotReady: number; alreadyLabeled: number;
+};
 
-  // Fallback: for any symbols not fetched, use the latest signal price
-  const missing = symbols.filter(s => !(s in priceMap));
-  if (missing.length > 0) {
-    const placeholders = missing.map((_, i) => `$${i + 1}`).join(',');
-    const rows = await q(
-      `SELECT DISTINCT ON (symbol) symbol, price_at_signal
-       FROM ai_signal_log
-       WHERE symbol IN (${placeholders})
-         AND price_at_signal IS NOT NULL
-         AND price_at_signal > 0
-       ORDER BY symbol, signal_at DESC`,
-      missing,
+function newTally(): HorizonTally {
+  return { labeled: 0, correct: 0, wrong: 0, neutral: 0, skippedNoPrice: 0, skippedNoDirection: 0, skippedUnsupported: 0, skippedNotReady: 0, alreadyLabeled: 0 };
+}
+
+/** Which optional outcome columns exist (migration 103 adds the 4h set and price_after_24h_at). */
+async function detectOutcomeColumns(): Promise<Set<string>> {
+  try {
+    const rows = await q<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'ai_signal_log'
+         AND column_name = ANY($1::text[])`,
+      [[...HORIZON_4H_COLUMNS, 'price_after_24h_at']],
     );
-    for (const r of rows) {
-      const p = parseFloat(String((r as any).price_at_signal));
-      if (p > 0 && !((r as any).symbol in priceMap)) {
-        priceMap[(r as any).symbol] = p;
-      }
-    }
+    return new Set(rows.map((r) => r.column_name));
+  } catch {
+    return new Set();
   }
+}
 
-  return priceMap;
+function candidateSql(horizon: OutcomeHorizon): string {
+  const notLabeled = horizon === '24h' ? `outcome = 'pending'` : `outcome_4h IS NULL`;
+  const interval = horizon === '24h' ? '24 hours' : '4 hours';
+  return `
+      SELECT id, symbol, asset_type, trade_bias, price_at_signal, signal_at
+      FROM ai_signal_log
+      WHERE ${notLabeled}
+        AND signal_at <= NOW() - INTERVAL '${interval}'
+        AND signal_at > NOW() - INTERVAL '7 days'
+        AND ${DIRECTIONAL_SQL}
+        AND price_at_signal IS NOT NULL AND price_at_signal > 0
+        AND ${SUPPORTED_ASSET_SQL}
+      ORDER BY signal_at ASC
+      LIMIT ${MAX_ROWS_PER_HORIZON}`;
 }
 
 /**
  * POST /api/cron/label-ai-outcomes
- * Cron job that labels ai_signal_log entries with outcomes.
- * Checks entries older than 4h where outcome is still 'pending'.
- * Fetches current prices from Alpha Vantage for accurate comparison.
+ *
+ * Labels ai_signal_log rows per horizon:
+ *   - 4h  → outcome_4h / price_after_4h / pct_move_4h (migration 103; skipped until it is applied)
+ *   - 24h → outcome / price_after_24h / pct_move_24h (the columns behind the public win rates)
+ * A horizon is only labelled once it has passed AND a completed bar at/after it exists. Rows without a usable price,
+ * direction (LONG/SHORT), entry price or supported asset type are left for a later run; anything still pending after
+ * 7 days is expired. Every UPDATE is guarded on "not yet labelled for this horizon", so overlapping or duplicate runs
+ * cannot relabel a row.
  */
 export async function POST(req: NextRequest) {
   // Accept cron secret (automated) or admin secret (manual trigger from admin panel)
@@ -103,128 +98,99 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Get pending signals older than 4 hours (enough time for price to move)
-    const pending = await q(`
-      SELECT id, workspace_id, symbol, asset_type, trade_bias, price_at_signal,
-             confidence, signal_at
-      FROM ai_signal_log
-      WHERE outcome = 'pending'
-        AND signal_at < NOW() - INTERVAL '4 hours'
-      ORDER BY signal_at ASC
-      LIMIT 200
-    `);
+    const nowMs = Date.now();
+    const columns = await detectOutcomeColumns();
+    const has4h = HORIZON_4H_COLUMNS.every((c) => columns.has(c));
+    const has24hAt = columns.has('price_after_24h_at');
 
-    if (!pending.length) {
-      return NextResponse.json({ success: true, labeled: 0, message: 'No pending signals to label' });
+    // 1. Give up on rows that could not be labelled within 7 days (terminal state for the public stats).
+    const expiredRows = await q<{ id: number }>(
+      `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW()
+       WHERE outcome = 'pending' AND signal_at < NOW() - INTERVAL '7 days'
+       RETURNING id`,
+    );
+    if (expiredRows.length) await markExpiredLifecycle(expiredRows.map((r) => r.id));
+
+    // 2. Rows the labeller can never score (no LONG/SHORT direction) are skipped, not defaulted to LONG. Log them.
+    const undirected = await q<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM ai_signal_log
+       WHERE outcome = 'pending' AND signal_at <= NOW() - INTERVAL '24 hours' AND NOT (${DIRECTIONAL_SQL})`,
+    );
+    const undirectedCount = Number(undirected[0]?.n ?? 0);
+    if (undirectedCount > 0) {
+      console.warn(`[label-ai-outcomes] ${undirectedCount} pending signal(s) have no LONG/SHORT trade_bias; skipped (expire after 7 days)`);
     }
 
-    // Collect unique symbols and build asset type map for correct AV endpoint
-    const symbols = [...new Set(pending.map((r: any) => r.symbol).filter(Boolean))];
-    const assetTypeMap: Record<string, string> = {};
-    for (const r of pending) {
-      const s = r as any;
-      if (s.symbol && !assetTypeMap[s.symbol]) {
-        assetTypeMap[s.symbol] = s.asset_type || 'equity';
-      }
+    const rows24 = await q<PendingRow>(candidateSql('24h'));
+    const rows4 = has4h ? await q<PendingRow>(candidateSql('4h')) : [];
+    if (!has4h) {
+      console.warn('[label-ai-outcomes] 4h outcome columns missing (apply migrations/103_ai_signal_outcome_horizons.sql); 4h labelling skipped');
     }
-    const priceMap = await fetchCurrentPrices(symbols, assetTypeMap);
 
-    let labeled = 0;
-    let correct = 0;
-    let wrong = 0;
-    let neutral = 0;
-    let expired = 0;
-    let skippedNoPrice = 0;
+    const resolve = createHorizonPriceResolver(nowMs);
+    const tallies: Record<OutcomeHorizon, HorizonTally> = { '4h': newTally(), '24h': newTally() };
 
-    for (const signal of pending) {
-      const s = signal as any;
-      const entryPrice = parseFloat(String(s.price_at_signal));
+    const work: Array<[OutcomeHorizon, PendingRow[]]> = [['24h', rows24], ['4h', rows4]];
+    for (const [horizon, rows] of work) {
+      const t = tallies[horizon];
+      for (const row of rows) {
+        const direction = normalizeDirection(row.trade_bias);
+        const assetClass = normalizeAssetClass(row.asset_type);
+        const entry = Number(row.price_at_signal);
+        const signalAtMs = new Date(row.signal_at).getTime();
+        if (!direction) {
+          t.skippedNoDirection++;
+          console.warn(`[label-ai-outcomes] signal ${row.id} (${row.symbol}) has no LONG/SHORT direction; skipped`);
+          continue;
+        }
+        if (!assetClass) { t.skippedUnsupported++; continue; }
+        if (!(entry > 0) || !horizonPassed(signalAtMs, horizon, nowMs)) { t.skippedNotReady++; continue; }
 
-      // If entry price was never recorded, try to use the current AV price
-      // and label as neutral (we can't compute direction without entry price)
-      if (!entryPrice || !Number.isFinite(entryPrice)) {
-        const signalAge = Date.now() - new Date(s.signal_at).getTime();
-        if (signalAge > 7 * 24 * 60 * 60 * 1000) {
-          await q(
-            `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW() WHERE id = $1`,
-            [s.id],
-          );
-          await updateLifecycleState(s.id, 'EXPIRED');
-          expired++;
-          labeled++;
-        } else {
-          // Backfill the price and mark neutral since we don't know entry
-          const nowPrice = priceMap[s.symbol];
-          if (nowPrice) {
-            await q(
-              `UPDATE ai_signal_log SET outcome = 'neutral', price_at_signal = $1, price_after_24h = $1, pct_move_24h = 0, outcome_measured_at = NOW() WHERE id = $2`,
-              [nowPrice, s.id],
+        const px = await resolve(row.symbol, assetClass, signalAtMs, horizon);
+        if (!px) { t.skippedNoPrice++; continue; }
+
+        const move = pctMove(entry, px.price);
+        const outcome = classifyOutcome(direction, move);
+        const pxAt = new Date(px.at).toISOString();
+
+        const updated = horizon === '24h'
+          ? await q<{ id: number }>(
+              has24hAt
+                ? `UPDATE ai_signal_log
+                   SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, price_after_24h_at = $5, outcome_measured_at = NOW()
+                   WHERE id = $4 AND outcome = 'pending'
+                   RETURNING id`
+                : `UPDATE ai_signal_log
+                   SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, outcome_measured_at = NOW()
+                   WHERE id = $4 AND outcome = 'pending'
+                   RETURNING id`,
+              has24hAt ? [outcome, px.price, move, row.id, pxAt] : [outcome, px.price, move, row.id],
+            )
+          : await q<{ id: number }>(
+              `UPDATE ai_signal_log
+               SET outcome_4h = $1, price_after_4h = $2, pct_move_4h = $3, price_after_4h_at = $5, outcome_4h_measured_at = NOW()
+               WHERE id = $4 AND outcome_4h IS NULL
+               RETURNING id`,
+              [outcome, px.price, move, row.id, pxAt],
             );
-            await updateLifecycleState(s.id, 'EXPIRED');
-            neutral++;
-            labeled++;
-          } else {
-            skippedNoPrice++;
-          }
+
+        if (!updated.length) { t.alreadyLabeled++; continue; }
+        t.labeled++;
+        t[outcome]++;
+        if (horizon === '24h') {
+          await updateLifecycleState(row.id, outcome === 'correct' ? 'TARGET_1_HIT' : outcome === 'wrong' ? 'STOPPED' : 'EXPIRED', move);
         }
-        continue;
       }
-
-      const currentPrice = priceMap[s.symbol];
-      if (!currentPrice) {
-        // No current price available at all — expire if old enough
-        const signalAge = Date.now() - new Date(s.signal_at).getTime();
-        if (signalAge > 7 * 24 * 60 * 60 * 1000) {
-          await q(
-            `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW() WHERE id = $1`,
-            [s.id],
-          );
-          await updateLifecycleState(s.id, 'EXPIRED');
-          expired++;
-          labeled++;
-        } else {
-          skippedNoPrice++;
-        }
-        continue;
-      }
-
-      const pctMove = ((currentPrice - entryPrice) / entryPrice) * 100;
-      // Clamp to fit NUMERIC(10,4) column — prevents DB overflow on extreme micro-cap moves
-      const clampedPct = Math.max(-999999, Math.min(999999, Math.round(pctMove * 10000) / 10000));
-      const direction = (s.trade_bias || 'LONG').toUpperCase();
-
-      // Thresholds: >1% in right direction = correct, >1% wrong = wrong, else neutral
-      let outcome: string;
-      if (direction === 'LONG') {
-        if (pctMove >= 1) { outcome = 'correct'; correct++; }
-        else if (pctMove <= -1) { outcome = 'wrong'; wrong++; }
-        else { outcome = 'neutral'; neutral++; }
-      } else if (direction === 'SHORT') {
-        if (pctMove <= -1) { outcome = 'correct'; correct++; }
-        else if (pctMove >= 1) { outcome = 'wrong'; wrong++; }
-        else { outcome = 'neutral'; neutral++; }
-      } else {
-        outcome = 'neutral';
-        neutral++;
-      }
-
-      await q(
-        `UPDATE ai_signal_log
-         SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, outcome_measured_at = NOW()
-         WHERE id = $4`,
-        [outcome, currentPrice, clampedPct, s.id],
-      );
-      await updateLifecycleState(s.id, outcome === 'correct' ? 'TARGET_1_HIT' : outcome === 'wrong' ? 'STOPPED' : 'EXPIRED', clampedPct);
-      labeled++;
     }
 
     return NextResponse.json({
       success: true,
-      labeled,
-      breakdown: { correct, wrong, neutral, expired, skippedNoPrice },
-      pendingTotal: pending.length,
-      pricesResolved: Object.keys(priceMap).length,
-      symbolsTotal: symbols.length,
+      labeled: tallies['24h'].labeled + tallies['4h'].labeled,
+      expired: expiredRows.length,
+      skippedNoDirectionPending: undirectedCount,
+      horizons: tallies,
+      candidates: { '24h': rows24.length, '4h': rows4.length },
+      horizon4hEnabled: has4h,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Labeling failed';
@@ -236,6 +202,17 @@ export async function POST(req: NextRequest) {
       context: { source: 'label-ai-outcomes' },
     }).catch(() => {});
     return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
+async function markExpiredLifecycle(ids: number[]) {
+  try {
+    await q(
+      `UPDATE ai_signal_log SET lifecycle_state = 'EXPIRED', expectancy_r = 0 WHERE id = ANY($1::bigint[])`,
+      [ids],
+    );
+  } catch {
+    // Lifecycle columns are optional until migration 068 is applied.
   }
 }
 
