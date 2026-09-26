@@ -20,6 +20,7 @@ import { wrapTruth } from "@/lib/admin";
 import type { ScannerHit, SystemHealth } from "@/lib/admin/types";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
+import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { readSavedScan, savedScanStaleAfterSec, scanStatusForResponse } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
@@ -32,7 +33,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const market = (searchParams.get("market") || "CRYPTO").toUpperCase() === "EQUITIES" ? "EQUITIES" : "CRYPTO";
+    // Defaults to EQUITIES while crypto market data (OPERATOR_CG_FETCH_ENABLED) is off.
+    const market = resolveAdminMarket(searchParams.get("market"));
     const timeframe = searchParams.get("timeframe") || "15m";
     const symbols = searchParams.get("symbols")
       ? searchParams.get("symbols")!.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
@@ -44,13 +46,18 @@ export async function GET(req: NextRequest) {
     ]);
 
     const staleAfter = savedScanStaleAfterSec();
-    const current = view.rows.filter((r) => r.status === "ok" && r.ageSec != null && r.ageSec <= staleAfter);
+    // Staleness from the saved packets (closed-market aware: last-session equity scans stay current while the
+    // US market is shut), not raw wall-clock age.
+    const staleBySymbol = new Map(view.packets.map((p) => [p.symbol.toUpperCase(), p.savedScan.stale]));
+    const isCurrent = (r: (typeof view.rows)[number]) =>
+      r.status === "ok" && (staleBySymbol.get(r.symbol.toUpperCase()) ?? (r.ageSec == null || r.ageSec > staleAfter)) === false;
+    const current = view.rows.filter(isCurrent);
     const rawHits: ScannerHit[] = current
       .flatMap((r) => r.hits)
       .sort((a, b) => b.confidence - a.confidence);
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
     const errors = view.rows
-      .filter((r) => r.status !== "ok" || r.ageSec == null || r.ageSec > staleAfter)
+      .filter((r) => !isCurrent(r))
       .map((r) => ({ symbol: r.symbol, error: r.status !== "ok" ? r.error ?? r.status : `stale (${r.ageSec == null ? "never scanned" : `${Math.round(r.ageSec / 60)} min old`})` }));
 
     const health: SystemHealth = {

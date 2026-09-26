@@ -9,41 +9,68 @@
 import { q } from "@/lib/db";
 import type { CandidatePipeline } from "@/lib/operator/orchestrator";
 import { computeEliteSignalScore } from "@/lib/operator/elite-score";
+import { isUsRegularSessionOpen, nyDateTime } from "@/lib/time/usSession";
 
 const WORKSPACE_ID = "operator-terminal";
-const SCANNER_VERSION = "admin-v1";
+const SCANNER_VERSION = "admin-v2";
+
+export type SignalSkipReason = "blocked" | "score_zero" | "no_direction" | "market_closed";
+
+/**
+ * Why a pipeline should NOT be logged as a signal, or null to log it. Only signals that can be graded
+ * are logged:
+ * - blocked (market or governance permission BLOCK): never an actionable signal;
+ * - score 0 (confidence rounds to 0, or elite score 0): nothing to grade;
+ * - no LONG/SHORT direction: the labeller cannot score it (#167 skips these);
+ * - US equities outside the regular session (weekend / overnight rescans): Friday-close setups would be graded
+ *   against Monday's gap, or only resolve neutral/expired.
+ */
+export function signalSkipReason(p: CandidatePipeline, market: string, nowMs: number = Date.now()): SignalSkipReason | null {
+  const v = p.verdict;
+  const g = p.governance;
+  if (String(market).toUpperCase() === "EQUITIES" && !isUsRegularSessionOpen(nowMs)) return "market_closed";
+  if (v.permission === "BLOCK" || g.finalPermission === "BLOCK") return "blocked";
+  if (v.direction !== "LONG" && v.direction !== "SHORT") return "no_direction";
+  if (Math.round((v.confidenceScore ?? 0) * 100) <= 0) return "score_zero";
+  if ((computeEliteSignalScore(p).score ?? 0) <= 0) return "score_zero";
+  return null;
+}
 
 /**
  * Record a batch of pipeline results as signals into ai_signal_log.
- * Skips signals already logged within the last 15 minutes for the same symbol+regime
- * to avoid flooding the table on rapid polling.
+ * Skips pipelines that can't be graded (see signalSkipReason) and dedupes on symbol + playbook + direction +
+ * NY session day (it used to be symbol + regime within 15 minutes, so each rescan re-logged the same setup).
  */
 export async function recordSignals(
   pipelines: CandidatePipeline[],
   market: string,
   timeframe: string,
+  nowMs: number = Date.now(),
 ): Promise<number> {
   if (!pipelines.length) return 0;
 
   let recorded = 0;
+  const nyDay = nyDateTime(nowMs).ymd;
 
   for (const p of pipelines) {
     const v = p.verdict;
     const g = p.governance;
     const c = p.candidate;
+    if (signalSkipReason(p, market, nowMs)) continue;
     const marketPrice = p.lastPrice ?? c.entryZone?.min ?? null;
     const elite = computeEliteSignalScore(p);
 
-    // Dedupe: skip if same symbol+regime logged in last 15 min
+    // Dedupe: same symbol + playbook + direction already logged this NY session day.
     try {
       const recent = await q(
         `SELECT id FROM ai_signal_log
          WHERE workspace_id = $1
            AND symbol = $2
-           AND regime = $3
-           AND signal_at > NOW() - INTERVAL '15 minutes'
+           AND trade_bias = $3
+           AND COALESCE(decision_trace->>'playbook', '') = $4
+           AND (signal_at AT TIME ZONE 'America/New_York')::date = $5::date
          LIMIT 1`,
-        [WORKSPACE_ID, v.symbol, v.regime],
+        [WORKSPACE_ID, v.symbol, v.direction, String(v.playbook ?? ""), nyDay],
       );
       if (recent.length > 0) continue;
     } catch {

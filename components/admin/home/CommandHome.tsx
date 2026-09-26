@@ -607,8 +607,10 @@ interface ChangeTapeResponse {
 }
 
 export default function CommandHome() {
+  // Both markets: the route's single-market default used to be CRYPTO, so Command Center read an empty
+  // crypto view while equities had saved packets.
   const opps = useTruthFetch<OpportunitiesResponse>(
-    "/api/admin/opportunities"
+    "/api/admin/opportunities?market=ALL"
   );
   const tape = useTruthFetch<ChangeTapeResponse>(
     "/api/admin/change-tape?limit=40"

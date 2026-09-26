@@ -47,6 +47,26 @@ export async function captureBenchmarkSnapshot(input: CaptureBenchmarkInput): Pr
     };
   }
 
+  // Skip a row identical to the latest one (same benchmark price and ARCA return). The cycle runs every 15 min,
+  // 24/7, so weekends and nights used to add dozens of identical "SPY $771.35 +4.35%" rows per day.
+  const latest = await q<{ benchmark_value: string; arca_return_pct: string | null }>(
+    `SELECT benchmark_value, arca_return_pct FROM arca_benchmark_snapshots
+      WHERE workspace_id=$1 AND portfolio_id=$2 AND benchmark_symbol=$3
+      ORDER BY snapshot_at DESC LIMIT 1`,
+    [input.portfolio.workspaceId, input.portfolio.id, symbol],
+  );
+  if (latest[0] && isUnchangedBenchmark(latest[0], price, arcaReturnPct)) {
+    return {
+      ok: true,
+      benchmarkSymbol: symbol,
+      benchmarkValue: price,
+      benchmarkReturnPct: null,
+      arcaReturnPct: round4(arcaReturnPct),
+      relativePerformancePct: null,
+      reason: "unchanged_since_last_snapshot",
+    };
+  }
+
   // Find first benchmark snapshot for this portfolio to compute % return.
   const first = await q<{ benchmark_value: string }>(
     `SELECT benchmark_value FROM arca_benchmark_snapshots
@@ -82,6 +102,18 @@ export async function captureBenchmarkSnapshot(input: CaptureBenchmarkInput): Pr
     arcaReturnPct: round4(arcaReturnPct),
     relativePerformancePct: round4(relative),
   };
+}
+
+/** Same benchmark price and ARCA return (to 4 dp) as the latest saved row: nothing new to record. */
+export function isUnchangedBenchmark(
+  latest: { benchmark_value: string | number; arca_return_pct: string | number | null },
+  price: number,
+  arcaReturnPct: number,
+): boolean {
+  const prevPrice = Number(latest.benchmark_value);
+  const prevArca = latest.arca_return_pct == null ? NaN : Number(latest.arca_return_pct);
+  return Number.isFinite(prevPrice) && Math.abs(prevPrice - price) < 1e-9
+    && Number.isFinite(prevArca) && Math.abs(prevArca - round4(arcaReturnPct)) < 1e-9;
 }
 
 export async function listBenchmarkSnapshots(

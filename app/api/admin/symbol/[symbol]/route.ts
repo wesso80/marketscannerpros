@@ -3,7 +3,7 @@
  * Runs the operator engine on a single symbol and returns AdminSymbolIntelligence.
  *
  * Query params:
- *   ?market=CRYPTO (default)
+ *   ?market=EQUITIES|CRYPTO (default: inferred from the symbol, else EQUITIES while crypto data is off)
  *   &timeframe=15m (default)
  */
 
@@ -14,6 +14,8 @@ import { isOperator } from "@/lib/quant/operatorAuth";
 import { wrapTruth } from "@/lib/admin";
 import type { Market } from "@/types/operator";
 import { buildAdminResearchScan } from "@/lib/admin/getAdminResearchPacket";
+import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
+import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 
 export const runtime = "nodejs";
 
@@ -34,7 +36,9 @@ export async function GET(
     const { symbol: rawSymbol } = await params;
     const symbol = decodeURIComponent(rawSymbol).toUpperCase();
     const { searchParams } = new URL(req.url);
-    const market = (searchParams.get("market") || "CRYPTO") as Market;
+    // ?market= wins; otherwise inferred from the symbol, falling back to the admin default (EQUITIES while
+    // crypto data is off). It used to default to CRYPTO, so /admin/symbol/AAPL asked AV for crypto "AAPL".
+    const market: Market = parseAdminMarket(searchParams.get("market"), marketForSymbol(symbol, defaultAdminMarket()));
     const timeframe = searchParams.get("timeframe") || "15m";
     const session = await getSessionFromCookie();
     const scan = await buildAdminResearchScan({ symbol, market, timeframe, workspaceId: session?.workspaceId });

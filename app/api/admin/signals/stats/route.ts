@@ -19,6 +19,13 @@ export const runtime = "nodejs";
 
 const WS = "operator-terminal";
 
+/**
+ * The AI outcome labeller was rewritten in #167 (merged 23:52 AEST, Sat 26 Sep 2026): real prices only, per-horizon,
+ * no default-long. Labels measured before that were made by the old labeller (stale price when AV failed, default
+ * long, wrong horizon) and are reported separately as "old method". Labels without outcome_measured_at are old.
+ */
+export const LABELLER_FIX_AT = "2026-09-26T13:52:24Z";
+
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -37,15 +44,24 @@ export async function GET(req: NextRequest) {
          COUNT(*) FILTER (WHERE outcome = 'expired')::int AS expired,
          ROUND(AVG(pct_move_24h) FILTER (WHERE outcome = 'correct' AND ABS(pct_move_24h) <= 100), 2) AS avg_move_correct,
          ROUND(AVG(ABS(pct_move_24h)) FILTER (WHERE outcome = 'wrong' AND ABS(pct_move_24h) <= 100), 2) AS avg_move_wrong,
-         ROUND(AVG(confluence_score), 1) AS avg_confluence
+         ROUND(AVG(confluence_score), 1) AS avg_confluence,
+         COUNT(*) FILTER (WHERE outcome != 'pending' AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz))::int AS labeled_old_method,
+         COUNT(*) FILTER (WHERE outcome != 'pending' AND outcome_measured_at >= $2::timestamptz)::int AS labeled_since_fix,
+         COUNT(*) FILTER (WHERE outcome = 'correct' AND outcome_measured_at >= $2::timestamptz)::int AS correct_since_fix,
+         COUNT(*) FILTER (WHERE outcome = 'wrong' AND outcome_measured_at >= $2::timestamptz)::int AS wrong_since_fix
        FROM ai_signal_log
        WHERE workspace_id = $1`,
-      [WS],
+      [WS, LABELLER_FIX_AT],
     );
 
     const o = overall[0] ?? {};
     const labeled = o.labeled ?? 0;
+    // "Hit rate incl. neutral/expired": correct / every labelled row (neutral and expired count as misses).
     const accuracyRate = labeled > 0 ? ((o.correct ?? 0) / labeled) * 100 : null;
+    const directional = (o.correct ?? 0) + (o.wrong ?? 0);
+    const labeledSinceFix = o.labeled_since_fix ?? 0;
+    const directionalSinceFix = (o.correct_since_fix ?? 0) + (o.wrong_since_fix ?? 0);
+    const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
 
     // 2. By regime
     const byRegime = await q(
@@ -113,9 +129,23 @@ export async function GET(req: NextRequest) {
         neutral: o.neutral ?? 0,
         expired: o.expired ?? 0,
         accuracyRate: accuracyRate !== null ? Math.round(accuracyRate * 10) / 10 : null,
+        accuracyLabel: "Hit rate incl. neutral/expired (correct ÷ all labelled)",
+        /** correct ÷ (correct + wrong): neutral/expired left out. */
+        directionalHitRate: pct(o.correct ?? 0, directional),
+        /** Labels made by the old labeller (before #167), included in the all-time figures above. */
+        labeledOldMethod: o.labeled_old_method ?? 0,
         avgMoveCorrect: o.avg_move_correct ?? null,
         avgMoveWrong: o.avg_move_wrong ?? null,
         avgConfluence: o.avg_confluence ?? null,
+      },
+      sinceFix: {
+        since: LABELLER_FIX_AT,
+        note: "Labels made by the fixed labeller (#167, from 23:52 AEST Sat 26 Sep 2026). All-time figures include older labels made by the old labeller (old method).",
+        labeled: labeledSinceFix,
+        correct: o.correct_since_fix ?? 0,
+        wrong: o.wrong_since_fix ?? 0,
+        accuracyRate: pct(o.correct_since_fix ?? 0, labeledSinceFix),
+        directionalHitRate: pct(o.correct_since_fix ?? 0, directionalSinceFix),
       },
       byRegime: byRegime.map((r: Record<string, unknown>) => ({
         regime: r.regime,

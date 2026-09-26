@@ -22,6 +22,7 @@ import { syncQueueFromPacket } from "@/lib/admin/queueStore";
 import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type ChangeTapeEvent, type ChangeTapeSeverity } from "@/lib/admin/changeTape";
 import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
+import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket, type SavedScanView } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
@@ -38,7 +39,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const marketParam = (searchParams.get("market") || "CRYPTO").toUpperCase();
+    // ALL = both markets; otherwise the requested market, defaulting to EQUITIES while crypto data is off.
+    const rawMarket = (searchParams.get("market") || "").toUpperCase();
+    const marketParam = rawMarket === "ALL" ? "ALL" : resolveAdminMarket(rawMarket);
     const timeframe = searchParams.get("timeframe") || "15m";
     const symbolsParam = searchParams.get("symbols");
 
@@ -59,7 +62,7 @@ export async function GET(req: NextRequest) {
         ? symbolsParam.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
         : undefined;
       if (symbols && symbols.length === 0) {
-        return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: new Date().toISOString() });
+        return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: null });
       }
       views = [await readSavedScan({ market, timeframe, symbols })];
     }
@@ -71,7 +74,8 @@ export async function GET(req: NextRequest) {
     if (packets.length === 0) {
       return NextResponse.json({
         rows: [], edgePackets: [], changesBySymbol: {}, errors: unavailable, savedScan,
-        timestamp: scanTimestamp ?? new Date().toISOString(),
+        // null when nothing is saved: the board shows "none", not a fresh-looking <now>.
+        timestamp: scanTimestamp,
       });
     }
 
@@ -172,7 +176,7 @@ export async function GET(req: NextRequest) {
       changesBySymbol,
       errors: unavailable,
       // When the newest saved result was built — shown as the scan age on the board.
-      timestamp: scanTimestamp ?? new Date().toISOString(),
+      timestamp: scanTimestamp,
       savedScan,
       meta: {
         symbolsRequested: packets.length,

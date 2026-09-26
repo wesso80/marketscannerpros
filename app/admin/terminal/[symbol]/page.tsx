@@ -5,16 +5,21 @@ import SymbolHeader from "@/components/admin/terminal/SymbolHeader";
 import TerminalMainGrid from "@/components/admin/terminal/TerminalMainGrid";
 import TerminalBottomWorkspace from "@/components/admin/terminal/TerminalBottomWorkspace";
 import { useSymbolIntelligence } from "@/lib/admin/hooks";
+import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
 
 export default function SymbolTerminalPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ symbol: string }>;
+  searchParams?: Promise<{ market?: string }>;
 }) {
   const { symbol } = use(params);
+  const query = searchParams ? use(searchParams) : {};
   const ticker = decodeURIComponent(symbol).toUpperCase();
   const [timeframe, setTimeframe] = useState("15m");
-  const [market] = useState("CRYPTO");
+  // Was hard-coded CRYPTO: ?market= wins, otherwise inferred from the symbol.
+  const market = parseAdminMarket(query?.market, marketForSymbol(ticker, "EQUITIES"));
   const { data, loading } = useSymbolIntelligence(ticker, market, timeframe);
 
   return (

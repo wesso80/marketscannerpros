@@ -1,3 +1,5 @@
+import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
+import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
@@ -18,7 +20,8 @@ export async function GET(req: NextRequest) {
   if (!(await authorize(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const symbol = (req.nextUrl.searchParams.get("symbol") || "").trim().toUpperCase();
-  const market = (req.nextUrl.searchParams.get("market") || "CRYPTO").toUpperCase();
+  // ?market= wins; else inferred from the symbol, falling back to EQUITIES while crypto data is off.
+  const market = parseAdminMarket(req.nextUrl.searchParams.get("market"), marketForSymbol(symbol, defaultAdminMarket()));
   const timeframe = req.nextUrl.searchParams.get("timeframe") || "15m";
   const symbols = (req.nextUrl.searchParams.get("symbols") || "")
     .split(",")

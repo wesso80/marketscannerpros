@@ -13,6 +13,7 @@ import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import type { InternalResearchScore, SetupDefinition } from "@/lib/admin/adminTypes";
 import type { DataTruth } from "@/lib/engines/dataTruth";
 import { computeResearchDelta } from "@/lib/admin/researchDelta";
+import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
 
 type SymbolResponse = AdminSymbolIntelligence & {
   research?: {
@@ -25,15 +26,24 @@ type SymbolResponse = AdminSymbolIntelligence & {
 
 export default function SymbolResearchTerminalPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ symbol: string }>;
+  searchParams?: Promise<{ market?: string }>;
 }) {
   const { symbol: rawSymbol } = use(params);
+  const query = searchParams ? use(searchParams) : {};
   const symbol = decodeURIComponent(rawSymbol).toUpperCase();
+  // ?market= wins; otherwise infer from the symbol (crypto watchlist / "-USD" → CRYPTO, else EQUITIES).
+  const initialMarket = parseAdminMarket(query?.market, marketForSymbol(symbol, "EQUITIES"));
   const router = useRouter();
   const [symbolInput, setSymbolInput] = useState("");
 
-  const [market, setMarket] = useState<string>("CRYPTO");
+  const [market, setMarket] = useState<string>(initialMarket);
+  // Navigating to another symbol keeps this component mounted: re-derive the market for the new symbol.
+  useEffect(() => {
+    setMarket(initialMarket);
+  }, [initialMarket]);
   const [timeframe, setTimeframe] = useState<string>("15m");
   const [data, setData] = useState<SymbolResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
