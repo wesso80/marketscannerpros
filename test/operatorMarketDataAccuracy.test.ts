@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/avRateGovernor', () => ({ avFetch: mocks.avFetch, avTryToken: mocks.avTryToken }));
 vi.mock('@/lib/marketData', () => ({ getBars: mocks.getBars }));
 vi.mock('@/lib/scoring/canonical/regimeOverlayData', () => ({ vixWithAlphaVantagePrimary: mocks.vix }));
-vi.mock('@/lib/coingecko', () => ({ getOHLCWithVolume: vi.fn(async () => []), resolveSymbolToId: vi.fn(async () => null), COINGECKO_ID_MAP: {} }));
+vi.mock('@/lib/coingecko', () => ({ getOHLC: vi.fn(async () => null), resolveSymbolToId: vi.fn(async () => null), COINGECKO_ID_MAP: {} }));
 
 import {
   createOperatorProvider,

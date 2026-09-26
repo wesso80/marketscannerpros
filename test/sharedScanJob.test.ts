@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
     finishRun: vi.fn(async () => undefined),
     pruneOldRuns: vi.fn(async () => undefined),
     lastManualRunAt: vi.fn(async () => null as number | null),
+    manualRunsSince: vi.fn(async () => ({ count: 0, oldestMs: null as number | null })),
     loadRunStatus: vi.fn(async () => ({ lastRun: null, running: null })),
     loadPriorResults: vi.fn(),
     saveScanResult: vi.fn(async () => undefined),
@@ -18,6 +19,7 @@ const m = vi.hoisted(() => ({
   buildScan: vi.fn(),
   cross: vi.fn(async () => ({ vixState: 'unknown', dxyState: 'neutral', breadthState: 'neutral' })),
   cgEnabled: vi.fn(() => false),
+  cgMarkets: vi.fn(async () => null as unknown),
   entitlement: { downgraded: false },
   recordSignals: vi.fn(async () => 0),
   opsAlert: vi.fn(async () => undefined),
@@ -30,6 +32,7 @@ vi.mock('@/lib/admin/getAdminResearchPacket', () => ({ buildAdminResearchScan: m
 vi.mock('@/lib/admin/serializer', () => ({ pipelineToScannerHit: (p: { verdict: { symbol: string } }) => ({ symbol: p.verdict.symbol, confidence: 0.7 }) }));
 vi.mock('@/lib/admin/signal-recorder', () => ({ recordSignals: m.recordSignals }));
 vi.mock('@/lib/opsAlerting', () => ({ opsAlert: m.opsAlert }));
+vi.mock('@/lib/coingecko', () => ({ COINGECKO_ID_MAP: { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' }, getMarketData: m.cgMarkets }));
 vi.mock('@/lib/operator/market-data', () => ({
   createOperatorProvider: vi.fn(() => ({ getCrossMarketState: m.cross })),
   memoizeProvider: (p: unknown) => p,
@@ -80,10 +83,13 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   process.env.ALPHA_VANTAGE_API_KEY = 'k';
   delete process.env.ADMIN_RESCAN_MIN_INTERVAL_SEC;
+  delete process.env.ADMIN_RESCAN_DAILY_CAP;
   m.entitlement.downgraded = false;
   for (const fn of Object.values(m.store)) if (typeof fn === 'function' && 'mockClear' in fn) (fn as ReturnType<typeof vi.fn>).mockClear();
   m.store.acquireRunLock.mockReset().mockResolvedValue(true);
   m.store.lastManualRunAt.mockReset().mockResolvedValue(null);
+  m.store.manualRunsSince.mockReset().mockResolvedValue({ count: 0, oldestMs: null });
+  m.cgMarkets.mockReset().mockResolvedValue(null);
   m.store.loadPriorResults.mockReset().mockResolvedValue(new Map());
   m.avFetch.mockReset();
   m.buildScan.mockReset();
@@ -212,6 +218,43 @@ describe('startSharedScan — crypto and locking', () => {
     expect(m.buildScan.mock.calls[0][0]).toMatchObject({ symbol: 'BTC', market: 'CRYPTO' });
   });
 
+  it('crypto with CoinGecko on: one /coins/markets bulk quote for every due id, shortlisted like equities', async () => {
+    m.cgEnabled.mockReturnValue(true);
+    m.store.loadPriorResults.mockResolvedValue(new Map([
+      ['BTC', priorRow('BTC', { scanPrice: 100 })], // quiet → quote-only
+      ['ETH', priorRow('ETH', { scanPrice: 100 })], // moved 3% → full scan
+      ['SOL', priorRow('SOL', { scanPrice: 100, scannedAtMs: NOW - 200 * MIN })], // refresh floor → full scan
+    ]));
+    m.cgMarkets.mockResolvedValue([
+      { id: 'bitcoin', current_price: 100.2, price_change_percentage_24h: 0.4, price_change_24h: 0.4, last_updated: '2026-09-25T16:59:00.000Z' },
+      { id: 'ethereum', current_price: 103, price_change_percentage_24h: 1.1, price_change_24h: 1.1, last_updated: '2026-09-25T16:59:00.000Z' },
+      { id: 'solana', current_price: 100, price_change_percentage_24h: 0.1, price_change_24h: 0.1, last_updated: '2026-09-25T16:59:00.000Z' },
+    ]);
+    m.buildScan.mockImplementation(async ({ symbol }: { symbol: string }) => scanOk(symbol, false));
+
+    const summary = await run({ market: 'CRYPTO', trigger: 'radar', symbols: ['BTC', 'ETH', 'SOL', 'NOID'] });
+
+    expect(m.cgMarkets).toHaveBeenCalledTimes(1);
+    expect(m.cgMarkets.mock.calls[0][0]).toMatchObject({ ids: ['bitcoin', 'ethereum', 'solana'], per_page: 250 });
+    expect(m.avFetch).not.toHaveBeenCalled(); // never stock bulk quotes for crypto
+    expect(summary.quotesAvailable).toBe(true);
+    expect(m.buildScan.mock.calls.map((c) => c[0].symbol).sort()).toEqual(['ETH', 'NOID', 'SOL']); // NOID: never scanned
+    expect(m.store.saveQuotes).toHaveBeenCalledWith('CRYPTO', '15m', expect.any(String), [
+      expect.objectContaining({ symbol: 'BTC', price: 100.2, changePercent: 0.4 }),
+    ]);
+    expect(summary.quoted).toBe(1);
+  });
+
+  it('crypto bulk quote failure falls back to the no-quotes plan', async () => {
+    m.cgEnabled.mockReturnValue(true);
+    m.store.loadPriorResults.mockResolvedValue(new Map([['BTC', priorRow('BTC')]]));
+    m.cgMarkets.mockResolvedValue(null);
+    m.buildScan.mockResolvedValue(scanOk('BTC', false));
+    const summary = await run({ market: 'CRYPTO', trigger: 'radar', symbols: ['BTC'] });
+    expect(summary.quotesAvailable).toBe(false);
+    expect(m.buildScan).toHaveBeenCalledTimes(1);
+  });
+
   it('refuses to start while another run holds the lock', async () => {
     m.store.acquireRunLock.mockResolvedValue(false);
     const res = await startSharedScan({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA'] });
@@ -232,6 +275,22 @@ describe('requestManualRescan guards', () => {
     const res = await requestManualRescan({ market: 'EQUITIES' });
     expect(res).toMatchObject({ ok: false, status: 429, retryAfterSec: 180 });
     expect(m.store.acquireRunLock).not.toHaveBeenCalled();
+  });
+
+  it('daily cap: 429 with a clear message once ADMIN_RESCAN_DAILY_CAP manual rescans ran in 24h (default 48)', async () => {
+    m.store.manualRunsSince.mockResolvedValue({ count: 48, oldestMs: NOW - 22 * 60 * MIN - 30 * MIN });
+    const res = await requestManualRescan({ market: 'CRYPTO' });
+    expect(res).toMatchObject({ ok: false, status: 429, retryAfterSec: 90 * 60 });
+    expect(res.ok ? '' : res.error).toMatch(/Daily manual rescan cap reached for CRYPTO: 48 of 48 in the last 24 hours.*about 1 h 30 min/);
+    expect(m.store.manualRunsSince).toHaveBeenCalledWith('CRYPTO', NOW - 24 * 60 * MIN);
+    expect(m.store.acquireRunLock).not.toHaveBeenCalled();
+
+    m.store.manualRunsSince.mockResolvedValue({ count: 47, oldestMs: NOW - 60 * MIN });
+    expect(await requestManualRescan({ market: 'CRYPTO', symbols: ['BTC'] })).toMatchObject({ ok: true });
+
+    process.env.ADMIN_RESCAN_DAILY_CAP = '10';
+    m.store.manualRunsSince.mockResolvedValue({ count: 10, oldestMs: NOW - 60 * MIN });
+    expect(await requestManualRescan({ market: 'EQUITIES' })).toMatchObject({ ok: false, status: 429 });
   });
 
   it('409 while a scan is running; 400 for too many or foreign symbols', async () => {

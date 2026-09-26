@@ -9,7 +9,8 @@
  * Per run:
  *   1. take the (market, timeframe) run lock — a second concurrent run is refused, not queued;
  *   2. pick the "due" symbols (not checked within ADMIN_SCAN_MAX_AGE_MIN, default 25 min);
- *   3. equities: one REALTIME_BULK_QUOTES call per 100 due symbols (price + day change);
+ *   3. equities: one REALTIME_BULK_QUOTES call per 100 due symbols (price + day change); crypto: one CoinGecko
+ *      /coins/markets call per 250 due symbols (price + 24h change);
  *   4. shortlist from those prices (never scanned / failed, refresh floor, movers, radar names; capped);
  *   5. full scan of the shortlist only: 15m bars via avFetch (waits for an avRateGovernor token), daily bars
  *      from the lib/marketData cache, VIX once per run (memoised provider), bars reused for the packet;
@@ -35,6 +36,7 @@ import {
 import { pipelineToScannerHit } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
 import { opsAlert } from "@/lib/opsAlerting";
+import { COINGECKO_ID_MAP, getMarketData } from "@/lib/coingecko";
 import * as store from "@/lib/admin/sharedScanStore";
 import { closedUsSession, isCurrentForClosedMarket } from "@/lib/admin/closedMarket";
 import {
@@ -42,6 +44,7 @@ import {
   diffRadar,
   formatScanAge,
   parseBulkQuotePayload,
+  parseCgMarketsQuotes,
   selectDeepScanSymbols,
   selectDueSymbols,
   sharedScanConfig,
@@ -175,6 +178,32 @@ export async function fetchBulkQuotes(symbols: string[], onAvCall: () => void): 
   return anyOk ? out : null;
 }
 
+/**
+ * Crypto bulk quote: CoinGecko /coins/markets for every due symbol with a static CoinGecko id, 250 ids per call
+ * (the admin universe is one call). Symbols without an id simply get no quote (they still get their
+ * never-scanned / refresh-floor full scans). null when CoinGecko returned nothing, so the run falls back to
+ * the no-quotes plan exactly as before.
+ */
+export async function fetchCryptoBulkQuotes(symbols: string[]): Promise<Map<string, BulkQuote> | null> {
+  const idToSymbols = new Map<string, string[]>();
+  for (const symbol of symbols) {
+    const id = COINGECKO_ID_MAP[symbol.replace(/-?USD$/i, "").toUpperCase()];
+    if (!id) continue;
+    idToSymbols.set(id, [...(idToSymbols.get(id) ?? []), symbol]);
+  }
+  if (idToSymbols.size === 0) return null;
+  const out = new Map<string, BulkQuote>();
+  for (const ids of chunk([...idToSymbols.keys()], 250)) {
+    try {
+      const rows = await getMarketData({ ids, per_page: 250, page: 1 });
+      for (const [sym, quote] of parseCgMarketsQuotes(rows, idToSymbols)) out.set(sym, quote);
+    } catch (err) {
+      console.warn(`[sharedScan] CoinGecko bulk quotes failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return out.size > 0 ? out : null;
+}
+
 function barTimestampToIso(ts: string | undefined): string | null {
   if (!ts) return null;
   const ms = /^\d{4}-\d{2}-\d{2}$/.test(ts) ? Date.parse(`${ts}T00:00:00Z`) : Date.parse(ts);
@@ -212,7 +241,7 @@ async function executeRun(input: {
       summary.skipped = due.length;
       notes.crypto = "paused";
     } else if (due.length > 0) {
-      const quotes = market === "EQUITIES" ? await fetchBulkQuotes(due, onAvCall) : null;
+      const quotes = market === "EQUITIES" ? await fetchBulkQuotes(due, onAvCall) : await fetchCryptoBulkQuotes(due);
       summary.quotesAvailable = quotes != null;
       const plan = req.forceDeep
         ? { deep: due.slice(0, cfg.maxDeepScans), quoteOnly: [] as string[], deferred: due.slice(cfg.maxDeepScans), reasons: Object.fromEntries(due.map((s) => [s, "manual rescan"])) as Record<string, string> }
@@ -495,13 +524,22 @@ export function manualRescanMinIntervalSec(): number {
 
 export const MANUAL_RESCAN_MAX_SYMBOLS = 25;
 
+/** Manual rescans allowed per market in any rolling 24 hours (ADMIN_RESCAN_DAILY_CAP, default 48; 0 = none). */
+export function manualRescanDailyCap(): number {
+  const raw = process.env.ADMIN_RESCAN_DAILY_CAP;
+  const n = raw == null || raw.trim() === "" ? NaN : Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : 48;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export type ManualRescanResult =
   | { ok: true; runId: string; symbolsRequested: number }
   | { ok: false; status: 400 | 409 | 429 | 503 | 500; error: string; retryAfterSec?: number };
 
 /**
  * Admin "Rescan now": rate-limited (one manual rescan per market per ADMIN_RESCAN_MIN_INTERVAL_SEC, default
- * 5 min) and overlap-protected (refused while any scan for that market+timeframe is running). With symbols
+ * 5 min, and at most ADMIN_RESCAN_DAILY_CAP per market in any 24 hours, default 48) and overlap-protected (refused while any scan for that market+timeframe is running). With symbols
  * (max 25) those are rescanned regardless of age; without, the universe is rescanned through the normal
  * shortlist with the freshness window disabled.
  */
@@ -530,6 +568,21 @@ export async function requestManualRescan(input: {
     if (last != null && nowMs - last < minGap) {
       const retryAfterSec = Math.ceil((minGap - (nowMs - last)) / 1000);
       return { ok: false, status: 429, error: `Manual rescan is limited to one per ${Math.round(minGap / 60000)} min per market.`, retryAfterSec };
+    }
+    const cap = manualRescanDailyCap();
+    const recent = await store.manualRunsSince(input.market, nowMs - DAY_MS);
+    if (recent.count >= cap) {
+      const retryAfterSec = recent.oldestMs != null ? Math.max(60, Math.ceil((recent.oldestMs + DAY_MS - nowMs) / 1000)) : 3600;
+      const totalMin = Math.ceil(retryAfterSec / 60);
+      const h = Math.floor(totalMin / 60);
+      const min = totalMin % 60;
+      return {
+        ok: false,
+        status: 429,
+        error: `Daily manual rescan cap reached for ${input.market}: ${recent.count} of ${cap} in the last 24 hours `
+          + `(ADMIN_RESCAN_DAILY_CAP). The next rescan is allowed in about ${h > 0 ? `${h} h ` : ""}${min} min; saved results stay readable meanwhile.`,
+        retryAfterSec,
+      };
     }
   } catch (err) {
     if (store.isMissingTableError(err)) return { ok: false, status: 503, error: MIGRATION_MISSING_MESSAGE };

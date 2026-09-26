@@ -105,6 +105,17 @@ export async function lastManualRunAt(market: SharedScanMarket): Promise<number 
   return toMs(rows[0]?.started_at);
 }
 
+/** Manual runs for a market started after sinceMs: count and the oldest start (for the daily-cap retry time). */
+export async function manualRunsSince(market: SharedScanMarket, sinceMs: number): Promise<{ count: number; oldestMs: number | null }> {
+  const rows = await q<{ n: number | string; oldest: string | null }>(
+    `SELECT COUNT(*)::int AS n, MIN(started_at) AS oldest
+       FROM admin_scan_runs
+      WHERE market = $1 AND trigger = 'manual' AND started_at > $2`,
+    [market, new Date(sinceMs).toISOString()],
+  );
+  return { count: Number(rows[0]?.n ?? 0) || 0, oldestMs: toMs(rows[0]?.oldest) };
+}
+
 export interface RunSummary {
   runId: string;
   market: string;
