@@ -101,7 +101,7 @@ export const defaultCrossAssetDeps: CrossAssetDeps = {
   },
   vix: async () => {
     const v = (await loadRegimeOverlayInputs()).vix;
-    return v && fin(v.level) ? { level: v.level, asOf: v.asOf ?? null, source: v.source === 'fred-csv' ? 'FRED CSV (VIXCLS)' : 'FRED (VIXCLS, stored)' } : null;
+    return v && fin(v.level) ? { level: v.level, asOf: v.asOf ?? null, source: v.source === 'alpha-vantage' ? 'Alpha Vantage INDEX_DATA (VIX)' : v.source === 'fred-csv' ? 'FRED CSV (VIXCLS)' : 'FRED (VIXCLS, stored)' } : null;
   },
   dxy: async () => {
     const r = await macroWithFallback('DXY', 2, Date.now());

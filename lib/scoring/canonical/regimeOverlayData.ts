@@ -1,5 +1,6 @@
 /**
  * Server-side loader for the regime overlay inputs, from data the app already stores (no new paid dependencies):
+ *   - VIX: Alpha Vantage INDEX_DATA daily (lib/macro/avIndexData.ts) first; FRED (stored VIXCLS, then CSV) as fallback (MV-1)
  *   - macro_series (FRED ingest): VIX (VIXCLS), CREDIT_HY_OAS (BAMLH0A0HYM2), US_M2 (M2SL)
  *   - ohlcv_bars (worker bar store): SPY and QQQ daily closes → SMA50 / SMA200
  *   - optional macro risk state from the Golden Egg macro regime (caller passes it; it costs AV calls)
@@ -18,6 +19,7 @@ import { isDailySeriesStale } from '@/lib/time/dataFreshness';
 import { FRED_SERIES } from '@/lib/macro/fred';
 import { getFredCsvCached } from '@/lib/macro/fredCsv';
 import { avFetchDailyBars } from '@/lib/marketData/client';
+import { getAvIndexDailyCached } from '@/lib/macro/avIndexData';
 
 const TTL_MS = 15 * 60 * 1000;
 let cache: { at: number; data: RegimeOverlayInputs } | null = null;
@@ -98,12 +100,25 @@ export async function macroWithFallback(key: keyof typeof FRED_SERIES, limit: nu
   return stored?.length ? { rows: stored, source: 'stored' } : null;
 }
 
+/**
+ * VIX: Alpha Vantage INDEX_DATA first (same-day close, MV-1), FRED (stored VIXCLS, then its CSV) as the fallback.
+ * Alpha Vantage is used when it is current, or when it is at least as new as what FRED has.
+ */
+export async function vixWithAlphaVantagePrimary(limit: number, now: number): Promise<Sourced<{ rows: Obs[] }> | null> {
+  const av = await getAvIndexDailyCached('VIX', { now }).catch(() => null);
+  const fromAv = av?.length ? { rows: av.slice(0, limit), source: 'alpha-vantage' as const } : null;
+  if (fromAv && !isOlderThanStaleLimit(fromAv.rows[0].on, now)) return fromAv;
+  const fred = await macroWithFallback('VIX', limit, now).catch(() => null);
+  if (fromAv && (!fred?.rows.length || fromAv.rows[0].on >= fred.rows[0].on)) return fromAv;
+  return fred;
+}
+
 export async function loadRegimeOverlayInputs(opts: { macroRiskState?: RegimeOverlayInputs['macroRiskState'] } = {}): Promise<RegimeOverlayInputs> {
   if (cache && Date.now() - cache.at < TTL_MS) return { ...cache.data, macroRiskState: opts.macroRiskState ?? cache.data.macroRiskState ?? null };
   const safe = async <T>(fn: () => Promise<T>): Promise<T | null> => { try { return await fn(); } catch { return null; } };
   const now = Date.now();
   const [vixS, hyS, m2, spy, qqq] = await Promise.all([
-    safe(() => macroWithFallback('VIX', 6, now)),
+    safe(() => vixWithAlphaVantagePrimary(6, now)),
     safe(() => macroWithFallback('CREDIT_HY_OAS', 21, now)),
     safe(() => macroSeries('US_M2', 4)),
     safe(() => indexTrend('SPY', now)),
