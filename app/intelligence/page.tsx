@@ -2,6 +2,11 @@
 
 import Link from 'next/link';
 import { LastUpdatedBadge, SectionHeader } from '@/components/intelligence/primitives';
+import { useEndpoint } from '@/components/intelligence/useEndpoint';
+import type { GlobalM2Dto } from '@/app/api/intelligence/global-m2/route';
+import type { FragilityResult } from '@/lib/intelligence/types';
+import type { LiquidityTransmissionPageDto } from '@/lib/intelligence/liquidityTransmissionPageMapper';
+import { fragilityStatusLabel, globalM2StatusLabel, liquidityStatusLabel, tileStatus } from '@/lib/intelligence/overviewStatus';
 
 // Launch plan §4 — Intelligence overview cleanly separates the three
 // production-live native modules from the roadmap. No mock data is shown.
@@ -10,7 +15,8 @@ interface ModuleCard {
   href: string;
   title: string;
   summary: string;
-  status: 'LIVE' | 'LIVE · PARTIAL' | 'UNDER CONSTRUCTION';
+  /** Live modules: filled in from the module's own endpoint (same rule as its page); roadmap modules are fixed. */
+  status: string;
 }
 
 const LIVE_NOW: ModuleCard[] = [
@@ -19,21 +25,21 @@ const LIVE_NOW: ModuleCard[] = [
     title: 'Global M2',
     summary:
       'USD-normalised national M2 across up to 11 economic blocs. Live from official central-bank + statistics sources.',
-    status: 'LIVE · PARTIAL',
+    status: 'CHECKING',
   },
   {
     href: '/intelligence/fragility',
     title: 'Market Fragility',
     summary:
       'Structural health / fragility composite with cross-asset rotation, credit, volatility and rates readings.',
-    status: 'LIVE',
+    status: 'CHECKING',
   },
   {
     href: '/intelligence/liquidity',
     title: 'Liquidity Transmission',
     summary:
-      'Validated cross-asset liquidity, 8-stage rotation clock, downstream risk appetite. Upstream Global M2 partial.',
-    status: 'LIVE · PARTIAL',
+      'Validated cross-asset liquidity, 8-stage rotation clock, downstream risk appetite.',
+    status: 'CHECKING',
   },
 ];
 
@@ -69,6 +75,17 @@ const COMING_SOON: ModuleCard[] = [
 ];
 
 export default function IntelligenceHome() {
+  // Tile badges read the same endpoints and rules as the module pages (each endpoint is cached in-process).
+  const m2 = useEndpoint<GlobalM2Dto>('/api/intelligence/global-m2');
+  const fragility = useEndpoint<FragilityResult>('/api/intelligence/fragility');
+  const liquidity = useEndpoint<LiquidityTransmissionPageDto>('/api/intelligence/liquidity');
+  const liveStatus: Record<string, string> = {
+    '/intelligence/global-m2': tileStatus(m2, () => globalM2StatusLabel(m2.data)),
+    '/intelligence/fragility': tileStatus(fragility, () => fragilityStatusLabel(fragility.data?.meta)),
+    '/intelligence/liquidity': tileStatus(liquidity, () => liquidityStatusLabel(liquidity.data)),
+  };
+  const liveModules = LIVE_NOW.map((m) => ({ ...m, status: liveStatus[m.href] ?? m.status }));
+  const lastUpdated = [m2.updatedAt, fragility.updatedAt, liquidity.updatedAt].filter((t): t is string => !!t).sort().pop();
   return (
     <div data-intelligence-overview>
       <header style={{ marginBottom: 4 }}>
@@ -92,9 +109,9 @@ export default function IntelligenceHome() {
       <SectionHeader
         title="Live Now"
         subtitle="Native engines with live provider data. Parity marked DATA_PARITY_PENDING where source deltas apply."
-        right={<LastUpdatedBadge />}
+        right={<LastUpdatedBadge timestamp={lastUpdated} />}
       />
-      <ModuleGrid modules={LIVE_NOW} />
+      <ModuleGrid modules={liveModules} />
 
       <SectionHeader
         title="Coming Soon"
@@ -168,8 +185,10 @@ function StatusBadge({ status }: { status: ModuleCard['status'] }) {
   const style =
     status === 'LIVE'
       ? { fg: '#6EE7B7', bg: 'rgba(16,185,129,0.20)', border: 'rgba(16,185,129,0.38)' }
-      : status === 'LIVE · PARTIAL'
+      : status.startsWith('LIVE ·')
       ? { fg: '#34D399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.28)' }
+      : status === 'CHECKING'
+      ? { fg: '#94A3B8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' }
       : { fg: '#F5B14C', bg: 'rgba(245,177,76,0.15)', border: 'rgba(245,177,76,0.32)' };
   return (
     <span
