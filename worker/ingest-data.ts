@@ -29,6 +29,22 @@ import {
 import { fetchCryptoSeries } from '../lib/scanner/cryptoBars';
 import { avRowVolume } from '../lib/scanner/avVolume';
 import { buildObservedCryptoQuote } from '../lib/worker/cryptoQuote';
+import {
+  avPayloadError,
+  buildLiveDailyBar,
+  chunkSymbols,
+  dailyHistoryComplete,
+  equityBarScheduleFromEnv,
+  isDailyRefreshDue,
+  isHourlyRefreshDue,
+  liveDailyBarSession,
+  mergeLiveDailyBar,
+  parseWorkerBulkQuotes,
+  workerAvRpm,
+  type BarFetchState,
+  type EquityBarSchedule,
+  type WorkerEquityQuote,
+} from '../lib/worker/equityBulk';
 
 // ============================================================================
 // Signal Detection Types
@@ -234,12 +250,12 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
 }
 
 // Rate limiter: Alpha Vantage 600 RPM commercial license (uncapped monthly)
-// Budget split: worker gets ALPHA_VANTAGE_RPM env (default 200), web gets remainder via avRateGovernor
+// Budget split: worker gets ALPHA_VANTAGE_RPM env (default 200, clamped to <= 200), web gets remainder via avRateGovernor
 // Total across all instances must not exceed 600 RPM contract limit
 let rateLimiter: TokenBucket | null = null;
 function getRateLimiter(): TokenBucket {
   if (!rateLimiter) {
-    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '200', 10);
+    const rpm = workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'));
     const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
     const burstCapacity = Math.max(1, Math.min(rpm, burstPerSecond));
     rateLimiter = new TokenBucket(burstCapacity, rpm / 60);
@@ -535,38 +551,29 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
   };
 }
 
-async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
+/**
+ * REALTIME_BULK_QUOTES (entitlement=realtime) for up to 100 symbols per call. Returns quotes in the same shape
+ * fetchAVGlobalQuote produced. Throws on HTTP errors and AV error / throttle payloads.
+ */
+async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, WorkerEquityQuote>> {
+  if (symbols.length === 0) return new Map();
   await getRateLimiter().take(1);
 
   const symbolList = symbols.join(',');
   const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
-  
+
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) {
     throw new Error(`AV bulk quotes HTTP ${res.status}`);
   }
 
   const json = await res.json();
-  const results = new Map<string, any>();
-
-  if (json['data'] && Array.isArray(json['data'])) {
-    for (const item of json['data']) {
-      if (item['01. symbol']) {
-        results.set(item['01. symbol'].toUpperCase(), {
-          price: parseFloat(item['05. price'] || '0'),
-          open: parseFloat(item['02. open'] || '0'),
-          high: parseFloat(item['03. high'] || '0'),
-          low: parseFloat(item['04. low'] || '0'),
-          prevClose: parseFloat(item['08. previous close'] || '0'),
-          volume: parseInt(item['06. volume'] || '0', 10),
-          changeAmt: parseFloat(item['09. change'] || '0'),
-          changePct: parseFloat((item['10. change percent'] || '0').replace('%', '')),
-        });
-      }
-    }
+  const payloadError = Array.isArray(json?.data) ? null : avPayloadError(json);
+  if (payloadError) {
+    throw new Error(`AV bulk quotes: ${payloadError}`);
   }
 
-  return results;
+  return parseWorkerBulkQuotes(json, Date.now());
 }
 
 /**
@@ -746,6 +753,38 @@ async function upsertQuote(symbol: string, quote: any): Promise<void> {
     quote.latestDay,
     quote.updatedAt ?? null,
   ]);
+}
+
+/** One statement for every bulk quote (same columns and values upsertQuote writes). */
+async function upsertEquityQuotesBatch(quotes: Map<string, WorkerEquityQuote>): Promise<void> {
+  if (quotes.size === 0) return;
+  const db = getPool();
+  const values: any[] = [];
+  const placeholders: string[] = [];
+  for (const [symbol, q] of quotes) {
+    const i = values.length;
+    placeholders.push(`($${i + 1}, $${i + 2}, $${i + 3}, $${i + 4}, $${i + 5}, $${i + 6}, $${i + 7}, $${i + 8}, $${i + 9}, $${i + 10}, NOW())`);
+    values.push(
+      symbol.toUpperCase(), q.price, q.open, q.high, q.low, q.prevClose,
+      Number.isFinite(Number(q.volume)) ? Math.round(Number(q.volume)) : null,
+      q.changeAmt, q.changePct, q.latestDay,
+    );
+  }
+  await db.query(`
+    INSERT INTO quotes_latest (symbol, price, open, high, low, prev_close, volume, change_amount, change_percent, latest_trading_day, fetched_at)
+    VALUES ${placeholders.join(', ')}
+    ON CONFLICT (symbol) DO UPDATE SET
+      price = EXCLUDED.price,
+      open = EXCLUDED.open,
+      high = EXCLUDED.high,
+      low = EXCLUDED.low,
+      prev_close = EXCLUDED.prev_close,
+      volume = EXCLUDED.volume,
+      change_amount = EXCLUDED.change_amount,
+      change_percent = EXCLUDED.change_percent,
+      latest_trading_day = EXCLUDED.latest_trading_day,
+      fetched_at = EXCLUDED.fetched_at
+  `, values);
 }
 
 async function upsertBars(symbol: string, timeframe: string, bars: AVBar[]): Promise<void> {
@@ -1184,25 +1223,100 @@ async function recordSignals(
 // Main Processing Functions
 // ============================================================================
 
-async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; success: boolean }> {
-  let apiCalls = 0;
-  
+// ── Equity bars held per process. The daily history and the 60min series are refetched only after bar close;
+//    the live daily bar comes from the cycle's REALTIME_BULK_QUOTES quote. ──
+interface EquityBarHold {
+  daily?: { bars: AVBar[]; state: BarFetchState };
+  hourly?: BarFetchState;
+}
+const equityBarHolds = new Map<string, EquityBarHold>();
+let equityBarSchedule: EquityBarSchedule | null = null;
+function getEquityBarSchedule(): EquityBarSchedule {
+  if (!equityBarSchedule) equityBarSchedule = equityBarScheduleFromEnv(process.env);
+  return equityBarSchedule;
+}
+
+/** True when the symbol's daily history or 60min series is due (bar close + settle passed since the last fetch, or never fetched). */
+function equityBarsDue(symbol: string, nowMs = Date.now()): boolean {
+  const hold = equityBarHolds.get(symbol.toUpperCase());
+  const cfg = getEquityBarSchedule();
+  if (isDailyRefreshDue(hold?.daily?.state, nowMs, cfg)) return true;
+  // 60min is fetched alongside a held daily history (as before); without one there is nothing to refresh yet.
+  return (hold?.daily?.bars.length ?? 0) > 0 && isHourlyRefreshDue(hold?.hourly, nowMs, cfg);
+}
+
+interface EquityProcessContext {
+  /** This cycle's REALTIME_BULK_QUOTES quote for the symbol (null when the bulk call failed or did not return it). */
+  bulkQuote: WorkerEquityQuote | null;
+  /** The bulk quote is already in quotes_latest (batch upsert succeeded). */
+  bulkQuotePersisted: boolean;
+  /** Quotes may be fetched (US session or an off-hours scan slot). False for a bars-only refresh after a bar close. */
+  quotesAllowed: boolean;
+}
+
+interface EquityProcessResult {
+  apiCalls: number;
+  success: boolean;
+  avDailyCalls: number;
+  avHourlyCalls: number;
+  avGlobalQuoteCalls: number;
+}
+
+async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): Promise<EquityProcessResult> {
+  const out: EquityProcessResult = { apiCalls: 0, success: false, avDailyCalls: 0, avHourlyCalls: 0, avGlobalQuoteCalls: 0 };
+  const key = symbol.toUpperCase();
+  const nowMs = Date.now();
+  const cfg = getEquityBarSchedule();
+  const hold: EquityBarHold = equityBarHolds.get(key) ?? {};
+  equityBarHolds.set(key, hold);
+
   try {
-    // 1. Fetch quote
-    const quote = await fetchAVGlobalQuote(symbol);
-    apiCalls++;
-    
+    // 1. Quote: from the cycle's bulk call. Per-symbol GLOBAL_QUOTE only when the bulk call failed or missed the symbol.
+    let quote: WorkerEquityQuote | null = ctx.bulkQuote;
     if (quote) {
-      await upsertQuote(symbol, quote);
+      if (!ctx.bulkQuotePersisted) await upsertQuote(symbol, quote);
       await cacheQuote(symbol, quote);
+    } else if (ctx.quotesAllowed) {
+      quote = await fetchAVGlobalQuote(symbol);
+      out.apiCalls++;
+      out.avGlobalQuoteCalls++;
+      if (quote) {
+        await upsertQuote(symbol, quote);
+        await cacheQuote(symbol, quote);
+      }
     }
 
-    // 2. Fetch daily bars
-    const bars = await fetchAVTimeSeries(symbol, 'daily', 'compact');
-    apiCalls++;
+    // 2. Daily history (DAILY_ADJUSTED compact): only when missing, after the session close + settle, or pre-open.
+    let fetchedDaily = false;
+    if (isDailyRefreshDue(hold.daily?.state, nowMs, cfg)) {
+      out.apiCalls++;
+      out.avDailyCalls++;
+      let fresh: AVBar[];
+      try {
+        fresh = await fetchAVTimeSeries(symbol, 'daily', 'compact');
+      } catch (err) {
+        hold.daily = { bars: hold.daily?.bars ?? [], state: { fetchedAtMs: nowMs, complete: false } };
+        throw err;
+      }
+      if (fresh.length > 0) {
+        hold.daily = { bars: fresh, state: { fetchedAtMs: nowMs, complete: dailyHistoryComplete(fresh, nowMs) } };
+        fetchedDaily = true;
+      } else {
+        hold.daily = { bars: hold.daily?.bars ?? [], state: { fetchedAtMs: nowMs, complete: false } };
+      }
+    }
+
+    // 3. Today's bar from the quote, merged into the held history (compact length kept). Once the history has been
+    //    refetched after the close, the fetched final bar wins until the next session opens.
+    const liveSession = liveDailyBarSession(hold.daily?.state, nowMs);
+    const liveBar = quote && liveSession ? buildLiveDailyBar(quote, liveSession) : null;
+    const heldBars = hold.daily?.bars ?? [];
+    const bars: AVBar[] = heldBars.length > 0 ? mergeLiveDailyBar(heldBars, liveBar) : [];
 
     if (bars.length > 0) {
-      await upsertBars(symbol, 'daily', bars);
+      // Full history after a fetch; otherwise only the live bar row changes.
+      const barsToWrite = fetchedDaily ? bars : liveBar ? [liveBar] : [];
+      if (barsToWrite.length > 0) await upsertBars(symbol, 'daily', barsToWrite);
 
       // ── Store midpoints for Time Gravity Map (multi-TF) ──
       try {
@@ -1237,33 +1351,38 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
         console.warn(`[worker] ${symbol}: Midpoint storage failed (non-fatal):`, mpErr?.message);
       }
 
-      // ── Store intraday midpoints for TGM (1H + 4H, 1 extra API call) ──
-      try {
-        const intradayBars = await fetchAVTimeSeries(symbol, '60min', 'compact');
-        apiCalls++;
-        if (intradayBars.length > 0) {
-          const processor = getCandleProcessor();
-          const hourlyTGM: TGMBar[] = intradayBars.map(b => ({
-            time: new Date(b.timestamp), open: b.open, high: b.high,
-            low: b.low, close: b.close, volume: b.volume,
-          }));
+      // ── Store intraday midpoints for TGM (1H + 4H): 60min refetched only after each hourly close + settle ──
+      if (isHourlyRefreshDue(hold.hourly, nowMs, cfg)) {
+        try {
+          out.apiCalls++;
+          out.avHourlyCalls++;
+          const intradayBars = await fetchAVTimeSeries(symbol, '60min', 'compact');
+          hold.hourly = { fetchedAtMs: nowMs, complete: intradayBars.length > 0 };
+          if (intradayBars.length > 0) {
+            const processor = getCandleProcessor();
+            const hourlyTGM: TGMBar[] = intradayBars.map(b => ({
+              time: new Date(b.timestamp), open: b.open, high: b.high,
+              low: b.low, close: b.close, volume: b.volume,
+            }));
 
-          const h1Count = await processor.processCandleBatch(symbol, '1H', hourlyTGM, 'equity');
-          const fourHourBars = aggregate1HTo4H(hourlyTGM);
-          const h4Count = fourHourBars.length > 0
-            ? await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity')
-            : 0;
+            const h1Count = await processor.processCandleBatch(symbol, '1H', hourlyTGM, 'equity');
+            const fourHourBars = aggregate1HTo4H(hourlyTGM);
+            const h4Count = fourHourBars.length > 0
+              ? await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity')
+              : 0;
 
-          if (h1Count + h4Count > 0) {
-            console.log(`[worker] ${symbol}: Stored ${h1Count + h4Count} intraday TGM midpoints (${h1Count} 1H, ${h4Count} 4H)`);
+            if (h1Count + h4Count > 0) {
+              console.log(`[worker] ${symbol}: Stored ${h1Count + h4Count} intraday TGM midpoints (${h1Count} 1H, ${h4Count} 4H)`);
+            }
           }
+        } catch (intradayErr: any) {
+          hold.hourly = { fetchedAtMs: nowMs, complete: false };
+          // Non-fatal — daily/weekly midpoints still work
+          console.warn(`[worker] ${symbol}: Intraday midpoint fetch failed (non-fatal):`, intradayErr?.message);
         }
-      } catch (intradayErr: any) {
-        // Non-fatal — daily/weekly midpoints still work
-        console.warn(`[worker] ${symbol}: Intraday midpoint fetch failed (non-fatal):`, intradayErr?.message);
       }
 
-      // 3. Compute indicators locally (no API call!)
+      // 5. Compute indicators locally (no API call!)
       const ohlcvBars: OHLCVBar[] = bars.map(b => ({
         timestamp: b.timestamp,
         open: b.open,
@@ -1287,7 +1406,7 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
       await upsertIndicators(symbol, 'daily', fullIndicators);
       await cacheIndicators(symbol, 'daily', fullIndicators);
       
-      // 4. Detect and record signals (runs on full universe automatically)
+      // 6. Detect and record signals (runs on full universe automatically)
       const latestPrice = bars[bars.length - 1]?.close;
       if (latestPrice && warmup.coreReady) {
         const detectedSignals = detectSignals(symbol, fullIndicators, latestPrice);
@@ -1303,12 +1422,13 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
     }
 
     await markSymbolFetched(symbol, true);
-    return { apiCalls, success: true };
+    out.success = true;
+    return out;
 
   } catch (err: any) {
     console.error(`[worker] Error processing ${symbol}:`, err?.message || err);
     await markSymbolFetched(symbol, false);
-    return { apiCalls, success: false };
+    return out;
   }
 }
 
@@ -1480,6 +1600,13 @@ async function runIngestionCycle(
   coingeckoSucceeded: number;
   coingeckoNoData: number;
   coingeckoFailed: number;
+  avBulkQuoteCalls: number;
+  avBulkQuotesReturned: number;
+  avBulkQuoteFailures: number;
+  avGlobalQuoteCalls: number;
+  avDailyCalls: number;
+  avHourlyCalls: number;
+  equityBarsOnlyRefreshes: number;
 }> {
   const stats = {
     symbolsProcessed: 0,
@@ -1492,6 +1619,13 @@ async function runIngestionCycle(
     coingeckoSucceeded: 0,
     coingeckoNoData: 0,
     coingeckoFailed: 0,
+    avBulkQuoteCalls: 0,
+    avBulkQuotesReturned: 0,
+    avBulkQuoteFailures: 0,
+    avGlobalQuoteCalls: 0,
+    avDailyCalls: 0,
+    avHourlyCalls: 0,
+    equityBarsOnlyRefreshes: 0,
   };
   const sessionState = getUsMarketSessionState();
   const equitySessionState = getUsEquitySessionState();
@@ -1510,16 +1644,50 @@ async function runIngestionCycle(
       : allSymbols;
   console.log(`[worker] Processing ${symbols.length} symbols... (crypto cadence mode: ${sessionState.mode}, equity session: ${equitySessionState.mode}${runEquityOffhoursScan ? ', off-hours scan slot=active' : ''})`);
 
+  // Equity quotes: one REALTIME_BULK_QUOTES call per 100 symbols per cycle (US session or an off-hours scan slot),
+  // written to quotes_latest in one statement. Replaces a GLOBAL_QUOTE call per symbol refresh.
+  const equityQuotesAllowed = equitySessionState.mode === 'market' || runEquityOffhoursScan;
+  const bulkQuotes = new Map<string, WorkerEquityQuote>();
+  let bulkQuotesPersisted = false;
+  const bulkSymbols = symbols
+    .filter((s) => s.asset_type !== 'crypto' && s.asset_type !== 'forex')
+    .map((s) => s.symbol);
+  if (equityQuotesAllowed && bulkSymbols.length > 0) {
+    for (const batch of chunkSymbols(bulkSymbols)) {
+      try {
+        stats.avBulkQuoteCalls++;
+        stats.apiCalls++;
+        const batchQuotes = await fetchAVBulkQuotes(batch);
+        for (const [sym, q] of batchQuotes) bulkQuotes.set(sym, q);
+      } catch (err: any) {
+        stats.avBulkQuoteFailures++;
+        console.warn(`[worker] Bulk quotes failed for ${batch.length} symbols (per-symbol GLOBAL_QUOTE fallback):`, err?.message || err);
+      }
+    }
+    stats.avBulkQuotesReturned = bulkQuotes.size;
+    if (bulkQuotes.size > 0) {
+      try {
+        await upsertEquityQuotesBatch(bulkQuotes);
+        bulkQuotesPersisted = true;
+      } catch (err: any) {
+        console.warn('[worker] Batch quotes_latest upsert failed (per-symbol upsert fallback):', err?.message || err);
+      }
+    }
+  }
+
   for (const { symbol, tier, asset_type, last_fetched_at } of symbols) {
     try {
-      if (asset_type !== 'crypto' && equitySessionState.mode !== 'market' && !runEquityOffhoursScan) {
+      const isEquity = asset_type !== 'crypto';
+      // Daily / 60min bars are refetched after bar close even outside the quote window (e.g. 16:20 ET, 09:00 ET).
+      const equityBarsRefreshDue = isEquity && equityBarsDue(symbol);
+      if (isEquity && !equityQuotesAllowed && !equityBarsRefreshDue) {
         stats.skippedEquityOffhours++;
         continue;
       }
 
       const intervalSeconds = getTierRefreshIntervalSeconds(asset_type, tier, sessionState.mode);
-      const bypassDueCheck = asset_type !== 'crypto' && equitySessionState.mode !== 'market' && runEquityOffhoursScan;
-      if (!bypassDueCheck && !isDueForFetch(last_fetched_at, intervalSeconds)) {
+      const bypassDueCheck = isEquity && equitySessionState.mode !== 'market' && runEquityOffhoursScan;
+      if (!bypassDueCheck && !equityBarsRefreshDue && !isDueForFetch(last_fetched_at, intervalSeconds)) {
         stats.skippedNotDue++;
         continue;
       }
@@ -1538,7 +1706,16 @@ async function runIngestionCycle(
       if (asset_type === 'crypto') {
         result = await processCryptoSymbol(symbol);
       } else {
-        result = await processEquitySymbol(symbol);
+        if (!equityQuotesAllowed) stats.equityBarsOnlyRefreshes++;
+        const equityResult = await processEquitySymbol(symbol, {
+          bulkQuote: bulkQuotes.get(symbol.toUpperCase()) ?? null,
+          bulkQuotePersisted: bulkQuotesPersisted,
+          quotesAllowed: equityQuotesAllowed,
+        });
+        stats.avGlobalQuoteCalls += equityResult.avGlobalQuoteCalls;
+        stats.avDailyCalls += equityResult.avDailyCalls;
+        stats.avHourlyCalls += equityResult.avHourlyCalls;
+        result = equityResult;
       }
 
       stats.apiCalls += result.apiCalls;
@@ -1599,9 +1776,11 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '500', 10);
+  const rpm = workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'));
   const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
-  console.log(`[worker] Rate limit: ${rpm} requests/minute`);
+  console.log(`[worker] Rate limit: ${rpm} requests/minute (worker cap 200; ALPHA_VANTAGE_RPM=${getEnv('ALPHA_VANTAGE_RPM') || 'unset'})`);
+  const barSchedule = getEquityBarSchedule();
+  console.log(`[worker] Equity AV: REALTIME_BULK_QUOTES per cycle (100/call); DAILY_ADJUSTED after close +${barSchedule.dailySettleMin}m and pre-open; 60min after each hourly close +${barSchedule.hourlySettleMin}m`);
   console.log(`[worker] Burst cap: ${burstPerSecond} requests/second`);
   console.log(`[worker] Redis: ${getEnv('UPSTASH_REDIS_REST_URL') ? 'enabled' : 'disabled'}`);
   console.log(`[worker] Mode: ${runOnce ? 'one-cycle' : 'continuous'}`);
@@ -1669,6 +1848,7 @@ async function main(): Promise<void> {
       console.log(`[worker] Cycle ${cycleCount} completed in ${duration}s`);
       console.log(`[worker] Stats: due=${stats.symbolsDue}, processed=${stats.symbolsProcessed}, ${stats.apiCalls} API calls, ${stats.errors} errors, ${stats.skippedNotDue || 0} skipped (not due), ${stats.skippedEquityOffhours || 0} skipped (equity off-hours)`);
       console.log(`[worker] CoinGecko stats: attempted=${stats.coingeckoAttempted}, succeeded=${stats.coingeckoSucceeded}, noData=${stats.coingeckoNoData}, failed=${stats.coingeckoFailed}`);
+      console.log(`[worker] AV equity stats: bulk=${stats.avBulkQuoteCalls} (${stats.avBulkQuotesReturned} quotes, ${stats.avBulkQuoteFailures} failed), globalQuoteFallback=${stats.avGlobalQuoteCalls}, daily=${stats.avDailyCalls}, 60min=${stats.avHourlyCalls}, barsOnly=${stats.equityBarsOnlyRefreshes}`);
 
       await logWorkerRun(`ingest-${workerLane}`, stats, 'completed');
 
