@@ -574,12 +574,15 @@ function CryptoDetailPageContent() {
               {[
                 ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'N/A'}`],
                 ['Price', formatPrice(coinData.market.price_usd)],
-                ['24h', `${coinData.price_changes['24h'] !== undefined ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h']?.toFixed(2)}%` : 'N/A'}`],
+                ['24h', typeof coinData.price_changes['24h'] === 'number' && Number.isFinite(coinData.price_changes['24h']) ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h'].toFixed(2)}%` : 'N/A'],
                 ['Bias', decision.structureBias],
                 ['Structure score', `${decision.alignmentScore}/100`],
-                ['Vol', decision.volatilityState],
+                // Scopes are named (OV-19): the coin's own 24h range vs the market-wide regime in the gate breakdown,
+                // and the crypto risk state comes from the same gate as the breakdown, so the two never disagree.
+                [`${coinData.coin.symbol.toUpperCase()} 24h range`, decision.volatilityState],
                 ['Liquidity', decision.liquidityState],
-                ['Regime', upeGlobal?.regime || decision.regimeTag],
+                ['Crypto risk state', marketGate ? (marketGate.riskState ?? 'Unavailable') : 'Loading'],
+                ['Global regime (cross-asset)', upeGlobal?.regime || 'Unavailable'],
                 ['Micro', upeMicroState || 'neutral'],
                 ['Risk', decision.riskTag],
                 ['Permission', permissionLabel],
@@ -693,7 +696,7 @@ function CryptoDetailPageContent() {
 
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Volatility + Liquidity</p>
-                    <p className="text-[11px] text-slate-300">Volatility: {decision.volatilityState}</p>
+                    <p className="text-[11px] text-slate-300">Volatility ({coinData.coin.symbol.toUpperCase()} 24h range): {decision.volatilityState}</p>
                     <p className="text-[11px] text-slate-300">Liquidity: {decision.liquidityState}</p>
                     <p className="text-[11px] text-slate-400">24h Vol {formatNumber(coinData.market.total_volume_24h)} • MCap {formatNumber(coinData.market.market_cap)}</p>
                   </div>

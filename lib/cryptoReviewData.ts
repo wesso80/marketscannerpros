@@ -25,6 +25,42 @@ export function cryptoReviewMissing(data: any): string[] {
   return Object.values(reviewChecks(data)).flatMap(([label, available, meta]) => !available ? [`${label} unavailable`] : meta?.freshnessStatus !== 'fresh' ? [`${label} freshness ${meta?.freshnessStatus ?? 'unknown'}`] : []);
 }
 
+const FEED_SOURCES: Record<'market' | 'breadth' | 'funding' | 'oi', string> = {
+  market: 'CoinGecko global market data',
+  breadth: 'CoinGecko trending coins and prices',
+  funding: 'OKX funding rates',
+  oi: 'CoinGecko derivatives, top 3 venues',
+};
+
+function feedTime(value: unknown, now: number): string | null {
+  const ms = Date.parse(String(value ?? ''));
+  if (!Number.isFinite(ms)) return null;
+  const d = new Date(ms);
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return now - ms > 12 * 3_600_000 ? `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}` : time;
+}
+
+/**
+ * One line per feed that is holding the gate back, naming the provider feed and since when (OV-18), e.g.
+ * "Breadth (CoinGecko trending coins and prices): stale since 6:06 pm". Empty when every feed is usable.
+ */
+export function cryptoReviewFeedNotes(data: any, now = Date.now()): string[] {
+  const checks = reviewChecks(data);
+  return (Object.keys(checks) as Array<keyof typeof checks>).flatMap((key) => {
+    const [label, available, meta] = checks[key];
+    const status = meta?.freshnessStatus;
+    if (available && status === 'fresh') return [];
+    const since = feedTime(meta?.lastUpdated, now);
+    const head = `${label} (${FEED_SOURCES[key]})`;
+    if (!available) {
+      const reason = key === 'oi' && typeof data?.oi?.comparisonReason === 'string' ? ` ${data.oi.comparisonReason}` : '';
+      const last = since ? ` Feed last updated ${since}.` : meta ? '' : ' No response from the feed.';
+      return [`${head}: unavailable.${reason}${last}`];
+    }
+    return [`${head}: ${status ?? 'freshness unknown'}${since ? ` since ${since}` : ''}.`];
+  });
+}
+
 function dominanceOf(dominance: unknown, symbol: string): number {
   if (!Array.isArray(dominance)) return 0;
   const row = dominance.find((entry: any) => entry?.symbol?.toUpperCase() === symbol);

@@ -13,7 +13,11 @@ import { GET as history } from '@/app/api/crypto-derivatives/history/route';
 const now = Date.UTC(2026, 8, 22, 12);
 const row = (overrides = {}) => ({ market: 'A', symbol: 'BTCUSDT', openInterest: 100, lastTradedAt: now / 1000 - 10, ...overrides });
 const current = (): OiObservation => buildOiObservation('BTC', [row()], now)!;
-const previous = (overrides: Partial<OiObservation> = {}): OiObservation => ({ ...current(), value: 80, observedAt: now - 24 * HOUR_MS - 10_000, ...overrides });
+// Per-contract OI follows the snapshot value unless a test overrides the contracts themselves.
+const previous = (overrides: Partial<OiObservation> = {}): OiObservation => {
+  const value = overrides.value ?? 80;
+  return { ...current(), value, contracts: { '["A","BTCUSDT"]': value }, observedAt: now - 24 * HOUR_MS - 10_000, ...overrides };
+};
 
 describe('observed OI comparison', () => {
   it('deduplicates contracts, counts venues and preserves observation time', () => {
@@ -22,11 +26,11 @@ describe('observed OI comparison', () => {
   it.each([{ openInterest: Number.NaN }, { openInterest: -1 }, { lastTradedAt: 0 }, { lastTradedAt: now / 1000 + 1 }, { lastTradedAt: now / 1000 - 901 }])('withholds invalid/currently stale observations: %j', invalid => {
     expect(buildOiObservation('BTC', [row(invalid)], now)).toBeNull();
   });
-  it('compares the closest 24h observation using identical venue and contract coverage', () => {
+  it('compares the closest 24h observation on the same venue contracts', () => {
     expect(compareOi24h(current(), [previous({ value: 10, observedAt: now - 23 * HOUR_MS }), previous()], now)).toMatchObject({ change24h: 25, previousValue: 80 });
   });
   it.each([
-    { coverage: 'other-venue' }, { method: 'legacy' as typeof OI_METHOD }, { symbol: 'ETH' },
+    { contracts: { '["B","BTCUSDT"]': 80 } }, { method: 'legacy' as typeof OI_METHOD }, { symbol: 'ETH' },
     { observedAt: now - HOUR_MS }, { observedAt: now - 48 * HOUR_MS }, { value: 0 }, { value: Number.NaN },
   ])('withholds an incompatible or mistimed baseline: %j', invalid => {
     expect(compareOi24h(current(), [previous(invalid)], now).change24h).toBeNull();
@@ -35,9 +39,10 @@ describe('observed OI comparison', () => {
     expect(compareOi24h(current(), [], now).change24h).toBeNull();
     expect(compareOi24h(current(), [previous({ value: 100 })], now).change24h).toBe(0);
   });
-  it('weights aggregate change by actual OI and requires all current members', () => {
+  it('weights aggregate change by actual OI and withholds it unless compared coins hold >= 90% of current OI', () => {
     expect(totalOiChange([{ value: 110, previousValue: 100 }, { value: 20, previousValue: 10 }])).toBeCloseTo(18.1818);
-    expect(totalOiChange([{ value: 110, previousValue: 100 }, { value: 20, previousValue: null }])).toBeNull();
+    expect(totalOiChange([{ value: 110, previousValue: 100 }, { value: 20, previousValue: null }])).toBeNull(); // 85% covered
+    expect(totalOiChange([{ value: 110, previousValue: 100 }, { value: 5, previousValue: null }])).toBeCloseTo(10); // 96% covered
   });
   it('does not derive directional short/long positioning from a change in total OI', () => {
     const observation = compareOi24h(current(), [previous({ value: 200 })], now);

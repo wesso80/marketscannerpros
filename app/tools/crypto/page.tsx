@@ -1,6 +1,7 @@
 'use client';
 
-import { cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
@@ -411,7 +412,7 @@ function CryptoCommandCenterContent() {
       ] : [],
       notrade: [],
       data: [
-        { t: dataTime, e: 'Feed status', d: cryptoReviewMissing(marketData).length === 0 ? 'Required feeds present and fresh.' : 'Waiting for CoinGecko response...' },
+        { t: dataTime, e: 'Feed status', d: cryptoReviewMissing(marketData).length === 0 ? 'Required feeds present and fresh.' : cryptoReviewFeedNotes(marketData).join(' ') },
       ],
     } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
   }, [marketData]);
@@ -558,6 +559,7 @@ function CryptoCommandCenterContent() {
               <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">
                 Hard Blocks: {morningDecision.hardBlocks.length ? morningDecision.hardBlocks.join(' • ') : 'None'}
               </div>
+              <CryptoFeedStatusNotes marketData={marketData} />
             </div>
           </div>
         </section>
