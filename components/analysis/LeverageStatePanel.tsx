@@ -24,11 +24,21 @@ const STATE_CLASS: Record<LeverageState, string> = {
   MIXED: 'text-slate-400 border-slate-600/40 bg-slate-700/[0.06]',
 };
 
-export default function LeverageStatePanel({ assessment, symbol }: { assessment: LeverageAssessment; symbol?: string }) {
+/** USD price label for the header (null when no usable price). */
+export function formatUsdPrice(price: number | null | undefined): string | null {
+  if (price == null || !Number.isFinite(price) || price <= 0) return null;
+  return price >= 1
+    ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `$${price.toPrecision(4)}`;
+}
+
+export default function LeverageStatePanel({ assessment, symbol, price }: { assessment: LeverageAssessment; symbol?: string; price?: number | null }) {
+  const priceLabel = formatUsdPrice(price);
   return (
     <div className={`rounded-lg border p-4 ${STATE_CLASS[assessment.state]}`}>
       <div className="flex flex-wrap items-center gap-2">
         {symbol ? <span className="text-xs font-black uppercase tracking-widest text-slate-400">{symbol}</span> : null}
+        {priceLabel ? <span className="font-mono text-sm font-bold text-slate-200">{priceLabel}</span> : null}
         <span className="text-lg font-black">{assessment.label}</span>
         <span className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-400">Evidence {assessment.evidence.level}</span>
       </div>

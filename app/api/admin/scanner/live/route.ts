@@ -24,6 +24,7 @@ import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { CRYPTO_PAUSED_MESSAGE, readSavedScan, savedScanStaleAfterSec, scanStatusForResponse } from "@/lib/admin/sharedScan";
 import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { isPausedRow, NOT_MONITORED } from "@/lib/admin/healthProbes";
+import { collapseHits } from "@/lib/admin/hitIntegrity";
 
 export const runtime = "nodejs";
 
@@ -54,9 +55,12 @@ export async function GET(req: NextRequest) {
     const isCurrent = (r: (typeof view.rows)[number]) =>
       r.status === "ok" && (staleBySymbol.get(r.symbol.toUpperCase()) ?? (r.ageSec == null || r.ageSec > staleAfter)) === false;
     const current = view.rows.filter(isCurrent);
-    const rawHits: ScannerHit[] = current
-      .flatMap((r) => r.hits)
-      .sort((a, b) => b.confidence - a.confidence);
+    // One engine pipeline per playbook → several rows per symbol (sometimes LONG and SHORT).
+    // Collapse to the best row per symbol + direction and flag two-sided symbols (hitIntegrity.ts).
+    // The saved row's last price rides along so the pages can show an absolute price.
+    const rawHits: ScannerHit[] = collapseHits(
+      current.flatMap((r) => r.hits.map((hit) => ({ ...hit, market: r.market, price: hit.price ?? r.price ?? null }))),
+    );
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
     // Crypto switched off on purpose (ADMIN_CRYPTO_ENABLED=false): its skipped / leftover rows are "paused",
     // listed separately, and never counted as scan errors. CoinGecko off does not pause crypto (it runs on AV).

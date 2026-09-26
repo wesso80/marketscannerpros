@@ -21,12 +21,19 @@ function getAdminHeaders(): HeadersInit {
 }
 
 /* ── Generic fetcher ── */
-async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: getAdminHeaders(), credentials: "include" });
+async function adminFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { headers: getAdminHeaders(), credentials: "include", signal });
   if (!res.ok) {
     throw new Error(`Admin API ${res.status}: ${await res.text()}`);
   }
   return res.json();
+}
+
+/** Drop any row tagged with a different saved-scan market than the one requested (belt and braces). */
+export function filterHitsForMarket(hits: ScannerHit[], market?: string): ScannerHit[] {
+  if (!market) return hits;
+  const want = market.toUpperCase();
+  return hits.filter((h) => !h.market || String(h.market).toUpperCase() === want);
 }
 
 /* ── Scanner Feed ── */
@@ -56,32 +63,57 @@ export function useScannerFeed(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Every request gets a sequence number; only the latest one may write state. The page opens on
+  // EQUITIES (~190 symbols, slower) and is switched to CRYPTO, so without this guard the older
+  // equities response could land last and overwrite the crypto list (the "crypto shows equities" leak).
+  const requestSeq = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const symbolsKey = symbols?.join(",") ?? "";
+
   const fetchScanner = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    abortRef.current?.abort();
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ timeframe });
       if (market) params.set("market", market);
-      if (symbols?.length) params.set("symbols", symbols.join(","));
+      if (symbolsKey) params.set("symbols", symbolsKey);
       const data = await adminFetch<ScannerResponse>(
         `/api/admin/scanner/live?${params}`,
+        controller?.signal,
       );
-      setHits(data.hits);
+      if (seq !== requestSeq.current) return;
+      setHits(filterHitsForMarket(data.hits ?? [], market));
       setHealth(data.health);
       setSavedScan(data.savedScan ?? null);
     } catch (err: unknown) {
+      if (seq !== requestSeq.current) return;
+      if (err instanceof Error && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Scanner fetch failed");
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [symbols?.join(","), market, timeframe]);
+  }, [symbolsKey, market, timeframe]);
+
+  // Switching market/timeframe must not keep showing the previous market's rows while loading.
+  useEffect(() => {
+    setHits([]);
+    setSavedScan(null);
+  }, [market, timeframe]);
 
   useEffect(() => {
     fetchScanner();
     if (pollInterval > 0) {
       const id = setInterval(fetchScanner, pollInterval);
-      return () => clearInterval(id);
+      return () => {
+        clearInterval(id);
+        abortRef.current?.abort();
+      };
     }
+    return () => abortRef.current?.abort();
   }, [fetchScanner, pollInterval]);
 
   return { hits, health, savedScan, loading, error, refetch: fetchScanner };

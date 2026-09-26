@@ -9,7 +9,7 @@ import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { closedMarketDataTruth, closedSessionForBar } from "@/lib/admin/closedMarket";
 import { barAgeFromClose, formingBarNote } from "@/lib/admin/barAge";
 import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
-import { classifySetup, getSetupDefinition } from "@/lib/engines/setupClassifier";
+import { classifySetupWithPlaybook, getSetupDefinition } from "@/lib/engines/setupClassifier";
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
 import { buildJournalDNA, computeJournalPatternBoost, type JournalCaseRow } from "@/lib/engines/journalLearning";
 import { computeOptionsIntelligence, type OptionsIntelligence } from "@/lib/engines/optionsIntelligence";
@@ -361,7 +361,8 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   }
 
   // No pipeline (no setup, or no bars) → explicit NO_SETUP; classifySetup only runs on a real engine snapshot.
-  const setup = pipeline ? classifySetup(snapshot) : getSetupDefinition("NO_SETUP");
+  // With a pipeline, a heuristic NO_SETUP falls back to the engine playbook's setup family.
+  const setup = pipeline ? classifySetupWithPlaybook(snapshot) : getSetupDefinition("NO_SETUP");
   const journalCases = await loadJournalCases(symbol, market);
   const dna = buildJournalDNA(journalCases, {
     symbol,

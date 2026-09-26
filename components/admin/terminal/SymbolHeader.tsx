@@ -2,6 +2,7 @@
 
 import StatusPill from "../shared/StatusPill";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
+import { fractionConfidencePct } from "@/lib/admin/hitIntegrity";
 
 export default function SymbolHeader({ symbol, data }: { symbol: string; data: AdminSymbolIntelligence | null }) {
   if (!data) return (
@@ -32,7 +33,7 @@ export default function SymbolHeader({ symbol, data }: { symbol: string; data: A
           label={s.permission}
           tone={s.permission === "GO" ? "green" : s.permission === "WAIT" ? "yellow" : "red"}
         />
-        <StatusPill label={`${s.confidence}%`} tone="blue" />
+        <StatusPill label={fractionConfidencePct(s.confidence)} tone="blue" />
         <StatusPill label={`Trust ${s.symbolTrust}%`} tone="neutral" />
       </div>
     </div>

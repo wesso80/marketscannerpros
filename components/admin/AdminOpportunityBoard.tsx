@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DataTruthBadge from "@/components/admin/shared/DataTruthBadge";
 import WhyThisRankDrawer from "@/components/admin/WhyThisRankDrawer";
 import { ScoreTypeBadge } from "@/components/ui";
@@ -41,6 +41,9 @@ function formatBias(b: string): string {
   return b;
 }
 
+/** Give up on a board load after this long and show an error instead of "Loading…" forever. */
+export const OPPORTUNITY_LOAD_TIMEOUT_MS = 90_000;
+
 /** `defaultMarket` comes from the server page (EQUITIES while crypto market data is off). */
 export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { defaultMarket?: Market } = {}) {
   const [market, setMarket] = useState<Market>(defaultMarket);
@@ -57,18 +60,32 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
   const [timestamp, setTimestamp] = useState<string | null>(null);
   const [savedScan, setSavedScan] = useState<SavedScanStatusData[]>([]);
 
+  // Only the latest request may write state: the board opens on the default market and is often switched
+  // straight away, so the first (slower) response must not overwrite — or un-set "loading" for — the second.
+  const requestSeq = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+
   async function load() {
+    const seq = ++requestSeq.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, OPPORTUNITY_LOAD_TIMEOUT_MS);
     setLoading(true);
     setError(null);
+    setRows([]);
     try {
       const res = await fetch(`/api/admin/opportunities?market=${market}&timeframe=${timeframe}`, {
         credentials: "include",
+        signal: controller.signal,
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || `HTTP ${res.status}`);
       }
       const json = await res.json();
+      if (seq !== requestSeq.current) return;
       setRows(json.rows ?? []);
       const map: Record<string, AdminEdgePacket> = {};
       for (const p of (json.edgePackets ?? []) as AdminEdgePacket[]) {
@@ -79,15 +96,20 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
       setTimestamp(json.timestamp ?? null);
       setSavedScan(Array.isArray(json.savedScan) ? json.savedScan : []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load opportunities");
+      if (seq !== requestSeq.current) return;
+      setError(timedOut
+        ? `Timed out after ${OPPORTUNITY_LOAD_TIMEOUT_MS / 1000}s loading the saved scan — try again`
+        : e instanceof Error ? e.message : "Failed to load opportunities");
       setRows([]);
     } finally {
-      setLoading(false);
+      clearTimeout(timer);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }
 
   useEffect(() => {
     load();
+    return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [market, timeframe]);
 
@@ -229,7 +251,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
           </thead>
           <tbody>
             {filtered.map((row) => (
-              <tr key={row.symbol} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+              <tr key={`${row.market}-${row.symbol}`} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                 <td style={tdStyle}>{row.rank}</td>
                 <td style={{ ...tdStyle, fontWeight: 700 }}>
                   {row.symbol}

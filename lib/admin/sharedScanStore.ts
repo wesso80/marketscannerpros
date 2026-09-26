@@ -5,6 +5,7 @@ import { q } from "@/lib/db";
 import type { RadarOpportunity } from "@/types/operator";
 import type { AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import type { ScannerHit } from "@/lib/admin/types";
+import { normalizeHitConfidence } from "@/lib/admin/hitIntegrity";
 import type { BulkQuote, PriorResult, RadarChange, SharedScanMarket } from "@/lib/admin/sharedScanLogic";
 
 /** A running row older than this is treated as a crashed run and no longer blocks new runs. */
@@ -326,7 +327,8 @@ export async function loadSavedResults(input: {
       changePct: toNum(r.change_pct),
       quoteAt: toIso(r.quote_at),
       packet: (r.packet as AdminResearchPacket | null) ?? null,
-      hits: Array.isArray(r.hit) ? (r.hit as ScannerHit[]) : [],
+      // Legacy rows stored confidence as a 0..1 fraction; rescale on read (hitIntegrity.ts).
+      hits: Array.isArray(r.hit) ? (r.hit as ScannerHit[]).map(normalizeHitConfidence) : [],
       radar: Array.isArray(r.radar) ? (r.radar as RadarOpportunity[]) : [],
       error: r.error == null ? null : String(r.error),
     };

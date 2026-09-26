@@ -23,10 +23,14 @@ import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type Chang
 import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
+import { boundedMap } from "@/lib/admin/boundedMap";
 import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket, type SavedScanView } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Per-symbol DB work in flight at once (pg pool max is 15, shared with every other admin request). */
+const DB_CONCURRENCY = 6;
 
 // Universe: the shared scan universe (DEFAULT_WATCHLISTS union, anchors first) — see lib/admin/sharedScanLogic.ts.
 
@@ -80,10 +84,10 @@ export async function GET(req: NextRequest) {
     }
 
     // whatChanged relative to this admin's workspace snapshots (saved packets are workspace-neutral).
+    // Bounded-parallel: this was a strictly sequential loop (2 queries per symbol, ~190 equities), which
+    // left the board on "Loading…" for a long time.
     if (workspaceId) {
-      const withDelta: SavedPacket[] = [];
-      for (const p of packets) withDelta.push({ ...p, whatChanged: await whatChangedForWorkspace(p, workspaceId) });
-      packets = withDelta;
+      packets = await boundedMap(packets, DB_CONCURRENCY, async (p) => ({ ...p, whatChanged: await whatChangedForWorkspace(p, workspaceId) }));
     }
 
     // Project to canonical AdminEdgePacket[] (Admin Edge Layer contract).
@@ -121,7 +125,7 @@ export async function GET(req: NextRequest) {
       const rankableIds = new Set(packets.filter(isRankable).map((p) => p.packetId));
       const liveEdge = edgePackets.filter((p) => rankableIds.has(p.packetId));
       const livePackets = packets.filter((p) => rankableIds.has(p.packetId));
-      await Promise.allSettled(liveEdge.map((p) => syncQueueFromPacket({ workspaceId: ws, packet: p })));
+      await boundedMap(liveEdge, DB_CONCURRENCY, (p) => syncQueueFromPacket({ workspaceId: ws, packet: p }).catch(() => undefined));
       // Persist canonical edge-packet snapshots (Tier 1 #2). Awaited so
       // any DB error surfaces in logs while still being non-blocking via
       // the outer try/catch — see persistEdgePackets internal swallow.
@@ -129,8 +133,10 @@ export async function GET(req: NextRequest) {
       await filterNewEdgePackets(ws, liveEdge)
         .then((fresh) => persistEdgePackets({ workspaceId: ws, packets: fresh }))
         .catch(() => 0);
-      const allEvents: ChangeTapeEvent[][] = await Promise.all(
-        livePackets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[])),
+      const allEvents: ChangeTapeEvent[][] = await boundedMap(
+        livePackets,
+        DB_CONCURRENCY,
+        (p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[]),
       );
       const flat = allEvents.flat();
       if (flat.length) await persistChangeTapeEvents(flat).catch(() => 0);

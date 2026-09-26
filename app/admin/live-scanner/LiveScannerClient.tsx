@@ -7,6 +7,7 @@ import StatusPill from "@/components/admin/shared/StatusPill";
 import { useScannerFeed } from "@/lib/admin/hooks";
 import type { ScannerHit } from "@/lib/admin/types";
 import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
+import { formatHitPrice, hitPermissionTitle, hitRowKey, otherPlaybooksLabel } from "@/lib/admin/hitIntegrity";
 
 // Full deduped universe per market (DEFAULT_WATCHLISTS) — anchors pinned first.
 // Admin-only page; safe to leak the wider universe (see no-public-leakage).
@@ -21,14 +22,21 @@ function permTone(p: string): "green" | "yellow" | "red" {
   return "red";
 }
 
+const GRID = "80px 90px 80px 70px 1fr 80px 70px 70px 90px";
+
 function HitRow({ hit }: { hit: ScannerHit }) {
+  const more = otherPlaybooksLabel(hit);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "80px 60px 70px 1fr 80px 70px 70px 90px", alignItems: "center", gap: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0.5rem 0", fontSize: "0.875rem" }}>
+    <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", gap: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0.5rem 0", fontSize: "0.875rem" }}>
       <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>{hit.symbol}</span>
-      <StatusPill label={hit.bias} tone={hit.bias === "LONG" ? "green" : hit.bias === "SHORT" ? "red" : "neutral"} />
+      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <StatusPill label={hit.bias} tone={hit.bias === "LONG" ? "green" : hit.bias === "SHORT" ? "red" : "neutral"} />
+        {hit.twoSided && <span title="This symbol has both a LONG and a SHORT setup (different playbooks) — conflicting, treat with care" style={{ fontSize: "0.625rem", color: "#FCD34D" }}>2-sided</span>}
+      </span>
+      <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.8)" }}>{formatHitPrice(hit.price)}</span>
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "#6EE7B7" }}>{hit.eliteScore != null ? hit.eliteScore.toFixed(1) : "—"}</span>
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>{hit.playbook ?? "—"}</span>
-      <span><StatusPill label={hit.permission} tone={permTone(hit.permission)} /></span>
+      <span title={hit.otherPlaybooks?.length ? `Also: ${hit.otherPlaybooks.join(", ")}` : undefined} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>{hit.playbook ?? "—"}{more ? ` ${more}` : ""}</span>
+      <span title={hitPermissionTitle(hit)}><StatusPill label={hit.marketPermission} tone={permTone(hit.marketPermission)} /></span>
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.7)" }}>{hit.confidence.toFixed(1)}%</span>
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.5)" }}>{hit.symbolTrust}%</span>
       <span style={{ textAlign: "right", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>{hit.setupState ?? "—"}</span>
@@ -96,18 +104,19 @@ export default function LiveScannerClient({ cryptoEnabled, defaultMarket = "EQUI
           </p>
         ) : (
           <div>
-            <div style={{ display: "grid", gridTemplateColumns: "80px 60px 70px 1fr 80px 70px 70px 90px", gap: "0.5rem", paddingBottom: "0.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: GRID, gap: "0.5rem", paddingBottom: "0.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
               <span>Symbol</span>
               <span>Bias</span>
+              <span style={{ textAlign: "right" }} title="Last saved price from the shared scan">Price</span>
               <span style={{ textAlign: "right" }}>Elite</span>
               <span>Playbook</span>
-              <span>Verdict</span>
+              <span title="Market verdict (pre-portfolio). Hover a pill for the governance/portfolio verdict and reasons.">Verdict</span>
               <span style={{ textAlign: "right" }}>Score</span>
               <span style={{ textAlign: "right" }}>Trust</span>
               <span style={{ textAlign: "right" }}>State</span>
             </div>
-            {hits.map((hit) => (
-              <HitRow key={hit.symbol} hit={hit} />
+            {hits.map((hit, i) => (
+              <HitRow key={hitRowKey(hit, i)} hit={hit} />
             ))}
           </div>
         )}

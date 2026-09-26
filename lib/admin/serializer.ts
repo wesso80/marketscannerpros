@@ -110,6 +110,14 @@ function extractLevels(keyLevels: KeyLevel[]): AdminSymbolIntelligence["levels"]
   };
 }
 
+function mergeBlockReasons(...lists: Array<string[] | undefined>): string[] {
+  const out: string[] = [];
+  for (const list of lists) {
+    for (const r of list ?? []) if (r && !out.includes(r)) out.push(r);
+  }
+  return out;
+}
+
 /* ── Scanner hit (one row) from a pipeline result ── */
 export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
   const v = p.verdict;
@@ -123,7 +131,11 @@ export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
     permission: toPermissionState(g.finalPermission),
     // Market-only permission (pre-governance). Use for discovery filtering.
     marketPermission: toPermissionState(v.permission),
-    confidence: Math.round(v.confidenceScore * 10) / 10,
+    // confidenceScore is a 0..1 fraction; every scanner surface renders
+    // `confidence` as a percent, so store 0..100 (1dp). Previously this was
+    // `x * 10 / 10`, which rendered 0.78 as "0.8%".
+    confidence: Math.round(v.confidenceScore * 1000) / 10,
+    confidenceUnit: "pct",
     eliteScore: elite.score,
     eliteGrade: elite.grade,
     setupState: elite.setupState,
@@ -132,7 +144,9 @@ export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
     symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
     sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
     playbook: v.playbook,
-    blockReasons: g.blockReasons ?? v.reasonCodes ?? [],
+    // Governance always returns an array, so the old `??` fallback never kept
+    // the verdict's own block reasons (doctrine hard blocks / score floor).
+    blockReasons: mergeBlockReasons(g.blockReasons, v.permission === "BLOCK" ? v.reasonCodes : undefined),
     timestamp: v.timestamp,
   };
 }
@@ -184,6 +198,8 @@ export function pipelineToSymbolIntelligence(
     permission: toPermissionState(g.finalPermission),
     // Market-only permission (pre-governance). Use for discovery filtering.
     marketPermission: toPermissionState(v.permission),
+    // Symbol intelligence keeps the 0..1 fraction (the research packet scores on it); the
+    // terminal cards render it with fractionConfidencePct (lib/admin/hitIntegrity.ts).
     confidence: Math.round(v.confidenceScore * 10) / 10,
     eliteScore: elite.score,
     eliteGrade: elite.grade,

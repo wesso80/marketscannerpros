@@ -3,6 +3,7 @@
 import { useState } from "react";
 import StatusPill from "../shared/StatusPill";
 import type { ScannerHit, AdminSymbolIntelligence } from "@/lib/admin/types";
+import { formatHitPrice, hitPermissionTitle, hitRowKey } from "@/lib/admin/hitIntegrity";
 
 type TabKey = "signals" | "audit" | "notes";
 const TABS: { key: TabKey; label: string }[] = [
@@ -54,31 +55,35 @@ export default function OperatorBottomTabs({
 function SignalsTable({ hits }: { hits: ScannerHit[] }) {
   return (
     <>
-      <div className="grid grid-cols-[120px_60px_80px_120px_80px_auto] gap-2 px-4 py-2 text-[10px] text-white/30 border-b border-white/[0.04]">
+      <div className="grid grid-cols-[120px_60px_80px_80px_120px_80px_auto] gap-2 px-4 py-2 text-[10px] text-white/30 border-b border-white/[0.04]">
         <span>Symbol</span>
         <span>Bias</span>
+        <span>Price</span>
         <span>Confidence</span>
         <span>Regime</span>
         <span>Size</span>
-        <span>Permission</span>
+        <span title="Market verdict (pre-portfolio). Hover a pill for the governance/portfolio verdict and reasons.">Verdict</span>
       </div>
       <div className="divide-y divide-white/[0.03]">
         {hits.length === 0 && (
           <div className="px-4 py-4 text-center text-xs text-white/30">No signals — run a scan</div>
         )}
-        {hits.map((row) => (
-          <div key={`${row.symbol}-${row.bias}`} className="grid grid-cols-[120px_60px_80px_120px_80px_auto] gap-2 px-4 py-2 items-center hover:bg-white/[0.02] transition text-[11px]">
-            <span className="font-medium text-white">{row.symbol}</span>
+        {hits.map((row, i) => (
+          <div key={hitRowKey(row, i)} className="grid grid-cols-[120px_60px_80px_80px_120px_80px_auto] gap-2 px-4 py-2 items-center hover:bg-white/[0.02] transition text-[11px]">
+            <span className="font-medium text-white">{row.symbol}{row.twoSided && <span className="ml-1 text-[9px] text-amber-300" title="Both a LONG and a SHORT setup exist for this symbol">2-sided</span>}</span>
             <span className={row.bias === "LONG" ? "text-emerald-400" : row.bias === "SHORT" ? "text-red-400" : "text-white/40"}>
               {row.bias === "LONG" ? "Bullish" : row.bias === "SHORT" ? "Bearish" : row.bias}
             </span>
+            <span className="text-white/60 font-mono">{formatHitPrice(row.price)}</span>
             <span className="text-white/60">{row.confidence}%</span>
             <StatusPill label={String(row.regime)} tone="purple" />
             <span className="text-white/50">{row.sizeMultiplier}x</span>
-            <StatusPill
-              label={row.permission}
-              tone={row.permission === "GO" ? "green" : row.permission === "WAIT" ? "yellow" : "red"}
-            />
+            <span title={hitPermissionTitle(row)}>
+              <StatusPill
+                label={row.marketPermission}
+                tone={row.marketPermission === "GO" ? "green" : row.marketPermission === "WAIT" ? "yellow" : "red"}
+              />
+            </span>
           </div>
         ))}
       </div>

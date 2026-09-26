@@ -198,3 +198,30 @@ export function classifySetup(snapshot: AdminSymbolIntelligence): SetupDefinitio
 
   return DEFINITIONS.NO_SETUP;
 }
+
+/**
+ * Engine playbook → setup family. Used only when the heuristic classifier finds no pattern for a
+ * snapshot that DOES have an engine pipeline, so a triggered/high-score engine setup is never labelled
+ * "No Setup" (the Priority Desk showed ADA/ARB as "No Setup" yet TRIGGERED).
+ */
+const PLAYBOOK_SETUP: Record<string, SetupType> = {
+  PULLBACK_CONTINUATION: "TREND_PULLBACK",
+  BREAKOUT_CONTINUATION: "RANGE_BREAKOUT",
+  FAILED_BREAKOUT_REVERSAL: "FAILED_BREAKOUT",
+  SQUEEZE_EXPANSION: "SQUEEZE_EXPANSION",
+  RANGE_MEAN_REVERSION: "RANGE_REVERSION",
+  POST_EVENT_RECLAIM: "RECLAIM_AND_HOLD",
+  LIQUIDITY_SWEEP_REVERSAL: "LIQUIDITY_SWEEP",
+};
+
+export function setupFromPlaybook(playbook: unknown): SetupDefinition | null {
+  const type = typeof playbook === "string" ? PLAYBOOK_SETUP[playbook.toUpperCase()] : undefined;
+  return type ? DEFINITIONS[type] : null;
+}
+
+/** classifySetup, falling back to the engine playbook when the heuristics return NO_SETUP. */
+export function classifySetupWithPlaybook(snapshot: AdminSymbolIntelligence): SetupDefinition {
+  const setup = classifySetup(snapshot);
+  if (setup.type !== "NO_SETUP") return setup;
+  return setupFromPlaybook(snapshot.playbook) ?? setup;
+}

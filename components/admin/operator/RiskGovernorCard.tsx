@@ -3,6 +3,7 @@
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
+import { fractionConfidencePct } from "@/lib/admin/hitIntegrity";
 
 export default function RiskGovernorCard({ data }: { data: AdminSymbolIntelligence | null }) {
   if (!data) return <AdminCard title="Research Guard"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
@@ -16,7 +17,7 @@ export default function RiskGovernorCard({ data }: { data: AdminSymbolIntelligen
           </span>
         </div>
         <DataRow label="Size Multiplier" value={`${data.sizeMultiplier}x`} />
-        <DataRow label="Confidence" value={`${data.confidence}%`} />
+        <DataRow label="Confidence" value={fractionConfidencePct(data.confidence)} />
         <DataRow label="Symbol Trust" value={`${data.symbolTrust}%`} />
       </div>
     </AdminCard>
