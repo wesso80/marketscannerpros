@@ -529,6 +529,29 @@ describe('curated seed', () => {
     expect(aug.releaseTimeUtc).toBe('2026-09-30T12:30:00.000Z'); // 08:30 EDT
   });
 
+  it('uses the ABS release-calendar dates for Australian data (Household Spending was listed on Oct 2, ABS says Tue Sep 29)', () => {
+    const datesOf = (id: string) => CURATED_EVENTS
+      .filter((e) => e.canonicalIndicatorId === id && e.localDate >= '2026-09-26' && e.localDate < '2027-02-01')
+      .map((e) => e.localDate);
+    // abs.gov.au/release-calendar/future-releases (checked 26 Sep 2026).
+    expect(datesOf('AU_HOUSEHOLD_SPENDING_MOM')).toEqual(['2026-09-29', '2026-11-04', '2026-12-03', '2027-01-12']);
+    expect(datesOf('AU_CPI_MONTHLY_HEADLINE_YOY')).toEqual(['2026-09-30', '2026-10-28', '2026-11-25', '2027-01-06', '2027-01-27']);
+    expect(datesOf('AU_EMPLOYMENT_CHANGE')).toEqual(['2026-10-15', '2026-11-19', '2026-12-17']);
+    expect(datesOf('AU_UNEMPLOYMENT_RATE')).toEqual(['2026-10-15', '2026-11-19', '2026-12-17']);
+    expect(datesOf('AU_GDP_QOQ')).toEqual(['2026-12-02']);
+    expect(datesOf('AU_CPI_HEADLINE_QOQ')).toEqual(['2026-10-28', '2027-01-27']);
+    const hsi = CURATED_EVENTS.find((e) => e.canonicalIndicatorId === 'AU_HOUSEHOLD_SPENDING_MOM' && e.localDate === '2026-09-29')!;
+    expect(hsi.localTime).toBe('11:30');
+    const ev = normalizeEvent(hsi, { nowUtcMs: NOW })!;
+    expect(ev.releaseTimeUtc).toBe('2026-09-29T01:30:00.000Z'); // 11:30 AEST
+    expect(ev.referencePeriod).toBe('Aug 2026');
+    const nov = normalizeEvent(CURATED_EVENTS.find((e) => e.canonicalIndicatorId === 'AU_HOUSEHOLD_SPENDING_MOM' && e.localDate === '2026-11-04')!, { nowUtcMs: NOW })!;
+    expect(nov.releaseTimeUtc).toBe('2026-11-04T00:30:00.000Z'); // 11:30 AEDT
+    expect(nov.referencePeriod).toBe('Sep 2026');
+    const janCpi = normalizeEvent(CURATED_EVENTS.find((e) => e.canonicalIndicatorId === 'AU_CPI_MONTHLY_HEADLINE_YOY' && e.localDate === '2027-01-06')!, { nowUtcMs: NOW })!;
+    expect(janCpi.referencePeriod).toBe('Nov 2026');
+  });
+
   it('marks estimated rows as unconfirmed so the UI cannot present them as scheduled', () => {
     const estimated = CURATED_EVENTS.filter((e) => e.timingStatus === 'ESTIMATED');
     expect(estimated.length).toBeGreaterThan(0);
