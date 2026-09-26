@@ -2082,7 +2082,7 @@ export default function DeepAnalysisPage({
                           {/* Catalyst class (rule-based) or legacy impact tag */}
                           {item.catalyst ? (
                             <span title={item.catalystReason} style={{ padding: "0.25rem 0.6rem", borderRadius: "6px", fontSize: "0.65rem", fontWeight: "700", background: item.catalyst === 'POSITIVE' ? 'rgba(16,185,129,0.15)' : item.catalyst === 'NEGATIVE' ? 'rgba(239,68,68,0.15)' : item.catalyst === 'EVENT_RISK' ? 'rgba(245,158,11,0.18)' : 'rgba(148,163,184,0.15)', color: item.catalyst === 'POSITIVE' ? '#10B981' : item.catalyst === 'NEGATIVE' ? '#EF4444' : item.catalyst === 'EVENT_RISK' ? '#F59E0B' : '#94A3B8' }}>
-                              {item.catalyst.replace('_', ' ')}{item.catalystReason && item.catalyst !== 'NEUTRAL' ? ` · ${item.catalystReason}` : ''}
+                              {item.catalyst.replace('_', ' ')}{item.catalystReason && item.catalystReason !== 'no material catalyst pattern' ? ` · ${item.catalystReason}` : ''}
                             </span>
                           ) : (() => {
                             const impact = getNewsImpact(item.title, item.summary || '');
