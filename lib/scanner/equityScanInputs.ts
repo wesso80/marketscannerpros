@@ -19,6 +19,15 @@ export function completedSessionAvgVolume(
   return vols.length >= 5 ? vols.reduce((s, v) => s + v, 0) / vols.length : null;
 }
 
+/**
+ * Daily equity bars up to the last CLOSED US session: drops today's still-forming bar (Alpha Vantage's realtime daily
+ * series includes it while the market is open), so anything labelled "completed" really is.
+ */
+export function completedEquityDailyBars<T extends { date: string }>(bars: ReadonlyArray<T>, nowMs: number = Date.now()): T[] {
+  const lastClosed = lastCompletedEquitySession(nowMs);
+  return bars.filter((b) => String(b.date).slice(0, 10) <= lastClosed);
+}
+
 export interface ParsedEquityQuote { price: number; open: number; prevClose: number; changePct: number; volume: number }
 
 const num = (value: unknown): number => {
