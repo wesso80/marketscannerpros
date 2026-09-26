@@ -29,6 +29,8 @@ import {
   type OHLCVBar,
   type IndicatorResult,
 } from '@/lib/indicators';
+import { scalpVolumeRatio } from '@/lib/scalper/volume';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -124,7 +126,8 @@ function parseTimeSeries(
       high: parseFloat(v['2. high'] || '0'),
       low: parseFloat(v['3. low'] || '0'),
       close: parseFloat(v['4. close'] || '0'),
-      volume: Math.round(parseFloat(v['5. volume'] || v['6. volume'] || '0')),
+      // CRYPTO_INTRADAY sends '5. volume' as a JSON number, equities as a string; avRowVolume handles both.
+      volume: avRowVolume(v),
     });
   }
   bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -154,7 +157,8 @@ export interface ScalpSignal {
     vwapDev: number | null;
     vwapSignal: 'above' | 'below' | 'neutral';
     volSpike: boolean;
-    volRatio: number;
+    /** Latest bar volume / 20-bar average; null when the bars carry no volume. */
+    volRatio: number | null;
     bbSqueeze: boolean;
     bbBreakout: 'upper' | 'lower' | null;
     bbWidth: number | null;
@@ -228,12 +232,7 @@ function computeScalpSignals(
   }
 
   // ── 4. Volume Spike ──
-  const avgVol20 =
-    volumes.length >= 20
-      ? volumes.slice(-20).reduce((a, b) => a + b, 0) / 20
-      : volumes.reduce((a, b) => a + b, 0) / Math.max(1, volumes.length);
-  const volRatio = avgVol20 > 0 ? latest.volume / avgVol20 : 1;
-  const volSpike = volRatio > 1.8;
+  const { volRatio, volSpike } = scalpVolumeRatio(volumes);
 
   // ── 5. Bollinger Bands Squeeze/Breakout ──
   const bb = bollingerBands(closes, 20, 2);
@@ -365,7 +364,7 @@ function computeScalpSignals(
       vwapDev: vwapDev != null ? Math.round(vwapDev * 100) / 100 : null,
       vwapSignal,
       volSpike,
-      volRatio: Math.round(volRatio * 100) / 100,
+      volRatio,
       bbSqueeze,
       bbBreakout,
       bbWidth: bbWidth != null ? Math.round(bbWidth * 100) / 100 : null,
