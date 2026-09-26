@@ -9,6 +9,7 @@ import EvidenceStack from "@/components/market/EvidenceStack";
 import MarketStatusStrip from "@/components/market/MarketStatusStrip";
 import RiskFlagPanel, { type RiskFlag } from "@/components/market/RiskFlagPanel";
 import { buildMarketDataProviderStatus } from "@/lib/scanner/providerStatus";
+import { fetchWithTimeout } from "@/lib/admin/fetchWithTimeout";
 
 type ScannerHit = {
   symbol: string;
@@ -36,6 +37,7 @@ type MorningCatalyst = {
 };
 
 type MorningBrief = {
+  scanSource?: { kind: "saved-scan" | "live"; newestScannedAt: string | null; ageLabel: string; savedSymbols: number; rankedSymbols: number; failedSymbols: number; asOfLabel: string | null; note: string };
   briefId: string;
   generatedAt: string;
   market: string;
@@ -394,9 +396,22 @@ function riskSeverity(label: string): RiskFlag["severity"] {
   return "info";
 }
 
+const BRIEF_TIMEOUT_MS = 60_000;
+
+type SavedBriefMeta = { source: string; generatedAt: string; ageSec: number; ageLabel: string };
+
+function briefFetchError(err: unknown, what: string): string {
+  if (err instanceof Error && err.name === "AbortError") {
+    return `Timed out after ${BRIEF_TIMEOUT_MS / 1000} s trying to ${what}. The server may be busy; try Reload Saved again in a minute.`;
+  }
+  return err instanceof Error ? err.message : `Unable to ${what}`;
+}
+
 export default function MorningBriefPage() {
   const [brief, setBrief] = useState<MorningBrief | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rebuilding, setRebuilding] = useState(false);
+  const [savedMeta, setSavedMeta] = useState<SavedBriefMeta | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
@@ -414,14 +429,40 @@ export default function MorningBriefPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/morning-brief", { headers: authHeaders(), cache: "no-store" });
-      if (!res.ok) throw new Error(`Brief failed (${res.status})`);
-      const data = await res.json();
+      // Reads the newest SAVED brief (cron or admin rebuild); never rebuilds or overwrites it.
+      const res = await fetchWithTimeout("/api/admin/morning-brief", { headers: authHeaders(), cache: "no-store" }, BRIEF_TIMEOUT_MS);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.error || `Brief failed (${res.status})`);
       setBrief(data.brief);
+      setSavedMeta(data.saved ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load morning brief");
+      setError(briefFetchError(err, "load the saved morning brief"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const rebuild = async () => {
+    setRebuilding(true);
+    setError(null);
+    try {
+      const res = await fetchWithTimeout("/api/admin/morning-brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(authHeaders() ?? {}) },
+        body: JSON.stringify(brief?.market ? { market: brief.market, timeframe: brief.timeframe } : {}),
+        cache: "no-store",
+      }, BRIEF_TIMEOUT_MS);
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        throw new Error(`${data.error || "Rebuild is rate-limited."}${data.retryAfterSec ? ` Try again in ${Math.ceil(data.retryAfterSec / 60)} min.` : ""}`);
+      }
+      if (!res.ok) throw new Error(data.error || `Rebuild failed (${res.status})`);
+      setBrief(data.brief);
+      setSavedMeta(data.saved ?? null);
+    } catch (err) {
+      setError(briefFetchError(err, "rebuild the morning brief"));
+    } finally {
+      setRebuilding(false);
     }
   };
 
@@ -536,7 +577,7 @@ export default function MorningBriefPage() {
   }, [brief?.generatedAt]);
 
   if (loading && !brief) {
-    return <main className="min-h-screen bg-[#0F172A] p-6 text-white">Building morning brief...</main>;
+    return <main className="min-h-screen bg-[#0F172A] p-6 text-white">Loading saved morning brief...</main>;
   }
 
   return (
@@ -553,8 +594,11 @@ export default function MorningBriefPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={refresh} className="rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-emerald-400/40">
-            Refresh Brief
+          <button onClick={refresh} disabled={loading || rebuilding} className="rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-emerald-400/40 disabled:opacity-60">
+            {loading ? "Loading..." : "Reload Saved"}
+          </button>
+          <button onClick={rebuild} disabled={loading || rebuilding} title="Build a new brief from the shared saved scan (admin copy; the cron's emailed brief is kept)" className="rounded-md border border-emerald-400/30 px-4 py-2 text-sm font-black text-emerald-200 disabled:opacity-60">
+            {rebuilding ? "Rebuilding..." : "Rebuild"}
           </button>
           <button onClick={() => runMorningAction("run_prewake")} disabled={Boolean(actionBusy)} className="rounded-md border border-purple-400/30 px-4 py-2 text-sm font-black text-purple-200 disabled:opacity-60">
             {actionBusy === "run_prewake" ? "Scanning..." : "Run Prewake"}
@@ -578,6 +622,13 @@ export default function MorningBriefPage() {
       </div>
 
       {error ? <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
+      {!loading && !brief && !error ? <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-slate-300">No saved brief yet. Press Rebuild to build one from the shared saved scan.</div> : null}
+      {savedMeta ? (
+        <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
+          Saved {savedMeta.source === "cron" ? "daily (cron) brief" : savedMeta.source === "email" ? "emailed brief" : savedMeta.source === "live" ? "live brief (not saved)" : "admin rebuild"} · built {savedMeta.ageLabel}
+          {brief?.scanSource ? <> · {brief.scanSource.note}</> : null}
+        </div>
+      ) : null}
       {emailStatus ? <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-200">{emailStatus}</div> : null}
       {actionStatus ? <div className="mb-4 rounded-lg border border-sky-500/25 bg-sky-500/10 p-3 text-sm text-sky-200">{actionStatus}</div> : null}
 

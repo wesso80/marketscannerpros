@@ -7,6 +7,8 @@ import type { ScannerHit, SystemHealth } from "@/lib/admin/types";
 import type { Market } from "@/types/operator";
 import { DEFAULT_WATCHLISTS } from "@/lib/operator/watchlists";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
+import { isRankable, readSavedScan, type SavedScanView } from "@/lib/admin/sharedScan";
+import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 
 export type DeskState = "TRADE" | "WAIT" | "DEFENSIVE" | "BLOCK";
 
@@ -279,6 +281,22 @@ export type MorningBrief = {
   scenarioTree: MorningScenarioTree[];
   commander: MorningCommanderView;
   nextImprovements: string[];
+  /** Where the scan part came from: the shared saved admin scan (default) or a live scan of a custom list. */
+  scanSource?: MorningScanSource;
+};
+
+export type MorningScanSource = {
+  kind: "saved-scan" | "live";
+  /** Newest saved result used (saved-scan only). */
+  newestScannedAt: string | null;
+  ageLabel: string;
+  /** Saved symbols in the market, and how many were current with a detected setup. */
+  savedSymbols: number;
+  rankedSymbols: number;
+  failedSymbols: number;
+  /** "as of Fri 25 Sep 2026 close" while the US market is shut. */
+  asOfLabel: string | null;
+  note: string;
 };
 
 export type MorningTradePlan = {
@@ -434,7 +452,9 @@ export async function buildMorningBrief(options: {
   timeframe?: string;
   scanLimit?: number;
 } = {}): Promise<MorningBrief> {
-  const market = options.market ?? "CRYPTO";
+  // Crypto only when crypto market data is on (OPERATOR_CG_FETCH_ENABLED); otherwise equities. A custom
+  // `symbols` list is scanned live (explicit request); otherwise the brief reads the shared saved scan.
+  const market = options.market ?? defaultAdminMarket();
   const timeframe = options.timeframe ?? "15m";
   const scanLimit = clampScanLimit(options.scanLimit);
   const generatedAt = new Date().toISOString();
@@ -448,28 +468,37 @@ export async function buildMorningBrief(options: {
     loadExpectancyDashboard(),
     buildPreviousBriefOutcomeGrade(),
   ]);
-  const universe = options.symbols?.length
-    ? buildCustomUniverse(options.symbols, market, scanLimit)
-    : await buildMorningUniverse(market, learning, scanLimit);
+  let universe: MorningUniverseMeta;
+  let hits: ScannerHit[];
+  let health: SystemHealth;
+  let scanSource: MorningScanSource;
+  if (options.symbols?.length) {
+    universe = buildCustomUniverse(options.symbols, market, scanLimit);
+    ({ hits, health } = await liveScanHits(universe.symbols, market, timeframe, risk));
+    scanSource = {
+      kind: "live", newestScannedAt: generatedAt, ageLabel: "just now", savedSymbols: 0,
+      rankedSymbols: universe.symbols.length, failedSymbols: health.errorsCount ?? 0, asOfLabel: null,
+      note: `Live scan of a custom list of ${universe.symbols.length} symbols.`,
+    };
+  } else {
+    // Default: the shared saved admin scan (lib/admin/sharedScan) — no live per-symbol AV loop.
+    const view = await readSavedScan({ market: market === "CRYPTO" ? "CRYPTO" : "EQUITIES", timeframe });
+    const saved = savedScanForBrief(view, scanLimit, risk.source);
+    hits = await enrichHitsWithExpectancy(saved.hits);
+    health = saved.health;
+    scanSource = saved.source;
+    universe = {
+      mode: "dynamic",
+      totalCandidates: view.rows.length,
+      scannedCount: saved.source.rankedSymbols,
+      scanLimit,
+      symbols: saved.symbols,
+      sources: [{ source: "shared-saved-scan", count: saved.symbols.length, sample: saved.symbols.slice(0, 8) }],
+      workerStatus: await loadWorkerStatus(),
+      note: saved.source.note,
+    };
+  }
   const symbols = universe.symbols;
-
-  const context: ScanContext = {
-    ...DEFAULT_CONTEXT,
-    portfolioState: {
-      ...DEFAULT_CONTEXT.portfolioState,
-      equity: risk.equity,
-      dailyPnl: risk.dailyPnl,
-      openRisk: risk.openExposure,
-      drawdownPct: risk.dailyDrawdown,
-      correlationRisk: risk.correlationRisk,
-      activePositions: risk.activePositions,
-      killSwitchActive: risk.killSwitchActive,
-    },
-  };
-
-  const scan = await runScan({ symbols, market, timeframe }, context, alphaVantageProvider);
-  const hits = await enrichHitsWithExpectancy(scanResultToHits(scan).map((hit) => ({ ...hit, riskSource: risk.source })));
-  const health = scanResultToHealth(scan, true);
   const catalysts = await loadCatalysts(symbols, hits);
   const rankedHits = rankHitsWithLearning(hits, learning, catalysts);
 
@@ -515,6 +544,7 @@ export async function buildMorningBrief(options: {
     riskGovernor,
     scenarioTree,
     commander,
+    scanSource,
     nextImprovements: [
       "Use the commander view first; it compresses permission, top candidates, risk limits, and review focus into one trading screen.",
       "Let the auto-grade compare yesterday's brief with journal outcomes before trusting repeated symbols today.",
@@ -523,7 +553,90 @@ export async function buildMorningBrief(options: {
   };
 }
 
-export async function saveMorningBriefSnapshot(brief: MorningBrief, source: "admin" | "email" | "cron" = "admin") {
+async function liveScanHits(symbols: string[], market: Market, timeframe: string, risk: MorningRiskState): Promise<{ hits: ScannerHit[]; health: SystemHealth }> {
+  const context: ScanContext = {
+    ...DEFAULT_CONTEXT,
+    portfolioState: {
+      ...DEFAULT_CONTEXT.portfolioState,
+      equity: risk.equity,
+      dailyPnl: risk.dailyPnl,
+      openRisk: risk.openExposure,
+      drawdownPct: risk.dailyDrawdown,
+      correlationRisk: risk.correlationRisk,
+      activePositions: risk.activePositions,
+      killSwitchActive: risk.killSwitchActive,
+    },
+  };
+
+  const scan = await runScan({ symbols, market, timeframe }, context, alphaVantageProvider);
+  const hits = await enrichHitsWithExpectancy(scanResultToHits(scan).map((hit) => ({ ...hit, riskSource: risk.source })));
+  return { hits, health: scanResultToHealth(scan, true) };
+}
+
+/**
+ * Brief inputs from the shared saved scan: hits from saved results that are current, succeeded and have a
+ * detected setup (the rule Priority Desk ranks by), capped at scanLimit symbols by best confidence.
+ * Failed/skipped/stale rows are counted, never ranked. Exported for tests.
+ */
+export function savedScanForBrief(
+  view: SavedScanView,
+  scanLimit: number,
+  riskSource: MorningRiskState["source"],
+): { hits: ScannerHit[]; symbols: string[]; health: SystemHealth; source: MorningScanSource } {
+  const rankable = view.packets.filter(isRankable);
+  const rankableSymbols = new Set(rankable.map((p) => p.symbol.toUpperCase()));
+  const bySymbol = view.rows
+    .filter((row) => rankableSymbols.has(row.symbol.toUpperCase()) && row.hits.length > 0)
+    .map((row) => ({ symbol: row.symbol, hits: row.hits, best: Math.max(...row.hits.map((h) => h.confidence ?? 0)) }))
+    .sort((a, b) => b.best - a.best)
+    .slice(0, scanLimit);
+  const hits = bySymbol
+    .flatMap((row) => row.hits.map((hit) => ({ ...hit, riskSource })))
+    .sort((a, b) => b.confidence - a.confidence);
+  const failed = view.rows.filter((row) => row.status === "failed").length;
+  const asOfLabel = rankable.find((p) => p.savedScan.asOfLabel)?.savedScan.asOfLabel ?? null;
+  const note = !view.available
+    ? `Shared saved scan unavailable${view.message ? `: ${view.message}` : ""}. Nothing ranked.`
+    : `From the shared saved admin scan: ${rankable.length} of ${view.rows.length} saved ${view.market.toLowerCase()} results are current with a setup (newest ${view.ageLabel}${asOfLabel ? `, ${asOfLabel}` : ""}); ${failed} failed.`;
+  return {
+    hits,
+    symbols: bySymbol.map((row) => row.symbol),
+    health: {
+      feed: view.available && view.rows.length > 0 ? "HEALTHY" : "DEGRADED",
+      websocket: "DISCONNECTED",
+      scanner: view.running ? "RUNNING" : "IDLE",
+      cache: view.available ? "OK" : "MISSING",
+      api: "LOW_LATENCY",
+      lastScanAt: view.newestScannedAt ?? undefined,
+      symbolsScanned: view.rows.length,
+      errorsCount: failed,
+    },
+    source: {
+      kind: "saved-scan",
+      newestScannedAt: view.newestScannedAt,
+      ageLabel: view.ageLabel,
+      savedSymbols: view.rows.length,
+      rankedSymbols: rankable.length,
+      failedSymbols: failed,
+      asOfLabel,
+      note,
+    },
+  };
+}
+
+/** Row id for a brief: admin rebuilds get their own ":admin" id so they never replace the cron/email brief. */
+export function morningBriefRowId(brief: Pick<MorningBrief, "briefId">, source: "admin" | "email" | "cron"): string {
+  const base = brief.briefId.replace(/:admin$/, "");
+  return source === "admin" ? `${base}:admin` : base;
+}
+
+/**
+ * Save a brief. Admin rebuilds are stored under `<day>:<market>:<tf>:admin`, so the brief the cron built and
+ * emailed (and that tomorrow's outcome grade scores) is never overwritten by a page action. The upsert also
+ * refuses to let an admin write replace a cron/email row with the same id. Returns the brief as saved.
+ */
+export async function saveMorningBriefSnapshot(brief: MorningBrief, source: "admin" | "email" | "cron" = "admin"): Promise<MorningBrief> {
+  const saved: MorningBrief = { ...brief, briefId: morningBriefRowId(brief, source) };
   try {
     await ensureMorningBriefTables();
     await q(
@@ -541,30 +654,145 @@ export async function saveMorningBriefSnapshot(brief: MorningBrief, source: "adm
         watch_count = EXCLUDED.watch_count,
         avoid_count = EXCLUDED.avoid_count,
         catalyst_count = EXCLUDED.catalyst_count,
-        source = CASE
-          WHEN admin_morning_briefs.source IN ('cron', 'email') AND EXCLUDED.source = 'admin' THEN admin_morning_briefs.source
-          ELSE EXCLUDED.source
-        END,
+        source = EXCLUDED.source,
         snapshot = EXCLUDED.snapshot,
-        updated_at = NOW()`,
+        updated_at = NOW()
+       WHERE NOT (admin_morning_briefs.source IN ('cron', 'email') AND EXCLUDED.source = 'admin')`,
       [
-        brief.briefId,
-        brief.generatedAt,
-        brief.market,
-        brief.timeframe,
-        brief.deskState,
-        brief.headline,
-        brief.topPlays.length,
-        brief.watchlist.length,
-        brief.avoidList.length,
-        brief.catalysts.length,
+        saved.briefId,
+        saved.generatedAt,
+        saved.market,
+        saved.timeframe,
+        saved.deskState,
+        saved.headline,
+        saved.topPlays.length,
+        saved.watchlist.length,
+        saved.avoidList.length,
+        saved.catalysts.length,
         source,
-        JSON.stringify(brief),
+        JSON.stringify(saved),
       ],
     );
   } catch (error) {
     console.warn("[morning-brief] Snapshot save failed:", error);
   }
+  return saved;
+}
+
+export type SavedMorningBrief = {
+  brief: MorningBrief;
+  source: string;
+  generatedAt: string;
+  ageSec: number;
+  ageLabel: string;
+};
+
+/** Newest saved brief for a market (any source), with its age. Null when none has been saved. */
+export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now()): Promise<SavedMorningBrief | null> {
+  await ensureMorningBriefTables();
+  const rows = await q<{ brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }>(
+    `SELECT brief_id, generated_at, source, snapshot
+       FROM admin_morning_briefs
+      WHERE market = $1 AND timeframe = $2
+      ORDER BY generated_at DESC
+      LIMIT 1`,
+    [market, timeframe],
+  );
+  const row = rows[0];
+  if (!row?.snapshot || typeof row.snapshot !== "object") return null;
+  const generatedAt = new Date(row.generated_at).toISOString();
+  const ageSec = Math.max(0, Math.round((nowMs - Date.parse(generatedAt)) / 1000));
+  return {
+    brief: { ...row.snapshot, briefId: row.brief_id },
+    source: row.source,
+    generatedAt,
+    ageSec,
+    ageLabel: formatBriefAge(ageSec),
+  };
+}
+
+export function formatBriefAge(ageSec: number): string {
+  if (ageSec < 90) return "just now";
+  const min = Math.round(ageSec / 60);
+  if (min < 90) return `${min} min ago`;
+  const hours = Math.round(ageSec / 3600);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.round(ageSec / 86400)} days ago`;
+}
+
+/* ── Admin "Rebuild" (overlap-protected, rate-limited) ──── */
+
+export function morningBriefRebuildMinIntervalSec(): number {
+  const n = Number(process.env.ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC);
+  return Number.isFinite(n) && n >= 0 ? n : 300;
+}
+
+const rebuildsInFlight = new Set<string>();
+
+export type MorningBriefRebuildResult =
+  | { ok: true; saved: SavedMorningBrief }
+  | { ok: false; status: 409 | 429 | 500; error: string; retryAfterSec?: number };
+
+/**
+ * Admin rebuild: refused (409) while one for the same market+timeframe is running on this instance, and limited
+ * (429) to one per ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC (default 300 s) per market, judged from the newest saved
+ * admin brief. Built from the shared saved scan and saved under the ":admin" id.
+ */
+export async function requestMorningBriefRebuild(input: {
+  market: Market;
+  timeframe?: string;
+  scanLimit?: number;
+  nowMs?: number;
+  build?: typeof buildMorningBrief;
+}): Promise<MorningBriefRebuildResult> {
+  const timeframe = input.timeframe || "15m";
+  const key = `${input.market}:${timeframe}`;
+  if (rebuildsInFlight.has(key)) {
+    return { ok: false, status: 409, error: "A morning brief rebuild is already running for this market." };
+  }
+  rebuildsInFlight.add(key);
+  try {
+    const nowMs = input.nowMs ?? Date.now();
+    const minGapMs = morningBriefRebuildMinIntervalSec() * 1000;
+    if (minGapMs > 0) {
+      await ensureMorningBriefTables();
+      const rows = await q<{ last: string | Date | null }>(
+        `SELECT MAX(generated_at) AS last FROM admin_morning_briefs WHERE source = 'admin' AND market = $1 AND timeframe = $2`,
+        [input.market, timeframe],
+      );
+      const lastMs = rows[0]?.last ? new Date(rows[0].last).getTime() : NaN;
+      if (Number.isFinite(lastMs) && nowMs - lastMs < minGapMs) {
+        const retryAfterSec = Math.ceil((minGapMs - (nowMs - lastMs)) / 1000);
+        return { ok: false, status: 429, error: `Brief rebuild is limited to one per ${Math.round(minGapMs / 60000)} min per market.`, retryAfterSec };
+      }
+    }
+    const build = input.build ?? buildMorningBrief;
+    const brief = await build({ market: input.market, timeframe, scanLimit: input.scanLimit });
+    const saved = await saveMorningBriefSnapshot(brief, "admin");
+    return {
+      ok: true,
+      saved: { brief: saved, source: "admin", generatedAt: saved.generatedAt, ageSec: 0, ageLabel: "just now" },
+    };
+  } catch (err) {
+    return { ok: false, status: 500, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    rebuildsInFlight.delete(key);
+  }
+}
+
+/** Sydney-day brief id the daily email/cron uses for a market+timeframe (idempotency key for the email job). */
+export function dailyMorningBriefId(market: Market, timeframe = "15m", nowMs: number = Date.now()): string {
+  return `${sydneyDateKey(new Date(nowMs).toISOString())}:${market}:${timeframe}`;
+}
+
+/** True when the cron already saved (i.e. built and emailed) today's brief for this id. */
+export async function cronBriefAlreadySent(briefId: string): Promise<boolean> {
+  await ensureMorningBriefTables();
+  const rows = await q<{ n: number }>(
+    `SELECT 1 AS n FROM admin_morning_briefs WHERE brief_id = $1 AND source = 'cron' LIMIT 1`,
+    [briefId],
+  );
+  return rows.length > 0;
 }
 
 export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHit): Promise<MorningTradePlan> {
@@ -1747,7 +1975,11 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
       SELECT brief_id, generated_at, snapshot
       FROM admin_morning_briefs
       WHERE generated_at < NOW() - INTERVAL '6 hours'
-      ORDER BY generated_at DESC
+      -- Grade the brief that was sent: newest Sydney day first, and within that day the cron/email brief
+      -- ahead of any admin rebuild (":admin" rows).
+      ORDER BY (generated_at AT TIME ZONE 'Australia/Sydney')::date DESC,
+               (source = 'admin') ASC,
+               generated_at DESC
       LIMIT 1
     `);
     const prior = rows[0];
@@ -2039,7 +2271,7 @@ function resolveDeskState(
   topPlays: ScannerHit[],
   watchlist: ScannerHit[],
 ): DeskState {
-  if (risk.killSwitchActive || risk.dailyDrawdown >= 0.04 || health.errorsCount && health.errorsCount > 3) return "BLOCK";
+  if (risk.killSwitchActive || risk.dailyDrawdown >= 0.04 || health.errorsCount && health.errorsCount > Math.max(3, (health.symbolsScanned ?? 0) * 0.25)) return "BLOCK";
   if (risk.correlationRisk >= 0.65 || risk.dailyDrawdown >= 0.02) return "DEFENSIVE";
   if (topPlays.length > 0) return "TRADE";
   if (watchlist.length > 0) return "WAIT";
@@ -2641,6 +2873,7 @@ async function buildBriefComparison(
       SELECT brief_id, generated_at, desk_state, snapshot
       FROM admin_morning_briefs
       WHERE brief_id != $1
+        AND brief_id != $1 || ':admin'
         AND market = $2
         AND timeframe = $3
       ORDER BY generated_at DESC
