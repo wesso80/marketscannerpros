@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP, resolveSymbolToId } from '@/lib/coingecko';
+import { findCryptoAliases } from '@/lib/scanner/cryptoAliases';
 import { proTimeframe } from '@/lib/scanner/timeframes';
 import { summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
@@ -2356,8 +2357,15 @@ export async function POST(req: NextRequest) {
     const derivatives = derivativeReads[0]?.status === 'fulfilled' ? derivativeReads[0].value : [];
     const markets = marketReads[0]?.status === 'fulfilled' ? marketReads[0].value ?? [] : [];
     const marketById = new Map(markets.map(coin => [coin.id, coin]));
+    // SC-12: never list the same coin twice under different tickers.
+    const aliasOf = findCryptoAliases(histories.map((read, index) => ({
+      symbol: universe[index],
+      coinId: read.status === 'fulfilled' ? read.value.basis?.coinId : null,
+    })), SYMBOL_TO_COINGECKO);
     histories.forEach((read, index) => {
       const symbol = universe[index];
+      const canonical = aliasOf.get(symbol);
+      if (canonical) { excluded.push({ symbol, reason: `duplicate_of_${canonical}` }); return; }
       if (read.status === 'rejected') {
         excluded.push({ symbol, reason: 'time_budget_or_provider_failure' });
         return;

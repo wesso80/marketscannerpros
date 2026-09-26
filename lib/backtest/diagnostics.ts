@@ -1,4 +1,6 @@
 import type { BacktestEngineResult, BacktestTrade } from '@/lib/backtest/engine';
+import { assessBacktestEdge, EDGE_INVALIDATION_RULE, LOW_WIN_RATE_PCT } from '@/lib/backtest/edgeAssessment';
+import { hasNoLosses, hasSufficientSample, MIN_TRADES_FOR_EXECUTE } from '@/lib/backtest/profitFactorScore';
 
 export type StrategyDirection = 'bullish' | 'bearish' | 'both';
 
@@ -27,13 +29,11 @@ function uniquePush(target: string[], value: string) {
   }
 }
 
-  function numericProfitFactor(result: BacktestEngineResult): number {
-    return result.profitFactor ?? 0;
-  }
-
-  function formatProfitFactor(result: BacktestEngineResult): string {
-    return result.profitFactor == null ? result.profitFactorLabel ?? 'unavailable' : result.profitFactor.toFixed(2);
-  }
+function formatProfitFactor(result: BacktestEngineResult): string {
+  if (result.profitFactor != null) return result.profitFactor.toFixed(2);
+  if (hasNoLosses(result)) return `∞ (${result.profitFactorLabel ?? 'no losing trades in sample'})`;
+  return result.profitFactorLabel ?? 'unavailable';
+}
 
 export function inferStrategyDirection(strategyId: string, trades: BacktestTrade[]): StrategyDirection {
   const hasLong = trades.some((trade) => trade.side === 'LONG');
@@ -56,7 +56,7 @@ export function buildBacktestDiagnostics(
   const failureTags: string[] = [];
   const adjustments: BacktestAdjustmentSuggestion[] = [];
 
-  if (result.totalTrades < 8) {
+  if (result.totalTrades < MIN_TRADES_FOR_EXECUTE) {
     uniquePush(failureTags, 'low_sample_size');
     adjustments.push({
       key: 'expand_sample',
@@ -65,7 +65,7 @@ export function buildBacktestDiagnostics(
     });
   }
 
-  if (result.winRate < 45) {
+  if (result.winRate < LOW_WIN_RATE_PCT) {
     uniquePush(failureTags, 'low_win_rate');
     adjustments.push({
       key: 'tighten_entries',
@@ -110,16 +110,14 @@ export function buildBacktestDiagnostics(
     });
   }
 
-  const invalidationRule = strategyDirection === 'both'
-    ? 'Invalidated when return < 0% and profit factor < 1.00'
-    : `Invalidated when ${strategyDirection} edge has return < 0% or profit factor < 1.00`;
-
+  // Shared with the validation badge (lib/backtest/edgeAssessment.ts): invalidated only when
+  // return < 0% and profit factor < 1. A low win rate or small sample is a flag ("watch").
+  const edge = assessBacktestEdge(result);
+  // The rule is the same for bullish, bearish and two-way strategies (the old directional text
+  // said "or" while the code applied "and").
+  const invalidationRule = EDGE_INVALIDATION_RULE;
   const invalidationStatus: 'valid' | 'watch' | 'invalidated' =
-    result.totalReturn < 0 && result.profitFactor != null && result.profitFactor < 1
-      ? 'invalidated'
-      : result.profitFactor == null || result.totalReturn < 0 || (result.profitFactor != null && result.profitFactor < 1) || result.winRate < 45
-      ? 'watch'
-      : 'valid';
+    edge.status === 'invalidated' ? 'invalidated' : edge.status === 'validated' ? 'valid' : 'watch';
 
   const invalidationReason = invalidationStatus === 'invalidated'
     ? `Setup is currently invalidated (${result.totalReturn.toFixed(2)}% return, PF ${formatProfitFactor(result)}).`
@@ -127,20 +125,27 @@ export function buildBacktestDiagnostics(
     ? `Setup is fragile (${result.totalReturn.toFixed(2)}% return, PF ${formatProfitFactor(result)}, WR ${result.winRate.toFixed(1)}%).`
     : `Setup remains valid (${result.totalReturn.toFixed(2)}% return, PF ${formatProfitFactor(result)}).`;
 
+  // No losing trades scores as the best profit factor (capped), not 0.
   const scoreRaw =
-    (numericProfitFactor(result) * 35) +
+    (edge.profitFactorScore * 35) +
     (result.winRate * 0.35) +
     (Math.max(result.totalReturn, -40) * 0.4) -
     (result.maxDrawdown * 1.1);
 
   const score = Math.max(0, Math.min(100, Math.round(scoreRaw)));
   const verdict: 'healthy' | 'watch' | 'invalidated' =
-    invalidationStatus === 'invalidated' ? 'invalidated' : result.profitFactor != null && score >= 60 ? 'healthy' : 'watch';
+    invalidationStatus === 'invalidated'
+      ? 'invalidated'
+      : score >= 60 && hasSufficientSample(result)
+      ? 'healthy'
+      : 'watch';
 
   const summary = verdict === 'healthy'
     ? `Edge is stable on ${timeframe} with score ${score}/100. Maintain current rule set and monitor drift.`
     : verdict === 'invalidated'
     ? `Edge is invalidated on ${timeframe}. Prioritize the top adjustments before deploying.`
+    : score >= 60 && !hasSufficientSample(result)
+    ? `Score ${score}/100 on ${timeframe}, but only ${result.totalTrades} trade${result.totalTrades === 1 ? '' : 's'} (fewer than ${MIN_TRADES_FOR_EXECUTE}). Too small a sample to call the edge healthy; extend the date range.`
     : `Edge is borderline on ${timeframe} with score ${score}/100. Tighten rules before scenario escalation.`;
 
   return {
