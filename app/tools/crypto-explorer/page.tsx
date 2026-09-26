@@ -717,7 +717,7 @@ function CryptoDetailPageContent() {
                 <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
 
-              <div className="mt-2 max-h-[420px] overflow-y-auto space-y-2 pr-1">
+              <div className="mt-2 space-y-2">
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="mb-1 text-[11px] uppercase text-slate-500">Performance</p>

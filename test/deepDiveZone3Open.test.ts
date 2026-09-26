@@ -13,5 +13,9 @@ describe('Deep-Dive Zone 3 is open by default and still collapsible', () => {
     expect(zone3![1]).toMatch(/\sopen[\s>]/);
     expect(zone3![2]).not.toMatch(/collapsed by default/i);
     expect(src).toContain('group-open:inline">Collapse');
+    // Now that Zone 3 opens by default there must be no inner scroll box (no second scroll to reach tickers/About).
+    const body = src.slice(zone3!.index!, src.indexOf('</details>', zone3!.index!));
+    expect(body).not.toMatch(/max-h-\[\d+px\]/);
+    expect(body).not.toMatch(/overflow-y-(auto|scroll)/);
   });
 });
