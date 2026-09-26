@@ -8,6 +8,16 @@ export function isRecentNews(value: string, now = Date.now(), hours = 24): boole
   const age = now - newsPublishedAt(value);
   return Number.isFinite(age) && age >= 0 && age <= hours * 3_600_000;
 }
+/**
+ * Headline for the News Intelligence gate when no article from the last 24 hours is in view (RS-20). "No news from the
+ * last 24 hours" only when there really is none; when recent articles exist but the page filters (sentiment, search,
+ * bucket, hide low-quality) hide them, say so instead of contradicting the brief built from those same articles.
+ */
+export function noRecentNewsLabel(recentTotal: number): string {
+  if (recentTotal <= 0) return 'No news from the last 24 hours';
+  return `${recentTotal} article${recentTotal === 1 ? '' : 's'} from the last 24 hours hidden by the current filters`;
+}
+
 export function newsTopicFlags(text: string) {
   return {
     macro: /\b(fomc|cpi|nfp|payrolls?|interest rates?|fed|federal reserve|inflation|yields?|treasur(?:y|ies))\b/i.test(text),

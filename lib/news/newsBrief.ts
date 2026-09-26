@@ -79,8 +79,9 @@ export function stripAdviceSentences(text: string | null | undefined): string | 
   const out = text
     .split('\n')
     .map((line) => {
-      // Split on sentence ends, keeping the punctuation.
-      const sentences = line.match(/[^.!?]+[.!?]+["')\]]*\s*|[^.!?]+$/g) ?? [line];
+      // Split on sentence ends (punctuation followed by a space or the end of the line), keeping the punctuation.
+      // A full stop inside a number ("2.5%", "$1.2bn") is not a sentence end (RS-20).
+      const sentences = line.match(/.*?[.!?]+["')\]]*(?=\s|$)\s*|.+$/g) ?? [line];
       return sentences.filter((s) => !containsAdvice(s)).join('').trimEnd();
     })
     .join('\n')
