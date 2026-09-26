@@ -1,3 +1,5 @@
+import { EQUITY_NEWS_MIN_RELEVANCE, EQUITY_NEWS_STRONG_RELEVANCE, mentionsCompany } from '@/lib/equityNewsRelevance';
+
 /**
  * Symbol-specific news filtering and catalyst classification.
  * Alpha Vantage NEWS_SENTIMENT returns `ticker_sentiment[]` with per-ticker relevance; only articles that actually
@@ -31,7 +33,12 @@ export interface RelevantArticle {
   catalystReason: string;
 }
 
-export const NEWS_MIN_RELEVANCE = 0.35;
+/**
+ * Same rule as the Equity Deep-Dive (lib/equityNewsRelevance.ts): AV gives unrelated filings 0.5-0.65 relevance for a
+ * ticker, so a floor alone lets them through. Keep an article only when relevance >= 0.3 AND it names the
+ * company/ticker, or AV scores it >= 0.9 (about the ticker even under a nickname).
+ */
+export const NEWS_MIN_RELEVANCE = EQUITY_NEWS_MIN_RELEVANCE;
 
 /** Alpha Vantage ticker keys: equities plain (META), crypto prefixed (CRYPTO:BTC), forex FOREX:EUR. */
 export function avTickerKey(symbol: string, assetClass: 'equity' | 'crypto' | 'forex'): string {
@@ -51,7 +58,7 @@ export function filterRelevantNews(
   feed: RawAvArticle[] | null | undefined,
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',
-  opts: { minRelevance?: number; limit?: number } = {},
+  opts: { minRelevance?: number; limit?: number; companyName?: string | null } = {},
 ): RelevantArticle[] {
   if (!Array.isArray(feed)) return [];
   const key = avTickerKey(symbol, assetClass);
@@ -63,6 +70,7 @@ export function filterRelevantNews(
     const relevance = Number(ts.relevance_score);
     if (!Number.isFinite(relevance) || relevance < minRel) continue;
     const text = `${a.title ?? ''} ${a.summary ?? ''}`;
+    if (relevance < EQUITY_NEWS_STRONG_RELEVANCE && !mentionsCompany(text, key.replace(/^(CRYPTO|FOREX):/, ''), opts.companyName)) continue;
     const cat = classifyCatalyst(text);
     out.push({
       title: a.title ?? '',

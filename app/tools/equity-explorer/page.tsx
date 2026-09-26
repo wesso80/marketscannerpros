@@ -7,6 +7,7 @@ import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { formatNewsPublished } from '@/lib/equityNewsRelevance';
 
 interface EquityData {
   company: {
@@ -767,7 +768,7 @@ function EquityExplorerContent() {
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Event Risk</p>
-                    <p className="text-xs text-slate-200">Earnings: <span className="font-semibold">Upcoming schedule check</span> • News: <span className="font-semibold">{getAggregateSentiment(data.news)?.label || 'Neutral'}</span></p>
+                    <p className="text-xs text-slate-200">Earnings: <span className="font-semibold">Upcoming schedule check</span> • News: <span className="font-semibold">{getAggregateSentiment(data.news)?.label || 'No ticker-specific news'}</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-400">
                     {upeSignal?.eligibilityUser === 'conditional' ? 'Conditional — trend + volume confirmation indicated.' : upeSignal?.eligibilityUser === 'blocked' ? 'Not aligned — conditions not aligned.' : 'Aligned — conditions broadly aligned.'}
@@ -1029,7 +1030,7 @@ function EquityExplorerContent() {
                     if (!sentiment) return null;
                     return (
                       <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                        <span className="text-[11px] text-slate-400">News Sentiment:</span>
+                        <span className="text-[11px] text-slate-400" title={`Average ${data.company.symbol} sentiment across ${data.news.length} ${data.company.symbol}-specific article${data.news.length === 1 ? '' : 's'}`}>{data.company.symbol} News Sentiment:</span>
                         <span className={`font-bold ${sentiment.color}`}>
                           {sentiment.score}% {sentiment.label}
                         </span>
@@ -1068,7 +1069,7 @@ function EquityExplorerContent() {
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <span>{article.source}</span>
                             <span>•</span>
-                            <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+                            <span>{formatNewsPublished(article.publishedAt) ?? 'Date unavailable'}</span>
                           </div>
                         </div>
                         <SentimentBadge sentiment={article.sentiment} />

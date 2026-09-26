@@ -2,6 +2,7 @@ import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { selectTickerNews } from '@/lib/equityNewsRelevance';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const BASE_URL = 'https://www.alphavantage.co/query';
@@ -113,7 +114,8 @@ export async function GET(request: NextRequest) {
       fetch(`${BASE_URL}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=INCOME_STATEMENT&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
-      fetch(`${BASE_URL}?function=NEWS_SENTIMENT&tickers=${symbol}&limit=10&apikey=${ALPHA_VANTAGE_API_KEY}`),
+      // 50 (not 10): most of AV's ticker feed is about other issuers, so ask for enough to keep ~10 ticker-specific items (OV-17).
+      fetch(`${BASE_URL}?function=NEWS_SENTIMENT&tickers=${symbol}&sort=LATEST&limit=50&apikey=${ALPHA_VANTAGE_API_KEY}`),
     ]);
 
     const [overviewRaw, quote, daily, income, earnings, news] = await Promise.all([
@@ -123,7 +125,7 @@ export async function GET(request: NextRequest) {
       incomeRes.json(),
       earningsRes.json(),
       newsRes.json(),
-    ]) as [OverviewData & { 'Error Message'?: string; 'Note'?: string }, { 'Global Quote': GlobalQuote }, Record<string, unknown>, { annualReports?: IncomeStatement[]; quarterlyReports?: IncomeStatement[] }, { annualEarnings?: EarningsData[]; quarterlyEarnings?: EarningsData[] }, { feed?: Array<{ title: string; url: string; time_published: string; authors: string[]; summary: string; source: string; overall_sentiment_label: string; overall_sentiment_score: number; ticker_sentiment?: Array<{ ticker: string; relevance_score: string; ticker_sentiment_label: string }> }> }];
+    ]) as [OverviewData & { 'Error Message'?: string; 'Note'?: string }, { 'Global Quote': GlobalQuote }, Record<string, unknown>, { annualReports?: IncomeStatement[]; quarterlyReports?: IncomeStatement[] }, { annualEarnings?: EarningsData[]; quarterlyEarnings?: EarningsData[] }, { feed?: Array<{ title: string; url: string; time_published: string; authors: string[]; summary: string; source: string; overall_sentiment_label: string; overall_sentiment_score: number; ticker_sentiment?: Array<{ ticker: string; relevance_score: string; ticker_sentiment_score?: string; ticker_sentiment_label: string }> }> }];
 
     // Check for API errors
     if (overviewRaw['Error Message'] || overviewRaw['Note']) {
@@ -217,16 +219,8 @@ export async function GET(request: NextRequest) {
       surprisePercent: parseFloat(e.surprisePercentage) || 0,
     }));
 
-    // Parse news
-    const newsItems = (news.feed || []).slice(0, 10).map((item) => ({
-      title: item.title,
-      url: item.url,
-      publishedAt: item.time_published,
-      source: item.source,
-      sentiment: item.overall_sentiment_label,
-      sentimentScore: item.overall_sentiment_score,
-      summary: item.summary?.slice(0, 200),
-    }));
+    // Parse news: only items actually about this ticker, with a real UTC timestamp and this ticker's sentiment (OV-17).
+    const newsItems = selectTickerNews(news.feed, symbol, overview.Name, { limit: 10 });
 
     // Calculate analyst ratings distribution
     const analystRatings = {
