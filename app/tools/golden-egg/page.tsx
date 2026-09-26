@@ -25,6 +25,7 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { setupTypeDisplay } from '@/lib/scoring/canonical/scannerAdapter';
 import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
@@ -442,7 +443,7 @@ export default function GoldenEggPage() {
   const geAssessmentLabel = geNoQualifyingSetup ? 'No Setup' : assessmentDisplayLabel(geAssessment);
   const geReason = geNoQualifyingSetup
     ? `No canonical setup qualifies on this bar${geNoSetup?.detail ? ` — ${geNoSetup.detail.replace(/^Closest:/, 'closest:')}` : ''}.`
-    : summarizeGEReason({ direction: ge?.layer1?.direction, setupType: ge?.layer2?.setup?.setupType, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
+    : summarizeGEReason({ direction: ge?.layer1?.direction, setupType: setupTypeDisplay(geEngine, ge?.layer2?.setup?.setupType, { withDirection: false }).toLowerCase(), confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geInvalidationConditions = buildGEInvalidationConditions({ confluence: geConfluenceScore, dataQuality: geDataQuality, primaryBlocker: ge?.layer1?.primaryBlocker, crossMarket: crossMarketAlignment.alignment, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
   const geMarketStatusItems = [
@@ -1170,7 +1171,8 @@ export default function GoldenEggPage() {
               <div className="space-y-3">
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase">Setup Type</div>
-                  <div className="text-sm text-white font-semibold capitalize">{ge.layer2.setup.setupType.replace(/_/g, ' ')}</div>
+                  {/* Canonical setup when there is one (the legacy engine's label read "trend" on an exhaustion fade). */}
+                  <div className="text-sm text-white font-semibold" data-testid="ge-setup-type" title={geEngine ? `Canonical setup engine${ge.layer2.setup.setupType ? ` (legacy engine read: ${ge.layer2.setup.setupType.replace(/_/g, ' ')})` : ''}` : undefined}>{setupTypeDisplay(geEngine, ge.layer2.setup.setupType)}</div>
                 </div>
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase">Thesis</div>
