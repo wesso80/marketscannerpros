@@ -33,6 +33,8 @@ async function adminFetch<T>(url: string): Promise<T> {
 type ScannerResponse = {
   hits: ScannerHit[];
   health: SystemHealth;
+  /** Saved-scan age/status (the feed serves the shared saved admin scan). */
+  savedScan?: import("@/components/admin/SavedScanStatus").SavedScanStatusData;
   meta: {
     symbolsScanned: number;
     errorsCount: number;
@@ -49,6 +51,7 @@ export function useScannerFeed(
 ) {
   const [hits, setHits] = useState<ScannerHit[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [savedScan, setSavedScan] = useState<ScannerResponse["savedScan"] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +66,7 @@ export function useScannerFeed(
       );
       setHits(data.hits);
       setHealth(data.health);
+      setSavedScan(data.savedScan ?? null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Scanner fetch failed");
     } finally {
@@ -78,7 +82,7 @@ export function useScannerFeed(
     }
   }, [fetchScanner, pollInterval]);
 
-  return { hits, health, loading, error, refetch: fetchScanner };
+  return { hits, health, savedScan, loading, error, refetch: fetchScanner };
 }
 
 /* ── Symbol Intelligence ── */

@@ -15,13 +15,22 @@ const CRYPTO_UNIVERSE = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "A
 const EQUITY_UNIVERSE = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
 // HIGH_PRIORITY_RESCAN and WATCHLIST stay narrow on purpose — they exist to
 // re-poll anchors fast without burning AV/CG quota on the full universe.
-const HIGH_PRIORITY_ANCHORS = ["SPY", "QQQ", "BTC", "ETH", "AAPL", "NVDA"];
-const WATCHLIST_ANCHORS = ["AAPL", "MSFT", "NVDA", "BTC", "ETH", "SOL"];
+// Split by market: a single mixed list sent crypto tickers (BTC/ETH/SOL) to the
+// equity pipeline, where they were looked up as US stock tickers.
+const HIGH_PRIORITY_ANCHORS: Record<"CRYPTO" | "EQUITIES", string[]> = {
+  EQUITIES: ["SPY", "QQQ", "AAPL", "NVDA"],
+  CRYPTO: ["BTC", "ETH"],
+};
+const WATCHLIST_ANCHORS: Record<"CRYPTO" | "EQUITIES", string[]> = {
+  EQUITIES: ["AAPL", "MSFT", "NVDA"],
+  CRYPTO: ["BTC", "ETH", "SOL"],
+};
 
 function defaultSymbols(mode: SchedulerMode, market: string): string[] {
-  if (mode === "HIGH_PRIORITY_RESCAN") return HIGH_PRIORITY_ANCHORS;
-  if (mode === "WATCHLIST") return WATCHLIST_ANCHORS;
-  if (market === "CRYPTO") return CRYPTO_UNIVERSE;
+  const m = market === "CRYPTO" ? "CRYPTO" : "EQUITIES";
+  if (mode === "HIGH_PRIORITY_RESCAN") return HIGH_PRIORITY_ANCHORS[m];
+  if (mode === "WATCHLIST") return WATCHLIST_ANCHORS[m];
+  if (m === "CRYPTO") return CRYPTO_UNIVERSE;
   return EQUITY_UNIVERSE;
 }
 

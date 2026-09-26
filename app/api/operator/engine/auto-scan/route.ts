@@ -1,9 +1,13 @@
 /**
- * POST /api/operator/engine/auto-scan — Run auto-scan against a named watchlist
- * GET  /api/operator/engine/auto-scan — Get current auto-scan state & latest results
+ * POST /api/operator/engine/auto-scan — trigger the shared saved admin scan
+ * GET  /api/operator/engine/auto-scan — saved radar for a watchlist
  *
- * The auto-scan stores latest results in memory so the dashboard can poll.
- * Each POST triggers a full scan of the selected watchlist.
+ * The nine admin-radar-equity-* Render crons POST here. Each POST now starts the shared scan job
+ * (lib/admin/sharedScan.ts) for the watchlist's market across the whole admin universe; symbols
+ * checked within the last ADMIN_SCAN_MAX_AGE_MIN minutes are not fetched again, so staggered crons no
+ * longer re-fetch the same names, and a POST that arrives while a run is in progress is a no-op.
+ * The radar is read from admin_scan_results (persisted), not from process memory, so it survives
+ * restarts and is the same on every instance.
  *
  * Body: { watchlist: string, timeframe?: string }
  * @internal PRIVATE — operator auth required
@@ -13,50 +17,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { isOperator } from '@/lib/quant/operatorAuth';
 import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
-import { runScan, createScanEnvelope } from '@/lib/operator/orchestrator';
-import type { Market, RadarOpportunity } from '@/types/operator';
-import { alphaVantageProvider } from '@/lib/operator/market-data';
+import type { RadarOpportunity } from '@/types/operator';
 import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
-import { opsAlert } from '@/lib/opsAlerting';
-import { radarState } from '@/lib/operator/radar-state';
-import { DEFAULT_ADMIN_SCAN_CONTEXT } from '@/lib/admin/scan-context';
+import { detachRun, readSavedScan, savedScanStaleAfterSec, startSharedScan, type StartSharedScanResult } from '@/lib/admin/sharedScan';
+import { loadRecentRadarChanges } from '@/lib/admin/sharedScanStore';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-/* ── In-memory auto-scan state ──────────────────────────────── */
+const DEFAULT_WATCHLIST = 'us-mega-cap';
+const DEFAULT_TIMEFRAME = '15m';
 
-interface AutoScanState {
-  active: boolean;
-  watchlistKey: string;
-  timeframe: string;
-  lastScanAt: string | null;
-  lastScanDurationMs: number;
-  symbolsScanned: number;
-  totalScans: number;
-  /** Cumulative radar — best opportunity per symbol, updated each scan */
-  liveRadar: RadarOpportunity[];
-  /** History of when symbols first appeared / disappeared */
-  radarHistory: { timestamp: string; symbol: string; action: 'appeared' | 'dropped'; permission: string; confidence: number }[];
-  errors: { symbol: string; error: string }[];
-}
-
-const autoState: AutoScanState = {
-  active: false,
-  watchlistKey: 'us-mega-cap',
-  timeframe: '1D',
-  lastScanAt: null,
-  lastScanDurationMs: 0,
-  symbolsScanned: 0,
-  totalScans: 0,
-  liveRadar: [],
-  radarHistory: [],
-  errors: [],
-};
-
-// Conservative admin context: zero equity / WAIT permission / no execution.
-// Discovery analytics only — never represents live account state.
-const DEFAULT_CONTEXT = DEFAULT_ADMIN_SCAN_CONTEXT;
+/** Scan requests handled by this process (display only). */
+let totalScans = 0;
 
 /* ── Auth helper ────────────────────────────────────────────── */
 
@@ -69,39 +42,74 @@ async function checkAuth(req: NextRequest): Promise<boolean> {
   return !!(session && isOperator(session.cid, session.workspaceId));
 }
 
-/* ── GET: poll for latest state ─────────────────────────────── */
+/* ── Saved state for a watchlist ────────────────────────────── */
+
+async function savedState(watchlistKey: string, timeframe: string) {
+  const wl = DEFAULT_WATCHLISTS[watchlistKey] ?? DEFAULT_WATCHLISTS[DEFAULT_WATCHLIST];
+  const view = await readSavedScan({ market: wl.market as 'EQUITIES' | 'CRYPTO', timeframe, symbols: wl.symbols });
+  const staleAfter = savedScanStaleAfterSec();
+  const wlSymbols = new Set(wl.symbols.map((s) => s.toUpperCase()));
+  const liveRadar: RadarOpportunity[] = view.rows
+    .filter((r) => r.status === 'ok' && r.ageSec != null && r.ageSec <= staleAfter)
+    .flatMap((r) => r.radar)
+    .sort((a, b) => b.confidenceScore - a.confidenceScore);
+  const radarHistory = view.available
+    ? (await loadRecentRadarChanges(timeframe, 400).catch(() => [])).filter((c) => wlSymbols.has(c.symbol)).slice(-200)
+    : [];
+  const lastRun = view.lastRun;
+  return {
+    active: !!view.running,
+    watchlistKey,
+    timeframe,
+    lastScanAt: view.newestScannedAt,
+    lastScanDurationMs: lastRun?.startedAt && lastRun.finishedAt ? Date.parse(lastRun.finishedAt) - Date.parse(lastRun.startedAt) : 0,
+    symbolsScanned: view.rows.filter((r) => r.scannedAt).length,
+    totalScans,
+    liveRadar,
+    radarHistory,
+    errors: view.rows.filter((r) => r.status !== 'ok').map((r) => ({ symbol: r.symbol, error: r.error ?? r.status })),
+    savedScan: {
+      available: view.available,
+      message: view.message ?? null,
+      ageSec: view.ageSec,
+      ageLabel: view.ageLabel,
+      oldestScannedAt: view.oldestScannedAt,
+      lastRun,
+      running: view.running,
+    },
+    watchlistInfo: wl,
+    availableWatchlists: Object.entries(DEFAULT_WATCHLISTS).map(([key, w]) => ({
+      key,
+      name: w.name,
+      market: w.market,
+      symbolCount: w.symbols.length,
+    })),
+  };
+}
+
+/* ── GET: saved radar ───────────────────────────────────────── */
 
 export async function GET(req: NextRequest) {
   if (!(await checkAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
-
-  return NextResponse.json({
-    ok: true,
-    data: {
-      ...autoState,
-      watchlistInfo: DEFAULT_WATCHLISTS[autoState.watchlistKey] ?? null,
-      availableWatchlists: Object.entries(DEFAULT_WATCHLISTS).map(([key, wl]) => ({
-        key,
-        name: wl.name,
-        market: wl.market,
-        symbolCount: wl.symbols.length,
-      })),
-    },
-  });
+  const watchlistKey = req.nextUrl.searchParams.get('watchlist') || DEFAULT_WATCHLIST;
+  const timeframe = req.nextUrl.searchParams.get('timeframe') || DEFAULT_TIMEFRAME;
+  return NextResponse.json({ ok: true, data: await savedState(watchlistKey, timeframe) });
 }
 
-/* ── POST: trigger a scan cycle ─────────────────────────────── */
+/* ── POST: start the shared scan ────────────────────────────── */
 
 export async function POST(req: NextRequest) {
-  if (!(await checkAuth(req))) {
+  const isCron = verifyCronAuth(req);
+  if (!isCron && !(await checkAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
-    const body = await req.json();
-    const watchlistKey = typeof body.watchlist === 'string' ? body.watchlist : autoState.watchlistKey;
-    const timeframe = typeof body.timeframe === 'string' ? body.timeframe : autoState.timeframe;
+    const body = await req.json().catch(() => ({}));
+    const watchlistKey = typeof body.watchlist === 'string' ? body.watchlist : DEFAULT_WATCHLIST;
+    const timeframe = typeof body.timeframe === 'string' && body.timeframe ? body.timeframe : DEFAULT_TIMEFRAME;
 
     const wl = DEFAULT_WATCHLISTS[watchlistKey];
     if (!wl) {
@@ -111,98 +119,31 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Update state
-    autoState.active = true;
-    autoState.watchlistKey = watchlistKey;
-    autoState.timeframe = timeframe;
-
-    const start = Date.now();
-
-    // Run the scan across all watchlist symbols
-    const result = await runScan(
-      { symbols: wl.symbols, market: wl.market, timeframe },
-      DEFAULT_CONTEXT,
-      alphaVantageProvider,
-    );
-
-    const duration = Date.now() - start;
-
-    // Track radar changes (appeared / dropped)
-    const prevSymbols = new Set(autoState.liveRadar.map(r => r.symbol));
-    const newSymbols = new Set(result.radar.map(r => r.symbol));
-    const now = new Date().toISOString();
-
-    for (const r of result.radar) {
-      if (!prevSymbols.has(r.symbol)) {
-        autoState.radarHistory.push({
-          timestamp: now,
-          symbol: r.symbol,
-          action: 'appeared',
-          permission: r.permission,
-          confidence: r.confidenceScore,
-        });
-      }
+    const start: StartSharedScanResult = await startSharedScan({
+      market: wl.market as 'EQUITIES' | 'CRYPTO',
+      timeframe,
+      trigger: isCron ? 'radar' : 'page',
+    });
+    if (!start.started && start.reason === 'error') {
+      return NextResponse.json({ error: 'Auto-scan failed', detail: start.message }, { status: 500 });
     }
-    for (const prev of autoState.liveRadar) {
-      if (!newSymbols.has(prev.symbol)) {
-        autoState.radarHistory.push({
-          timestamp: now,
-          symbol: prev.symbol,
-          action: 'dropped',
-          permission: prev.permission,
-          confidence: prev.confidenceScore,
-        });
-      }
-    }
+    detachRun(start);
+    totalScans++;
 
-    // Keep history bounded
-    if (autoState.radarHistory.length > 200) {
-      autoState.radarHistory = autoState.radarHistory.slice(-200);
-    }
-
-    // Update state
-    autoState.liveRadar = result.radar;
-    autoState.errors = result.errors;
-    autoState.lastScanAt = now;
-    autoState.lastScanDurationMs = duration;
-    autoState.symbolsScanned = result.symbolsScanned;
-    autoState.totalScans++;
-
-    // Sync to shared radar state for GET /api/operator/engine/radar
-    radarState.liveRadar = result.radar;
-    radarState.lastScanAt = now;
-
-    // Fire ops alert for new radar appearances
-    const newAppearances = autoState.radarHistory.filter(h => h.timestamp === now && h.action === 'appeared');
-    if (newAppearances.length > 0) {
-      opsAlert({
-        title: `Auto-Scan — ${newAppearances.length} New Signal(s)`,
-        message: newAppearances.map(a => `${a.symbol} (${a.permission} @ ${(a.confidence * 100).toFixed(1)}%)`).join('\n'),
-        severity: 'info',
-        source: 'auto-scan',
-        metadata: {
-          watchlist: watchlistKey,
-          symbolsScanned: result.symbolsScanned,
-          totalRadar: result.radar.length,
-          durationMs: duration,
-          scanNumber: autoState.totalScans,
-        },
-      }).catch(() => { /* never block on alert failure */ });
-    }
-
+    const data = await savedState(watchlistKey, timeframe);
     return NextResponse.json({
       ok: true,
       data: {
-        ...autoState,
-        watchlistInfo: wl,
+        ...data,
         scanResult: {
-          requestId: result.requestId,
-          environmentMode: result.environmentMode,
-          engineVersions: result.engineVersions,
-          symbolsScanned: result.symbolsScanned,
-          radarCount: result.radar.length,
-          errorCount: result.errors.length,
-          durationMs: duration,
+          requestId: start.started ? start.runId : null,
+          started: start.started,
+          skipped: start.started ? null : start.reason,
+          message: start.started ? 'Shared scan started; results are saved as each symbol completes.' : start.message,
+          symbolsScanned: data.symbolsScanned,
+          radarCount: data.liveRadar.length,
+          errorCount: data.errors.length,
+          durationMs: data.lastScanDurationMs,
         },
       },
     });

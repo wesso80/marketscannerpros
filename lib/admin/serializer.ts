@@ -19,6 +19,7 @@ import type {
 import { toPermissionState, toBiasState } from "./types";
 import { renderTruth } from "./truth-layer";
 import { computeEliteSignalScore } from "@/lib/operator/elite-score";
+import { nyDateTime, usSessionCloseMinutes } from "@/lib/time/usSession";
 
 /* ── Compute raw indicator values from bars ── */
 function computeRawIndicators(bars: Bar[]) {
@@ -31,11 +32,58 @@ function computeRawIndicators(bars: Bar[]) {
   return {
     ema20: ema(closes, 20) ?? 0,
     ema50: ema(closes, 50) ?? 0,
-    ema200: ema(closes, 200) ?? 0,
+    // Real EMA200 or null: with fewer than 200 bars there is no EMA200 (it used to read 0).
+    ema200: ema(closes, 200),
     vwap: vwap(ohlcv) ?? 0,
     atr: atr(ohlcv, 14) ?? 0,
     adx: adxResult?.adx ?? 0,
   };
+}
+
+/* ── Day change ── */
+
+function barMs(b: Bar): number {
+  const t = b.timestamp;
+  // Daily bars are "YYYY-MM-DD"; intraday bars are ISO UTC instants (see normalizeAvBarTimestamp).
+  return /^\d{4}-\d{2}-\d{2}$/.test(t) ? Date.parse(`${t}T00:00:00Z`) : Date.parse(t);
+}
+
+/**
+ * The day's change in percent, from bars alone, or null when the bars do not reach back far enough.
+ * - Daily bars: last close vs the previous daily close.
+ * - Equity intraday: last close vs the previous US session's regular-hours close (last bar starting before
+ *   the session close on the previous NY date).
+ * - Crypto intraday: last close vs the close 24 hours earlier.
+ * (It used to be last bar vs the bar before it — a one-bar change labelled as the day's change.)
+ */
+export function dayChangePercentFromBars(bars: Bar[], market?: string): number | null {
+  if (bars.length < 2) return null;
+  const last = bars[bars.length - 1];
+  if (!(last.close > 0)) return null;
+  const pct = (ref: number | undefined) => (ref && ref > 0 ? ((last.close - ref) / ref) * 100 : null);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(last.timestamp)) return pct(bars[bars.length - 2].close);
+
+  const lastMs = barMs(last);
+  if (!Number.isFinite(lastMs)) return null;
+
+  if (String(market || "").toUpperCase() === "CRYPTO") {
+    const cutoff = lastMs - 24 * 3600_000;
+    for (let i = bars.length - 2; i >= 0; i--) {
+      const ms = barMs(bars[i]);
+      if (Number.isFinite(ms) && ms <= cutoff) return pct(bars[i].close);
+    }
+    return null;
+  }
+
+  const lastDay = nyDateTime(lastMs).ymd;
+  for (let i = bars.length - 2; i >= 0; i--) {
+    const ms = barMs(bars[i]);
+    if (!Number.isFinite(ms)) continue;
+    const { ymd, minutes } = nyDateTime(ms);
+    if (ymd >= lastDay) continue;
+    if (minutes < usSessionCloseMinutes(ymd)) return pct(bars[i].close);
+  }
+  return null;
 }
 
 /* ── Map KeyLevel[] → flat levels object for admin UI ── */
@@ -93,16 +141,19 @@ export function pipelineToSymbolIntelligence(
   bars: Bar[],
   dveFlags: string[] = [],
   scanTimestamp?: string,
+  opts: {
+    market?: string;
+    /** Day change from a quote (e.g. REALTIME_BULK_QUOTES change_percent). Preferred over bars when given. */
+    dayChangePercent?: number | null;
+  } = {},
 ): AdminSymbolIntelligence {
   const v = p.verdict;
   const g = p.governance;
   const c = p.candidate;
   const lastBar = bars[bars.length - 1];
-  const prevBar = bars.length > 1 ? bars[bars.length - 2] : lastBar;
   const price = lastBar?.close ?? 0;
-  const changePercent = prevBar?.close
-    ? ((price - prevBar.close) / prevBar.close) * 100
-    : 0;
+  const quoted = opts.dayChangePercent;
+  const changePercent = (quoted != null && Number.isFinite(quoted) ? quoted : dayChangePercentFromBars(bars, opts.market ?? v.market)) ?? 0;
 
   // Extract indicator values from feature vector if available
   // These get populated by the feature engine
@@ -139,7 +190,7 @@ export function pipelineToSymbolIntelligence(
     indicators: {
       ema20: raw?.ema20 ?? 0,
       ema50: raw?.ema50 ?? 0,
-      ema200: raw?.ema200 ?? 0,
+      ema200: raw ? raw.ema200 : null,
       vwap: raw?.vwap ?? 0,
       atr: raw?.atr ?? 0,
       bbwpPercentile: features?.bbwpPercentile ?? 0,

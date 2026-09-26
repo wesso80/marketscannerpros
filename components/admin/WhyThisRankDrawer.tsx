@@ -172,7 +172,7 @@ export default function WhyThisRankDrawer({ row, onClose }: Props) {
                 <div key={axis}>
                   <div className="mb-0.5 flex items-center justify-between text-[11px]">
                     <span className={`font-bold capitalize ${score.dominantAxis === axis ? "text-emerald-300" : "text-slate-300"}`}>
-                      {axis}{score.dominantAxis === axis ? " *dominant*" : ""}
+                      {axis === "options" ? "options (placeholder proxy)" : axis}{score.dominantAxis === axis ? " *dominant*" : ""}
                     </span>
                     <span className="tabular-nums text-slate-400">{Math.round(val)}</span>
                   </div>

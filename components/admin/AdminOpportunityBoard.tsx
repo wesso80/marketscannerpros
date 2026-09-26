@@ -6,6 +6,7 @@ import WhyThisRankDrawer from "@/components/admin/WhyThisRankDrawer";
 import { ScoreTypeBadge } from "@/components/ui";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
+import SavedScanStatus, { type SavedScanStatusData } from "@/components/admin/SavedScanStatus";
 
 type Market = "CRYPTO" | "EQUITIES" | "ALL";
 
@@ -53,6 +54,7 @@ export default function AdminOpportunityBoard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<AdminOpportunityRow | null>(null);
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const [savedScan, setSavedScan] = useState<SavedScanStatusData[]>([]);
 
   async function load() {
     setLoading(true);
@@ -74,6 +76,7 @@ export default function AdminOpportunityBoard() {
       setEdgeBySymbol(map);
       setChangesBySymbol(json.changesBySymbol ?? {});
       setTimestamp(json.timestamp ?? null);
+      setSavedScan(Array.isArray(json.savedScan) ? json.savedScan : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load opportunities");
       setRows([]);
@@ -166,9 +169,27 @@ export default function AdminOpportunityBoard() {
               background: "#10B981", color: "#0F172A", border: "none",
               fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1,
             }}>
-            {loading ? "Scanning…" : "Refresh"}
+            {loading ? "Loading…" : "Refresh"}
           </button>
         </div>
+      </div>
+
+      {/* Saved-scan age + manual rescan (the board reads the shared saved admin scan) */}
+      <div style={{
+        display: "flex", flexDirection: "column", gap: 4, marginBottom: "0.75rem",
+        padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid rgba(255,255,255,0.06)",
+      }}>
+        {savedScan.map((st) => (
+          <SavedScanStatus key={st.market} status={st} onRescanStarted={() => { setTimeout(load, 45_000); }} />
+        ))}
+        {savedScan.length === 0 && !loading && (
+          <span style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>No saved scan status.</span>
+        )}
+        {timeframe !== "15m" && (
+          <span style={{ fontSize: "0.7rem", color: "#F59E0B" }}>
+            The scheduled scan saves 15m results; other timeframes only have data after a manual rescan.
+          </span>
+        )}
       </div>
 
       {error && (
@@ -187,7 +208,7 @@ export default function AdminOpportunityBoard() {
         {rows.length > 0 && (
           <> · scores {Math.min(...rows.map(r => r.score.score))}–{Math.max(...rows.map(r => r.score.score))}</>
         )}
-        {timestamp && <> · scan {new Date(timestamp).toLocaleTimeString()}</>}
+        {timestamp && <> · newest saved result {new Date(timestamp).toLocaleTimeString()}</>}
         {rows.length > 0 && filtered.length < rows.length && (
           <span style={{ color: "#F59E0B", marginLeft: 6 }}>
             ({rows.length - filtered.length} hidden by filters)

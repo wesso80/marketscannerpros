@@ -2,18 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
-import { getAdminResearchPacketsForSymbols, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { wrapTruth } from "@/lib/admin";
-import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
+import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket } from "@/lib/admin/sharedScan";
 
 export const runtime = "nodejs";
 
-// Admin Priority Desk surveys the full DEFAULT_WATCHLISTS union per market
-// (deduped, anchors first) so promising names outside the mega-caps surface.
-const EQUITIES = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
-const CRYPTO = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
+// Admin Priority Desk surveys the full DEFAULT_WATCHLISTS union per market (deduped, anchors first).
+// It reads the shared saved admin scan (lib/admin/sharedScan.ts) instead of rebuilding ~265 packets
+// live on every load/poll (~990 Alpha Vantage calls per load before). Each packet carries savedScan
+// { status, ageLabel, stale }; only current, successful results rank in the "best" lists.
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
   const adminAuth = await requireAdmin(req);
@@ -23,7 +22,7 @@ async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: 
   return { ok: true, workspaceId: session.workspaceId };
 }
 
-function topBy(packets: AdminResearchPacket[], predicate: (p: AdminResearchPacket) => boolean, max = 6): AdminResearchPacket[] {
+function topBy(packets: SavedPacket[], predicate: (p: SavedPacket) => boolean, max = 6): SavedPacket[] {
   return packets
     .filter(predicate)
     .sort((a, b) => b.trustAdjustedScore - a.trustAdjustedScore)
@@ -36,15 +35,15 @@ export async function GET(req: NextRequest) {
 
   const timeframe = req.nextUrl.searchParams.get("timeframe") || "15m";
 
-  const [{ risk }, [equityPackets, cryptoPackets]] = await Promise.all([
+  const [{ risk }, equityView, cryptoView] = await Promise.all([
     buildAdminScanContext(),
-    Promise.all([
-      getAdminResearchPacketsForSymbols({ symbols: EQUITIES, market: "EQUITIES", timeframe, workspaceId: auth.workspaceId }),
-      getAdminResearchPacketsForSymbols({ symbols: CRYPTO, market: "CRYPTO", timeframe, workspaceId: auth.workspaceId }),
-    ]),
+    readSavedScan({ market: "EQUITIES", timeframe }),
+    readSavedScan({ market: "CRYPTO", timeframe }),
   ]);
 
-  const all = [...equityPackets, ...cryptoPackets];
+  const everything = [...equityView.packets, ...cryptoView.packets];
+  // Only current, successful saved results rank; failed / skipped / stale ones go to the degraded list.
+  const all = everything.filter(isRankable);
 
   const bestEquities = topBy(all, (p) => p.assetClass === "equity");
   const bestCrypto = topBy(all, (p) => p.assetClass === "crypto");
@@ -54,14 +53,14 @@ export async function GET(req: NextRequest) {
   const bestNewsDriven = topBy(all, (p) => p.newsContext.status === "ELEVATED");
   const bestEarningsWatch = topBy(all, (p) => p.earningsContext.riskLevel === "HIGH" || p.earningsContext.riskLevel === "MEDIUM");
   const avoidTrapList = topBy(all, (p) => p.trapDetection.trapRiskScore >= 60, 8);
-  const dataDegradedList = topBy(all, (p) => ["STALE", "DEGRADED", "MISSING", "ERROR", "SIMULATED"].includes(p.dataTruth.status), 8);
+  const dataDegradedList = topBy(everything, (p) => !isRankable(p) || ["STALE", "DEGRADED", "MISSING", "ERROR", "SIMULATED"].includes(p.dataTruth.status), 8);
   const arcaTopCandidate = all.slice().sort((a, b) => b.trustAdjustedScore - a.trustAdjustedScore)[0] ?? null;
 
   await appendResearchEvent({
     workspaceId: auth.workspaceId,
     eventType: "NEW_HIGH_PRIORITY",
     severity: "INFO",
-    message: `Priority Desk generated ${all.length} packets across equities and crypto.`,
+    message: `Priority Desk read ${all.length} current saved packets across equities and crypto.`,
     payload: {
       timeframe,
       equities: bestEquities.length,
@@ -72,7 +71,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    generatedAt: new Date().toISOString(),
+    // When the newest saved result was built (not "now"): the page shows this as the scan age.
+    generatedAt: [equityView.newestScannedAt, cryptoView.newestScannedAt].filter(Boolean).sort().pop() ?? null,
+    servedAt: new Date().toISOString(),
+    savedScan: { equities: scanStatusForResponse(equityView), crypto: scanStatusForResponse(cryptoView) },
     timeframe,
     bestEquities,
     bestCrypto,
@@ -103,13 +105,13 @@ export async function GET(req: NextRequest) {
       { equities: bestEquities.length, crypto: bestCrypto.length, degraded: dataDegradedList.length },
       {
         source: "admin:priority-desk",
-        freshness: dataDegradedList.length > 0 ? "stale" : "real-time",
+        freshness: dataDegradedList.length > 0 ? "stale" : "delayed",
         simulated: false,
         missingFields: dataDegradedList.map((p) => p.symbol),
         confidence: dataDegradedList.length > all.length / 3 ? "low" : dataDegradedList.length > 0 ? "medium" : "high",
         confidenceReason:
           dataDegradedList.length === 0
-            ? "All packets returned fresh data."
+            ? "All saved packets are current."
             : `${dataDegradedList.length}/${all.length} packets degraded; downgraded confidence.`,
       },
     ),

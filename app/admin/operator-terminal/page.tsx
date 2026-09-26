@@ -6,6 +6,7 @@ import OperatorCenterPanel from "@/components/admin/operator/OperatorCenterPanel
 import OperatorRightRail from "@/components/admin/operator/OperatorRightRail";
 import OperatorBottomTabs from "@/components/admin/operator/OperatorBottomTabs";
 import { useScannerFeed, useSymbolIntelligence } from "@/lib/admin/hooks";
+import SavedScanStatus, { requestRescan } from "@/components/admin/SavedScanStatus";
 import { useState, useEffect, useCallback } from "react";
 
 export default function OperatorTerminalPage() {
@@ -14,8 +15,16 @@ export default function OperatorTerminalPage() {
   const [market, setMarket] = useState("CRYPTO");
   const [killActive, setKillActive] = useState(false);
 
-  // Auto-poll scanner every 60s
-  const { hits, health, loading: scanLoading, refetch: rescan } = useScannerFeed(undefined, market, timeframe, 60000);
+  // Re-read the shared saved scan every 60s (a DB read — no market-data calls).
+  const { hits, savedScan, loading: scanLoading, refetch } = useScannerFeed(undefined, market, timeframe, 60000);
+  const [rescanNote, setRescanNote] = useState<string | null>(null);
+  // "R" / toolbar rescan asks the shared job for a rescan (rate-limited, refused while one runs).
+  const rescan = useCallback(async () => {
+    const r = await requestRescan(market, timeframe);
+    setRescanNote(r.message);
+    refetch();
+    if (r.ok) setTimeout(refetch, 45_000);
+  }, [market, timeframe, refetch]);
   const { data: symbolData, loading: symbolLoading } = useSymbolIntelligence(focusSymbol, market, timeframe);
 
   // Auto-select first hit when scan results arrive and no symbol is manually selected
@@ -76,9 +85,14 @@ export default function OperatorTerminalPage() {
         killActive={killActive}
       />
 
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <SavedScanStatus status={savedScan} compact onRescanStarted={() => setTimeout(refetch, 45_000)} />
+        {rescanNote && <span className="text-[10px] text-white/40">{rescanNote}</span>}
+      </div>
+
       {(scanLoading || symbolLoading) && (
         <div className="text-center text-white/30 text-xs py-1">
-          {scanLoading ? "Running live scan…" : `Loading ${focusSymbol} intelligence…`}
+          {scanLoading ? "Loading saved scan…" : `Loading ${focusSymbol} intelligence…`}
         </div>
       )}
 
