@@ -6,6 +6,7 @@
  * view of Friday's equity close is GOOD, while a daily bar two sessions behind is STALE.
  */
 import { isNonTradingDay } from '@/lib/time/marketHolidays';
+import { lastCompletedUsSessionDate, usSessionsBetween } from '@/lib/time/usSession';
 
 export type DataTrustLevel = 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA';
 export type TrustAssetClass = 'equity' | 'crypto' | 'forex';
@@ -60,17 +61,14 @@ export function normalizeTimeframeInterval(tf: string): string {
   return k;
 }
 
-/** Most recent US equity session date (YYYY-MM-DD) that has CLOSED as of `nowMs` (20:00 UTC close, weekends/holidays skipped). */
+/**
+ * Most recent US equity session date (YYYY-MM-DD) that has CLOSED as of `nowMs`: 16:00 New York time (13:00 on
+ * scheduled early closes), weekends/holidays skipped. It used to assume a fixed 20:00 UTC close, which is only right in
+ * US summer time: from November to March (close 21:00 UTC) it treated the still-open session as closed for an hour and
+ * marked rows from the previous session "one bar behind".
+ */
 export function lastCompletedEquitySession(nowMs: number): string {
-  const d = new Date(nowMs);
-  // If today's session hasn't closed yet (before 20:00 UTC) start from yesterday.
-  if (d.getUTCHours() < 20) d.setUTCDate(d.getUTCDate() - 1);
-  for (let i = 0; i < 10; i++) {
-    const dow = d.getUTCDay();
-    if (dow !== 0 && dow !== 6 && !isNonTradingDay(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) break;
-    d.setUTCDate(d.getUTCDate() - 1);
-  }
-  return d.toISOString().slice(0, 10);
+  return lastCompletedUsSessionDate(nowMs);
 }
 
 function judgeFreshness(input: DataTrustInput, nowMs: number): DataTrustResult['freshness'] {
@@ -98,7 +96,9 @@ function judgeFreshness(input: DataTrustInput, nowMs: number): DataTrustResult['
     }
     const gapDays = Math.round((Date.parse(expected) - Date.parse(barDate)) / 86_400_000);
     if (minutes >= 10_080) return gapDays <= 7 ? 'fresh' : gapDays <= 14 ? 'delayed' : 'stale';
-    return gapDays <= 1 ? 'delayed' : 'stale';
+    // Count SESSIONS behind, not calendar days: Friday's bar on Monday evening is one session behind (delayed), not
+    // three days (it used to read STALE).
+    return usSessionsBetween(barDate, expected) <= 1 ? 'delayed' : 'stale';
   }
   // 24/7 markets: allow one interval of lag (bar open time + interval = close), then one more as delayed.
   const ageMin = (nowMs - lastMs) / 60_000;
