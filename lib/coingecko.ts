@@ -779,6 +779,8 @@ export async function getGlobalData(): Promise<{
   total_volume: Record<string, number>;
   market_cap_percentage: Record<string, number>;
   market_cap_change_percentage_24h_usd: number;
+  /** CoinGecko's update time for this snapshot (unix seconds). */
+  updated_at?: number;
 } | null> {
   try {
     const data = await cgFetch<{ data: {
@@ -786,6 +788,7 @@ export async function getGlobalData(): Promise<{
       total_volume: Record<string, number>;
       market_cap_percentage: Record<string, number>;
       market_cap_change_percentage_24h_usd: number;
+      updated_at?: number;
     } }>('/global', {
       init: { next: { revalidate: 300 } },
     });

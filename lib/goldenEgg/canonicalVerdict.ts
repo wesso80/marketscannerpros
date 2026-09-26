@@ -242,11 +242,12 @@ export function canonicalNarrativeSummary(symbol: string, c: CanonicalResult, l1
   }
   const setup = `${c.direction === 'neutral' ? '' : `${c.direction} `}${(SETUP_LABEL[c.setupType] ?? c.setupType).toLowerCase()} setup`;
   const reasons = c.permission === 'BLOCK' ? c.blockReasons : c.permission === 'WATCH' ? c.watchReasons : [];
-  const why = reasons[0] ? trimStop(reasons[0].message) : '';
+  // Engine reasons lead with the raw code ("EXHAUSTION_FADE short: …"): say it in words ("exhaustion fade (short): …").
+  const why = reasons[0] ? trimStop(reasons[0].message).replace(/^([A-Z][A-Z_]+) (long|short)\b/, (_m, code: string, dir: string) => `${(SETUP_LABEL[code] ?? code.replace(/_/g, ' ')).toLowerCase()} (${dir})`) : '';
   const lead = c.permission === 'PASS'
     ? `${symbol}: a ${setup} qualifies (grade ${c.grade}).`
     : c.permission === 'WATCH'
-      ? `${symbol}: a ${setup} is forming but is on watch (grade ${c.grade})${why ? ` because ${why.charAt(0).toLowerCase()}${why.slice(1)}` : ''}.`
+      ? `${symbol}: a ${setup} is forming but is on watch (grade ${c.grade})${why ? ` because ${/^[A-Z][a-z]/.test(why) ? why.charAt(0).toLowerCase() + why.slice(1) : why}` : ''}.`
       : `${symbol}: a ${setup} was found but is blocked${why ? ` — ${why}` : ''}.`;
   return `${lead}${legacy}`;
 }

@@ -22,6 +22,7 @@ import { avFetch } from '@/lib/avRateGovernor';
 import { atr as calcATR, OHLCVBar } from '@/lib/indicators';
 import { scanPatterns, type Candle, type DetectedPattern, type KeyLine } from '@/lib/patterns/pattern-engine';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { completedEquityDailyBars } from '@/lib/scanner/equityScanInputs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,7 +108,10 @@ async function fetchEquityOHLCV(symbol: string): Promise<OHLCV[] | null> {
     }))
     .filter(c => Number.isFinite(c.close) && c.close > 0)
     .sort((a, b) => a.date.localeCompare(b.date));
-  return ohlcv.length >= 30 ? ohlcv : null;
+  // Completed sessions only: the realtime daily series includes today's unfinished bar during market hours, which the
+  // page then labelled "completed <today>" (SC-9). Crypto already drops its open candle (closedCandles).
+  const completed = completedEquityDailyBars(ohlcv);
+  return completed.length >= 30 ? completed : null;
 }
 
 async function fetchCryptoOHLCV(symbol: string): Promise<OHLCV[] | null> {

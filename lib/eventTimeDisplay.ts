@@ -81,3 +81,20 @@ export function formatEventTime(event: EventTimeSource, timeZone: string = viewe
   const label = [date, time].filter(Boolean).join(' ') || 'Scheduled';
   return { date, time, label, zone: 'ET', title: label === 'Scheduled' ? 'Release time not published' : `${label} (New York time)` };
 }
+
+/**
+ * Short calendar-day label ("Sep 30") for a date-only value such as an earnings `reportDate`.
+ * `new Date('2026-09-30')` is UTC midnight, which is still 29 Sep for anyone west of UTC, so a bare
+ * YYYY-MM-DD is formatted as the calendar day it names, never shifted by the viewer's zone. A full
+ * timestamp is shown in the viewer's zone. Unparseable input gives '—'.
+ */
+export function formatCalendarDay(value: string | null | undefined, locale = 'en-US'): string {
+  const text = (value ?? '').trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (m) {
+    const ms = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    return Number.isFinite(ms) ? new Date(ms).toLocaleDateString(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—';
+  }
+  const ms = Date.parse(text);
+  return Number.isFinite(ms) ? new Date(ms).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : '—';
+}

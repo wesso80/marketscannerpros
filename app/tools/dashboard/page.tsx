@@ -57,7 +57,8 @@ const INDEX_PROXIES = [
   { etf: 'DIA', label: 'Dow Jones', index: 'DJI' },
   { etf: 'QQQ', label: 'Nasdaq 100', index: 'NDX' },
   { etf: 'IWM', label: 'Russell 2000', index: 'RUT' },
-  { etf: 'VIXY', label: 'Volatility', index: 'VIX' },
+  // VIXY is a VIX futures ETF, not the VIX index: it can move quite differently intraday (OV-5).
+  { etf: 'VIXY', label: 'VIX futures ETF', index: 'VIX' },
 ] as const;
 const INDEX_SYMBOLS = INDEX_PROXIES.map((i) => i.etf);
 interface IndexQuote {
@@ -151,10 +152,11 @@ function MagnitudeBar({ value, max = 100, color = 'var(--msp-flat)', height = 3 
 
 function DashboardMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
-    <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, minHeight: '3.5rem' }}>
+    <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, minHeight: '3.5rem', minWidth: 0 }}>
       <span style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</span>
       <span style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>{value}</span>
-      <span style={{ fontSize: 11, color: 'var(--msp-text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={detail}>{detail}</span>
+      {/* Wraps instead of a single no-wrap line: a long detail (e.g. the degraded-feed list) used to force the hero wider than a phone screen (OV-11). */}
+      <span style={{ fontSize: 11, color: 'var(--msp-text-faint)', overflowWrap: 'anywhere' }} title={detail}>{detail}</span>
     </div>
   );
 }
@@ -343,8 +345,9 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
   return (
     <div className="space-y-4">
       <section style={{ background: 'var(--msp-panel)', borderRadius: 'var(--msp-radius-card)', padding: 16 }} aria-label="Dashboard command header">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
-          <div>
+        {/* minmax(0,1fr) + min-w-0 keep the hero inside the viewport on phones (OV-11). */}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>
               <span>Research dashboard · <a href="/tools/command-center" style={{ color: 'var(--msp-accent)' }}>market overview in Command Center</a></span>
               {regime.data && (
@@ -366,7 +369,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                 </span>
               )}
             </div>
-            <h1 className="mt-1" style={{ fontSize: 'var(--msp-text-h1)', fontWeight: 500, color: 'var(--msp-text)', lineHeight: 1.25 }}>Open the research queue, then validate one symbol.</h1>
+            <h1 className="mt-1" style={{ fontSize: 'var(--msp-text-h1)', fontWeight: 500, color: 'var(--msp-text)', lineHeight: 1.25, overflowWrap: 'anywhere' }}>Open the research queue, then validate one symbol.</h1>
             <p className="mt-1 max-w-3xl" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
               Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.
             </p>
@@ -377,7 +380,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
             </div>
           </div>
 
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] self-start gap-1.5 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
             <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail={hasQueue ? `Top focus: ${topQueueSymbol}` : 'Run Scanner to populate'} />
             <DashboardMetric label="Data health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : loadingFeeds ? 'Feeds syncing' : 'No feed errors reported'} />
             <DashboardMetric label="High impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? 'var(--msp-warn)' : 'var(--msp-flat)'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
@@ -394,7 +397,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
               <SectionEyebrow>Today&apos;s research queue</SectionEyebrow>
-              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Highest-evidence symbols first.</h2>
+              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of the Scanner&apos;s ranked queue.</h2>
               <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Golden Egg. Review context only; no trade instructions.</p>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
@@ -528,16 +531,16 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
         </div>
       </section>
 
-      {/* ─── Volatility Watch + Time Confluence + ARCA Summary ─── */}
-      <section className="grid gap-3 md:grid-cols-3" aria-label="Volatility and research context panels">
-        {/* Volatility Watch */}
+      {/* ─── Trend strength (ADX) + Time Confluence + ARCA Summary ─── */}
+      <section className="grid gap-3 md:grid-cols-3" aria-label="Trend strength and research context panels">
+        {/* Trend strength (ADX). ADX measures trend strength, not volatility compression/expansion (OV-10). */}
         <DSCard>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <SectionEyebrow>Volatility watch</SectionEyebrow>
-              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Compression &amp; expansion signals</div>
+              <SectionEyebrow>Trend strength</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>ADX readings (top of the queue)</div>
             </div>
-            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/volatility-engine'; }} aria-label="Open Dynamic Volatility Engine">DVE ›</DSButton>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/volatility-engine'; }} aria-label="Open Dynamic Volatility Engine for compression and expansion">DVE ›</DSButton>
           </div>
           {cached.loading ? (
             <div className="space-y-2">
@@ -545,12 +548,12 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
             </div>
           ) : (
             <div className="space-y-1.5">
-              {/* High ADX = trending (expansion); low ADX = compression candidate */}
+              {/* High ADX = strong trend; low ADX = weak trend or range (not a volatility measure) */}
               {(cached.all.slice(0, 5) as CachedSymbol[])
                 .sort((a, b) => Math.abs(b.adx ?? -1) - Math.abs(a.adx ?? -1))
                 .slice(0, 4)
                 .map((r: CachedSymbol) => {
-                  const phase = r.adx === null ? 'ADX unavailable' : r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
+                  const phase = r.adx === null ? 'ADX unavailable' : r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Weak trend';
                   const phaseTone: 'bull' | 'warn' | 'info' = r.adx !== null && r.adx >= 30 ? 'bull' : r.adx !== null && r.adx >= 20 ? 'warn' : 'info';
                   return (
                     <button
@@ -570,9 +573,9 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
                   );
                 })}
               {cached.all.length === 0 && (
-                <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Run Scanner to populate volatility watch</div>
+                <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Run Scanner to populate trend strength</div>
               )}
-              <div className="pt-1" style={{ fontSize: 10, color: 'var(--msp-text-faint)' }}>ADX ≥ 30 trending · 20–29 developing · &lt;20 compression. Heuristic only.</div>
+              <div className="pt-1" style={{ fontSize: 10, color: 'var(--msp-text-faint)' }}>ADX ≥ 30 trending · 20–29 developing · &lt;20 weak trend or range. ADX measures trend strength, not volatility; see DVE for compression and expansion. Heuristic only.</div>
             </div>
           )}
         </DSCard>
@@ -708,7 +711,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
       {/* -- Best Setups (from worker cache) ------------------------------ */}
       {cached.loading ? <CardSkeleton rows={5} /> : (
       <Card>
-        <PanelHeader title="Top confluence now" eyebrow="Validated queue" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full scanner ›</button>} />
+        <PanelHeader title="Top confluence now" eyebrow="Ranked queue (not yet validated)" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full scanner ›</button>} />
         {cached.all.length === 0 ? (
           <div className="text-xs text-slate-500 py-4 text-center">
             No cached data yet — <button type="button" onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
@@ -806,7 +809,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
             })}
           </div>
         )}
-        <p className="mt-2 text-[10px] text-slate-600">Live ETF proxies (SPY/DIA/QQQ/IWM/VIXY) — index levels are end-of-day via Alpha Vantage.</p>
+        <p className="mt-2 text-[10px] text-slate-600">Tiles show ETF prices standing in for the indices (SPY, DIA, QQQ, IWM), not index levels: live or 15-minute-delayed Alpha Vantage quotes. VIXY is a VIX futures ETF and can move differently from the VIX itself.</p>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

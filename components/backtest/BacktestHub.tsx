@@ -10,7 +10,7 @@ import StatisticsBasisNote from './StatisticsBasisNote';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { useState, useMemo, useCallback } from 'react';
-import { sampledMetric, sampledProfitFactor } from '@/lib/backtest/displayMetric';
+import { NO_LOSING_TRADES, NO_WINNING_TRADES, largestGainTrade, largestLossTrade, sampledMetric, sampledProfitFactor } from '@/lib/backtest/displayMetric';
 import { Card, SectionHeader, Badge, ScoreBar, TabBar, EmptyState } from '@/app/v2/_components/ui';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 import { useV2 } from '@/app/v2/_lib/V2Context';
@@ -460,8 +460,8 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     <MetricRow label="Calmar" value={sampledMetric(result.calmarRatio, n(result.totalTrades))} />
                     <MetricRow label="Volatility" value={sampledMetric(result.volatility, n(result.totalTrades), 2, '%')} />
                     <MetricRow label="Time in Market" value={`${n(result.timeInMarket).toFixed(1)}%`} />
-                    {result.bestTrade && <MetricRow label="Largest Gain" value={fmtPct(n(result.bestTrade.returnPercent))} color="text-emerald-400" />}
-                    {result.worstTrade && <MetricRow label="Largest Loss" value={fmtPct(n(result.worstTrade.returnPercent))} color="text-red-400" />}
+                    {result.bestTrade && (() => { const g = largestGainTrade(result.bestTrade); return <MetricRow label="Largest Gain" value={g ? fmtPct(n(g.returnPercent)) : NO_WINNING_TRADES} color={g ? 'text-emerald-400' : 'text-slate-400'} />; })()}
+                    {result.worstTrade && (() => { const l = largestLossTrade(result.worstTrade); return <MetricRow label="Largest Loss" value={l ? fmtPct(n(l.returnPercent)) : NO_LOSING_TRADES} color={l ? 'text-red-400' : 'text-slate-400'} />; })()}
                   </div>
                 </Card>
 
