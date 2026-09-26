@@ -89,6 +89,8 @@ function fmtDateTime(value?: string) {
 
 // Avg interval between re-triggers of the same alert (not across all alerts/symbols): see lib/alerts/summaryStats.
 const avgTriggerInterval = avgRetriggerInterval;
+/** Rows shown in the Alerts Console before "Show all". */
+const CONSOLE_ROW_LIMIT = 12;
 
 export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { tier, isLoading } = useUserTier();
@@ -103,6 +105,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [loadingData, setLoadingData] = useState(true);
   const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
+  const [showAllRows, setShowAllRows] = useState(false);
   const [zone3Open, setZone3Open] = useState(true);
   const [zone4Open, setZone4Open] = useState(false);
   const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy'>('basic');
@@ -223,8 +226,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       return alert.trigger_count > 0;
     });
     // Legacy multi-condition alerts are listed under Basic with a "Not checked" status so they can be seen and removed.
-    return (consoleTab === 'basic' ? [...filtered, ...multiAlerts] : filtered).slice(0, 12);
+    return consoleTab === 'basic' ? [...filtered, ...multiAlerts] : filtered;
   }, [alerts, multiAlerts, consoleTab]);
+
+  // The console shows the first CONSOLE_ROW_LIMIT rows; "Show all" lists the rest instead of hiding them silently.
+  useEffect(() => { setShowAllRows(false); }, [consoleTab]);
+  const visibleAlertRows = showAllRows ? alertRows : alertRows.slice(0, CONSOLE_ROW_LIMIT);
 
   // If every alert is smart/strategy, an empty "Basic" default contradicts the "N active" header — open the tab that has rows.
   const autoTabbedRef = useRef(false);
@@ -420,7 +427,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
             <button type="button" role="tab" aria-selected={consoleTab === 'smart'} onClick={() => setConsoleTab('smart')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'smart' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Smart</button>
             <button type="button" role="tab" aria-selected={consoleTab === 'triggered'} onClick={() => setConsoleTab('triggered')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'triggered' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Triggered</button>
           </div>
-          <div className="text-xs text-slate-400">{alertRows.length} shown</div>
+          <div className="text-xs text-slate-400">{visibleAlertRows.length < alertRows.length ? `${visibleAlertRows.length} of ${alertRows.length} shown` : `${alertRows.length} shown`}</div>
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
           <div className="rounded-xl border border-slate-800 bg-slate-950/25">
@@ -435,7 +442,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               </div>
             ) : (
               <div className="max-h-[520px] overflow-auto">
-                {alertRows.map((alert) => {
+                {visibleAlertRows.map((alert) => {
                   const status = consoleRowLabel(alert, deriveStatus(alert));
                   const type = classifyAlertType(alert);
                   const isEditing = editingId === alert.id;
@@ -481,6 +488,16 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
                     </div>
                   );
                 })}
+                {alertRows.length > CONSOLE_ROW_LIMIT && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllRows((v) => !v)}
+                    className="w-full px-4 py-2 text-center text-xs font-semibold text-slate-300 hover:bg-white/5 hover:text-white"
+                    data-testid="console-show-all"
+                  >
+                    {showAllRows ? 'Show fewer' : `Show all ${alertRows.length} alerts`}
+                  </button>
+                )}
               </div>
             )}
           </div>

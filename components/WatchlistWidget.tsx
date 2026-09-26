@@ -68,6 +68,8 @@ export default function WatchlistWidget() {
   const [loading, setLoading] = useState(true);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Informational messages (the save worked), shown in neutral styling rather than as an error.
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Create watchlist modal
   const [showCreate, setShowCreate] = useState(false);
@@ -257,6 +259,7 @@ export default function WatchlistWidget() {
   // Add symbol
   const addSymbol = async () => {
     if (!newSymbol.trim() || !selectedWatchlist) return;
+    setNotice(null);
 
     try {
       const res = await fetch('/api/watchlists/items', {
@@ -289,7 +292,7 @@ export default function WatchlistWidget() {
             : w
         ));
       } else {
-        setError(`${String(data.item?.symbol ?? newSymbol).toUpperCase()} is already on this list.`);
+        setNotice(`${String(data.item?.symbol ?? newSymbol).toUpperCase()} is already on this list.`);
       }
       
       // Fetch quote for new symbol
@@ -412,6 +415,12 @@ export default function WatchlistWidget() {
           <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
             {error}
             <button type="button" aria-label="Dismiss error message" onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+          </div>
+        )}
+        {notice && (
+          <div role="status" className="mb-4 rounded-lg border border-slate-600/60 bg-slate-700/30 p-3 text-sm text-slate-200">
+            {notice}
+            <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)} className="ml-2 underline">Dismiss</button>
           </div>
         )}
 
