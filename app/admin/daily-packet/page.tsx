@@ -26,7 +26,7 @@ interface MacroRow {
   latestValue: number | null; latestObservedOn: string | null;
   change: number | null; changePct: number | null; freshnessAgeDays: number | null;
 }
-interface DriftSignal { key: string; label: string; severity: 'low' | 'medium' | 'high'; value: number | string | null; detail: string }
+interface DriftSignal { key: string; label: string; severity: 'low' | 'medium' | 'high'; value: number | string | null; detail: string; noData?: boolean }
 interface DriftReport { signals: DriftSignal[] }
 interface CalBucket { bucket: string; setups: number; withOutcome: number; winRate: number | null; avgR5d: number | null }
 interface CalReport { byConfidence: CalBucket[]; byOppScore: CalBucket[]; byEvidenceQuality: CalBucket[] }
@@ -164,7 +164,7 @@ export default function DailyPacketPage() {
                 <tbody>{packet.drift.signals.map((s) => (
                   <tr key={s.key} style={{ borderTop: '1px solid #1F2937' }}>
                     <Td>{s.label}</Td>
-                    <Td><span style={{ color: SEV_COLOR[s.severity], fontWeight: 700, textTransform: 'uppercase', fontSize: 11 }}>{s.severity}</span></Td>
+                    <Td><span style={{ color: s.noData ? '#6B7280' : SEV_COLOR[s.severity], fontWeight: 700, textTransform: 'uppercase', fontSize: 11 }}>{s.noData ? 'no data' : s.severity}</span></Td>
                     <Td>{String(s.value ?? '—')}</Td>
                     <Td><span style={{ color: '#9CA3AF' }}>{s.detail}</span></Td>
                   </tr>
