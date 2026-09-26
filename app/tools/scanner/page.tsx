@@ -10,6 +10,7 @@ import { compareScannerScores } from '@/lib/scanner/scoreContract';
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
+import { RANKED_VERDICT_CLASS, rankedVerdictBadge } from '@/lib/scanner/rankedVerdict';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
 import { legacyExecutionReason } from '@/lib/scanner/legacyReason';
@@ -116,7 +117,6 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
   if (r.rankExplanation?.summary) {
     return r.rankExplanation.summary.replace(/;\s*rank is reduced when evidence is missing, stale, or liquidity is thin\.?\s*$/i, '').trim();
   }
-  if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
   if (!regimeCompatible) {
     const setup = r.direction === 'bullish' ? 'Bull trend setup' : r.direction === 'bearish' ? 'Bear trend setup' : 'Directional setup';
     const setupType = setupTypeForRegime(r);
@@ -1640,7 +1640,7 @@ export default function ScannerPage() {
               ['Symbols', String(filtered.length), 'var(--msp-text)'],
               ['Aligned Scenarios', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), 'var(--msp-bull)'],
               ['Developing', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
-              ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), 'var(--msp-bear)'],
+              ['Needs Review', String(filtered.filter(r => rankedVerdictBadge(r).label === 'BLOCK').length), 'var(--msp-bear)'],
               ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), 'var(--msp-warn)'],
             ].map(([label, value, color]) => (
               <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
@@ -1697,7 +1697,7 @@ export default function ScannerPage() {
                       <th scope="col" className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Setup stage (where the structure is) and the factors supporting the bias">Setup · Reason</th>
                       <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Data trust: freshness of the last completed bar, interval integrity, indicator coverage, history depth">Trust</th>
                       <th scope="col" className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Extension / volatility state (DVE): where price is in the move — independent of setup and lifecycle">Extension</th>
-                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Whether the setup type is compatible with the current market regime">Regime fit</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Engine verdict: PASS (validated edge), WATCH (setup present, reasons on hover), BLOCK (data / eligibility), No setup. Hover a badge for the reasons.">Verdict</th>
                       <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap" title="Research lifecycle: how far this candidate has progressed through validation (discovered → watching → setting up → ready). Describes the research process, not price maturity.">Research stage</th>
                       <th scope="col" className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Review</th>
                     </tr>
@@ -1760,11 +1760,11 @@ export default function ScannerPage() {
                             })()}
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
-                            {regimeCompatible
-                              ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Match</span>
-                              : r.scoreV2?.regimeScore?.gated
-                                ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
-                                : <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
+                            {(() => {
+                              const verdict = rankedVerdictBadge(r);
+                              const title = `${verdict.title}\nRegime fit: ${regimeCompatible ? 'setup type matches the current regime' : 'neutral for the current regime'}.`;
+                              return <span title={title} className={`text-[11px] px-1.5 py-0.5 rounded border ${RANKED_VERDICT_CLASS[verdict.tone]}`}>{verdict.label}</span>;
+                            })()}
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span className="text-[11px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
