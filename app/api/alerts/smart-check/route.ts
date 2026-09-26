@@ -663,7 +663,8 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
       await sendPushToUser(alert.workspace_id, {
         title: `🎯 ${alert.name || 'Smart Alert'}`,
         body: result.message,
-        tag: `smart-alert-${alert.condition_type}`,
+        // Per alert, not per condition type, so two smart alerts don't replace each other (TR-25).
+        tag: `smart-alert-${alert.id}`,
         data: {
           url: '/tools/scanner',
           type: 'smart_alert',

@@ -350,7 +350,9 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
       await sendPushToUser(alert.workspace_id, {
         title: `📊 ${alert.symbol} Alert`,
         body: conditionMet,
-        tag: `price-alert-${alert.symbol}`,
+        // One notification per alert: a per-symbol tag made several alerts on the same
+        // symbol replace each other on the device (TR-25).
+        tag: `price-alert-${alert.id}`,
         data: {
           url: '/tools/scanner',
           type: 'price_alert',

@@ -12,7 +12,8 @@ import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import { alertConditionLabel } from '@/lib/alertPresentation';
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
-import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts } from '@/lib/alerts/consoleStatus';
+import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts, smartAlertShare } from '@/lib/alerts/consoleStatus';
+import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import RegimeBanner from '@/components/RegimeBanner';
 import { PageHero } from '@/components/ui';
 import { useSearchParams } from 'next/navigation';
@@ -189,11 +190,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     return triggersLast24h(history, serverLast24h);
   }, [history, serverLast24h]);
 
-  const smartPct = useMemo(() => {
-    if (activeAlerts.length === 0) return 0;
-    const smart = activeAlerts.filter((a) => a.is_smart_alert || (a.condition_type ?? '').startsWith('strategy_') || (a.condition_type ?? '').startsWith('scanner_')).length;
-    return Math.round((smart / activeAlerts.length) * 100);
-  }, [activeAlerts]);
+  // Smart/strategy share of checked active alerts (multi-condition alerts aren't checked, so not counted).
+  const smartPct = useMemo(() => smartAlertShare(alerts), [alerts]);
 
   const mostActiveSymbol = useMemo(() => {
     if (history.length === 0) return 'N/A';
@@ -348,7 +346,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           metrics={[
             { label: 'Active', value: `${activeAlerts.length}`, tone: 'bull', detail: 'Open notifications' },
             { label: 'Last 24h', value: `${triggeredToday}`, tone: 'warn', detail: 'Triggers in the last 24 hours' },
-            { label: 'Smart %', value: `${smartPct}%`, tone: 'info', detail: 'Smart alert share' },
+            { label: 'Smart %', value: `${smartPct}%`, tone: 'info', detail: 'Smart/strategy share of checked alerts' },
             { label: 'Tracking', value: riskLocked ? 'Locked' : 'Open', tone: riskLocked ? 'bear' : 'bull', detail: riskLocked ? 'Rule guard active' : 'No guard active' },
           ]}
         />
@@ -574,11 +572,11 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
                 <div className={`rounded-lg p-2 ${tier === 'free' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
                   <div className="text-slate-400">Free</div>
-                  <div className="font-semibold text-slate-100">3</div>
+                  <div className="font-semibold text-slate-100">{ALERT_LIMITS.free} active alerts</div>
                 </div>
                 <div className={`rounded-lg p-2 ${tier === 'pro' || tier === 'pro_trader' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
                   <div className="text-slate-400">Pro</div>
-                  <div className="font-semibold text-slate-100">∞</div>
+                  <div className="font-semibold text-slate-100">{ALERT_LIMITS.pro} active alerts</div>
                 </div>
               </div>
             </div>
