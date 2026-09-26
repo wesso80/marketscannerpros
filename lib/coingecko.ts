@@ -823,14 +823,26 @@ export function symbolToId(symbol: string): string | null {
   return COINGECKO_ID_MAP[normalized] || null;
 }
 
-function selectBestSearchMatch(
+/**
+ * Pick the CoinGecko coin for a ticker from /search results. Only an EXACT ticker match (or an exact coin-name
+ * match, e.g. "bitcoin") is accepted; among several coins sharing a ticker, the highest market cap wins.
+ *
+ * SC-12: this used to fall back to the highest-market-cap result of any fuzzy match, so a partial ticker like
+ * "AP" resolved to Uniswap and "HB" to Hedera. The scanner then listed phantom rows carrying UNI's and HBAR's
+ * data under those symbols. No exact match now means no coin (a provider-mapping miss), never a different coin.
+ */
+export function selectBestSearchMatch(
   symbol: string,
   matches: Array<{ id: string; name: string; symbol: string; market_cap_rank: number }>
 ): string | null {
   if (!matches.length) return null;
 
   const normalized = normalizeSymbol(symbol);
-  const scored = matches.map((item) => {
+  const candidates = matches.filter((item) =>
+    normalizeSymbol(String(item.symbol || '')) === normalized
+    || String(item.name || '').toUpperCase() === symbol.toUpperCase().trim());
+  if (!candidates.length) return null;
+  const scored = candidates.map((item) => {
     const itemSymbol = normalizeSymbol(item.symbol);
     const exactSymbol = itemSymbol === normalized ? 1 : 0;
     const exactName = item.name.toUpperCase() === symbol.toUpperCase() ? 1 : 0;
