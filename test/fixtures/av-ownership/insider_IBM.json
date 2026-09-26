@@ -1,0 +1,244 @@
+{
+ "data": [
+  {
+   "transaction_date": "2026-08-27",
+   "ticker": "IBM",
+   "executive": "KRISHNA, ARVIND",
+   "executive_title": "Director, Chairman, President & CEO",
+   "security_type": "Phantom Stock",
+   "acquisition_or_disposal": "A",
+   "shares": "8375.5601",
+   "share_price": "238.79"
+  },
+  {
+   "transaction_date": "2026-08-26",
+   "ticker": "IBM",
+   "executive": "THOMAS, ROBERT DAVID",
+   "executive_title": "Senior Vice President",
+   "security_type": "Common Stock",
+   "acquisition_or_disposal": "D",
+   "shares": "25000.0",
+   "share_price": "230.3235"
+  },
+  {
+   "transaction_date": "2026-07-01",
+   "ticker": "IBM",
+   "executive": "ROBINSON, ANNE",
+   "executive_title": "Senior Vice President",
+   "security_type": "Common Stock",
+   "acquisition_or_disposal": "D",
+   "shares": "781.0",
+   "share_price": "286.725"
+  },
+  {
+   "transaction_date": "2026-07-01",
+   "ticker": "IBM",
+   "executive": "ROBINSON, ANNE",
+   "executive_title": "Senior Vice President",
+   "security_type": "Common Stock",
+   "acquisition_or_disposal": "A",
+   "shares": "1412.0",
+   "share_price": "0.0"
+  },
+  {
+   "transaction_date": "2026-07-01",
+   "ticker": "IBM",
+   "executive": "ROBINSON, ANNE",
+   "executive_title": "Senior Vice President",
+   "security_type": "Rst. Stock Unit",
+   "acquisition_or_disposal": "D",
+   "shares": "1412.0",
+   "share_price": "0.0"
+  },
+  {
+   "transaction_date": "2026-07-01",
+   "ticker": "IBM",
+   "executive": "ROBINSON, ANNE",
+   "executive_title": "Senior Vice President",
+   "security_type": "Common Stock",
+   "acquisition_or_disposal": "A",
+   "shares": "5883.0",
+   "share_price": "0.0"
+  },
+  {
+   "transaction_date": "2026-07-01",
+   "ticker": "IBM",
+   "executive": "ROBINSON, ANNE",
+   "executive_title": "Senior Vice President",
+   "security_type": "Common Stock",
+   "acquisition_or_disposal": "D",
+   "shares": "3254.0",
+   "share_price": "286.725"
+  },
+  {
+   "transaction_date": "2026-07-01",
+   "ticker": "IBM",
+   "executive": "ROBINSON, ANNE",
+   "executive_title": "Senior Vice President",
+   "security_type": "Rst. Stock Unit",
+   "acquisition_or_disposal": "D",
+   "shares": "5883.0",
+   "share_price": "0.0"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "ZOLLAR, ALFRED W",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "325.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "LAGUARTA, RAMON",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "325.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "GORSKY, ALEX",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "383.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "HOWARD, MICHELLE J",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "228.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "BROWN, MARIANNE CATHERINE",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "325.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "BUBERL, THOMAS",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "341.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "FARR, DAVID N",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "209.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "VOSER, PETER R.",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "356.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "POLLACK, MARTHA E",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "209.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "MIEBACH, MICHAEL",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "325.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "MCNABB, FREDERICK WILLIAM III",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "325.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-30",
+   "ticker": "IBM",
+   "executive": "LIVERIS, ANDREW N",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "347.0",
+   "share_price": "281.21"
+  },
+  {
+   "transaction_date": "2026-06-04",
+   "ticker": "IBM",
+   "executive": "FEHRING, NICOLAS A.",
+   "executive_title": "VP, Controller",
+   "security_type": "Common Stock",
+   "acquisition_or_disposal": "D",
+   "shares": "400.0",
+   "share_price": "0.0"
+  },
+  {
+   "transaction_date": "2026-03-31",
+   "ticker": "IBM",
+   "executive": "LAGUARTA, RAMON",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "126.0",
+   "share_price": "242.39"
+  },
+  {
+   "transaction_date": "2026-03-31",
+   "ticker": "IBM",
+   "executive": "LIVERIS, ANDREW N",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "403.0",
+   "share_price": "242.39"
+  },
+  {
+   "transaction_date": "2026-03-31",
+   "ticker": "IBM",
+   "executive": "HOWARD, MICHELLE J",
+   "executive_title": "Director",
+   "security_type": "Promised Fee Share",
+   "acquisition_or_disposal": "A",
+   "shares": "264.0",
+   "share_price": "242.39"
+  }
+ ]
+}
