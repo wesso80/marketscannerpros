@@ -9,6 +9,7 @@ import { DEFAULT_WATCHLISTS } from "@/lib/operator/watchlists";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 import { isRankable, readSavedScan, type SavedScanView } from "@/lib/admin/sharedScan";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
+import { loadSavedScanPrices, recordAdminCalls, type AdminCallInput, type SavedScanPrice } from "@/lib/admin/adminCallLog";
 
 export type DeskState = "TRADE" | "WAIT" | "DEFENSIVE" | "BLOCK";
 
@@ -676,7 +677,51 @@ export async function saveMorningBriefSnapshot(brief: MorningBrief, source: "adm
   } catch (error) {
     console.warn("[morning-brief] Snapshot save failed:", error);
   }
+  await recordMorningBriefCalls(saved, source).catch(() => undefined);
   return saved;
+}
+
+/**
+ * The brief's top plays as admin calls (admin-call:morning-brief), priced from the saved scan. Score = the displayed
+ * elite score (includes the expectancy boost, as shown), else confidence. Pure so it can be unit-tested.
+ */
+export function morningBriefCalls(brief: MorningBrief, prices: Map<string, SavedScanPrice>, source: string): AdminCallInput[] {
+  const calledAtMs = Date.parse(brief.generatedAt);
+  return brief.topPlays.map((hit, i) => {
+    const px = prices.get(String(hit.symbol).toUpperCase());
+    const confidencePct = Number.isFinite(hit.confidence) ? hit.confidence * 100 : null;
+    return {
+      source: "morning-brief" as const,
+      symbol: hit.symbol,
+      market: brief.market,
+      direction: hit.bias,
+      score: hit.eliteScore ?? confidencePct,
+      secondaryScore: confidencePct,
+      price: px?.price ?? null,
+      priceAt: px?.at ?? null,
+      priceSource: "saved-scan",
+      timeframe: brief.timeframe,
+      regime: typeof hit.regime === "string" ? hit.regime : null,
+      verdict: `top play #${i + 1}`,
+      trace: {
+        briefId: brief.briefId,
+        briefSource: source,
+        rank: i + 1,
+        playbook: hit.playbook ?? null,
+        eliteScore: hit.eliteScore ?? null,
+        eliteGrade: hit.eliteGrade ?? null,
+        marketPermission: hit.marketPermission ?? null,
+        deskState: brief.deskState,
+      },
+      calledAtMs: Number.isFinite(calledAtMs) ? calledAtMs : undefined,
+    };
+  });
+}
+
+async function recordMorningBriefCalls(brief: MorningBrief, source: string): Promise<void> {
+  if (!brief.topPlays?.length) return;
+  const prices = await loadSavedScanPrices(brief.market, brief.topPlays.map((h) => h.symbol));
+  await recordAdminCalls(morningBriefCalls(brief, prices, source));
 }
 
 export type SavedMorningBrief = {
@@ -1337,7 +1382,7 @@ async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
         COUNT(*) FILTER (WHERE outcome = 'pending')::int AS pending,
         ROUND((COUNT(*) FILTER (WHERE outcome = 'correct')::numeric / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0)) * 100, 1)::float AS "accuracyRate"
       FROM ai_signal_log
-      WHERE signal_at > NOW() - INTERVAL '30 days'
+      WHERE workspace_id = 'operator-terminal' AND signal_at > NOW() - INTERVAL '30 days'
     `);
     const feedbackRows = await q<{ action: string; count: number }>(`
       SELECT action, COUNT(*)::int AS count

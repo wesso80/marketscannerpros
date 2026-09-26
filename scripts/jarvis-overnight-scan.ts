@@ -90,6 +90,12 @@ async function main() {
   const peakMb = Math.round(peakRss / 1048576);
   await saveRun({ runKey: report.sessionDate, generatedAt: report.generatedAt, sessionDate: report.sessionDate, kind: 'overnight', report, markdown: md, snapshot: report.snapshot, apiUsage: { av: report.apiUsage.alphaVantage, cg: report.apiUsage.coingecko, db: report.apiUsage.dbQueries, errors: report.apiUsage.errors, peakRssMb: peakMb, equityCap: Number(process.env.JARVIS_EQUITY_MAX ?? 900) }, runtimeMs: report.apiUsage.runtimeMs });
   if (scheduled) await kvSet(`run_marker:${ny.date}`, { at: new Date(nowMs).toISOString(), status: 'completed', sessionDate: report.sessionDate });
+  // Log the shortlist as admin calls for outcome labelling (best-effort; never touches scan results).
+  try {
+    const { recordJarvisShortlist } = await import('../lib/jarvis/radar/adminCalls');
+    const logged = await recordJarvisShortlist(report);
+    if (logged) log(`admin calls: ${logged.recorded} logged, ${logged.duplicates} already logged, skipped ${JSON.stringify(logged.skipped)}${logged.error ? ` · error ${logged.error}` : ''}`);
+  } catch (e) { log(`admin call logging failed (scan results are intact): ${e instanceof Error ? e.message : String(e)}`); }
   log(`done → ${path.relative(process.cwd(), mdPath)} · AV ${report.apiUsage.alphaVantage} calls · CG ${report.apiUsage.coingecko} · errors ${report.apiUsage.errors} · ${(report.apiUsage.runtimeMs / 60000).toFixed(1)} min · peak RSS ${peakMb} MB`);
   // Daily report + delivery run AFTER the scan is fully persisted; any failure here is recorded and never touches scan results.
   try {

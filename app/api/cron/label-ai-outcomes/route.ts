@@ -19,7 +19,21 @@ export const dynamic = 'force-dynamic';
 
 const SUPPORTED_ASSET_SQL = `LOWER(TRIM(asset_type)) IN ('equity','equities','stock','stocks','etf','crypto')`;
 const DIRECTIONAL_SQL = `UPPER(TRIM(COALESCE(trade_bias, ''))) IN ('LONG','SHORT')`;
-const MAX_ROWS_PER_HORIZON = 200;
+/** Rows per horizon per run (oldest first). AI_OUTCOME_MAX_ROWS overrides; admin pages now log more calls. */
+export function maxRowsPerHorizon(): number {
+  const n = Number(process.env.AI_OUTCOME_MAX_ROWS);
+  return Number.isFinite(n) && n >= 1 ? Math.min(1000, Math.floor(n)) : 300;
+}
+/**
+ * Wall-clock budget for price lookups per run. The Render cron (label-signal-outcomes) curls this route with
+ * --max-time 120 and --retry 3 --retry-all-errors: a run that outlasts curl is retried while the first one is still
+ * going, duplicating every AV call. Past the budget, only rows whose bars are already loaded are labelled; the rest
+ * wait for the next run (every 6 h). AI_OUTCOME_TIME_BUDGET_MS overrides (default 90 s).
+ */
+export function labellerTimeBudgetMs(): number {
+  const n = Number(process.env.AI_OUTCOME_TIME_BUDGET_MS);
+  return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : 90_000;
+}
 const HORIZON_4H_COLUMNS = ['outcome_4h', 'price_after_4h', 'pct_move_4h', 'price_after_4h_at', 'outcome_4h_measured_at'];
 
 type PendingRow = {
@@ -68,7 +82,7 @@ function candidateSql(horizon: OutcomeHorizon): string {
         AND price_at_signal IS NOT NULL AND price_at_signal > 0
         AND ${SUPPORTED_ASSET_SQL}
       ORDER BY signal_at ASC
-      LIMIT ${MAX_ROWS_PER_HORIZON}`;
+      LIMIT ${maxRowsPerHorizon()}`;
 }
 
 /**
@@ -129,6 +143,9 @@ export async function POST(req: NextRequest) {
 
     const resolve = createHorizonPriceResolver(nowMs);
     const tallies: Record<OutcomeHorizon, HorizonTally> = { '4h': newTally(), '24h': newTally() };
+    const budgetMs = labellerTimeBudgetMs();
+    const startedMs = Date.now();
+    let deferredOverBudget = 0;
 
     const work: Array<[OutcomeHorizon, PendingRow[]]> = [['24h', rows24], ['4h', rows4]];
     for (const [horizon, rows] of work) {
@@ -145,6 +162,8 @@ export async function POST(req: NextRequest) {
         }
         if (!assetClass) { t.skippedUnsupported++; continue; }
         if (!(entry > 0) || !horizonPassed(signalAtMs, horizon, nowMs)) { t.skippedNotReady++; continue; }
+        // Over budget: finish rows whose bars are already loaded (no new call); leave the rest for the next run.
+        if (Date.now() - startedMs > budgetMs && !resolve.hasLoaded(row.symbol, assetClass)) { deferredOverBudget++; continue; }
 
         const px = await resolve(row.symbol, assetClass, signalAtMs, horizon);
         if (!px) { t.skippedNoPrice++; continue; }
@@ -191,6 +210,11 @@ export async function POST(req: NextRequest) {
       horizons: tallies,
       candidates: { '24h': rows24.length, '4h': rows4.length },
       horizon4hEnabled: has4h,
+      // Distinct bar fetches (≈ Alpha Vantage calls; crypto is AV too — no CoinGecko) and the time budget.
+      priceFetches: resolve.fetchCounts(),
+      deferredOverBudget,
+      budgetMs,
+      elapsedMs: Date.now() - startedMs,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Labeling failed';

@@ -13,6 +13,50 @@
 
 import { q } from "@/lib/db";
 import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
+import { recordAdminCalls, type AdminCallInput } from "@/lib/admin/adminCallLog";
+
+/** trust_adjusted_score column value: the packet's real trustAdjustedScore (0 when a hand-built packet has none). */
+export function edgeTrustScore(packet: AdminEdgePacket): number {
+  const t = Number(packet.trustAdjustedScore);
+  return Number.isFinite(t) ? Math.max(0, Math.min(100, t)) : 0;
+}
+
+/**
+ * The packet as an admin call for outcome labelling (admin-call:edge-packet). Simulated and do-nothing packets are
+ * not calls; NEUTRAL bias and packets without a price are skipped by recordAdminCalls.
+ */
+export function edgePacketCall(packet: AdminEdgePacket, nowMs: number = Date.now()): AdminCallInput | null {
+  if (packet.simulated || packet.doNothing) return null;
+  return {
+    source: "edge-packet",
+    symbol: packet.symbol,
+    market: packet.assetClass,
+    direction: packet.bias,
+    score: packet.opportunityRankScore,
+    secondaryScore: packet.trustAdjustedScore ?? null,
+    price: packet.price ?? null,
+    priceAt: packet.priceAt ?? null,
+    priceSource: "edge-packet",
+    timeframe: packet.timeframe,
+    entry: packet.entry?.trigger ?? packet.entry?.aggressiveEntry ?? null,
+    stop: packet.stopLoss?.level ?? null,
+    target1: packet.takeProfit?.tp1 ?? null,
+    target2: packet.takeProfit?.tp2 ?? null,
+    verdict: packet.adminState,
+    trace: {
+      packetId: packet.packetId,
+      setupType: packet.setupType,
+      thesisStatus: packet.thesisStatus,
+      opportunityRank: packet.opportunityRank,
+      opportunityRankScore: packet.opportunityRankScore,
+      trustAdjustedScore: packet.trustAdjustedScore ?? null,
+      evidenceQualityScore: packet.evidenceQualityScore,
+      trapRiskScore: packet.trapRiskScore,
+      generatedAt: packet.generatedAt,
+    },
+    calledAtMs: nowMs,
+  };
+}
 
 let tableReady = false;
 
@@ -99,11 +143,9 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
           packet.thesisStatus,
           packet.setupType,
           packet.bias,
-          // trustAdjustedScore lives on the source AdminResearchPacket, not
-          // AdminEdgePacket directly — caller-side projection copied it
-          // into the underlying packet. Use evidenceQualityScore (which IS
-          // dataTruth.trustScore) and the rank score as a fallback.
-          packet.opportunityRankScore,
+          // The source packet's real trustAdjustedScore (projectEdgePacket carries it). This column used to
+          // store opportunityRankScore. Hand-built packets without one store 0 rather than the rank score.
+          edgeTrustScore(packet),
           packet.evidenceQualityScore,
           packet.trapRiskScore,
           packet.freshness,
@@ -119,6 +161,10 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
       console.error("[admin-edge-packets] insert failed for", packet.symbol, err);
     }
   }
+  // Log the new packets' LONG/SHORT calls for outcome labelling. Every workspace persists the same saved-scan
+  // packets; the per symbol + direction + NY-day dedupe keeps one call.
+  const calls = input.packets.map((p) => edgePacketCall(p)).filter((c): c is AdminCallInput => c !== null);
+  if (calls.length) await recordAdminCalls(calls).catch(() => undefined);
   return written;
 }
 

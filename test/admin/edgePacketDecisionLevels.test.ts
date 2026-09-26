@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { projectEdgePacket } from "../../lib/admin/edgePacket";
+import { edgePacketPrice, projectEdgePacket } from "../../lib/admin/edgePacket";
 import type { AdminResearchPacket } from "../../lib/admin/getAdminResearchPacket";
 
 function basePacket(overrides: Partial<AdminResearchPacket> = {}): AdminResearchPacket {
@@ -101,5 +101,40 @@ describe("projectEdgePacket — decision levels", () => {
     expect(ep.riskReward.rrToTp3).toBe(3);
     // SHORT bias + price below trigger → aggressive entry = price
     expect(ep.entry.aggressiveEntry).toBe(199);
+  });
+});
+
+describe("projectEdgePacket — price, priceAt and trust score (fix/admin-call-logging)", () => {
+  it("carries the quote price, its scan time and the real trust-adjusted score", () => {
+    const ep = projectEdgePacket(basePacket({ createdAt: "2026-09-25T14:00:00.000Z", quote: { price: 200, changePercent: 0, lastScanAt: "2026-09-25T13:45:00.000Z" }, trustAdjustedScore: 58 }));
+    expect(ep.price).toBe(200);
+    expect(ep.priceAt).toBe("2026-09-25T13:45:00.000Z");
+    expect(ep.trustAdjustedScore).toBe(58);
+    expect(edgePacketPrice(ep)).toEqual({ price: 200, at: "2026-09-25T13:45:00.000Z" });
+  });
+
+  it("uses the saved bulk quote time when the price came from it", () => {
+    const pkt = basePacket({ createdAt: "2026-09-25T14:00:00.000Z", quote: { price: 203.5, changePercent: 0, lastScanAt: "2026-09-25T13:30:00.000Z" } });
+    (pkt as unknown as { savedScan: unknown }).savedScan = { quote: { price: 203.5, quoteAt: "2026-09-25T13:59:00.000Z" } };
+    const ep = projectEdgePacket(pkt);
+    expect(ep.price).toBe(203.5);
+    expect(ep.priceAt).toBe("2026-09-25T13:59:00.000Z");
+  });
+
+  it("falls back to the snapshot price, and to null when there is no price at all", () => {
+    const noQuote = projectEdgePacket(basePacket({ quote: { price: 0, changePercent: 0, lastScanAt: "" } as AdminResearchPacket["quote"] }));
+    expect(noQuote.price).toBe(201);
+    const none = basePacket({ quote: { price: 0, changePercent: 0, lastScanAt: "" } as AdminResearchPacket["quote"] });
+    (none.snapshot as unknown as { price: number }).price = 0;
+    const ep = projectEdgePacket(none);
+    expect(ep.price ?? null).toBeNull();
+    expect(edgePacketPrice(ep)).toBeNull();
+  });
+
+  it("edgePacketPrice ignores rows saved before packets carried a price", () => {
+    expect(edgePacketPrice(null)).toBeNull();
+    expect(edgePacketPrice({})).toBeNull();
+    expect(edgePacketPrice({ price: -1 })).toBeNull();
+    expect(edgePacketPrice({ price: 10 })).toEqual({ price: 10, at: null });
   });
 });

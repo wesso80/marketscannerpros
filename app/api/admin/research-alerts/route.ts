@@ -20,6 +20,27 @@ import {
 } from "@/lib/engines/researchAlertEngine";
 import type { AdminResearchAlert } from "@/lib/admin/adminTypes";
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
+import { loadSavedScanPrices, recordAdminCalls, type AdminCallInput, type SavedScanPrice } from "@/lib/admin/adminCallLog";
+
+/** A FIRED research alert as an admin call (admin-call:research-alert), priced from the saved scan. */
+export function researchAlertCall(alert: AdminResearchAlert, price: SavedScanPrice | undefined): AdminCallInput {
+  const calledAtMs = Date.parse(alert.createdAt);
+  return {
+    source: "research-alert",
+    symbol: alert.symbol,
+    market: alert.market,
+    direction: alert.bias,
+    score: alert.score,
+    secondaryScore: alert.dataTrustScore,
+    price: price?.price ?? null,
+    priceAt: price?.at ?? null,
+    priceSource: "saved-scan",
+    timeframe: alert.timeframe,
+    verdict: "FIRED",
+    trace: { alertId: alert.alertId, setup: alert.setup, dataTrustScore: alert.dataTrustScore },
+    calledAtMs: Number.isFinite(calledAtMs) ? calledAtMs : undefined,
+  };
+}
 
 export const runtime = "nodejs";
 
@@ -134,6 +155,11 @@ export async function POST(req: NextRequest) {
         outcome.alert.createdAt,
       ],
     );
+
+    if (outcome.status === "FIRED") {
+      const prices = await loadSavedScanPrices(outcome.alert.market, [outcome.alert.symbol]);
+      await recordAdminCalls([researchAlertCall(outcome.alert, prices.get(outcome.alert.symbol.toUpperCase()))]).catch(() => undefined);
+    }
 
     await appendResearchEvent({
       workspaceId: auth.workspaceId,

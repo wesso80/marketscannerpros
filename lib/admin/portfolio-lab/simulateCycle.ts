@@ -35,6 +35,8 @@ import { writeJournal } from "./journalEngine";
 import { captureBenchmarkSnapshot } from "./benchmarkEngine";
 import { rollupPlaybookPerformance } from "./playbookEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
+import { edgePacketPrice } from "@/lib/admin/edgePacket";
+import { recordAdminCalls, type AdminCallInput } from "@/lib/admin/adminCallLog";
 import type { ArcaPortfolio, ArcaPosition, SimulateCycleResult } from "./types";
 import { runDebateAndRecord, linkDebateToOrder } from "@/lib/admin/arca-brain/adversarialDebate";
 import {
@@ -117,12 +119,19 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     since: new Date(Date.now() - (opts.sinceMinutes ?? 720) * 60_000).toISOString(),
     limit: 500,
   });
+  // Newest first, so the first priced row per symbol wins. It used to read packet_json.snapshot.price, which edge
+  // packets never had: every position logged skip_mark:no_price and no order ever filled.
   const priceBySymbol = new Map<string, number>();
+  const priceAtBySymbol = new Map<string, string | null>();
   for (const r of recent) {
     if (priceBySymbol.has(r.symbol)) continue;
-    const p = (r.packetJson as unknown as { snapshot?: { price?: number } }).snapshot?.price;
-    if (Number.isFinite(p)) priceBySymbol.set(r.symbol, Number(p));
+    const px = edgePacketPrice(r.packetJson);
+    if (px) {
+      priceBySymbol.set(r.symbol, px.price);
+      priceAtBySymbol.set(r.symbol, px.at);
+    }
   }
+  const plannedCalls: AdminCallInput[] = [];
 
   // 1+2. Mark & maybe exit open positions.
   const opens = await listOpenPositions(opts.workspaceId, portfolio.id);
@@ -545,6 +554,32 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       arcaConfidence: debateOutcome.record.confidenceAfterDebate,
     });
 
+    // Log the planned order as an admin call (outcome labelling); price = latest edge-packet price for the symbol.
+    plannedCalls.push({
+      source: "arca",
+      symbol: cand.row.symbol,
+      market: cand.assetClass,
+      direction: cand.side,
+      score: debateOutcome.record.confidenceAfterDebate,
+      secondaryScore: cand.row.trustAdjustedScore,
+      price: priceBySymbol.get(cand.row.symbol) ?? null,
+      priceAt: priceAtBySymbol.get(cand.row.symbol) ?? null,
+      priceSource: "edge-packet",
+      entry: cand.entry,
+      stop: cand.stop,
+      target1: cand.tp1,
+      target2: cand.tp2,
+      verdict: "PLANNED",
+      regime: regimeDecision.regime ?? null,
+      trace: {
+        sourceEdgePacketId: cand.row.packetId,
+        playbookId: cand.row.setupType || null,
+        opportunityRankScore: cand.row.opportunityRankScore,
+        debate: debateOutcome.record.finalDecision,
+        workspaceId: opts.workspaceId,
+      },
+    });
+
     // Stamp the order with its authorising debate id, and link back.
     try {
       await q(
@@ -585,6 +620,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     }
     ordersCreated++;
   }
+  if (plannedCalls.length) await recordAdminCalls(plannedCalls).catch(() => undefined);
 
   // Per-row no-trade rejections from the decision-engine gate. Every
   // candidate that the gate dropped must produce its own
