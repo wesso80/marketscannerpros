@@ -69,6 +69,18 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // The Nasdaq Reporting admin page and /api/admin/reporting were removed (brad, 27 Sep 2026).
+      // Old bookmarks land on the admin home. The nasdaq_usage_reports table is left in place.
+      {
+        source: '/admin/reporting/:path*',
+        destination: '/admin',
+        permanent: false,
+      },
+      {
+        source: '/admin/reporting',
+        destination: '/admin',
+        permanent: false,
+      },
       // Signup route never existed; both homepage CTAs historically pointed here.
       // Catch any cached/external /auth/signup links and send them to the real
       // auth page (307 so it isn't permanently cached if a signup page is added).
