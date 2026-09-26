@@ -37,12 +37,13 @@ export interface MoverLike {
 
 export interface SectorLike {
   name: string;
-  changePercent: number;
+  /** null = no data; left out of ranking and breadth. */
+  changePercent: number | null;
 }
 
 export interface CryptoOverviewLike {
   totalMarketCapFormatted?: string;
-  marketCapChange24h?: number;
+  marketCapChange24h?: number | null;
   btcDominance?: number;
   ethDominance?: number;
 }
@@ -160,7 +161,8 @@ export interface StrengthRanking {
 /** Rank the strongest/weakest areas. Ranking is by observed % change — labelled
  *  as such; this is a relative read, not a forecast. */
 export function rankSectorStrength(sectors: SectorLike[], limit = 3): StrengthRanking {
-  const valid = sectors.filter((s) => Number.isFinite(s.changePercent));
+  // Sectors with no change (null) are left out rather than counted as 0%.
+  const valid = sectors.filter((s): s is SectorLike & { changePercent: number } => typeof s.changePercent === 'number' && Number.isFinite(s.changePercent));
   const sorted = [...valid].sort((a, b) => b.changePercent - a.changePercent);
   const green = valid.filter((s) => s.changePercent > 0).length;
   return {
@@ -187,11 +189,12 @@ export interface RiskToneResult {
   note: string;
 }
 
-export function deriveRiskTone(greenRatio: number, cryptoChange24h: number | undefined): RiskToneResult {
+/** `greenRatio` null = no sector data; a missing crypto change is treated as flat. */
+export function deriveRiskTone(greenRatio: number | null, cryptoChange24h: number | null | undefined): RiskToneResult {
   const cryptoUp = (cryptoChange24h ?? 0) > 0.5;
   const cryptoDown = (cryptoChange24h ?? 0) < -0.5;
-  const breadthOn = greenRatio >= 0.6;
-  const breadthOff = greenRatio <= 0.4;
+  const breadthOn = greenRatio != null && greenRatio >= 0.6;
+  const breadthOff = greenRatio != null && greenRatio <= 0.4;
 
   if (breadthOn && !cryptoDown) {
     return { tone: 'risk_on', label: 'Risk-on conditions', note: 'Broad participation is positive across sampled markets.' };

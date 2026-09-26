@@ -13,7 +13,8 @@ interface MarketData {
   totalMarketCapFormatted: string;
   totalVolume: number;
   totalVolumeFormatted: string;
-  marketCapChange24h: number;
+  /** null when CoinGecko sent no 24h change (shown as n/a, not 0.00%). */
+  marketCapChange24h: number | null;
   dominance: DominanceCoin[];
   sparkline: { time: number; value: number }[];
 }
@@ -165,10 +166,10 @@ export default function MarketOverviewWidget() {
         </div>
         <span style={{
           fontSize: '12px',
-          color: (data.marketCapChange24h ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
+          color: data.marketCapChange24h == null ? 'var(--msp-flat)' : data.marketCapChange24h >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)',
           fontWeight: 600
         }}>
-          {(data.marketCapChange24h ?? 0) >= 0 ? '↗' : '↘'} {Math.abs(data.marketCapChange24h ?? 0).toFixed(2)}%
+          {data.marketCapChange24h == null ? '24h n/a' : `${data.marketCapChange24h >= 0 ? '↗' : '↘'} ${Math.abs(data.marketCapChange24h).toFixed(2)}%`}
         </span>
       </div>
 

@@ -27,6 +27,7 @@ import LeverageStatePanel from '@/components/analysis/LeverageStatePanel';
 import CrossAssetPanel from '@/components/analysis/CrossAssetPanel';
 import { useCryptoDerivatives } from '@/hooks/useCryptoDerivatives';
 import { applyFeedHealth, assessSessionFreshness, degradedFeedList } from '@/lib/analysis/sessionDataHealth';
+import { CRYPTO_MAX_AGE_MINUTES, equityLayerTiming } from '@/lib/analysis/providerAsOf';
 import {
   describeRegime,
   rankSectorStrength,
@@ -129,18 +130,22 @@ export default function CommandCenterPage() {
 
   const reg = describeRegime(regime.data ?? null, prevRegime);
   const strength = rankSectorStrength(sectorData);
-  const riskTone = deriveRiskTone(strength.greenRatio, cryptoData?.marketCapChange24h);
+  const riskTone = deriveRiskTone(strength.total ? strength.greenRatio : null, cryptoData?.marketCapChange24h);
   const flow = interpretCryptoParticipation(cryptoData);
   const calendarWarning = calendarDataWarning(calendar.data?.events);
   const eventClock = summarizeEventClock(upcomingConfirmedEvents(calendar.data?.events ?? []));
 
   // Cross-asset: crypto total cap vs. equity sector breadth (association only).
-  const meanSectorChange = sectorData.length
-    ? sectorData.reduce((s, x) => s + (x.changePercent ?? 0), 0) / sectorData.length
+  // Sectors with no change (null) are left out of the average instead of counting as 0%.
+  const sectorMoves = sectorData
+    .map((x) => x.changePercent)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  const meanSectorChange = sectorMoves.length
+    ? sectorMoves.reduce((s, v) => s + v, 0) / sectorMoves.length
     : undefined;
   const crossReadings = [
     describeCrossAsset({
-      a: { label: 'Crypto (total cap)', changePct: cryptoData?.marketCapChange24h },
+      a: { label: 'Crypto (total cap)', changePct: cryptoData?.marketCapChange24h ?? undefined },
       b: { label: 'Equity sectors (avg)', changePct: meanSectorChange },
       baseline: 'positive',
       freshness: 'delayed',
@@ -151,7 +156,7 @@ export default function CommandCenterPage() {
   // open-interest change and liquidations refine it in the Crypto tools).
   const btcLeverage = derivatives.data
     ? classifyLeverageState({
-        priceChangePct: derivatives.data.coin.change24h,
+        priceChangePct: derivatives.data.coin.change24h ?? undefined,
         fundingRate: derivatives.data.aggregatedFunding.fundingRatePct,
         freshness: 'delayed',
       })
@@ -186,14 +191,16 @@ export default function CommandCenterPage() {
     !calendarWarning,
   ].filter(Boolean).length;
   // Shared freshness rule (lib/analysis/sessionDataHealth.ts): "current" needs a provider
-  // as-of time within cadence. The sectors and crypto responses only carry their own
-  // response time and movers carry none, so those layers count as recency unknown.
+  // as-of time within cadence. Each feed passes the provider's own time (OV-7): the sector
+  // ETF quotes give only a trading day, so they can be stale but not proven current
+  // intraday; crypto uses CoinGecko's update time; movers use Alpha Vantage's last_updated.
+  const sessionNow = new Date();
   const sessionFreshness = assessSessionFreshness([
     { name: 'regime', available: Boolean(regime.data?.regime) && reg.available, asOf: reg.asOf, stale: reg.stale },
-    { name: 'sectors', available: sectorData.length > 0, asOf: null },
-    { name: 'crypto', available: Boolean(cryptoData), asOf: null },
-    { name: 'movers', available: moverList.length > 0, asOf: null },
-  ]);
+    { name: 'sectors', available: sectorData.length > 0, ...equityLayerTiming({ asOf: sectors.data?.asOf, tradingDay: sectors.data?.asOfTradingDay }, sessionNow) },
+    { name: 'crypto', available: Boolean(cryptoData), asOf: crypto.data?.asOf ?? null, cadenceMinutes: CRYPTO_MAX_AGE_MINUTES },
+    { name: 'movers', available: moverList.length > 0, ...equityLayerTiming({ asOf: movers.data?.equityAsOf }, sessionNow) },
+  ], sessionNow.getTime());
   // Same degraded-feed list and wording as the Market dashboard, for the feeds this page reads.
   const degradedFeeds = degradedFeedList({
     feeds: [

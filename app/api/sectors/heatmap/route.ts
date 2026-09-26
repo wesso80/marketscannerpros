@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
+import { oldestTradingDay, parseAlphaVantageEasternTime, parseTradingDay } from '@/lib/analysis/providerAsOf';
 
 // Sector ETF mappings
 const SECTOR_ETFS = [
@@ -38,15 +39,18 @@ interface SectorData {
   name: string;
   price?: number;
   change?: number;
-  changePercent: number;
+  /** null when the provider sent no change (shown as n/a, left out of breadth and ranking). */
+  changePercent: number | null;
   weight: number;
   color: string;
-  daily?: number;
-  weekly?: number;
-  monthly?: number;
-  quarterly?: number;
-  ytd?: number;
-  yearly?: number;
+  daily?: number | null;
+  weekly?: number | null;
+  monthly?: number | null;
+  quarterly?: number | null;
+  ytd?: number | null;
+  yearly?: number | null;
+  /** Quote's trading day from GLOBAL_QUOTE ("07. latest trading day"). */
+  tradingDay?: string | null;
   // Technical overlay
   rsi14?: number | null;
   adx14?: number | null;
@@ -61,13 +65,16 @@ interface SectorData {
 
 /** Classify sector rotation phase from multi-period momentum */
 function classifyRotation(s: {
-  changePercent?: number;
-  daily?: number;
-  weekly?: number;
-  monthly?: number;
-  quarterly?: number;
-}): string {
-  const short = s.weekly ?? s.daily ?? s.changePercent ?? 0;
+  changePercent?: number | null;
+  daily?: number | null;
+  weekly?: number | null;
+  monthly?: number | null;
+  quarterly?: number | null;
+}): string | undefined {
+  const shortRaw = s.weekly ?? s.daily ?? s.changePercent;
+  // No move at all: no phase, rather than calling a missing sector "Lagging".
+  if (shortRaw == null || !Number.isFinite(shortRaw)) return undefined;
+  const short = shortRaw;
   const med = s.monthly ?? short;
   const long = s.quarterly ?? med;
 
@@ -139,8 +146,11 @@ async function enrichSectors(sectors: SectorData[]): Promise<SectorData[]> {
       s.rotation_phase = classifyRotation(s);
     }
 
-    // RS ranking: rank by real-time changePercent (1 = strongest)
-    const sorted = [...sectors].sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0));
+    // RS ranking: rank by real-time changePercent (1 = strongest). Sectors without a
+    // change get no rank instead of being ranked as 0%.
+    const sorted = sectors
+      .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
+      .sort((a, b) => (b.changePercent as number) - (a.changePercent as number));
     sorted.forEach((s, i) => {
       const match = sectors.find(x => x.symbol === s.symbol);
       if (match) match.rs_rank = i + 1;
@@ -197,9 +207,11 @@ export async function GET(req: NextRequest) {
           { name: 'Communication Services', key: 'Communication Services' },
         ];
         
-        const parsePercent = (str: string) => {
-          if (!str) return 0;
-          return parseFloat(str.replace('%', '')) || 0;
+        // Missing or unparseable values stay null (n/a), not 0%.
+        const parsePercent = (str: string): number | null => {
+          if (!str) return null;
+          const n = parseFloat(String(str).replace('%', ''));
+          return Number.isFinite(n) ? n : null;
         };
         
         const sectorData = sectors.map((sector, idx) => {
@@ -221,9 +233,14 @@ export async function GET(req: NextRequest) {
         });
         
         const enriched = await enrichSectors(sectorData);
+        const fetchedAt = new Date().toISOString();
         return NextResponse.json({
           sectors: enriched,
-          timestamp: new Date().toISOString(),
+          // `timestamp` stays the response time; `asOf` is the provider's own time (null if not sent).
+          timestamp: fetchedAt,
+          fetchedAt,
+          asOf: parseAlphaVantageEasternTime(data['Meta Data']?.['Last Refreshed']),
+          asOfTradingDay: null,
           source: 'alpha_vantage_sector'
         });
       }
@@ -255,7 +272,12 @@ export async function GET(req: NextRequest) {
             name: etf.name,
             price: parseFloat(quote['05. price'] || '0'),
             change: parseFloat(quote['09. change'] || '0'),
-            changePercent: parseFloat(quote['10. change percent']?.replace('%', '') || '0'),
+            // A missing change percent is n/a, not a flat 0.00% day.
+            changePercent: (() => {
+              const n = parseFloat(String(quote['10. change percent'] ?? '').replace('%', ''));
+              return Number.isFinite(n) ? n : null;
+            })(),
+            tradingDay: parseTradingDay(quote['07. latest trading day']),
             weight: SECTOR_WEIGHTS[etf.symbol] || 5,
             color: etf.color,
           };
@@ -272,9 +294,14 @@ export async function GET(req: NextRequest) {
     
     if (validSectors.length > 0) {
       const enriched = await enrichSectors(validSectors);
+      const fetchedAt = new Date().toISOString();
       return NextResponse.json({
         sectors: enriched,
-        timestamp: new Date().toISOString(),
+        timestamp: fetchedAt,
+        fetchedAt,
+        // GLOBAL_QUOTE gives a trading day but no time. Use the oldest quote's day.
+        asOf: null,
+        asOfTradingDay: oldestTradingDay(validSectors.map((s) => s.tradingDay)),
         source: 'alpha_vantage_etf'
       });
     }
