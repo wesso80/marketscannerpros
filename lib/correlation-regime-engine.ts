@@ -21,9 +21,9 @@ export type CorrelationRegime =
   | 'DECORRELATED'   // BTC and SPY uncorrelated (crypto doing its own thing)
   | 'STRESS';        // VIX extreme, all correlations go to 1, everything drops
 
-export type VIXRegime = 'LOW' | 'NORMAL' | 'ELEVATED' | 'EXTREME';
+export type VIXRegime = 'LOW' | 'NORMAL' | 'ELEVATED' | 'EXTREME' | 'UNAVAILABLE';
 
-export type SectorRotation = 'GROWTH_LEADING' | 'VALUE_LEADING' | 'DEFENSIVE' | 'MIXED';
+export type SectorRotation = 'GROWTH_LEADING' | 'VALUE_LEADING' | 'DEFENSIVE' | 'MIXED' | 'UNAVAILABLE';
 
 export interface AssetSnapshot {
   symbol: string;
@@ -38,8 +38,8 @@ export interface CorrelationRegimeInput {
   vix?: AssetSnapshot;
   dxy?: AssetSnapshot;
   gold?: AssetSnapshot;
-  /** Rolling 20-day correlation between BTC and SPY returns. -1 to +1 */
-  btcSpyCorrelation?: number;
+  /** Rolling 20-day correlation between BTC and SPY returns. -1 to +1. Omit (or null) when unavailable — no default. */
+  btcSpyCorrelation?: number | null;
   /** Extra sector ETFs for rotation detection */
   sectors?: {
     xlk?: AssetSnapshot; // Tech
@@ -54,18 +54,21 @@ export interface CorrelationRegimeOutput {
   regime: CorrelationRegime;
   vixRegime: VIXRegime;
   sectorRotation: SectorRotation;
-  btcSpyCorrelation: number;
-  dxyTrend: 'strengthening' | 'weakening' | 'neutral';
+  /** null when the correlation input was unavailable. */
+  btcSpyCorrelation: number | null;
+  dxyTrend: 'strengthening' | 'weakening' | 'neutral' | 'unavailable';
   riskScore: number; // 0 (max risk-off) to 100 (max risk-on)
   sizeMultiplier: number; // 0.0 to 1.0 — scale position sizes
   warnings: string[];
   recommendation: string;
+  /** Optional inputs that were missing (not scored, never replaced by a default): 'vix' | 'dxy' | 'gold' | 'btcSpyCorrelation' | 'sectors'. */
+  unavailable: string[];
   components: {
     btcMomentum: number;
     spyMomentum: number;
-    vixLevel: number;
-    dxyLevel: number;
-    goldSafeHaven: boolean;
+    vixLevel: number | null;
+    dxyLevel: number | null;
+    goldSafeHaven: boolean | null;
   };
 }
 
@@ -84,7 +87,7 @@ function classifyVIX(vixPrice: number): VIXRegime {
  */
 function detectSectorRotation(input: CorrelationRegimeInput): SectorRotation {
   const sectors = input.sectors;
-  if (!sectors?.xlk || !sectors?.xlu || !sectors?.xlf) return 'MIXED';
+  if (!sectors?.xlk || !sectors?.xlu || !sectors?.xlf) return 'UNAVAILABLE';
 
   const techChange = sectors.xlk.change24h;
   const utilitiesChange = sectors.xlu.change24h;
@@ -117,30 +120,41 @@ export function computeCorrelationRegime(input: CorrelationRegimeInput): Correla
   // Core momentum
   const btcMomentum = input.btc.change24h;
   const spyMomentum = input.spy.change24h;
-  const vixLevel = input.vix?.price ?? 18;
-  const dxyLevel = input.dxy?.price ?? 103;
-  const goldChange = input.gold?.change24h ?? 0;
-  const btcSpyCorr = input.btcSpyCorrelation ?? 0.5;
+  // Optional inputs are used only when present. A missing input is reported in `unavailable` and simply not scored;
+  // it is never replaced by a placeholder (the old defaults VIX 18 / DXY 103 / corr 0.5 always read "RISK ON 55").
+  const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+  const unavailable: string[] = [];
+  const vixLevel = fin(input.vix?.price) ? input.vix!.price : null;
+  const dxyLevel = fin(input.dxy?.price) ? input.dxy!.price : null;
+  const dxyChange = fin(input.dxy?.change24h) ? input.dxy!.change24h : null;
+  const goldChange = fin(input.gold?.change24h) ? input.gold!.change24h : null;
+  const btcSpyCorr = fin(input.btcSpyCorrelation) ? input.btcSpyCorrelation : null;
+  if (vixLevel === null) unavailable.push('vix');
+  if (dxyChange === null) unavailable.push('dxy');
+  if (goldChange === null) unavailable.push('gold');
+  if (btcSpyCorr === null) unavailable.push('btcSpyCorrelation');
 
   // VIX regime
-  const vixRegime = classifyVIX(vixLevel);
+  const vixRegime: VIXRegime = vixLevel === null ? 'UNAVAILABLE' : classifyVIX(vixLevel);
   if (vixRegime === 'EXTREME') warnings.push('VIX EXTREME (>30): all-correlations-to-1 risk');
   if (vixRegime === 'ELEVATED') warnings.push('VIX elevated: reduce position sizes');
 
   // DXY trend
-  const dxyTrend: 'strengthening' | 'weakening' | 'neutral' =
-    (input.dxy?.change24h ?? 0) > 0.15 ? 'strengthening'
-    : (input.dxy?.change24h ?? 0) < -0.15 ? 'weakening'
+  const dxyTrend: CorrelationRegimeOutput['dxyTrend'] =
+    dxyChange === null ? 'unavailable'
+    : dxyChange > 0.15 ? 'strengthening'
+    : dxyChange < -0.15 ? 'weakening'
     : 'neutral';
 
   if (dxyTrend === 'strengthening') warnings.push('USD strengthening: headwind for risk assets');
 
   // Gold safe-haven signal
-  const goldSafeHaven = goldChange > 0.5 && spyMomentum < -0.3;
+  const goldSafeHaven = goldChange === null ? null : goldChange > 0.5 && spyMomentum < -0.3;
   if (goldSafeHaven) warnings.push('Gold rallying while equities drop: flight to safety');
 
   // Sector rotation
   const sectorRotation = detectSectorRotation(input);
+  if (sectorRotation === 'UNAVAILABLE') unavailable.push('sectors');
 
   // ─── Regime classification ───
 
@@ -152,7 +166,7 @@ export function computeCorrelationRegime(input: CorrelationRegimeInput): Correla
     regime = 'RISK_ON';
   } else if (btcMomentum < -0.5 && spyMomentum < -0.3) {
     regime = 'RISK_OFF';
-  } else if (Math.abs(btcSpyCorr) < 0.2) {
+  } else if (btcSpyCorr !== null && Math.abs(btcSpyCorr) < 0.2) {
     regime = 'DECORRELATED';
   } else if ((btcMomentum > 0.5 && spyMomentum < -0.3) || (btcMomentum < -0.5 && spyMomentum > 0.3)) {
     regime = 'DIVERGENT';
@@ -173,7 +187,7 @@ export function computeCorrelationRegime(input: CorrelationRegimeInput): Correla
   riskScore += Math.max(-15, Math.min(15, spyMomentum * 5));
 
   // VIX contribution (±20)
-  const vixContrib = vixLevel < 14 ? 15 : vixLevel < 20 ? 5 : vixLevel < 25 ? -5 : vixLevel < 30 ? -12 : -20;
+  const vixContrib = vixLevel === null ? 0 : vixLevel < 14 ? 15 : vixLevel < 20 ? 5 : vixLevel < 25 ? -5 : vixLevel < 30 ? -12 : -20;
   riskScore += vixContrib;
 
   // DXY contribution (±5)
@@ -215,17 +229,18 @@ export function computeCorrelationRegime(input: CorrelationRegimeInput): Correla
     regime,
     vixRegime,
     sectorRotation,
-    btcSpyCorrelation: Number(btcSpyCorr.toFixed(3)),
+    btcSpyCorrelation: btcSpyCorr === null ? null : Number(btcSpyCorr.toFixed(3)),
     dxyTrend,
     riskScore,
     sizeMultiplier,
     warnings,
     recommendation,
+    unavailable,
     components: {
       btcMomentum: Number(btcMomentum.toFixed(2)),
       spyMomentum: Number(spyMomentum.toFixed(2)),
-      vixLevel: Number(vixLevel.toFixed(2)),
-      dxyLevel: Number(dxyLevel.toFixed(2)),
+      vixLevel: vixLevel === null ? null : Number(vixLevel.toFixed(2)),
+      dxyLevel: dxyLevel === null ? null : Number(dxyLevel.toFixed(2)),
       goldSafeHaven,
     },
   };

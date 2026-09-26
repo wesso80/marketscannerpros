@@ -74,6 +74,10 @@ export interface DailySeriesResult {
  * The concrete per-provider fetchers are injected so this module stays testable
  * and free of hard provider coupling.
  */
+/** Default parallelism / time budget for a cold load (RS-16: 27 sequential calls could hang the page). */
+export const FRAGILITY_LOAD_CONCURRENCY = 4;
+export const FRAGILITY_LOAD_BUDGET_MS = 20_000;
+
 export async function loadFragilityInput(
   fetchers?: {
     alphaVantage?: (symbol: string) => Promise<DailySeriesResult>;
@@ -81,6 +85,7 @@ export async function loadFragilityInput(
     coingecko?: (id: string) => Promise<DailySeriesResult>;
     derivedTotal3?: () => Promise<DailySeriesResult>;
   },
+  opts: { concurrency?: number; budgetMs?: number } = {},
 ): Promise<FragilityInput> {
   const liveEnabled = process.env.INTELLIGENCE_LIVE_DATA === 'true';
   const hasFred = Boolean(process.env.FRED_API_KEY);
@@ -97,22 +102,56 @@ export async function loadFragilityInput(
     return unavailable('missing-ALPHA_VANTAGE_API_KEY');
   }
 
+  const fetchOne = async (sym: FragilitySymbol): Promise<DailySeriesResult | null> => {
+    const map = PROVIDER_MAP[sym];
+    try {
+      if (map.provider === 'alpha-vantage' && fetchers.alphaVantage) return await fetchers.alphaVantage(map.providerSymbol);
+      if (map.provider === 'fred' && fetchers.fred) return await fetchers.fred(map.providerSymbol);
+      if (map.provider === 'coingecko' && fetchers.coingecko) return await fetchers.coingecko(map.providerSymbol);
+      if (map.provider === 'derived' && fetchers.derivedTotal3) return await fetchers.derivedTotal3();
+      return null;
+    } catch (e) {
+      return { bars: null, provider: map.provider, error: e instanceof Error ? e.message : 'fetch-failed' };
+    }
+  };
+
+  // Limited parallelism with an overall time budget: symbols not fetched when the budget runs out are recorded as
+  // missing (the engine reports PARTIAL coverage) instead of holding the whole request open.
+  const concurrency = Math.max(1, Math.floor(opts.concurrency ?? FRAGILITY_LOAD_CONCURRENCY));
+  const budgetMs = Math.max(0, opts.budgetMs ?? FRAGILITY_LOAD_BUDGET_MS);
+  const deadline = Date.now() + budgetMs;
+  const results = new Map<FragilitySymbol, DailySeriesResult | null>();
+  let nextIdx = 0;
+  let budgetHit = false;
+  const worker = async () => {
+    while (!budgetHit && nextIdx < FRAGILITY_SYMBOLS.length) {
+      if (Date.now() >= deadline) { budgetHit = true; return; }
+      const sym = FRAGILITY_SYMBOLS[nextIdx++];
+      const res = await fetchOne(sym);
+      if (!budgetHit) results.set(sym, res);
+    }
+  };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<'budget'>((resolve) => { timer = setTimeout(() => resolve('budget'), Math.max(0, deadline - Date.now())); });
+  const outcome = await Promise.race([Promise.all(Array.from({ length: concurrency }, worker)).then(() => 'done' as const), budget]);
+  if (timer) clearTimeout(timer);
+  if (outcome === 'budget') budgetHit = true;
+  const snapshot = new Map(results);
+
   const series: Partial<Record<FragilitySymbol, FragilityDailyBar[]>> = {};
   const providersUsed = new Set<string>();
   const errors: string[] = [];
+  const timedOut: string[] = [];
   let latest = 0;
 
   for (const sym of FRAGILITY_SYMBOLS) {
     const map = PROVIDER_MAP[sym];
-    let res: DailySeriesResult | null = null;
-    try {
-      if (map.provider === 'alpha-vantage' && fetchers.alphaVantage) res = await fetchers.alphaVantage(map.providerSymbol);
-      else if (map.provider === 'fred' && fetchers.fred) res = await fetchers.fred(map.providerSymbol);
-      else if (map.provider === 'coingecko' && fetchers.coingecko) res = await fetchers.coingecko(map.providerSymbol);
-      else if (map.provider === 'derived' && fetchers.derivedTotal3) res = await fetchers.derivedTotal3();
-    } catch (e) {
-      res = { bars: null, provider: map.provider, error: e instanceof Error ? e.message : 'fetch-failed' };
+    if (!snapshot.has(sym)) {
+      timedOut.push(sym);
+      errors.push(`${sym}:time-budget`);
+      continue;
     }
+    const res = snapshot.get(sym) ?? null;
     if (res?.bars && res.bars.length > 0) {
       series[sym] = res.bars;
       providersUsed.add(map.provider);
@@ -130,6 +169,7 @@ export async function loadFragilityInput(
     dataAsOf: latest ? new Date(latest).toISOString() : new Date().toISOString(),
     providersUsed: [...providersUsed],
     sourceStatus: status,
+    ...(timedOut.length ? { timedOut } : {}),
   };
 }
 
