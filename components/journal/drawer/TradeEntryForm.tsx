@@ -382,6 +382,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />
+            <p className="mt-1 text-[11px] text-slate-500">Leave blank for no target: none is filled in for you.</p>
           </div>
         </div>
 

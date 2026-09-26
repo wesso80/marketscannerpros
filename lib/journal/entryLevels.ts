@@ -5,8 +5,8 @@
  * warning shows until the trader sets one. risk_amount and planned R:R are only computed from a
  * stop the trader actually entered.
  *
- * The target keeps its existing default when left blank (2x the old stop distance: 4% / 10% crypto /
- * 3% forex); that is unchanged here.
+ * A blank target stays blank too (it used to default to +4% / 10% crypto / 3% forex). Planned R:R
+ * needs both a stop and a target the trader entered.
  */
 export interface EntryLevelsInput {
   side: 'LONG' | 'SHORT';
@@ -33,20 +33,17 @@ function positive(value: unknown): number | null {
 export function resolveEntryLevels(input: EntryLevelsInput): EntryLevels {
   const { side, entryPrice, quantity } = input;
   const stopLoss = positive(input.stopLoss);
-  let target = positive(input.target);
-  if (target == null) {
-    const ac = String(input.assetClass || '').toLowerCase();
-    const pct = ac === 'crypto' ? 0.10 : ac === 'forex' ? 0.030 : 0.04;
-    target = side === 'LONG' ? +(entryPrice * (1 + pct)).toFixed(8) : +(entryPrice * (1 - pct)).toFixed(8);
-  }
+  const target = positive(input.target);
 
   let riskAmount: number | null = null;
   let plannedRR: number | null = null;
   if (stopLoss != null) {
     const riskPerUnit = Math.abs(entryPrice - stopLoss);
     riskAmount = riskPerUnit * quantity;
-    const rewardPerUnit = Math.abs(target - entryPrice);
-    plannedRR = riskPerUnit > 0 ? rewardPerUnit / riskPerUnit : null;
+    if (target != null) {
+      const rewardPerUnit = Math.abs(target - entryPrice);
+      plannedRR = riskPerUnit > 0 ? rewardPerUnit / riskPerUnit : null;
+    }
   }
   return { stopLoss, target, riskAmount, plannedRR };
 }

@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
     const notes = body.notes || null;
     const tradeDate = body.tradeDate || new Date().toISOString().slice(0, 10);
 
-    // TR-9: a blank stop stays blank (no invented stop); risk/R:R only from a stop the trader entered.
+    // TR-9: a blank stop or target stays blank (nothing invented); risk only from an entered stop,
+    // planned R:R only from an entered stop and target.
     const { stopLoss, target, riskAmount, plannedRR } = resolveEntryLevels({
       side: side as 'LONG' | 'SHORT',
       entryPrice,
