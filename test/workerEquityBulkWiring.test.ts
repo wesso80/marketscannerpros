@@ -25,7 +25,8 @@ describe('worker equities wiring (source guard)', () => {
     expect(cycle).toContain('chunkSymbols(bulkSymbols)');
     expect(cycle).toContain('await fetchAVBulkQuotes(batch)');
     expect(cycle).toContain('upsertEquityQuotesBatch(bulkQuotes)');
-    const fetcher = between('async function fetchAVBulkQuotes(', '/**\n * Fetch crypto OHLC');
+    // End at the function's closing brace (the doc comment that used to follow it was rewritten by #176).
+    const fetcher = between('async function fetchAVBulkQuotes(', '\n}\n');
     expect(fetcher).toContain('function=REALTIME_BULK_QUOTES');
     expect(fetcher).toContain('entitlement=realtime');
     expect(fetcher).toContain('getRateLimiter().take(1)');
