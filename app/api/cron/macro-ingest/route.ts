@@ -44,7 +44,20 @@ export async function POST(req: NextRequest) {
   const started = Date.now();
   try {
     const result = await ingestFred({ sinceISO: since, only });
-    return NextResponse.json({ ...result, durationMs: Date.now() - started });
+    // Series errors used to come back as HTTP 200 with ok:false, which `curl -f` in the
+    // Render cron treats as success, so a broken ingest went unnoticed (OV-1). Tell the
+    // admin about any failed series, and fail the request when nothing was ingested.
+    if (result.failed > 0) {
+      const failedSeries = result.perSeries.filter((s) => s.error).map((s) => `${s.seriesKey}: ${s.error}`);
+      notifyAdmin({
+        subject: 'macro-ingest: some FRED series failed',
+        body: `FRED ingest (${result.via ?? 'api'}) failed for ${result.failed} series:\n${failedSeries.join('\n')}`,
+        severity: result.ingested === 0 ? 'error' : 'warn',
+        context: { since: since ?? null, only: only ? only.join(',') : null, ingested: result.ingested, durationMs: Date.now() - started },
+      }).catch(() => {});
+    }
+    const status = result.failed > 0 && result.ingested === 0 ? 502 : 200;
+    return NextResponse.json({ ...result, durationMs: Date.now() - started }, { status });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     notifyAdmin({

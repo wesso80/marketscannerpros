@@ -50,6 +50,17 @@ function toMs(value: string | null | undefined): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
+const SOURCE_LABEL: Record<string, string> = { 'fred-csv': 'FRED CSV', 'alpha-vantage': 'Alpha Vantage' };
+
+/** "VIX as of 2026-09-22 (4 days old, FRED CSV)": each input's own date, so a stale input is named. */
+function describeInputDate(label: string, value: string | null | undefined, now: number, source?: string | null): string {
+  const ms = toMs(value ?? null);
+  if (ms == null) return `${label} date unknown`;
+  const age = Math.max(0, Math.floor((now - ms) / DAY_MS));
+  const extra = [`${age} day${age === 1 ? '' : 's'} old`, source && SOURCE_LABEL[source] ? SOURCE_LABEL[source] : null].filter(Boolean).join(', ');
+  return `${label} as of ${new Date(ms).toISOString().slice(0, 10)} (${extra})`;
+}
+
 const describeTrend = (key: string, side: 'above' | 'below' | 'mixed') =>
   side === 'above' ? `${key} above its 50- and 200-day averages`
     : side === 'below' ? `${key} below its 50- and 200-day averages`
@@ -59,16 +70,22 @@ export function classifyMarketRegime(inputs: RegimeOverlayInputs | null | undefi
   const P = MARKET_REGIME_POLICY;
   const vix = inputs?.vix;
   const spySide = trendSide(inputs?.spy);
+  const vixDateRaw = vix?.asOf ?? inputs?.asOf ?? null;
+  const vixDate = describeInputDate('VIX', vixDateRaw, now, vix?.source);
+  const spyDate = describeInputDate('SPY', inputs?.spy?.asOf, now, inputs?.spy?.source);
   const missing = [!vix || !fin(vix.level) ? 'VIX' : null, spySide === null ? 'SPY trend' : null].filter(Boolean);
-  if (missing.length) return { available: false, reason: `Market data unavailable: ${missing.join(' and ')} missing.` };
+  if (missing.length) {
+    const present = [missing.includes('VIX') ? null : vixDate, missing.includes('SPY trend') ? null : spyDate].filter(Boolean);
+    return { available: false, reason: `Market data unavailable: ${missing.join(' and ')} missing${present.length ? ` (${present.join(', ')})` : ''}.` };
+  }
 
-  const vixAt = toMs(inputs?.asOf ?? null);
+  const vixAt = toMs(vixDateRaw);
   const spyAt = toMs(inputs?.spy?.asOf ?? null);
-  if (vixAt == null || spyAt == null) return { available: false, reason: 'Market data unavailable: observation dates are missing.' };
+  if (vixAt == null || spyAt == null) return { available: false, reason: `Market data unavailable: ${vixDate}, ${spyDate}.` };
   const asOfMs = Math.min(vixAt, spyAt);
   const ageDays = (now - asOfMs) / DAY_MS;
   if (ageDays > P.unavailableAfterDays) {
-    return { available: false, reason: `Market data unavailable: latest VIX/SPY observation is ${Math.floor(ageDays)} days old.` };
+    return { available: false, reason: `Market data unavailable: ${vixDate}, ${spyDate}; inputs older than ${P.unavailableAfterDays} days are not used.` };
   }
 
   const level = vix!.level;
@@ -79,6 +96,10 @@ export function classifyMarketRegime(inputs: RegimeOverlayInputs | null | undefi
   const reasons = [`VIX ${level.toFixed(1)}${shock != null ? ` (${shock >= 0 ? '+' : ''}${shock.toFixed(0)}% over 5 sessions)` : ''}`, describeTrend('SPY', spySide!)];
   if (qqqSide) reasons.push(describeTrend('QQQ', qqqSide));
   if (hyWidening != null) reasons.push(`HY credit spread ${hyWidening >= 0 ? '+' : ''}${hyWidening.toFixed(2)}pp over 20 observations`);
+  const dated = [vixDate, spyDate];
+  if (qqqSide && inputs?.qqq?.asOf) dated.push(describeInputDate('QQQ', inputs.qqq.asOf, now, inputs.qqq.source));
+  if (inputs?.hyOas?.asOf) dated.push(describeInputDate('HY OAS', inputs.hyOas.asOf, now, inputs.hyOas.source));
+  reasons.push(`Data: ${dated.join(', ')}`);
 
   let regime: Regime;
   if (level >= P.vixStress || (level >= P.vixElevated && shock != null && shock >= P.vixShockPct) || (hyWidening != null && hyWidening >= P.hyOasStressPp && spySide === 'below')) {
