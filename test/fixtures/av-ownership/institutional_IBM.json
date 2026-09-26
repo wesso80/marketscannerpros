@@ -1,0 +1,78 @@
+{
+ "symbol": "IBM",
+ "total_institutional_holders": "3936",
+ "total_institutional_shares": "714367306",
+ "holders_with_increased_holdings": "2032",
+ "shares_with_increased_holdings": "41381272",
+ "holders_with_decreased_holdings": "1460",
+ "shares_with_decreased_holdings": "27058238",
+ "holders_with_unchanged_holdings": "444",
+ "shares_with_unchanged_holdings": "645927796",
+ "total_institutional_ownership_percentage": "76%",
+ "holdings": [
+  {
+   "holder_name": "VANGUARD GROUP INC",
+   "shares_held": "97216131",
+   "shares_changed": "1439824",
+   "shares_changed_percentage": "1.50%",
+   "change_type": "increased",
+   "last_reported": "2025-12-31"
+  },
+  {
+   "holder_name": "BLACKROCK",
+   "shares_held": "76763481",
+   "shares_changed": "-802472",
+   "shares_changed_percentage": "-1.03%",
+   "change_type": "decreased",
+   "last_reported": "2026-06-30"
+  },
+  {
+   "holder_name": "VANGUARD CAPITAL MANAGEMENT LLC",
+   "shares_held": "61385366",
+   "shares_changed": "539761",
+   "shares_changed_percentage": "0.89%",
+   "change_type": "increased",
+   "last_reported": "2026-06-30"
+  },
+  {
+   "holder_name": "STATE STREET CORP",
+   "shares_held": "56045055",
+   "shares_changed": "1450562",
+   "shares_changed_percentage": "2.66%",
+   "change_type": "increased",
+   "last_reported": "2026-06-30"
+  },
+  {
+   "holder_name": "VANGUARD PORTFOLIO MANAGEMENT LLC",
+   "shares_held": "28348295",
+   "shares_changed": "687429",
+   "shares_changed_percentage": "2.48%",
+   "change_type": "increased",
+   "last_reported": "2026-06-30"
+  },
+  {
+   "holder_name": "GEODE CAPITAL MANAGEMENT",
+   "shares_held": "23448500",
+   "shares_changed": "372171",
+   "shares_changed_percentage": "1.61%",
+   "change_type": "increased",
+   "last_reported": "2026-06-30"
+  },
+  {
+   "holder_name": "MORGAN STANLEY",
+   "shares_held": "17459828",
+   "shares_changed": "-2171123",
+   "shares_changed_percentage": "-11.06%",
+   "change_type": "decreased",
+   "last_reported": "2026-06-30"
+  },
+  {
+   "holder_name": "CAPITAL WORLD INVESTORS",
+   "shares_held": "16207905",
+   "shares_changed": "-854548",
+   "shares_changed_percentage": "-5.01%",
+   "change_type": "decreased",
+   "last_reported": "2026-06-30"
+  }
+ ]
+}

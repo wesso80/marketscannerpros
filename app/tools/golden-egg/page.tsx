@@ -49,6 +49,7 @@ const CRYPTO_SET = new Set([
 const DeepAnalysis = dynamic(() => import('@/app/tools/deep-analysis/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Deep Analysis…</div> });
 const IntradayCharts = dynamic(() => import('@/app/tools/intraday-charts/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
 const CompanyOverview = dynamic(() => import('@/app/tools/company-overview/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fundamentals…</div> });
+const OwnershipFlowPanel = dynamic(() => import('@/components/golden-egg/OwnershipFlowPanel'), { ssr: false });
 
 const GE_TABS = ['Verdict', 'Chart', 'Deep Analysis', 'Fundamentals'] as const;
 type GETab = typeof GE_TABS[number];
@@ -832,7 +833,10 @@ export default function GoldenEggPage() {
               </div>
             </Card>
           ) : (
-            <CompanyOverview symbol={sym} />
+            <>
+              <CompanyOverview symbol={sym} />
+              <OwnershipFlowPanel symbol={sym} />
+            </>
           )}
         </GoldenEggSubviewFrame>
       )}
