@@ -391,6 +391,8 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
               <div>
                 <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol}</div>
+                {/* SC-14: same price as the desktop Ranked table's Price column. */}
+                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price">{isUsableNumber(row.price) ? formatPrice(row.price) : 'Price unavailable'}</div>
                 <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
               <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
@@ -451,6 +453,8 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               <div>
                 <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol || 'Unknown'}</div>
+                {/* SC-14: same price as the desktop Ranked table's Price column. */}
+                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price">{isUsableNumber(row.price) ? formatPrice(row.price) : 'Price unavailable'}</div>
                 <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
               <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
