@@ -44,6 +44,7 @@ import { parseProFilters, selectProCandidates, type ProScanFilters, type ProScan
 import { isRetiredFastCryptoRequest, resolveBulkScanMode, type BulkScanMode } from '@/lib/scanner/proScanMode';
 import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 import { cachedMoversToAdd, completedSessionAvgVolume, parseEquityQuote } from '@/lib/scanner/equityScanInputs';
+import { riskOffThresholds } from '@/lib/regime-classifier';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -777,6 +778,8 @@ interface InstitutionalPickScoreV2 {
   context: {
     regime: 'trend' | 'range' | 'expansion' | 'contraction' | 'unknown';
     riskMode: 'risk_on' | 'risk_off' | 'neutral';
+    /** Risk-off thresholds used for this row's asset class (ATR% / today's move %). */
+    riskOffThresholds: { atrPct: number; movePct: number; assetClass: 'equity' | 'crypto' };
     biasAllowed: 'long_only' | 'short_only' | 'both' | 'none';
     contextScore: number;
     tags: string[];
@@ -969,8 +972,12 @@ function deriveRegime(adxValue?: number, atrPercent?: number): InstitutionalPick
   return 'unknown';
 }
 
-function deriveRiskMode(atrPercent?: number, momentumAbs?: number): InstitutionalPickScoreV2['context']['riskMode'] {
-  if ((Number.isFinite(atrPercent) && (atrPercent as number) >= 6) || (Number.isFinite(momentumAbs) && (momentumAbs as number) >= 8)) {
+function deriveRiskMode(
+  atrPercent: number | undefined,
+  momentumAbs: number | undefined,
+  thresholds: { atrPct: number; movePct: number },
+): InstitutionalPickScoreV2['context']['riskMode'] {
+  if ((Number.isFinite(atrPercent) && (atrPercent as number) >= thresholds.atrPct) || (Number.isFinite(momentumAbs) && (momentumAbs as number) >= thresholds.movePct)) {
     return 'risk_off';
   }
   if ((Number.isFinite(atrPercent) && (atrPercent as number) <= 3) && (Number.isFinite(momentumAbs) && (momentumAbs as number) >= 1)) {
@@ -1073,7 +1080,9 @@ function buildInstitutionalPickScoreV2(
   const setupScore = clamp(setupScoreRaw, 0, 100);
 
   const regime = deriveRegime(Number.isFinite(adxValue) ? adxValue : undefined, atrPercent);
-  const riskMode = deriveRiskMode(atrPercent, Math.abs(change24h));
+  // Per-asset-class limits: crypto's normal ATR (6–8%) is not a risk-off tape.
+  const riskOff = riskOffThresholds(params.type);
+  const riskMode = deriveRiskMode(atrPercent, Math.abs(change24h), riskOff);
 
   const biasAllowed: InstitutionalPickScoreV2['context']['biasAllowed'] = !directional
     ? 'none'
@@ -1149,6 +1158,7 @@ function buildInstitutionalPickScoreV2(
     context: {
       regime,
       riskMode,
+      riskOffThresholds: { ...riskOff, assetClass: params.type },
       biasAllowed,
       contextScore: clampInt(contextScore, 0, 100),
       tags,

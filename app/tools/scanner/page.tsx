@@ -1365,7 +1365,7 @@ export default function ScannerPage() {
           && !strategyKey.includes('range_fade')
           && !strategyKey.includes('mean_reversion');
         const reason = pick.compositeV2?.blockers?.length ? pick.compositeV2.blockers.join(' ') : dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
-          : legacyExecutionReason(blockReasons) ?? (strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
+          : legacyExecutionReason(blockReasons, scoreV2?.context?.riskOffThresholds) ?? (strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
           : rangeConfirmationNeeded ? 'Directional setup inside range — confirm break/fade'
           : tfA != null && tfA >= 4 && qual !== 'low' ? 'Four-factor agreement'
           : atrPct != null && atrPct < 1.5 ? 'Compression setup'
