@@ -367,6 +367,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               value={stopLoss}
               onChange={(e) => setStopLoss(e.target.value)}
             />
+            <p className="mt-1 text-[11px] text-slate-500">Your stop. Leave blank for no stop: R stays unavailable until you set one.</p>
           </div>
           <div>
             <label htmlFor="trade-target" className={LABEL}>Key Level</label>
