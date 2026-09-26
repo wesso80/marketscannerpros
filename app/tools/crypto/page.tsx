@@ -11,6 +11,7 @@ import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import { PageHero } from '@/components/ui';
+import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 const TrendingCoinsWidget = dynamic(() => import('@/components/TrendingCoinsWidget'), {
   ssr: false,
@@ -743,6 +744,7 @@ function CryptoCommandCenterContent() {
             </div>
           </div>
         </details>
+        <CoinGeckoCredit className="text-center" />
       </main>
     </div>
   );

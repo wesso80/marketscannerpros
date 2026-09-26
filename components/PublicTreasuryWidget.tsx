@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatTreasuryUsd as formatUsd } from '@/lib/crypto/treasuryValuation';
+import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 interface TreasuryCompany {
   name: string;
@@ -236,7 +237,7 @@ export default function PublicTreasuryWidget() {
             <button disabled={page >= pageCount} onClick={() => setPage(value => value + 1)} className="rounded border border-slate-700 px-3 py-1 disabled:opacity-40">Next</button>
           </nav>
           <p className="mt-3 text-[11px] text-slate-400">Observation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.</p>
-          <p className="mt-2 text-right text-[10px] text-slate-600">Source: CoinGecko Public Treasury</p>
+          <CoinGeckoCredit className="mt-2 text-right" detail="Public Treasury" />
         </>
       )}
     </div>

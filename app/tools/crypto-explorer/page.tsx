@@ -10,6 +10,7 @@ import CryptoMorningDecisionCard, { type CryptoDecisionGate } from '@/components
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { PageHero } from '@/components/ui';
+import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 interface CoinData {
   coin: {
@@ -791,6 +792,7 @@ function CryptoDetailPageContent() {
             <div className="text-center text-[11px] text-slate-500">
               Last updated: {coinData.last_updated ? new Date(coinData.last_updated).toLocaleString() : 'N/A'}
             </div>
+            <CoinGeckoCredit className="text-center" />
           </>
         )}
 
