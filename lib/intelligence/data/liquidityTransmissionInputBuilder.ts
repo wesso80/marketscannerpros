@@ -12,8 +12,11 @@ import {
   LIQUIDITY_PROVIDER_MAP, type LiquidityAssetKey, type LiquidityAssetSeriesLoad,
   type LiquidityProvider, type LiquiditySourceClass,
 } from './providers/liquidityAssetProviders';
+import { isDailySeriesStale } from '@/lib/time/dataFreshness';
 
 const KEYS = Object.keys(LIQUIDITY_PROVIDER_MAP) as LiquidityAssetKey[];
+/** Crypto trades every day, so its staleness counts calendar days; everything else counts US sessions. */
+const CRYPTO_KEYS = new Set<LiquidityAssetKey>(['btc', 'eth', 'total2']);
 
 export interface AssetPackMetadata {
   key: LiquidityAssetKey;
@@ -118,7 +121,7 @@ export function buildLiquidityTransmissionInput(
     const confirmed: ConfirmedAssetPack = buildConfirmedAssetPack(bars, nowIso);
     const missing = !res || res.status !== 'OK' || !bars || bars.length === 0
       || (confirmed.m1 === null && confirmed.r20 === null && confirmed.r5 === null);
-    const staleAge = confirmed.latestDaily ? staleByAge(confirmed.latestDaily, nowIso, 7) : false;
+    const staleAge = confirmed.latestDaily ? isDailySeriesStale(confirmed.latestDaily, Date.parse(nowIso), CRYPTO_KEYS.has(key) ? '24x7' : 'us-equity') : false;
     packs.push({
       key,
       pineSymbol: map.pineSymbol,
@@ -166,11 +169,3 @@ export function buildLiquidityTransmissionInput(
   };
 }
 
-/** A provider series is stale if its latest confirmed daily bar is older than
- *  `days` calendar days behind `nowIso`. Weekend/holiday tolerance = 7 days. */
-function staleByAge(latestDay: string, nowIso: string, days: number): boolean {
-  const t0 = Date.parse(nowIso.slice(0, 10) + 'T00:00:00Z');
-  const t1 = Date.parse(latestDay + 'T00:00:00Z');
-  if (!Number.isFinite(t0) || !Number.isFinite(t1)) return false;
-  return (t0 - t1) / (1000 * 60 * 60 * 24) > days;
-}

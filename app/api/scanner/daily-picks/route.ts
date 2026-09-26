@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
+import { dailyPickPriceBasis } from "@/lib/scanner/dailyPickPriceBasis";
 import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } from "@/lib/scanner/dailyPickTrust";
 import { canonicalPickFields, rankDailyPicks, readStoredCanonical, storedLegacyScore } from "@/lib/scoring/canonical/dailyPick";
 import { formatSessionDate, toYmd } from "@/lib/time/usSession";
@@ -93,13 +94,16 @@ export async function GET(req: NextRequest) {
       if (target[pick.asset_class]) {
         const trust = evaluateDailyPickTrust(pick, nowMs);
         trusts.push(trust);
+        const storedCanonical = readStoredCanonical(pick.indicators);
         target[pick.asset_class].push({
           ...pick,
           scan_date: toYmd(pick.scan_date),
+          // Says which price `price` is: crypto rows store a scan-time spot quote, the verdict uses the completed bar.
+          ...dailyPickPriceBasis(pick.price, storedCanonical, pick.asset_class),
           // Canonical verdict (primary: permission / grade / setup / direction). From Phase 3 the `score` + `direction`
           // columns hold the canonical values too (indicators.scoreColumn = 'canonical'); legacyScore is the old
           // signal-count score.
-          ...canonicalPickFields(readStoredCanonical(pick.indicators)),
+          ...canonicalPickFields(storedCanonical),
           legacyScore: storedLegacyScore(pick.indicators, Number(pick.score)),
           trust,
           dataTimestamp: trust.dataTimestamp,

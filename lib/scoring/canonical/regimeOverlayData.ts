@@ -14,7 +14,7 @@
  */
 import { q } from '@/lib/db';
 import type { IndexTrend, RegimeOverlayInputs } from './regimeOverlay';
-import { MARKET_REGIME_POLICY } from '@/lib/marketRegime';
+import { isDailySeriesStale } from '@/lib/time/dataFreshness';
 import { FRED_SERIES } from '@/lib/macro/fred';
 import { getFredCsvCached } from '@/lib/macro/fredCsv';
 import { avFetchDailyBars } from '@/lib/marketData/client';
@@ -23,17 +23,13 @@ const TTL_MS = 15 * 60 * 1000;
 let cache: { at: number; data: RegimeOverlayInputs } | null = null;
 
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
-const DAY_MS = 86_400_000;
 
 type Obs = { on: string; value: number };
 type Sourced<T> = T & { source: 'stored' | 'fred-csv' | 'alpha-vantage' };
 
-/** True when a YYYY-MM-DD / ISO date is missing or older than the regime's stale limit. */
+/** True when a YYYY-MM-DD / ISO date is missing or stale under the shared trading-day rule (lib/time/dataFreshness). */
 export function isOlderThanStaleLimit(dateLike: string | null | undefined, now = Date.now()): boolean {
-  if (!dateLike) return true;
-  const ms = Date.parse(dateLike.length === 10 ? `${dateLike}T00:00:00Z` : dateLike);
-  if (!Number.isFinite(ms)) return true;
-  return (now - ms) / DAY_MS > MARKET_REGIME_POLICY.staleAfterDays;
+  return isDailySeriesStale(dateLike, now);
 }
 
 async function macroSeries(key: string, limit: number): Promise<Array<{ on: string; value: number }>> {
