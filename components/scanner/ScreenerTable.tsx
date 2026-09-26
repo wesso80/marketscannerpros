@@ -2,11 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { gradeBasis } from '@/lib/scoring/canonical/display';
+import { formatScannerPrice } from '@/lib/scanner/proDisplay';
 
 /* ─── Types ─── */
 export interface ScreenerRow {
   rank: number;
   symbol: string;
+  /** Label shown instead of `symbol` (e.g. "AR-USD" for a crypto row); `symbol` stays the key used for analysis. */
+  displaySymbol?: string;
   direction: 'LONG' | 'SHORT' | 'NEUTRAL';
   confidence: number;
   scoreExplanation?: string;
@@ -124,8 +127,13 @@ const COLUMNS: Column[] = [
   {
     key: 'symbol', label: 'Symbol', width: '110px',
     render: (r) => (
-      <span style={{ fontWeight: 700, color: 'var(--msp-text)', letterSpacing: '0.02em' }}>{r.symbol}</span>
+      <span style={{ fontWeight: 700, color: 'var(--msp-text)', letterSpacing: '0.02em' }}>{r.displaySymbol ?? r.symbol}</span>
     ),
+  },
+  {
+    key: 'price', label: 'Price', width: '90px', align: 'right',
+    title: 'Last price from the scan (latest bar close or quote)',
+    render: (r) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatScannerPrice(r.price)}</span>,
   },
   {
     key: 'direction', label: 'Bias', width: '82px', align: 'center',

@@ -27,6 +27,7 @@ import { reconcileFeedStatusWithRows } from '@/lib/scanner/feedStatusFromRows';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
+import { formatScannerPrice, proDisplaySymbol } from '@/lib/scanner/proDisplay';
 import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
 import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
@@ -328,7 +329,8 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Rank {row.rank}</div>
-                <div className="mt-1 text-lg font-black text-white">{row.symbol}</div>
+                <div className="mt-1 text-lg font-black text-white">{row.displaySymbol ?? row.symbol}</div>
+                {row.price != null && <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatScannerPrice(row.price)}</div>}
               </div>
               <div className={`rounded-md border px-2 py-1 text-[11px] font-black uppercase ${researchTone}`}>
                 {row.scorePermission ?? (row.permission === 'COMPLIANT' ? 'Aligned' : row.permission === 'BLOCKED' ? 'Not aligned' : 'Mixed')}
@@ -1028,6 +1030,9 @@ export default function ScannerPage() {
   const proRequestKey = JSON.stringify([proAsset, proTimeframe, proUniverseSize, proFilters, proSort]);
   const [proResponse, setProScanResults] = useState<any>(null);
   const proScanResults = proResponse?.requestKey === proRequestKey ? proResponse : null;
+  // Results from a scan whose filters/sort have since changed are hidden (they no longer match the controls); say so and
+  // offer the re-run instead of leaving an empty area (SC-11).
+  const proResultsOutdated = Boolean(proResponse) && !proScanResults;
   const proAbortRef = useRef<AbortController | null>(null);
   const detailRequestRef = useRef(0);
   useEffect(() => {
@@ -1362,7 +1367,7 @@ export default function ScannerPage() {
               ? 'COMPLIANT'
               : 'TIGHT';
         return {
-          rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
+          rank: idx + 1, symbol: pick.symbol, displaySymbol: proDisplaySymbol(pick.symbol, proScanResults?.type ?? proAsset), direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
           scorePermission: noSetup ? 'NO SETUP' : primaryPermission, factorCoverage: pick.canonical?.coverage ?? pick.compositeV2?.coverage, canonical: pick.canonical,
           scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: coverage-adjusted magnitude ${(pick.compositeV2.coverageAdjustedMagnitude ?? pick.compositeV2.conservativeMagnitude).toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
@@ -1936,6 +1941,13 @@ export default function ScannerPage() {
           {proScanResults?.dataQuality?.source === 'local_demo' && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
               <strong>Local demo Pro Scanner rows:</strong> live bulk scanner data is unavailable in this local environment, so these rows are sample research outputs for workflow testing only. Do not treat them as live scanner output.
+            </div>
+          )}
+
+          {proResultsOutdated && !proScanLoading && (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              <span>Filters or sort changed since the last scan, so its results are hidden. Run the scan again to see matches for the new settings.</span>
+              <button type="button" onClick={runProScan} className="rounded-md border border-amber-400/40 bg-amber-400/15 px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-amber-100 hover:bg-amber-400/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Re-run scan</button>
             </div>
           )}
 
