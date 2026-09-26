@@ -87,6 +87,9 @@ function wrap<T>(args: {
 // Bars
 // ---------------------------------------------------------------------------
 
+/** Bars in an Alpha Vantage TIME_SERIES_DAILY_ADJUSTED outputsize=compact response. */
+const AV_DAILY_COMPACT_BARS = 100;
+
 export async function getBars(symbol: string, timeframe: BarTimeframe, opts: FetchOptions = {}): Promise<DataEnvelope<OhlcBar[]>> {
   const dataType = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly' ? 'dailyBars' : 'intradayBars';
   const source = `alpha-vantage:${timeframe === 'daily' ? 'TIME_SERIES_DAILY_ADJUSTED' : `TIME_SERIES_INTRADAY:${timeframe}`}`;
@@ -100,10 +103,14 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
     }
   }
 
-  // 2. Postgres
+  // 2. Postgres. A daily read must hold the same series the AV call it replaces returns (compact = latest 100
+  // sessions): read exactly that many and only serve it when all are there (a short stored series goes to AV).
   if (!opts.forceFresh) {
-    const pg = await pgReadBars(symbol, timeframe);
-    if (pg && ageSecondsFrom(pg.fetchedAt) <= max) {
+    const pg = dataType === 'dailyBars' && timeframe === 'daily'
+      ? await pgReadBars(symbol, timeframe, AV_DAILY_COMPACT_BARS)
+      : await pgReadBars(symbol, timeframe);
+    const enough = !(dataType === 'dailyBars' && timeframe === 'daily') || (pg?.bars.length ?? 0) >= AV_DAILY_COMPACT_BARS;
+    if (pg && enough && ageSecondsFrom(pg.fetchedAt) <= max) {
       await rSet(CK.bars(symbol, timeframe), pg.bars, pg.fetchedAt, FRESHNESS_RULES[dataType].realTime);
       return wrap({ data: pg.bars, source, fetchedAt: pg.fetchedAt, fromCache: 'postgres', dataType });
     }

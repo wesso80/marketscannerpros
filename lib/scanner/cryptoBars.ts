@@ -60,16 +60,45 @@ const dedupeByTime = (bars: Bar[]): Bar[] => {
 
 type RequestOptions = { retries?: number; timeoutMs?: number };
 
-async function fetchDailyBars(coinId: string, nowS: number, requestOptions?: RequestOptions, windows = DEFAULT_DAILY_WINDOWS): Promise<{ bars: Bar[]; volumes: Array<[number, number]>; warnings: string[] }> {
+/** Next data-cache lifetime for a history window that ends on a completed-bar boundary (its candles never change). */
+const COMPLETED_WINDOW_CACHE_S = 6 * 60 * 60;
+/** market_chart/range returns one 00:00 UTC point per day only for ranges longer than 90 days. */
+const DAILY_VOLUME_RANGE_DAYS = 92;
+
+/**
+ * Bar-boundary request ends, so the same URL repeats and the fetch cache can hit.
+ *  - `liveEndS`: the live end of a series, floored to the minute (still ≥ 60 s behind now: CoinGecko rejects a `to`
+ *    even a few seconds ahead of its own clock, error 10014). The open bar stays in the response, just ≤ 2 min old.
+ *    (Not floored in the minute right after 00:00 UTC, so the new day's open candle is never cut off.)
+ *  - `dayStartS`: 00:00 UTC of the day `liveEndS` falls in. Windows ending there hold completed daily bars only, so
+ *    their URL is identical for the whole UTC day.
+ */
+export function cryptoRequestAnchors(nowMs: number): { liveEndS: number; dayStartS: number } {
+  const trailingS = Math.floor(nowMs / 1000) - 60;
+  const floored = Math.floor(trailingS / 60) * 60;
+  // Never end exactly on 00:00 UTC in the minute after midnight: that would drop the new day's open candle.
+  const liveEndS = floored % DAY_S === 0 ? trailingS : floored;
+  return { liveEndS, dayStartS: Math.floor(liveEndS / DAY_S) * DAY_S };
+}
+
+async function fetchDailyBars(coinId: string, nowMs: number, requestOptions?: RequestOptions, windows = DEFAULT_DAILY_WINDOWS): Promise<{ bars: Bar[]; volumes: Array<[number, number]>; warnings: string[] }> {
   const warnings: string[] = [];
+  const { liveEndS, dayStartS } = cryptoRequestAnchors(nowMs);
+  const completedOpts = { ...requestOptions, cacheSeconds: COMPLETED_WINDOW_CACHE_S };
+  // Window k ≥ 1 ends on the UTC day boundary (a completed-bar close) and starts 1 h after the boundary 180·(k+1) days
+  // back, so it holds exactly the daily closes the old `now − 180·(k+1)d … now − 180·k d` window held (≤ 180 days,
+  // the Pro daily limit) but its URL no longer changes every second. Window 0 still ends at the live edge.
+  const completedWindow = (k: number) => getOHLCRange(
+    coinId, dayStartS - (k + 1) * DAILY_MAX_DAYS * DAY_S + 3600, dayStartS - k * DAILY_MAX_DAYS * DAY_S, completedOpts,
+  );
   // Extra 180-day windows further back (index 2..windows-1) are warm-up history only (e.g. EMA200 convergence);
   // volume stays on the most recent ~360 days.
   const extraWindows = Array.from({ length: Math.max(0, windows - DEFAULT_DAILY_WINDOWS) }, (_, i) => i + DEFAULT_DAILY_WINDOWS);
   const [recent, older, chart, ...extra] = await Promise.all([
-    getOHLCRange(coinId, nowS - DAILY_MAX_DAYS * DAY_S, nowS, requestOptions),
-    getOHLCRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS - DAILY_MAX_DAYS * DAY_S, requestOptions),
-    getMarketChartRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS, requestOptions),
-    ...extraWindows.map((k) => getOHLCRange(coinId, nowS - (k + 1) * DAILY_MAX_DAYS * DAY_S, nowS - k * DAILY_MAX_DAYS * DAY_S, requestOptions)),
+    getOHLCRange(coinId, liveEndS - DAILY_MAX_DAYS * DAY_S, liveEndS, requestOptions),
+    completedWindow(1),
+    getMarketChartRange(coinId, dayStartS - 2 * DAILY_MAX_DAYS * DAY_S + 3600, liveEndS, requestOptions),
+    ...extraWindows.map((k) => completedWindow(k)),
   ]);
   if (!recent?.length) throw new Error(`CoinGecko daily OHLC unavailable for ${coinId}`);
   if (!older?.length) warnings.push('only ~180 daily bars available (older history missing)');
@@ -85,8 +114,45 @@ async function fetchDailyBars(coinId: string, nowS: number, requestOptions?: Req
   return { bars: dedupeByTime([...asBars(olderHistory, '1d'), ...asBars(older, '1d'), ...asBars(recent, '1d')]), volumes: chart?.total_volumes ?? [], warnings };
 }
 
-async function fetchHourlyBars(coinId: string, nowS: number, requestOptions?: RequestOptions): Promise<Bar[]> {
-  const rows = await getOHLCRange(coinId, nowS - HOURLY_MAX_DAYS * DAY_S, nowS, requestOptions, 'hourly');
+export interface CryptoDailyIncrement {
+  /** Completed daily bars opening at or after `sinceOpenMs − 2 days`, ascending, volumes attached where available. */
+  bars: Bar[];
+  /** Daily 00:00 UTC volume points (plus the live point) covering the last ~92 days, for re-attaching to history. */
+  volumes: Array<[number, number]>;
+  warnings: string[];
+}
+
+/**
+ * Only the daily bars missing since `sinceOpenMs` (the open time of the newest bar the caller holds), in 2 CoinGecko
+ * calls: one `ohlc/range interval=daily` over the gap (+2 days of overlap so a candle CoinGecko revised is re-read) and
+ * one >90-day `market_chart/range` for the daily volume points. A full history costs 3 calls per refresh and re-reads
+ * 360 days. Returns null when the gap is too long for one daily window — the caller must refetch the full history.
+ * Throws when CoinGecko returns no OHLC at all (provider failure, not "no new bar").
+ */
+export async function fetchCryptoDailyIncrement(
+  coinId: string,
+  sinceOpenMs: number,
+  nowMs = Date.now(),
+  requestOptions?: RequestOptions,
+): Promise<CryptoDailyIncrement | null> {
+  const { liveEndS } = cryptoRequestAnchors(nowMs);
+  const fromS = Math.floor(sinceOpenMs / 1000) - 2 * DAY_S;
+  if (!Number.isFinite(fromS) || fromS <= 0 || fromS >= liveEndS || liveEndS - fromS > DAILY_MAX_DAYS * DAY_S) return null;
+  const [rows, chart] = await Promise.all([
+    getOHLCRange(coinId, fromS, liveEndS, requestOptions),
+    getMarketChartRange(coinId, liveEndS - DAILY_VOLUME_RANGE_DAYS * DAY_S, liveEndS, requestOptions),
+  ]);
+  if (rows == null) throw new Error(`CoinGecko daily OHLC unavailable for ${coinId}`);
+  const warnings: string[] = [];
+  const volumes = chart?.total_volumes ?? [];
+  if (!volumes.length) warnings.push('daily volume unavailable from market_chart');
+  const { completed } = splitPartialBar(attachDailyVolumes(dedupeByTime(asBars(rows, '1d')), volumes), '1d', nowMs);
+  return { bars: completed, volumes, warnings };
+}
+
+async function fetchHourlyBars(coinId: string, nowMs: number, requestOptions?: RequestOptions): Promise<Bar[]> {
+  const { liveEndS } = cryptoRequestAnchors(nowMs);
+  const rows = await getOHLCRange(coinId, liveEndS - HOURLY_MAX_DAYS * DAY_S, liveEndS, requestOptions, 'hourly');
   if (!rows?.length) throw new Error(`CoinGecko hourly OHLC unavailable for ${coinId}`);
   return dedupeByTime(asBars(rows, '1h'));
 }
@@ -105,8 +171,7 @@ export async function fetchCryptoSeries(
 ): Promise<CryptoSeries> {
   const base = symbolOrId.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase();
   const coinId = opts.coinId ?? (await resolveSymbolToId(base)) ?? symbolOrId.toLowerCase();
-  // CoinGecko rejects `to` values even a few seconds ahead of its own clock (error 10014); trail by one minute.
-  const nowS = Math.floor(nowMs / 1000) - 60;
+  // Request ends trail now by ≥ 1 minute (CoinGecko error 10014) and sit on bar boundaries: see cryptoRequestAnchors.
   const warnings: string[] = [];
   let bars: Bar[];
   let barInterval: ScanBarInterval;
@@ -116,7 +181,7 @@ export async function fetchCryptoSeries(
 
   if (timeframe === 'daily' || timeframe === 'weekly') {
     const windows = Math.min(MAX_DAILY_WINDOWS, Math.max(DEFAULT_DAILY_WINDOWS, Math.floor(opts.dailyWindows ?? DEFAULT_DAILY_WINDOWS)));
-    const d = await fetchDailyBars(coinId, nowS, opts.requestOptions, windows);
+    const d = await fetchDailyBars(coinId, nowMs, opts.requestOptions, windows);
     warnings.push(...d.warnings);
     const daily = attachDailyVolumes(d.bars, d.volumes);
     if (d.volumes.length) volumeBasis = 'coingecko_daily_total_volume';
@@ -129,7 +194,7 @@ export async function fetchCryptoSeries(
       source += ' → aggregated to Monday-anchored weekly bars';
     }
   } else if (timeframe === '1h') {
-    bars = await fetchHourlyBars(coinId, nowS, opts.requestOptions); barInterval = '1h';
+    bars = await fetchHourlyBars(coinId, nowMs, opts.requestOptions); barInterval = '1h';
     source = 'coingecko ohlc/range interval=hourly';
     warnings.push('hourly volume not provided by CoinGecko — volume factors unavailable on 1H');
   } else if (timeframe === '30m') {
@@ -145,7 +210,8 @@ export async function fetchCryptoSeries(
     warnings.push('30m history limited to ~1 day (EMA200 unavailable); volume unavailable');
   } else {
     // 15m: CoinGecko exposes no sub-hourly OHLC; aggregate 5-minute price samples from a ≤1-day range.
-    const chart = await getMarketChartRange(coinId, nowS - DAY_S, nowS, opts.requestOptions);
+    const { liveEndS } = cryptoRequestAnchors(nowMs);
+    const chart = await getMarketChartRange(coinId, liveEndS - DAY_S, liveEndS, opts.requestOptions);
     if (!chart?.prices?.length) throw new Error(`CoinGecko 5-minute prices unavailable for ${coinId}`);
     bars = barsFromPriceSamples(chart.prices, '15m'); barInterval = '15m'; hlBasis = 'price_samples';
     source = 'coingecko market_chart/range (5-minute price samples → 15m bars)';

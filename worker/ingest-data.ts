@@ -23,12 +23,14 @@ import { recordSignalsBatch } from '../lib/signalService';
 import { getCandleProcessor } from '../lib/candleProcessor';
 import {
   COINGECKO_ID_MAP,
+  getMarketData,
   getSimplePrices,
   resolveSymbolToId,
 } from '../lib/coingecko';
-import { fetchCryptoSeries } from '../lib/scanner/cryptoBars';
+import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cryptoBars';
 import { avRowVolume } from '../lib/scanner/avVolume';
-import { buildObservedCryptoQuote } from '../lib/worker/cryptoQuote';
+import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
+import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
 
 // ============================================================================
 // Signal Detection Types
@@ -54,9 +56,11 @@ function getEnv(key: string): string {
 }
 
 // Refresh intervals by tier (in seconds)
-// - CoinGecko fetches historical OHLC data (daily candles) — no need for sub-minute polling
-// - Analyst plan: 500K calls/month cap. 170 crypto symbols × aggressive polling = budget blowout
-// - Previous rates (45s/120s/600s) burned ~49K calls/day; new rates target ~5K calls/day
+// - Crypto tier refreshes recompute indicators / TGM / signals from the worker's held daily history and cost 0
+//   CoinGecko calls: the history is fetched once, then only the missing candle once per UTC day
+//   (lib/worker/cryptoDailyHistory.ts), and spot quotes come from ONE /coins/markets call per ~60 s for every coin
+//   (refreshCryptoQuoteSnapshot). Before this, each refresh cost ~4 calls (3 × 360-day history + 1 simple/price)
+//   ≈ 12.7k calls/day for 100 coins (~386k/month of the 500k plan); now ≈ 1.7k/day.
 // - For live price updates, use quotes_latest table (populated by worker each cycle)
 const CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
   1: 600,    // Tier 1: every 10 minutes (was 45s — daily OHLC doesn't change that fast)
@@ -570,78 +574,128 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
 }
 
 /**
- * Fetch crypto OHLC from CoinGecko (preferred - no rate limit issues)
- * Returns up to 360 genuine daily candles in two bounded history windows
- * 
- * Worker-level in-memory cache prevents redundant CoinGecko HTTP calls
- * when fallback chains fire or when the worker cycle is faster than
- * the cache TTL. Historical OHLC data changes at most once per day.
+ * Crypto daily history from CoinGecko. The first read of a coin fetches the same ~360 genuine daily candles as before
+ * (2 × 180-day ohlc/range windows + market_chart volumes = 3 calls); after that only the candle(s) missing since the
+ * newest held bar are fetched, once per UTC day after CoinGecko publishes it (~00:35 UTC; 2 calls), with a full
+ * re-sync every WORKER_CG_FULL_RESYNC_DAYS (default 7). The held history is persisted to Redis (full precision) so a
+ * restart or deploy does not refetch 360 days for every coin. Readers get the same completed bars as before.
  */
-const workerCGCache = new Map<string, { data: AVBar[]; expiresAt: number }>();
-const WORKER_CG_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes — longer than any tier interval
-
-async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
-  // Check worker-level cache first (prevents redundant HTTP calls)
-  const cached = workerCGCache.get(symbol.toUpperCase());
-  if (cached && cached.expiresAt > Date.now() && cached.data.length > 0) {
-    return cached.data;
-  }
-
-  // Map symbol to CoinGecko ID
+function resolveWorkerCoinIdSync(symbol: string): string | null {
   const normalized = symbol.toUpperCase();
-  const allowDynamicResolve = getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false);
-  const ohlcRetries = getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1);
-  const ohlcTimeoutMs = getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000);
-  const mappedId =
-    COINGECKO_ID_MAP[normalized] ||
-    COINGECKO_ID_MAP[normalized.replace('USDT', '')];
-  const coinId =
-    mappedId ||
-    (allowDynamicResolve ? await resolveSymbolToId(normalized) : null);
-  
+  return COINGECKO_ID_MAP[normalized] || COINGECKO_ID_MAP[normalized.replace('USDT', '')] || null;
+}
+
+async function resolveWorkerCoinId(symbol: string): Promise<string | null> {
+  const mapped = resolveWorkerCoinIdSync(symbol);
+  if (mapped) return mapped;
+  return getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false) ? await resolveSymbolToId(symbol.toUpperCase()) : null;
+}
+
+const CG_DAILY_HISTORY_REDIS_PREFIX = 'worker:cg-daily:v1:';
+const CG_DAILY_HISTORY_REDIS_TTL_S = 8 * 24 * 60 * 60;
+
+let cryptoDailyHistory: CryptoDailyHistoryCache | null = null;
+function getCryptoDailyHistory(): CryptoDailyHistoryCache {
+  if (cryptoDailyHistory) return cryptoDailyHistory;
+  const requestOptions = () => ({
+    retries: getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1),
+    timeoutMs: getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000),
+  });
+  cryptoDailyHistory = new CryptoDailyHistoryCache({
+    fetchFull: async (symbol, coinId, nowMs) => {
+      // Shared scanner adapter: two <=180-day daily windows + daily USD volume.
+      // Do not manufacture OHLC from close samples or relabel 4-day candles as daily.
+      const series = await fetchCryptoSeries(symbol, 'daily', nowMs, { coinId, requestOptions: requestOptions() });
+      return { bars: series.bars, warnings: series.warnings };
+    },
+    fetchIncrement: (coinId, sinceOpenMs, nowMs) => fetchCryptoDailyIncrement(coinId, sinceOpenMs, nowMs, requestOptions()),
+    load: async (coinId) => {
+      const r = getRedis();
+      return r ? await r.get(`${CG_DAILY_HISTORY_REDIS_PREFIX}${coinId}`) : null;
+    },
+    save: async (entry: DailyHistoryEntry) => {
+      const r = getRedis();
+      if (r) await r.set(`${CG_DAILY_HISTORY_REDIS_PREFIX}${entry.coinId}`, entry, { ex: CG_DAILY_HISTORY_REDIS_TTL_S });
+    },
+    log: (message) => console.warn(`[worker] CoinGecko ${message}`),
+  }, {
+    settleMs: getPositiveIntFromEnv('WORKER_CG_DAILY_SETTLE_MINUTES', DEFAULT_DAILY_HISTORY_CONFIG.settleMs / 60_000) * 60_000,
+    retryMs: getPositiveIntFromEnv('WORKER_CG_HISTORY_RETRY_SECONDS', DEFAULT_DAILY_HISTORY_CONFIG.retryMs / 1000) * 1000,
+    fullResyncMs: getPositiveIntFromEnv('WORKER_CG_FULL_RESYNC_DAYS', DEFAULT_DAILY_HISTORY_CONFIG.fullResyncMs / DAY_MS) * DAY_MS,
+  });
+  return cryptoDailyHistory;
+}
+
+async function fetchCoinGeckoDaily(symbol: string): Promise<{ bars: AVBar[]; calls: number; plan: string }> {
+  const coinId = await resolveWorkerCoinId(symbol);
   if (!coinId) {
-    if (!allowDynamicResolve) {
+    if (!getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false)) {
       console.warn(`[worker] No CoinGecko mapping for ${symbol} (dynamic resolve disabled)`);
     } else {
       console.warn(`[worker] No CoinGecko mapping for ${symbol}`);
     }
-    return [];
+    return { bars: [], calls: 0, plan: 'none' };
   }
 
   try {
-    // Shared scanner adapter: two <=180-day daily windows + daily USD volume.
-    // Do not manufacture OHLC from close samples or relabel 4-day candles as daily.
-    const series = await fetchCryptoSeries(symbol, 'daily', Date.now(), {
-      coinId,
-      requestOptions: { retries: ohlcRetries, timeoutMs: ohlcTimeoutMs },
-    });
-    const bars: AVBar[] = series.bars.map(bar => ({
+    const result = await getCryptoDailyHistory().getBars(symbol, coinId);
+    const bars: AVBar[] = result.bars.map(bar => ({
       timestamp: bar.t.slice(0, 10), open: bar.open, high: bar.high,
       low: bar.low, close: bar.close, volume: bar.volume ?? Number.NaN,
     }));
-    if (series.warnings.length) console.warn(`[worker] ${symbol}: ${series.warnings.join('; ')}`);
+    if (result.warnings.length) console.warn(`[worker] ${symbol}: ${result.warnings.join('; ')}`);
 
     if (bars.length === 0) {
       console.warn(`[worker] No CoinGecko history data for ${symbol} (${coinId})`);
-      return [];
+      return { bars: [], calls: result.calls, plan: result.plan };
     }
 
     // Sort oldest first
     bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    
-    // Cache successful fetch to prevent redundant HTTP calls
-    workerCGCache.set(symbol.toUpperCase(), {
-      data: bars,
-      expiresAt: Date.now() + WORKER_CG_CACHE_TTL_MS,
-    });
-
-    console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol} (genuine daily OHLC, maximum 360d)`);
-    return bars;
+    if (result.plan !== 'none') {
+      console.log(`[worker] CoinGecko: ${result.plan} daily read for ${symbol} → ${bars.length} bars (${result.calls} calls)`);
+    }
+    return { bars, calls: result.calls, plan: result.plan };
 
   } catch (err: any) {
     console.error(`[worker] CoinGecko fetch error for ${symbol}:`, err?.message || err);
-    return [];
+    return { bars: [], calls: 3, plan: 'full' };
   }
+}
+
+/**
+ * ONE /coins/markets call per 250 coins, every WORKER_CG_QUOTE_INTERVAL_SECONDS (default 60), replaces the per-coin
+ * /simple/price call each tier refresh made. Every enabled crypto symbol's quotes_latest row is refreshed from it in a
+ * single statement; the per-symbol refresh reuses the snapshot for the Redis quote cache.
+ */
+let cryptoQuoteSnapshot: CryptoQuoteSnapshot | null = null;
+
+async function refreshCryptoQuoteSnapshot(symbols: string[]): Promise<number> {
+  const intervalMs = Math.max(30, getPositiveIntFromEnv('WORKER_CG_QUOTE_INTERVAL_SECONDS', 60)) * 1000;
+  if (cryptoQuoteSnapshot && Date.now() - cryptoQuoteSnapshot.fetchedAt < intervalMs) return 0;
+  const withIds: Array<{ symbol: string; coinId: string }> = [];
+  for (const symbol of symbols) {
+    const coinId = await resolveWorkerCoinId(symbol);
+    if (coinId) withIds.push({ symbol, coinId });
+  }
+  if (!withIds.length) return 0;
+  const snapshot = await fetchCryptoQuoteSnapshot(
+    withIds,
+    (ids) => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, {
+      retries: 1,
+      timeoutMs: getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000),
+    }),
+  );
+  cryptoQuoteSnapshot = snapshot;
+  if (snapshot.quotes.size) {
+    try {
+      await upsertQuotesBatch([...snapshot.quotes.entries()]);
+    } catch (err: any) {
+      console.error('[worker] quotes_latest batch upsert failed:', err?.message || err);
+    }
+  }
+  console.log(`[worker] CoinGecko markets snapshot: ${snapshot.quotes.size}/${withIds.length} coins quoted in ${snapshot.calls} call(s)${snapshot.missing.length ? `; missing ${snapshot.missing.slice(0, 10).join(', ')}${snapshot.missing.length > 10 ? '…' : ''}` : ''}`);
+  return snapshot.calls;
 }
 
 // ============================================================================
@@ -746,6 +800,47 @@ async function upsertQuote(symbol: string, quote: any): Promise<void> {
     quote.latestDay,
     quote.updatedAt ?? null,
   ]);
+}
+
+/** Same row shape as upsertQuote, many symbols in one statement. */
+async function upsertQuotesBatch(entries: Array<[string, any]>): Promise<void> {
+  if (!entries.length) return;
+  const db = getPool();
+  const values: any[] = [];
+  const rows: string[] = [];
+  let p = 1;
+  for (const [symbol, quote] of entries) {
+    rows.push(`($${p}, $${p + 1}, $${p + 2}, $${p + 3}, $${p + 4}, $${p + 5}, $${p + 6}, $${p + 7}, $${p + 8}, $${p + 9}, COALESCE($${p + 10}::timestamptz, NOW()))`);
+    values.push(
+      symbol.toUpperCase(),
+      quote.price,
+      quote.open,
+      quote.high,
+      quote.low,
+      quote.prevClose,
+      quote.volume != null && Number.isFinite(Number(quote.volume)) ? Math.round(Number(quote.volume)) : null,
+      quote.changeAmt,
+      quote.changePct,
+      quote.latestDay,
+      quote.updatedAt ?? null,
+    );
+    p += 11;
+  }
+  await db.query(`
+    INSERT INTO quotes_latest (symbol, price, open, high, low, prev_close, volume, change_amount, change_percent, latest_trading_day, fetched_at)
+    VALUES ${rows.join(', ')}
+    ON CONFLICT (symbol) DO UPDATE SET
+      price = EXCLUDED.price,
+      open = EXCLUDED.open,
+      high = EXCLUDED.high,
+      low = EXCLUDED.low,
+      prev_close = EXCLUDED.prev_close,
+      volume = EXCLUDED.volume,
+      change_amount = EXCLUDED.change_amount,
+      change_percent = EXCLUDED.change_percent,
+      latest_trading_day = EXCLUDED.latest_trading_day,
+      fetched_at = EXCLUDED.fetched_at
+  `, values);
 }
 
 async function upsertBars(symbol: string, timeframe: string, bars: AVBar[]): Promise<void> {
@@ -1319,13 +1414,17 @@ async function processCryptoSymbol(symbol: string): Promise<{
   coingeckoSucceeded: number;
   coingeckoNoData: number;
   coingeckoFailed: number;
+  coingeckoCalls: number;
 }> {
   let apiCalls = 0;
+  let coingeckoCalls = 0;
   const coingeckoAttempted = 1;
   
   try {
-    // CoinGecko only for crypto ingestion
-    let bars = await fetchCoinGeckoDaily(symbol);
+    // CoinGecko only for crypto ingestion (held daily history; 0 calls unless a new candle or re-sync is due)
+    const daily = await fetchCoinGeckoDaily(symbol);
+    const bars = daily.bars;
+    coingeckoCalls += daily.calls;
     let coingeckoSucceeded = 0;
     let coingeckoNoData = 0;
 
@@ -1340,6 +1439,7 @@ async function processCryptoSymbol(symbol: string): Promise<{
         coingeckoSucceeded,
         coingeckoNoData,
         coingeckoFailed: 0,
+        coingeckoCalls,
       };
     }
 
@@ -1349,17 +1449,24 @@ async function processCryptoSymbol(symbol: string): Promise<{
       await upsertBars(symbol, 'daily', bars);
 
       // Keep completed-bar evidence separate from the provider's spot quote.
+      // The cycle's /coins/markets snapshot already wrote quotes_latest; reuse it for the Redis quote cache. Only a
+      // coin missing from the snapshot falls back to its own /simple/price call (the old per-refresh behaviour).
       const latest = bars[bars.length - 1];
-      const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[symbol.toUpperCase().replace('USDT', '')] ||
-        (getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false) ? await resolveSymbolToId(symbol) : null);
-      if (coinId) {
-        apiCalls += 1;
-        const spot = await getSimplePrices([coinId], { include_24h_change: true, include_24h_vol: true });
-        const quote = buildObservedCryptoQuote(spot?.[coinId]);
-        if (quote) {
-          await upsertQuote(symbol, quote);
-          await cacheQuote(symbol, quote);
-        } else console.warn(`[worker] ${symbol}: fresh spot quote unavailable; retaining previous observation`);
+      const snapshotQuote = cryptoQuoteSnapshot?.quotes.get(symbol.toUpperCase()) ?? null;
+      if (snapshotQuote) {
+        await cacheQuote(symbol, snapshotQuote);
+      } else {
+        const coinId = await resolveWorkerCoinId(symbol);
+        if (coinId) {
+          apiCalls += 1;
+          coingeckoCalls += 1;
+          const spot = await getSimplePrices([coinId], { include_24h_change: true, include_24h_vol: true });
+          const quote = buildObservedCryptoQuote(spot?.[coinId]);
+          if (quote) {
+            await upsertQuote(symbol, quote);
+            await cacheQuote(symbol, quote);
+          } else console.warn(`[worker] ${symbol}: fresh spot quote unavailable; retaining previous observation`);
+        }
       }
 
       // ── Store midpoints for Time Gravity Map ──
@@ -1445,6 +1552,7 @@ async function processCryptoSymbol(symbol: string): Promise<{
       coingeckoSucceeded,
       coingeckoNoData,
       coingeckoFailed: 0,
+      coingeckoCalls,
     };
 
   } catch (err: any) {
@@ -1457,6 +1565,7 @@ async function processCryptoSymbol(symbol: string): Promise<{
       coingeckoSucceeded: 0,
       coingeckoNoData: 0,
       coingeckoFailed: 1,
+      coingeckoCalls,
     };
   }
 }
@@ -1480,6 +1589,7 @@ async function runIngestionCycle(
   coingeckoSucceeded: number;
   coingeckoNoData: number;
   coingeckoFailed: number;
+  coingeckoCalls: number;
 }> {
   const stats = {
     symbolsProcessed: 0,
@@ -1492,6 +1602,8 @@ async function runIngestionCycle(
     coingeckoSucceeded: 0,
     coingeckoNoData: 0,
     coingeckoFailed: 0,
+    /** Real CoinGecko HTTP calls this cycle (markets snapshot + daily history + simple/price fallbacks). */
+    coingeckoCalls: 0,
   };
   const sessionState = getUsMarketSessionState();
   const equitySessionState = getUsEquitySessionState();
@@ -1509,6 +1621,16 @@ async function runIngestionCycle(
       ? allSymbols.filter((s) => s.asset_type !== 'crypto')
       : allSymbols;
   console.log(`[worker] Processing ${symbols.length} symbols... (crypto cadence mode: ${sessionState.mode}, equity session: ${equitySessionState.mode}${runEquityOffhoursScan ? ', off-hours scan slot=active' : ''})`);
+
+  // One shared CoinGecko quote snapshot for every crypto symbol (≤ 1 call per 250 coins per ~60 s).
+  const cryptoSymbols = symbols.filter((s) => s.asset_type === 'crypto').map((s) => s.symbol);
+  if (cryptoSymbols.length) {
+    try {
+      stats.coingeckoCalls += await refreshCryptoQuoteSnapshot(cryptoSymbols);
+    } catch (err: any) {
+      console.error('[worker] CoinGecko markets snapshot failed:', err?.message || err);
+    }
+  }
 
   for (const { symbol, tier, asset_type, last_fetched_at } of symbols) {
     try {
@@ -1533,6 +1655,7 @@ async function runIngestionCycle(
         coingeckoSucceeded?: number;
         coingeckoNoData?: number;
         coingeckoFailed?: number;
+        coingeckoCalls?: number;
       };
 
       if (asset_type === 'crypto') {
@@ -1546,6 +1669,7 @@ async function runIngestionCycle(
       stats.coingeckoSucceeded += result.coingeckoSucceeded || 0;
       stats.coingeckoNoData += result.coingeckoNoData || 0;
       stats.coingeckoFailed += result.coingeckoFailed || 0;
+      stats.coingeckoCalls += result.coingeckoCalls || 0;
       stats.symbolsProcessed++;
       
       if (!result.success) {
@@ -1611,6 +1735,8 @@ async function main(): Promise<void> {
   console.log(`[worker] Lane lock: ${workerLane}`);
   console.log(`[worker] CoinGecko dynamic resolve: ${getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false) ? 'enabled' : 'disabled (mapped symbols only)'}`);
   console.log(`[worker] CoinGecko OHLC request profile: retries=${getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1)}, timeoutMs=${getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000)}`);
+  console.log(`[worker] CoinGecko quotes: one /coins/markets snapshot every ${Math.max(30, getPositiveIntFromEnv('WORKER_CG_QUOTE_INTERVAL_SECONDS', 60))}s for all coins`);
+  console.log(`[worker] CoinGecko daily history: held + incremental (settle ${getPositiveIntFromEnv('WORKER_CG_DAILY_SETTLE_MINUTES', 40)} min after 00:00 UTC, retry ${getPositiveIntFromEnv('WORKER_CG_HISTORY_RETRY_SECONDS', 900)}s, full re-sync every ${getPositiveIntFromEnv('WORKER_CG_FULL_RESYNC_DAYS', 7)} d)`);
   const sessionState = getUsMarketSessionState();
   console.log(`[worker] Market session timezone: ${sessionState.timezone}`);
   console.log(`[worker] Market cadence (T1/T2/T3): ${getTierRefreshIntervalSeconds('crypto', 1, 'market')}s / ${getTierRefreshIntervalSeconds('crypto', 2, 'market')}s / ${getTierRefreshIntervalSeconds('crypto', 3, 'market')}s`);
@@ -1668,7 +1794,7 @@ async function main(): Promise<void> {
 
       console.log(`[worker] Cycle ${cycleCount} completed in ${duration}s`);
       console.log(`[worker] Stats: due=${stats.symbolsDue}, processed=${stats.symbolsProcessed}, ${stats.apiCalls} API calls, ${stats.errors} errors, ${stats.skippedNotDue || 0} skipped (not due), ${stats.skippedEquityOffhours || 0} skipped (equity off-hours)`);
-      console.log(`[worker] CoinGecko stats: attempted=${stats.coingeckoAttempted}, succeeded=${stats.coingeckoSucceeded}, noData=${stats.coingeckoNoData}, failed=${stats.coingeckoFailed}`);
+      console.log(`[worker] CoinGecko stats: attempted=${stats.coingeckoAttempted}, succeeded=${stats.coingeckoSucceeded}, noData=${stats.coingeckoNoData}, failed=${stats.coingeckoFailed}, httpCalls=${stats.coingeckoCalls}`);
 
       await logWorkerRun(`ingest-${workerLane}`, stats, 'completed');
 
