@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 interface NewsArticle {
   title: string;
@@ -167,7 +168,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
         </div>
       )}
 
-      <p className="mt-3 text-right text-[10px] text-slate-600">Powered by CoinGecko News</p>
+      <CoinGeckoCredit className="mt-3 text-right" detail="News" />
     </div>
   );
 }

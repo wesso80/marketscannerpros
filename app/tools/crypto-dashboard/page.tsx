@@ -14,6 +14,7 @@ import TradeIdeasSection from '@/components/derivatives/TradeIdeasSection';
 import DerivativesContextSection from '@/components/derivatives/DerivativesContextSection';
 import type { DashboardData, DerivativesTradeIdea } from '@/components/derivatives/types';
 import { PageHero } from '@/components/ui';
+import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { tier } = useUserTier();
@@ -452,6 +453,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       <TradeIdeasSection ideas={derivativeDataComplete ? tradeIdeas : []} />
 
       <DerivativesContextSection />
+      <CoinGeckoCredit className="text-center" detail="Funding rates from OKX" />
     </div>
   );
 }

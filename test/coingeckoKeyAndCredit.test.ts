@@ -45,4 +45,23 @@ describe('CoinGecko attribution (BP-5)', () => {
     expect(footer).toMatch(/<a href="https:\/\/www\.coingecko\.com\/en\/api"[^>]*>\s*Data provided by CoinGecko\s*<\/a>/);
     expect(footer).not.toContain('Market data powered by CoinGecko');
   });
+
+  it('in-app credit component links the same phrase to /en/api', () => {
+    const credit = readFileSync(resolve(__dirname, '../components/CoinGeckoCredit.tsx'), 'utf8');
+    expect(credit).toContain("COINGECKO_ATTRIBUTION_URL = 'https://www.coingecko.com/en/api'");
+    expect(credit).toMatch(/<a href=\{COINGECKO_ATTRIBUTION_URL\}[^>]*>\s*Data provided by CoinGecko\s*<\/a>/);
+  });
+
+  // The Footer is hidden on /tools/*, so the credit must also sit on the in-app CoinGecko surfaces.
+  it.each([
+    'app/tools/crypto-explorer/page.tsx', // Markets > Crypto Deep-Dive
+    'app/tools/crypto/page.tsx', // Markets > Crypto Command
+    'app/tools/crypto-dashboard/page.tsx', // Dashboard > Crypto Derivatives
+    'components/CryptoNewsWidget.tsx', // Markets > Crypto Intel (news)
+    'components/PublicTreasuryWidget.tsx', // Markets > Crypto Intel (treasury)
+  ])('%s shows the CoinGecko credit', (file) => {
+    const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
+    expect(src).toContain("import CoinGeckoCredit from '@/components/CoinGeckoCredit';");
+    expect(src).toMatch(/<CoinGeckoCredit[\s/>]/);
+  });
 });
