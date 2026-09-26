@@ -1,12 +1,13 @@
 /**
- * /admin/live-scanner. Server wrapper so the page knows whether crypto market data is on (OPERATOR_CG_FETCH_ENABLED,
- * server-only) and opens on Equities when it is off, instead of an idle crypto-only feed.
+ * /admin/live-scanner. Server wrapper: passes whether admin crypto is on (ADMIN_CRYPTO_ENABLED, server-only, on by
+ * default; crypto runs on Alpha Vantage data even with CoinGecko off) and the admin default market (EQUITIES).
  */
-import { operatorCgFetchEnabled } from "@/lib/operator/market-data";
+import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
+import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import LiveScannerClient from "./LiveScannerClient";
 
 export const dynamic = "force-dynamic";
 
 export default function LiveScannerPage() {
-  return <LiveScannerClient cryptoEnabled={operatorCgFetchEnabled()} />;
+  return <LiveScannerClient cryptoEnabled={isAdminCryptoEnabled()} defaultMarket={defaultAdminMarket()} />;
 }

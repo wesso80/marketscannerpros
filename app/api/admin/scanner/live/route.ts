@@ -22,7 +22,7 @@ import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { CRYPTO_PAUSED_MESSAGE, readSavedScan, savedScanStaleAfterSec, scanStatusForResponse } from "@/lib/admin/sharedScan";
-import { operatorCgFetchEnabled } from "@/lib/operator/market-data";
+import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { isPausedRow, NOT_MONITORED } from "@/lib/admin/healthProbes";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    // Defaults to EQUITIES while crypto market data (OPERATOR_CG_FETCH_ENABLED) is off.
+    // Defaults to EQUITIES (defaultAdminMarket); market=CRYPTO reads the crypto saved scan.
     const market = resolveAdminMarket(searchParams.get("market"));
     const timeframe = searchParams.get("timeframe") || "15m";
     const symbols = searchParams.get("symbols")
@@ -58,9 +58,9 @@ export async function GET(req: NextRequest) {
       .flatMap((r) => r.hits)
       .sort((a, b) => b.confidence - a.confidence);
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
-    // Crypto switched off on purpose (OPERATOR_CG_FETCH_ENABLED off): its skipped / leftover rows are "paused",
-    // listed separately, and never counted as scan errors.
-    const cryptoEnabled = operatorCgFetchEnabled();
+    // Crypto switched off on purpose (ADMIN_CRYPTO_ENABLED=false): its skipped / leftover rows are "paused",
+    // listed separately, and never counted as scan errors. CoinGecko off does not pause crypto (it runs on AV).
+    const cryptoEnabled = isAdminCryptoEnabled();
     const marketPaused = market === "CRYPTO" && !cryptoEnabled;
     const isPaused = (r: (typeof view.rows)[number]) => (marketPaused && !isCurrent(r)) || isPausedRow(r, market, cryptoEnabled);
     const paused = view.rows.filter(isPaused).map((r) => r.symbol);

@@ -12,7 +12,7 @@
 import { q } from "@/lib/db";
 import { isCurrentForClosedMarket } from "@/lib/admin/closedMarket";
 import { sharedScanConfig } from "@/lib/admin/sharedScanLogic";
-import { operatorCgFetchEnabled } from "@/lib/operator/market-data";
+import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 
 export const NOT_MONITORED = "NOT MONITORED";
 
@@ -28,11 +28,12 @@ function isMissingTable(err: unknown): boolean {
 }
 
 /**
- * A saved-scan row skipped because crypto data is switched off on purpose (OPERATOR_CG_FETCH_ENABLED off).
- * It is "paused", never a scan error.
+ * A saved-scan row skipped because admin crypto is switched off on purpose (ADMIN_CRYPTO_ENABLED=false, see
+ * lib/admin/adminCrypto; older rows carry the pre-#175 OPERATOR_CG_FETCH_ENABLED message). It is "paused", never a
+ * scan error. The CoinGecko flag alone no longer pauses crypto: crypto scans on Alpha Vantage data.
  */
 export function isPausedRow(row: { status: string; error?: string | null }, market: string, cryptoEnabled: boolean): boolean {
-  return market === "CRYPTO" && row.status === "skipped" && (!cryptoEnabled || /OPERATOR_CG_FETCH_ENABLED/.test(row.error ?? ""));
+  return market === "CRYPTO" && row.status === "skipped" && (!cryptoEnabled || /ADMIN_CRYPTO_ENABLED|OPERATOR_CG_FETCH_ENABLED/.test(row.error ?? ""));
 }
 
 /* ── Scanner (shared saved scan → admin_scan_runs) ───────────────────── */
@@ -89,7 +90,7 @@ function ageText(sec: number | null): string {
 
 /**
  * Pure: per-market scanner health from the latest finished run per market (+ whether one is running now).
- * Crypto with OPERATOR_CG_FETCH_ENABLED off is PAUSED on purpose, never an error. An equities run made after
+ * Crypto switched off (ADMIN_CRYPTO_ENABLED=false) is PAUSED on purpose, never an error; CoinGecko off is not paused. An equities run made after
  * the last session's close stays OK while the US market is shut.
  */
 export function summarizeScannerHealth(
@@ -106,7 +107,7 @@ export function summarizeScannerHealth(
     const failed = Number(row?.symbols_failed ?? 0) || 0;
     const base = { market, timeframe: row?.timeframe ?? null, lastRunAt, lastRunStatus: row?.status ?? null, ageSec, scanned, failed, running };
     if (market === "CRYPTO" && !opts.cryptoEnabled) {
-      return { ...base, status: "PAUSED" as const, note: "Crypto paused on purpose (OPERATOR_CG_FETCH_ENABLED is off)." };
+      return { ...base, status: "PAUSED" as const, note: "Crypto paused on purpose (ADMIN_CRYPTO_ENABLED=false)." };
     }
     if (!row) return { ...base, status: "NO_RUNS" as const, note: "No shared-scan run recorded." };
     const summary = `last run ${ageText(ageSec)} (${row.status}), ${scanned} scanned, ${failed} failed`;
@@ -148,11 +149,11 @@ export async function loadScannerHealth(nowMs: number = Date.now()): Promise<Sca
     ]);
     return summarizeScannerHealth(latest, running.map((r) => r.market), {
       nowMs,
-      cryptoEnabled: operatorCgFetchEnabled(),
+      cryptoEnabled: isAdminCryptoEnabled(),
       staleAfterSec: scannerStaleAfterSec(),
     });
   } catch (err) {
-    if (isMissingTable(err)) return summarizeScannerHealth([], [], { nowMs, cryptoEnabled: operatorCgFetchEnabled(), staleAfterSec: scannerStaleAfterSec() });
+    if (isMissingTable(err)) return summarizeScannerHealth([], [], { nowMs, cryptoEnabled: isAdminCryptoEnabled(), staleAfterSec: scannerStaleAfterSec() });
     return null;
   }
 }

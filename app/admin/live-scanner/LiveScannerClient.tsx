@@ -36,10 +36,10 @@ function HitRow({ hit }: { hit: ScannerHit }) {
   );
 }
 
-export default function LiveScannerClient({ cryptoEnabled }: { cryptoEnabled: boolean }) {
+export default function LiveScannerClient({ cryptoEnabled, defaultMarket = "EQUITIES" }: { cryptoEnabled: boolean; defaultMarket?: "CRYPTO" | "EQUITIES" }) {
   const [polling, setPolling] = useState(false);
   // Crypto only when crypto market data is on; otherwise the equities saved scan (it used to be crypto-only).
-  const [market, setMarket] = useState<"CRYPTO" | "EQUITIES">(cryptoEnabled ? "CRYPTO" : "EQUITIES");
+  const [market, setMarket] = useState<"CRYPTO" | "EQUITIES">(cryptoEnabled ? defaultMarket : "EQUITIES");
   const { hits, health, loading, error, refetch } = useScannerFeed(
     SYMBOLS[market],
     market,
@@ -58,7 +58,7 @@ export default function LiveScannerClient({ cryptoEnabled }: { cryptoEnabled: bo
               key={m}
               onClick={() => setMarket(m)}
               disabled={m === "CRYPTO" && !cryptoEnabled}
-              title={m === "CRYPTO" && !cryptoEnabled ? "Crypto data paused (OPERATOR_CG_FETCH_ENABLED is off)" : undefined}
+              title={m === "CRYPTO" && !cryptoEnabled ? "Admin crypto is switched off (ADMIN_CRYPTO_ENABLED=false)" : undefined}
               className={`rounded-lg px-3 py-1 text-xs font-medium transition disabled:opacity-40 ${market === m ? "bg-sky-500/20 text-sky-200" : "bg-white/10 text-white/60 hover:bg-white/20"}`}
             >
               {m === "EQUITIES" ? "Equities" : "Crypto"}
@@ -85,7 +85,7 @@ export default function LiveScannerClient({ cryptoEnabled }: { cryptoEnabled: bo
             {hits.length} hit{hits.length !== 1 ? "s" : ""} · {health?.symbolsScanned ?? 0} symbols scanned
           </span>
           {error && <span className="text-red-400 text-xs">{error}</span>}
-          {!cryptoEnabled && <span className="text-amber-300/80 text-xs">Crypto data paused</span>}
+          {!cryptoEnabled && <span className="text-amber-300/80 text-xs">Crypto switched off</span>}
         </div>
       </AdminCard>
 

@@ -16,8 +16,8 @@ export const maxDuration = 120;
 /**
  * Daily brief email (cron `daily-operator-morning-brief`, or admin "Send now"/preview).
  *
- * - Market defaults to EQUITIES while crypto market data is off (OPERATOR_CG_FETCH_ENABLED), even when the cron
- *   body sends no market.
+ * - Market defaults to EQUITIES (defaultAdminMarket) when the body sends no market, whatever the crypto/CoinGecko
+ *   switches say; market "CRYPTO" builds the crypto brief.
  * - The brief is built from the shared saved admin scan (fast; no live per-symbol AV loop).
  * - Cron runs are idempotent per Sydney day + market + timeframe: once today's cron brief is saved (after the
  *   email went out), a curl retry gets `{ skipped: "already_sent" }` and sends nothing. A retry that arrives while

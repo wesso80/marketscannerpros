@@ -1,17 +1,13 @@
 /**
  * Admin market defaults (pure helpers, safe for client components).
  *
- * Crypto market data for the admin area is switched by OPERATOR_CG_FETCH_ENABLED (server-only). While it is off,
- * crypto views are empty, so every admin page, API fallback and job should open on EQUITIES. Server code reads the
- * flag through `defaultAdminMarket()` (lib/admin/defaultAdminMarket.ts) and passes the result to client pages.
+ * Every admin page, API fallback and job opens on EQUITIES (`defaultAdminMarket()`, lib/admin/defaultAdminMarket.ts);
+ * crypto is opened explicitly. Whether admin crypto is available is `isAdminCryptoEnabled()` (lib/admin/adminCrypto,
+ * ADMIN_CRYPTO_ENABLED, on by default); server wrappers pass both values to client pages.
  */
 import { DEFAULT_WATCHLISTS } from "@/lib/operator/watchlists";
 
 export type AdminMarket = "EQUITIES" | "CRYPTO";
-
-export function adminMarketFor(cryptoEnabled: boolean): AdminMarket {
-  return cryptoEnabled ? "CRYPTO" : "EQUITIES";
-}
 
 /** Parse a market query/body value ("EQUITY", "stocks" and "EQUITIES" all mean EQUITIES); fallback otherwise. */
 export function parseAdminMarket(raw: unknown, fallback: AdminMarket): AdminMarket {

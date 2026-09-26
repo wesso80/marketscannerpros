@@ -13,7 +13,7 @@ const root = path.join(__dirname, "../..");
 const read = (p: string) => fs.readFileSync(path.join(root, p), "utf8");
 
 describe("admin pages default market", () => {
-  it.each(["app/admin/alerts/page.tsx", "app/admin/diagnostics/page.tsx"])("%s does not force market=CRYPTO", (file) => {
+  it.each(["app/admin/alerts/page.tsx", "app/admin/diagnostics/page.tsx", "app/admin/overview/page.tsx"])("%s does not force market=CRYPTO", (file) => {
     const src = read(file);
     expect(src).not.toMatch(/scanner\/live\?market=CRYPTO/);
     expect(src).toMatch(/\/api\/admin\/scanner\/live\?timeframe=15m/);

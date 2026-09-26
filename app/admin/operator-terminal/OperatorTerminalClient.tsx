@@ -11,14 +11,14 @@ import { useState, useEffect, useCallback } from "react";
 
 const DEFAULT_FOCUS: Record<string, string> = { CRYPTO: "ADA", EQUITIES: "SPY" };
 
-/** Opens on Equities when crypto market data is off (OPERATOR_CG_FETCH_ENABLED), since crypto has no data then. */
-export function initialOperatorMarket(cryptoEnabled: boolean): "CRYPTO" | "EQUITIES" {
-  return cryptoEnabled ? "CRYPTO" : "EQUITIES";
+/** Opens on the admin default market (EQUITIES); never on crypto while admin crypto is switched off. */
+export function initialOperatorMarket(cryptoEnabled: boolean, defaultMarket: "CRYPTO" | "EQUITIES" = "EQUITIES"): "CRYPTO" | "EQUITIES" {
+  return cryptoEnabled ? defaultMarket : "EQUITIES";
 }
 
-export default function OperatorTerminalClient({ cryptoEnabled }: { cryptoEnabled: boolean }) {
-  const [market, setMarketState] = useState<string>(() => initialOperatorMarket(cryptoEnabled));
-  const [focusSymbol, setFocusSymbol] = useState(() => DEFAULT_FOCUS[initialOperatorMarket(cryptoEnabled)]);
+export default function OperatorTerminalClient({ cryptoEnabled, defaultMarket = "EQUITIES" }: { cryptoEnabled: boolean; defaultMarket?: "CRYPTO" | "EQUITIES" }) {
+  const [market, setMarketState] = useState<string>(() => initialOperatorMarket(cryptoEnabled, defaultMarket));
+  const [focusSymbol, setFocusSymbol] = useState(() => DEFAULT_FOCUS[initialOperatorMarket(cryptoEnabled, defaultMarket)]);
   const [timeframe, setTimeframe] = useState("15m");
   // Switching market also switches the focus symbol, so an equity is never looked up as crypto (or vice versa).
   const setMarket = useCallback((m: string) => {

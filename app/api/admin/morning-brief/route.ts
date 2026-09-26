@@ -6,7 +6,7 @@
  *      and rate-limited (429, ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC, default 300 s). Built from the shared saved
  *      scan (no live per-symbol AV loop) and saved under "<day>:<market>:<tf>:admin", so the cron's saved and
  *      emailed brief is never replaced.
- * Market defaults to EQUITIES while crypto market data is off (OPERATOR_CG_FETCH_ENABLED).
+ * Market defaults to EQUITIES (defaultAdminMarket); market=CRYPTO builds the crypto brief.
  * Legacy: GET with ?symbols=A,B builds a live brief for that custom list and returns it WITHOUT saving it.
  */
 import { NextRequest, NextResponse } from "next/server";

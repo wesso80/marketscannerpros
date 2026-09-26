@@ -9,15 +9,16 @@
  * Per run:
  *   1. take the (market, timeframe) run lock — a second concurrent run is refused, not queued;
  *   2. pick the "due" symbols (not checked within ADMIN_SCAN_MAX_AGE_MIN, default 25 min);
- *   3. equities: one REALTIME_BULK_QUOTES call per 100 due symbols (price + day change); crypto: one CoinGecko
- *      /coins/markets call per 250 due symbols (price + 24h change);
+ *   3. equities: one REALTIME_BULK_QUOTES call per 100 due symbols (price + day change); crypto with CoinGecko on
+ *      (OPERATOR_CG_FETCH_ENABLED): one /coins/markets call per 250 due symbols (price + 24h change); crypto with
+ *      CoinGecko off: no quotes (Alpha Vantage has no bulk crypto quote), so every due symbol gets a full scan;
  *   4. shortlist from those prices (never scanned / failed, refresh floor, movers, radar names; capped);
  *   5. full scan of the shortlist only: 15m bars via avFetch (waits for an avRateGovernor token), daily bars
  *      from the lib/marketData cache, VIX once per run (memoised provider), bars reused for the packet;
  *   6. quote-only refresh for the rest (packet kept, age label shows its real age);
  *   7. save, record radar appear/drop events on the run row, alert on new radar names.
- * Crypto is never looked up through stock endpoints; with the CoinGecko kill-switch off, crypto rows are
- * marked skipped and make no calls.
+ * Crypto is never looked up through stock endpoints. Crypto runs on Alpha Vantage bars/levels whether or not
+ * CoinGecko is on; only ADMIN_CRYPTO_ENABLED=false (lib/admin/adminCrypto) marks crypto rows skipped with no calls.
  */
 import { randomUUID } from "crypto";
 import type { CandidatePipeline } from "@/lib/operator/orchestrator";
@@ -38,6 +39,7 @@ import { recordSignals } from "@/lib/admin/signal-recorder";
 import { opsAlert } from "@/lib/opsAlerting";
 import { COINGECKO_ID_MAP, getMarketData } from "@/lib/coingecko";
 import * as store from "@/lib/admin/sharedScanStore";
+import { ADMIN_CRYPTO_DISABLED_MESSAGE, isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { closedUsSession, isCurrentForClosedMarket } from "@/lib/admin/closedMarket";
 import {
   chunk,
@@ -58,8 +60,8 @@ import type { RadarOpportunity } from "@/types/operator";
 
 export type SharedScanTrigger = "cron" | "radar" | "edge" | "manual" | "page";
 
-export const CRYPTO_PAUSED_MESSAGE =
-  "Crypto market data paused (OPERATOR_CG_FETCH_ENABLED is off); crypto is never looked up through stock endpoints.";
+/** Saved on crypto rows skipped because admin crypto is switched off (ADMIN_CRYPTO_ENABLED=false). */
+export const CRYPTO_PAUSED_MESSAGE = ADMIN_CRYPTO_DISABLED_MESSAGE;
 export const MIGRATION_MISSING_MESSAGE = "Saved admin scan tables are missing — apply migrations/104_admin_shared_scan.sql.";
 
 export interface SharedScanRequest {
@@ -234,14 +236,18 @@ async function executeRun(input: {
     const due = selectDueSymbols(symbols, prior, started, cfg.maxAgeMin);
     summary.symbolsDue = due.length;
 
-    if (market === "CRYPTO" && !operatorCgFetchEnabled()) {
+    if (market === "CRYPTO" && !isAdminCryptoEnabled()) {
       for (const symbol of due) {
         await store.markResultStatus({ market, timeframe, symbol, runId, status: "skipped", error: CRYPTO_PAUSED_MESSAGE });
       }
       summary.skipped = due.length;
       notes.crypto = "paused";
     } else if (due.length > 0) {
-      const quotes = market === "EQUITIES" ? await fetchBulkQuotes(due, onAvCall) : await fetchCryptoBulkQuotes(due);
+      // Crypto quotes need CoinGecko; with it off (quota protection) the run full-scans every due symbol on AV.
+      const quotes = market === "EQUITIES"
+        ? await fetchBulkQuotes(due, onAvCall)
+        : operatorCgFetchEnabled() ? await fetchCryptoBulkQuotes(due) : null;
+      if (market === "CRYPTO") notes.cryptoQuotes = quotes ? "coingecko" : operatorCgFetchEnabled() ? "coingecko_failed" : "off";
       summary.quotesAvailable = quotes != null;
       const plan = req.forceDeep
         ? { deep: due.slice(0, cfg.maxDeepScans), quoteOnly: [] as string[], deferred: due.slice(cfg.maxDeepScans), reasons: Object.fromEntries(due.map((s) => [s, "manual rescan"])) as Record<string, string> }

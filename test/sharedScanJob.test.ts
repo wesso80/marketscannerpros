@@ -84,6 +84,7 @@ beforeEach(() => {
   process.env.ALPHA_VANTAGE_API_KEY = 'k';
   delete process.env.ADMIN_RESCAN_MIN_INTERVAL_SEC;
   delete process.env.ADMIN_RESCAN_DAILY_CAP;
+  delete process.env.ADMIN_CRYPTO_ENABLED;
   m.entitlement.downgraded = false;
   for (const fn of Object.values(m.store)) if (typeof fn === 'function' && 'mockClear' in fn) (fn as ReturnType<typeof vi.fn>).mockClear();
   m.store.acquireRunLock.mockReset().mockResolvedValue(true);
@@ -201,13 +202,42 @@ describe('startSharedScan — equities run', () => {
 });
 
 describe('startSharedScan — crypto and locking', () => {
-  it('crypto with CoinGecko off: rows marked skipped, no market-data calls, never stock endpoints', async () => {
+  it('crypto switched off (ADMIN_CRYPTO_ENABLED=false): rows marked skipped, no market-data calls', async () => {
+    process.env.ADMIN_CRYPTO_ENABLED = 'false';
+    m.cgEnabled.mockReturnValue(true); // CoinGecko on does not override the admin crypto kill switch
     const summary = await run({ market: 'CRYPTO', trigger: 'cron', symbols: ['BTC', 'ETH'] });
     expect(m.avFetch).not.toHaveBeenCalled();
+    expect(m.cgMarkets).not.toHaveBeenCalled();
     expect(m.buildScan).not.toHaveBeenCalled();
     expect(m.store.markResultStatus).toHaveBeenCalledTimes(2);
-    expect(m.store.markResultStatus.mock.calls[0][0]).toMatchObject({ symbol: 'BTC', status: 'skipped' });
+    expect(m.store.markResultStatus.mock.calls[0][0]).toMatchObject({ symbol: 'BTC', status: 'skipped', error: expect.stringContaining('ADMIN_CRYPTO_ENABLED') });
     expect(summary.skipped).toBe(2);
+  });
+
+  it('crypto with CoinGecko OFF (default): scans on AV — zero CoinGecko calls, no stock quotes, full scan of every due symbol', async () => {
+    m.store.loadPriorResults.mockResolvedValue(new Map([
+      ['BTC', priorRow('BTC')], // quiet, scanned 30 min ago — would be quote-only with quotes
+      ['ETH', priorRow('ETH', { checkedAtMs: NOW - 5 * MIN })], // fresh → not due
+    ]));
+    m.buildScan.mockImplementation(async ({ symbol }: { symbol: string }) => scanOk(symbol, false));
+    const summary = await run({ market: 'CRYPTO', trigger: 'radar', symbols: ['BTC', 'ETH', 'SOL'] });
+    expect(m.cgMarkets).not.toHaveBeenCalled();
+    expect(m.avFetch).not.toHaveBeenCalled();
+    expect(summary.quotesAvailable).toBe(false);
+    expect(summary.skipped).toBe(0);
+    expect(m.buildScan.mock.calls.map((c) => c[0].symbol)).toEqual(['BTC', 'SOL']);
+    expect(m.buildScan.mock.calls[0][0]).toMatchObject({ market: 'CRYPTO' });
+    expect(m.store.saveQuotes).not.toHaveBeenCalled();
+    expect(m.store.finishRun.mock.calls.at(-1)?.[0]).toMatchObject({ notes: expect.objectContaining({ cryptoQuotes: 'off' }) });
+  });
+
+  it('crypto with CoinGecko off is capped at ADMIN_SCAN_MAX_DEEP per run; the rest are deferred, not skipped', async () => {
+    m.buildScan.mockImplementation(async ({ symbol }: { symbol: string }) => scanOk(symbol, false));
+    const symbols = Array.from({ length: 5 }, (_, i) => `C${i}`);
+    const summary = await run({ market: 'CRYPTO', trigger: 'radar', symbols, config: { maxDeepScans: 3 } });
+    expect(m.buildScan).toHaveBeenCalledTimes(3);
+    expect(summary.deferred).toBe(2);
+    expect(summary.skipped).toBe(0);
   });
 
   it('crypto with CoinGecko on: no bulk stock quotes, symbols full-scanned as CRYPTO', async () => {
