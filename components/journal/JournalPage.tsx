@@ -172,22 +172,8 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
     exitPrice: number;
     exitTs: string;
     closeReason: 'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off';
-    outcome: 'win' | 'loss' | 'breakeven';
-    setupQuality: 'A' | 'B' | 'C' | 'D';
-    followedPlan: boolean;
-    errorType:
-      | 'none'
-      | 'entry_early'
-      | 'entry_late'
-      | 'no_stop'
-      | 'oversize'
-      | 'ignored_signal'
-      | 'bad_liquidity'
-      | 'chop'
-      | 'news_spike'
-      | 'emotion'
-      | 'unknown';
-    reviewText?: string;
+    followedPlan: boolean | null;
+    notes: string;
   }) => {
     if (!selectedTrade) return;
     try {
@@ -196,8 +182,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
         exitTs: req.exitTs,
         closeReason: req.closeReason,
         followedPlan: req.followedPlan,
-        errorType: req.errorType,
-        reviewText: `${req.outcome} | ${req.setupQuality}${req.reviewText ? ` | ${req.reviewText}` : ''}`,
+        notes: req.notes,
       });
       setCloseModalOpen(false);
     } catch (err) {
