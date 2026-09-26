@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { mapJournalResponseToPayload } from '@/lib/journal/mapPayload';
+import { matchesAssetClassFilter } from '@/lib/journal/assetClassFilter';
 import { JournalPayload, JournalQueryState, SortModel, TradeRowModel } from '@/types/journal';
 
 function matchesQuery(trade: TradeRowModel, query: JournalQueryState): boolean {
@@ -9,7 +10,7 @@ function matchesQuery(trade: TradeRowModel, query: JournalQueryState): boolean {
   if (query.symbol && trade.symbol !== query.symbol.toUpperCase()) return false;
   if (query.strategyTag && trade.strategyTag !== query.strategyTag) return false;
   if (query.side && trade.side !== query.side) return false;
-  if (query.assetClass && trade.assetClass !== query.assetClass) return false;
+  if (!matchesAssetClassFilter(trade, query.assetClass)) return false;
   if (query.from && new Date(trade.entry.ts).getTime() < new Date(query.from).getTime()) return false;
   if (query.to && new Date(trade.entry.ts).getTime() > new Date(query.to).getTime()) return false;
   if (query.q) {
