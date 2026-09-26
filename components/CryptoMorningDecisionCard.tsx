@@ -1,6 +1,7 @@
 'use client';
 
-import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -224,7 +225,6 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
   }, [marketData]);
 
   useEffect(() => { onDecision?.(decision); }, [decision, onDecision]);
-  const feedNotes = useMemo(() => (marketData ? cryptoReviewFeedNotes(marketData) : []), [marketData]);
 
   const freshnessBadges = useMemo(() => {
     const entries = [
@@ -302,11 +302,7 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
           <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">
             Hard Blocks: {decision.hardBlocks.length ? decision.hardBlocks.join(' • ') : 'None'}
           </div>
-          {feedNotes.length > 0 && (
-            <ul className="mt-1 space-y-0.5 rounded border border-amber-500/30 bg-amber-500/5 p-1.5 text-[11px] text-amber-200" aria-label="Feed status">
-              {feedNotes.map((note) => <li key={note}>{note}</li>)}
-            </ul>
-          )}
+          <CryptoFeedStatusNotes marketData={marketData} />
         </div>
       </div>
     </section>

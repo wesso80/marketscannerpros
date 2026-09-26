@@ -68,10 +68,20 @@ describe('OV-18 trending freshness and feed notes', () => {
     expect(cryptoReviewFeedNotes(null, now)[0]).toContain('No response from the feed');
   });
 
-  it('the gate card renders the notes', () => {
+  it('the gate card and Crypto Command render the same shared Feed status list', () => {
+    const list = read('components/CryptoFeedStatusNotes.tsx');
+    expect(list).toContain('cryptoReviewFeedNotes(marketData)');
+    expect(list).toContain('aria-label="Feed status"');
     const card = read('components/CryptoMorningDecisionCard.tsx');
-    expect(card).toContain('cryptoReviewFeedNotes(marketData)');
-    expect(card).toContain('aria-label="Feed status"');
+    const command = read('app/tools/crypto/page.tsx');
+    for (const src of [card, command]) {
+      expect(src).toContain("import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes'");
+      expect(src).toContain('<CryptoFeedStatusNotes marketData={marketData} />');
+    }
+    // No second copy of the list markup, and the scanner feed row no longer claims it is still waiting on CoinGecko.
+    expect(card).not.toContain('aria-label="Feed status"');
+    expect(command).not.toContain('aria-label="Feed status"');
+    expect(command).not.toContain('Waiting for CoinGecko response');
   });
 });
 
