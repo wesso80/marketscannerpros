@@ -15,6 +15,8 @@ import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts } from '@/lib/alerts/consoleStatus';
 import RegimeBanner from '@/components/RegimeBanner';
 import { PageHero } from '@/components/ui';
+import { useSearchParams } from 'next/navigation';
+import { buildAlertEdit, canEditLevel, consoleListAlerts, consoleRowLabel, symbolFromQuery } from '@/lib/alerts/consoleList';
 
 type AlertItem = {
   id: string;
@@ -23,6 +25,8 @@ type AlertItem = {
   condition_value: number;
   is_active: boolean;
   trigger_count: number;
+  name?: string | null;
+  is_recurring?: boolean | null;
   triggered_at?: string;
   is_smart_alert?: boolean;
   is_multi_condition?: boolean;
@@ -103,6 +107,14 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy'>('basic');
   const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'cleaning' | 'done'>('idle');
   const [cleanupCount, setCleanupCount] = useState(0);
+  // Inline edit of one console row (name, and level for price / % alerts).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; level: string }>({ name: '', level: '' });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  // Watchlist "Alert" button links here with ?symbol=X: prefill the new-alert form with it.
+  const searchParams = useSearchParams();
+  const prefillSymbol = symbolFromQuery(searchParams?.get('symbol'));
 
   // AI Page Context - share alerts page state with copilot
   const { setPageData } = useAIPageContext();
@@ -203,7 +215,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const pendingCooldowns = useMemo(() => activeAlerts.filter((a) => deriveStatus(a) === 'Cooldown').length, [activeAlerts]);
 
   const alertRows = useMemo(() => {
-    const filtered = activeAlerts.filter((alert) => {
+    // All alerts, active first: paused and fired one-time alerts stay visible so they can be re-armed or deleted.
+    const filtered = consoleListAlerts(alerts).filter((alert) => {
       const isSmart = Boolean(alert.is_smart_alert || (alert.condition_type ?? '').startsWith('strategy_') || (alert.condition_type ?? '').startsWith('scanner_'));
       const isMulti = Boolean(alert.is_multi_condition);
       if (consoleTab === 'basic') return !isSmart && !isMulti;
@@ -213,7 +226,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     });
     // Legacy multi-condition alerts are listed under Basic with a "Not checked" status so they can be seen and removed.
     return (consoleTab === 'basic' ? [...filtered, ...multiAlerts] : filtered).slice(0, 12);
-  }, [activeAlerts, multiAlerts, consoleTab]);
+  }, [alerts, multiAlerts, consoleTab]);
 
   // If every alert is smart/strategy, an empty "Basic" default contradicts the "N active" header — open the tab that has rows.
   const autoTabbedRef = useRef(false);
@@ -238,13 +251,47 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     await fetchAll();
   };
 
+  // Edit opens an inline form filled with the alert's current values (it used to open a blank form).
   const editAlert = (alert: AlertItem) => {
-    const type = classifyAlertType(alert);
-    setActiveZone4Tab(type === 'Strategy' ? 'strategy' : 'basic');
-    setZone4Open(true);
+    setEditingId(alert.id);
+    setEditError(null);
+    setEditForm({ name: alert.name ?? '', level: String(alert.condition_value ?? '') });
+  };
+
+  const saveEdit = async (alert: AlertItem) => {
+    const result = buildAlertEdit(alert, editForm);
+    if (!result.ok) {
+      setEditError(result.error);
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result.body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setEditError(data.error || 'Failed to save changes');
+        return;
+      }
+      setEditingId(null);
+      await fetchAll();
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const orphanedCount = useMemo(() => alerts.filter((a) => a.is_smart_alert && Number(a.condition_value) === 0).length, [alerts]);
+
+  useEffect(() => {
+    // Opened from the Watchlist "Alert" button: show the new-alert form with the symbol filled in.
+    if (prefillSymbol) {
+      setActiveZone4Tab('basic');
+      setZone4Open(true);
+    }
+  }, [prefillSymbol]);
 
   const cleanupOrphaned = async () => {
     setCleanupStatus('cleaning');
@@ -379,7 +426,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
           <div className="rounded-xl border border-slate-800 bg-slate-950/25">
-            <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-100">Active Alerts Console</div>
+            <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-100">Alerts Console</div>
             {alertRows.length === 0 ? (
               <div className="px-4 py-5 text-sm text-slate-400">
                 {activeAlerts.length === 0
@@ -391,11 +438,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
             ) : (
               <div className="max-h-[520px] overflow-auto">
                 {alertRows.map((alert) => {
-                  const status = deriveStatus(alert);
+                  const status = consoleRowLabel(alert, deriveStatus(alert));
                   const type = classifyAlertType(alert);
+                  const isEditing = editingId === alert.id;
                   return (
-                    <div key={alert.id} className="group border-b border-slate-800 px-3 py-2 sm:h-[60px] sm:py-0">
-                      <div className="flex h-full flex-col justify-center gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <div key={alert.id} className="group border-b border-slate-800 px-3 py-2 sm:py-0">
+                      <div className="flex flex-col justify-center gap-1.5 sm:h-[60px] sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                         <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
                           <span className="min-w-[56px] rounded-md border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
                           <span className="truncate text-sm font-semibold text-slate-100">{alertConditionLabel(alert.condition_type ?? '', alert.condition_value)}</span>
@@ -412,6 +460,26 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
                           <button type="button" onClick={() => void deleteAlert(alert.id)} className="rounded bg-rose-500/15 px-2 py-1 text-[11px] text-rose-200">Delete</button>
                         </div>
                       </div>
+                      {isEditing && (
+                        <form
+                          className="mb-2 mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/60 p-2 text-xs"
+                          onSubmit={(e) => { e.preventDefault(); void saveEdit(alert); }}
+                        >
+                          <label className="flex items-center gap-1 text-slate-400">
+                            Name
+                            <input type="text" value={editForm.name} maxLength={100} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="w-40 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100" />
+                          </label>
+                          {canEditLevel(alert) && (
+                            <label className="flex items-center gap-1 text-slate-400">
+                              {(alert.condition_type ?? '').startsWith('percent_') ? 'Move %' : 'Price'}
+                              <input type="number" step="any" min="0" value={editForm.level} onChange={(e) => setEditForm((f) => ({ ...f, level: e.target.value }))} className="w-28 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-slate-100" />
+                            </label>
+                          )}
+                          <button type="submit" disabled={editSaving} className="rounded bg-emerald-600 px-2 py-1 font-semibold text-white disabled:opacity-50">{editSaving ? 'Saving…' : 'Save'}</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="rounded px-2 py-1 text-slate-300">Cancel</button>
+                          {editError && <span className="text-rose-300">{editError}</span>}
+                        </form>
+                      )}
                     </div>
                   );
                 })}
@@ -520,7 +588,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
                 <button type="button" aria-pressed={activeZone4Tab === 'basic'} onClick={() => setActiveZone4Tab('basic')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'basic' ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>Basic</button>
                 <button type="button" aria-pressed={activeZone4Tab === 'strategy'} onClick={() => setActiveZone4Tab('strategy')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'strategy' ? 'bg-indigo-500/15 text-indigo-200' : 'bg-white/10 text-slate-200'}`}>Strategy</button>
               </div>
-              <AlertsWidget compact={false} className="!border-slate-800 !bg-transparent" />
+              <AlertsWidget compact={false} className="!border-slate-800 !bg-transparent" prefilledSymbol={prefillSymbol ?? undefined} />
             </div>
 
             {tier === 'free' && <UpgradeGate requiredTier="pro" feature="more price alerts" />}
