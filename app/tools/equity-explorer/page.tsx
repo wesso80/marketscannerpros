@@ -776,9 +776,10 @@ function EquityExplorerContent() {
               </div>
             </section>
 
-            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+            {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
+            <details open className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-                <span>Zone 3 • Informational (Collapsed by Default)</span>
+                <span>Zone 3 • Informational</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
                 <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>

@@ -709,14 +709,15 @@ function CryptoDetailPageContent() {
               </div>
             </section>
 
-            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+            {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
+            <details open className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-                <span>Zone 3 • Informational (Collapsed by Default)</span>
+                <span>Zone 3 • Informational</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
                 <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
 
-              <div className="mt-2 max-h-[420px] overflow-y-auto space-y-2 pr-1">
+              <div className="mt-2 space-y-2">
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="mb-1 text-[11px] uppercase text-slate-500">Performance</p>
