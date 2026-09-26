@@ -603,10 +603,10 @@ export function savedScanForBrief(
     symbols: bySymbol.map((row) => row.symbol),
     health: {
       feed: view.available && view.rows.length > 0 ? "HEALTHY" : "DEGRADED",
-      websocket: "DISCONNECTED",
+      websocket: "NOT MONITORED", // no websocket exists; API latency is not probed
       scanner: view.running ? "RUNNING" : "IDLE",
       cache: view.available ? "OK" : "MISSING",
-      api: "LOW_LATENCY",
+      api: "NOT MONITORED",
       lastScanAt: view.newestScannedAt ?? undefined,
       symbolsScanned: view.rows.length,
       errorsCount: failed,

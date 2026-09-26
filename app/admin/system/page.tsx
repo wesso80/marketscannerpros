@@ -15,6 +15,7 @@ interface SystemHealth {
   lastScanAt?: string | null;
   errorsCount?: number;
   dbConnected?: boolean;
+  scannerDetail?: { note?: string } | null;
 }
 
 interface RiskState {
@@ -51,10 +52,12 @@ function authHeaders(): HeadersInit {
 function statusTone(value?: string | boolean): "green" | "yellow" | "red" | "neutral" {
   if (value === true) return "green";
   if (value === false) return "red";
-  const text = String(value || "").toUpperCase();
-  if (["HEALTHY", "OK", "LOW_LATENCY", "RUNNING", "ONLINE", "CONNECTED"].some((item) => text.includes(item))) return "green";
-  if (["DEGRADED", "IDLE", "DISCONNECTED", "UNKNOWN", "CHECK"].some((item) => text.includes(item))) return "yellow";
+  const text = String(value || "").toUpperCase().replace(/_/g, " ");
+  // Not measured / paused on purpose are neutral, never red or green.
+  if (text.includes("NOT MONITORED") || text.includes("PAUSED")) return "neutral";
   if (["ERROR", "FAIL", "BLOCK"].some((item) => text.includes(item))) return "red";
+  if (["DEGRADED", "IDLE", "UNKNOWN", "CHECK", "STALE", "NO RUNS", "NO DATA"].some((item) => text.includes(item))) return "yellow";
+  if (["HEALTHY", "OK", "RUNNING", "ONLINE", "CONNECTED"].some((item) => text.includes(item))) return "green";
   return "neutral";
 }
 
@@ -105,7 +108,7 @@ export default function SystemPage() {
 
   return (
     <div className="p-4 space-y-4">
-      <SectionTitle title="System Command Health" subtitle={error || (health?.lastScanAt ? `Last scan: ${new Date(health.lastScanAt).toLocaleString()}` : undefined)} />
+      <SectionTitle title="System Command Health" subtitle={error || [health?.lastScanAt ? `Last scan: ${new Date(health.lastScanAt).toLocaleString()}` : null, health?.scannerDetail?.note ?? null].filter(Boolean).join(" · ") || undefined} />
 
       <div className="flex justify-end">
         <button

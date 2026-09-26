@@ -36,6 +36,7 @@ interface IncomeStats {
     pro_trader: number;
     free: number;
   };
+  revenueBasis?: string;
   history: {
     month: string;
     pro: number;
@@ -198,7 +199,7 @@ export default function AdminIncomePage() {
                 borderRadius: "0.5rem",
                 border: "1px solid rgba(245, 158, 11, 0.2)"
               }}>
-                <span style={{ color: "#F59E0B" }}>Pro Trader ({stats.subscriptions.proTrader})</span>
+                <span style={{ color: "#F59E0B" }}>Pro Trader (legacy, billed as Pro)* ({stats.subscriptions.proTrader})</span>
                 <span style={{ color: "#E5E7EB", fontWeight: 600 }}>
                   {formatCurrency(stats.subscriptions.proTrader * stats.pricing.pro_trader)}/mo
                 </span>
@@ -209,7 +210,7 @@ export default function AdminIncomePage() {
           {/* Revenue details */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span style={{ color: "#9CA3AF" }}>Gross Revenue</span>
+              <span style={{ color: "#9CA3AF" }}>Gross Revenue (list-price estimate)*</span>
               <span style={{ color: "#E5E7EB" }}>{formatCurrency(stats.summary.grossRevenue)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
@@ -320,8 +321,8 @@ export default function AdminIncomePage() {
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                   <th style={{ textAlign: "left", padding: "0.75rem", color: "#9CA3AF" }}>Month</th>
                   <th style={{ textAlign: "right", padding: "0.75rem", color: "var(--msp-accent)" }}>Pro</th>
-                  <th style={{ textAlign: "right", padding: "0.75rem", color: "#F59E0B" }}>Pro Trader</th>
-                  <th style={{ textAlign: "right", padding: "0.75rem", color: "#10B981" }}>Revenue</th>
+                  <th style={{ textAlign: "right", padding: "0.75rem", color: "#F59E0B" }}>Pro Trader (legacy)*</th>
+                  <th style={{ textAlign: "right", padding: "0.75rem", color: "#10B981" }}>Revenue (est.)*</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,8 +350,12 @@ export default function AdminIncomePage() {
           Pricing Reference
         </h3>
         <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-          Pro: ${stats.pricing.pro}/mo • Pro Trader: ${stats.pricing.pro_trader}/mo • 
+          Pro: ${stats.pricing.pro}/mo • Pro Trader (legacy, billed as Pro): ${stats.pricing.pro_trader}/mo • 
           Stripe: 2.9% + $0.30/transaction • OpenAI: $2.50/1M input, $10/1M output tokens
+        </div>
+        <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "0.5rem" }}>
+          * {stats.revenueBasis ||
+            "List-price estimate: active Stripe-linked subscriptions × Pro monthly list price. Legacy Pro Trader subs are billed as Pro."}
         </div>
       </div>
     </div>

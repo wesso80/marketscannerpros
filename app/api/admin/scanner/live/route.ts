@@ -8,7 +8,7 @@
  *
  * Query params:
  *   ?symbols=ADA,SUI,MATIC,FET (comma-separated, optional filter)
- *   &market=CRYPTO (default) | EQUITIES
+ *   &market=EQUITIES | CRYPTO (default: EQUITIES while crypto data is off, see resolveAdminMarket)
  *   &timeframe=15m (default)
  * The default universe follows the market (it used to be the crypto list even for EQUITIES, so crypto
  * tickers were looked up as US stocks).
@@ -21,7 +21,9 @@ import type { ScannerHit, SystemHealth } from "@/lib/admin/types";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
-import { readSavedScan, savedScanStaleAfterSec, scanStatusForResponse } from "@/lib/admin/sharedScan";
+import { CRYPTO_PAUSED_MESSAGE, readSavedScan, savedScanStaleAfterSec, scanStatusForResponse } from "@/lib/admin/sharedScan";
+import { operatorCgFetchEnabled } from "@/lib/operator/market-data";
+import { isPausedRow, NOT_MONITORED } from "@/lib/admin/healthProbes";
 
 export const runtime = "nodejs";
 
@@ -56,16 +58,23 @@ export async function GET(req: NextRequest) {
       .flatMap((r) => r.hits)
       .sort((a, b) => b.confidence - a.confidence);
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
+    // Crypto switched off on purpose (OPERATOR_CG_FETCH_ENABLED off): its skipped / leftover rows are "paused",
+    // listed separately, and never counted as scan errors.
+    const cryptoEnabled = operatorCgFetchEnabled();
+    const marketPaused = market === "CRYPTO" && !cryptoEnabled;
+    const isPaused = (r: (typeof view.rows)[number]) => (marketPaused && !isCurrent(r)) || isPausedRow(r, market, cryptoEnabled);
+    const paused = view.rows.filter(isPaused).map((r) => r.symbol);
     const errors = view.rows
-      .filter((r) => !isCurrent(r))
+      .filter((r) => !isCurrent(r) && !isPaused(r))
       .map((r) => ({ symbol: r.symbol, error: r.status !== "ok" ? r.error ?? r.status : `stale (${r.ageSec == null ? "never scanned" : `${Math.round(r.ageSec / 60)} min old`})` }));
 
     const health: SystemHealth = {
-      feed: view.available && current.length > 0 ? "HEALTHY" : "DEGRADED",
-      websocket: "DISCONNECTED",
-      scanner: view.running ? "RUNNING" : "IDLE",
-      cache: "OK",
-      api: "LOW_LATENCY",
+      feed: marketPaused ? "PAUSED" : view.available && current.length > 0 ? "HEALTHY" : "DEGRADED",
+      // Not measured: there is no websocket, and cache / API latency are not probed.
+      websocket: NOT_MONITORED,
+      scanner: marketPaused ? "PAUSED" : view.running ? "RUNNING" : "IDLE",
+      cache: NOT_MONITORED,
+      api: NOT_MONITORED,
       lastScanAt: view.newestScannedAt ?? undefined,
       symbolsScanned: current.length,
       errorsCount: errors.length,
@@ -79,6 +88,10 @@ export async function GET(req: NextRequest) {
         symbolsScanned: current.length,
         errorsCount: errors.length,
         errors,
+        market,
+        pausedCount: paused.length,
+        paused,
+        pausedReason: marketPaused || paused.length ? CRYPTO_PAUSED_MESSAGE : null,
         timestamp: view.newestScannedAt,
         risk,
       },
