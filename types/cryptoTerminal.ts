@@ -23,7 +23,8 @@ export interface CoinOverview {
   symbol: string;          // "BTC"
   name: string;
   price: number;
-  change24h: number;
+  /** null when CoinGecko sent no 24h change (shown as n/a). */
+  change24h: number | null;
   change7d: number;
   marketCap: number;
   rank: number;
@@ -99,7 +100,7 @@ export interface TopCoinsDerivativesResponse {
     symbol: string;
     name: string;
     price: number;
-    change24h: number;
+    change24h: number | null;
     exchanges: DerivativeRow[];
     aggregatedFunding: AggregatedFunding;
     aggregatedOI: AggregatedOI;

@@ -335,6 +335,9 @@ export interface Mover {
 export interface MarketMoversResponse {
   success: boolean;
   source: string;
+  lastUpdated?: string;
+  /** Provider time of the equity lists; null when not sent. */
+  equityAsOf?: string | null;
   topGainers: Mover[];
   topLosers: Mover[];
   mostActive: Mover[];
@@ -389,17 +392,23 @@ export interface SectorData {
   name: string;
   price?: number;
   change?: number;
-  changePercent: number;
+  /** null when the provider sent no change (n/a). */
+  changePercent: number | null;
   weight: number;
   color: string;
-  daily?: number;
-  weekly?: number;
-  monthly?: number;
+  daily?: number | null;
+  weekly?: number | null;
+  monthly?: number | null;
 }
 
 export interface SectorsResponse {
   sectors: SectorData[];
+  /** Response time. */
   timestamp: string;
+  /** Provider's own time, when it sends one. */
+  asOf?: string | null;
+  /** Quote trading day (YYYY-MM-DD) when the provider gives a date but no time. */
+  asOfTradingDay?: string | null;
 }
 
 // --- Crypto Market Overview ---
@@ -410,12 +419,15 @@ export interface CryptoOverviewResponse {
     totalMarketCapFormatted: string;
     totalVolume: number;
     totalVolumeFormatted: string;
-    marketCapChange24h: number;
+    /** null when CoinGecko sent no 24h change (n/a). */
+    marketCapChange24h: number | null;
     btcDominance: number;
     ethDominance: number;
     dominance: Array<{ symbol: string; dominance: number }>;
     sparkline: Array<{ time: number; value: number }>;
   };
+  /** CoinGecko's own update time for the global snapshot; null if not sent. */
+  asOf?: string | null;
 }
 
 // --- Commodities ---

@@ -70,7 +70,13 @@ function MarketsMetric({ label, value, tone = 'var(--msp-text)', detail }: { lab
   );
 }
 
-function pctColor(v: number) {
+/** Signed percent, or "n/a" when the provider sent no value (never a made-up 0.00%). */
+function fmtSignedPct(v: number | null | undefined) {
+  return v == null || !Number.isFinite(v) ? 'n/a' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
+}
+
+function pctColor(v: number | null | undefined) {
+  if (v == null || !Number.isFinite(v)) return 'text-slate-400';
   if (v > 0) return 'text-emerald-400';
   if (v < 0) return 'text-red-400';
   return 'text-slate-400';
@@ -171,14 +177,15 @@ export default function ExplorerPage() {
               <h3 className="text-sm font-semibold text-white mb-3">Sector Heatmap</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
                 {sectorData.map((s: SectorData) => {
-                  const pct = s.changePercent ?? s.daily ?? 0;
+                  // No change from the provider: grey tile reading "n/a", not a flat 0.00% (OV-7).
+                  const pct = s.changePercent ?? s.daily ?? null;
                   return (
                     <button
                       type="button"
                       key={s.symbol}
                       className="rounded-lg p-2.5 text-center cursor-pointer hover:ring-1 hover:ring-white/20 transition-all focus:outline-none focus:ring-1 focus:ring-emerald-400/60"
                       style={{
-                        backgroundColor: pct > 0 ? `rgba(16, 185, 129, ${Math.min(Math.abs(pct) / 3, 0.6)})` : pct < 0 ? `rgba(239, 68, 68, ${Math.min(Math.abs(pct) / 3, 0.6)})` : 'rgba(148, 163, 184, 0.1)',
+                        backgroundColor: pct == null ? 'rgba(148, 163, 184, 0.1)' : pct > 0 ? `rgba(16, 185, 129, ${Math.min(Math.abs(pct) / 3, 0.6)})` : pct < 0 ? `rgba(239, 68, 68, ${Math.min(Math.abs(pct) / 3, 0.6)})` : 'rgba(148, 163, 184, 0.1)',
                       }}
                       onClick={() => openGoldenEgg(s.symbol)}
                       aria-label={`Open ${s.symbol} in Golden Egg`}
@@ -186,7 +193,7 @@ export default function ExplorerPage() {
                       <div className="text-[11px] text-white font-semibold">{s.symbol}</div>
                       <div className="text-[11px] text-slate-300 truncate">{s.name}</div>
                       <div className={`text-xs font-bold ${pctColor(pct)}`}>
-                        {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
+                        {fmtSignedPct(pct)}
                       </div>
                     </button>
                   );
@@ -271,7 +278,7 @@ export default function ExplorerPage() {
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                   <div className="text-[11px] text-slate-500 uppercase">Total Market Cap</div>
                   <div className="text-sm font-bold text-white">{cryptoData.totalMarketCapFormatted}</div>
-                  <div className={`text-[11px] ${pctColor(cryptoData.marketCapChange24h)}`}>{cryptoData.marketCapChange24h > 0 ? '+' : ''}{cryptoData.marketCapChange24h.toFixed(2)}%</div>
+                  <div className={`text-[11px] ${pctColor(cryptoData.marketCapChange24h)}`}>{fmtSignedPct(cryptoData.marketCapChange24h)}</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                   <div className="text-[11px] text-slate-500 uppercase">24h Volume</div>
@@ -352,7 +359,7 @@ export default function ExplorerPage() {
                     <tr key={s.symbol} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                       <td className="py-2.5 px-2 text-white">{s.name}</td>
                       <td className="py-2.5 px-2 text-emerald-400">{s.symbol}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.changePercent)}`}>{s.changePercent > 0 ? '+' : ''}{s.changePercent.toFixed(2)}%</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.changePercent)}`}>{fmtSignedPct(s.changePercent)}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : '—'}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : '—'}</td>
                       <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : '—'}</td>
