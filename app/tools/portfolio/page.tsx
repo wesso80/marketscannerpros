@@ -14,7 +14,7 @@ import CommandStrip, { type TerminalDensity } from '@/components/terminal/Comman
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
-import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
+import { formatDollar } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
@@ -38,6 +38,7 @@ import {
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
 import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
+import { closedTradeR, formatR as formatStopR, formatRiskUnits, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
 
 interface Position {
   id: number;
@@ -69,6 +70,8 @@ interface ClosedPosition extends Position {
   closeDate: string;
   closePrice: number;
   realizedPL: number;
+  /** R against a recorded stop (from the linked journal entry); absent when no stop was recorded. */
+  rMultiple?: number;
 }
 
 interface PerformanceSnapshot {
@@ -1718,34 +1721,28 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   ] as const;
 
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  const riskPerTradeFractionForDisplay = Math.max(0.001, riskSettings.maxRiskPerTrade / 100);
+  // One risk unit = account equity x max risk per trade % (the same budget Model Allocation sizes with).
+  // Used wherever there is no real stop; never called R.
+  const riskUnitUsd = riskUnitDollars(capitalBase, riskSettings.maxRiskPerTrade);
   const formatRiskPairText = (amount: number) => {
-    const rValue = amountToR(amount, capitalBase, riskPerTradeFractionForDisplay);
     const sign = amount >= 0 ? '+' : '-';
-    return `${formatR(rValue)} (${sign}${formatDollar(amount)})`;
+    return `${sign}${formatDollar(amount)} (${formatRiskUnits(toRiskUnits(amount, riskUnitUsd))})`;
   };
 
-  const avgR = closedPositions.length > 0
-    ? closedPositions.reduce((sum, trade) => {
-        const notional = trade.entryPrice * positionUnits(trade);
-        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-        return sum + (trade.realizedPL / Math.max(1, riskUnit));
-      }, 0) / closedPositions.length
-    : 0;
-  const bestR = closedPositions.length > 0
-    ? Math.max(...closedPositions.map((trade) => {
-        const notional = trade.entryPrice * positionUnits(trade);
-        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-        return trade.realizedPL / Math.max(1, riskUnit);
-      }))
-    : 0;
-  const worstR = closedPositions.length > 0
-    ? Math.min(...closedPositions.map((trade) => {
-        const notional = trade.entryPrice * positionUnits(trade);
-        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-        return trade.realizedPL / Math.max(1, riskUnit);
-      }))
-    : 0;
+  // R only against a real stop (journal-recorded or kept on this device); risk units for every closed trade.
+  const closedMeasures = closedPositions.map((trade) => ({
+    id: trade.id,
+    r: closedTradeR(trade, positionUnits(trade)),
+    riskUnits: toRiskUnits(trade.realizedPL, riskUnitUsd),
+  }));
+  const closedMeasureById = new Map(closedMeasures.map((m) => [m.id, m]));
+  const closedRSummary = summarize(closedMeasures.map((m) => m.r));
+  const closedRiskUnitSummary = summarize(closedMeasures.map((m) => m.riskUnits));
+
+  // Open R: sum of R over open positions that have a stop on the loss side of entry.
+  const openRValues = positions.map((p) => openRiskMetrics({ ...p, stopPrice: validLevel(p.stopPrice) }).rMultiple);
+  const openRSummary = summarize(openRValues);
+  const openRTotal = openRSummary.count > 0 ? openRValues.reduce<number>((sum, v) => sum + (v ?? 0), 0) : null;
 
   const draftEntry = Number(deployDraft.entry || 0);
   const draftStop = Number(deployDraft.stop || 0);
@@ -1949,7 +1946,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         />
 
         <DecisionCockpit
-          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatRiskPairText(totalValue)}</div><div className="msp-muted">Cost Basis: {formatRiskPairText(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
+          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatMoney(totalValue)}</div><div className="msp-muted">Cost Basis: {formatMoney(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
           center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {formatRiskPairText(totalPL)}</div><div className="msp-muted">Unrealized: {formatRiskPairText(unrealizedPL)}</div><div className="msp-muted">Realized: {formatRiskPairText(realizedPL)}</div></div>}
           right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total return: {totalReturnPct == null ? '—' : `${totalReturnPct.toFixed(2)}%`}</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
         />
@@ -2599,8 +2596,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="space-y-3">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Total Exposure</div><div className="text-sm font-bold text-slate-100">{deploymentPct.toFixed(1)}%</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Net R Exposure</div><div className="text-sm font-bold text-slate-100">{(positions.length ? positions.reduce((sum, p) => sum + (p.plPercent / Math.max(1, riskSettings.maxRiskPerTrade)), 0) : 0).toFixed(2)}R</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div><div className="text-[10px] text-slate-500" title="P&L divided by the account risk per trade (account equity x max risk per trade %)">{formatRiskUnits(toRiskUnits(unrealizedPL, riskUnitUsd))}</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2" title="Sum of R (P&L / risk to stop) over open positions with a stop set"><div className="text-[10px] uppercase text-slate-500">Open R (positions with a stop)</div><div className="text-sm font-bold text-slate-100">{formatStopR(openRTotal)}</div><div className="text-[10px] text-slate-500">{openRSummary.count} of {positions.length} positions have a stop</div></div>
               </div>
 
               <div className="flex items-center justify-between mb-2">
@@ -2694,20 +2691,23 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
           {activeTab === 'trade-ledger' && (
             <div className="space-y-4">
-              <div className="grid gap-2 md:grid-cols-5">
+              <div className="grid gap-2 md:grid-cols-6">
                 {[
                   { label: 'Win %', value: `${winRatePct.toFixed(1)}%` },
-                  { label: 'Avg R', value: `${avgR.toFixed(2)}R` },
-                  { label: 'Best R', value: `${bestR.toFixed(2)}R` },
-                  { label: 'Worst R', value: `${worstR.toFixed(2)}R` },
+                  { label: 'Avg R', value: formatStopR(closedRSummary.avg), detail: `${closedRSummary.count} of ${closedPositions.length} trades with a stop` },
+                  { label: 'Best R', value: formatStopR(closedRSummary.best) },
+                  { label: 'Worst R', value: formatStopR(closedRSummary.worst) },
+                  { label: 'Avg Risk Units', value: formatRiskUnits(closedRiskUnitSummary.avg), detail: 'P&L / account risk per trade' },
                   { label: 'Expectancy', value: formatMoney(expectancy) },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
                     <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{metric.label}</div>
                     <div className="text-sm font-bold text-slate-100">{metric.value}</div>
+                    {'detail' in metric && metric.detail ? <div className="text-[10px] text-slate-500">{metric.detail}</div> : null}
                   </div>
                 ))}
               </div>
+              <div className="text-[11px] text-slate-500">R = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ({riskUnitUsd != null ? formatMoney(riskUnitUsd) : '—'} = account equity × {riskSettings.maxRiskPerTrade}%).</div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Closed Trades Equity Curve</div>
@@ -2777,6 +2777,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       <th scope="col" className="px-2 py-2 text-left">Open</th>
                       <th scope="col" className="px-2 py-2 text-left">Exit</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
+                      <th scope="col" className="px-2 py-2 text-right">Risk Units</th>
                       <th scope="col" className="px-2 py-2 text-right">Holding Time</th>
                       <th scope="col" className="px-2 py-2 text-left">Setup Tag</th>
                       <th scope="col" className="px-2 py-2 text-left">Outcome</th>
@@ -2785,16 +2786,19 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </thead>
                   <tbody>
                     {closedPositions.map((trade) => {
-                      const notional = trade.entryPrice * positionUnits(trade);
-                      const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
-                      const r = trade.realizedPL / Math.max(1, riskUnit);
+                      const measure = closedMeasureById.get(trade.id);
+                      const r = measure?.r ?? null;
+                      const riskUnits = measure?.riskUnits ?? null;
                       const holdDays = Math.max(0, Math.round((new Date(trade.closeDate).getTime() - new Date(trade.entryDate).getTime()) / 86_400_000));
                       const outcomeType = trade.realizedPL > 0 ? 'Target' : trade.realizedPL < 0 ? 'Stop' : 'Manual';
                       return (
                         <tr key={trade.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2">{trade.symbol} @ {trade.entryPrice.toFixed(2)}</td>
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
-                          <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
+                          {r == null
+                            ? <td className="px-2 py-2 text-right text-slate-500" title="No stop recorded for this trade, so R is unavailable">—</td>
+                            : <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatStopR(r)}</td>}
+                          <td className={`px-2 py-2 text-right ${riskUnits == null ? 'text-slate-500' : riskUnits >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{riskUnits == null ? '—' : riskUnits.toFixed(2)}</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
                           <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
@@ -2804,7 +2808,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         </tr>
                       );
                     })}
-                    {closedPositions.length === 0 && <tr><td colSpan={7} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
+                    {closedPositions.length === 0 && <tr><td colSpan={8} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
                   </tbody>
                 </table>
               </div>
