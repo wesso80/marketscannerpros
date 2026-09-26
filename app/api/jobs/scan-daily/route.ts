@@ -17,6 +17,7 @@ import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators 
 import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
 import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
+import { latestUsSessionDate } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -388,10 +389,12 @@ async function runDailyScan(req: NextRequest) {
       else errors.push(`forex:${symbol}`);
     }
 
-    // Store results in database
-    const today = new Date().toISOString().split('T')[0];
+    // Store results in database. scan_date = the US market session the data belongs to (America/New_York calendar):
+    // the 21:30 UTC run (7:30 AM AEST) is dated with the session that just closed, and weekend/holiday re-runs keep
+    // that session's date instead of inventing a Saturday. (It used to be the server's UTC calendar day.)
+    const today = latestUsSessionDate(Date.now());
     
-    // Delete old entries for today (in case of re-run)
+    // Delete old entries for this session (in case of re-run)
     await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [today]);
 
     // Insert new results. score/direction columns carry the canonical verdict (0 = BLOCK); the legacy signal-count
@@ -423,6 +426,7 @@ async function runDailyScan(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      scanDate: today,
       scanned: results.length,
       errors: errors.length,
       errorSymbols: errors,
