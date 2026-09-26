@@ -85,7 +85,6 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
       optionType: (['CALL', 'PUT'] as const).includes(searchParams.get('optionType')?.toUpperCase() as 'CALL' | 'PUT') ? (searchParams.get('optionType')!.toUpperCase() as 'CALL' | 'PUT') : undefined,
       strikePrice: searchParams.get('strikePrice') || undefined,
       expirationDate: searchParams.get('expirationDate') || undefined,
-      premium: searchParams.get('premium') || undefined,
     };
 
     setPrefillValues(iv);
