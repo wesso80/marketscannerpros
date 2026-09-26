@@ -19,6 +19,12 @@ export function equityMoversBasisLabel(feed: string | null | undefined): string 
   return '15-min delayed';
 }
 
+/** Movers "Data" chip: crypto is live (CoinGecko); equities follow the Alpha Vantage feed actually received (OV-21). */
+export function moversDataChipLabel(feed: string | null | undefined): string {
+  const equities = feed === 'end_of_day' ? 'equities end of day' : feed === 'unavailable' ? 'equities unavailable' : 'equities 15-min delayed';
+  return `Crypto live · ${equities}`;
+}
+
 /**
  * "as of 15:45 ET" for a provider timestamp (ISO). Adds the New York date when it is not the same New York day as `nowMs`
  * ("as of 16:15 ET, Fri 25 Sep"). Returns null for missing/invalid input.

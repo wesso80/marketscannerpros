@@ -91,11 +91,20 @@ describe('regime VIX: Alpha Vantage primary, FRED fallback', () => {
     }));
     const inputs = await (await freshLoader())();
     expect(inputs.vix).toMatchObject({ level: 16, asOf: dayStr(3), source: 'stored' });
-    expect((console.warn as any).mock.calls.map((c: unknown[]) => c.join(' ')).join('\n')).toContain('[avIndexData] INDEX_DATA VIX failed: AV info error: Thank you for using Alpha Vantage! This is a premium endpoint.');
+    expect((console.warn as any).mock.calls.map((c: unknown[]) => c.join(' ')).join('\n')).toContain('[avIndexData] INDEX_DATA VIX failed: Thank you for using Alpha Vantage! This is a premium endpoint.');
     // #157 follow-up: the reason reaches the regime response (signals[0].detail), not only the server log.
-    expect(inputs.vix!.note).toBe('Alpha Vantage VIX unavailable: AV info error: Thank you for using Alpha Vantage! This is a premium endpoint.');
+    expect(inputs.vix!.note).toBe('Alpha Vantage VIX unavailable: Thank you for using Alpha Vantage! This is a premium endpoint.');
     const r = classifyMarketRegime(inputs, NOW);
     if (r.available) expect(r.reasons).toContain(inputs.vix!.note);
+  });
+
+  it('an entitlement refusal sent as an AV "Note" is reported in AV\'s words, not as "quota exceeded"', async () => {
+    mockDb(macroRows(6, 3, 16));
+    const msg = 'You are not yet entitled to index data access. Please subscribe to any of our 150, 300, 600, or 1200 requests per minute premium plans.';
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('function=INDEX_DATA') ? new Response(JSON.stringify({ Note: msg })) : new Response('', { status: 404 })));
+    const inputs = await (await freshLoader())();
+    expect(inputs.vix).toMatchObject({ source: 'stored', note: `Alpha Vantage VIX unavailable: ${msg}` });
+    expect(inputs.vix!.note).not.toContain('quota');
   });
 
   it('falls back to FRED when there is no Alpha Vantage key (no call made)', async () => {

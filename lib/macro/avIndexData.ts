@@ -66,7 +66,12 @@ export async function getAvIndexDailyCached(symbol: string, opts: { now?: number
     else error = payload ? 'no daily closes in the response' : 'Alpha Vantage returned an error message or HTTP 404';
     if (!rows) console.warn(`[avIndexData] INDEX_DATA ${sym}: no daily closes in the response${payload ? '' : ' (Alpha Vantage "Error Message" or HTTP 404)'}`);
   } catch (e) {
-    error = (e instanceof Error ? e.message : String(e)).replace(/apikey=[^&\s]+/gi, 'apikey=***').slice(0, 200);
+    // avFetch prefixes every Alpha Vantage "Note" with "AV quota exceeded:", but AV also uses Note for plan refusals
+    // ("You are not yet entitled to index data access…"). Keep AV's own words so the regime reason is accurate.
+    error = (e instanceof Error ? e.message : String(e))
+      .replace(/apikey=[^&\s]+/gi, 'apikey=***')
+      .replace(/^AV (quota exceeded|info error):\s*/i, '')
+      .slice(0, 240);
     console.warn(`[avIndexData] INDEX_DATA ${sym} failed: ${error}`);
   }
   cache.set(sym, { at: now, rows, error });

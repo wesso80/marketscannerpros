@@ -58,7 +58,11 @@ type CommoditySource = 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY';
 
 interface CommodityData {
   symbol: string;
+  /** Display name. ETF proxy rows are named by the fund, e.g. "USO (WTI Crude Oil proxy)", because the price is the
+   *  fund's share price, not the commodity's (OV-20). */
   name: string;
+  /** The commodity itself ("WTI Crude Oil"), for every row. */
+  commodityName?: string;
   price: number;
   change: number;
   changePercent: number;
@@ -152,11 +156,12 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
         console.log(`[Commodities] ✓ ETF proxy ${proxy.etf} → $${etfQuote.price} (${etfQuote.changePercent}%)`);
         const result = withFreshness({
           symbol,
-          name: config.name,
+          name: `${proxy.etf} (${config.name} proxy)`,
+          commodityName: config.name,
           price: etfQuote.price,
           change: etfQuote.change,
           changePercent: etfQuote.changePercent,
-          unit: `$/${proxy.etf} share (proxy)`,
+          unit: `$ per ${proxy.etf} share (fund price)`,
           category: config.category,
           date: etfQuote.date,
           history: [{ date: etfQuote.date, value: etfQuote.price }],
@@ -250,6 +255,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     const result = withFreshness({
       symbol,
       name: config.name,
+      commodityName: config.name,
       price: currentPrice,
       change,
       changePercent,
