@@ -1,4 +1,5 @@
-export type MarketRegime = 'TREND_DAY' | 'MEAN_REVERT_DAY' | 'VOL_EXPANSION' | 'VOL_COMPRESSION' | 'LIQUIDITY_VACUUM' | 'NEWS_SHOCK';
+/** RANGE_DAY = no measured trend (market mode 'chop'); MEAN_REVERT_DAY is kept for a real gamma pin. */
+export type MarketRegime = 'TREND_DAY' | 'RANGE_DAY' | 'MEAN_REVERT_DAY' | 'VOL_EXPANSION' | 'VOL_COMPRESSION' | 'LIQUIDITY_VACUUM' | 'NEWS_SHOCK';
 export type RiskOnOff = 'risk_on' | 'risk_off';
 export type VolState = 'LOW' | 'NORMAL' | 'HIGH' | 'EXTREME';
 export type LiquidityState = 'THIN' | 'NORMAL' | 'RICH';
@@ -44,7 +45,8 @@ export function computeRegimeEngine(input: RegimeEngineInput): RegimeEngineOutpu
         ? 'VOL_COMPRESSION'
         : liquidityState === 'THIN'
           ? 'LIQUIDITY_VACUUM'
-          : 'MEAN_REVERT_DAY';
+          // 'chop' only means no trend was measured (ADX < 25); that is not evidence of mean reversion (RS-15).
+          : 'RANGE_DAY';
 
   const riskMode: RiskOnOff = input.gammaState === 'Negative' || volState === 'EXTREME' ? 'risk_off' : 'risk_on';
 

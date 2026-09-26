@@ -853,7 +853,7 @@ export default function TerminalPage() {
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[11px] text-slate-500 uppercase">Regime</div>
-                      <div className="text-base font-bold text-emerald-400">{pm.regime}</div>
+                      <div className={`text-base font-bold ${pm.regime === 'TRENDING' ? 'text-emerald-400' : pm.regime === 'NO_TREND' || pm.regime === 'MIXED' ? 'text-slate-300' : 'text-amber-400'}`} title="Largest scenario weight; TRENDING only when daily ADX (or gamma) measured a trend">{pm.regime.replace(/_/g, ' ')}</div>
                     </div>
                   </div>
                   {perm && !perm.blocked && pm.decision && <div className="text-xs text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
