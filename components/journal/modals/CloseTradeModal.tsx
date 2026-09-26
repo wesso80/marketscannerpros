@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TradeModel } from '@/types/journal';
 import { closeExitPrefill, isOptionsTrade } from '@/lib/journal/closePrefill';
+import { buildCloseReviewNotes, closeOutcomeFromPrices, followedPlanValue, type CloseErrorType, type SetupQuality } from '@/lib/journal/closeReview';
 
 type CloseTradeModalProps = {
   open: boolean;
@@ -12,22 +13,10 @@ type CloseTradeModalProps = {
     exitPrice: number;
     exitTs: string;
     closeReason: 'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off';
-    outcome: 'win' | 'loss' | 'breakeven';
-    setupQuality: 'A' | 'B' | 'C' | 'D';
-    followedPlan: boolean;
-    errorType:
-      | 'none'
-      | 'entry_early'
-      | 'entry_late'
-      | 'no_stop'
-      | 'oversize'
-      | 'ignored_signal'
-      | 'bad_liquidity'
-      | 'chop'
-      | 'news_spike'
-      | 'emotion'
-      | 'unknown';
-    reviewText?: string;
+    /** null = not answered (stored as NULL, ignored by rule adherence). */
+    followedPlan: boolean | null;
+    /** Exit notes built from the answered review fields only. */
+    notes: string;
   }) => Promise<void>;
 };
 
@@ -35,22 +24,10 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
   const [exitPrice, setExitPrice] = useState('');
   const [exitTs, setExitTs] = useState(new Date().toISOString().slice(0, 16));
   const [closeReason, setCloseReason] = useState<'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off'>('manual');
-  const [outcome, setOutcome] = useState<'win' | 'loss' | 'breakeven'>('breakeven');
-  const [setupQuality, setSetupQuality] = useState<'A' | 'B' | 'C' | 'D'>('B');
-  const [followedPlan, setFollowedPlan] = useState(true);
-  const [errorType, setErrorType] = useState<
-    | 'none'
-    | 'entry_early'
-    | 'entry_late'
-    | 'no_stop'
-    | 'oversize'
-    | 'ignored_signal'
-    | 'bad_liquidity'
-    | 'chop'
-    | 'news_spike'
-    | 'emotion'
-    | 'unknown'
-  >('none');
+  // Review answers start unanswered; nothing is saved for them unless the user picks a value.
+  const [setupQuality, setSetupQuality] = useState<SetupQuality | ''>('');
+  const [followedPlan, setFollowedPlan] = useState<'' | 'yes' | 'no'>('');
+  const [errorType, setErrorType] = useState<CloseErrorType | ''>('');
   const [reviewText, setReviewText] = useState('');
   const [optionMarkMissing, setOptionMarkMissing] = useState(false);
 
@@ -64,10 +41,10 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
       setOptionMarkMissing(prefill.kind === 'manual' && prefill.reason === 'option_mark_unavailable');
       setExitTs(new Date().toISOString().slice(0, 16));
       setCloseReason('manual');
-      setOutcome('breakeven');
-      setSetupQuality('B');
-      setFollowedPlan(true);
-      setErrorType('none');
+      setSetupQuality('');
+      setFollowedPlan('');
+      // A missing stop is a fact from the trade, not a guess, so it is pre-selected (and can be changed).
+      setErrorType(trade?.stop == null ? 'no_stop' : '');
       setReviewText('');
 
       // Stocks/crypto with no mark yet: fetch a quote as a fallback (never for options).
@@ -96,8 +73,11 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
   }, [open, markPrice]);
 
   const canSubmit = useMemo(() => {
-    return Number(exitPrice) > 0 && Boolean(exitTs) && Boolean(closeReason) && Boolean(outcome) && Boolean(setupQuality);
-  }, [closeReason, exitPrice, exitTs, outcome, setupQuality]);
+    return Number(exitPrice) > 0 && Boolean(exitTs) && Boolean(closeReason);
+  }, [closeReason, exitPrice, exitTs]);
+
+  // Outcome is derived from the realised P&L (the server stores the same), never chosen by hand.
+  const derivedOutcome = trade ? closeOutcomeFromPrices(trade.side, trade.entry.price, Number(exitPrice)) : null;
 
   if (!open) return null;
 
@@ -115,7 +95,7 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
 
         {trade?.stop == null && (
           <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
-            Stop was missing at entry. Defaulting error type to no_stop.
+            Stop was missing at entry. Error type is pre-set to no_stop.
           </div>
         )}
 
@@ -146,17 +126,16 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
           </div>
 
           <div>
-            <label htmlFor="close-outcome" className="block text-xs font-medium text-slate-400 mb-1">Outcome *</label>
-            <select id="close-outcome" value={outcome} onChange={(event) => setOutcome(event.target.value as typeof outcome)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
-              <option value="win">win</option>
-              <option value="loss">loss</option>
-              <option value="breakeven">breakeven</option>
-            </select>
+            <div className="block text-xs font-medium text-slate-400 mb-1">Outcome</div>
+            <div id="close-outcome" aria-live="polite" className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-slate-300">
+              {derivedOutcome ?? '—'} <span className="text-[11px] text-slate-500">(from realised P&amp;L)</span>
+            </div>
           </div>
 
           <div>
-            <label htmlFor="close-setup-quality" className="block text-xs font-medium text-slate-400 mb-1">Setup Quality *</label>
-            <select id="close-setup-quality" value={setupQuality} onChange={(event) => setSetupQuality(event.target.value as typeof setupQuality)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+            <label htmlFor="close-setup-quality" className="block text-xs font-medium text-slate-400 mb-1">Setup Quality</label>
+            <select id="close-setup-quality" value={setupQuality} onChange={(event) => setSetupQuality(event.target.value as typeof setupQuality)} className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+              <option value="">Not rated</option>
               <option value="A">A</option>
               <option value="B">B</option>
               <option value="C">C</option>
@@ -167,6 +146,7 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
           <div>
             <label htmlFor="close-error-type" className="block text-xs font-medium text-slate-400 mb-1">Error Type</label>
             <select id="close-error-type" value={errorType} onChange={(event) => setErrorType(event.target.value as typeof errorType)} className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+              <option value="">Not answered</option>
               {['none', 'entry_early', 'entry_late', 'no_stop', 'oversize', 'ignored_signal', 'bad_liquidity', 'chop', 'news_spike', 'emotion', 'unknown'].map((value) => (
                 <option key={value} value={value}>{value}</option>
               ))}
@@ -174,10 +154,14 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
           </div>
         </div>
 
-        <label htmlFor="close-followed-plan" className="mt-3 flex items-center gap-2 text-sm text-slate-200">
-          <input id="close-followed-plan" name="followedPlan" type="checkbox" checked={followedPlan} onChange={(event) => setFollowedPlan(event.target.checked)} />
-          Followed plan
-        </label>
+        <div className="mt-3 max-w-xs">
+          <label htmlFor="close-followed-plan" className="block text-xs font-medium text-slate-400 mb-1">Followed plan?</label>
+          <select id="close-followed-plan" name="followedPlan" value={followedPlan} onChange={(event) => setFollowedPlan(event.target.value as typeof followedPlan)} className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+            <option value="">Not answered</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
 
         <div className="mt-3">
           <label htmlFor="close-review-text" className="block text-xs font-medium text-slate-400 mb-1">Review Notes</label>
@@ -193,11 +177,8 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
               exitPrice: Number(exitPrice),
               exitTs: new Date(exitTs).toISOString(),
               closeReason,
-              outcome,
-              setupQuality,
-              followedPlan,
-              errorType: trade?.stop == null ? 'no_stop' : errorType,
-              reviewText,
+              followedPlan: followedPlanValue(followedPlan),
+              notes: buildCloseReviewNotes({ setupQuality, errorType, reviewText }),
             })}
             className="rounded bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200 disabled:opacity-40"
           >
