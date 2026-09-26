@@ -1585,7 +1585,7 @@ export default function ScannerPage() {
       {mode === 'ranked' && !selectedSymbol && (
         <>
           {/* Timeframe selector */}
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <span className="text-[11px] text-slate-500 mr-1 uppercase">Timeframe</span>
             {SCAN_TIMEFRAMES.map(tf => (
               <button key={tf.value} type="button" aria-pressed={v2Timeframe === tf.value} onClick={() => setV2Timeframe(tf.value)}
