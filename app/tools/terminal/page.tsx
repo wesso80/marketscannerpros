@@ -809,7 +809,7 @@ export default function TerminalPage() {
                     </button>
                   </div>
                 </div>
-                <p className="mb-3 text-xs text-amber-200">{!perm ? 'Permission unavailable.' : perm.blocked ? `Blocked: ${perm.noTradeMode?.reason || 'permission conditions not met'}` : 'Permission conditions met.'} Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.</p>
+                <p className="mb-3 text-xs text-amber-200">{!perm ? 'Permission unavailable.' : perm.blocked ? (perm.sessionLimited ? `${perm.noTradeMode?.reason}.` : `Blocked: ${perm.noTradeMode?.reason || 'permission conditions not met'}`) : 'Permission conditions met.'} Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.</p>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Bias</div>
@@ -954,7 +954,7 @@ export default function TerminalPage() {
                         <span className="text-slate-400">Analysis Mode</span>
                         <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? '—'}</span>
                       </div>
-                      {perm.blocked && <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1">Analysis paused: {perm.noTradeMode?.reason || 'conditions not met'}</div>}
+                      {perm.blocked && <div className={`mt-2 text-[11px] rounded px-2 py-1 ${perm.sessionLimited ? 'text-amber-300 bg-amber-500/10' : 'text-red-400 bg-red-500/10'}`}>{perm.sessionLimited ? perm.noTradeMode?.reason : `Analysis paused: ${perm.noTradeMode?.reason || 'conditions not met'}`}</div>}
                       {!perm.blocked && perm.allowed?.length > 0 && (
                         <div className="mt-2">
                           <div className="text-[11px] text-slate-500 uppercase mb-1">Aligned</div>

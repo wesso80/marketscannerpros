@@ -5,7 +5,8 @@ import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
  */
 import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
 import { getQuote } from '@/lib/onDemandFetch';
-import { describeMultiple, periodLabels, parseEarningsCalendarCsv, nextEarningsFromCalendar, daysUntil, type EarningsCalendarRow } from './fundamentalsContext';
+import { describeMultiple, periodLabels, nextEarningsFromCalendar, daysUntil, type EarningsCalendarRow } from './fundamentalsContext';
+import { parseAlphaVantageEarningsCalendar } from '../earningsCalendarCsv';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const OVERVIEW_TTL = 6 * 60 * 60_000;
@@ -70,7 +71,12 @@ export async function getNextEarningsWithStatus(symbol: string): Promise<{ statu
     const text = await res.text();
     // A JSON body is a provider note / error (e.g. rate limit), not an empty calendar: do not cache it as "none".
     if (!res.ok || text.trim().startsWith('{')) return { status: 'UNKNOWN', row: null };
-    const row = nextEarningsFromCalendar(parseEarningsCalendarCsv(text), key);
+    const parsed = parseAlphaVantageEarningsCalendar(text, { source: `golden-egg ${key}` });
+    // Not the calendar at all (no symbol/reportDate header): unknown, not "none".
+    if (!parsed.headerOk) return { status: 'UNKNOWN', row: null };
+    const row = nextEarningsFromCalendar(parsed.rows, key);
+    // A row we could not read may be this symbol's report: say UNKNOWN and do not cache "none".
+    if (!row && parsed.skipped.length > 0) return { status: 'UNKNOWN', row: null };
     calendarCache.set(key, { ts: Date.now(), data: row });
     return { status: row ? 'SCHEDULED' : 'NONE_IN_HORIZON', row };
   } catch {

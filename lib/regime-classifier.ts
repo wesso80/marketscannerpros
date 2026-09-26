@@ -54,6 +54,18 @@ export function volatilityThresholds(assetClass?: 'equity' | 'crypto' | 'forex')
   return { compressed: 1.5, expanded: 4, extreme: 7 };
 }
 
+/**
+ * Thresholds for the legacy "risk-off tape" diagnostic (bulk scanner `scoreV2`, surfaced in the Pro table's Reason
+ * column). Equity keeps its original ATR ≥ 6% or a ≥ 8% move today. Other asset classes scale both numbers by their
+ * own extreme-volatility limit from volatilityThresholds() (crypto 10 vs equity 7 → ATR ≥ 8.6% / move ≥ 11.4%), so
+ * normal crypto volatility (ATR 6–8%) no longer reads as a risk-off tape. Symmetric: no side is involved.
+ */
+export function riskOffThresholds(assetClass?: 'equity' | 'crypto' | 'forex'): { atrPct: number; movePct: number } {
+  const scale = volatilityThresholds(assetClass).extreme / volatilityThresholds('equity').extreme;
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  return { atrPct: round1(6 * scale), movePct: round1(8 * scale) };
+}
+
 export function classifyRegime(indicators: {
   adx?: number;
   rsi?: number;

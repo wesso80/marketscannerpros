@@ -20,8 +20,21 @@ import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
 import { PageHero } from '@/components/ui';
+import {
+  buildPortfolioSyncPayload,
+  gateAfterDelete,
+  gateFromLoad,
+  interpretSyncResponse,
+  isEmptySyncPayload,
+  serverHasPortfolioData,
+  shouldPostPortfolio,
+  SYNC_FAILED_MESSAGE,
+  type PortfolioSyncPayload,
+  type SyncGate,
+} from '@/lib/portfolio/clientSync';
 
 interface Position {
   id: number;
@@ -600,6 +613,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const [manualValue, setManualValue] = useState('');
   const [manualOpen, setManualOpen] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  // Persistent notice when server sync is switched off for this session (load failed or conflict).
+  const [syncBlocked, setSyncBlocked] = useState<string | null>(null);
+  // Server sync gate: only POST on top of a server copy we actually loaded (see lib/portfolio/clientSync.ts).
+  const syncGateRef = useRef<SyncGate>({ enabled: false, revision: null, lastSyncedJson: null, blockedMessage: null });
+  const latestSyncPayloadRef = useRef<PortfolioSyncPayload | null>(null);
+  // POSTs and DELETEs run one at a time so each one is based on the revision the previous one returned.
+  const syncQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const cashNotSavedShownRef = useRef(false);
+  // Set by "Clear all data": the next sync may replace the saved copy with an empty one.
+  const clearRequestedRef = useRef(false);
 
   // Auto-dismiss sync error after 8s
   useEffect(() => {
@@ -886,71 +909,79 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     
     const loadData = async () => {
       let loadedPositions: Position[] = [];
-      
+      let serverWasEmpty = false;
+
+      const readLocal = <T,>(key: string): T | null => {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        try { return JSON.parse(raw) as T; } catch { console.error(`Failed to load ${key}`); return null; }
+      };
+
       try {
         const res = await fetch('/api/portfolio');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.positions?.length > 0 || data.closedPositions?.length > 0 || data.performanceHistory?.length > 0 || data.cashState) {
-            loadedPositions = data.positions || [];
-            setPositions(loadedPositions);
-            setClosedPositions(data.closedPositions || []);
-            setPerformanceHistory(data.performanceHistory || []);
-            setRiskAnalytics(data.riskAnalytics || null);
-            setRiskAnalyticsMeta(data.riskAnalyticsMeta || null);
-            if (data.cashState) {
-              setStartingCapitalInput(String(Number(data.cashState.startingCapital ?? 10000)));
-              setCashLedger(Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : []);
-            }
-            setDataLoaded(true);
-            // Auto-refresh prices after loading
-            if (loadedPositions.length > 0) {
-              refreshAllPrices(loadedPositions);
-            }
-            return;
+        const data = res.ok ? await res.json() : null;
+        const gate = gateFromLoad({ ok: res.ok, data });
+        syncGateRef.current = gate;
+        setSyncBlocked(gate.blockedMessage);
+        if (res.ok && serverHasPortfolioData(data)) {
+          loadedPositions = data.positions || [];
+          const loadedClosed = data.closedPositions || [];
+          const loadedPerformance = data.performanceHistory || [];
+          // Cash state is kept on this device when the server has none (it may never have been saved there);
+          // otherwise loading server positions would reset the local cash ledger to empty.
+          const loadedStartingCapital = data.cashState
+            ? String(Number(data.cashState.startingCapital ?? 10000))
+            : (localStorage.getItem('portfolio_starting_capital') || '10000');
+          const loadedCashLedger: CashLedgerEntry[] = data.cashState
+            ? (Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : [])
+            : (readLocal<CashLedgerEntry[]>('portfolio_cash_ledger') || []);
+          setPositions(loadedPositions);
+          setClosedPositions(loadedClosed);
+          setPerformanceHistory(loadedPerformance);
+          setRiskAnalytics(data.riskAnalytics || null);
+          setRiskAnalyticsMeta(data.riskAnalyticsMeta || null);
+          setStartingCapitalInput(loadedStartingCapital);
+          setCashLedger(loadedCashLedger);
+          if (data.cashState) {
+            // Exactly what the server holds: no POST until something changes.
+            syncGateRef.current = {
+              ...syncGateRef.current,
+              lastSyncedJson: JSON.stringify(buildPortfolioSyncPayload(loadedPositions, loadedClosed, loadedPerformance, loadedStartingCapital, loadedCashLedger)),
+            };
           }
+          setDataLoaded(true);
+          // Auto-refresh prices after loading
+          if (loadedPositions.length > 0) {
+            refreshAllPrices(loadedPositions);
+          }
+          return;
         }
+        serverWasEmpty = res.ok;
       } catch (e) {
         console.error('Failed to load from server, falling back to localStorage');
+        syncGateRef.current = gateFromLoad({ ok: false });
+        setSyncBlocked(syncGateRef.current.blockedMessage);
       }
-      
-      // Fallback to localStorage (for migration or if not logged in)
-      const saved = localStorage.getItem('portfolio_positions');
-      const savedClosed = localStorage.getItem('portfolio_closed');
-      const savedPerformance = localStorage.getItem('portfolio_performance');
-      const savedStartingCapital = localStorage.getItem('portfolio_starting_capital');
-      const savedCashLedger = localStorage.getItem('portfolio_cash_ledger');
-      if (saved) {
-        try {
-          loadedPositions = JSON.parse(saved);
-          setPositions(loadedPositions);
-        } catch (e) {
-          console.error('Failed to load positions');
-        }
+
+      // Fallback to localStorage (server empty, server unavailable, or not logged in).
+      // Syncing stays off unless the server answered and was empty (nothing there to overwrite).
+      const localPositions = readLocal<Position[]>('portfolio_positions') || [];
+      const localClosed = readLocal<ClosedPosition[]>('portfolio_closed') || [];
+      const localPerformance = readLocal<PerformanceSnapshot[]>('portfolio_performance') || [];
+      const localStartingCapital = localStorage.getItem('portfolio_starting_capital');
+      const localCashLedger = readLocal<CashLedgerEntry[]>('portfolio_cash_ledger') || [];
+      loadedPositions = localPositions;
+      setPositions(localPositions);
+      setClosedPositions(localClosed);
+      setPerformanceHistory(localPerformance);
+      if (localStartingCapital) {
+        setStartingCapitalInput(localStartingCapital);
       }
-      if (savedClosed) {
-        try {
-          setClosedPositions(JSON.parse(savedClosed));
-        } catch (e) {
-          console.error('Failed to load closed positions');
-        }
-      }
-      if (savedPerformance) {
-        try {
-          setPerformanceHistory(JSON.parse(savedPerformance));
-        } catch (e) {
-          console.error('Failed to load performance history');
-        }
-      }
-      if (savedStartingCapital) {
-        setStartingCapitalInput(savedStartingCapital);
-      }
-      if (savedCashLedger) {
-        try {
-          setCashLedger(JSON.parse(savedCashLedger));
-        } catch (e) {
-          console.error('Failed to load cash ledger');
-        }
+      setCashLedger(localCashLedger);
+      const localPayload = buildPortfolioSyncPayload(localPositions, localClosed, localPerformance, localStartingCapital || startingCapitalInput, localCashLedger);
+      if (serverWasEmpty && isEmptySyncPayload(localPayload)) {
+        // Nothing locally and nothing on the server: no need to POST.
+        syncGateRef.current = { ...syncGateRef.current, lastSyncedJson: JSON.stringify(localPayload) };
       }
       setDataLoaded(true);
       // Auto-refresh prices after loading from localStorage
@@ -961,6 +992,69 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     
     loadData();
   }, []);
+
+  const blockPortfolioSync = (message: string) => {
+    syncGateRef.current = { ...syncGateRef.current, enabled: false, blockedMessage: message };
+    setSyncBlocked(message);
+  };
+
+  /** POST the latest local state, based on the last known server revision. Runs after any queued sync/delete. */
+  const enqueuePortfolioSync = () => {
+    syncQueueRef.current = syncQueueRef.current.then(async () => {
+      const gate = syncGateRef.current;
+      const payload = latestSyncPayloadRef.current;
+      if (!payload) return;
+      const payloadJson = JSON.stringify(payload);
+      if (!shouldPostPortfolio(gate, payloadJson)) return;
+      const confirmClear = clearRequestedRef.current && isEmptySyncPayload(payload);
+      try {
+        const response = await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, baseRevision: gate.revision, ...(confirmClear ? { confirmClear: true } : {}) }),
+        });
+        const body = await response.json().catch(() => null);
+        const outcome = interpretSyncResponse(response.status, body);
+        if (outcome.kind === 'saved') {
+          syncGateRef.current = { ...syncGateRef.current, revision: outcome.revision, lastSyncedJson: payloadJson };
+          if (confirmClear) clearRequestedRef.current = false;
+          if (outcome.message && !cashNotSavedShownRef.current) {
+            cashNotSavedShownRef.current = true;
+            setSyncError(outcome.message);
+          } else if (!outcome.message) {
+            setSyncError(null);
+          }
+        } else if (outcome.kind === 'blocked') {
+          blockPortfolioSync(outcome.message);
+        } else if (outcome.kind === 'local_only') {
+          syncGateRef.current = { ...syncGateRef.current, enabled: false };
+        } else {
+          setSyncError(outcome.message);
+        }
+      } catch (e) {
+        console.error('Failed to sync portfolio to server');
+        setSyncError(SYNC_FAILED_MESSAGE);
+      }
+    }).catch(() => { /* keep the queue alive */ });
+  };
+
+  /** Hard-delete one row on the server, in the same queue as syncs so revisions stay in order. */
+  const enqueuePortfolioDelete = (id: number, kind: 'active' | 'closed') => {
+    syncQueueRef.current = syncQueueRef.current.then(async () => {
+      try {
+        const response = await fetch('/api/portfolio', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, kind }),
+        });
+        if (!response.ok) return;
+        const body = await response.json().catch(() => null);
+        const next = gateAfterDelete(syncGateRef.current, body);
+        syncGateRef.current = next;
+        if (!next.enabled && next.blockedMessage) setSyncBlocked(next.blockedMessage);
+      } catch { /* local state already updated; sync will retry */ }
+    }).catch(() => { /* keep the queue alive */ });
+  };
 
   // Save positions to database (and localStorage as backup)
   useEffect(() => {
@@ -973,32 +1067,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     localStorage.setItem('portfolio_starting_capital', startingCapitalInput);
     localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashLedger));
     
-    // Sync to database
-    const syncToServer = async () => {
-      try {
-        const response = await fetch('/api/portfolio', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            positions,
-            closedPositions,
-            performanceHistory,
-            cashState: {
-              startingCapital: Number(startingCapitalInput || 0),
-              cashLedger,
-            },
-          })
-        });
-        if (!response.ok) throw new Error('Portfolio save rejected');
-        setSyncError(null);
-      } catch (e) {
-        console.error('Failed to sync portfolio to server');
-        setSyncError('Portfolio sync failed — changes saved locally only');
-      }
-    };
-    
+    // Sync to database: only on top of the server copy we loaded, and only when something changed.
+    const payload = buildPortfolioSyncPayload(positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger);
+    latestSyncPayloadRef.current = payload;
+    if (!shouldPostPortfolio(syncGateRef.current, JSON.stringify(payload))) return;
+
     // Debounce the sync
-    const timeoutId = setTimeout(syncToServer, 1000);
+    const timeoutId = setTimeout(() => enqueuePortfolioSync(), 1000);
     return () => clearTimeout(timeoutId);
   }, [positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger, mounted, dataLoaded]);
 
@@ -1319,21 +1394,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     setPositions((prev) => prev.filter((p) => p.id !== id));
     // Hard-delete on the server too — the POST wipe-and-replace path skips
     // journal-linked rows, so without this they'd reappear on next GET.
-    fetch('/api/portfolio', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, kind: 'active' }),
-    }).catch(() => { /* local state already updated; sync will retry */ });
+    enqueuePortfolioDelete(id, 'active');
   };
 
   const deleteClosedTrade = (id: number) => {
     if (!confirm('Delete this closed trade? This cannot be undone.')) return;
     setClosedPositions((prev) => prev.filter((p) => p.id !== id));
-    fetch('/api/portfolio', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, kind: 'closed' }),
-    }).catch(() => { /* local state already updated */ });
+    enqueuePortfolioDelete(id, 'closed');
   };
 
   const applyCashFlow = () => {
@@ -1365,23 +1432,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       localStorage.removeItem('portfolio_cash_ledger');
       localStorage.removeItem('portfolio_starting_capital');
       
-      // Also clear from server
-      try {
-        await fetch('/api/portfolio', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            positions: [],
-            closedPositions: [],
-            performanceHistory: [],
-            cashState: {
-              startingCapital: Number(startingCapitalInput || 0),
-              cashLedger: [],
-            },
-          })
-        });
-      } catch (e) {
-        console.error('Failed to clear server data');
+      // Also clear from server. This is the only path allowed to send an empty portfolio over a saved one.
+      latestSyncPayloadRef.current = buildPortfolioSyncPayload([], [], [], startingCapitalInput, []);
+      if (syncGateRef.current.enabled) {
+        clearRequestedRef.current = true;
+        enqueuePortfolioSync();
+      } else {
+        setSyncError('Cleared on this device only. The saved server copy was not changed because server sync is off for this page.');
       }
     }
   };
@@ -1658,9 +1715,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     { key: 'trade-ledger', label: 'Trade Ledger' },
   ] as const;
 
-  const formatMoney = (value: number) => `$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  const formatSignedMoney = (value: number) => `${value >= 0 ? '+' : '-'}$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const riskPerTradeFractionForDisplay = Math.max(0.001, riskSettings.maxRiskPerTrade / 100);
   const formatRiskPairText = (amount: number) => {
     const rValue = amountToR(amount, capitalBase, riskPerTradeFractionForDisplay);
@@ -1814,6 +1869,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   return (
     <div className={`${embeddedInWorkspace ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
+      {syncBlocked && (
+        <div role="status" className="mx-4 mt-2 flex items-center justify-between rounded-md border border-amber-500/40 bg-amber-900/20 px-4 py-2 text-[13px] text-amber-300">
+          <span>{syncBlocked}</span>
+          <button type="button" onClick={() => window.location.reload()} className="ml-4 text-xs font-semibold uppercase text-amber-400 hover:text-white">Reload</button>
+        </div>
+      )}
       {syncError && (
         <div className="mx-4 mt-2 flex items-center justify-between rounded-md border border-amber-500/40 bg-amber-900/20 px-4 py-2 text-[13px] text-amber-300">
           <span>{syncError}</span>
@@ -1950,7 +2011,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Value</div>
               <div className="text-2xl font-black text-slate-100">{formatMoney(totalValue)}</div>
-              <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {totalPL >= 0 ? '+' : '-'}{formatMoney(totalPL)}</div>
+              <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {formatSignedMoney(totalPL)}</div>
               <div className="text-xs text-slate-400">Current drawdown {cleanRiskReady ? `${currentDrawdownPct.toFixed(2)}%` : 'N/A — clean equity history building'}</div>
             </div>
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-center">
@@ -2481,7 +2542,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="space-y-3">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Total Exposure</div><div className="text-sm font-bold text-slate-100">{deploymentPct.toFixed(1)}%</div></div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{unrealizedPL >= 0 ? '+' : '-'}{formatMoney(unrealizedPL)}</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatSignedMoney(unrealizedPL)}</div></div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Net R Exposure</div><div className="text-sm font-bold text-slate-100">{(positions.length ? positions.reduce((sum, p) => sum + (p.plPercent / Math.max(1, riskSettings.maxRiskPerTrade)), 0) : 0).toFixed(2)}R</div></div>
               </div>
 

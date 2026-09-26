@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { parseAlphaVantageEarningsCalendar } from '@/lib/earningsCalendarCsv';
 
 // Cache for 1 hour (earnings data doesn't change frequently)
 let calendarCache: { data: any; timestamp: number } | null = null;
@@ -95,32 +96,19 @@ await avTakeToken();
 }
 
 function parseEarningsCSV(csv: string) {
-  const lines = csv.trim().split('\n');
-  if (lines.length < 2) {
+  // Quote-aware: names like "FLAGSTAR BANK, N.A." keep their date. Unreadable dates are skipped and logged.
+  const parsed = parseAlphaVantageEarningsCalendar(csv, { source: '/api/earnings' });
+  if (!parsed.rows.length) {
     return { earnings: [], upcoming: [], thisWeek: [], nextWeek: [] };
   }
-  
-  const headers = lines[0].split(',');
-  const earnings: any[] = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',');
-    if (values.length < headers.length) continue;
-    
-    const entry: any = {};
-    headers.forEach((header, idx) => {
-      entry[header.trim()] = values[idx]?.trim();
-    });
-    
-    earnings.push({
-      symbol: entry.symbol,
-      name: entry.name,
-      reportDate: entry.reportDate,
-      fiscalDateEnding: entry.fiscalDateEnding,
-      estimate: parseFloat(entry.estimate) || null,
-      currency: entry.currency || 'USD',
-    });
-  }
+  const earnings: any[] = parsed.rows.map((r) => ({
+    symbol: r.symbol,
+    name: r.name,
+    reportDate: r.reportDate,
+    fiscalDateEnding: r.fiscalDateEnding,
+    estimate: r.estimate,
+    currency: r.currency || 'USD',
+  }));
   
   // Sort by date
   earnings.sort((a, b) => new Date(a.reportDate).getTime() - new Date(b.reportDate).getTime());

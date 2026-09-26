@@ -6,6 +6,7 @@ import { q } from '../lib/db';
 import { sendAlertEmail } from '../lib/email';
 import { ensureNotificationSchema } from '../lib/notifications/tradeEvents';
 import { alertWorkerError } from '../lib/opsAlerting';
+import { normalizeDiscordWebhookUrl, sendDiscordWebhook } from '../lib/notifications/discordWebhook';
 
 type TradeEventType = 'TRADE_ENTERED' | 'TRADE_CLOSED' | 'TRADE_CLOSE_FAILED';
 type DeliveryChannel = 'in_app' | 'email' | 'discord';
@@ -315,7 +316,8 @@ async function deliverEmail(event: TradeEventRow, prefs: NotificationPrefs, titl
 }
 
 async function deliverDiscord(event: TradeEventRow, prefs: NotificationPrefs, title: string, body: string, href: string | null) {
-  const recipient = asString(prefs.discord_webhook_url || '').trim();
+  // Only real Discord webhook URLs are posted to (shared check with the alert checkers).
+  const recipient = normalizeDiscordWebhookUrl(prefs.discord_webhook_url) ?? '';
   if (!recipient || !prefs.discord_enabled) {
     await upsertDelivery({
       workspaceId: event.workspace_id,
@@ -324,28 +326,18 @@ async function deliverDiscord(event: TradeEventRow, prefs: NotificationPrefs, ti
       recipient: recipient || 'disabled',
       status: 'skipped',
       dedupeKey: `delivery:${event.id}:discord:${recipient || 'disabled'}`,
-      error: recipient ? 'Discord channel disabled' : 'Discord webhook not configured',
+      error: recipient ? 'Discord channel disabled' : asString(prefs.discord_webhook_url || '').trim() ? 'Not a Discord webhook URL' : 'Discord webhook not configured',
     });
     return;
   }
 
   if (await alreadyDelivered(event.workspace_id, event.id, 'discord', recipient)) return;
 
-  const payload = {
-    content: `**${title}**\n${body}\n<https://app.marketscannerpros.app${href || '/tools/workspace?tab=journal'}>`,
-  };
+  const content = `**${title}**\n${body}\n<https://app.marketscannerpros.app${href || '/tools/workspace?tab=journal'}>`;
 
   try {
-    const response = await fetch(recipient, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => 'Discord webhook failed');
-      throw new Error(`Discord webhook error ${response.status}: ${text.slice(0, 300)}`);
-    }
+    const result = await sendDiscordWebhook(recipient, content);
+    if (!result.ok) throw new Error(result.error || 'Discord webhook failed');
 
     await upsertDelivery({
       workspaceId: event.workspace_id,

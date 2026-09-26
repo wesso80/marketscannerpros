@@ -1,6 +1,7 @@
 'use client';
 
 import { alertConditionLabel } from '@/lib/alertPresentation';
+import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import { isPaidTier } from '@/lib/tiers';
@@ -96,7 +97,8 @@ export default function AlertsWidget({
   // New alert form state
   const [newAlert, setNewAlert] = useState({
     symbol: prefilledSymbol || '',
-    assetType: 'crypto' as const,
+    // No default market: the user must choose, so the alert is priced from the right feed (TR-18).
+    assetType: '' as '' | 'crypto' | 'equity' | 'forex',
     conditionType: 'price_above' as const,
     conditionValue: '',
     name: '',
@@ -164,6 +166,11 @@ export default function AlertsWidget({
       setError('Please enter symbol and price');
       return;
     }
+    const marketCheck = validateBasicAlertAssetType(newAlert.assetType, newAlert.conditionType, newAlert.symbol);
+    if (!marketCheck.ok) {
+      setError(marketCheck.message);
+      return;
+    }
 
     setCreating(true);
     setError('');
@@ -185,7 +192,7 @@ export default function AlertsWidget({
         setShowCreate(false);
         setNewAlert({
           symbol: '',
-          assetType: 'crypto',
+          assetType: '',
           conditionType: 'price_above',
           conditionValue: '',
           name: '',
@@ -657,12 +664,14 @@ export default function AlertsWidget({
             />
             <select
               value={newAlert.assetType}
+              aria-label="Market"
               onChange={e => setNewAlert(prev => ({ ...prev, assetType: e.target.value as any }))}
               className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
             >
+              <option value="" disabled>Market…</option>
               <option value="crypto">Crypto</option>
               <option value="equity">Stock</option>
-              <option value="forex">Forex</option>
+              <option value="forex">Forex (price only)</option>
             </select>
           </div>
           

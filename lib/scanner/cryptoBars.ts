@@ -2,7 +2,8 @@
  * Genuine-timeframe crypto bars for the scanner (CoinGecko Pro).
  *
  * Sources (verified live 2026-09-20 against pro-api.coingecko.com):
- *  - /coins/{id}/ohlc/range?interval=daily  → true DAILY OHLC, ≤180 days per call (we take 2 calls → ~360 bars).
+ *  - /coins/{id}/ohlc/range?interval=daily  → true DAILY OHLC, ≤180 days per call (we take 2 calls → ~360 bars;
+ *                                              callers that need a converged EMA200 ask for more 180-day windows).
  *  - /coins/{id}/ohlc/range?interval=hourly → true HOURLY OHLC, ≤31 days per call (~745 bars).
  *  - /coins/{id}/market_chart/range          → daily `total_volumes` (24h volume ending at each 00:00 UTC point) for
  *                                              >90-day ranges; 5-minute price points for ≤1-day ranges.
@@ -37,6 +38,10 @@ export interface CryptoSeries {
 const DAY_S = 86_400;
 const HOURLY_MAX_DAYS = 31;
 const DAILY_MAX_DAYS = 180;
+/** Default daily history: 2 × 180-day windows (~360 bars). */
+const DEFAULT_DAILY_WINDOWS = 2;
+/** Upper bound on 180-day windows per request (8 → ~1,440 bars). */
+const MAX_DAILY_WINDOWS = 8;
 
 // CoinGecko OHLC timestamps are candle CLOSE times; Bar.t is the OPEN time.
 // Normalise before volume joins, weekly aggregation, or completed-bar checks.
@@ -55,17 +60,29 @@ const dedupeByTime = (bars: Bar[]): Bar[] => {
 
 type RequestOptions = { retries?: number; timeoutMs?: number };
 
-async function fetchDailyBars(coinId: string, nowS: number, requestOptions?: RequestOptions): Promise<{ bars: Bar[]; volumes: Array<[number, number]>; warnings: string[] }> {
+async function fetchDailyBars(coinId: string, nowS: number, requestOptions?: RequestOptions, windows = DEFAULT_DAILY_WINDOWS): Promise<{ bars: Bar[]; volumes: Array<[number, number]>; warnings: string[] }> {
   const warnings: string[] = [];
-  const [recent, older, chart] = await Promise.all([
+  // Extra 180-day windows further back (index 2..windows-1) are warm-up history only (e.g. EMA200 convergence);
+  // volume stays on the most recent ~360 days.
+  const extraWindows = Array.from({ length: Math.max(0, windows - DEFAULT_DAILY_WINDOWS) }, (_, i) => i + DEFAULT_DAILY_WINDOWS);
+  const [recent, older, chart, ...extra] = await Promise.all([
     getOHLCRange(coinId, nowS - DAILY_MAX_DAYS * DAY_S, nowS, requestOptions),
     getOHLCRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS - DAILY_MAX_DAYS * DAY_S, requestOptions),
     getMarketChartRange(coinId, nowS - 2 * DAILY_MAX_DAYS * DAY_S, nowS, requestOptions),
+    ...extraWindows.map((k) => getOHLCRange(coinId, nowS - (k + 1) * DAILY_MAX_DAYS * DAY_S, nowS - k * DAILY_MAX_DAYS * DAY_S, requestOptions)),
   ]);
   if (!recent?.length) throw new Error(`CoinGecko daily OHLC unavailable for ${coinId}`);
   if (!older?.length) warnings.push('only ~180 daily bars available (older history missing)');
   if (!chart?.total_volumes?.length) warnings.push('daily volume unavailable from market_chart');
-  return { bars: dedupeByTime([...asBars(older, '1d'), ...asBars(recent, '1d')]), volumes: chart?.total_volumes ?? [], warnings };
+  // Keep only the contiguous history: an older window is used only if every newer window came back.
+  const olderHistory: number[][] = [];
+  if (older?.length) {
+    for (const rows of extra) {
+      if (!rows?.length) { warnings.push(`daily warm-up history shorter than requested (${windows} × 180 days)`); break; }
+      olderHistory.unshift(...rows);
+    }
+  }
+  return { bars: dedupeByTime([...asBars(olderHistory, '1d'), ...asBars(older, '1d'), ...asBars(recent, '1d')]), volumes: chart?.total_volumes ?? [], warnings };
 }
 
 async function fetchHourlyBars(coinId: string, nowS: number, requestOptions?: RequestOptions): Promise<Bar[]> {
@@ -78,7 +95,13 @@ export async function fetchCryptoSeries(
   symbolOrId: string,
   timeframe: CryptoScanTimeframe,
   nowMs = Date.now(),
-  opts: { /** Already-resolved CoinGecko id; skips ticker resolution (never treat an id like 'bitcoin' as a ticker). */ coinId?: string; requestOptions?: RequestOptions } = {},
+  opts: {
+    /** Already-resolved CoinGecko id; skips ticker resolution (never treat an id like 'bitcoin' as a ticker). */ coinId?: string;
+    requestOptions?: RequestOptions;
+    /** Daily/weekly only: number of 180-day OHLC windows to fetch (default 2 ≈ 360 bars, max 8). More history lets a
+     *  200-period EMA converge (an SMA-seeded EMA200 on 360 bars still carries ~20% of its seed). */
+    dailyWindows?: number;
+  } = {},
 ): Promise<CryptoSeries> {
   const base = symbolOrId.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase();
   const coinId = opts.coinId ?? (await resolveSymbolToId(base)) ?? symbolOrId.toLowerCase();
@@ -92,7 +115,8 @@ export async function fetchCryptoSeries(
   let source: string;
 
   if (timeframe === 'daily' || timeframe === 'weekly') {
-    const d = await fetchDailyBars(coinId, nowS, opts.requestOptions);
+    const windows = Math.min(MAX_DAILY_WINDOWS, Math.max(DEFAULT_DAILY_WINDOWS, Math.floor(opts.dailyWindows ?? DEFAULT_DAILY_WINDOWS)));
+    const d = await fetchDailyBars(coinId, nowS, opts.requestOptions, windows);
     warnings.push(...d.warnings);
     const daily = attachDailyVolumes(d.bars, d.volumes);
     if (d.volumes.length) volumeBasis = 'coingecko_daily_total_volume';

@@ -139,19 +139,29 @@ function OptionsScannerPageContent() {
         alert(`⚠️ Educational Mode\n\nReview observation for ${symbol}:\nDirection bias: ${payload.decision.direction}\nConfidence: ${payload.decision.confidence}/100\n\nThis is a simulated research workflow — no recommendation and no broker execution.`);
       },
       onAlert: async () => {
+        const level = Number(payload?.header?.underlyingPrice);
+        if (!Number.isFinite(level) || level <= 0) {
+          alert('No underlying price yet — run the scan first, then create the alert.');
+          return;
+        }
         try {
+          // The alerts API takes camelCase fields; options underlyings are US stocks/ETFs.
           const res = await fetch('/api/alerts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               symbol: symbol.toUpperCase(),
-              condition_type: 'price_above',
-              condition_value: payload?.header?.underlyingPrice || 0,
-              alert_name: `Options: ${symbol} ${payload?.decision?.direction || 'NEUTRAL'} signal`,
+              assetType: 'equity',
+              conditionType: 'price_above',
+              conditionValue: level,
+              name: `Options: ${symbol} ${payload?.decision?.direction || 'NEUTRAL'} signal`,
             }),
           });
           if (res.ok) alert(`✅ Alert created for ${symbol}`);
-          else alert('Failed to create alert');
+          else {
+            const data = await res.json().catch(() => null);
+            alert(`Failed to create alert${data?.message || data?.error ? `: ${data.message || data.error}` : ''}`);
+          }
         } catch { alert('Failed to create alert — network error'); }
       },
       onWatchlist: async () => {

@@ -166,7 +166,8 @@ export function evaluateCanonical(input: CanonicalInput): CanonicalResult {
   const uncappedGrade: CanonicalResult['grade'] = permission === 'BLOCK' ? 'F'
     : !meetsRR(best) ? 'C' // below the minimum reward:risk → never graded A/B
     : cautions.length ? 'C' // at an opposing level / momentum against the setup → never graded A/B
-    : calibration ? (calibration.percentile >= 85 ? 'A' : calibration.percentile >= 60 ? 'B' : 'C')
+    // Graded on the displayed (rounded) score so a shown "60" is never a C for rounding alone (59.6 used to be C).
+    : calibration ? (score >= 85 ? 'A' : score >= 60 ? 'B' : 'C')
     : best.score >= th.gradeA ? 'A' : best.score >= th.gradeB ? 'B' : 'C';
   // Snapshot mode (indicator values only: no swing structure, ATR-only stops, ~65% of the factor weight) is capped at
   // B — its factor score is mostly ADX, so an A there is not comparable to a bars-mode A. Score/permission unchanged.

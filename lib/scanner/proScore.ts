@@ -9,6 +9,8 @@ import { barsPerDay, evaluateHardBlocks, macroEventFlags } from './hardBlocks';
 export interface ProHardBlockContext {
   /** Upcoming earnings map (symbol → YYYY-MM-DD). Omitted/empty → earnings UNKNOWN (flag, not block). */
   earningsMap?: Map<string, string>;
+  /** Symbols whose calendar row could not be read → earnings UNKNOWN for them (flag), never "none in horizon". */
+  earningsUnreadable?: Set<string>;
   macroFlags?: ScoreReason[];
   nowMs?: number;
 }
@@ -52,7 +54,8 @@ export function scoreProSnapshot(pick: any, asset: TrustAssetClass, timeframe: s
     price, referencePrice: pick.referenceClose ?? null, referenceSource: pick.referenceSource ?? null, referenceIndependent: false,
     atrPct: atrPct ?? null,
     earningsDate: asset === 'equity' ? hardCtx.earningsMap?.get(String(pick.symbol ?? '').toUpperCase()) ?? null : null,
-    earningsCalendarLoaded: Boolean(hardCtx.earningsMap && hardCtx.earningsMap.size > 0),
+    earningsCalendarLoaded: Boolean(hardCtx.earningsMap && hardCtx.earningsMap.size > 0)
+      && !hardCtx.earningsUnreadable?.has(String(pick.symbol ?? '').toUpperCase()),
     dollarVolumeDaily: asset === 'crypto' && Number.isFinite(volume24h) && volume24h > 0 ? volume24h
       : adv != null ? adv : dv != null ? dv * barsPerDay(timeframe, asset) : null,
     nowMs: hardCtx.nowMs,

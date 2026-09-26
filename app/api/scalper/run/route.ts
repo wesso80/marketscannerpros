@@ -15,6 +15,7 @@ import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
 import { getCachedBarsOnly, setCachedBars } from '@/lib/barCache';
 import { getOHLCWithVolume, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { withScalpFreshness, rankScalpRows } from '@/lib/scalper/freshness';
 import {
   calculateAllIndicators,
   rsi,
@@ -28,6 +29,8 @@ import {
   type OHLCVBar,
   type IndicatorResult,
 } from '@/lib/indicators';
+import { scalpVolumeRatio } from '@/lib/scalper/volume';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,7 +40,7 @@ type ScalpTimeframe = '5min' | '15min';
 type AssetClass = 'crypto' | 'equity';
 
 /* ─── Default Watchlists ─── */
-const DEFAULT_CRYPTO = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'MATIC', 'DOT'];
+const DEFAULT_CRYPTO = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'POL', 'DOT'];
 const DEFAULT_EQUITY = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'META', 'GOOGL', 'AMD', 'SPY', 'QQQ'];
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -123,7 +126,8 @@ function parseTimeSeries(
       high: parseFloat(v['2. high'] || '0'),
       low: parseFloat(v['3. low'] || '0'),
       close: parseFloat(v['4. close'] || '0'),
-      volume: Math.round(parseFloat(v['5. volume'] || v['6. volume'] || '0')),
+      // CRYPTO_INTRADAY sends '5. volume' as a JSON number, equities as a string; avRowVolume handles both.
+      volume: avRowVolume(v),
     });
   }
   bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -138,7 +142,8 @@ export interface ScalpSignal {
   timeframe: ScalpTimeframe;
   price: number;
   direction: 'long' | 'short' | 'neutral';
-  strength: number; // 0-100
+  /** 0-100; null when the latest bar is stale (no score, no rank). */
+  strength: number | null;
   entry: number;
   stop: number;
   target1: number;
@@ -152,7 +157,8 @@ export interface ScalpSignal {
     vwapDev: number | null;
     vwapSignal: 'above' | 'below' | 'neutral';
     volSpike: boolean;
-    volRatio: number;
+    /** Latest bar volume / 20-bar average; null when the bars carry no volume. */
+    volRatio: number | null;
     bbSqueeze: boolean;
     bbBreakout: 'upper' | 'lower' | null;
     bbWidth: number | null;
@@ -163,6 +169,9 @@ export interface ScalpSignal {
   indicators: IndicatorResult;
   barCount: number;
   lastBar: string;
+  /** Latest bar is too old for this cadence: no score, direction or levels. */
+  stale: boolean;
+  barAgeMinutes: number | null;
 }
 
 function computeScalpSignals(
@@ -170,7 +179,7 @@ function computeScalpSignals(
   bars: OHLCVBar[],
   assetClass: AssetClass,
   timeframe: ScalpTimeframe,
-): ScalpSignal {
+): Omit<ScalpSignal, 'stale' | 'barAgeMinutes'> {
   const closes = bars.map((b) => b.close);
   const volumes = bars.map((b) => b.volume);
   const latest = bars[bars.length - 1];
@@ -223,12 +232,7 @@ function computeScalpSignals(
   }
 
   // ── 4. Volume Spike ──
-  const avgVol20 =
-    volumes.length >= 20
-      ? volumes.slice(-20).reduce((a, b) => a + b, 0) / 20
-      : volumes.reduce((a, b) => a + b, 0) / Math.max(1, volumes.length);
-  const volRatio = avgVol20 > 0 ? latest.volume / avgVol20 : 1;
-  const volSpike = volRatio > 1.8;
+  const { volRatio, volSpike } = scalpVolumeRatio(volumes);
 
   // ── 5. Bollinger Bands Squeeze/Breakout ──
   const bb = bollingerBands(closes, 20, 2);
@@ -360,7 +364,7 @@ function computeScalpSignals(
       vwapDev: vwapDev != null ? Math.round(vwapDev * 100) / 100 : null,
       vwapSignal,
       volSpike,
-      volRatio: Math.round(volRatio * 100) / 100,
+      volRatio,
       bbSqueeze,
       bbBreakout,
       bbWidth: bbWidth != null ? Math.round(bbWidth * 100) / 100 : null,
@@ -441,7 +445,7 @@ export async function POST(req: NextRequest) {
       chunk.map(async (sym) => {
         const bars = await fetcher(sym, timeframe);
         if (!bars) throw new Error(`No data for ${sym}`);
-        return computeScalpSignals(sym, bars, assetClass, timeframe);
+        return withScalpFreshness(computeScalpSignals(sym, bars, assetClass, timeframe));
       }),
     );
     for (let i = 0; i < settled.length; i++) {
@@ -451,15 +455,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Sort by strength descending
-  results.sort((a, b) => b.strength - a.strength);
+  // Fresh rows by strength descending; stale rows unranked at the bottom
+  const ranked = rankScalpRows(results);
 
   return NextResponse.json({
     ok: true,
     timeframe,
     assetClass,
     scanned: symbols.length,
-    results,
+    results: ranked,
     errors: errors.length > 0 ? errors : undefined,
     timestamp: new Date().toISOString(),
   });
