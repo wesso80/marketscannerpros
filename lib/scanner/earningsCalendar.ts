@@ -9,9 +9,10 @@
    --------------------------------------------------------------------------- */
 
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { earliestReportDates, parseAlphaVantageEarningsCalendar } from '@/lib/earningsCalendarCsv';
 
 const TTL_MS = 60 * 60 * 1000; // 1 hour
-let cache: { map: Map<string, string>; ts: number } | null = null;
+let cache: { map: Map<string, string>; unreadable: Set<string>; ts: number } | null = null;
 let inflight: Promise<Map<string, string>> | null = null;
 
 /** Returns a map of UPPERCASE symbol → earliest upcoming report date (YYYY-MM-DD). */
@@ -30,8 +31,8 @@ export async function getUpcomingEarningsMap(): Promise<Map<string, string>> {
       );
       if (!res.ok) return cache?.map ?? new Map<string, string>();
       const csv = await res.text();
-      const map = parseEarningsCalendarCsv(csv);
-      cache = { map, ts: Date.now() };
+      const { map, unreadable } = parseEarningsCalendarDetailed(csv);
+      cache = { map, unreadable, ts: Date.now() };
       return map;
     } catch {
       return cache?.map ?? new Map<string, string>();
@@ -49,6 +50,12 @@ export function peekEarningsMap(): Map<string, string> {
   return cache?.map ?? new Map<string, string>();
 }
 
+/** Symbols whose calendar row had an unreadable report date in the cached calendar. Their earnings status must be
+ *  UNKNOWN (not "none in horizon"). Never blocks. */
+export function peekUnreadableEarningsSymbols(): Set<string> {
+  return cache?.unreadable ?? new Set<string>();
+}
+
 /** Fire-and-forget: if the cache is missing or stale (and no fetch is already
  *  running), kick off a refresh in the background. Never awaited by callers. */
 export function warmEarningsMap(): void {
@@ -58,26 +65,18 @@ export function warmEarningsMap(): void {
   void getUpcomingEarningsMap();
 }
 
+/** Parse the AV EARNINGS_CALENDAR CSV into symbol → earliest report date, plus the symbols whose row could not be
+ *  read (quote-aware; see lib/earningsCalendarCsv.ts). A symbol that also has a readable row is not "unreadable". */
+export function parseEarningsCalendarDetailed(csv: string): { map: Map<string, string>; unreadable: Set<string> } {
+  const parsed = parseAlphaVantageEarningsCalendar(csv, { source: 'scanner' });
+  const map = earliestReportDates(parsed.rows);
+  const unreadable = new Set(parsed.skipped.map((r) => r.symbol).filter((sym) => sym && !map.has(sym)));
+  return { map, unreadable };
+}
+
 /** Parse the AV EARNINGS_CALENDAR CSV into symbol → earliest report date. */
 export function parseEarningsCalendarCsv(csv: string): Map<string, string> {
-  const map = new Map<string, string>();
-  const lines = csv.trim().split('\n');
-  if (lines.length < 2) return map;
-  const headers = lines[0].split(',').map((h) => h.trim());
-  const symIdx = headers.indexOf('symbol');
-  const dateIdx = headers.indexOf('reportDate');
-  if (symIdx === -1 || dateIdx === -1) return map;
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',');
-    const symbol = values[symIdx]?.trim().toUpperCase();
-    const reportDate = values[dateIdx]?.trim();
-    if (!symbol || !reportDate) continue;
-    const existing = map.get(symbol);
-    // Keep the earliest upcoming date per symbol.
-    if (!existing || reportDate < existing) map.set(symbol, reportDate);
-  }
-  return map;
+  return parseEarningsCalendarDetailed(csv).map;
 }
 
 /** Whole days from `from` until `dateStr` (YYYY-MM-DD). Null if invalid or past. */

@@ -11,6 +11,7 @@ import { avFetch } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
+import { equityDailyAdx } from '@/lib/equityTrendMetrics';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -65,7 +66,7 @@ async function getCachedDailyBars(symbol: string): Promise<Array<{ date: string;
   return null;
 }
 
-async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ level: number; label: string }>; vwap?: number }> {
+async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ level: number; label: string }>; vwap?: number; dailyAdx?: number }> {
   if (!ALPHA_VANTAGE_KEY) return { levels: [] };
 
   try {
@@ -94,6 +95,7 @@ async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ l
 
     const levels: Array<{ level: number; label: string }> = [];
     let vwap: number | undefined;
+    let dailyAdx: number | undefined;
 
     const intradaySeries = intradayData?.['Time Series (60min)'] as Record<string, Record<string, string>> | undefined;
     if (intradaySeries && Object.keys(intradaySeries).length > 0) {
@@ -159,6 +161,10 @@ async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ l
         .filter((item): item is NonNullable<typeof item> => !!item)
         .sort((a, b) => b.date.localeCompare(a.date));
 
+      // Daily ADX(14) on completed sessions feeds the engine's market mode (ADX ≥ 25 → 'launch'); without it every
+      // equity row defaulted to 'chop'.
+      dailyAdx = equityDailyAdx(dailyRows);
+
       const week = dailyRows.slice(0, 5);
       if (week.length) {
         levels.push({ level: Math.max(...week.map((row) => row.high)), label: 'WEEK_HIGH' });
@@ -186,7 +192,7 @@ async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ l
       }
     }
 
-    return { levels, vwap };
+    return { levels, vwap, dailyAdx };
   } catch (error) {
     console.warn('[flow] Liquidity level fetch failed:', error);
     return { levels: [] };
@@ -382,6 +388,7 @@ export async function GET(request: NextRequest) {
                 }
               : null,
             liquidityLevels: liquidity.levels,
+            trendMetrics: liquidity.dailyAdx !== undefined ? { adx: liquidity.dailyAdx } : undefined,
             dataHealth: {
               freshness: analysis.dataQuality?.freshness,
               // Only a real data fallback counts; informational dataConfidenceCaps notes are display-only.

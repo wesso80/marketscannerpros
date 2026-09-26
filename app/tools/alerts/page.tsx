@@ -2,13 +2,17 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
+import { avgRetriggerInterval, pushBadgeState, triggersLast24h, type PushBadgeState } from '@/lib/alerts/summaryStats';
+import { getNotificationPermission, isPushSupported, isSubscribedToPush } from '@/lib/push';
 import AlertsWidget from "@/components/AlertsWidget";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
-import { alertConditionLabel, alertThreshold } from '@/lib/alertPresentation';
+import { alertConditionLabel } from '@/lib/alertPresentation';
+import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
+import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts } from '@/lib/alerts/consoleStatus';
 import RegimeBanner from '@/components/RegimeBanner';
 import { PageHero } from '@/components/ui';
 import { useSearchParams } from 'next/navigation';
@@ -31,6 +35,7 @@ type AlertItem = {
 
 type AlertHistoryItem = {
   id: string;
+  alert_id?: string | null;
   symbol: string;
   triggered_at: string;
   condition_met: string;
@@ -73,13 +78,6 @@ function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
   return 'Basic';
 }
 
-function deriveStatus(alert: AlertItem): 'Armed' | 'Cooldown' | 'Disabled' | 'Incomplete' {
-  if (!alert.is_active) return 'Disabled';
-  if (alert.condition_type.startsWith('price_') && (alertThreshold(alert.condition_value) ?? 0) <= 0) return 'Incomplete';
-  if (!alert.triggered_at || !alert.cooldown_minutes) return 'Armed';
-  const ms = Date.now() - new Date(alert.triggered_at).getTime();
-  return ms < alert.cooldown_minutes * 60_000 ? 'Cooldown' : 'Armed';
-}
 
 function fmtDateTime(value?: string) {
   if (!value) return '—';
@@ -88,22 +86,8 @@ function fmtDateTime(value?: string) {
   return d.toLocaleString();
 }
 
-function avgTriggerInterval(history: AlertHistoryItem[]) {
-  if (history.length < 2) return 'N/A';
-  const sorted = [...history]
-    .map((h) => new Date(h.triggered_at).getTime())
-    .filter((t) => Number.isFinite(t))
-    .sort((a, b) => b - a);
-  if (sorted.length < 2) return 'N/A';
-  let total = 0;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    total += Math.abs(sorted[i] - sorted[i + 1]);
-  }
-  const avgMin = Math.round(total / (sorted.length - 1) / 60000);
-  if (avgMin < 60) return `${avgMin}m`;
-  const hours = (avgMin / 60).toFixed(1);
-  return `${hours}h`;
-}
+// Avg interval between re-triggers of the same alert (not across all alerts/symbols): see lib/alerts/summaryStats.
+const avgTriggerInterval = avgRetriggerInterval;
 
 export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { tier, isLoading } = useUserTier();
@@ -111,12 +95,16 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [history, setHistory] = useState<AlertHistoryItem[]>([]);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  // Server's rolling 24h trigger count (all history, not just the rows loaded here).
+  const [serverLast24h, setServerLast24h] = useState<number | null>(null);
+  // Real push status for this browser (permission + saved subscription).
+  const [pushState, setPushState] = useState<PushBadgeState>('Checking');
   const [loadingData, setLoadingData] = useState(true);
   const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [zone3Open, setZone3Open] = useState(true);
   const [zone4Open, setZone4Open] = useState(false);
-  const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy' | 'multi'>('basic');
+  const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy'>('basic');
   const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'cleaning' | 'done'>('idle');
   const [cleanupCount, setCleanupCount] = useState(0);
   // Inline edit of one console row (name, and level for price / % alerts).
@@ -160,6 +148,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
       setAlerts(Array.isArray(alertsJson?.alerts) ? alertsJson.alerts : []);
       setHistory(Array.isArray(historyJson?.history) ? historyJson.history : []);
+      setServerLast24h(typeof historyJson?.stats?.last24h === 'number' ? historyJson.stats.last24h : null);
       setPrefs(prefsJson?.prefs || null);
 
       const failed = results
@@ -177,14 +166,28 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     void fetchAll();
   }, []);
 
-  const activeAlerts = useMemo(() => alerts.filter((a) => a.is_active), [alerts]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const supported = isPushSupported();
+        const permission = getNotificationPermission();
+        const subscribed = supported ? await isSubscribedToPush() : false;
+        if (!cancelled) setPushState(pushBadgeState({ supported, permission, subscribed }));
+      } catch {
+        if (!cancelled) setPushState('Unsupported');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // "Active" = alerts a checker actually evaluates; legacy multi-condition alerts are never checked (TR-25).
+  const activeAlerts = useMemo(() => checkedActiveAlerts(alerts), [alerts]);
+  const multiAlerts = useMemo(() => legacyMultiAlerts(alerts), [alerts]);
   const triggeredToday = useMemo(() => {
-    const today = new Date();
-    return history.filter((h) => {
-      const d = new Date(h.triggered_at);
-      return d.toDateString() === today.toDateString();
-    }).length;
-  }, [history]);
+    // Rolling last 24h, from the server's count over all history (TR-20).
+    return triggersLast24h(history, serverLast24h);
+  }, [history, serverLast24h]);
 
   const smartPct = useMemo(() => {
     if (activeAlerts.length === 0) return 0;
@@ -221,8 +224,9 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       if (consoleTab === 'smart') return isSmart;
       return alert.trigger_count > 0;
     });
-    return filtered.slice(0, 12);
-  }, [alerts, consoleTab]);
+    // Legacy multi-condition alerts are listed under Basic with a "Not checked" status so they can be seen and removed.
+    return (consoleTab === 'basic' ? [...filtered, ...multiAlerts] : filtered).slice(0, 12);
+  }, [alerts, multiAlerts, consoleTab]);
 
   // If every alert is smart/strategy, an empty "Basic" default contradicts the "N active" header — open the tab that has rows.
   const autoTabbedRef = useRef(false);
@@ -230,8 +234,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     if (autoTabbedRef.current || activeAlerts.length === 0) return;
     autoTabbedRef.current = true;
     const hasBasic = activeAlerts.some((a) => !a.is_smart_alert && !a.is_multi_condition && !(a.condition_type ?? '').startsWith('strategy_') && !(a.condition_type ?? '').startsWith('scanner_'));
-    if (!hasBasic) setConsoleTab('smart');
-  }, [activeAlerts]);
+    if (!hasBasic && multiAlerts.length === 0) setConsoleTab('smart');
+  }, [activeAlerts, multiAlerts]);
 
   const toggleAlert = async (alert: AlertItem) => {
     await fetch('/api/alerts', {
@@ -312,7 +316,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         activeAlerts: activeAlerts.length,
         triggeredToday,
       },
-      summary: `Alert Radar Console: ${activeAlerts.length} active, ${triggeredToday} triggered today`,
+      summary: `Alert Radar Console: ${activeAlerts.length} active, ${triggeredToday} triggered in the last 24h`,
     });
   }, [tier, setPageData, activeAlerts, triggeredToday]);
 
@@ -332,18 +336,18 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           eyebrow="Alerts review"
           badges={[
             { label: `${activeAlerts.length} active` },
-            { label: `${triggeredToday} today` },
+            { label: `${triggeredToday} in 24h` },
           ]}
           title="Alert radar console"
           subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
           actions={[
-            { label: 'New alert', variant: 'primary', onClick: () => { setActiveZone4Tab('multi'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'New alert', variant: 'primary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Quick alert', variant: 'secondary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
           ]}
           metrics={[
             { label: 'Active', value: `${activeAlerts.length}`, tone: 'bull', detail: 'Open notifications' },
-            { label: 'Triggered today', value: `${triggeredToday}`, tone: 'warn', detail: 'Fired in last 24h' },
+            { label: 'Last 24h', value: `${triggeredToday}`, tone: 'warn', detail: 'Triggers in the last 24 hours' },
             { label: 'Smart %', value: `${smartPct}%`, tone: 'info', detail: 'Smart alert share' },
             { label: 'Tracking', value: riskLocked ? 'Locked' : 'Open', tone: riskLocked ? 'bear' : 'bull', detail: riskLocked ? 'Rule guard active' : 'No guard active' },
           ]}
@@ -364,13 +368,13 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
           <div className="flex gap-2 lg:gap-3">
             <MetricPill label="Active" value={`${activeAlerts.length}`} />
-            <MetricPill label="Triggered Today" value={`${triggeredToday}`} />
+            <MetricPill label="Last 24h" value={`${triggeredToday}`} />
             <MetricPill label="Smart %" value={`${smartPct}%`} />
           </div>
 
           <div className="flex justify-start gap-2 lg:justify-center">
-            <StatusBadge label="Push" state={prefs?.in_app_enabled ? 'Enabled' : 'Disabled'} />
-            <StatusBadge label="Webhook" state={prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Connected' : 'Not Set'} />
+            <StatusBadge label="Push (this browser)" state={pushState} />
+            <StatusBadge label="Webhook" state={prefs?.discord_enabled && isDiscordWebhookUrl(prefs?.discord_webhook_url) ? 'Connected' : prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Not a Discord URL' : 'Not Set'} />
           </div>
 
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
@@ -381,14 +385,11 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               <button type="button" role="tab" aria-selected={activeZone4Tab === 'strategy'} onClick={() => { setActiveZone4Tab('strategy'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
                 Strategy
               </button>
-              <button type="button" role="tab" aria-selected={activeZone4Tab === 'multi'} onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'multi' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
-                Multi
-              </button>
             </div>
             <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 disabled:opacity-50">
               Quick Alert
             </button>
-            <button type="button" onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
+            <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
               + New Alert
             </button>
           </div>
@@ -451,7 +452,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
                         <div className="flex items-center gap-2 sm:ml-auto md:opacity-0 md:transition md:group-hover:opacity-100">
                           <span className="hidden text-xs text-slate-400 sm:inline">Triggered {alert.trigger_count}x</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' || status === 'Not checked' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`} title={status === 'Not checked' ? 'Multi-condition alerts are not evaluated by the alert checker, so this alert will not fire.' : undefined}>
                             {status}
                           </span>
                           <button type="button" onClick={() => editAlert(alert)} className="rounded bg-indigo-500/15 px-2 py-1 text-[11px] text-indigo-200">Edit</button>
@@ -491,7 +492,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
             <div className="mt-3 space-y-2 text-sm text-slate-300">
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Last Trigger: <span className="text-slate-100">{fmtDateTime(history[0]?.triggered_at)}</span></div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Most Active Symbol: <span className="text-slate-100">{mostActiveSymbol}</span></div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Trigger Interval: <span className="text-slate-100">{avgTriggerInterval(history)}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Re-trigger Interval (same alert): <span className="text-slate-100">{avgTriggerInterval(history)}</span></div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Pending Cooldowns: <span className="text-slate-100">{pendingCooldowns}</span></div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -586,7 +587,6 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               <div className="mb-2 flex flex-wrap gap-2">
                 <button type="button" aria-pressed={activeZone4Tab === 'basic'} onClick={() => setActiveZone4Tab('basic')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'basic' ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>Basic</button>
                 <button type="button" aria-pressed={activeZone4Tab === 'strategy'} onClick={() => setActiveZone4Tab('strategy')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'strategy' ? 'bg-indigo-500/15 text-indigo-200' : 'bg-white/10 text-slate-200'}`}>Strategy</button>
-                <button type="button" aria-pressed={activeZone4Tab === 'multi'} onClick={() => setActiveZone4Tab('multi')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'multi' ? 'bg-purple-500/15 text-purple-200' : 'bg-white/10 text-slate-200'}`}>Multi</button>
               </div>
               <AlertsWidget compact={false} className="!border-slate-800 !bg-transparent" prefilledSymbol={prefillSymbol ?? undefined} />
             </div>

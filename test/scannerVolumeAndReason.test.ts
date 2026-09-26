@@ -47,8 +47,12 @@ describe('legacyExecutionReason', () => {
     // buildInstitutionalPickScoreV2 raises both codes when the composite has no net direction.
     expect(legacyExecutionReason(['direction_neutral', 'tf_alignment_low', 'risk_mode_block'])).toBe('MSP factors split (no net direction)');
   });
-  it('a real risk-off tape keeps a risk label', () => {
-    expect(legacyExecutionReason(['risk_mode_block'])).toMatch(/Risk-off/);
+  it('a real risk-off tape keeps a risk label (older payloads without thresholds: equity 6% / 8%)', () => {
+    expect(legacyExecutionReason(['risk_mode_block'])).toBe('Risk-off tape (equity ATR ≥ 6% or ≥ 8% move today)');
+  });
+  it('states the thresholds the scan actually used', () => {
+    expect(legacyExecutionReason(['risk_mode_block'], { atrPct: 8.6, movePct: 11.4, assetClass: 'crypto' }))
+      .toBe('Risk-off tape (crypto ATR ≥ 8.6% or ≥ 11.4% move today)');
   });
   it('alignment and no reason', () => {
     expect(legacyExecutionReason(['tf_alignment_low', 'no_trigger'])).toBe('Alignment below threshold');

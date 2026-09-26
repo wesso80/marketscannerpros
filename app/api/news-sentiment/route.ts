@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
+import { buildNewsBriefPrompt, NEWS_BRIEF_SYSTEM_PROMPT, stripAdviceSentences } from '@/lib/news/newsBrief';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -28,34 +29,8 @@ async function generateAINewsAnalysis(articles: any[], tickers: string): Promise
   if (!OPENAI_API_KEY || articles.length === 0) return null;
   
   try {
-    // Summarize articles for the prompt
-    const articleSummaries = articles.slice(0, 15).map((a, i) => 
-      `${i+1}. [${a.sentiment.label}] "${a.title}" (${a.source})\n   ${a.summary?.slice(0, 150) || 'No summary'}...`
-    ).join('\n');
-    
-    // Calculate overall sentiment
-    const bullish = articles.filter(a => a.sentiment.label.toLowerCase().includes('bullish')).length;
-    const bearish = articles.filter(a => a.sentiment.label.toLowerCase().includes('bearish')).length;
-    const neutral = articles.length - bullish - bearish;
-    
-    const prompt = `Analyze the following ${articles.length} news articles about ${tickers.toUpperCase()}:
-
-SENTIMENT BREAKDOWN:
-- Bullish: ${bullish} articles (${((bullish/articles.length)*100).toFixed(0)}%)
-- Bearish: ${bearish} articles (${((bearish/articles.length)*100).toFixed(0)}%)
-- Neutral: ${neutral} articles (${((neutral/articles.length)*100).toFixed(0)}%)
-
-RECENT HEADLINES:
-${articleSummaries}
-
-Based on this news flow, provide:
-1. **Overall Sentiment**: Is the news predominantly bullish, bearish, or mixed?
-2. **Key Themes**: What are the 2-3 main narratives driving coverage?
-3. **Notable Events**: Any significant news that traders should watch?
-4. **Market Impact**: How might this news affect price action?
-5. **Risk Factors**: Any concerning stories or negative catalysts?
-
-Be concise and actionable. Max 300 words.`;
+    // Descriptive-only prompt (describe, never direct the reader); see lib/news/newsBrief.ts.
+    const prompt = buildNewsBriefPrompt(articles, tickers);
 
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -68,17 +43,18 @@ Be concise and actionable. Max 300 words.`;
         messages: [
           {
             role: 'system',
-            content: 'You are a financial news analyst providing concise, actionable market intelligence. Focus on what matters for traders. Use emojis sparingly for visual hierarchy.'
+            content: NEWS_BRIEF_SYSTEM_PROMPT
           },
           { role: 'user', content: prompt }
         ],
         max_tokens: 500,
-        temperature: 0.7
+        temperature: 0.3
       })
     });
     
     const result = await res.json();
-    return result.choices?.[0]?.message?.content || null;
+    // Belt and braces: drop any sentence that still reads as a direction to the reader.
+    return stripAdviceSentences(result.choices?.[0]?.message?.content || null);
   } catch (err) {
     console.error('AI news analysis error:', err);
     return null;

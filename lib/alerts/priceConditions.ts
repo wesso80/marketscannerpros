@@ -14,6 +14,8 @@ export interface AlertQuote {
   price: number;
   /** Percent move (e.g. -2.4 for a 2.4% drop). null when the source did not provide one. */
   changePercent: number | null;
+  /** Stocks: the quote's latest trading day (YYYY-MM-DD, New York). Used to skip stale quotes (TR-17). */
+  asOfDate?: string | null;
 }
 
 function finite(value: unknown): number | null {
@@ -35,7 +37,9 @@ export function parseGlobalQuote(data: unknown): AlertQuote | null {
   } else {
     changePercent = finite(gq?.['10. change percent']);
   }
-  return { price, changePercent };
+  const day = gq?.['07. latest trading day'];
+  const asOfDate = typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+  return { price, changePercent, asOfDate };
 }
 
 /** Whether a basic alert's condition is met. Price alerts keep their existing >= / <= test. */
@@ -66,20 +70,23 @@ function fmtPrice(price: number): string {
 
 /** Human-readable description of what fired (used in history, email, push). */
 export function describeConditionMet(symbol: string, conditionType: string, conditionValue: unknown, quote: AlertQuote, assetType?: string): string {
-  const price = fmtPrice(quote.price);
+  // Forex rates are quoted to 5 decimals and are not dollar amounts (e.g. USDJPY).
+  const isFx = assetType === 'forex';
+  const price = isFx ? quote.price.toFixed(5) : fmtPrice(quote.price);
+  const cur = isFx ? '' : '$';
   const threshold = Math.abs(finite(conditionValue) ?? 0);
   const basis = assetType === 'crypto' ? 'in 24h' : 'vs previous close';
   const change = quote.changePercent == null ? '' : `${quote.changePercent >= 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%`;
   switch (conditionType) {
     case 'price_above':
-      return `${symbol} crossed above $${conditionValue} (now $${price})`;
+      return `${symbol} crossed above ${cur}${conditionValue} (now ${cur}${price})`;
     case 'price_below':
-      return `${symbol} dropped below $${conditionValue} (now $${price})`;
+      return `${symbol} dropped below ${cur}${conditionValue} (now ${cur}${price})`;
     case 'percent_change_up':
-      return `${symbol} ${change} ${basis} (alert: +${threshold}%, now $${price})`;
+      return `${symbol} ${change} ${basis} (alert: +${threshold}%, now ${cur}${price})`;
     case 'percent_change_down':
-      return `${symbol} ${change} ${basis} (alert: -${threshold}%, now $${price})`;
+      return `${symbol} ${change} ${basis} (alert: -${threshold}%, now ${cur}${price})`;
     default:
-      return `${symbol} alert triggered at $${price}`;
+      return `${symbol} alert triggered at ${cur}${price}`;
   }
 }

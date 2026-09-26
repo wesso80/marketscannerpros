@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
+import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/registry';
 
 /**
@@ -289,6 +290,9 @@ async function checkStrategyAlerts(req: NextRequest) {
                   console.error('Push notification failed:', pushErr);
                 }
               }
+
+              // The user's own Discord webhook, if enabled (TR-26). Last and never throws.
+              await deliverAlertToUserDiscord(alert.workspace_id, { title: `${alertName} (${symbol})`, detail: alertMessage });
 
               triggered.push(alert.id);
             }

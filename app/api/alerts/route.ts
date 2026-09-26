@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 
 /**
  * Price Alerts API
@@ -157,9 +158,11 @@ export async function GET(req: NextRequest) {
       }));
     }
 
-    // Get quota info
-    const quotaResult = await q(
-      `SELECT max_alerts, active_alerts, total_triggers_today FROM alert_quotas WHERE workspace_id = $1`,
+    // Triggers in the last 24h, counted from alert history. (alert_quotas.total_triggers_today
+    // is only ever incremented and never reset, so it is a lifetime total, not "today".)
+    const triggers24hResult = await q(
+      `SELECT COUNT(*) AS count FROM alert_history
+       WHERE workspace_id = $1 AND triggered_at > NOW() - INTERVAL '24 hours'`,
       [session.workspaceId]
     );
 
@@ -172,7 +175,7 @@ export async function GET(req: NextRequest) {
         used: activeCount,
         max: maxAlerts,
         tier,
-        triggersToday: quotaResult[0]?.total_triggers_today || 0,
+        triggersToday: Number(triggers24hResult[0]?.count ?? 0) || 0,
       },
     });
   } catch (error) {
@@ -268,6 +271,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Basic price / % change alerts must say which market the symbol is in, so the checker
+    // prices it from the right feed (no silent crypto default; commodity alerts can't be
+    // priced yet). Smart alerts keep their existing default.
+    let assetType: string = body.assetType || 'crypto';
+    if (!isSmartAlert) {
+      const assetCheck = validateBasicAlertAssetType(body.assetType, body.conditionType, body.symbol);
+      if (!assetCheck.ok) {
+        return NextResponse.json({ error: assetCheck.error, message: assetCheck.message }, { status: 400 });
+      }
+      assetType = assetCheck.assetType;
+    }
+
     // Check quota
     
     const activeResult = await q(
@@ -311,7 +326,7 @@ export async function POST(req: NextRequest) {
       [
         session.workspaceId,
         body.symbol.toUpperCase(),
-        body.assetType || 'crypto',
+        assetType,
         isMultiCondition ? 'multi' : body.conditionType,
         isMultiCondition ? 0 : body.conditionValue,
         body.conditionTimeframe || null,

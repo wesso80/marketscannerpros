@@ -8,6 +8,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { isPaidTier, watchlistLimitsFor } from '@/lib/tiers';
 import { filterByMove, formatTodayMove, sortByMove, summarizeMoves, todayMove, type MoveFilter, type MoveSort } from '@/lib/watchlist/todayMove';
 import { fetchWatchlistQuotes, formatQuoteAsOf, type WatchlistQuote } from '@/lib/watchlist/quotes';
+import { afterWatchlistDeleted, upsertWatchlistItem, watchlistNameError, WATCHLIST_NAME_MAX } from '@/lib/watchlist/listState';
 
 interface Watchlist {
   id: string;
@@ -204,10 +205,11 @@ export default function WatchlistWidget() {
       const res = await fetch(`/api/watchlists?id=${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
 
-      setWatchlists(watchlists.filter(w => w.id !== id));
-      if (selectedWatchlist?.id === id) {
-        setSelectedWatchlist(watchlists[0] || null);
-      }
+      // Select the first remaining list (the old code could re-select the deleted one).
+      const next = afterWatchlistDeleted(watchlists, id, selectedWatchlist?.id);
+      setWatchlists(next.lists);
+      setSelectedWatchlist(next.selected);
+      if (!next.selected) setItems([]);
     } catch (err) {
       setError('Failed to delete watchlist');
     }
@@ -215,6 +217,41 @@ export default function WatchlistWidget() {
 
   const deleteWatchlist = (id: string) => {
     setPendingDeleteId(id);
+  };
+
+  // Rename watchlist
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  useEffect(() => { setRenaming(false); }, [selectedWatchlist?.id]);
+
+  const startRename = () => {
+    if (!selectedWatchlist) return;
+    setRenameValue(selectedWatchlist.name ?? '');
+    setRenaming(true);
+  };
+
+  const saveRename = async () => {
+    if (!selectedWatchlist) return;
+    const nameError = watchlistNameError(renameValue);
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
+    try {
+      const res = await fetch('/api/watchlists', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedWatchlist.id, name: renameValue.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to rename watchlist');
+      const name = data.watchlist?.name ?? renameValue.trim();
+      setWatchlists(watchlists.map(w => (w.id === selectedWatchlist.id ? { ...w, name } : w)));
+      setSelectedWatchlist({ ...selectedWatchlist, name });
+      setRenaming(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to rename watchlist');
+    }
   };
 
   // Add symbol
@@ -238,16 +275,22 @@ export default function WatchlistWidget() {
       }
 
       const data = await res.json();
-      setItems([...items, data.item]);
+      // The server upserts on (list, symbol): re-adding returns the existing row, so update
+      // it in place instead of appending a duplicate card and bumping the count.
+      const merged = upsertWatchlistItem(items, data.item as WatchlistItem);
+      setItems(merged.items);
       setShowAddSymbol(false);
       setNewSymbol('');
-      
-      // Update count
-      setWatchlists(watchlists.map(w => 
-        w.id === selectedWatchlist.id 
-          ? { ...w, item_count: w.item_count + 1 }
-          : w
-      ));
+
+      if (merged.added) {
+        setWatchlists(watchlists.map(w => 
+          w.id === selectedWatchlist.id 
+            ? { ...w, item_count: w.item_count + 1 }
+            : w
+        ));
+      } else {
+        setError(`${String(data.item?.symbol ?? newSymbol).toUpperCase()} is already on this list.`);
+      }
       
       // Fetch quote for new symbol
       fetchQuotes([data.item]);
@@ -422,7 +465,26 @@ export default function WatchlistWidget() {
               <div className="grid gap-3 md:grid-cols-3">
                 <div>
                   <div className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Watchlist</div>
-                  <div className="mt-1 text-lg font-black text-white">{(selectedWatchlist.name ?? '').toUpperCase()}</div>
+                  {renaming ? (
+                    <form
+                      className="mt-1 flex items-center gap-2"
+                      onSubmit={(e) => { e.preventDefault(); void saveRename(); }}
+                    >
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        maxLength={WATCHLIST_NAME_MAX}
+                        aria-label="Watchlist name"
+                        autoFocus
+                        className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-white"
+                      />
+                      <button type="submit" className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Save</button>
+                      <button type="button" onClick={() => setRenaming(false)} className="rounded-md px-2 py-1 text-xs text-slate-300">Cancel</button>
+                    </form>
+                  ) : (
+                    <div className="mt-1 text-lg font-black text-white">{(selectedWatchlist.name ?? '').toUpperCase()}</div>
+                  )}
                   <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">Mode: {watchlistMode}</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">
                     Avg move today:{' '}
@@ -470,6 +532,20 @@ export default function WatchlistWidget() {
                       className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-50"
                     >
                       + Create List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startRename}
+                      className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteWatchlist(selectedWatchlist.id)}
+                      className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300"
+                    >
+                      Delete List
                     </button>
                   </div>
                 </div>

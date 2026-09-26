@@ -3,6 +3,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { watchlistLimitsFor } from '@/lib/tiers';
+import { watchlistNameError } from '@/lib/watchlist/listState';
 
 // GET /api/watchlists - List all watchlists with item counts
 export async function GET(req: NextRequest) {
@@ -166,6 +167,11 @@ export async function PUT(req: NextRequest) {
     let paramIndex = 1;
 
     if (name !== undefined) {
+      // Same rules as create: a rename can't blank the name or exceed the length cap.
+      const nameError = watchlistNameError(name);
+      if (nameError) {
+        return NextResponse.json({ error: nameError }, { status: 400 });
+      }
       updates.push(`name = $${paramIndex++}`);
       values.push(name.trim());
     }

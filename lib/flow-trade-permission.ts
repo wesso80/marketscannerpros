@@ -35,6 +35,11 @@ export interface FlowTradePermission {
     active: boolean;
     reason: string;
   };
+  /**
+   * True when permission is withheld only by the session overlay (its stricter TPS bar or its confidence/liquidity
+   * minimums) while the score itself clears the standard threshold. The reason then reads "Unavailable in … session".
+   */
+  sessionLimited?: boolean;
   riskMode: 'low' | 'medium' | 'high';
   sizeMultiplier: number;
   stopStyle: 'tight_structural' | 'structural' | 'atr_trailing' | 'wider_confirmation';
@@ -53,6 +58,13 @@ export interface FlowTradePermission {
 }
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+/** Standard Trade Permission threshold (0-1) when no session overlay tightens it. */
+export const BASE_TPS_THRESHOLD = 0.65;
+
+function sessionLabel(phase: string): string {
+  return phase.toLowerCase().replace(/_session$/, '').replace(/^crypto_/, '').replace(/_/g, ' ');
+}
 
 function alignmentMap(state: InstitutionalFlowState): Record<TradeArchetype, number> {
   switch (state) {
@@ -178,6 +190,8 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
   const so = input.sessionOverlay ?? null;
   let sessionAdjustment: FlowTradePermission['sessionAdjustment'];
   let sizeCapApplied = false;
+  let failsSessionConfidence = false;
+  let failsSessionLiquidity = false;
 
   if (so) {
     // Apply additive TPS modifier (scaled to 0-1 range)
@@ -188,6 +202,8 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     const failsConfidenceGate = so.minimumConfidence > 0 && input.stateConfidence < so.minimumConfidence;
     const failsLiquidityGate = so.minimumLiquidityClarity > 0 && (input.liquidityClarity) < so.minimumLiquidityClarity;
 
+    failsSessionConfidence = failsConfidenceGate;
+    failsSessionLiquidity = failsLiquidityGate;
     if (failsConfidenceGate || failsLiquidityGate) {
       tps = Math.min(tps, (so.minimumTps - 1) / 100); // ensure it falls below the session TPS threshold
     }
@@ -210,12 +226,19 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     staleData;
 
   // Use session-specific minimum TPS if provided, otherwise base threshold
-  const tpsThreshold = so ? so.minimumTps / 100 : 0.65;
+  const tpsThreshold = so ? so.minimumTps / 100 : BASE_TPS_THRESHOLD;
   const blocked = autoNoTrade || tps < tpsThreshold;
+  // Blocked only by the session's stricter bar (or its confidence/liquidity minimums), not by the data: the score
+  // clears the standard threshold. Say so, instead of a data-driven "BLOCKED" that reads as weak data.
+  const sessionGateFailed = !!so && (failsSessionConfidence || failsSessionLiquidity);
+  const sessionLimited = !autoNoTrade && blocked && !!so &&
+    (sessionGateFailed || (tpsThreshold > BASE_TPS_THRESHOLD && tps >= BASE_TPS_THRESHOLD));
 
   let reason = 'Permission granted';
   if (autoNoTrade && staleData) reason = 'NO-TRADE MODE: data health stale';
   else if (autoNoTrade) reason = 'NO-TRADE MODE: accumulation + low volatility + unclear liquidity';
+  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: below the session's minimum ${failsSessionConfidence ? 'state confidence' : 'liquidity clarity'}`;
+  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${Math.round(tps * 100)} clears the standard ${Math.round(BASE_TPS_THRESHOLD * 100)} but this session requires ${Math.round(tpsThreshold * 100)}`;
   else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${Math.round(tps * 100)} below threshold (${Math.round(tpsThreshold * 100)})`;
 
   let scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
@@ -252,6 +275,7 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
       active: autoNoTrade,
       reason,
     },
+    ...(sessionLimited ? { sessionLimited: true } : {}),
     riskMode: blocked ? 'high' : policy.riskMode,
     sizeMultiplier: Number(scaledSize.toFixed(2)),
     stopStyle,

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { scalpVolumeCell } from '@/lib/scalper/volume';
 
 /* ─── Types (mirror API response) ─── */
 type AssetClass = 'crypto' | 'equity';
@@ -15,7 +16,8 @@ interface ScalpSignalData {
   vwapDev: number | null;
   vwapSignal: string;
   volSpike: boolean;
-  volRatio: number;
+  /** null when the source bars carry no volume */
+  volRatio: number | null;
   bbSqueeze: boolean;
   bbBreakout: 'upper' | 'lower' | null;
   bbWidth: number | null;
@@ -30,7 +32,7 @@ interface ScalpResult {
   timeframe: ScalpTimeframe;
   price: number;
   direction: 'long' | 'short' | 'neutral';
-  strength: number;
+  strength: number | null;
   entry: number;
   stop: number;
   target1: number;
@@ -39,10 +41,12 @@ interface ScalpResult {
   signals: ScalpSignalData;
   barCount: number;
   lastBar: string;
+  stale?: boolean;
+  barAgeMinutes?: number | null;
 }
 
 /* ─── Default Watchlists ─── */
-const CRYPTO_DEFAULTS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'MATIC', 'DOT'];
+const CRYPTO_DEFAULTS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'POL', 'DOT'];
 const EQUITY_DEFAULTS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'META', 'GOOGL', 'AMD', 'SPY', 'QQQ'];
 
 /* ─── Helpers ─── */
@@ -255,6 +259,9 @@ export default function AdminScalperPage() {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
                             {r.direction === 'long' ? '▲' : r.direction === 'short' ? '▼' : '—'} {r.direction.toUpperCase()}
                           </span>
+                          {r.stale && (
+                            <span className="ml-1 rounded border border-rose-400/35 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">STALE</span>
+                          )}
                         </td>
                         <td className="py-2.5 px-2 text-right">
                           <StrengthBar value={r.strength} />
@@ -266,7 +273,10 @@ export default function AdminScalperPage() {
                         </td>
                         <td className="py-2.5 px-2 text-center">{signalCode(r.signals.vwapSignal)}</td>
                         <td className="py-2.5 px-2 text-center">
-                          {r.signals.volSpike ? <span title={`${r.signals.volRatio}x avg`}>SPIKE</span> : <span className="text-slate-600">—</span>}
+                          {(() => {
+                            const cell = scalpVolumeCell(r.signals.volRatio, r.signals.volSpike, 'SPIKE');
+                            return <span title={cell.title} className={r.signals.volSpike ? 'font-bold text-amber-300' : 'text-slate-400'}>{cell.text}</span>;
+                          })()}
                         </td>
                         <td className="py-2.5 px-2 text-center">
                           {r.signals.bbSqueeze ? 'SQZ' : r.signals.bbBreakout ? (r.signals.bbBreakout === 'upper' ? 'UP' : 'DOWN') : <span className="text-slate-600">—</span>}
@@ -305,7 +315,10 @@ export default function AdminScalperPage() {
 
 /* ═══════════ Sub-Components ═══════════ */
 
-function StrengthBar({ value }: { value: number }) {
+function StrengthBar({ value }: { value: number | null }) {
+  if (value == null) {
+    return <div className="text-right text-[10px] text-slate-500" title="No score: latest bar is stale">—</div>;
+  }
   const color = value >= 60 ? 'var(--msp-bull)' : value >= 30 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   return (
     <div className="flex items-center gap-1.5 justify-end">
@@ -462,7 +475,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <SignalRow code={signalCode(s.emaCross)} label="EMA Crossover" value={s.emaDetail} color={dirColor(s.emaCross)} />
           <SignalRow code={signalCode(s.rsiSignal)} label="RSI(7)" value={s.rsi7 != null ? `${s.rsi7.toFixed(1)} — ${s.rsiSignal}` : '—'} color={dirColor(s.rsiSignal)} />
           <SignalRow code={signalCode(s.vwapSignal)} label="VWAP" value={s.vwapDev != null ? `${s.vwapDev > 0 ? '+' : ''}${s.vwapDev.toFixed(2)}% ${s.vwapSignal}` : '—'} color={dirColor(s.vwapSignal)} />
-          <SignalRow code={s.volSpike ? 'VOL' : 'NEUT'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
+          <SignalRow code={s.volSpike ? 'VOL' : 'NEUT'} label="Volume" value={s.volRatio == null ? 'n/a (no volume in source bars)' : `${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
           <SignalRow code={s.bbSqueeze ? 'SQZ' : s.bbBreakout ? 'BRK' : 'NEUT'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? 'var(--msp-warn)' : s.bbBreakout === 'upper' ? 'var(--msp-bull)' : s.bbBreakout === 'lower' ? 'var(--msp-bear)' : 'var(--msp-flat)'} />
           <SignalRow code={signalCode(s.macdSignal)} label="MACD" value={s.macdHist != null ? `Hist: ${s.macdHist > 0 ? '+' : ''}${s.macdHist.toFixed(4)} — ${s.macdSignal}` : '—'} color={dirColor(s.macdSignal)} />
           <SignalRow code="ATR" label="ATR(14)" value={s.atr != null ? fmtP(s.atr) : '—'} color="#94A3B8" />

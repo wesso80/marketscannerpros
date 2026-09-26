@@ -7,6 +7,7 @@ import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 import { computePortfolioRisk, type ExternalFlow } from '@/lib/portfolio/riskAnalytics';
 import { positionUnits } from '@/lib/portfolio/positionValue';
 import { normalizeExpiration } from '@/lib/options/contractQuote';
+import { readServerPortfolioState, replacePortfolio, sqlErrorCode, type SyncProgress } from '@/lib/portfolio/serverSync';
 
 interface Position {
   id: number;
@@ -207,11 +208,21 @@ export async function GET(req: NextRequest) {
       console.warn('portfolio_cash_ledger table not available yet; continuing without persisted cash state');
     }
 
+    // Fingerprint of what a POST would replace. The client must send it back with its next POST;
+    // if the server copy has changed in between, the POST is refused instead of overwriting it.
+    let syncRevision: string | null = null;
+    try {
+      syncRevision = (await tx((client) => readServerPortfolioState(client, workspaceId))).revision;
+    } catch (revisionError) {
+      console.warn('Portfolio GET: sync revision unavailable; client will not sync this session', sqlErrorCode(revisionError) ?? '');
+    }
+
     return NextResponse.json({
       positions,
       closedPositions,
       performanceHistory,
       cashState,
+      syncRevision,
       riskAnalytics,
       riskAnalyticsMeta: {
         basis: 'account_equity_v2',
@@ -231,6 +242,7 @@ export async function GET(req: NextRequest) {
 
 // POST - Save portfolio data
 export async function POST(req: NextRequest) {
+  const progress: SyncProgress = { stage: 'start' };
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
@@ -282,78 +294,27 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* risk check fallback: allow sync for data integrity */ }
 
-    await tx(async (client) => {
-      // Serialize replacements for this workspace; an insert failure rolls back all deletes.
-      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [workspaceId]);
-      const q = async (sql: string, params: any[] = []) => (await client.query(sql, params)).rows;
-      // Clear existing manual entries (preserve journal-linked rows)
-      await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
-      await q(`DELETE FROM portfolio_closed WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
-      await q(`DELETE FROM portfolio_performance WHERE workspace_id = $1`, [workspaceId]);
+    const result = await tx((client) => replacePortfolio(
+      client,
+      workspaceId,
+      { positions, closedPositions, performanceHistory, cashState },
+      { baseRevision: body.baseRevision, confirmClear: body.confirmClear },
+      progress,
+    ));
 
-      // Insert manual positions (skip journal-linked ones — they're preserved)
-      for (const p of positions || []) {
-        if (p.journalEntryId) continue;
-        await q(
-          `INSERT INTO portfolio_positions (workspace_id, symbol, side, quantity, entry_price, current_price, entry_date)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [workspaceId, p.symbol, p.side, p.quantity, p.entryPrice, p.currentPrice, p.entryDate || new Date().toISOString()]
-        );
-      }
+    if (result.status === 'conflict') {
+      const message = result.reason === 'empty_overwrite'
+        ? 'Refusing to replace saved portfolio data with an empty portfolio. No records were changed.'
+        : 'The saved portfolio changed since this page loaded (another tab or device). Reload to get the latest. No records were changed.';
+      return NextResponse.json({ error: message, conflict: result.reason, syncRevision: result.revision }, { status: 409 });
+    }
 
-      // Insert manual closed positions (skip journal-linked ones)
-      for (const p of closedPositions || []) {
-        if (p.journalEntryId) continue;
-        await q(
-          `INSERT INTO portfolio_closed (workspace_id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [workspaceId, p.symbol, p.side, p.quantity, p.entryPrice, p.closePrice ?? p.currentPrice, p.entryDate, p.closeDate, p.realizedPL ?? p.pl]
-        );
-      }
-
-      // Insert performance snapshots. Only rows explicitly produced by the new
-      // account-equity model are eligible for risk analytics.
-      await q(`ALTER TABLE portfolio_performance ADD COLUMN IF NOT EXISTS snapshot_basis TEXT`);
-      for (const p of performanceHistory || []) {
-        const date = new Date(p.timestamp).toISOString().split('T')[0];
-        const basis = p.basis === 'account_equity_v2' ? 'account_equity_v2' : 'legacy_position_value';
-        await q(
-          `INSERT INTO portfolio_performance (workspace_id, snapshot_date, total_value, total_pl, snapshot_basis)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (workspace_id, snapshot_date) DO UPDATE
-           SET total_value = $3, total_pl = $4, snapshot_basis = $5`,
-          [workspaceId, date, p.totalValue, p.totalPL, basis]
-        );
-      }
-
-      {
-        await q(`DELETE FROM portfolio_cash_ledger WHERE workspace_id = $1`, [workspaceId]);
-
-        const startingCapital = Number(cashState?.startingCapital);
-        await q(
-          `INSERT INTO portfolio_cash_ledger (workspace_id, entry_type, amount, effective_date, note)
-           VALUES ($1, 'starting_capital', $2, $3, $4)`,
-          [workspaceId, Number.isFinite(startingCapital) ? startingCapital : 10000, new Date().toISOString(), 'Configured starting capital']
-        );
-
-        for (const item of cashState?.cashLedger || []) {
-          const entryType = item?.type === 'withdrawal' ? 'withdrawal' : 'deposit';
-          const amount = Number(item?.amount || 0);
-          if (!Number.isFinite(amount) || amount <= 0) continue;
-          await q(
-            `INSERT INTO portfolio_cash_ledger (workspace_id, entry_type, amount, effective_date, note)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [workspaceId, entryType, amount, item?.timestamp || new Date().toISOString(), item?.note || null]
-          );
-        }
-      }
-
-    });
-
-    return NextResponse.json({ success: true, riskWarning });
+    return NextResponse.json({ success: true, riskWarning, syncRevision: result.revision, cashStateSaved: result.cashStateSaved });
   } catch (error) {
-    console.error("Portfolio POST error:", error);
-    return NextResponse.json({ error: "Failed to save portfolio" }, { status: 500 });
+    const code = sqlErrorCode(error);
+    console.error("Portfolio POST error:", `stage=${progress.stage}`, `code=${code ?? 'none'}`, error);
+    // Stage and SQLSTATE only (no data), so a failing sync can be diagnosed from the browser too.
+    return NextResponse.json({ error: "Failed to save portfolio", stage: progress.stage, code: code ?? null }, { status: 500 });
   }
 }
 
@@ -379,11 +340,19 @@ export async function DELETE(req: NextRequest) {
     const kind = body.kind === 'closed' ? 'closed' : 'active';
     const table = kind === 'closed' ? 'portfolio_closed' : 'portfolio_positions';
 
-    const result = await q(
-      `DELETE FROM ${table} WHERE workspace_id = $1 AND id = $2 RETURNING id`,
-      [workspaceId, id]
-    );
-    return NextResponse.json({ success: true, deleted: result.length });
+    // Same lock as POST, and report the sync revision before/after so the page can tell its own
+    // delete apart from a change made elsewhere.
+    const result = await tx(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [workspaceId]);
+      const before = await readServerPortfolioState(client, workspaceId);
+      const deleted = (await client.query(
+        `DELETE FROM ${table} WHERE workspace_id = $1 AND id = $2 RETURNING id`,
+        [workspaceId, id]
+      )).rows;
+      const after = await readServerPortfolioState(client, workspaceId);
+      return { deleted: deleted.length, previousRevision: before.revision, syncRevision: after.revision };
+    });
+    return NextResponse.json({ success: true, ...result });
   } catch (error) {
     console.error("Portfolio DELETE error:", error);
     return NextResponse.json({ error: "Failed to delete position" }, { status: 500 });
