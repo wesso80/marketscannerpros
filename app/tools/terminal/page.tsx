@@ -38,6 +38,7 @@ import {
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
 import { blockedReasonLabel, stripBlockedPrefix } from '@/lib/flow-trade-permission';
+import { describeGammaInput } from '@/lib/options/dealerGammaInput';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -823,6 +824,7 @@ export default function TerminalPage() {
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Gamma</div>
                     <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state || '—'}</div>
+                    <div className="mt-1 text-[10px] leading-snug text-slate-500" title={fd.gamma_input?.convention ?? undefined}>{describeGammaInput(fd.gamma_input)}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Directional score</div>

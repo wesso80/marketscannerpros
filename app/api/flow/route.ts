@@ -5,6 +5,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
+import { CRYPTO_DEALER_GAMMA_REASON, dealerGammaFromAnalysis } from '@/lib/options/dealerGammaInput';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from '@/lib/coingecko';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { avFetch } from '@/lib/avRateGovernor';
@@ -362,6 +363,7 @@ export async function GET(request: NextRequest) {
             atr: crypto.atr,
             liquidityLevels: crypto.levels,
             cryptoPositioning: crypto.positioning,
+            dealerGamma: { state: 'unavailable', reason: CRYPTO_DEALER_GAMMA_REASON },
             trendMetrics: {
               priceAboveTrend: crypto.vwap ? crypto.spot >= crypto.vwap : undefined,
               // Daily ADX gives crypto the same measured market mode as equities (ADX ≥ 25 → 'launch').
@@ -395,6 +397,8 @@ export async function GET(request: NextRequest) {
                 }
               : null,
             liquidityLevels: liquidity.levels,
+            // MV-3: signed dealer gamma from the chain the analyzer already fetched (no extra provider calls).
+            dealerGamma: dealerGammaFromAnalysis(analysis),
             trendMetrics: liquidity.dailyAdx !== undefined ? { adx: liquidity.dailyAdx } : undefined,
             dataHealth: {
               freshness: analysis.dataQuality?.freshness,
