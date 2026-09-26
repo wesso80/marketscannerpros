@@ -1074,11 +1074,14 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
       fetchPayload: async (fn, url) => {
         console.log(`📊 Fetching options chain via ${fn} for ${symbol}${targetExpiration ? ` (target expiry ${targetExpiration})` : ''}...`);
         await avTakeToken();
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+        if (response.ok === false) throw new Error(`AV HTTP ${response.status} for ${fn} ${symbol}`);
         const payload = await response.json();
         if (payload?.['Error Message']) { console.error(`❌ ${fn} Error Message:`, payload['Error Message']); return null; }
-        if (payload?.['Note']) { console.warn(`⚠️ ${fn} Note (likely rate limit):`, payload['Note']); return null; }
-        if (payload?.['Information']) { console.warn(`⚠️ ${fn} Information (tier/entitlement):`, payload['Information']); return null; }
+        // Throw (not return null) so the shared chain records Alpha Vantage's exact message as the fallback reason
+        // and applies the same entitlement / rate-limit handling as every other options route (avFetch).
+        if (payload?.['Note']) throw new Error(`AV quota exceeded: ${payload['Note']}`);
+        if (payload?.['Information']) throw new Error(`AV info error: ${payload['Information']}`);
         return payload;
       },
     });

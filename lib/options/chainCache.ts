@@ -17,7 +17,7 @@
  * the previous-session chain is used instead when it is better quoted; it is labelled quoteBasis
  * 'previous_session' with its as-of date. FMV marks are only ever used as marks (last resort).
  */
-import { usableOptionRows } from '@/lib/options/avChain';
+import { isAlphaVantageSampleChain, usableOptionRows } from '@/lib/options/avChain';
 import { getCached, setCached } from '@/lib/redis';
 
 export type AvChainFunction = 'REALTIME_OPTIONS_FMV' | 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
@@ -46,8 +46,12 @@ export type ChainPayloadFetcher = (fn: AvChainFunction, url: string) => Promise<
 export const CHAIN_CACHE_TTL_SECONDS = 120;
 /** Below this share of two-sided quotes a realtime chain is not treated as a quoted market. */
 export const MIN_TWO_SIDED_QUOTE_COVERAGE = 0.25;
-/** After Alpha Vantage answers a realtime function with its "not entitled" sample, skip it for this long. */
-const NOT_ENTITLED_SKIP_MS = 60 * 60 * 1000;
+/**
+ * After Alpha Vantage answers a realtime function with its "not entitled" sample (or an entitlement error), skip it
+ * for this long. Was 1 hour; 10 minutes means a newly activated entitlement (or a one-off sample answer) stops
+ * forcing the previous-session chain much sooner, at the cost of one extra call per 10 minutes per server.
+ */
+export const NOT_ENTITLED_SKIP_MS = 10 * 60 * 1000;
 const MAX_MEMORY_ENTRIES = 12;
 
 export const optionsRawChainKey = (symbol: string) => `opt:raw:${symbol.trim().toUpperCase()}`;
@@ -189,7 +193,14 @@ export async function fetchSharedOptionsChain<T = Record<string, any>>(
     } catch { /* Redis optional */ }
 
     const warnings: string[] = [];
-    const issue = (text: string) => { opts.issues?.push(text); };
+    const reasons: string[] = [];
+    // Every provider that is skipped is logged with the exact reason (Alpha Vantage's own message where there is
+    // one), so a fallback to the previous-session chain is never silent in the server logs.
+    const issue = (text: string) => {
+      opts.issues?.push(text);
+      reasons.push(text);
+      console.warn(`[optionsChain] ${sym}: ${text}`);
+    };
     const finish = async (value: ChainValue): Promise<SharedOptionsChain> => {
       remember(key, value);
       try { await setCached(key, value, CHAIN_CACHE_TTL_SECONDS); } catch { /* Redis optional */ }
@@ -202,7 +213,7 @@ export async function fetchSharedOptionsChain<T = Record<string, any>>(
       const skipUntil = providerSkip.get(fn);
       if (skipUntil && skipUntil > Date.now()) {
         warnings.push(`${fn}:skipped_not_entitled`);
-        issue(`${fn}: skipped (recently answered "not entitled" for this API key)`);
+        issue(`${fn}: skipped until ${new Date(skipUntil).toISOString()} (it recently answered "not entitled" for this API key)`);
         continue;
       }
       const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(sym)}&require_greeks=true&apikey=${opts.apiKey}`;
@@ -212,22 +223,34 @@ export async function fetchSharedOptionsChain<T = Record<string, any>>(
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         warnings.push(`${fn}:fetch_failed`);
-        issue(`${fn}: ${message.slice(0, 200)}`);
+        issue(`${fn}: ${message.slice(0, 300)}`);
         if (fn !== 'HISTORICAL_OPTIONS' && /premium endpoint|not entitled|entitlement/i.test(message) && !/rate limit|requests per|quota/i.test(message)) providerSkip.set(fn, Date.now() + NOT_ENTITLED_SKIP_MS);
-        console.warn(`[optionsChain] ${fn} ${sym} unavailable: ${message.slice(0, 200)}`);
         continue;
       }
       if (!payload) {
         warnings.push(`${fn}:no_data`);
-        issue(`${fn}: no contracts returned`);
+        issue(`${fn}: no payload returned (Alpha Vantage "Error Message" or HTTP 404)`);
         continue;
       }
       const rows = usableOptionRows(payload, sym);
       if (!rows) {
-        const sample = Array.isArray(payload?.data) && payload.data.length > 0;
-        warnings.push(sample ? `${fn}:not_entitled_sample_data` : `${fn}:empty_data`);
-        issue(`${fn}: ${sample ? 'artificial sample / wrong-symbol chain (API key not entitled to this endpoint)' : 'no contracts returned'}`);
-        if (sample && fn !== 'HISTORICAL_OPTIONS') providerSkip.set(fn, Date.now() + NOT_ENTITLED_SKIP_MS);
+        // Only Alpha Vantage's artificial "premium endpoint" sample means "not entitled". A chain for a different
+        // symbol used to be treated the same way, which switched realtime options off for EVERY symbol for an hour.
+        const sample = isAlphaVantageSampleChain(payload);
+        const hasRows = Array.isArray(payload?.data) && payload.data.length > 0;
+        const avMessage = typeof payload?.message === 'string' ? ` Alpha Vantage says: "${payload.message.slice(0, 300)}"` : '';
+        if (sample) {
+          warnings.push(`${fn}:not_entitled_sample_data`);
+          issue(`${fn}: artificial sample chain (API key not entitled to this endpoint).${avMessage}`);
+          if (fn !== 'HISTORICAL_OPTIONS') providerSkip.set(fn, Date.now() + NOT_ENTITLED_SKIP_MS);
+        } else if (hasRows) {
+          const got = String(payload.data[0]?.symbol ?? '?');
+          warnings.push(`${fn}:wrong_symbol`);
+          issue(`${fn}: contracts are for ${got}, not ${sym}`);
+        } else {
+          warnings.push(`${fn}:empty_data`);
+          issue(`${fn}: no contracts returned.${avMessage}`);
+        }
         continue;
       }
       const payloadMeta = { date: payload?.date, lastRefreshed: payload?.lastRefreshed, last_refreshed: payload?.last_refreshed };
@@ -254,6 +277,9 @@ export async function fetchSharedOptionsChain<T = Record<string, any>>(
         return finish(thinRealtime);
       }
       if (fn === 'HISTORICAL_OPTIONS' && thinRealtime) warnings.push(`${fn}:used_for_quotes_previous_session`);
+      if (fn === 'HISTORICAL_OPTIONS' && reasons.length) {
+        console.warn(`[optionsChain] ${sym}: using HISTORICAL_OPTIONS (previous session${value.asOfDate ? ` ${value.asOfDate}` : ''}) because: ${reasons.join(' | ')}`);
+      }
       return finish(value);
     }
     if (thinRealtime) {
