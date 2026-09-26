@@ -46,6 +46,8 @@ export interface FragilityInput {
   dataAsOf: string;
   providersUsed: string[];
   sourceStatus: FragilitySourceStatus;
+  /** Symbols skipped because the loader's time budget ran out (RS-16); they count as missing. */
+  timedOut?: string[];
 }
 
 export interface FragilityConfig {

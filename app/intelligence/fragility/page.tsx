@@ -25,7 +25,7 @@ const RADAR_COLUMNS: IntelColumn[] = [
 ];
 
 export default function FragilityPage() {
-  const { data, loading, error, updatedAt } = useEndpoint<FragilityResult>('/api/intelligence/fragility');
+  const { data, loading, error, updatedAt, retry } = useEndpoint<FragilityResult>('/api/intelligence/fragility');
 
   return (
     <div>
@@ -37,7 +37,14 @@ export default function FragilityPage() {
       </header>
 
       {loading && <Note>Loading Market Fragility…</Note>}
-      {error && <Note tone="error">Could not load: {error}</Note>}
+      {error && (
+        <Note tone="error">
+          Could not load: {error}{' '}
+          <button type="button" onClick={retry} disabled={loading} style={{ marginLeft: 8, padding: '2px 10px', borderRadius: 6, border: '1px solid var(--msp-border)', background: 'transparent', color: 'var(--msp-text)', cursor: 'pointer', fontWeight: 700 }}>
+            Retry
+          </button>
+        </Note>
+      )}
 
       {data && (
         <>
