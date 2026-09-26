@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
+import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 
 /**
  * Scanner Signal Alerts Checker
@@ -429,6 +430,12 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
       console.error('Failed to send signal alert push:', pushErr);
     }
   }
+
+  // The user's own Discord webhook, if enabled (TR-26). Last and never throws.
+  await deliverAlertToUserDiscord(alert.workspace_id, {
+    title: `${alert.name || 'Signal Alert'} (${alert.symbol})`,
+    detail: result.message || `Scanner signal triggered: ${alert.condition_type.replace(/_/g, ' ')}`,
+  });
 
   console.log(`✅ Signal alert triggered: ${alert.name || alert.condition_type} for ${alert.symbol}`);
 }
