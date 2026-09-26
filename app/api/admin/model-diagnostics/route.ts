@@ -1,58 +1,36 @@
 /**
- * GET /api/admin/model-diagnostics — Calibration + drift snapshot for the
- * MSP research model. Aggregates score buckets from `admin_research_cases`
- * and contrasts them with realised outcomes recorded in `signal_outcomes`
- * (or `signals_outcomes`).
+ * GET /api/admin/model-diagnostics — Calibration + drift snapshot for the MSP research model.
  *
- * BOUNDARY: read-only model telemetry. No re-training, no parameter
- * mutation. This is a diagnostics window only.
+ * Scores come from two places:
+ *   - `admin_research_cases.score` (saved research cases; that table has no outcome column, so cases only
+ *     fill the bucket counts / average score, never the hit rate);
+ *   - `ai_signal_log` (migrations/048), workspace 'operator-terminal' (same as /api/admin/signals/stats):
+ *     `confidence` (0–100) is the score and `outcome` (pending / correct / wrong / neutral / expired) the label.
+ *
+ * Only outcomes measured by the fixed labeller (outcome_measured_at >= LABELLER_FIX_AT) count as labelled.
+ * Verdicts written by the old labelling method are reported separately (`oldMethodLabelled`), not mixed in.
+ *
+ * It used to read `signal_outcomes` / `signals_outcomes` with `score` / `created_at` columns that don't exist,
+ * so the outcome side was always empty.
+ *
+ * BOUNDARY: read-only model telemetry. No re-training, no parameter mutation. This is a diagnostics window only.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
+import { LABELLER_FIX_AT } from "@/app/api/admin/signals/stats/route";
+import { computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
 
 export const runtime = "nodejs";
 
-interface CalibrationBucket {
-  band: string;
-  min: number;
-  max: number;
-  cases: number;
-  hitRate: number | null;
-  avgScore: number | null;
-}
-
-interface OutcomeRow {
-  score?: number | string | null;
-  outcome?: string | null;
-}
-
-const BANDS: Array<{ label: string; min: number; max: number }> = [
-  { label: "0–24", min: 0, max: 24 },
-  { label: "25–44", min: 25, max: 44 },
-  { label: "45–59", min: 45, max: 59 },
-  { label: "60–74", min: 60, max: 74 },
-  { label: "75–100", min: 75, max: 100 },
-];
-
-function bucketFor(score: number) {
-  return BANDS.findIndex((b) => score >= b.min && score <= b.max);
-}
-
-function isWinningOutcome(outcome: string | null | undefined): boolean | null {
-  if (!outcome) return null;
-  const u = outcome.toUpperCase();
-  if (u.includes("WIN") || u.includes("HIT") || u.includes("TARGET") || u.includes("TP")) return true;
-  if (u.includes("LOSS") || u.includes("STOP") || u.includes("MISS") || u.includes("SL")) return false;
-  return null;
-}
+const SIGNAL_WORKSPACE = "operator-terminal";
 
 async function loadCases(): Promise<OutcomeRow[]> {
   try {
-    const rows = await q(
-      "SELECT score, outcome FROM admin_research_cases ORDER BY created_at DESC LIMIT 1000",
+    const rows = await q<OutcomeRow>(
+      "SELECT score, NULL::text AS outcome FROM admin_research_cases ORDER BY created_at DESC LIMIT 1000",
     );
     return rows ?? [];
   } catch {
@@ -60,18 +38,38 @@ async function loadCases(): Promise<OutcomeRow[]> {
   }
 }
 
-async function loadSignalOutcomes(): Promise<OutcomeRow[]> {
-  for (const table of ["signal_outcomes", "signals_outcomes"]) {
-    try {
-      const rows = await q(
-        `SELECT score, outcome FROM ${table} ORDER BY created_at DESC LIMIT 1000`,
-      );
-      if (Array.isArray(rows)) return rows;
-    } catch {
-      // Try the next table name.
-    }
+interface SignalLoad {
+  rows: OutcomeRow[];
+  oldMethodLabelled: number;
+  error: string | null;
+}
+
+async function loadSignalOutcomes(): Promise<SignalLoad> {
+  try {
+    const [rows, old] = await Promise.all([
+      // Verdicts from before the labeller fix are nulled so they don't count as labelled.
+      q<OutcomeRow>(
+        `SELECT confidence AS score,
+                CASE WHEN outcome IN ('correct', 'wrong', 'neutral', 'expired') AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz)
+                     THEN NULL ELSE outcome END AS outcome
+           FROM ai_signal_log
+          WHERE workspace_id = $1 AND confidence IS NOT NULL
+          ORDER BY signal_at DESC
+          LIMIT 1000`,
+        [SIGNAL_WORKSPACE, LABELLER_FIX_AT],
+      ),
+      q<{ n: string | number }>(
+        `SELECT COUNT(*) AS n
+           FROM ai_signal_log
+          WHERE workspace_id = $1 AND outcome IN ('correct', 'wrong')
+            AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz)`,
+        [SIGNAL_WORKSPACE, LABELLER_FIX_AT],
+      ),
+    ]);
+    return { rows: rows ?? [], oldMethodLabelled: Number(old?.[0]?.n ?? 0) || 0, error: null };
+  } catch (err) {
+    return { rows: [], oldMethodLabelled: 0, error: err instanceof Error ? err.message : String(err) };
   }
-  return [];
 }
 
 export async function GET(req: NextRequest) {
@@ -80,63 +78,19 @@ export async function GET(req: NextRequest) {
   }
 
   const cases = await loadCases();
-  const outcomes = await loadSignalOutcomes();
-  const merged = [...cases, ...outcomes];
-
-  const buckets: CalibrationBucket[] = BANDS.map((b) => ({
-    band: b.label,
-    min: b.min,
-    max: b.max,
-    cases: 0,
-    hitRate: null,
-    avgScore: null,
-  }));
-
-  const sumByBucket = new Array(BANDS.length).fill(0);
-  const winsByBucket = new Array(BANDS.length).fill(0);
-  const labelledByBucket = new Array(BANDS.length).fill(0);
-
-  for (const row of merged) {
-    const score = Number(row.score);
-    if (!Number.isFinite(score)) continue;
-    const idx = bucketFor(score);
-    if (idx < 0) continue;
-    buckets[idx].cases += 1;
-    sumByBucket[idx] += score;
-    const win = isWinningOutcome(row.outcome ?? null);
-    if (win !== null) {
-      labelledByBucket[idx] += 1;
-      if (win) winsByBucket[idx] += 1;
-    }
-  }
-
-  for (let i = 0; i < buckets.length; i++) {
-    if (buckets[i].cases > 0) {
-      buckets[i].avgScore = Math.round((sumByBucket[i] / buckets[i].cases) * 10) / 10;
-    }
-    if (labelledByBucket[i] > 0) {
-      buckets[i].hitRate = Math.round((winsByBucket[i] / labelledByBucket[i]) * 1000) / 10;
-    }
-  }
-
+  const signals = await loadSignalOutcomes();
+  const merged = [...cases, ...signals.rows];
+  const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(merged);
   const totalCases = merged.length;
-  const totalLabelled = labelledByBucket.reduce((a, b) => a + b, 0);
-  const totalWins = winsByBucket.reduce((a, b) => a + b, 0);
-  const overallHitRate = totalLabelled > 0 ? Math.round((totalWins / totalLabelled) * 1000) / 10 : null;
 
-  // Simple monotonicity check: hit rates should not collapse as score
-  // increases. Surface a warning when a higher band is materially worse
-  // than a lower one (>= 5pp drop with both bands populated).
-  const drift: Array<{ from: string; to: string; delta: number }> = [];
-  for (let i = 1; i < buckets.length; i++) {
-    const lo = buckets[i - 1];
-    const hi = buckets[i];
-    if (lo.hitRate !== null && hi.hitRate !== null && hi.cases >= 5 && lo.cases >= 5) {
-      const delta = Math.round((hi.hitRate - lo.hitRate) * 10) / 10;
-      if (delta <= -5) {
-        drift.push({ from: lo.band, to: hi.band, delta });
-      }
-    }
+  let note: string | null = null;
+  if (totalCases === 0) {
+    note = "No research cases or ai_signal_log signals recorded yet — save research cases from the Symbol Research terminal or let the shared scan log signals to populate this view.";
+  } else if (totalLabelled === 0) {
+    note = `No outcomes labelled by the fixed labeller yet (since ${LABELLER_FIX_AT}). Hit rates stay empty until signals are measured` +
+      (signals.oldMethodLabelled > 0 ? `; ${signals.oldMethodLabelled} old-method verdict(s) are excluded.` : ".");
+  } else if (signals.oldMethodLabelled > 0) {
+    note = `${signals.oldMethodLabelled} verdict(s) from the old labelling method (before ${LABELLER_FIX_AT}) are excluded from hit rates.`;
   }
 
   return NextResponse.json({
@@ -147,10 +101,14 @@ export async function GET(req: NextRequest) {
     overallHitRate,
     buckets,
     drift,
-    note:
-      totalCases === 0
-        ? "No cases or signal outcomes recorded yet — save research cases from the Symbol Research terminal to populate this view."
-        : null,
+    sources: {
+      researchCases: cases.length,
+      aiSignalLog: signals.rows.length,
+      aiSignalLogError: signals.error,
+      labelledSince: LABELLER_FIX_AT,
+      oldMethodLabelled: signals.oldMethodLabelled,
+    },
+    note,
     truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }),
   });
 }

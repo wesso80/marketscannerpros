@@ -4,6 +4,9 @@
  * Platform-wide usage analytics for the admin dashboard.
  * Covers: DAU/WAU/MAU, feature adoption, scan volume,
  * conversion funnel, trade activity, and retention.
+ *
+ * trade_outcomes has no created_at column (migrations 051/055: entry_ts, exit_ts, computed_at), so trade
+ * activity is dated by COALESCE(exit_ts, computed_at). The old created_at queries always failed and showed 0.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -100,7 +103,7 @@ export async function GET(req: NextRequest) {
           safe('feature_adoption_portfolio', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM portfolio_positions`)),
           safe('feature_adoption_ai', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM ai_usage WHERE created_at > NOW() - INTERVAL '30 days'`)),
           safe('feature_adoption_scanner', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM scan_usage WHERE scan_date > CURRENT_DATE - 30`)),
-          safe('feature_adoption_outcomes', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM trade_outcomes WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe('feature_adoption_outcomes', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM trade_outcomes WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '30 days'`)),
           safe('feature_adoption_total', degradation, () => q(`SELECT COUNT(*)::int AS n FROM user_subscriptions WHERE status IN ('active','trialing')`)),
         ]);
         return [{
@@ -117,16 +120,16 @@ export async function GET(req: NextRequest) {
       safe('trade_activity', degradation, () => q(`
         SELECT
           (SELECT COUNT(*) FROM trade_outcomes
-           WHERE created_at > NOW() - INTERVAL '30 days') AS trades_30d,
+           WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '30 days') AS trades_30d,
           (SELECT COUNT(*) FROM trade_outcomes
-           WHERE created_at > NOW() - INTERVAL '7 days') AS trades_7d,
+           WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '7 days') AS trades_7d,
           (SELECT COUNT(*) FROM trade_outcomes
-           WHERE created_at > NOW() - INTERVAL '24 hours') AS trades_today,
+           WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '24 hours') AS trades_today,
           (SELECT ROUND(AVG(CASE WHEN outcome = 'win' THEN 1.0 ELSE 0.0 END) * 100, 1)
            FROM trade_outcomes
-           WHERE created_at > NOW() - INTERVAL '30 days') AS avg_win_rate,
+           WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '30 days') AS avg_win_rate,
           (SELECT ROUND(AVG(r_multiple)::numeric, 2) FROM trade_outcomes
-           WHERE created_at > NOW() - INTERVAL '30 days' AND r_multiple IS NOT NULL) AS avg_r_multiple
+           WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '30 days' AND r_multiple IS NOT NULL) AS avg_r_multiple
       `)),
 
       // ─── Tier distribution (current) ───
@@ -167,7 +170,7 @@ export async function GET(req: NextRequest) {
         ) scans ON scans.workspace_id = us.workspace_id
         LEFT JOIN (
           SELECT workspace_id, COUNT(*) AS cnt FROM trade_outcomes
-          WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY workspace_id
+          WHERE COALESCE(exit_ts, computed_at) > NOW() - INTERVAL '7 days' GROUP BY workspace_id
         ) trades ON trades.workspace_id = us.workspace_id
         LEFT JOIN (
           SELECT workspace_id, COUNT(*) AS cnt FROM ai_usage
