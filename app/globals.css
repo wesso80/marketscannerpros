@@ -1140,7 +1140,7 @@ button.truncate {
     min-width: 0 !important;
     /* Wrap a long unbroken string (URL, hash) only when it can't fit on its own line.
        Was word-break: break-word, which also let flex/grid items shrink to one character
-       wide and split ordinary words mid-word ("GO/OGL", "Unavail/able") on phones. */
+       wide and split ordinary words mid-word ("GOO/GL", "Weekl/y") on phones. */
     overflow-wrap: break-word;
   }
 
