@@ -236,7 +236,8 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     expect(sc.hypotheticalRisk).toEqual({ riskPct: 0.5 });
     // Setup panel invalidation text
     expect(out.layer2.setup.invalidation).toBe('The canonical short setup is invalidated by a close above 104.5.');
-    expect(out.layer2.setup.thesis).toBe('legacy thesis');
+    // RS-13 follow-up: the Setup thesis leads with the canonical short, legacy text kept only as secondary context.
+    expect(out.layer2.setup.thesis).toBe('TEST: the canonical engine reads a short exhaustion fade setup (score 95/100, qualifies). Older confluence model (secondary context only): legacy thesis');
     // Deep Analysis packet
     const pk = out.canonical!;
     expect(pk.levels.invalidation.price).toBeGreaterThan(price);
@@ -246,6 +247,33 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     expect(pk.invalidation[0]).toMatch(/close above 104.5/);
     // Legacy levels stay available as secondary context
     expect(out.legacyConfluence!.levels!.invalidation.price).toBe(104);
+  });
+
+  it('Setup thesis follows the canonical direction, not the legacy one', () => {
+    const legacyThesis = 'TEST shows a bullish range-bound setup (no trend strength (ADX 17)). ADX 17 weak trend. Options positioning is bullish (P/C 0.62 on 2026-10-02). Market pressure at 64/100 supports the thesis. Time confluence is bullish with strong signal strength (supportive).';
+    const short = result({ permission: 'PASS', grade: 'A', direction: 'short', setupType: 'EXHAUSTION_FADE', score: 88, blockReasons: [], watchReasons: [],
+      levels: { entry: 100, invalidation: 104, target: 94, riskReward: 1.5, invalidationBasis: 'recent_extreme', targetBasis: 'ema20', flags: [] } });
+    for (const legacyDir of ['LONG', 'NEUTRAL'] as const) {
+      const p = payload();
+      p.layer1.direction = legacyDir;
+      p.layer2.setup.thesis = legacyThesis;
+      const t = applyCanonicalToGoldenEgg(p, short).layer2.setup.thesis;
+      expect(t).toBe('TEST: the canonical engine reads a short exhaustion fade setup (score 88/100, qualifies). ADX 17 weak trend. Options positioning is bullish (P/C 0.62 on 2026-10-02). Market pressure is 64/100. Time confluence is bullish with strong signal strength, against the canonical short. The older confluence model read a bullish range-bound setup (no trend strength (ADX 17)) (secondary context only).');
+      expect(t).not.toMatch(/supports the thesis|TEST shows a bullish/);
+    }
+    // Same direction: the legacy thesis is left alone.
+    const p = payload(); // legacy SHORT
+    p.layer2.setup.thesis = 'TEST shows a bearish trend continuation setup (ADX 31 confirms trend strength).';
+    expect(applyCanonicalToGoldenEgg(p, short).layer2.setup.thesis).toBe('TEST shows a bearish trend continuation setup (ADX 31 confirms trend strength).');
+    // No canonical setup while legacy says bullish: no directional thesis.
+    const none = result({ permission: 'BLOCK', grade: 'F', direction: 'neutral', setupType: 'NONE', score: 0, levels: null, blockReasons: [{ code: 'NO_SETUP', message: 'No eligible setup' }], watchReasons: [] });
+    const q = payload();
+    q.layer1.direction = 'LONG';
+    q.layer2.setup.thesis = legacyThesis;
+    const tn = applyCanonicalToGoldenEgg(q, none).layer2.setup.thesis;
+    expect(tn).toMatch(/^TEST: no canonical setup qualifies right now, so there is no directional thesis\. /);
+    expect(tn).toContain('Time confluence is bullish with strong signal strength.');
+    expect(tn).toMatch(/The older confluence model read a bullish range-bound setup .* \(secondary context only\)\.$/);
   });
 
   it('RS-13: a canonical long puts the stop below price and the target above it', () => {
