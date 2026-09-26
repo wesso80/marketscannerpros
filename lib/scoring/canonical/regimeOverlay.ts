@@ -32,12 +32,16 @@ export const REGIME_OVERLAY_POLICY = {
   sizeFloor: 0.4,
 } as const;
 
-export interface IndexTrend { close: number; sma50: number; sma200: number; /** Latest bar time (ISO), when known. */ asOf?: string | null }
+/** Where an input came from: the app's own tables, or a read-time fallback when those were stale (OV-1). */
+export type RegimeInputSource = 'stored' | 'fred-csv' | 'alpha-vantage';
+
+export interface IndexTrend { close: number; sma50: number; sma200: number; /** Latest bar time (ISO), when known. */ asOf?: string | null; source?: RegimeInputSource }
 
 export interface RegimeOverlayInputs {
+  /** VIX observation date (kept for existing callers; same as vix.asOf). */
   asOf?: string | null;
-  vix?: { level: number; change5dPct?: number | null } | null;
-  hyOas?: { level: number; change20dPp?: number | null } | null;
+  vix?: { level: number; change5dPct?: number | null; asOf?: string | null; source?: RegimeInputSource } | null;
+  hyOas?: { level: number; change20dPp?: number | null; asOf?: string | null; source?: RegimeInputSource } | null;
   m2?: { change3mPct: number } | null;
   spy?: IndexTrend | null;
   qqq?: IndexTrend | null;

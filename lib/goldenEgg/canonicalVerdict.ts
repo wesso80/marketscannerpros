@@ -10,8 +10,8 @@ import type { PriceData } from '@/lib/goldenEggFetchers';
 import { evaluateCanonicalFromBars } from '@/lib/scoring/canonical/engine';
 import { evaluateRegimeOverlay, overlayForDirection, type RegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlay';
 import { SETUP_LABEL } from '@/lib/scoring/canonical/scannerAdapter';
-import { targetBasisLabel } from '@/lib/scoring/canonical/display';
-import type { CanonicalAssetClass, CanonicalBar, CanonicalReason, CanonicalResult } from '@/lib/scoring/canonical/types';
+import { noSetupDisplay, targetBasisLabel } from '@/lib/scoring/canonical/display';
+import type { CanonicalAssetClass, CanonicalBar, CanonicalLevels, CanonicalReason, CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { Direction, GoldenEggPayload, PublicAssessment } from '@/src/features/goldenEgg/types';
 
 /** Most bars the Golden Egg canonical verdict reads: enough for an SMA-seeded EMA200 to converge (1,000 bars leave
@@ -85,8 +85,10 @@ export type GoldenEggLegacyConfluence = NonNullable<GoldenEggPayload['legacyConf
  * Deep Analysis and signal recording read — layer1.assessment/direction/grade/primaryBlocker/flipConditions and
  * payload.canonical.verdict — now agree with the canonical engine. The v2 confluence score stays available as
  * `layer1.confluenceScore` / `layer1.confidence` and, with its original grade/assessment, in `legacyConfluence`.
- * When the canonical direction differs from the legacy direction, the packet levels are replaced by the canonical
- * levels so invalidation/targets never describe the opposite trade.
+ * Whenever a canonical setup with levels exists, every level panel's data — the Golden Egg scenario (layer2.scenario:
+ * reference/trigger, invalidation, reaction zones, R), layer2.setup.invalidation and the packet levels /
+ * confirmation / invalidation that Deep Analysis reads — is rebuilt from the canonical setup's own direction and
+ * levels, so a canonical short never shows the legacy engine's long stop/targets (RS-13).
  */
 export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: CanonicalResult): GoldenEggPayload {
   const l1 = payload.layer1;
@@ -116,43 +118,96 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
     legacyConfluence: legacy,
   };
 
+  const lv = canonicalSetupLevels(c);
+  if (lv) {
+    const long = c.direction === 'long';
+    out.layer2 = {
+      ...payload.layer2,
+      setup: { ...payload.layer2?.setup, invalidation: `The canonical ${c.direction} setup is invalidated by a close ${long ? 'below' : 'above'} ${fmtLevel(lv.invalidation)}.` },
+      scenario: {
+        referenceTrigger: `${setup} ${c.direction}: canonical entry ${fmtLevel(lv.entry)} (last close); the setup holds while price stays ${long ? 'above' : 'below'} ${fmtLevel(lv.invalidation)}`,
+        referenceLevel: { type: c.permission === 'PASS' ? 'reference' : 'confirmation', price: lv.entry },
+        invalidationLevel: { price: lv.invalidation, logic: invalidationLogic(lv, long) },
+        reactionZones: [{ price: lv.target, rMultiple: lv.riskReward, note: `Canonical target (${targetBasisLabel(lv)})` }],
+        hypotheticalRr: { expectedR: lv.riskReward, minR: payload.layer2?.scenario?.hypotheticalRr?.minR ?? 1.5 },
+        ...(payload.layer2?.scenario?.hypotheticalRisk ? { hypotheticalRisk: payload.layer2.scenario.hypotheticalRisk } : {}),
+      },
+    };
+  }
+
   if (payload.canonical) {
     const packet = { ...payload.canonical };
     packet.verdict = { ...packet.verdict, assessment, direction, grade: c.grade, primaryBlocker: primaryBlocker ?? null, setupType: c.setupType === 'NONE' ? packet.verdict.setupType : c.setupType, setupNote: c.setupType === 'NONE' ? packet.verdict.setupNote : `${setup} (canonical ${c.score}/100, ${c.permission})` };
-    if (c.levels && c.direction !== 'neutral' && direction !== l1.direction) {
-      const lv = c.levels;
+    if (lv) {
       const mech = lv.invalidationBasis === 'atr_fallback';
+      const above = c.direction === 'long';
       packet.levels = {
         reference: { price: lv.entry, basis: 'structural', label: 'Canonical entry (last close)' },
-        invalidation: { price: lv.invalidation, basis: mech ? 'mechanical' : 'structural', label: `Canonical invalidation (${lv.invalidationBasis.replace('_', ' ')})`, distanceAtr: null },
+        invalidation: { price: lv.invalidation, basis: mech ? 'mechanical' : 'structural', label: `Canonical invalidation (${lv.invalidationBasis.replace('_', ' ')})`, distanceAtr: typeof lv.riskAtr === 'number' ? lv.riskAtr : null },
         zones: [{ price: lv.target, basis: lv.targetBasis === 'projected' ? 'mechanical' : 'structural', label: `Canonical target (${targetBasisLabel(lv)})`, rMultiple: lv.riskReward }],
         illustrativeR: lv.riskReward,
       };
-    }
-    if (direction !== l1.direction) {
-      // Legacy confirmation/invalidation text described the legacy direction; replace it so nothing reads as the
-      // opposite trade.
-      if (c.levels && c.direction !== 'neutral') {
-        const above = c.direction === 'long';
-        packet.confirmation = [`${setup} ${c.direction} setup holds while price stays ${above ? 'above' : 'below'} ${c.levels.invalidation}`];
-        packet.invalidation = [`A close ${above ? 'below' : 'above'} ${c.levels.invalidation} invalidates the canonical ${c.direction} setup`];
-      } else {
-        packet.confirmation = ['No canonical setup is eligible — wait for a trend-continuation, pullback, squeeze or exhaustion setup to form'];
-        packet.invalidation = [];
-        packet.levels = { ...packet.levels, reference: { ...packet.levels.reference, label: `Legacy confluence: ${packet.levels.reference.label}` } };
-      }
+      packet.confirmation = [`${setup} ${c.direction} setup holds while price stays ${above ? 'above' : 'below'} ${fmtLevel(lv.invalidation)}`];
+      packet.invalidation = [`A close ${above ? 'below' : 'above'} ${fmtLevel(lv.invalidation)} invalidates the canonical ${c.direction} setup`];
+    } else if (direction !== l1.direction) {
+      // No usable canonical setup and the legacy text described another direction: replace it so nothing reads as
+      // the opposite trade.
+      packet.confirmation = ['No canonical setup is eligible — wait for a trend-continuation, pullback, squeeze or exhaustion setup to form'];
+      packet.invalidation = [];
+      packet.levels = { ...packet.levels, reference: { ...packet.levels.reference, label: `Legacy confluence: ${packet.levels.reference.label}` } };
     }
     out.canonical = packet;
   }
   if (out.layer3?.narrative && (assessment !== l1.assessment || direction !== l1.direction)) {
-    const why = primaryBlocker ? ` ${primaryBlocker}.` : '';
-    out.layer3 = {
-      ...out.layer3,
-      narrative: {
-        ...out.layer3.narrative,
-        summary: `${payload.meta.symbol}: canonical verdict ${c.permission} · grade ${c.grade} · ${setup}${c.direction !== 'neutral' ? ` ${c.direction}` : ''}.${why} Legacy confluence ${l1.confluenceScore}/100 read ${l1.assessment} ${l1.direction} (secondary).`,
-      },
-    };
+    out.layer3 = { ...out.layer3, narrative: { ...out.layer3.narrative, summary: canonicalNarrativeSummary(payload.meta.symbol, c, l1) } };
   }
   return out;
+}
+
+/** The canonical setup's levels when a directional setup exists and its geometry matches its direction
+ *  (long: stop < entry < target; short: target < entry < stop); otherwise null. */
+export function canonicalSetupLevels(c: CanonicalResult): CanonicalLevels | null {
+  const lv = c.levels;
+  if (!lv || c.setupType === 'NONE' || c.direction === 'neutral') return null;
+  if (![lv.entry, lv.invalidation, lv.target, lv.riskReward].every((x) => typeof x === 'number' && Number.isFinite(x))) return null;
+  const ok = c.direction === 'long' ? lv.invalidation < lv.entry && lv.target > lv.entry : lv.invalidation > lv.entry && lv.target < lv.entry;
+  return ok ? lv : null;
+}
+
+function fmtLevel(x: number): string {
+  const a = Math.abs(x);
+  return String(Number(x.toFixed(a >= 1000 ? 2 : a >= 1 ? 2 : a >= 0.01 ? 4 : 8)));
+}
+
+function invalidationLogic(lv: CanonicalLevels, long: boolean): string {
+  const side = long ? 'Below' : 'Above';
+  const atr = typeof lv.riskAtr === 'number' && Number.isFinite(lv.riskAtr) ? `, ${Number(lv.riskAtr.toFixed(2))}x ATR from entry` : '';
+  const basis = lv.invalidationBasis === 'swing' ? `the last confirmed swing ${long ? 'low' : 'high'}`
+    : lv.invalidationBasis === 'recent_extreme' ? `the recent exhaustion ${long ? 'low' : 'high'}`
+    : 'an ATR-based model stop (no structural level)';
+  return `${side} ${basis} (canonical setup${atr})`;
+}
+
+const LEGACY_LEAN: Record<Direction, string> = { LONG: 'a bullish lean', SHORT: 'a bearish lean', NEUTRAL: 'no clear lean' };
+const trimStop = (s: string) => s.trim().replace(/[.\s]+$/, '');
+
+/** Plain-sentence Golden Egg narrative summary for the canonical verdict (no raw engine labels such as
+ *  "canonical verdict BLOCK · grade F"). */
+export function canonicalNarrativeSummary(symbol: string, c: CanonicalResult, l1: Pick<GoldenEggPayload['layer1'], 'confluenceScore' | 'direction'>): string {
+  const legacy = ` The older confluence model scores it ${l1.confluenceScore}/100 with ${LEGACY_LEAN[l1.direction] ?? 'no clear lean'} (secondary context only).`;
+  const none = noSetupDisplay(c);
+  if (none) {
+    if (none.kind === 'blocked') return `${symbol}: no trade setup is allowed right now — ${trimStop(none.detail ?? 'blocked')}.${legacy}`;
+    const closest = none.detail?.startsWith('Closest: ') ? ` The closest candidate was ${trimStop(none.detail.slice(9))}.` : none.detail ? ` ${trimStop(none.detail)}.` : '';
+    return `${symbol}: there is no qualifying setup right now.${closest}${legacy}`;
+  }
+  const setup = `${c.direction === 'neutral' ? '' : `${c.direction} `}${(SETUP_LABEL[c.setupType] ?? c.setupType).toLowerCase()} setup`;
+  const reasons = c.permission === 'BLOCK' ? c.blockReasons : c.permission === 'WATCH' ? c.watchReasons : [];
+  const why = reasons[0] ? trimStop(reasons[0].message) : '';
+  const lead = c.permission === 'PASS'
+    ? `${symbol}: a ${setup} qualifies (grade ${c.grade}).`
+    : c.permission === 'WATCH'
+      ? `${symbol}: a ${setup} is forming but is on watch (grade ${c.grade})${why ? ` because ${why.charAt(0).toLowerCase()}${why.slice(1)}` : ''}.`
+      : `${symbol}: a ${setup} was found but is blocked${why ? ` — ${why}` : ''}.`;
+  return `${lead}${legacy}`;
 }
