@@ -17,6 +17,7 @@ import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/u
 import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useRankedQueue } from '@/hooks/useRankedQueue';
+import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
@@ -298,15 +299,16 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
   // Top 5 of the canonical ranked queue — same order a user sees on Scanner. Movers are context, not the queue.
   const scannerQueue = cached.all.slice(0, 5);
   const moverQueue: Mover[] = [];
-  const degradedFeeds = [
-    ...ranked.qualityWarnings,
-    cached.error ? 'Scanner queue' : null,
-    cacheStale ? `Scanner data stale (${cacheAgeMinutes != null ? `${cacheAgeMinutes}m old` : 'age unknown'})` : null,
-    movers.error ? 'Movers' : null,
-    news.error ? 'News' : null,
-    calendar.error ? 'Calendar' : null,
-    !calendar.loading ? calendarDataWarning(calendar.data?.events) : null,
-  ].filter(Boolean);
+  // Same degraded-feed rule and wording as the Session overview (lib/analysis/sessionDataHealth.ts).
+  const degradedFeeds = degradedFeedList({
+    scanner: { warnings: ranked.qualityWarnings, error: cached.error, stale: cacheStale, ageMinutes: cacheAgeMinutes },
+    feeds: [
+      { label: 'Movers', error: movers.error },
+      { label: 'News', error: news.error },
+      { label: 'Calendar', error: calendar.error },
+    ],
+    calendarWarning: !calendar.loading ? calendarDataWarning(calendar.data?.events) : null,
+  });
   const loadingFeeds = [cached.loading, movers.loading, news.loading, calendar.loading].filter(Boolean).length;
   const researchQueueCount = scannerQueue.length + moverQueue.length;
   const highImpactEventCount = highImpactEvents.length;
