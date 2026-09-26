@@ -148,6 +148,8 @@ const nextConfig = {
       // Dashboard surface
       { source: '/tools/crypto-dashboard', destination: '/tools/dashboard?tab=crypto', permanent: true },
       { source: '/tools/crypto', destination: '/tools/explorer?tab=crypto-command', permanent: true },
+      // Diamond Hunter was removed (26 Sep 2026). Temporary (307) so the path can be reused if it ever comes back.
+      { source: '/tools/diamond-hunter', destination: '/tools/explorer?tab=crypto-command', permanent: false },
       { source: '/tools/macro', destination: '/tools/dashboard?tab=macro', permanent: true },
 
       // Scanner surface

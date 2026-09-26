@@ -21,7 +21,6 @@ export const areaLinks: Record<WorkflowArea, Array<{ href: string; label: string
   ],
   scanner: [
     { href: '/tools/scanner', label: 'Ranked & custom scans' },
-    { href: '/tools/diamond-hunter', label: 'Diamond Hunter' },
     { href: '/tools/liquidity-sweep', label: 'Liquidity sweeps' },
     { href: '/tools/scalper', label: 'Intraday scanner' },
   ],
@@ -48,7 +47,7 @@ export const areaLinks: Record<WorkflowArea, Array<{ href: string; label: string
 export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
   if (pathname.includes('backtest') || pathname.includes('signal-accuracy') || (pathname === '/tools/workspace' && tab === 'backtest')) return 'backtest';
   if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlist|alerts|learning)(\/|$)/.test(pathname)) return 'track';
-  if (/\/(scanner|diamond-hunter|liquidity-sweep|scalper)(\/|$)/.test(pathname)) return 'scanner';
+  if (/\/(scanner|liquidity-sweep|scalper)(\/|$)/.test(pathname)) return 'scanner';
   if (pathname.startsWith('/intelligence') || /\/(command-center|dashboard|msp-radar|explorer|markets)(\/|$)/.test(pathname)) return 'overview';
   if (pathname.startsWith('/tools/') && !/\/(referrals|settings|account)$/.test(pathname)) return 'research';
   return null;
@@ -65,7 +64,6 @@ export const toolWorkflows: ToolWorkflow[] = [
   ] },
   { id: 'validate', title: '2. Scanner', subtitle: 'Build a shortlist for a defined universe and timeframe.', outcome: 'Ranked candidates with visible data limitations.', tools: [
     tool('/tools/scanner', 'Ranked & custom scans', 'Rank, filter and inspect research candidates.', 'free', 'primary'),
-    tool('/tools/diamond-hunter', 'Diamond Hunter', 'Manual on-chain discovery and validation.', 'free', 'specialist'),
     tool('/tools/liquidity-sweep', 'Liquidity sweeps', 'Sweep and reclaim research.', 'pro', 'specialist'),
     tool('/tools/scalper', 'Intraday scanner', 'Short-timeframe research with freshness checks.', 'pro', 'specialist'),
   ] },
