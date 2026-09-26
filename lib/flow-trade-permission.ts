@@ -192,6 +192,8 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
   let sizeCapApplied = false;
   let failsSessionConfidence = false;
   let failsSessionLiquidity = false;
+  // Score after the session's additive adjustment but before a failed session gate caps it (see below).
+  let tpsBeforeGate = tps;
 
   if (so) {
     // Apply additive TPS modifier (scaled to 0-1 range)
@@ -204,6 +206,7 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
 
     failsSessionConfidence = failsConfidenceGate;
     failsSessionLiquidity = failsLiquidityGate;
+    tpsBeforeGate = tps;
     if (failsConfidenceGate || failsLiquidityGate) {
       tps = Math.min(tps, (so.minimumTps - 1) / 100); // ensure it falls below the session TPS threshold
     }
@@ -228,18 +231,32 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
   // Use session-specific minimum TPS if provided, otherwise base threshold
   const tpsThreshold = so ? so.minimumTps / 100 : BASE_TPS_THRESHOLD;
   const blocked = autoNoTrade || tps < tpsThreshold;
-  // Blocked only by the session's stricter bar (or its confidence/liquidity minimums), not by the data: the score
-  // clears the standard threshold. Say so, instead of a data-driven "BLOCKED" that reads as weak data.
+  // "Session-limited" (shown as "Unavailable this session") only when the score itself clears the standard threshold
+  // and it is a session requirement that blocks it: the session's higher TPS bar (e.g. midday 70) or one of its
+  // confidence/liquidity minimums. A score below the standard threshold is weak data and reads as a normal BLOCKED,
+  // whatever the session. Never for crypto: it trades 24/7, so there is no session to be "unavailable" in.
   const sessionGateFailed = !!so && (failsSessionConfidence || failsSessionLiquidity);
-  const sessionLimited = !autoNoTrade && blocked && !!so &&
-    (sessionGateFailed || (tpsThreshold > BASE_TPS_THRESHOLD && tps >= BASE_TPS_THRESHOLD));
+  const isCrypto = so?.assetClass === 'crypto';
+  const sessionLimited = !autoNoTrade && blocked && !!so && !isCrypto &&
+    tpsBeforeGate >= BASE_TPS_THRESHOLD &&
+    (sessionGateFailed || tpsThreshold > BASE_TPS_THRESHOLD);
+
+  const pct = (v: number) => Math.round(v * 100);
+  const failedGateText = !so ? '' : failsSessionConfidence
+    ? `state confidence ${Math.round(input.stateConfidence)} is below the ${so.minimumConfidence} minimum`
+    : `liquidity clarity ${Math.round(input.liquidityClarity)} is below the ${so.minimumLiquidityClarity} minimum`;
 
   let reason = 'Permission granted';
   if (autoNoTrade && staleData) reason = 'NO-TRADE MODE: data health stale';
   else if (autoNoTrade) reason = 'NO-TRADE MODE: accumulation + low volatility + unclear liquidity';
-  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: below the session's minimum ${failsSessionConfidence ? 'state confidence' : 'liquidity clarity'}`;
-  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${Math.round(tps * 100)} clears the standard ${Math.round(BASE_TPS_THRESHOLD * 100)} but this session requires ${Math.round(tpsThreshold * 100)}`;
-  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${Math.round(tps * 100)} below threshold (${Math.round(tpsThreshold * 100)})`;
+  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tpsBeforeGate)} clears the standard ${pct(BASE_TPS_THRESHOLD)} but ${failedGateText} for this session`;
+  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tps)} clears the standard ${pct(BASE_TPS_THRESHOLD)} but this session requires ${pct(tpsThreshold)}`;
+  else if (blocked && sessionGateFailed) {
+    reason = tpsBeforeGate < tpsThreshold
+      ? `BLOCKED: Trade Permission Score ${pct(tpsBeforeGate)} below threshold (${pct(tpsThreshold)}); ${failedGateText} for ${sessionLabel(so!.phase)} hours`
+      : `BLOCKED: ${failedGateText} for ${sessionLabel(so!.phase)} hours (Trade Permission Score ${pct(tpsBeforeGate)} would otherwise clear the ${pct(tpsThreshold)} threshold)`;
+  }
+  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${pct(tps)} below threshold (${pct(tpsThreshold)})`;
 
   let scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
 
