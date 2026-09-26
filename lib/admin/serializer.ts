@@ -20,6 +20,7 @@ import { toPermissionState, toBiasState } from "./types";
 import { renderTruth } from "./truth-layer";
 import { computeEliteSignalScore } from "@/lib/operator/elite-score";
 import { nyDateTime, usSessionCloseMinutes } from "@/lib/time/usSession";
+import { computeBbwpPercentile, relativeVolumeRatio } from "@/lib/operator/feature-engine";
 
 /* ── Compute raw indicator values from bars ── */
 function computeRawIndicators(bars: Bar[]) {
@@ -37,7 +38,15 @@ function computeRawIndicators(bars: Bar[]) {
     vwap: vwap(ohlcv) ?? 0,
     atr: atr(ohlcv, 14) ?? 0,
     adx: adxResult?.adx ?? 0,
+    // Scales the admin engines expect (setupClassifier, trapDetection, internalResearchScore): BBWP as a
+    // 0..100 percentile and RVOL as a ratio (1.0 = average). The feature vector holds 0..1 scores instead.
+    bbwpPercentile: Math.round(computeBbwpPercentile(closes) * 1000) / 10,
+    rvol: roundRatio(relativeVolumeRatio(bars)),
   };
+}
+
+function roundRatio(v: number | null): number | null {
+  return v == null || !Number.isFinite(v) ? null : Math.round(v * 100) / 100;
 }
 
 /* ── Day change ── */
@@ -193,9 +202,12 @@ export function pipelineToSymbolIntelligence(
       ema200: raw ? raw.ema200 : null,
       vwap: raw?.vwap ?? 0,
       atr: raw?.atr ?? 0,
-      bbwpPercentile: features?.bbwpPercentile ?? 0,
+      // 0..100 percentile and a plain RVOL ratio. The feature vector's 0..1 scores used to be copied here as-is,
+      // so every snapshot read as a BBWP squeeze (≤10 → "Volatility Contraction"/"Squeeze Expansion") with
+      // "relative volume below baseline" (score 0.33 at average volume vs the 0.7 ratio threshold).
+      bbwpPercentile: features?.bbwpPercentile != null ? Math.round(features.bbwpPercentile * 1000) / 10 : raw?.bbwpPercentile ?? 50,
       adx: raw?.adx ?? 0,
-      rvol: features?.relativeVolumeScore ?? 0,
+      rvol: raw?.rvol ?? (features?.relativeVolumeScore != null ? Math.round(features.relativeVolumeScore * 300) / 100 : 0),
     },
     dve: {
       state: dveFlags.find((f) => f.includes("EXPAND")) ? "EXPANSION" :
@@ -223,6 +235,63 @@ export function pipelineToSymbolIntelligence(
     },
     evidence: v.evidence,
     truth: renderTruth(p, scanTimestamp ?? v.timestamp),
+  };
+}
+
+/* ── Symbol snapshot from bars when no playbook qualified ("no setup") ── */
+/**
+ * Real snapshot for a symbol whose bars were fetched but where the engine found no playbook: last close, day
+ * change, EMAs/ATR/VWAP/ADX/BBWP/RVOL and key levels from the bars — never a zero-filled placeholder. Neutral
+ * bias, WAIT permission, confidence 0, no targets (there is no trade thesis). Bars are not embedded (saved
+ * packets stay small); /api/admin/symbol returns the scan's bars alongside the packet.
+ */
+export function barsToNoSetupIntelligence(input: {
+  symbol: string;
+  timeframe: string;
+  market?: string;
+  bars: Bar[];
+  keyLevels?: KeyLevel[];
+  scanTimestamp: string;
+  dayChangePercent?: number | null;
+  blockReasons?: string[];
+}): AdminSymbolIntelligence {
+  const { bars } = input;
+  const last = bars[bars.length - 1];
+  const raw = computeRawIndicators(bars);
+  const quoted = input.dayChangePercent;
+  const change = (quoted != null && Number.isFinite(quoted) ? quoted : dayChangePercentFromBars(bars, input.market)) ?? 0;
+  const levels = extractLevels(input.keyLevels ?? []);
+  return {
+    symbol: input.symbol,
+    timeframe: input.timeframe,
+    session: last?.session ?? "UNKNOWN",
+    price: last?.close ?? 0,
+    changePercent: Math.round(change * 100) / 100,
+    bias: "NEUTRAL",
+    regime: "UNCLASSIFIED",
+    permission: "WAIT",
+    marketPermission: "WAIT",
+    confidence: 0,
+    symbolTrust: 50,
+    sizeMultiplier: 0,
+    lastScanAt: input.scanTimestamp,
+    blockReasons: input.blockReasons ?? [],
+    penalties: [],
+    playbook: "NO_SETUP",
+    indicators: {
+      ema20: raw.ema20,
+      ema50: raw.ema50,
+      ema200: raw.ema200,
+      vwap: raw.vwap,
+      atr: raw.atr,
+      bbwpPercentile: raw.bbwpPercentile,
+      adx: raw.adx,
+      rvol: raw.rvol ?? 0,
+    },
+    dve: { state: "NEUTRAL", direction: "NEUTRAL", persistence: 0, breakoutReadiness: 0, trap: false, exhaustion: false },
+    timeConfluence: { score: 0, hotWindow: false, alignmentCount: 0, nextClusterAt: "" },
+    levels: { ...levels, vwap: levels.vwap || raw.vwap },
+    targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
   };
 }
 

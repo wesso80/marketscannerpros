@@ -1,12 +1,12 @@
 import type { Bar, Market } from "@/types/operator";
 import { runScan, type MarketDataProvider, type ScanContext, type ScanResult } from "@/lib/operator/orchestrator";
 import { alphaVantageProvider, memoizeProvider } from "@/lib/operator/market-data";
-import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
+import { barsToNoSetupIntelligence, pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { closedMarketDataTruth, closedSessionForBar } from "@/lib/admin/closedMarket";
 import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
-import { classifySetup } from "@/lib/engines/setupClassifier";
+import { classifySetup, getSetupDefinition } from "@/lib/engines/setupClassifier";
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
 import { buildJournalDNA, computeJournalPatternBoost, type JournalCaseRow } from "@/lib/engines/journalLearning";
 import { computeOptionsIntelligence, type OptionsIntelligence } from "@/lib/engines/optionsIntelligence";
@@ -229,6 +229,21 @@ function assessAlertEligibility(packet: {
   return { eligible: reasons.length === 0, reasons };
 }
 
+export const NO_SETUP_REASON = "No setup detected: no playbook qualified on these bars.";
+
+/** Research score for a "no setup" packet: 0, lifecycle NO_EDGE (DATA_DEGRADED still wins), labelled NO_SETUP. */
+export function noSetupScore(score: InternalResearchScore): InternalResearchScore {
+  return {
+    ...score,
+    score: 0,
+    trustAdjustedScore: 0,
+    lifecycle: score.lifecycle === "DATA_DEGRADED" ? "DATA_DEGRADED" : "NO_EDGE",
+    scoreDecayReason: `NO_SETUP: ${NO_SETUP_REASON}`,
+    dominantAxis: null,
+    notes: [NO_SETUP_REASON, ...score.notes],
+  };
+}
+
 export interface AdminResearchPacketParams {
   symbol: string;
   market?: Market | string;
@@ -274,33 +289,47 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   const bars = await provider.getBars(symbol, market, timeframe).catch(() => [] as Bar[]);
   const noBars = bars.length === 0;
   const pipeline = result.pipelines[0];
-  const snapshot = pipeline
+  // Bars but no playbook = "no setup": a real snapshot from the bars (price, change, indicators, levels), never
+  // zeros. Zeros used to be classified as "Volatility Contraction" (zero width reads as compression).
+  const noSetup = !pipeline && !noBars && result.errors.filter((e) => e.symbol === symbol).length === 0;
+  const snapshot: AdminSymbolIntelligence = pipeline
     ? pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp, {
         market,
         dayChangePercent: params.quote?.changePercent ?? null,
       })
-    : ({
-        symbol,
-        timeframe,
-        session: "UNKNOWN",
-        price: 0,
-        changePercent: 0,
-        bias: "NEUTRAL",
-        regime: "ROTATIONAL_RANGE",
-        permission: "WAIT",
-        marketPermission: "WAIT",
-        confidence: 0,
-        symbolTrust: 50,
-        sizeMultiplier: 0,
-        lastScanAt: result.timestamp,
-        blockReasons: result.errors.map((e) => e.error),
-        penalties: [],
-        indicators: { ema20: 0, ema50: 0, ema200: null, vwap: 0, atr: 0, bbwpPercentile: 0, adx: 0, rvol: 0 },
-        dve: { state: "NEUTRAL", direction: "NEUTRAL", persistence: 0, breakoutReadiness: 0, trap: false, exhaustion: false },
-        timeConfluence: { score: 0, hotWindow: false, alignmentCount: 0, nextClusterAt: "" },
-        levels: { pdh: 0, pdl: 0, weeklyHigh: 0, weeklyLow: 0, monthlyHigh: 0, monthlyLow: 0, midpoint: 0, vwap: 0 },
-        targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
-      } as AdminSymbolIntelligence);
+    : !noBars
+      ? barsToNoSetupIntelligence({
+          symbol,
+          timeframe,
+          market,
+          bars,
+          keyLevels: await provider.getKeyLevels(symbol, market).catch(() => []),
+          scanTimestamp: result.timestamp,
+          dayChangePercent: params.quote?.changePercent ?? null,
+          blockReasons: result.errors.filter((e) => e.symbol === symbol).map((e) => e.error),
+        })
+      : ({
+          symbol,
+          timeframe,
+          session: "UNKNOWN",
+          price: 0,
+          changePercent: 0,
+          bias: "NEUTRAL",
+          regime: "UNCLASSIFIED",
+          permission: "WAIT",
+          marketPermission: "WAIT",
+          confidence: 0,
+          symbolTrust: 50,
+          sizeMultiplier: 0,
+          lastScanAt: result.timestamp,
+          blockReasons: result.errors.map((e) => e.error),
+          penalties: [],
+          indicators: { ema20: 0, ema50: 0, ema200: null, vwap: 0, atr: 0, bbwpPercentile: 50, adx: 0, rvol: 0 },
+          dve: { state: "NEUTRAL", direction: "NEUTRAL", persistence: 0, breakoutReadiness: 0, trap: false, exhaustion: false },
+          timeConfluence: { score: 0, hotWindow: false, alignmentCount: 0, nextClusterAt: "" },
+          levels: { pdh: 0, pdl: 0, weeklyHigh: 0, weeklyLow: 0, monthlyHigh: 0, monthlyLow: 0, midpoint: 0, vwap: 0 },
+          targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
+        } as AdminSymbolIntelligence);
 
   // Age from the newest bar. With no bars there is no age (it used to be "now", i.e. fresh) and the
   // packet is marked as a source error so it ranks as failed/degraded, never as fresh data.
@@ -324,7 +353,8 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
         sourceErrors,
       });
 
-  const setup = classifySetup(snapshot);
+  // No pipeline (no setup, or no bars) → explicit NO_SETUP; classifySetup only runs on a real engine snapshot.
+  const setup = pipeline ? classifySetup(snapshot) : getSetupDefinition("NO_SETUP");
   const journalCases = await loadJournalCases(symbol, market);
   const dna = buildJournalDNA(journalCases, {
     symbol,
@@ -336,11 +366,14 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   });
   const journalBoost = computeJournalPatternBoost(dna.matches);
 
-  const internalResearchScore = computeInternalResearchScore({
+  const scored = computeInternalResearchScore({
     snapshot,
     dataTruth,
     journalPatternBoost: journalBoost,
   });
+  // No setup: nothing to score. Score 0 with a NO_SETUP reason and NO_EDGE lifecycle (unless the data itself is
+  // degraded), so no ranking, alert gate or bot treats indicator-only axes as a research score.
+  const internalResearchScore = noSetup ? noSetupScore(scored) : scored;
 
   const optionsScore = Math.max(0, Math.min(100, Math.round((snapshot.evidence?.crossMarketConfirmation ?? 0.5) * 100)));
   const trap = detectTrapRisk({
@@ -387,7 +420,7 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
         })
       : { enabled: false as const, note: "Crypto context not applicable for equities." };
 
-  const eligibility = assessAlertEligibility({
+  const assessed = assessAlertEligibility({
     score: internalResearchScore,
     dataTruth,
     lifecycle: internalResearchScore.lifecycle,
@@ -395,6 +428,9 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
     trapRiskScore: trap.trapRiskScore,
     setupType: setup.type,
   });
+  const eligibility = noSetup
+    ? { eligible: false, reasons: [...new Set([NO_SETUP_REASON, ...assessed.reasons])] }
+    : assessed;
 
   const arcaContext = buildArcaContext({
     symbol,
@@ -472,8 +508,10 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
     trapDetection: trap,
     lifecycle: internalResearchScore.lifecycle,
     bias: snapshot.bias,
-    primaryReason: internalResearchScore.dominantAxis ? `Dominant evidence axis: ${internalResearchScore.dominantAxis}` : "No dominant evidence axis.",
-    mainRisk: trap.reasons[0] ?? "No acute trap signature detected.",
+    primaryReason: noSetup
+      ? NO_SETUP_REASON
+      : internalResearchScore.dominantAxis ? `Dominant evidence axis: ${internalResearchScore.dominantAxis}` : "No dominant evidence axis.",
+    mainRisk: noSetup ? "No setup detected; nothing to act on." : trap.reasons[0] ?? "No acute trap signature detected.",
     whatChanged: FIRST_SCAN_WHAT_CHANGED,
     alertEligibility: eligibility,
     arcaContext,

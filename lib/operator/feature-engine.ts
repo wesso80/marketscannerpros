@@ -157,7 +157,8 @@ function computeAtrPercentile(ohlcv: OHLCVBar[]): number {
  * BBWP: Bollinger Band Width Percentile.
  * Uses bbWidthPercent over a rolling window.
  */
-function computeBbwpPercentile(closes: number[]): number {
+/** Bollinger-band-width percentile, 0..1 (0.5 when there is too little history). */
+export function computeBbwpPercentile(closes: number[]): number {
   if (closes.length < 40) return 0.5;
   const lookback = Math.min(100, closes.length - 20);
   const widths: number[] = [];
@@ -471,18 +472,26 @@ function computeFundingPressureProxy(bars: Bar[]): number {
  * Uses max(current, previous) to handle partial current-day bars
  * (daily data fetched during market hours has incomplete volume).
  */
-function computeRelativeVolume(bars: Bar[]): number {
-  if (bars.length < 10) return 0.5;
+/**
+ * Relative volume as a plain ratio (1.0 = average), or null when there is too little history.
+ * Uses the higher of the last two bars' volume to handle a partial last bar.
+ */
+export function relativeVolumeRatio(bars: Bar[]): number | null {
+  if (bars.length < 10) return null;
   const current = bars[bars.length - 1].volume;
   const prev = bars.length >= 2 ? bars[bars.length - 2].volume : current;
-  // Use the higher of current or previous to handle partial bars
   const effectiveVol = Math.max(current, prev);
   const histBars = bars.slice(0, -2);
-  if (histBars.length < 5) return 0.5;
+  if (histBars.length < 5) return null;
   const avg = histBars.reduce((s, b) => s + b.volume, 0) / histBars.length;
-  if (avg <= 0) return 0.5;
-  const rvol = effectiveVol / avg;
-  // RVOL 1.0 = average → 0.5; 2.0+ = very high → ~0.85; 3.0+ → 1.0
+  if (avg <= 0) return null;
+  return effectiveVol / avg;
+}
+
+function computeRelativeVolume(bars: Bar[]): number {
+  const rvol = relativeVolumeRatio(bars);
+  if (rvol == null) return 0.5;
+  // RVOL 1.0 = average → 0.33; 2.0 → 0.67; 3.0+ → 1.0 (a 0..1 score, not the ratio)
   return clamp(rvol / 3, 0, 1);
 }
 

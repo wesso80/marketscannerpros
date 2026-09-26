@@ -5,6 +5,7 @@ import Link from "next/link";
 import AdminCard from "@/components/admin/shared/AdminCard";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import StatusPill from "@/components/admin/shared/StatusPill";
+import { fetchWithTimeout } from "@/lib/admin/fetchWithTimeout";
 
 type Tone = "green" | "yellow" | "red" | "blue" | "purple" | "neutral";
 
@@ -163,12 +164,15 @@ export default function CommanderPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/morning-brief?scanLimit=20", { headers: authHeaders(), cache: "no-store" });
+      // The newest saved brief (cron or admin rebuild); the Morning Brief page has the Rebuild action.
+      const res = await fetchWithTimeout("/api/admin/morning-brief", { headers: authHeaders(), cache: "no-store" }, 60_000);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `Commander refresh failed (${res.status})`);
       setBrief(data.brief);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load commander view");
+      setError(err instanceof Error && err.name === "AbortError"
+        ? "Timed out after 60 s loading the saved brief. Try Refresh again in a minute."
+        : err instanceof Error ? err.message : "Unable to load commander view");
     } finally {
       setLoading(false);
     }
