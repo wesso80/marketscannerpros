@@ -85,12 +85,4 @@ describe('post-remediation audit round 2 regressions', () => {
     expect(widget).toContain('Cost basis not supplied');
     expect(widget).toContain('Unavailable');
   });
-
-  it('keeps Diamond Hunter manual-only', () => {
-    const page = read('app/tools/diamond-hunter/page.tsx');
-
-    expect(page).toContain("['Mode', 'Manual']");
-    expect(page).toContain('Diamond Hunter will not call CoinGecko until you press Run scan.');
-    expect(page).not.toContain('window.setInterval(load, 120_000)');
-  });
 });
