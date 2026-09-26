@@ -72,7 +72,11 @@ export interface SharedScanRequest {
   symbols?: string[];
   /** Overrides for this run (e.g. manual rescan uses maxAgeMin 0). */
   config?: Partial<SharedScanConfig>;
-  /** Log pipelines to ai_signal_log (manual rescans only, as the old live admin scan did). */
+  /**
+   * Log pipelines to ai_signal_log for outcome labelling. Default: every run (cron, radar, edge, page, manual), tagged
+   * with the trigger in decision_trace; pass false to opt out. It used to be manual rescans only, so the calls the
+   * Terminal / Priority Desk / Opportunity Board show between rescans were never measured.
+   */
   recordSignals?: boolean;
   /** Full-scan every due symbol (up to maxDeepScans) instead of shortlisting by quote (manual symbol rescans). */
   forceDeep?: boolean;
@@ -311,7 +315,7 @@ async function executeRun(input: {
             } else {
               summary.scanned += 1;
               radarInputs.push({ symbol, before: previous?.radar ?? null, after: radar });
-              if (req.recordSignals) toRecord.push(...scan.result.pipelines);
+              if (req.recordSignals !== false) toRecord.push(...scan.result.pipelines);
             }
           } catch (err) {
             summary.failed += 1;
@@ -322,7 +326,8 @@ async function executeRun(input: {
 
         summary.radarChanges = diffRadar(radarInputs, new Date().toISOString());
         if (toRecord.length > 0) {
-          await recordSignals(toRecord, market, timeframe).catch((err) => console.error("[sharedScan] signal recording failed:", err));
+          await recordSignals(toRecord, market, timeframe, Date.now(), { trigger: req.trigger, runId })
+            .catch((err) => console.error("[sharedScan] signal recording failed:", err));
         }
         const appeared = summary.radarChanges.filter((c) => c.action === "appeared");
         if (appeared.length > 0) {

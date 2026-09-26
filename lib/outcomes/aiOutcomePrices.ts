@@ -154,17 +154,21 @@ export interface ResolvedHorizonPrice extends HorizonPrice {
  */
 export function createHorizonPriceResolver(nowMs: number, fetchers: BarFetchers = defaultBarFetchers) {
   const memo = new Map<string, Promise<PriceBar[] | null>>();
+  /** Distinct bar fetches this run (≈ provider calls: intraday = one AV call; daily may come from the cache). */
+  const counts = { intraday: 0, daily: 0 };
   const load = (kind: keyof BarFetchers, symbol: string) => {
     const k = `${kind}:${symbol}`;
     let p = memo.get(k);
     if (!p) {
+      if (kind === 'equityIntraday' || kind === 'cryptoIntraday') counts.intraday += 1;
+      else counts.daily += 1;
       p = fetchers[kind](symbol).catch(() => null);
       memo.set(k, p);
     }
     return p;
   };
 
-  return async function resolve(
+  const resolve = async function resolve(
     symbol: string,
     assetClass: OutcomeAssetClass,
     signalAtMs: number,
@@ -180,4 +184,11 @@ export function createHorizonPriceResolver(nowMs: number, fetchers: BarFetchers 
     const fromDaily = daily ? priceAtOrAfter(daily, target, nowMs) : null;
     return fromDaily ? { ...fromDaily, source: 'daily' } : null;
   };
+  return Object.assign(resolve, {
+    /** Bar fetches started so far this run, by kind. */
+    fetchCounts: () => ({ ...counts }),
+    /** True when this symbol's bars for the horizon's first lookup are already loaded (costs no new call). */
+    hasLoaded: (symbol: string, assetClass: OutcomeAssetClass) =>
+      memo.has(`${assetClass === 'crypto' ? 'cryptoIntraday' : 'equityIntraday'}:${symbol}`),
+  });
 }

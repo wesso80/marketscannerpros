@@ -3,8 +3,9 @@
  *
  * Serves the operator-engine hits saved by the shared admin scan (lib/admin/sharedScan.ts) instead of
  * running the engine live on every poll (~144 Alpha Vantage calls per minute with the terminal open).
- * "Rescan now" is POST /api/admin/scan (rate-limited, overlap-protected); it also logs the rescanned
- * pipelines to ai_signal_log, which this route used to do on every poll.
+ * "Rescan now" is POST /api/admin/scan (rate-limited, overlap-protected). Every shared-scan run (cron, radar,
+ * edge, page, manual) logs its pipelines to ai_signal_log (deduped per symbol + playbook + direction + NY day),
+ * which this route used to do on every poll.
  *
  * Query params:
  *   ?symbols=ADA,SUI,MATIC,FET (comma-separated, optional filter)

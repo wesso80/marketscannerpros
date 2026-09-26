@@ -6,6 +6,7 @@ import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { wrapTruth } from "@/lib/admin";
 import { isDataDegraded, isRankable, readSavedScan, scanStatusForResponse, type SavedPacket } from "@/lib/admin/sharedScan";
+import { recordAdminCalls, savedPacketCall, type AdminCallInput } from "@/lib/admin/adminCallLog";
 
 export const runtime = "nodejs";
 
@@ -28,6 +29,20 @@ const lastTopKeys = new Map<string, string>();
 /** "MA, NVDA, AAPL" — the best-list symbols in rank order; "" when nothing ranks (no event). */
 export function priorityDeskTopKey(top: Pick<SavedPacket, "symbol">[], max = 5): string {
   return top.slice(0, max).map((p) => p.symbol).join(", ");
+}
+
+/**
+ * The Priority Desk's calls: every symbol in the best equities / crypto lists (with its rank) plus the ARCA top
+ * candidate. Logged to ai_signal_log (admin-call:priority-desk) when the top list changes, for outcome labelling.
+ */
+export function priorityDeskCalls(bestEquities: SavedPacket[], bestCrypto: SavedPacket[], arcaTop: SavedPacket | null, nowMs: number = Date.now()): AdminCallInput[] {
+  const calls: AdminCallInput[] = [];
+  const add = (list: SavedPacket[], listName: string) =>
+    list.forEach((p, i) => calls.push(savedPacketCall(p, "priority-desk", { verdict: `${listName} #${i + 1}`, trace: { list: listName, rank: i + 1 }, calledAtMs: nowMs })));
+  add(bestEquities, "bestEquities");
+  add(bestCrypto, "bestCrypto");
+  if (arcaTop) calls.push(savedPacketCall(arcaTop, "priority-desk", { verdict: "ARCA top", trace: { list: "arcaTopCandidate", rank: 1 }, calledAtMs: nowMs }));
+  return calls;
 }
 
 function topBy(packets: SavedPacket[], predicate: (p: SavedPacket) => boolean, max = 6): SavedPacket[] {
@@ -85,6 +100,8 @@ export async function GET(req: NextRequest) {
         degraded: dataDegradedList.length,
       },
     }).catch(() => undefined);
+    // Same trigger as the tape: log the desk's calls with their saved-scan price (deduped per NY day).
+    await recordAdminCalls(priorityDeskCalls(bestEquities, bestCrypto, arcaTopCandidate)).catch(() => undefined);
   }
 
   return NextResponse.json({

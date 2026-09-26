@@ -76,7 +76,7 @@ describe('recordSignals', () => {
 describe('signal stats labelling', () => {
   it('reports since-fix figures, old-method count, directional hit rate and a clear metric label', async () => {
     m.q.mockImplementation(async (sql: string) => {
-      if (String(sql).includes('labeled_since_fix')) {
+      if (String(sql).includes('labeled_old_method')) {
         return [{ total_signals: 300, labeled: 200, pending: 100, correct: 100, wrong: 30, neutral: 50, expired: 20,
           labeled_old_method: 180, labeled_since_fix: 20, correct_since_fix: 8, wrong_since_fix: 4 }];
       }
@@ -92,7 +92,48 @@ describe('signal stats labelling', () => {
     expect(body.sinceFix.accuracyRate).toBe(40);
     expect(body.sinceFix.directionalHitRate).toBe(66.7);
     expect(body.sinceFix.since).toBe(LABELLER_FIX_AT);
-    const overallCall = m.q.mock.calls.find(([sql]) => String(sql).includes('labeled_since_fix'));
+    const overallCall = m.q.mock.calls.find(([sql]) => String(sql).includes('labeled_old_method'));
     expect(overallCall?.[1]).toEqual(['operator-terminal', '2026-09-26T13:52:24Z']);
+  });
+
+  it('averages moves signed to the call direction and breaks since-fix results down by direction, asset, 4h and source', async () => {
+    m.q.mockImplementation(async (sql: string) => {
+      const s = String(sql);
+      if (s.includes('labeled_old_method')) return [{ total_signals: 10, labeled: 6, correct: 3, wrong: 2, avg_move_correct: 1.8, avg_move_wrong: 1.1, avg_signed_move_since_fix: '0.42', neutral_since_fix: 1, labeled_since_fix: 6, correct_since_fix: 3, wrong_since_fix: 2 }];
+      if (s.includes('GROUP BY regime')) return [{ regime: 'TREND_UP', total: 8, correct: 5, wrong: 1, labeled: 7, correct_since_fix: 2, wrong_since_fix: 2, labeled_since_fix: 4 }];
+      if (s.includes('GROUPING SETS ((UPPER')) return [
+        { dir: 'LONG', asset: null, labeled: 4, correct: 3, wrong: 1, neutral: 0, avg_signed_move: '0.9' },
+        { dir: 'SHORT', asset: null, labeled: 2, correct: 0, wrong: 1, neutral: 1, avg_signed_move: '-0.5' },
+        { dir: null, asset: 'equity', labeled: 6, correct: 3, wrong: 2, neutral: 1, avg_signed_move: '0.42' },
+      ];
+      if (s.includes('outcome_4h IN')) return [{ dir: null, labeled: 5, correct: 2, wrong: 2, neutral: 1, avg_signed_move: '0.1' }];
+      if (s.includes("LIKE 'admin-call:%'")) return [{ source: 'admin-call:priority-desk', total: 12, pending: 9, labeled: 3, correct: 2, wrong: 1, neutral: 0, avg_signed_move: '0.7', first_at: null }];
+      return [];
+    });
+    const body = await (await statsGET(new Request('http://x/api/admin/signals/stats') as never)).json();
+    const all = m.q.mock.calls.map(([s]) => String(s)).join('\n');
+    // SHORT moves are flipped before averaging (a correct short counts positive)
+    expect(all).toContain("CASE WHEN UPPER(trade_bias) = 'SHORT' THEN -pct_move_24h ELSE pct_move_24h END");
+    expect(all).toContain("CASE WHEN UPPER(trade_bias) = 'SHORT' THEN -pct_move_4h ELSE pct_move_4h END");
+    expect(body.sinceFix.avgSignedMovePct).toBe(0.42);
+    expect(body.sinceFix.neutral).toBe(1);
+    expect(body.sinceFix.byDirection).toEqual([
+      expect.objectContaining({ direction: 'LONG', directionalHitRate: 75, avgSignedMovePct: 0.9 }),
+      expect.objectContaining({ direction: 'SHORT', directionalHitRate: 0, avgSignedMovePct: -0.5 }),
+    ]);
+    expect(body.sinceFix.byAsset).toEqual([expect.objectContaining({ asset: 'equity', labeled: 6 })]);
+    expect(body.sinceFix.horizon4h.overall).toMatchObject({ labeled: 5, directionalHitRate: 50 });
+    expect(body.bySource).toEqual([expect.objectContaining({ source: 'admin-call:priority-desk', total: 12, pending: 9, directionalHitRate: 66.7 })]);
+    // regime bars use since-fix counts
+    expect(body.byRegime[0]).toMatchObject({ correctSinceFix: 2, wrongSinceFix: 2, labeledSinceFix: 4, directionalHitRateSinceFix: 50 });
+  });
+
+  it('4h block is null when the 4h columns are missing', async () => {
+    m.q.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('outcome_4h IN')) throw new Error('column "outcome_4h" does not exist');
+      return [];
+    });
+    const body = await (await statsGET(new Request('http://x/api/admin/signals/stats') as never)).json();
+    expect(body.sinceFix.horizon4h).toBeNull();
   });
 });

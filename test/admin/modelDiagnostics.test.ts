@@ -1,5 +1,6 @@
 /**
- * Model Diagnostics reads ai_signal_log (confidence / outcome), not the nonexistent signal_outcomes columns.
+ * Model Diagnostics reads ai_signal_log (confluence_score by default / outcome), not the nonexistent signal_outcomes
+ * columns, and no longer pads the buckets with outcome-less research cases.
  * correct → win, wrong → loss; only fixed-labeller verdicts (outcome_measured_at >= LABELLER_FIX_AT) count.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -25,7 +26,7 @@ vi.mock("@/lib/db", () => ({
 
 import { GET } from "../../app/api/admin/model-diagnostics/route";
 import { computeCalibration, isWinningOutcome } from "@/lib/admin/modelDiagnostics";
-import { LABELLER_FIX_AT } from "../../app/api/admin/signals/stats/route";
+import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
 
 beforeEach(() => { m.sql = []; m.params = []; m.signals = []; m.old = 0; });
 
@@ -61,11 +62,13 @@ describe("GET /api/admin/model-diagnostics", () => {
     const body = await (await GET(new NextRequest("http://localhost/api/admin/model-diagnostics"))).json();
     const all = m.sql.join("\n");
     expect(all).not.toMatch(/signal_outcomes|signals_outcomes/);
-    expect(all).toMatch(/confidence AS score/);
+    expect(all).toMatch(/confluence_score AS score/);
+    expect(all).not.toMatch(/admin_research_cases/);
     expect(all).toMatch(/outcome_measured_at/);
     const sigParams = m.params[m.sql.findIndex((s) => /FROM ai_signal_log/.test(s))];
     expect(sigParams).toEqual(["operator-terminal", LABELLER_FIX_AT]);
-    expect(body.totalCases).toBe(4); // 1 research case + 3 signals
+    expect(body.totalSignals).toBe(3); // signals only — research cases no longer pad the counts
+    expect(body.scoreField).toBe("confluence");
     expect(body.totalLabelled).toBe(2);
     expect(body.overallHitRate).toBe(50);
     expect(body.sources.oldMethodLabelled).toBe(4);
@@ -77,5 +80,20 @@ describe("GET /api/admin/model-diagnostics", () => {
     const body = await (await GET(new NextRequest("http://localhost/api/admin/model-diagnostics"))).json();
     expect(body.totalLabelled).toBe(0);
     expect(body.note).toMatch(/fixed labeller/);
+  });
+
+  it("buckets on elite_score (rounded) or confidence when asked, and ignores unknown score names", async () => {
+    m.signals = [{ score: 80, outcome: "correct" }];
+    let body = await (await GET(new NextRequest("http://localhost/api/admin/model-diagnostics?score=elite"))).json();
+    expect(m.sql.join("\n")).toMatch(/ROUND\(elite_score\) AS score/);
+    expect(m.sql.join("\n")).toMatch(/elite_score IS NOT NULL/);
+    expect(body.scoreField).toBe("elite");
+    m.sql = [];
+    body = await (await GET(new NextRequest("http://localhost/api/admin/model-diagnostics?score=confidence"))).json();
+    expect(m.sql.join("\n")).toMatch(/confidence AS score/);
+    m.sql = [];
+    body = await (await GET(new NextRequest("http://localhost/api/admin/model-diagnostics?score=1;DROP"))).json();
+    expect(body.scoreField).toBe("confluence");
+    expect(m.sql.join("\n")).not.toMatch(/DROP/);
   });
 });

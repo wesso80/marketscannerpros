@@ -1,17 +1,20 @@
 /**
  * GET /api/admin/model-diagnostics — Calibration + drift snapshot for the MSP research model.
  *
- * Scores come from two places:
- *   - `admin_research_cases.score` (saved research cases; that table has no outcome column, so cases only
- *     fill the bucket counts / average score, never the hit rate);
- *   - `ai_signal_log` (migrations/048), workspace 'operator-terminal' (same as /api/admin/signals/stats):
- *     `confidence` (0–100) is the score and `outcome` (pending / correct / wrong / neutral / expired) the label.
+ * Reads `ai_signal_log` (migrations/048), workspace 'operator-terminal' (the shared-scan signals, same as
+ * /api/admin/signals/stats). `outcome` (pending / correct / wrong / neutral / expired) is the label.
+ *
+ * Score used for the buckets (`?score=`):
+ *   - `confluence` (default): `confluence_score` 0–100 — the scanner's directional confluence, i.e. what the
+ *     calibration question ("do higher scores hit more often?") is actually about;
+ *   - `elite`: `elite_score` (rounded) — the operator composite shown on the Priority Desk;
+ *   - `confidence`: `confidence` 0–100 (the old default; it's the verdict confidence, not the ranking score).
  *
  * Only outcomes measured by the fixed labeller (outcome_measured_at >= LABELLER_FIX_AT) count as labelled.
  * Verdicts written by the old labelling method are reported separately (`oldMethodLabelled`), not mixed in.
  *
- * It used to read `signal_outcomes` / `signals_outcomes` with `score` / `created_at` columns that don't exist,
- * so the outcome side was always empty.
+ * Saved research cases used to be merged in; they have no outcome, so they only padded the bucket counts.
+ * They are no longer included.
  *
  * BOUNDARY: read-only model telemetry. No re-training, no parameter mutation. This is a diagnostics window only.
  */
@@ -20,22 +23,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
-import { LABELLER_FIX_AT } from "@/app/api/admin/signals/stats/route";
+import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
 import { computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
 
 export const runtime = "nodejs";
 
 const SIGNAL_WORKSPACE = "operator-terminal";
 
-async function loadCases(): Promise<OutcomeRow[]> {
-  try {
-    const rows = await q<OutcomeRow>(
-      "SELECT score, NULL::text AS outcome FROM admin_research_cases ORDER BY created_at DESC LIMIT 1000",
-    );
-    return rows ?? [];
-  } catch {
-    return [];
-  }
+export type ScoreField = "confluence" | "elite" | "confidence";
+
+/** Column expression per score option (whitelisted — never interpolate user input). */
+const SCORE_SQL: Record<ScoreField, string> = {
+  confluence: "confluence_score",
+  elite: "ROUND(elite_score)",
+  confidence: "confidence",
+};
+
+const SCORE_COLUMN: Record<ScoreField, string> = {
+  confluence: "confluence_score",
+  elite: "elite_score",
+  confidence: "confidence",
+};
+
+export function parseScoreField(v: string | null | undefined): ScoreField {
+  const s = String(v ?? "").toLowerCase();
+  return s === "elite" || s === "confidence" ? s : "confluence";
 }
 
 interface SignalLoad {
@@ -44,16 +56,16 @@ interface SignalLoad {
   error: string | null;
 }
 
-async function loadSignalOutcomes(): Promise<SignalLoad> {
+async function loadSignalOutcomes(field: ScoreField): Promise<SignalLoad> {
   try {
     const [rows, old] = await Promise.all([
       // Verdicts from before the labeller fix are nulled so they don't count as labelled.
       q<OutcomeRow>(
-        `SELECT confidence AS score,
+        `SELECT ${SCORE_SQL[field]} AS score,
                 CASE WHEN outcome IN ('correct', 'wrong', 'neutral', 'expired') AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz)
                      THEN NULL ELSE outcome END AS outcome
            FROM ai_signal_log
-          WHERE workspace_id = $1 AND confidence IS NOT NULL
+          WHERE workspace_id = $1 AND ${SCORE_COLUMN[field]} IS NOT NULL
           ORDER BY signal_at DESC
           LIMIT 1000`,
         [SIGNAL_WORKSPACE, LABELLER_FIX_AT],
@@ -77,15 +89,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
   }
 
-  const cases = await loadCases();
-  const signals = await loadSignalOutcomes();
-  const merged = [...cases, ...signals.rows];
-  const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(merged);
-  const totalCases = merged.length;
+  const scoreField = parseScoreField(req.nextUrl.searchParams.get("score"));
+  const signals = await loadSignalOutcomes(scoreField);
+  const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(signals.rows);
+  const totalSignals = signals.rows.length;
 
   let note: string | null = null;
-  if (totalCases === 0) {
-    note = "No research cases or ai_signal_log signals recorded yet — save research cases from the Symbol Research terminal or let the shared scan log signals to populate this view.";
+  if (totalSignals === 0) {
+    note = "No ai_signal_log signals recorded yet — every shared-scan run logs its signals, so this fills after the next scan.";
   } else if (totalLabelled === 0) {
     note = `No outcomes labelled by the fixed labeller yet (since ${LABELLER_FIX_AT}). Hit rates stay empty until signals are measured` +
       (signals.oldMethodLabelled > 0 ? `; ${signals.oldMethodLabelled} old-method verdict(s) are excluded.` : ".");
@@ -96,13 +107,16 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     generatedAt: new Date().toISOString(),
-    totalCases,
+    scoreField,
+    scoreColumn: SCORE_COLUMN[scoreField],
+    totalSignals,
+    /** @deprecated same as totalSignals (kept for older clients). */
+    totalCases: totalSignals,
     totalLabelled,
     overallHitRate,
     buckets,
     drift,
     sources: {
-      researchCases: cases.length,
       aiSignalLog: signals.rows.length,
       aiSignalLogError: signals.error,
       labelledSince: LABELLER_FIX_AT,

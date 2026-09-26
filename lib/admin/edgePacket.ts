@@ -88,6 +88,14 @@ export interface AdminEdgePacket {
   thesisStatus: ThesisStatus;
   setupType: string;                  // SetupDefinition.type
   bias: BiasState;
+  /** Source AdminResearchPacket.trustAdjustedScore (0..100). Absent on packets saved before it was carried. */
+  trustAdjustedScore?: number;
+
+  /* snapshot price when the packet was built (the fresher bulk quote when there is one) and when it was observed.
+   * Used to label the call's outcome and by the ARCA simulator to mark positions / fill orders. Absent on
+   * packets saved before it was carried. */
+  price?: number | null;
+  priceAt?: string | null;
 
   /* axis scores (all 0..100, independently scored) */
   asymmetryScore: number;
@@ -221,6 +229,7 @@ export function projectEdgePacket(
   });
 
   const doNothing = evaluateDoNothing(packet);
+  const { price, priceAt } = snapshotPrice(packet, generatedAt);
 
   return {
     packetId: packet.packetId,
@@ -240,6 +249,9 @@ export function projectEdgePacket(
     thesisStatus: deriveThesisStatus(packet, !!doNothing),
     setupType: packet.setup?.type ?? "NO_SETUP",
     bias: (packet.snapshot?.bias ?? "NEUTRAL") as BiasState,
+    trustAdjustedScore: clamp01to100(packet.trustAdjustedScore ?? 0),
+    price,
+    priceAt,
 
     asymmetryScore,
     timingScore,
@@ -271,6 +283,34 @@ export function projectEdgePacket(
     simulated: false,
     missingFields: [],
   };
+}
+
+/**
+ * Price an edge packet was built at, and when it was observed. A saved shared-scan packet carries its newer bulk
+ * quote in savedScan.quote (withFreshQuote copies the price into quote.price); otherwise the price is the packet's
+ * own quote from its last scan.
+ */
+function snapshotPrice(packet: AdminResearchPacket, generatedAt: string): { price: number | null; priceAt: string | null } {
+  const quotePrice = Number(packet.quote?.price);
+  const snapPrice = Number(packet.snapshot?.price);
+  const price = Number.isFinite(quotePrice) && quotePrice > 0 ? quotePrice : Number.isFinite(snapPrice) && snapPrice > 0 ? snapPrice : null;
+  if (price === null) return { price: null, priceAt: null };
+  const saved = (packet as { savedScan?: { quote?: { price?: number | null; quoteAt?: string | null } } }).savedScan?.quote;
+  const priceAt = saved?.quoteAt && Number(saved.price) === price
+    ? saved.quoteAt
+    : packet.quote?.lastScanAt || generatedAt;
+  return { price, priceAt };
+}
+
+/**
+ * Price stored with an edge packet row (`price`, carried since fix/admin-call-logging). Packets saved earlier have
+ * no price: null (the ARCA simulator used to read a `snapshot.price` field edge packets never had, so it never
+ * marked positions or filled orders).
+ */
+export function edgePacketPrice(p: Partial<Pick<AdminEdgePacket, "price" | "priceAt">> | null | undefined): { price: number; at: string | null } | null {
+  const price = Number(p?.price);
+  if (!p || p.price === null || p.price === undefined || !Number.isFinite(price) || price <= 0) return null;
+  return { price, at: p.priceAt ?? null };
 }
 
 /* ────────────── helpers ────────────── */

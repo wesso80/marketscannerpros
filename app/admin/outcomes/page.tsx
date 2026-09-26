@@ -45,6 +45,10 @@ interface Stats {
     labeled: number;
     accuracyRate: number | null;
     avgScore: number | null;
+    correctSinceFix?: number;
+    wrongSinceFix?: number;
+    labeledSinceFix?: number;
+    directionalHitRateSinceFix?: number | null;
   }[];
   byVerdict: {
     verdict: string;
@@ -53,7 +57,12 @@ interface Stats {
     wrong: number;
     labeled: number;
     accuracyRate: number | null;
+    correctSinceFix?: number;
+    wrongSinceFix?: number;
+    labeledSinceFix?: number;
+    directionalHitRateSinceFix?: number | null;
   }[];
+  bySource?: (DirectionalSummary & { source: string; total: number; pending: number; firstAt: string | null })[];
   trend: {
     recent7d: { total: number; correct: number; labeled: number; accuracyRate: number | null };
     prior30d: { total: number; correct: number; labeled: number; accuracyRate: number | null };
@@ -66,7 +75,37 @@ interface Stats {
     wrong: number;
     accuracyRate: number | null;
     directionalHitRate: number | null;
+    neutral?: number;
+    avgSignedMovePct?: number | null;
+    byDirection?: (DirectionalSummary & { direction: string })[];
+    byAsset?: (DirectionalSummary & { asset: string })[];
+    horizon4h?: { overall: DirectionalSummary; byDirection: (DirectionalSummary & { direction: string })[] } | null;
   };
+}
+
+interface DirectionalSummary {
+  labeled: number;
+  correct: number;
+  wrong: number;
+  neutral: number;
+  directionalHitRate: number | null;
+  avgSignedMovePct: number | null;
+}
+
+/** One row of the since-fix breakdown table. */
+function BreakdownRow({ label, s, extra }: { label: string; s: DirectionalSummary; extra?: string }) {
+  return (
+    <tr style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <td style={{ padding: "0.35rem 0.5rem", fontFamily: "monospace", color: "#D1D5DB" }}>{label}</td>
+      <td style={{ padding: "0.35rem 0.5rem", textAlign: "right" }}>{s.labeled}</td>
+      <td style={{ padding: "0.35rem 0.5rem", textAlign: "right", color: "#9CA3AF" }}>{s.correct}/{s.wrong}/{s.neutral}</td>
+      <td style={{ padding: "0.35rem 0.5rem", textAlign: "right", color: "#10B981" }}>{s.directionalHitRate != null ? `${s.directionalHitRate}%` : "—"}</td>
+      <td style={{ padding: "0.35rem 0.5rem", textAlign: "right", color: (s.avgSignedMovePct ?? 0) >= 0 ? "#10B981" : "#EF4444" }}>
+        {s.avgSignedMovePct != null ? `${s.avgSignedMovePct >= 0 ? "+" : ""}${s.avgSignedMovePct.toFixed(2)}%` : "—"}
+      </td>
+      <td style={{ padding: "0.35rem 0.5rem", color: "#6B7280" }}>{extra ?? ""}</td>
+    </tr>
+  );
 }
 
 /* ── Helpers ── */
@@ -289,21 +328,27 @@ export default function OutcomesPage() {
             <StatCard label="Wrong" value={stats?.overall.wrong ?? 0} color="#EF4444" />
             <StatCard label="Pending" value={stats?.overall.pending ?? 0} color="#FBBF24" />
             <StatCard
-              label="Avg Move (✓)"
+              label="Avg move in call's direction (✓)"
               value={stats?.overall.avgMoveCorrect != null ? `${Number(stats.overall.avgMoveCorrect).toFixed(2)}%` : "—"}
               color="#10B981"
             />
             <StatCard
-              label="Avg Move (✗)"
+              label="Avg adverse move (✗)"
               value={stats?.overall.avgMoveWrong != null ? `${Number(stats.overall.avgMoveWrong).toFixed(2)}%` : "—"}
               color="#EF4444"
+            />
+            <StatCard
+              label="Since fix: avg move in call's direction"
+              value={stats?.sinceFix?.avgSignedMovePct != null ? `${stats.sinceFix.avgSignedMovePct.toFixed(2)}%` : "—"}
+              sub="24h, correct + wrong + neutral"
+              color="#10B981"
             />
             <StatCard label="Avg Confluence" value={stats?.overall.avgConfluence ?? "—"} />
           </div>
 
           {stats?.sinceFix?.note && (
             <div style={{ fontSize: "0.72rem", color: "#9CA3AF", marginBottom: "1rem" }}>
-              {stats.sinceFix.note} Breakdowns below are all-time.
+              {stats.sinceFix.note} Regime and verdict bars below use since-fix labels; their signal counts are all-time.
             </div>
           )}
 
@@ -339,6 +384,49 @@ export default function OutcomesPage() {
             </div>
           </div>
 
+          {/* ── Since-fix breakdown: source, direction, asset, 4h ── */}
+          {stats?.sinceFix && (
+            <div style={{
+              background: "rgba(17, 24, 39, 0.6)", border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.5rem", overflowX: "auto",
+            }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#F9FAFB", marginBottom: "0.25rem" }}>
+                Since the labeller fix — by source, direction, asset and horizon
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#6B7280", marginBottom: "0.75rem" }}>
+                Hit = correct ÷ (correct + wrong). Move = average move in the call&apos;s direction (a correct short counts positive).
+                Sources: operator-terminal = shared-scan pipelines; admin-call:* = calls each page showed. No baseline here — see run-first.sql Q2.
+              </div>
+              <table style={{ width: "100%", fontSize: "0.75rem", color: "#E5E7EB", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
+                    <th style={{ padding: "0.35rem 0.5rem" }}>Group</th>
+                    <th style={{ padding: "0.35rem 0.5rem", textAlign: "right" }}>Labelled</th>
+                    <th style={{ padding: "0.35rem 0.5rem", textAlign: "right" }}>C/W/N</th>
+                    <th style={{ padding: "0.35rem 0.5rem", textAlign: "right" }}>Hit</th>
+                    <th style={{ padding: "0.35rem 0.5rem", textAlign: "right" }}>Move</th>
+                    <th style={{ padding: "0.35rem 0.5rem" }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(stats.bySource ?? []).map((r) => (
+                    <BreakdownRow key={`src-${r.source}`} label={r.source} s={r} extra={`${r.total} logged · ${r.pending} pending`} />
+                  ))}
+                  {(stats.sinceFix.byDirection ?? []).map((r) => (
+                    <BreakdownRow key={`dir-${r.direction}`} label={`24h ${r.direction}`} s={r} />
+                  ))}
+                  {(stats.sinceFix.byAsset ?? []).map((r) => (
+                    <BreakdownRow key={`asset-${r.asset}`} label={`24h ${r.asset}`} s={r} />
+                  ))}
+                  {stats.sinceFix.horizon4h && <BreakdownRow label="4h all" s={stats.sinceFix.horizon4h.overall} />}
+                  {(stats.sinceFix.horizon4h?.byDirection ?? []).map((r) => (
+                    <BreakdownRow key={`4h-${r.direction}`} label={`4h ${r.direction}`} s={r} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* ── Regime Breakdown ── */}
           {stats?.byRegime && stats.byRegime.length > 0 && (
             <div style={{
@@ -346,13 +434,13 @@ export default function OutcomesPage() {
               borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.5rem",
             }}>
               <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#F9FAFB", marginBottom: "0.75rem" }}>
-                Accuracy by Regime
+                Accuracy by Regime (since labeller fix)
               </div>
               <div style={{ display: "grid", gap: "0.5rem" }}>
                 {stats.byRegime.map((r) => (
                   <div key={r.regime} style={{ display: "grid", gridTemplateColumns: "140px 1fr 60px", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: "0.75rem", color: "#D1D5DB", fontFamily: "monospace" }}>{r.regime}</span>
-                    <AccuracyBar correct={r.correct} wrong={r.wrong} total={r.labeled} />
+                    <AccuracyBar correct={r.correctSinceFix ?? 0} wrong={r.wrongSinceFix ?? 0} total={r.labeledSinceFix ?? 0} />
                     <span style={{ fontSize: "0.7rem", color: "#6B7280", textAlign: "right" }}>{r.total} sig</span>
                   </div>
                 ))}
@@ -367,13 +455,13 @@ export default function OutcomesPage() {
               borderRadius: "0.75rem", padding: "1rem 1.25rem", marginBottom: "1.5rem",
             }}>
               <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#F9FAFB", marginBottom: "0.75rem" }}>
-                Accuracy by Verdict
+                Accuracy by Verdict (since labeller fix)
               </div>
               <div style={{ display: "grid", gap: "0.5rem" }}>
                 {stats.byVerdict.map((v) => (
                   <div key={v.verdict} style={{ display: "grid", gridTemplateColumns: "140px 1fr 60px", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: "0.75rem", color: permissionColor(v.verdict), fontFamily: "monospace" }}>{v.verdict}</span>
-                    <AccuracyBar correct={v.correct} wrong={v.wrong} total={v.labeled} />
+                    <AccuracyBar correct={v.correctSinceFix ?? 0} wrong={v.wrongSinceFix ?? 0} total={v.labeledSinceFix ?? 0} />
                     <span style={{ fontSize: "0.7rem", color: "#6B7280", textAlign: "right" }}>{v.total} sig</span>
                   </div>
                 ))}

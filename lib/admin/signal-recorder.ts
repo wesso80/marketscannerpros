@@ -36,16 +36,24 @@ export function signalSkipReason(p: CandidatePipeline, market: string, nowMs: nu
   return null;
 }
 
+/** Which shared-scan run produced the signals (cron | radar | edge | manual | page), stored in decision_trace. */
+export interface RecordSignalsMeta {
+  trigger?: string;
+  runId?: string;
+}
+
 /**
  * Record a batch of pipeline results as signals into ai_signal_log.
  * Skips pipelines that can't be graded (see signalSkipReason) and dedupes on symbol + playbook + direction +
  * NY session day (it used to be symbol + regime within 15 minutes, so each rescan re-logged the same setup).
+ * Every shared-scan run records (not only manual rescans); decision_trace.trigger / runId say which run.
  */
 export async function recordSignals(
   pipelines: CandidatePipeline[],
   market: string,
   timeframe: string,
   nowMs: number = Date.now(),
+  meta: RecordSignalsMeta = {},
 ): Promise<number> {
   if (!pipelines.length) return 0;
 
@@ -115,6 +123,9 @@ export async function recordSignals(
             },
             eliteScore: elite,
             scannerVersion: SCANNER_VERSION,
+            source: "shared-scan",
+            trigger: meta.trigger ?? null,
+            runId: meta.runId ?? null,
           }),
         ],
       );

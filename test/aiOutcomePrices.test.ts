@@ -95,4 +95,17 @@ describe('createHorizonPriceResolver', () => {
     expect(await resolve('AAPL', 'equity', signal, '4h')).toBeNull();
     expect(f.equityIntraday).not.toHaveBeenCalled();
   });
+
+  it('counts distinct bar fetches (≈ AV calls) and reports which symbols are already loaded', async () => {
+    const f = fetchers({ cryptoIntraday: vi.fn(async () => [{ closeTime: signal + 5 * 3_600_000, close: 2 }]) });
+    const resolve = createHorizonPriceResolver(now, f);
+    expect(resolve.hasLoaded('AAPL', 'equity')).toBe(false);
+    await resolve('AAPL', 'equity', signal, '24h'); // intraday + daily fallback
+    await resolve('AAPL', 'equity', signal + 60_000, '24h'); // memoised: no new fetch
+    await resolve('BTC', 'crypto', signal, '4h');
+    expect(resolve.fetchCounts()).toEqual({ intraday: 2, daily: 1 });
+    expect(resolve.hasLoaded('AAPL', 'equity')).toBe(true);
+    expect(resolve.hasLoaded('BTC', 'crypto')).toBe(true);
+    expect(resolve.hasLoaded('BTC', 'equity')).toBe(false);
+  });
 });

@@ -21,7 +21,7 @@ const m = vi.hoisted(() => ({
   cgEnabled: vi.fn(() => false),
   cgMarkets: vi.fn(async () => null as unknown),
   entitlement: { downgraded: false },
-  recordSignals: vi.fn(async () => 0),
+  recordSignals: vi.fn(async (..._args: unknown[]) => 0),
   opsAlert: vi.fn(async () => undefined),
 }));
 
@@ -141,8 +141,18 @@ describe('startSharedScan — equities run', () => {
     expect(summary).toMatchObject({ symbolsDue: 3, scanned: 1, quoted: 1, failed: 1, avCalls: 1, vixState: 'unknown', quotesAvailable: true });
     expect(summary.radarChanges.map((c) => `${c.symbol}:${c.action}`)).toEqual(['AAA:appeared']);
     expect(m.opsAlert).toHaveBeenCalledTimes(1);
-    expect(m.recordSignals).not.toHaveBeenCalled();
+    // every shared-scan run logs its signals (not just manual rescans), tagged with the trigger and run id
+    expect(m.recordSignals).toHaveBeenCalledTimes(1);
+    expect(m.recordSignals.mock.calls[0][4]).toEqual({ trigger: 'radar', runId: expect.stringMatching(/^scan_equities_/) });
     expect(m.store.finishRun).toHaveBeenCalledWith(expect.objectContaining({ status: 'done', symbolsScanned: 1, symbolsQuoted: 1, symbolsFailed: 1, avCalls: 1 }));
+  });
+
+  it('recordSignals: false opts a run out of signal logging', async () => {
+    m.avFetch.mockResolvedValue({ data: [{ symbol: 'AAA', close: '100', previous_close: '98' }] });
+    m.buildScan.mockResolvedValue(scanOk('AAA'));
+    const summary = await run({ market: 'EQUITIES', trigger: 'cron', symbols: ['AAA'], recordSignals: false });
+    expect(summary.scanned).toBe(1);
+    expect(m.recordSignals).not.toHaveBeenCalled();
   });
 
   it('a first scan with no bars is saved as failed, never as fresh data', async () => {

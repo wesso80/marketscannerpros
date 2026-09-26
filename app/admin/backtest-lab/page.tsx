@@ -11,6 +11,9 @@ interface SetupBreakdown {
   hitRate: number | null;
   wins: number;
   losses: number;
+  neutral?: number;
+  pending?: number;
+  avgMovePct?: number | null;
 }
 
 interface BacktestLabResponse {
@@ -22,7 +25,7 @@ interface BacktestLabResponse {
   overallAvgScore?: number | null;
   breakdown?: SetupBreakdown[];
   note?: string | null;
-  error?: string;
+  error?: string | null;
 }
 
 function authHeaders(): HeadersInit {
@@ -67,8 +70,10 @@ export default function BacktestLabPage() {
           </div>
           <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: "0.2rem 0 0.4rem" }}>Backtest Lab</h1>
           <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
-            Historical performance of saved research calls grouped by setup and market. Read-only — this lab studies
-            past calls, it does not place anything.
+            How past calls did over the last 90 days: every shared-scan signal (by playbook) and every call an admin
+            page showed (Priority Desk, Morning Brief, alerts, Jarvis, edge packets, ARCA), grouped by setup and market.
+            Wins/losses are fixed-labeller 24h verdicts; hit rate = W ÷ (W + L); avg move is in the call&apos;s direction.
+            Read-only — this lab studies past calls, it does not place anything.
           </p>
         </div>
         <button
@@ -105,7 +110,7 @@ export default function BacktestLabPage() {
               marginBottom: "1.25rem",
             }}
           >
-            <Stat label="Total cases" value={String(data.totalCases ?? 0)} />
+            <Stat label="Logged calls" value={String(data.totalCases ?? 0)} />
             <Stat label="Wins" value={String(data.totalWins ?? 0)} tone="green" />
             <Stat label="Losses" value={String(data.totalLosses ?? 0)} tone="red" />
             <Stat
@@ -148,7 +153,11 @@ export default function BacktestLabPage() {
                       {row.hitRate !== null ? `${row.hitRate}%` : "—"}
                     </div>
                     <div style={{ color: "#94A3B8", fontSize: 11 }}>
-                      {row.cases} cases · {row.wins}W / {row.losses}L · avg score {row.avgScore}
+                      {row.cases} calls · {row.wins}W / {row.losses}L{row.neutral ? ` / ${row.neutral}N` : ""}
+                      {row.pending ? ` · ${row.pending} pending` : ""} · avg score {row.avgScore}
+                      {row.avgMovePct !== null && row.avgMovePct !== undefined
+                        ? ` · avg move ${row.avgMovePct >= 0 ? "+" : ""}${Number(row.avgMovePct).toFixed(2)}%`
+                        : ""}
                     </div>
                   </div>
                 ))}

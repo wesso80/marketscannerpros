@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   q: vi.fn(),
   resolve: vi.fn(),
   createResolver: vi.fn(),
+  hasLoaded: vi.fn(),
 }));
 vi.mock('@/lib/db', () => ({ q: mocks.q }));
 vi.mock('@/lib/adminAuth', () => ({ requireAdmin: vi.fn(async () => ({ ok: false })) }));
@@ -12,7 +13,7 @@ vi.mock('@/lib/opsAlerting', () => ({ alertCronFailure: vi.fn(async () => undefi
 vi.mock('@/lib/admin/notifyAdmin', () => ({ notifyAdmin: vi.fn(async () => undefined) }));
 vi.mock('@/lib/outcomes/aiOutcomePrices', () => ({ createHorizonPriceResolver: mocks.createResolver }));
 
-import { POST } from '@/app/api/cron/label-ai-outcomes/route';
+import { POST, labellerTimeBudgetMs, maxRowsPerHorizon } from '@/app/api/cron/label-ai-outcomes/route';
 
 const NOW = Date.parse('2026-09-26T12:00:00Z');
 const H = 3_600_000;
@@ -57,12 +58,58 @@ beforeEach(() => {
   });
   mocks.resolve.mockReset();
   mocks.createResolver.mockReset();
-  mocks.createResolver.mockReturnValue(mocks.resolve);
+  mocks.hasLoaded.mockReset();
+  mocks.hasLoaded.mockReturnValue(false);
+  mocks.createResolver.mockReturnValue(Object.assign(mocks.resolve, {
+    fetchCounts: () => ({ intraday: 2, daily: 1 }),
+    hasLoaded: mocks.hasLoaded,
+  }));
 });
 
 afterEach(() => {
   vi.useRealTimers();
   delete process.env.CRON_SECRET;
+  delete process.env.AI_OUTCOME_MAX_ROWS;
+  delete process.env.AI_OUTCOME_TIME_BUDGET_MS;
+});
+
+describe('labeller run limits (more rows now that admin pages log calls)', () => {
+  it('defaults to 300 rows per horizon and a 90 s price budget, env-overridable within bounds', () => {
+    expect(maxRowsPerHorizon()).toBe(300);
+    expect(labellerTimeBudgetMs()).toBe(90_000);
+    process.env.AI_OUTCOME_MAX_ROWS = '5000';
+    process.env.AI_OUTCOME_TIME_BUDGET_MS = '30000';
+    expect(maxRowsPerHorizon()).toBe(1000);
+    expect(labellerTimeBudgetMs()).toBe(30_000);
+    process.env.AI_OUTCOME_MAX_ROWS = 'x';
+    process.env.AI_OUTCOME_TIME_BUDGET_MS = '5';
+    expect(maxRowsPerHorizon()).toBe(300);
+    expect(labellerTimeBudgetMs()).toBe(90_000);
+  });
+
+  it('uses the row limit in the candidate query and reports price fetches', async () => {
+    process.env.AI_OUTCOME_MAX_ROWS = '250';
+    state.rows24 = [row(1, 30)];
+    mocks.resolve.mockResolvedValue({ price: 103, at: NOW - 5 * H, source: 'intraday' });
+    const body = await (await POST(req())).json();
+    expect(sqlCalls(/LIMIT 250/).length).toBeGreaterThan(0);
+    expect(body.priceFetches).toEqual({ intraday: 2, daily: 1 });
+    expect(body).toMatchObject({ deferredOverBudget: 0, budgetMs: 90_000 });
+  });
+
+  it('past the time budget, only rows whose bars are already loaded are labelled; the rest wait', async () => {
+    process.env.AI_OUTCOME_TIME_BUDGET_MS = '1000';
+    state.rows24 = [row(1, 30, { symbol: 'AAPL' }), row(2, 29, { symbol: 'MSFT' }), row(3, 28, { symbol: 'AAPL' })];
+    mocks.hasLoaded.mockImplementation((s: string) => s === 'AAPL');
+    mocks.resolve.mockImplementation(async () => {
+      vi.setSystemTime(Date.now() + 2_000); // the first lookup blows the budget
+      return { price: 103, at: NOW - 5 * H, source: 'intraday' };
+    });
+    const body = await (await POST(req())).json();
+    expect(mocks.resolve.mock.calls.map((c) => c[0])).toEqual(['AAPL', 'AAPL']);
+    expect(body.deferredOverBudget).toBe(1);
+    expect(body.horizons['24h'].labeled).toBe(2);
+  });
 });
 
 describe('POST /api/cron/label-ai-outcomes', () => {

@@ -19,6 +19,9 @@ interface DriftRow {
 
 interface ModelDiagnosticsResponse {
   ok: boolean;
+  scoreField?: ScoreField;
+  scoreColumn?: string;
+  totalSignals?: number;
   totalCases?: number;
   totalLabelled?: number;
   overallHitRate?: number | null;
@@ -27,6 +30,14 @@ interface ModelDiagnosticsResponse {
   note?: string | null;
   error?: string;
 }
+
+type ScoreField = "confluence" | "elite" | "confidence";
+
+const SCORE_OPTIONS: { value: ScoreField; label: string }[] = [
+  { value: "confluence", label: "Confluence score" },
+  { value: "elite", label: "Elite score" },
+  { value: "confidence", label: "Confidence" },
+];
 
 function authHeaders(): HeadersInit {
   if (typeof window === "undefined") return {};
@@ -38,11 +49,12 @@ export default function ModelDiagnosticsPage() {
   const [data, setData] = useState<ModelDiagnosticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [scoreField, setScoreField] = useState<ScoreField>("confluence");
 
-  const refresh = async () => {
+  const refresh = async (field: ScoreField = scoreField) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/model-diagnostics", { headers: authHeaders() });
+      const res = await fetch(`/api/admin/model-diagnostics?score=${field}`, { headers: authHeaders() });
       const json = (await res.json().catch(() => ({}))) as ModelDiagnosticsResponse;
       if (!res.ok || !json.ok) {
         setError(json.error || "Failed to load model diagnostics.");
@@ -58,8 +70,9 @@ export default function ModelDiagnosticsPage() {
   };
 
   useEffect(() => {
-    refresh();
-  }, []);
+    refresh(scoreField);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scoreField]);
 
   return (
     <div style={{ color: "#E5E7EB" }}>
@@ -70,12 +83,26 @@ export default function ModelDiagnosticsPage() {
           </div>
           <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: "0.2rem 0 0.4rem" }}>Model Diagnostics</h1>
           <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
-            Calibration of the internal research score against realised outcomes. Read-only telemetry — this page does
-            not retrain or alter the model.
+            Calibration of shared-scan signal scores against realised outcomes (ai_signal_log, fixed-labeller verdicts
+            only). Buckets use the {SCORE_OPTIONS.find((o) => o.value === scoreField)?.label.toLowerCase()}
+            {data?.scoreColumn ? ` (${data.scoreColumn})` : ""}. Read-only telemetry — this page does not retrain or
+            alter the model.
           </p>
         </div>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <select
+          aria-label="Score used for buckets"
+          value={scoreField}
+          onChange={(e) => setScoreField(e.target.value as ScoreField)}
+          style={{
+            padding: "0.45rem 0.6rem", background: "rgba(15,23,42,0.8)", color: "#E5E7EB",
+            border: "1px solid rgba(148,163,184,0.3)", borderRadius: 8, fontSize: 12,
+          }}
+        >
+          {SCORE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
         <button
-          onClick={refresh}
+          onClick={() => refresh()}
           disabled={loading}
           style={{
             padding: "0.5rem 0.9rem",
@@ -90,6 +117,7 @@ export default function ModelDiagnosticsPage() {
         >
           {loading ? "Refreshing…" : "Refresh"}
         </button>
+        </div>
       </header>
 
       {error && (
@@ -108,7 +136,7 @@ export default function ModelDiagnosticsPage() {
               marginBottom: "1.25rem",
             }}
           >
-            <Stat label="Total cases" value={String(data.totalCases ?? 0)} />
+            <Stat label="Signals" value={String(data.totalSignals ?? data.totalCases ?? 0)} />
             <Stat label="Labelled outcomes" value={String(data.totalLabelled ?? 0)} />
             <Stat
               label="Overall hit rate"
@@ -147,7 +175,7 @@ export default function ModelDiagnosticsPage() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "#E5E7EB", fontWeight: 700 }}>Band {b.band}</span>
-                    <span style={{ color: "#64748B", fontSize: 11 }}>{b.cases} cases</span>
+                    <span style={{ color: "#64748B", fontSize: 11 }}>{b.cases} signals</span>
                   </div>
                   <div style={{ color: "#10B981", fontSize: 22, fontWeight: 800, marginTop: 6 }}>
                     {b.hitRate !== null ? `${b.hitRate}%` : "—"}
