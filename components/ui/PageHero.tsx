@@ -77,9 +77,11 @@ export default function PageHero({
       }}
     >
       <div
-        className={hasRightColumn ? "grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]" : ""}
+        className={hasRightColumn ? "grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]" : ""}
       >
-        <div>
+        {/* grid-cols-1 = minmax(0,1fr): without it the single phone-width column grows to the widest metric chip's
+            unwrapped text (nowrap detail lines) and the whole hero overflows the screen. */}
+        <div className="min-w-0">
           <div
             className="flex flex-wrap items-center gap-2"
             style={{ fontSize: "var(--msp-text-label)", color: "var(--msp-text-muted)" }}
@@ -130,7 +132,7 @@ export default function PageHero({
         </div>
 
         {hasRightColumn ? (
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2">
             {metrics!.map((m, i) => <MetricChip key={i} {...m} />)}
           </div>
         ) : null}
