@@ -32,7 +32,7 @@ import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from
 import { crossSectionalPercentiles } from '@/lib/analysis';
 import { scoreProSnapshot, type ProHardBlockContext } from '@/lib/scanner/proScore';
 import { macroEventFlags } from '@/lib/scanner/hardBlocks';
-import { peekEarningsMap, warmEarningsMap } from '@/lib/scanner/earningsCalendar';
+import { peekEarningsMap, peekUnreadableEarningsSymbols, warmEarningsMap } from '@/lib/scanner/earningsCalendar';
 import { compareScannerScores, dollarVolume, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
 import { applyCanonicalToScannerRow, canonicalFeaturesFromCandles, canonicalFeaturesFromRow, compareCanonicalRows, dataWatchFrom, evaluateCanonical, evaluateRegimeOverlay, hardBlocksFrom, overlayForDirection, type CanonicalFeatures, type RegimeOverlayInputs } from '@/lib/scoring/canonical';
 import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
@@ -44,6 +44,7 @@ import { parseProFilters, selectProCandidates, type ProScanFilters, type ProScan
 import { isRetiredFastCryptoRequest, resolveBulkScanMode, type BulkScanMode } from '@/lib/scanner/proScanMode';
 import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 import { cachedMoversToAdd, completedSessionAvgVolume, parseEquityQuote } from '@/lib/scanner/equityScanInputs';
+import { riskOffThresholds } from '@/lib/regime-classifier';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -777,6 +778,8 @@ interface InstitutionalPickScoreV2 {
   context: {
     regime: 'trend' | 'range' | 'expansion' | 'contraction' | 'unknown';
     riskMode: 'risk_on' | 'risk_off' | 'neutral';
+    /** Risk-off thresholds used for this row's asset class (ATR% / today's move %). */
+    riskOffThresholds: { atrPct: number; movePct: number; assetClass: 'equity' | 'crypto' };
     biasAllowed: 'long_only' | 'short_only' | 'both' | 'none';
     contextScore: number;
     tags: string[];
@@ -969,8 +972,12 @@ function deriveRegime(adxValue?: number, atrPercent?: number): InstitutionalPick
   return 'unknown';
 }
 
-function deriveRiskMode(atrPercent?: number, momentumAbs?: number): InstitutionalPickScoreV2['context']['riskMode'] {
-  if ((Number.isFinite(atrPercent) && (atrPercent as number) >= 6) || (Number.isFinite(momentumAbs) && (momentumAbs as number) >= 8)) {
+function deriveRiskMode(
+  atrPercent: number | undefined,
+  momentumAbs: number | undefined,
+  thresholds: { atrPct: number; movePct: number },
+): InstitutionalPickScoreV2['context']['riskMode'] {
+  if ((Number.isFinite(atrPercent) && (atrPercent as number) >= thresholds.atrPct) || (Number.isFinite(momentumAbs) && (momentumAbs as number) >= thresholds.movePct)) {
     return 'risk_off';
   }
   if ((Number.isFinite(atrPercent) && (atrPercent as number) <= 3) && (Number.isFinite(momentumAbs) && (momentumAbs as number) >= 1)) {
@@ -1073,7 +1080,9 @@ function buildInstitutionalPickScoreV2(
   const setupScore = clamp(setupScoreRaw, 0, 100);
 
   const regime = deriveRegime(Number.isFinite(adxValue) ? adxValue : undefined, atrPercent);
-  const riskMode = deriveRiskMode(atrPercent, Math.abs(change24h));
+  // Per-asset-class limits: crypto's normal ATR (6–8%) is not a risk-off tape.
+  const riskOff = riskOffThresholds(params.type);
+  const riskMode = deriveRiskMode(atrPercent, Math.abs(change24h), riskOff);
 
   const biasAllowed: InstitutionalPickScoreV2['context']['biasAllowed'] = !directional
     ? 'none'
@@ -1149,6 +1158,7 @@ function buildInstitutionalPickScoreV2(
     context: {
       regime,
       riskMode,
+      riskOffThresholds: { ...riskOff, assetClass: params.type },
       biasAllowed,
       contextScore: clampInt(contextScore, 0, 100),
       tags,
@@ -1705,7 +1715,7 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   }
   const context = proScoreUniverse(scored, 'equity');
   warmEarningsMap();
-  const hardCtx: ProHardBlockContext = { earningsMap: peekEarningsMap(), macroFlags: macroEventFlags() };
+  const hardCtx: ProHardBlockContext = { earningsMap: peekEarningsMap(), earningsUnreadable: peekUnreadableEarningsSymbols(), macroFlags: macroEventFlags() };
   for (const item of scored) Object.assign(item, scoreProSnapshot(item, 'equity', timeframe, context, false, hardCtx));
 
   // Fetch chartData from ohlcv_bars — ONLY for the top candidates (bounded I/O).
@@ -2011,7 +2021,7 @@ function applyInstitutionalFilterToTopPicks(
   const canonicalAssetClass = params.canonicalAssetClass ?? params.type;
   const regimeOverlay = params.regimeOverlayInputs ? overlayForDirection(evaluateRegimeOverlay(params.regimeOverlayInputs, canonicalAssetClass)) : undefined;
   if (params.type === 'equity') warmEarningsMap();
-  const hardCtx: ProHardBlockContext = { earningsMap: params.type === 'equity' ? peekEarningsMap() : undefined, macroFlags: macroEventFlags() };
+  const hardCtx: ProHardBlockContext = { earningsMap: params.type === 'equity' ? peekEarningsMap() : undefined, earningsUnreadable: params.type === 'equity' ? peekUnreadableEarningsSymbols() : undefined, macroFlags: macroEventFlags() };
   const withFilter = topPicks.map((original) => {
     const initial = scoreProSnapshot(original, params.type, params.timeframe, universe);
     const pick = {...original, ...initial, price: original.indicators?.price ?? original.price, atr: original.indicators?.atr ?? original.atr};

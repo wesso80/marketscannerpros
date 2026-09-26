@@ -13,6 +13,7 @@ import RotationBoard from "@/components/news-decision/RotationBoard";
 import NewsGroup from "@/components/news-decision/NewsGroup";
 import type { DecisionNewsItem, NarrativeGroup, NewsGateModel } from "@/components/news-decision/types";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
+import { NEWS_BRIEF_LABEL } from "@/lib/news/newsBrief";
 import { PageHero } from "@/components/ui";
 
 interface TickerSentiment {
@@ -724,7 +725,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       permission: 'NO', riskState: 'Unavailable', volRegime: 'Unavailable', catalystDensity: 'Unavailable',
       narrativeStrength: 'Unavailable', executionMode: 'Observation', topNarrative: 'No news from the last 24 hours',
       confidencePct: 0, rotationLeaders: [], warnings: ['No current news evidence. Older articles remain in the archive below.'],
-      briefAllowed: ['Refresh current sources'], briefAvoid: ['Inferring current conditions from archived headlines'], sentimentPct: 0, eventRiskLabel: macroEventCard?.event || 'Calendar coverage unverified', eventRiskCountdown: 'Unavailable',
+      briefAllowed: ['Refresh current sources'], briefAvoid: ['Archived headlines older than 24 hours.'], sentimentPct: 0, eventRiskLabel: macroEventCard?.event || 'Calendar coverage unverified', eventRiskCountdown: 'Unavailable',
     };
     const highImpactCount24h = recent.filter((item) => item.impact === 'HIGH').length;
     const macroMentionsCount = recent.filter((item) => item.macroMentions).length;
@@ -770,16 +771,17 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       sentimentPct: clamp(Math.round((bullish / Math.max(1, bullish + bearish)) * 100)),
       eventRiskLabel: macroEventCard?.event || 'No major macro event',
       eventRiskCountdown: macroEventCard?.daysUntil !== null && macroEventCard?.daysUntil !== undefined ? `${macroEventCard.daysUntil}d` : '--',
+      // Descriptive observations only — no instructions to the reader.
       briefAllowed:
         permission === 'NO'
-          ? ['Observation only until shock window clears.', 'Study mode only, no fresh activity.']
+          ? ['Event-shock headlines dominate current coverage.', 'Evidence quality is low while the shock window is open.']
           : permission === 'CONDITIONAL'
-            ? ['Leaders carry the cleaner research evidence.', 'Overstretched moves need confirmation evidence.']
-              : ['Confirmed leaders show the cleanest continuation context.', 'Use standard risk review assumptions.'],
+            ? ['Leading narratives carry the stronger research evidence.', 'Stretched moves lack confirmation evidence.']
+              : ['Leading narratives show the most consistent coverage.', 'No elevated headline-risk flags in current coverage.'],
       briefAvoid:
         volRegime === 'Event Shock'
-            ? ['Headline spikes without confirmation.', 'Mixed-breadth ideas with weak evidence.']
-            : ['Low quality laggards without catalyst support.', 'Repeated entries around conflicting narratives.'],
+            ? ['Headline spikes without confirmation.', 'Mixed-breadth moves with weak evidence.']
+            : ['Laggards without catalyst support.', 'Conflicting narratives around the same names.'],
     };
   }, [filteredNews, groupedNarratives, macroEventCard]);
 
@@ -800,7 +802,8 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
         />}
         <main style={{ padding: embeddedInResearch ? "0" : "24px 16px", display: "flex", justifyContent: "center" }}>
           <div style={{ width: "100%", maxWidth: 960 }}>
-            {!embeddedInResearch && <ComplianceDisclaimer compact />}
+            {/* Shown when embedded in Research too: this page carries AI summaries. */}
+            <ComplianceDisclaimer compact />
             <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
               <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
             </div>
@@ -847,7 +850,8 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       />}
       <main style={{ minHeight: embeddedInResearch ? undefined : "100vh", padding: embeddedInResearch ? "0" : "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%' }}>
-        {!embeddedInResearch && <ComplianceDisclaimer compact />}
+        {/* Shown when embedded in Research too: this page carries AI summaries. */}
+        <ComplianceDisclaimer compact />
 
         {/* Tabs */}
         <div
@@ -1035,7 +1039,10 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
             {newsAIAnalysis && (
               <section className="mb-4 rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4">
-                <div className="mb-2 text-xs text-white/60">Daily Brief</div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-white/60">Daily Brief</div>
+                  <div data-testid="news-brief-ai-label" className="rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-semibold text-amber-200">{NEWS_BRIEF_LABEL}</div>
+                </div>
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/75">
                     <div>• Bias: {newsGate.riskState} with narrative {newsGate.topNarrative}.</div>
@@ -1045,7 +1052,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/75">
                     <div className="mb-1">Scenario Notes:</div>
                     {newsGate.briefAllowed.map((line) => <div key={line}>• {line}</div>)}
-                    <div className="mt-2 mb-1">Avoid:</div>
+                    <div className="mt-2 mb-1">Weak-evidence areas:</div>
                     {newsGate.briefAvoid.map((line) => <div key={line}>• {line}</div>)}
                     {showAdminTools ? <button type="button" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-300/20">Post Daily Brief (Admin)</button> : null}
                   </div>
@@ -1325,7 +1332,10 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
                 {earningsAIAnalysis && (
                   <section className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
-                    <h3 className="mb-2 text-sm font-semibold text-emerald-300">Catalyst Insights</h3>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-emerald-300">Catalyst Insights</h3>
+                      <div className="rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-semibold text-amber-200">{NEWS_BRIEF_LABEL}</div>
+                    </div>
                     <p className="whitespace-pre-wrap text-sm text-white/70">{earningsAIAnalysis}</p>
                   </section>
                 )}

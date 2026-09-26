@@ -39,6 +39,7 @@ type FlowPayload = {
       active: boolean;
       reason: string;
     };
+    sessionLimited?: boolean;
     riskMode: 'low' | 'medium' | 'high';
     sizeMultiplier: number;
     stopStyle: 'tight_structural' | 'structural' | 'atr_trailing' | 'wider_confirmation';
@@ -318,9 +319,13 @@ export default function CapitalFlowCard({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Analysis Matrix</div>
             <div style={{ color: flow.flow_trade_permission.blocked ? 'var(--msp-bear)' : 'var(--msp-bull)', fontSize: '0.72rem', fontWeight: 800 }}>
-              TPS {toNum(flow.flow_trade_permission.tps).toFixed(0)} • {flow.flow_trade_permission.blocked ? 'NOT ALIGNED' : 'ALIGNED'}
+              TPS {toNum(flow.flow_trade_permission.tps).toFixed(0)} • {flow.flow_trade_permission.blocked ? (flow.flow_trade_permission.sessionLimited ? 'UNAVAILABLE THIS SESSION' : 'NOT ALIGNED') : 'ALIGNED'}
             </div>
           </div>
+
+          {flow.flow_trade_permission.blocked && flow.flow_trade_permission.sessionLimited && (
+            <div style={{ color: '#FCD34D', fontSize: '0.7rem' }}>{flow.flow_trade_permission.noTradeMode.reason}</div>
+          )}
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: 'var(--msp-text)', fontSize: '0.72rem' }}>
             <span><strong>Risk:</strong> {flow.flow_trade_permission.riskMode.toUpperCase()}</span>

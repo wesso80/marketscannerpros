@@ -1,5 +1,6 @@
 'use client';
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
+import { formatEventTime } from '@/lib/eventTimeDisplay';
 
 /* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
@@ -16,6 +17,7 @@ import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/u
 import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useRankedQueue } from '@/hooks/useRankedQueue';
+import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
@@ -297,15 +299,16 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
   // Top 5 of the canonical ranked queue — same order a user sees on Scanner. Movers are context, not the queue.
   const scannerQueue = cached.all.slice(0, 5);
   const moverQueue: Mover[] = [];
-  const degradedFeeds = [
-    ...ranked.qualityWarnings,
-    cached.error ? 'Scanner queue' : null,
-    cacheStale ? `Scanner data stale (${cacheAgeMinutes != null ? `${cacheAgeMinutes}m old` : 'age unknown'})` : null,
-    movers.error ? 'Movers' : null,
-    news.error ? 'News' : null,
-    calendar.error ? 'Calendar' : null,
-    !calendar.loading ? calendarDataWarning(calendar.data?.events) : null,
-  ].filter(Boolean);
+  // Same degraded-feed rule and wording as the Session overview (lib/analysis/sessionDataHealth.ts).
+  const degradedFeeds = degradedFeedList({
+    scanner: { warnings: ranked.qualityWarnings, error: cached.error, stale: cacheStale, ageMinutes: cacheAgeMinutes },
+    feeds: [
+      { label: 'Movers', error: movers.error },
+      { label: 'News', error: news.error },
+      { label: 'Calendar', error: calendar.error },
+    ],
+    calendarWarning: !calendar.loading ? calendarDataWarning(calendar.data?.events) : null,
+  });
   const loadingFeeds = [cached.loading, movers.loading, news.loading, calendar.loading].filter(Boolean).length;
   const researchQueueCount = scannerQueue.length + moverQueue.length;
   const highImpactEventCount = highImpactEvents.length;
@@ -849,18 +852,21 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
               <div className="text-xs text-slate-500 py-4 text-center">No high-impact events this period</div>
             ) : (
               <div className="space-y-2">
-                {highImpactEvents.map((e: EconomicEvent, i: number) => (
+                {highImpactEvents.map((e: EconomicEvent, i: number) => {
+                  const shown = formatEventTime(e);
+                  return (
                   <div key={i} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 min-w-0">
                       <ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />
                       <span className="text-white truncate">{e.event}</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 text-slate-500">
-                      <span>{e.date}</span>
-                      <span>{e.time || '—'}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0 text-slate-500" title={shown.title}>
+                      <span>{shown.date}</span>
+                      <span>{shown.time || '—'}</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <button type="button" onClick={() => navigateTo('research')} className="mt-2 block text-[11px] text-emerald-400 hover:underline">Full Calendar &#x203A;</button>

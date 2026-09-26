@@ -36,7 +36,7 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
     market: 'CRYPTO',
     symbols: [
       'BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT',
-      'LINK', 'MATIC', 'UNI', 'NEAR', 'APT', 'SUI', 'FET', 'RNDR',
+      'LINK', 'POL', 'UNI', 'NEAR', 'APT', 'SUI', 'FET', 'RNDR',
     ],
   },
   'crypto-defi': {

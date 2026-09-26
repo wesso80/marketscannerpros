@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
+import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { fetchMPE } from '@/lib/goldenEggFetchers';
 
 /**
@@ -674,6 +675,14 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
     } catch (pushErr) {
       console.error('Failed to send smart alert push:', pushErr);
     }
+  }
+
+  // The user's own Discord webhook, if enabled (TR-26). Last and never throws.
+  if (result.message) {
+    await deliverAlertToUserDiscord(alert.workspace_id, {
+      title: `${alert.name || 'Smart Alert'}${alert.symbol ? ` (${alert.symbol})` : ''}`,
+      detail: result.message,
+    });
   }
 }
 

@@ -13,6 +13,7 @@ import { fetchOptionsSnapshot } from '../../goldenEggFetchers';
 import { findUniverseViolations } from '../../universe/assetClass';
 import type { AssetClass, Bar, CatalystHit } from './types';
 import { budget } from './budget';
+import { earliestReportDates, parseAlphaVantageEarningsCalendar } from '../../earningsCalendarCsv';
 import { OVERVIEW_CACHE_KEY, OVERVIEW_TTL_MS, kvGet, kvSet, type OverviewCache } from './store';
 
 export const SECTOR_ETFS: Record<string, string> = { XLK: 'Technology', XLF: 'Financials', XLV: 'Health Care', XLE: 'Energy', XLY: 'Consumer Discretionary', XLP: 'Consumer Staples', XLI: 'Industrials', XLB: 'Materials', XLU: 'Utilities', XLRE: 'Real Estate', XLC: 'Communication Services' };
@@ -192,9 +193,9 @@ export async function loadEarningsCalendar(): Promise<Record<string, string>> {
     const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
     const text = await res.text();
     if (!text.startsWith('symbol')) return {};
-    const out: Record<string, string> = {};
-    for (const line of text.split('\n').slice(1)) { const [sym, , date] = line.split(','); if (sym && date && !out[sym]) out[sym.toUpperCase()] = date.trim(); }
-    return out;
+    // Quote-aware (names like "FLAGSTAR BANK, N.A."); unreadable dates are skipped and logged, never stored.
+    const parsed = parseAlphaVantageEarningsCalendar(text, { source: 'radar' });
+    return Object.fromEntries(earliestReportDates(parsed.rows));
   } catch { return {}; }
 }
 

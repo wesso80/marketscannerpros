@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { scalpVolumeCell } from '@/lib/scalper/volume';
 import { useUserTier, canAccessScalper } from '@/lib/useUserTier';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import {
+  formatScalpBarAge,
+  isScalpBarStale,
+  rankScalpRows,
+  scalpBarAgeMinutes,
+} from '@/lib/scalper/freshness';
 
 /* ─── Types (mirror API response) ─── */
 type AssetClass = 'crypto' | 'equity';
@@ -16,7 +23,8 @@ interface ScalpSignalData {
   vwapDev: number | null;
   vwapSignal: string;
   volSpike: boolean;
-  volRatio: number;
+  /** null when the source bars carry no volume */
+  volRatio: number | null;
   bbSqueeze: boolean;
   bbBreakout: 'upper' | 'lower' | null;
   bbWidth: number | null;
@@ -31,7 +39,8 @@ interface ScalpResult {
   timeframe: ScalpTimeframe;
   price: number;
   direction: 'long' | 'short' | 'neutral';
-  strength: number;
+  /** null when the latest bar is stale (no score, no rank). */
+  strength: number | null;
   entry: number;
   stop: number;
   target1: number;
@@ -40,10 +49,12 @@ interface ScalpResult {
   signals: ScalpSignalData;
   barCount: number;
   lastBar: string;
+  stale?: boolean;
+  barAgeMinutes?: number | null;
 }
 
 /* ─── Default Watchlists ─── */
-const CRYPTO_DEFAULTS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'MATIC', 'DOT'];
+const CRYPTO_DEFAULTS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'POL', 'DOT'];
 const EQUITY_DEFAULTS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'META', 'GOOGL', 'AMD', 'SPY', 'QQQ'];
 
 /* ─── Helpers ─── */
@@ -70,28 +81,24 @@ function directionLabel(direction: ScalpResult['direction']) {
   return 'Neutral';
 }
 
-function barAgeMinutes(lastBar: string): number | null {
-  if (!lastBar) return null;
-  const normalized = /Z$|[+-]\d{2}:?\d{2}$/.test(lastBar) ? lastBar : lastBar.replace(' ', 'T') + 'Z';
-  const ts = Date.parse(normalized);
-  if (!Number.isFinite(ts)) return null;
-  return Math.max(0, (Date.now() - ts) / 60_000);
-}
-
-function staleThresholdMinutes(timeframe: ScalpTimeframe): number {
-  return timeframe === '5min' ? 15 : 45;
+function rowBarAgeMinutes(result: ScalpResult): number | null {
+  if (result.barAgeMinutes !== undefined) return result.barAgeMinutes;
+  return scalpBarAgeMinutes(result.lastBar, result.assetClass);
 }
 
 function isStaleScalpBar(result: ScalpResult): boolean {
-  const age = barAgeMinutes(result.lastBar);
-  return age != null && age > staleThresholdMinutes(result.timeframe);
+  if (typeof result.stale === 'boolean') return result.stale;
+  return isScalpBarStale(rowBarAgeMinutes(result), result.timeframe);
 }
 
-function formatBarAge(lastBar: string): string {
-  const age = barAgeMinutes(lastBar);
-  if (age == null) return 'age unknown';
-  if (age < 60) return `${Math.round(age)}m old`;
-  return `${(age / 60).toFixed(1)}h old`;
+/** Stale rows never carry a score, direction or rank, even if an older API response sent one. */
+function normalizeScalpRows(rows: ScalpResult[]): ScalpResult[] {
+  return rankScalpRows(
+    rows.map((r) => {
+      const stale = isStaleScalpBar(r);
+      return stale ? { ...r, stale, strength: null, direction: 'neutral' as const, riskReward: 0 } : { ...r, stale };
+    }),
+  );
 }
 
 /* ─── Component ─── */
@@ -133,7 +140,7 @@ export default function ScalperPage() {
       }
 
       const data = await res.json();
-      setResults(data.results || []);
+      setResults(normalizeScalpRows(data.results || []));
       if (data.errors?.length) setErrors(data.errors);
       setLastScan(new Date().toLocaleTimeString());
     } catch {
@@ -363,17 +370,21 @@ export default function ScalperPage() {
                       <tr
                         key={r.symbol}
                         onClick={() => setSelectedRow(isSelected ? null : r.symbol)}
-                        className={`border-b border-slate-800/50 cursor-pointer transition-colors ${isSelected ? 'bg-emerald-900/20' : 'hover:bg-slate-800/40'}`}
+                        className={`border-b border-slate-800/50 cursor-pointer transition-colors ${isSelected ? 'bg-emerald-900/20' : 'hover:bg-slate-800/40'} ${isStaleScalpBar(r) ? 'opacity-60' : ''}`}
                       >
                         <td className="py-2.5 px-2 font-bold text-white">{r.symbol}</td>
                         <td className="py-2.5 px-2">
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
-                              {directionLabel(r.direction)}
-                            </span>
-                            {isStaleScalpBar(r) && (
-                              <span className="rounded border border-rose-400/35 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold text-rose-300">
-                                STALE INPUT · {formatBarAge(r.lastBar)}
+                            {isStaleScalpBar(r) ? (
+                              <span
+                                className="rounded border border-rose-400/35 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold text-rose-300"
+                                title="Latest source bar is too old for this timeframe. No score, direction or rank is given."
+                              >
+                                STALE · UNAVAILABLE · {formatScalpBarAge(rowBarAgeMinutes(r))}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
+                                {directionLabel(r.direction)}
                               </span>
                             )}
                           </div>
@@ -388,7 +399,10 @@ export default function ScalperPage() {
                         </td>
                         <td className="py-2.5 px-2 text-center">{signalDot(r.signals.vwapSignal)}</td>
                         <td className="py-2.5 px-2 text-center">
-                          {r.signals.volSpike ? <span title={`${r.signals.volRatio}x avg`}>🔥</span> : <span className="text-slate-600">—</span>}
+                          {(() => {
+                            const cell = scalpVolumeCell(r.signals.volRatio, r.signals.volSpike);
+                            return <span title={cell.title} className={r.signals.volSpike ? 'font-bold text-amber-300' : 'text-slate-400'}>{cell.text}</span>;
+                          })()}
                         </td>
                         <td className="py-2.5 px-2 text-center">
                           {r.signals.bbSqueeze ? '🔶' : r.signals.bbBreakout ? (r.signals.bbBreakout === 'upper' ? '🟢' : '🔴') : <span className="text-slate-600">—</span>}
@@ -428,7 +442,10 @@ export default function ScalperPage() {
 
 /* ═══════════ Sub-Components ═══════════ */
 
-function StrengthBar({ value }: { value: number }) {
+function StrengthBar({ value }: { value: number | null }) {
+  if (value == null) {
+    return <div className="text-right text-[10px] text-slate-500" title="No score: latest bar is stale">—</div>;
+  }
   const color = value >= 60 ? 'var(--msp-bull)' : value >= 30 ? 'var(--msp-warn)' : 'var(--msp-bear)';
   return (
     <div className="flex items-center gap-1.5 justify-end">
@@ -451,7 +468,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <span className="text-xs text-slate-400">{r.timeframe} · {r.assetClass}</span>
         </div>
         <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
-          {directionLabel(r.direction)} context
+          {isStaleScalpBar(r) ? 'Stale · no context' : `${directionLabel(r.direction)} context`}
         </span>
       </div>
 
@@ -492,7 +509,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <SignalRow icon={signalDot(s.emaCross)} label="EMA Crossover" value={s.emaDetail} color={dirColor(s.emaCross)} />
           <SignalRow icon={signalDot(s.rsiSignal)} label="RSI(7)" value={s.rsi7 != null ? `${s.rsi7.toFixed(1)} — ${s.rsiSignal}` : '—'} color={dirColor(s.rsiSignal)} />
           <SignalRow icon={signalDot(s.vwapSignal)} label="VWAP" value={s.vwapDev != null ? `${s.vwapDev > 0 ? '+' : ''}${s.vwapDev.toFixed(2)}% ${s.vwapSignal}` : '—'} color={dirColor(s.vwapSignal)} />
-          <SignalRow icon={s.volSpike ? '🔥' : '⚪'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
+          <SignalRow icon={s.volSpike ? '🔥' : '⚪'} label="Volume" value={s.volRatio == null ? 'n/a (no volume in source bars)' : `${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
           <SignalRow icon={s.bbSqueeze ? '🔶' : s.bbBreakout ? '💥' : '⚪'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? 'var(--msp-warn)' : s.bbBreakout === 'upper' ? 'var(--msp-bull)' : s.bbBreakout === 'lower' ? 'var(--msp-bear)' : 'var(--msp-flat)'} />
           <SignalRow icon={signalDot(s.macdSignal)} label="MACD" value={s.macdHist != null ? `Hist: ${s.macdHist > 0 ? '+' : ''}${s.macdHist.toFixed(4)} — ${s.macdSignal}` : '—'} color={dirColor(s.macdSignal)} />
           <SignalRow icon="📏" label="ATR(14)" value={s.atr != null ? fmtP(s.atr) : '—'} color="#94A3B8" />
@@ -503,7 +520,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
       <div className="px-4 py-2 border-t border-slate-700/30 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
         <span>{r.barCount} bars</span>
         <span className={isStaleScalpBar(r) ? 'font-bold text-rose-300' : ''}>
-          Last source bar: {r.lastBar} · {formatBarAge(r.lastBar)}{isStaleScalpBar(r) ? ' · STALE FOR THIS CADENCE' : ''}
+          Last source bar: {r.lastBar} · {formatScalpBarAge(rowBarAgeMinutes(r))}{isStaleScalpBar(r) ? ' · STALE FOR THIS CADENCE' : ''}
         </span>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { parseAlphaVantageEarningsCalendar } from '@/lib/earningsCalendarCsv';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -144,27 +145,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Parse CSV
-    const lines = csvText.trim().split("\n");
-    if (lines.length < 2) {
+    // Parse CSV (quote-aware: names like "FLAGSTAR BANK, N.A." keep their date; unreadable dates are skipped and logged)
+    const parsed = parseAlphaVantageEarningsCalendar(csvText, { source: "/api/earnings-calendar" });
+    if (!parsed.rows.length) {
       return NextResponse.json({
         success: false,
         error: "No earnings data available",
       });
     }
 
-    const headers = lines[0].split(",");
-    const earnings = lines.slice(1).map((line) => {
-      const values = line.split(",");
-      return {
-        symbol: values[0]?.trim() || "",
-        name: values[1]?.trim() || "",
-        reportDate: values[2]?.trim() || "",
-        fiscalDateEnding: values[3]?.trim() || "",
-        estimate: values[4] && values[4] !== "None" ? parseFloat(values[4]) : null,
-        currency: values[5]?.trim() || "USD",
-      };
-    }).filter(e => e.symbol); // Remove empty rows
+    const earnings = parsed.rows.map((r) => ({
+      symbol: r.symbol,
+      name: r.name,
+      reportDate: r.reportDate,
+      fiscalDateEnding: r.fiscalDateEnding,
+      estimate: r.estimate,
+      currency: r.currency || "USD",
+    }));
 
     // Optionally fetch recent earnings results for top symbols
     let recentResults: any[] = [];

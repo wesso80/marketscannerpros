@@ -48,8 +48,9 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
         <span className="rounded border px-1.5 py-0.5 font-black" style={{ color, borderColor: color + '66', backgroundColor: color + '14' }} data-testid="canonical-permission">{badge}</span>
         <span className="font-bold text-white">{SETUP_LABEL[c.setupType] ?? c.setupType}</span>
         <span>{c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side'}</span>
-        <span className="font-black text-white">Grade {c.grade}</span>
-        <span title={c.scoreBasis === 'calibrated_expectancy_percentile' ? 'Percentile of calibrated expected R among same-direction setups (display only)' : 'Factor alignment, not a probability'}>{scoreLabel(c)}</span>
+        {/* No setup: grade F and score 0 are engine placeholders, not a grade and a score. */}
+        {noSetup ? null : <span className="font-black text-white">Grade {c.grade}</span>}
+        {noSetup ? null : <span title={c.scoreBasis === 'calibrated_expectancy_percentile' ? 'Percentile of calibrated expected R among same-direction setups (display only)' : 'Factor alignment, not a probability'}>{scoreLabel(c)}</span>}
         {(c.permission === 'BLOCK' ? [] : cautionTags(c)).map((t) => <span key={t} className="rounded border border-amber-400/40 px-1 text-amber-300" data-testid="canonical-caution">{t}</span>)}
         {c.sizeMultiplier < 1 && c.permission !== 'BLOCK' ? <span className="text-amber-300">size ×{c.sizeMultiplier}</span> : null}
         <span className="text-slate-500">bar {c.barDate ? c.barDate.slice(0, 10) : 'unknown'} · coverage {Math.round(c.coverage * 100)}%</span>

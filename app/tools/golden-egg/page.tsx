@@ -29,7 +29,7 @@ import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
-import { NO_EDGE_BANNER, calibrationSummary, cautionTags, scoreLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, calibrationSummary, cautionTags, noSetupDisplay, scoreLabel } from '@/lib/scoring/canonical/display';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -416,6 +416,10 @@ export default function GoldenEggPage() {
   // Canonical engine verdict (primary). The confluence score above is the secondary "legacy confluence" when present.
   const geEngine = ge?.canonicalVerdict ?? null;
   const geSetupLabel = geEngine ? geEngine.setupType.replace(/_/g, ' ').toLowerCase() : null;
+  // No canonical setup on this bar: the engine's score 0 / grade F are placeholders, so show "No qualifying setup" and
+  // the closest candidate's reason instead. A hard block on a no-setup bar keeps its BLOCK wording.
+  const geNoSetup = noSetupDisplay(geEngine);
+  const geNoQualifyingSetup = geNoSetup?.kind === 'no_setup';
   const geScenario = ge?.layer2?.scenario;
   const geSafeScenario = geScenario ?? null;
   const d = dve.data?.data;
@@ -435,8 +439,10 @@ export default function GoldenEggPage() {
     ? { alignment: geCanonical.crossMarket.alignment as 'supportive' | 'neutral' | 'headwind', factors: geCanonical.crossMarket.items.filter((i) => i.relation !== 'unknown').map((i) => `${i.symbol}: ${i.trend} (${i.relation})`) }
     : deriveCrossMarketAlignment(regime.data?.signals);
   const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, primaryBlocker: ge?.layer1?.primaryBlocker, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment });
-  const geAssessmentLabel = assessmentDisplayLabel(geAssessment);
-  const geReason = summarizeGEReason({ direction: ge?.layer1?.direction, setupType: ge?.layer2?.setup?.setupType, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
+  const geAssessmentLabel = geNoQualifyingSetup ? 'No Setup' : assessmentDisplayLabel(geAssessment);
+  const geReason = geNoQualifyingSetup
+    ? `No canonical setup qualifies on this bar${geNoSetup?.detail ? ` — ${geNoSetup.detail.replace(/^Closest:/, 'closest:')}` : ''}.`
+    : summarizeGEReason({ direction: ge?.layer1?.direction, setupType: ge?.layer2?.setup?.setupType, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geInvalidationConditions = buildGEInvalidationConditions({ confluence: geConfluenceScore, dataQuality: geDataQuality, primaryBlocker: ge?.layer1?.primaryBlocker, crossMarket: crossMarketAlignment.alignment, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
   const geMarketStatusItems = [
@@ -631,7 +637,7 @@ export default function GoldenEggPage() {
         eyebrow="Golden Egg validation workbench"
         badges={[
           ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
-          ...(ge && geEngine ? [{ label: `Canonical ${geEngine.permission} · grade ${geEngine.grade}` }, { label: `Legacy confluence ${geConfluenceScore}/100` }] : ge ? [{ label: `Confluence ${geConfluenceScore}/100` }] : []),
+          ...(ge && geEngine ? [{ label: geNoQualifyingSetup ? 'Canonical: no qualifying setup' : `Canonical ${geEngine.permission} · grade ${geEngine.grade}` }, { label: `Legacy confluence ${geConfluenceScore}/100` }] : ge ? [{ label: `Confluence ${geConfluenceScore}/100` }] : []),
           { label: `Data ${geDataQuality}` },
           ...GOLDEN_EGG_WORKFLOW_CHECKS.map((c) => ({ label: c })),
         ]}
@@ -644,7 +650,7 @@ export default function GoldenEggPage() {
         ]}
         metrics={[
           { label: 'Symbol', value: sym, tone: 'warn', detail: 'Single-symbol validation' },
-          { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : geEngine ? `Canonical ${geSetupLabel} · score ${geEngine.score} · grade ${geEngine.grade}` : 'Verdict packet' },
+          { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geNoQualifyingSetup ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : geNoSetup ? `Canonical: ${geNoSetup.headline}${geNoSetup.detail ? ` — ${geNoSetup.detail}` : ''}` : geEngine ? `Canonical ${geSetupLabel} · score ${geEngine.score} · grade ${geEngine.grade}` : 'Verdict packet' },
           { label: geEngine ? 'Legacy confluence' : 'Confluence', value: ge ? `${geConfluenceScore}/100` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geEngine ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : geEngine ? 'Secondary — v2 evidence alignment, not the verdict' : 'Evidence alignment' },
           { label: 'Data trust', value: geDataQuality, tone: geDataQuality === 'GOOD' ? 'bull' : geDataQuality === 'DEGRADED' ? 'warn' : 'bear', detail: geDataQualityTitle, title: geDataQualityTitle },
         ]}
@@ -879,8 +885,8 @@ export default function GoldenEggPage() {
                     <h2 className="text-2xl font-bold text-white">{ge.meta.symbol}</h2>
                     {regime.data && <Badge label={`Regime: ${humanizeEnum(regime.data.regime)}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || 'var(--msp-text-muted)'} small />}
                     <span title="Directional research bias from the Golden Egg evidence stack"><Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} /></span>
-                    <span title={geEngine ? 'Canonical grade (A/B/C; F = blocked) from the canonical setup engine' : 'Grade summarizes setup quality across the Golden Egg model'}><Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small /></span>
-                    {(() => { const lc = geEngine ? (geEngine.permission === 'PASS' ? 'READY' : geEngine.permission === 'WATCH' ? 'WATCHING' : 'INVALIDATED') : deriveGELifecycle(geAssessment, geConfluenceScore); return <span title="Lifecycle describes whether the setup is forming, ready, watching, or invalidated" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{lc.replace('_', ' ')}</span>; })()}
+                    {geNoQualifyingSetup ? null : <span title={geEngine ? 'Canonical grade (A/B/C; F = blocked) from the canonical setup engine' : 'Grade summarizes setup quality across the Golden Egg model'}><Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small /></span>}
+                    {geNoQualifyingSetup ? null : (() => { const lc = geEngine ? (geEngine.permission === 'PASS' ? 'READY' : geEngine.permission === 'WATCH' ? 'WATCHING' : 'INVALIDATED') : deriveGELifecycle(geAssessment, geConfluenceScore); return <span title="Lifecycle describes whether the setup is forming, ready, watching, or invalidated" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{lc.replace('_', ' ')}</span>; })()}
                     <span title="Cross-market factors can support, oppose, or remain neutral to the setup" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[crossMarketAlignment.alignment], borderColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '15' }}>{crossMarketAlignment.alignment === 'headwind' ? 'Headwind' : crossMarketAlignment.alignment === 'supportive' ? 'Tailwind' : 'Neutral'}</span>
                     <span title={geDataQualityTitle} className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: geDataQualityColor(geDataQuality), borderColor: geDataQualityColor(geDataQuality) + '40', backgroundColor: geDataQualityColor(geDataQuality) + '15' }}>Data {geDataQuality}</span>
                   </div>
@@ -897,15 +903,25 @@ export default function GoldenEggPage() {
 
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="text-center">
-                    <div className="text-3xl font-bold uppercase tracking-wider" style={{ color: verdictColor(geAssessment || 'WATCH') }}>
+                    <div className="text-3xl font-bold uppercase tracking-wider" style={{ color: geNoQualifyingSetup ? 'var(--msp-text-muted)' : verdictColor(geAssessment || 'WATCH') }}>
                       {geAssessmentLabel}
                     </div>
                     <div className="text-[11px] text-slate-500 uppercase">Assessment</div>
                   </div>
                   {geEngine ? (
                     <div className="text-center max-w-xs" title="Canonical setup: calibrated percentile of expected R (daily equity/crypto) or uncalibrated factor alignment; legacy confluence is shown underneath as a secondary read">
-                      <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{scoreLabel(geEngine)}</div>
-                      <div className="text-[11px] text-slate-500 uppercase">Canonical · {geSetupLabel}{cautionTags(geEngine).map((t) => ` · ${t}`).join('')}</div>
+                      {geNoSetup ? (
+                        <>
+                          <div className="text-xl font-bold" style={{ color: geNoQualifyingSetup ? 'var(--msp-text-muted)' : verdictColor(geAssessment || 'WATCH') }} data-testid="ge-no-setup">{geNoSetup.headline}</div>
+                          {geNoSetup.detail ? <div className="text-[11px] text-slate-400" data-testid="ge-no-setup-detail">{geNoSetup.detail}</div> : null}
+                          <div className="text-[11px] text-slate-500 uppercase">Canonical</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{scoreLabel(geEngine)}</div>
+                          <div className="text-[11px] text-slate-500 uppercase">Canonical · {geSetupLabel}{cautionTags(geEngine).map((t) => ` · ${t}`).join('')}</div>
+                        </>
+                      )}
                       {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{NO_EDGE_BANNER}</div> : null}
                       {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{calibrationSummary(geEngine)}</div> : null}
                       <div className="text-[10px] text-slate-500">Legacy confluence {geConfluenceScore}/100</div>

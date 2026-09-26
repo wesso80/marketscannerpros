@@ -183,11 +183,22 @@ function mapLocalIndicators(
   };
 }
 
+/** Crypto daily indicator history: 6 × 180-day CoinGecko windows (~1,080 bars), of which the last 1,000 are used —
+ *  an SMA-seeded EMA200 on 1,000 bars is within ~$0.40 of full history on BTC (vs ~$800 high on 360 bars). */
+const CRYPTO_INDICATOR_WINDOWS = 6;
+const CRYPTO_INDICATOR_BARS = 1000;
+
 // ── Helper: fetch price ─────────────────────────────────────────────────
 export async function fetchPrice(
   symbol: string,
   assetClass: string,
-  opts?: { requireHistoricals?: boolean; avInterval?: string },
+  opts?: {
+    requireHistoricals?: boolean;
+    avInterval?: string;
+    /** Crypto daily: also fetch ~1,080 days of daily bars as `indicatorHistory` so EMA200 converges (equities get up to
+     *  1,000 bars from AV 'full' whenever requireHistoricals is set). Costs 4 extra CoinGecko OHLC calls. */
+    cryptoIndicatorHistory?: boolean;
+  },
 ): Promise<PriceData | null> {
   try {
     const interval = opts?.avInterval || 'daily';
@@ -202,8 +213,9 @@ export async function fetchPrice(
       const base = symbol.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase();
       const coinId = COINGECKO_ID_MAP[base] || (await resolveSymbolToId(base));
       if (!coinId) return null;
+      const longHistory = !!opts?.requireHistoricals && !!opts?.cryptoIndicatorHistory && seriesTf === 'daily';
       const [series, detail] = await Promise.all([
-        fetchCryptoSeries(base, seriesTf, Date.now(), { coinId }),
+        fetchCryptoSeries(base, seriesTf, Date.now(), { coinId, dailyWindows: longHistory ? CRYPTO_INDICATOR_WINDOWS : undefined }),
         getCoinDetail(coinId).catch(() => null),
       ]);
       const bars = series.bars;
@@ -215,6 +227,9 @@ export async function fetchPrice(
       const changeBase = series.partialBar || livePrice !== last.close ? last.close : prev.close;
       const histLen = opts?.requireHistoricals ? 360 : 60;
       const tail = bars.slice(-histLen);
+      // Indicator history: up to 1,000 completed daily bars (same rule as equities) so EMA200 converges; display bars,
+      // DVE and the canonical verdict keep the 360-bar tail.
+      const indicatorBars = longHistory && bars.length > tail.length ? bars.slice(-CRYPTO_INDICATOR_BARS) : null;
       const vols = tail.slice(-20).map((b) => b.volume).filter((v): v is number => v != null && v > 0);
       return {
         price: livePrice,
@@ -230,6 +245,7 @@ export async function fetchPrice(
         historicalLows: tail.map((b) => b.low),
         historicalDates: tail.map((b) => b.t),
         historicalVolumes: tail.map((b) => (b.volume != null && b.volume > 0 ? b.volume : null)),
+        ...(indicatorBars ? { indicatorHistory: { closes: indicatorBars.map((b) => b.close), highs: indicatorBars.map((b) => b.high), lows: indicatorBars.map((b) => b.low) } } : {}),
         barInterval: series.barInterval,
         lastCompletedBarAt: series.lastCompletedBarAt,
         priceTs: detail?.last_updated || md?.last_updated || series.partialBar?.t || series.lastCompletedBarAt || undefined,
