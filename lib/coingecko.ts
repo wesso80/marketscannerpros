@@ -562,6 +562,12 @@ export async function getSimplePrices(
     include_24h_change?: boolean;
     include_24h_vol?: boolean;
     include_market_cap?: boolean;
+    /**
+     * Skip the Next.js data cache. Use it when the caller judges freshness from `last_updated_at`: the data cache
+     * serves an expired entry first (stale-while-revalidate), so after a quiet spell the first reader gets prices as
+     * old as the previous request and a fresh feed reads as stale (OV-18).
+     */
+    noStore?: boolean;
   }
 ): Promise<Record<string, CoinGeckoPrice> | null> {
   try {
@@ -577,7 +583,7 @@ export async function getSimplePrices(
 
     return await cgFetch<Record<string, CoinGeckoPrice>>('/simple/price', {
       params,
-      init: { next: { revalidate: 30 } },
+      init: options?.noStore ? { cache: 'no-store' } : { next: { revalidate: 30 } },
     });
   } catch (error) {
     console.error('[CoinGecko] Price fetch error:', error);

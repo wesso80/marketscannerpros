@@ -19,7 +19,7 @@ describe('versioned OI history', () => {
     tracker = await import('@/lib/crypto/oiHistory');
     expect((await tracker.trackOiHistory([observation(start + HOUR_MS, 200)], start + HOUR_MS))[0].change24h).toBeNull();
     expect((await tracker.trackOiHistory([observation(start + 24 * HOUR_MS, 110)], start + 24 * HOUR_MS))[0].change24h).toBeCloseTo(10);
-    expect(state.writes).toHaveBeenCalledWith(expect.stringContaining('oi:observed-usd:v2:'), 48 * 3600);
+    expect(state.writes).toHaveBeenCalledWith(expect.stringContaining('oi:observed-usd:v3:'), 48 * 3600);
   });
   it('ignores old anchors and refuses changed venue coverage', async () => {
     state.stored.set('oi:anchor:24h', { BTC: 1000 });

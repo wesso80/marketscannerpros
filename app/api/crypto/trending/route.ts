@@ -27,9 +27,12 @@ export async function GET() {
 
     // Extract coin IDs to fetch current prices
     const coinIds = trending.coins.map(c => c.item.id);
-    const prices = await getSimplePrices(coinIds, { 
+    // noStore: freshness below is judged from these prices' last_updated_at, so they must not come from the
+    // stale-while-revalidate data cache (a quiet spell made the first load read "Trending: Stale", OV-18).
+    const prices = await getSimplePrices(coinIds, {
       include_24h_change: true,
-      include_market_cap: true 
+      include_market_cap: true,
+      noStore: true,
     });
     const priceUpdatedAt = Object.values(prices || {}).reduce<number | null>((latest, price) => {
       if (!price?.last_updated_at) return latest;

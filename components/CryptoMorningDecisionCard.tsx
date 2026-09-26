@@ -1,6 +1,6 @@
 'use client';
 
-import { cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -43,7 +43,7 @@ function freshnessLabel(status: FreshnessStatus): string {
   return 'Unknown';
 }
 
-export type CryptoDecisionGate = { dataComplete: boolean; longsAllowed: boolean; shortsAllowed: boolean; hardBlocks: string[] };
+export type CryptoDecisionGate = { dataComplete: boolean; longsAllowed: boolean; shortsAllowed: boolean; hardBlocks: string[]; riskState?: string };
 export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?: (gate: CryptoDecisionGate) => void } = {}) {
   const [marketData, setMarketData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -224,6 +224,7 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
   }, [marketData]);
 
   useEffect(() => { onDecision?.(decision); }, [decision, onDecision]);
+  const feedNotes = useMemo(() => (marketData ? cryptoReviewFeedNotes(marketData) : []), [marketData]);
 
   const freshnessBadges = useMemo(() => {
     const entries = [
@@ -278,7 +279,7 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
           <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown (5 Inputs)</p>
           <div className="mt-1 grid gap-1 text-[11px]">
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
-              <span className="text-slate-500">Risk State</span>
+              <span className="text-slate-500">Crypto Risk State</span>
               <p className="font-semibold text-slate-200">{decision.riskState}</p>
             </div>
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
@@ -290,7 +291,7 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
               <p className="font-semibold text-slate-200">{decision.liquidity}</p>
             </div>
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
-              <span className="text-slate-500">Volatility Regime</span>
+              <span className="text-slate-500" title="Market-wide: 24h move in total crypto market cap (not a single coin's range)">Market Vol Regime</span>
               <p className="font-semibold text-slate-200">{decision.volatility}</p>
             </div>
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
@@ -301,6 +302,11 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
           <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">
             Hard Blocks: {decision.hardBlocks.length ? decision.hardBlocks.join(' • ') : 'None'}
           </div>
+          {feedNotes.length > 0 && (
+            <ul className="mt-1 space-y-0.5 rounded border border-amber-500/30 bg-amber-500/5 p-1.5 text-[11px] text-amber-200" aria-label="Feed status">
+              {feedNotes.map((note) => <li key={note}>{note}</li>)}
+            </ul>
+          )}
         </div>
       </div>
     </section>
