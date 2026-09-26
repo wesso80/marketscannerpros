@@ -25,8 +25,12 @@ const ETF_PROXIES: Record<string, { etf: string; multiplier: number; description
   WHEAT:       { etf: 'WEAT', multiplier: 1,   description: 'Teucrium Wheat Fund' },
   CORN:        { etf: 'CORN', multiplier: 1,   description: 'Teucrium Corn Fund' },
   SUGAR:       { etf: 'CANE', multiplier: 1,   description: 'Teucrium Sugar Fund' },
-  COFFEE:      { etf: 'JO',   multiplier: 1,   description: 'iPath Series B Bloomberg Coffee ETN' },
+  // No COFFEE proxy: the iPath coffee ETN (JO) was delisted in June 2023 and Alpha Vantage still returns its last quote
+  // (2023-06-14), which showed coffee as "STALE · proxy JO, 1200d" (OV-16). Coffee uses AV's monthly COFFEE series.
 };
+
+/** An ETF proxy quote older than this is a dead or halted listing, not a live price: use the commodity series instead. */
+const ETF_PROXY_MAX_AGE_DAYS = 7;
 
 // Core commodities config (legacy endpoints used as fallback only)
 const COMMODITIES = {
@@ -35,13 +39,14 @@ const COMMODITIES = {
   NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', interval: 'daily' },
   GOLD: { function: 'GOLD_SILVER_SPOT', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
   SILVER: { function: 'GOLD_SILVER_SPOT', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
-  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals', interval: 'monthly' },
+  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/metric ton', category: 'Metals', interval: 'monthly' },
   ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/metric ton', category: 'Metals', interval: 'monthly' },
-  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture', interval: 'monthly' },
-  CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture', interval: 'monthly' },
-  COTTON: { function: 'COTTON', name: 'Cotton', unit: '$/lb', category: 'Agriculture', interval: 'monthly' },
-  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: '$/lb', category: 'Agriculture', interval: 'monthly' },
-  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: '$/lb', category: 'Agriculture', interval: 'monthly' },
+  // Units as Alpha Vantage reports them in each series' `unit` field (World Bank monthly prices).
+  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/metric ton', category: 'Agriculture', interval: 'monthly' },
+  CORN: { function: 'CORN', name: 'Corn', unit: '$/metric ton', category: 'Agriculture', interval: 'monthly' },
+  COTTON: { function: 'COTTON', name: 'Cotton', unit: 'cents/lb', category: 'Agriculture', interval: 'monthly' },
+  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: 'cents/lb', category: 'Agriculture', interval: 'monthly' },
+  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: 'cents/lb', category: 'Agriculture', interval: 'monthly' },
 };
 
 // Cache for commodity data (15 minute TTL - commodities update less frequently)
@@ -142,7 +147,8 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     if (proxy) {
       console.log(`[Commodities] Trying real-time ETF proxy ${proxy.etf} for ${symbol}...`);
       const etfQuote = await fetchETFQuote(proxy.etf);
-      if (etfQuote && etfQuote.price > 0) {
+      const proxyAge = etfQuote ? dataAgeDays(etfQuote.date) : Number.POSITIVE_INFINITY;
+      if (etfQuote && etfQuote.price > 0 && proxyAge <= ETF_PROXY_MAX_AGE_DAYS) {
         console.log(`[Commodities] ✓ ETF proxy ${proxy.etf} → $${etfQuote.price} (${etfQuote.changePercent}%)`);
         const result = withFreshness({
           symbol,
@@ -158,7 +164,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
         cache.set(cacheKey, { data: result, timestamp: Date.now() });
         return result;
       }
-      console.log(`[Commodities] ETF proxy ${proxy.etf} unavailable, falling back to legacy endpoint`);
+      console.log(`[Commodities] ETF proxy ${proxy.etf} ${etfQuote ? `quote is ${etfQuote.date} (${proxyAge}d old)` : 'unavailable'}, falling back to legacy endpoint`);
     }
 
     // ── Strategy 2: GOLD_SILVER_SPOT or legacy commodity endpoint ──

@@ -30,10 +30,19 @@ export function parseIndexDataCloses(payload: unknown): IndexObs[] {
 
 const SUCCESS_TTL_MS = 15 * 60 * 1000;
 const FAILURE_TTL_MS = 10 * 60 * 1000;
-const cache = new Map<string, { at: number; rows: IndexObs[] | null }>();
+const cache = new Map<string, { at: number; rows: IndexObs[] | null; error?: string }>();
 
 export function clearAvIndexDataCache(): void {
   cache.clear();
+}
+
+/**
+ * Why the last INDEX_DATA call for `symbol` gave no rows (Alpha Vantage's own message, HTTP status, timeout), or null.
+ * Lets the regime say why it fell back to FRED instead of leaving the reason only in server logs (#157 follow-up).
+ */
+export function avIndexFailureReason(symbol: string): string | null {
+  const hit = cache.get(symbol.trim().toUpperCase());
+  return hit && !hit.rows ? hit.error ?? 'no daily closes returned' : null;
 }
 
 /**
@@ -48,15 +57,18 @@ export async function getAvIndexDailyCached(symbol: string, opts: { now?: number
   const hit = cache.get(sym);
   if (hit && now - hit.at < (hit.rows ? SUCCESS_TTL_MS : FAILURE_TTL_MS)) return hit.rows;
   let rows: IndexObs[] | null = null;
+  let error: string | undefined;
   try {
     const url = `https://www.alphavantage.co/query?function=INDEX_DATA&symbol=${encodeURIComponent(sym)}&interval=daily&apikey=${key}`;
     const payload = await avFetch(url, `INDEX_DATA ${sym}`);
     const parsed = parseIndexDataCloses(payload);
     if (parsed.length) rows = parsed;
-    else console.warn(`[avIndexData] INDEX_DATA ${sym}: no daily closes in the response${payload ? '' : ' (Alpha Vantage "Error Message" or HTTP 404)'}`);
+    else error = payload ? 'no daily closes in the response' : 'Alpha Vantage returned an error message or HTTP 404';
+    if (!rows) console.warn(`[avIndexData] INDEX_DATA ${sym}: no daily closes in the response${payload ? '' : ' (Alpha Vantage "Error Message" or HTTP 404)'}`);
   } catch (e) {
-    console.warn(`[avIndexData] INDEX_DATA ${sym} failed: ${e instanceof Error ? e.message : String(e)}`);
+    error = (e instanceof Error ? e.message : String(e)).replace(/apikey=[^&\s]+/gi, 'apikey=***').slice(0, 200);
+    console.warn(`[avIndexData] INDEX_DATA ${sym} failed: ${error}`);
   }
-  cache.set(sym, { at: now, rows });
+  cache.set(sym, { at: now, rows, error });
   return rows;
 }

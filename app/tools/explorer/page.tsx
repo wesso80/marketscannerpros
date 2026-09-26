@@ -401,7 +401,7 @@ export default function ExplorerPage() {
                       <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? 'var(--msp-bull)' : c.changePercent < 0 ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-lg font-bold text-white">${c.price.toFixed(2)}</span>
+                      <span className="text-lg font-bold text-white">{c.unit?.includes('cents') ? `${c.price.toFixed(2)}¢` : `$${c.price.toFixed(2)}`}</span>
                       <span className={`text-xs ${pctColor(c.changePercent)}`}>{c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%</span>
                     </div>
                   </div>
