@@ -1,6 +1,11 @@
 /**
  * Shared layout for the 1200×675 share cards (X's large image ratio). Rendered by next/og (satori), so every
  * element with more than one child uses display:flex and colours are literals.
+ *
+ * Satori's flex items default to flexShrink 0 (unlike browsers' 1), so a middle area whose content is taller than
+ * the space left used to grow and push the footer (disclaimer + site) off the bottom of the image. The header and
+ * footer are fixed (flexShrink 0); the middle area is the only part that can shrink (flexShrink 1, minHeight 0,
+ * flexBasis 0) and clips its own overflow, so the footer always stays inside the 675px canvas.
  */
 import type { ReactNode } from 'react';
 import { SHARE_DISCLAIMER, SHARE_SITE, SHARE_THEME as T } from './theme';
@@ -23,7 +28,7 @@ export function CardFrame({ kicker, asOf, accent = T.accent, children, note }: {
       }}
     >
       <div style={{ position: 'absolute', top: 0, left: 0, width: SHARE_CARD_WIDTH, height: 6, background: accent, display: 'flex' }} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div
             style={{
@@ -41,9 +46,16 @@ export function CardFrame({ kicker, asOf, accent = T.accent, children, note }: {
         <div style={{ display: 'flex', fontSize: 19, color: T.muted, textAlign: 'right' }}>{asOf}</div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, marginTop: 26, overflow: 'hidden' }}>{children}</div>
+      <div
+        style={{
+          display: 'flex', flexDirection: 'column', flexGrow: 1, flexShrink: 1, flexBasis: 0, minHeight: 0, marginTop: 26,
+          overflow: 'hidden',
+        }}
+      >
+        {children}
+      </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
         {note ? <div style={{ display: 'flex', fontSize: 15, color: T.warn, marginBottom: 6 }}>{note}</div> : null}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: T.faint }}>
           <div style={{ display: 'flex' }}>{SHARE_DISCLAIMER}</div>

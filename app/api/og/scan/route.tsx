@@ -5,6 +5,7 @@ import {
 } from '@/lib/og/scanOg';
 import { loadShare } from '@/lib/og/scanShareData';
 import { loadLatestDailyPicks } from '@/lib/og/dailyPicksLatest';
+import { shareCardFonts } from '@/lib/share/font';
 
 // Node runtime: the text is built from the database (daily_picks / company_overview), not from the query string.
 export const runtime = 'nodejs';
@@ -56,7 +57,11 @@ export async function GET(req: NextRequest | Request) {
   const cached = cache.get(result.key);
   if (cached && now - cached.at < CACHE_TTL_MS) return png(cached.png, true);
 
-  const image = new ImageResponse(<ScanOgCard m={result.model} />, { width: OG_SCAN_WIDTH, height: OG_SCAN_HEIGHT });
+  const image = new ImageResponse(<ScanOgCard m={result.model} />, {
+    width: OG_SCAN_WIDTH, height: OG_SCAN_HEIGHT,
+    // Unkerned Noto Sans so drawn words match satori's layout (no stray gap after "WATCH"); see lib/share/font.ts.
+    fonts: shareCardFonts(),
+  });
   const body = await image.arrayBuffer();
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
   cache.set(result.key, { at: now, png: body });

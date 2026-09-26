@@ -8,7 +8,7 @@
  */
 import { buildWave3Bundle, type Wave3Deps } from '@/lib/intelligence/data/globalM2Pipeline';
 import type { ProviderFxRaw, ProviderM2Raw } from '@/lib/intelligence/data/providers/globalM2ProviderTypes';
-import type { PersistedM2Store } from '@/lib/intelligence/data/globalM2Store';
+import { dbGlobalM2Store, type PersistedM2Store } from '@/lib/intelligence/data/globalM2Store';
 import { CardFrame, Stat } from './CardFrame';
 import { SHARE_THEME as T } from './theme';
 import { clipText } from './validate';
@@ -52,11 +52,30 @@ export function persistedOnlyDeps(): Wave3Deps {
   };
 }
 
+/**
+ * The store with writes disabled. The card is a public GET, so it must never write to macro_series. (In practice
+ * buildWave3Bundle only writes a bloc after a successful LIVE fetch, and every provider here is offline, so nothing
+ * was ever written; this makes it impossible rather than incidental.) Exported for tests.
+ */
+export function readOnlyM2Store(store: PersistedM2Store): PersistedM2Store {
+  return { read: (id) => store.read(id), write: async () => 0 };
+}
+
+/** "Jul 2026", or "Jul 2026 (some blocs Jun 2026)" when the blocs in the total end in different months. */
+export function dataThroughLabel(observationMonths: string[]): string {
+  const months = observationMonths.filter((m) => /^\d{4}-\d{2}/.test(m)).map((m) => m.slice(0, 7)).sort();
+  if (months.length === 0) return '—';
+  const newest = months[months.length - 1];
+  const oldest = months[0];
+  return oldest === newest ? monthLabel(newest) : `${monthLabel(newest)} (some blocs ${monthLabel(oldest)})`;
+}
+
 export async function loadM2CardModel(opts: { store?: PersistedM2Store } = {}): Promise<M2CardModel | null> {
-  const b = await buildWave3Bundle(persistedOnlyDeps(), { persist: true, ...(opts.store ? { store: opts.store } : {}) });
+  // persist: true is what turns on buildWave3Bundle's "read persisted last-known-good" fallback (persist: false skips
+  // reading as well as writing, which would leave the card with no data). Writes are blocked by readOnlyM2Store.
+  const b = await buildWave3Bundle(persistedOnlyDeps(), { persist: true, store: readOnlyM2Store(opts.store ?? dbGlobalM2Store) });
   const r = b.result;
   if (!r.validBlocCount || !(r.totalUsd > 0) || r.blocs.length === 0) return null;
-  const months = r.blocs.map((x) => x.observationMonth).filter(Boolean).sort();
   const ingested = b.blocs.map((x) => x.retrievedAt).filter(Boolean).sort();
   const q = r.quality;
   const eligible = b.eligibility.interpretationEligible;
@@ -70,7 +89,7 @@ export async function loadM2CardModel(opts: { store?: PersistedM2Store } = {}): 
       ? `Weighted coverage ${q.estimatedWeightedCoveragePercent.toFixed(1)}%`
       : `Weighted coverage ${q.estimatedWeightedCoveragePercent.toFixed(1)}% (below ${b.eligibility.weightedCoverageThreshold}%): cross-bloc cycle not shown`,
     blocCount: `${r.validBlocCount} of 11 blocs`,
-    dataThrough: monthLabel(months[months.length - 1]),
+    dataThrough: dataThroughLabel(r.blocs.map((x) => x.observationMonth)),
     lastIngested: ingested.length ? ingested[ingested.length - 1].slice(0, 10) : null,
     topBlocs: [...r.blocs].sort((a, c) => c.shareOfGlobal - a.shareOfGlobal).slice(0, 6).map((x) => ({
       name: clipText(x.name, 18), share: `${x.shareOfGlobal.toFixed(1)}%`, r3: pct(x.r3),

@@ -53,6 +53,16 @@ describe('buildScanOgModel: every word comes from stored data', () => {
     }
   });
 
+  it('prints the score in the share card\'s wording ("95th pct"), not a bare /100', async () => {
+    mocks.loadShare.mockResolvedValue(share({ score: 95, scoreText: '95th pct', verdict: 'WATCH · A · Exhaustion fade · factors only' }));
+    const r = await buildScanOgModel(sp('symbol=META'), loaders());
+    expect(r.status === 200 && r.model.stats[0]).toEqual({ label: 'Score', value: '95th pct' });
+    expect(JSON.stringify(r)).not.toContain('95/100');
+    mocks.loadShare.mockResolvedValue(share({ scoreText: '74/100 factors (uncalibrated)' }));
+    const u = await buildScanOgModel(sp('symbol=NVDA'), loaders());
+    expect(u.status === 200 && u.model.stats[0]).toEqual({ label: 'Score', value: '74/100 factors (uncalibrated)' });
+  });
+
   it('DAILY uses the latest stored snapshot (top 3, crypto as -USD), not query text', async () => {
     mocks.loadLatest.mockResolvedValue(day);
     const r = await buildScanOgModel(sp(`symbol=DAILY&date=2020-01-01&${INJECT}`), loaders());

@@ -13,7 +13,7 @@
 import { evaluateCanonicalFromBars } from './engine';
 import { evaluateRegimeOverlay, overlayForDirection, type RegimeOverlayInputs } from './regimeOverlay';
 import { compareCanonicalRows, SETUP_LABEL } from './scannerAdapter';
-import { cautionTags } from './display';
+import { cautionTags, scoreLabel } from './display';
 import type { CanonicalAssetClass, CanonicalBar, CanonicalReason, CanonicalResult } from './types';
 
 /** A completed daily bar older than this (calendar days) is treated as stale (covers weekends + a holiday). */
@@ -148,6 +148,9 @@ export interface PickView {
   label: string | null;
   /** Honest one-liner about what the score means. */
   basisNote: string;
+  /** The score as the share cards print it ("95th pct", "74/100 factors (uncalibrated)", "No qualifying setup");
+   *  null without a canonical verdict. */
+  scoreText: string | null;
 }
 
 /** Public-facing view of a stored daily pick (share card, RSS): canonical first, legacy fallback. */
@@ -155,7 +158,7 @@ export function pickView(row: { score: number | null; direction: string | null; 
   const c = readStoredCanonical({ canonical: row.canonical });
   if (!c) {
     const side = row.direction === 'bullish' ? 'LONG' : row.direction === 'bearish' ? 'SHORT' : 'WATCH';
-    return { side, score: row.score, label: null, basisNote: 'Legacy signal-count score (not a probability).' };
+    return { side, score: row.score, label: null, basisNote: 'Legacy signal-count score (not a probability).', scoreText: null };
   }
   const side = c.permission === 'BLOCK' || c.direction === 'neutral' ? 'WATCH' : c.direction === 'long' ? 'LONG' : 'SHORT';
   const basisNote = c.scoreBasis === 'calibrated_expectancy_percentile'
@@ -163,5 +166,5 @@ export function pickView(row: { score: number | null; direction: string | null; 
     : c.scoreBasis === 'factor_alignment_uncalibrated'
       ? 'Score = factor alignment (uncalibrated, not a probability).'
       : 'Canonical setup score (not a probability).';
-  return { side, score: c.permission === 'BLOCK' ? 0 : c.score, label: canonicalLabel(c), basisNote };
+  return { side, score: c.permission === 'BLOCK' ? 0 : c.score, label: canonicalLabel(c), basisNote, scoreText: scoreLabel(c) };
 }
