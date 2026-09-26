@@ -237,6 +237,8 @@ type SortDir = 'asc' | 'desc';
 type ScannerMode = 'ranked' | 'pro';
 type ScannerStage = ScannerMode | 'analysis';
 type AssetClass = 'crypto' | 'equity' | 'forex';
+/** Below the md breakpoint (matches the .msp-scanner-mobile rules in globals.css). */
+const PHONE_MEDIA_QUERY = '(max-width: 767px)';
 /** Requested Pro Scanner universe; the server caps it per plan. */
 const PRO_SCAN_UNIVERSE_SIZE = 500;
 
@@ -266,14 +268,14 @@ function ScannerFlowRail({
         const isAnalysis = stage.id === 'analysis';
         const disabled = isAnalysis && !canOpenAnalysis;
         const content = (
-          <div className={`h-full rounded-md border px-3 py-1.5 text-left transition ${
+          <div className={`h-full min-w-0 rounded-md border px-2 py-1.5 text-left transition sm:px-3 ${
             isActive
               ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
               : disabled
                 ? 'border-white/10 bg-white/[0.025] text-slate-600'
                 : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
           }`}>
-            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{stage.eyebrow}</div>
+            <div className="truncate break-normal text-[10px] font-black uppercase tracking-[0.06em] text-slate-500 sm:tracking-[0.14em]" title={stage.eyebrow}>{stage.eyebrow}</div>
             <div className={`mt-0.5 text-sm font-black ${isActive ? 'text-emerald-200' : disabled ? 'text-slate-600' : 'text-white'}`}>{stage.label}</div>
             <div className="mt-0.5 truncate text-[11px] leading-4 text-slate-500" title={stage.detail}>{stage.detail}</div>
           </div>
@@ -312,7 +314,7 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       {rows.map((row) => {
         const biasColor = row.direction === 'LONG' ? 'text-emerald-300' : row.direction === 'SHORT' ? 'text-rose-300' : 'text-slate-300';
         const trustTone = row.dataQuality === 'GOOD' ? 'text-emerald-300 border-emerald-500/35 bg-emerald-500/10' : row.dataQuality === 'MISSING' ? 'text-rose-300 border-rose-500/35 bg-rose-500/10' : 'text-amber-300 border-amber-500/35 bg-amber-500/10';
@@ -366,7 +368,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
   }
 
   return (
-    <div className="msp-scanner-mobile-cards gap-3">
+    <div className="msp-scanner-mobile-cards grid-cols-1 gap-3">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
         const msp = computeMspScore(row, activeRegime);
@@ -427,7 +429,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
 
 function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   return (
-    <div className="msp-scanner-mobile-cards gap-3">
+    <div className="msp-scanner-mobile-cards grid-cols-1 gap-3">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
         const msp = computeMspScore(row, activeRegime);
@@ -1042,6 +1044,10 @@ export default function ScannerPage() {
 
 
   const [proBulkViewMode, setProBulkViewMode] = useState<'table' | 'cards'>('table');
+  // SC-7: the Pro table is ~1,450px wide, so phones start on cards (same rows); the Table toggle still works.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.(PHONE_MEDIA_QUERY).matches) setProBulkViewMode('cards');
+  }, []);
 
   /* ─── Shared detail state ─── */
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
@@ -1515,8 +1521,8 @@ export default function ScannerPage() {
         className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
         aria-label="Scanner command header"
       >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
-          <div>
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
               <span className="text-emerald-300">Workflow step 1 · Market research queue</span>
               {showRegimeChip && (
@@ -1551,7 +1557,7 @@ export default function ScannerPage() {
             </div>
           </div>
 
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2">
             <ScannerMetric label="Mode" value={modeLabel} tone="#A5B4FC" detail={modeDetail} />
             <ScannerMetric label={headerStage === 'analysis' ? 'Symbol' : 'Queue'} value={queueValue} tone={queueTone} detail={queueDetail} />
             <ScannerMetric label="Data Health" value={dataHealthValue} tone={dataHealthTone} detail={dataHealthDetail} />
@@ -1611,7 +1617,7 @@ export default function ScannerPage() {
             ))}
           </div>
 
-          <div className="grid gap-2 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
             {[
               ['Symbols', String(filtered.length), 'var(--msp-text)'],
               ['Aligned Scenarios', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), 'var(--msp-bull)'],
@@ -1633,6 +1639,7 @@ export default function ScannerPage() {
           )}
 
           <MarketStatusStrip
+            className="grid-cols-1"
             items={rankedProviderStatuses.map(({ label, status, quality }) => ({
               label,
               status,
@@ -1799,10 +1806,10 @@ export default function ScannerPage() {
                 <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Universe</div>
                 <div className="mb-3">
                   <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Asset Class</div>
-                  <div className="flex gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
                     {(['crypto', 'equity', 'forex'] as const).map(ac => (
                       <button key={ac} type="button" aria-pressed={proAsset === ac} onClick={() => setProAsset(ac)}
-                        className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                        className={`whitespace-nowrap break-normal rounded-md border px-2.5 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 sm:px-3 ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
                         {ac}
                       </button>
                     ))}
@@ -1885,7 +1892,7 @@ export default function ScannerPage() {
               onClick={runProScan}
               disabled={proScanLoading}
               aria-disabled={proScanLoading}
-              className={`mt-4 w-full rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.1em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+              className={`mt-4 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
                 proScanLoading
                   ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
                   : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
@@ -1942,7 +1949,7 @@ export default function ScannerPage() {
           {/* Pro Scan Results */}
           {proScanResults && (
             <div>
-              <div className="mb-2 grid gap-2 md:grid-cols-5">
+              <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
                 {[
                   ['Scanned', String(proScanResults.scanned ?? '—'), 'var(--msp-text)'],
                   ['Candidates', String(proScreenerRows.length), 'var(--msp-bull)'],
@@ -1974,7 +1981,10 @@ export default function ScannerPage() {
               )}
               {proBulkViewMode === 'cards'
                 ? <ProScannerCards rows={proScreenerRows} onRowClick={handleProRowClick} />
-                : <ScreenerTable rows={proScreenerRows} emptyMessage="No evaluated candidates satisfy the selected filters. Review exclusions, universe coverage, and data availability." onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
+                : <>
+                  <p className="mb-1 text-[11px] text-slate-500 md:hidden" data-testid="pro-table-scroll-hint">Swipe sideways to see all columns, or switch to Cards.</p>
+                  <ScreenerTable rows={proScreenerRows} emptyMessage="No evaluated candidates satisfy the selected filters. Review exclusions, universe coverage, and data availability." onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />
+                </>}
               <div className="mt-2 text-[11px] text-slate-600">
                 Bias within these {proScreenerRows.length} Pro matches (from {proScanResults.scanned ?? '—'} {proAsset} symbols scanned) · Regime: {currentRegime.toUpperCase()} · {proScreenerRows.filter(r => r.direction === 'LONG').length} long / {proScreenerRows.filter(r => r.direction === 'SHORT').length} short / {proScreenerRows.filter(r => r.direction === 'NEUTRAL').length} neutral. This describes your filtered universe, not the whole market.
               </div>
