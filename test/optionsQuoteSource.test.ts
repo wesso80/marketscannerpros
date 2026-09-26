@@ -108,7 +108,7 @@ describe('shared chain source selection', () => {
     expect(describeChainSource(chain!)).toMatch(/marks only, no usable bid\/ask/);
   });
 
-  it('a key not entitled to REALTIME_OPTIONS is not asked again for an hour (no wasted calls)', async () => {
+  it('a key not entitled to REALTIME_OPTIONS is not asked again straight away (no wasted calls)', async () => {
     m.av = { REALTIME_OPTIONS: realtimeNotEntitledSample(), HISTORICAL_OPTIONS: historicalOptionsIbm() };
     expect((await load('IBM'))?.provider).toBe('HISTORICAL_OPTIONS');
     m.calls = [];
