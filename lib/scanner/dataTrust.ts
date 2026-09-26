@@ -5,6 +5,7 @@
  * Freshness is judged against the last bar the market could have COMPLETED, not against wall-clock age, so a Saturday
  * view of Friday's equity close is GOOD, while a daily bar two sessions behind is STALE.
  */
+import { forexOpenMinutesBetween, forexSessionsBetween, lastCompletedForexDailyBar } from '@/lib/time/fxSession';
 import { isNonTradingDay } from '@/lib/time/marketHolidays';
 import { lastCompletedUsSessionDate, usSessionsBetween } from '@/lib/time/usSession';
 
@@ -99,6 +100,22 @@ function judgeFreshness(input: DataTrustInput, nowMs: number): DataTrustResult['
     // Count SESSIONS behind, not calendar days: Friday's bar on Monday evening is one session behind (delayed), not
     // three days (it used to read STALE).
     return usSessionsBetween(barDate, expected) <= 1 ? 'delayed' : 'stale';
+  }
+  if (input.assetClass === 'forex') {
+    // FX is shut Friday 17:00 to Sunday 17:00 New York time (lib/time/fxSession). Daily bars (Alpha Vantage FX_DAILY,
+    // UTC-dated weekdays) are judged against the last COMPLETED weekday bar, so Friday's bar stays current all weekend;
+    // weekly and intraday bars age only while the market is open.
+    if (minutes >= 1440 && minutes < 10_080) {
+      const behind = forexSessionsBetween(input.lastBarAt.slice(0, 10), lastCompletedForexDailyBar(nowMs));
+      return behind === 0 ? 'fresh' : behind === 1 ? 'delayed' : 'stale';
+    }
+    const openMin = forexOpenMinutesBetween(lastMs, nowMs);
+    if (minutes >= 10_080) {
+      // Weekly: one week of trading is 5 x 1440 open minutes.
+      const weeks = openMin / 7200;
+      return weeks <= 2 ? 'fresh' : weeks <= 3 ? 'delayed' : 'stale';
+    }
+    return openMin <= minutes * 2 ? 'fresh' : openMin <= minutes * 3 ? 'delayed' : 'stale';
   }
   // 24/7 markets: allow one interval of lag (bar open time + interval = close), then one more as delayed.
   const ageMin = (nowMs - lastMs) / 60_000;
