@@ -9,6 +9,7 @@
 
 import { useEdgeProfile } from '@/hooks/useEdgeProfile';
 import type { EdgeInsight, EdgeSlice } from '@/lib/intelligence/edgeProfile';
+import type { EdgeProfileLock } from '@/lib/intelligence/edgeProfileUnlock';
 
 /* ── Compact visual codes for insight types ─────────────────────────── */
 
@@ -101,11 +102,11 @@ function StatCell({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function EmptyState({ compact = false }: { compact?: boolean }) {
+function EmptyState({ compact = false, lock }: { compact?: boolean; lock: EdgeProfileLock }) {
   return (
     <div className={`${compact ? 'py-2 text-left' : 'py-5 text-center'}`}>
       <div className="text-xs leading-5 text-slate-400">
-        Not enough closed trades yet. Close at least 10 trades in your journal to unlock edge insights.
+        Not enough closed trades yet ({lock.progressLabel}). Close at least {lock.unlockAt} trades in your journal to unlock edge insights.
       </div>
     </div>
   );
@@ -130,7 +131,7 @@ function PremiumGate() {
 }
 
 export default function EdgeInsightCards({ compact = false }: { compact?: boolean } = {}) {
-  const { data: profile, loading, isEmpty, isPremiumRequired } = useEdgeProfile();
+  const { data: profile, loading, error, lock, isPremiumRequired } = useEdgeProfile();
 
   if (loading) {
     return (
@@ -155,12 +156,23 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
     );
   }
 
-  if (isEmpty || !profile) {
+  // Load failed: say so instead of showing a 0/10 counter we can't vouch for.
+  if (error && !profile) {
+    return (
+      <div className="rounded-md border border-slate-800/60 bg-[var(--msp-panel)] px-3 py-1.5 flex items-center justify-between gap-3 text-xs">
+        <span className="font-semibold text-slate-300">Edge Profile</span>
+        <span className="text-[11px] text-slate-500">Unavailable right now (couldn&apos;t load your closed trades)</span>
+      </div>
+    );
+  }
+
+  // Locked until the unlock threshold: no win rate, R or insights from a handful of trades.
+  if (!profile || lock.locked) {
     if (compact) {
       return (
         <div className="rounded-md border border-slate-800/60 bg-[var(--msp-panel)] px-3 py-1.5 flex items-center justify-between gap-3 text-xs">
           <span className="font-semibold text-slate-300">Edge Profile</span>
-          <span className="text-[11px] text-slate-500">0/10 closed trades — unlocks after 10 journal closes</span>
+          <span className="text-[11px] text-slate-500">{lock.progressLabel} — unlocks after {lock.unlockAt} journal closes</span>
         </div>
       );
     }
@@ -169,7 +181,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
         <h3 className="text-sm font-semibold text-white mb-1">
           Edge Profile
         </h3>
-        <EmptyState compact={compact} />
+        <EmptyState compact={compact} lock={lock} />
       </div>
     );
   }
