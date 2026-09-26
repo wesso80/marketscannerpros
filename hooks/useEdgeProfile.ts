@@ -7,12 +7,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { EdgeProfile } from '@/lib/intelligence/edgeProfile';
+import { edgeProfileLock, type EdgeProfileLock } from '@/lib/intelligence/edgeProfileUnlock';
 
 export interface UseEdgeProfileResult {
   data: EdgeProfile | null;
   error: string | null;
   loading: boolean;
   isEmpty: boolean;
+  /** Fewer closed trades than the unlock threshold (10): show progress, not statistics. */
+  lock: EdgeProfileLock;
   isPremiumRequired: boolean;
   refetch: () => void;
 }
@@ -67,6 +70,7 @@ export function useEdgeProfile(lookbackDays?: number): UseEdgeProfileResult {
     error,
     loading,
     isEmpty: !loading && (data?.totalOutcomes ?? 0) === 0,
+    lock: edgeProfileLock(data?.totalOutcomes),
     isPremiumRequired,
     refetch,
   };
