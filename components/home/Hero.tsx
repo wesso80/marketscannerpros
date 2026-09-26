@@ -62,7 +62,7 @@ export default function Hero() {
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
             Market data sources, not endorsements
           </p>
-          <div className="flex items-center gap-8 sm:gap-10">
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 sm:gap-10">
             {/* NASDAQ */}
             <a
               href="https://www.nasdaq.com"
