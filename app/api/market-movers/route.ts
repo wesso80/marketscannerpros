@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
+import { parseAlphaVantageEasternTime } from '@/lib/analysis/providerAsOf';
+import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -17,6 +19,8 @@ async function fetchEquityMovers(): Promise<{
   gainers: any[];
   losers: any[];
   active: any[];
+  /** Alpha Vantage's `last_updated` as ISO; null if not sent. */
+  asOf?: string | null;
 }> {
   if (!ALPHA_VANTAGE_API_KEY) return { gainers: [], losers: [], active: [] };
   try {
@@ -31,6 +35,7 @@ async function fetchEquityMovers(): Promise<{
       gainers: data?.top_gainers || [],
       losers: data?.top_losers || [],
       active: data?.most_actively_traded || [],
+      asOf: parseAlphaVantageEasternTime(data?.last_updated),
     };
   } catch {
     return { gainers: [], losers: [], active: [] };
@@ -98,11 +103,13 @@ export async function GET(request: NextRequest) {
 
     // Merge equity + crypto gainers/losers, equity first
     // Filter out garbage tickers (non-ASCII, special chars like ^, warrants like +)
-    const eqGainers = equityMovers.gainers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker)).slice(0, 10);
-    const eqLosers = equityMovers.losers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker)).slice(0, 10);
-    const eqActive = equityMovers.active.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker)).slice(0, 10);
-    const cryptoGainers = (topMovers?.top_gainers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker)).slice(0, 10);
-    const cryptoLosers = (topMovers?.top_losers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker)).slice(0, 10);
+    // One server-side quality filter for every page (OV-9): equities drop warrants/rights/units and anything
+    // under $1 or 100k shares; crypto keeps the market-cap floor (lib/analysis/moverQuality).
+    const eqGainers = equityMovers.gainers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const eqLosers = equityMovers.losers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const eqActive = equityMovers.active.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const cryptoGainers = (topMovers?.top_gainers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const cryptoLosers = (topMovers?.top_losers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
 
     // If both sources failed, try returning cached data
     if (eqGainers.length === 0 && cryptoGainers.length === 0) {
@@ -239,8 +246,11 @@ export async function GET(request: NextRequest) {
       metadata: {
         provider: 'alphavantage+coingecko',
         model: 'TOP_GAINERS_LOSERS + coins/top_gainers_losers + indicators_latest',
+        equityFilter: `no warrants/rights/units; price >= $1; volume >= ${EQUITY_MOVER_MIN_VOLUME.toLocaleString('en-US')}; market cap >= $100M when known`,
       },
       lastUpdated: new Date().toISOString(),
+      // Provider time of the equity lists (Alpha Vantage last_updated). CoinGecko movers carry no time.
+      equityAsOf: equityMovers.asOf ?? null,
       topGainers: [...eqGainers, ...cryptoGainers].map(enrich),
       topLosers: [...eqLosers, ...cryptoLosers].map(enrich),
       mostActive: [...eqActive, ...(mostActive || []).slice(0, 10).map(normalizeMostActive)].map(enrich),

@@ -8,7 +8,7 @@
  * target-before-invalidation and expected R (daily equity/crypto) or an "uncalibrated" label (other contexts).
  */
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
-import { NO_EDGE_BANNER, calibrationSummary, cautionTags, scoreLabel, targetBasisLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, scoreLabel, targetBasisLabel } from '@/lib/scoring/canonical/display';
 import { canonicalRowStatus } from '@/lib/scoring/canonical/scannerAdapter';
 
 const SETUP_LABEL: Record<string, string> = {
@@ -57,6 +57,7 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
       </div>
       {noEdge ? <div className="mt-1 font-semibold text-amber-300/90" data-testid="canonical-no-edge">{NO_EDGE_BANNER}</div> : null}
       {calib ? <div className="mt-0.5 text-slate-400" data-testid="canonical-calibration">{calib}</div> : null}
+      {gradeRelativeNote(c) ? <div className="mt-0.5 text-slate-400" data-testid="canonical-grade-relative">{gradeRelativeNote(c)}</div> : null}
       {reasons.length ? (
         <ul className="mt-1 list-disc pl-4 text-slate-400">
           {reasons.slice(0, compact ? 2 : 6).map((r) => <li key={r.code + r.message}><span className="font-mono text-slate-500">{r.code}</span> {r.message}</li>)}

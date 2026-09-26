@@ -84,6 +84,14 @@ const EQUITY_LIQUIDITY: Record<string, Omit<SessionLiquidityProfile, 'phase' | '
     tradable: true,
     note: 'After-hours: very thin liquidity, large slippage. ALLOW_TIGHTENED only.',
   },
+  MARKET_CLOSED: {
+    liquidityExpectation: 'LOW',
+    liquidityScore: 0,
+    slippageMultiplier: 1.0,
+    ruCapMultiplier: 1.0,
+    tradable: false,
+    note: 'US equity market closed (weekend or holiday): no live liquidity. Analysis is for the next open.',
+  },
 };
 
 // ── Crypto Liquidity Map ──────────────────────────────────────────────
@@ -160,6 +168,17 @@ export function computeSessionLiquidityFromPhase(
     assetClass,
     ...row,
   };
+}
+
+/**
+ * Weight applied to liquidity clarity inside the Trade Permission Score. In a live session it is the session's
+ * liquidity (floored at 0.30). With the equity market closed there is no session to weight by: the permission is a
+ * read for the next open, so it uses the standard (morning) session weight rather than a closed market's zero
+ * liquidity (RS-22).
+ */
+export function tpsLiquidityWeight(profile: Pick<SessionLiquidityProfile, 'phase' | 'liquidityScore'>): number {
+  if (profile.phase === 'MARKET_CLOSED') return EQUITY_LIQUIDITY.MORNING_SESSION.liquidityScore / 100;
+  return Math.max(0.30, profile.liquidityScore / 100);
 }
 
 /**

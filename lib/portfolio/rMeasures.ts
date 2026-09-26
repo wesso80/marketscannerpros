@@ -8,6 +8,19 @@
  *    definition, used everywhere a stop isn't available, and never called R.
  */
 
+/**
+ * The account equity risk units are measured against, or null when the account has no capital recorded (starting
+ * capital + net deposits <= 0) or equity is not positive. Risk units are then unavailable: no invented base.
+ */
+export function riskUnitBase(input: { startingCapital: number; netDeposits: number; accountEquity: number }): number | null {
+  const funded = Number(input.startingCapital) + Number(input.netDeposits);
+  if (!Number.isFinite(funded) || funded <= 0) return null;
+  return Number.isFinite(input.accountEquity) && input.accountEquity > 0 ? input.accountEquity : null;
+}
+
+/** Shown where risk units would appear when there is no account equity to measure them against. */
+export const RISK_UNITS_NEED_EQUITY = 'Set Starting Capital to see risk units';
+
 /** Dollar size of one risk unit, or null when the account base or risk % is unusable. */
 export function riskUnitDollars(accountEquity: number, maxRiskPerTradePct: number): number | null {
   if (!Number.isFinite(accountEquity) || accountEquity <= 0) return null;
@@ -34,15 +47,25 @@ export interface ClosedForR {
   rMultiple?: number | null;
   /** Stop kept on this device for a manual position. */
   stopPrice?: number | null;
+  /** Exit price (same units as entryPrice). When known, R is worked out from prices, so no contract multiplier is needed. */
+  closePrice?: number | null;
 }
 
 /** R for a closed trade, or null when no real stop is known. `units` = quantity x contract multiplier. */
 export function closedTradeR(trade: ClosedForR, units: number): number | null {
   if (trade.rMultiple != null && Number.isFinite(trade.rMultiple)) return trade.rMultiple;
   const stop = Number(trade.stopPrice);
-  if (!Number.isFinite(stop) || stop <= 0 || !(units > 0)) return null;
+  if (!Number.isFinite(stop) || stop <= 0) return null;
   const riskPerUnit = trade.side === 'LONG' ? trade.entryPrice - stop : stop - trade.entryPrice;
   if (!(riskPerUnit > 0)) return null;
+  // Multiplier-free: P&L and risk both scale with quantity x multiplier, so R = price move / risk per unit. This keeps an
+  // option close right (x100 on both sides) even when the row no longer says it is an option (a close with no linked
+  // journal entry has no tradeType), where P&L / (risk x units) used to take x1 units.
+  const close = Number(trade.closePrice);
+  if (trade.closePrice != null && Number.isFinite(close) && close >= 0) {
+    return (trade.side === 'LONG' ? close - trade.entryPrice : trade.entryPrice - close) / riskPerUnit;
+  }
+  if (!(units > 0)) return null;
   return trade.realizedPL / (riskPerUnit * units);
 }
 

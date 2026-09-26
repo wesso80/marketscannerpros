@@ -110,6 +110,7 @@ export function gradeBasis(c: GradeInput): string {
   const out: string[] = [];
   if (isCalibrated(c)) {
     out.push(`Grade ${c.grade} from the Setup score ${c.score} (${ordinal(c.score)} percentile of calibrated expected R): A ≥ 85, B ≥ 60, C below.`);
+    out.push(GRADE_RELATIVE_SENTENCE);
   } else {
     const a = c.thresholds?.gradeA, b = c.thresholds?.gradeB;
     out.push(`Grade ${c.grade} from the Setup score ${c.score} (raw factor alignment, uncalibrated)${a != null && b != null ? `: A ≥ ${a}, B ≥ ${b}, C below` : ''}.`);
@@ -122,4 +123,38 @@ export function gradeBasis(c: GradeInput): string {
   if (snap) out.push(snap.message + '.');
   out.push('The MSP composite does not set the grade.');
   return out.join(' ');
+}
+
+/**
+ * What a displayed % change is measured against (RS-19). Equities: the prior session close. Crypto trades 24/7, so
+ * the basis is the provider's: CoinGecko's rolling 24h for live quotes, or the last completed bar's close for the
+ * Golden Egg packet (a daily bar opens at 00:00 UTC, a weekly bar on Monday 00:00 UTC).
+ */
+export function priceChangeBasisLabel(assetType: string | null | undefined, basis: 'rolling_24h' | { barInterval: string | null | undefined }): string {
+  if (assetType !== 'crypto') return 'vs prior close';
+  if (basis === 'rolling_24h') return '24h';
+  const bi = basis.barInterval;
+  if (bi === '1d') return 'since 00:00 UTC';
+  if (bi === '1w') return 'since Mon 00:00 UTC';
+  return bi ? `since last ${bi} bar close` : 'since last bar close';
+}
+
+/** Direction-neutral form for the grade tooltip (gradeBasis reads the same for long and short). */
+export const GRADE_RELATIVE_SENTENCE = 'Grade is relative within direction: expected R is ranked against other setups of the same direction, not against zero.';
+
+/**
+ * RS-17: a calibrated score/grade is a percentile of expected R among setups of the SAME direction, so a top-graded
+ * short can still have negative expected R (it is the least-bad short). Says so; null when not calibrated/no setup.
+ */
+export function gradeRelativeNote(c: (C & { setupType?: string; direction?: string }) | null | undefined): string | null {
+  if (!c || !isCalibrated(c) || c.setupType === 'NONE') return null;
+  const dir = c.direction === 'short' ? 'short' : c.direction === 'long' ? 'long' : 'same-direction';
+  const k = c.calibration!;
+  const base = `Grade is relative within direction: it ranks this setup's expected R against other ${dir} setups, not against zero.`;
+  if (!Number.isFinite(k.expectedR)) return base;
+  if (!(k.expectedR > 0)) {
+    const r = k.expectedR.toFixed(2);
+    return `${base} Expected R is still ${r}R here, so a high grade means one of the better ${dir} setups, not a positive edge.`;
+  }
+  return base;
 }

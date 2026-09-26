@@ -1,6 +1,6 @@
 "use client";
 
-import { isRecentNews, newsTopicFlags } from '@/lib/newsEvidence';
+import { isRecentNews, newsTopicFlags, noRecentNewsLabel } from '@/lib/newsEvidence';
 import { useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
@@ -721,10 +721,11 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
   const newsGate = useMemo<NewsGateModel>(() => {
     const recent = filteredNews.filter(item => isRecentNews(item.raw.timePublished));
+    const recentTotal = enrichNews.filter(item => isRecentNews(item.raw.timePublished)).length;
     if (!recent.length) return {
       permission: 'NO', riskState: 'Unavailable', volRegime: 'Unavailable', catalystDensity: 'Unavailable',
-      narrativeStrength: 'Unavailable', executionMode: 'Observation', topNarrative: 'No news from the last 24 hours',
-      confidencePct: 0, rotationLeaders: [], warnings: ['No current news evidence. Older articles remain in the archive below.'],
+      narrativeStrength: 'Unavailable', executionMode: 'Observation', topNarrative: noRecentNewsLabel(recentTotal),
+      confidencePct: 0, rotationLeaders: [], warnings: [recentTotal ? 'Recent articles are hidden by the filters above; clear them to include them.' : 'No current news evidence. Older articles remain in the archive below.'],
       briefAllowed: ['Refresh current sources'], briefAvoid: ['Archived headlines older than 24 hours.'], sentimentPct: 0, eventRiskLabel: macroEventCard?.event || 'Calendar coverage unverified', eventRiskCountdown: 'Unavailable',
     };
     const highImpactCount24h = recent.filter((item) => item.impact === 'HIGH').length;
@@ -783,7 +784,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
             ? ['Headline spikes without confirmation.', 'Mixed-breadth moves with weak evidence.']
             : ['Laggards without catalyst support.', 'Conflicting narratives around the same names.'],
     };
-  }, [filteredNews, groupedNarratives, macroEventCard]);
+  }, [filteredNews, enrichNews, groupedNarratives, macroEventCard]);
 
   const handleToggleDecision = (id: string) => {
     setExpandedDecisionIds((prev) => ({ ...prev, [id]: !prev[id] }));
