@@ -3,12 +3,13 @@
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
+import { fractionConfidencePct } from "@/lib/admin/hitIntegrity";
 
 export default function ConfidenceCard({ data }: { data: AdminSymbolIntelligence | null }) {
   if (!data) return <AdminCard title="Confidence"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
   return (
     <AdminCard title="Confidence">
-      <DataRow label="Confidence" value={`${data.confidence}%`} valueColor="text-sky-300" />
+      <DataRow label="Confidence" value={fractionConfidencePct(data.confidence)} valueColor="text-sky-300" />
       <DataRow label="Elite Score" value={data.eliteScore != null ? `${data.eliteScore.toFixed(1)} (${data.eliteGrade ?? "—"})` : "—"} valueColor="text-emerald-300" />
       <DataRow label="Symbol Trust" value={`${data.symbolTrust}%`} />
       <DataRow label="Size Multiplier" value={`${data.sizeMultiplier}x`} />

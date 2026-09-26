@@ -46,7 +46,9 @@ export type ScannerHit = {
    * topPlays/watchlist filtering so personal exposure cannot suppress setups.
    */
   marketPermission: PermissionState;
+  /** Percent 0..100 (legacy saved rows without `confidenceUnit` were 0..1). */
   confidence: number;
+  confidenceUnit?: "pct";
   eliteScore?: number;
   eliteGrade?: EliteGrade;
   setupState?: "DISCOVERED" | "WATCHING" | "TRIGGERED" | "INVALIDATED" | "EXPIRED";
@@ -58,6 +60,14 @@ export type ScannerHit = {
   playbook?: Playbook | string;
   blockReasons?: string[];
   timestamp?: string;
+  /** Saved-scan market the row came from (EQUITIES | CRYPTO). */
+  market?: string;
+  /** Last saved price for the symbol (from the saved scan row), when available. */
+  price?: number | null;
+  /** Other playbooks for the same symbol+direction collapsed into this row. */
+  otherPlaybooks?: string[];
+  /** True when the same symbol also has a row in the opposite direction. */
+  twoSided?: boolean;
   expectancy?: {
     symbol: {
       sample: number;

@@ -82,7 +82,7 @@ describe('C2: no setup with bars → real snapshot', () => {
   it('source: the zero-filled placeholder is only used when there are no bars', () => {
     const src = readFileSync('lib/admin/getAdminResearchPacket.ts', 'utf8');
     expect(src).toContain('barsToNoSetupIntelligence(');
-    expect(src).toContain('pipeline ? classifySetup(snapshot) : getSetupDefinition("NO_SETUP")');
+    expect(src).toContain('pipeline ? classifySetupWithPlaybook(snapshot) : getSetupDefinition("NO_SETUP")');
   });
 
   it('/api/admin/symbol returns the scanned bars (packets do not embed them)', () => {
