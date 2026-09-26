@@ -15,6 +15,7 @@ import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
 import { getCachedBarsOnly, setCachedBars } from '@/lib/barCache';
 import { getOHLCWithVolume, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { withScalpFreshness, rankScalpRows } from '@/lib/scalper/freshness';
 import {
   calculateAllIndicators,
   rsi,
@@ -37,7 +38,7 @@ type ScalpTimeframe = '5min' | '15min';
 type AssetClass = 'crypto' | 'equity';
 
 /* ─── Default Watchlists ─── */
-const DEFAULT_CRYPTO = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'MATIC', 'DOT'];
+const DEFAULT_CRYPTO = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'POL', 'DOT'];
 const DEFAULT_EQUITY = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'META', 'GOOGL', 'AMD', 'SPY', 'QQQ'];
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -138,7 +139,8 @@ export interface ScalpSignal {
   timeframe: ScalpTimeframe;
   price: number;
   direction: 'long' | 'short' | 'neutral';
-  strength: number; // 0-100
+  /** 0-100; null when the latest bar is stale (no score, no rank). */
+  strength: number | null;
   entry: number;
   stop: number;
   target1: number;
@@ -163,6 +165,9 @@ export interface ScalpSignal {
   indicators: IndicatorResult;
   barCount: number;
   lastBar: string;
+  /** Latest bar is too old for this cadence: no score, direction or levels. */
+  stale: boolean;
+  barAgeMinutes: number | null;
 }
 
 function computeScalpSignals(
@@ -170,7 +175,7 @@ function computeScalpSignals(
   bars: OHLCVBar[],
   assetClass: AssetClass,
   timeframe: ScalpTimeframe,
-): ScalpSignal {
+): Omit<ScalpSignal, 'stale' | 'barAgeMinutes'> {
   const closes = bars.map((b) => b.close);
   const volumes = bars.map((b) => b.volume);
   const latest = bars[bars.length - 1];
@@ -441,7 +446,7 @@ export async function POST(req: NextRequest) {
       chunk.map(async (sym) => {
         const bars = await fetcher(sym, timeframe);
         if (!bars) throw new Error(`No data for ${sym}`);
-        return computeScalpSignals(sym, bars, assetClass, timeframe);
+        return withScalpFreshness(computeScalpSignals(sym, bars, assetClass, timeframe));
       }),
     );
     for (let i = 0; i < settled.length; i++) {
@@ -451,15 +456,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Sort by strength descending
-  results.sort((a, b) => b.strength - a.strength);
+  // Fresh rows by strength descending; stale rows unranked at the bottom
+  const ranked = rankScalpRows(results);
 
   return NextResponse.json({
     ok: true,
     timeframe,
     assetClass,
     scanned: symbols.length,
-    results,
+    results: ranked,
     errors: errors.length > 0 ? errors : undefined,
     timestamp: new Date().toISOString(),
   });

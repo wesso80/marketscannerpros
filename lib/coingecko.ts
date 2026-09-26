@@ -374,6 +374,9 @@ export const COINGECKO_ID_MAP: Record<string, string> = {
   'LINKUSDT': 'chainlink',
   'MATIC': 'matic-network',
   'MATICUSDT': 'matic-network',
+  // MATIC migrated to POL (Polygon Ecosystem Token) in Sept 2024.
+  'POL': 'polygon-ecosystem-token',
+  'POLUSDT': 'polygon-ecosystem-token',
   'LTC': 'litecoin',
   'LTCUSDT': 'litecoin',
   'SHIB': 'shiba-inu',
