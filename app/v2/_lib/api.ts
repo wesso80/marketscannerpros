@@ -177,6 +177,7 @@ export interface ScannerResponse {
       stale: boolean;
       coverageScore: number | null;
       warnings: string[];
+      notes?: string[];
       providerStatus?: {
         source: string;
         provider: string;
@@ -187,6 +188,7 @@ export interface ScannerResponse {
         productionDemoEnabled: boolean;
         alertLevel: 'none' | 'info' | 'warning' | 'critical';
         warnings: string[];
+        notes?: string[];
       } | null;
     };
     riskGovernor?: { regime: string; riskMode: string; permission: string } | null;
@@ -532,6 +534,7 @@ export interface OptionsScanResponse {
         productionDemoEnabled: boolean;
         alertLevel: 'none' | 'info' | 'warning' | 'critical';
         warnings: string[];
+        notes?: string[];
       } | null;
       optionsChainQuality?: {
         status: 'sufficient' | 'thin' | 'missing';
