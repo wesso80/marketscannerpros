@@ -4,6 +4,7 @@ import { alphaVantageProvider, memoizeProvider } from "@/lib/operator/market-dat
 import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
+import { closedMarketDataTruth, closedSessionForBar } from "@/lib/admin/closedMarket";
 import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
 import { classifySetup } from "@/lib/engines/setupClassifier";
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
@@ -309,12 +310,19 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   const ageSec = Number.isFinite(lastBarMs) ? Math.max(0, Math.round((Date.now() - lastBarMs) / 1000)) : null;
   const sourceErrors = result.errors.filter((e) => e.symbol === symbol).map((e) => e.error);
   if (noBars && !sourceErrors.includes("NO_BAR_DATA")) sourceErrors.push("NO_BAR_DATA");
-  const dataTruth = computeDataTruth({
-    marketDataAgeSec: ageSec,
-    timeframe,
-    isCached: false,
-    sourceErrors,
-  });
+  // US equities while the market is shut: last-session bars are as current as data gets, so they are labelled
+  // "as of <session> close" (CACHED) instead of STALE by wall-clock age (trust 15 over a weekend).
+  const closedSession = market === "EQUITIES" && !noBars && sourceErrors.length === 0
+    ? closedSessionForBar(bars[bars.length - 1].timestamp)
+    : null;
+  const dataTruth = closedSession
+    ? closedMarketDataTruth(ageSec, timeframe, closedSession)
+    : computeDataTruth({
+        marketDataAgeSec: ageSec,
+        timeframe,
+        isCached: false,
+        sourceErrors,
+      });
 
   const setup = classifySetup(snapshot);
   const journalCases = await loadJournalCases(symbol, market);

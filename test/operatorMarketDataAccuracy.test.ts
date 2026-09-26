@@ -65,6 +65,8 @@ describe('equity entitlement (configurable, graceful fallback)', () => {
     await createOperatorProvider({ waitForToken: true }).getBars('AAPL', 'EQUITIES', '15m');
     expect(mocks.avFetch).toHaveBeenCalledTimes(1);
     expect(String(mocks.avFetch.mock.calls[0][0])).toContain('entitlement=realtime');
+    // regular-session bars only (no thin post-market bar as the "latest" bar after the close)
+    expect(String(mocks.avFetch.mock.calls[0][0])).toContain('extended_hours=false');
   });
 
   it('honours OPERATOR_AV_ENTITLEMENT', async () => {

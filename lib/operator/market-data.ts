@@ -98,16 +98,18 @@ function resolveAVFunction(
     };
   }
 
-  // Equities / Futures / Forex / Options → standard endpoints
+  // Equities / Futures / Forex / Options → standard endpoints. Regular-session bars only: Alpha Vantage includes
+  // pre/post-market bars by default, so after the close the newest bar was a thin 19:45 ET bar (relative volume
+  // near zero, compressed ranges) and averages mixed in extended-hours volume.
   const ent = entitlementParam(entitlement);
   if (['5m', '5min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (5min)', extraParams: `&interval=5min&outputsize=${operatorOutputSize()}${ent}` };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (5min)', extraParams: `&interval=5min&outputsize=${operatorOutputSize()}&extended_hours=false${ent}` };
   }
   if (['15m', '15min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (15min)', extraParams: `&interval=15min&outputsize=${operatorOutputSize()}${ent}` };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (15min)', extraParams: `&interval=15min&outputsize=${operatorOutputSize()}&extended_hours=false${ent}` };
   }
   if (['1h', '60min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (60min)', extraParams: `&interval=60min&outputsize=${operatorOutputSize()}${ent}` };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (60min)', extraParams: `&interval=60min&outputsize=${operatorOutputSize()}&extended_hours=false${ent}` };
   }
   // Daily, 4H, 1W all use daily adjusted (4H/1W aggregated from daily)
   return { fn: 'TIME_SERIES_DAILY_ADJUSTED', tsKey: 'Time Series (Daily)', extraParams: `&outputsize=${operatorOutputSize()}${ent}` };

@@ -96,6 +96,15 @@ describe('selectDeepScanSymbols (shortlist from bulk quotes)', () => {
     expect(noQuoteForNew.deferred).toEqual(['N4']);
   });
 
+  it('an over-cap symbol with no saved packet is deferred even with a quote (a quote-only refresh cannot create a row)', () => {
+    const p = new Map<string, PriorResult>([['EMPTY', prior('EMPTY', { status: 'failed', hasPacket: false })]]);
+    const quotes = new Map([['N1', quote('N1', 10)], ['N2', quote('N2', 10)], ['N3', quote('N3', 10)], ['N4', quote('N4', 10)], ['EMPTY', quote('EMPTY', 10)]]);
+    const plan = selectDeepScanSymbols({ due: ['N1', 'N2', 'N3', 'N4', 'EMPTY'], prior: p, quotes, nowMs: NOW, cfg });
+    expect(plan.deep).toEqual(['N1', 'N2', 'N3']);
+    expect(plan.quoteOnly).toEqual([]);
+    expect(plan.deferred).toEqual(['N4', 'EMPTY']);
+  });
+
   it('without bulk quotes every due symbol is a full-scan candidate (capped)', () => {
     const p = new Map<string, PriorResult>([['A', prior('A')], ['B', prior('B')]]);
     const plan = selectDeepScanSymbols({ due: ['A', 'B'], prior: p, quotes: null, nowMs: NOW, cfg });
