@@ -15,12 +15,20 @@ interface Health {
   lastScanAt?: string | null;
   errorsCount?: number;
   dbConnected?: boolean;
+  scannerDetail?: {
+    note?: string;
+    markets?: { market: string; status: string; note: string }[];
+  } | null;
 }
 
 interface ScannerMeta {
   symbolsScanned?: number;
   errorsCount?: number;
   errors?: { symbol: string; error: string }[];
+  market?: string;
+  pausedCount?: number;
+  paused?: string[];
+  pausedReason?: string | null;
   timestamp?: string;
   environmentMode?: string;
 }
@@ -46,10 +54,12 @@ function authHeaders(): HeadersInit {
 function tone(value?: string | boolean): "green" | "yellow" | "red" | "neutral" {
   if (value === true) return "green";
   if (value === false) return "red";
-  const text = String(value || "").toUpperCase();
-  if (["HEALTHY", "OK", "LOW_LATENCY", "RUNNING", "CONNECTED"].some((item) => text.includes(item))) return "green";
-  if (["IDLE", "DISCONNECTED", "UNKNOWN", "DEGRADED"].some((item) => text.includes(item))) return "yellow";
+  const text = String(value || "").toUpperCase().replace(/_/g, " ");
+  // Not measured / paused on purpose are neutral, never red or green.
+  if (text.includes("NOT MONITORED") || text.includes("PAUSED")) return "neutral";
   if (["ERROR", "FAILED", "BLOCK"].some((item) => text.includes(item))) return "red";
+  if (["IDLE", "UNKNOWN", "DEGRADED", "STALE", "NO RUNS", "NO DATA", "CHECK"].some((item) => text.includes(item))) return "yellow";
+  if (["HEALTHY", "OK", "RUNNING", "CONNECTED"].some((item) => text.includes(item))) return "green";
   return "neutral";
 }
 
@@ -67,7 +77,8 @@ export default function DiagnosticsPage() {
     try {
       const [healthRes, scannerRes, scannerDiagnosticsRes] = await Promise.all([
         fetch("/api/admin/system/health", { headers: authHeaders() }),
-        fetch("/api/admin/scanner/live?market=CRYPTO&timeframe=15m", { headers: authHeaders() }),
+        // No market param: the server picks the default (EQUITIES while crypto data is switched off).
+        fetch("/api/admin/scanner/live?timeframe=15m", { headers: authHeaders() }),
         fetch("/api/admin/diagnostics/scanners", { headers: authHeaders() }),
       ]);
       setLatencyMs(Math.round(performance.now() - startedAt));
@@ -97,6 +108,8 @@ export default function DiagnosticsPage() {
   ];
 
   const scannerErrors = scanner?.meta?.errors || [];
+  const pausedCount = scanner?.meta?.pausedCount ?? 0;
+  const scannerMarkets = health?.scannerDetail?.markets ?? [];
 
   return (
     <div className="p-4 space-y-4">
@@ -114,8 +127,9 @@ export default function DiagnosticsPage() {
         <MiniStat label="Round Trip" value={latencyMs == null ? "-" : `${latencyMs}ms`} />
         <MiniStat label="Symbols Scanned" value={String(scanner?.meta?.symbolsScanned ?? "-")} />
         <MiniStat label="Scanner Hits" value={String(scanner?.hits?.length ?? "-")} />
-        <MiniStat label="Scan Errors" value={String(scanner?.meta?.errorsCount ?? 0)} />
-        <MiniStat label="Bar Cache" value={`${scannerDiagnostics?.barCache?.size ?? 0}/${scannerDiagnostics?.barCache?.maxEntries ?? 0}`} />
+        <MiniStat label={`Scan Errors${scanner?.meta?.market ? ` (${scanner.meta.market})` : ""}`} value={String(scanner?.meta?.errorsCount ?? 0)} />
+        <MiniStat label="Paused (not errors)" value={String(pausedCount)} />
+        <MiniStat label="Bar Cache (this instance)" value={`${scannerDiagnostics?.barCache?.size ?? 0}/${scannerDiagnostics?.barCache?.maxEntries ?? 0}`} />
         <MiniStat label="Signals 24h" value={String(scannerDiagnostics?.scanners?.signalCount24h ?? 0)} />
         <MiniStat label="DB Latency" value={scannerDiagnostics?.database?.latencyMs == null ? "-" : `${scannerDiagnostics.database.latencyMs}ms`} />
       </div>
@@ -129,10 +143,25 @@ export default function DiagnosticsPage() {
           ))}
         </div>
       </AdminCard>
+      {scannerMarkets.length > 0 && (
+        <AdminCard title="Shared Scan Runs (admin_scan_runs)">
+          <div className="grid gap-2 md:grid-cols-2">
+            {scannerMarkets.map((m) => (
+              <div key={m.market} className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/70 text-sm">{m.market}</span>
+                  <StatusPill label={m.status.replace(/_/g, " ")} tone={tone(m.status)} />
+                </div>
+                <p className="mt-1 text-xs text-white/45">{m.note}</p>
+              </div>
+            ))}
+          </div>
+        </AdminCard>
+      )}
       <AdminCard title="Scanner Infrastructure">
         <div className="grid gap-2 md:grid-cols-2">
           <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
-            <span className="text-white/70 text-sm">Bar Cache Entries</span>
+            <span className="text-white/70 text-sm">Bar Cache Entries (this instance)</span>
             <StatusPill label={`${scannerDiagnostics?.barCache?.size ?? 0}/${scannerDiagnostics?.barCache?.maxEntries ?? 0}`} tone="neutral" />
           </div>
           <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
@@ -161,6 +190,12 @@ export default function DiagnosticsPage() {
           </div>
         ) : (
           <p className="text-white/40 text-sm">No scanner errors returned by the latest diagnostic run.</p>
+        )}
+        {pausedCount > 0 && (
+          <p className="mt-2 text-xs text-white/45">
+            {pausedCount} symbol{pausedCount === 1 ? "" : "s"} paused on purpose, not counted as errors
+            {scanner?.meta?.pausedReason ? `: ${scanner.meta.pausedReason}` : "."}
+          </p>
         )}
       </AdminCard>
     </div>

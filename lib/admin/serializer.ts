@@ -302,10 +302,10 @@ export function scanResultToHealth(
 ): SystemHealth {
   return {
     feed: feedOk ? "HEALTHY" : "DEGRADED",
-    websocket: "DISCONNECTED", // Will be CONNECTED once WS is added
+    websocket: "NOT MONITORED", // there is no websocket; nothing measures it
     scanner: result ? "RUNNING" : "IDLE",
-    cache: "OK",
-    api: "LOW_LATENCY",
+    cache: "NOT MONITORED",
+    api: "NOT MONITORED",
     lastScanAt: result?.timestamp,
     symbolsScanned: result?.symbolsScanned ?? 0,
     errorsCount: result?.errors?.length ?? 0,

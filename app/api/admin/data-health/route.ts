@@ -12,27 +12,27 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
 import { getProviderHealthSummary } from "@/lib/admin/providerTelemetry";
+import {
+  loadDiscordBridgeHealth,
+  loadResearchAlertHealth,
+  loadScannerHealth,
+  loadStripeWebhookHealth,
+  type ActivityRow,
+} from "@/lib/admin/healthProbes";
 
 export const runtime = "nodejs";
 
 interface ProviderRow {
   id: string;
   label: string;
-  status: "OK" | "DEGRADED" | "DOWN" | "UNKNOWN";
+  /** CONFIGURED = the key is set (not a live check); PAUSED = switched off on purpose. */
+  status: "OK" | "CONFIGURED" | "PAUSED" | "DEGRADED" | "DOWN" | "UNKNOWN";
   latencyMs?: number | null;
   lastSeen?: string | null;
   note?: string;
 }
 
-interface WebhookRow {
-  id: string;
-  label: string;
-  lastReceivedAt?: string | null;
-  lastStatus?: "OK" | "FAILED" | "STALE" | "UNKNOWN";
-  count24h?: number;
-  failures24h?: number;
-  note?: string;
-}
+type WebhookRow = ActivityRow;
 
 function relativeTime(iso: string | null | undefined): string | null {
   if (!iso) return null;
@@ -55,50 +55,22 @@ async function probeDatabase(): Promise<{ connected: boolean; latencyMs: number 
   }
 }
 
-async function probeLastSignalAt(): Promise<string | null> {
-  try {
-    const rows = await q(
-      "SELECT MAX(created_at) AS last FROM operator_state",
-    );
-    return rows?.[0]?.last ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function probeWebhookCounts(table: string): Promise<{ count: number; failures: number; last: string | null }> {
-  try {
-    const rows = await q(
-      `SELECT COUNT(*)::int AS c,
-              COUNT(*) FILTER (WHERE status = 'failed')::int AS f,
-              MAX(created_at) AS last
-       FROM ${table}
-       WHERE created_at > NOW() - INTERVAL '24 hours'`,
-    );
-    const row = rows?.[0] ?? {};
-    return {
-      count: Number(row.c) || 0,
-      failures: Number(row.f) || 0,
-      last: row.last ?? null,
-    };
-  } catch {
-    return { count: 0, failures: 0, last: null };
-  }
-}
-
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
   }
 
-  const db = await probeDatabase();
-  const lastSignal = await probeLastSignalAt();
+  const [db, scanner, discord, alerts] = await Promise.all([
+    probeDatabase(),
+    loadScannerHealth(),
+    loadDiscordBridgeHealth(),
+    loadResearchAlertHealth(),
+  ]);
 
   const hasAlphaVantage = !!process.env.ALPHA_VANTAGE_API_KEY;
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
   const hasStripe = !!process.env.STRIPE_SECRET_KEY;
   const hasStripeWebhook = !!process.env.STRIPE_WEBHOOK_SECRET;
-  const hasDiscord = !!process.env.DISCORD_BRIDGE_WEBHOOK_URL || !!process.env.DISCORD_WEBHOOK_URL;
 
   const providers: ProviderRow[] = [
     {
@@ -111,72 +83,38 @@ export async function GET(req: NextRequest) {
     {
       id: "alpha-vantage",
       label: "Alpha Vantage",
-      status: hasAlphaVantage ? "OK" : "DEGRADED",
-      note: hasAlphaVantage ? "Market data feed configured" : "ALPHA_VANTAGE_API_KEY missing",
+      status: hasAlphaVantage ? "CONFIGURED" : "DEGRADED",
+      note: hasAlphaVantage ? "Key set (configuration only, not a live check)" : "ALPHA_VANTAGE_API_KEY missing",
     },
     {
       id: "openai",
       label: "OpenAI",
-      status: hasOpenAI ? "OK" : "DEGRADED",
-      note: hasOpenAI ? "MSP Analyst online" : "OPENAI_API_KEY missing",
+      status: hasOpenAI ? "CONFIGURED" : "DEGRADED",
+      note: hasOpenAI ? "Key set (configuration only, not a live check)" : "OPENAI_API_KEY missing",
     },
     {
       id: "stripe",
       label: "Stripe",
-      status: hasStripe ? "OK" : "DEGRADED",
-      note: hasStripe ? "Subscriptions configured" : "STRIPE_SECRET_KEY missing",
+      status: hasStripe ? "CONFIGURED" : "DEGRADED",
+      note: hasStripe ? "Key set (configuration only, not a live check)" : "STRIPE_SECRET_KEY missing",
     },
     {
       id: "scanner",
       label: "Scanner Pipeline",
-      status: lastSignal ? "OK" : "DEGRADED",
-      lastSeen: relativeTime(lastSignal),
-      note: lastSignal ? "Operator state recently written" : "No operator_state activity yet",
+      // From the shared saved scan's run log (admin_scan_runs), not the retired operator_state table.
+      status: !scanner ? "UNKNOWN" : scanner.status === "OK" ? "OK" : scanner.status === "PAUSED" ? "PAUSED" : "DEGRADED",
+      lastSeen: relativeTime(scanner?.lastRunAt),
+      note: scanner ? scanner.note : "Could not read admin_scan_runs",
     },
   ];
 
-  // Webhook activity — table presence is optional; absent tables degrade
-  // to UNKNOWN rather than failing the response.
-  const stripeEvents = await probeWebhookCounts("stripe_webhook_events");
-  const alertDispatches = await probeWebhookCounts("alert_dispatch_log");
-
+  // Webhook / outbound activity from tables that exist. Stripe events are not logged anywhere, so Stripe
+  // delivery is NOT MONITORED rather than a fake STALE.
   const webhooks: WebhookRow[] = [
-    {
-      id: "stripe",
-      label: "Stripe Webhooks",
-      count24h: stripeEvents.count,
-      failures24h: stripeEvents.failures,
-      lastReceivedAt: relativeTime(stripeEvents.last),
-      lastStatus: !hasStripeWebhook
-        ? "UNKNOWN"
-        : stripeEvents.failures > 0
-        ? "FAILED"
-        : stripeEvents.count > 0
-        ? "OK"
-        : "STALE",
-      note: hasStripeWebhook ? "Signed receiver active" : "STRIPE_WEBHOOK_SECRET missing",
-    },
-    {
-      id: "alerts",
-      label: "Alert Dispatcher",
-      count24h: alertDispatches.count,
-      failures24h: alertDispatches.failures,
-      lastReceivedAt: relativeTime(alertDispatches.last),
-      lastStatus:
-        alertDispatches.failures > 0
-          ? "FAILED"
-          : alertDispatches.count > 0
-          ? "OK"
-          : "STALE",
-      note: "Outbound research alerts",
-    },
-    {
-      id: "discord",
-      label: "Discord Bridge",
-      lastStatus: hasDiscord ? "OK" : "UNKNOWN",
-      note: hasDiscord ? "Outbound webhook configured" : "DISCORD_WEBHOOK_URL missing",
-    },
-  ];
+    await loadStripeWebhookHealth(hasStripeWebhook),
+    alerts,
+    discord,
+  ].map((row) => ({ ...row, lastReceivedAt: relativeTime(row.lastReceivedAt) }));
 
   // Phase 10: Provider telemetry — success/failure/latency tracking
   const providerTelemetry = getProviderHealthSummary();
@@ -186,6 +124,7 @@ export async function GET(req: NextRequest) {
     generatedAt: new Date().toISOString(),
     database: db,
     providers,
+    scanner,
     webhooks,
     providerTelemetry: providerTelemetry.map((summary) => ({
       provider: summary.provider,
