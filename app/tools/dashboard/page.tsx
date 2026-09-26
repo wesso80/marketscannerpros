@@ -1,6 +1,7 @@
 'use client';
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 import { formatEventTime } from '@/lib/eventTimeDisplay';
+import { formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
 
 /* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
@@ -826,14 +827,14 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
             })}
           </div>
         )}
-        <p className="mt-2 text-[10px] text-slate-600">Tiles show ETF prices standing in for the indices (SPY, DIA, QQQ, IWM), not index levels: live or 15-minute-delayed Alpha Vantage quotes. VIXY is a VIX futures ETF and can move differently from the VIX itself.</p>
+        <p className="mt-2 text-[10px] text-slate-600">Tiles show ETF prices standing in for the indices (SPY, DIA, QQQ, IWM), not index levels: 15-minute-delayed Alpha Vantage quotes (US equities are licensed 15-minute delayed). VIXY is a VIX futures ETF and can move differently from the VIX itself.</p>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* -- Equity Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <PanelHeader title="Equity movers" eyebrow="Live movement" />
+            <PanelHeader title="Equity movers" eyebrow="15-min delayed" action={formatEasternAsOf(movers.data?.equityAsOf) ? <span className="text-[10px] text-slate-500">{formatEasternAsOf(movers.data?.equityAsOf)}</span> : null} />
             <div className="space-y-1">
               <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
               {eqGainers.length === 0 ? (

@@ -29,6 +29,7 @@ import {
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { avEquityEntitlementParam } from '@/lib/alphaVantageEntitlement';
 import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
 import { crossSectionalPercentiles } from '@/lib/analysis';
 import { scoreProSnapshot, type ProHardBlockContext } from '@/lib/scanner/proScore';
@@ -1277,7 +1278,7 @@ async function fetchAlphaTopMovers(): Promise<{
   }
 
   try {
-    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_KEY}${avEquityEntitlementParam()}`;
     await avTakeToken();
     const response = await fetch(url, { cache: 'no-store' });
     const data = await response.json();
