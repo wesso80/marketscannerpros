@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { parseCsvTable } from '@/lib/csv';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -34,24 +35,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'API error or rate limited' }, { status: 429 });
     }
 
-    // Parse CSV: symbol, name, ipoDate, priceRangeLow, priceRangeHigh, currency, exchange
-    const lines = csvText.trim().split('\n');
-    if (lines.length < 2) {
+    // Parse CSV: symbol, name, ipoDate, priceRangeLow, priceRangeHigh, currency, exchange.
+    // Quote-aware (company names can contain commas) and read by header name, not position.
+    const table = parseCsvTable(csvText);
+    if (table.rows.length < 1 || table.col('symbol') < 0 || table.col('ipoDate') < 0) {
       return NextResponse.json({ success: true, ipos: [], count: 0 });
     }
 
-    const ipos = lines.slice(1).map((line) => {
-      const values = line.split(',');
-      return {
-        symbol: values[0]?.trim() || '',
-        name: values[1]?.trim() || '',
-        ipoDate: values[2]?.trim() || '',
-        priceRangeLow: values[3] && values[3] !== '' ? parseFloat(values[3]) : null,
-        priceRangeHigh: values[4] && values[4] !== '' ? parseFloat(values[4]) : null,
-        currency: values[5]?.trim() || 'USD',
-        exchange: values[6]?.trim() || '',
-      };
-    }).filter(ipo => ipo.symbol && ipo.ipoDate);
+    const num = (v: string) => { const n = v === '' ? NaN : Number(v); return Number.isFinite(n) ? n : null; };
+    const ipos = table.rows.map((row) => ({
+      symbol: table.get(row, 'symbol'),
+      name: table.get(row, 'name'),
+      ipoDate: table.get(row, 'ipoDate'),
+      priceRangeLow: num(table.get(row, 'priceRangeLow')),
+      priceRangeHigh: num(table.get(row, 'priceRangeHigh')),
+      currency: table.get(row, 'currency') || 'USD',
+      exchange: table.get(row, 'exchange'),
+    })).filter(ipo => ipo.symbol && ipo.ipoDate);
 
     // Sort by date ascending
     ipos.sort((a, b) => a.ipoDate.localeCompare(b.ipoDate));
