@@ -16,6 +16,7 @@ import SignalRail from '@/components/terminal/SignalRail';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
+import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
@@ -1680,15 +1681,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const cleanRiskReady = cleanPerformanceHistory.length >= 5 && Boolean(riskAnalytics);
   const maxDrawdownFromSnapshots = riskAnalytics?.maxDrawdown ?? 0;
 
-  const cagrApprox = (() => {
-    if (cleanPerformanceHistory.length < 2) return null;
-    const first = cleanPerformanceHistory[0];
-    const last = cleanPerformanceHistory[cleanPerformanceHistory.length - 1];
-    const days = Math.max(1, (new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 86_400_000);
-    const years = days / 365;
-    if (years <= 0 || first.totalValue <= 0 || last.totalValue <= 0) return null;
-    return (Math.pow(last.totalValue / first.totalValue, 1 / years) - 1) * 100;
-  })();
+  // N/A (null) until clean equity history is ready (same gate as Sharpe / Max DD) and spans >= 30 days.
+  const cagrApprox = cagrFromEquityHistory(cleanPerformanceHistory, { ready: cleanRiskReady });
 
   const returnsSeries = cleanPerformanceHistory
     .slice(1)
