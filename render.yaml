@@ -8,7 +8,7 @@
       - key: NODE_ENV
         value: production
       - key: ALPHA_VANTAGE_RPM
-        value: "400"
+        value: "600"  # matches Render dashboard (2026-09-27)
       # Cap V8 old-space at 1536 MB on the 2 GB Standard instance so GC
       # pressure kicks in before the container's cgroup OOM-killer or the
       # native cppgc heap (used by ContextifyScript during SSR compilation)
@@ -342,7 +342,7 @@
     runtime: node
     schedule: "15 20 * * *"  # 8:15 PM UTC daily - after prewake universe refresh
     buildCommand: echo "Cron job ready"
-    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 180 -X POST "$WEB_URL/api/jobs/email-morning-brief" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"scanLimit":80}'
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 180 -X POST "$WEB_URL/api/jobs/email-morning-brief" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"scanLimit":80,"market":"EQUITIES"}'
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.app"
@@ -548,7 +548,7 @@
   - type: cron
     name: persist-edge-packets-crypto
     runtime: node
-    schedule: "0 0 30 2 *"  # PAUSED 2026-06-14 — never fires (Feb 30). CoinGecko fetch disabled; crypto edge packets empty. Original: */15 * * * *
+    schedule: "*/15 * * * *"  # Resumed 2026-09-27 (matches Render dashboard); admin crypto runs on Alpha Vantage (isAdminCryptoEnabled)
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 540 -X POST "$WEB_URL/api/cron/persist-edge-packets" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"market":"CRYPTO","timeframe":"15m"}'
     envVars:
