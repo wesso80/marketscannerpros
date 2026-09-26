@@ -21,6 +21,7 @@ import { useRankedQueue } from '@/hooks/useRankedQueue';
 import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { proDisplaySymbol } from '@/lib/scanner/proDisplay';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
@@ -178,16 +179,18 @@ function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up'
   const pct = parseChangePct(mover.change_percentage);
   const barColor = tone === 'up' ? 'var(--msp-bull)' : 'var(--msp-bear)';
   const sign = pct >= 0 ? '+' : '';
+  // Crypto movers carry the -USD suffix so a coin such as HOOD is not read as the US stock of the same ticker.
+  const label = proDisplaySymbol(mover.ticker, mover.asset_class);
   return (
     <button
       type="button"
-      aria-label={`Open Golden Egg for ${mover.ticker}`}
+      aria-label={`Open Golden Egg for ${label}`}
       className="w-full rounded-md px-2 py-1.5 text-xs hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
       onClick={onOpen}
       onKeyDown={onKeyOpen}
     >
-      <div className="grid grid-cols-[4.5rem_1fr_5.5rem] items-center gap-2">
-        <span style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{mover.ticker}</span>
+      <div className="grid grid-cols-[5.5rem_1fr_5.5rem] items-center gap-2">
+        <span className="truncate text-left" title={label} style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{label}</span>
         <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--msp-text-muted)' }}>{fmtPrice(parseFloat(mover.price))}</span>
         <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: barColor, fontWeight: 500 }}>{sign}{Number.isFinite(pct) ? `${pct.toFixed(2)}%` : mover.change_percentage}</span>
       </div>

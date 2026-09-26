@@ -12,6 +12,7 @@
  */
 import type { Regime } from '@/lib/risk-governor-hard';
 import type { IndexTrend, RegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlay';
+import { DAILY_SERIES_MAX_MISSING_SESSIONS, isDailySeriesStale } from '@/lib/time/dataFreshness';
 
 export const MARKET_REGIME_POLICY = {
   /** VIX at or above this is a stress reading on its own. */
@@ -24,8 +25,12 @@ export const MARKET_REGIME_POLICY = {
   vixLow: 13,
   /** HY OAS widening (percentage points over 20 observations) that counts as credit stress. */
   hyOasStressPp: 0.5,
-  /** Inputs older than this are flagged stale (covers weekends and a holiday; FRED lags a day). */
-  staleAfterDays: 4,
+  /**
+   * Inputs missing more than this many completed US sessions are flagged stale (weekends and holidays are not
+   * counted; one session covers FRED's next-morning publication). Shared with the liquidity engine
+   * (lib/time/dataFreshness.ts).
+   */
+  staleAfterMissingSessions: DAILY_SERIES_MAX_MISSING_SESSIONS,
   /** Inputs older than this are not used at all. */
   unavailableAfterDays: 14,
 } as const;
@@ -116,5 +121,5 @@ export function classifyMarketRegime(inputs: RegimeOverlayInputs | null | undefi
     regime = 'RANGE_NEUTRAL';
   }
 
-  return { available: true, regime, asOf: new Date(asOfMs).toISOString(), stale: ageDays > P.staleAfterDays, reasons };
+  return { available: true, regime, asOf: new Date(asOfMs).toISOString(), stale: isDailySeriesStale(new Date(asOfMs).toISOString(), now), reasons };
 }

@@ -18,6 +18,7 @@ import { PageHero } from '@/components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { filterMoversByFloor } from '@/lib/analysis';
 import { humanizeEnum } from '@/lib/presentation/labels';
+import { proDisplaySymbol } from '@/lib/scanner/proDisplay';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
@@ -142,7 +143,7 @@ export default function ExplorerPage() {
         metrics={[
           { label: 'Sectors leading', value: sectorData.length ? `${sectorData.filter((s: SectorData) => (s.changePercent ?? 0) > 0).length}/${sectorData.length} green` : '—', tone: 'bull', detail: sectorData.length ? `Top: ${[...sectorData].sort((a: SectorData, b: SectorData) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]?.name}` : 'Sector data loading' },
           { label: 'Crypto cap', value: cryptoData?.totalMarketCapFormatted || '—', tone: 'info', detail: cryptoData ? `BTC ${cryptoData.btcDominance.toFixed(1)}% · ETH ${cryptoData.ethDominance.toFixed(1)}%` : 'Crypto market loading' },
-          { label: 'Top gainer', value: allGainers[0]?.ticker || '—', tone: 'warn', detail: allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading' },
+          { label: 'Top gainer', value: allGainers[0] ? proDisplaySymbol(allGainers[0].ticker, allGainers[0].asset_class) : '—', tone: 'warn', detail: allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading' },
           { label: 'Next check', value: tab, tone: 'warn', detail: 'Pick one lens, then drop into Scanner or Golden Egg' },
         ]}
       />
@@ -306,8 +307,8 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoGainers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
-                      <span className="font-semibold text-white w-16">{m.ticker}</span>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
+                      <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
                     </button>
@@ -322,8 +323,8 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoLosers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
-                      <span className="font-semibold text-white w-16">{m.ticker}</span>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
+                      <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
                     </button>
