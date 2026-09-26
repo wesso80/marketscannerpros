@@ -20,7 +20,7 @@ import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
-import { localDateInput, paperCloseDateIso, positionLimitLabel, profitFactorDisplay } from '@/lib/portfolio/trackDisplay';
+import { localDateInput, paperCloseDateIso, positionLimitWhenReady, profitFactorWhenReady } from '@/lib/portfolio/trackDisplay';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
@@ -557,7 +557,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const { isLocked: riskLocked } = useRiskPermission();
   const tradeExecutionEventMapRef = useRef<Record<number, string>>({});
 
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const portfolioLimit = getPortfolioLimit(tier);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1687,7 +1687,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const avgWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / winningTrades.length : 0;
   const avgLossAbs = losingTrades.length > 0 ? Math.abs(losingTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / losingTrades.length) : 0;
   // TR-6: no ratio without a losing trade (was a hard-coded placeholder ratio that read like a real statistic).
-  const profitFactor = profitFactorDisplay(closedPositions.map((trade) => trade.realizedPL));
+  // TR-37: '…' until positions have loaded, so first paint never flashes fallback wording.
+  const profitFactor = profitFactorWhenReady(closedPositions.map((trade) => trade.realizedPL), dataLoaded);
   const expectancy = closedTradesCount > 0
     ? ((winRatePct / 100) * avgWin) - ((1 - (winRatePct / 100)) * avgLossAbs)
     : 0;
@@ -1993,7 +1994,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             { label: 'Unrealized', value: formatRiskPairText(unrealizedPL), tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
             { label: 'Realized', value: formatRiskPairText(realizedPL), tone: realizedPL >= 0 ? 'bull' : 'bear' },
             { label: 'Drawdown', value: cleanRiskReady ? `${currentDrawdownPct.toFixed(1)}%` : 'N/A', tone: cleanRiskReady && currentDrawdownPct > 10 ? 'bear' : 'warn' },
-            { label: 'Limit', value: positionLimitLabel(positions.length, getPortfolioLimit(tier)), tone: positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
+            { label: 'Limit', value: positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading), tone: dataLoaded && !tierLoading && positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
           ]}
         />
 
