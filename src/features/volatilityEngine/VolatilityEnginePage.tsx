@@ -1,7 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
 import VEHeatmapGauge from '@/src/features/volatilityEngine/components/VEHeatmapGauge';
 import VEDirectionalCompass from '@/src/features/volatilityEngine/components/VEDirectionalCompass';
@@ -45,7 +45,6 @@ export default function VolatilityEnginePage() {
   const params = useSearchParams();
   const requestedSymbol = params.get('symbol')?.toUpperCase() || '';
   const [symbol, setSymbol] = useState(requestedSymbol);
-  useEffect(() => { setSymbol(requestedSymbol); setReading(null); }, [requestedSymbol]);
   const [reading, setReading] = useState<DVEReading | null>(null);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -84,6 +83,15 @@ export default function VolatilityEnginePage() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') analyze();
   };
+
+  // A ?symbol= link (e.g. from Golden Egg or the Terminal) runs the analysis, instead of only filling the box (RS-18).
+  const analyzeRef = useRef(analyze);
+  analyzeRef.current = analyze;
+  useEffect(() => {
+    setSymbol(requestedSymbol);
+    setReading(null);
+    if (requestedSymbol) void analyzeRef.current(requestedSymbol);
+  }, [requestedSymbol]);
 
   // Stale comes from the age of the price bars (session-aware, from the API), not from a cache hit: a result cached
   // inside the 3-minute TTL is as current as the bars it was computed from.

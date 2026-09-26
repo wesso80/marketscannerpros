@@ -59,3 +59,13 @@ describe('DVE freshness comes from the data age, not the cache (RS-8)', () => {
     expect((await call('NOBARTIME')).dataFreshness).toBe('unknown');
   });
 });
+
+describe('RS-18: ?symbol= runs the DVE analysis', () => {
+  it('the page calls analyze for the requested symbol, not just setSymbol', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(require('node:path').resolve(__dirname, '../src/features/volatilityEngine/VolatilityEnginePage.tsx'), 'utf8');
+    const effect = src.slice(src.indexOf('const analyzeRef = useRef(analyze)'), src.indexOf('}, [requestedSymbol]);'));
+    expect(effect).toContain('if (requestedSymbol) void analyzeRef.current(requestedSymbol);');
+    expect(src).not.toContain('useEffect(() => { setSymbol(requestedSymbol); setReading(null); }, [requestedSymbol]);');
+  });
+});
