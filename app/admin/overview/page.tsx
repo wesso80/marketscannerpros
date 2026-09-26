@@ -496,9 +496,9 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               <span style={{ color: "#64748B", fontSize: "0.75rem" }}>15m {scannerMarket === "CRYPTO" ? "crypto" : "equities"}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-              {(topScannerHits.length ? topScannerHits : ([{ symbol: "No candidates", bias: "WAIT", permission: "WAIT", confidence: 0, symbolTrust: 0, regime: "—" }] as AdminScannerHit[])).slice(0, 4).map((hit) => (
+              {(topScannerHits.length ? topScannerHits : ([{ symbol: "No candidates", bias: "WAIT", permission: "WAIT", confidence: 0, symbolTrust: 0, regime: "—" }] as AdminScannerHit[])).slice(0, 4).map((hit, i) => (
                 <button
-                  key={hit.symbol}
+                  key={`${hit.symbol}-${hit.bias}-${i}`}
                   onClick={() => hit.symbol !== "No candidates" && (window.location.href = `/admin/terminal/${encodeURIComponent(hit.symbol)}`)}
                   style={{
                     display: "grid",

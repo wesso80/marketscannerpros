@@ -169,8 +169,8 @@ export default function AlertsPage() {
       <AdminCard title="Actionable Scanner Alerts">
         {goHits.length ? (
           <div className="space-y-2">
-            {goHits.slice(0, 8).map((hit) => (
-              <Link key={hit.symbol} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="grid grid-cols-[70px_70px_1fr_70px_60px] items-center gap-2 rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-sm no-underline hover:bg-emerald-500/10">
+            {goHits.slice(0, 8).map((hit, i) => (
+              <Link key={`${hit.symbol}-${hit.bias}-${i}`} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="grid grid-cols-[70px_70px_1fr_70px_60px] items-center gap-2 rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-sm no-underline hover:bg-emerald-500/10">
                 <span className="font-black text-white">{hit.symbol}</span>
                 <span className={hit.bias === "LONG" ? "font-semibold text-emerald-300" : hit.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{hit.bias === "LONG" ? "Bullish" : hit.bias === "SHORT" ? "Bearish" : hit.bias}</span>
                 <span className="truncate text-white/55">{hit.playbook || hit.regime}</span>
@@ -187,8 +187,8 @@ export default function AlertsPage() {
       <AdminCard title="Watchlist Alerts">
         {watchHits.length ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-            {watchHits.slice(0, 10).map((hit) => (
-              <Link key={hit.symbol} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="rounded-lg border border-amber-500/15 bg-amber-500/5 px-3 py-2 text-sm no-underline hover:bg-amber-500/10">
+            {watchHits.slice(0, 10).map((hit, i) => (
+              <Link key={`${hit.symbol}-${hit.bias}-${i}`} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="rounded-lg border border-amber-500/15 bg-amber-500/5 px-3 py-2 text-sm no-underline hover:bg-amber-500/10">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-black text-white">{hit.symbol}</span>
                   <StatusPill label={hit.permission} tone={permissionTone(hit.permission)} />

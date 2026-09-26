@@ -18,6 +18,12 @@ export function checkGovernance(req: GovernanceCheckRequest): GovernanceDecision
   const blockReasons: string[] = [];
   const throttleReasons: string[] = [];
   const lockouts: string[] = [];
+  // Equity-relative limits are meaningless without a live equity value
+  // (admin scan context uses 0 for "unknown"). Previously `openRisk >= pct * 0`
+  // evaluated 0 >= 0 and hard-BLOCKED every pipeline in every market, and
+  // `dailyPnl / 0` produced Infinity. Documented intent (scan-context.ts) is
+  // "no live equity → research-only: sizing disabled, permission capped at WAIT".
+  const hasLiveEquity = Number.isFinite(portfolioState.equity) && portfolioState.equity > 0;
 
   // ── Kill switch ──
   if (portfolioState.killSwitchActive) {
@@ -25,7 +31,7 @@ export function checkGovernance(req: GovernanceCheckRequest): GovernanceDecision
   }
 
   // ── Daily loss cap ──
-  if (portfolioState.dailyPnl < 0) {
+  if (hasLiveEquity && portfolioState.dailyPnl < 0) {
     const dailyLossPct = Math.abs(portfolioState.dailyPnl) / portfolioState.equity;
     if (dailyLossPct >= riskPolicy.maxDailyLossPct) {
       blockReasons.push('DAILY_LOSS_LIMIT_HIT');
@@ -44,7 +50,7 @@ export function checkGovernance(req: GovernanceCheckRequest): GovernanceDecision
   }
 
   // ── Open risk cap ──
-  if (portfolioState.openRisk >= riskPolicy.maxOpenRiskPct * portfolioState.equity) {
+  if (hasLiveEquity && portfolioState.openRisk >= riskPolicy.maxOpenRiskPct * portfolioState.equity) {
     blockReasons.push('OPEN_RISK_LIMIT_HIT');
   }
 
@@ -87,6 +93,13 @@ export function checkGovernance(req: GovernanceCheckRequest): GovernanceDecision
   } else {
     finalPermission = verdict.permission;
     sizeMultiplier = verdict.sizeMultiplier;
+  }
+
+  // ── No live equity → research-only cap (WAIT, no sizing) ──
+  if (!hasLiveEquity && finalPermission !== 'BLOCK') {
+    throttleReasons.push('NO_LIVE_EQUITY');
+    if (finalPermission === 'ALLOW' || finalPermission === 'ALLOW_REDUCED') finalPermission = 'WAIT';
+    sizeMultiplier = 0;
   }
 
   return {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AdminResearchEventTape from "@/components/admin/AdminResearchEventTape";
 import SavedScanStatus, { type SavedScanStatusData } from "@/components/admin/SavedScanStatus";
+import { formatHitPrice } from "@/lib/admin/hitIntegrity";
 
 type Packet = {
   symbol: string;
@@ -17,7 +18,28 @@ type Packet = {
   whatChanged: string;
   nextResearchChecks: string[];
   savedScan?: { status: string; ageLabel: string; stale: boolean; error: string | null; asOfLabel?: string | null };
+  /** Engine snapshot (the API returns the full saved packet); optional so older payloads still render. */
+  snapshot?: {
+    bias?: string;
+    price?: number;
+    playbook?: string;
+    targets?: { entry?: number; invalidation?: number; target1?: number };
+  };
 };
+
+/** Direction / price / levels line from the packet's engine snapshot (null when there is nothing to show). */
+function packetLevels(packet: Pick<Packet, "snapshot">): { bias: string; price: string; entry: string; stop: string; tp1: string; playbook: string | null } | null {
+  const s = packet.snapshot;
+  if (!s) return null;
+  return {
+    bias: s.bias === "LONG" ? "Long" : s.bias === "SHORT" ? "Short" : s.bias ? "Neutral" : "—",
+    price: formatHitPrice(s.price),
+    entry: formatHitPrice(s.targets?.entry),
+    stop: formatHitPrice(s.targets?.invalidation),
+    tp1: formatHitPrice(s.targets?.target1),
+    playbook: s.playbook ?? null,
+  };
+}
 
 type PriorityDeskResponse = {
   generatedAt: string | null;
@@ -152,6 +174,7 @@ function Panel({ title, rows, danger = false, note }: { title: string; rows: Pac
 }
 
 function Row({ packet }: { packet: Packet }) {
+  const lv = packetLevels(packet);
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-xs">
       <div className="flex items-center justify-between">
@@ -166,6 +189,16 @@ function Row({ packet }: { packet: Packet }) {
           )}
         </div>
       </div>
+      {lv && (
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px]">
+          <span className={lv.bias === "Long" ? "text-emerald-300" : lv.bias === "Short" ? "text-red-300" : "text-white/60"}>{lv.bias}</span>
+          <span className="text-white/70">Px {lv.price}</span>
+          <span className="text-white/60">Entry {lv.entry}</span>
+          <span className="text-white/60">Stop {lv.stop}</span>
+          <span className="text-white/60">TP1 {lv.tp1}</span>
+          {lv.playbook && <span className="text-white/40">{lv.playbook}</span>}
+        </div>
+      )}
       <div className="mt-1 grid gap-1" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <div>Setup: <span className="text-white/80">{packet.setup.label || packet.setup.type}</span></div>
         <div>Trust-Adjusted: <span className="text-white/80">{packet.trustAdjustedScore.toFixed(1)}</span></div>

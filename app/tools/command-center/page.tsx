@@ -351,7 +351,7 @@ export default function CommandCenterPage() {
           <p className="mt-1 text-sm text-slate-300">{flow.note}</p>
           {btcLeverage ? (
             <div className="mt-3">
-              <LeverageStatePanel assessment={btcLeverage} symbol="BTC" />
+              <LeverageStatePanel assessment={btcLeverage} symbol="BTC" price={derivatives.data?.coin.price} />
             </div>
           ) : (
             <p className="mt-2 text-[11px] italic text-slate-500">A deeper leverage/positioning read (funding, open interest, liquidations) is available in the Crypto Command Center.</p>
