@@ -70,20 +70,23 @@ function fmtPrice(price: number): string {
 
 /** Human-readable description of what fired (used in history, email, push). */
 export function describeConditionMet(symbol: string, conditionType: string, conditionValue: unknown, quote: AlertQuote, assetType?: string): string {
-  const price = fmtPrice(quote.price);
+  // Forex rates are quoted to 5 decimals and are not dollar amounts (e.g. USDJPY).
+  const isFx = assetType === 'forex';
+  const price = isFx ? quote.price.toFixed(5) : fmtPrice(quote.price);
+  const cur = isFx ? '' : '$';
   const threshold = Math.abs(finite(conditionValue) ?? 0);
   const basis = assetType === 'crypto' ? 'in 24h' : 'vs previous close';
   const change = quote.changePercent == null ? '' : `${quote.changePercent >= 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%`;
   switch (conditionType) {
     case 'price_above':
-      return `${symbol} crossed above $${conditionValue} (now $${price})`;
+      return `${symbol} crossed above ${cur}${conditionValue} (now ${cur}${price})`;
     case 'price_below':
-      return `${symbol} dropped below $${conditionValue} (now $${price})`;
+      return `${symbol} dropped below ${cur}${conditionValue} (now ${cur}${price})`;
     case 'percent_change_up':
-      return `${symbol} ${change} ${basis} (alert: +${threshold}%, now $${price})`;
+      return `${symbol} ${change} ${basis} (alert: +${threshold}%, now ${cur}${price})`;
     case 'percent_change_down':
-      return `${symbol} ${change} ${basis} (alert: -${threshold}%, now $${price})`;
+      return `${symbol} ${change} ${basis} (alert: -${threshold}%, now ${cur}${price})`;
     default:
-      return `${symbol} alert triggered at $${price}`;
+      return `${symbol} alert triggered at ${cur}${price}`;
   }
 }
