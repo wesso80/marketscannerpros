@@ -7,6 +7,9 @@
  * Permission Engine — symbols with earnings within N days are blocked.
  */
 
+import { avTakeToken } from '@/lib/avRateGovernor';
+import { parseAlphaVantageEarningsCalendar } from '@/lib/earningsCalendarCsv';
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface CatalystProximity {
@@ -31,28 +34,37 @@ let cacheExpiry = 0;
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 /**
- * Fetch upcoming earnings from Alpha Vantage EARNINGS endpoint.
- * Caches for 4 hours to avoid repeated AV calls.
+ * Fetch the upcoming-earnings calendar from Alpha Vantage EARNINGS_CALENDAR (3-month horizon).
+ *
+ * EARNINGS_CALENDAR returns CSV (`symbol,name,reportDate,fiscalDateEnding,estimate,currency`), read with the shared
+ * quote-aware parser. This used to call `function=EARNINGS` with no symbol and read JSON `data.data`, which can never
+ * return a calendar: the map was always empty, so the catalyst gate never blocked anything.
+ * Throws when the response is not the calendar (rate-limit note, error JSON) so the caller does not cache "no earnings".
  */
 async function fetchEarningsCalendar(): Promise<Map<string, EarningsEntry>> {
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
   if (!apiKey) return new Map();
 
-  const url = `https://www.alphavantage.co/query?function=EARNINGS&horizon=3month&apikey=${apiKey}`;
+  const url = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${apiKey}`;
+  await avTakeToken();
   const res = await fetch(url, { next: { revalidate: 14400 } });
-  if (!res.ok) return new Map();
+  if (!res.ok) throw new Error(`EARNINGS_CALENDAR HTTP ${res.status}`);
 
-  const data = await res.json();
-  const entries: EarningsEntry[] = data?.data ?? [];
+  const parsed = parseAlphaVantageEarningsCalendar(await res.text(), { source: 'quant catalyst gate' });
+  if (!parsed.headerOk) throw new Error('EARNINGS_CALENDAR did not return the CSV calendar');
 
+  // Keep the nearest earnings date per symbol.
   const map = new Map<string, EarningsEntry>();
-  for (const e of entries) {
-    if (e.symbol && e.reportDate) {
-      // Keep the nearest earnings date per symbol
-      const existing = map.get(e.symbol);
-      if (!existing || e.reportDate < existing.reportDate) {
-        map.set(e.symbol, e);
-      }
+  for (const row of parsed.rows) {
+    const existing = map.get(row.symbol);
+    if (!existing || row.reportDate < existing.reportDate) {
+      map.set(row.symbol, {
+        symbol: row.symbol,
+        reportDate: row.reportDate,
+        fiscalDateEnding: row.fiscalDateEnding || undefined,
+        estimate: row.estimate == null ? undefined : String(row.estimate),
+        currency: row.currency || undefined,
+      });
     }
   }
   return map;
