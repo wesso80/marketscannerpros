@@ -66,6 +66,12 @@ function sessionLabel(phase: string): string {
   return phase.toLowerCase().replace(/_session$/, '').replace(/^crypto_/, '').replace(/_/g, ' ');
 }
 
+/** "asian hours", "after hours" (not "after hours hours"). */
+function sessionHours(phase: string): string {
+  const label = sessionLabel(phase);
+  return /\bhours$/.test(label) ? label : `${label} hours`;
+}
+
 function alignmentMap(state: InstitutionalFlowState): Record<TradeArchetype, number> {
   switch (state) {
     case 'ACCUMULATION':
@@ -241,22 +247,33 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     tpsBeforeGate >= BASE_TPS_THRESHOLD &&
     (sessionGateFailed || tpsThreshold > BASE_TPS_THRESHOLD);
 
-  const pct = (v: number) => Math.round(v * 100);
+  // Whole-number score exactly as the cards show it (`tps` is returned to one decimal and displayed with toFixed(0)), so
+  // the reason never quotes a different number from the card.
+  const pct = (v: number) => Math.round(Number((v * 100).toFixed(1)));
+  const tpsThr = pct(tpsThreshold);
+  // A raw score just under the threshold can round up to it: show one (floored) decimal rather than "68 below 68".
+  const scoreBelow = (v: number) => (pct(v) < tpsThr ? String(pct(v)) : (Math.floor(v * 1000) / 10).toFixed(1));
+  // Only a score that rounds ABOVE a threshold "clears" it; one that rounds to it "meets" it.
+  const passVerb = (v: number, threshold: number) => (pct(v) > pct(threshold) ? 'clears' : 'meets');
   const failedGateText = !so ? '' : failsSessionConfidence
     ? `state confidence ${Math.round(input.stateConfidence)} is below the ${so.minimumConfidence} minimum`
     : `liquidity clarity ${Math.round(input.liquidityClarity)} is below the ${so.minimumLiquidityClarity} minimum`;
+  // A failed session gate caps the score just under the session bar; the card shows the capped score.
+  const capNote = pct(tps) !== pct(tpsBeforeGate) ? ` (score capped at ${pct(tps)})` : '';
 
   let reason = 'Permission granted';
   if (autoNoTrade && staleData) reason = 'NO-TRADE MODE: data health stale';
   else if (autoNoTrade) reason = 'NO-TRADE MODE: accumulation + low volatility + unclear liquidity';
-  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tpsBeforeGate)} clears the standard ${pct(BASE_TPS_THRESHOLD)} but ${failedGateText} for this session`;
-  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tps)} clears the standard ${pct(BASE_TPS_THRESHOLD)} but this session requires ${pct(tpsThreshold)}`;
+  else if (sessionLimited && sessionGateFailed) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tpsBeforeGate)} ${passVerb(tpsBeforeGate, BASE_TPS_THRESHOLD)} the standard ${pct(BASE_TPS_THRESHOLD)} but ${failedGateText} for this session${capNote}`;
+  else if (sessionLimited) reason = `Unavailable in ${sessionLabel(so!.phase)} session: Trade Permission Score ${pct(tps)} ${passVerb(tps, BASE_TPS_THRESHOLD)} the standard ${pct(BASE_TPS_THRESHOLD)} but this session requires ${tpsThr}`;
   else if (blocked && sessionGateFailed) {
+    // Weak branch quotes the capped score (what the card shows; always below the bar). Otherwise the gate is the blocker
+    // and the pre-cap score is given with an honest verb.
     reason = tpsBeforeGate < tpsThreshold
-      ? `BLOCKED: Trade Permission Score ${pct(tpsBeforeGate)} below threshold (${pct(tpsThreshold)}); ${failedGateText} for ${sessionLabel(so!.phase)} hours`
-      : `BLOCKED: ${failedGateText} for ${sessionLabel(so!.phase)} hours (Trade Permission Score ${pct(tpsBeforeGate)} would otherwise clear the ${pct(tpsThreshold)} threshold)`;
+      ? `BLOCKED: Trade Permission Score ${pct(tps)} below threshold (${tpsThr}); ${failedGateText} for ${sessionHours(so!.phase)}`
+      : `BLOCKED: ${failedGateText} for ${sessionHours(so!.phase)}, so the Trade Permission Score is capped at ${pct(tps)} (${pct(tpsBeforeGate)} before the cap, which would otherwise ${passVerb(tpsBeforeGate, tpsThreshold) === 'clears' ? 'clear' : 'meet'} the ${tpsThr} threshold)`;
   }
-  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${pct(tps)} below threshold (${pct(tpsThreshold)})`;
+  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${scoreBelow(tps)} below threshold (${tpsThr})`;
 
   let scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
 
