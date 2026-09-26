@@ -14,7 +14,7 @@ import CommandStrip, { type TerminalDensity } from '@/components/terminal/Comman
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
-import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
+import { formatDollar } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
@@ -1946,7 +1946,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         />
 
         <DecisionCockpit
-          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatRiskPairText(totalValue)}</div><div className="msp-muted">Cost Basis: {formatRiskPairText(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
+          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatMoney(totalValue)}</div><div className="msp-muted">Cost Basis: {formatMoney(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
           center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {formatRiskPairText(totalPL)}</div><div className="msp-muted">Unrealized: {formatRiskPairText(unrealizedPL)}</div><div className="msp-muted">Realized: {formatRiskPairText(realizedPL)}</div></div>}
           right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total return: {totalReturnPct == null ? '—' : `${totalReturnPct.toFixed(2)}%`}</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
         />
