@@ -415,6 +415,9 @@ export const COINGECKO_ID_MAP: Record<string, string> = {
   'ARBUSDT': 'arbitrum',
   'OP': 'optimism',
   'OPUSDT': 'optimism',
+  // Onyxcoin (XCN): provider API ID verified at coingecko.com/en/coins/onyxcoin.
+  'XCN': 'chain-2',
+  'XCNUSDT': 'chain-2',
   // Special tokens
   'JUP': 'jupiter-exchange-solana',
   'JUPUSDT': 'jupiter-exchange-solana',

@@ -98,6 +98,16 @@ describe('scheduled writes', () => {
     expect((insert as unknown as [string, unknown[]])[1].slice(0, 4)).toEqual(['account-a', '2026-09-27', 10000, 0]);
     expect(query.mock.calls.some(([sql]) => /(?:DELETE|UPDATE|INSERT INTO) portfolio_/.test(sql))).toBe(false);
   });
+  it.each([{ error: null, expected: 'skipped' }, { error: 'Missing price', expected: 'captured' }])('retries a paused account sooner without oversampling a healthy account: $expected', async ({ error, expected }) => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('SELECT enabled')) return { rows: [{ enabled: true, last_attempt_at: '2026-09-27T07:55:00Z', last_error: error }] };
+      if (sql.includes('FROM portfolio_cash_ledger')) return { rows: cash };
+      return { rows: [] };
+    });
+    vi.mocked(q).mockResolvedValue([]);
+    vi.mocked(tx).mockImplementation(async work => work({ query } as never));
+    expect((await captureAccount('account-a')).status).toBe(expected);
+  });
   it('isolates one account failure from the worker', async () => {
     vi.mocked(q).mockResolvedValueOnce([{ workspace_id: 'account-a' }]).mockResolvedValueOnce([]);
     vi.mocked(tx).mockRejectedValueOnce(new Error('DB unavailable'));
