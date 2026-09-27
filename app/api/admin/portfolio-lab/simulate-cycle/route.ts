@@ -26,20 +26,24 @@ export async function POST(req: NextRequest) {
   } catch {
     /* empty body ok */
   }
-  const result = await simulateArcaCycle({
-    workspaceId: admin.workspaceId,
-    maxNewIdeas: clampNum(body.maxNewIdeas, 1, 25, 5),
-    sinceMinutes: clampNum(body.sinceMinutes, 30, 1440, 240),
-  });
-  return NextResponse.json(
-    wrapTruth(result, {
-      source: "arca:simulate-cycle",
-      simulated: true,
-      freshness: "real-time",
-      confidence: "high",
-      confidenceReason: "Ledger updated.",
-    }),
-  );
+  try {
+    const result = await simulateArcaCycle({
+      workspaceId: admin.workspaceId,
+      maxNewIdeas: clampNum(body.maxNewIdeas, 1, 25, 5),
+      sinceMinutes: clampNum(body.sinceMinutes, 30, 1440, 240),
+    });
+    return NextResponse.json(
+      wrapTruth(result, {
+        source: "arca:simulate-cycle",
+        simulated: true,
+        freshness: "real-time",
+        confidence: "high",
+        confidenceReason: "Ledger updated.",
+      }),
+    );
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Paper cycle failed" }, { status: 503 });
+  }
 }
 
 function clampNum(n: unknown, lo: number, hi: number, dflt: number): number {
