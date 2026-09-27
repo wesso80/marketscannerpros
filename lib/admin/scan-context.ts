@@ -13,6 +13,7 @@ export type AdminRiskSnapshot = {
   dailyRiskBaselineEquity?: number | null;
   dailyRiskAsOf?: string | null;
   dailyRiskBasis?: string;
+  legacyLossSignalUnverified?: boolean;
   openExposure: number;
   openRiskUsd: number;
   exposureUsd: number;
@@ -231,8 +232,7 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
     const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
     const { equity, dailyPnl, dailyDrawdown, dailyDrawdownKnown } = dailyRisk;
     const hasLiveEquity = equity > 0;
-    // Preserve a hard stop from legacy inputs while the corrected baseline is unavailable.
-    // This signal is never presented as a measured daily loss.
+    // Keep legacy discrepancies visible for reconciliation; they cannot establish a daily loss breach.
     const legacyEquity = Number(performanceRows[0]?.total_value) || operatorRisk.equity;
     const legacyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
     const legacyPeak = Number(performanceRows[0]?.legacy_peak_equity);
@@ -243,7 +243,7 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
     const correlationRisk = Math.max(operatorRisk.correlationRisk, exposureUsd > 0 ? largestSymbolExposure / exposureUsd : 0);
     const activePositions = Number(positions?.active_positions ?? 0);
     const openExposure = hasLiveEquity && openRiskUsd > 0 ? openRiskUsd / equity : hasLiveEquity && exposureUsd > 0 ? Math.min(0.05, (exposureUsd / equity) * 0.25) : 0;
-    const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04 || unverifiedLossStop;
+    const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04;
     const permission = killSwitchActive ? "BLOCK" : !hasLiveEquity || !dailyDrawdownKnown ? "WAIT" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
     const sizeMultiplier = !hasLiveEquity || !dailyDrawdownKnown ? 0 : permission === "GO"
       ? Math.max(0.25, Math.min(1, 1 - Math.max(dailyDrawdown / 0.04, correlationRisk / 1.4)))
@@ -251,6 +251,7 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
 
     return {
       ...dailyRisk,
+      legacyLossSignalUnverified: unverifiedLossStop,
       openExposure,
       openRiskUsd,
       exposureUsd,
@@ -267,7 +268,7 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
         dailyDrawdownKnown
           ? `Snapshot daily loss as of ${dailyRisk.dailyRiskAsOf} UTC; baseline ${formatUsd(dailyRisk.dailyRiskBaselineEquity!)}. Cumulative P&L change excludes cash flows; this is not an intraday high-water drawdown.`
           : "Daily loss unavailable: consecutive current-day and prior-day UTC account_equity_v2 snapshots are required. Legacy position values and lifetime unrealized P&L are not daily loss.",
-        ...(unverifiedLossStop ? ["Legacy loss signal remains blocked pending verified daily account snapshots; it is not a measured daily loss."] : []),
+        ...(unverifiedLossStop ? ["Legacy loss inputs cannot verify a daily breach and are excluded from the stop calculation. Reconcile history; account sizing remains unavailable until consecutive daily observations exist."] : []),
         `Risk synced from workspace portfolio/journal (${activePositions} open position${activePositions === 1 ? "" : "s"}).`,
         ...(hasLiveEquity
           ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
@@ -277,7 +278,7 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
       operatorGuardReasons: [
         ...(operatorRisk.killSwitchActive ? ["Existing operator hard stop active"] : []),
         ...(dailyDrawdown >= 0.04 ? ["Verified daily loss hard stop active"] : []),
-        ...(unverifiedLossStop ? ["Unverified legacy loss signal: reconcile account snapshots"] : []),
+        ...(unverifiedLossStop ? ["Legacy history needs reconciliation; not a verified daily loss"] : []),
         ...(!dailyDrawdownKnown ? ["Daily account baseline unavailable; sizing disabled"] : []),
         ...(dailyDrawdown >= 0.02 ? [`Snapshot daily loss ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
         ...(correlationRisk >= 0.65 ? [`Correlation risk ${(correlationRisk * 100).toFixed(0)}%`] : []),
@@ -312,6 +313,7 @@ export async function buildAdminScanContext(workspaceId?: string): Promise<{ con
       correlationRisk: risk.correlationRisk,
       activePositions: risk.activePositions,
       killSwitchActive: risk.killSwitchActive,
+      accountRiskAvailable: risk.dailyDrawdownKnown === true,
     },
     accountState: {
       ...DEFAULT_ADMIN_SCAN_CONTEXT.accountState,

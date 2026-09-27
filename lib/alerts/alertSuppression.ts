@@ -16,6 +16,8 @@
 import type { AdminResearchAlert, ResearchLifecycle } from "../admin/adminTypes";
 
 export type SuppressionReason =
+  | "NOTIFICATIONS_PAUSED"
+  | "NOTIFICATION_SETTINGS_UNAVAILABLE"
   | "COOLDOWN_ACTIVE"
   | "DUPLICATE_IN_WINDOW"
   | "BELOW_SCORE_THRESHOLD"

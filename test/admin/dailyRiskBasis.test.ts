@@ -48,11 +48,11 @@ describe('canonical guard preserves restrictions', () => {
     database([], { permission: 'BLOCK', equity: 0 });
     expect(await loadAdminRiskSnapshot('workspace-a')).toMatchObject({ permission: 'BLOCK', sizeMultiplier: 0 });
   });
-  it('retains the live legacy loss stop without labelling it daily loss', async () => {
+  it('keeps legacy loss discrepancies as warnings with unknown account sizing', async () => {
     database([snapshot('2026-09-20', 70000, -120000, 'legacy_position_value')], {}, -122052);
     const risk = await loadAdminRiskSnapshot('workspace-a');
-    expect(risk).toMatchObject({ permission: 'BLOCK', sizeMultiplier: 0, dailyDrawdownKnown: false, dailyDrawdown: 0 });
-    expect(risk.operatorGuardReasons.join(' ')).toContain('Unverified legacy loss');
+    expect(risk).toMatchObject({ permission: 'WAIT', sizeMultiplier: 0, dailyDrawdownKnown: false, dailyDrawdown: 0, legacyLossSignalUnverified: true });
+    expect(risk.operatorGuardReasons.join(' ')).toContain('Legacy history needs reconciliation');
   });
   it('blocks a verified four-percent daily loss', async () => {
     database([snapshot('2026-09-27', 96000, -14000), clean[1]]);

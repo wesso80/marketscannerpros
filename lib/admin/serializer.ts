@@ -142,7 +142,7 @@ export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
     triggerDistancePct: elite.triggerDistancePct,
     featureImportance: elite.featureImportance,
     symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
-    sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
+    sizeMultiplier: Math.round(g.sizeMultiplier * 100) / 100,
     playbook: v.playbook,
     // Governance always returns an array, so the old `??` fallback never kept
     // the verdict's own block reasons (doctrine hard blocks / score floor).
@@ -207,7 +207,7 @@ export function pipelineToSymbolIntelligence(
     triggerDistancePct: elite.triggerDistancePct,
     featureImportance: elite.featureImportance,
     symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
-    sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
+    sizeMultiplier: Math.round(g.sizeMultiplier * 100) / 100,
     lastScanAt: v.timestamp,
     blockReasons: g.blockReasons ?? [],
     penalties: v.penalties?.map((pen) => pen.code) ?? [],

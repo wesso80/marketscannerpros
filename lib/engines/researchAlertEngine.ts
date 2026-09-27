@@ -55,6 +55,8 @@ export interface ResearchAlertCandidate {
 }
 
 export interface ResearchAlertContext {
+  /** Required by the dispatch path; missing settings fail closed. */
+  notificationsPaused?: boolean;
   recentAlerts: Pick<AdminResearchAlert, "symbol" | "timeframe" | "setup" | "createdAt">[];
   thresholds?: Partial<SuppressionThresholds>;
   /** Inject "now" for deterministic tests. */
@@ -104,7 +106,7 @@ export async function runResearchAlertEngine(
   const now = ctx.now ?? Date.now();
   const alert = buildAlert(candidate, now);
 
-  const decision = evaluateSuppression({
+  let decision = evaluateSuppression({
     symbol: candidate.symbol,
     market: candidate.market,
     timeframe: candidate.timeframe,
@@ -122,6 +124,9 @@ export async function runResearchAlertEngine(
     now,
   });
 
+  if (decision.allow && ctx.notificationsPaused !== false) {
+    decision = { allow: false, reason: ctx.notificationsPaused === true ? 'NOTIFICATIONS_PAUSED' : 'NOTIFICATION_SETTINGS_UNAVAILABLE' };
+  }
   if (!decision.allow) {
     return {
       alert,

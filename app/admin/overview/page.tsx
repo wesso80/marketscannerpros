@@ -300,7 +300,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     .sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))
     .slice(0, 5);
   const riskPermissionRaw = riskState?.killSwitchActive ? "KILL" : riskState?.permission || "WAIT";
-  const riskPermission = riskPermissionRaw === "KILL" ? "ALERTS PAUSED" : riskPermissionRaw === "BLOCK" ? "SYSTEM GUARD ACTIVE" : riskPermissionRaw;
+  const riskPermission = riskPermissionRaw === "KILL" ? "ACCOUNT STOP ACTIVE" : riskPermissionRaw === "BLOCK" ? "ACCOUNT RESTRICTED" : riskPermissionRaw;
   const riskAllowsTrading = ["ALLOW", "GO", "ALLOW_REDUCED"].includes(riskPermissionRaw);
   const topScannerHits = [...scannerHits]
     .sort((a, b) => (Number(b.confidence || 0) + Number(b.symbolTrust || 0)) - (Number(a.confidence || 0) + Number(a.symbolTrust || 0)))
@@ -315,7 +315,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
   )));
   const operatorState = operatorScore >= 75 ? "READY" : operatorScore >= 50 ? "WATCH" : "CHECK";
   const actionQueue = [
-    riskPermissionRaw === "KILL" ? "Research alerts paused — suppress notifications" : riskAllowsTrading ? `Research gate open — ${riskPermission}` : `Research gate says ${riskPermission}`,
+    riskPermissionRaw === "KILL" ? "Account stop active — no account sizing" : riskAllowsTrading ? `Account permission — ${riskPermission}` : `Account permission: ${riskPermission}`,
 
     topScannerHits.length > 0 ? `${topScannerHits.length} live scanner candidates ranked` : "No live scanner candidates",
     systemHealth?.dbConnected === false ? "Database health check failed" : "Database connected",
@@ -471,7 +471,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
             {[
               ["/admin/live-scanner", "Live Scanner"],
               ["/admin/operator-terminal", "Research Terminal"],
-              ["/admin/risk", "Research Guard"],
+              ["/admin/risk", "Account Risk Status"],
               ["/admin/outcomes", "Signal Outcomes"],
               ["/admin/backtest-lab", "Backtest Lab"],
               ["/admin/data-health", "Data Health"],

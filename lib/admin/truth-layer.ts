@@ -12,7 +12,7 @@
  * Rules:
  *   - Never overrides governance
  *   - Never invents decisions
- *   - Always exposes one final answer
+ *   - Separates market research verdict from account permission
  *   - Always exposes one primary reason
  *   - Always shows freshness
  *   - Degrades gracefully on stale/partial data
@@ -97,6 +97,8 @@ export interface TruthObject {
 
   // Block 1 — Final Decision
   finalVerdict: FinalVerdict;
+  accountVerdict?: FinalVerdict;
+  accountReasons?: string[];
   operatorAction: OperatorAction;
   confidenceClass: ConfidenceClass;
   effectiveSize: number;
@@ -148,7 +150,7 @@ const REASON_LABELS: Record<string, string> = {
   EXHAUSTION_RISK: "Extension exhaustion risk present",
   REGIME_MISMATCH: "Regime does not support this playbook",
   DRAWDOWN_LOCKOUT: "Drawdown governor has frozen new risk",
-  KILL_SWITCH_ACTIVE: "Research alerts are paused",
+  KILL_SWITCH_ACTIVE: "Account stop is active",
   CORRELATION_RISK: "Portfolio correlation risk is elevated",
   MAX_POSITIONS: "Maximum position count reached",
   STALE_DATA: "Market data is stale or unavailable",
@@ -220,11 +222,10 @@ interface ReasonCandidate {
 function buildReasonStack(pipeline: CandidatePipeline): TruthReason[] {
   const reasons: ReasonCandidate[] = [];
   const v = pipeline.verdict;
-  const g = pipeline.governance;
   const ev = v.evidence;
 
-  // Governance hard blocks (highest priority)
-  for (const br of g.blockReasons ?? []) {
+  // Research reasons come from market scoring, never personal account restrictions.
+  for (const br of v.permission === "BLOCK" ? v.reasonCodes ?? [] : []) {
     const code = br.toUpperCase().replace(/[\s-]+/g, "_");
     reasons.push({ code, direction: "NEGATIVE", impact: 0.95 });
   }
@@ -364,7 +365,7 @@ function resolveUpgradeTrigger(
     LOW_SYMBOL_TRUST: { code: "TRUST_IMPROVEMENT", label: "Follow-through rate improves over next sessions" },
     WEAK_CROSS_MARKET: { code: "CROSS_MARKET_CONFIRM", label: "Cross-market conditions align with bias" },
     DRAWDOWN_LOCKOUT: { code: "DRAWDOWN_COOLDOWN", label: "Governance unlock after drawdown cooldown reset" },
-    KILL_SWITCH_ACTIVE: { code: "KILL_SWITCH_OFF", label: "Research alerts resumed by operator" },
+    KILL_SWITCH_ACTIVE: { code: "KILL_SWITCH_OFF", label: "Account stop cleared by operator" },
     LOW_LIQUIDITY: { code: "LIQUIDITY_IMPROVEMENT", label: "Participation and liquidity reach deployment threshold" },
     LOW_CONFIDENCE: { code: "SCORE_IMPROVEMENT", label: "Score improves above action threshold" },
     HIGH_TRANSITION_RISK: { code: "TRANSITION_RISK_LOWER", label: "Regime transition risk falls below limit" },
@@ -428,12 +429,11 @@ function resolveFreshness(
 
 function resolveReadiness(pipeline: CandidatePipeline): TruthReadiness {
   const v = pipeline.verdict;
-  const g = pipeline.governance;
   const c = pipeline.candidate;
 
   const setupValid = c.candidateState === "CANDIDATE" || c.candidateState === "VALIDATED" || c.candidateState === "READY";
   const researchReady =
-    (g.finalPermission === "ALLOW" || g.finalPermission === "ALLOW_REDUCED") &&
+    setupValid && (v.permission === "ALLOW" || v.permission === "ALLOW_REDUCED") &&
     v.confidenceScore >= RESEARCH_READY_CONFIDENCE_MIN;
   const triggerHit = c.entryZone != null;
 
@@ -460,9 +460,10 @@ export function renderTruth(
   const v = pipeline.verdict;
   const g = pipeline.governance;
 
-  const finalVerdict = g.finalPermission as FinalVerdict;
+  const finalVerdict = v.permission as FinalVerdict;
   const freshness = resolveFreshness(pipeline, scanTimestamp);
   const readiness = resolveReadiness(pipeline);
+  if (freshness.dataState === "STALE" || freshness.dataState === "UNAVAILABLE" || freshness.dataState === "PARTIAL") readiness.researchReady = false;
   const confidenceClass = toConfidenceClass(v.confidenceScore);
   const operatorAction = resolveOperatorAction(finalVerdict, readiness, freshness.dataState);
 
@@ -480,7 +481,7 @@ export function renderTruth(
   const whyNotStronger = generateWhyNotStronger(pipeline, reasonStack);
 
   const effectiveSize =
-    finalVerdict === "BLOCK" ? 0 : Math.round(v.sizeMultiplier * 100) / 100;
+    g.finalPermission === "BLOCK" || g.finalPermission === "WAIT" ? 0 : Math.round(g.sizeMultiplier * 100) / 100;
 
   return {
     truthId: `truth_${v.verdictId ?? Date.now()}`,
@@ -490,6 +491,8 @@ export function renderTruth(
     timestamp: new Date().toISOString(),
 
     finalVerdict,
+    accountVerdict: g.finalPermission,
+    accountReasons: [...(g.blockReasons ?? []), ...(g.throttleReasons ?? [])],
     operatorAction,
     confidenceClass,
     effectiveSize,

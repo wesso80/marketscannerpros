@@ -141,7 +141,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       label: "Risk & Alerts",
       items: [
-        { href: "/admin/risk", label: "Risk Governor", code: "RG" },
+        { href: "/admin/risk", label: "Account Risk Status", code: "RG" },
         { href: "/admin/alerts", label: "Alerts", code: "AL" },
         { href: "/admin/discord-bridge", label: "Discord Bridge", code: "DX" },
       ],

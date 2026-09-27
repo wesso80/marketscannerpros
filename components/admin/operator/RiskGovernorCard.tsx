@@ -6,17 +6,18 @@ import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import { fractionConfidencePct } from "@/lib/admin/hitIntegrity";
 
 export default function RiskGovernorCard({ data }: { data: AdminSymbolIntelligence | null }) {
-  if (!data) return <AdminCard title="Research Guard"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  if (!data) return <AdminCard title="Account Risk Status"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
   return (
-    <AdminCard title="Research Guard" actions={<span className="text-white/30 text-xs cursor-pointer">⊑ ⚙ ≡</span>}>
+    <AdminCard title="Account Risk Status" actions={<span className="text-white/30 text-xs cursor-pointer">⊑ ⚙ ≡</span>}>
       <div className="space-y-0.5">
         <div className="flex items-center justify-between py-1.5 text-sm">
-          <span className="text-white/55">Research Gate</span>
+          <span className="text-white/55">Account Permission</span>
           <span className="rounded bg-red-500/15 border border-red-500/20 px-2 py-0.5 text-xs font-medium text-red-300">
             {data.permission}
           </span>
         </div>
         <DataRow label="Size Multiplier" value={`${data.sizeMultiplier}x`} />
+        <DataRow label="Research Permission" value={data.marketPermission} />
         <DataRow label="Confidence" value={fractionConfidencePct(data.confidence)} />
         <DataRow label="Symbol Trust" value={`${data.symbolTrust}%`} />
       </div>

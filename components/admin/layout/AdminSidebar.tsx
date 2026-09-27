@@ -27,7 +27,7 @@ const sections = [
   {
     label: "RISK & ALERTS",
     items: [
-      { href: "/admin/risk", label: "Research Guard", icon: "🛡️" },
+      { href: "/admin/risk", label: "Account Risk Status", icon: "🛡️" },
       { href: "/admin/alerts", label: "Alerts", icon: "🔔" },
       { href: "/admin/discord-bridge", label: "Discord Bridge", icon: "⚡" },
       { href: "/admin/research-scheduler", label: "Scheduler Runs", icon: "⏱" },
