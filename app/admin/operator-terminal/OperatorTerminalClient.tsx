@@ -7,7 +7,7 @@ import OperatorRightRail from "@/components/admin/operator/OperatorRightRail";
 import OperatorBottomTabs from "@/components/admin/operator/OperatorBottomTabs";
 import { useScannerFeed, useSymbolIntelligence } from "@/lib/admin/hooks";
 import SavedScanStatus, { requestRescan } from "@/components/admin/SavedScanStatus";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const DEFAULT_FOCUS: Record<string, string> = { CRYPTO: "ADA", EQUITIES: "SPY" };
 
@@ -30,13 +30,19 @@ export default function OperatorTerminalClient({ cryptoEnabled, defaultMarket = 
   // Re-read the shared saved scan every 60s (a DB read — no market-data calls).
   const { hits, savedScan, loading: scanLoading, refetch } = useScannerFeed(undefined, market, timeframe, 60000);
   const [rescanNote, setRescanNote] = useState<string | null>(null);
+  const rescanTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scheduleRefresh = useCallback(() => {
+    clearTimeout(rescanTimer.current);
+    rescanTimer.current = setTimeout(() => { if (!document.hidden) void refetch(); }, 45_000);
+  }, [refetch]);
+  useEffect(() => () => clearTimeout(rescanTimer.current), [scheduleRefresh]);
   // "R" / toolbar rescan asks the shared job for a rescan (rate-limited, refused while one runs).
   const rescan = useCallback(async () => {
     const r = await requestRescan(market, timeframe);
     setRescanNote(r.message);
     refetch();
-    if (r.ok) setTimeout(refetch, 45_000);
-  }, [market, timeframe, refetch]);
+    if (r.ok) scheduleRefresh();
+  }, [market, timeframe, refetch, scheduleRefresh]);
   const { data: symbolData, loading: symbolLoading } = useSymbolIntelligence(focusSymbol, market, timeframe);
 
   // Auto-select first hit when scan results arrive and no symbol is manually selected
@@ -99,7 +105,7 @@ export default function OperatorTerminalClient({ cryptoEnabled, defaultMarket = 
       />
 
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <SavedScanStatus status={savedScan} compact onRescanStarted={() => setTimeout(refetch, 45_000)} />
+        <SavedScanStatus status={savedScan} compact onRescanStarted={scheduleRefresh} />
         {rescanNote && <span className="text-[10px] text-white/40">{rescanNote}</span>}
       </div>
 

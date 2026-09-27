@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useEffect, useState } from "react";
 
@@ -41,11 +42,10 @@ export default function AdminResearchEventTape({ limit = 40 }: { limit?: number 
         if (alive) setLoading(false);
       }
     }
-    load();
-    const id = setInterval(load, 30000);
+    const stop = startVisiblePolling(load, 30000);
     return () => {
       alive = false;
-      clearInterval(id);
+      stop();
     };
   }, [limit]);
 

@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useState, useEffect } from "react";
 
@@ -73,14 +74,7 @@ export default function AdminCostsPage() {
   };
 
   useEffect(() => {
-    fetchStats();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      if (autoRefresh) fetchStats();
-    }, 30000);
-    
-    return () => clearInterval(interval);
+    return startVisiblePolling(fetchStats, autoRefresh ? 30000 : 0);
   }, [autoRefresh]);
 
   const formatCost = (cost: number) => `$${cost.toFixed(4)}`;

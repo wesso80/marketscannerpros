@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { q } from "@/lib/db";
 import type { Market } from "@/types/operator";
+import { loadPriorPacketSnapshots, packetHistoryKey } from "@/lib/admin/researchPacketHistory";
 import { whatChangedForWorkspace } from "@/lib/admin/getAdminResearchPacket";
 import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
@@ -134,9 +135,10 @@ export async function POST(req: NextRequest) {
     const results: Array<{ workspaceId: string; written: number; packetsBuilt: number; error?: string }> = [];
     for (const w of workspaces) {
       try {
+        const history = await loadPriorPacketSnapshots(w.workspace_id, current);
         const packets = [];
         for (const p of current) {
-          packets.push({ ...p, whatChanged: await whatChangedForWorkspace(p, w.workspace_id) });
+          packets.push({ ...p, whatChanged: await whatChangedForWorkspace(p, w.workspace_id, history.get(packetHistoryKey(p)) ?? null) });
         }
         const edgePackets: AdminEdgePacket[] = packets.map((p) => projectEdgePacket(p));
         // Rank by opportunityRankScore desc; pin IGNORE state to bottom.

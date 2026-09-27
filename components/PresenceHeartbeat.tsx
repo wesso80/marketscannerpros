@@ -1,4 +1,5 @@
 'use client';
+import { startVisiblePolling } from '@/lib/client/visiblePolling';
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
@@ -21,7 +22,6 @@ function getOrCreateSessionId(): string {
  */
 export default function PresenceHeartbeat() {
   const pathname = usePathname() || '/';
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionIdRef = useRef<string>('');
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function PresenceHeartbeat() {
     if (!sid) return;
 
     const send = () => {
-      fetch('/api/analytics/heartbeat', {
+      return fetch('/api/analytics/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sid, current_path: pathname }),
@@ -46,15 +46,8 @@ export default function PresenceHeartbeat() {
       });
     };
 
-    // Immediate heartbeat on mount / path change
-    send();
+    return startVisiblePolling(send, HEARTBEAT_INTERVAL_MS);
 
-    // Recurring heartbeat every 60s
-    timerRef.current = setInterval(send, HEARTBEAT_INTERVAL_MS);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, [pathname]);
 
   return null;

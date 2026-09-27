@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
+
 import { useEffect, useState } from "react";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import AdminCard from "@/components/admin/shared/AdminCard";
@@ -89,9 +91,7 @@ export default function SystemPage() {
   };
 
   useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 30_000);
-    return () => clearInterval(interval);
+    return startVisiblePolling(refresh, 30_000);
   }, []);
 
   const services = [

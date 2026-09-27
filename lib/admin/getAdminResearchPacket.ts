@@ -19,7 +19,7 @@ import { buildJournalDNA, computeJournalPatternBoost, type JournalCaseRow } from
 import { computeOptionsIntelligence, type OptionsIntelligence } from "@/lib/engines/optionsIntelligence";
 import { computeCryptoRegimeIntelligence, type CryptoRegimeIntelligence } from "@/lib/engines/cryptoRegimeIntelligence";
 import { computeEarningsRisk, type EarningsRisk } from "@/lib/engines/earningsRisk";
-import { snapshotResearchPacket, loadPriorPacketSnapshot } from "@/lib/admin/researchPacketHistory";
+import { snapshotResearchPacket, loadPriorPacketSnapshot, type PacketSnapshot } from "@/lib/admin/researchPacketHistory";
 import { computeResearchDelta, summarizeResearchDelta } from "@/lib/admin/researchDelta";
 import { q } from "@/lib/db";
 import type { ArcaAdminContext } from "@/lib/admin/arcaTypes";
@@ -563,9 +563,9 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
  * (workspace, symbol, market, timeframe). Honest fallback when there is no prior snapshot.
  * Used when a packet is built and when a saved (shared-scan) packet is handed to a workspace.
  */
-export async function whatChangedForWorkspace(packet: AdminResearchPacket, workspaceId: string): Promise<string> {
+export async function whatChangedForWorkspace(packet: AdminResearchPacket, workspaceId: string, priorSnapshot?: PacketSnapshot | null): Promise<string> {
   try {
-    const prior = await loadPriorPacketSnapshot({
+    const prior = priorSnapshot !== undefined ? priorSnapshot : await loadPriorPacketSnapshot({
       workspaceId,
       symbol: packet.symbol,
       market: packet.market,

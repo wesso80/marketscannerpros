@@ -37,7 +37,7 @@ export default function RiskPage() {
       <SectionTitle title="Account Risk Status" subtitle={error ? `Error: ${error}` : undefined} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
-        <MiniStat label="Open Risk" value={`$${openRiskUsd.toLocaleString()}`} />
+        <MiniStat label="Open Risk" value={risk && !error ? `$${openRiskUsd.toLocaleString()}` : "Unavailable"} />
         <MiniStat label="Snapshot Daily Loss" value={risk?.dailyDrawdownKnown ? `${(drawdown * 100).toFixed(2)}%` : "Unavailable"} />
         <MiniStat label="Concentration Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />
         <MiniStat label="Open Positions" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "\u2014 / \u2014"} />
@@ -96,13 +96,13 @@ export default function RiskPage() {
       </AdminCard>
 
       <AdminCard title="Scheduled Account History" actions={
-        <button onClick={capture} disabled={capturing}
+        <button onClick={capture} disabled={capturing || !risk || !!error}
           className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/20 disabled:opacity-50">
           {capturing ? 'Checking account…' : risk?.capture?.enabled ? 'Capture current equity' : 'Start daily account history'}
         </button>
       }>
         <div className="space-y-2 text-sm text-white/70">
-          <p>{risk?.capture?.enabled ? 'Enabled: the data worker checks this account every 15 minutes.' : 'Not enabled for this account.'}</p>
+          <p>{!risk || error ? 'Account history status unavailable.' : risk.capture?.enabled ? 'Enabled: the data worker checks this account every 15 minutes.' : 'Not enabled for this account.'}</p>
           <p>Uses saved capital and cash flows, reconciled closed positions, and provider-timestamped prices or completed equity session closes. Missing or unsupported inputs pause capture.</p>
           <p>Recorded days: {risk?.capture?.observations ?? 0} · Latest date: {risk?.capture?.latest_date ?? 'None'}</p>
           <p>Last successful capture: {risk?.capture?.last_success_at ?? 'None'}</p>
@@ -116,11 +116,11 @@ export default function RiskPage() {
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-white/55">Max Concurrent Positions</span>
-            <span className="text-white/90 font-mono">{risk?.maxPositions ?? 10}</span>
+            <span className="text-white/90 font-mono">{risk && !error ? risk.maxPositions : "Unavailable"}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-white/55">Active Positions</span>
-            <span className="text-white/90 font-mono">{risk?.activePositions ?? 0}</span>
+            <span className="text-white/90 font-mono">{risk && !error ? risk.activePositions : "Unavailable"}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-white/55">Daily Loss Guard</span>

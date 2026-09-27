@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
+
 import { useEffect, useState, useCallback } from "react";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import AdminCard from "@/components/admin/shared/AdminCard";
@@ -84,9 +86,7 @@ export default function AdminHealthPage() {
   }, []);
 
   useEffect(() => {
-    refetch();
-    const t = setInterval(refetch, 30_000);
-    return () => clearInterval(t);
+    return startVisiblePolling(refetch, 30_000);
   }, [refetch]);
 
   return (

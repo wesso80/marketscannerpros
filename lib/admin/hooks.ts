@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 /**
  * Admin Terminal — Data hooks
@@ -109,15 +110,8 @@ export function useScannerFeed(
   }, [market, timeframe]);
 
   useEffect(() => {
-    fetchScanner();
-    if (pollInterval > 0) {
-      const id = setInterval(fetchScanner, pollInterval);
-      return () => {
-        clearInterval(id);
-        abortRef.current?.abort();
-      };
-    }
-    return () => abortRef.current?.abort();
+    const stop = startVisiblePolling(fetchScanner, pollInterval);
+    return () => { stop(); abortRef.current?.abort(); };
   }, [fetchScanner, pollInterval]);
 
   return { hits, health, savedScan, scanErrors, loading, error, refetch: fetchScanner };
@@ -176,11 +170,7 @@ export function useSystemHealth(pollInterval = 30000) {
   }, []);
 
   useEffect(() => {
-    fetchHealth();
-    if (pollInterval > 0) {
-      const id = setInterval(fetchHealth, pollInterval);
-      return () => clearInterval(id);
-    }
+    return startVisiblePolling(fetchHealth, pollInterval);
   }, [fetchHealth, pollInterval]);
 
   return { health, error, refetch: fetchHealth };
@@ -215,21 +205,22 @@ export function useRiskState(pollInterval = 30000) {
   const [risk, setRisk] = useState<RiskState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const inFlight = useRef(false);
   const fetchRisk = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       const data = await adminFetch<RiskState>("/api/admin/risk/state");
       setRisk(data);
+      setError(null);
     } catch (err: unknown) {
+      setRisk(null);
       setError(err instanceof Error ? err.message : "Risk fetch failed");
-    }
+    } finally { inFlight.current = false; }
   }, []);
 
   useEffect(() => {
-    fetchRisk();
-    if (pollInterval > 0) {
-      const id = setInterval(fetchRisk, pollInterval);
-      return () => clearInterval(id);
-    }
+    return startVisiblePolling(fetchRisk, pollInterval);
   }, [fetchRisk, pollInterval]);
 
   return { risk, error, refetch: fetchRisk };

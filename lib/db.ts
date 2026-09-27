@@ -81,7 +81,15 @@ export async function q<T = any>(text: string, params: any[] = []): Promise<T[]>
     try { return (await scope.client.query(text, params)).rows as T[]; }
     catch (error) { logQueryFailure(text, started, error, true); scope.failed = error; throw error; }
   }
-  const client = await getPool().connect();
+  let client: PoolClient;
+  try { client = await getPool().connect(); }
+  catch (error) {
+    logQueryFailure(text, started, error, false);
+    console.error('[db] connection acquisition failed', {
+      total: getPool().totalCount, idle: getPool().idleCount, waiting: getPool().waitingCount,
+    });
+    throw error;
+  }
   try {
     // statement_timeout now set at pool level — no per-query SET needed
     const res = await client.query(text, params);

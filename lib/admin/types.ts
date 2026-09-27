@@ -31,6 +31,9 @@ export function toBiasState(d: Direction | undefined): BiasState {
 
 /* ── Scanner hit (one row in the live feed) ── */
 export type ScannerHit = {
+  discoveryPermission?: PermissionState;
+  discoveryBias?: BiasState;
+  clearance?: ReturnType<typeof import("./positionClearance").positionClearance>;
   symbol: string;
   bias: BiasState;
   regime: Regime | string;

@@ -64,6 +64,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
 
   // Only the latest request may write state: the board opens on the default market and is often switched
   // straight away, so the first (slower) response must not overwrite — or un-set "loading" for — the second.
+  const rescanTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const requestSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -113,7 +114,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
 
   useEffect(() => {
     load();
-    return () => abortRef.current?.abort();
+    return () => { abortRef.current?.abort(); clearTimeout(rescanTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [market, timeframe]);
 
@@ -212,7 +213,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
         padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid rgba(255,255,255,0.06)",
       }}>
         {savedScan.map((st) => (
-          <SavedScanStatus key={st.market} status={st} onRescanStarted={() => { setTimeout(load, 45_000); }} />
+          <SavedScanStatus key={st.market} status={st} onRescanStarted={() => { clearTimeout(rescanTimer.current); rescanTimer.current = setTimeout(() => { if (!document.hidden) void load(); }, 45_000); }} />
         ))}
         {savedScan.length === 0 && !loading && (
           <span style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>No saved scan status.</span>

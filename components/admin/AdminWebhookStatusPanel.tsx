@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useEffect, useState } from "react";
 
@@ -60,11 +61,10 @@ export default function AdminWebhookStatusPanel() {
         if (!cancelled) setLoading(false);
       }
     };
-    load();
-    const id = window.setInterval(load, 60000);
+    const stop = startVisiblePolling(load, 60000);
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      stop();
     };
   }, []);
 

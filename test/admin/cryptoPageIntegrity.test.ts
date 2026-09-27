@@ -226,7 +226,7 @@ describe("Opportunity Board loading", () => {
   it("route no longer runs the per-symbol whatChanged loop sequentially", () => {
     const route = src("app/api/admin/opportunities/route.ts");
     expect(route).not.toContain("for (const p of packets) withDelta.push");
-    expect(route).toContain("boundedMap(packets, DB_CONCURRENCY");
+    expect(route).toContain("loadPriorPacketSnapshots(workspaceId, packets)");
   });
   it("board ignores stale responses and times out instead of loading forever", () => {
     const board = src("components/admin/AdminOpportunityBoard.tsx");
@@ -251,9 +251,11 @@ describe("Priority Desk: engine setup never labelled 'No Setup'", () => {
     expect(classifySetupWithPlaybook(snap("LIQUIDITY_SWEEP_REVERSAL")).type).toBe("LIQUIDITY_SWEEP");
     expect(classifySetupWithPlaybook(snap(undefined)).type).toBe("NO_SETUP");
   });
-  it("desk rows show direction, price and entry/stop/TP1 from the packet snapshot", () => {
+  it("desk rows show the independent position assessment levels", () => {
     const page = src("app/admin/priority-desk/page.tsx");
-    expect(page).toContain("packetLevels(packet)");
-    expect(page).toMatch(/Entry \{lv\.entry\}[\s\S]*Stop \{lv\.stop\}[\s\S]*TP1 \{lv\.tp1\}/);
+    expect(page).toContain("const t = row.technical");
+    expect(page).toContain("formatHitPrice(t.entryTrigger)");
+    expect(page).toContain("formatHitPrice(t.stop)");
+    expect(page).toContain("formatHitPrice(t.tp1)");
   });
 });
