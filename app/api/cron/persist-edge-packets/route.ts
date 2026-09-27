@@ -15,8 +15,9 @@
  *   2. recomputes whatChanged against that workspace's prior snapshot,
  *   3. projects to canonical AdminEdgePacket[],
  *   4. inserts the ones the workspace does not already have into `admin_edge_packets`.
- * It also nudges the shared scan (a no-op when it is fresh or already running),
- * so edge packets keep flowing even if the radar crons are retired.
+ * It also starts the existing shared refresh and waits for completion before publishing.
+ * No provider schedule or budget is increased. If another refresh owns the lock,
+ * it retains the existing saved-results behavior and reports scanCompleted=false.
  *
  * Body: `{ "market": "CRYPTO" | "EQUITIES", "timeframe"?: string, "limit"?: number }`
  *
@@ -33,7 +34,7 @@ import { loadPriorPacketSnapshots, packetHistoryKey } from "@/lib/admin/research
 import { whatChangedForWorkspace } from "@/lib/admin/getAdminResearchPacket";
 import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
-import { detachRun, isRankable, readSavedScan, startSharedScan, withFreshQuote } from "@/lib/admin/sharedScan";
+import { isRankable, readSavedScan, startSharedScan, withFreshQuote } from "@/lib/admin/sharedScan";
 import { sharedScanUniverse } from "@/lib/admin/sharedScanLogic";
 import { notifyAdmin } from "@/lib/admin/notifyAdmin";
 
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
     const symbols = universe.slice(0, limit);
 
     const scanMarket = market === "CRYPTO" ? "CRYPTO" : "EQUITIES";
-    const view = await readSavedScan({ market: scanMarket, timeframe, symbols });
+    let view = await readSavedScan({ market: scanMarket, timeframe, symbols });
     if (!view.available) {
       return NextResponse.json({
         ok: false,
@@ -93,7 +94,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, reason: "scan_start_failed", message: scan.message,
         durationMs: Date.now() - started }, { status: 503 });
     }
-    detachRun(scan);
+    // This scheduled route has a 540s caller budget. Unlike interactive pages,
+    // it must publish the scan it starts, not the pre-refresh snapshot. Leave
+    // 60s for publication; an overlong scan continues under its existing lock.
+    let scanCompleted = false;
+    if (scan.started) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const remaining = Math.max(1, 480_000 - (Date.now() - started));
+      const completion = await Promise.race([
+        scan.done,
+        new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining); }),
+      ]).finally(() => { if (timer) clearTimeout(timer); });
+      if (!completion || completion.status !== "done") {
+        return NextResponse.json({ ok: false,
+          reason: completion ? "shared_scan_failed" : "shared_scan_still_running",
+          runId: scan.runId, message: completion?.error ?? "Scan has not completed within the publication budget.",
+          durationMs: Date.now() - started }, { status: 503 });
+      }
+      scanCompleted = true;
+      view = await readSavedScan({ market: scanMarket, timeframe, symbols });
+      if (!view.available) {
+        return NextResponse.json({ ok: false, reason: "completed_scan_unavailable", runId: scan.runId,
+          message: view.message, durationMs: Date.now() - started }, { status: 503 });
+      }
+    }
     const current = view.packets.filter(isRankable).map(withFreshQuote);
 
     // Active workspaces from the same source the arca-cycle cron uses.
@@ -118,6 +142,7 @@ export async function POST(req: NextRequest) {
       currentPackets: current.length,
       savedPackets: view.packets.length,
       scanStarted: scan.started,
+      scanCompleted,
       scanNote: scan.started ? scan.runId : scan.message,
     };
     if (workspaces.length === 0 || current.length === 0) {
