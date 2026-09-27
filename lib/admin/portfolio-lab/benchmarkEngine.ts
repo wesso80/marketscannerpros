@@ -139,10 +139,13 @@ export async function listBenchmarkSnapshots(
   }>(
     `SELECT snapshot_at, benchmark_symbol, benchmark_value, benchmark_return_pct,
             arca_return_pct, relative_performance_pct
-       FROM arca_benchmark_snapshots
-      WHERE workspace_id=$1 AND portfolio_id=$2
-        ${opts.symbol ? "AND benchmark_symbol=$3" : ""}
-      ORDER BY snapshot_at DESC LIMIT ${limit}`,
+       FROM (
+         SELECT DISTINCT ON ((snapshot_at AT TIME ZONE 'UTC')::date, benchmark_symbol) *
+           FROM arca_benchmark_snapshots
+          WHERE workspace_id=$1 AND portfolio_id=$2
+            ${opts.symbol ? "AND benchmark_symbol=$3" : ""}
+          ORDER BY (snapshot_at AT TIME ZONE 'UTC')::date DESC, benchmark_symbol, snapshot_at DESC
+       ) daily ORDER BY snapshot_at DESC LIMIT ${limit}`,
     opts.symbol ? [workspaceId, portfolioId, opts.symbol.toUpperCase()] : [workspaceId, portfolioId],
   );
   return rows.map((r) => ({
