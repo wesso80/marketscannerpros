@@ -8,6 +8,7 @@ import { computePortfolioRisk, type ExternalFlow } from '@/lib/portfolio/riskAna
 import { positionUnits } from '@/lib/portfolio/positionValue';
 import { normalizeExpiration } from '@/lib/options/contractQuote';
 import { readServerPortfolioState, replacePortfolio, sqlErrorCode, type SyncProgress } from '@/lib/portfolio/serverSync';
+import { classifyClosedJournalLinks, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
 
 interface Position {
   id: number;
@@ -30,6 +31,7 @@ interface ClosedPosition extends Position {
   closeDate: string;
   closePrice: number;
   realizedPL: number;
+  journalLink?: ClosedJournalLink;
 }
 
 interface PerformanceSnapshot {
@@ -88,7 +90,9 @@ export async function GET(req: NextRequest) {
     // Fetch closed positions
     const closedRaw = await q(
       `SELECT c.id, c.symbol, c.side, c.quantity, c.entry_price, c.close_price, c.entry_date, c.close_date, c.realized_pl, c.journal_entry_id,
-              j.trade_type, j.asset_class, j.r_multiple, j.stop_loss
+              j.trade_type, j.asset_class, j.r_multiple, j.stop_loss,
+              j.id AS journal_row_id, j.is_open AS journal_is_open, j.status AS journal_status,
+              j.pl AS journal_pl, j.exit_price AS journal_exit_price
        FROM portfolio_closed c
        LEFT JOIN journal_entries j ON j.id = c.journal_entry_id AND j.workspace_id = c.workspace_id
        WHERE c.workspace_id = $1
@@ -150,11 +154,18 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    // TR-38: tell rows the Journal still agrees with apart from orphaned / re-opened / duplicate mirror rows.
+    const closedLinks = classifyClosedJournalLinks(closedRaw);
     const closedPositions: ClosedPosition[] = closedRaw.map((p: any) => {
+      const journalLink = closedLinks.get(p.id) ?? 'manual';
       const qty = parseFloat(p.quantity);
       const entry = parseFloat(p.entry_price);
-      const close = parseFloat(p.close_price);
-      const realizedPL = parseFloat(p.realized_pl);
+      // A live Journal link follows the Journal's current exit / P&L (the mirror row is a copy taken at close
+      // time and is not updated when the Journal entry is edited).
+      const journalExit = journalLink === 'journal' ? parseFloat(p.journal_exit_price) : NaN;
+      const journalPL = journalLink === 'journal' ? parseFloat(p.journal_pl) : NaN;
+      const close = Number.isFinite(journalExit) ? journalExit : parseFloat(p.close_price);
+      const realizedPL = Number.isFinite(journalPL) ? journalPL : parseFloat(p.realized_pl);
       const plPercent = ((close - entry) / entry) * 100 * (p.side === 'LONG' ? 1 : -1);
 
       return {
@@ -171,6 +182,7 @@ export async function GET(req: NextRequest) {
         entryDate: p.entry_date,
         closeDate: p.close_date,
         journalEntryId: p.journal_entry_id || undefined,
+        journalLink,
         // Trade type from the linked journal entry (options closes use the x100 contract multiplier).
         tradeType: p.trade_type || undefined,
         assetClass: p.asset_class || undefined,
