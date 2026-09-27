@@ -68,3 +68,14 @@ describe('paper cycle coordination', () => {
     expect(writeJournal).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('Paper cycle completed:'), journalType: 'REVIEW' }));
   });
 });
+it('completes a 500-symbol rejected cycle with one bulk audit write', async () => {
+  vi.mocked(runDecisionEngine).mockResolvedValue({ selected: [], scannedPackets: 500,
+    rejected: Array.from({ length: 500 }, (_, i) => ({ packetId: `p${i}`, symbol: `S${i}`, passed: false, reasons: ['freshness_stale'] })) });
+  vi.mocked(q).mockImplementation(async sql => sql.includes('pg_try_advisory') ? [{ locked: true }] :
+    sql.includes('WITH input AS') ? Array.from({ length: 500 }, (_, i) => ({ id: String(i) })) : []);
+  const result = await simulateArcaCycle({ workspaceId: 'w' });
+  expect(result.noTradeRowsWritten).toBe(500);
+  expect(result.gateRejections).toBe(500);
+  expect(vi.mocked(q).mock.calls.filter(([sql]) => sql.includes('WITH input AS'))).toHaveLength(1);
+  expect(writeJournal).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('Paper cycle completed:') }));
+});

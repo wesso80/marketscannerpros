@@ -228,14 +228,8 @@ function whatWouldChange(stage: RejectionStage): string {
  * - Soft-fails: any write error is caught so the cycle continues; the
  *   error surfaces in the return value so the caller can decide.
  */
-export async function recordNoTradeDecisionFromCandidate(
-  input: NoTradeCandidateInput,
-): Promise<NoTradeWriteResult> {
-  const dedupeKey = `${input.symbol}::${input.rejectionStage}`;
-  if (input.dedupeKeys?.has(dedupeKey)) {
-    return { written: false, skippedReason: "duplicate" };
-  }
-
+/** Same evidence formatting for individual and bulk writes. */
+export function prepareNoTradeDecision(input: NoTradeCandidateInput) {
   const source = mapStageToSource(input.rejectionStage);
   const journalType = mapStageToJournalType(input.rejectionStage);
 
@@ -261,27 +255,6 @@ export async function recordNoTradeDecisionFromCandidate(
     `${reasonPrefix} ${input.rejectionReason}` +
     regimeFrag + edgeFrag + allocFrag + debateFrag + freshFrag;
 
-  let noTradeRowId: string | undefined;
-  let journalRowId: string | undefined;
-
-  try {
-    const row = await recordNoTradeRejection({
-      workspaceId: input.workspaceId,
-      symbol: input.symbol,
-      rejectionSource: source,
-      rejectionReason: structuredReason,
-      debateId: input.debate?.id ?? null,
-      hypotheticalEntry: input.entry ?? null,
-      hypotheticalStop: input.stopLoss ?? null,
-      hypotheticalTarget: input.takeProfit ?? null,
-      hypotheticalSizeDollars: input.hypotheticalSizeDollars ?? null,
-    });
-    noTradeRowId = (row as unknown as { id?: string }).id;
-  } catch {
-    // best-effort — surface via return value, do not break the cycle
-  }
-
-  try {
     const evidence: string[] = [];
     if (input.regimePlaybookDecision?.requiredConfirmations?.length) {
       evidence.push(`required: ${input.regimePlaybookDecision.requiredConfirmations.join(", ")}`);
@@ -339,7 +312,17 @@ export async function recordNoTradeDecisionFromCandidate(
       journalType === "RISK_BLOCK"               ? "RISK BLOCK" :
       input.rejectionStage === "WAIT_FOR_CONFIRMATION" ? "DEFERRED" :
                                                        "REJECTED";
-    const j = await writeJournal({
+  return { rejection: {
+      workspaceId: input.workspaceId,
+      symbol: input.symbol,
+      rejectionSource: source,
+      rejectionReason: structuredReason,
+      debateId: input.debate?.id ?? null,
+      hypotheticalEntry: input.entry ?? null,
+      hypotheticalStop: input.stopLoss ?? null,
+      hypotheticalTarget: input.takeProfit ?? null,
+      hypotheticalSizeDollars: input.hypotheticalSizeDollars ?? null,
+    }, journal: {
       workspaceId: input.workspaceId,
       portfolioId: input.portfolioId,
       journalType,
@@ -351,12 +334,16 @@ export async function recordNoTradeDecisionFromCandidate(
       evidence,
       dataFreshness: input.dataFreshness ?? undefined,
       sourcePacketIds: input.edgePacketId ? [input.edgePacketId] : [],
-    });
-    journalRowId = (j as unknown as { id?: string }).id;
-  } catch {
-    // best-effort
-  }
+    } };
+}
 
+export async function recordNoTradeDecisionFromCandidate(input: NoTradeCandidateInput): Promise<NoTradeWriteResult> {
+  const dedupeKey = `${input.symbol}::${input.rejectionStage}`;
+  if (input.dedupeKeys?.has(dedupeKey)) return { written: false, skippedReason: "duplicate" };
+  const prepared = prepareNoTradeDecision(input);
+  // Propagate failures so the surrounding ledger transaction rolls back honestly.
+  const row = await recordNoTradeRejection(prepared.rejection);
+  const journal = await writeJournal(prepared.journal);
   input.dedupeKeys?.add(dedupeKey);
-  return { written: true, noTradeRowId, journalRowId };
+  return { written: true, noTradeRowId: row.id, journalRowId: journal.id };
 }
