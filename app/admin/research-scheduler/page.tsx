@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { RunSummary } from "@/lib/admin/sharedScanStore";
@@ -102,9 +104,7 @@ export default function ResearchSchedulerPage() {
   }
 
   useEffect(() => {
-    fetchRuns();
-    const t = setInterval(fetchRuns, 60_000);
-    return () => clearInterval(t);
+    return startVisiblePolling(fetchRuns, 60_000);
   }, []);
 
   return (

@@ -50,8 +50,6 @@ export async function snapshotResearchPacket(input: {
   scanMode?: string;
 }): Promise<PacketSnapshot | null> {
   try {
-    await ensurePacketSnapshotTable();
-    
     const result = await q<{ id: number }>(
       `INSERT INTO admin_research_packet_snapshots (
         workspace_id, symbol, market, timeframe, asset_class, packet_json,
@@ -109,8 +107,6 @@ export async function loadPriorPacketSnapshot(input: {
   excludeId?: number; // skip the latest snapshot (if just created)
 }): Promise<PacketSnapshot | null> {
   try {
-    await ensurePacketSnapshotTable();
-    
     const results = await q<PacketSnapshot>(
       `SELECT id, workspace_id AS "workspaceId", symbol, market, timeframe, asset_class AS "assetClass",
               packet_json AS "packetJson", raw_research_score AS "rawResearchScore",
@@ -133,6 +129,37 @@ export async function loadPriorPacketSnapshot(input: {
   }
 }
 
+/** Request-local batch lookup: one indexed latest-row lookup per unique key in one query.
+ * Errors propagate, so a database outage cannot masquerade as a first scan.
+ */
+export function packetHistoryKey(packet: { symbol: string; market: string; timeframe: string }): string {
+  return JSON.stringify([packet.symbol, packet.market, packet.timeframe]);
+}
+
+export async function loadPriorPacketSnapshots(
+  workspaceId: string,
+  packets: readonly { symbol: string; market: string; timeframe: string }[],
+): Promise<Map<string, PacketSnapshot>> {
+  const keys = [...new Map(packets.map(p => [packetHistoryKey(p), {
+    symbol: p.symbol, market: p.market, timeframe: p.timeframe,
+  }])).values()];
+  if (!keys.length) return new Map();
+  const rows = await q<PacketSnapshot>(
+    `SELECT p.id, p.workspace_id AS "workspaceId", p.symbol, p.market, p.timeframe,
+            p.asset_class AS "assetClass", p.packet_json AS "packetJson",
+            p.raw_research_score AS "rawResearchScore", p.trust_adjusted_score AS "trustAdjustedScore",
+            p.lifecycle, p.data_trust_status AS "dataTrustStatus", p.created_at AS "createdAt"
+       FROM jsonb_to_recordset($2::jsonb) AS k(symbol text, market text, timeframe text)
+       CROSS JOIN LATERAL (
+         SELECT * FROM admin_research_packet_snapshots
+          WHERE workspace_id = $1 AND symbol = k.symbol AND market = k.market AND timeframe = k.timeframe
+          ORDER BY created_at DESC, id DESC LIMIT 1
+       ) p`,
+    [workspaceId, JSON.stringify(keys)],
+  );
+  return new Map(rows.map(row => [packetHistoryKey(row), row]));
+}
+
 /**
  * List recent packet snapshots for a symbol (for admin inspection).
  */
@@ -144,8 +171,6 @@ export async function listPacketHistory(input: {
   limit?: number;
 }): Promise<PacketSnapshot[]> {
   try {
-    await ensurePacketSnapshotTable();
-    
     const limit = Math.min(100, input.limit || 20);
     const results = await q<PacketSnapshot>(
       `SELECT id, workspace_id AS "workspaceId", symbol, market, timeframe, asset_class AS "assetClass",
@@ -172,8 +197,6 @@ export async function listPacketHistory(input: {
  */
 export async function cleanupOldPacketSnapshots(retentionDays = 90): Promise<number> {
   try {
-    await ensurePacketSnapshotTable();
-    
     const result = await q<{ count: number }>(
       `DELETE FROM admin_research_packet_snapshots
        WHERE created_at < NOW() - INTERVAL '${retentionDays} days'

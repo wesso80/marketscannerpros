@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useEffect, useState } from "react";
 
@@ -62,11 +63,10 @@ export default function AdminProviderHealthGrid() {
         if (!cancelled) setLoading(false);
       }
     };
-    load();
-    const id = window.setInterval(load, 30000);
+    const stop = startVisiblePolling(load, 30000);
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      stop();
     };
   }, []);
 

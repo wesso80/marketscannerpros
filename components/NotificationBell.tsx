@@ -1,4 +1,5 @@
 'use client';
+import { startVisiblePolling } from '@/lib/client/visiblePolling';
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -122,10 +123,8 @@ export default function NotificationBell({ compact = false }: NotificationBellPr
   useEffect(() => {
     if (!authenticated) return;
 
-    void fetchNotifications();
     void fetchPrefs();
-    const interval = setInterval(() => void fetchNotifications(), 30000);
-    return () => clearInterval(interval);
+    return startVisiblePolling(fetchNotifications, 30000);
   }, [authenticated, fetchNotifications, fetchPrefs]);
 
   useEffect(() => {

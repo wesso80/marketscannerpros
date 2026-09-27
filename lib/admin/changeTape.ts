@@ -10,7 +10,7 @@
 import { q } from "../db";
 import type { AdminResearchPacket } from "./getAdminResearchPacket";
 import { computeResearchDelta, type ResearchDelta } from "./researchDelta";
-import { loadPriorPacketSnapshot } from "./researchPacketHistory";
+import { loadPriorPacketSnapshot, type PacketSnapshot } from "./researchPacketHistory";
 
 export type ChangeTapeEventType =
   | "GAMMA_FLIP"
@@ -70,9 +70,10 @@ const SCORE_JUMP_THRESHOLD = 15;
 export async function detectChangeTapeEvents(input: {
   workspaceId: string;
   packet: AdminResearchPacket;
+  priorSnapshot?: PacketSnapshot | null;
 }): Promise<ChangeTapeEvent[]> {
   const { workspaceId, packet } = input;
-  const prior = await loadPriorPacketSnapshot({
+  const prior = input.priorSnapshot !== undefined ? input.priorSnapshot : await loadPriorPacketSnapshot({
     workspaceId,
     symbol: packet.symbol,
     market: packet.market,

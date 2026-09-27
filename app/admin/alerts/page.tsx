@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
@@ -94,9 +96,7 @@ export default function AlertsPage() {
   };
 
   useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 60_000);
-    return () => clearInterval(interval);
+    return startVisiblePolling(refresh, 60_000);
   }, []);
 
   const sortedHits = [...hits].sort((a, b) => (b.confidence + b.symbolTrust) - (a.confidence + a.symbolTrust));

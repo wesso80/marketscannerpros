@@ -52,3 +52,9 @@ Records are append-only through this API. A unique workspace/request ID prevents
 `POST /api/admin/position-history` accepts `{ "offset": 0 }` and processes up to five unique saved-scan symbols. Continue with the returned `next` offset until null. Requires admin authentication and same-origin browser requests. This explicit action consumes provider requests for daily history only; GET evidence remains read-only. Fresh market-qualified saved history is reused for six hours. Unsupported/short/stale histories retain unavailable reasons.
 
 `GET /api/admin/portfolio-lab/holdings` exposes workspace-scoped saved holdings, saved-price exposure/P&L and valuation limitations. It does not return ARCA simulation positions, broker balances or live quotes.
+
+## Shared position readiness
+
+Each assessment now includes `clearance`, also used by `/api/admin/scanner/live`. It contains `status` (BLOCKED or WATCH), reasons, current-price reward/risk, independent position direction, weekly/daily technical levels, evidence ID and `executionEnabled:false`. There is no TRADEABLE output until independent macro, performance and human-review requirements are implemented.
+
+Account WAIT/BLOCK, unknown or older-than-24-hour risk evidence, missing position evidence, breached stops, outside-zone prices, current-price reward/risk below 1.5, restricted/unknown earnings and simultaneous opposing saved setups withhold readiness. Discovery scores remain unchanged. Scanner rows retain `discoveryPermission` and `discoveryBias` separately; compatibility permission fields are capped at WAIT/BLOCK with zero size. One row per symbol uses the independent position direction and the same enriched stored history as Decision Desk. Consumers must not interpret discoveryPermission as clearance.

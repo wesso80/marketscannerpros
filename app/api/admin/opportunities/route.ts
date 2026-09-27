@@ -23,6 +23,8 @@ import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type Chang
 import { filterNewEdgePackets, persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
+import { loadPriorPacketSnapshots, packetHistoryKey } from "@/lib/admin/researchPacketHistory";
+import { createSingleFlight } from "@/lib/admin/singleFlight";
 import { boundedMap } from "@/lib/admin/boundedMap";
 import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket, type SavedScanView } from "@/lib/admin/sharedScan";
 
@@ -30,7 +32,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Per-symbol DB work in flight at once (pg pool max is 15, shared with every other admin request). */
-const DB_CONCURRENCY = 6;
+const DB_CONCURRENCY = 2;
+const opportunityReads = createSingleFlight<Response>();
 
 // Universe: the shared scan universe (DEFAULT_WATCHLISTS union, anchors first) — see lib/admin/sharedScanLogic.ts.
 
@@ -41,6 +44,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const params = new URL(req.url).searchParams;
+  params.sort();
+  const key = JSON.stringify([session.workspaceId, params.toString()]);
+  const response = await opportunityReads(key, () => buildOpportunities(req, session.workspaceId!));
+  return response.clone();
+}
+
+async function buildOpportunities(req: NextRequest, workspaceId: string) {
   try {
     const { searchParams } = new URL(req.url);
     // ALL = both markets; otherwise the requested market, defaulting to EQUITIES while crypto data is off.
@@ -53,7 +64,6 @@ export async function GET(req: NextRequest) {
     // No symbols override allowed in ALL mode (would be ambiguous which market each belongs to).
     const isCrossAsset = marketParam === "ALL" && !symbolsParam;
 
-    const workspaceId = session?.workspaceId;
     let views: SavedScanView[] = [];
     if (isCrossAsset) {
       views = await Promise.all([
@@ -83,12 +93,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // whatChanged relative to this admin's workspace snapshots (saved packets are workspace-neutral).
-    // Bounded-parallel: this was a strictly sequential loop (2 queries per symbol, ~190 equities), which
-    // left the board on "Loading…" for a long time.
-    if (workspaceId) {
-      packets = await boundedMap(packets, DB_CONCURRENCY, async (p) => ({ ...p, whatChanged: await whatChangedForWorkspace(p, workspaceId) }));
-    }
+    // Share one history read across delta text and change-tape detection.
+    // Previously each poll did four queries per symbol before queue/persistence work.
+    const history = await loadPriorPacketSnapshots(workspaceId, packets);
+    packets = await Promise.all(packets.map(async p => ({
+      ...p, whatChanged: await whatChangedForWorkspace(p, workspaceId, history.get(packetHistoryKey(p)) ?? null),
+    })));
 
     // Project to canonical AdminEdgePacket[] (Admin Edge Layer contract).
     const edgePackets: AdminEdgePacket[] = packets.map((p) => projectEdgePacket(p));
@@ -120,8 +130,8 @@ export async function GET(req: NextRequest) {
     // edge-packet snapshots for audit/calibration. All best-effort.
     let setupCapture: SetupCaptureSummary | null = null;
     const changesBySymbol: Record<string, Array<{ eventType: string; severity: ChangeTapeSeverity; magnitude: number }>> = {};
-    if (session?.workspaceId) {
-      const ws = session.workspaceId;
+    if (workspaceId) {
+      const ws = workspaceId;
       // Failed / stale saved rows are shown (with their status) but never queued, persisted or taped.
       const rankableIds = new Set(packets.filter(isRankable).map((p) => p.packetId));
       const liveEdge = edgePackets.filter((p) => rankableIds.has(p.packetId));
@@ -138,7 +148,7 @@ export async function GET(req: NextRequest) {
       const allEvents: ChangeTapeEvent[][] = await boundedMap(
         livePackets,
         DB_CONCURRENCY,
-        (p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[]),
+        (p) => detectChangeTapeEvents({ workspaceId: ws, packet: p, priorSnapshot: history.get(packetHistoryKey(p)) ?? null }).catch(() => [] as ChangeTapeEvent[]),
       );
       const flat = allEvents.flat();
       if (flat.length) await persistChangeTapeEvents(flat).catch(() => 0);

@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
+
 /**
  * Admin Command Home
  *
@@ -21,7 +23,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
 type PersonalExposureFlag = AdminEdgePacket["personalExposureFlag"];
 import type { AdminLifecycleState } from "@/lib/admin/lifecycle";
@@ -52,7 +54,7 @@ function TruthBadge({ truth }: { truth?: TruthShape | null }) {
       : fresh === "delayed" || fresh === "degraded"
         ? "#F59E0B"
         : "#EF4444";
-  const tag = truth.simulated ? "SIMULATED" : "LIVE";
+  const tag = truth.simulated ? "SIMULATED" : fresh === "real-time" || fresh === "fresh" ? "LIVE" : "UNVERIFIED";
   return (
     <span style={badgeStyle(color)}>
       {(truth.source || "engine").toUpperCase()} · {fresh} · {tag}
@@ -565,7 +567,10 @@ function useTruthFetch<T>(url: string): FetchState<T> {
     data: null,
     truth: null,
   });
+  const inFlight = useRef(false);
   const load = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       const res = await fetch(url, { cache: "no-store" });
       const body = await res.json();
@@ -589,12 +594,10 @@ function useTruthFetch<T>(url: string): FetchState<T> {
         error: err instanceof Error ? err.message : "fetch failed",
         data: null,
       });
-    }
+    } finally { inFlight.current = false; }
   }, [url]);
   useEffect(() => {
-    void load();
-    const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
+    return startVisiblePolling(load, 30_000);
   }, [load]);
   return state;
 }
@@ -695,7 +698,12 @@ export default function CommandHome() {
         </nav>
       </header>
 
-      <MarketStateBar packets={packets} />
+      {opps.error || opps.loading ? (
+        <div role="status" style={{ padding: 16, color: '#FCD34D' }}>
+          {opps.error ? `Opportunity data unavailable: ${opps.error}. Empty panels below are not a no-setups signal.` : 'Loading saved opportunity data. Counts are not yet available.'}
+        </div>
+      ) : <MarketStateBar packets={packets} />}
+      {tape.error && <div role="status">Change tape unavailable: {tape.error}</div>}
 
       <DoNothingBannerWrap packets={packets} />
 

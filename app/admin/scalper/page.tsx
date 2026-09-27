@@ -1,6 +1,7 @@
 'use client';
+import { startVisiblePolling } from '@/lib/client/visiblePolling';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { scalpVolumeCell } from '@/lib/scalper/volume';
 
@@ -78,7 +79,6 @@ export default function AdminScalperPage() {
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ─── Scan ─── */
   const runScan = useCallback(async () => {
@@ -115,12 +115,8 @@ export default function AdminScalperPage() {
 
   /* ─── Auto-refresh ─── */
   useEffect(() => {
-    if (autoRefresh) {
-      intervalRef.current = setInterval(runScan, 60_000);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    if (!autoRefresh) return;
+    return startVisiblePolling(runScan, 60_000, false);
   }, [autoRefresh, runScan]);
 
   const selected = results.find((r) => r.symbol === selectedRow);

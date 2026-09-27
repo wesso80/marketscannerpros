@@ -9,10 +9,11 @@ import type { DecisionAssessment, decisionAccount, DECISION_STRATEGIES } from '@
 import type { readStoredMacroEvidence } from '@/lib/admin/macroOutlook';
 import { formatHitPrice } from '@/lib/admin/hitIntegrity';
 
+type DeskAssessment = DecisionAssessment & { clearance?: ReturnType<typeof import('@/lib/admin/positionClearance').positionClearance> };
 type DeskData = {
   schemaVersion: string; servedAt: string; strategies: typeof DECISION_STRATEGIES;
   account: ReturnType<typeof decisionAccount>; macro: Awaited<ReturnType<typeof readStoredMacroEvidence>>;
-  counts: Record<string, number>; assessments: DecisionAssessment[]; limitations: string[]; savedScans: Record<string, { available: boolean; missingSymbols: number; message: string | null }>;
+  counts: Record<string, number>; assessments: DeskAssessment[]; limitations: string[]; savedScans: Record<string, { available: boolean; missingSymbols: number; message: string | null }>;
 };
 const desks = [
   ['Macro', '/admin/macro-pulse'], ['Research', '/admin/opportunity-board'], ['Risk', '/admin/risk'],
@@ -77,10 +78,11 @@ export default function DecisionDeskPage() {
     </>}
   </div>;
 }
-function Assessment({ row, onSaved }: { row: DecisionAssessment; onSaved: () => void }) {
+function Assessment({ row, onSaved }: { row: DeskAssessment; onSaved: () => void }) {
   const t = row.technical;
   return <details className="rounded border border-slate-700 bg-slate-900/40 p-4">
     <summary className="cursor-pointer"><strong className="text-emerald-300">{row.symbol}</strong> · {row.market} · {row.research.bias} · <strong>{label(row.status)}</strong><span className="ml-3 text-xs text-slate-400">Discovery score {row.research.score?.toFixed(1) ?? '—'} ({row.evidence.scanTimeframe})</span></summary>
+    {row.clearance && <div className="mt-2 text-sm text-amber-200"><strong>Position readiness: {row.clearance.status}</strong><p>{row.clearance.reasons.join(' · ')}</p><p>Current-price reward/risk: {row.clearance.currentRewardR?.toFixed(2) ?? 'unavailable'}R · POSITION sleeve</p></div>}
     <p className="mt-2 text-xs text-slate-400">Scan: {row.evidence.scannedAt ?? 'unavailable'} · daily bars: {row.evidence.dailyAsOf ?? 'unavailable'} · {row.evidence.dataStatus}{row.evidence.marketClosedAsOf ? ` · ${row.evidence.marketClosedAsOf}` : ''}</p>
     <p className="my-2 text-sm">Discovery ({row.evidence.scanTimeframe}, {row.research.discoveryBias}): {row.research.reason}</p>
     <p className="text-sm text-sky-200">Weekly trend: {row.trend?.bias ?? 'unavailable'} · monthly context: {row.trend?.monthlyBias ?? 'unavailable'} · {row.trend?.alignment ?? 'UNAVAILABLE'}</p>

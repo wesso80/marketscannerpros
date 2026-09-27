@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -158,12 +159,10 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
   useEffect(() => {
     fetchStats();
-    fetchLiveUsers();
     fetchSystemHealth();
     fetchRiskState();
     fetchScannerFeed();
-    const liveInterval = setInterval(fetchLiveUsers, 30_000);
-    return () => clearInterval(liveInterval);
+    return startVisiblePolling(fetchLiveUsers, 30_000);
   }, []);
 
   const fetchStats = async () => {

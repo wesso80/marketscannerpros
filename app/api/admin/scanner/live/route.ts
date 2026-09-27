@@ -26,7 +26,8 @@ import { CRYPTO_PAUSED_MESSAGE, readSavedScan, savedScanStaleAfterSec, scanStatu
 import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { isPausedRow, NOT_MONITORED } from "@/lib/admin/healthProbes";
 import { collapseHits } from "@/lib/admin/hitIntegrity";
-import { positionLevelView } from "@/lib/admin/positionLevels";
+import { positionClearance } from "@/lib/admin/positionClearance";
+import { enrichStoredPositionEvidence } from "@/lib/admin/decisionEvidence";
 
 export const runtime = "nodejs";
 
@@ -61,13 +62,30 @@ export async function GET(req: NextRequest) {
     // One engine pipeline per playbook → several rows per symbol (sometimes LONG and SHORT).
     // Collapse to the best row per symbol + direction and flag two-sided symbols (hitIntegrity.ts).
     // The saved row's last price rides along so the pages can show an absolute price.
-    const rawHits: ScannerHit[] = collapseHits(
+    const evidence = await enrichStoredPositionEvidence(view.packets);
+    const packetBySymbol = new Map(evidence.map(p => [p.symbol, p]));
+    const collapsed: ScannerHit[] = collapseHits(
       current.flatMap((r) => r.hits.map((hit) => ({
         ...hit, market: r.market, price: hit.price ?? r.price ?? null,
         // Position (weekly/daily) levels from the saved packet, matched to this hit's direction.
-        positionLevels: positionLevelView(r.packet?.snapshot?.positionLevels, hit.bias),
+
       }))),
     );
+    const seenSymbols = new Set<string>();
+    const rawHits: ScannerHit[] = collapsed.filter(hit => {
+      if (seenSymbols.has(hit.symbol)) return false;
+      seenSymbols.add(hit.symbol); return true;
+    }).map(hit => {
+      const packet = packetBySymbol.get(hit.symbol);
+      const clearance = packet ? positionClearance(packet, risk, hit.twoSided === true) : undefined;
+      return { ...hit, discoveryPermission: hit.marketPermission, discoveryBias: hit.bias,
+        bias: clearance?.direction ?? "NEUTRAL",
+        marketPermission: clearance?.status === 'WATCH' ? 'WAIT' : 'BLOCK',
+        permission: clearance?.status === 'WATCH' ? 'WAIT' : 'BLOCK', sizeMultiplier: 0,
+        positionLevels: clearance?.technical, clearance,
+        blockReasons: clearance?.reasons ?? ['Position evidence unavailable.'],
+      };
+    });
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
     // Crypto switched off on purpose (ADMIN_CRYPTO_ENABLED=false): its skipped / leftover rows are "paused",
     // listed separately, and never counted as scan errors. CoinGecko off does not pause crypto (it runs on AV).

@@ -1,3 +1,4 @@
+import { positionClearance } from '@/lib/admin/positionClearance';
 import { enrichStoredPositionEvidence } from '@/lib/admin/decisionEvidence';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
@@ -23,7 +24,15 @@ export async function GET(req: NextRequest) {
       readSavedScan({ market: 'CRYPTO', timeframe: '15m' }),
       buildAdminScanContext(auth.workspaceId), readStoredMacroEvidence(),
     ]);
-    const assessments = buildDecisionAssessments(await enrichStoredPositionEvidence([...equities.packets, ...crypto.packets])).filter(row => !symbol || row.symbol === symbol);
+    const packets = await enrichStoredPositionEvidence([...equities.packets, ...crypto.packets]);
+    const packetById = new Map(packets.map(p => [p.packetId, p]));
+    const opposing = new Set([...(equities.rows ?? []), ...(crypto.rows ?? [])].filter(r => {
+      const directions = new Set(r.hits.map(h => h.bias));
+      return directions.has('LONG') && directions.has('SHORT');
+    }).map(r => `${r.market}:${r.symbol}`));
+    const assessments = buildDecisionAssessments(packets).filter(row => !symbol || row.symbol === symbol).map(row => ({
+      ...row, clearance: positionClearance(packetById.get(row.evidence.packetId)!, risk, opposing.has(`${row.market}:${row.symbol}`)),
+    }));
     const counts = { total: assessments.length, REVIEW_REQUIRED: 0, WATCH: 0, INVALIDATED: 0, DATA_UNAVAILABLE: 0 };
     for (const row of assessments) counts[row.status]++;
     return NextResponse.json({ schemaVersion: 'decision-desk.v2', servedAt: new Date().toISOString(),

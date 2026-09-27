@@ -1,5 +1,7 @@
 "use client";
 
+import { startVisiblePolling } from "@/lib/client/visiblePolling";
+
 /**
  * app/admin/command/page.tsx — Commander Mode.
  *
@@ -58,9 +60,7 @@ export default function CommandModePage() {
   }
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    return startVisiblePolling(load, 60_000);
   }, []);
 
   return (
