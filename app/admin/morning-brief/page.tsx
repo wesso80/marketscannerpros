@@ -61,6 +61,7 @@ type MorningBrief = {
     equity: number;
     dailyPnl: number;
     dailyDrawdown: number;
+    dailyDrawdownKnown?: boolean;
     correlationRisk: number;
     maxPositions: number;
     activePositions: number;
@@ -657,10 +658,10 @@ export default function MorningBriefPage() {
                 <Metric label="Permission" value={brief.risk.killSwitchActive ? "BLOCK" : brief.risk.permission} tone={permissionTone(brief.risk.permission)} />
                 <Metric label="Size" value={`${brief.risk.sizeMultiplier.toFixed(2)}x`} />
                 <Metric label="Equity" value={formatCurrency(brief.risk.equity)} />
-                <Metric label="Daily P&L" value={formatCurrency(brief.risk.dailyPnl)} tone={brief.risk.dailyPnl >= 0 ? "green" : "red"} />
+                <Metric label="Snapshot daily P&L" value={brief.risk.dailyDrawdownKnown ? formatCurrency(brief.risk.dailyPnl) : "Unavailable"} tone={brief.risk.dailyDrawdownKnown ? (brief.risk.dailyPnl >= 0 ? "green" : "red") : "neutral"} />
                 <Metric label="Open Risk" value={`${formatCurrency(brief.risk.openRiskUsd)} / ${(brief.risk.openExposure * 100).toFixed(1)}%`} />
                 <Metric label="Exposure" value={formatCurrency(brief.risk.exposureUsd)} />
-                <Metric label="Drawdown" value={`${(brief.risk.dailyDrawdown * 100).toFixed(1)}%`} />
+                <Metric label="Snapshot daily loss" value={brief.risk.dailyDrawdownKnown ? `${(brief.risk.dailyDrawdown * 100).toFixed(1)}%` : "Unavailable"} />
                 <Metric label="Correlation" value={`${(brief.risk.correlationRisk * 100).toFixed(0)}%`} />
                 <Metric label="Positions" value={`${brief.risk.activePositions}/${brief.risk.maxPositions}`} />
                 <Metric label="Risk Source" value={brief.risk.source.replace("_", " ")} />

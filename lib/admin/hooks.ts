@@ -190,6 +190,10 @@ type RiskState = {
   equity?: number;
   dailyPnl?: number;
   dailyDrawdown: number;
+  dailyDrawdownKnown?: boolean;
+  dailyRiskBaselineEquity?: number | null;
+  dailyRiskAsOf?: string | null;
+  dailyRiskBasis?: string;
   correlationRisk: number;
   maxPositions: number;
   activePositions: number;
