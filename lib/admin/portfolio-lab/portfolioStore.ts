@@ -255,6 +255,12 @@ export async function getDefaultPortfolio(
   return rows[0] ? mapPortfolio(rows[0]) : null;
 }
 
+/** Cycles pin their starting ledger ID, even if the default account is reset. */
+export async function getPortfolioById(workspaceId: string, portfolioId: string): Promise<ArcaPortfolio | null> {
+  const rows = await q<any>('SELECT * FROM arca_portfolios WHERE workspace_id = $1 AND id = $2 LIMIT 1', [workspaceId, portfolioId]);
+  return rows[0] ? mapPortfolio(rows[0]) : null;
+}
+
 export async function listPortfolios(workspaceId: string): Promise<ArcaPortfolio[]> {
   const rows = await q<any>(
     `SELECT * FROM arca_portfolios WHERE workspace_id = $1 ORDER BY created_at ASC`,
