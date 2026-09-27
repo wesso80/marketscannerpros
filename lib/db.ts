@@ -1,4 +1,23 @@
 import { Pool, PoolClient, QueryResult } from "pg";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const queryTransaction = new AsyncLocalStorage<{ client: PoolClient; deadline: number; failed?: unknown }>();
+
+/** Opt-in atomic unit for engines built on q(). A caught SQL error still prevents commit. */
+export async function atomicQueries<T>(work: () => Promise<T>, budgetMs = 45_000): Promise<T> {
+  if (queryTransaction.getStore()) throw new Error('Nested atomicQueries is not supported');
+  return tx(async (client) => {
+    const state = { client, deadline: Date.now() + budgetMs, failed: undefined as unknown };
+    await client.query("SET LOCAL statement_timeout = '15s'");
+    await client.query("SET LOCAL idle_in_transaction_session_timeout = '20s'");
+    return queryTransaction.run(state, async () => {
+      const result = await work();
+      if (state.failed) throw state.failed;
+      if (Date.now() >= state.deadline) throw new Error('Paper cycle exceeded transaction budget');
+      return result;
+    });
+  });
+}
 
 declare global {
   // eslint-disable-next-line no-var
@@ -38,6 +57,16 @@ export const pool = {
 };
 
 export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  const scope = queryTransaction.getStore();
+  if (scope) {
+    if (scope.failed) throw scope.failed;
+    if (Date.now() >= scope.deadline) {
+      scope.failed = new Error('Paper cycle exceeded transaction budget');
+      throw scope.failed;
+    }
+    try { return (await scope.client.query(text, params)).rows as T[]; }
+    catch (error) { scope.failed = error; throw error; }
+  }
   const client = await getPool().connect();
   try {
     // statement_timeout now set at pool level — no per-query SET needed
