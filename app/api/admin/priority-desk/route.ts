@@ -7,6 +7,7 @@ import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { wrapTruth } from "@/lib/admin";
 import { isDataDegraded, isRankable, readSavedScan, scanStatusForResponse, type SavedPacket } from "@/lib/admin/sharedScan";
 import { recordAdminCalls, savedPacketCall, type AdminCallInput } from "@/lib/admin/adminCallLog";
+import { to100 } from "@/lib/admin/doNothing";
 
 export const runtime = "nodejs";
 
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
   const bestEquities = topBy(all, (p) => p.assetClass === "equity");
   const bestCrypto = topBy(all, (p) => p.assetClass === "crypto");
   const bestOptionsPressure = topBy(all, (p) => p.optionsIntelligence.optionsPressureScore >= 65);
-  const bestVolatilityCompression = topBy(all, (p) => p.volatilityState.breakoutReadiness >= 60 && !p.volatilityState.exhaustion);
+  const bestVolatilityCompression = topBy(all, (p) => to100(p.volatilityState.breakoutReadiness) >= 60 && !p.volatilityState.exhaustion);
   const bestTimeConfluence = topBy(all, (p) => p.timeConfluence.score >= 0.7 || p.timeConfluence.hotWindow);
   const bestNewsDriven = topBy(all, (p) => p.newsContext.status === "ELEVATED");
   const bestEarningsWatch = topBy(all, (p) => p.earningsContext.riskLevel === "HIGH" || p.earningsContext.riskLevel === "MEDIUM");
