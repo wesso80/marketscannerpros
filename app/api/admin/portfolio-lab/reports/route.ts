@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
       { reports, disclaimer: ARCA_DISCLAIMER },
       {
         source: "arca:reports",
-        freshness: "real-time",
+        freshness: "unknown",
+        simulated: true,
         confidence: "high",
         confidenceReason: "Persisted report archive.",
       },

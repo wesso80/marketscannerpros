@@ -214,6 +214,7 @@ export interface EdgarFiling {
 }
 
 export interface NewsItem {
+  relevanceVerified?: boolean;
   headline: string;
   timestamp: Date;
   tickers: string[];

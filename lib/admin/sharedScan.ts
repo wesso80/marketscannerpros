@@ -480,7 +480,9 @@ export async function readSavedScan(input: { market: SharedScanMarket; timeframe
     newestScannedAt: null, oldestScannedAt: null, ageSec: null, ageLabel: "never", missingSymbols: [],
   };
   try {
-    const symbols = input.symbols?.length ? normalizeSymbols(input.symbols) : undefined;
+    // Default readers follow the active universe, retaining historical rows in storage.
+    // Explicit symbol research can still request an archived symbol.
+    const symbols = input.symbols?.length ? normalizeSymbols(input.symbols) : sharedScanUniverse(input.market);
     const [rows, runs] = await Promise.all([
       store.loadSavedResults({ market: input.market, timeframe, symbols, nowMs: input.nowMs }),
       store.loadRunStatus(input.market, timeframe),

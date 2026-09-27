@@ -43,10 +43,10 @@ async function bucketBy(
             COUNT(*) FILTER (WHERE o.realised_r_5d IS NOT NULL)::text AS with_outcome,
             AVG(CASE WHEN o.realised_r_5d IS NOT NULL THEN (CASE WHEN o.realised_r_5d > 0 THEN 1.0 ELSE 0.0 END) END)::text AS win_rate,
             AVG(o.realised_r_5d)::text AS avg_r_5d,
-            AVG(o.realised_r_20d)::text AS avg_r_20d,
+            AVG(CASE WHEN o.bars_used >= 20 THEN o.realised_r_20d END)::text AS avg_r_20d,
             ${orderExpr} AS order_val
        FROM edge_ledger_setups s
-       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id
+       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id AND o.bars_used >= 5
       WHERE s.workspace_id = $1 AND s.status = 'taken'
       GROUP BY bucket, order_val
       ORDER BY order_val NULLS LAST`,

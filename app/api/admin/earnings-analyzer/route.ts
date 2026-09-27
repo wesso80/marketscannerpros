@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const client = new OpenAI({ apiKey });
 
   // 1. Build earnings packet.
-  const snapshot = await buildEarningsHistorySnapshot(ticker);
+  const snapshot = await buildEarningsHistorySnapshot(ticker, { earningsDate });
   const serialized = serializeEarningsHistory(snapshot);
 
   // Stage 3: persist a packet snapshot for ARCA grounding + recall.
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
         reactionSampleSize: snapshot.reactionStats.sampleSize,
       });
     }
-    const v = validateEarningsNote(parsed);
+    const v = validateEarningsNote(parsed, snapshot);
     aiResult = v.ok ? { ok: true, note: v } : { ok: false, reason: v.reason };
   } catch (e) {
     aiResult = { ok: false, reason: e instanceof Error ? e.message : "openai_error" };

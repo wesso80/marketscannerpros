@@ -14,6 +14,7 @@ import type { InternalResearchScore, SetupDefinition } from "@/lib/admin/adminTy
 import type { DataTruth } from "@/lib/engines/dataTruth";
 import { computeResearchDelta } from "@/lib/admin/researchDelta";
 import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
+import { PositionLevelsCard } from "@/components/admin/PositionLevels";
 
 type SymbolResponse = AdminSymbolIntelligence & {
   research?: {
@@ -244,6 +245,8 @@ export default function SymbolResearchTerminalPage({
             <AdminEvidenceStack axes={data.research.score.axes} dominant={data.research.score.dominantAxis} />
             <AdminResearchScoreBreakdown score={data.research.score} />
           </div>
+
+          <PositionLevelsCard levels={data.positionLevels} bias={data.bias} />
 
           <AdminScenarioMap snapshot={data} setup={data.research.setup} />
 

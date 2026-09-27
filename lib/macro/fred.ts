@@ -25,6 +25,8 @@ export const FRED_SERIES: Record<string, {
   description: string;
   units: string;
   cadence: 'daily' | 'weekly' | 'monthly';
+  /** Observation age allowance when publication lags the observation cadence. */
+  maxObservationAgeDays?: number;
   category: 'rates' | 'vol' | 'fx' | 'credit' | 'liquidity' | 'sentiment';
 }> = {
   FED_FUNDS_RATE: { fredId: 'DFF', description: 'Federal Funds Effective Rate', units: '%', cadence: 'daily', category: 'rates' },
@@ -33,7 +35,9 @@ export const FRED_SERIES: Record<string, {
   YIELD_2S10S:    { fredId: 'T10Y2Y', description: '10Y minus 2Y Treasury spread', units: '%', cadence: 'daily', category: 'rates' },
   VIX:            { fredId: 'VIXCLS', description: 'CBOE Volatility Index (VIX)', units: 'index', cadence: 'daily', category: 'vol' },
   VIX3M:          { fredId: 'VXVCLS', description: 'CBOE S&P 500 3-Month Volatility Index', units: 'index', cadence: 'daily', category: 'vol' },
-  DXY:            { fredId: 'DTWEXBGS', description: 'Trade Weighted USD Index: Broad Goods and Services', units: 'index', cadence: 'daily', category: 'fx' },
+  // H.10 publishes the prior week's daily observations on Monday (Tuesday on holidays).
+  // https://www.federalreserve.gov/releases/h10/about.htm
+  DXY:            { fredId: 'DTWEXBGS', description: 'Trade Weighted USD Index: Broad Goods and Services', units: 'index', cadence: 'daily', maxObservationAgeDays: 10, category: 'fx' },
   CREDIT_HY_OAS:  { fredId: 'BAMLH0A0HYM2', description: 'ICE BofA US High Yield Index Option-Adjusted Spread', units: '%', cadence: 'daily', category: 'credit' },
   UNRATE:         { fredId: 'UNRATE', description: 'US Unemployment Rate', units: '%', cadence: 'monthly', category: 'sentiment' },
   CPI_YOY:        { fredId: 'CPIAUCSL', description: 'CPI All Urban Consumers (level — YoY computed downstream)', units: 'index', cadence: 'monthly', category: 'sentiment' },

@@ -1,3 +1,4 @@
+import { loadRunStatus } from "@/lib/admin/sharedScanStore";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
@@ -37,7 +38,7 @@ function defaultSymbols(mode: SchedulerMode, market: string): string[] {
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
   const adminAuth = await requireAdmin(req);
-  if (adminAuth.ok) return { ok: true, workspaceId: adminAuth.workspaceId || "admin" };
+  if (adminAuth.ok) return { ok: Boolean(adminAuth.workspaceId), workspaceId: adminAuth.workspaceId || "" };
   const session = await getSessionFromCookie();
   if (!session || !isOperator(session.cid, session.workspaceId)) return { ok: false, workspaceId: "" };
   return { ok: true, workspaceId: session.workspaceId };
@@ -48,10 +49,17 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const limit = Math.max(1, Math.min(200, Number(req.nextUrl.searchParams.get("limit") || 50)));
-  const runs = await listSchedulerRuns(auth.workspaceId, limit);
+  const [runs, ...sharedResults] = await Promise.all([
+    listSchedulerRuns(auth.workspaceId, limit),
+    ...(["EQUITIES", "CRYPTO"] as const).map(async market => {
+      try { return { market, timeframe: "15m", available: true, ...await loadRunStatus(market, "15m") }; }
+      catch { return { market, timeframe: "15m", available: false, lastRun: null, running: null }; }
+    }),
+  ]);
   return NextResponse.json({
     ok: true,
     runs,
+    sharedScans: sharedResults,
     truth: wrapTruth(
       { source: 'admin:research-scheduler', count: runs.length },
       {

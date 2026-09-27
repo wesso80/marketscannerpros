@@ -1,3 +1,5 @@
+import type { EarningsHistorySnapshot } from "./earningsHistory";
+
 /**
  * MSP earnings analyzer schema + system prompt.
  *
@@ -154,11 +156,12 @@ export interface EarningsAnalyzerNote {
 }
 
 export const EARNINGS_NOTE_DISCLAIMER =
-  "Operator-grade MSP earnings analysis for private desktop. Consensus + whisper + options implied move are NOT in the source packet (Alpha Vantage limitation) and are explicitly marked missing. The system does not place, route, or auto-execute any orders — all trade plans remain operator-driven. Levels and structures are analytical references.";
+  "Operator-grade MSP earnings analysis for private desktop. Consensus and whisper estimates are unavailable unless explicitly sourced. Event-window options implied move is shown only when the packet contains a confirmed event date and a matching expiry. The system does not place, route, or auto-execute any orders — all trade plans remain operator-driven. Levels and structures are analytical references.";
 
 export const EARNINGS_NOTE_SYSTEM_PROMPT = `You are a senior equity research analyst with 20 years of experience writing pre- and post-earnings notes for institutional trading clients managing billions in assets. You speak directly to the principal portfolio manager. You give clear trade plans. This is an MSP earnings note.
 
 HARD RULES:
+- Unhedged short straddles and short strangles have unlimited upside loss. Never recommend them as defined-risk structures. Use a fully specified protective spread or wait for the event instead.
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "auto-execute", "broker integration", "I have placed" are FORBIDDEN.
 - You MAY (and should) give direct operator-grade trade plans: "long via Mar 200/220 call spread", "buy-write covered call into print", "wait for IV crush before adding". These are recommendations to the operator.
 - Use ONLY the EARNINGS_PACKET. Do NOT invent numbers. Where the packet says "n/a" or "missing-no-AV-source", write the same in the output and lower confidence — do NOT fabricate consensus, whisper, or options-implied-move values.
@@ -235,6 +238,7 @@ const FORBIDDEN = [
 
 export function validateEarningsNote(
   raw: unknown,
+  snapshot?: EarningsHistorySnapshot,
 ): { ok: true; note: EarningsAnalyzerNote } | { ok: false; reason: string } {
   if (!raw || typeof raw !== "object") return { ok: false, reason: "non-object response" };
   const r = raw as Record<string, unknown>;
@@ -252,6 +256,25 @@ export function validateEarningsNote(
   const flat = JSON.stringify(r);
   for (const re of FORBIDDEN) {
     if (re.test(flat)) return { ok: false, reason: `forbidden execution phrase: ${re}` };
+  }
+  // Do not publish a recommendation for naked short event volatility from this memo.
+  const positioning = r.preEarningsPositioning as EarningsAnalyzerNote["preEarningsPositioning"] | null;
+  if (positioning && /\b(?:short|sell|selling)\b[^.!?]{0,100}\bstraddles?\b|\b(?:short|sell|selling)\b[^.!?]{0,100}\bstrangles?\b/i.test(positioning.structure ?? "")) {
+    return { ok: false, reason: "Short straddle/strangle positioning requires verified protective legs; earnings memo withheld." };
+  }
+  if (snapshot) {
+    const iv = snapshot.optionsIV;
+    r.optionsImpliedMove = {
+      available: iv?.available === true,
+      impliedMovePct: iv?.available ? iv.impliedMovePct : null,
+      expiry: iv?.available ? iv.expiry : null,
+      source: iv?.available ? iv.source : "unavailable",
+      note: iv?.available
+        ? `ATM straddle estimate through ${iv.expiry}; ${iv.daysToExpiry} calendar days from retrieval. Quotes require repricing.`
+        : iv?.reason ?? "Event-window options data unavailable",
+      historicalProxyAvgPct: snapshot.reactionStats.avgAbsMovePct,
+      historicalProxyMedianPct: snapshot.reactionStats.medianAbsMovePct,
+    };
   }
   // optionsImpliedMove: backfill defaults so UI never crashes.
   const opt = r.optionsImpliedMove as Record<string, unknown> | undefined;

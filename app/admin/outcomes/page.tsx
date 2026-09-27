@@ -27,6 +27,10 @@ interface Stats {
     totalSignals: number;
     labeled: number;
     pending: number;
+    pendingMaturing?: number;
+    pendingDue?: number;
+    pendingExpiry?: number;
+    oldestPendingAt?: string | null;
     correct: number;
     wrong: number;
     neutral: number;
@@ -339,7 +343,10 @@ export default function OutcomesPage() {
             <StatCard label="Old-method labels (before #167)" value={stats?.overall.labeledOldMethod ?? 0} color="#9CA3AF" />
             <StatCard label="Correct" value={stats?.overall.correct ?? 0} color="#10B981" />
             <StatCard label="Wrong" value={stats?.overall.wrong ?? 0} color="#EF4444" />
-            <StatCard label="Pending" value={stats?.overall.pending ?? 0} color="#FBBF24" />
+            <StatCard label="Pending (24h)" value={stats?.overall.pending ?? 0} color="#FBBF24" />
+            <StatCard label="Waiting for 24h" value={stats?.overall.pendingMaturing ?? '—'} sub="Horizon has not passed" />
+            <StatCard label="24h passed, awaiting label" value={stats?.overall.pendingDue ?? '—'} sub="May await a completed market bar" color="#FBBF24" />
+            <StatCard label="Awaiting expiry (>7d)" value={stats?.overall.pendingExpiry ?? '—'} color="#FBBF24" />
             <StatCard
               label="Avg move in call's direction (✓)"
               value={stats?.overall.avgMoveCorrect != null ? `${Number(stats.overall.avgMoveCorrect).toFixed(2)}%` : "—"}

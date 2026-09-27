@@ -91,6 +91,8 @@ export default function PortfolioLabPage() {
   const [data, setData] = useState<SummaryPayload | null>(null);
   const [meta, setMeta] = useState<{ source: string; freshness: string; fetchedAt: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
   const [cycling, setCycling] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +204,17 @@ export default function PortfolioLabPage() {
     }
   };
 
+  async function resetPaper() {
+    if (!data?.portfolio || !confirm('Archive this paper ledger and start a new paused $200,000 account? Personal holdings are unchanged.')) return;
+    setResetting(true); setResetMessage('');
+    try {
+      const response = await fetch('/api/admin/portfolio-lab/reset', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({portfolioId:data.portfolio.id})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      setResetMessage(result.message); await load();
+    } catch (e) { setResetMessage(e instanceof Error ? e.message : 'Reset failed'); }
+    finally { setResetting(false); }
+  }
   const portfolio = data?.portfolio;
   const equityChangePct = portfolio
     ? ((portfolio.totalEquity - portfolio.startingBalance) / portfolio.startingBalance) * 100
@@ -210,6 +223,8 @@ export default function PortfolioLabPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0F172A", color: "#E2E8F0", padding: 24 }}>
       <div style={{ maxWidth: 1440, margin: "0 auto" }}>
+        {resetMessage && <p role="status" style={{padding:12,color:'#6EE7B7'}}>{resetMessage}</p>}
+        {portfolio && <p style={{padding:12}}>Paper account status: <strong>{portfolio.status}</strong> · Created as a separate simulated ledger.</p>}
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
@@ -238,7 +253,8 @@ export default function PortfolioLabPage() {
                 <button onClick={load} disabled={loading} style={btnGhost}>
                   {loading ? "Loading…" : "Reload"}
                 </button>
-                <button onClick={runCycle} disabled={cycling} style={btnPrimary}>
+                <button onClick={resetPaper} disabled={resetting || loading || cycling} style={btnGhost}>{resetting ? 'Resetting…' : 'Archive & reset paper account'}</button>
+                <button onClick={runCycle} disabled={cycling || portfolio.status !== 'ACTIVE'} style={btnPrimary}>
                   {cycling ? "Running cycle…" : "Run Sim Cycle"}
                 </button>
               </>
@@ -246,7 +262,7 @@ export default function PortfolioLabPage() {
           </div>
         </div>
 
-        {portfolio && <SubNav />}
+
 
         {error && <ErrorBox text={error} />}
         {cycleResult && (

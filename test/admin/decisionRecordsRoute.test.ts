@@ -1,0 +1,21 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+const m = vi.hoisted(() => ({ auth:vi.fn(),scan:vi.fn(),risk:vi.fn(),macro:vi.fn(),save:vi.fn(),read:vi.fn(),assessment:vi.fn() }));
+vi.mock('@/lib/adminAuth',()=>({requireAdmin:m.auth}));
+vi.mock('@/lib/admin/sharedScan',()=>({readSavedScan:m.scan}));
+vi.mock('@/lib/admin/scan-context',()=>({buildAdminScanContext:m.risk}));
+vi.mock('@/lib/admin/macroOutlook',()=>({readStoredMacroEvidence:m.macro}));
+vi.mock('@/lib/admin/decisionEvidence',()=>({enrichStoredPositionEvidence:async(p:unknown)=>p}));
+vi.mock('@/lib/admin/decisionDesk',()=>({assessPosition:m.assessment,decisionAccount:(r:unknown)=>r}));
+vi.mock('@/lib/admin/decisionRecords',()=>({DECISION_ACTIONS:['WATCH','DECLINED','FOLLOW_UP'],saveDecision:m.save,readDecisions:m.read,reviewCheckpoints:()=>[]}));
+import { GET, POST } from '@/app/api/admin/decision-records/route';
+import { NextRequest } from 'next/server';
+const body={symbol:'TEST',market:'EQUITIES',action:'WATCH',note:'Wait for completed daily confirmation',evidenceId:'a'.repeat(64),requestId:'00000000-0000-4000-8000-000000000001'};
+const request=(value:unknown=body,origin='https://test')=>new NextRequest('https://test/api/admin/decision-records',{method:'POST',headers:{'Content-Type':'application/json',origin},body:JSON.stringify(value)});
+beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({ok:true,workspaceId:'workspace-a'});m.scan.mockResolvedValue({packets:[{snapshot:{price:100},savedScan:{scannedAt:'2026-09-27T12:00:00Z'}}]});m.risk.mockResolvedValue({risk:{permission:'WAIT'}});m.macro.mockResolvedValue({verdict:null});m.assessment.mockReturnValue({symbol:'TEST',market:'EQUITIES',evidenceId:body.evidenceId});m.save.mockResolvedValue({id:'saved',created_at:'2026-09-27T12:00:00Z'});});
+describe('research decision write boundary',()=>{
+  it('denies unresolved identity before any read or write',async()=>{m.auth.mockResolvedValue({ok:true});expect((await POST(request())).status).toBe(403);expect((await GET(new NextRequest('https://test/api/admin/decision-records'))).status).toBe(403);expect(m.scan).not.toHaveBeenCalled();expect(m.save).not.toHaveBeenCalled();});
+  it('rejects cross-origin writes',async()=>{expect((await POST(request(body,'https://unrelated.test'))).status).toBe(403);expect(m.scan).not.toHaveBeenCalled();});
+  it('rejects trade-like actions and missing notes',async()=>{expect((await POST(request({...body,action:'BUY'}))).status).toBe(400);expect((await POST(request({...body,note:''}))).status).toBe(400);expect(m.save).not.toHaveBeenCalled();});
+  it('requires reviewing changed evidence before saving',async()=>{m.assessment.mockReturnValue({evidenceId:'b'.repeat(64)});expect((await POST(request())).status).toBe(409);expect(m.save).not.toHaveBeenCalled();});
+  it('stores server-built evidence and workspace, ignoring client supplied assessment',async()=>{expect((await POST(request({...body,workspaceId:'other',assessment:{status:'APPROVED'}}))).status).toBe(201);expect(m.save.mock.calls[0][0]).toBe('workspace-a');expect(m.save.mock.calls[0][1].assessment).toEqual(m.assessment.mock.results[0].value);expect(m.risk).toHaveBeenCalledWith('workspace-a');});
+});

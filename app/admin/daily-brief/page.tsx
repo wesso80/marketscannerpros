@@ -96,7 +96,7 @@ interface BriefResponse {
     fundamentalsNote: ResearchNote | null;
     technicalNote: TechnicalNote | null;
     synthesis: {
-      alignment: "aligned-bullish" | "aligned-bearish" | "conflicting" | "insufficient-data";
+      alignment: "aligned-bullish" | "aligned-bearish" | "conflicting" | "mixed" | "insufficient-data";
       summary: string;
     };
     diagnostics: {

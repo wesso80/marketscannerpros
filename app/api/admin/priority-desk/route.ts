@@ -1,3 +1,4 @@
+import { priorityDeskTopKey, priorityDeskCalls } from "@/lib/admin/pageCalls";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
@@ -6,7 +7,8 @@ import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { wrapTruth } from "@/lib/admin";
 import { isDataDegraded, isRankable, readSavedScan, scanStatusForResponse, type SavedPacket } from "@/lib/admin/sharedScan";
-import { recordAdminCalls, savedPacketCall, type AdminCallInput } from "@/lib/admin/adminCallLog";
+import { recordAdminCalls } from "@/lib/admin/adminCallLog";
+import { to100 } from "@/lib/admin/doNothing";
 
 export const runtime = "nodejs";
 
@@ -17,7 +19,7 @@ export const runtime = "nodejs";
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
   const adminAuth = await requireAdmin(req);
-  if (adminAuth.ok) return { ok: true, workspaceId: adminAuth.workspaceId || "admin" };
+  if (adminAuth.ok && adminAuth.workspaceId) return { ok: true, workspaceId: adminAuth.workspaceId };
   const session = await getSessionFromCookie();
   if (!session || !isOperator(session.cid, session.workspaceId)) return { ok: false, workspaceId: "" };
   return { ok: true, workspaceId: session.workspaceId };
@@ -25,25 +27,6 @@ async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: 
 
 /** Last top-candidate key per workspace+timeframe on this instance (tape de-dupe). */
 const lastTopKeys = new Map<string, string>();
-
-/** "MA, NVDA, AAPL" — the best-list symbols in rank order; "" when nothing ranks (no event). */
-export function priorityDeskTopKey(top: Pick<SavedPacket, "symbol">[], max = 5): string {
-  return top.slice(0, max).map((p) => p.symbol).join(", ");
-}
-
-/**
- * The Priority Desk's calls: every symbol in the best equities / crypto lists (with its rank) plus the ARCA top
- * candidate. Logged to ai_signal_log (admin-call:priority-desk) when the top list changes, for outcome labelling.
- */
-export function priorityDeskCalls(bestEquities: SavedPacket[], bestCrypto: SavedPacket[], arcaTop: SavedPacket | null, nowMs: number = Date.now()): AdminCallInput[] {
-  const calls: AdminCallInput[] = [];
-  const add = (list: SavedPacket[], listName: string) =>
-    list.forEach((p, i) => calls.push(savedPacketCall(p, "priority-desk", { verdict: `${listName} #${i + 1}`, trace: { list: listName, rank: i + 1 }, calledAtMs: nowMs })));
-  add(bestEquities, "bestEquities");
-  add(bestCrypto, "bestCrypto");
-  if (arcaTop) calls.push(savedPacketCall(arcaTop, "priority-desk", { verdict: "ARCA top", trace: { list: "arcaTopCandidate", rank: 1 }, calledAtMs: nowMs }));
-  return calls;
-}
 
 function topBy(packets: SavedPacket[], predicate: (p: SavedPacket) => boolean, max = 6): SavedPacket[] {
   return packets
@@ -59,7 +42,7 @@ export async function GET(req: NextRequest) {
   const timeframe = req.nextUrl.searchParams.get("timeframe") || "15m";
 
   const [{ risk }, equityView, cryptoView] = await Promise.all([
-    buildAdminScanContext(),
+    buildAdminScanContext(auth.workspaceId),
     readSavedScan({ market: "EQUITIES", timeframe }),
     readSavedScan({ market: "CRYPTO", timeframe }),
   ]);
@@ -73,7 +56,7 @@ export async function GET(req: NextRequest) {
   const bestEquities = topBy(all, (p) => p.assetClass === "equity");
   const bestCrypto = topBy(all, (p) => p.assetClass === "crypto");
   const bestOptionsPressure = topBy(all, (p) => p.optionsIntelligence.optionsPressureScore >= 65);
-  const bestVolatilityCompression = topBy(all, (p) => p.volatilityState.breakoutReadiness >= 60 && !p.volatilityState.exhaustion);
+  const bestVolatilityCompression = topBy(all, (p) => to100(p.volatilityState.breakoutReadiness) >= 60 && !p.volatilityState.exhaustion);
   const bestTimeConfluence = topBy(all, (p) => p.timeConfluence.score >= 0.7 || p.timeConfluence.hotWindow);
   const bestNewsDriven = topBy(all, (p) => p.newsContext.status === "ELEVATED");
   const bestEarningsWatch = topBy(all, (p) => p.earningsContext.riskLevel === "HIGH" || p.earningsContext.riskLevel === "MEDIUM");
@@ -131,7 +114,7 @@ export async function GET(req: NextRequest) {
     operatorGuard: {
       active: risk.operatorGuardActive,
       reasons: risk.operatorGuardReasons,
-      alertsDeliveryPaused: risk.killSwitchActive || risk.permission === "BLOCK",
+      accountSizingRestricted: risk.killSwitchActive || risk.permission === "BLOCK",
       message: risk.operatorGuardActive
         ? "Operator guard active — discovery remains live. Personal exposure warnings shown separately."
         : null,

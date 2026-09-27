@@ -1,3 +1,4 @@
+import { savePositionHistory } from './positionHistory';
 import { marketForSymbol } from "@/lib/admin/adminMarket";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import type { Bar, Market } from "@/types/operator";
@@ -8,6 +9,9 @@ import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { closedMarketDataTruth, closedSessionForBar } from "@/lib/admin/closedMarket";
 import { barAgeFromClose, formingBarNote } from "@/lib/admin/barAge";
+import { computePositionTrend } from '@/lib/admin/positionTrend';
+import { computePositionLevels } from "@/lib/admin/positionLevels";
+import { lastCompletedUsSessionDate } from "@/lib/time/usSession";
 import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
 import { classifySetupWithPlaybook, getSetupDefinition } from "@/lib/engines/setupClassifier";
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
@@ -232,6 +236,15 @@ function assessAlertEligibility(packet: {
   return { eligible: reasons.length === 0, reasons };
 }
 
+/**
+ * Newest daily bar date that is a completed session: US equities = the last completed NY session; crypto (daily
+ * candle closes 00:00 UTC) = yesterday UTC. Newer daily bars are still forming.
+ */
+export function lastCompletedDailyDate(market: string, nowMs: number): string {
+  if (market.toUpperCase() === "CRYPTO") return new Date(nowMs - 86_400_000).toISOString().slice(0, 10);
+  return lastCompletedUsSessionDate(nowMs);
+}
+
 export const NO_SETUP_REASON = "No setup detected: no playbook qualified on these bars.";
 
 /** Research score for a "no setup" packet: 0, lifecycle NO_EDGE (DATA_DEGRADED still wins), labelled NO_SETUP. */
@@ -334,6 +347,23 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
           levels: { pdh: 0, pdl: 0, weeklyHigh: 0, weeklyLow: 0, monthlyHigh: 0, monthlyLow: 0, midpoint: 0, vwap: 0 },
           targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
         } as AdminSymbolIntelligence);
+
+  // Position (weekly/daily) levels from DAILY bars, weekly/monthly derived from them (lib/admin/positionLevels).
+  // Equity daily bars are the ones the key levels already use (memoised: no extra call). No usable daily bars =
+  // "unavailable", never the 15m levels.
+  const dailyBars = provider.getDailyBars
+    ? await provider.getDailyBars(symbol, market).catch(() => [] as Bar[])
+    : [];
+  const nowMs = Date.now();
+  await savePositionHistory(market, symbol, dailyBars).catch(() => undefined);
+  snapshot.positionEvidenceSource = 'scan_daily_bars';
+  snapshot.positionTrend = computePositionTrend(dailyBars, lastCompletedDailyDate(market, nowMs), nowMs);
+  snapshot.positionLevels = computePositionLevels({
+    dailyBars,
+    price: snapshot.price > 0 ? snapshot.price : null,
+    completedThrough: lastCompletedDailyDate(market, nowMs),
+    nowMs,
+  });
 
   // Age from the newest bar's CLOSE (AV timestamps are bar starts; a just-closed 15m bar used to read 900 s old,
   // so 15m data was never LIVE). With no bars there is no age, and the packet is marked as a source error so it

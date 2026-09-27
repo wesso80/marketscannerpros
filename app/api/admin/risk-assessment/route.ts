@@ -86,11 +86,18 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    if (holdings.some(h => h.ticker === t)) {
+      return NextResponse.json({ error: "duplicate_holding", detail: `Combine allocations for ${t} into one row.` }, { status: 400 });
+    }
     holdings.push({
       ticker: t,
       allocationPct: pct,
       costBasis: Number.isFinite(Number(h.costBasis)) ? Number(h.costBasis) : undefined,
     });
+  }
+
+  if (holdings.reduce((sum, h) => sum + h.allocationPct, 0) > 100 + 1e-9) {
+    return NextResponse.json({ error: "invalid_total_allocation", detail: "Long-only allocations cannot exceed 100%." }, { status: 400 });
   }
 
   const exposure = body.personalExposureFlag ?? "none";
@@ -158,7 +165,7 @@ export async function POST(req: NextRequest) {
         hasCorrelations: snapshot.correlations.length > 0,
       });
     }
-    const v = validateRiskMemo(parsed);
+    const v = validateRiskMemo(parsed, snapshot);
     aiResult = v.ok
       ? { ok: true, memo: v }
       : { ok: false, reason: v.reason };

@@ -8,18 +8,21 @@
  *      SUPPRESSED outcomes (no dispatch) for blocked candidates.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   ADMIN_RESEARCH_ALERT_HEADER,
   buildDiscordPayload,
 } from "../../lib/alerts/discord";
-import { buildEmailPayload } from "../../lib/alerts/email";
+import { buildEmailPayload, dispatchEmailResearchAlert } from "../../lib/alerts/email";
 import {
   evaluateSuppression,
   DEFAULT_THRESHOLDS,
 } from "../../lib/alerts/alertSuppression";
 import { runResearchAlertEngine } from "../../lib/engines/researchAlertEngine";
 import type { AdminResearchAlert } from "../../lib/admin/adminTypes";
+
+beforeEach(() => { vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 204 }))); });
+afterEach(() => { vi.unstubAllGlobals(); });
 
 function alert(overrides: Partial<AdminResearchAlert> = {}): AdminResearchAlert {
   return {
@@ -160,7 +163,7 @@ describe("Phase 5 — engine outcome", () => {
         dataTrustScore: 78,
         lifecycle: "READY",
       },
-      { recentAlerts: [], now: Date.parse("2026-04-29T12:00:00Z") },
+      { notificationsPaused: false, recentAlerts: [], now: Date.parse("2026-04-29T12:00:00Z") },
     );
     expect(outcome.status).toBe("FIRED");
     expect(outcome.alert.classification).toBe("PRIVATE_RESEARCH_ALERT_NOT_BROKER_EXECUTION");
@@ -181,11 +184,30 @@ describe("Phase 5 — engine outcome", () => {
         dataTrustScore: 78,
         lifecycle: "DATA_DEGRADED",
       },
-      { recentAlerts: [], now: Date.parse("2026-04-29T12:00:00Z") },
+      { notificationsPaused: false, recentAlerts: [], now: Date.parse("2026-04-29T12:00:00Z") },
     );
     expect(outcome.status).toBe("SUPPRESSED");
     expect(outcome.decision.reason).toBe("DATA_DEGRADED");
     expect(outcome.channels.discord.skipped).toBe("SUPPRESSED");
     expect(outcome.channels.email.skipped).toBe("SUPPRESSED");
+  });
+});
+
+describe('independent notification pause', () => {
+  const candidate = { symbol: 'AAPL', market: 'EQUITIES', timeframe: '15m', setup: 'TREND_CONTINUATION' as const, bias: 'LONG' as const, score: 82, dataTrustScore: 78, lifecycle: 'READY' as const };
+  it.each([true, undefined])('does not dispatch when paused or settings unavailable: %s', async paused => {
+    const result = await runResearchAlertEngine(candidate, { notificationsPaused: paused, recentAlerts: [], discordWebhookUrl: 'https://discord.com/api/webhooks/test' });
+    expect(result.status).toBe('SUPPRESSED');
+    expect(result.decision.reason).toBe(paused ? 'NOTIFICATIONS_PAUSED' : 'NOTIFICATION_SETTINGS_UNAVAILABLE');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it('dispatches a qualified unpaused candidate through a mocked transport', async () => {
+    const result = await runResearchAlertEngine(candidate, { notificationsPaused: false, recentAlerts: [], discordWebhookUrl: 'https://discord.com/api/webhooks/test' });
+    expect(result.channels.discord.ok).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it('does not claim email delivery just because a recipient is configured', async () => {
+    expect(await dispatchEmailResearchAlert(alert(), 'ops@example.com')).toEqual({ ok: false, skipped: 'EMAIL_BACKEND_UNAVAILABLE' });
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

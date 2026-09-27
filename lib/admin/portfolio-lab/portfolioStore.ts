@@ -255,6 +255,12 @@ export async function getDefaultPortfolio(
   return rows[0] ? mapPortfolio(rows[0]) : null;
 }
 
+/** Cycles pin their starting ledger ID, even if the default account is reset. */
+export async function getPortfolioById(workspaceId: string, portfolioId: string): Promise<ArcaPortfolio | null> {
+  const rows = await q<any>('SELECT * FROM arca_portfolios WHERE workspace_id = $1 AND id = $2 LIMIT 1', [workspaceId, portfolioId]);
+  return rows[0] ? mapPortfolio(rows[0]) : null;
+}
+
 export async function listPortfolios(workspaceId: string): Promise<ArcaPortfolio[]> {
   const rows = await q<any>(
     `SELECT * FROM arca_portfolios WHERE workspace_id = $1 ORDER BY created_at ASC`,
@@ -717,6 +723,23 @@ export async function listSnapshots(
     `SELECT * FROM arca_portfolio_snapshots
       WHERE workspace_id = $1 AND portfolio_id = $2
       ORDER BY snapshot_at DESC LIMIT $3`,
+    [workspaceId, portfolioId, limit],
+  );
+  return rows.map(mapSnapshot);
+}
+
+/** One latest observation per UTC day; intraday cadence must not truncate the history to a few days. */
+export async function listDailySnapshots(
+  workspaceId: string, portfolioId: string, opts: { limit?: number } = {},
+): Promise<ArcaPortfolioSnapshot[]> {
+  const limit = Math.max(1, Math.min(opts.limit ?? 365, 1000));
+  const rows = await q<any>(
+    `SELECT * FROM (
+       SELECT DISTINCT ON ((snapshot_at AT TIME ZONE 'UTC')::date) *
+         FROM arca_portfolio_snapshots
+        WHERE workspace_id = $1 AND portfolio_id = $2
+        ORDER BY (snapshot_at AT TIME ZONE 'UTC')::date DESC, snapshot_at DESC, id DESC
+     ) daily ORDER BY snapshot_at DESC LIMIT $3`,
     [workspaceId, portfolioId, limit],
   );
   return rows.map(mapSnapshot);

@@ -316,7 +316,7 @@ interface BuildCandidatesArgs {
   outlook: Outlook;
 }
 
-function buildCandidates(a: BuildCandidatesArgs): StrategyCandidate[] {
+export function buildCandidates(a: BuildCandidatesArgs): StrategyCandidate[] {
   const { spot, calls, puts } = a;
 
   const atmCall = nearestByDelta(calls, 0.50);
@@ -475,15 +475,16 @@ function buildCandidates(a: BuildCandidatesArgs): StrategyCandidate[] {
   }
 
   // Long straddle.
-  if (atmCall && atmPut) {
+  const straddlePut = atmCall ? puts.find(p => p.strike === atmCall.strike) : undefined;
+  if (atmCall && straddlePut) {
     const lc: OptionLeg = { side: "long", contract: atmCall, qty: 1 };
-    const lp: OptionLeg = { side: "long", contract: atmPut, qty: 1 };
-    const net = -(atmCall.mid + atmPut.mid);
-    const K = (atmCall.strike + atmPut.strike) / 2;
+    const lp: OptionLeg = { side: "long", contract: straddlePut, qty: 1 };
+    const net = -(atmCall.mid + straddlePut.mid);
+    const K = (atmCall.strike + straddlePut.strike) / 2;
     const loBe = K - (-net), hiBe = K + (-net);
     cands.push({
       category: "long-straddle",
-      description: `Long ${atmCall.strike}c + long ${atmPut.strike}p (${atmCall.dte}d)`,
+      description: `Long ${atmCall.strike}c + long ${straddlePut.strike}p (${atmCall.dte}d)`,
       fits: ["volatile"],
       legs: [lc, lp],
       netCreditPerShare: round2(net),
@@ -493,8 +494,8 @@ function buildCandidates(a: BuildCandidatesArgs): StrategyCandidate[] {
       marginEstimatePerShare: -net,
       probabilityOfProfitPct: round2(probOutsideFromIV(spot, loBe, hiBe, atmCall.dte, atmCall.impliedVolatility)),
       netGreeks: aggregateGreeks([lc, lp]),
-      worstLiquidity: weakest([atmCall, atmPut]),
-      avgSpreadPct: avgSpread([atmCall, atmPut]),
+      worstLiquidity: weakest([atmCall, straddlePut]),
+      avgSpreadPct: avgSpread([atmCall, straddlePut]),
       rationale: `Long-vol. Pay $${(-net).toFixed(2)} debit. Profits if realised move exceeds $${(-net).toFixed(2)} (BE $${loBe.toFixed(2)} / $${hiBe.toFixed(2)}).`,
     });
   }
@@ -525,7 +526,7 @@ function buildCandidates(a: BuildCandidatesArgs): StrategyCandidate[] {
 
   // Iron condor.
   if (otm30Put && otm16Put && otm30Call && otm16Call
-      && otm16Put.strike < otm30Put.strike && otm16Call.strike > otm30Call.strike) {
+      && otm16Put.strike < otm30Put.strike && otm30Put.strike < otm30Call.strike && otm16Call.strike > otm30Call.strike) {
     const sp: OptionLeg = { side: "short", contract: otm30Put, qty: 1 };
     const lp: OptionLeg = { side: "long", contract: otm16Put, qty: 1 };
     const sc: OptionLeg = { side: "short", contract: otm30Call, qty: 1 };

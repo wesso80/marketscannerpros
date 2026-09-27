@@ -368,6 +368,8 @@ export interface ScoringRequest {
 }
 
 export interface PortfolioState {
+  /** False withholds account sizing without changing research quality. */
+  accountRiskAvailable?: boolean;
   equity: number;
   dailyPnl: number;
   drawdownPct: number;

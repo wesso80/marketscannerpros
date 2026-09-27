@@ -85,7 +85,7 @@ export default function PortfolioLabPerformancePage() {
               <EquitySpark points={data.equityCurve.map((p) => p.equity)} />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748B", marginTop: 6 }}>
                 <span>{data.equityCurve[0]?.at?.slice(0, 10) ?? "—"}</span>
-                <span>{data.performance.basedOnSnapshots} snapshots · computed {new Date(data.performance.computedAt).toLocaleString()}</span>
+                <span>{data.equityCurve.length} daily observations · computed {new Date(data.performance.computedAt).toLocaleString()}</span>
                 <span>{data.equityCurve[data.equityCurve.length - 1]?.at?.slice(0, 10) ?? "—"}</span>
               </div>
             </section>

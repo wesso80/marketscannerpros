@@ -11,7 +11,8 @@ vi.mock('@/lib/operator/elite-score', () => ({
 vi.mock('@/lib/adminAuth', () => ({ requireAdmin: vi.fn(async () => ({ ok: true })) }));
 
 import { recordSignals, signalSkipReason } from '@/lib/admin/signal-recorder';
-import { GET as statsGET, LABELLER_FIX_AT } from '@/app/api/admin/signals/stats/route';
+import { GET as statsGET } from '@/app/api/admin/signals/stats/route';
+import { LABELLER_FIX_AT } from '@/lib/admin/signalStats';
 
 const OPEN = Date.parse('2026-09-25T17:00:00Z'); // Fri 13:00 ET
 const SAT = Date.parse('2026-09-26T14:10:00Z'); // Sat

@@ -86,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/quant", label: "Quant Terminal", code: "QT" },
         { href: "/admin/learning-engine", label: "Learning Engine", code: "LE" },
         { href: "/admin/outcomes", label: "Signal Outcomes", code: "SO" },
-        { href: "/admin/priority-desk", label: "Priority Desk", code: "PD" },
+        { href: "/admin/priority-desk", label: "Decision Desk", code: "PD" },
         { href: "/admin/research-scheduler", label: "Research Scheduler", code: "RS" },
         { href: "/admin/journal-learning", label: "Journal Learning", code: "JL" },
         { href: "/admin/backtest-lab", label: "Backtest Lab", code: "BL" },
@@ -95,8 +95,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       label: "ARCA Portfolio Lab",
       items: [
+        { href: "/admin/portfolio-lab/holdings", label: "Saved Holdings", code: "PH" },
         { href: "/admin/portfolio-lab", label: "ARCA Dashboard", code: "PL" },
-        { href: "/admin/portfolio-lab/positions", label: "Open Positions", code: "PP" },
+        { href: "/admin/portfolio-lab/positions", label: "Paper Positions", code: "PP" },
         { href: "/admin/portfolio-lab/orders", label: "Sim Orders", code: "PO" },
         { href: "/admin/portfolio-lab/trades", label: "Closed Trades", code: "PT" },
         { href: "/admin/portfolio-lab/journal", label: "ARCA Journal", code: "PJ" },
@@ -141,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       label: "Risk & Alerts",
       items: [
-        { href: "/admin/risk", label: "Risk Governor", code: "RG" },
+        { href: "/admin/risk", label: "Account Risk Status", code: "RG" },
         { href: "/admin/alerts", label: "Alerts", code: "AL" },
         { href: "/admin/discord-bridge", label: "Discord Bridge", code: "DX" },
       ],

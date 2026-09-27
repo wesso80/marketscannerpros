@@ -2,7 +2,7 @@
  * Local technical-indicator engine for admin briefs.
  *
  * Fetches a single TIME_SERIES_DAILY_ADJUSTED call from Alpha Vantage,
- * then computes every indicator client-side. This keeps quota burn at
+ * then adjusts historical OHLC/volume for splits and computes indicators locally. This keeps quota burn at
  * ONE call per ticker per brief (vs 8+ if we used AV's RSI/MACD/BBANDS
  * endpoints separately).
  *
@@ -120,6 +120,29 @@ interface AvDailyResponse {
   Information?: string;
 }
 
+/** Express historical bars in today's share units. Never treat a split as a loss.
+ * Dividend cash flows are not included: these are split-adjusted price returns.
+ * Missing corporate-action metadata must not silently fall back to raw history.
+ */
+export function parseSplitAdjustedDaily(series: Record<string, Record<string, string>>): OhlcBar[] {
+  let futureSplits = 1;
+  const bars: OhlcBar[] = [];
+  for (const [date, row] of Object.entries(series).sort(([a], [b]) => b.localeCompare(a))) {
+    const split = Number(row["8. split coefficient"]);
+    const raw = ["1. open", "2. high", "3. low", "4. close"].map(k => Number(row[k]));
+    const volume = Number(row["6. volume"]);
+    if (!Number.isFinite(split) || split <= 0 || !Number.isFinite(volume) || volume < 0 || raw.some(v => !Number.isFinite(v) || v <= 0)) {
+      throw new Error(`Invalid adjusted daily bar or split metadata at ${date}`);
+    }
+    const [open, high, low, close] = raw.map(v => v / futureSplits);
+    bars.push({ date, open, high, low, close, volume: volume * futureSplits });
+    // The split applies to bars BEFORE its ex-date, not the ex-date bar itself.
+    futureSplits *= split;
+    if (!Number.isFinite(futureSplits) || futureSplits <= 0) throw new Error("Invalid cumulative split factor");
+  }
+  return bars.reverse();
+}
+
 export async function fetchDailyOhlcv(symbol: string): Promise<{
   status: TechnicalSnapshot["status"];
   bars: OhlcBar[];
@@ -133,9 +156,9 @@ export async function fetchDailyOhlcv(symbol: string): Promise<{
       error: "ALPHA_VANTAGE_API_KEY missing",
     };
   }
-  const url = `${AV_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=full&apikey=${encodeURIComponent(apiKey)}`;
+  const url = `${AV_BASE}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=full&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const json = await avFetchAdmin<AvDailyResponse | null>(url, `TIME_SERIES_DAILY ${symbol}`);
+    const json = await avFetchAdmin<AvDailyResponse | null>(url, `TIME_SERIES_DAILY_ADJUSTED ${symbol}`);
     if (!json) {
       return { status: "missing", bars: [], error: "no data" };
     }
@@ -149,23 +172,7 @@ export async function fetchDailyOhlcv(symbol: string): Promise<{
     if (!series) {
       return { status: "missing", bars: [], error: "no Time Series (Daily) field" };
     }
-    const bars: OhlcBar[] = Object.entries(series)
-      .map(([date, row]) => ({
-        date,
-        open: Number(row["1. open"]),
-        high: Number(row["2. high"]),
-        low: Number(row["3. low"]),
-        close: Number(row["4. close"]),
-        volume: Number(row["5. volume"]),
-      }))
-      .filter(
-        (b) =>
-          Number.isFinite(b.open) &&
-          Number.isFinite(b.high) &&
-          Number.isFinite(b.low) &&
-          Number.isFinite(b.close),
-      )
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const bars = parseSplitAdjustedDaily(series);
     return { status: "ok", bars };
   } catch (err) {
     return {

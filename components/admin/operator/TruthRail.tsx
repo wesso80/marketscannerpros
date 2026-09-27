@@ -5,6 +5,7 @@ import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import DataTruthBadge from "@/components/admin/shared/DataTruthBadge";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { useState } from "react";
+import { POSITION_LEVELS_LABEL, positionFlags, positionLevelView, type PositionLevelView } from "@/lib/admin/positionLevels";
 
 /* ═════════════════════════════════════════════════════
    COLOR / LABEL HELPERS
@@ -112,6 +113,18 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Position (weekly/daily) lines for the copied trade params (the main levels; 15m follows as timing). */
+function positionClipboardLines(v: PositionLevelView): string[] {
+  if (v.status !== "ok") return [`${POSITION_LEVELS_LABEL}: ${v.message}`];
+  const flags = positionFlags(v);
+  return [
+    `${POSITION_LEVELS_LABEL}: trigger ${v.entryTrigger} (daily close ${v.direction === "LONG" ? "above" : "below"}), zone ${v.entryZoneLow}-${v.entryZoneHigh}`,
+    `Stop: ${v.stop} (${v.stopSource}, risk ${v.riskPct}%)`,
+    `Targets: ${v.targets.map((t, i) => `T${i + 1} ${t.price} (${t.r}R ${t.timeframe})`).join(" · ") || "—"}`,
+    `Hold: ${v.expectedHold}${flags.length ? ` · ${flags.join(", ")}` : ""}`,
+  ];
+}
+
 /* ═════════════════════════════════════════════════════
    BLOCK 1 — FINAL DECISION
    ═════════════════════════════════════════════════════ */
@@ -131,10 +144,8 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
     const lines = [
       `${data.symbol} ${data.bias} ${truth.finalVerdict}`,
       `Action: ${actionLabel(truth.operatorAction)}`,
-      `Entry: ${data.targets.entry || data.price}`,
-      `Stop: ${data.targets.invalidation || "—"}`,
-      `T1: ${data.targets.target1 || "—"}`,
-      `T2: ${data.targets.target2 || "—"}`,
+      ...positionClipboardLines(positionLevelView(data.positionLevels, data.bias)),
+      `Intraday timing (15m): entry ${data.targets.entry || data.price} · stop ${data.targets.invalidation || "—"} · T1 ${data.targets.target1 || "—"} · T2 ${data.targets.target2 || "—"}`,
       `Size: ${truth.effectiveSize}x`,
       `Confidence: ${truth.confidenceClass}`,
       `Regime: ${data.regime} · Playbook: ${data.playbook || "—"}`,
@@ -147,6 +158,7 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
 
   return (
     <Card>
+      <Label>Research Verdict</Label>
       {/* Verdict */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <span style={{
@@ -191,6 +203,10 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
         </span>
       </button>
 
+      <div className="mb-2 text-xs text-white/60">
+        Account permission: <strong>{truth.accountVerdict ?? "Unavailable"}</strong>
+        {truth.accountReasons?.length ? <p>{truth.accountReasons.join(" · ")}</p> : null}
+      </div>
       {/* Confidence + Size */}
       <div style={{ display: "flex", gap: 16, fontSize: "0.7rem" }}>
         <span>
@@ -198,7 +214,7 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
           <span style={{ color: confColor(truth.confidenceClass), fontWeight: 600 }}>{truth.confidenceClass}</span>
         </span>
         <span>
-          <span style={{ color: "#6B7280" }}>Size: </span>
+          <span style={{ color: "#6B7280" }}>Account Size: </span>
           <span style={{ color: truth.effectiveSize > 0 ? "#D1D5DB" : "#EF4444", fontWeight: 600 }}>{truth.effectiveSize}x</span>
         </span>
       </div>

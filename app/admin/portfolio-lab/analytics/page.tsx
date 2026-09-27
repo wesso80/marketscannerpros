@@ -62,6 +62,10 @@ interface ExitReason {
 interface BenchmarkMetrics {
   symbol: string;
   pairs: number;
+  minimumPairs: number;
+  periodStart: string | null;
+  periodEnd: string | null;
+  reason: string | null;
   beta: number | null;
   r2: number | null;
   trackingErrorPctAnn: number | null;
@@ -198,7 +202,7 @@ interface Analytics {
     overallHours: number | null;
   };
   kelly: { overall: KellyResult; byPlaybook: PerPlaybookKelly[] };
-  riskOfRuin: { estimatePct: number; method: string; edgePerR: number | null; bankrollInR: number };
+  riskOfRuin: { estimatePct: number | null; method: string; edgePerR: number | null; bankrollInR: number; sampleSize: number; minimumSample: number; reason: string | null };
   calibration: CalibrationBucket[];
   stress: {
     openPositions: number;
@@ -251,10 +255,10 @@ export default function PortfolioLabAnalyticsPage() {
   const [corrMinPaired, setCorrMinPaired] = useState(10);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setData(null); setMeta(null);
     try {
       const r = await fetch("/api/admin/portfolio-lab/analytics", { cache: "no-store" });
-      const j = await r.json();
+      const j = await r.json().catch(() => { throw new Error(`Analytics service returned an unreadable response (HTTP ${r.status}). Please retry.`); });
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       const a = j?.data?.analytics as Analytics | null;
       setData(a);
@@ -280,7 +284,7 @@ export default function PortfolioLabAnalyticsPage() {
         seed: String(opts?.seed ?? mcSeed),
       });
       const r = await fetch(`/api/admin/portfolio-lab/monte-carlo?${params.toString()}`, { cache: "no-store" });
-      const j = await r.json();
+      const j = await r.json().catch(() => { throw new Error(`Analytics service returned an unreadable response (HTTP ${r.status}). Please retry.`); });
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setMc((j?.data?.monteCarlo ?? null) as MonteCarloResult | null);
       setMcMeta({ confidence: j?.confidence ?? "?", reason: j?.confidenceReason ?? "" });
@@ -304,7 +308,7 @@ export default function PortfolioLabAnalyticsPage() {
         minPaired: String(corrMinPaired),
       });
       const r = await fetch(`/api/admin/portfolio-lab/correlation?${params.toString()}`, { cache: "no-store" });
-      const j = await r.json();
+      const j = await r.json().catch(() => { throw new Error(`Analytics service returned an unreadable response (HTTP ${r.status}). Please retry.`); });
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setCorr((j?.data?.correlation ?? null) as CorrelationResult | null);
       setCorrMeta({ confidence: j?.confidence ?? "?", reason: j?.confidenceReason ?? "" });
@@ -332,7 +336,7 @@ export default function PortfolioLabAnalyticsPage() {
         <Header meta={meta} onReload={load} loading={loading} health={data?.health} />
         {error && <div style={errBox}>Error: {error}</div>}
         {!data ? (
-          <div style={emptyBox}>{loading ? "Computing analytics…" : "No analytics available. Initialise the ARCA portfolio and run a sim cycle first."}</div>
+          <div style={emptyBox}>{loading ? "Computing analytics…" : error ? "Analytics could not be loaded. Use Reload to retry." : (meta?.reason || "No analytics are available for this workspace.")}</div>
         ) : (
           <>
             <Headline a={data} />
@@ -425,7 +429,7 @@ function Headline({ a }: { a: Analytics }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 10, marginBottom: 12 }}>
       <Kpi label="Total Return" value={pct(h.totalReturnPct)} tone={h.totalReturnPct >= 0 ? "good" : "bad"} sub={`day ${h.daysActive}`} />
-      <Kpi label="CAGR" value={h.cagrPct == null ? "—" : pct(h.cagrPct)} tone={h.cagrPct != null && h.cagrPct >= 0 ? "good" : "bad"} sub="annualised" />
+      <Kpi label="CAGR" value={h.cagrPct == null ? "—" : pct(h.cagrPct)} tone={h.cagrPct != null && h.cagrPct >= 0 ? "good" : "bad"} sub="since inception · annualised" />
       <Kpi label="Sharpe" value={fmtNum(h.sharpe, 2)} tone={ratioTone(h.sharpe, 1)} sub={h.annualisedVolPct != null ? `vol ${h.annualisedVolPct.toFixed(1)}%` : ""} />
       <Kpi label="Sortino" value={fmtNum(h.sortino, 2)} tone={ratioTone(h.sortino, 1)} sub="downside only" />
       <Kpi label="Calmar" value={fmtNum(h.calmar, 2)} tone={ratioTone(h.calmar, 1)} sub="CAGR / maxDD" />
@@ -610,20 +614,16 @@ function RiskOfRuinAndCalibration({ a }: { a: Analytics }) {
       <div style={panel}>
         <SectionHeader title="Risk of Ruin (estimate)" />
         <div style={{ fontSize: 36, fontWeight: 700, color: rorTone(a.riskOfRuin.estimatePct), margin: "4px 0 8px" }}>
-          {a.riskOfRuin.estimatePct.toFixed(2)}%
+          {a.riskOfRuin.estimatePct == null ? "Unavailable" : `${a.riskOfRuin.estimatePct.toFixed(2)}%`}
         </div>
         <div style={{ fontSize: 12, color: "#94A3B8" }}>
-          {a.riskOfRuin.estimatePct >= 99
-            ? "Edge is non-positive or insufficient. Do not size up."
-            : a.riskOfRuin.estimatePct >= 25
-            ? "Material ruin risk at current bankroll. Reduce risk-per-trade or improve edge."
-            : a.riskOfRuin.estimatePct >= 5
-            ? "Tolerable but watch playbook quality."
-            : "Bankroll well-capitalised vs current edge."}
+          {a.riskOfRuin.reason ?? (a.riskOfRuin.estimatePct != null && a.riskOfRuin.estimatePct >= 99
+            ? "The observed sample has non-positive edge under this approximation."
+            : "Model estimate from observed win/loss R-multiples; it does not establish a safe position size.")}
         </div>
         <div style={{ marginTop: 8, fontSize: 11, color: "#64748B", lineHeight: 1.5 }}>
-          edge per R: <strong>{fmtNum(a.riskOfRuin.edgePerR, 3)}</strong> · bankroll: <strong>{a.riskOfRuin.bankrollInR}R</strong> · method: {a.riskOfRuin.method}<br/>
-          <em>Vince-style geometric approximation — directional, not a precise forecast.</em>
+          Sample: <strong>{a.riskOfRuin.sampleSize}/{a.riskOfRuin.minimumSample}</strong> closed win/loss trades with valid R · edge per R: <strong>{fmtNum(a.riskOfRuin.edgePerR, 3)}</strong> · bankroll: <strong>{a.riskOfRuin.bankrollInR}R</strong> · method: {a.riskOfRuin.method}<br/>
+          <em>Geometric approximation assumes stable, independent outcomes. The minimum sample is a reporting threshold, not proof of reliability.</em>
         </div>
       </div>
       <div style={panel}>
@@ -757,7 +757,9 @@ function BenchmarkRow({ a }: { a: Analytics }) {
   const b = a.benchmark!;
   return (
     <div style={panel}>
-      <SectionHeader title={`Benchmark vs ${b.symbol} — ${b.pairs} paired days`} />
+      <SectionHeader title={`Benchmark vs ${b.symbol} — ${b.pairs} matched return observations`} />
+      {b.reason && <p style={{ color: "#FACC15", fontSize: 12 }}>{b.reason}</p>}
+      <p style={{ color: "#94A3B8", fontSize: 11 }}>Common observation window: {b.periodStart ?? "—"} to {b.periodEnd ?? "—"}. Minimum {b.minimumPairs} matched returns; no synthetic inception baseline.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
         <Kpi label="β (beta)" value={fmtNum(b.beta, 2)} sub="cov/var" />
         <Kpi label="R²" value={fmtNum(b.r2, 3)} sub="fit" />
@@ -1354,7 +1356,7 @@ function DailyAndStreaks({ a }: { a: Analytics }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
       <div style={panel}>
-        <SectionHeader title={`Daily P&L (${a.daily.dayCount} snapshot days)`} />
+        <SectionHeader title={`Daily P&L (${a.daily.dayCount} completed daily returns)`} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
           <Tile label="Best Day" value={a.daily.bestDayPct == null ? "—" : pct(a.daily.bestDayPct)} tone="good" />
           <Tile label="Worst Day" value={a.daily.worstDayPct == null ? "—" : pct(a.daily.worstDayPct)} tone="bad" />
@@ -1468,7 +1470,8 @@ function ratioTone(v: number | null | undefined, target: number): "good" | "bad"
   if (v < target * 0.5) return "bad";
   return undefined;
 }
-function rorTone(v: number): string {
+function rorTone(v: number | null): string {
+  if (v == null) return "#94A3B8";
   if (v >= 50) return "#F87171";
   if (v >= 10) return "#FACC15";
   return "#10B981";

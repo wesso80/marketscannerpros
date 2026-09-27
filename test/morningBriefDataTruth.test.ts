@@ -42,7 +42,8 @@ describe("morning brief data truth layer", () => {
     expect(backend).not.toContain("accountRiskUnit: 0.01");
     expect(backend).not.toContain("using conservative fallback");
     expect(backend).toContain("equity: 0");
-    expect(backend).toContain("sizeMultiplier: 0");
+    expect(backend).toContain("return loadAdminRiskSnapshot(workspaceId)");
+    expect(read("lib/admin/scan-context.ts")).toContain("sizeMultiplier: 0");
     expect(backend).toContain("Live equity unavailable");
     expect(backend).toContain("Single-trade risk cap unavailable until live equity is synced.");
   });

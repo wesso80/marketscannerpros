@@ -8,6 +8,7 @@ import { useScannerFeed } from "@/lib/admin/hooks";
 import type { ScannerHit } from "@/lib/admin/types";
 import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 import { formatHitPrice, hitPermissionTitle, hitRowKey, otherPlaybooksLabel } from "@/lib/admin/hitIntegrity";
+import { PositionLevelsLine } from "@/components/admin/PositionLevels";
 
 // Full deduped universe per market (DEFAULT_WATCHLISTS) — anchors pinned first.
 // Admin-only page; safe to leak the wider universe (see no-public-leakage).
@@ -27,7 +28,8 @@ const GRID = "80px 90px 80px 70px 1fr 80px 70px 70px 90px";
 function HitRow({ hit }: { hit: ScannerHit }) {
   const more = otherPlaybooksLabel(hit);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", gap: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0.5rem 0", fontSize: "0.875rem" }}>
+    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0.5rem 0" }}>
+    <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
       <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>{hit.symbol}</span>
       <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <StatusPill label={hit.bias} tone={hit.bias === "LONG" ? "green" : hit.bias === "SHORT" ? "red" : "neutral"} />
@@ -41,6 +43,9 @@ function HitRow({ hit }: { hit: ScannerHit }) {
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.5)" }}>{hit.symbolTrust}%</span>
       <span style={{ textAlign: "right", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>{hit.setupState ?? "—"}</span>
     </div>
+    {/* Position (weekly/daily) levels: the main levels; the scan itself runs on 15m bars. */}
+    <PositionLevelsLine className="mt-1" view={hit.positionLevels} bias={hit.bias} />
+    </div>
   );
 }
 
@@ -48,7 +53,7 @@ export default function LiveScannerClient({ cryptoEnabled, defaultMarket = "EQUI
   const [polling, setPolling] = useState(false);
   // Crypto only when crypto market data is on; otherwise the equities saved scan (it used to be crypto-only).
   const [market, setMarket] = useState<"CRYPTO" | "EQUITIES">(cryptoEnabled ? defaultMarket : "EQUITIES");
-  const { hits, health, loading, error, refetch } = useScannerFeed(
+  const { hits, health, scanErrors, loading, error, refetch } = useScannerFeed(
     SYMBOLS[market],
     market,
     "15m",
@@ -90,12 +95,19 @@ export default function LiveScannerClient({ cryptoEnabled, defaultMarket = "EQUI
         <div className="flex items-center gap-3">
           <StatusPill label={health?.scanner === "RUNNING" ? "Running" : "Idle"} tone={health?.scanner === "RUNNING" ? "green" : "neutral"} />
           <span className="text-white/50 text-xs">
-            {hits.length} hit{hits.length !== 1 ? "s" : ""} · {health?.symbolsScanned ?? 0} symbols scanned
+            {hits.length} hit{hits.length !== 1 ? "s" : ""} · {health?.symbolsScanned ?? 0} current symbols · {health?.errorsCount ?? 0} unavailable
           </span>
           {error && <span className="text-red-400 text-xs">{error}</span>}
           {!cryptoEnabled && <span className="text-amber-300/80 text-xs">Crypto switched off</span>}
         </div>
       </AdminCard>
+
+      {scanErrors.length > 0 && <AdminCard title="Unavailable symbols">
+        <p className="mb-2 text-xs text-white/50">These symbols are excluded from current results. Reloading reads saved results; it does not launch another scan.</p>
+        <ul className="space-y-1 text-sm text-amber-200">
+          {scanErrors.map(({ symbol, error }) => <li key={symbol}><strong>{symbol}</strong>: {error}</li>)}
+        </ul>
+      </AdminCard>}
 
       <AdminCard title="Scanner Results">
         {hits.length === 0 ? (

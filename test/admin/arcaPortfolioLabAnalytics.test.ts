@@ -175,7 +175,7 @@ describe("computeAnalytics — headline + drawdown", () => {
     expect(r.headline.ulcerIndex! > 0).toBe(true);
   });
 
-  it("emits a non-null Sharpe when daily returns have variance", () => {
+  it("withholds annualised ratios when only five daily returns exist", () => {
     // 6 days of alternating returns produce a non-null Sharpe.
     const snapshots: ArcaPortfolioSnapshot[] = [
       snap({ id: 6, snapshotAt: "2026-05-06T20:00:00Z", totalEquity: 204_000 }),
@@ -186,9 +186,9 @@ describe("computeAnalytics — headline + drawdown", () => {
       snap({ id: 1, snapshotAt: "2026-05-01T20:00:00Z", totalEquity: 200_000 }),
     ];
     const r = computeAnalytics(baseInput({ snapshots, currentEquity: 204_000 }));
-    expect(r.headline.sharpe).not.toBeNull();
-    expect(r.headline.annualisedVolPct).not.toBeNull();
-    expect(r.daily.dayCount).toBe(6);
+    expect(r.headline.sharpe).toBeNull();
+    expect(r.headline.annualisedVolPct).toBeNull();
+    expect(r.daily.dayCount).toBe(5);
     expect(r.daily.bestDayPct).not.toBeNull();
     expect(r.daily.positiveDayPct).not.toBeNull();
   });
@@ -287,7 +287,7 @@ describe("Kelly", () => {
 
 describe("computeRiskOfRuin", () => {
   it("is 100% when edge is non-positive", () => {
-    const r = computeRiskOfRuin(40, 1, 1);
+    const r = computeRiskOfRuin(40, 1, 1, 100);
     expect(r.estimatePct).toBe(100);
     expect(r.edgePerR! <= 0).toBe(true);
   });
@@ -295,15 +295,15 @@ describe("computeRiskOfRuin", () => {
   it("is between 0 and 100% for a thin positive edge", () => {
     // 51% / 1.0 payoff / 1% risk → edge per R = 0.02, bankroll = 100R.
     // Strong edges crush RoR toward 0 (correctly), so we test a thin edge.
-    const r = computeRiskOfRuin(51, 1, 1);
+    const r = computeRiskOfRuin(51, 1, 1, 100);
     expect(r.estimatePct).toBeGreaterThan(0);
     expect(r.estimatePct).toBeLessThan(100);
     expect(r.bankrollInR).toBe(100);
   });
 
   it("decreases (or stays the same) as bankroll-in-R grows", () => {
-    const a = computeRiskOfRuin(51, 1, 2).estimatePct;     // 50R bankroll
-    const b = computeRiskOfRuin(51, 1, 1).estimatePct;     // 100R bankroll
+    const a = computeRiskOfRuin(51, 1, 2, 100).estimatePct;     // 50R bankroll
+    const b = computeRiskOfRuin(51, 1, 1, 100).estimatePct;     // 100R bankroll
     expect(b).toBeLessThanOrEqual(a);
   });
 });
@@ -374,8 +374,8 @@ describe("benchmark metrics", () => {
     // monotone +1%/day series collapses variance and makes beta numerically
     // unstable. ARCA is proportional to benchmark (2000×), so daily returns
     // are identical → beta=1, R²=1, IR=0.
-    const dates = ["05-01","05-02","05-03","05-04","05-05","05-06"];
-    const benchSeries = [100, 105, 95, 110, 100, 108];
+    const dates = Array.from({ length: 31 }, (_, i) => `05-${String(i + 1).padStart(2, "0")}`);
+    const benchSeries = dates.map((_, i) => 100 + i + (i % 2 ? 4 : -2));
     const arcaSeries  = benchSeries.map((b) => b * 2000); // 200k, 210k, 190k…
     const snapshots: ArcaPortfolioSnapshot[] = dates.map((d, i) => snap({
       id: dates.length - i,
@@ -395,11 +395,14 @@ describe("benchmark metrics", () => {
       snapshots,
       benchmarkSnaps: benchSnaps,
       currentEquity: arcaSeries[arcaSeries.length - 1],
+      startingBalance: 100_000, // must not substitute inception equity for the first matched day
     }));
     expect(r.benchmark).not.toBeNull();
     expect(r.benchmark!.beta!).toBeGreaterThan(0.95);
     expect(r.benchmark!.beta!).toBeLessThan(1.05);
     expect(r.benchmark!.r2!).toBeGreaterThan(0.99);
+    expect(r.benchmark!.arcaCagrPct).toBe(r.benchmark!.benchmarkCagrPct);
+    expect(r.benchmark!.excessCagrPct).toBe(0);
     expect(Math.abs(r.benchmark!.informationRatio ?? 0)).toBeLessThan(0.01);
   });
 
@@ -434,5 +437,41 @@ describe("rolling drawdown", () => {
     expect(last.drawdownPct).toBeLessThan(8);
     // First point: equity == starting balance peak, DD = 0
     expect(r.rolling.series[0].drawdownPct).toBe(0);
+  });
+});
+
+
+describe("evidence minimums and observation integrity", () => {
+  it("does not turn no trades or an invalid model into 100% ruin", () => {
+    expect(computeAnalytics(baseInput()).riskOfRuin.estimatePct).toBeNull();
+    expect(computeRiskOfRuin(51, 1, 1, 29).estimatePct).toBeNull();
+    expect(computeRiskOfRuin(51, 1, 1, 30).estimatePct).not.toBeNull();
+    for (const risk of [0, -1, NaN, Infinity, 101]) {
+      expect(computeRiskOfRuin(51, 1, risk, 100).estimatePct).toBeNull();
+    }
+    expect(computeRiskOfRuin(100, null, 1, 100).estimatePct).toBeNull();
+    expect(computeRiskOfRuin(NaN, 1, 1, 100).estimatePct).toBeNull();
+  });
+
+  it("withholds every benchmark ratio for the three-observation production case", () => {
+    const snapshots = [1,2,3,4].map(day => snap({ snapshotAt: `2026-05-0${day}T20:00:00Z` })).reverse();
+    const benchmarkSnaps = [1,2,3,4].map(day => ({ snapshotAt: `2026-05-0${day}T20:00:00Z`, benchmarkSymbol: "SPY", benchmarkValue: 100 + day, benchmarkReturnPct: null, arcaReturnPct: null, relativePerformancePct: null })).reverse();
+    const result = computeAnalytics(baseInput({ snapshots, benchmarkSnaps }));
+    expect(result.benchmark?.pairs).toBe(3);
+    expect(result.benchmark?.beta).toBeNull();
+    expect(result.benchmark?.trackingErrorPctAnn).toBeNull();
+    expect(result.benchmark?.informationRatio).toBeNull();
+    expect(result.benchmark?.benchmarkCagrPct).toBeNull();
+    expect(result.health.benchmarkAligned).toBe(false);
+    expect(result.benchmark?.reason).toContain("3/30");
+  });
+
+  it("does not count an inception-to-first-snapshot gain as a daily gain", () => {
+    const result = computeAnalytics(baseInput({ snapshots: [
+      snap({ snapshotAt: "2026-05-02T20:00:00Z", totalEquity: 303_000 }),
+      snap({ snapshotAt: "2026-05-01T20:00:00Z", totalEquity: 300_000 }),
+    ] }));
+    expect(result.daily.dayCount).toBe(1);
+    expect(result.daily.bestDayPct).toBe(1);
   });
 });

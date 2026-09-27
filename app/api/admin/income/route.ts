@@ -8,13 +8,13 @@ import { PLAN_PRICES } from '@/lib/planPrices';
 // `pro_trader` subscribers are billed as Pro (the 2026 pricing simplification), so they are valued at the Pro
 // price too, not the old $50. user_subscriptions has no price / amount / interval column, so revenue here is a
 // list-price estimate (every paid sub valued at the monthly list price); it is not what Stripe actually charged.
-export const SUBSCRIPTION_PRICES = {
+const SUBSCRIPTION_PRICES = {
   pro: PLAN_PRICES.pro.monthlyRaw,
   pro_trader: PLAN_PRICES.pro.monthlyRaw,
   free: 0,
 };
 
-export const REVENUE_BASIS =
+const REVENUE_BASIS =
   'List-price estimate: active Stripe-linked subscriptions × Pro monthly list price. Legacy Pro Trader subs are billed as Pro. ' +
   'The database stores no charged amount, billing interval, discount or refund, so yearly plans, coupons and refunds are not reflected.';
 

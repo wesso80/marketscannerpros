@@ -26,12 +26,14 @@ import { CRYPTO_PAUSED_MESSAGE, readSavedScan, savedScanStaleAfterSec, scanStatu
 import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { isPausedRow, NOT_MONITORED } from "@/lib/admin/healthProbes";
 import { collapseHits } from "@/lib/admin/hitIntegrity";
+import { positionLevelView } from "@/lib/admin/positionLevels";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   // Auth gate
-  if (!(await requireAdmin(req)).ok) {
+  const admin = await requireAdmin(req);
+  if (!admin.ok || !admin.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest) {
       : undefined;
 
     const [{ risk }, view] = await Promise.all([
-      buildAdminScanContext(),
+      buildAdminScanContext(admin.workspaceId),
       readSavedScan({ market, timeframe, symbols }),
     ]);
 
@@ -60,7 +62,11 @@ export async function GET(req: NextRequest) {
     // Collapse to the best row per symbol + direction and flag two-sided symbols (hitIntegrity.ts).
     // The saved row's last price rides along so the pages can show an absolute price.
     const rawHits: ScannerHit[] = collapseHits(
-      current.flatMap((r) => r.hits.map((hit) => ({ ...hit, market: r.market, price: hit.price ?? r.price ?? null }))),
+      current.flatMap((r) => r.hits.map((hit) => ({
+        ...hit, market: r.market, price: hit.price ?? r.price ?? null,
+        // Position (weekly/daily) levels from the saved packet, matched to this hit's direction.
+        positionLevels: positionLevelView(r.packet?.snapshot?.positionLevels, hit.bias),
+      }))),
     );
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
     // Crypto switched off on purpose (ADMIN_CRYPTO_ENABLED=false): its skipped / leftover rows are "paused",
@@ -72,9 +78,15 @@ export async function GET(req: NextRequest) {
     const errors = view.rows
       .filter((r) => !isCurrent(r) && !isPaused(r))
       .map((r) => ({ symbol: r.symbol, error: r.status !== "ok" ? r.error ?? r.status : `stale (${r.ageSec == null ? "never scanned" : `${Math.round(r.ageSec / 60)} min old`})` }));
+    if (!marketPaused) {
+      const represented = new Set(view.rows.map(r => r.symbol));
+      for (const symbol of view.missingSymbols) {
+        if (!represented.has(symbol)) errors.push({ symbol, error: 'No saved scan yet' });
+      }
+    }
 
     const health: SystemHealth = {
-      feed: marketPaused ? "PAUSED" : view.available && current.length > 0 ? "HEALTHY" : "DEGRADED",
+      feed: marketPaused ? "PAUSED" : view.available && current.length > 0 && errors.length === 0 ? "HEALTHY" : "DEGRADED",
       // Not measured: there is no websocket, and cache / API latency are not probed.
       websocket: NOT_MONITORED,
       scanner: marketPaused ? "PAUSED" : view.running ? "RUNNING" : "IDLE",

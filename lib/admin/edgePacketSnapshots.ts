@@ -14,6 +14,83 @@
 import { q } from "@/lib/db";
 import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { recordAdminCalls, type AdminCallInput } from "@/lib/admin/adminCallLog";
+import { nyDateTime } from "@/lib/time/usSession";
+
+/* ────────────── one direction per symbol per day ────────────── */
+
+export type PacketDirection = "LONG" | "SHORT";
+
+/** LONG / SHORT for a directional bias (incl. BULLISH_RESEARCH / BEARISH_RESEARCH); null for NEUTRAL / unknown. */
+export function packetDirection(bias: string | null | undefined): PacketDirection | null {
+  const b = String(bias ?? "").toUpperCase();
+  if (b === "LONG" || b.startsWith("BULL")) return "LONG";
+  if (b === "SHORT" || b.startsWith("BEAR")) return "SHORT";
+  return null;
+}
+
+/** Key for "this symbol on this New York trading day" (same day definition as the admin call log). */
+export function symbolDayKey(symbol: string, market: string, at: string | number | Date): string | null {
+  const ms = new Date(at).getTime();
+  if (!Number.isFinite(ms)) return null;
+  return `${String(symbol).toUpperCase()}|${String(market).toUpperCase()}|${nyDateTime(ms).ymd}`;
+}
+
+/**
+ * Keep one direction per symbol per New York day. `lockedToday` holds the direction already stored for a
+ * symbol-day (its first directional packet that day). A packet in the other direction is dropped; within one
+ * batch, conflicting directions for a new symbol-day go to the higher opportunityRankScore (ties: the first
+ * packet). NEUTRAL packets are never dropped. Before this, a coin whose 15-minute bias flipped during the day
+ * got both a LONG and a SHORT packet (and both were logged as calls).
+ */
+export function oneDirectionPerDay<T extends Pick<AdminEdgePacket, "symbol" | "market" | "bias" | "generatedAt" | "opportunityRankScore">>(
+  packets: T[],
+  lockedToday: Map<string, PacketDirection> = new Map(),
+): { kept: T[]; dropped: T[] } {
+  const locks = new Map(lockedToday);
+  const best = new Map<string, T>();
+  for (const p of packets) {
+    const dir = packetDirection(p.bias);
+    const key = symbolDayKey(p.symbol, p.market, p.generatedAt);
+    if (!dir || !key || locks.has(key)) continue;
+    const current = best.get(key);
+    if (!current || p.opportunityRankScore > current.opportunityRankScore) best.set(key, p);
+  }
+  for (const [key, p] of best) locks.set(key, packetDirection(p.bias)!);
+  const kept: T[] = [];
+  const dropped: T[] = [];
+  for (const p of packets) {
+    const dir = packetDirection(p.bias);
+    const key = dir ? symbolDayKey(p.symbol, p.market, p.generatedAt) : null;
+    if (!dir || !key) { kept.push(p); continue; }
+    (locks.get(key) === dir ? kept : dropped).push(p);
+  }
+  return { kept, dropped };
+}
+
+/** Directions already stored today (per symbol-day) for this workspace. Best-effort: empty on a lookup error. */
+async function loadDirectionLocks(workspaceId: string, packets: AdminEdgePacket[]): Promise<Map<string, PacketDirection>> {
+  const locks = new Map<string, PacketDirection>();
+  const symbols = [...new Set(packets.filter((p) => packetDirection(p.bias)).map((p) => p.symbol))];
+  if (!symbols.length) return locks;
+  try {
+    const rows = await q<{ symbol: string; market: string; bias: string; generated_at: string }>(
+      `SELECT symbol, market, bias, generated_at
+         FROM admin_edge_packets
+        WHERE workspace_id = $1 AND symbol = ANY($2)
+          AND generated_at >= NOW() - INTERVAL '2 days'
+        ORDER BY generated_at ASC`,
+      [workspaceId, symbols],
+    );
+    for (const r of rows) {
+      const dir = packetDirection(r.bias);
+      const key = dir ? symbolDayKey(r.symbol, r.market, r.generated_at) : null;
+      if (dir && key && !locks.has(key)) locks.set(key, dir);
+    }
+  } catch (err) {
+    console.error("[admin-edge-packets] direction lookup failed:", err);
+  }
+  return locks;
+}
 
 /** trust_adjusted_score column value: the packet's real trustAdjustedScore (0 when a hand-built packet has none). */
 export function edgeTrustScore(packet: AdminEdgePacket): number {
@@ -119,8 +196,12 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
   if (!input.packets.length) return 0;
   await ensureTable();
 
+  // One direction per symbol per New York day: a packet opposite to the direction already stored today is not
+  // written (and not logged as a call).
+  const { kept } = oneDirectionPerDay(input.packets, await loadDirectionLocks(input.workspaceId, input.packets));
+
   let written = 0;
-  for (const packet of input.packets) {
+  for (const packet of kept) {
     try {
       await q(
         `INSERT INTO admin_edge_packets (
@@ -163,7 +244,7 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
   }
   // Log the new packets' LONG/SHORT calls for outcome labelling. Every workspace persists the same saved-scan
   // packets; the per symbol + direction + NY-day dedupe keeps one call.
-  const calls = input.packets.map((p) => edgePacketCall(p)).filter((c): c is AdminCallInput => c !== null);
+  const calls = kept.map((p) => edgePacketCall(p)).filter((c): c is AdminCallInput => c !== null);
   if (calls.length) await recordAdminCalls(calls).catch(() => undefined);
   return written;
 }

@@ -52,12 +52,14 @@ export async function avFetchDailyBars(symbol: string, full: boolean): Promise<{
   for (const [date, row] of Object.entries(series)) {
     const close = toNum(row['5. adjusted close']) ?? toNum(row['4. close']);
     if (close === null) continue;
+    const rawClose = toNum(row['4. close']);
+    const adjustment = rawClose && rawClose > 0 ? close / rawClose : 1;
     bars.push({
       date,
       ts: Date.parse(date + 'T00:00:00Z'),
-      open: toNum(row['1. open']) ?? close,
-      high: toNum(row['2. high']) ?? close,
-      low: toNum(row['3. low']) ?? close,
+      open: (toNum(row['1. open']) ?? close / adjustment) * adjustment,
+      high: (toNum(row['2. high']) ?? close / adjustment) * adjustment,
+      low: (toNum(row['3. low']) ?? close / adjustment) * adjustment,
       close,
       volume: toNum(row['6. volume']) ?? toNum(row['5. volume']) ?? 0,
     });

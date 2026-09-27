@@ -25,6 +25,7 @@ import type {
 } from '@/lib/marketData';
 
 export type PacketType =
+  | 'position-setup'
   | 'equity-research'
   | 'earnings'
   | 'options'
@@ -167,10 +168,10 @@ export function buildAdminMarketPacket(input: BuildPacketInput): AdminMarketPack
   };
 }
 
-export async function persistAdminMarketPacket(packet: AdminMarketPacket): Promise<void> {
+export async function persistAdminMarketPacket(packet: AdminMarketPacket, query: typeof q = q): Promise<void> {
   const { id, workspaceId, scope, scopeKey, packetType, builtAt, staleAfter,
     freshness, confidence, evidenceQuality, sources, ...rest } = packet;
-  await q(
+  await query(
     `INSERT INTO admin_market_packets
        (id, workspace_id, scope, scope_key, packet_type, payload, sources,
         freshness, confidence, evidence_quality, stale_after, built_at)

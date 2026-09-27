@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { RunSummary } from "@/lib/admin/sharedScanStore";
+type SharedStatus = { market: string; timeframe: string; available: boolean; lastRun: RunSummary | null; running: RunSummary | null };
 
 interface SchedulerRun {
   id: number;
@@ -46,6 +49,8 @@ function badge(val: number, warn: number, err: number, label: string) {
 }
 
 export default function ResearchSchedulerPage() {
+  const [sharedScans, setSharedScans] = useState<SharedStatus[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [runs, setRuns] = useState<SchedulerRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
@@ -59,7 +64,12 @@ export default function ResearchSchedulerPage() {
     try {
       const res = await fetch("/api/admin/research-scheduler?limit=100", { credentials: "include" });
       const data = await res.json();
-      if (data.ok) setRuns(data.runs ?? []);
+      if (!res.ok || !data.ok) throw new Error(data.error || "Run history unavailable");
+      setRuns(data.runs ?? []);
+      setSharedScans(data.sharedScans ?? []);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Run history unavailable");
     } finally {
       setLoading(false);
     }
@@ -78,12 +88,14 @@ export default function ResearchSchedulerPage() {
       const data = await res.json();
       if (data.ok) {
         setLastResult(
-          `Run complete — ${data.result.symbolsScanned} scanned, ${data.result.alertsFired} alerts, ${data.result.runtimeMs}ms`
+          `Run complete — ${data.result.symbolsScanned} scanned, ${data.result.alertsEligible} eligible, ${data.result.alertsDispatched} delivered, ${data.result.runtimeMs}ms`
         );
-        fetchRuns();
+        await fetchRuns();
       } else {
         setLastResult(`Error: ${data.error || "unknown"}`);
       }
+    } catch (err) {
+      setLastResult(`Error: ${err instanceof Error ? err.message : "Manual run failed"}`);
     } finally {
       setTriggering(false);
     }
@@ -101,9 +113,29 @@ export default function ResearchSchedulerPage() {
         Research Scheduler
       </h1>
       <p style={{ color: "#94A3B8", fontSize: 13, marginBottom: 24 }}>
-        24/7 scan run history · auto-refresh 60s · admin only
+        Current shared scanner status and separate manual packet-check history · refreshes status every 60s
       </p>
 
+      {error && <p role="alert" style={{ color: "#F59E0B" }}>{error} — previously loaded results may be outdated.</p>}
+      <section className="mb-6 space-y-3" aria-label="Current shared scans">
+        <h2 className="text-lg font-bold">Current shared scans</h2>
+        <p className="text-sm text-slate-400">This is the scanner feeding the Opportunity Board and Priority Desk. Status reads do not start scans. Last-run age alone does not establish a missed schedule; equities follow market hours.</p>
+        {sharedScans.map(scan => {
+          const run = scan.running ?? scan.lastRun;
+          return <div key={scan.market} className="rounded border border-slate-700 p-3 text-sm">
+            <strong>{scan.market} · {scan.timeframe}</strong>
+            {!scan.available ? <p>Status unavailable</p> : !run ? <p>No shared scan run recorded</p> : <>
+              <p>{run.status} · trigger: {run.trigger} · started {run.startedAt ? new Date(run.startedAt).toLocaleString() : "Unavailable"}</p>
+              <p>Completed: {run.finishedAt ? new Date(run.finishedAt).toLocaleString() : "Not completed"}</p>
+              <p>{run.symbolsScanned} deep scans · {run.symbolsQuoted} quote refreshes · {run.symbolsFailed} failed · {run.avCalls} AV requests</p>
+              {run.error && <p className="text-amber-300">{run.error}</p>}
+            </>}
+          </div>;
+        })}
+        <Link href="/admin/opportunity-board" className="text-emerald-300 underline">Open shared results and rescan controls</Link>
+      </section>
+      <h2 className="mb-2 text-lg font-bold">Manual packet checks</h2>
+      <p className="mb-4 text-sm text-slate-400">This separate legacy workflow evaluates research packets and alert eligibility. It has no automatic schedule and does not send notifications. Modes label the requested run; they do not configure a recurring job.</p>
       {/* Manual Trigger */}
       <div
         style={{
@@ -180,7 +212,7 @@ export default function ResearchSchedulerPage() {
       {loading ? (
         <p style={{ color: "#64748B" }}>Loading run history…</p>
       ) : runs.length === 0 ? (
-        <p style={{ color: "#64748B" }}>No runs yet. Trigger one above or wait for the 24/7 cron.</p>
+        <p style={{ color: "#64748B" }}>No manual packet checks recorded. Shared scanner status is shown above.</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -193,7 +225,7 @@ export default function ResearchSchedulerPage() {
                 <th style={{ padding: "6px 10px" }}>Started</th>
                 <th style={{ padding: "6px 10px" }}>Runtime</th>
                 <th style={{ padding: "6px 10px" }}>Scanned</th>
-                <th style={{ padding: "6px 10px" }}>Alerts</th>
+                <th style={{ padding: "6px 10px" }}>Alert eligible</th>
                 <th style={{ padding: "6px 10px" }}>Suppressed</th>
                 <th style={{ padding: "6px 10px" }}>Stale</th>
                 <th style={{ padding: "6px 10px" }}>Errors</th>

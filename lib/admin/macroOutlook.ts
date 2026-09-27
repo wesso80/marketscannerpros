@@ -65,7 +65,7 @@ export interface MacroOutlookSnapshot {
 
 interface MacroRow {
   series_key: string;
-  observed_on: Date;
+  observed_on: Date | string;
   value: string | number;
 }
 
@@ -88,9 +88,9 @@ async function loadLatestSeries(seriesKey: string): Promise<{
   );
   return {
     rows: rows.map((r) => ({
-      observed_on: r.observed_on,
+      observed_on: new Date(r.observed_on),
       value: typeof r.value === "number" ? r.value : parseFloat(String(r.value)),
-    })),
+    })).filter(r => Number.isFinite(r.observed_on.getTime()) && Number.isFinite(r.value)),
   };
 }
 
@@ -160,36 +160,29 @@ async function buildSeriesRead(seriesKey: string): Promise<MacroSeriesRead> {
     .slice(0, 10);
   const oneMonthRow = findOnOrBefore(rows, oneMonthTarget);
   const age = ageDays(latestRow.observed_on);
-  const threshold = STALE_THRESHOLD_DAYS[meta.cadence];
-  const status: "ok" | "stale" = age != null && age > threshold ? "stale" : "ok";
+  const threshold = meta.maxObservationAgeDays ?? STALE_THRESHOLD_DAYS[meta.cadence];
+  const status: "ok" | "stale" = age === null || age < 0 || age > threshold ? "stale" : "ok";
 
   const delta = priorRow ? latestRow.value - priorRow.value : null;
   const deltaPct = priorRow && priorRow.value !== 0 ? (delta! / priorRow.value) * 100 : null;
   const deltaOneMonth = oneMonthRow ? latestRow.value - oneMonthRow.value : null;
 
   // Special case: CPI_YOY — convert from index to YoY %
-  let latestValue = latestRow.value;
-  let priorValue = priorRow?.value ?? null;
-  let oneMonthValue = oneMonthRow?.value ?? null;
+  let latestValue: number | null = latestRow.value;
+  let priorValue: number | null = priorRow?.value ?? null;
+  let oneMonthValue: number | null = oneMonthRow?.value ?? null;
   if (seriesKey === "CPI_YOY") {
-    const yoyTarget = new Date(latestRow.observed_on.getTime() - 365 * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    const yoyRow = findOnOrBefore(rows, yoyTarget);
-    if (yoyRow && yoyRow.value !== 0) {
-      latestValue = ((latestRow.value - yoyRow.value) / yoyRow.value) * 100;
-      // Prior month YoY
-      if (priorRow) {
-        const priorYoyTarget = new Date(priorRow.observed_on.getTime() - 365 * 86_400_000)
-          .toISOString()
-          .slice(0, 10);
-        const priorYoyRow = findOnOrBefore(rows, priorYoyTarget);
-        if (priorYoyRow && priorYoyRow.value !== 0) {
-          priorValue = ((priorRow.value - priorYoyRow.value) / priorYoyRow.value) * 100;
-        }
-      }
-      oneMonthValue = priorValue;
-    }
+    // A CPI index level is not an inflation rate. Require the matching prior-year month.
+    const yoy = (row: { observed_on: Date; value: number } | null): number | null => {
+      if (!row) return null;
+      const month = row.observed_on.toISOString().slice(5, 7);
+      const priorMonth = `${row.observed_on.getUTCFullYear() - 1}-${month}`;
+      const base = rows.find(r => r.observed_on.toISOString().startsWith(priorMonth));
+      return base && base.value > 0 ? (row.value / base.value - 1) * 100 : null;
+    };
+    latestValue = yoy(latestRow);
+    priorValue = yoy(priorRow);
+    oneMonthValue = yoy(oneMonthRow);
   }
 
   return {
@@ -201,15 +194,15 @@ async function buildSeriesRead(seriesKey: string): Promise<MacroSeriesRead> {
     latestDate: latestRow.observed_on.toISOString().slice(0, 10),
     prior: priorValue,
     priorDate: priorRow?.observed_on.toISOString().slice(0, 10) ?? null,
-    delta: priorValue != null ? latestValue - priorValue : null,
+    delta: latestValue != null && priorValue != null ? latestValue - priorValue : null,
     deltaPct:
-      priorValue != null && priorValue !== 0
+      latestValue != null && priorValue != null && priorValue !== 0
         ? ((latestValue - priorValue) / Math.abs(priorValue)) * 100
-        : deltaPct,
+        : seriesKey === "CPI_YOY" ? null : deltaPct,
     oneMonthAgo: oneMonthValue,
     oneMonthAgoDate: oneMonthRow?.observed_on.toISOString().slice(0, 10) ?? null,
-    deltaOneMonth: oneMonthValue != null ? latestValue - oneMonthValue : deltaOneMonth,
-    status,
+    deltaOneMonth: latestValue != null && oneMonthValue != null ? latestValue - oneMonthValue : seriesKey === "CPI_YOY" ? null : deltaOneMonth,
+    status: latestValue === null ? "missing" : status,
     ageDays: age,
   };
 }
@@ -276,9 +269,9 @@ async function buildSpyContext(): Promise<SpyContext> {
     const sma50v = sma(closes, 50);
     const sma200v = sma(closes, 200);
     // Returns
-    const ret1m = closes.length >= 21 ? pctDiff(latest, closes[21]) : null;
-    const ret3m = closes.length >= 63 ? pctDiff(latest, closes[63]) : null;
-    const ret6m = closes.length >= 126 ? pctDiff(latest, closes[126]) : null;
+    const ret1m = closes.length > 21 ? pctDiff(latest, closes[21]) : null;
+    const ret3m = closes.length > 63 ? pctDiff(latest, closes[63]) : null;
+    const ret6m = closes.length > 126 ? pctDiff(latest, closes[126]) : null;
 
     // Breadth proxy: fraction of last 200 closes that sit above their own trailing 200-bar SMA.
     // (Real breadth needs constituent data; this is documented proxy only.)
@@ -297,8 +290,9 @@ async function buildSpyContext(): Promise<SpyContext> {
       breadthProxy = counted > 0 ? (above / counted) * 100 : null;
     }
 
+    const spyAge = ageDays(asOf);
     return {
-      status: "ok",
+      status: !Number.isFinite(latest) || spyAge === null || spyAge < 0 || spyAge > 4 ? "stale" : "ok",
       price: latest,
       asOf,
       sma50: sma50v,
@@ -338,6 +332,26 @@ const SERIES_KEYS = [
   "UNRATE",
   "CPI_YOY",
 ] as const;
+
+/** A current market call needs current required inputs, not just a fresh request. */
+export function macroMemoBlockReason(snapshot: MacroOutlookSnapshot): string | null {
+  const unavailable: string[] = SERIES_KEYS.filter(key => snapshot.series[key]?.status !== "ok");
+  if (snapshot.spy.status !== "ok") unavailable.push("SPY");
+  return unavailable.length
+    ? `Current macro outlook withheld: refresh ${unavailable.join(", ")}. Historical observations remain available for inspection.`
+    : null;
+}
+
+/** Stored evidence only: no provider requests, AI calls or persistence. */
+export async function readStoredMacroEvidence() {
+  const results = await Promise.all(SERIES_KEYS.map(async key => {
+    try { return { key, observation: await buildSeriesRead(key), error: null }; }
+    catch { return { key, observation: null, error: "Stored macro observation unavailable" }; }
+  }));
+  return { source: "fred:macro_series", verdict: null, verdictStatus: "REVIEW_REQUIRED",
+    note: "Cadence-aware stored observations; no independent regime verdict is inferred from a symbol's trend.",
+    observations: results, missing: results.filter(r => !r.observation || r.observation.status !== "ok").map(r => r.key) };
+}
 
 export async function buildMacroOutlookSnapshot(): Promise<MacroOutlookSnapshot> {
   const [spy, ...seriesReads] = await Promise.all([

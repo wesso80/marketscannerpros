@@ -17,7 +17,7 @@ const m = vi.hoisted(() => ({
   savedRows: [] as Record<string, unknown>[],
 }));
 
-vi.mock("@/lib/adminAuth", () => ({ requireAdmin: vi.fn(async () => ({ ok: true })) }));
+vi.mock("@/lib/adminAuth", () => ({ requireAdmin: vi.fn(async () => ({ ok: true, workspaceId: "test-workspace" })) }));
 vi.mock("@/lib/auth", () => ({ getSessionFromCookie: vi.fn(async () => null) }));
 vi.mock("@/lib/db", () => ({
   q: vi.fn(async (sql: string) => {

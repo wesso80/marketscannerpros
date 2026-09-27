@@ -1,4 +1,7 @@
+import { accountChecklistStatus, accountDisplaySize } from '@/lib/admin/accountPresentation';
+import { reviewStoredCatalyst } from '@/lib/catalyst/researchIntegrity';
 import { q } from "@/lib/db";
+import { loadAdminRiskSnapshot } from "@/lib/admin/scan-context";
 import { runScan } from "@/lib/operator/orchestrator";
 import type { ScanContext } from "@/lib/operator/orchestrator";
 import { alphaVantageProvider } from "@/lib/operator/market-data";
@@ -10,6 +13,7 @@ import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 import { isRankable, readSavedScan, type SavedScanView } from "@/lib/admin/sharedScan";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { loadSavedScanPrices, recordAdminCalls, type AdminCallInput, type SavedScanPrice } from "@/lib/admin/adminCallLog";
+import { positionLevelView } from "@/lib/admin/positionLevels";
 
 export type DeskState = "TRADE" | "WAIT" | "DEFENSIVE" | "BLOCK";
 
@@ -35,6 +39,7 @@ export type MorningRiskState = {
   equity: number;
   dailyPnl: number;
   dailyDrawdown: number;
+  dailyDrawdownKnown?: boolean;
   correlationRisk: number;
   maxPositions: number;
   activePositions: number;
@@ -404,25 +409,6 @@ const DEFAULT_CONTEXT: ScanContext = {
   metaHealthThrottle: 1.0,
 };
 
-const FALLBACK_RISK: MorningRiskState = {
-  openExposure: 0,
-  openRiskUsd: 0,
-  exposureUsd: 0,
-  equity: 0,
-  dailyPnl: 0,
-  dailyDrawdown: 0,
-  correlationRisk: 0,
-  maxPositions: 0,
-  activePositions: 0,
-  killSwitchActive: false,
-  permission: "WAIT",
-  sizeMultiplier: 0,
-  source: "fallback",
-  workspaceId: null,
-  lastUpdatedAt: null,
-  notes: ["No live portfolio or operator risk state found; permission is WAIT and sizing is disabled."],
-};
-
 const FALLBACK_LEARNING: MorningLearningSnapshot = {
   totalSignals: 0,
   labeled: 0,
@@ -448,6 +434,7 @@ const FALLBACK_LEARNING: MorningLearningSnapshot = {
 };
 
 export async function buildMorningBrief(options: {
+  workspaceId?: string;
   symbols?: string[];
   market?: Market;
   timeframe?: string;
@@ -462,12 +449,12 @@ export async function buildMorningBrief(options: {
   const briefId = `${sydneyDateKey(generatedAt)}:${market}:${timeframe}`;
 
   const [risk, learning, recentBriefs, sessionScore, expectancy, outcomeGrade] = await Promise.all([
-    loadRiskState(),
-    loadLearningSnapshot(),
-    loadRecentBriefs(),
-    loadSessionScoreReport(),
-    loadExpectancyDashboard(),
-    buildPreviousBriefOutcomeGrade(),
+    loadRiskState(options.workspaceId),
+    loadLearningSnapshot(options.workspaceId),
+    loadRecentBriefs(options.workspaceId),
+    loadSessionScoreReport(options.workspaceId),
+    loadExpectancyDashboard(options.workspaceId),
+    buildPreviousBriefOutcomeGrade(options.workspaceId),
   ]);
   let universe: MorningUniverseMeta;
   let hits: ScannerHit[];
@@ -513,7 +500,7 @@ export async function buildMorningBrief(options: {
   const avoidList = rankedHits.filter((hit) => hit.marketPermission === "BLOCK").slice(0, 6);
   const researchSetups = buildResearchSetups(rankedHits, topPlays, watchlist, risk);
   const deskState = resolveDeskState(risk, health, topPlays, watchlist);
-  const comparison = await buildBriefComparison(briefId, market, timeframe, deskState, topPlays, catalysts);
+  const comparison = await buildBriefComparison(briefId, market, timeframe, deskState, topPlays, catalysts, options.workspaceId);
   const executionChecklist = buildExecutionChecklist(deskState, topPlays, watchlist.length ? watchlist : researchSetups, catalysts, risk, learning, comparison);
   const riskGovernor = buildMorningRiskGovernor(risk, sessionScore, expectancy);
   const scenarioTree = buildScenarioTree(topPlays, watchlist, researchSetups, catalysts, riskGovernor, expectancy);
@@ -588,11 +575,12 @@ export function savedScanForBrief(
   const rankableSymbols = new Set(rankable.map((p) => p.symbol.toUpperCase()));
   const bySymbol = view.rows
     .filter((row) => rankableSymbols.has(row.symbol.toUpperCase()) && row.hits.length > 0)
-    .map((row) => ({ symbol: row.symbol, hits: row.hits, best: Math.max(...row.hits.map((h) => h.confidence ?? 0)) }))
+    .map((row) => ({ symbol: row.symbol, hits: row.hits, levels: row.packet?.snapshot?.positionLevels, best: Math.max(...row.hits.map((h) => h.confidence ?? 0)) }))
     .sort((a, b) => b.best - a.best)
     .slice(0, scanLimit);
   const hits = bySymbol
-    .flatMap((row) => row.hits.map((hit) => ({ ...hit, riskSource })))
+    // Position (weekly/daily) levels from the saved packet, matched to each hit's direction.
+    .flatMap((row) => row.hits.map((hit) => ({ ...hit, riskSource, positionLevels: positionLevelView(row.levels, hit.bias) })))
     .sort((a, b) => b.confidence - a.confidence);
   const failed = view.rows.filter((row) => row.status === "failed").length;
   const asOfLabel = rankable.find((p) => p.savedScan.asOfLabel)?.savedScan.asOfLabel ?? null;
@@ -625,14 +613,15 @@ export function savedScanForBrief(
   };
 }
 
-/** Row id for a brief: admin rebuilds get their own ":admin" id so they never replace the cron/email brief. */
-export function morningBriefRowId(brief: Pick<MorningBrief, "briefId">, source: "admin" | "email" | "cron"): string {
-  const base = brief.briefId.replace(/:admin$/, "");
-  return source === "admin" ? `${base}:admin` : base;
+/** Admin copies include their workspace; cron/email idempotency keys remain unchanged. */
+export function morningBriefRowId(brief: Pick<MorningBrief, "briefId"> & { risk?: Pick<MorningRiskState, "workspaceId"> }, source: "admin" | "email" | "cron"): string {
+  const base = brief.briefId.replace(/:admin(?::workspace:[^:]+)?$/, "");
+  const workspaceSuffix = brief.risk?.workspaceId ? `:workspace:${brief.risk.workspaceId}` : "";
+  return source === "admin" ? `${base}:admin${workspaceSuffix}` : base;
 }
 
 /**
- * Save a brief. Admin rebuilds are stored under `<day>:<market>:<tf>:admin`, so the brief the cron built and
+ * Save a brief. Admin rebuilds are stored under `<day>:<market>:<tf>:admin:workspace:<id>`, so the brief the cron built and
  * emailed (and that tomorrow's outcome grade scores) is never overwritten by a page action. The upsert also
  * refuses to let an admin write replace a cron/email row with the same id. Returns the brief as saved.
  */
@@ -733,15 +722,16 @@ export type SavedMorningBrief = {
 };
 
 /** Newest saved brief for a market (any source), with its age. Null when none has been saved. */
-export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now()): Promise<SavedMorningBrief | null> {
+export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now(), workspaceId?: string): Promise<SavedMorningBrief | null> {
   await ensureMorningBriefTables();
   const rows = await q<{ brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }>(
     `SELECT brief_id, generated_at, source, snapshot
        FROM admin_morning_briefs
       WHERE market = $1 AND timeframe = $2
+        ${workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $3" : ""}
       ORDER BY generated_at DESC
       LIMIT 1`,
-    [market, timeframe],
+    workspaceId ? [market, timeframe, workspaceId] : [market, timeframe],
   );
   const row = rows[0];
   if (!row?.snapshot || typeof row.snapshot !== "object") return null;
@@ -780,10 +770,11 @@ export type MorningBriefRebuildResult =
 
 /**
  * Admin rebuild: refused (409) while one for the same market+timeframe is running on this instance, and limited
- * (429) to one per ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC (default 300 s) per market, judged from the newest saved
+ * (429) to one per ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC (default 300 s) per workspace and market, judged from the newest saved
  * admin brief. Built from the shared saved scan and saved under the ":admin" id.
  */
 export async function requestMorningBriefRebuild(input: {
+  workspaceId?: string;
   market: Market;
   timeframe?: string;
   scanLimit?: number;
@@ -791,7 +782,7 @@ export async function requestMorningBriefRebuild(input: {
   build?: typeof buildMorningBrief;
 }): Promise<MorningBriefRebuildResult> {
   const timeframe = input.timeframe || "15m";
-  const key = `${input.market}:${timeframe}`;
+  const key = `${input.workspaceId ?? "cron-default"}:${input.market}:${timeframe}`;
   if (rebuildsInFlight.has(key)) {
     return { ok: false, status: 409, error: "A morning brief rebuild is already running for this market." };
   }
@@ -802,8 +793,9 @@ export async function requestMorningBriefRebuild(input: {
     if (minGapMs > 0) {
       await ensureMorningBriefTables();
       const rows = await q<{ last: string | Date | null }>(
-        `SELECT MAX(generated_at) AS last FROM admin_morning_briefs WHERE source = 'admin' AND market = $1 AND timeframe = $2`,
-        [input.market, timeframe],
+        `SELECT MAX(generated_at) AS last FROM admin_morning_briefs WHERE source = 'admin' AND market = $1 AND timeframe = $2
+          ${input.workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $3" : ""}`,
+        input.workspaceId ? [input.market, timeframe, input.workspaceId] : [input.market, timeframe],
       );
       const lastMs = rows[0]?.last ? new Date(rows[0].last).getTime() : NaN;
       if (Number.isFinite(lastMs) && nowMs - lastMs < minGapMs) {
@@ -812,7 +804,7 @@ export async function requestMorningBriefRebuild(input: {
       }
     }
     const build = input.build ?? buildMorningBrief;
-    const brief = await build({ market: input.market, timeframe, scanLimit: input.scanLimit });
+    const brief = await build({ market: input.market, timeframe, scanLimit: input.scanLimit, ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}) });
     const saved = await saveMorningBriefSnapshot(brief, "admin");
     return {
       ok: true,
@@ -848,7 +840,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
     `Desk state ${brief.deskState}; risk permission ${brief.risk.permission}; size multiplier ${brief.risk.sizeMultiplier.toFixed(2)}x.`,
     `Open risk ${formatUsd(brief.risk.openRiskUsd)} on ${formatUsd(brief.risk.equity)} equity; daily P&L ${formatUsd(brief.risk.dailyPnl)}.`,
   ];
-  if (brief.risk.killSwitchActive) riskNotes.unshift("Research alerts paused. Plan is review-only until risk permission resets.");
+  if (brief.risk.killSwitchActive) riskNotes.unshift("Account stop active. Account sizing remains restricted; research and notifications are assessed separately.");
   if (brief.risk.correlationRisk >= 0.65) riskNotes.push("Correlation is elevated; reduce size or wait for exposure to compress.");
 
   return {
@@ -870,7 +862,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
       ? symbolCatalysts.map((event) => `${event.impactLabel} ${event.impactScore}: ${event.headline}`)
       : ["No fresh scanned catalyst attached to this symbol."],
     checklist: [
-      { label: "Risk", status: brief.risk.killSwitchActive ? "BLOCK" : "PASS", instruction: brief.risk.killSwitchActive ? "Do not act while research alerts are paused." : "Confirm size before entry." },
+      { label: "Risk", status: accountChecklistStatus(brief.risk), instruction: brief.risk.killSwitchActive ? "Account stop active; no new account risk." : "Confirm size before entry." },
       { label: "Trigger", status: play.permission === "GO" ? "PASS" : "WAIT", instruction: play.permission === "GO" ? "Use planned trigger only; no late chase." : "Wait for permission to clear before action." },
       { label: "Catalyst", status: highImpactCatalysts.length ? "WAIT" : "PASS", instruction: highImpactCatalysts.length ? "Review high-impact catalyst before committing size." : "No high-impact catalyst conflict found." },
       { label: "Review", status: "INFO", instruction: "After the session, label worked, failed, missed, invalidated, or rule broken." },
@@ -899,13 +891,13 @@ export async function saveMorningTradePlan(plan: MorningTradePlan) {
   );
 }
 
-export async function buildOpenRescore(brief: MorningBrief): Promise<MorningOpenRescore> {
+export async function buildOpenRescore(brief: MorningBrief, workspaceId?: string): Promise<MorningOpenRescore> {
   const symbols = uniqueSymbols([
     ...brief.topPlays.map((play) => play.symbol),
     ...brief.watchlist.map((play) => play.symbol),
     ...brief.universe.symbols.slice(0, 20),
   ], brief.market).slice(0, 30);
-  const rescored = await buildMorningBrief({ symbols, market: brief.market, timeframe: "5m", scanLimit: Math.max(10, symbols.length) });
+  const rescored = await buildMorningBrief({ workspaceId, symbols, market: brief.market, timeframe: "5m", scanLimit: Math.max(10, symbols.length) });
   const previousTop = new Set(brief.topPlays.map((play) => play.symbol));
   const currentTop = new Set(rescored.topPlays.map((play) => play.symbol));
   const promoted = [...currentTop].filter((symbol) => !previousTop.has(symbol));
@@ -1225,129 +1217,8 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
 </html>`.trim();
 }
 
-async function loadRiskState(): Promise<MorningRiskState> {
-  const operatorRisk = await loadOperatorRiskState();
-  const workspaceId = await resolveOperatorWorkspaceId();
-  if (!workspaceId) return operatorRisk;
-
-  try {
-    const [positionRows, journalRows, performanceRows] = await Promise.all([
-      q<{ active_positions: number; exposure_usd: string | null; unrealized_pl: string | null; largest_symbol_exposure: string | null; last_updated_at: string | null }>(`
-        SELECT
-          COUNT(*)::int AS active_positions,
-          COALESCE(SUM(ABS(quantity::numeric * current_price::numeric)), 0)::text AS exposure_usd,
-          COALESCE(SUM(CASE WHEN side = 'LONG' THEN (current_price::numeric - entry_price::numeric) * quantity::numeric ELSE (entry_price::numeric - current_price::numeric) * quantity::numeric END), 0)::text AS unrealized_pl,
-          COALESCE(MAX(symbol_exposure), 0)::text AS largest_symbol_exposure,
-          MAX(updated_at)::text AS last_updated_at
-        FROM (
-          SELECT *, SUM(ABS(quantity::numeric * current_price::numeric)) OVER (PARTITION BY symbol) AS symbol_exposure
-          FROM portfolio_positions
-          WHERE workspace_id = $1
-        ) positions
-      `, [workspaceId]).catch(() => []),
-      q<{ open_risk_usd: string | null; daily_pl: string | null; closed_trades_today: number; last_updated_at: string | null }>(`
-        SELECT
-          COALESCE(SUM(risk_amount::numeric) FILTER (WHERE is_open = TRUE), 0)::text AS open_risk_usd,
-          COALESCE(SUM(pl::numeric) FILTER (WHERE COALESCE(exit_date, trade_date) = CURRENT_DATE), 0)::text AS daily_pl,
-          COUNT(*) FILTER (WHERE is_open = FALSE AND COALESCE(exit_date, trade_date) = CURRENT_DATE)::int AS closed_trades_today,
-          MAX(updated_at)::text AS last_updated_at
-        FROM journal_entries
-        WHERE workspace_id = $1
-      `, [workspaceId]).catch(() => []),
-      q<{ latest_equity: string | null; peak_equity: string | null; latest_snapshot: string | null }>(`
-        SELECT
-          (SELECT total_value::text FROM portfolio_performance WHERE workspace_id = $1 ORDER BY snapshot_date DESC LIMIT 1) AS latest_equity,
-          (SELECT MAX(total_value)::text FROM portfolio_performance WHERE workspace_id = $1) AS peak_equity,
-          (SELECT MAX(snapshot_date)::text FROM portfolio_performance WHERE workspace_id = $1) AS latest_snapshot
-      `, [workspaceId]).catch(() => []),
-    ]);
-
-    const positions = positionRows[0];
-    const journal = journalRows[0];
-    const performance = performanceRows[0];
-    const exposureUsd = Number(positions?.exposure_usd ?? 0);
-    const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
-    const dailyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
-    const rawEquity = Number(performance?.latest_equity ?? 0) || Number(operatorRisk.equity ?? 0);
-    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
-    const equity = hasLiveEquity ? rawEquity : 0;
-    const peakEquity = hasLiveEquity ? Math.max(equity, Number(performance?.peak_equity ?? equity)) : 0;
-    const dailyDrawdown = hasLiveEquity
-      ? Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0)
-      : operatorRisk.dailyDrawdown;
-    const largestSymbolExposure = Number(positions?.largest_symbol_exposure ?? 0);
-    const correlationRisk = Math.max(operatorRisk.correlationRisk, exposureUsd > 0 ? largestSymbolExposure / exposureUsd : 0);
-    const activePositions = Number(positions?.active_positions ?? 0);
-    const openExposure = hasLiveEquity && openRiskUsd > 0 ? openRiskUsd / equity : hasLiveEquity && exposureUsd > 0 ? Math.min(0.05, exposureUsd / equity * 0.25) : 0;
-    const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04;
-    const permission = !hasLiveEquity ? "WAIT" : killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
-    const sizeMultiplier = !hasLiveEquity ? 0 : permission === "GO"
-      ? Math.max(0.25, Math.min(1, 1 - Math.max(dailyDrawdown / 0.04, correlationRisk / 1.4)))
-      : permission === "WAIT" ? 0.5 : 0;
-
-    return {
-      openExposure,
-      openRiskUsd,
-      exposureUsd,
-      equity,
-      dailyPnl,
-      dailyDrawdown,
-      correlationRisk,
-      maxPositions: operatorRisk.maxPositions,
-      activePositions,
-      killSwitchActive,
-      permission,
-      sizeMultiplier,
-      source: "portfolio_journal",
-      workspaceId,
-      lastUpdatedAt: positions?.last_updated_at ?? journal?.last_updated_at ?? performance?.latest_snapshot ?? null,
-      notes: [
-        `Risk synced from workspace portfolio/journal (${activePositions} open position${activePositions === 1 ? "" : "s"}).`,
-        ...(hasLiveEquity
-          ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
-          : ["No live equity value found; sizing is disabled and permission is capped at WAIT."]),
-      ],
-    };
-  } catch {
-    return operatorRisk;
-  }
-}
-
-async function loadOperatorRiskState(): Promise<MorningRiskState> {
-  try {
-    const rows = await q<{ context_state: Record<string, any>; updated_at: string | null }>(
-      "SELECT context_state, updated_at::text FROM operator_state ORDER BY created_at DESC LIMIT 1",
-    );
-    const ctx = rows[0]?.context_state;
-    if (!ctx) return FALLBACK_RISK;
-    const rawEquity = Number(ctx.equity ?? 0);
-    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
-    const equity = hasLiveEquity ? rawEquity : 0;
-    const openExposure = Number(ctx.openRisk ?? 0);
-    return {
-      openExposure,
-      openRiskUsd: hasLiveEquity ? openExposure * equity : 0,
-      exposureUsd: Number(ctx.exposureUsd ?? 0),
-      equity,
-      dailyPnl: Number(ctx.dailyPnl ?? 0),
-      dailyDrawdown: Number(ctx.dailyDrawdown ?? 0),
-      correlationRisk: Number(ctx.correlationRisk ?? 0),
-      maxPositions: hasLiveEquity ? Number(ctx.maxPositions ?? 10) : 0,
-      activePositions: Number(ctx.activePositions ?? 0),
-      killSwitchActive: Boolean(ctx.killSwitchActive),
-      permission: !hasLiveEquity ? "WAIT" : ctx.killSwitchActive ? "BLOCK" : String(ctx.permission ?? "WAIT"),
-      sizeMultiplier: hasLiveEquity ? Number(ctx.sizeMultiplier ?? 1) : 0,
-      source: "operator_state",
-      workspaceId: null,
-      lastUpdatedAt: rows[0]?.updated_at ?? null,
-      notes: [
-        "Risk read from latest operator state; portfolio/journal sync was unavailable.",
-        ...(hasLiveEquity ? [] : ["Operator state has no live equity value; sizing is disabled and permission is capped at WAIT."]),
-      ],
-    };
-  } catch {
-    return FALLBACK_RISK;
-  }
+async function loadRiskState(workspaceId?: string): Promise<MorningRiskState> {
+  return loadAdminRiskSnapshot(workspaceId);
 }
 
 async function resolveOperatorWorkspaceId(): Promise<string | null> {
@@ -1373,7 +1244,7 @@ async function resolveOperatorWorkspaceId(): Promise<string | null> {
   }
 }
 
-async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
+async function loadLearningSnapshot(workspaceId?: string): Promise<MorningLearningSnapshot> {
   try {
     const rows = await q<Omit<MorningLearningSnapshot, "briefFeedbackTotal" | "briefFeedbackByAction">>(`
       SELECT
@@ -1388,24 +1259,27 @@ async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
       SELECT action, COUNT(*)::int AS count
       FROM admin_morning_brief_feedback
       WHERE created_at > NOW() - INTERVAL '30 days'
+        ${workspaceId ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
       GROUP BY action
-    `).catch(() => []);
+    `, workspaceId ? [workspaceId] : []).catch(() => []);
     const symbolRows = await q<{ symbol: string; action: string; count: number }>(`
       SELECT symbol, action, COUNT(*)::int AS count
       FROM admin_morning_brief_feedback
       WHERE created_at > NOW() - INTERVAL '30 days'
+        ${workspaceId ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
       GROUP BY symbol, action
       ORDER BY count DESC
       LIMIT 40
-    `).catch(() => []);
+    `, workspaceId ? [workspaceId] : []).catch(() => []);
     const playbookRows = await q<{ playbook: string; action: string; count: number }>(`
       SELECT COALESCE(NULLIF(playbook, ''), 'Unknown') AS playbook, action, COUNT(*)::int AS count
       FROM admin_morning_brief_feedback
       WHERE created_at > NOW() - INTERVAL '30 days'
+        ${workspaceId ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
       GROUP BY COALESCE(NULLIF(playbook, ''), 'Unknown'), action
       ORDER BY count DESC
       LIMIT 40
-    `).catch(() => []);
+    `, workspaceId ? [workspaceId] : []).catch(() => []);
     const briefFeedbackByAction = Object.fromEntries(
       feedbackRows.map((row) => [row.action, Number(row.count ?? 0)]),
     );
@@ -1424,17 +1298,18 @@ async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
   }
 }
 
-async function loadSessionScoreReport(): Promise<MorningSessionScoreReport> {
+async function loadSessionScoreReport(workspaceIdOverride?: string): Promise<MorningSessionScoreReport> {
   const reviewDate = sydneyDateKey(new Date().toISOString());
-  const workspaceId = await resolveOperatorWorkspaceId();
+  const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
   try {
     const [feedbackRows, tradeRows] = await Promise.all([
       q<{ action: string; count: number; best_symbol: string | null }>(`
         SELECT action, COUNT(*)::int AS count, MIN(symbol) AS best_symbol
         FROM admin_morning_brief_feedback
         WHERE created_at >= NOW() - INTERVAL '24 hours'
+          ${workspaceIdOverride ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
         GROUP BY action
-      `).catch(() => []),
+      `, workspaceIdOverride ? [workspaceIdOverride] : []).catch(() => []),
       workspaceId ? q<{ closed_trades: number; wins: number; total_pl: string | null; total_r: string | null; best_symbol: string | null; weakest_symbol: string | null }>(`
         WITH closed AS (
           SELECT symbol, COALESCE(pl::numeric, 0) AS pl, COALESCE(r_multiple::numeric, dynamic_r::numeric, normalized_r::numeric, 0) AS r_value, outcome
@@ -1505,14 +1380,15 @@ async function loadSessionScoreReport(): Promise<MorningSessionScoreReport> {
   }
 }
 
-async function loadRecentBriefs(): Promise<MorningBriefHistoryItem[]> {
+async function loadRecentBriefs(workspaceId?: string): Promise<MorningBriefHistoryItem[]> {
   try {
     const rows = await q<any>(`
       SELECT brief_id, generated_at, desk_state, headline, top_play_count, catalyst_count
       FROM admin_morning_briefs
+      ${workspaceId ? "WHERE snapshot #>> '{risk,workspaceId}' = $1" : ""}
       ORDER BY generated_at DESC
       LIMIT 7
-    `);
+    `, workspaceId ? [workspaceId] : []);
     return rows.map((row) => ({
       briefId: row.brief_id,
       generatedAt: row.generated_at,
@@ -1747,14 +1623,14 @@ async function loadWorkerStatus(): Promise<MorningWorkerStatus> {
 
 async function loadCatalystSymbolsForUniverse(market: Market): Promise<string[]> {
   try {
-    const rows = await q<{ ticker: string }>(`
-      SELECT DISTINCT ticker
+    const rows = await q<any>(`
+      SELECT ticker, source, headline, catalyst_type, raw_payload
       FROM catalyst_events
       WHERE event_timestamp_utc >= NOW() - INTERVAL '48 hours'
-      ORDER BY ticker ASC
-      LIMIT 80
+      ORDER BY event_timestamp_utc DESC
+      LIMIT 400
     `);
-    return uniqueSymbols(rows.map((row) => row.ticker), market);
+    return uniqueSymbols(rows.map(reviewStoredCatalyst).filter((row) => row !== null).map((row) => row.ticker), market);
   } catch {
     return [];
   }
@@ -1978,7 +1854,7 @@ function buildTradePlanEntryTrigger(play: ScannerHit, brief: MorningBrief) {
       ? "Wait for a clean reclaim/continuation trigger; no entry after the move is already stretched."
       : "Wait for directional bias to resolve before entry.";
   if (brief.deskState === "DEFENSIVE") return `${base} Use defensive confirmation and reduced size.`;
-  if (brief.deskState === "BLOCK") return "Operator guard active — trade execution paused. Market discovery remains live. Review personal risk context before acting on any setup.";
+  if (brief.deskState === "BLOCK") return "Account risk restricted — no new account sizing. Market discovery remains live. Review personal risk context before acting on any setup.";
   return base;
 }
 
@@ -1990,7 +1866,7 @@ function buildTradePlanInvalidation(play: ScannerHit, catalysts: MorningCatalyst
 function buildTradePlanSizing(brief: MorningBrief, play: ScannerHit, catalysts: MorningCatalyst[]) {
   const catalystCut = catalysts.length ? 0.5 : 1;
   const permissionCut = play.permission === "GO" ? 1 : play.permission === "WAIT" ? 0.5 : 0;
-  const size = Math.max(0, Math.min(1, brief.risk.sizeMultiplier * play.sizeMultiplier * catalystCut * permissionCut));
+  const size = accountDisplaySize(brief.risk, brief.risk.sizeMultiplier * play.sizeMultiplier * catalystCut * permissionCut);
   if (size <= 0) return "No new size. Keep this as a watch-only plan.";
   return `Use up to ${size.toFixed(2)}x planned size. Cut in half if the first trigger is late, liquidity is poor, or correlation rises.`;
 }
@@ -2012,7 +1888,7 @@ function buildDailyReviewLessons(
   return lessons.length ? lessons : ["No major adjustment detected. Keep labelling plays so the model has a sharper personal sample."];
 }
 
-async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
+async function buildPreviousBriefOutcomeGrade(workspaceIdOverride?: string): Promise<MorningOutcomeGrade> {
   const empty = emptyOutcomeGrade("No prior saved brief is ready to grade yet.");
   try {
     await ensureMorningOutcomeTables();
@@ -2020,13 +1896,14 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
       SELECT brief_id, generated_at, snapshot
       FROM admin_morning_briefs
       WHERE generated_at < NOW() - INTERVAL '6 hours'
+        ${workspaceIdOverride ? "AND snapshot #>> '{risk,workspaceId}' = $1" : ""}
       -- Grade the brief that was sent: newest Sydney day first, and within that day the cron/email brief
       -- ahead of any admin rebuild (":admin" rows).
       ORDER BY (generated_at AT TIME ZONE 'Australia/Sydney')::date DESC,
                (source = 'admin') ASC,
                generated_at DESC
       LIMIT 1
-    `);
+    `, workspaceIdOverride ? [workspaceIdOverride] : []);
     const prior = rows[0];
     if (!prior?.snapshot) return empty;
 
@@ -2034,14 +1911,15 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
     const symbols = uniqueSymbols(plays.map((play) => play.symbol), prior.snapshot.market ?? "CRYPTO");
     if (!symbols.length) return emptyOutcomeGrade("Prior brief had no plays to grade.", prior.brief_id, prior.generated_at);
 
-    const workspaceId = await resolveOperatorWorkspaceId();
+    const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
     const [feedbackRows, tradeRows] = await Promise.all([
       q<{ symbol: string; action: string; note: string | null }>(`
         SELECT DISTINCT ON (symbol) symbol, action, note
         FROM admin_morning_brief_feedback
-        WHERE brief_id = $1 OR (symbol = ANY($2::text[]) AND created_at >= $3::timestamptz)
+        WHERE (brief_id = $1 OR (symbol = ANY($2::text[]) AND created_at >= $3::timestamptz))
+          ${workspaceIdOverride ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $4)" : ""}
         ORDER BY symbol, created_at DESC
-      `, [prior.brief_id, symbols, prior.generated_at]).catch(() => []),
+      `, workspaceIdOverride ? [prior.brief_id, symbols, prior.generated_at, workspaceIdOverride] : [prior.brief_id, symbols, prior.generated_at]).catch(() => []),
       workspaceId ? q<{ symbol: string; pl: string | null; r_value: string | null }>(`
         SELECT symbol,
                COALESCE(SUM(pl::numeric), 0)::text AS pl,
@@ -2122,9 +2000,9 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
   }
 }
 
-async function loadExpectancyDashboard(): Promise<MorningExpectancyDashboard> {
+async function loadExpectancyDashboard(workspaceIdOverride?: string): Promise<MorningExpectancyDashboard> {
   const generatedAt = new Date().toISOString();
-  const workspaceId = await resolveOperatorWorkspaceId();
+  const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
   if (!workspaceId) {
     return {
       generatedAt,
@@ -2175,11 +2053,12 @@ function buildMorningRiskGovernor(
   const portfolioHeatLimitUsd = risk.equity * 0.06;
   const hasLiveEquity = Number.isFinite(risk.equity) && risk.equity > 0;
   const baseMaxTrades = sessionScore.ruleBreaks > 0 || sessionScore.disciplineScore < 60 ? 1 : sessionScore.executionScore >= 75 ? 4 : 3;
-  const maxTradesToday = !hasLiveEquity || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 ? 0 : baseMaxTrades;
+  const maxTradesToday = !hasLiveEquity || risk.permission !== "GO" || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 ? 0 : baseMaxTrades;
   const remainingTrades = Math.max(0, maxTradesToday - sessionScore.closedTrades);
   const lockouts: string[] = [];
   if (!hasLiveEquity) lockouts.push("Live equity unavailable");
-  if (risk.killSwitchActive) lockouts.push("Research alerts paused");
+  if (risk.permission !== "GO") lockouts.push(`Canonical account guard: ${risk.permission}`);
+  if (risk.killSwitchActive) lockouts.push("Account stop active");
   if (risk.dailyDrawdown >= 0.04) lockouts.push("Daily drawdown hard stop reached");
   if (hasLiveEquity && Math.abs(Math.min(0, risk.dailyPnl)) >= dailyStopUsd) lockouts.push("Daily loss cap reached");
   if (hasLiveEquity && risk.openRiskUsd >= portfolioHeatLimitUsd) lockouts.push("Portfolio heat cap reached");
@@ -2227,7 +2106,7 @@ function buildScenarioTree(
     return {
       symbol: play.symbol,
       bias: play.bias,
-      baseCase: `${play.permission} ${play.bias} setup using ${play.playbook || play.regime}; confidence ${play.confidence}%.`,
+      baseCase: `${play.marketPermission} ${play.bias} research setup using ${play.playbook || play.regime}; confidence ${play.confidence}%.`,
       bullishPath: play.bias === "SHORT" ? `Only flips constructive if ${play.symbol} rejects downside pressure and reclaims structure.` : `Continuation path: trigger holds, volume expands, and ${play.symbol} accepts above the setup area.`,
       bearishPath: play.bias === "LONG" ? `Failure path: trigger loses acceptance or catalyst/news pressure contradicts the long bias.` : `Continuation path: lower high forms, downside pressure expands, and bounce attempts fail.`,
       chopPath: `No trade if ${play.symbol} sits between trigger and invalidation or liquidity is thin in the first impulse.`,
@@ -2263,15 +2142,15 @@ function buildCommanderView(
 async function loadCatalysts(symbols: string[], hits: ScannerHit[]): Promise<MorningCatalyst[]> {
   try {
     const rows = await q<any>(`
-      SELECT ticker, source, headline, url, catalyst_type, catalyst_subtype, event_timestamp_et, severity, confidence
+      SELECT ticker, source, headline, url, catalyst_type, catalyst_subtype, event_timestamp_et, severity, confidence, raw_payload
       FROM catalyst_events
       WHERE event_timestamp_utc >= NOW() - INTERVAL '36 hours'
         AND ticker = ANY($1::text[])
       ORDER BY event_timestamp_et DESC
-      LIMIT 20
+      LIMIT 200
     `, [symbols]);
     const hitBySymbol = new Map(hits.map((hit) => [hit.symbol, hit]));
-    return rows.map((row) => ({
+    return rows.map(reviewStoredCatalyst).filter((row): row is NonNullable<typeof row> => row !== null).map((row) => ({
       ticker: row.ticker,
       source: row.source,
       headline: row.headline,
@@ -2282,7 +2161,7 @@ async function loadCatalysts(symbols: string[], hits: ScannerHit[]): Promise<Mor
       severity: row.severity,
       confidence: row.confidence == null ? null : Number(row.confidence),
       ...scoreCatalystImpact(row, hitBySymbol.get(String(row.ticker || "").toUpperCase())),
-    })).sort((a, b) => b.impactScore - a.impactScore || new Date(b.eventTimestampEt || 0).getTime() - new Date(a.eventTimestampEt || 0).getTime());
+    })).sort((a, b) => b.impactScore - a.impactScore || new Date(b.eventTimestampEt || 0).getTime() - new Date(a.eventTimestampEt || 0).getTime()).slice(0, 20);
   } catch {
     return [];
   }
@@ -2298,14 +2177,14 @@ function scoreCatalystImpact(row: Record<string, any>, hit?: ScannerHit): Pick<M
   else if (severity === "MED") score += 22;
   else if (severity === "LOW") score += 10;
   score += Math.round(Math.max(0, Math.min(1, confidence)) * 20);
-  if (hit?.permission === "GO") score += 18;
-  if (hit?.permission === "WAIT") score += 10;
-  if (/earnings|guidance|sec|offering|lawsuit|merger|cpi|fomc|fed|rate|hack|exploit|delist/.test(`${subtype} ${headline}`)) score += 18;
-  if (/upgrade|partnership|approval|launch|listing/.test(`${subtype} ${headline}`)) score += 8;
+  if (hit?.marketPermission === "GO") score += 18;
+  if (hit?.marketPermission === "WAIT") score += 10;
+  if (/\b(?:earnings|guidance|sec|offering|lawsuit|merger|cpi|fomc|fed|rates?|hack|exploit|delist)\b/.test(`${subtype.replace(/_/g, " ")} ${headline}`)) score += 18;
+  if (/\b(?:upgrade|partnership|approval|launch|listing)\b/.test(`${subtype.replace(/_/g, " ")} ${headline}`)) score += 8;
   const impactScore = clampScore(score);
   const impactLabel = impactScore >= 80 ? "CRITICAL" : impactScore >= 62 ? "HIGH" : impactScore >= 40 ? "MED" : "LOW";
   const impactReason = hit
-    ? `${impactLabel} catalyst impact because ${hit.symbol} is a ${hit.permission} scanner candidate with ${severity || "unknown"} severity news.`
+    ? `${impactLabel} catalyst impact because ${hit.symbol} is a ${hit.marketPermission} research candidate with ${severity || "unknown"} severity news.`
     : `${impactLabel} catalyst impact based on severity, confidence, and headline risk.`;
   return { impactScore, impactLabel, impactReason };
 }
@@ -2316,7 +2195,8 @@ function resolveDeskState(
   topPlays: ScannerHit[],
   watchlist: ScannerHit[],
 ): DeskState {
-  if (risk.killSwitchActive || risk.dailyDrawdown >= 0.04 || health.errorsCount && health.errorsCount > Math.max(3, (health.symbolsScanned ?? 0) * 0.25)) return "BLOCK";
+  if (risk.permission === "BLOCK" || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 || health.errorsCount && health.errorsCount > Math.max(3, (health.symbolsScanned ?? 0) * 0.25)) return "BLOCK";
+  if (risk.permission !== "GO") return "WAIT";
   if (risk.correlationRisk >= 0.65 || risk.dailyDrawdown >= 0.02) return "DEFENSIVE";
   if (topPlays.length > 0) return "TRADE";
   if (watchlist.length > 0) return "WAIT";
@@ -2324,7 +2204,7 @@ function resolveDeskState(
 }
 
 function buildHeadline(state: DeskState, topPlays: ScannerHit[], catalysts: MorningCatalyst[]): string {
-  if (state === "BLOCK") return "Operator guard active — outbound alerts paused, discovery running";
+  if (state === "BLOCK") return "Account risk restricted; market discovery remains available";
   if (state === "DEFENSIVE") return "Defensive session: only clean triggers deserve attention";
   if (topPlays.length > 0) return `${topPlays.length} live play candidate${topPlays.length === 1 ? "" : "s"} on deck`;
   if (catalysts.length > 0) return "Catalysts are active, but scanner wants patience";
@@ -2341,7 +2221,7 @@ function buildOperatorNote(
   const learningText = learning.accuracyRate == null
     ? "Learning sample is still building."
     : `Recent signal accuracy is ${learning.accuracyRate.toFixed(1)}%.`;
-  if (state === "BLOCK") return `Operator guard active — execution paused. Drawdown ${(risk.dailyDrawdown * 100).toFixed(1)}%, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
+  if (state === "BLOCK") return `Account risk restricted — no new account sizing. Snapshot daily loss ${risk.dailyDrawdownKnown ? `${(risk.dailyDrawdown * 100).toFixed(1)}%` : "unavailable"}, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
   if (state === "DEFENSIVE") return `Trade smaller, require clean trigger confirmation, and avoid correlated exposure. ${learningText}`;
   if (topPlays.length > 0) return `Start with ${topPlays[0].symbol}; confirm trigger, invalidation, and catalyst risk before taking any exposure. ${learningText}`;
   if (watchlist.length > 0) return `${watchlist.length} setups are worth watching, but none are green-lit yet. ${learningText}`;
@@ -2367,7 +2247,7 @@ function buildExecutionChecklist(
   const invalidationRule = primary
     ? `For ${primary.symbol}, abandon the idea if permission drops to BLOCK, the setup loses ${primary.playbook || primary.regime} structure, or a fresh catalyst contradicts the bias.`
     : "No primary setup. Do not manufacture a trade until a GO candidate appears.";
-  const sizingRule = state === "TRADE"
+  const sizingRule = accountChecklistStatus(risk) !== "PASS" ? "No new account size until account assessment passes." : state === "TRADE"
     ? `Start at ${Math.max(0.25, Math.min(1, risk.sizeMultiplier)).toFixed(2)}x planned size; reduce by half if correlation rises above 65% or the first trigger is late.`
     : state === "DEFENSIVE"
       ? "Use half size or less, one position at a time, and only after clean confirmation."
@@ -2383,9 +2263,9 @@ function buildExecutionChecklist(
     checklist: [
       {
         label: "Risk Permission",
-        status: state === "BLOCK" ? "BLOCK" : state === "DEFENSIVE" ? "WAIT" : "PASS",
+        status: accountChecklistStatus(risk),
         instruction: risk.killSwitchActive
-          ? "Operator guard active — outbound alerts paused. Discovery and opportunity ranking continue."
+          ? "Account stop active — no account sizing. Discovery and opportunity ranking continue."
           : `Execution permission: ${risk.permission}; active positions ${risk.activePositions}/${risk.maxPositions}.`,
       },
       {
@@ -2646,7 +2526,7 @@ function buildResearchSetups(
 ) {
   // researchSetups: market-discovered setups shown even when execution is paused.
   // Operator guard (drawdown, kill switch) does NOT suppress research setup discovery.
-  const executionBlocked = risk.killSwitchActive || risk.permission === "BLOCK" || risk.dailyDrawdown >= 0.02;
+  const executionBlocked = risk.killSwitchActive || risk.permission !== "GO" || risk.dailyDrawdown >= 0.02;
   if (!executionBlocked) return [];
   const used = new Set([...topPlays, ...watchlist].map((hit) => hit.symbol));
   return rankedHits
@@ -2654,11 +2534,8 @@ function buildResearchSetups(
     .slice(0, 6)
     .map((hit) => ({
       ...hit,
-      permission: "WAIT" as const,
-      blockReasons: [
-        "Operator guard active — review only. Discovery remains live.",
-        ...(hit.blockReasons ?? []).slice(0, 3),
-      ],
+      permission: hit.marketPermission ?? hit.permission,
+      blockReasons: hit.marketPermission === "BLOCK" ? hit.blockReasons : [],
     }));
 }
 
@@ -2900,6 +2777,7 @@ async function buildBriefComparison(
   deskState: DeskState,
   topPlays: ScannerHit[],
   catalysts: MorningCatalyst[],
+  workspaceId?: string,
 ): Promise<MorningBriefComparison> {
   const empty: MorningBriefComparison = {
     previousBriefId: null,
@@ -2921,9 +2799,10 @@ async function buildBriefComparison(
         AND brief_id != $1 || ':admin'
         AND market = $2
         AND timeframe = $3
+        ${workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $4" : ""}
       ORDER BY generated_at DESC
       LIMIT 1
-    `, [currentBriefId, market, timeframe]);
+    `, workspaceId ? [currentBriefId, market, timeframe, workspaceId] : [currentBriefId, market, timeframe]);
 
     const previous = rows[0];
     if (!previous?.snapshot) return empty;

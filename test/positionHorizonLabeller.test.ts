@@ -27,7 +27,8 @@ import {
 } from '@/lib/outcomes/positionHorizonLabeller';
 import { loadPositionHorizonStats, summarizeHorizon, horizonStatsSql, MIN_HORIZON_SAMPLE } from '@/lib/admin/positionHorizonStats';
 import type { DailyOhlcBar } from '@/lib/outcomes/positionHorizon';
-import { POST, positionBudgetMs } from '@/app/api/cron/label-ai-outcomes/route';
+import { POST } from '@/app/api/cron/label-ai-outcomes/route';
+import { positionBudgetMs } from '@/lib/outcomes/labelBudget';
 
 const DAY = 86_400_000;
 const NOW = Date.parse('2026-09-27T04:00:00Z');

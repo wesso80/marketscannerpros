@@ -10,7 +10,7 @@ describe('COINGECKO_ID_MAP covers the admin crypto universe', () => {
 
   it('ambiguous tickers map to the verified coins', () => {
     expect(COINGECKO_ID_MAP).toMatchObject({
-      APE: 'apecoin', RON: 'ronin', BEAM: 'beam-2', PRIME: 'echelon-prime', PIXEL: 'pixels',
+      XCN: 'chain-2', XCNUSDT: 'chain-2', APE: 'apecoin', RON: 'ronin', BEAM: 'beam-2', PRIME: 'echelon-prime', PIXEL: 'pixels',
       EGLD: 'elrond-erd-2', STX: 'blockstack', MKR: 'maker', TAO: 'bittensor', FLOW: 'flow',
     });
   });

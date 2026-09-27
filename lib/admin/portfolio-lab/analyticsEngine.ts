@@ -31,6 +31,8 @@
  * reads paper data and produces statistics — nothing more.
  */
 
+import { MIN_RETURN_OBSERVATIONS, MIN_RUIN_TRADES, lastValuesByUtcDay, completedDailyReturns, latestContinuousReturns, dailyRiskAdjusted } from "./statisticalEvidence";
+
 import type {
   ArcaPortfolioSnapshot,
   ArcaPosition,
@@ -124,7 +126,10 @@ export interface PerPlaybookKelly extends KellyResult {
 }
 
 export interface RiskOfRuin {
-  estimatePct: number;             // 0..100
+  estimatePct: number | null;
+  sampleSize: number;
+  minimumSample: number;
+  reason: string | null;
   method: "vince_geometric";
   edgePerR: number | null;
   bankrollInR: number;
@@ -158,6 +163,10 @@ export interface StressResult {
 export interface BenchmarkMetrics {
   symbol: string;
   pairs: number;
+  minimumPairs: number;
+  periodStart: string | null;
+  periodEnd: string | null;
+  reason: string | null;
   beta: number | null;
   r2: number | null;
   trackingErrorPctAnn: number | null;
@@ -240,13 +249,15 @@ export function computeAnalytics(input: AnalyticsInput): AnalyticsResult {
   const snaps = [...input.snapshots].reverse();
 
   // ── daily-bucketed equity series for return / drawdown / Sharpe ──
-  const byDay = bucketLastSnapshotPerDay(snaps);
+  const byDay = lastValuesByUtcDay(snaps.map(s => ({ at: s.snapshotAt, value: s.totalEquity })));
   const dayKeys = Array.from(byDay.keys()).sort();
   const dailyEquity = dayKeys.map((k) => byDay.get(k)!);
-  const dailyReturns = pctChanges(dailyEquity, input.startingBalance);
+  const returnSeries = completedDailyReturns(dayKeys, dailyEquity);
+  const dailyReturns = returnSeries.filter((r): r is number => r != null);
+  const continuousReturns = latestContinuousReturns(dayKeys, returnSeries);
 
   // ── headline metrics ──
-  const headline = computeHeadline(input, dailyEquity, dailyReturns, daysActive);
+  const headline = computeHeadline(input, dailyEquity, continuousReturns, daysActive);
 
   // ── daily stats ──
   const daily = computeDailyStats(dailyReturns);
@@ -268,7 +279,10 @@ export function computeAnalytics(input: AnalyticsInput): AnalyticsResult {
   const byPlaybook = perPlaybookKelly(input.trades, input.maxSingleTradeRiskPct);
 
   // ── risk of ruin (estimate) ──
-  const riskOfRuin = computeRiskOfRuin(tq.winRatePct, tq.payoffRatio, input.riskPerTradePct);
+  const ruinTrades = input.trades.filter(t => t.rMultiple != null && Number.isFinite(t.rMultiple)
+    && ((t.outcome === "WIN" && t.rMultiple > 0) || (t.outcome === "LOSS" && t.rMultiple < 0)));
+  const ruinStats = computeTradeQuality(ruinTrades);
+  const riskOfRuin = computeRiskOfRuin(ruinStats.winRatePct, ruinStats.payoffRatio, input.riskPerTradePct, ruinTrades.length);
 
   // ── confidence calibration ──
   const calibration = computeCalibration(input.trades);
@@ -282,22 +296,21 @@ export function computeAnalytics(input: AnalyticsInput): AnalyticsResult {
     dayKeys,
     dailyEquity,
     input.benchmarkSnaps,
-    input.startingBalance,
-    daysActive,
   );
 
   // ── rolling series ──
   const window = 30;
-  const rollingSeries = computeRollingSeries(dayKeys, dailyEquity, dailyReturns, window);
+  const rollingSeries = computeRollingSeries(dayKeys, dailyEquity, returnSeries, window);
 
   // ── streaks (trade + session) ──
-  const streaks = computeStreaks(input.trades, dailyReturns);
+  const streaks = computeStreaks(input.trades, returnSeries);
 
   // ── data-health flags ──
   const warnings: string[] = [];
   if (input.trades.length < 10) warnings.push("Fewer than 10 closed trades — trade-quality stats are noisy.");
-  if (dailyEquity.length < 5) warnings.push("Fewer than 5 distinct snapshot days — risk-adjusted metrics are unstable.");
-  if (input.benchmarkSnaps.length < 5) warnings.push("Fewer than 5 benchmark snapshots — benchmark comparison is approximate.");
+  if (continuousReturns.length < MIN_RETURN_OBSERVATIONS) warnings.push(`Annualised risk metrics withheld: ${continuousReturns.length}/${MIN_RETURN_OBSERVATIONS} consecutive completed UTC-day returns. Intraday snapshots are not independent daily samples.`);
+  if (riskOfRuin.reason) warnings.push(riskOfRuin.reason);
+  if (benchmark?.reason) warnings.push(benchmark.reason);
   if (input.trades.filter((t) => t.arcaConfidence != null).length < 10) warnings.push("Fewer than 10 trades with arca_confidence — calibration unreliable.");
 
   return {
@@ -318,8 +331,8 @@ export function computeAnalytics(input: AnalyticsInput): AnalyticsResult {
     streaks,
     health: {
       sufficientTrades: input.trades.length >= 10,
-      sufficientSnapshots: dailyEquity.length >= 5,
-      benchmarkAligned: benchmark != null && (benchmark.pairs ?? 0) >= 5,
+      sufficientSnapshots: continuousReturns.length >= MIN_RETURN_OBSERVATIONS,
+      benchmarkAligned: benchmark != null && benchmark.pairs >= MIN_RETURN_OBSERVATIONS,
       warnings,
     },
   };
@@ -356,7 +369,7 @@ function computeHeadline(
   const currentDdPct = peak > 0 ? ((peak - currentEquity) / peak) * 100 : 0;
 
   // Sharpe / Sortino / Ann Vol from daily returns.
-  const { sharpe, sortino, annVol } = riskAdjusted(dailyReturns);
+  const { sharpe, sortino, annVol } = dailyRiskAdjusted(dailyReturns);
 
   // Ulcer Index = sqrt( mean( drawdown_t² ) ) on daily series.
   const ddSeries: number[] = [];
@@ -389,21 +402,6 @@ function computeHeadline(
   };
 }
 
-function riskAdjusted(daily: number[]): { sharpe: number | null; sortino: number | null; annVol: number | null } {
-  if (daily.length < 2) return { sharpe: null, sortino: null, annVol: null };
-  const mean = daily.reduce((s, x) => s + x, 0) / daily.length;
-  const variance = daily.reduce((s, x) => s + (x - mean) ** 2, 0) / (daily.length - 1);
-  const sd = Math.sqrt(variance);
-  const negs = daily.filter((x) => x < 0);
-  const downsideVar = negs.length > 0 ? negs.reduce((s, x) => s + x * x, 0) / negs.length : 0;
-  const downsideSd = Math.sqrt(downsideVar);
-  const ANN = Math.sqrt(252);
-  return {
-    sharpe: sd > 0 ? (mean / sd) * ANN : null,
-    sortino: downsideSd > 0 ? (mean / downsideSd) * ANN : null,
-    annVol: sd > 0 ? sd * ANN * 100 : null,
-  };
-}
 
 // ─────────────────────────────────────────────────────────── daily P&L stats
 
@@ -666,17 +664,24 @@ export function computeRiskOfRuin(
   winRatePct: number | null,
   payoffRatio: number | null,
   riskPerTradePct: number,
+  sampleSize: number,
 ): RiskOfRuin {
-  const bankrollInR = riskPerTradePct > 0 ? round2(100 / riskPerTradePct) : 0;
-  if (winRatePct == null || payoffRatio == null || bankrollInR <= 0) {
-    return { estimatePct: 100, method: "vince_geometric", edgePerR: null, bankrollInR };
+  const bankrollInR = Number.isFinite(riskPerTradePct) && riskPerTradePct > 0 && riskPerTradePct <= 100 ? round2(100 / riskPerTradePct) : 0;
+  const evidence = { sampleSize, minimumSample: MIN_RUIN_TRADES, reason: null as string | null };
+  let reason: string | null = null;
+  if (!Number.isInteger(sampleSize) || sampleSize < MIN_RUIN_TRADES) {
+    reason = `Risk-of-ruin estimate unavailable: ${sampleSize}/${MIN_RUIN_TRADES} closed win/loss trades with valid R-multiples.`;
+  } else if (winRatePct == null || payoffRatio == null || !Number.isFinite(winRatePct) || !Number.isFinite(payoffRatio)
+      || winRatePct <= 0 || winRatePct >= 100 || payoffRatio <= 0 || bankrollInR <= 0) {
+    reason = "Risk-of-ruin estimate unavailable: requires observed wins and losses, a finite payoff ratio, and valid risk per trade.";
   }
-  const p = winRatePct / 100;
+  if (reason) return { ...evidence, reason, estimatePct: null, method: "vince_geometric", edgePerR: null, bankrollInR };
+  const p = winRatePct! / 100;
   const q = 1 - p;
-  const b = payoffRatio;
+  const b = payoffRatio!;
   const edgePerR = p * b - q;
   if (edgePerR <= 0) {
-    return { estimatePct: 100, method: "vince_geometric", edgePerR: round3(edgePerR), bankrollInR };
+    return { ...evidence, estimatePct: 100, method: "vince_geometric", edgePerR: round3(edgePerR), bankrollInR };
   }
   // Practical Vince approximation: normalise edge against payoff so the
   // base of the geometric falls in (0,1), then raise to bankroll-in-R.
@@ -684,6 +689,7 @@ export function computeRiskOfRuin(
   const base = (1 - normalised) / (1 + normalised);
   const ror = Math.pow(base, bankrollInR) * 100;
   return {
+    ...evidence,
     estimatePct: round3(Math.max(0, Math.min(100, ror))),
     method: "vince_geometric",
     edgePerR: round3(edgePerR),
@@ -780,109 +786,67 @@ function computeStress(positions: ArcaPosition[], equity: number): StressResult 
 // ─────────────────────────────────────────────────────────── benchmark
 
 function computeBenchmark(
-  symbol: string,
-  arcaDays: string[],
-  arcaEquity: number[],
-  benchSnaps: BenchmarkSnap[],
-  startingBalance: number,
-  daysActive: number,
-): BenchmarkMetrics | null {
-  if (benchSnaps.length === 0 || arcaDays.length < 2) {
-    return { symbol, pairs: 0, beta: null, r2: null, trackingErrorPctAnn: null, informationRatio: null, upCapture: null, downCapture: null, arcaCagrPct: null, benchmarkCagrPct: null, excessCagrPct: null };
-  }
-
-  // Bucket benchmark by day (last value wins).
-  const byDay = new Map<string, number>();
-  for (const s of benchSnaps) {
-    const day = (s.snapshotAt || "").slice(0, 10);
-    if (day) byDay.set(day, s.benchmarkValue);
-  }
-
-  // Build paired daily returns over the intersection of dates.
-  const arcaByDay = new Map<string, number>();
-  for (let i = 0; i < arcaDays.length; i++) arcaByDay.set(arcaDays[i], arcaEquity[i]);
-  const dates = Array.from(new Set([...arcaByDay.keys(), ...byDay.keys()])).filter((d) => arcaByDay.has(d) && byDay.has(d)).sort();
-  if (dates.length < 2) {
-    return { symbol, pairs: 0, beta: null, r2: null, trackingErrorPctAnn: null, informationRatio: null, upCapture: null, downCapture: null, arcaCagrPct: null, benchmarkCagrPct: null, excessCagrPct: null };
-  }
-
-  const rp: number[] = [];
-  const rb: number[] = [];
-  let prevA = startingBalance;
-  let prevB = byDay.get(dates[0])!;
+  symbol: string, arcaDays: string[], arcaEquity: number[], benchSnaps: BenchmarkSnap[],
+): BenchmarkMetrics {
+  const today = new Date().toISOString().slice(0, 10);
+  const byDay = lastValuesByUtcDay(benchSnaps.filter(s => s.benchmarkSymbol === symbol)
+    .map(s => ({ at: s.snapshotAt, value: s.benchmarkValue })));
+  const arcaByDay = new Map(arcaDays.map((day, i) => [day, arcaEquity[i]]));
+  const dates = arcaDays.filter(day => day < today && byDay.has(day)).sort();
+  const result: BenchmarkMetrics = {
+    symbol, pairs: 0, minimumPairs: MIN_RETURN_OBSERVATIONS,
+    periodStart: dates[0] ?? null, periodEnd: dates.at(-1) ?? null, reason: null,
+    beta: null, r2: null, trackingErrorPctAnn: null, informationRatio: null,
+    upCapture: null, downCapture: null, arcaCagrPct: null, benchmarkCagrPct: null, excessCagrPct: null,
+  };
+  const rp: number[] = [], rb: number[] = [];
+  let regularCalendarDays = true;
   for (let i = 1; i < dates.length; i++) {
-    const a = arcaByDay.get(dates[i])!;
-    const b = byDay.get(dates[i])!;
-    if (prevA > 0 && prevB > 0) {
-      rp.push((a - prevA) / prevA);
-      rb.push((b - prevB) / prevB);
-    }
-    prevA = a;
-    prevB = b;
+    const previousA = arcaByDay.get(dates[i - 1])!, previousB = byDay.get(dates[i - 1])!;
+    if (previousA <= 0 || previousB <= 0) { regularCalendarDays = false; continue; }
+    rp.push((arcaByDay.get(dates[i])! - previousA) / previousA);
+    rb.push((byDay.get(dates[i])! - previousB) / previousB);
+    if (Date.parse(dates[i]) - Date.parse(dates[i - 1]) !== 86_400_000) regularCalendarDays = false;
   }
-  if (rp.length < 2) {
-    return { symbol, pairs: rp.length, beta: null, r2: null, trackingErrorPctAnn: null, informationRatio: null, upCapture: null, downCapture: null, arcaCagrPct: null, benchmarkCagrPct: null, excessCagrPct: null };
+  result.pairs = rp.length;
+  if (rp.length < MIN_RETURN_OBSERVATIONS) {
+    result.reason = `Benchmark statistics unavailable: ${rp.length}/${MIN_RETURN_OBSERVATIONS} matched return observations. Both series must use the same dates.`;
+    return result;
   }
-
-  // Beta = cov(rp, rb) / var(rb)
   const mp = avg(rp), mb = avg(rb);
   let cov = 0, varB = 0, varP = 0;
   for (let i = 0; i < rp.length; i++) {
     cov += (rp[i] - mp) * (rb[i] - mb);
-    varB += (rb[i] - mb) ** 2;
-    varP += (rp[i] - mp) ** 2;
+    varB += (rb[i] - mb) ** 2; varP += (rp[i] - mp) ** 2;
   }
-  const n = rp.length - 1;
-  cov /= n; varB /= n; varP /= n;
-  const beta = varB > 0 ? cov / varB : null;
-  const corr = varB > 0 && varP > 0 ? cov / Math.sqrt(varB * varP) : null;
-  const r2 = corr == null ? null : corr * corr;
-
-  // Tracking error + IR
+  const divisor = rp.length - 1;
+  cov /= divisor; varB /= divisor; varP /= divisor;
+  result.beta = varB > 0 ? round3(cov / varB) : null;
+  result.r2 = varB > 0 && varP > 0 ? round3(cov ** 2 / (varB * varP)) : null;
   const active = rp.map((r, i) => r - rb[i]);
-  const mActive = avg(active);
-  const varActive = active.reduce((s, x) => s + (x - mActive) ** 2, 0) / Math.max(1, active.length - 1);
-  const teAnn = Math.sqrt(varActive) * Math.sqrt(252) * 100;
-  const ir = Math.sqrt(varActive) > 0 ? (mActive / Math.sqrt(varActive)) * Math.sqrt(252) : null;
-
-  // Up/Down capture
-  const upIdx = rb.map((r, i) => (r > 0 ? i : -1)).filter((i) => i >= 0);
-  const dnIdx = rb.map((r, i) => (r < 0 ? i : -1)).filter((i) => i >= 0);
-  const sumP_up = upIdx.reduce((s, i) => s + rp[i], 0);
-  const sumB_up = upIdx.reduce((s, i) => s + rb[i], 0);
-  const sumP_dn = dnIdx.reduce((s, i) => s + rp[i], 0);
-  const sumB_dn = dnIdx.reduce((s, i) => s + rb[i], 0);
-  const upCapture = sumB_up !== 0 ? sumP_up / sumB_up : null;
-  const downCapture = sumB_dn !== 0 ? sumP_dn / sumB_dn : null;
-
-  // CAGRs
-  const arcaCagrPct =
-    daysActive >= 30 && startingBalance > 0
-      ? (Math.pow(arcaEquity[arcaEquity.length - 1] / startingBalance, 365 / daysActive) - 1) * 100
-      : null;
-  const benchStart = byDay.get(dates[0])!;
-  const benchEnd = byDay.get(dates[dates.length - 1])!;
-  const benchSpanDays = (new Date(dates[dates.length - 1]).getTime() - new Date(dates[0]).getTime()) / 86_400_000;
-  const benchmarkCagrPct =
-    benchSpanDays >= 30 && benchStart > 0
-      ? (Math.pow(benchEnd / benchStart, 365 / benchSpanDays) - 1) * 100
-      : null;
-  const excessCagrPct =
-    arcaCagrPct != null && benchmarkCagrPct != null ? arcaCagrPct - benchmarkCagrPct : null;
-
-  return {
-    symbol,
-    pairs: rp.length,
-    beta: beta == null ? null : round3(beta),
-    r2: r2 == null ? null : round3(r2),
-    trackingErrorPctAnn: round3(teAnn),
-    informationRatio: ir == null ? null : round3(ir),
-    upCapture: upCapture == null ? null : round3(upCapture),
-    downCapture: downCapture == null ? null : round3(downCapture),
-    arcaCagrPct: arcaCagrPct == null ? null : round2(arcaCagrPct),
-    benchmarkCagrPct: benchmarkCagrPct == null ? null : round2(benchmarkCagrPct),
-    excessCagrPct: excessCagrPct == null ? null : round2(excessCagrPct),
+  const activeMean = avg(active);
+  const activeSd = Math.sqrt(active.reduce((sum, r) => sum + (r - activeMean) ** 2, 0) / divisor);
+  if (regularCalendarDays) {
+    result.trackingErrorPctAnn = round3(activeSd * Math.sqrt(365) * 100);
+    result.informationRatio = activeSd > 0 ? round3(activeMean / activeSd * Math.sqrt(365)) : null;
+  } else {
+    result.reason = "Annualised benchmark ratios withheld: matched observations include calendar gaps. Other statistics describe matched observation intervals.";
+  }
+  const capture = (positive: boolean) => {
+    const indexes = rb.map((r, i) => ((positive ? r > 0 : r < 0) ? i : -1)).filter(i => i >= 0);
+    const denominator = indexes.reduce((sum, i) => sum + rb[i], 0);
+    return denominator !== 0 ? round3(indexes.reduce((sum, i) => sum + rp[i], 0) / denominator) : null;
   };
+  result.upCapture = capture(true); result.downCapture = capture(false);
+  // Both CAGRs use the same observed endpoints and elapsed calendar time.
+  const first = dates[0], last = dates[dates.length - 1];
+  const spanDays = (Date.parse(last) - Date.parse(first)) / 86_400_000;
+  if (spanDays >= 30 && arcaByDay.get(first)! > 0 && byDay.get(first)! > 0) {
+    result.arcaCagrPct = round2((Math.pow(arcaByDay.get(last)! / arcaByDay.get(first)!, 365 / spanDays) - 1) * 100);
+    result.benchmarkCagrPct = round2((Math.pow(byDay.get(last)! / byDay.get(first)!, 365 / spanDays) - 1) * 100);
+    result.excessCagrPct = round2(result.arcaCagrPct - result.benchmarkCagrPct);
+  }
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────── rolling series
@@ -890,7 +854,7 @@ function computeBenchmark(
 function computeRollingSeries(
   dayKeys: string[],
   dailyEquity: number[],
-  dailyReturns: number[],
+  dailyReturns: Array<number | null>,
   window: number,
 ): RollingPoint[] {
   // Compute peak/drawdown using equity and rolling Sharpe using returns.
@@ -900,16 +864,13 @@ function computeRollingSeries(
     const eq = dailyEquity[i];
     if (eq > peak) peak = eq;
     const ddPct = peak > 0 ? ((peak - eq) / peak) * 100 : 0;
-    // Rolling Sharpe — need at least `window` returns up to (but not including) day i
-    // dailyReturns has length dailyEquity.length - 1 (no return on first day)
-    // Day i corresponds to return index i-1.
     let rs: number | null = null;
     if (i >= window) {
-      const slice = dailyReturns.slice(i - window, i); // last `window` returns
-      const m = avg(slice);
-      const v = slice.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(1, slice.length - 1);
-      const sd = Math.sqrt(v);
-      rs = sd > 0 ? round3((m / sd) * Math.sqrt(252)) : null;
+      const slice = dailyReturns.slice(i - window + 1, i + 1);
+      if (slice.every((r): r is number => r != null)) {
+        const value = dailyRiskAdjusted(slice).sharpe;
+        rs = value == null ? null : round3(value);
+      }
     }
     out.push({ date: dayKeys[i], equity: round2(eq), drawdownPct: round3(ddPct), rollingSharpe: rs });
   }
@@ -918,7 +879,7 @@ function computeRollingSeries(
 
 // ─────────────────────────────────────────────────────────── streaks
 
-function computeStreaks(trades: ArcaTrade[], dailyReturns: number[]): StreakStats {
+function computeStreaks(trades: ArcaTrade[], dailyReturns: Array<number | null>): StreakStats {
   // listTrades is DESC; chronologise
   const chrono = [...trades].reverse();
   let lw = 0, ll = 0, cw = 0, cl = 0;
@@ -938,6 +899,7 @@ function computeStreaks(trades: ArcaTrade[], dailyReturns: number[]): StreakStat
   // Session streaks from daily returns
   let lp = 0, lDown = 0, runUp = 0, runDown = 0;
   for (const r of dailyReturns) {
+    if (r == null || r === 0) { runUp = 0; runDown = 0; continue; }
     if (r > 0) { runUp++; runDown = 0; if (runUp > lp) lp = runUp; }
     else if (r < 0) { runDown++; runUp = 0; if (runDown > lDown) lDown = runDown; }
   }
@@ -945,27 +907,6 @@ function computeStreaks(trades: ArcaTrade[], dailyReturns: number[]): StreakStat
 }
 
 // ─────────────────────────────────────────────────────────── helpers
-
-function bucketLastSnapshotPerDay(snaps: ArcaPortfolioSnapshot[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const s of snaps) {
-    const day = (s.snapshotAt || "").slice(0, 10);
-    if (!day) continue;
-    map.set(day, s.totalEquity); // chronological order, last wins
-  }
-  return map;
-}
-
-function pctChanges(series: number[], startingBalance: number): number[] {
-  if (series.length === 0) return [];
-  const out: number[] = [];
-  let prev = startingBalance;
-  for (const v of series) {
-    if (prev > 0) out.push((v - prev) / prev);
-    prev = v;
-  }
-  return out;
-}
 
 function avg(xs: number[]): number {
   if (xs.length === 0) return 0;

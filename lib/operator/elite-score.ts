@@ -51,7 +51,7 @@ function resolveSetupState(pipeline: CandidatePipeline, price: number): EliteSig
   if (candidate.direction === "LONG" && candidate.invalidationPrice > 0 && price <= candidate.invalidationPrice) return "INVALIDATED";
   if (candidate.direction === "SHORT" && candidate.invalidationPrice > 0 && price >= candidate.invalidationPrice) return "INVALIDATED";
   if (priceInsideEntry(pipeline, price)) return "TRIGGERED";
-  return pipeline.governance.finalPermission === "ALLOW" || pipeline.governance.finalPermission === "ALLOW_REDUCED" ? "WATCHING" : "DISCOVERED";
+  return pipeline.verdict.permission === "ALLOW" || pipeline.verdict.permission === "ALLOW_REDUCED" ? "WATCHING" : "DISCOVERED";
 }
 
 function componentWeights(pipeline: CandidatePipeline) {
@@ -90,13 +90,6 @@ export function computeEliteSignalScore(pipeline: CandidatePipeline, bars: Bar[]
   const ev = pipeline.verdict.evidence;
   const price = pipeline.lastPrice ?? bars[bars.length - 1]?.close ?? 0;
   const distance = triggerDistance(pipeline, price);
-  const riskPermissionScore = pipeline.governance.finalPermission === "ALLOW"
-    ? 1
-    : pipeline.governance.finalPermission === "ALLOW_REDUCED"
-      ? 0.72
-      : pipeline.governance.finalPermission === "WAIT"
-        ? 0.35
-        : 0;
   const edgeScore = clamp((ev.regimeFit * 0.3) + (ev.structureQuality * 0.25) + (ev.symbolTrust * 0.25) + (ev.modelHealth * 0.2));
   const timingScore = clamp((ev.timeConfluence * 0.55) + (ev.volatilityAlignment * 0.3) + (distance == null ? 0.1 : clamp(1 - distance / 0.02, 0, 1) * 0.15));
   const liquidityScore = clamp((ev.participationFlow * 0.7) + (ev.crossMarketConfirmation * 0.3));
@@ -115,12 +108,11 @@ export function computeEliteSignalScore(pipeline: CandidatePipeline, bars: Bar[]
     timingScore * weights.timingScore +
     liquidityScore * weights.liquidityScore +
     asymmetryScore * weights.asymmetryScore +
-    cleanlinessScore * weights.cleanlinessScore +
-    riskPermissionScore * weights.riskPermissionScore
-  ) * 100;
+    cleanlinessScore * weights.cleanlinessScore
+  ) / (1 - weights.riskPermissionScore) * 100;
   const score = Math.round(raw * 10) / 10;
   const notes: string[] = [];
-  if (riskPermissionScore < 0.7) notes.push("Risk permission is not fully clear.");
+  notes.push("Research-only score; account suitability is assessed separately.");
   if (asymmetryScore < 0.5) notes.push("Reward-to-risk asymmetry is below elite threshold.");
   if (liquidityScore < 0.5) notes.push("Participation or cross-market confirmation is weak.");
   if (cleanlinessScore < 0.6) notes.push("Setup has event, extension, or contradiction risk.");
@@ -134,16 +126,15 @@ export function computeEliteSignalScore(pipeline: CandidatePipeline, bars: Bar[]
     liquidityScore: roundPct(liquidityScore),
     asymmetryScore: roundPct(asymmetryScore),
     cleanlinessScore: roundPct(cleanlinessScore),
-    riskPermissionScore: roundPct(riskPermissionScore),
+    riskPermissionScore: 0, // Deprecated compatibility field; excluded from research score.
     triggerDistancePct: distance == null ? null : Math.round(distance * 10000) / 100,
     setupState: resolveSetupState(pipeline, price),
     featureImportance: [
-      importanceRow("Edge", edgeScore, weights.edgeScore, "Regime fit, structure quality, symbol trust, and model health."),
-      importanceRow("Timing", timingScore, weights.timingScore, "Time confluence, volatility alignment, and trigger proximity."),
-      importanceRow("Liquidity", liquidityScore, weights.liquidityScore, pipeline.candidate.market === "CRYPTO" ? "Participation flow and cross-market confirmation carry higher crypto weight." : "Participation flow and cross-market confirmation."),
-      importanceRow("Asymmetry", asymmetryScore, weights.asymmetryScore, "Reward-to-risk profile into the first target."),
-      importanceRow("Cleanliness", cleanlinessScore, weights.cleanlinessScore, "Event safety, extension safety, and contradiction penalties."),
-      importanceRow("Risk Permission", riskPermissionScore, weights.riskPermissionScore, "Risk governor permission after account, environment, and policy checks."),
+      importanceRow("Edge", edgeScore, weights.edgeScore / (1 - weights.riskPermissionScore), "Regime fit, structure quality, symbol trust, and model health."),
+      importanceRow("Timing", timingScore, weights.timingScore / (1 - weights.riskPermissionScore), "Time confluence, volatility alignment, and trigger proximity."),
+      importanceRow("Liquidity", liquidityScore, weights.liquidityScore / (1 - weights.riskPermissionScore), pipeline.candidate.market === "CRYPTO" ? "Participation flow and cross-market confirmation carry higher crypto weight." : "Participation flow and cross-market confirmation."),
+      importanceRow("Asymmetry", asymmetryScore, weights.asymmetryScore / (1 - weights.riskPermissionScore), "Reward-to-risk profile into the first target."),
+      importanceRow("Cleanliness", cleanlinessScore, weights.cleanlinessScore / (1 - weights.riskPermissionScore), "Event safety, extension safety, and contradiction penalties."),
     ].sort((a, b) => b.contribution - a.contribution),
     notes,
   };

@@ -66,7 +66,7 @@ declare global {
   var __sseBus: SSEBus | undefined;
 }
 
-export function getSSEBus(): SSEBus {
+function getSSEBus(): SSEBus {
   if (!global.__sseBus) {
     global.__sseBus = new SSEBus();
   }

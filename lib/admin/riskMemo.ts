@@ -5,6 +5,7 @@
  * gives concrete hedging recommendations. The system never executes
  * orders — operator decides.
  */
+import type { PortfolioRiskSnapshot } from "./portfolioRisk";
 
 export interface RiskDashboardRow {
   ticker: string;
@@ -111,8 +112,9 @@ HARD RULES:
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "position opened by the system", "auto-execute" are FORBIDDEN.
 - You MAY (and should) give direct operator-grade hedging recommendations: "buy SPY 5% OTM puts", "raise 10% cash", "trim NVDA from 18% → 12%", "add VXX hedge". These are recommendations to the operator, not system actions.
 - Use ONLY the RISK_PACKET provided. Do NOT invent numbers. If a value is "n/a" in the packet, write "n/a (not in packet)" and lower confidence.
-- Implied vol, options chains, bid-ask spread, and historical earnings-day moves are NOT in the packet (Alpha Vantage limitation). If a hedging recommendation requires options pricing, frame it qualitatively ("approximately 0.5-1.0% of notional") and flag the unknown.
-- Beta-scaled stress estimates assume linear scaling — note this assumption in the recession scenario.
+- Implied vol, options chains, bid-ask spread, and historical earnings-day moves are NOT in the packet. Hedge prices and costs must be "unavailable — current options quotes required". Never invent a numeric cost range.
+- Beta-scaled stress estimates assume linear scaling with losses bounded at -100% for unlevered long holdings. Historical price returns are split-adjusted, not dividend total returns.
+- Echo each holding's allocationPct and numeric metrics exactly. Never swap weights or reconstruct them from sector totals.
 - riskRating per holding must be consistent with that holding's HV90, beta, max drawdown, and liquidity band:
     low: HV90<25 AND beta<0.8 AND maxDD>-25
     moderate: HV90<40 AND beta<1.2 AND maxDD>-40
@@ -190,6 +192,7 @@ const FORBIDDEN = [
 
 export function validateRiskMemo(
   raw: unknown,
+  snapshot?: PortfolioRiskSnapshot,
 ): { ok: true; memo: RiskMemo } | { ok: false; reason: string } {
   if (!raw || typeof raw !== "object") {
     return { ok: false, reason: "non-object response" };
@@ -208,6 +211,22 @@ export function validateRiskMemo(
   for (const re of FORBIDDEN) {
     if (re.test(flat)) {
       return { ok: false, reason: `forbidden execution phrase matched: ${re}` };
+    }
+  }
+  if (snapshot) {
+    if (!Array.isArray(r.dashboard) || r.dashboard.length !== snapshot.holdings.length) return { ok: false, reason: "Risk memo holdings do not match the supplied portfolio" };
+    const seen = new Set<string>();
+    for (const row of r.dashboard as RiskDashboardRow[]) {
+      const h = snapshot.holdings.find(h => h.ticker === row?.ticker);
+      if (!h || seen.has(h.ticker)) return { ok: false, reason: "Unknown or duplicate holding in risk memo" };
+      seen.add(h.ticker);
+      const expected = { allocationPct: h.allocationPct, hv90Pct: h.hv90, beta252: h.beta252, maxDrawdownPct: h.maxDrawdownPct, stress2008Pct: h.stress2008Pct };
+      for (const [key, value] of Object.entries(expected)) {
+        const actual = row[key as keyof RiskDashboardRow];
+        if (value === null ? actual !== null : typeof actual !== "number" || !Number.isFinite(actual) || Math.abs(actual - value) > (key === "allocationPct" ? 1e-9 : 0.011)) {
+          return { ok: false, reason: `Risk memo changed ${h.ticker} ${key}; narrative withheld. The supplied portfolio and computed snapshot remain authoritative.` };
+        }
+      }
     }
   }
   r.classification = "ADMIN_RESEARCH_NOTE_NOT_BROKER_EXECUTION";

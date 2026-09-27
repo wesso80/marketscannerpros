@@ -26,6 +26,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requireAdmin } from "@/lib/adminAuth";
 import { wrapTruth } from "@/lib/admin/truthLayer";
+import { groundOptionsMemo } from "@/lib/admin/optionsMemoGrounding";
 import {
   buildOptionsSnapshot,
   serializeOptionsSnapshot,
@@ -169,7 +170,7 @@ export async function POST(req: NextRequest) {
       r.evidenceQualityScore = deriveOptionsEvidenceScore(snapshot);
     }
     const v = validateOptionsMemo(parsed);
-    aiResult = v.ok ? { ok: true, memo: v } : { ok: false, reason: v.reason };
+    aiResult = v.ok ? { ok: true, memo: { ok: true, memo: groundOptionsMemo(v.memo, snapshot, riskBudgetUSD) } } : { ok: false, reason: v.reason };
   } catch (e) {
     aiResult = { ok: false, reason: e instanceof Error ? e.message : "openai_error" };
   }
@@ -195,7 +196,7 @@ export async function POST(req: NextRequest) {
   // Confidence band based on chain depth + selected-expiration OI.
   let confidence: "high" | "medium" | "low" = "medium";
   const avgOI = snapshot.expirationAvgOI ?? 0;
-  let confidenceReason = `Chain asOf ${snapshot.chainAsOfDate ?? "n/a"}, ${snapshot.chainContractCount} contracts, selected expiration ${snapshot.selectedExpiration ?? "n/a"} (${snapshot.selectedExpirationDte ?? "?"}d, avg OI ${avgOI}), ATM IV ${snapshot.atmIVPct ?? "n/a"}%, ${snapshot.candidates.length} candidates built.`;
+  let confidenceReason = `Chain asOf ${snapshot.chainAsOfDate ?? "n/a"}, ${snapshot.chainContractCount} contracts, selected expiration ${snapshot.selectedExpiration ?? "n/a"} (${snapshot.selectedExpirationDte ?? "?"}d at chain date, avg OI ${avgOI}), ATM IV ${snapshot.atmIVPct ?? "n/a"}%, ${snapshot.candidates.length} candidates built.`;
   if (snapshot.chainContractCount >= 500 && avgOI >= 500 && snapshot.atmIVPct != null) {
     confidence = "high";
   } else if (snapshot.chainContractCount < 100 || avgOI < 50) {

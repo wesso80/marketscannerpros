@@ -15,7 +15,7 @@
  */
 
 import { q } from '@/lib/db';
-import { getBars } from '@/lib/marketData';
+import { isUsTradingDay, lastCompletedUsSessionDate, nextUsTradingDay, nyDateTime } from '@/lib/time/usSession';
 
 export interface LabelResult {
   setupId: number;
@@ -30,11 +30,31 @@ export interface LabelResult {
   barsUsed: number;
 }
 
-interface BarLite { ts: number; high: number; low: number; close: number; }
+export interface BarLite { ts: number; high: number; low: number; close: number; }
 
-function pickForwardBars(bars: BarLite[], sinceTs: number): BarLite[] {
-  // Daily bars: keep bars STRICTLY after the setup day
-  return bars.filter((b) => b.ts > sinceTs);
+/** Only complete, consecutive forward sessions. Missing days do not shift a five-day horizon. */
+export function pickForwardBars(bars: BarLite[], sinceTs: number, market: 'equity' | 'crypto', nowMs = Date.now()): BarLite[] {
+  const nextUtcDay = (day: string) => new Date(Date.parse(day) + 86_400_000).toISOString().slice(0, 10);
+  const sinceDay = market === 'equity' ? nyDateTime(sinceTs).ymd : new Date(sinceTs).toISOString().slice(0, 10);
+  const nextDay = market === 'equity' ? nextUsTradingDay : nextUtcDay;
+  const completedThrough = market === 'equity' ? lastCompletedUsSessionDate(nowMs)
+    : new Date(Date.parse(new Date(nowMs).toISOString().slice(0, 10)) - 86_400_000).toISOString().slice(0, 10);
+  const byDay = new Map<string, BarLite>();
+  for (const bar of [...bars].sort((a, b) => a.ts - b.ts)) {
+    if (![bar.ts, bar.high, bar.low, bar.close].every(Number.isFinite) || bar.low <= 0 || bar.high < bar.low || bar.close < bar.low || bar.close > bar.high) continue;
+    const day = new Date(bar.ts).toISOString().slice(0, 10);
+    if (day > completedThrough || (market === 'equity' && !isUsTradingDay(day))) continue;
+    byDay.set(day, bar);
+  }
+  const result: BarLite[] = [];
+  let day = nextDay(sinceDay);
+  while (day <= completedThrough && result.length < 20) {
+    const bar = byDay.get(day);
+    if (!bar) break;
+    result.push(bar);
+    day = nextDay(day);
+  }
+  return result;
 }
 
 function rMultiple(price: number, entry: number, risk: number, dir: 'long' | 'short'): number {
@@ -43,7 +63,7 @@ function rMultiple(price: number, entry: number, risk: number, dir: 'long' | 'sh
   return diff / risk;
 }
 
-function computeWindow(
+export function computeWindow(
   fwd: BarLite[],
   windowBars: number,
   entry: number,
@@ -54,7 +74,7 @@ function computeWindow(
 ): { mfe: number | null; mae: number | null; hitT: boolean | null; hitS: boolean | null; ttt: number | null; tts: number | null; realised: number | null; status: 'pending' | 'partial' | 'complete' } {
   if (fwd.length === 0) return { mfe: null, mae: null, hitT: null, hitS: null, ttt: null, tts: null, realised: null, status: 'pending' };
   const slice = fwd.slice(0, windowBars);
-  let mfe = -Infinity, mae = Infinity;
+  let mfe = 0, mae = 0;
   let ttt: number | null = null, tts: number | null = null;
   let hitT: boolean | null = target === null ? null : false;
   let hitS: boolean | null = stop === null ? null : false;
@@ -62,8 +82,8 @@ function computeWindow(
     const b = slice[i];
     const hiR = rMultiple(b.high, entry, risk, dir);
     const loR = rMultiple(b.low, entry, risk, dir);
-    const bestR = dir === 'long' ? hiR : -loR;     // for short, low = best
-    const worstR = dir === 'long' ? loR : -hiR;    // for short, high = worst
+    const bestR = dir === 'long' ? hiR : loR;     // for short, low = best
+    const worstR = dir === 'long' ? loR : hiR;    // for short, high = worst
     mfe = Math.max(mfe, bestR);
     mae = Math.min(mae, worstR);
     if (target !== null && hitT === false) {
@@ -82,17 +102,17 @@ function computeWindow(
     mfe: Number.isFinite(mfe) ? mfe : null,
     mae: Number.isFinite(mae) ? mae : null,
     hitT, hitS, ttt, tts,
-    realised,
+    realised: status === 'complete' ? realised : null,
     status,
   };
 }
 
 export async function labelOutcome(setupId: number): Promise<LabelResult | null> {
   const setupRows = await q<{
-    id: number; workspace_id: string; symbol: string; direction: 'long' | 'short';
+    id: number; workspace_id: string; symbol: string; market: string; direction: 'long' | 'short';
     entry_price: string | null; stop_price: string | null; target_price: string | null;
     risk_per_share: string | null; surfaced_at: Date;
-  }>(`SELECT id, workspace_id, symbol, direction, entry_price, stop_price, target_price, risk_per_share, surfaced_at
+  }>(`SELECT id, workspace_id, symbol, market, direction, entry_price, stop_price, target_price, risk_per_share, surfaced_at
        FROM edge_ledger_setups WHERE id = $1`, [setupId]);
   if (setupRows.length === 0) return null;
   const s = setupRows[0];
@@ -100,14 +120,20 @@ export async function labelOutcome(setupId: number): Promise<LabelResult | null>
   const stop = s.stop_price === null ? null : Number(s.stop_price);
   const target = s.target_price === null ? null : Number(s.target_price);
   const risk = s.risk_per_share === null ? null : Number(s.risk_per_share);
-  if (entry === null || risk === null || risk <= 0) {
+  if (entry === null || risk === null || !Number.isFinite(entry) || !Number.isFinite(risk) || entry <= 0 || risk <= 0 || !['equity', 'crypto'].includes(s.market)) {
     // Can't label without entry + risk
     return null;
   }
 
-  const barsEnv = await getBars(s.symbol, 'daily');
-  if (!barsEnv.data || barsEnv.data.length === 0) return null;
-  const fwd: BarLite[] = pickForwardBars(barsEnv.data.map((b) => ({ ts: b.ts, high: b.high, low: b.low, close: b.close })), s.surfaced_at.getTime());
+  // The ingest worker already maintains real equity and crypto daily OHLC.
+  // Read it directly: a crypto ticker must never fall through to an equity-only AV endpoint.
+  const bars = await q<{ ts: Date | string; high: string; low: string; close: string }>(
+    `SELECT ts, high, low, close FROM ohlcv_bars
+      WHERE symbol = $1 AND timeframe = 'daily' AND ts >= $2::timestamptz - INTERVAL '1 day'
+      ORDER BY ts ASC LIMIT 90`, [s.symbol.toUpperCase(), s.surfaced_at],
+  );
+  const fwd = pickForwardBars(bars.map(b => ({ ts: new Date(b.ts).getTime(), high: Number(b.high), low: Number(b.low), close: Number(b.close) })),
+    s.surfaced_at.getTime(), s.market as 'equity' | 'crypto');
 
   const w1 = computeWindow(fwd, 1, entry, risk, target, stop, s.direction);
   const w5 = computeWindow(fwd, 5, entry, risk, target, stop, s.direction);
@@ -165,9 +191,10 @@ export async function labelAllPending(opts: { limit?: number } = {}): Promise<{ 
   const setups = await q<{ id: number; workspace_id: string }>(
     `SELECT s.id, s.workspace_id
        FROM edge_ledger_setups s
-       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id
+       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
       WHERE (o.outcome_status IS NULL OR o.outcome_status IN ('pending','partial'))
         AND s.surfaced_at <= NOW() - INTERVAL '1 day'
+        AND s.market IN ('equity', 'crypto')
       ORDER BY s.surfaced_at ASC
       LIMIT $1`,
     [opts.limit ?? 500],

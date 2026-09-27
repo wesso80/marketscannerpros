@@ -18,7 +18,7 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
     name: 'US Mega-Cap',
     market: 'EQUITIES',
     symbols: [
-      'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'BRK.B',
+      'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'BRK-B',
       'AVGO', 'JPM', 'LLY', 'UNH', 'V', 'MA', 'XOM', 'COST', 'HD', 'PG',
       'JNJ', 'NFLX',
     ],
@@ -66,10 +66,12 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
   'us-small-cap-value': {
     name: 'US Small-Cap Value',
     market: 'EQUITIES',
+    // COOP stopped trading 2025-10-01 (Rocket acquisition); TGNA 2026-03-20 (Nexstar).
+    // SEC: 933136/000095014225002623/eh250686104_8k.htm; 39899/000110465926032772/tm269445d1_8k.htm.
     symbols: [
       'MLI', 'ATKR', 'CRS', 'SKYW', 'BOOT', 'PLUS', 'CALM', 'HRB',
-      'COOP', 'PRDO', 'IBP', 'MHO', 'CVCO', 'GHC', 'NPK', 'OFG',
-      'CNS', 'AROC', 'PARR', 'TGNA', 'WHD', 'SLVM', 'JBI', 'PAGS',
+      'PRDO', 'IBP', 'MHO', 'CVCO', 'GHC', 'NPK', 'OFG',
+      'CNS', 'AROC', 'PARR', 'WHD', 'SLVM', 'JBI', 'PAGS',
       'YOU',
     ],
   },
@@ -85,22 +87,25 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
     ],
   },
 
+  // EXAS last traded 2026-03-20 (Abbott acquisition, completed 2026-03-23).
+  // https://abbott.mediaroom.com/2026-03-23-Abbott-completes-acquisition-of-Exact-Sciences
   'us-biotech': {
     name: 'US Biotech / Catalyst',
     market: 'EQUITIES',
     symbols: [
       'VRTX', 'REGN', 'BIIB', 'MRNA', 'BNTX', 'NVAX', 'BMRN', 'INSM',
-      'NTLA', 'BEAM', 'CRSP', 'EDIT', 'SRPT', 'IONS', 'ALNY', 'EXAS',
+      'NTLA', 'BEAM', 'CRSP', 'EDIT', 'SRPT', 'IONS', 'ALNY',
       'CRNX', 'KRYS', 'RXRX', 'VKTX', 'MDGL', 'IMVT', 'ARWR', 'IOVA',
       'TGTX',
     ],
   },
 
+  // Block changed SQ to XYZ on NYSE effective 2025-01-21 (Block investor notice, 2025-01-09).
   'us-fintech-disruptors': {
     name: 'US Fintech / Payments Disruptors',
     market: 'EQUITIES',
     symbols: [
-      'SQ', 'PYPL', 'AFRM', 'SOFI', 'HOOD', 'COIN', 'MSTR', 'UPST',
+      'XYZ', 'PYPL', 'AFRM', 'SOFI', 'HOOD', 'COIN', 'MSTR', 'UPST',
       'LMND', 'NU', 'PAGS', 'BILL', 'TOST', 'MARA', 'RIOT', 'CLSK',
       'HUT', 'WULF', 'CIFR', 'IREN', 'BTBT',
     ],
@@ -128,13 +133,15 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
     ],
   },
 
+  // Kellanova (K): Mars acquisition completed 2025-12-11. WBA ceased trading 2025-08-28.
+  // Mars completion notice; SEC 1618921/000119312525190603/d87240dex991.htm.
   'us-defensive-cashflow': {
     name: 'US Defensive Cashflow',
     market: 'EQUITIES',
     symbols: [
       'PG', 'KO', 'PEP', 'WMT', 'COST', 'MCD', 'CL', 'KMB',
-      'GIS', 'K', 'MDLZ', 'HSY', 'CHD', 'CLX', 'TGT', 'DG',
-      'DLTR', 'WBA', 'CVS', 'O', 'STAG', 'VICI', 'NEE', 'D',
+      'GIS', 'MDLZ', 'HSY', 'CHD', 'CLX', 'TGT', 'DG',
+      'DLTR', 'CVS', 'O', 'STAG', 'VICI', 'NEE', 'D',
       'SO', 'DUK', 'AEP',
     ],
   },
