@@ -1,4 +1,5 @@
 import { Pool, PoolClient, QueryResult } from "pg";
+import { createHash } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 const queryTransaction = new AsyncLocalStorage<{ client: PoolClient; deadline: number; failed?: unknown }>();
@@ -56,7 +57,20 @@ export const pool = {
   }
 };
 
+function logQueryFailure(text: string, started: number, error: unknown, atomic: boolean): void {
+  // Never log SQL text or parameter values: queries can contain private data.
+  // The fingerprint lets engineering identify the exact statement from source.
+  console.error('[db] query failed', {
+    fingerprint: createHash('sha256').update(text.replace(/\s+/g, ' ').trim()).digest('hex').slice(0, 12),
+    operation: text.trim().match(/^[A-Za-z]+/)?.[0].toUpperCase() ?? 'UNKNOWN',
+    durationMs: Date.now() - started,
+    code: typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : 'UNKNOWN',
+    atomic,
+  });
+}
+
 export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  const started = Date.now();
   const scope = queryTransaction.getStore();
   if (scope) {
     if (scope.failed) throw scope.failed;
@@ -65,13 +79,16 @@ export async function q<T = any>(text: string, params: any[] = []): Promise<T[]>
       throw scope.failed;
     }
     try { return (await scope.client.query(text, params)).rows as T[]; }
-    catch (error) { scope.failed = error; throw error; }
+    catch (error) { logQueryFailure(text, started, error, true); scope.failed = error; throw error; }
   }
   const client = await getPool().connect();
   try {
     // statement_timeout now set at pool level — no per-query SET needed
     const res = await client.query(text, params);
     return res.rows as T[];
+  } catch (error) {
+    logQueryFailure(text, started, error, false);
+    throw error;
   } finally {
     client.release();
   }
