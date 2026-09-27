@@ -67,7 +67,7 @@ export default function PortfolioLabTradesPage() {
           </div>
         )}
 
-        {trades.length === 0 ? (
+        {error ? null : trades.length === 0 ? (
           <div style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 8, padding: 24, color: "#64748B", textAlign: "center", fontSize: 13 }}>{loading ? "Loading…" : "No closed trades."}</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, background: "#111827", border: "1px solid #1F2937", borderRadius: 8 }}>

@@ -51,7 +51,7 @@ export default function PortfolioLabPositionsPage() {
       <div style={{ maxWidth: 1440, margin: "0 auto" }}>
         <Header title="ARCA Open Positions (SIMULATED)" subtitle="Mark-to-market view. No broker." onReload={load} loading={loading} />
         {error && <ErrorBox text={error} />}
-        {positions.length === 0 ? (
+        {error ? null : positions.length === 0 ? (
           <Empty text={loading ? "Loading…" : "No open positions."} />
         ) : (
           <table style={tbl}>

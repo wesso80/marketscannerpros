@@ -246,7 +246,7 @@ export default function PortfolioLabPage() {
           </div>
         </div>
 
-        {portfolio && <SubNav />}
+
 
         {error && <ErrorBox text={error} />}
         {cycleResult && (
