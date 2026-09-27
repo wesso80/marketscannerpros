@@ -1,5 +1,6 @@
 "use client";
 
+import { accountDisplaySize } from "@/lib/admin/accountPresentation";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminCard from "@/components/admin/shared/AdminCard";
@@ -20,6 +21,7 @@ type ScannerHit = {
   bias: "LONG" | "SHORT" | "NEUTRAL";
   regime: string;
   permission: "GO" | "WAIT" | "BLOCK";
+  marketPermission?: "GO" | "WAIT" | "BLOCK";
   confidence: number;
   symbolTrust: number;
   sizeMultiplier: number;
@@ -591,7 +593,7 @@ export default function MorningBriefPage() {
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {brief ? <StatusPill label={`Account desk: ${brief.deskState}`} tone={stateTone(brief.deskState)} /> : null}
-            <StatusPill label="Daily Email Armed" tone="purple" />
+            <StatusPill label="Saved briefing" tone="purple" />
           </div>
           <h1 className="text-3xl font-black tracking-tight">Morning Trading Brief</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
@@ -924,6 +926,7 @@ export default function MorningBriefPage() {
                   <PlayCard
                     key={play.symbol}
                     play={play}
+                    accountSize={accountDisplaySize(brief.risk, play.sizeMultiplier)}
                     plan={tradePlans[play.symbol]}
                     feedback={feedbackStatus[play.symbol]}
                     savingFeedback={savingFeedback}
@@ -1009,7 +1012,7 @@ export default function MorningBriefPage() {
 
           <section className="mb-5 grid gap-4 xl:grid-cols-2">
             <AdminCard>
-              <SectionTitle title="News And Catalyst Risk" subtitle="Fresh catalyst events found for the scanned symbols." />
+              <SectionTitle title="News And Catalyst Risk" subtitle="News must pass ticker-relevance and current classification checks. Unsupported stored news is withheld." />
               <div className="space-y-3">
                 {brief.catalysts.length > 0 ? brief.catalysts.map((event, index) => (
                   <div key={`${event.ticker}-${index}`} className="rounded-md border border-white/10 bg-slate-950/40 p-3">
@@ -1105,7 +1108,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
   ].filter(Boolean) as string[];
   const riskWarnings = [
     !hasLiveRisk ? `Risk source is ${formatSource(brief.risk.source)}.` : null,
-    brief.risk.killSwitchActive ? "Research alerts paused." : null,
+    brief.risk.killSwitchActive ? "Account stop active; account sizing restricted." : null,
     ...brief.risk.notes.slice(0, 2),
   ].filter(Boolean) as string[];
   const learningWarnings = [
@@ -1120,10 +1123,10 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
         source: "admin-risk",
         provider: formatSource(brief.risk.source),
         stale: !brief.risk.lastUpdatedAt,
-        degraded: !hasLiveRisk || brief.risk.killSwitchActive,
+        degraded: !hasLiveRisk || !brief.risk.dailyDrawdownKnown || brief.risk.killSwitchActive,
         warnings: riskWarnings,
       }),
-      coverageScore: hasLiveRisk ? 100 : brief.risk.source === "operator_state" ? 60 : 20,
+      coverageScore: null,
       computedAt: brief.risk.lastUpdatedAt ?? null,
     },
     {
@@ -1133,7 +1136,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
         provider: brief.universe.workerStatus.lastWorkerName || "morning worker",
         stale: workerFreshness === "stale",
         degraded: workerFreshness !== "fresh" || brief.universe.workerStatus.lastWorkerErrors > 0,
-        warnings: [brief.universe.workerStatus.note, brief.universe.workerStatus.lastWorkerErrors > 0 ? `${brief.universe.workerStatus.lastWorkerErrors} worker errors.` : null].filter(Boolean) as string[],
+        warnings: [workerFreshness !== "fresh" ? brief.universe.workerStatus.note : null, brief.universe.workerStatus.lastWorkerErrors > 0 ? `${brief.universe.workerStatus.lastWorkerErrors} worker errors.` : null].filter(Boolean) as string[],
       }),
       coverageScore: workerFreshness === "fresh" ? 100 : workerFreshness === "stale" ? 60 : 20,
       computedAt: brief.universe.workerStatus.lastWorkerRunAt ?? brief.universe.workerStatus.latestScannerCacheAt,
@@ -1188,7 +1191,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
     },
   ];
   const riskFlags = [
-    brief.risk.killSwitchActive ? "Research alerts paused." : null,
+    brief.risk.killSwitchActive ? "Account stop active; account sizing restricted." : null,
     !hasLiveRisk ? `Risk source is ${formatSource(brief.risk.source)}.` : null,
     workerFreshness !== "fresh" ? `Worker freshness is ${workerFreshness}.` : null,
     (brief.health.errorsCount ?? 0) > 0 ? `${brief.health.errorsCount ?? 0} scanner errors.` : null,
@@ -1217,6 +1220,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
 
 function PlayCard({
   play,
+  accountSize,
   plan,
   feedback,
   savingFeedback,
@@ -1224,6 +1228,7 @@ function PlayCard({
   onPlan,
 }: {
   play: ScannerHit;
+  accountSize: number;
   plan?: MorningTradePlan;
   feedback?: string;
   savingFeedback: string | null;
@@ -1238,7 +1243,7 @@ function PlayCard({
           <div className="mt-1 text-sm text-slate-400">{play.playbook || "No playbook"}</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <StatusPill label={play.permission} tone={permissionTone(play.permission)} />
+          <StatusPill label={`Research ${play.marketPermission ?? "Unavailable"}`} tone={permissionTone(play.marketPermission ?? "WAIT")} />
           <StatusPill label={`${play.confidence}%`} tone="green" />
         </div>
       </div>
@@ -1246,10 +1251,10 @@ function PlayCard({
         <Metric label="Bias" value={play.bias} />
         <Metric label="Regime" value={String(play.regime)} />
         <Metric label="Trust" value={`${play.symbolTrust}%`} />
-        <Metric label="Size" value={`${play.sizeMultiplier.toFixed(2)}x`} />
+        <Metric label="Account Size" value={`${accountSize.toFixed(2)}x`} />
       </div>
       <PositionLevelsLine className="mt-3" view={play.positionLevels} bias={play.bias} />
-      {play.blockReasons?.length ? <div className="mt-3 text-xs text-amber-300">Watch: {play.blockReasons.slice(0, 2).join(", ")}</div> : null}
+      {play.blockReasons?.length ? <div className="mt-3 text-xs text-amber-300">Saved scan restrictions: {play.blockReasons.slice(0, 2).join(", ")}</div> : null}
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
         <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`} className="rounded-md border border-sky-400/30 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/10">
           Open Terminal

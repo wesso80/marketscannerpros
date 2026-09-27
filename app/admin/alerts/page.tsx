@@ -23,6 +23,7 @@ interface ScannerHit {
 interface RiskState {
   openExposure: number;
   dailyDrawdown: number;
+  dailyDrawdownKnown?: boolean;
   correlationRisk: number;
   maxPositions: number;
   activePositions: number;
@@ -102,6 +103,7 @@ export default function AlertsPage() {
   const goHits = sortedHits.filter((hit) => hit.marketPermission === "GO");
   const watchHits = sortedHits.filter((hit) => hit.marketPermission === "WAIT");
   const riskAlerts = [
+    !risk ? "Account assessment unavailable — risk feed has not loaded" : !risk.dailyDrawdownKnown ? "Daily account baseline unavailable — account sizing remains disabled" : null,
     risk?.killSwitchActive ? "Account stop active — account sizing restricted; research notifications are controlled separately" : null,
     risk && risk.dailyDrawdown > 0.015 ? `Daily drawdown elevated: ${(risk.dailyDrawdown * 100).toFixed(2)}%` : null,
     risk && risk.correlationRisk > 0.6 ? `Correlation risk high: ${(risk.correlationRisk * 100).toFixed(0)}%` : null,

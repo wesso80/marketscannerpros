@@ -153,9 +153,13 @@ const NEWS_RULES: { pattern: RegExp; subtype: CatalystSubtype; severity: Severit
  * Returns null if no rules match.
  */
 export function classifyNews(item: NewsItem): ClassificationResult | null {
-  const text = `${item.headline} ${item.body || ''}`;
+  // Summaries often contain unrelated companies and historical deals. Require headline evidence.
+  const text = item.headline;
+  const portfolioHolding = /\b(?:new holdings?|new position|shares? of|[\d,.]+ shares?|stake in|holdings? in|position in)\b/i.test(text);
+  const explicitDeal = /\b(?:definitive.?agreement|merger.?agreement|buyout|takeover)\b/i.test(text);
 
   for (const rule of NEWS_RULES) {
+    if (rule.subtype === CatalystSubtype.MNA_DEFINITIVE && portfolioHolding && !explicitDeal) continue;
     const match = text.match(rule.pattern);
     if (match) {
       return {

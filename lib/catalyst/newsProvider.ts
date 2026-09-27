@@ -101,7 +101,7 @@ export async function ingestNews(tickers: string[] = [], lookbackHours = 24): Pr
           confidence: classification.confidence,
           severity: classification.severity,
           classificationReason: classification.reason,
-          rawPayload: JSON.stringify({ source: item.source, body: item.body?.slice(0, 2000) }),
+          rawPayload: JSON.stringify({ source: item.source, body: item.body?.slice(0, 2000), relevanceVerified: item.relevanceVerified === true }),
         });
       }
     } catch (err: any) {
