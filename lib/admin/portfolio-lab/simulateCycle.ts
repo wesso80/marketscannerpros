@@ -41,7 +41,9 @@ import { runDebateAndRecord, linkDebateToOrder } from "@/lib/admin/arca-brain/ad
 import {
   recordNoTradeDecisionFromCandidate,
   type RejectionStage,
+  type NoTradeCandidateInput,
 } from "@/lib/admin/arca-brain/recordNoTradeDecisionFromCandidate";
+import { batchNoTradeDecisions } from "@/lib/admin/arca-brain/batchNoTradeDecisions";
 import { recentMistakeFrequency } from "@/lib/admin/arca-brain/mistakeLabeler";
 import { gradeCandidate, recordAllocationDecision } from "@/lib/admin/arca-brain/capitalAllocation";
 import { computeInformationEdge, scoreInformationEdge } from "@/lib/admin/arca-brain/informationEdge";
@@ -684,6 +686,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
   // silent drops. The summary journal below is in addition to (not
   // instead of) the per-symbol rows.
   const gateReasonHistogram: Record<string, number> = {};
+  const gateAuditInputs: NoTradeCandidateInput[] = [];
   for (const r of decision.rejected) {
     for (const reason of r.reasons) {
       // Bucket reasons by their leading token (e.g. "thesis_status_DEVELOPING" → "thesis_status")
@@ -691,7 +694,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       gateReasonHistogram[bucket] = (gateReasonHistogram[bucket] ?? 0) + 1;
     }
     const dominant = mapGateReasonToStage(r.reasons);
-    const res = await recordNoTradeDecisionFromCandidate({
+    gateAuditInputs.push({
       workspaceId: opts.workspaceId,
       portfolioId: portfolio.id,
       symbol: r.symbol,
@@ -707,8 +710,8 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       metadata: { gateReasons: r.reasons },
       dedupeKeys: rejectionLog,
     });
-    if (res.written) noTradeRowsWritten++;
   }
+  noTradeRowsWritten += await batchNoTradeDecisions(gateAuditInputs);
   if (decision.rejected.length > 0) {
     const topHist = Object.entries(gateReasonHistogram)
       .sort((a, b) => b[1] - a[1])

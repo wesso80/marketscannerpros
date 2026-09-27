@@ -220,15 +220,10 @@ describe("recordNoTradeDecisionFromCandidate — journal + dedupe + fields", () 
     expect(j.dataFreshness).toBe("stale");
   });
 
-  it("returns written=true even if recordNoTradeRejection throws (soft-fail)", async () => {
+  it("propagates a failed audit write instead of claiming success", async () => {
     recordNoTradeRejectionMock.mockRejectedValueOnce(new Error("db down"));
-    const r = await recordNoTradeDecisionFromCandidate({
-      ...baseInput,
-      rejectionStage: "STALE_DATA",
-    });
-    // The funnel must NOT bubble the error — the cycle keeps moving.
-    expect(r.written).toBe(true);
-    expect(writeJournalMock).toHaveBeenCalledTimes(1);
+    await expect(recordNoTradeDecisionFromCandidate({ ...baseInput, rejectionStage: "STALE_DATA" })).rejects.toThrow("db down");
+    expect(writeJournalMock).not.toHaveBeenCalled();
   });
 
   it("forwards edgePacketId into journal sourcePacketIds", async () => {
