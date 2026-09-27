@@ -44,7 +44,7 @@ describe("evaluateRegimePlaybook", () => {
   it("returns UNKNOWN_PLAYBOOK when playbookId is null", () => {
     const d = evaluateRegimePlaybook(row({}), null);
     expect(d.status).toBe("UNKNOWN_PLAYBOOK");
-    expect(d.sizeMultiplier).toBe(0.25); // strict experimental
+    expect(d.sizeMultiplier).toBe(0); // strict unknown playbook blocks
     expect(d.disqualifiers).toContain("playbook_id_missing");
   });
 
@@ -70,7 +70,7 @@ describe("evaluateRegimePlaybook", () => {
 
   it("returns WAIT_FOR_CONFIRMATION when requiredConfirmations are present", () => {
     const d = evaluateRegimePlaybook(
-      row({ requiredConfirmations: ["volume_expansion", "rs_leadership"] }),
+      row({ enabledPlaybooks: ["breakout"], requiredConfirmations: ["volume_expansion", "rs_leadership"] }),
       "breakout",
     );
     expect(d.status).toBe("WAIT_FOR_CONFIRMATION");
@@ -89,10 +89,10 @@ describe("evaluateRegimePlaybook", () => {
     expect(d.disqualifiers).toContain("avoided_asset_class:crypto");
   });
 
-  it("returns ENABLED when the matrix is empty / permissive", () => {
+  it("returns DISABLED when the matrix has no explicit permissions", () => {
     const d = evaluateRegimePlaybook(row({}), "breakout", { assetClass: "equity" });
-    expect(d.status).toBe("ENABLED");
-    expect(d.sizeMultiplier).toBe(1);
+    expect(d.status).toBe("DISABLED");
+    expect(d.sizeMultiplier).toBe(0);
     expect(d.sourceRuleId).toBe("rule-1");
   });
 
@@ -108,4 +108,16 @@ describe("evaluateRegimePlaybook", () => {
     const d = evaluateRegimePlaybook(row({ id: "rule-RISK_ON_TREND-v3" }), "breakout");
     expect(d.sourceRuleId).toBe("rule-RISK_ON_TREND-v3");
   });
+});
+
+it('required confirmations block reduced-size playbooks too', () => {
+  const d = evaluateRegimePlaybook(row({ reducedSizePlaybooks: ['breakout'], requiredConfirmations: ['volume'] }), 'breakout');
+  expect(d.status).toBe('WAIT_FOR_CONFIRMATION');
+  expect(d.sizeMultiplier).toBe(0);
+});
+it('a reduced-only permission is valid even with a separate enabled list', () => {
+  expect(evaluateRegimePlaybook(row({ enabledPlaybooks: ['trend'], reducedSizePlaybooks: ['breakout'] }), 'breakout').status).toBe('REDUCE_SIZE');
+});
+it('an explicitly enabled playbook passes once no confirmations remain', () => {
+  expect(evaluateRegimePlaybook(row({ enabledPlaybooks: ['breakout'] }), 'breakout').status).toBe('ENABLED');
 });

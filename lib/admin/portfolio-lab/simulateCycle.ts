@@ -46,9 +46,8 @@ import { recentMistakeFrequency } from "@/lib/admin/arca-brain/mistakeLabeler";
 import { gradeCandidate, recordAllocationDecision } from "@/lib/admin/arca-brain/capitalAllocation";
 import { computeInformationEdge, scoreInformationEdge } from "@/lib/admin/arca-brain/informationEdge";
 import { deriveInformationEdge } from "@/lib/admin/arca-brain/deriveInformationEdge";
-import { getRegimeMatrix } from "@/lib/admin/arca-brain/regimePlaybookMatrix";
-import { evaluateRegimePlaybook } from "@/lib/admin/arca-brain/regimePlaybookDecision";
-import type { DataFreshnessStatus, InformationEdgeBand, RegimePlaybookMatrixRow } from "@/lib/admin/arca-brain/types";
+import { loadPaperRegimeContext, assessPaperRegime } from "./paperRegime";
+import type { DataFreshnessStatus, InformationEdgeBand } from "@/lib/admin/arca-brain/types";
 import { q, atomicQueries } from "@/lib/db";
 import { refreshPaperBalances } from "./refreshPaperBalances";
 import { paperEquity } from "./paperEquity";
@@ -90,12 +89,7 @@ export interface SimulateCycleOptions {
   workspaceId: string;
   maxNewIdeas?: number;
   sinceMinutes?: number;
-  /** Current market regime label (e.g. RISK_ON_TREND). When omitted,
-   *  every candidate is evaluated against an UNKNOWN_REGIME decision. */
-  currentRegime?: string | null;
-  /** When true (default) UNKNOWN_REGIME blocks the trade. When false
-   *  it runs at reduced size. */
-  strictUnknownRegime?: boolean;
+
 }
 
 export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<SimulateCycleResult> {
@@ -240,21 +234,17 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
     rows: recent,
   });
 
-  // Load the Regime-Playbook Matrix row once per cycle. If no regime
-  // was supplied, every candidate will resolve to UNKNOWN_REGIME and
-  // the strict policy will gate it.
-  const currentRegime = opts.currentRegime ?? null;
-  const strictUnknownRegime = opts.strictUnknownRegime !== false;
-  let regimeMatrixRow: RegimePlaybookMatrixRow | null = null;
-  if (currentRegime) {
-    regimeMatrixRow = await getRegimeMatrix(opts.workspaceId, currentRegime).catch(() => null);
-  }
+  // Load independently measured, asset-scoped regime evidence once; no provider requests.
+  const regimeContext = decision.selected.length ? await loadPaperRegimeContext(opts.workspaceId) : { snapshots: [], policies: [] };
 
   const occupied = new Set([
     ...(await listOpenPositions(opts.workspaceId, portfolio.id)).map((p) => p.symbol),
     ...(await listOrders(opts.workspaceId, portfolio.id, { status: ['PLANNED', 'WAITING_FOR_TRIGGER', 'TRIGGERED'] })).map((o) => o.symbol),
   ]);
   for (const cand of decision.selected) {
+    const playbookId = cand.row.setupType || null;
+    const regimeDecision = assessPaperRegime(regimeContext, opts.workspaceId, cand.assetClass, playbookId);
+    const currentRegime = regimeDecision.regime;
     if (occupied.has(cand.row.symbol)) {
       rejections++;
       notes.push(`skip_candidate:${cand.row.symbol}:existing_position_or_order`);
@@ -279,7 +269,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
         rejectionReason: `Could not size: ${sizing.reason ?? "unknown"}`,
         edgePacketId: cand.row.packetId,
         playbookId: cand.row.setupType || null,
-        regime: opts.currentRegime ?? null,
+        regime: currentRegime,
         entry: cand.entry,
         stopLoss: cand.stop,
         takeProfit: cand.tp1 ?? null,
@@ -321,7 +311,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
         rejectionReason: `Pre-trade risk check failed: ${pre.reasons.join(", ")}`,
         edgePacketId: cand.row.packetId,
         playbookId: cand.row.setupType || null,
-        regime: opts.currentRegime ?? null,
+        regime: currentRegime,
         entry: cand.entry,
         stopLoss: cand.stop,
         takeProfit: cand.tp1 ?? null,
@@ -346,16 +336,11 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
     // Block / reduce / wait based on whether the current regime allows
     // this candidate's playbook. Runs before Information Edge so that
     // disabled playbooks never spend compute on the brain stack.
-    const playbookId = cand.row.setupType || null;
-    const regimeDecision = evaluateRegimePlaybook(regimeMatrixRow, playbookId, {
-      strict: strictUnknownRegime,
-      assetClass: cand.assetClass,
-    });
 
     if (
       regimeDecision.status === "DISABLED" ||
       regimeDecision.status === "WAIT_FOR_CONFIRMATION" ||
-      (regimeDecision.status === "UNKNOWN_REGIME" && strictUnknownRegime)
+      regimeDecision.sizeMultiplier <= 0
     ) {
       rejections++;
       const sizingForRow = sizing;
@@ -374,7 +359,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
         rejectionReason: regimeDecision.reason,
         edgePacketId: cand.row.packetId,
         playbookId,
-        regime: regimeDecision.regime ?? opts.currentRegime ?? null,
+        regime: regimeDecision.regime ?? currentRegime,
         regimePlaybookDecision: regimeDecision,
         dataFreshness: narrowFreshness(cand.row.freshness),
         entry: cand.entry,
@@ -382,7 +367,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
         takeProfit: cand.tp1 ?? null,
         hypotheticalSizeDollars: sizingForRow.ok ? sizingForRow.notional : null,
         confidence: cand.row.trustAdjustedScore,
-        metadata: { sourceRuleId: regimeDecision.sourceRuleId ?? null },
+        metadata: { sourceRuleId: regimeDecision.sourceRuleId ?? null, regimeEvidence: regimeContext.snapshots.find(s => s.asset_class === cand.assetClass) ?? null },
         dedupeKeys: rejectionLog,
       });
       if (res.written) noTradeRowsWritten++;
@@ -477,7 +462,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
         rejectionReason: reason,
         edgePacketId: cand.row.packetId,
         playbookId,
-        regime: regimeDecision.regime ?? opts.currentRegime ?? null,
+        regime: regimeDecision.regime ?? currentRegime,
         regimePlaybookDecision: regimeDecision,
         informationEdge: {
           score: edgeScore,
@@ -556,7 +541,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
         rejectionReason: debateReason,
         edgePacketId: cand.row.packetId,
         playbookId,
-        regime: regimeDecision.regime ?? opts.currentRegime ?? null,
+        regime: regimeDecision.regime ?? currentRegime,
         regimePlaybookDecision: regimeDecision,
         informationEdge: {
           score: edgeScore,
@@ -639,6 +624,8 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       verdict: "PLANNED",
       regime: regimeDecision.regime ?? null,
       trace: {
+        regimeEvidence: regimeContext.snapshots.find(s => s.asset_class === cand.assetClass) ?? null,
+        regimePolicyId: regimeDecision.sourceRuleId,
         sourceEdgePacketId: cand.row.packetId,
         playbookId: cand.row.setupType || null,
         opportunityRankScore: cand.row.opportunityRankScore,
@@ -710,7 +697,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       rejectionStage: dominant,
       rejectionReason: r.reasons.join(", "),
       edgePacketId: r.packetId ?? null,
-      regime: opts.currentRegime ?? null,
+      regime: null,
       // Freshness reasons are explicit in the gate list — surface them.
       dataFreshness:
         r.reasons.some((x) => x === "freshness_stale") ? "stale" :

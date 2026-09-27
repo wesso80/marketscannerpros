@@ -33,8 +33,8 @@ export interface RegimePlaybookDecision {
 
 export interface EvaluateRegimePlaybookOpts {
   /**
-   * When true (default) UNKNOWN_REGIME becomes WAIT_FOR_CONFIRMATION
-   * (size 0) and UNKNOWN_PLAYBOOK becomes REDUCE_SIZE at 0.25.
+   * When true (default) UNKNOWN_REGIME blocks entry
+   * (size 0) and UNKNOWN_PLAYBOOK blocks entry (size 0).
    * When false UNKNOWN_REGIME becomes REDUCE_SIZE at 0.5.
    */
   strict?: boolean;
@@ -55,12 +55,11 @@ export interface EvaluateRegimePlaybookOpts {
  *   2. Playbook missing → UNKNOWN_PLAYBOOK
  *   3. Asset class avoided → DISABLED
  *   4. Playbook in disabledPlaybooks → DISABLED
- *   5. enabledPlaybooks set & playbook not listed → DISABLED
- *      (matrix is an allow-list when enabledPlaybooks is non-empty)
- *   6. Playbook in reducedSizePlaybooks → REDUCE_SIZE
- *   7. requiredConfirmations present → WAIT_FOR_CONFIRMATION (caller
+ *   5. Strict allow-list miss (enabled or reduced) → DISABLED
+ *   6. requiredConfirmations present → WAIT_FOR_CONFIRMATION (caller
  *      may downgrade to ENABLED once confirmations are present —
  *      the cycle does not know that yet, so it is honest here)
+ *   7. Playbook in reducedSizePlaybooks → REDUCE_SIZE
  *   8. Else → ENABLED
  */
 export function evaluateRegimePlaybook(
@@ -99,8 +98,8 @@ export function evaluateRegimePlaybook(
     return {
       ...base,
       status: "UNKNOWN_PLAYBOOK",
-      sizeMultiplier: strict ? experimental : reduced,
-      reason: "candidate has no playbook id — treated as experimental",
+      sizeMultiplier: strict ? 0 : experimental,
+      reason: "candidate has no playbook id — strict policy blocks entry",
       disqualifiers: ["playbook_id_missing"],
     };
   }
@@ -128,23 +127,13 @@ export function evaluateRegimePlaybook(
   }
 
   // 5. Allow-list miss
-  if (matrix.enabledPlaybooks.length > 0 && !matrix.enabledPlaybooks.includes(playbookId)) {
+  if ((strict || matrix.enabledPlaybooks.length > 0) && !matrix.enabledPlaybooks.includes(playbookId) && !matrix.reducedSizePlaybooks.includes(playbookId)) {
     return {
       ...base,
       status: "DISABLED",
       sizeMultiplier: 0,
       reason: `playbook=${playbookId} not in regime=${matrix.regime} enabledPlaybooks allow-list`,
       disqualifiers: [`not_in_allow_list:${playbookId}`],
-    };
-  }
-
-  // 6. Reduced size
-  if (matrix.reducedSizePlaybooks.includes(playbookId)) {
-    return {
-      ...base,
-      status: "REDUCE_SIZE",
-      sizeMultiplier: reduced,
-      reason: `playbook=${playbookId} REDUCE_SIZE in regime=${matrix.regime}`,
     };
   }
 
@@ -157,6 +146,16 @@ export function evaluateRegimePlaybook(
       reason:
         `regime=${matrix.regime} requires confirmation(s): ` +
         matrix.requiredConfirmations.join(", "),
+    };
+  }
+
+  // 6. Reduced size
+  if (matrix.reducedSizePlaybooks.includes(playbookId)) {
+    return {
+      ...base,
+      status: "REDUCE_SIZE",
+      sizeMultiplier: reduced,
+      reason: `playbook=${playbookId} REDUCE_SIZE in regime=${matrix.regime}`,
     };
   }
 

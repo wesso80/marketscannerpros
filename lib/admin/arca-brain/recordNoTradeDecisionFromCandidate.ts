@@ -198,7 +198,7 @@ function whatWouldChange(stage: RejectionStage): string {
     case "REGIME_MATRIX":
     case "DISABLED_PLAYBOOK":    return "Wait for a regime in which this playbook is enabled, or remove it from disabled list.";
     case "WAIT_FOR_CONFIRMATION":return "Supply the regime's required confirmations.";
-    case "UNKNOWN_REGIME":       return "Pass a current regime label (or seed the regime matrix row).";
+    case "UNKNOWN_REGIME":       return "Restore fresh asset-specific regime evidence and configure its explicit playbook policy; do not supply a guessed regime label.";
     case "UNKNOWN_PLAYBOOK":     return "Tag the candidate with a setup_type the matrix knows about.";
     case "CAPITAL_ALLOCATION":   return "Improve composite grade: raise confidence, edge, regime quality, or reduce mistake rate.";
     case "RISK_CAP":
