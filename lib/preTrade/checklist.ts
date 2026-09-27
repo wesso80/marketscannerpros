@@ -22,6 +22,7 @@
  */
 
 import { q } from '@/lib/db';
+import { loadAdminRiskSnapshot } from '@/lib/admin/scan-context';
 import { getPlaybook } from '@/lib/playbooks';
 import type { Playbook, PreferredRegime, IvBias } from '@/lib/playbooks';
 
@@ -68,8 +69,8 @@ const DEFAULT_LIMITS = {
 };
 
 function ivMatch(bias: IvBias, bucket: ChecklistInput['ivBucket']): boolean | null {
-  if (!bucket || bucket === 'iv-unknown') return null;
   if (bias === 'iv-any') return true;
+  if (!bucket || bucket === 'iv-unknown') return null;
   if (bias === 'iv-low') return bucket === 'iv<30';
   if (bias === 'iv-high') return bucket === 'iv>70';
   return null;
@@ -105,6 +106,23 @@ export async function runChecklist(input: ChecklistInput, limits = DEFAULT_LIMIT
 
   const gates: GateResult[] = [];
 
+  // A checklist cannot override the account guard with caller-supplied inputs.
+  try {
+    const risk = await loadAdminRiskSnapshot(input.workspaceId);
+    const known = risk.source !== 'fallback' && risk.workspaceId === input.workspaceId
+      && Number.isFinite(risk.equity) && risk.equity > 0;
+    const pass = known && risk.permission === 'GO' && !risk.killSwitchActive;
+    gates.push({
+      key: 'account_risk', label: 'Account risk guard', severity: 'blocking',
+      passed: known ? pass : null,
+      detail: known
+        ? `${risk.permission}: ${risk.operatorGuardReasons.join('; ') || 'Saved account risk state'}`
+        : 'Account risk state is unavailable; checklist clearance is withheld.',
+    });
+  } catch {
+    gates.push({ key: 'account_risk', label: 'Account risk guard', severity: 'blocking', passed: null, detail: 'Account risk state could not be read.' });
+  }
+
   // 1. Regime gate
   if (playbook && input.observedRegime !== undefined) {
     const pass = playbook.preferredRegime === 'any' || playbook.preferredRegime === input.observedRegime;
@@ -120,7 +138,7 @@ export async function runChecklist(input: ChecklistInput, limits = DEFAULT_LIMIT
   }
 
   // 2. Evidence quality gate
-  if (typeof input.evidenceQuality === 'number') {
+  if (typeof input.evidenceQuality === 'number' && Number.isFinite(input.evidenceQuality) && input.evidenceQuality >= 0 && input.evidenceQuality <= 100) {
     const pass = input.evidenceQuality >= limits.evidenceMin;
     gates.push({
       key: 'evidence',
@@ -134,11 +152,14 @@ export async function runChecklist(input: ChecklistInput, limits = DEFAULT_LIMIT
   }
 
   // 3. Exposure gate
-  if (input.currentExposure) {
-    const sym = input.currentExposure.sameSymbolPct ?? 0;
-    const sec = input.currentExposure.sameSectorPct ?? 0;
-    const symOk = sym + (input.proposedSizePct ?? 0) <= limits.sameSymbolMaxPct;
-    const secOk = sec + (input.proposedSizePct ?? 0) <= limits.sameSectorMaxPct;
+  const sym = input.currentExposure?.sameSymbolPct;
+  const sec = input.currentExposure?.sameSectorPct;
+  const size = input.proposedSizePct;
+  if (typeof sym === 'number' && Number.isFinite(sym) && sym >= 0
+      && typeof sec === 'number' && Number.isFinite(sec) && sec >= 0
+      && typeof size === 'number' && Number.isFinite(size) && size > 0) {
+    const symOk = sym + size <= limits.sameSymbolMaxPct;
+    const secOk = sec + size <= limits.sameSectorMaxPct;
     const pass = symOk && secOk;
     gates.push({
       key: 'exposure',
@@ -170,7 +191,7 @@ export async function runChecklist(input: ChecklistInput, limits = DEFAULT_LIMIT
     const pass = input.freshness === 'real-time' || input.freshness === 'delayed';
     gates.push({
       key: 'data_freshness',
-      label: 'Market data is fresh',
+      label: 'Market data freshness (operator supplied)',
       passed: pass,
       severity: 'blocking',
       detail: pass ? undefined : `Freshness: ${input.freshness}`,
@@ -208,8 +229,8 @@ export async function runChecklist(input: ChecklistInput, limits = DEFAULT_LIMIT
     gates.push({ key: 'personal_cap', label: 'Daily trade cap', passed: null, severity: 'blocking', detail: 'Could not read ledger' });
   }
 
-  const blocking = gates.filter((g) => g.severity === 'blocking' && g.passed === false).map((g) => g.key);
-  const warning = gates.filter((g) => g.severity === 'warning' && g.passed === false).map((g) => g.key);
+  const blocking = gates.filter((g) => g.severity === 'blocking' && g.passed !== true).map((g) => g.key);
+  const warning = gates.filter((g) => g.severity === 'warning' && g.passed !== true).map((g) => g.key);
 
   let recommendation: Recommendation = 'go';
   if (blocking.length > 0) recommendation = 'no-go';
@@ -218,7 +239,7 @@ export async function runChecklist(input: ChecklistInput, limits = DEFAULT_LIMIT
   const rationale =
     recommendation === 'no-go' ? `Blocked by ${blocking.length} gate(s): ${blocking.join(', ')}` :
     recommendation === 'caution' ? `Proceed with caution: ${warning.length} warning(s): ${warning.join(', ')}` :
-    'All evaluated gates passed.';
+    'All required gates passed; operator-supplied inputs still require verification.';
 
   return {
     recommendation,

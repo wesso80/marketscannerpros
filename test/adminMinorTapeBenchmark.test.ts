@@ -43,7 +43,7 @@ describe('Priority Desk tape (m1)', () => {
     const src = readFileSync('app/api/admin/priority-desk/route.ts', 'utf8');
     expect(src).toContain('lastTopKeys.get(tapeKey) !== topKey');
     expect(src).not.toContain('Priority Desk read ${all.length} current saved packets');
-    const { priorityDeskTopKey } = await import('@/app/api/admin/priority-desk/route');
+    const { priorityDeskTopKey } = await import('@/lib/admin/pageCalls');
     expect(priorityDeskTopKey([{ symbol: 'MA' }, { symbol: 'NVDA' }] as never)).toBe('MA, NVDA');
     expect(priorityDeskTopKey([])).toBe('');
   });

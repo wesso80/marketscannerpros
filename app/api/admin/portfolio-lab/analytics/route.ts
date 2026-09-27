@@ -29,43 +29,48 @@ export async function GET(req: NextRequest) {
   const maxSnapshots = clampInt(url.searchParams.get("snapshots"), 60, 365, 1000);
   const maxTrades = clampInt(url.searchParams.get("trades"), 50, 1000, 5000);
 
-  const out = await loadAnalytics({
-    workspaceId: admin.workspaceId,
-    maxSnapshots,
-    maxTrades,
-  });
+  try {
+    const out = await loadAnalytics({
+      workspaceId: admin.workspaceId,
+      maxSnapshots,
+      maxTrades,
+    });
 
-  if (!out.ok) {
+    if (!out.ok) {
+      return NextResponse.json(
+        wrapTruth(
+          { analytics: null, disclaimer: ARCA_DISCLAIMER, reason: out.reason },
+          {
+            source: "arca:analytics",
+            freshness: "real-time",
+            simulated: true,
+            confidence: "high",
+            confidenceReason: "No ARCA portfolio exists in this workspace.",
+          },
+        ),
+      );
+    }
+
     return NextResponse.json(
       wrapTruth(
-        { analytics: null, disclaimer: ARCA_DISCLAIMER, reason: out.reason },
+        {
+          analytics: out.analytics,
+          benchmarkSymbol: out.benchmarkSymbol,
+          disclaimer: ARCA_DISCLAIMER,
+        },
         {
           source: "arca:analytics",
-          freshness: "real-time",
           simulated: true,
-          confidence: "high",
-          confidenceReason: "No ARCA portfolio yet; POST /create-default first.",
+          freshness: "real-time",
+          confidence: out.analytics.health.sufficientTrades && out.analytics.health.sufficientSnapshots ? "high" : "medium",
+          confidenceReason: out.analytics.health.warnings.join(" "),
         },
       ),
     );
+  } catch (error) {
+    console.error("[arca:analytics] Unable to load analytics", error);
+    return NextResponse.json({ error: "Analytics are temporarily unavailable. Retry or check the service logs." }, { status: 503 });
   }
-
-  return NextResponse.json(
-    wrapTruth(
-      {
-        analytics: out.analytics,
-        benchmarkSymbol: out.benchmarkSymbol,
-        disclaimer: ARCA_DISCLAIMER,
-      },
-      {
-        source: "arca:analytics",
-        simulated: true,
-        freshness: "real-time",
-        confidence: out.analytics.health.sufficientTrades && out.analytics.health.sufficientSnapshots ? "high" : "medium",
-        confidenceReason: out.analytics.health.warnings.join(" "),
-      },
-    ),
-  );
 }
 
 function clampInt(raw: string | null, lo: number, def: number, hi: number): number {

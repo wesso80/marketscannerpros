@@ -112,6 +112,7 @@ export interface EarningsHistorySnapshot {
 
 export async function buildEarningsHistorySnapshot(
   ticker: string,
+  opts: { earningsDate?: string | null } = {},
 ): Promise<EarningsHistorySnapshot> {
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
   const symbol = ticker.toUpperCase();
@@ -160,7 +161,7 @@ export async function buildEarningsHistorySnapshot(
   // Live options-IV (ATM straddle). Run after we know the underlying price.
   const nextEarningsDateAVProbe = extractNextEarningsDate(earningsRes.body);
   const optionsIV = await fetchEarningsImpliedMove(symbol, {
-    earningsDate: nextEarningsDateAVProbe,
+    earningsDate: opts.earningsDate ?? nextEarningsDateAVProbe,
     underlying: lastBar ? lastBar.close : null,
   });
 

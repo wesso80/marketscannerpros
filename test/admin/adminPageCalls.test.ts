@@ -8,8 +8,8 @@ const m = vi.hoisted(() => ({ q: vi.fn(async (..._a: unknown[]): Promise<unknown
 vi.mock("@/lib/db", () => ({ q: m.q }));
 vi.mock("../../lib/db", () => ({ q: m.q }));
 
-import { priorityDeskCalls } from "@/app/api/admin/priority-desk/route";
-import { researchAlertCall } from "@/app/api/admin/research-alerts/route";
+import { priorityDeskCalls } from "@/lib/admin/pageCalls";
+import { researchAlertCall } from "@/lib/admin/pageCalls";
 import { morningBriefCalls, type MorningBrief } from "@/lib/admin/morning-brief";
 import { jarvisShortlistCalls, recordJarvisShortlist } from "@/lib/jarvis/radar/adminCalls";
 import { edgePacketCall, edgeTrustScore } from "@/lib/admin/edgePacketSnapshots";

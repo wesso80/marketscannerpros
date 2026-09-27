@@ -25,7 +25,6 @@ const SIGNED_24H = signedMoveSql("pct_move_24h");
 const SIGNED_4H = signedMoveSql("pct_move_4h");
 
 // LABELLER_FIX_AT lives in lib/admin/signalStats (shared by Scorecard, Model Diagnostics, Backtest Lab); re-exported here.
-export { LABELLER_FIX_AT };
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req)).ok) {

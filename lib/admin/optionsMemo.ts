@@ -98,7 +98,7 @@ export interface OptionsArchitectMemo {
 
   outlookAssessment: {
     underlyingPrice: number;
-    impliedMoveOneSigma: number;
+    impliedMoveOneSigma: number | null;
     hvRegime: "low" | "normal" | "elevated" | "extreme" | "unknown";
     ivVsHvNote: string;
     direction: Outlook;
