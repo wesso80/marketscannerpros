@@ -13,7 +13,8 @@
  * Slippage estimate applied to fillPrice.
  */
 
-import { insertSimOrder, updateSimOrderStatus, insertPosition, updatePortfolioBalances } from "./portfolioStore";
+import { insertSimOrder, updateSimOrderStatus, insertPosition } from "./portfolioStore";
+import { refreshPaperBalances } from "./refreshPaperBalances";
 import { writeJournal } from "./journalEngine";
 import type {
   ArcaAssetClass,
@@ -161,14 +162,7 @@ export async function fillOrderAndOpenPosition(args: {
     ? -(fillPrice * order.quantity)
     : (fillPrice * order.quantity);
   const newCash = round2(portfolio.currentCash + cashDelta);
-  const newEquity = round2(newCash + portfolio.unrealisedPnl + (portfolio.totalEquity - portfolio.currentCash));
-  await updatePortfolioBalances({
-    portfolioId: portfolio.id,
-    currentCash: newCash,
-    realisedPnl: portfolio.realisedPnl,
-    unrealisedPnl: portfolio.unrealisedPnl,
-    totalEquity: newEquity,
-  });
+  await refreshPaperBalances(portfolio, newCash, portfolio.realisedPnl);
 
   await writeJournal({
     workspaceId: portfolio.workspaceId,
