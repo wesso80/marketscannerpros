@@ -11,7 +11,7 @@
 import {
   getDefaultPortfolio,
   listOpenPositions,
-  listSnapshots,
+  listDailySnapshots,
   listTrades,
 } from "./portfolioStore";
 import { listBenchmarkSnapshots } from "./benchmarkEngine";
@@ -20,7 +20,7 @@ import { computeAnalytics, type AnalyticsResult } from "./analyticsEngine";
 
 export interface LoadAnalyticsOptions {
   workspaceId: string;
-  /** Snapshot history depth. Default 365. */
+  /** Distinct UTC-day history depth. Default 365. */
   maxSnapshots?: number;
   /** Trade history depth. Default 1000. */
   maxTrades?: number;
@@ -35,7 +35,7 @@ export async function loadAnalytics(opts: LoadAnalyticsOptions): Promise<Analyti
   if (!portfolio) return { ok: false, reason: "no_portfolio" };
 
   const [snapshots, trades, positions, benchSnaps] = await Promise.all([
-    listSnapshots(opts.workspaceId, portfolio.id, { limit: opts.maxSnapshots ?? 365 }),
+    listDailySnapshots(opts.workspaceId, portfolio.id, { limit: opts.maxSnapshots ?? 365 }),
     listTrades(opts.workspaceId, portfolio.id, { limit: opts.maxTrades ?? 1000 }),
     listOpenPositions(opts.workspaceId, portfolio.id),
     listBenchmarkSnapshots(opts.workspaceId, portfolio.id, {

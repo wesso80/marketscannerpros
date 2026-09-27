@@ -8,7 +8,8 @@
  * No DB writes. All metrics computed in-memory from already-stored data.
  */
 
-import { listSnapshots, listTrades } from "./portfolioStore";
+import { lastValuesByUtcDay, completedDailyReturns, latestContinuousReturns, dailyRiskAdjusted } from "./statisticalEvidence";
+import { listDailySnapshots, listTrades } from "./portfolioStore";
 import type { ArcaPortfolioSnapshot, ArcaTrade } from "./types";
 
 export interface PerformanceMetrics {
@@ -62,7 +63,7 @@ export interface PerformanceInput {
 
 export async function computePerformance(input: PerformanceInput): Promise<PerformanceMetrics> {
   const [snapshots, trades] = await Promise.all([
-    listSnapshots(input.workspaceId, input.portfolioId, { limit: input.maxSnapshots ?? 365 }),
+    listDailySnapshots(input.workspaceId, input.portfolioId, { limit: input.maxSnapshots ?? 365 }),
     listTrades(input.workspaceId, input.portfolioId, { limit: input.maxTrades ?? 1000 }),
   ]);
   return derivePerformance({
@@ -98,8 +99,10 @@ export function derivePerformance(args: {
   const currentDdPct = peak > 0 ? ((peak - currentEquity) / peak) * 100 : 0;
 
   // Daily returns from snapshots → Sharpe/Sortino
-  const dailyReturns = computeDailyReturns(ordered, startingBalance);
-  const { sharpe, sortino, volAnn } = riskAdjusted(dailyReturns);
+  const byDay = lastValuesByUtcDay(ordered.map(s => ({ at: s.snapshotAt, value: s.totalEquity })));
+  const days = [...byDay.keys()].sort();
+  const returns = completedDailyReturns(days, days.map(day => byDay.get(day)!));
+  const { sharpe, sortino, annVol: volAnn } = dailyRiskAdjusted(latestContinuousReturns(days, returns));
 
   // Trade stats
   const closed = trades.length;
@@ -161,42 +164,6 @@ export function derivePerformance(args: {
     basedOnSnapshots: ordered.length,
     basedOnTrades: closed,
   };
-}
-
-function computeDailyReturns(orderedSnapshots: ArcaPortfolioSnapshot[], startingBalance: number): number[] {
-  if (orderedSnapshots.length === 0) return [];
-  // Bucket by yyyy-mm-dd, take last snapshot per day.
-  const byDay = new Map<string, number>();
-  for (const s of orderedSnapshots) {
-    const day = (s.snapshotAt || "").slice(0, 10);
-    if (!day) continue;
-    byDay.set(day, s.totalEquity); // later snapshots overwrite earlier
-  }
-  const days = Array.from(byDay.keys()).sort();
-  if (days.length < 2) return [];
-  const returns: number[] = [];
-  let prev = startingBalance;
-  for (const d of days) {
-    const eq = byDay.get(d)!;
-    if (prev > 0) returns.push((eq - prev) / prev);
-    prev = eq;
-  }
-  return returns;
-}
-
-function riskAdjusted(daily: number[]): { sharpe: number | null; sortino: number | null; volAnn: number | null } {
-  if (daily.length < 2) return { sharpe: null, sortino: null, volAnn: null };
-  const mean = daily.reduce((s, x) => s + x, 0) / daily.length;
-  const variance = daily.reduce((s, x) => s + (x - mean) ** 2, 0) / (daily.length - 1);
-  const sd = Math.sqrt(variance);
-  const negs = daily.filter((x) => x < 0);
-  const downsideVar = negs.length > 0 ? negs.reduce((s, x) => s + x * x, 0) / negs.length : 0;
-  const downsideSd = Math.sqrt(downsideVar);
-  const ANN = Math.sqrt(252);
-  const sharpe = sd > 0 ? (mean / sd) * ANN : null;
-  const sortino = downsideSd > 0 ? (mean / downsideSd) * ANN : null;
-  const volAnn = sd * ANN * 100;
-  return { sharpe, sortino, volAnn };
 }
 
 function computeStreaks(trades: ArcaTrade[]): { currentWin: number; currentLoss: number; longestWin: number; longestLoss: number } {

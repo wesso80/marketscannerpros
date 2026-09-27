@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
           source: "arca:analytics",
           simulated: true,
           freshness: "real-time",
-          confidence: out.analytics.health.sufficientTrades && out.analytics.health.sufficientSnapshots ? "high" : "medium",
+          confidence: out.analytics.health.sufficientTrades && out.analytics.health.sufficientSnapshots ? "high" : "low",
           confidenceReason: out.analytics.health.warnings.join(" "),
         },
       ),
