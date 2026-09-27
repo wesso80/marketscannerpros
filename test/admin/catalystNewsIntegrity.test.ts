@@ -8,6 +8,7 @@ describe('news catalyst evidence', () => {
   it.each([
     'Asset Allocation Strategies LLC Acquires New Holdings in Amazon.com, Inc. $AMZN',
     'Fund acquires 40,763 shares of Amazon $AMZN',
+    'Amazon.com, Inc. $AMZN Shares Newly Acquired by Valueworks LLC',
     'Bridger Management LLC Buys New Holdings in Amazon.com, Inc. $AMZN',
     'Cypherpunk technologies director Oei Khing Djien sells $661,500 in stock',
   ])('does not call ordinary holdings or insider trades a takeover: %s', headline => {
