@@ -51,13 +51,13 @@ export async function POST(req: NextRequest) {
     let rows: Array<{ workspace_id: string }> = [];
     try {
       rows = await q<{ workspace_id: string }>(
-        `SELECT DISTINCT workspace_id FROM arca_portfolios WHERE status='ACTIVE'`,
+        `SELECT DISTINCT workspace_id FROM arca_portfolios WHERE status='ACTIVE' AND mode='SIMULATED'`,
       );
     } catch (selectErr) {
       const msg = selectErr instanceof Error ? selectErr.message : String(selectErr);
       // Common case: migration 095 not deployed → table missing.
-      // Don't fail the cron; surface clearly and return 200 with skipped=true.
-      const isMissingTable = /relation .* does not exist|arca_portfolios/i.test(msg);
+      // Report lookup failures as failures so Render cannot mark a skipped run healthy.
+      const isMissingTable = (selectErr as { code?: string })?.code === '42P01';
       notifyAdmin({
         subject: isMissingTable
           ? "arca-cycle skipped — arca_portfolios table missing"
@@ -67,12 +67,12 @@ export async function POST(req: NextRequest) {
         context: { durationMs: Date.now() - started },
       }).catch(() => {});
       return NextResponse.json({
-        ok: true,
+        ok: false,
         skipped: true,
         reason: isMissingTable ? "arca_portfolios_table_missing" : "portfolio_lookup_failed",
         message: msg,
         durationMs: Date.now() - started,
-      });
+      }, { status: 503 });
     }
 
     if (rows.length === 0) {
@@ -100,12 +100,13 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
     }
+    const ok = results.every((result) => result.ok);
     return NextResponse.json({
-      ok: true,
+      ok,
       workspacesProcessed: rows.length,
       results,
       durationMs: Date.now() - started,
-    });
+    }, { status: ok ? 200 : 503 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     notifyAdmin({

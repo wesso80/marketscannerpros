@@ -33,8 +33,6 @@ import { markAndMaybeExit } from "./positionEngine";
 import { sizeForPortfolio } from "./positionSizing";
 import { checkPreTrade, emitRiskEventIfBreached } from "./riskEngine";
 import { writeJournal } from "./journalEngine";
-import { captureBenchmarkSnapshot } from "./benchmarkEngine";
-import { rollupPlaybookPerformance } from "./playbookEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { edgePacketPrice } from "@/lib/admin/edgePacket";
 import { recordAdminCalls, type AdminCallInput } from "@/lib/admin/adminCallLog";
@@ -51,7 +49,11 @@ import { deriveInformationEdge } from "@/lib/admin/arca-brain/deriveInformationE
 import { getRegimeMatrix } from "@/lib/admin/arca-brain/regimePlaybookMatrix";
 import { evaluateRegimePlaybook } from "@/lib/admin/arca-brain/regimePlaybookDecision";
 import type { DataFreshnessStatus, InformationEdgeBand, RegimePlaybookMatrixRow } from "@/lib/admin/arca-brain/types";
-import { q } from "@/lib/db";
+import { q, atomicQueries } from "@/lib/db";
+import { refreshPaperBalances } from "./refreshPaperBalances";
+import { paperEquity } from "./paperEquity";
+import { captureBenchmarkSnapshot } from "./benchmarkEngine";
+import { rollupPlaybookPerformance } from "./playbookEngine";
 
 /**
  * Narrow the free-text freshness on an edge-packet row to the
@@ -97,7 +99,56 @@ export interface SimulateCycleOptions {
 }
 
 export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<SimulateCycleResult> {
-  const portfolio = await ensurePortfolio(opts.workspaceId);
+  const started = Date.now();
+  console.info('[arca-cycle] started', { workspaceId: opts.workspaceId });
+  try {
+    const result = await atomicQueries(async () => {
+      // Transaction-scoped lock works with pooled Neon connections and releases on crash/rollback.
+      const [lock] = await q<{ locked: boolean }>(
+        `SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS locked`,
+        [`arca-cycle:${opts.workspaceId}`],
+      );
+      if (!lock?.locked) throw new Error('Paper cycle already running for this workspace');
+      const portfolio = await ensurePortfolio(opts.workspaceId);
+      // Serialise with pause/reset and other writers of the portfolio balance row.
+      await q(`SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE`, [opts.workspaceId, portfolio.id]);
+      const current = await getPortfolioById(opts.workspaceId, portfolio.id);
+      if (!current || current.mode !== 'SIMULATED') throw new Error('Simulated paper portfolio required');
+      const cycleKey = `Paper cycle completed:${Math.floor(started / 900_000)}`;
+      const done = await q(`SELECT id FROM arca_trade_journal WHERE workspace_id=$1 AND portfolio_id=$2 AND journal_type='REVIEW' AND title=$3 LIMIT 1`, [opts.workspaceId, current.id, cycleKey]);
+      if (done.length) return skippedCycle(current, 'Already completed this 15-minute window; retry skipped.');
+      const result = await runCycle(opts, current);
+      if (current.status === 'ACTIVE') await writeJournal({
+        workspaceId: opts.workspaceId, portfolioId: current.id, journalType: 'REVIEW', title: cycleKey,
+        reasoning: JSON.stringify(result),
+      });
+      return result;
+    });
+    // Optional reporting follows the committed ledger. A reporting failure cannot leave half a fill.
+    if (result.candidatesScanned !== undefined) {
+      const refreshed = await getPortfolioById(opts.workspaceId, result.portfolioId);
+      if (refreshed) {
+        try { const bm = await captureBenchmarkSnapshot({ portfolio: refreshed }); result.benchmarkCaptured = bm.ok; result.benchmarkSymbol = bm.benchmarkSymbol; }
+        catch (error) { result.notes.push(`Benchmark unavailable: ${error instanceof Error ? error.message : String(error)}`); }
+        try { result.playbooksUpdated = (await rollupPlaybookPerformance(refreshed)).playbooksUpdated; }
+        catch (error) { result.notes.push(`Playbook rollup unavailable: ${error instanceof Error ? error.message : String(error)}`); }
+      }
+    }
+    console.info('[arca-cycle] completed', { workspaceId: opts.workspaceId, durationMs: Date.now() - started, ...result });
+    return result;
+  } catch (error) {
+    console.error('[arca-cycle] failed', { workspaceId: opts.workspaceId, durationMs: Date.now() - started, error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+function skippedCycle(portfolio: ArcaPortfolio, reason: string): SimulateCycleResult {
+  return { portfolioId: portfolio.id, cycleAt: new Date().toISOString(), ordersCreated: 0, ordersTriggered: 0,
+    ordersCancelled: 0, positionsOpened: 0, positionsMarked: 0, positionsClosed: 0,
+    riskEventsCreated: 0, rejections: 0, notes: [reason] };
+}
+
+async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): Promise<SimulateCycleResult> {
   if (portfolio.status !== 'ACTIVE') return {
     portfolioId: portfolio.id, cycleAt: new Date().toISOString(),
     ordersCreated: 0, ordersTriggered: 0, ordersCancelled: 0,
@@ -160,6 +211,9 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     runningPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
   }
 
+  await refreshPaperBalances(runningPortfolio, runningPortfolio.currentCash, runningPortfolio.realisedPnl);
+  runningPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
+
   // 3. Trigger waiting orders.
   const waiting = await listOrders(opts.workspaceId, portfolio.id, {
     status: ["WAITING_FOR_TRIGGER", "PLANNED"],
@@ -183,6 +237,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     portfolio: runningPortfolio,
     maxNewIdeas: opts.maxNewIdeas ?? 5,
     sinceMinutes: opts.sinceMinutes ?? 720,
+    rows: recent,
   });
 
   // Load the Regime-Playbook Matrix row once per cycle. If no regime
@@ -195,7 +250,16 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     regimeMatrixRow = await getRegimeMatrix(opts.workspaceId, currentRegime).catch(() => null);
   }
 
+  const occupied = new Set([
+    ...(await listOpenPositions(opts.workspaceId, portfolio.id)).map((p) => p.symbol),
+    ...(await listOrders(opts.workspaceId, portfolio.id, { status: ['PLANNED', 'WAITING_FOR_TRIGGER', 'TRIGGERED'] })).map((o) => o.symbol),
+  ]);
   for (const cand of decision.selected) {
+    if (occupied.has(cand.row.symbol)) {
+      rejections++;
+      notes.push(`skip_candidate:${cand.row.symbol}:existing_position_or_order`);
+      continue;
+    }
     const sizing = sizeForPortfolio(runningPortfolio, {
       entry: cand.entry,
       stop: cand.stop,
@@ -625,6 +689,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     } catch {
       // Soft-fail.
     }
+    occupied.add(cand.row.symbol);
     ordersCreated++;
   }
   if (plannedCalls.length) await recordAdminCalls(plannedCalls).catch(() => undefined);
@@ -683,7 +748,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   const exposure = bucketExposure(closingOpens);
   const finalPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
   const unrealised = closingOpens.reduce((s, p) => s + p.unrealisedPnl, 0);
-  const equity = round2(finalPortfolio.currentCash + unrealised);
+  const equity = paperEquity(finalPortfolio.currentCash, closingOpens);
   await updatePortfolioBalances({
     portfolioId: finalPortfolio.id,
     currentCash: finalPortfolio.currentCash,
@@ -710,26 +775,12 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     openRiskPct,
   });
 
-  // 6. Benchmark + playbook rollup (best-effort; never block the cycle).
-  let benchmarkCaptured = false;
-  let benchmarkSymbol: string | undefined;
-  let playbooksUpdated: number | undefined;
-  try {
-    const refreshed = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? finalPortfolio;
-    const bm = await captureBenchmarkSnapshot({ portfolio: refreshed });
-    benchmarkCaptured = bm.ok;
-    benchmarkSymbol = bm.benchmarkSymbol;
-    if (!bm.ok) notes.push(`benchmark: ${bm.reason ?? "unavailable"}`);
-  } catch (err) {
-    notes.push(`benchmark error: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  try {
-    const refreshed = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? finalPortfolio;
-    const pb = await rollupPlaybookPerformance(refreshed);
-    playbooksUpdated = pb.playbooksUpdated;
-  } catch (err) {
-    notes.push(`playbook rollup error: ${err instanceof Error ? err.message : String(err)}`);
-  }
+  // Benchmark/report rollups are separate from the atomic ledger write. Never wait on
+  // a provider inside this transaction (the report flow can capture benchmarks).
+  const benchmarkCaptured = false;
+  const benchmarkSymbol = undefined;
+  const playbooksUpdated = undefined;
+  notes.push('Benchmark and playbook rollups deferred to reporting.');
 
   return {
     portfolioId: finalPortfolio.id,

@@ -12,8 +12,8 @@ import {
   closePositionRow,
   insertTrade,
   markPosition,
-  updatePortfolioBalances,
 } from "./portfolioStore";
+import { refreshPaperBalances } from "./refreshPaperBalances";
 import { writeJournal } from "./journalEngine";
 import { recordTradeClosureLearning } from "@/lib/admin/arca-brain/recordTradeClosureLearning";
 import type {
@@ -67,11 +67,11 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     if (side === "LONG" && currentPrice <= position.stopLoss) {
       exitReason = "STOP_LOSS";
       exitStatus = "STOPPED";
-      exitPrice = position.stopLoss;
+      exitPrice = currentPrice; // A gap through the stop cannot fill at the better stop price.
     } else if (side === "SHORT" && currentPrice >= position.stopLoss) {
       exitReason = "STOP_LOSS";
       exitStatus = "STOPPED";
-      exitPrice = position.stopLoss;
+      exitPrice = currentPrice; // A gap through the stop cannot fill at the better stop price.
     }
   }
   // TP3 > TP2 > TP1; close on first touch of any defined TP.
@@ -157,18 +157,9 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
 
   // Reflect cash: long close returns notional; short close pays notional (already received at fill).
   const cashDelta = side === "LONG" ? notional : -notional;
-  const newCash = round2(portfolio.currentCash + cashDelta);
+  const newCash = round2(portfolio.currentCash + cashDelta - fees);
   const newRealised = round2(portfolio.realisedPnl + realisedNet);
-  const newUnrealised = round2(portfolio.unrealisedPnl - position.unrealisedPnl);
-  // Recompute equity: cash + unrealised on remaining opens; caller will recompute holistically.
-  const newEquity = round2(newCash + newUnrealised);
-  await updatePortfolioBalances({
-    portfolioId: portfolio.id,
-    currentCash: newCash,
-    realisedPnl: newRealised,
-    unrealisedPnl: newUnrealised,
-    totalEquity: newEquity,
-  });
+  await refreshPaperBalances(portfolio, newCash, newRealised);
 
   await writeJournal({
     workspaceId: portfolio.workspaceId,
@@ -264,15 +255,9 @@ export async function manualSimClose(args: {
   });
 
   const cashDelta = position.side === "LONG" ? notional : -notional;
-  const newCash = round2(portfolio.currentCash + cashDelta);
+  const newCash = round2(portfolio.currentCash + cashDelta - fees);
   const newRealised = round2(portfolio.realisedPnl + realisedNet);
-  await updatePortfolioBalances({
-    portfolioId: portfolio.id,
-    currentCash: newCash,
-    realisedPnl: newRealised,
-    unrealisedPnl: portfolio.unrealisedPnl,
-    totalEquity: round2(newCash + portfolio.unrealisedPnl),
-  });
+  await refreshPaperBalances(portfolio, newCash, newRealised);
   await writeJournal({
     workspaceId: portfolio.workspaceId,
     portfolioId: portfolio.id,
