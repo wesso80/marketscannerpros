@@ -170,6 +170,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
     workspaceId: opts.workspaceId,
     since: new Date(Date.now() - (opts.sinceMinutes ?? 720) * 60_000).toISOString(),
     limit: 500,
+    latestPerSymbol: true,
   });
   // Newest first, so the first priced row per symbol wins. It used to read packet_json.snapshot.price, which edge
   // packets never had: every position logged skip_mark:no_price and no order ever filled.
