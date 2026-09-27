@@ -16,6 +16,7 @@ import CrossMarketCard from "./CrossMarketCard";
 import EventRiskCard from "./EventRiskCard";
 import FlowCard from "./FlowCard";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
+import { PositionLevelsCard } from "@/components/admin/PositionLevels";
 
 export default function TerminalMainGrid({
   data,
@@ -43,6 +44,7 @@ export default function TerminalMainGrid({
 
       {/* Right: Intelligence cards */}
       <div className="space-y-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 14rem)" }}>
+        {data && <PositionLevelsCard levels={data.positionLevels} bias={data.bias} />}
         <ConfidenceCard data={data} />
         <SymbolTrustCard data={data} />
         <EvidenceStackCard data={data} />

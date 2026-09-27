@@ -27,7 +27,7 @@ export default function AdminScenarioMap({
       label: "Bullish",
       color: "#10B981",
       condition: `Reclaim and hold above ${fmt(lvl?.pdh)} (PDH) with rising RVOL`,
-      outcome: `Research target ${fmt(t?.target1)} → ${fmt(t?.target2)}`,
+      outcome: `Intraday (${snapshot.timeframe || "15m"}) target ${fmt(t?.target1)} → ${fmt(t?.target2)}`,
     },
     {
       label: "Bearish",
@@ -44,7 +44,7 @@ export default function AdminScenarioMap({
     {
       label: "Invalidation",
       color: "#F59E0B",
-      condition: `Close beyond ${fmt(t?.invalidation)} against thesis`,
+      condition: `Close beyond ${fmt(t?.invalidation)} (${snapshot.timeframe || "15m"} invalidation) against thesis`,
       outcome: `Mark setup INVALIDATED, re-evaluate after next session`,
     },
   ];

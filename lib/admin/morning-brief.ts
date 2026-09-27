@@ -10,6 +10,7 @@ import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 import { isRankable, readSavedScan, type SavedScanView } from "@/lib/admin/sharedScan";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { loadSavedScanPrices, recordAdminCalls, type AdminCallInput, type SavedScanPrice } from "@/lib/admin/adminCallLog";
+import { positionLevelView } from "@/lib/admin/positionLevels";
 
 export type DeskState = "TRADE" | "WAIT" | "DEFENSIVE" | "BLOCK";
 
@@ -588,11 +589,12 @@ export function savedScanForBrief(
   const rankableSymbols = new Set(rankable.map((p) => p.symbol.toUpperCase()));
   const bySymbol = view.rows
     .filter((row) => rankableSymbols.has(row.symbol.toUpperCase()) && row.hits.length > 0)
-    .map((row) => ({ symbol: row.symbol, hits: row.hits, best: Math.max(...row.hits.map((h) => h.confidence ?? 0)) }))
+    .map((row) => ({ symbol: row.symbol, hits: row.hits, levels: row.packet?.snapshot?.positionLevels, best: Math.max(...row.hits.map((h) => h.confidence ?? 0)) }))
     .sort((a, b) => b.best - a.best)
     .slice(0, scanLimit);
   const hits = bySymbol
-    .flatMap((row) => row.hits.map((hit) => ({ ...hit, riskSource })))
+    // Position (weekly/daily) levels from the saved packet, matched to each hit's direction.
+    .flatMap((row) => row.hits.map((hit) => ({ ...hit, riskSource, positionLevels: positionLevelView(row.levels, hit.bias) })))
     .sort((a, b) => b.confidence - a.confidence);
   const failed = view.rows.filter((row) => row.status === "failed").length;
   const asOfLabel = rankable.find((p) => p.savedScan.asOfLabel)?.savedScan.asOfLabel ?? null;

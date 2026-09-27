@@ -7,6 +7,7 @@ import { ScoreTypeBadge } from "@/components/ui";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
 import SavedScanStatus, { type SavedScanStatusData } from "@/components/admin/SavedScanStatus";
+import { POSITION_LEVELS_LABEL, INTRADAY_LEVELS_LABEL, positionFlags, positionLevelView } from "@/lib/admin/positionLevels";
 
 type Market = "CRYPTO" | "EQUITIES" | "ALL";
 
@@ -239,12 +240,17 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
         )}
       </div>
 
+      <div style={{ fontSize: "0.68rem", color: "#9CA3AF", marginBottom: 6 }}>
+        Levels: <strong style={{ color: "#BAE6FD" }}>{POSITION_LEVELS_LABEL}</strong> (weekly swing stop, weekly/monthly targets, entry on a daily close through the trigger; hold 6+ weeks).
+        Grey &quot;15m&quot; lines are {INTRADAY_LEVELS_LABEL}, not position levels.
+      </div>
+
       {/* ── Results table ── */}
       <div style={{ overflowX: "auto", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "0.75rem" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
           <thead style={{ background: "rgba(17,24,39,0.8)" }}>
             <tr>
-              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Entry", "Stop", "TP1", "TP2", "TP3", "R:R", "Changes", "Data Trust", ""].map((h) => (
+              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Trigger (daily close)", "Stop (weekly)", "TP1", "TP2", "TP3", "TP1 R", "Changes", "Data Trust", ""].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -321,21 +327,48 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
                   </span>
                 </td>
                 {(() => {
+                  // Main levels: Position (weekly/daily). The 15m levels stay underneath as intraday timing.
                   const ep = edgeBySymbol[row.symbol];
+                  const pos = ep?.positionLevels ?? positionLevelView(null, ep?.bias ?? row.bias);
                   const fmt = (n: number | null | undefined) =>
-                    n == null || !Number.isFinite(n) ? "—" : n >= 1000 ? n.toFixed(0) : n.toFixed(2);
+                    n == null || !Number.isFinite(n) || n <= 0 ? "—" : n >= 1000 ? n.toFixed(0) : n >= 1 ? n.toFixed(2) : n.toPrecision(4);
                   const rrColor = (rr: number | null | undefined) =>
-                    rr == null ? "#6B7280" : rr >= 2 ? "#10B981" : rr >= 1 ? "#FBBF24" : "#F97316";
-                  const bestRR = ep?.riskReward?.rrToTp1 ?? null;
+                    rr == null ? "#6B7280" : rr >= 2 ? "#10B981" : rr >= 1.5 ? "#FBBF24" : "#F97316";
+                  const intraday = (n: number | null | undefined) => (
+                    <div style={{ fontSize: "0.6rem", color: "#6B7280" }} title={INTRADAY_LEVELS_LABEL}>15m {fmt(n)}</div>
+                  );
+                  const ok = pos.status === "ok";
+                  const flags = positionFlags(pos);
+                  const tpCell = (i: number, intradayVal: number | null | undefined) => {
+                    const t = ok ? pos.targets[i] : undefined;
+                    return (
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }} title={t?.source}>
+                        {fmt(t?.price)}{t && <span style={{ color: "#6B7280", fontSize: "0.6rem" }}> {t.r}R</span>}
+                        {intraday(intradayVal)}
+                      </td>
+                    );
+                  };
                   return (
                     <>
-                      <td style={{ ...tdStyle, fontFamily: "monospace" }}>{fmt(ep?.entry?.trigger ?? null)}</td>
-                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#FCA5A5" }}>{fmt(ep?.stopLoss?.level ?? null)}</td>
-                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }}>{fmt(ep?.takeProfit?.tp1 ?? null)}</td>
-                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }}>{fmt(ep?.takeProfit?.tp2 ?? null)}</td>
-                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }}>{fmt(ep?.takeProfit?.tp3 ?? null)}</td>
-                      <td style={{ ...tdStyle, fontFamily: "monospace", color: rrColor(bestRR), fontWeight: 700 }}>
-                        {bestRR == null ? "—" : bestRR.toFixed(2) + "R"}
+                      <td style={{ ...tdStyle, fontFamily: "monospace" }} title={ok ? `${POSITION_LEVELS_LABEL}: ${pos.entryNote ?? ""}` : pos.message ?? undefined}>
+                        {ok ? fmt(pos.entryTrigger) : (
+                          <span style={{ fontFamily: "inherit", fontSize: "0.62rem", color: "#FBBF24", whiteSpace: "normal", display: "inline-block", maxWidth: 160 }}>{pos.message}</span>
+                        )}
+                        {ok && <div style={{ fontSize: "0.6rem", color: "#9CA3AF" }}>zone {fmt(pos.entryZoneLow)}–{fmt(pos.entryZoneHigh)}</div>}
+                        {intraday(ep?.entry?.trigger)}
+                      </td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#FCA5A5" }} title={pos.stopSource ?? undefined}>
+                        {fmt(ok ? pos.stop : null)}
+                        {ok && pos.riskPct != null && <span style={{ color: "#6B7280", fontSize: "0.6rem" }}> {pos.riskPct}%</span>}
+                        {intraday(ep?.stopLoss?.level)}
+                      </td>
+                      {tpCell(0, ep?.takeProfit?.tp1)}
+                      {tpCell(1, ep?.takeProfit?.tp2)}
+                      {tpCell(2, ep?.takeProfit?.tp3)}
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: rrColor(ok ? pos.tp1R : null), fontWeight: 700 }}>
+                        {ok && pos.tp1R != null ? pos.tp1R.toFixed(2) + "R" : "—"}
+                        {flags.length > 0 && <div style={{ fontSize: "0.58rem", color: "#FBBF24", fontWeight: 400 }}>{flags.join(" · ")}</div>}
+                        <div style={{ fontSize: "0.6rem", color: "#6B7280", fontWeight: 400 }}>15m {ep?.riskReward?.rrToTp1 == null ? "—" : ep.riskReward.rrToTp1.toFixed(2) + "R"}</div>
                       </td>
                     </>
                   );

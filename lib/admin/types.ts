@@ -7,6 +7,7 @@
 import type { Permission, Regime, Direction, Playbook } from "@/types/operator";
 import type { TruthObject } from "./truth-layer";
 import type { EliteGrade, EliteSignalScore } from "@/lib/operator/elite-score";
+import type { PositionLevels, PositionLevelView } from "./positionLevels";
 
 /* ── Bias is a simplified Direction for the UI ── */
 export type BiasState = "LONG" | "SHORT" | "NEUTRAL";
@@ -64,6 +65,8 @@ export type ScannerHit = {
   market?: string;
   /** Last saved price for the symbol (from the saved scan row), when available. */
   price?: number | null;
+  /** Position (weekly/daily) levels matched to this hit's bias (attached when saved rows are read). */
+  positionLevels?: PositionLevelView;
   /** Other playbooks for the same symbol+direction collapsed into this row. */
   otherPlaybooks?: string[];
   /** True when the same symbol also has a row in the opposite direction. */
@@ -151,6 +154,7 @@ export type AdminSymbolIntelligence = {
     midpoint: number;
     vwap: number;
   };
+  /** Levels from the scan timeframe's bars (15m on the shared admin scan): intraday timing, not position levels. */
   targets: {
     entry: number;
     invalidation: number;
@@ -158,6 +162,12 @@ export type AdminSymbolIntelligence = {
     target2: number;
     target3: number;
   };
+  /**
+   * Position (weekly/daily) levels, both directions (lib/admin/positionLevels): daily-close entry trigger, stop beyond
+   * the latest weekly swing + daily-ATR buffer, targets at weekly/monthly levels (>= 1.5R), weekly/monthly bars derived
+   * from the daily bars. Absent on packets saved before they were added.
+   */
+  positionLevels?: PositionLevels;
   /** Evidence breakdown from scoring engine */
   evidence?: {
     regimeFit: number;

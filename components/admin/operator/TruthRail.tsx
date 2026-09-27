@@ -5,6 +5,7 @@ import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import DataTruthBadge from "@/components/admin/shared/DataTruthBadge";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { useState } from "react";
+import { POSITION_LEVELS_LABEL, positionFlags, positionLevelView, type PositionLevelView } from "@/lib/admin/positionLevels";
 
 /* ═════════════════════════════════════════════════════
    COLOR / LABEL HELPERS
@@ -112,6 +113,18 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Position (weekly/daily) lines for the copied trade params (the main levels; 15m follows as timing). */
+function positionClipboardLines(v: PositionLevelView): string[] {
+  if (v.status !== "ok") return [`${POSITION_LEVELS_LABEL}: ${v.message}`];
+  const flags = positionFlags(v);
+  return [
+    `${POSITION_LEVELS_LABEL}: trigger ${v.entryTrigger} (daily close ${v.direction === "LONG" ? "above" : "below"}), zone ${v.entryZoneLow}-${v.entryZoneHigh}`,
+    `Stop: ${v.stop} (${v.stopSource}, risk ${v.riskPct}%)`,
+    `Targets: ${v.targets.map((t, i) => `T${i + 1} ${t.price} (${t.r}R ${t.timeframe})`).join(" · ") || "—"}`,
+    `Hold: ${v.expectedHold}${flags.length ? ` · ${flags.join(", ")}` : ""}`,
+  ];
+}
+
 /* ═════════════════════════════════════════════════════
    BLOCK 1 — FINAL DECISION
    ═════════════════════════════════════════════════════ */
@@ -131,10 +144,8 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
     const lines = [
       `${data.symbol} ${data.bias} ${truth.finalVerdict}`,
       `Action: ${actionLabel(truth.operatorAction)}`,
-      `Entry: ${data.targets.entry || data.price}`,
-      `Stop: ${data.targets.invalidation || "—"}`,
-      `T1: ${data.targets.target1 || "—"}`,
-      `T2: ${data.targets.target2 || "—"}`,
+      ...positionClipboardLines(positionLevelView(data.positionLevels, data.bias)),
+      `Intraday timing (15m): entry ${data.targets.entry || data.price} · stop ${data.targets.invalidation || "—"} · T1 ${data.targets.target1 || "—"} · T2 ${data.targets.target2 || "—"}`,
       `Size: ${truth.effectiveSize}x`,
       `Confidence: ${truth.confidenceClass}`,
       `Regime: ${data.regime} · Playbook: ${data.playbook || "—"}`,

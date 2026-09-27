@@ -7,6 +7,7 @@ import IndicatorMatrixCard from "./IndicatorMatrixCard";
 import DVESummaryCard from "./DVESummaryCard";
 import LiquidityLevelsCard from "./LiquidityLevelsCard";
 import TargetsInvalidationCard from "./TargetsInvalidationCard";
+import { PositionLevelsCard } from "@/components/admin/PositionLevels";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
 export default function OperatorRightRail({ data }: { data: AdminSymbolIntelligence | null }) {
@@ -16,6 +17,9 @@ export default function OperatorRightRail({ data }: { data: AdminSymbolIntellige
     <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 12rem)" }}>
       {/* Tier 1 — Truth Layer (always visible) */}
       <TruthRail truth={data?.truth ?? null} data={data} />
+
+      {/* Main levels for position trades: weekly structure / daily entry (always visible). */}
+      {data && <PositionLevelsCard levels={data.positionLevels} bias={data.bias} />}
 
       {/* Tier 2 toggle */}
       <button

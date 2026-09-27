@@ -10,8 +10,12 @@ import MarketStatusStrip from "@/components/market/MarketStatusStrip";
 import RiskFlagPanel, { type RiskFlag } from "@/components/market/RiskFlagPanel";
 import { buildMarketDataProviderStatus } from "@/lib/scanner/providerStatus";
 import { fetchWithTimeout } from "@/lib/admin/fetchWithTimeout";
+import { PositionLevelsLine } from "@/components/admin/PositionLevels";
+import type { PositionLevelView } from "@/lib/admin/positionLevels";
 
 type ScannerHit = {
+  /** Position (weekly/daily) levels matched to this hit (absent on briefs built before they were added). */
+  positionLevels?: PositionLevelView;
   symbol: string;
   bias: "LONG" | "SHORT" | "NEUTRAL";
   regime: string;
@@ -1243,6 +1247,7 @@ function PlayCard({
         <Metric label="Trust" value={`${play.symbolTrust}%`} />
         <Metric label="Size" value={`${play.sizeMultiplier.toFixed(2)}x`} />
       </div>
+      <PositionLevelsLine className="mt-3" view={play.positionLevels} bias={play.bias} />
       {play.blockReasons?.length ? <div className="mt-3 text-xs text-amber-300">Watch: {play.blockReasons.slice(0, 2).join(", ")}</div> : null}
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
         <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`} className="rounded-md border border-sky-400/30 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/10">

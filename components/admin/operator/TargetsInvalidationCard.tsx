@@ -10,7 +10,8 @@ function fmt(val: number, price: number) {
 }
 
 export default function TargetsInvalidationCard({ data }: { data: AdminSymbolIntelligence | null }) {
-  if (!data) return <AdminCard title="Targets / Invalidation"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const title = `Intraday timing (${data?.timeframe || "15m"})`;
+  if (!data) return <AdminCard title={title}><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
   const t = data.targets;
   const p = data.price;
 
@@ -27,7 +28,7 @@ export default function TargetsInvalidationCard({ data }: { data: AdminSymbolInt
   const notional = positionSize * (t.entry || p);
 
   return (
-    <AdminCard title="Targets / Invalidation" actions={<span className="text-white/30 text-xs cursor-pointer">≡</span>}>
+    <AdminCard title={title} actions={<span className="text-white/30 text-xs" title="Scan-timeframe levels for timing only; the position levels are in the Position plan card.">not position levels</span>}>
       <div className="space-y-0.5">
         <DataRow label="Entry" value={fmt(t.entry, p)} valueColor="text-emerald-300" />
         <DataRow label="Stop" value={fmt(t.invalidation, p)} valueColor="text-red-300" />
@@ -59,7 +60,7 @@ export default function TargetsInvalidationCard({ data }: { data: AdminSymbolInt
             <span className="text-white/60">${riskAmt.toFixed(p < 1 ? 6 : 4)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Size ({data.sizeMultiplier}x @ 1% risk)</span>
+            <span>Size ({data.sizeMultiplier}x @ 1% risk, {data.timeframe || "15m"} stop)</span>
             <span className="text-white/60">{positionSize.toLocaleString()} units</span>
           </div>
           <div className="flex justify-between">

@@ -5,6 +5,8 @@ import Link from "next/link";
 import AdminResearchEventTape from "@/components/admin/AdminResearchEventTape";
 import SavedScanStatus, { type SavedScanStatusData } from "@/components/admin/SavedScanStatus";
 import { formatHitPrice } from "@/lib/admin/hitIntegrity";
+import { PositionLevelsLine, TimeframeTag } from "@/components/admin/PositionLevels";
+import type { PositionLevels } from "@/lib/admin/positionLevels";
 
 type Packet = {
   symbol: string;
@@ -24,6 +26,8 @@ type Packet = {
     price?: number;
     playbook?: string;
     targets?: { entry?: number; invalidation?: number; target1?: number };
+    /** Position (weekly/daily) levels; absent on packets saved before they were added. */
+    positionLevels?: PositionLevels;
   };
 };
 
@@ -189,8 +193,12 @@ function Row({ packet }: { packet: Packet }) {
           )}
         </div>
       </div>
+      {packet.snapshot && (
+        <PositionLevelsLine className="mt-1" levels={packet.snapshot.positionLevels} bias={packet.snapshot.bias} />
+      )}
       {lv && (
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px]">
+          <TimeframeTag kind="intraday" />
           <span className={lv.bias === "Long" ? "text-emerald-300" : lv.bias === "Short" ? "text-red-300" : "text-white/60"}>{lv.bias}</span>
           <span className="text-white/70">Px {lv.price}</span>
           <span className="text-white/60">Entry {lv.entry}</span>

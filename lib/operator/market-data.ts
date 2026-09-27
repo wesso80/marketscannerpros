@@ -345,6 +345,46 @@ async function fetchCryptoLevelBars(symbol: string, opts: AvCallOptions): Promis
   return bars.map(b => ({ ...b, symbol }));
 }
 
+/* ── Crypto daily bars for position levels ────────────────────
+ * Weekly structure (lib/admin/positionLevels) needs months of daily history. The key-level bars above are
+ * CoinGecko's 30-day OHLC when CoinGecko is on, too short for weekly swings, so position levels then use Alpha
+ * Vantage DIGITAL_CURRENCY_DAILY (full history), cached per process for CRYPTO_POSITION_BARS_TTL_MS: at most one AV
+ * call per coin per 6 h and never a CoinGecko call. With CoinGecko off the key-level bars already are that AV
+ * series and are reused (no extra call).
+ */
+const CRYPTO_POSITION_MIN_BARS = 60;
+const CRYPTO_POSITION_BARS_TTL_MS = 6 * 60 * 60 * 1000;
+const CRYPTO_POSITION_BARS = new Map<string, { bars: Bar[]; expiresAt: number }>();
+const CRYPTO_POSITION_INFLIGHT = new Map<string, Promise<Bar[]>>();
+
+/** @internal test hook */
+export function resetCryptoPositionBarCache(): void {
+  CRYPTO_POSITION_BARS.clear();
+  CRYPTO_POSITION_INFLIGHT.clear();
+}
+
+async function fetchCryptoPositionBars(symbol: string, opts: AvCallOptions): Promise<Bar[]> {
+  const levelBars = await fetchCryptoLevelBars(symbol, opts);
+  if (levelBars.length >= CRYPTO_POSITION_MIN_BARS) return levelBars;
+  const key = symbol.replace(/-?USD$/i, '').toUpperCase();
+  const cached = CRYPTO_POSITION_BARS.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.bars.map(b => ({ ...b, symbol }));
+  let inflight = CRYPTO_POSITION_INFLIGHT.get(key);
+  if (!inflight) {
+    inflight = (async () => {
+      const av = await fetchAVBars(symbol, 'CRYPTO', '1D', opts);
+      const bars = av.length >= 2 ? av : [];
+      if (CRYPTO_POSITION_BARS.size >= CRYPTO_LEVELS_CACHE_MAX) CRYPTO_POSITION_BARS.clear();
+      CRYPTO_POSITION_BARS.set(key, { bars, expiresAt: Date.now() + (bars.length ? CRYPTO_POSITION_BARS_TTL_MS : CRYPTO_LEVELS_MISS_TTL_MS) });
+      return bars;
+    })().finally(() => CRYPTO_POSITION_INFLIGHT.delete(key));
+    CRYPTO_POSITION_INFLIGHT.set(key, inflight);
+  }
+  const bars = await inflight;
+  // AV failed: the shorter key-level bars are still better than nothing (positionLevels reports if too short).
+  return (bars.length ? bars : levelBars).map(b => ({ ...b, symbol }));
+}
+
 /**
  * Alpha Vantage stamps US equity intraday bars in New York local time and crypto intraday bars in UTC, both
  * without an offset. Store an ISO UTC instant so every consumer that does `new Date(bar.timestamp)` gets the
@@ -615,6 +655,14 @@ export function createOperatorProvider(opts: OperatorProviderOptions = {}): Mark
       return computeKeyLevels(daily);
     },
 
+    // Daily bars for the position (weekly/daily) levels. Equities: the same shared lib/marketData daily cache the
+    // key levels use (memoizeProvider shares one fetch). Crypto: see fetchCryptoPositionBars (no CoinGecko call).
+    async getDailyBars(symbol: string, market: Market): Promise<Bar[]> {
+      return market === 'CRYPTO'
+        ? fetchCryptoPositionBars(symbol, opts)
+        : fetchCachedEquityDailyBars(symbol, market, '1D');
+    },
+
     async getCrossMarketState(): Promise<CrossMarketState> {
       return fetchCrossMarketState();
     },
@@ -635,8 +683,22 @@ export const alphaVantageProvider: MarketDataProvider = createOperatorProvider()
 export function memoizeProvider(base: MarketDataProvider): MarketDataProvider {
   const barCache = new Map<string, Promise<Bar[]>>();
   const levelCache = new Map<string, Promise<KeyLevel[]>>();
+  const dailyCache = new Map<string, Promise<Bar[]>>();
   let cross: Promise<CrossMarketState> | null = null;
+  const baseDaily = base.getDailyBars?.bind(base);
+  const getDailyBars = baseDaily
+    ? (symbol: string, market: Market): Promise<Bar[]> => {
+        const key = `${symbol.toUpperCase()}|${market}`;
+        let hit = dailyCache.get(key);
+        if (!hit) {
+          hit = baseDaily(symbol, market).catch(() => [] as Bar[]);
+          dailyCache.set(key, hit);
+        }
+        return hit;
+      }
+    : undefined;
   return {
+    ...(getDailyBars ? { getDailyBars } : {}),
     getBars(symbol, market, timeframe) {
       const key = `${symbol.toUpperCase()}|${market}|${timeframe.toLowerCase()}`;
       let hit = barCache.get(key);
@@ -650,7 +712,12 @@ export function memoizeProvider(base: MarketDataProvider): MarketDataProvider {
       const key = `${symbol.toUpperCase()}|${market}`;
       let hit = levelCache.get(key);
       if (!hit) {
-        hit = base.getKeyLevels(symbol, market).catch(() => [] as KeyLevel[]);
+        // Equities: key levels come from the memoised daily bars (the same lib/marketData series), so the position
+        // levels and the key levels share one daily-bar fetch per symbol per run. Crypto key levels keep their own
+        // path (CoinGecko 30-day OHLC / AV, cached in-process).
+        hit = getDailyBars && market !== 'CRYPTO'
+          ? getDailyBars(symbol, market).then(computeKeyLevels).catch(() => [] as KeyLevel[])
+          : base.getKeyLevels(symbol, market).catch(() => [] as KeyLevel[]);
         levelCache.set(key, hit);
       }
       return hit;

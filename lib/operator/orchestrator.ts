@@ -87,6 +87,12 @@ export interface ScanResult {
 export interface MarketDataProvider {
   getBars(symbol: string, market: Market, timeframe: string): Promise<Bar[]>;
   getKeyLevels(symbol: string, market: Market): Promise<KeyLevel[]>;
+  /**
+   * Optional: daily bars for the admin position (weekly/daily) levels. For non-crypto markets a provider that
+   * implements it must return exactly the bars its getKeyLevels uses: memoizeProvider then derives those key levels
+   * from the memoised daily bars (one fetch). Crypto may return a longer series than its key levels use.
+   */
+  getDailyBars?(symbol: string, market: Market): Promise<Bar[]>;
   getCrossMarketState(): Promise<CrossMarketState>;
   getEventWindow(symbol: string): Promise<EventWindow>;
 }
