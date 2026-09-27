@@ -1,3 +1,4 @@
+import { readCapturedRiskHistory } from '@/lib/portfolio/serverCapture';
 import { q } from "@/lib/db";
 import { measureDailyRisk, type RiskEquitySnapshot } from "./riskSnapshotMetrics";
 import type { ScanContext } from "@/lib/operator/orchestrator";
@@ -190,7 +191,7 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
   if (!workspaceId) return { ...operatorRisk, permission: operatorRisk.killSwitchActive ? "BLOCK" : "WAIT", sizeMultiplier: 0 };
 
   try {
-    const [positionRows, journalRows, performanceRows] = await Promise.all([
+    const [positionRows, journalRows, performanceRows, capturedRows] = await Promise.all([
       q<{ active_positions: number; exposure_usd: string | null; unrealized_pl: string | null; largest_symbol_exposure: string | null; last_updated_at: string | null }>(`
         SELECT
           COUNT(*)::int AS active_positions,
@@ -220,11 +221,12 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
         WHERE workspace_id = $1
         ORDER BY snapshot_date DESC LIMIT 2
       `, [workspaceId]),
+      readCapturedRiskHistory(workspaceId),
     ]);
 
     const positions = positionRows[0];
     const journal = journalRows[0];
-    const dailyRisk = measureDailyRisk(performanceRows);
+    const dailyRisk = measureDailyRisk(capturedRows ?? performanceRows);
     const exposureUsd = Number(positions?.exposure_usd ?? 0);
     const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
     const { equity, dailyPnl, dailyDrawdown, dailyDrawdownKnown } = dailyRisk;

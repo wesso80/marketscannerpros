@@ -56,6 +56,8 @@ export interface WorkerEquityQuote {
   changeAmt: number;
   changePct: number;
   latestDay: string;
+  /** Provider observation time; absent if the feed did not supply an intraday timestamp. */
+  updatedAt?: string | null;
 }
 
 const num = (value: unknown): number => {
@@ -103,6 +105,9 @@ export function parseWorkerBulkQuotes(payload: unknown, nowMs: number): Map<stri
     const changeAmt = Number.isFinite(reportedChange) ? reportedChange : prevClose > 0 ? price - prevClose : 0;
     const changePct = Number.isFinite(reportedPct) ? reportedPct : prevClose > 0 ? (price / prevClose - 1) * 100 : 0;
     const volume = first(row?.volume, row?.['06. volume']);
+    const timestamp = String(row?.timestamp ?? "").trim();
+    const providerTs = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(timestamp)
+      ? nyWallTimeToUtcMs(timestamp.replace(/\.\d+$/, "")) : null;
     out.set(symbol, {
       price,
       open: orZero(first(row?.open, row?.['02. open'])),
@@ -113,6 +118,7 @@ export function parseWorkerBulkQuotes(payload: unknown, nowMs: number): Map<stri
       changeAmt,
       changePct,
       latestDay: quoteSessionDay(row?.timestamp ?? row?.['07. latest trading day'], nowMs),
+      updatedAt: providerTs != null && providerTs <= nowMs + 60_000 ? new Date(providerTs).toISOString() : null,
     });
   }
   return out;
@@ -310,4 +316,14 @@ export function equityBarScheduleFromEnv(env: Record<string, string | undefined>
     hourlyRetryMin: int('WORKER_AV_HOURLY_RETRY_MINUTES', d.hourlyRetryMin, 1, 60),
     retryWindowMin: int('WORKER_AV_RETRY_WINDOW_MINUTES', d.retryWindowMin, 1, 24 * 60),
   };
+}
+
+/** A freshly fetched completed daily bar is an EOD mark, dated at the actual session close. */
+export function completedEquityMark(bars: DailyBar[], nowMs: number, settleMinutes = 20) {
+  const session = lastCompletedUsSessionDate(nowMs);
+  const closeMs = nyWallTimeToUtcMs(`${session} ${String(Math.floor(usSessionCloseMinutes(session) / 60)).padStart(2, '0')}:${String(usSessionCloseMinutes(session) % 60).padStart(2, '0')}:00`);
+  if (closeMs == null || nowMs < closeMs + settleMinutes * 60_000) return null;
+  const bar = bars.find(b => b.timestamp === session);
+  if (!bar || !Number.isFinite(bar.close) || bar.close <= 0) return null;
+  return { price: bar.close, updatedAt: new Date(closeMs).toISOString() };
 }

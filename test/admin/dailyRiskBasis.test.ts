@@ -62,4 +62,18 @@ describe('canonical guard preserves restrictions', () => {
     database([snapshot('2026-09-27', 100000, -10000), clean[1]], {}, -10000);
     expect(await loadAdminRiskSnapshot('workspace-a')).toMatchObject({ permission: 'GO', dailyDrawdownKnown: true, dailyDrawdown: 0 });
   });
+  it('uses registered server observations instead of conflicting browser values', async () => {
+    database([snapshot('2026-09-27', 999999, 100000), clean[1]]);
+    const original = vi.mocked(q).getMockImplementation()!;
+    vi.mocked(q).mockImplementation(async (sql, params) => {
+      if (sql.includes('FROM account_equity_capture')) return [{ enabled: true, last_error: null }];
+      if (sql.includes('FROM account_equity_observations')) return [
+        { ...snapshot('2026-09-27', 96000, -14000), captured_at: now.toISOString() },
+        { ...clean[1], captured_at: '2026-09-26T23:50:00Z' },
+      ];
+      return original(sql, params);
+    });
+    expect(await loadAdminRiskSnapshot('workspace-a')).toMatchObject({ permission: 'BLOCK', equity: 96000, dailyDrawdown: 0.04 });
+  });
+
 });

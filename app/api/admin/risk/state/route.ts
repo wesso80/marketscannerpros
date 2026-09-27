@@ -10,6 +10,8 @@ import { isOperator } from "@/lib/quant/operatorAuth";
 import { loadAdminRiskSnapshot } from "@/lib/admin/scan-context";
 import { equityHistoryNotes } from "@/lib/admin/equityHistoryHealth";
 
+import { readCaptureStatus } from "@/lib/portfolio/serverCapture";
+
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
@@ -26,9 +28,9 @@ export async function GET(req: NextRequest) {
   if (!workspaceId) return NextResponse.json({ error: "Workspace required" }, { status: 403 });
 
   try {
-    const [riskState, historyNotes] = await Promise.all([loadAdminRiskSnapshot(workspaceId), equityHistoryNotes(workspaceId)]);
+    const [riskState, historyNotes, capture] = await Promise.all([loadAdminRiskSnapshot(workspaceId), equityHistoryNotes(workspaceId), readCaptureStatus(workspaceId)]);
 
-    return NextResponse.json({ ...riskState, notes: [...riskState.notes, ...historyNotes] });
+    return NextResponse.json({ ...riskState, capture, notes: [...riskState.notes, ...historyNotes] });
   } catch (err: unknown) {
     console.error("[admin:risk:state] Error:", err);
     return NextResponse.json(

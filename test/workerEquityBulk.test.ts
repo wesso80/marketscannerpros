@@ -3,6 +3,7 @@ import {
   AV_DAILY_COMPACT_BARS,
   buildLiveDailyBar,
   chunkSymbols,
+  completedEquityMark,
   dailyHistoryComplete,
   dailyRefreshMarksMs,
   equityBarScheduleFromEnv,
@@ -72,7 +73,7 @@ describe('parseWorkerBulkQuotes', () => {
     expect([...quotes.keys()]).toEqual(['AAPL']);
     expect(quotes.get('AAPL')).toEqual({
       price: 227.5, open: 225.1, high: 228, low: 224.5, prevClose: 225, volume: 31000123,
-      changeAmt: 2.5, changePct: 1.1111, latestDay: '2026-09-25',
+      changeAmt: 2.5, changePct: 1.1111, latestDay: '2026-09-25', updatedAt: '2026-09-25T16:59:58.000Z',
     });
   });
 
@@ -89,6 +90,7 @@ describe('parseWorkerBulkQuotes', () => {
     expect(q.latestDay).toBe('2026-09-25');
     const noTs = parseWorkerBulkQuotes({ data: [{ symbol: 'SPY', close: '600' }] }, ny('2026-09-27', '12:00')).get('SPY')!;
     expect(noTs.latestDay).toBe('2026-09-25');
+    expect(noTs.updatedAt).toBeNull();
   });
 
   it('returns an empty map for error payloads', () => {
@@ -230,5 +232,16 @@ describe('equityBarScheduleFromEnv', () => {
     expect(cfg.preOpenMin).toBe(8 * 60 + 30);
     expect(cfg.hourlySettleMin).toBe(2);
     expect(equityBarScheduleFromEnv({ WORKER_AV_PREOPEN_REFRESH: '10:00' }).preOpenMin).toBe(9 * 60);
+  });
+});
+
+describe('completed equity capture marks', () => {
+  const bars = [{ timestamp: '2026-09-25', close: 101, open: 100, high: 102, low: 99, volume: 1 }];
+  it('uses the provider daily close and its actual session time on weekends', () => {
+    expect(completedEquityMark(bars, ny('2026-09-27', '12:00'))).toEqual({ price: 101, updatedAt: '2026-09-25T20:00:00.000Z' });
+  });
+  it('refuses an unsettled close or a bar from the wrong session', () => {
+    expect(completedEquityMark(bars, ny('2026-09-25', '16:05'))).toBeNull();
+    expect(completedEquityMark(bars, ny('2026-09-28', '17:00'))).toBeNull();
   });
 });
