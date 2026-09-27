@@ -22,6 +22,7 @@ import { wrapTruth } from "@/lib/admin/truthLayer";
 import {
   buildMacroOutlookSnapshot,
   serializeMacroOutlook,
+  macroMemoBlockReason,
 } from "@/lib/admin/macroOutlook";
 import {
   MACRO_MEMO_SYSTEM_PROMPT,
@@ -68,6 +69,15 @@ export async function POST(req: NextRequest) {
 
   // 1. Build macro packet.
   const snapshot = await buildMacroOutlookSnapshot();
+  const blockReason = macroMemoBlockReason(snapshot);
+  if (blockReason) {
+    return NextResponse.json(wrapTruth(
+      { memo: null, snapshot, aiError: blockReason },
+      { source: snapshot.source, fetchedAt: snapshot.generatedAt, freshness: "stale", simulated: false,
+        confidence: "low", confidenceReason: blockReason,
+        missingFields: [...snapshot.missingFields, ...snapshot.staleSeries.map(key => `${key}:stale`)] },
+    ), { status: 422 });
+  }
   const serialized = serializeMacroOutlook(snapshot);
 
   // Persist a packet snapshot for ARCA + recall.

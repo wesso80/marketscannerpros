@@ -251,10 +251,10 @@ export default function PortfolioLabAnalyticsPage() {
   const [corrMinPaired, setCorrMinPaired] = useState(10);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setData(null); setMeta(null);
     try {
       const r = await fetch("/api/admin/portfolio-lab/analytics", { cache: "no-store" });
-      const j = await r.json();
+      const j = await r.json().catch(() => { throw new Error(`Analytics service returned an unreadable response (HTTP ${r.status}). Please retry.`); });
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       const a = j?.data?.analytics as Analytics | null;
       setData(a);
@@ -280,7 +280,7 @@ export default function PortfolioLabAnalyticsPage() {
         seed: String(opts?.seed ?? mcSeed),
       });
       const r = await fetch(`/api/admin/portfolio-lab/monte-carlo?${params.toString()}`, { cache: "no-store" });
-      const j = await r.json();
+      const j = await r.json().catch(() => { throw new Error(`Analytics service returned an unreadable response (HTTP ${r.status}). Please retry.`); });
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setMc((j?.data?.monteCarlo ?? null) as MonteCarloResult | null);
       setMcMeta({ confidence: j?.confidence ?? "?", reason: j?.confidenceReason ?? "" });
@@ -304,7 +304,7 @@ export default function PortfolioLabAnalyticsPage() {
         minPaired: String(corrMinPaired),
       });
       const r = await fetch(`/api/admin/portfolio-lab/correlation?${params.toString()}`, { cache: "no-store" });
-      const j = await r.json();
+      const j = await r.json().catch(() => { throw new Error(`Analytics service returned an unreadable response (HTTP ${r.status}). Please retry.`); });
       if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setCorr((j?.data?.correlation ?? null) as CorrelationResult | null);
       setCorrMeta({ confidence: j?.confidence ?? "?", reason: j?.confidenceReason ?? "" });
@@ -332,7 +332,7 @@ export default function PortfolioLabAnalyticsPage() {
         <Header meta={meta} onReload={load} loading={loading} health={data?.health} />
         {error && <div style={errBox}>Error: {error}</div>}
         {!data ? (
-          <div style={emptyBox}>{loading ? "Computing analytics…" : "No analytics available. Initialise the ARCA portfolio and run a sim cycle first."}</div>
+          <div style={emptyBox}>{loading ? "Computing analytics…" : error ? "Analytics could not be loaded. Use Reload to retry." : (meta?.reason || "No analytics are available for this workspace.")}</div>
         ) : (
           <>
             <Headline a={data} />

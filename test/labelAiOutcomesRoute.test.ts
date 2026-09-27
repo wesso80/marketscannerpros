@@ -13,7 +13,8 @@ vi.mock('@/lib/opsAlerting', () => ({ alertCronFailure: vi.fn(async () => undefi
 vi.mock('@/lib/admin/notifyAdmin', () => ({ notifyAdmin: vi.fn(async () => undefined) }));
 vi.mock('@/lib/outcomes/aiOutcomePrices', () => ({ createHorizonPriceResolver: mocks.createResolver }));
 
-import { POST, labellerTimeBudgetMs, maxRowsPerHorizon } from '@/app/api/cron/label-ai-outcomes/route';
+import { POST } from '@/app/api/cron/label-ai-outcomes/route';
+import { labellerTimeBudgetMs, maxRowsPerHorizon } from '@/lib/outcomes/labelBudget';
 
 const NOW = Date.parse('2026-09-26T12:00:00Z');
 const H = 3_600_000;

@@ -3,7 +3,7 @@
  *
  * Pulls Alpha Vantage HISTORICAL_OPTIONS (or REALTIME_OPTIONS_FMV when the
  * caller's plan supports it), picks the first listed expiry on/after the
- * target date (earnings date if supplied, otherwise today), finds the ATM
+ * confirmed earnings date (strictly after it when event time is unknown), finds the ATM
  * call + put nearest the underlying, and computes
  *
  *     implied_move_pct = (atm_call_mark + atm_put_mark) / underlying * 100
@@ -81,6 +81,13 @@ export async function fetchEarningsImpliedMove(
     reason,
   });
 
+  const today = fetchedAt.slice(0, 10);
+  const eventDate = opts.earningsDate;
+  if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)
+      || !Number.isFinite(Date.parse(eventDate)) || new Date(eventDate).toISOString().slice(0, 10) !== eventDate) {
+    return unavailable("earnings date is unconfirmed; an event-window implied move cannot be selected");
+  }
+  if (eventDate < today) return unavailable("earnings event has passed; current options do not measure its pre-event implied move");
   if (!apiKey) return unavailable("ALPHA_VANTAGE_API_KEY missing");
   if (opts.underlying == null || !Number.isFinite(opts.underlying) || opts.underlying <= 0) {
     return unavailable("no underlying price in packet");
@@ -138,14 +145,15 @@ export async function fetchEarningsImpliedMove(
 
   if (!chain) return unavailable(lastReason);
 
-  // Pick target expiry: first listed expiry on/after earnings date (or today).
-  const target = opts.earningsDate ?? new Date().toISOString().slice(0, 10);
+  // Event time is unknown: expiry must be strictly later than the event date.
+  const target = eventDate;
   const expiries = Array.from(
     new Set(chain.map((c) => (c.expiration || "").slice(0, 10)).filter(Boolean)),
   ).sort();
   if (!expiries.length) return unavailable("no expirations parsed from chain");
 
-  const candidate = expiries.find((e) => e >= target) ?? expiries[expiries.length - 1];
+  const candidate = expiries.find((e) => e > target);
+  if (!candidate) return unavailable("no listed expiration brackets the earnings event");
   const expiryContracts = chain.filter((c) => (c.expiration || "").slice(0, 10) === candidate);
   const calls = expiryContracts.filter((c) => (c.type || "").toLowerCase() === "call");
   const puts = expiryContracts.filter((c) => (c.type || "").toLowerCase() === "put");
@@ -181,7 +189,7 @@ export async function fetchEarningsImpliedMove(
   const daysToExpiry = Math.max(
     0,
     Math.round(
-      (Date.parse(`${candidate}T00:00:00Z`) - Date.parse(`${target}T00:00:00Z`)) / 86400000,
+      (Date.parse(`${candidate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000,
     ),
   );
 

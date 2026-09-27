@@ -45,7 +45,7 @@ const SCORE_COLUMN: Record<ScoreField, string> = {
   confidence: "confidence",
 };
 
-export function parseScoreField(v: string | null | undefined): ScoreField {
+function parseScoreField(v: string | null | undefined): ScoreField {
   const s = String(v ?? "").toLowerCase();
   return s === "elite" || s === "confidence" ? s : "confluence";
 }

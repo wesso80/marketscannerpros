@@ -59,7 +59,7 @@ interface OptionsArchitectMemo {
   mainRisk: string;
   outlookAssessment: {
     underlyingPrice: number;
-    impliedMoveOneSigma: number;
+    impliedMoveOneSigma: number | null;
     hvRegime: string;
     ivVsHvNote: string;
     direction: Outlook;
@@ -304,7 +304,7 @@ export default function OptionsArchitectPage() {
                 </div>
                 <div style={{ textAlign: "right", minWidth: 200 }}>
                   <div style={{ fontSize: 11, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5 }}>1-sigma implied move</div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: "#FBBF24" }}>±${memo.outlookAssessment.impliedMoveOneSigma.toFixed(2)}</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "#FBBF24" }}>{memo.outlookAssessment.impliedMoveOneSigma == null ? "n/a" : `±$${memo.outlookAssessment.impliedMoveOneSigma.toFixed(2)}`}</div>
                   <div style={{ fontSize: 11, color: "#64748B", marginTop: 6 }}>HV regime</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: regimeColor(memo.outlookAssessment.hvRegime) }}>{memo.outlookAssessment.hvRegime.toUpperCase()}</div>
                 </div>
@@ -376,15 +376,15 @@ export default function OptionsArchitectPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 12 }}>
                 <Field label="Net credit (-debit) / share" value={`$${memo.tradeSetup.netCreditPerShare.toFixed(2)}`} valueColor={memo.tradeSetup.netCreditPerShare >= 0 ? "#10B981" : "#EF4444"} />
-                <Field label="Max profit / contract" value={memo.tradeSetup.maxProfitPerContract == null ? "unlimited" : `$${memo.tradeSetup.maxProfitPerContract.toFixed(2)}`} valueColor="#10B981" />
-                <Field label="Max loss / contract" value={memo.tradeSetup.maxLossPerContract == null ? "undefined" : `$${memo.tradeSetup.maxLossPerContract.toFixed(2)}`} valueColor="#EF4444" />
+                <Field label="Max profit / unit" value={memo.tradeSetup.maxProfitPerContract == null ? "unlimited" : `$${memo.tradeSetup.maxProfitPerContract.toFixed(2)}`} valueColor="#10B981" />
+                <Field label="Max loss / unit" value={memo.tradeSetup.maxLossPerContract == null ? "undefined" : `$${memo.tradeSetup.maxLossPerContract.toFixed(2)}`} valueColor="#EF4444" />
                 <Field label="Breakeven(s)" value={memo.tradeSetup.breakevens.map((b) => `$${b.toFixed(2)}`).join(", ")} valueColor="#FBBF24" />
-                <Field label="POP" value={memo.tradeSetup.probabilityOfProfitPct != null ? `${memo.tradeSetup.probabilityOfProfitPct.toFixed(1)}%` : "n/a"} valueColor="#60A5FA" />
+                <Field label="POP (chain-date estimate)" value={memo.tradeSetup.probabilityOfProfitPct != null ? `${memo.tradeSetup.probabilityOfProfitPct.toFixed(1)}%` : "n/a"} valueColor="#60A5FA" />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 12 }}>
-                <Field label="Contracts to open" value={String(memo.tradeSetup.contractsToOpen)} valueColor="#F1F5F9" />
-                <Field label="Margin / contract" value={`$${memo.tradeSetup.marginEstimatePerContract.toFixed(2)}`} />
+                <Field label="Strategy units (100-share multiplier)" value={String(memo.tradeSetup.contractsToOpen)} valueColor="#F1F5F9" />
+                <Field label="Capital / unit" value={`$${memo.tradeSetup.marginEstimatePerContract.toFixed(2)}`} />
                 <Field label="Total capital at risk" value={`$${memo.tradeSetup.totalCapitalAtRisk.toFixed(2)}`} valueColor="#FBBF24" />
                 <Field label="Position Δ / θ" value={`${memo.tradeSetup.positionGreeks.delta.toFixed(2)} / ${memo.tradeSetup.positionGreeks.theta.toFixed(2)}/d`} />
               </div>
@@ -413,7 +413,7 @@ export default function OptionsArchitectPage() {
                   <thead>
                     <tr style={{ borderBottom: "1px solid #334155", color: "#94A3B8" }}>
                       <th style={{ ...th, textAlign: "left" }}>Price</th>
-                      <th style={{ ...th, textAlign: "right" }}>PnL/ctr</th>
+                      <th style={{ ...th, textAlign: "right" }}>P&L/unit</th>
                       <th style={{ ...th, textAlign: "right" }}>% risk</th>
                     </tr>
                   </thead>

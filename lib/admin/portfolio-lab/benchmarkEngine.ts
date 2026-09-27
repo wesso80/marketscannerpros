@@ -130,7 +130,7 @@ export async function listBenchmarkSnapshots(
 }>> {
   const limit = Math.min(opts.limit ?? 365, 1000);
   const rows = await q<{
-    snapshot_at: string;
+    snapshot_at: string | Date;
     benchmark_symbol: string;
     benchmark_value: string;
     benchmark_return_pct: string | null;
@@ -146,7 +146,7 @@ export async function listBenchmarkSnapshots(
     opts.symbol ? [workspaceId, portfolioId, opts.symbol.toUpperCase()] : [workspaceId, portfolioId],
   );
   return rows.map((r) => ({
-    snapshotAt: r.snapshot_at,
+    snapshotAt: new Date(r.snapshot_at).toISOString(),
     benchmarkSymbol: r.benchmark_symbol,
     benchmarkValue: Number(r.benchmark_value),
     benchmarkReturnPct: r.benchmark_return_pct == null ? null : Number(r.benchmark_return_pct),

@@ -88,10 +88,13 @@ function formatUsd(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0);
 }
 
-async function loadOperatorRiskState(): Promise<AdminRiskSnapshot> {
+async function loadOperatorRiskState(workspaceId?: string): Promise<AdminRiskSnapshot> {
   try {
     const rows = await q<{ context_state: Record<string, any>; updated_at: string | null }>(
-      "SELECT context_state, updated_at::text FROM operator_state ORDER BY created_at DESC LIMIT 1",
+      `SELECT context_state, updated_at::text FROM operator_state
+       ${workspaceId ? "WHERE workspace_id = $1" : ""}
+       ORDER BY updated_at DESC LIMIT 1`,
+      workspaceId ? [workspaceId] : [],
     );
     const ctx = rows[0]?.context_state;
     if (!ctx) return FALLBACK_ADMIN_RISK;
@@ -100,7 +103,7 @@ async function loadOperatorRiskState(): Promise<AdminRiskSnapshot> {
     const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
     const equity = hasLiveEquity ? rawEquity : UNKNOWN_EQUITY;
     const openExposure = Number(ctx.openRisk ?? 0);
-    const killSwitchActive = Boolean(ctx.killSwitchActive);
+    const killSwitchActive = Boolean(ctx.killSwitchActive) || ctx.permission === "BLOCK";
     const dailyDrawdown = Number(ctx.dailyDrawdown ?? 0);
     const correlationRisk = Number(ctx.correlationRisk ?? 0);
     const activePositions = Number(ctx.activePositions ?? 0);
@@ -129,7 +132,7 @@ async function loadOperatorRiskState(): Promise<AdminRiskSnapshot> {
       permission,
       sizeMultiplier: !hasLiveEquity || permission === "BLOCK" ? 0 : Number(ctx.sizeMultiplier ?? (permission === "GO" ? 1 : 0.5)),
       source: "operator_state",
-      workspaceId: null,
+      workspaceId: workspaceId ?? null,
       lastUpdatedAt: rows[0]?.updated_at ?? null,
       notes: [
         "Risk read from latest operator state; portfolio/journal sync was unavailable.",
@@ -171,9 +174,9 @@ async function resolveOperatorWorkspaceId(): Promise<string | null> {
   }
 }
 
-export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
-  const operatorRisk = await loadOperatorRiskState();
-  const workspaceId = await resolveOperatorWorkspaceId();
+export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promise<AdminRiskSnapshot> {
+  const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
+  const operatorRisk = await loadOperatorRiskState(workspaceId ?? undefined);
   if (!workspaceId) return operatorRisk;
 
   try {
@@ -190,7 +193,7 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
           FROM portfolio_positions
           WHERE workspace_id = $1
         ) positions
-      `, [workspaceId]).catch(() => []),
+      `, [workspaceId]),
       q<{ open_risk_usd: string | null; daily_pl: string | null; closed_trades_today: number; last_updated_at: string | null }>(`
         SELECT
           COALESCE(SUM(risk_amount::numeric) FILTER (WHERE is_open = TRUE), 0)::text AS open_risk_usd,
@@ -199,13 +202,13 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
           MAX(updated_at)::text AS last_updated_at
         FROM journal_entries
         WHERE workspace_id = $1
-      `, [workspaceId]).catch(() => []),
+      `, [workspaceId]),
       q<{ latest_equity: string | null; peak_equity: string | null; latest_snapshot: string | null }>(`
         SELECT
           (SELECT total_value::text FROM portfolio_performance WHERE workspace_id = $1 ORDER BY snapshot_date DESC LIMIT 1) AS latest_equity,
           (SELECT MAX(total_value)::text FROM portfolio_performance WHERE workspace_id = $1) AS peak_equity,
           (SELECT MAX(snapshot_date)::text FROM portfolio_performance WHERE workspace_id = $1) AS latest_snapshot
-      `, [workspaceId]).catch(() => []),
+      `, [workspaceId]),
     ]);
 
     const positions = positionRows[0];
@@ -263,12 +266,18 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
       ],
     };
   } catch {
-    return operatorRisk;
+    return {
+      ...operatorRisk, workspaceId,
+      permission: operatorRisk.permission === "BLOCK" ? "BLOCK" : "WAIT",
+      sizeMultiplier: 0, operatorGuardActive: true,
+      notes: [...operatorRisk.notes, "Portfolio/journal risk reads failed; clearance and sizing are withheld."],
+      operatorGuardReasons: [...operatorRisk.operatorGuardReasons, "Portfolio/journal risk unavailable"],
+    };
   }
 }
 
-export async function buildAdminScanContext(): Promise<{ context: ScanContext; risk: AdminRiskSnapshot }> {
-  const risk = await loadAdminRiskSnapshot();
+export async function buildAdminScanContext(workspaceId?: string): Promise<{ context: ScanContext; risk: AdminRiskSnapshot }> {
+  const risk = await loadAdminRiskSnapshot(workspaceId);
   const fallbackThrottle = risk.source === "fallback" ? 0.25 : 1.0;
   // metaHealthThrottle controls discovery scoring. Portfolio risk (drawdown, kill
   // switch, permission) must NOT throttle it -- those are operator guard warnings only.

@@ -194,6 +194,23 @@ export function validateTechnicalNote(
       return { ok: false, reason: `forbidden execution phrase matched: ${re}` };
     }
   }
+  const plan = r.tradePlanSummary as TechnicalNote["tradePlanSummary"] | null;
+  if (!plan || !["bullish", "bearish", "neutral"].includes(plan.bias)) return { ok: false, reason: "invalid trade plan bias" };
+  const levels = [plan.entryLevel, plan.stopLevel, plan.target1, plan.target2];
+  if (levels.some(v => v !== null && (typeof v !== "number" || !Number.isFinite(v) || v <= 0))) {
+    return { ok: false, reason: "trade plan levels must be positive numbers or null" };
+  }
+  if (plan.entryLevel !== null && plan.stopLevel !== null && plan.bias !== "neutral") {
+    const direction = plan.bias === "bullish" ? 1 : -1;
+    const risk = direction * (plan.entryLevel - plan.stopLevel);
+    const targets = [plan.target1, plan.target2];
+    if (risk <= 0 || targets.some(t => t !== null && direction * (t - plan.entryLevel!) <= 0)) {
+      return { ok: false, reason: "stop or target is on the wrong side of entry" };
+    }
+    plan.riskRewardRatio = targets.map(t => t === null ? "n/a" : `${(direction * (t - plan.entryLevel!) / risk).toFixed(2)}R`).join(" / ");
+  } else {
+    plan.riskRewardRatio = "n/a — directional entry and stop required";
+  }
   r.classification = "ADMIN_RESEARCH_NOTE_NOT_BROKER_EXECUTION";
   r.disclaimer = TECHNICAL_NOTE_DISCLAIMER;
   if (!r.generatedAt) r.generatedAt = new Date().toISOString();

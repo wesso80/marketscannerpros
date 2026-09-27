@@ -32,7 +32,8 @@ export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   // Auth gate
-  if (!(await requireAdmin(req)).ok) {
+  const admin = await requireAdmin(req);
+  if (!admin.ok || !admin.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       : undefined;
 
     const [{ risk }, view] = await Promise.all([
-      buildAdminScanContext(),
+      buildAdminScanContext(admin.workspaceId),
       readSavedScan({ market, timeframe, symbols }),
     ]);
 

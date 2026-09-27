@@ -80,9 +80,10 @@ export async function findAnalogues(opts: {
     `SELECT s.id, s.symbol, s.surfaced_at, s.playbook, s.setup_type, s.direction,
             s.regime, s.opportunity_score::text, s.evidence_quality::text,
             (s.feature_embedding <=> $2::vector)::text AS distance,
-            o.classification, o.r_multiple::text, o.resolved_at
+            o.outcome_status AS classification, o.realised_r_5d::text AS r_multiple,
+            CASE WHEN o.realised_r_5d IS NOT NULL THEN o.labelled_at END AS resolved_at
        FROM edge_ledger_setups s
-       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id
+       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
       WHERE s.workspace_id = $1
         AND s.feature_embedding IS NOT NULL
         ${opts.excludeSetupId ? 'AND s.id <> $4' : ''}

@@ -83,6 +83,7 @@ interface RiskMemo {
 }
 
 interface SnapshotMin {
+  holdings: Array<Omit<DashboardRow, "hv90Pct" | "riskRating" | "topConcerns"> & { hv90: number | null }>;
   totalAllocationPct: number;
   benchmark: { ticker: string; status: string; lastBarDate: string | null };
   correlations: Array<{ pair: string; r: number; windowDays: number }>;
@@ -259,7 +260,7 @@ function MemoView({ resp }: { resp: Resp }) {
         <h3 style={cardTitle}>Memo failed validation</h3>
         <div style={{ color: "#FCA5A5", fontSize: 13 }}>{d.aiError || "unknown"}</div>
         <pre style={{ fontSize: 11, color: "#9CA3AF", marginTop: 12, whiteSpace: "pre-wrap" }}>
-          {JSON.stringify(snap.portfolio, null, 2)}
+          {JSON.stringify({ holdings: snap.holdings, portfolio: snap.portfolio }, null, 2)}
         </pre>
       </section>
     );
@@ -321,8 +322,10 @@ function MemoView({ resp }: { resp: Resp }) {
               </tr>
             </thead>
             <tbody>
-              {m.dashboard.map((row, i) => {
-                const c = ratingColor(row.riskRating);
+              {snap.holdings.map((holding, i) => {
+                const assessment = m.dashboard.find(r => r.ticker === holding.ticker);
+                const row = { ...holding, hv90Pct: holding.hv90, riskRating: assessment?.riskRating, topConcerns: assessment?.topConcerns ?? [] };
+                const c = row.riskRating ? ratingColor(row.riskRating) : "#9CA3AF";
                 return (
                   <tr key={i} style={{ borderTop: "1px solid #1F2937" }}>
                     <td style={td}><strong>{row.ticker}</strong></td>
@@ -381,7 +384,7 @@ function MemoView({ resp }: { resp: Resp }) {
       <section style={{ ...card, borderColor: "#10B98155" }}>
         <h3 style={{ ...cardTitle, color: "#10B981" }}>Recommended Actions (operator-grade · system does not execute)</h3>
         <div style={{ display: "grid", gap: 10 }}>
-          {m.recommendedActions.sort((a, b) => a.priority - b.priority).map((a, i) => (
+          {[...m.recommendedActions].sort((a, b) => a.priority - b.priority).map((a, i) => (
             <div key={i} style={{ padding: 10, background: "#0B1220", border: "1px solid #1F2937", borderRadius: 6 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                 <span style={{
