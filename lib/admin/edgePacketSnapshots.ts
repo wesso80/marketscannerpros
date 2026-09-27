@@ -326,7 +326,21 @@ export async function loadEdgePackets(input: LoadEdgePacketsInput): Promise<Edge
             opportunity_rank, opportunity_rank_score, admin_state, thesis_status,
             setup_type, bias, trust_adjusted_score, evidence_quality_score,
             trap_risk_score, freshness, simulated, do_nothing, scheduler_run_id,
-            packet_json, generated_at
+            CASE WHEN packet_json #>> '{liquidityTargets,integrity}' = 'symbol_local_v1'
+              THEN packet_json
+              ELSE (packet_json - 'liquidityTargets') || jsonb_build_object(
+                'liquidityTargets', jsonb_build_object(
+                  'integrity', 'unavailable_legacy',
+                  'unavailableReason', 'Legacy map could contain other symbols; regenerate from symbol research.',
+                  'buyStops', '[]'::jsonb, 'sellStops', '[]'::jsonb,
+                  'priorHigh', NULL, 'priorLow', NULL,
+                  'vwapMagnets', '[]'::jsonb, 'gammaWalls', '[]'::jsonb, 'maxPain', NULL,
+                  'failedBreakouts', '[]'::jsonb, 'failedReclaims', '[]'::jsonb,
+                  'forcedBuyerZones', '[]'::jsonb, 'forcedSellerZones', '[]'::jsonb,
+                  'optionsDataMissing', true),
+                'missingFields', COALESCE(packet_json->'missingFields', '[]'::jsonb)
+                  || '["liquidityTargets: legacy map unavailable"]'::jsonb)
+            END AS packet_json, generated_at
        FROM admin_edge_packets
       WHERE ${where}
       ORDER BY generated_at DESC
