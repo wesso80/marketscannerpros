@@ -59,9 +59,9 @@ async function loadTrainingSet(workspaceId: string): Promise<TrainingExample[]> 
             s.evidence_quality::text, s.opportunity_score::text, s.confidence,
             s.reward_risk::text, o.realised_r_5d::text
        FROM edge_ledger_setups s
-       JOIN edge_ledger_outcomes o ON o.setup_id = s.id
+       JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
       WHERE s.workspace_id = $1
-        AND o.outcome_status IN ('partial', 'complete')
+        AND o.bars_used >= 5
         AND o.realised_r_5d IS NOT NULL`,
     [workspaceId],
   );

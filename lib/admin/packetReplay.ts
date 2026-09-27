@@ -25,11 +25,19 @@ export interface PacketReplayBucket {
   avgOpportunityScore: number | null;
 }
 
+export interface PacketSetupTrace {
+  setupId: number; symbol: string; market: string; packetId: string | null;
+  sourcePacketId: string | null; modelVersion: string | null; levelsTimeframe: string | null;
+  status: string; surfacedAt: string; outcomeStatus: string; barsUsed: number;
+  forwardR5d: number | null; forwardR20d: number | null;
+}
+
 export interface PacketReplayReport {
   workspaceId: string;
   windowDays: number;
   generatedAt: string;
   buckets: PacketReplayBucket[];
+  traces: PacketSetupTrace[];
   totals: {
     packetsBuilt: number;
     setupsLinked: number;
@@ -65,8 +73,8 @@ export async function buildPacketReplayReport(
   }>(
     `SELECT p.packet_type,
             s.status,
-            (o.setup_id IS NOT NULL) AS has_outcome,
-            o.realised_r_5d::text AS realised_r_5d,
+            (o.bars_used >= 5 AND o.realised_r_5d IS NOT NULL) AS has_outcome,
+            CASE WHEN o.bars_used >= 5 THEN o.realised_r_5d::text ELSE NULL END AS realised_r_5d,
             s.evidence_quality::text AS evidence_quality,
             s.opportunity_score::text AS opportunity_score
        FROM edge_ledger_setups s
@@ -74,11 +82,35 @@ export async function buildPacketReplayReport(
          ON p.id = s.packet_id
         AND p.workspace_id = s.workspace_id
   LEFT JOIN edge_ledger_outcomes o
-         ON o.setup_id = s.id
+         ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
       WHERE s.workspace_id = $1
         AND s.surfaced_at >= NOW() - ($2 || ' days')::interval`,
     [workspaceId, String(windowDays)],
   );
+
+  const traceRows = await q<{
+    id: number; symbol: string; market: string; packet_id: string | null;
+    source_packet_id: string | null; model_version: string | null; levels_timeframe: string | null;
+    status: string; surfaced_at: Date | string; outcome_status: string | null; bars_used: number | null;
+    realised_r_5d: string | null; realised_r_20d: string | null;
+  }>(`SELECT s.id, s.symbol, s.market, p.id AS packet_id, s.status, s.surfaced_at,
+             s.feature_vector->>'sourcePacketId' AS source_packet_id,
+             s.feature_vector->>'modelVersion' AS model_version,
+             s.feature_vector->>'levelsTimeframe' AS levels_timeframe,
+             o.outcome_status, o.bars_used, o.realised_r_5d, o.realised_r_20d
+        FROM edge_ledger_setups s
+        LEFT JOIN admin_market_packets p ON p.id = s.packet_id AND p.workspace_id = s.workspace_id
+        LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
+       WHERE s.workspace_id = $1 AND s.surfaced_at >= NOW() - ($2 || ' days')::interval
+       ORDER BY s.surfaced_at DESC, s.id DESC LIMIT 20`, [workspaceId, String(windowDays)]);
+  const traces: PacketSetupTrace[] = traceRows.map(row => ({
+    setupId: Number(row.id), symbol: row.symbol, market: row.market, packetId: row.packet_id,
+    sourcePacketId: row.source_packet_id, modelVersion: row.model_version, levelsTimeframe: row.levels_timeframe,
+    status: row.status, surfacedAt: new Date(row.surfaced_at).toISOString(),
+    outcomeStatus: row.outcome_status ?? 'pending', barsUsed: Number(row.bars_used ?? 0),
+    forwardR5d: Number(row.bars_used) >= 5 && row.realised_r_5d != null ? Number(row.realised_r_5d) : null,
+    forwardR20d: Number(row.bars_used) >= 20 && row.realised_r_20d != null ? Number(row.realised_r_20d) : null,
+  }));
 
   // 3. Bucket by packet_type
   const byType = new Map<string, PacketReplayBucket>();
@@ -110,7 +142,7 @@ export async function buildPacketReplayReport(
     if (row.status === 'skipped') bucket.setupsSkipped++;
     if (row.has_outcome) bucket.setupsResolved++;
 
-    const r5 = row.realised_r_5d === null ? null : Number(row.realised_r_5d);
+    const r5 = !row.has_outcome || row.realised_r_5d === null ? null : Number(row.realised_r_5d);
     const ev = row.evidence_quality === null ? null : Number(row.evidence_quality);
     const op = row.opportunity_score === null ? null : Number(row.opportunity_score);
 
@@ -145,6 +177,7 @@ export async function buildPacketReplayReport(
     windowDays,
     generatedAt: new Date().toISOString(),
     buckets,
+    traces,
     totals,
   };
 }

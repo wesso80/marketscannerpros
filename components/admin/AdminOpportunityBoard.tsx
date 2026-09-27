@@ -59,6 +59,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
   const [error, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<AdminOpportunityRow | null>(null);
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const [setupCapture, setSetupCapture] = useState<{ eligible: number; linked: number; failed: number; skippedReasons: Record<string, number> } | null>(null);
   const [savedScan, setSavedScan] = useState<SavedScanStatusData[]>([]);
 
   // Only the latest request may write state: the board opens on the default market and is often switched
@@ -76,6 +77,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
     setLoading(true);
     setError(null);
     setRows([]);
+    setSetupCapture(null);
     try {
       const res = await fetch(`/api/admin/opportunities?market=${market}&timeframe=${timeframe}`, {
         credentials: "include",
@@ -88,6 +90,7 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
       const json = await res.json();
       if (seq !== requestSeq.current) return;
       setRows(json.rows ?? []);
+      setSetupCapture(json.setupCapture ?? null);
       const map: Record<string, AdminEdgePacket> = {};
       for (const p of (json.edgePackets ?? []) as AdminEdgePacket[]) {
         map[p.symbol] = p;
@@ -126,6 +129,11 @@ export default function AdminOpportunityBoard({ defaultMarket = "EQUITIES" }: { 
   return (
     <div style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1400, margin: "0 auto" }}>
       {/* Why This Rank Drawer */}
+      {setupCapture && <div style={{ marginBottom: 12, padding: 12, background: "#111827", color: "#CBD5E1", fontSize: 12 }}>
+        Research ledger: {setupCapture.linked}/{setupCapture.eligible} eligible position plans linked · {setupCapture.failed} failed.
+        <span> Daily entry must be confirmed in-zone with at least 1.5R. Repeated plans reuse their original record; no trades are opened.</span>
+        {Object.entries(setupCapture.skippedReasons).map(([reason, count]) => <span key={reason} style={{ display: "block", color: "#94A3B8" }}>{reason.replaceAll('_', ' ')}: {count}</span>)}
+      </div>}
       <WhyThisRankDrawer row={selectedRow} onClose={() => setSelectedRow(null)} />
 
       <header style={{ marginBottom: "1rem" }}>

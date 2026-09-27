@@ -57,10 +57,10 @@ export async function GET(req: NextRequest) {
          COUNT(*)::text AS total,
          COUNT(*) FILTER (WHERE s.status = 'taken')::text AS taken,
          COUNT(*) FILTER (WHERE s.status = 'skipped')::text AS skipped,
-         COUNT(*) FILTER (WHERE o.outcome_status IS NULL OR o.outcome_status = 'pending')::text AS pending_outcomes,
+         COUNT(*) FILTER (WHERE o.outcome_status IS NULL OR o.outcome_status IN ('pending','partial'))::text AS pending_outcomes,
          COUNT(*) FILTER (WHERE o.outcome_status = 'complete')::text AS complete_outcomes
        FROM edge_ledger_setups s
-       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id
+       LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
        WHERE s.workspace_id = $1 AND s.surfaced_at >= $2`,
       [workspaceId, sinceISO],
     ),
