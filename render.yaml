@@ -564,10 +564,9 @@
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 540 -X POST "$WEB_URL/api/cron/persist-edge-packets" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"market":"EQUITIES","timeframe":"15m"}'
     envVars:
-      - key: WEB_URL
-        value: "https://marketscannerpros.app"
-      - key: CRON_SECRET
-        sync: false
+      # Existing Dashboard-managed group, shared with the repaired production cron jobs.
+      # Keep secrets in Render; per-job overrides caused persistent HTTP 401 failures.
+      - fromGroup: msp-cron-http
 
   - type: cron
     name: arca-cycle
@@ -588,10 +587,9 @@
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/arca-daily-report" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
-      - key: WEB_URL
-        value: "https://marketscannerpros.app"
-      - key: CRON_SECRET
-        sync: false
+      # Existing Dashboard-managed group, shared with the repaired production cron jobs.
+      # Keep secrets in Render; per-job overrides caused persistent HTTP 401 failures.
+      - fromGroup: msp-cron-http
 
   # Pulls Alpha Vantage OVERVIEW for every enabled equity in symbol_universe
   # and persists float / short interest / company-info into company_overview.
