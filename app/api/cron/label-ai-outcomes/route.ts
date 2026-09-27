@@ -13,6 +13,7 @@ import {
   type OutcomeHorizon,
 } from '@/lib/outcomes/aiOutcomeLabel';
 import { createHorizonPriceResolver } from '@/lib/outcomes/aiOutcomePrices';
+import { labelPositionHorizons, type PositionHorizonRunResult } from '@/lib/outcomes/positionHorizonLabeller';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,6 +34,13 @@ export function maxRowsPerHorizon(): number {
 export function labellerTimeBudgetMs(): number {
   const n = Number(process.env.AI_OUTCOME_TIME_BUDGET_MS);
   return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : 90_000;
+}
+/**
+ * Price-lookup budget for the 6w/12w horizons, which run after 4h/24h: whatever is left of the main budget, at least
+ * 5 s (so rows whose daily bars load quickly still progress) and at most 30 s (keeps the run inside curl's 120 s).
+ */
+export function positionBudgetMs(mainBudgetMs: number, elapsedMs: number): number {
+  return Math.max(5_000, Math.min(30_000, mainBudgetMs - elapsedMs));
 }
 const HORIZON_4H_COLUMNS = ['outcome_4h', 'price_after_4h', 'pct_move_4h', 'price_after_4h_at', 'outcome_4h_measured_at'];
 
@@ -91,6 +99,8 @@ function candidateSql(horizon: OutcomeHorizon): string {
  * Labels ai_signal_log rows per horizon:
  *   - 4h  → outcome_4h / price_after_4h / pct_move_4h (migration 103; skipped until it is applied)
  *   - 24h → outcome / price_after_24h / pct_move_24h (the columns behind the public win rates)
+ *   - 6w / 12w → outcome_6w / outcome_12w and friends on DAILY bars (migration 105; skipped until it is applied;
+ *     lib/outcomes/positionHorizonLabeller.ts)
  * A horizon is only labelled once it has passed AND a completed bar at/after it exists. Rows without a usable price,
  * direction (LONG/SHORT), entry price or supported asset type are left for a later run; anything still pending after
  * 7 days is expired. Every UPDATE is guarded on "not yet labelled for this horizon", so overlapping or duplicate runs
@@ -202,6 +212,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 6-week / 12-week position horizons (daily bars). Never fails the run: 4h/24h labels are already written.
+    let positionHorizons: PositionHorizonRunResult | { enabled: false; error: string };
+    try {
+      positionHorizons = await labelPositionHorizons({ nowMs, budgetMs: positionBudgetMs(budgetMs, Date.now() - startedMs) });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[label-ai-outcomes] 6w/12w labelling failed: ${message}`);
+      positionHorizons = { enabled: false, error: message };
+    }
+
     return NextResponse.json({
       success: true,
       labeled: tallies['24h'].labeled + tallies['4h'].labeled,
@@ -214,6 +234,7 @@ export async function POST(req: NextRequest) {
       priceFetches: resolve.fetchCounts(),
       deferredOverBudget,
       budgetMs,
+      positionHorizons,
       elapsedMs: Date.now() - startedMs,
     });
   } catch (err: unknown) {
