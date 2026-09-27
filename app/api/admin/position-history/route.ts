@@ -1,3 +1,4 @@
+import { validAdminMutationOrigin } from '@/lib/admin/mutationOrigin';
 import { NextRequest,NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { readSavedScan } from '@/lib/admin/sharedScan';
@@ -12,7 +13,7 @@ export async function POST(req:NextRequest){
  const headers={'Cache-Control':'private, no-store'};
  const auth=await requireAdmin(req);
  if(!auth.ok||!auth.workspaceId)return NextResponse.json({error:'Unauthorized'},{status:403,headers});
- if(req.headers.get('origin')&&req.headers.get('origin')!==req.nextUrl.origin)return NextResponse.json({error:'Origin mismatch'},{status:403,headers});
+ if(!validAdminMutationOrigin(req.headers.get('origin'),req.nextUrl.origin))return NextResponse.json({error:'Origin mismatch'},{status:403,headers});
  const body=await req.json().catch(()=>({}));
  const offset=body.offset??0;
  if(!Number.isInteger(offset)||offset<0||offset>10000)return NextResponse.json({error:'Invalid offset'},{status:400,headers});

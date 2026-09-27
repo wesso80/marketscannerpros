@@ -1,3 +1,4 @@
+import { validAdminMutationOrigin } from '@/lib/admin/mutationOrigin';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { readSavedScan } from '@/lib/admin/sharedScan';
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok || !auth.workspaceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 403, headers });
   // Browser-origin writes must come from this application, not a third-party form.
   const origin = req.headers.get('origin');
-  if (origin && origin !== req.nextUrl.origin) return NextResponse.json({ error: 'Origin rejected' }, { status: 403, headers });
+  if (!validAdminMutationOrigin(origin, req.nextUrl.origin)) return NextResponse.json({ error: 'Origin rejected' }, { status: 403, headers });
   let body;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400, headers }); }
   if (!body || typeof body.symbol !== 'string' || !/^[A-Z0-9.\-]{1,15}$/.test(body.symbol) ||
