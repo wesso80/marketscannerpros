@@ -20,6 +20,7 @@ import {
   listOpenPositions,
   updatePortfolioBalances,
   getDefaultPortfolio,
+  getPortfolioById,
 } from "./portfolioStore";
 import { ARCA_DEFAULT_PORTFOLIO_NAME } from "./constants";
 import { createDefaultArcaPortfolio } from "./createPortfolio";
@@ -97,6 +98,12 @@ export interface SimulateCycleOptions {
 
 export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<SimulateCycleResult> {
   const portfolio = await ensurePortfolio(opts.workspaceId);
+  if (portfolio.status !== 'ACTIVE') return {
+    portfolioId: portfolio.id, cycleAt: new Date().toISOString(),
+    ordersCreated: 0, ordersTriggered: 0, ordersCancelled: 0,
+    positionsOpened: 0, positionsMarked: 0, positionsClosed: 0,
+    riskEventsCreated: 0, rejections: 0, notes: ['Paper account is ' + portfolio.status + '; cycle skipped.'],
+  };
   const notes: string[] = [];
   let ordersCreated = 0;
   let ordersTriggered = 0;
@@ -150,7 +157,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     positionsMarked++;
     if (res.exit) positionsClosed++;
     // Refresh portfolio after each cash-impacting operation.
-    runningPortfolio = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? runningPortfolio;
+    runningPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
   }
 
   // 3. Trigger waiting orders.
@@ -168,7 +175,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     });
     ordersTriggered++;
     positionsOpened++;
-    runningPortfolio = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? runningPortfolio;
+    runningPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
   }
 
   // 4. New candidates → planned/limit orders.
@@ -674,7 +681,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   // 5. Snapshot.
   const closingOpens = await listOpenPositions(opts.workspaceId, portfolio.id);
   const exposure = bucketExposure(closingOpens);
-  const finalPortfolio = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? runningPortfolio;
+  const finalPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
   const unrealised = closingOpens.reduce((s, p) => s + p.unrealisedPnl, 0);
   const equity = round2(finalPortfolio.currentCash + unrealised);
   await updatePortfolioBalances({
@@ -708,7 +715,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   let benchmarkSymbol: string | undefined;
   let playbooksUpdated: number | undefined;
   try {
-    const refreshed = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? finalPortfolio;
+    const refreshed = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? finalPortfolio;
     const bm = await captureBenchmarkSnapshot({ portfolio: refreshed });
     benchmarkCaptured = bm.ok;
     benchmarkSymbol = bm.benchmarkSymbol;
@@ -717,7 +724,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     notes.push(`benchmark error: ${err instanceof Error ? err.message : String(err)}`);
   }
   try {
-    const refreshed = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? finalPortfolio;
+    const refreshed = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? finalPortfolio;
     const pb = await rollupPlaybookPerformance(refreshed);
     playbooksUpdated = pb.playbooksUpdated;
   } catch (err) {
