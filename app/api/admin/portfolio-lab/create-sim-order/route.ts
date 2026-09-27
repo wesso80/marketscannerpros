@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (!portfolio) return NextResponse.json({ error: "No ARCA portfolio" }, { status: 404 });
 
   const assetClass = body.assetClass as ArcaAssetClass;
-  const sizing = sizeForPortfolio(portfolio, {
+  const sizing = await sizeForPortfolio(portfolio, {
     entry: body.entry!,
     stop: body.stop!,
     side: body.side!,
