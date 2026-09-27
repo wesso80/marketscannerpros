@@ -87,10 +87,12 @@ async function aggregateDimension(workspaceId: string, dim: Dimension): Promise<
   }>(
     `WITH base AS (
        SELECT ${cell} AS cell_key, s.status,
-              o.realised_r_5d, o.realised_r_20d,
-              o.hit_target_5d, o.hit_stop_5d
+              CASE WHEN o.bars_used >= 5 THEN o.realised_r_5d END AS realised_r_5d,
+              CASE WHEN o.bars_used >= 20 THEN o.realised_r_20d END AS realised_r_20d,
+              CASE WHEN o.bars_used >= 5 THEN o.hit_target_5d END AS hit_target_5d,
+              CASE WHEN o.bars_used >= 5 THEN o.hit_stop_5d END AS hit_stop_5d
          FROM edge_ledger_setups s
-         LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id
+         LEFT JOIN edge_ledger_outcomes o ON o.setup_id = s.id AND o.workspace_id = s.workspace_id
         WHERE s.workspace_id = $1
      )
      SELECT cell_key,

@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
+import { captureResearchSetups, type SetupCaptureSummary } from "@/lib/admin/researchSetupBridge";
 import { wrapTruth } from "@/lib/admin";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import { whatChangedForWorkspace } from "@/lib/admin/getAdminResearchPacket";
@@ -36,10 +36,10 @@ const DB_CONCURRENCY = 6;
 
 export async function GET(req: NextRequest) {
   // Auth gate (mirrors /api/admin/symbol/[symbol] pattern)
-  if (!(await requireAdmin(req)).ok) {
+  const session = await requireAdmin(req);
+  if (!session.ok || !session.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
-  const session = await getSessionFromCookie();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -118,6 +118,7 @@ export async function GET(req: NextRequest) {
 
     // Side-effects: sync queue state + emit change-tape events + persist
     // edge-packet snapshots for audit/calibration. All best-effort.
+    let setupCapture: SetupCaptureSummary | null = null;
     const changesBySymbol: Record<string, Array<{ eventType: string; severity: ChangeTapeSeverity; magnitude: number }>> = {};
     if (session?.workspaceId) {
       const ws = session.workspaceId;
@@ -125,6 +126,7 @@ export async function GET(req: NextRequest) {
       const rankableIds = new Set(packets.filter(isRankable).map((p) => p.packetId));
       const liveEdge = edgePackets.filter((p) => rankableIds.has(p.packetId));
       const livePackets = packets.filter((p) => rankableIds.has(p.packetId));
+      setupCapture = await captureResearchSetups(ws, liveEdge);
       await boundedMap(liveEdge, DB_CONCURRENCY, (p) => syncQueueFromPacket({ workspaceId: ws, packet: p }).catch(() => undefined));
       // Persist canonical edge-packet snapshots (Tier 1 #2). Awaited so
       // any DB error surfaces in logs while still being non-blocking via
@@ -180,6 +182,7 @@ export async function GET(req: NextRequest) {
       rows,
       edgePackets,
       changesBySymbol,
+      setupCapture,
       errors: unavailable,
       // When the newest saved result was built — shown as the scan age on the board.
       timestamp: scanTimestamp,

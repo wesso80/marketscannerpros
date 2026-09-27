@@ -84,7 +84,7 @@ export async function computeRankCalibration(
   windowDays = 90,
 ): Promise<CalibrationReport> {
   const computedAt = new Date().toISOString();
-  const notes: string[] = [];
+  const notes: string[] = ["Forward five-bar research returns are not executed trade P/L. Overlapping setups may be correlated; sample counts alone do not establish independent evidence."];
 
   let rows: JoinedRow[] = [];
   try {
@@ -186,21 +186,26 @@ export async function computeRankCalibration(
 }
 
 async function loadJoinedRows(workspaceId: string, windowDays: number): Promise<JoinedRow[]> {
-  // Join edge_ledger_outcomes -> edge_ledger_setups (for packet_id) ->
-  // admin_edge_packets (for axes JSON). Filter by workspace and window.
-  // Only `outcome_status='complete'` rows are considered (5d window must
-  // be fully closed for realised_r_5d to be honest).
+  // Use the immutable axis snapshot saved with the setup. Older records may
+  // reference an edge packet directly; the lateral fallback selects one row,
+  // so duplicate packet snapshots never multiply the calibration sample.
   const rows = await q<{ packet_json: unknown; realised_r_5d: string | number }>(
-    `SELECT aep.packet_json AS packet_json, elo.realised_r_5d AS realised_r_5d
+    `SELECT COALESCE(amp.payload->'researchSetup'->'axisScores', aep.packet_json) AS packet_json,
+            elo.realised_r_5d AS realised_r_5d
        FROM edge_ledger_outcomes elo
-       JOIN edge_ledger_setups   els ON els.id = elo.setup_id
-       JOIN admin_edge_packets   aep ON aep.packet_id = els.packet_id
-                                    AND aep.workspace_id = elo.workspace_id
+       JOIN edge_ledger_setups els ON els.id = elo.setup_id AND els.workspace_id = elo.workspace_id
+       LEFT JOIN admin_market_packets amp ON amp.id = els.packet_id AND amp.workspace_id = els.workspace_id
+       LEFT JOIN LATERAL (
+         SELECT packet_json FROM admin_edge_packets
+          WHERE workspace_id = els.workspace_id
+            AND packet_id = COALESCE(els.feature_vector->>'sourcePacketId', els.packet_id)
+          ORDER BY generated_at ASC, id ASC LIMIT 1
+       ) aep ON true
       WHERE elo.workspace_id = $1
-        AND elo.outcome_status = 'complete'
+        AND elo.bars_used >= 5
         AND elo.realised_r_5d IS NOT NULL
         AND elo.labelled_at >= NOW() - ($2 || ' days')::interval
-      LIMIT 1000`,
+      ORDER BY els.surfaced_at DESC, els.id DESC LIMIT 1000`,
     [workspaceId, String(windowDays)],
   );
 

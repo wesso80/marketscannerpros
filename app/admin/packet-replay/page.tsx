@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import type { PacketSetupTrace } from '@/lib/admin/packetReplay';
 
 interface Bucket {
   packetType: string;
@@ -33,6 +34,7 @@ interface Report {
   windowDays: number;
   generatedAt: string;
   buckets: Bucket[];
+  traces: PacketSetupTrace[];
   totals: { packetsBuilt: number; setupsLinked: number; setupsResolved: number; winsR5d: number };
 }
 
@@ -60,9 +62,9 @@ export default function PacketReplayPage() {
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#E5E7EB' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, color: '#F9FAFB' }}>Packet Replay Backtest</h1>
+          <h1 style={{ margin: 0, fontSize: 26, color: '#F9FAFB' }}>Packet-to-Outcome Trace</h1>
           <p style={{ margin: '6px 0 0', color: '#9CA3AF', fontSize: 13, maxWidth: 720 }}>
-            Joins admin_market_packets with edge_ledger setups + outcomes. Answers: does every packet type actually produce setups that resolve profitably?
+            Tracks saved research packets through surfaced setups and completed forward-bar observations. Forward R is measured from the research trigger; it is not an executed trade, fee-adjusted P/L, or a six-week strategy result. Repeated plans reuse one record; overlapping plans are not independent samples.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -92,11 +94,19 @@ export default function PacketReplayPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 18 }}>
             <Stat label="Packets built" value={String(report.totals.packetsBuilt)} />
             <Stat label="Setups linked" value={String(report.totals.setupsLinked)} />
-            <Stat label="Resolved" value={String(report.totals.setupsResolved)} />
-            <Stat label="Wins (5d R>0)" value={String(report.totals.winsR5d)} />
-            <Stat label="Win rate" value={report.totals.setupsResolved > 0 ? ((report.totals.winsR5d / report.totals.setupsResolved) * 100).toFixed(0) + '%' : '—'} />
+            <Stat label="Mature 5-bar outcomes" value={String(report.totals.setupsResolved)} />
+            <Stat label="Positive 5-bar R" value={String(report.totals.winsR5d)} />
+            <Stat label="Positive-return rate" value={report.totals.setupsResolved > 0 ? ((report.totals.winsR5d / report.totals.setupsResolved) * 100).toFixed(0) + '%' : '—'} />
           </div>
 
+          <h2 style={{ fontSize: 18 }}>Recent setup traces</h2>
+          {(report.traces ?? []).length === 0 && <p>No qualifying position setup has been recorded yet. Open the Opportunity Board to capture current confirmed plans; pending entries and plans below 1.5R are excluded.</p>}
+          {(report.traces ?? []).map(trace => <div key={trace.setupId} style={{ border: '1px solid #374151', borderRadius: 8, padding: 12, marginBottom: 10, overflowWrap: 'anywhere' }}>
+            <strong>{trace.symbol} · {trace.market} · setup #{trace.setupId} · {trace.status}</strong>
+            <p>Source packet: {trace.sourcePacketId ?? 'unavailable'}<br/>Saved packet: {trace.packetId ?? 'unlinked'}<br/>{trace.modelVersion ?? 'legacy method'} · levels {trace.levelsTimeframe ?? 'unavailable'}</p>
+            <p>First surfaced: {trace.surfacedAt} · Outcome: {trace.outcomeStatus} · {trace.barsUsed} completed forward bars</p>
+            <p>5-bar forward R: {trace.forwardR5d == null ? 'Pending — need 5 completed bars' : trace.forwardR5d.toFixed(3)} · 20-bar forward R: {trace.forwardR20d == null ? 'Pending — need 20 completed bars' : trace.forwardR20d.toFixed(3)}</p>
+          </div>)}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr>
               <th style={th}>Packet type</th>
@@ -104,9 +114,9 @@ export default function PacketReplayPage() {
               <th style={{ ...th, textAlign: 'right' }}>Linked</th>
               <th style={{ ...th, textAlign: 'right' }}>Taken</th>
               <th style={{ ...th, textAlign: 'right' }}>Skipped</th>
-              <th style={{ ...th, textAlign: 'right' }}>Resolved</th>
-              <th style={{ ...th, textAlign: 'right' }}>Win rate</th>
-              <th style={{ ...th, textAlign: 'right' }}>Avg R (5d)</th>
+              <th style={{ ...th, textAlign: 'right' }}>Mature 5-bar</th>
+              <th style={{ ...th, textAlign: 'right' }}>Positive R rate</th>
+              <th style={{ ...th, textAlign: 'right' }}>Avg forward R (5 bars)</th>
               <th style={{ ...th, textAlign: 'right' }}>Avg Ev</th>
               <th style={{ ...th, textAlign: 'right' }}>Avg Opp</th>
             </tr></thead>

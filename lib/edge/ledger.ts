@@ -24,6 +24,8 @@ export type Regime = 'trend-up' | 'trend-down' | 'chop' | 'vol-expand' | 'vol-co
 
 export interface RecordSetupInput {
   workspaceId: string;
+  /** Server-derived immutable plan identity; repeated snapshots reuse the first observation. */
+  setupKey?: string;
   symbol: string;
   market: 'equity' | 'crypto' | 'options' | 'futures';
   playbook?: string;
@@ -64,10 +66,10 @@ function computeRR(entry: number | null | undefined, stop: number | null | undef
  * Record a setup as 'surfaced'. Idempotent on (workspace_id, setup_key).
  * Returns the row id (existing or new).
  */
-export async function recordSetupSurfaced(input: RecordSetupInput): Promise<number> {
-  const key = deriveSetupKey(input);
+export async function recordSetupSurfaced(input: RecordSetupInput, query: typeof q = q): Promise<number> {
+  const key = input.setupKey ?? deriveSetupKey(input);
   const { risk, rr } = computeRR(input.entryPrice, input.stopPrice, input.targetPrice, input.direction);
-  const rows = await q<{ id: number }>(
+  const rows = await query<{ id: number }>(
     `INSERT INTO edge_ledger_setups
        (workspace_id, setup_key, symbol, market, playbook, setup_type, direction,
         packet_id, regime, vix_level, iv_percentile, sector, catalyst_proximity_days,
@@ -76,9 +78,7 @@ export async function recordSetupSurfaced(input: RecordSetupInput): Promise<numb
         feature_vector, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'surfaced')
        ON CONFLICT (workspace_id, setup_key) DO UPDATE
-         SET evidence_quality = COALESCE(EXCLUDED.evidence_quality, edge_ledger_setups.evidence_quality),
-             opportunity_score = COALESCE(EXCLUDED.opportunity_score, edge_ledger_setups.opportunity_score),
-             confidence = COALESCE(EXCLUDED.confidence, edge_ledger_setups.confidence)
+         SET setup_key = edge_ledger_setups.setup_key
        RETURNING id`,
     [
       input.workspaceId, key, input.symbol.toUpperCase(), input.market,

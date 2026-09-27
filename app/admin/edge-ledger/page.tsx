@@ -148,7 +148,7 @@ export default function EdgeLedgerPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 28, color: '#F9FAFB' }}>Edge Ledger</h1>
           <p style={{ margin: '8px 0 0', color: '#9CA3AF', fontSize: 14, maxWidth: 720 }}>
-            Every setup the platform surfaces — taken or skipped — with forward MFE/MAE labelled from real bars.
+            Confirmed weekly/daily position plans captured from the Opportunity Board, with forward MFE/MAE from completed real bars.
             Counterfactual stats (what skipped setups would have done) appear alongside taken-performance.
             Research-only; no broker execution.
           </p>
@@ -196,7 +196,7 @@ export default function EdgeLedgerPage() {
             <SummaryCard label="Setups Surfaced" value={data.summary.total} sub={`last ${data.summary.days}d`} />
             <SummaryCard label="Taken" value={data.summary.taken} accent="#10B981" />
             <SummaryCard label="Skipped" value={data.summary.skipped} accent="#6B7280" />
-            <SummaryCard label="Outcomes Labelled" value={data.summary.completeOutcomes} sub={`${data.summary.pendingOutcomes} pending`} />
+            <SummaryCard label="Complete 20-bar Outcomes" value={data.summary.completeOutcomes} sub={`${data.summary.pendingOutcomes} pending or partial`} />
           </div>
 
           {DIMENSIONS.map((d) => {
@@ -255,7 +255,7 @@ export default function EdgeLedgerPage() {
 
           {data.matrix.length === 0 && (
             <div style={{ background: '#0B1220', border: '1px solid #374151', borderRadius: 8, padding: 24, textAlign: 'center', color: '#9CA3AF' }}>
-              No matrix cells yet. Surface some setups via the scanner and run the
+              No matrix cells yet. Qualifying plans are captured when the Opportunity Board is loaded. The scheduled matrix rebuild uses the
               <code style={{ color: '#E5E7EB', margin: '0 4px' }}>edge-rebuild-matrix</code> cron.
             </div>
           )}
