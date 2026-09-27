@@ -65,10 +65,10 @@ export async function captureAccount(workspaceId: string, force = false) {
     await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     // Same lock as Portfolio saves; no concurrent partial replacement can be captured.
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [workspaceId]);
-    const config = await client.query(`SELECT enabled, last_attempt_at FROM account_equity_capture WHERE workspace_id = $1 FOR UPDATE`, [workspaceId]);
+    const config = await client.query(`SELECT enabled, last_attempt_at, last_error FROM account_equity_capture WHERE workspace_id = $1 FOR UPDATE`, [workspaceId]);
     const row = config.rows[0];
     const now = new Date();
-    if (!row?.enabled || (row.last_attempt_at && now.getTime() - new Date(row.last_attempt_at).getTime() < (force ? 60_000 : 15 * 60_000))) {
+    if (!row?.enabled || (row.last_attempt_at && now.getTime() - new Date(row.last_attempt_at).getTime() < (force || row.last_error ? 60_000 : 15 * 60_000))) {
       return { status: 'skipped' as const };
     }
     const cash = await client.query<CaptureCash>(`SELECT entry_type, amount, effective_date::text FROM portfolio_cash_ledger WHERE workspace_id::text = $1`, [workspaceId]);
@@ -104,7 +104,8 @@ export async function captureAccount(workspaceId: string, force = false) {
 export async function captureDueAccounts() {
   await ensureCaptureSchema();
   const due = await q<{ workspace_id: string }>(`SELECT workspace_id FROM account_equity_capture
-    WHERE enabled AND (last_attempt_at IS NULL OR last_attempt_at < NOW() - INTERVAL '15 minutes')
+    WHERE enabled AND (last_attempt_at IS NULL OR last_attempt_at < NOW() - INTERVAL '15 minutes'
+      OR (last_error IS NOT NULL AND last_attempt_at < NOW() - INTERVAL '1 minute'))
     ORDER BY last_attempt_at ASC NULLS FIRST LIMIT 10`);
   const counts = { captured: 0, blocked: 0, skipped: 0, failed: 0 };
   for (const row of due) {
@@ -115,4 +116,21 @@ export async function captureDueAccounts() {
     }
   }
   return counts;
+}
+
+/** Only explicit enrolled accounts supply mark-refresh symbols; never guess an operator workspace. */
+export async function dueCaptureSymbols() {
+  await ensureCaptureSchema();
+  return q<{ symbol: string; asset_type: string; observed_at: string | null; observed_price: string | null }>(`
+    WITH due AS (
+      SELECT workspace_id FROM account_equity_capture
+      WHERE enabled AND (last_attempt_at IS NULL OR last_attempt_at < NOW() - INTERVAL '15 minutes'
+        OR (last_error IS NOT NULL AND last_attempt_at < NOW() - INTERVAL '1 minute'))
+      ORDER BY last_attempt_at ASC NULLS FIRST LIMIT 10
+    )
+    SELECT DISTINCT p.symbol, u.asset_type, quote.observed_at::text, quote.observed_price::text
+    FROM due JOIN portfolio_positions p ON p.workspace_id = due.workspace_id
+    JOIN symbol_universe u ON u.symbol = p.symbol
+    LEFT JOIN quotes_latest quote ON quote.symbol = p.symbol
+    WHERE u.asset_type IN ('equity', 'crypto') ORDER BY p.symbol LIMIT 100`);
 }

@@ -15,7 +15,9 @@ dotenv.config({ path: '.env.local' });
 dotenv.config(); // Also try .env as fallback
 
 import { Pool } from 'pg';
-import { ensureCaptureSchema, captureDueAccounts } from '../lib/portfolio/serverCapture';
+import { captureMarkUsable } from '../lib/portfolio/captureValues';
+import { isUsRegularSessionOpen } from '../lib/time/usSession';
+import { ensureCaptureSchema, captureDueAccounts, dueCaptureSymbols } from '../lib/portfolio/serverCapture';
 import { Redis } from '@upstash/redis';
 import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
@@ -1704,6 +1706,38 @@ async function processCryptoSymbol(symbol: string): Promise<{
   }
 }
 
+/** Small account-only quote refresh runs independently of slow full-universe history ingestion. */
+async function refreshAndCaptureAccounts() {
+  const now = new Date();
+  const missing = (await dueCaptureSymbols()).filter(row =>
+    !(Number(row.observed_price) > 0) || !captureMarkUsable(row.asset_type, row.observed_at, now));
+  const crypto = missing.filter(row => row.asset_type === 'crypto').flatMap(row => {
+    const coinId = resolveWorkerCoinIdSync(row.symbol);
+    return coinId ? [{ symbol: row.symbol, coinId }] : [];
+  });
+  if (crypto.length) {
+    const snapshot = await fetchCryptoQuoteSnapshot(crypto,
+      ids => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, { retries: 1, timeoutMs: 6000 }));
+    await upsertQuotesBatch([...snapshot.quotes.entries()]);
+  }
+  const equities = missing.filter(row => row.asset_type === 'equity').map(row => row.symbol);
+  if (isUsRegularSessionOpen(now.getTime())) {
+    for (const batch of chunkSymbols(equities)) await upsertEquityQuotesBatch(await fetchAVBulkQuotes(batch));
+  } else {
+    for (const symbol of equities) {
+      const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'compact'), Date.now(), getEquityBarSchedule().dailySettleMin);
+      if (mark) await getPool().query(`
+        INSERT INTO quotes_latest (symbol, price, observed_price, observed_at)
+        VALUES ($1, $2, $2, $3::timestamptz)
+        ON CONFLICT (symbol) DO UPDATE SET observed_price = EXCLUDED.observed_price, observed_at = EXCLUDED.observed_at
+        WHERE quotes_latest.observed_at IS NULL OR quotes_latest.observed_at < EXCLUDED.observed_at
+      `, [symbol, mark.price, mark.updatedAt]);
+    }
+  }
+  const captures = await captureDueAccounts();
+  if (Object.values(captures).some(Boolean)) console.log('[worker] Account equity capture:', JSON.stringify(captures));
+}
+
 // ============================================================================
 // Main Worker Loop
 // ============================================================================
@@ -1975,7 +2009,19 @@ async function main(): Promise<void> {
   });
 
   let cycleCount = 0;
-  let lastAccountCaptureCheck = 0;
+  let accountCaptureRunning = false;
+  const checkAccounts = async () => {
+    if (accountCaptureRunning) return;
+    accountCaptureRunning = true;
+    try { await refreshAndCaptureAccounts(); }
+    catch (error) {
+      console.error('[worker] Account equity capture unavailable:', error instanceof Error ? error.message : 'unknown error');
+    } finally { accountCaptureRunning = false; }
+  };
+  if (!runOnce) {
+    void checkAccounts();
+    setInterval(() => { void checkAccounts(); }, 60_000).unref();
+  }
   const CYCLE_INTERVAL_MS = 60000; // Run full cycle every 60 seconds
 
   while (true) {
@@ -1994,15 +2040,7 @@ async function main(): Promise<void> {
 
       await logWorkerRun(`ingest-${workerLane}`, stats, 'completed');
 
-      if (Date.now() - lastAccountCaptureCheck >= 60_000) {
-        lastAccountCaptureCheck = Date.now();
-        try {
-          const captures = await captureDueAccounts();
-          if (Object.values(captures).some(Boolean)) console.log('[worker] Account equity capture:', JSON.stringify(captures));
-        } catch (error) {
-          console.error('[worker] Account equity capture unavailable:', error instanceof Error ? error.message : 'unknown error');
-        }
-      }
+      if (runOnce) await checkAccounts();
 
       if (runOnce) {
         if (failOnErrors && stats.errors > 0) {
