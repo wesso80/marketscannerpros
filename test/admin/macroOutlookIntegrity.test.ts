@@ -9,6 +9,23 @@ const snapshot = () => ({ spy: { status: 'ok' }, series: Object.fromEntries(keys
 beforeEach(() => { vi.resetAllMocks(); vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-27T12:00:00Z')); vi.stubEnv('ALPHA_VANTAGE_API_KEY', 'test-key'); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
 describe('macro freshness', () => {
+  it('accepts the latest weekly-published broad-dollar observations without relaxing other daily series', async () => {
+    vi.mocked(q).mockResolvedValue([{ observed_on: '2026-09-18', value: '100' }]);
+    vi.mocked(avFetchAdmin).mockResolvedValue({ 'Time Series (Daily)': {} });
+    const s = await buildMacroOutlookSnapshot();
+    expect(s.series.DXY).toMatchObject({ status: 'ok', ageDays: 9, latestDate: '2026-09-18', fredId: 'DTWEXBGS' });
+    expect(s.series.VIX.status).toBe('stale');
+    expect(s.series.US10Y.status).toBe('stale');
+  });
+  it('still withholds overdue and future-dated broad-dollar data', async () => {
+    vi.mocked(avFetchAdmin).mockResolvedValue({ 'Time Series (Daily)': {} });
+    for (const observed_on of ['2026-09-16', '2026-09-28']) {
+      vi.mocked(q).mockResolvedValue([{ observed_on, value: '100' }]);
+      const s = await buildMacroOutlookSnapshot();
+      expect(s.series.DXY.status).toBe('stale');
+      expect(macroMemoBlockReason(s)).toContain('DXY');
+    }
+  });
   it('withholds the 0-of-9 current-series case', () => {
     const s = snapshot(); for (const series of Object.values(s.series)) series.status = 'stale';
     expect(macroMemoBlockReason(s)).toContain('withheld');
