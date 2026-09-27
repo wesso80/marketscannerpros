@@ -103,11 +103,12 @@ export default function PortfolioLabPage() {
     setError(null);
     try {
       const r = await fetch("/api/admin/portfolio-lab/summary", { cache: "no-store" });
+      if (!r.ok) throw new Error(`Paper dashboard refresh failed (HTTP ${r.status}). Displayed figures are from the last successful load.`);
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setData(j?.data ?? null);
       setMeta({ source: j?.source ?? "?", freshness: j?.freshness ?? "?", fetchedAt: j?.fetchedAt ?? "" });
     } catch (e) {
+      setMeta((previous) => previous ? { ...previous, freshness: "STALE — refresh failed" } : null);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
