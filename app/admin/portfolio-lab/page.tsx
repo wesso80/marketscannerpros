@@ -204,6 +204,17 @@ export default function PortfolioLabPage() {
     }
   };
 
+  async function setPaperStatus() {
+    if (!data?.portfolio) return;
+    setResetting(true); setResetMessage('');
+    try {
+      const response = await fetch('/api/admin/portfolio-lab/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ portfolioId: data.portfolio.id, status: data.portfolio.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      setResetMessage(result.message); await load();
+    } catch (e) { setResetMessage(e instanceof Error ? e.message : 'Status change failed'); }
+    finally { setResetting(false); }
+  }
   async function resetPaper() {
     if (!data?.portfolio || !confirm('Archive this paper ledger and start a new paused $200,000 account? Personal holdings are unchanged.')) return;
     setResetting(true); setResetMessage('');
@@ -253,6 +264,7 @@ export default function PortfolioLabPage() {
                 <button onClick={load} disabled={loading} style={btnGhost}>
                   {loading ? "Loading…" : "Reload"}
                 </button>
+                <button onClick={setPaperStatus} disabled={resetting || loading || cycling || !['ACTIVE', 'PAUSED'].includes(portfolio.status)} style={btnGhost}>{portfolio.status === 'ACTIVE' ? 'Pause paper account' : 'Resume paper account'}</button>
                 <button onClick={resetPaper} disabled={resetting || loading || cycling} style={btnGhost}>{resetting ? 'Resetting…' : 'Archive & reset paper account'}</button>
                 <button onClick={runCycle} disabled={cycling || portfolio.status !== 'ACTIVE'} style={btnPrimary}>
                   {cycling ? "Running cycle…" : "Run Sim Cycle"}
