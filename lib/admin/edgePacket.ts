@@ -18,7 +18,7 @@ import {
   mapResearchLifecycleToAdminState,
   type AdminLifecycleState,
 } from "./lifecycle";
-import { evaluateDoNothing, type DoNothingVerdict } from "./doNothing";
+import { evaluateDoNothing, to100, type DoNothingVerdict } from "./doNothing";
 import { buildLiquidityMap, type LiquidityMap } from "./liquidityMap";
 
 /* ────────────── Thesis status ────────────── */
@@ -195,11 +195,14 @@ export function projectEdgePacket(
       axes.time ?? 0,
     ),
   );
+  // breakoutReadiness and evidence.structureQuality are 0..1 engine scores (serializer: features.structureScore /
+  // scoring-engine evidence). Rounded straight to 0..100 they became 0 or 1, which sank every rank score
+  // (0 of 300 packets reached 65). to100 scales 0..1 to 0..100 and leaves 0..100 values alone.
   const volatilityScore = clamp01to100(
-    packet.volatilityState?.breakoutReadiness ?? axes.volatility ?? 0,
+    to100(packet.volatilityState?.breakoutReadiness ?? axes.volatility ?? 0),
   );
   const structureScore = clamp01to100(
-    packet.snapshot?.evidence?.structureQuality ?? 50,
+    to100(packet.snapshot?.evidence?.structureQuality ?? 50),
   );
   const liquidityScore = clamp01to100(
     0.6 * structureScore + 0.4 * deriveTargetClarity(packet),
