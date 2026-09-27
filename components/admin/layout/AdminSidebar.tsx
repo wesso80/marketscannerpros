@@ -8,7 +8,7 @@ const sections = [
     label: "RESEARCH",
     items: [
       { href: "/admin", label: "Command Centre", icon: "▣" },
-      { href: "/admin/priority-desk", label: "Priority Desk", icon: "★" },
+      { href: "/admin/priority-desk", label: "Decision Desk", icon: "★" },
       { href: "/admin/opportunity-board", label: "Best Plays", icon: "◈" },
       { href: "/admin/live-scanner", label: "Live Scanner", icon: "📡" },
       { href: "/admin/operator-terminal", label: "Research Terminal", icon: "⚡" },

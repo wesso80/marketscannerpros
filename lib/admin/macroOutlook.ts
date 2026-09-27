@@ -342,6 +342,17 @@ export function macroMemoBlockReason(snapshot: MacroOutlookSnapshot): string | n
     : null;
 }
 
+/** Stored evidence only: no provider requests, AI calls or persistence. */
+export async function readStoredMacroEvidence() {
+  const results = await Promise.all(SERIES_KEYS.map(async key => {
+    try { return { key, observation: await buildSeriesRead(key), error: null }; }
+    catch { return { key, observation: null, error: "Stored macro observation unavailable" }; }
+  }));
+  return { source: "fred:macro_series", verdict: null, verdictStatus: "REVIEW_REQUIRED",
+    note: "Cadence-aware stored observations; no independent regime verdict is inferred from a symbol's trend.",
+    observations: results, missing: results.filter(r => !r.observation || r.observation.status !== "ok").map(r => r.key) };
+}
+
 export async function buildMacroOutlookSnapshot(): Promise<MacroOutlookSnapshot> {
   const [spy, ...seriesReads] = await Promise.all([
     buildSpyContext(),
