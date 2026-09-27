@@ -17,15 +17,18 @@ type RiskFlagPanelProps = {
 };
 
 export default function RiskFlagPanel({ title = 'Risk Flags', flags, emptyText = 'No active risk flags.' }: RiskFlagPanelProps) {
+  // Several evidence sources can report the same flag. Duplicate React keys can
+  // leave obsolete warning nodes behind after a refresh, so render each exact flag once.
+  const uniqueFlags = [...new Map(flags.map(flag => [JSON.stringify([flag.label, flag.detail ?? '', flag.severity ?? 'info']), flag])).entries()];
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
       <div className="mb-2 text-[11px] font-black uppercase tracking-[0.1em] text-slate-500">{title}</div>
-      {flags.length === 0 ? (
+      {uniqueFlags.length === 0 ? (
         <div className="text-xs text-slate-500">{emptyText}</div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {flags.map((flag) => (
-            <span key={`${flag.label}-${flag.detail ?? ''}`} title={flag.detail} className={`rounded-md border px-2 py-1 text-[11px] font-bold uppercase ${flagTone(flag.severity)}`}>
+          {uniqueFlags.map(([key, flag]) => (
+            <span key={key} title={flag.detail} className={`rounded-md border px-2 py-1 text-[11px] font-bold uppercase ${flagTone(flag.severity)}`}>
               {flag.label}
             </span>
           ))}
