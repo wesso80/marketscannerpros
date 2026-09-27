@@ -23,7 +23,7 @@ import {
 } from "@/lib/admin/portfolio-lab/constants";
 import { sizePosition } from "@/lib/admin/portfolio-lab/positionSizing";
 import { shouldFill } from "@/lib/admin/portfolio-lab/simulatedOrderEngine";
-import { gateRow } from "@/lib/admin/portfolio-lab/decisionEngine";
+import { gateRow, runDecisionEngine } from "@/lib/admin/portfolio-lab/decisionEngine";
 import { derivePerformance } from "@/lib/admin/portfolio-lab/performanceEngine";
 import type {
   ArcaPortfolio,
@@ -495,4 +495,17 @@ describe("no broker execution path", () => {
   it("portfolio fixture is fixed to SIMULATED mode", () => {
     expect(portfolio().mode).toBe("SIMULATED");
   });
+});
+
+
+it('keeps the decision scan bounded when the cycle reuses a larger price snapshot', async () => {
+  const rows = Array.from({ length: 500 }, (_, i) => ({
+    symbol: `S${i}`, packetId: `p${i}`, doNothing: true, adminState: 'IGNORE',
+    thesisStatus: 'invalid', freshness: 'stale', opportunityRankScore: 0,
+    evidenceQualityScore: 0, trapRiskScore: 100, bias: 'BULL',
+  } as EdgePacketRow));
+  const result = await runDecisionEngine({ portfolio: portfolio(), rows, maxNewIdeas: 5 });
+  expect(result.scannedPackets).toBe(150);
+  expect(result.selected).toEqual([]);
+  expect(rows).toHaveLength(500);
 });
