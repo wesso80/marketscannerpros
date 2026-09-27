@@ -149,14 +149,14 @@ describe('6w/12w labeller', () => {
     expect(r.horizons['6w']).toMatchObject({ labeled: 0, alreadyLabeled: 1 });
   });
 
-  it('past the budget, rows whose symbol has no bars loaded yet wait for the next run', async () => {
+  it('past the budget, cached symbols also wait for the next run', async () => {
     state.rows['6w'] = [cand(1, 50, { symbol: 'AAPL' }), cand(2, 50, { symbol: 'MSFT' }), cand(3, 49, { symbol: 'AAPL' })];
     const bars = series(Date.parse('2026-09-27T00:00:00Z') - 120 * DAY, 120);
     const equity = vi.fn(async () => { vi.setSystemTime(Date.now() + 5_000); return bars; });
     const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 1_000, loaders: { equity, crypto: async () => null } });
     expect(equity.mock.calls.map((c) => c[0])).toEqual(['AAPL']);
-    expect(r.deferredOverBudget).toBe(1);
-    expect(r.horizons['6w']?.labeled).toBe(2);
+    expect(r.deferredOverBudget).toBe(2);
+    expect(r.horizons['6w']?.labeled).toBe(1);
   });
 
   it('equity bars: the shared daily cache merged over the stored ohlcv_bars history (no extra API call)', async () => {
