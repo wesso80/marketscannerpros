@@ -40,6 +40,8 @@ export interface DecisionEngineOptions {
   portfolio: ArcaPortfolio;
   maxNewIdeas?: number;
   sinceMinutes?: number;
+  /** Reuse the cycle snapshot instead of loading a second copy. */
+  rows?: EdgePacketRow[];
 }
 
 // `thesisStatus` is the lowercase enum emitted by `deriveThesisStatus` in
@@ -66,7 +68,7 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
   const sinceMs = (opts.sinceMinutes ?? 720) * 60_000;
   const since = new Date(Date.now() - sinceMs).toISOString();
 
-  const rows = await loadEdgePackets({
+  const rows = opts.rows ?? await loadEdgePackets({
     workspaceId: portfolio.workspaceId,
     since,
     limit,
