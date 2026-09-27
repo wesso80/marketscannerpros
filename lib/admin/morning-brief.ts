@@ -432,6 +432,7 @@ const FALLBACK_LEARNING: MorningLearningSnapshot = {
 };
 
 export async function buildMorningBrief(options: {
+  workspaceId?: string;
   symbols?: string[];
   market?: Market;
   timeframe?: string;
@@ -446,12 +447,12 @@ export async function buildMorningBrief(options: {
   const briefId = `${sydneyDateKey(generatedAt)}:${market}:${timeframe}`;
 
   const [risk, learning, recentBriefs, sessionScore, expectancy, outcomeGrade] = await Promise.all([
-    loadRiskState(),
-    loadLearningSnapshot(),
-    loadRecentBriefs(),
-    loadSessionScoreReport(),
-    loadExpectancyDashboard(),
-    buildPreviousBriefOutcomeGrade(),
+    loadRiskState(options.workspaceId),
+    loadLearningSnapshot(options.workspaceId),
+    loadRecentBriefs(options.workspaceId),
+    loadSessionScoreReport(options.workspaceId),
+    loadExpectancyDashboard(options.workspaceId),
+    buildPreviousBriefOutcomeGrade(options.workspaceId),
   ]);
   let universe: MorningUniverseMeta;
   let hits: ScannerHit[];
@@ -497,7 +498,7 @@ export async function buildMorningBrief(options: {
   const avoidList = rankedHits.filter((hit) => hit.marketPermission === "BLOCK").slice(0, 6);
   const researchSetups = buildResearchSetups(rankedHits, topPlays, watchlist, risk);
   const deskState = resolveDeskState(risk, health, topPlays, watchlist);
-  const comparison = await buildBriefComparison(briefId, market, timeframe, deskState, topPlays, catalysts);
+  const comparison = await buildBriefComparison(briefId, market, timeframe, deskState, topPlays, catalysts, options.workspaceId);
   const executionChecklist = buildExecutionChecklist(deskState, topPlays, watchlist.length ? watchlist : researchSetups, catalysts, risk, learning, comparison);
   const riskGovernor = buildMorningRiskGovernor(risk, sessionScore, expectancy);
   const scenarioTree = buildScenarioTree(topPlays, watchlist, researchSetups, catalysts, riskGovernor, expectancy);
@@ -610,14 +611,15 @@ export function savedScanForBrief(
   };
 }
 
-/** Row id for a brief: admin rebuilds get their own ":admin" id so they never replace the cron/email brief. */
-export function morningBriefRowId(brief: Pick<MorningBrief, "briefId">, source: "admin" | "email" | "cron"): string {
-  const base = brief.briefId.replace(/:admin$/, "");
-  return source === "admin" ? `${base}:admin` : base;
+/** Admin copies include their workspace; cron/email idempotency keys remain unchanged. */
+export function morningBriefRowId(brief: Pick<MorningBrief, "briefId"> & { risk?: Pick<MorningRiskState, "workspaceId"> }, source: "admin" | "email" | "cron"): string {
+  const base = brief.briefId.replace(/:admin(?::workspace:[^:]+)?$/, "");
+  const workspaceSuffix = brief.risk?.workspaceId ? `:workspace:${brief.risk.workspaceId}` : "";
+  return source === "admin" ? `${base}:admin${workspaceSuffix}` : base;
 }
 
 /**
- * Save a brief. Admin rebuilds are stored under `<day>:<market>:<tf>:admin`, so the brief the cron built and
+ * Save a brief. Admin rebuilds are stored under `<day>:<market>:<tf>:admin:workspace:<id>`, so the brief the cron built and
  * emailed (and that tomorrow's outcome grade scores) is never overwritten by a page action. The upsert also
  * refuses to let an admin write replace a cron/email row with the same id. Returns the brief as saved.
  */
@@ -718,15 +720,16 @@ export type SavedMorningBrief = {
 };
 
 /** Newest saved brief for a market (any source), with its age. Null when none has been saved. */
-export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now()): Promise<SavedMorningBrief | null> {
+export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now(), workspaceId?: string): Promise<SavedMorningBrief | null> {
   await ensureMorningBriefTables();
   const rows = await q<{ brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }>(
     `SELECT brief_id, generated_at, source, snapshot
        FROM admin_morning_briefs
       WHERE market = $1 AND timeframe = $2
+        ${workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $3" : ""}
       ORDER BY generated_at DESC
       LIMIT 1`,
-    [market, timeframe],
+    workspaceId ? [market, timeframe, workspaceId] : [market, timeframe],
   );
   const row = rows[0];
   if (!row?.snapshot || typeof row.snapshot !== "object") return null;
@@ -765,10 +768,11 @@ export type MorningBriefRebuildResult =
 
 /**
  * Admin rebuild: refused (409) while one for the same market+timeframe is running on this instance, and limited
- * (429) to one per ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC (default 300 s) per market, judged from the newest saved
+ * (429) to one per ADMIN_BRIEF_REBUILD_MIN_INTERVAL_SEC (default 300 s) per workspace and market, judged from the newest saved
  * admin brief. Built from the shared saved scan and saved under the ":admin" id.
  */
 export async function requestMorningBriefRebuild(input: {
+  workspaceId?: string;
   market: Market;
   timeframe?: string;
   scanLimit?: number;
@@ -776,7 +780,7 @@ export async function requestMorningBriefRebuild(input: {
   build?: typeof buildMorningBrief;
 }): Promise<MorningBriefRebuildResult> {
   const timeframe = input.timeframe || "15m";
-  const key = `${input.market}:${timeframe}`;
+  const key = `${input.workspaceId ?? "cron-default"}:${input.market}:${timeframe}`;
   if (rebuildsInFlight.has(key)) {
     return { ok: false, status: 409, error: "A morning brief rebuild is already running for this market." };
   }
@@ -787,8 +791,9 @@ export async function requestMorningBriefRebuild(input: {
     if (minGapMs > 0) {
       await ensureMorningBriefTables();
       const rows = await q<{ last: string | Date | null }>(
-        `SELECT MAX(generated_at) AS last FROM admin_morning_briefs WHERE source = 'admin' AND market = $1 AND timeframe = $2`,
-        [input.market, timeframe],
+        `SELECT MAX(generated_at) AS last FROM admin_morning_briefs WHERE source = 'admin' AND market = $1 AND timeframe = $2
+          ${input.workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $3" : ""}`,
+        input.workspaceId ? [input.market, timeframe, input.workspaceId] : [input.market, timeframe],
       );
       const lastMs = rows[0]?.last ? new Date(rows[0].last).getTime() : NaN;
       if (Number.isFinite(lastMs) && nowMs - lastMs < minGapMs) {
@@ -797,7 +802,7 @@ export async function requestMorningBriefRebuild(input: {
       }
     }
     const build = input.build ?? buildMorningBrief;
-    const brief = await build({ market: input.market, timeframe, scanLimit: input.scanLimit });
+    const brief = await build({ market: input.market, timeframe, scanLimit: input.scanLimit, ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}) });
     const saved = await saveMorningBriefSnapshot(brief, "admin");
     return {
       ok: true,
@@ -884,13 +889,13 @@ export async function saveMorningTradePlan(plan: MorningTradePlan) {
   );
 }
 
-export async function buildOpenRescore(brief: MorningBrief): Promise<MorningOpenRescore> {
+export async function buildOpenRescore(brief: MorningBrief, workspaceId?: string): Promise<MorningOpenRescore> {
   const symbols = uniqueSymbols([
     ...brief.topPlays.map((play) => play.symbol),
     ...brief.watchlist.map((play) => play.symbol),
     ...brief.universe.symbols.slice(0, 20),
   ], brief.market).slice(0, 30);
-  const rescored = await buildMorningBrief({ symbols, market: brief.market, timeframe: "5m", scanLimit: Math.max(10, symbols.length) });
+  const rescored = await buildMorningBrief({ workspaceId, symbols, market: brief.market, timeframe: "5m", scanLimit: Math.max(10, symbols.length) });
   const previousTop = new Set(brief.topPlays.map((play) => play.symbol));
   const currentTop = new Set(rescored.topPlays.map((play) => play.symbol));
   const promoted = [...currentTop].filter((symbol) => !previousTop.has(symbol));
@@ -1210,8 +1215,8 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
 </html>`.trim();
 }
 
-async function loadRiskState(): Promise<MorningRiskState> {
-  return loadAdminRiskSnapshot();
+async function loadRiskState(workspaceId?: string): Promise<MorningRiskState> {
+  return loadAdminRiskSnapshot(workspaceId);
 }
 
 async function resolveOperatorWorkspaceId(): Promise<string | null> {
@@ -1237,7 +1242,7 @@ async function resolveOperatorWorkspaceId(): Promise<string | null> {
   }
 }
 
-async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
+async function loadLearningSnapshot(workspaceId?: string): Promise<MorningLearningSnapshot> {
   try {
     const rows = await q<Omit<MorningLearningSnapshot, "briefFeedbackTotal" | "briefFeedbackByAction">>(`
       SELECT
@@ -1252,24 +1257,27 @@ async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
       SELECT action, COUNT(*)::int AS count
       FROM admin_morning_brief_feedback
       WHERE created_at > NOW() - INTERVAL '30 days'
+        ${workspaceId ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
       GROUP BY action
-    `).catch(() => []);
+    `, workspaceId ? [workspaceId] : []).catch(() => []);
     const symbolRows = await q<{ symbol: string; action: string; count: number }>(`
       SELECT symbol, action, COUNT(*)::int AS count
       FROM admin_morning_brief_feedback
       WHERE created_at > NOW() - INTERVAL '30 days'
+        ${workspaceId ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
       GROUP BY symbol, action
       ORDER BY count DESC
       LIMIT 40
-    `).catch(() => []);
+    `, workspaceId ? [workspaceId] : []).catch(() => []);
     const playbookRows = await q<{ playbook: string; action: string; count: number }>(`
       SELECT COALESCE(NULLIF(playbook, ''), 'Unknown') AS playbook, action, COUNT(*)::int AS count
       FROM admin_morning_brief_feedback
       WHERE created_at > NOW() - INTERVAL '30 days'
+        ${workspaceId ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
       GROUP BY COALESCE(NULLIF(playbook, ''), 'Unknown'), action
       ORDER BY count DESC
       LIMIT 40
-    `).catch(() => []);
+    `, workspaceId ? [workspaceId] : []).catch(() => []);
     const briefFeedbackByAction = Object.fromEntries(
       feedbackRows.map((row) => [row.action, Number(row.count ?? 0)]),
     );
@@ -1288,17 +1296,18 @@ async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
   }
 }
 
-async function loadSessionScoreReport(): Promise<MorningSessionScoreReport> {
+async function loadSessionScoreReport(workspaceIdOverride?: string): Promise<MorningSessionScoreReport> {
   const reviewDate = sydneyDateKey(new Date().toISOString());
-  const workspaceId = await resolveOperatorWorkspaceId();
+  const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
   try {
     const [feedbackRows, tradeRows] = await Promise.all([
       q<{ action: string; count: number; best_symbol: string | null }>(`
         SELECT action, COUNT(*)::int AS count, MIN(symbol) AS best_symbol
         FROM admin_morning_brief_feedback
         WHERE created_at >= NOW() - INTERVAL '24 hours'
+          ${workspaceIdOverride ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $1)" : ""}
         GROUP BY action
-      `).catch(() => []),
+      `, workspaceIdOverride ? [workspaceIdOverride] : []).catch(() => []),
       workspaceId ? q<{ closed_trades: number; wins: number; total_pl: string | null; total_r: string | null; best_symbol: string | null; weakest_symbol: string | null }>(`
         WITH closed AS (
           SELECT symbol, COALESCE(pl::numeric, 0) AS pl, COALESCE(r_multiple::numeric, dynamic_r::numeric, normalized_r::numeric, 0) AS r_value, outcome
@@ -1369,14 +1378,15 @@ async function loadSessionScoreReport(): Promise<MorningSessionScoreReport> {
   }
 }
 
-async function loadRecentBriefs(): Promise<MorningBriefHistoryItem[]> {
+async function loadRecentBriefs(workspaceId?: string): Promise<MorningBriefHistoryItem[]> {
   try {
     const rows = await q<any>(`
       SELECT brief_id, generated_at, desk_state, headline, top_play_count, catalyst_count
       FROM admin_morning_briefs
+      ${workspaceId ? "WHERE snapshot #>> '{risk,workspaceId}' = $1" : ""}
       ORDER BY generated_at DESC
       LIMIT 7
-    `);
+    `, workspaceId ? [workspaceId] : []);
     return rows.map((row) => ({
       briefId: row.brief_id,
       generatedAt: row.generated_at,
@@ -1876,7 +1886,7 @@ function buildDailyReviewLessons(
   return lessons.length ? lessons : ["No major adjustment detected. Keep labelling plays so the model has a sharper personal sample."];
 }
 
-async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
+async function buildPreviousBriefOutcomeGrade(workspaceIdOverride?: string): Promise<MorningOutcomeGrade> {
   const empty = emptyOutcomeGrade("No prior saved brief is ready to grade yet.");
   try {
     await ensureMorningOutcomeTables();
@@ -1884,13 +1894,14 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
       SELECT brief_id, generated_at, snapshot
       FROM admin_morning_briefs
       WHERE generated_at < NOW() - INTERVAL '6 hours'
+        ${workspaceIdOverride ? "AND snapshot #>> '{risk,workspaceId}' = $1" : ""}
       -- Grade the brief that was sent: newest Sydney day first, and within that day the cron/email brief
       -- ahead of any admin rebuild (":admin" rows).
       ORDER BY (generated_at AT TIME ZONE 'Australia/Sydney')::date DESC,
                (source = 'admin') ASC,
                generated_at DESC
       LIMIT 1
-    `);
+    `, workspaceIdOverride ? [workspaceIdOverride] : []);
     const prior = rows[0];
     if (!prior?.snapshot) return empty;
 
@@ -1898,14 +1909,15 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
     const symbols = uniqueSymbols(plays.map((play) => play.symbol), prior.snapshot.market ?? "CRYPTO");
     if (!symbols.length) return emptyOutcomeGrade("Prior brief had no plays to grade.", prior.brief_id, prior.generated_at);
 
-    const workspaceId = await resolveOperatorWorkspaceId();
+    const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
     const [feedbackRows, tradeRows] = await Promise.all([
       q<{ symbol: string; action: string; note: string | null }>(`
         SELECT DISTINCT ON (symbol) symbol, action, note
         FROM admin_morning_brief_feedback
-        WHERE brief_id = $1 OR (symbol = ANY($2::text[]) AND created_at >= $3::timestamptz)
+        WHERE (brief_id = $1 OR (symbol = ANY($2::text[]) AND created_at >= $3::timestamptz))
+          ${workspaceIdOverride ? "AND brief_id IN (SELECT brief_id FROM admin_morning_briefs WHERE snapshot #>> '{risk,workspaceId}' = $4)" : ""}
         ORDER BY symbol, created_at DESC
-      `, [prior.brief_id, symbols, prior.generated_at]).catch(() => []),
+      `, workspaceIdOverride ? [prior.brief_id, symbols, prior.generated_at, workspaceIdOverride] : [prior.brief_id, symbols, prior.generated_at]).catch(() => []),
       workspaceId ? q<{ symbol: string; pl: string | null; r_value: string | null }>(`
         SELECT symbol,
                COALESCE(SUM(pl::numeric), 0)::text AS pl,
@@ -1986,9 +1998,9 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
   }
 }
 
-async function loadExpectancyDashboard(): Promise<MorningExpectancyDashboard> {
+async function loadExpectancyDashboard(workspaceIdOverride?: string): Promise<MorningExpectancyDashboard> {
   const generatedAt = new Date().toISOString();
-  const workspaceId = await resolveOperatorWorkspaceId();
+  const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
   if (!workspaceId) {
     return {
       generatedAt,
@@ -2766,6 +2778,7 @@ async function buildBriefComparison(
   deskState: DeskState,
   topPlays: ScannerHit[],
   catalysts: MorningCatalyst[],
+  workspaceId?: string,
 ): Promise<MorningBriefComparison> {
   const empty: MorningBriefComparison = {
     previousBriefId: null,
@@ -2787,9 +2800,10 @@ async function buildBriefComparison(
         AND brief_id != $1 || ':admin'
         AND market = $2
         AND timeframe = $3
+        ${workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $4" : ""}
       ORDER BY generated_at DESC
       LIMIT 1
-    `, [currentBriefId, market, timeframe]);
+    `, workspaceId ? [currentBriefId, market, timeframe, workspaceId] : [currentBriefId, market, timeframe]);
 
     const previous = rows[0];
     if (!previous?.snapshot) return empty;

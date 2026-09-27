@@ -17,6 +17,8 @@ vi.mock('@/lib/operator/market-data', async (orig) => ({
 
 import {
   morningBriefRowId,
+  buildMorningBrief,
+  loadLatestMorningBrief,
   requestMorningBriefRebuild,
   saveMorningBriefSnapshot,
   savedScanForBrief,
@@ -162,7 +164,7 @@ describe('wiring (source checks)', () => {
   });
 
   it('GET serves the saved brief (load, not build+save on every request); POST is the rebuild', () => {
-    expect(route).toContain('loadLatestMorningBrief(market, timeframe)');
+    expect(route).toContain('loadLatestMorningBrief(market, timeframe, Date.now(), admin.workspaceId)');
     expect(route).toContain('requestMorningBriefRebuild(');
     expect(route).not.toContain('(searchParams.get("market") || "CRYPTO")');
     expect(route).toContain('resolveAdminMarket(');
@@ -185,4 +187,44 @@ describe('wiring (source checks)', () => {
     expect(commander).toContain('fetchWithTimeout("/api/admin/morning-brief"');
     expect(commander).not.toContain('morning-brief?scanLimit=20');
   });
+});
+
+
+describe('workspace-scoped saved briefs', () => {
+  it('separates admin copies by account while preserving the cron email key', () => {
+    const a = brief({ risk: { workspaceId: 'workspace-a' } as never });
+    const b = brief({ risk: { workspaceId: 'workspace-b' } as never });
+    expect(morningBriefRowId(a, 'admin')).toBe('2026-09-27:EQUITIES:15m:admin:workspace:workspace-a');
+    expect(morningBriefRowId(b, 'admin')).not.toBe(morningBriefRowId(a, 'admin'));
+    expect(morningBriefRowId(a, 'cron')).toBe('2026-09-27:EQUITIES:15m');
+    expect(morningBriefRowId({ ...a, briefId: morningBriefRowId(a, 'admin') }, 'admin')).toBe(morningBriefRowId(a, 'admin'));
+  });
+  it('filters cached snapshots using their account identity', async () => {
+    await loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a');
+    const call = m.q.mock.calls.find(([sql]) => sql.includes('SELECT brief_id, generated_at, source, snapshot'))!;
+    expect(call[0]).toContain("snapshot #>> '{risk,workspaceId}' = $3");
+    expect(call[1]).toEqual(['EQUITIES', '15m', 'workspace-a']);
+  });
+  it('scopes rebuild throttling and passes the account to the builder', async () => {
+    const build = vi.fn(async () => brief({ risk: { workspaceId: 'workspace-a' } as never }));
+    const result = await requestMorningBriefRebuild({ market: 'EQUITIES', workspaceId: 'workspace-a', build: build as never });
+    expect(result.ok).toBe(true);
+    expect(build).toHaveBeenCalledWith(expect.objectContaining({ workspaceId: 'workspace-a' }));
+    const call = m.q.mock.calls.find(([sql]) => sql.includes('SELECT MAX(generated_at) AS last'))!;
+    expect(call[0]).toContain("snapshot #>> '{risk,workspaceId}' = $3");
+    expect(call[1]).toEqual(['EQUITIES', '15m', 'workspace-a']);
+  });
+});
+
+
+it('builds risk and journal statistics from the explicit workspace rather than the global selector', async () => {
+  const result = await buildMorningBrief({ workspaceId: 'workspace-a', market: 'EQUITIES' });
+  expect(result.risk.workspaceId).toBe('workspace-a');
+  const riskQuery = m.q.mock.calls.find(([sql]) => sql.includes('FROM operator_state'))!;
+  expect(riskQuery[0]).toContain('WHERE workspace_id = $1');
+  expect(riskQuery[1]).toEqual(['workspace-a']);
+  const journalQueries = m.q.mock.calls.filter(([sql]) => sql.includes('FROM journal_entries') && sql.includes('workspace_id = $1'));
+  expect(journalQueries.length).toBeGreaterThan(2);
+  expect(journalQueries.every(([, params]) => params?.[0] === 'workspace-a')).toBe(true);
+  expect(m.q.mock.calls.some(([sql]) => sql.includes('ORDER BY last_activity'))).toBe(false);
 });

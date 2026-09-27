@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
       if (!brief?.briefId) {
         return NextResponse.json({ error: "brief is required" }, { status: 400 });
       }
-      const rescore = await buildOpenRescore(brief);
+      if (!admin.workspaceId) return NextResponse.json({ error: "Workspace required" }, { status: 403 });
+      const rescore = await buildOpenRescore(brief, admin.workspaceId);
       // Saved as an admin copy (":admin" id); never replaces the cron's emailed brief.
       rescore.brief = await saveMorningBriefSnapshot(rescore.brief, "admin");
       return NextResponse.json({ ok: true, action, rescore, truth });
