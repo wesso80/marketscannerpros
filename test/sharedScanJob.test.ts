@@ -47,10 +47,24 @@ import {
   isDataDegraded,
   isRankable,
   requestManualRescan,
+  readSavedScan,
   startSharedScan,
   toSavedPacket,
   withFreshQuote,
 } from '@/lib/admin/sharedScan';
+
+describe('active scanner universe', () => {
+  it('uses the corrected provider symbol and excludes retired names from default reads', async () => {
+    await readSavedScan({ market: 'EQUITIES' });
+    const requested = m.store.loadSavedResults.mock.calls.at(-1)?.[0] as unknown as { symbols: string[] };
+    expect(requested.symbols).toContain('BRK-B');
+    for (const symbol of ['BRK.B', 'COOP', 'TGNA']) expect(requested.symbols).not.toContain(symbol);
+  });
+  it('retains explicit historical symbol lookups', async () => {
+    await readSavedScan({ market: 'EQUITIES', symbols: ['COOP'] });
+    expect(m.store.loadSavedResults).toHaveBeenLastCalledWith(expect.objectContaining({ symbols: ['COOP'] }));
+  });
+});
 
 const NOW = Date.parse('2026-09-25T17:00:00Z');
 const MIN = 60_000;

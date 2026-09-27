@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { loadAdminRiskSnapshot } from "@/lib/admin/scan-context";
+import { equityHistoryNotes } from "@/lib/admin/equityHistoryHealth";
 
 export const runtime = "nodejs";
 
@@ -25,9 +26,9 @@ export async function GET(req: NextRequest) {
   if (!workspaceId) return NextResponse.json({ error: "Workspace required" }, { status: 403 });
 
   try {
-    const riskState = await loadAdminRiskSnapshot(workspaceId);
+    const [riskState, historyNotes] = await Promise.all([loadAdminRiskSnapshot(workspaceId), equityHistoryNotes(workspaceId)]);
 
-    return NextResponse.json(riskState);
+    return NextResponse.json({ ...riskState, notes: [...riskState.notes, ...historyNotes] });
   } catch (err: unknown) {
     console.error("[admin:risk:state] Error:", err);
     return NextResponse.json(

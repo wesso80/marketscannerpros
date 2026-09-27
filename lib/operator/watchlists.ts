@@ -18,7 +18,7 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
     name: 'US Mega-Cap',
     market: 'EQUITIES',
     symbols: [
-      'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'BRK.B',
+      'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'BRK-B',
       'AVGO', 'JPM', 'LLY', 'UNH', 'V', 'MA', 'XOM', 'COST', 'HD', 'PG',
       'JNJ', 'NFLX',
     ],
@@ -66,10 +66,12 @@ export const DEFAULT_WATCHLISTS: Record<string, WatchlistEntry> = {
   'us-small-cap-value': {
     name: 'US Small-Cap Value',
     market: 'EQUITIES',
+    // COOP stopped trading 2025-10-01 (Rocket acquisition); TGNA 2026-03-20 (Nexstar).
+    // SEC: 933136/000095014225002623/eh250686104_8k.htm; 39899/000110465926032772/tm269445d1_8k.htm.
     symbols: [
       'MLI', 'ATKR', 'CRS', 'SKYW', 'BOOT', 'PLUS', 'CALM', 'HRB',
-      'COOP', 'PRDO', 'IBP', 'MHO', 'CVCO', 'GHC', 'NPK', 'OFG',
-      'CNS', 'AROC', 'PARR', 'TGNA', 'WHD', 'SLVM', 'JBI', 'PAGS',
+      'PRDO', 'IBP', 'MHO', 'CVCO', 'GHC', 'NPK', 'OFG',
+      'CNS', 'AROC', 'PARR', 'WHD', 'SLVM', 'JBI', 'PAGS',
       'YOU',
     ],
   },

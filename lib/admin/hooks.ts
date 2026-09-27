@@ -59,6 +59,7 @@ export function useScannerFeed(
 ) {
   const [hits, setHits] = useState<ScannerHit[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [scanErrors, setScanErrors] = useState<ScannerResponse["meta"]["errors"]>([]);
   const [savedScan, setSavedScan] = useState<ScannerResponse["savedScan"] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +89,7 @@ export function useScannerFeed(
       if (seq !== requestSeq.current) return;
       setHits(filterHitsForMarket(data.hits ?? [], market));
       setHealth(data.health);
+      setScanErrors(data.meta?.errors ?? []);
       setSavedScan(data.savedScan ?? null);
     } catch (err: unknown) {
       if (seq !== requestSeq.current) return;
@@ -101,6 +103,8 @@ export function useScannerFeed(
   // Switching market/timeframe must not keep showing the previous market's rows while loading.
   useEffect(() => {
     setHits([]);
+    setScanErrors([]);
+    setHealth(null);
     setSavedScan(null);
   }, [market, timeframe]);
 
@@ -116,7 +120,7 @@ export function useScannerFeed(
     return () => abortRef.current?.abort();
   }, [fetchScanner, pollInterval]);
 
-  return { hits, health, savedScan, loading, error, refetch: fetchScanner };
+  return { hits, health, savedScan, scanErrors, loading, error, refetch: fetchScanner };
 }
 
 /* ── Symbol Intelligence ── */
