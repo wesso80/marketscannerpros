@@ -28,13 +28,14 @@ import {
   createSimulatedOrder,
   fillOrderAndOpenPosition,
   shouldFill,
+  cancelOrder,
 } from "./simulatedOrderEngine";
 import { markAndMaybeExit } from "./positionEngine";
 import { sizeForPortfolio, floorQuantity } from "./positionSizing";
 import { checkPreTrade, emitRiskEventIfBreached } from "./riskEngine";
 import { writeJournal } from "./journalEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
-import { edgePacketPrice } from "@/lib/admin/edgePacket";
+import { freshPaperQuote, latestPaperEvidence, paperInstrumentKey, validatePaperFill } from "./paperFillEvidence";
 import { recordAdminCalls, type AdminCallInput } from "@/lib/admin/adminCallLog";
 import type { ArcaPortfolio, ArcaPosition, SimulateCycleResult } from "./types";
 import { runDebateAndRecord, linkDebateToOrder } from "@/lib/admin/arca-brain/adversarialDebate";
@@ -167,40 +168,31 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
   // block). Keys are `${symbol}::${stage}`. Lives only for this cycle.
   const rejectionLog = new Set<string>();
 
-  // Build a symbol → latest price map from recent edge-packet snapshots.
+  // Load one latest evidence snapshot per market/symbol, shared by marks, fills and candidates.
   const recent = await loadEdgePackets({
     workspaceId: opts.workspaceId,
     since: new Date(Date.now() - (opts.sinceMinutes ?? 720) * 60_000).toISOString(),
     limit: 500,
     latestPerSymbol: true,
   });
-  // Newest first, so the first priced row per symbol wins. It used to read packet_json.snapshot.price, which edge
-  // packets never had: every position logged skip_mark:no_price and no order ever filled.
-  const priceBySymbol = new Map<string, number>();
-  const priceAtBySymbol = new Map<string, string | null>();
-  for (const r of recent) {
-    if (priceBySymbol.has(r.symbol)) continue;
-    const px = edgePacketPrice(r.packetJson);
-    if (px) {
-      priceBySymbol.set(r.symbol, px.price);
-      priceAtBySymbol.set(r.symbol, px.at);
-    }
-  }
+  const evidenceByInstrument = latestPaperEvidence(recent);
+  let regimeContextPromise: ReturnType<typeof loadPaperRegimeContext> | undefined;
+  const regimeContextForCycle = () => regimeContextPromise ??= loadPaperRegimeContext(opts.workspaceId);
   const plannedCalls: AdminCallInput[] = [];
 
   // 1+2. Mark & maybe exit open positions.
   const opens = await listOpenPositions(opts.workspaceId, portfolio.id);
   let runningPortfolio = portfolio;
   for (const pos of opens) {
-    const px = priceBySymbol.get(pos.symbol);
-    if (!Number.isFinite(px)) {
-      notes.push(`skip_mark:${pos.symbol}:no_price`);
+    const quote = freshPaperQuote(evidenceByInstrument.get(paperInstrumentKey(pos.assetClass, pos.symbol)));
+    if (!quote) {
+      notes.push(`skip_mark:${pos.symbol}:fresh_unambiguous_price_unavailable`);
       continue;
     }
     const res = await markAndMaybeExit({
       portfolio: runningPortfolio,
       position: pos,
-      currentPrice: px!,
+      currentPrice: quote.price,
     });
     positionsMarked++;
     if (res.exit) positionsClosed++;
@@ -215,17 +207,46 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
   const waiting = await listOrders(opts.workspaceId, portfolio.id, {
     status: ["WAITING_FOR_TRIGGER", "PLANNED"],
   });
+  const filledSymbols = new Set((await listOpenPositions(opts.workspaceId, portfolio.id)).map(p => p.symbol));
   for (const order of waiting) {
-    const px = priceBySymbol.get(order.symbol);
-    if (!Number.isFinite(px)) continue;
-    if (!shouldFill(order, px!)) continue;
+    const row = evidenceByInstrument.get(paperInstrumentKey(order.assetClass, order.symbol));
+    const quote = freshPaperQuote(row);
+    if (!row || !quote) {
+      notes.push(`skip_fill:${order.symbol}:fresh_unambiguous_price_unavailable`);
+      continue;
+    }
+    if (!shouldFill(order, quote.price)) continue;
+    const validation = validatePaperFill(order, row, runningPortfolio);
+    let reason = validation.ok ? null : validation.reason;
+    if (filledSymbols.has(order.symbol)) reason = 'existing_position_for_symbol';
+    const regime = validation.ok && !reason
+      ? assessPaperRegime(await regimeContextForCycle(), opts.workspaceId, order.assetClass, order.playbookId)
+      : null;
+    if (regime && regime.sizeMultiplier <= 0) reason = regime.reason;
+    if (validation.ok && !reason && regime) {
+      const riskPct = runningPortfolio.settings.maxSingleTradeRiskPct * regime.sizeMultiplier;
+      if (!Number.isFinite(riskPct) || riskPct <= 0 || validation.riskDollars > runningPortfolio.totalEquity * riskPct / 100) {
+        reason = 'fill_risk_exceeds_current_regime_or_single_trade_limit';
+      } else {
+        const pre = await checkPreTrade({ portfolio: runningPortfolio, assetClass: order.assetClass,
+          riskDollars: validation.riskDollars, notional: validation.notional });
+        if (!pre.ok) reason = pre.reasons.join(',');
+      }
+    }
+    if (reason || !validation.ok || !regime) {
+      await cancelOrder({ portfolio: runningPortfolio, order, reason: `Pre-fill revalidation: ${reason ?? 'validation_unavailable'}` });
+      ordersCancelled++;
+      rejections++;
+      notes.push(`cancel_fill:${order.symbol}:${reason ?? 'validation_unavailable'}`);
+      continue;
+    }
     await fillOrderAndOpenPosition({
-      portfolio: runningPortfolio,
-      order,
-      currentPrice: px!,
+      portfolio: runningPortfolio, order, currentPrice: quote.price,
+      validationEvidence: { packetId: row.packetId, priceAt: quote.at, regime: regime.regime, policyId: regime.sourceRuleId },
     });
     ordersTriggered++;
     positionsOpened++;
+    filledSymbols.add(order.symbol);
     runningPortfolio = (await getPortfolioById(opts.workspaceId, portfolio.id)) ?? runningPortfolio;
   }
 
@@ -238,7 +259,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
   });
 
   // Load independently measured, asset-scoped regime evidence once; no provider requests.
-  const regimeContext = decision.selected.length ? await loadPaperRegimeContext(opts.workspaceId) : { snapshots: [], policies: [] };
+  const regimeContext = decision.selected.length ? await regimeContextForCycle() : { snapshots: [], policies: [] };
 
   const occupied = new Set([
     ...(await listOpenPositions(opts.workspaceId, portfolio.id)).map((p) => p.symbol),
@@ -619,8 +640,8 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       direction: cand.side,
       score: debateOutcome.record.confidenceAfterDebate,
       secondaryScore: cand.row.trustAdjustedScore,
-      price: priceBySymbol.get(cand.row.symbol) ?? null,
-      priceAt: priceAtBySymbol.get(cand.row.symbol) ?? null,
+      price: cand.currentPrice,
+      priceAt: freshPaperQuote(cand.row)?.at ?? null,
       priceSource: "edge-packet",
       entry: cand.entry,
       stop: cand.stop,
