@@ -303,7 +303,8 @@ export interface EdgePacketRow {
 }
 
 export async function loadEdgePackets(input: LoadEdgePacketsInput): Promise<EdgePacketRow[]> {
-  await ensureTable();
+  // Reads must not acquire schema/index locks inside a paper-ledger transaction.
+  // The table and indexes are provisioned by migrations / the ingestion writer.
   const limit = Math.min(500, input.limit ?? 100);
   const params: unknown[] = [input.workspaceId];
   let where = "workspace_id = $1";
