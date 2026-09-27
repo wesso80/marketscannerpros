@@ -96,8 +96,8 @@ export function checkGovernance(req: GovernanceCheckRequest): GovernanceDecision
   }
 
   // ── No live equity → research-only cap (WAIT, no sizing) ──
-  if (!hasLiveEquity && finalPermission !== 'BLOCK') {
-    throttleReasons.push('NO_LIVE_EQUITY');
+  if ((!hasLiveEquity || portfolioState.accountRiskAvailable === false) && finalPermission !== 'BLOCK') {
+    throttleReasons.push(hasLiveEquity ? 'ACCOUNT_BASELINE_UNAVAILABLE' : 'NO_LIVE_EQUITY');
     if (finalPermission === 'ALLOW' || finalPermission === 'ALLOW_REDUCED') finalPermission = 'WAIT';
     sizeMultiplier = 0;
   }

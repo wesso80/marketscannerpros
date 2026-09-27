@@ -59,14 +59,13 @@ export function buildEmailPayload(
 
 export interface EmailDispatchResult {
   ok: boolean;
-  skipped?: "NO_RECIPIENT_CONFIGURED";
+  skipped?: "NO_RECIPIENT_CONFIGURED" | "EMAIL_BACKEND_UNAVAILABLE";
   error?: string;
 }
 
 /**
  * Best-effort email dispatch. If no transactional backend is wired,
- * logs the payload and returns ok=true (the payload is recorded in the
- * alerts table either way by the engine).
+ * returns an explicit unavailable result; it never claims a delivery.
  */
 export async function dispatchEmailResearchAlert(
   alert: AdminResearchAlert,
@@ -74,10 +73,6 @@ export async function dispatchEmailResearchAlert(
 ): Promise<EmailDispatchResult> {
   const recipient = (to ?? process.env.ADMIN_RESEARCH_ALERT_EMAIL ?? "").trim();
   if (!recipient) return { ok: false, skipped: "NO_RECIPIENT_CONFIGURED" };
-  const payload = buildEmailPayload(alert, recipient);
-  // Pluggable: when a transactional backend is wired (e.g. Resend, SES),
-  // call it here. Until then we log so ops can see the payload.
-  // eslint-disable-next-line no-console
-  console.log("[admin-research-alert][email]", payload.subject);
-  return { ok: true };
+  // A configured recipient is not evidence that a transport exists or a message was delivered.
+  return { ok: false, skipped: "EMAIL_BACKEND_UNAVAILABLE" };
 }

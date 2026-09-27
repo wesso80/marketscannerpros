@@ -27,7 +27,7 @@ export type ConfidenceClass = "HIGH" | "MODERATE" | "WEAK" | "INVALID";
 export type ThesisState = "STRONG" | "DEGRADED" | "INVALID" | "UNKNOWN";
 
 export interface ReadinessInput {
-  finalPermission: "ALLOW" | "ALLOW_REDUCED" | "WAIT" | "BLOCK";
+  researchPermission: "ALLOW" | "ALLOW_REDUCED" | "WAIT" | "BLOCK";
   confidenceScore: number;
   setupValid: boolean;
   triggerHit: boolean;
@@ -50,9 +50,9 @@ export function classifyConfidence(score: number): ConfidenceClass {
 }
 
 /** Research-ready gating. */
-export function isResearchReady(input: Pick<ReadinessInput, "finalPermission" | "confidenceScore">): boolean {
+export function isResearchReady(input: Pick<ReadinessInput, "researchPermission" | "confidenceScore">): boolean {
   return (
-    (input.finalPermission === "ALLOW" || input.finalPermission === "ALLOW_REDUCED") &&
+    (input.researchPermission === "ALLOW" || input.researchPermission === "ALLOW_REDUCED") &&
     input.confidenceScore >= RESEARCH_READY_CONFIDENCE_MIN
   );
 }
@@ -70,7 +70,7 @@ export function classifyThesis(confidenceScore: number, structureQuality: number
 export function computeReadiness(input: ReadinessInput): Readiness {
   return {
     setupValid: input.setupValid,
-    researchReady: isResearchReady(input),
+    researchReady: input.setupValid && isResearchReady(input),
     triggerHit: input.triggerHit,
     thesisState: classifyThesis(input.confidenceScore, input.structureQuality),
   };

@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
     operatorGuard: {
       active: risk.operatorGuardActive,
       reasons: risk.operatorGuardReasons,
-      alertsDeliveryPaused: risk.killSwitchActive || risk.permission === "BLOCK",
+      accountSizingRestricted: risk.killSwitchActive || risk.permission === "BLOCK",
       message: risk.operatorGuardActive
         ? "Operator guard active — discovery remains live. Personal exposure warnings shown separately."
         : null,

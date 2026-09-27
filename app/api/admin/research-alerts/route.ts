@@ -1,3 +1,4 @@
+import { readResearchNotificationSettings } from '@/lib/admin/researchNotificationSettings';
 import type { AdminResearchAlert } from "@/lib/admin/adminTypes";
 import { researchAlertCall } from "@/lib/admin/pageCalls";
 /**
@@ -66,8 +67,9 @@ async function ensureTable(): Promise<void> {
 }
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
-  if (!(await requireAdmin(req)).ok) return { ok: false, workspaceId: "" };
-  return { ok: true, workspaceId: "admin" };
+  const auth = await requireAdmin(req);
+  if (!auth.ok || !auth.workspaceId) return { ok: false, workspaceId: "" };
+  return { ok: true, workspaceId: auth.workspaceId };
 }
 
 export async function POST(req: NextRequest) {
@@ -91,16 +93,19 @@ export async function POST(req: NextRequest) {
          FROM admin_research_alerts
         WHERE workspace_id = $1
           AND created_at > NOW() - INTERVAL '24 hours'
+          AND status = 'FIRED'
         ORDER BY created_at DESC
         LIMIT 200`,
       [auth.workspaceId],
     );
 
+    const notificationSettings = await readResearchNotificationSettings(auth.workspaceId);
     const candidate = body as ResearchAlertCandidate;
     candidate.symbol = candidate.symbol.toUpperCase();
     candidate.market = candidate.market.toUpperCase();
 
     const outcome = await runResearchAlertEngine(candidate, {
+      notificationsPaused: notificationSettings.paused,
       recentAlerts: recent.map((r) => ({
         symbol: r.symbol,
         timeframe: r.timeframe,
@@ -239,9 +244,9 @@ export async function GET(req: NextRequest) {
         score: r.score,
         dataTrustScore: r.data_trust_score,
         classification: r.classification,
+        channels: r.channels,
         status: r.status,
         suppressionReason: r.suppression_reason,
-        channels: r.channels,
         createdAt: typeof r.created_at === "string" ? r.created_at : new Date(r.created_at).toISOString(),
       })),
       truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }),

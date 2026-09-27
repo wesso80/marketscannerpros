@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import AdminCard from "@/components/admin/shared/AdminCard";
+import ResearchNotificationControls from "@/components/admin/shared/ResearchNotificationControls";
 import MiniStat from "@/components/admin/shared/MiniStat";
 import StatusPill from "@/components/admin/shared/StatusPill";
 import { useRiskState } from "@/lib/admin/hooks";
@@ -33,16 +34,16 @@ export default function RiskPage() {
 
   return (
     <div className="p-4 space-y-4">
-      <SectionTitle title="Research Guard" subtitle={error ? `Error: ${error}` : undefined} />
+      <SectionTitle title="Account Risk Status" subtitle={error ? `Error: ${error}` : undefined} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
         <MiniStat label="Open Risk" value={`$${openRiskUsd.toLocaleString()}`} />
         <MiniStat label="Snapshot Daily Loss" value={risk?.dailyDrawdownKnown ? `${(drawdown * 100).toFixed(2)}%` : "Unavailable"} />
-        <MiniStat label="Correlation Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />
-        <MiniStat label="Open Scenarios" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "\u2014 / \u2014"} />
+        <MiniStat label="Concentration Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />
+        <MiniStat label="Open Positions" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "\u2014 / \u2014"} />
       </div>
 
-      <AdminCard title="Alert Posture" actions={
+      <AdminCard title="Account Suitability" actions={
         <button
           onClick={refetch}
           className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20 transition"
@@ -51,8 +52,9 @@ export default function RiskPage() {
         </button>
       }>
         <div className="space-y-3">
+          <p className="text-sm text-white/70">Research remains available independently. Account sizing is withheld when daily history is unavailable; verified loss limits and operator stops still apply.</p>
           <div className="flex items-center justify-between">
-            <span className="text-white/55 text-sm">Research Gate</span>
+            <span className="text-white/55 text-sm">Account Permission</span>
             <StatusPill
               label={risk?.permission ?? "WAIT"}
               tone={risk?.permission === "GO" ? "green" : risk?.permission === "BLOCK" ? "red" : "yellow"}
@@ -71,17 +73,21 @@ export default function RiskPage() {
             <span className="text-white/90 text-sm font-mono">{risk?.sizeMultiplier?.toFixed(2) ?? "—"}×</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55 text-sm">Alert Posture</span>
+            <span className="text-white/55 text-sm">Account Suitability</span>
             <StatusPill
-              label={killActive ? "ALERTS PAUSED" : "ALERTS ACTIVE"}
-              tone={killActive ? "red" : "green"}
+              label={killActive ? "ACCOUNT STOP ACTIVE" : risk?.dailyDrawdownKnown ? "ASSESSED" : "ASSESSMENT UNAVAILABLE"}
+              tone={killActive ? "red" : risk?.dailyDrawdownKnown ? "green" : "yellow"}
             />
           </div>
         </div>
       </AdminCard>
 
+      <ResearchNotificationControls />
+
       <AdminCard title="Risk Data Basis">
         <div className="space-y-2 text-sm text-white/70">
+          <p className="font-medium">{risk?.dailyDrawdownKnown ? "Account assessment available" : "Account assessment unavailable"}</p>
+          {risk?.operatorGuardReasons?.map((reason, i) => <p key={`guard-${i}`}>{reason}</p>)}
           <p>Account equity: {risk?.equity ? `$${risk.equity.toLocaleString()}` : "Unavailable"}</p>
           <p>Prior-day baseline: {risk?.dailyRiskBaselineEquity ? `$${risk.dailyRiskBaselineEquity.toLocaleString()}` : "Unavailable"}</p>
           <p>Snapshot date (UTC): {risk?.dailyRiskAsOf ?? "Unavailable"}</p>
@@ -106,14 +112,14 @@ export default function RiskPage() {
         </div>
       </AdminCard>
 
-      <AdminCard title="Research Scenario Limits">
+      <AdminCard title="Account Limits">
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Max Concurrent Scenarios</span>
+            <span className="text-white/55">Max Concurrent Positions</span>
             <span className="text-white/90 font-mono">{risk?.maxPositions ?? 10}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Active Research Scenarios</span>
+            <span className="text-white/55">Active Positions</span>
             <span className="text-white/90 font-mono">{risk?.activePositions ?? 0}</span>
           </div>
           <div className="flex items-center justify-between">

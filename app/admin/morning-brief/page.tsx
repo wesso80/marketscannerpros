@@ -590,7 +590,7 @@ export default function MorningBriefPage() {
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            {brief ? <StatusPill label={brief.deskState} tone={stateTone(brief.deskState)} /> : null}
+            {brief ? <StatusPill label={`Account desk: ${brief.deskState}`} tone={stateTone(brief.deskState)} /> : null}
             <StatusPill label="Daily Email Armed" tone="purple" />
           </div>
           <h1 className="text-3xl font-black tracking-tight">Morning Trading Brief</h1>

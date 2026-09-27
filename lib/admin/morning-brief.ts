@@ -838,7 +838,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
     `Desk state ${brief.deskState}; risk permission ${brief.risk.permission}; size multiplier ${brief.risk.sizeMultiplier.toFixed(2)}x.`,
     `Open risk ${formatUsd(brief.risk.openRiskUsd)} on ${formatUsd(brief.risk.equity)} equity; daily P&L ${formatUsd(brief.risk.dailyPnl)}.`,
   ];
-  if (brief.risk.killSwitchActive) riskNotes.unshift("Research alerts paused. Plan is review-only until risk permission resets.");
+  if (brief.risk.killSwitchActive) riskNotes.unshift("Account stop active. Account sizing remains restricted; research and notifications are assessed separately.");
   if (brief.risk.correlationRisk >= 0.65) riskNotes.push("Correlation is elevated; reduce size or wait for exposure to compress.");
 
   return {
@@ -860,7 +860,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
       ? symbolCatalysts.map((event) => `${event.impactLabel} ${event.impactScore}: ${event.headline}`)
       : ["No fresh scanned catalyst attached to this symbol."],
     checklist: [
-      { label: "Risk", status: brief.risk.killSwitchActive ? "BLOCK" : "PASS", instruction: brief.risk.killSwitchActive ? "Do not act while research alerts are paused." : "Confirm size before entry." },
+      { label: "Risk", status: brief.risk.killSwitchActive ? "BLOCK" : "PASS", instruction: brief.risk.killSwitchActive ? "Account stop active; no new account risk." : "Confirm size before entry." },
       { label: "Trigger", status: play.permission === "GO" ? "PASS" : "WAIT", instruction: play.permission === "GO" ? "Use planned trigger only; no late chase." : "Wait for permission to clear before action." },
       { label: "Catalyst", status: highImpactCatalysts.length ? "WAIT" : "PASS", instruction: highImpactCatalysts.length ? "Review high-impact catalyst before committing size." : "No high-impact catalyst conflict found." },
       { label: "Review", status: "INFO", instruction: "After the session, label worked, failed, missed, invalidated, or rule broken." },
@@ -1852,7 +1852,7 @@ function buildTradePlanEntryTrigger(play: ScannerHit, brief: MorningBrief) {
       ? "Wait for a clean reclaim/continuation trigger; no entry after the move is already stretched."
       : "Wait for directional bias to resolve before entry.";
   if (brief.deskState === "DEFENSIVE") return `${base} Use defensive confirmation and reduced size.`;
-  if (brief.deskState === "BLOCK") return "Operator guard active — trade execution paused. Market discovery remains live. Review personal risk context before acting on any setup.";
+  if (brief.deskState === "BLOCK") return "Account risk restricted — no new account sizing. Market discovery remains live. Review personal risk context before acting on any setup.";
   return base;
 }
 
@@ -2056,7 +2056,7 @@ function buildMorningRiskGovernor(
   const lockouts: string[] = [];
   if (!hasLiveEquity) lockouts.push("Live equity unavailable");
   if (risk.permission !== "GO") lockouts.push(`Canonical account guard: ${risk.permission}`);
-  if (risk.killSwitchActive) lockouts.push("Research alerts paused");
+  if (risk.killSwitchActive) lockouts.push("Account stop active");
   if (risk.dailyDrawdown >= 0.04) lockouts.push("Daily drawdown hard stop reached");
   if (hasLiveEquity && Math.abs(Math.min(0, risk.dailyPnl)) >= dailyStopUsd) lockouts.push("Daily loss cap reached");
   if (hasLiveEquity && risk.openRiskUsd >= portfolioHeatLimitUsd) lockouts.push("Portfolio heat cap reached");
@@ -2202,7 +2202,7 @@ function resolveDeskState(
 }
 
 function buildHeadline(state: DeskState, topPlays: ScannerHit[], catalysts: MorningCatalyst[]): string {
-  if (state === "BLOCK") return "Operator guard active — outbound alerts paused, discovery running";
+  if (state === "BLOCK") return "Account risk restricted; market discovery remains available";
   if (state === "DEFENSIVE") return "Defensive session: only clean triggers deserve attention";
   if (topPlays.length > 0) return `${topPlays.length} live play candidate${topPlays.length === 1 ? "" : "s"} on deck`;
   if (catalysts.length > 0) return "Catalysts are active, but scanner wants patience";
@@ -2219,7 +2219,7 @@ function buildOperatorNote(
   const learningText = learning.accuracyRate == null
     ? "Learning sample is still building."
     : `Recent signal accuracy is ${learning.accuracyRate.toFixed(1)}%.`;
-  if (state === "BLOCK") return `Operator guard active — execution paused. Snapshot daily loss ${risk.dailyDrawdownKnown ? `${(risk.dailyDrawdown * 100).toFixed(1)}%` : "unavailable"}, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
+  if (state === "BLOCK") return `Account risk restricted — no new account sizing. Snapshot daily loss ${risk.dailyDrawdownKnown ? `${(risk.dailyDrawdown * 100).toFixed(1)}%` : "unavailable"}, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
   if (state === "DEFENSIVE") return `Trade smaller, require clean trigger confirmation, and avoid correlated exposure. ${learningText}`;
   if (topPlays.length > 0) return `Start with ${topPlays[0].symbol}; confirm trigger, invalidation, and catalyst risk before taking any exposure. ${learningText}`;
   if (watchlist.length > 0) return `${watchlist.length} setups are worth watching, but none are green-lit yet. ${learningText}`;
@@ -2263,7 +2263,7 @@ function buildExecutionChecklist(
         label: "Risk Permission",
         status: state === "BLOCK" ? "BLOCK" : state === "DEFENSIVE" ? "WAIT" : "PASS",
         instruction: risk.killSwitchActive
-          ? "Operator guard active — outbound alerts paused. Discovery and opportunity ranking continue."
+          ? "Account stop active — no account sizing. Discovery and opportunity ranking continue."
           : `Execution permission: ${risk.permission}; active positions ${risk.activePositions}/${risk.maxPositions}.`,
       },
       {
@@ -2532,11 +2532,8 @@ function buildResearchSetups(
     .slice(0, 6)
     .map((hit) => ({
       ...hit,
-      permission: "WAIT" as const,
-      blockReasons: [
-        "Operator guard active — review only. Discovery remains live.",
-        ...(hit.blockReasons ?? []).slice(0, 3),
-      ],
+      permission: hit.marketPermission ?? hit.permission,
+      blockReasons: hit.marketPermission === "BLOCK" ? hit.blockReasons : [],
     }));
 }
 

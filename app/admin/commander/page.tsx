@@ -385,16 +385,16 @@ function CommandStateStrip({ brief }: { brief: CommanderBrief }) {
     <section className={`mb-5 rounded-lg border ${borderColor} ${bgColor} p-4 ${textColor}`}>
       <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch xl:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 text-xs font-black uppercase tracking-[0.16em] opacity-70">Command State</div>
+          <div className="mb-2 text-xs font-black uppercase tracking-[0.16em] opacity-70">Account Command State</div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-5xl font-black tracking-tight md:text-6xl">{commandState === "BLOCK" ? "GUARD" : commandState}</div>
             {commandState === "BLOCK" ? (
-              <StatusPill label="OPERATOR GUARD ACTIVE" tone="red" />
+              <StatusPill label="ACCOUNT RISK RESTRICTED" tone="red" />
             ) : (
               <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} />
             )}
             <StatusPill label="DISCOVERY ACTIVE" tone="green" />
-            <StatusPill label={brief.risk.killSwitchActive ? "RESEARCH ALERTS PAUSED" : "RESEARCH ALERTS ACTIVE"} tone={brief.risk.killSwitchActive ? "yellow" : "green"} />
+            <StatusPill label={brief.risk.killSwitchActive ? "ACCOUNT STOP ACTIVE" : `ACCOUNT ${brief.risk.permission}`} tone={brief.risk.killSwitchActive ? "red" : brief.risk.permission === "GO" ? "green" : "yellow"} />
             <StatusPill label={sourceLabel(brief.risk.source)} tone={brief.risk.source === "portfolio_journal" ? "green" : brief.risk.source === "operator_state" ? "yellow" : "red"} />
           </div>
           <div className="mt-3 text-sm font-semibold leading-6">Allowed Next Action: {allowedNextAction(brief, commandState)}</div>

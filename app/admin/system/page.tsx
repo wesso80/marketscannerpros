@@ -131,7 +131,7 @@ export default function SystemPage() {
         <div className="grid gap-3 md:grid-cols-4">
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
             <div className="text-[10px] uppercase tracking-[0.18em] text-white/35">Risk Permission</div>
-            <div className={`mt-1 text-xl font-black ${riskLocked ? "text-red-300" : risk?.permission === "ALLOW" || risk?.permission === "GO" ? "text-emerald-300" : "text-amber-300"}`}>{risk?.killSwitchActive ? "ALERTS PAUSED" : risk?.permission === "BLOCK" ? "GUARD ACTIVE" : risk?.permission || "WAIT"}</div>
+            <div className={`mt-1 text-xl font-black ${riskLocked ? "text-red-300" : risk?.permission === "ALLOW" || risk?.permission === "GO" ? "text-emerald-300" : "text-amber-300"}`}>{risk?.killSwitchActive ? "ACCOUNT STOP ACTIVE" : risk?.permission === "BLOCK" ? "ACCOUNT RESTRICTED" : risk?.permission || "WAIT"}</div>
           </div>
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
             <div className="text-[10px] uppercase tracking-[0.18em] text-white/35">Drawdown</div>

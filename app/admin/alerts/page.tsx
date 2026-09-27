@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import AdminCard from "@/components/admin/shared/AdminCard";
+import ResearchNotificationControls from "@/components/admin/shared/ResearchNotificationControls";
 import StatusPill from "@/components/admin/shared/StatusPill";
 
 interface ScannerHit {
@@ -11,6 +12,7 @@ interface ScannerHit {
   bias: string;
   regime: string;
   permission: string;
+  marketPermission?: string;
   confidence: number;
   symbolTrust: number;
   sizeMultiplier: number;
@@ -41,6 +43,7 @@ interface ResearchAlertLogEntry {
   classification: string;
   status: "FIRED" | "SUPPRESSED";
   suppressionReason: string | null;
+  channels?: { discord?: { ok?: boolean }; email?: { ok?: boolean } };
   createdAt: string;
 }
 
@@ -81,7 +84,7 @@ export default function AlertsPage() {
         const data = await alertRes.json();
         setResearchLog(data.alerts || []);
       }
-      if (!scanRes.ok || !riskRes.ok) setError("One or more alert feeds failed to load.");
+      if (!scanRes.ok || !riskRes.ok || !alertRes.ok) setError("One or more alert feeds failed to load.");
     } catch {
       setError("Alert refresh failed.");
     } finally {
@@ -96,10 +99,10 @@ export default function AlertsPage() {
   }, []);
 
   const sortedHits = [...hits].sort((a, b) => (b.confidence + b.symbolTrust) - (a.confidence + a.symbolTrust));
-  const goHits = sortedHits.filter((hit) => hit.permission === "GO");
-  const watchHits = sortedHits.filter((hit) => hit.permission === "WAIT");
+  const goHits = sortedHits.filter((hit) => hit.marketPermission === "GO");
+  const watchHits = sortedHits.filter((hit) => hit.marketPermission === "WAIT");
   const riskAlerts = [
-    risk?.killSwitchActive ? "Research alerts are paused" : null,
+    risk?.killSwitchActive ? "Account stop active — account sizing restricted; research notifications are controlled separately" : null,
     risk && risk.dailyDrawdown > 0.015 ? `Daily drawdown elevated: ${(risk.dailyDrawdown * 100).toFixed(2)}%` : null,
     risk && risk.correlationRisk > 0.6 ? `Correlation risk high: ${(risk.correlationRisk * 100).toFixed(0)}%` : null,
     risk && risk.activePositions >= risk.maxPositions ? "Max position count reached" : null,
@@ -119,7 +122,9 @@ export default function AlertsPage() {
         </button>
       </div>
 
-      <AdminCard title="Risk Alerts">
+      <ResearchNotificationControls />
+
+      <AdminCard title="Account Risk Alerts">
         {riskAlerts.length ? (
           <div className="space-y-2">
             {riskAlerts.map((alert) => (
@@ -153,8 +158,8 @@ export default function AlertsPage() {
                 <span className={row.bias === "LONG" ? "font-semibold text-emerald-300" : row.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{row.bias === "LONG" ? "Bullish" : row.bias === "SHORT" ? "Bearish" : row.bias}</span>
                 <span className="truncate text-white/55">{row.setup} · {row.timeframe}</span>
                 <StatusPill
-                  label={row.status === "FIRED" ? "FIRED" : (row.suppressionReason || "SUPPRESSED")}
-                  tone={row.status === "FIRED" ? "green" : "neutral"}
+                  label={row.status === "FIRED" ? (row.channels?.discord?.ok || row.channels?.email?.ok ? "DELIVERED" : "NOT DELIVERED") : (row.suppressionReason || "SUPPRESSED")}
+                  tone={row.channels?.discord?.ok || row.channels?.email?.ok ? "green" : "neutral"}
                 />
                 <span className="text-right font-mono text-white/70">{Math.round(row.score)}</span>
                 <span className="text-right font-mono text-white/45">{Math.round(row.dataTrustScore)}</span>
@@ -166,7 +171,7 @@ export default function AlertsPage() {
         )}
       </AdminCard>
 
-      <AdminCard title="Actionable Scanner Alerts">
+      <AdminCard title="Research Scanner Alerts">
         {goHits.length ? (
           <div className="space-y-2">
             {goHits.slice(0, 8).map((hit, i) => (
@@ -174,7 +179,7 @@ export default function AlertsPage() {
                 <span className="font-black text-white">{hit.symbol}</span>
                 <span className={hit.bias === "LONG" ? "font-semibold text-emerald-300" : hit.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{hit.bias === "LONG" ? "Bullish" : hit.bias === "SHORT" ? "Bearish" : hit.bias}</span>
                 <span className="truncate text-white/55">{hit.playbook || hit.regime}</span>
-                <StatusPill label={hit.permission} tone={permissionTone(hit.permission)} />
+                <StatusPill label={hit.marketPermission ?? "Unavailable"} tone={permissionTone(hit.marketPermission ?? "")} />
                 <span className="text-right font-mono text-white/70">{Number(hit.confidence || 0).toFixed(0)}%</span>
               </Link>
             ))}
@@ -191,7 +196,7 @@ export default function AlertsPage() {
               <Link key={`${hit.symbol}-${hit.bias}-${i}`} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="rounded-lg border border-amber-500/15 bg-amber-500/5 px-3 py-2 text-sm no-underline hover:bg-amber-500/10">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-black text-white">{hit.symbol}</span>
-                  <StatusPill label={hit.permission} tone={permissionTone(hit.permission)} />
+                  <StatusPill label={hit.marketPermission ?? "Unavailable"} tone={permissionTone(hit.marketPermission ?? "")} />
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-white/45">
                   <span className="truncate">{hit.bias === "LONG" ? "Bullish Bias" : hit.bias === "SHORT" ? "Bearish Bias" : hit.bias} - {hit.playbook || hit.regime}</span>

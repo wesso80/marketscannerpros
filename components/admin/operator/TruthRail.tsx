@@ -158,6 +158,7 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
 
   return (
     <Card>
+      <Label>Research Verdict</Label>
       {/* Verdict */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <span style={{
@@ -202,6 +203,10 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
         </span>
       </button>
 
+      <div className="mb-2 text-xs text-white/60">
+        Account permission: <strong>{truth.accountVerdict ?? "Unavailable"}</strong>
+        {truth.accountReasons?.length ? <p>{truth.accountReasons.join(" · ")}</p> : null}
+      </div>
       {/* Confidence + Size */}
       <div style={{ display: "flex", gap: 16, fontSize: "0.7rem" }}>
         <span>
@@ -209,7 +214,7 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
           <span style={{ color: confColor(truth.confidenceClass), fontWeight: 600 }}>{truth.confidenceClass}</span>
         </span>
         <span>
-          <span style={{ color: "#6B7280" }}>Size: </span>
+          <span style={{ color: "#6B7280" }}>Account Size: </span>
           <span style={{ color: truth.effectiveSize > 0 ? "#D1D5DB" : "#EF4444", fontWeight: 600 }}>{truth.effectiveSize}x</span>
         </span>
       </div>

@@ -188,6 +188,7 @@ export function useSystemHealth(pollInterval = 30000) {
 
 /* ── Risk State ── */
 type RiskState = {
+  operatorGuardReasons?: string[];
   capture?: { enabled: boolean; observations: number; latest_date: string | null; last_attempt_at: string | null; last_success_at: string | null; last_error: string | null } | null;
   openExposure: number;
   openRiskUsd?: number;
