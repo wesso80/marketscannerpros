@@ -8,6 +8,7 @@
  */
 
 import { loadEdgePackets, type EdgePacketRow } from "@/lib/admin/edgePacketSnapshots";
+import { biasToDirection, POSITION_LEVEL_DEFAULTS } from "@/lib/admin/positionLevels";
 import type { ArcaAssetClass, ArcaPortfolio } from "./types";
 
 export interface CandidateGate {
@@ -54,8 +55,7 @@ export interface DecisionEngineOptions {
 // ("PRIME"/"TRIGGERED"/"CONFIRMED"/"DEVELOPING") which were the wrong
 // vocabulary entirely — the result was a 100% rejection rate on the gate.
 const ALLOWED_THESIS = new Set(["alive", "weakening", "crowded"]);
-const ALLOWED_BIAS_LONG = new Set(["BULL", "LONG", "STRONG_BULL"]);
-const ALLOWED_BIAS_SHORT = new Set(["BEAR", "SHORT", "STRONG_BEAR"]);
+
 
 export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<DecisionEngineResult> {
   const { portfolio } = opts;
@@ -89,11 +89,12 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
       rejected.push({ packetId: row.packetId, symbol: row.symbol, passed: false, reasons: gateReasons });
       continue;
     }
-    const sel = projectCandidate(row);
-    if (!sel) {
-      rejected.push({ packetId: row.packetId, symbol: row.symbol, passed: false, reasons: ["entry_or_stop_missing"] });
+    const projection = projectCandidate(row);
+    if (!projection.ok) {
+      rejected.push({ packetId: row.packetId, symbol: row.symbol, passed: false, reasons: [projection.reason] });
       continue;
     }
+    const sel = projection.candidate;
     const existing = selectedBySymbol.get(row.symbol);
     if (!existing || row.opportunityRankScore > existing.row.opportunityRankScore) {
       selectedBySymbol.set(row.symbol, sel);
@@ -136,44 +137,56 @@ export function gateRow(row: EdgePacketRow, portfolio: ArcaPortfolio): string[] 
   return reasons;
 }
 
-function projectCandidate(row: EdgePacketRow): SelectedCandidate | null {
+/** Never substitute intraday levels or a planned entry for observed price evidence. */
+export function projectCandidate(row: EdgePacketRow, nowMs = Date.now()):
+  { ok: true; candidate: SelectedCandidate } | { ok: false; reason: string } {
   const pkt = row.packetJson;
-  const entry = pkt.entry?.trigger ?? pkt.entry?.conservativeEntry ?? pkt.entry?.aggressiveEntry ?? null;
-  const stop = pkt.stopLoss?.level ?? null;
-  if (entry == null || stop == null) return null;
-
-  const side: "LONG" | "SHORT" =
-    ALLOWED_BIAS_LONG.has(String(pkt.bias).toUpperCase())
-      ? "LONG"
-      : ALLOWED_BIAS_SHORT.has(String(pkt.bias).toUpperCase())
-      ? "SHORT"
-      : entry > stop
-      ? "LONG"
-      : "SHORT";
-
-  // sanity: long requires stop < entry; short requires stop > entry
-  if (side === "LONG" && stop >= entry) return null;
-  if (side === "SHORT" && stop <= entry) return null;
-
-  const tp1 = pkt.takeProfit?.tp1 ?? null;
-  const tp2 = pkt.takeProfit?.tp2 ?? null;
-  const tp3 = pkt.takeProfit?.tp3 ?? null;
-
-  const snapshotAny = (pkt as unknown as { snapshot?: { price?: number } }).snapshot;
-  const currentPrice = Number.isFinite(snapshotAny?.price) ? Number(snapshotAny!.price) : entry;
-
-  return {
-    row,
-    entry,
-    stop,
-    tp1,
-    tp2,
-    tp3,
-    side,
-    currentPrice,
-    rrToTp1: pkt.riskReward?.rrToTp1 ?? null,
+  const levels = pkt?.positionLevels;
+  const reject = (reason: string) => ({ ok: false as const, reason });
+  const positive = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
+  const side = biasToDirection(pkt?.bias);
+  if (!side || levels?.status !== "ok" || levels.timeframe !== "1W/1D" || levels.direction !== side) {
+    return reject("position_levels_unavailable_or_direction_mismatch");
+  }
+  const generated = Date.parse(pkt.generatedAt);
+  const expires = Date.parse(pkt.staleAfter);
+  const priceAt = Date.parse(pkt.priceAt ?? "");
+  // Apply the packet TTL to quote age too: republishing an old quote is not fresh evidence.
+  const ttl = expires - generated;
+  if (!Number.isFinite(generated) || !Number.isFinite(expires) || ttl <= 0 || generated > nowMs || expires <= nowMs) {
+    return reject("packet_expired_or_timestamp_unavailable");
+  }
+  if (!positive(pkt.price) || !Number.isFinite(priceAt) || priceAt > nowMs || nowMs - priceAt >= ttl) {
+    return reject("current_price_missing_or_stale");
+  }
+  const dailyAt = Date.parse(levels.dailyAsOf ?? "");
+  if (!Number.isFinite(dailyAt) || dailyAt > nowMs || nowMs - dailyAt > POSITION_LEVEL_DEFAULTS.maxDailyAgeDays * 86_400_000) {
+    return reject("position_daily_history_stale_or_missing");
+  }
+  if (levels.entryStatus !== "in_zone") return reject("daily_entry_not_confirmed_in_zone");
+  const entry = levels.entryTrigger, stop = levels.stop, tp1 = levels.tp1;
+  const low = levels.entryZoneLow, high = levels.entryZoneHigh;
+  if (!positive(entry) || !positive(stop) || !positive(tp1) || !positive(low) || !positive(high) || low > high) {
+    return reject("invalid_position_levels");
+  }
+  const currentPrice = pkt.price;
+  if (currentPrice < low || currentPrice > high) return reject("current_price_outside_entry_zone");
+  const sign = side === "LONG" ? 1 : -1;
+  const plannedRisk = sign * (entry - stop), currentRisk = sign * (currentPrice - stop);
+  const plannedReward = sign * (tp1 - entry), currentReward = sign * (tp1 - currentPrice);
+  const minR = Math.max(1.5, Number.isFinite(levels.minRewardR) ? levels.minRewardR : 1.5);
+  if (plannedRisk <= 0 || currentRisk <= 0 || plannedReward <= 0 || currentReward <= 0 ||
+      plannedReward / plannedRisk < minR || currentReward / currentRisk < minR || levels.belowMinR) {
+    return reject("position_reward_risk_invalid_or_below_minimum");
+  }
+  // Optional targets must remain beyond TP1, in the trade's direction.
+  const tp2 = positive(levels.tp2) && sign * (levels.tp2 - tp1) > 0 ? levels.tp2 : null;
+  const tp3 = positive(levels.tp3) && sign * (levels.tp3 - (tp2 ?? tp1)) > 0 ? levels.tp3 : null;
+  return { ok: true, candidate: {
+    row, entry, stop, tp1, tp2, tp3, side, currentPrice,
+    rrToTp1: currentReward / currentRisk,
     assetClass: normaliseAssetClass(row.assetClass),
-  };
+  } };
 }
 
 function normaliseAssetClass(s: string): ArcaAssetClass {
