@@ -38,13 +38,14 @@ function HitRow({ hit }: { hit: ScannerHit }) {
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.8)" }}>{formatHitPrice(hit.price)}</span>
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "#6EE7B7" }}>{hit.eliteScore != null ? hit.eliteScore.toFixed(1) : "—"}</span>
       <span title={hit.otherPlaybooks?.length ? `Also: ${hit.otherPlaybooks.join(", ")}` : undefined} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>{hit.playbook ?? "—"}{more ? ` ${more}` : ""}</span>
-      <span title={hitPermissionTitle(hit)}><StatusPill label={hit.marketPermission} tone={permTone(hit.marketPermission)} /></span>
+      <span title={hitPermissionTitle(hit)}><StatusPill label={hit.clearance?.status ?? "BLOCKED"} tone={hit.clearance?.status === "WATCH" ? "yellow" : "red"} /></span>
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.7)" }}>{hit.confidence.toFixed(1)}%</span>
       <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.5)" }}>{hit.symbolTrust}%</span>
       <span style={{ textAlign: "right", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>{hit.setupState ?? "—"}</span>
     </div>
     {/* Position (weekly/daily) levels: the main levels; the scan itself runs on 15m bars. */}
-    <PositionLevelsLine className="mt-1" view={hit.positionLevels} bias={hit.bias} />
+    <PositionLevelsLine className="mt-1" view={hit.positionLevels} bias={hit.clearance?.direction ?? hit.bias} />
+    <p className="mt-1 text-xs text-amber-200">{hit.blockReasons?.join(" · ")}</p>
     </div>
   );
 }
@@ -122,7 +123,7 @@ export default function LiveScannerClient({ cryptoEnabled, defaultMarket = "EQUI
               <span style={{ textAlign: "right" }} title="Last saved price from the shared scan">Price</span>
               <span style={{ textAlign: "right" }}>Elite</span>
               <span>Playbook</span>
-              <span title="Market verdict (pre-portfolio). Hover a pill for the governance/portfolio verdict and reasons.">Verdict</span>
+              <span title="Position readiness from the same checks as Decision Desk; no execution authority.">Readiness</span>
               <span style={{ textAlign: "right" }}>Score</span>
               <span style={{ textAlign: "right" }}>Trust</span>
               <span style={{ textAlign: "right" }}>State</span>
