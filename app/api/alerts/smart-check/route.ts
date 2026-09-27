@@ -1,5 +1,6 @@
 import { buildOiObservation, totalOiChange } from '@/lib/crypto/oiComparisons';
 import { trackOiHistory } from '@/lib/crypto/oiHistory';
+import { persistDerivativeSnapshots } from '@/lib/crypto/derivativesSnapshots';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
@@ -106,16 +107,19 @@ async function checkSmartAlerts(req: NextRequest) {
     const derivativesData = derivativesBundle.data;
     
     // Save snapshot for historical analysis
-    await saveSnapshot(derivativesData);
+    const snapshotSaved = await saveSnapshot(derivativesData);
 
     // Persist the exact same per-coin payload — no second provider fetch.
-    await savePerCoinSnapshots(derivativesBundle.multi);
+    const perCoinSnapshots = await persistDerivativeSnapshots(derivativesBundle.multi, q);
+    const snapshotLog = `[smart-check] Per-coin snapshots: ${JSON.stringify(perCoinSnapshots)}`;
+    if (perCoinSnapshots.status === 'saved') console.log(snapshotLog);
+    else console.warn(snapshotLog);
 
     // Save stablecoin supply snapshot
     await saveStablecoinSnapshot(req);
 
     if (alerts.length === 0) {
-      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active smart alerts', snapshotSaved: true });
+      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active smart alerts', snapshotSaved, perCoinSnapshots });
     }
 
     const triggered: string[] = [];
@@ -156,6 +160,8 @@ async function checkSmartAlerts(req: NextRequest) {
       skipped: skipped.length,
       triggeredIds: triggered,
       errors: errors.length > 0 ? errors : undefined,
+      snapshotSaved,
+      perCoinSnapshots,
       dataSnapshot: {
         oi24hChange: derivativesData.oi?.total?.change24h,
         avgFunding: derivativesData.funding?.average?.fundingRatePercent,
@@ -699,64 +705,27 @@ async function saveSnapshot(data: DerivativesData) {
         raw_data
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
-        data.oi?.total?.value || null,
-        data.oi?.total?.change24h || null,
-        data.oi?.btc?.value || null,
-        data.oi?.btc?.change24h || null,
-        data.funding?.btc?.fundingRatePercent || null,
-        data.longShort?.btc?.longShortRatio || null,
-        data.oi?.eth?.value || null,
-        data.oi?.eth?.change24h || null,
-        data.funding?.eth?.fundingRatePercent || null,
-        data.longShort?.eth?.longShortRatio || null,
-        data.fearGreed?.value || null,
-        data.fearGreed?.classification || null,
-        data.funding?.average?.fundingRatePercent || null,
-        data.longShort?.average?.longShortRatio || null,
+        data.oi?.total?.value ?? null,
+        data.oi?.total?.change24h ?? null,
+        data.oi?.btc?.value ?? null,
+        data.oi?.btc?.change24h ?? null,
+        data.funding?.btc?.fundingRatePercent ?? null,
+        data.longShort?.btc?.longShortRatio ?? null,
+        data.oi?.eth?.value ?? null,
+        data.oi?.eth?.change24h ?? null,
+        data.funding?.eth?.fundingRatePercent ?? null,
+        data.longShort?.eth?.longShortRatio ?? null,
+        data.fearGreed?.value ?? null,
+        data.fearGreed?.classification ?? null,
+        data.funding?.average?.fundingRatePercent ?? null,
+        data.longShort?.average?.longShortRatio ?? null,
         JSON.stringify(data),
       ]
     );
+    return true;
   } catch (err) {
     console.error('Failed to save snapshot:', err);
-  }
-}
-
-/** Snapshot top-20 coin derivatives for historical funding rate / OI charting */
-async function savePerCoinSnapshots(data: any | null) {
-  try {
-    if (!data?.coins?.length) {
-      console.warn('[smart-check] Per-coin derivatives snapshot skipped: aggregate unavailable');
-      return;
-    }
-
-    const values: any[][] = [];
-    for (const coin of data.coins) {
-      values.push([
-        coin.symbol,
-        coin.aggregatedFunding?.fundingRatePct ?? null,
-        coin.aggregatedFunding?.annualised ?? null,
-        coin.aggregatedFunding?.sentiment ?? null,
-        coin.aggregatedOI?.totalOI ?? null,
-        coin.aggregatedOI?.totalVolume24h ?? null,
-        coin.aggregatedFunding?.exchangeCount ?? null,
-        coin.price ?? null,
-        coin.change24h ?? null,
-      ]);
-    }
-
-    // Batch insert — one row per coin per snapshot
-    for (const v of values) {
-      await q(
-        `INSERT INTO derivatives_snapshots
-          (symbol, funding_rate_pct, annualised_pct, sentiment,
-           total_oi, total_volume_24h, exchange_count, price, change_24h)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-        v
-      );
-    }
-    console.log(`[smart-check] Saved ${values.length} per-coin derivatives snapshots`);
-  } catch (err) {
-    console.error('Failed to save per-coin snapshots:', err);
+    return false;
   }
 }
 

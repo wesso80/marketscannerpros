@@ -160,7 +160,7 @@ async function buildSeriesRead(seriesKey: string): Promise<MacroSeriesRead> {
     .slice(0, 10);
   const oneMonthRow = findOnOrBefore(rows, oneMonthTarget);
   const age = ageDays(latestRow.observed_on);
-  const threshold = STALE_THRESHOLD_DAYS[meta.cadence];
+  const threshold = meta.maxObservationAgeDays ?? STALE_THRESHOLD_DAYS[meta.cadence];
   const status: "ok" | "stale" = age === null || age < 0 || age > threshold ? "stale" : "ok";
 
   const delta = priorRow ? latestRow.value - priorRow.value : null;
