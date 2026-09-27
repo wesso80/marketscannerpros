@@ -68,7 +68,7 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
   const sinceMs = (opts.sinceMinutes ?? 720) * 60_000;
   const since = new Date(Date.now() - sinceMs).toISOString();
 
-  const rows = opts.rows ?? await loadEdgePackets({
+  const rows = opts.rows?.slice(0, limit) ?? await loadEdgePackets({
     workspaceId: portfolio.workspaceId,
     since,
     limit,
