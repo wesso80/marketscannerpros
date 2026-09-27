@@ -98,7 +98,7 @@ describe('labeller run limits (more rows now that admin pages log calls)', () =>
     expect(body).toMatchObject({ deferredOverBudget: 0, budgetMs: 90_000 });
   });
 
-  it('past the time budget, only rows whose bars are already loaded are labelled; the rest wait', async () => {
+  it('past the time budget, cached symbols also wait rather than extending database work', async () => {
     process.env.AI_OUTCOME_TIME_BUDGET_MS = '1000';
     state.rows24 = [row(1, 30, { symbol: 'AAPL' }), row(2, 29, { symbol: 'MSFT' }), row(3, 28, { symbol: 'AAPL' })];
     mocks.hasLoaded.mockImplementation((s: string) => s === 'AAPL');
@@ -107,9 +107,9 @@ describe('labeller run limits (more rows now that admin pages log calls)', () =>
       return { price: 103, at: NOW - 5 * H, source: 'intraday' };
     });
     const body = await (await POST(req())).json();
-    expect(mocks.resolve.mock.calls.map((c) => c[0])).toEqual(['AAPL', 'AAPL']);
-    expect(body.deferredOverBudget).toBe(1);
-    expect(body.horizons['24h'].labeled).toBe(2);
+    expect(mocks.resolve.mock.calls.map((c) => c[0])).toEqual(['AAPL']);
+    expect(body.deferredOverBudget).toBe(2);
+    expect(body.horizons['24h'].labeled).toBe(1);
   });
 });
 
