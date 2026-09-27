@@ -151,8 +151,8 @@ export async function POST(req: NextRequest) {
         }
         if (!assetClass) { t.skippedUnsupported++; continue; }
         if (!(entry > 0) || !horizonPassed(signalAtMs, horizon, nowMs)) { t.skippedNotReady++; continue; }
-        // Over budget: finish rows whose bars are already loaded (no new call); leave the rest for the next run.
-        if (Date.now() - startedMs > budgetMs && !resolve.hasLoaded(row.symbol, assetClass)) { deferredOverBudget++; continue; }
+        // Stop starting rows after the budget, including cached symbols: each row still performs database writes.
+        if (Date.now() - startedMs >= budgetMs) { deferredOverBudget++; continue; }
 
         const px = await resolve(row.symbol, assetClass, signalAtMs, horizon);
         if (!px) { t.skippedNoPrice++; continue; }
