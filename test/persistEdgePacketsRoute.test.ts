@@ -1,0 +1,17 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+const m = vi.hoisted(() => ({ read: vi.fn(), start: vi.fn(), q: vi.fn() }));
+vi.mock('@/lib/db', () => ({ q: m.q }));
+vi.mock('@/lib/admin/sharedScan', () => ({ readSavedScan: m.read, startSharedScan: m.start, detachRun: vi.fn(), isRankable: () => true, withFreshQuote: (p: unknown) => p }));
+vi.mock('@/lib/admin/sharedScanLogic', () => ({ sharedScanUniverse: () => ['BTC'] }));
+vi.mock('@/lib/admin/getAdminResearchPacket', () => ({ whatChangedForWorkspace: vi.fn() }));
+vi.mock('@/lib/admin/edgePacket', () => ({ projectEdgePacket: vi.fn() }));
+vi.mock('@/lib/admin/edgePacketSnapshots', () => ({ filterNewEdgePackets: vi.fn(), persistEdgePackets: vi.fn() }));
+vi.mock('@/lib/admin/notifyAdmin', () => ({ notifyAdmin: vi.fn(async () => undefined) }));
+import { POST } from '@/app/api/cron/persist-edge-packets/route';
+const req = () => new NextRequest('http://localhost/api/cron/persist-edge-packets', { method: 'POST', headers: { 'x-cron-secret': 'test' }, body: JSON.stringify({ market: 'CRYPTO' }) });
+beforeEach(() => { vi.clearAllMocks(); process.env.CRON_SECRET = 'test'; m.read.mockResolvedValue({ available: true, packets: [], ageLabel: 'now' }); m.start.mockResolvedValue({ started: false, reason: 'already_running', message: 'running' }); m.q.mockResolvedValue([]); });
+it('returns a retryable failure when the saved scan cannot be read', async () => { m.read.mockResolvedValue({ available: false, message: 'connection timeout' }); const r = await POST(req()); expect(r.status).toBe(503); expect(await r.json()).toMatchObject({ ok: false, reason: 'saved_scan_unavailable' }); expect(m.start).not.toHaveBeenCalled(); });
+it('does not disguise failure to start the refresh as success', async () => { m.start.mockResolvedValue({ started: false, reason: 'error', message: 'connection timeout' }); const r = await POST(req()); expect(r.status).toBe(503); expect(await r.json()).toMatchObject({ ok: false, reason: 'scan_start_failed' }); });
+it('keeps a healthy already-running scan and empty workspace a normal no-op', async () => { const r = await POST(req()); expect(r.status).toBe(200); expect(await r.json()).toMatchObject({ ok: true, reason: 'no_active_workspaces' }); });
+it('returns a retryable failure when portfolio lookup fails', async () => { m.q.mockRejectedValueOnce(new Error('database offline')); const r = await POST(req()); expect(r.status).toBe(503); expect(await r.json()).toMatchObject({ ok: false, reason: 'portfolio_lookup_failed' }); });

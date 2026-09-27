@@ -79,15 +79,19 @@ export async function POST(req: NextRequest) {
     const view = await readSavedScan({ market: scanMarket, timeframe, symbols });
     if (!view.available) {
       return NextResponse.json({
-        ok: true,
+        ok: false,
         skipped: true,
         reason: "saved_scan_unavailable",
         message: view.message,
         durationMs: Date.now() - started,
-      });
+      }, { status: 503 });
     }
     // Keep the shared scan moving (no-op when fresh or already running).
     const scan = await startSharedScan({ market: scanMarket, timeframe, trigger: "edge" });
+    if (!scan.started && scan.reason !== "already_running") {
+      return NextResponse.json({ ok: false, reason: "scan_start_failed", message: scan.message,
+        durationMs: Date.now() - started }, { status: 503 });
+    }
     detachRun(scan);
     const current = view.packets.filter(isRankable).map(withFreshQuote);
 
@@ -101,12 +105,12 @@ export async function POST(req: NextRequest) {
       const msg = err instanceof Error ? err.message : String(err);
       const missing = /relation .* does not exist|arca_portfolios/i.test(msg);
       return NextResponse.json({
-        ok: true,
+        ok: false,
         skipped: true,
         reason: missing ? "arca_portfolios_table_missing" : "portfolio_lookup_failed",
         message: msg,
         durationMs: Date.now() - started,
-      });
+      }, { status: 503 });
     }
     const savedScan = {
       ageLabel: view.ageLabel,
@@ -158,9 +162,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const ok = results.every((result) => !result.error);
     const totalWritten = results.reduce((acc, r) => acc + r.written, 0);
     return NextResponse.json({
-      ok: true,
+      ok,
       market,
       symbolsRequested: symbols.length,
       workspacesProcessed: results.length,
@@ -168,7 +173,7 @@ export async function POST(req: NextRequest) {
       savedScan,
       results,
       durationMs: Date.now() - started,
-    });
+    }, { status: ok ? 200 : 503 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     notifyAdmin({
