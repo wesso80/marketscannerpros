@@ -56,6 +56,8 @@ export type {
 interface FetchOptions {
   /** Force refresh, skip all caches. */
   forceFresh?: boolean;
+  /** Position research needs a full year, separate from compact scanner history. */
+  fullDailyHistory?: boolean;
   /** Accept data up to this age (s). If cache entry is older, refresh. */
   maxAgeSec?: number;
 }
@@ -95,23 +97,26 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
   const source = `alpha-vantage:${timeframe === 'daily' ? 'TIME_SERIES_DAILY_ADJUSTED' : `TIME_SERIES_INTRADAY:${timeframe}`}`;
   const max = opts.maxAgeSec ?? FRESHNESS_RULES[dataType].realTime;
 
+  const full = timeframe === 'daily' && opts.fullDailyHistory === true;
+  const barLimit = full ? 500 : AV_DAILY_COMPACT_BARS;
+  const cacheKey = CK.bars(symbol, full ? 'daily-position-v2' : timeframe);
   // 1. Redis
   if (!opts.forceFresh) {
-    const hit = await rGet<OhlcBar[]>(CK.bars(symbol, timeframe));
+    const hit = await rGet<OhlcBar[]>(cacheKey);
     if (hit && ageSecondsFrom(hit.fetchedAt) <= max) {
       return wrap({ data: hit.data, source, fetchedAt: hit.fetchedAt, fromCache: 'redis', dataType });
     }
   }
 
-  // 2. Postgres. A daily read must hold the same series the AV call it replaces returns (compact = latest 100
-  // sessions): read exactly that many and only serve it when all are there (a short stored series goes to AV).
-  if (!opts.forceFresh) {
+  // The legacy store mixes raw worker OHLC and adjusted closes. Position history requires
+  // a coherently adjusted provider series; reuse its separate Redis cache above.
+  if (!opts.forceFresh && !full) {
     const pg = dataType === 'dailyBars' && timeframe === 'daily'
-      ? await pgReadBars(symbol, timeframe, AV_DAILY_COMPACT_BARS)
+      ? await pgReadBars(symbol, timeframe, barLimit)
       : await pgReadBars(symbol, timeframe);
-    const enough = !(dataType === 'dailyBars' && timeframe === 'daily') || (pg?.bars.length ?? 0) >= AV_DAILY_COMPACT_BARS;
-    if (pg && enough && ageSecondsFrom(pg.fetchedAt) <= max) {
-      await rSet(CK.bars(symbol, timeframe), pg.bars, pg.fetchedAt, FRESHNESS_RULES[dataType].realTime);
+    const enough = !(dataType === 'dailyBars' && timeframe === 'daily') || (pg?.bars.length ?? 0) >= barLimit;
+    if (pg && enough && (!full || pg.bars.every(b => b.low <= Math.min(b.open, b.close) && b.high >= Math.max(b.open, b.close))) && ageSecondsFrom(pg.fetchedAt) <= max) {
+      await rSet(cacheKey, pg.bars, pg.fetchedAt, FRESHNESS_RULES[dataType].realTime);
       return wrap({ data: pg.bars, source, fetchedAt: pg.fetchedAt, fromCache: 'postgres', dataType });
     }
   }
@@ -119,7 +124,7 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
   // 3. AV
   try {
     const fresh = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly'
-      ? await avFetchDailyBars(symbol, false)
+      ? await avFetchDailyBars(symbol, full)
       : await avFetchIntradayBars(symbol, timeframe);
     if (!fresh) {
       // Fall back to whatever Postgres has, even if stale
@@ -127,9 +132,10 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
       if (pg) return wrap({ data: pg.bars, source, fetchedAt: pg.fetchedAt, fromCache: 'postgres', dataType, missingFields: ['live-fetch-failed'] });
       return wrap<OhlcBar[]>({ data: null, source, fetchedAt: new Date().toISOString(), fromCache: 'miss', dataType, error: 'no data' });
     }
+    if (full) fresh.bars = fresh.bars.slice(-500);
     // Persist
     await pgUpsertBars(symbol, timeframe, fresh.bars).catch(() => undefined);
-    await rSet(CK.bars(symbol, timeframe), fresh.bars, fresh.fetchedAt, FRESHNESS_RULES[dataType].realTime);
+    await rSet(cacheKey, fresh.bars, fresh.fetchedAt, FRESHNESS_RULES[dataType].realTime);
     return wrap({ data: fresh.bars, source, fetchedAt: fresh.fetchedAt, fromCache: 'av', dataType });
   } catch (e) {
     const pg = await pgReadBars(symbol, timeframe);

@@ -86,3 +86,11 @@ describe('getBars(daily) reads through Postgres', () => {
     expect(env.missingFields).toContain('live-fetch-failed'); // (mock AV returns nothing → stale Postgres fallback)
   });
 });
+
+describe('position history coverage',()=>{
+ it('does not truncate position research to the legacy compact cache',async()=>{
+  db.rows=stored('2026-09-25',100);
+  await getBars('AAPL','daily',{fullDailyHistory:true});
+  expect(client.avFetchDailyBars).toHaveBeenCalledWith('AAPL',true);
+ });
+});

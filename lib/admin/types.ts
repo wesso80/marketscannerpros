@@ -169,7 +169,7 @@ export type AdminSymbolIntelligence = {
    */
   positionLevels?: PositionLevels;
   positionTrend?: import('./positionTrend').PositionTrend;
-  positionEvidenceSource?: 'scan_daily_bars' | 'ohlcv_bars_identity_checked';
+  positionEvidenceSource?: 'scan_daily_bars' | 'ohlcv_bars_identity_checked' | 'market_qualified_history';
   /** Evidence breakdown from scoring engine */
   evidence?: {
     regimeFit: number;

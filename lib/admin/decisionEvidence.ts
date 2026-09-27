@@ -1,3 +1,4 @@
+import { readPositionHistory } from './positionHistory';
 import { q } from '@/lib/db';
 import { lastCompletedUsSessionDate } from '@/lib/time/usSession';
 import { computePositionLevels, type DailyBarLike } from './positionLevels';
@@ -7,7 +8,18 @@ import type { SavedPacket } from './sharedScan';
 /** Read-only upgrade of legacy EQUITY packets using identity-checked stored daily bars.
  * Crypto history is intentionally not read from the symbol-only equity cache. New crypto scans attach their own trend. */
 export async function enrichStoredPositionEvidence(packets: SavedPacket[], nowMs = Date.now()): Promise<SavedPacket[]> {
-  const symbols = [...new Set(packets.filter(p => p.market === 'EQUITIES' && !p.snapshot.positionTrend).map(p => p.symbol))];
+  const stored = await readPositionHistory();
+  const history = new Map(stored.map(h => [h.market + ":" + h.symbol, h]));
+  packets = packets.map(p => {
+    const cached = history.get(p.market + ":" + p.symbol);
+    if (!cached?.bars?.length) return p;
+    const completedThrough = p.market === 'EQUITIES' ? lastCompletedUsSessionDate(nowMs) : new Date(nowMs - 86400000).toISOString().slice(0,10);
+    const trend = computePositionTrend(cached.bars, completedThrough, nowMs);
+    if (p.snapshot.positionTrend?.status === 'ok' && trend.status !== 'ok') return p;
+    return { ...p, snapshot: { ...p.snapshot, positionEvidenceSource: 'market_qualified_history' as const, positionTrend: trend,
+      positionLevels: computePositionLevels({dailyBars: cached.bars, completedThrough, price: p.snapshot.price, nowMs}) } };
+  });
+  const symbols = [...new Set(packets.filter(p => p.market === 'EQUITIES' && (!p.snapshot.positionTrend || p.snapshot.positionTrend.status !== 'ok')).map(p => p.symbol))];
   if (!symbols.length) return packets;
   let rows: { symbol: string; timestamp: string; open: number; high: number; low: number; close: number }[];
   try {
@@ -20,7 +32,7 @@ export async function enrichStoredPositionEvidence(packets: SavedPacket[], nowMs
   for (const row of rows) { const bars = bySymbol.get(row.symbol) ?? []; bars.push(row); bySymbol.set(row.symbol, bars); }
   const completedThrough = lastCompletedUsSessionDate(nowMs);
   return packets.map(p => {
-    const dailyBars = p.market === 'EQUITIES' && !p.snapshot.positionTrend ? bySymbol.get(p.symbol) : null;
+    const dailyBars = p.market === 'EQUITIES' && (!p.snapshot.positionTrend || p.snapshot.positionTrend.status !== 'ok') ? bySymbol.get(p.symbol) : null;
     if (!dailyBars?.length) return p;
     return { ...p, snapshot: { ...p.snapshot, positionEvidenceSource: 'ohlcv_bars_identity_checked' as const,
       positionTrend: computePositionTrend(dailyBars, completedThrough, nowMs),

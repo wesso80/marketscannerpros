@@ -56,7 +56,7 @@ export default function PortfolioLabJournalPage() {
           </div>
         </div>
         {error && <div style={{ background: "#7F1D1D", color: "#FCA5A5", padding: 10, borderRadius: 8, fontSize: 13, marginBottom: 12 }}>Error: {error}</div>}
-        {entries.length === 0 ? (
+        {error ? null : entries.length === 0 ? (
           <div style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 8, padding: 24, color: "#64748B", textAlign: "center", fontSize: 13 }}>{loading ? "Loading…" : "No journal entries."}</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

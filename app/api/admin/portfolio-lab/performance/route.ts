@@ -66,7 +66,8 @@ export async function GET(req: NextRequest) {
       },
       {
         source: "arca:performance",
-        freshness: "real-time",
+        freshness: "unknown",
+        simulated: true,
         confidence: "high",
         confidenceReason: "Computed from arca_portfolio_snapshots + arca_trades.",
       },

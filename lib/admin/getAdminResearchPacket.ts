@@ -1,3 +1,4 @@
+import { savePositionHistory } from './positionHistory';
 import { marketForSymbol } from "@/lib/admin/adminMarket";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import type { Bar, Market } from "@/types/operator";
@@ -354,6 +355,7 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
     ? await provider.getDailyBars(symbol, market).catch(() => [] as Bar[])
     : [];
   const nowMs = Date.now();
+  await savePositionHistory(market, symbol, dailyBars).catch(() => undefined);
   snapshot.positionEvidenceSource = 'scan_daily_bars';
   snapshot.positionTrend = computePositionTrend(dailyBars, lastCompletedDailyDate(market, nowMs), nowMs);
   snapshot.positionLevels = computePositionLevels({

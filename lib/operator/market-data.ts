@@ -203,7 +203,7 @@ async function fetchAVBars(
  */
 async function fetchCachedEquityDailyBars(symbol: string, market: Market, timeframe: string): Promise<Bar[]> {
   try {
-    const env = await getCachedBars(symbol, 'daily');
+    const env = await getCachedBars(symbol, 'daily', { fullDailyHistory: true });
     const rows = (env.data ?? []).filter(b => Number.isFinite(b.close) && b.close > 0);
     return rows
       .slice()
@@ -352,7 +352,7 @@ async function fetchCryptoLevelBars(symbol: string, opts: AvCallOptions): Promis
  * call per coin per 6 h and never a CoinGecko call. With CoinGecko off the key-level bars already are that AV
  * series and are reused (no extra call).
  */
-const CRYPTO_POSITION_MIN_BARS = 60;
+const CRYPTO_POSITION_MIN_BARS = 250;
 const CRYPTO_POSITION_BARS_TTL_MS = 6 * 60 * 60 * 1000;
 const CRYPTO_POSITION_BARS = new Map<string, { bars: Bar[]; expiresAt: number }>();
 const CRYPTO_POSITION_INFLIGHT = new Map<string, Promise<Bar[]>>();

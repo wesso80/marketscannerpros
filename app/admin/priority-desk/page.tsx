@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PositionHistoryRepair from '@/components/admin/PositionHistoryRepair';
 import DecisionJournal from '@/components/admin/DecisionJournal';
 import DecisionRecordForm from '@/components/admin/DecisionRecordForm';
 import type { DecisionAssessment, decisionAccount, DECISION_STRATEGIES } from '@/lib/admin/decisionDesk';
@@ -15,7 +16,7 @@ type DeskData = {
 };
 const desks = [
   ['Macro', '/admin/macro-pulse'], ['Research', '/admin/opportunity-board'], ['Risk', '/admin/risk'],
-  ['Portfolio', '/admin/portfolio-lab/positions'], ['Performance', '/admin/outcomes'], ['Audit', '/admin/research-scheduler'],
+  ['Portfolio', '/admin/portfolio-lab/holdings'], ['Performance', '/admin/outcomes'], ['Audit', '/admin/research-scheduler'],
 ] as const;
 const label = (value: string) => value.replaceAll('_', ' ');
 export default function DecisionDeskPage() {
@@ -42,6 +43,7 @@ export default function DecisionDeskPage() {
       <div><h1 className="text-2xl font-bold">Decision Desk</h1><p className="text-sm text-slate-400">Research evidence, strategy checks and account risk. Final decisions remain yours.</p></div>
       <button className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50" disabled={loading} onClick={() => setRefresh(v => v + 1)}>{loading ? 'Reading saved evidence…' : 'Refresh saved evidence'}</button>
     </header>
+    <PositionHistoryRepair onComplete={() => setRefresh(v => v + 1)} />
     <nav aria-label="Research desks" className="flex flex-wrap gap-4">{desks.map(([name, href]) => <Link key={name} href={href} className="text-emerald-300 underline">{name}</Link>)}</nav>
     <p className="text-xs text-slate-400">This page and your tools use the same <a className="text-cyan-300 underline" href="/api/admin/decision-desk">read-only JSON feed</a>. Refresh reads stored evidence; it does not run scans or AI. No automatic refresh.</p>
     {error && <p role="alert" className="rounded border border-red-400 p-3 text-red-200">{error}</p>}

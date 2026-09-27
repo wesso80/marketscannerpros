@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const m = vi.hoisted(()=>({q:vi.fn()}));
+vi.mock('@/lib/admin/positionHistory',()=>({readPositionHistory:vi.fn(async()=>[])}));
 vi.mock('@/lib/db',()=>({q:m.q}));
 import { enrichStoredPositionEvidence } from '@/lib/admin/decisionEvidence';
 import type { SavedPacket } from '@/lib/admin/sharedScan';
@@ -7,7 +8,7 @@ beforeEach(()=>vi.clearAllMocks());
 describe('read-only legacy position evidence enrichment',()=>{
   it('never reads crypto from the symbol-only equity cache',async()=>{
     const packets=[{market:'CRYPTO',symbol:'AR',snapshot:{}}] as SavedPacket[];
-    expect(await enrichStoredPositionEvidence(packets)).toBe(packets);expect(m.q).not.toHaveBeenCalled();
+    expect(await enrichStoredPositionEvidence(packets)).toEqual(packets);expect(m.q).not.toHaveBeenCalled();
   });
   it('checks the stored asset identity and does not write enriched packets',async()=>{
     m.q.mockResolvedValue([]);
@@ -18,6 +19,6 @@ describe('read-only legacy position evidence enrichment',()=>{
   it('preserves missing evidence on a cache failure without fetching a provider',async()=>{
     m.q.mockRejectedValue(new Error('offline'));
     const packets=[{market:'EQUITIES',symbol:'TEST',snapshot:{}}] as SavedPacket[];
-    expect(await enrichStoredPositionEvidence(packets)).toBe(packets);
+    expect(await enrichStoredPositionEvidence(packets)).toEqual(packets);
   });
 });

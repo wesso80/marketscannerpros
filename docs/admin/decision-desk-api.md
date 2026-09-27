@@ -46,3 +46,9 @@ Assessments are sorted by status then the discovery score. This is a triage orde
 Records are append-only through this API. A unique workspace/request ID prevents retries from overwriting earlier records. There is no update/delete route and no trading action. The table may be provisioned with migration 106 or initializes on the first explicit POST. No production research decisions were manufactured as part of deployment verification.
 
 `reference_price` is the saved scan price, not an entry fill; `reference_at` is the scan timestamp. Original assessment plus current account/macro evidence are retained as JSON. Future return observations must preserve their own source/time and distinguish gross price changes, corporate actions, costs and realized trades.
+
+### Position history recovery
+
+`POST /api/admin/position-history` accepts `{ "offset": 0 }` and processes up to five unique saved-scan symbols. Continue with the returned `next` offset until null. Requires admin authentication and same-origin browser requests. This explicit action consumes provider requests for daily history only; GET evidence remains read-only. Fresh market-qualified saved history is reused for six hours. Unsupported/short/stale histories retain unavailable reasons.
+
+`GET /api/admin/portfolio-lab/holdings` exposes workspace-scoped saved holdings, saved-price exposure/P&L and valuation limitations. It does not return ARCA simulation positions, broker balances or live quotes.
