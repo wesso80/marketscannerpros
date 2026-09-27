@@ -14,7 +14,7 @@ import { ARCA_DEFAULT_PORTFOLIO_NAME, ARCA_DISCLAIMER } from "@/lib/admin/portfo
 import { computePerformance } from "@/lib/admin/portfolio-lab/performanceEngine";
 import { listBenchmarkSnapshots } from "@/lib/admin/portfolio-lab/benchmarkEngine";
 import { listPlaybookPerformance } from "@/lib/admin/portfolio-lab/playbookEngine";
-import { listSnapshots } from "@/lib/admin/portfolio-lab/portfolioStore";
+import { listDailySnapshots } from "@/lib/admin/portfolio-lab/portfolioStore";
 
 export const runtime = "nodejs";
 
@@ -38,9 +38,9 @@ export async function GET(req: NextRequest) {
       realisedPnl: portfolio.realisedPnl,
       unrealisedPnl: portfolio.unrealisedPnl,
     }),
-    listBenchmarkSnapshots(wsid, portfolio.id, { limit: 180 }),
+    listBenchmarkSnapshots(wsid, portfolio.id, { symbol: portfolio.settings.benchmarkSymbol, limit: 365 }),
     listPlaybookPerformance(wsid, portfolio.id),
-    listSnapshots(wsid, portfolio.id, { limit: 180 }),
+    listDailySnapshots(wsid, portfolio.id, { limit: 365 }),
   ]);
 
   return NextResponse.json(
