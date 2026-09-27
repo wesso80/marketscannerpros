@@ -270,6 +270,8 @@ export async function filterNewEdgePackets(workspaceId: string, packets: AdminEd
 }
 
 export interface LoadEdgePacketsInput {
+  /** Deduplicate within the workspace before applying the limit. Paper decisions only. */
+  latestPerSymbol?: boolean;
   workspaceId: string;
   symbol?: string;
   market?: string;
@@ -341,9 +343,10 @@ export async function loadEdgePackets(input: LoadEdgePacketsInput): Promise<Edge
                 'missingFields', COALESCE(packet_json->'missingFields', '[]'::jsonb)
                   || '["liquidityTargets: legacy map unavailable"]'::jsonb)
             END AS packet_json, generated_at
-       FROM admin_edge_packets
-      WHERE ${where}
-      ORDER BY generated_at DESC
+       FROM ${input.latestPerSymbol ? `(SELECT DISTINCT ON (market, symbol) *
+         FROM admin_edge_packets WHERE ${where}
+         ORDER BY market, symbol, generated_at DESC, id DESC) latest_packets` : `admin_edge_packets WHERE ${where}`}
+      ORDER BY generated_at DESC, id DESC
       LIMIT $${params.length}`,
     params,
   );

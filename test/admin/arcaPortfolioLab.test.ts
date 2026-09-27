@@ -505,7 +505,7 @@ it('keeps the decision scan bounded when the cycle reuses a larger price snapsho
     evidenceQualityScore: 0, trapRiskScore: 100, bias: 'BULL',
   } as EdgePacketRow));
   const result = await runDecisionEngine({ portfolio: portfolio(), rows, maxNewIdeas: 5 });
-  expect(result.scannedPackets).toBe(150);
+  expect(result.scannedPackets).toBe(500);
   expect(result.selected).toEqual([]);
   expect(rows).toHaveLength(500);
 });

@@ -59,27 +59,16 @@ const ALLOWED_THESIS = new Set(["alive", "weakening", "crowded"]);
 
 export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<DecisionEngineResult> {
   const { portfolio } = opts;
-  // Load a much larger window so the engine actually sees the whole
-  // universe each cycle. Without this, a small set of stale mega-cap
-  // packets monopolise the dedupe slots and the engine appears to
-  // "do nothing different" cycle after cycle.
+  // The opportunity cap must not truncate the universe before eligibility checks.
   const maxIdeas = opts.maxNewIdeas ?? 10;
-  const limit = Math.max(100, Math.min(500, maxIdeas * 30));
+  const limit = 500;
   const sinceMs = (opts.sinceMinutes ?? 720) * 60_000;
   const since = new Date(Date.now() - sinceMs).toISOString();
-
-  const rows = opts.rows?.slice(0, limit) ?? await loadEdgePackets({
-    workspaceId: portfolio.workspaceId,
-    since,
-    limit,
+  const sourceRows = opts.rows ?? await loadEdgePackets({
+    workspaceId: portfolio.workspaceId, since, limit, latestPerSymbol: true,
   });
-
-  // Two-pass:
-  //  1. Gate every row (so the inspector / journal sees the full
-  //     rejection picture across the whole universe, not just the
-  //     first 10 unique symbols).
-  //  2. Dedupe at SELECTION time only — keep the highest-scoring
-  //     passing packet per symbol.
+  // Supplied snapshots receive the same rule: latest evidence wins even when blocked.
+  const rows = latestPaperPackets(sourceRows, limit);
   const selectedBySymbol = new Map<string, SelectedCandidate>();
   const rejected: CandidateGate[] = [];
 
@@ -95,9 +84,9 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
       continue;
     }
     const sel = projection.candidate;
-    const existing = selectedBySymbol.get(row.symbol);
+    const existing = selectedBySymbol.get(`${row.market}:${row.symbol}`);
     if (!existing || row.opportunityRankScore > existing.row.opportunityRankScore) {
-      selectedBySymbol.set(row.symbol, sel);
+      selectedBySymbol.set(`${row.market}:${row.symbol}`, sel);
     }
   }
 
@@ -109,12 +98,32 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
   return { selected, rejected, scannedPackets: rows.length };
 }
 
+/** Select latest market/symbol evidence BEFORE gates; never resurrect an older passing setup. */
+export function latestPaperPackets(rows: EdgePacketRow[], limit = 500): EdgePacketRow[] {
+  const ordered = [...rows].sort((a, b) => {
+    const aAt = Date.parse(a.generatedAt), bAt = Date.parse(b.generatedAt);
+    // Malformed evidence is rejected later, not silently replaced by a historic passing row.
+    const timeOrder = (Number.isFinite(bAt) ? bAt : Infinity) - (Number.isFinite(aAt) ? aAt : Infinity);
+    return timeOrder || (b.id ?? 0) - (a.id ?? 0);
+  });
+  const latest = new Map<string, EdgePacketRow>();
+  for (const row of ordered) {
+    const key = `${row.market}:${row.symbol}`;
+    if (!latest.has(key)) latest.set(key, row);
+    if (latest.size >= limit) break;
+  }
+  return [...latest.values()];
+}
+
 
 export function gateRow(row: EdgePacketRow, portfolio: ArcaPortfolio): string[] {
   const reasons: string[] = [];
   const s = portfolio.settings;
 
-  if (row.doNothing) reasons.push("do_nothing_flag");
+  if (row.doNothing) {
+    reasons.push("do_nothing_flag");
+    if (row.packetJson?.doNothing?.code) reasons.push(`do_nothing_reason:${row.packetJson.doNothing.code}`);
+  }
   if (row.adminState === "INVALIDATED" || row.adminState === "EXPIRED" || row.adminState === "IGNORE") {
     reasons.push(`admin_state_${row.adminState}`);
   }
