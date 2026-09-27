@@ -26,6 +26,7 @@ import { CRYPTO_PAUSED_MESSAGE, readSavedScan, savedScanStaleAfterSec, scanStatu
 import { isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { isPausedRow, NOT_MONITORED } from "@/lib/admin/healthProbes";
 import { collapseHits } from "@/lib/admin/hitIntegrity";
+import { positionLevelView } from "@/lib/admin/positionLevels";
 
 export const runtime = "nodejs";
 
@@ -60,7 +61,11 @@ export async function GET(req: NextRequest) {
     // Collapse to the best row per symbol + direction and flag two-sided symbols (hitIntegrity.ts).
     // The saved row's last price rides along so the pages can show an absolute price.
     const rawHits: ScannerHit[] = collapseHits(
-      current.flatMap((r) => r.hits.map((hit) => ({ ...hit, market: r.market, price: hit.price ?? r.price ?? null }))),
+      current.flatMap((r) => r.hits.map((hit) => ({
+        ...hit, market: r.market, price: hit.price ?? r.price ?? null,
+        // Position (weekly/daily) levels from the saved packet, matched to this hit's direction.
+        positionLevels: positionLevelView(r.packet?.snapshot?.positionLevels, hit.bias),
+      }))),
     );
     const hits = await enrichHitsWithExpectancy(rawHits.map((hit) => ({ ...hit, riskSource: risk.source })));
     // Crypto switched off on purpose (ADMIN_CRYPTO_ENABLED=false): its skipped / leftover rows are "paused",

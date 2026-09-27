@@ -20,6 +20,7 @@ import {
 } from "./lifecycle";
 import { evaluateDoNothing, type DoNothingVerdict } from "./doNothing";
 import { buildLiquidityMap, type LiquidityMap } from "./liquidityMap";
+import { positionLevelView, type PositionLevelView } from "./positionLevels";
 
 /* ────────────── Thesis status ────────────── */
 
@@ -132,6 +133,13 @@ export interface AdminEdgePacket {
     rrToTp2: number | null;
     rrToTp3: number | null;
   };
+  /** Timeframe the entry/stopLoss/takeProfit blocks above come from (the scan timeframe, "15m" on the shared scan). */
+  levelsTimeframe?: string;
+
+  /* Position (weekly/daily) levels (weekly/monthly derived from daily bars), matched to `bias` (lib/admin/positionLevels). The main levels for
+   * position trades; entry/stopLoss/takeProfit above are the intraday (scan-timeframe) timing levels. Absent on
+   * packets saved before it was added. */
+  positionLevels?: PositionLevelView;
 
   /* narrative — short, factual, evidence-bound */
   whyNow: string;
@@ -263,6 +271,8 @@ export function projectEdgePacket(
     invalidationClarityScore,
 
     ...buildDecisionLevels(packet),
+    levelsTimeframe: packet.timeframe,
+    positionLevels: positionLevelView(packet.snapshot?.positionLevels, packet.snapshot?.bias),
 
     ...buildNarrative(packet),
     doNotTradeReasons: doNothing ? [doNothing.code, ...doNothing.detail] : [],

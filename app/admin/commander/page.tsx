@@ -6,6 +6,8 @@ import AdminCard from "@/components/admin/shared/AdminCard";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import StatusPill from "@/components/admin/shared/StatusPill";
 import { fetchWithTimeout } from "@/lib/admin/fetchWithTimeout";
+import { PositionLevelsLine } from "@/components/admin/PositionLevels";
+import type { PositionLevelView } from "@/lib/admin/positionLevels";
 
 type Tone = "green" | "yellow" | "red" | "blue" | "purple" | "neutral";
 
@@ -17,6 +19,8 @@ type ScannerHit = {
   confidence: number;
   sizeMultiplier: number;
   playbook?: string;
+  /** Position (weekly/daily) levels matched to this hit (absent on briefs built before they were added). */
+  positionLevels?: PositionLevelView;
 };
 
 type CommanderBrief = {
@@ -198,7 +202,7 @@ export default function CommanderPage() {
           <div className="mb-2 flex flex-wrap gap-2">
             {brief ? <StatusPill label={brief.commander.permission} tone={stateTone(brief.commander.permission)} /> : null}
             {brief ? <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} /> : null}
-            {brief ? <StatusPill label={`${brief.market} ${brief.timeframe}`} tone="blue" /> : null}
+            {brief ? <StatusPill label={`${brief.market} · signals ${brief.timeframe} · levels weekly/daily`} tone="blue" /> : null}
           </div>
           <h1 className="text-3xl font-black tracking-tight">Admin Commander</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
@@ -458,6 +462,7 @@ function PlayRow({ play, compact = false }: { play: ScannerHit; compact?: boolea
           <StatusPill label={`${play.confidence}%`} tone="blue" />
         </div>
       </div>
+      <PositionLevelsLine className="mt-2" view={play.positionLevels} bias={play.bias} />
       {!compact ? (
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
           <Metric label="Bias" value={play.bias} />
