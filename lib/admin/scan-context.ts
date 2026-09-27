@@ -1,4 +1,5 @@
 import { q } from "@/lib/db";
+import { measureDailyRisk, type RiskEquitySnapshot } from "./riskSnapshotMetrics";
 import type { ScanContext } from "@/lib/operator/orchestrator";
 
 export type AdminRiskSource = "portfolio_journal" | "operator_state" | "fallback";
@@ -7,6 +8,10 @@ export type AdminRiskSnapshot = {
   equity: number;
   dailyPnl: number;
   dailyDrawdown: number;
+  dailyDrawdownKnown?: boolean;
+  dailyRiskBaselineEquity?: number | null;
+  dailyRiskAsOf?: string | null;
+  dailyRiskBasis?: string;
   openExposure: number;
   openRiskUsd: number;
   exposureUsd: number;
@@ -76,6 +81,8 @@ export const FALLBACK_ADMIN_RISK: AdminRiskSnapshot = {
   killSwitchActive: false,
   permission: "WAIT",
   sizeMultiplier: 0,
+  dailyDrawdownKnown: false,
+  dailyRiskBasis: "unavailable",
   source: "fallback",
   workspaceId: null,
   lastUpdatedAt: null,
@@ -103,15 +110,16 @@ async function loadOperatorRiskState(workspaceId?: string): Promise<AdminRiskSna
     const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
     const equity = hasLiveEquity ? rawEquity : UNKNOWN_EQUITY;
     const openExposure = Number(ctx.openRisk ?? 0);
-    const killSwitchActive = Boolean(ctx.killSwitchActive) || ctx.permission === "BLOCK";
-    const dailyDrawdown = Number(ctx.dailyDrawdown ?? 0);
+    const killSwitchActive = Boolean(ctx.killSwitchActive) || ctx.permission === "BLOCK" || Number(ctx.dailyDrawdown) >= 0.04;
+    const reportedDrawdown = Number(ctx.dailyDrawdown ?? 0);
+    const dailyDrawdown = Number.isFinite(reportedDrawdown) ? Math.max(0, reportedDrawdown) : 0;
     const correlationRisk = Number(ctx.correlationRisk ?? 0);
     const activePositions = Number(ctx.activePositions ?? 0);
     const maxPositions = Number(ctx.maxPositions ?? 10);
-    const permission = !hasLiveEquity
-      ? "WAIT"
-      : killSwitchActive
+    const permission = killSwitchActive
       ? "BLOCK"
+      : !hasLiveEquity
+      ? "WAIT"
       : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 || activePositions >= maxPositions
         ? "WAIT"
         : String(ctx.permission ?? "WAIT") === "GO"
@@ -131,6 +139,8 @@ async function loadOperatorRiskState(workspaceId?: string): Promise<AdminRiskSna
       killSwitchActive,
       permission,
       sizeMultiplier: !hasLiveEquity || permission === "BLOCK" ? 0 : Number(ctx.sizeMultiplier ?? (permission === "GO" ? 1 : 0.5)),
+      dailyDrawdownKnown: false,
+      dailyRiskBasis: "Operator-reported value; daily baseline unverified",
       source: "operator_state",
       workspaceId: workspaceId ?? null,
       lastUpdatedAt: rows[0]?.updated_at ?? null,
@@ -141,7 +151,7 @@ async function loadOperatorRiskState(workspaceId?: string): Promise<AdminRiskSna
       operatorGuardActive: permission === "BLOCK" || permission === "WAIT",
       operatorGuardReasons: [
         ...(killSwitchActive ? ["Kill switch active"] : []),
-        ...(dailyDrawdown >= 0.02 ? [`Daily drawdown ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
+        ...(dailyDrawdown >= 0.02 ? [`Snapshot daily loss ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
         ...(correlationRisk >= 0.65 ? ["Correlation risk elevated"] : []),
         ...(!hasLiveEquity ? ["No live equity value"] : []),
       ],
@@ -177,7 +187,7 @@ async function resolveOperatorWorkspaceId(): Promise<string | null> {
 export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promise<AdminRiskSnapshot> {
   const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
   const operatorRisk = await loadOperatorRiskState(workspaceId ?? undefined);
-  if (!workspaceId) return operatorRisk;
+  if (!workspaceId) return { ...operatorRisk, permission: operatorRisk.killSwitchActive ? "BLOCK" : "WAIT", sizeMultiplier: 0 };
 
   try {
     const [positionRows, journalRows, performanceRows] = await Promise.all([
@@ -197,47 +207,48 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
       q<{ open_risk_usd: string | null; daily_pl: string | null; closed_trades_today: number; last_updated_at: string | null }>(`
         SELECT
           COALESCE(SUM(risk_amount::numeric) FILTER (WHERE is_open = TRUE), 0)::text AS open_risk_usd,
-          COALESCE(SUM(pl::numeric) FILTER (WHERE COALESCE(exit_date, trade_date) = CURRENT_DATE), 0)::text AS daily_pl,
+          COALESCE(SUM(pl::numeric) FILTER (WHERE is_open = FALSE AND COALESCE(exit_date, trade_date) = (NOW() AT TIME ZONE 'UTC')::date), 0)::text AS daily_pl,
           COUNT(*) FILTER (WHERE is_open = FALSE AND COALESCE(exit_date, trade_date) = CURRENT_DATE)::int AS closed_trades_today,
           MAX(updated_at)::text AS last_updated_at
         FROM journal_entries
         WHERE workspace_id = $1
       `, [workspaceId]),
-      q<{ latest_equity: string | null; peak_equity: string | null; latest_snapshot: string | null }>(`
-        SELECT
-          (SELECT total_value::text FROM portfolio_performance WHERE workspace_id = $1 ORDER BY snapshot_date DESC LIMIT 1) AS latest_equity,
-          (SELECT MAX(total_value)::text FROM portfolio_performance WHERE workspace_id = $1) AS peak_equity,
-          (SELECT MAX(snapshot_date)::text FROM portfolio_performance WHERE workspace_id = $1) AS latest_snapshot
+      q<RiskEquitySnapshot & { legacy_peak_equity?: string }>(`
+        SELECT snapshot_date::text, total_value::text, total_pl::text, snapshot_basis,
+          MAX(total_value) OVER ()::text AS legacy_peak_equity
+        FROM portfolio_performance
+        WHERE workspace_id = $1
+        ORDER BY snapshot_date DESC LIMIT 2
       `, [workspaceId]),
     ]);
 
     const positions = positionRows[0];
     const journal = journalRows[0];
-    const performance = performanceRows[0];
+    const dailyRisk = measureDailyRisk(performanceRows);
     const exposureUsd = Number(positions?.exposure_usd ?? 0);
     const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
-    const dailyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
-    const rawEquity = Number(performance?.latest_equity ?? 0) || operatorRisk.equity;
-    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
-    const equity = hasLiveEquity ? rawEquity : UNKNOWN_EQUITY;
-    const peakEquity = hasLiveEquity ? Math.max(equity, Number(performance?.peak_equity ?? equity)) : UNKNOWN_EQUITY;
-    const dailyDrawdown = hasLiveEquity
-      ? Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0)
-      : operatorRisk.dailyDrawdown;
+    const { equity, dailyPnl, dailyDrawdown, dailyDrawdownKnown } = dailyRisk;
+    const hasLiveEquity = equity > 0;
+    // Preserve a hard stop from legacy inputs while the corrected baseline is unavailable.
+    // This signal is never presented as a measured daily loss.
+    const legacyEquity = Number(performanceRows[0]?.total_value) || operatorRisk.equity;
+    const legacyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
+    const legacyPeak = Number(performanceRows[0]?.legacy_peak_equity);
+    const unverifiedLossStop = !dailyDrawdownKnown && legacyEquity > 0 && (
+      legacyPnl / legacyEquity <= -0.04 || (legacyPeak > 0 && (legacyPeak - legacyEquity) / legacyPeak >= 0.04)
+    );
     const largestSymbolExposure = Number(positions?.largest_symbol_exposure ?? 0);
     const correlationRisk = Math.max(operatorRisk.correlationRisk, exposureUsd > 0 ? largestSymbolExposure / exposureUsd : 0);
     const activePositions = Number(positions?.active_positions ?? 0);
     const openExposure = hasLiveEquity && openRiskUsd > 0 ? openRiskUsd / equity : hasLiveEquity && exposureUsd > 0 ? Math.min(0.05, (exposureUsd / equity) * 0.25) : 0;
-    const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04;
-    const permission = !hasLiveEquity ? "WAIT" : killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
-    const sizeMultiplier = !hasLiveEquity ? 0 : permission === "GO"
+    const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04 || unverifiedLossStop;
+    const permission = killSwitchActive ? "BLOCK" : !hasLiveEquity || !dailyDrawdownKnown ? "WAIT" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
+    const sizeMultiplier = !hasLiveEquity || !dailyDrawdownKnown ? 0 : permission === "GO"
       ? Math.max(0.25, Math.min(1, 1 - Math.max(dailyDrawdown / 0.04, correlationRisk / 1.4)))
       : permission === "WAIT" ? 0.5 : 0;
 
     return {
-      equity,
-      dailyPnl,
-      dailyDrawdown,
+      ...dailyRisk,
       openExposure,
       openRiskUsd,
       exposureUsd,
@@ -249,8 +260,12 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
       sizeMultiplier,
       source: "portfolio_journal",
       workspaceId,
-      lastUpdatedAt: positions?.last_updated_at ?? journal?.last_updated_at ?? performance?.latest_snapshot ?? null,
+      lastUpdatedAt: positions?.last_updated_at ?? journal?.last_updated_at ?? dailyRisk.dailyRiskAsOf ?? null,
       notes: [
+        dailyDrawdownKnown
+          ? `Snapshot daily loss as of ${dailyRisk.dailyRiskAsOf} UTC; baseline ${formatUsd(dailyRisk.dailyRiskBaselineEquity!)}. Cumulative P&L change excludes cash flows; this is not an intraday high-water drawdown.`
+          : "Daily loss unavailable: consecutive current-day and prior-day UTC account_equity_v2 snapshots are required. Legacy position values and lifetime unrealized P&L are not daily loss.",
+        ...(unverifiedLossStop ? ["Legacy loss signal remains blocked pending verified daily account snapshots; it is not a measured daily loss."] : []),
         `Risk synced from workspace portfolio/journal (${activePositions} open position${activePositions === 1 ? "" : "s"}).`,
         ...(hasLiveEquity
           ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
@@ -258,8 +273,11 @@ export async function loadAdminRiskSnapshot(workspaceIdOverride?: string): Promi
       ],
       operatorGuardActive: permission === "BLOCK" || permission === "WAIT",
       operatorGuardReasons: [
-        ...(killSwitchActive ? ["Kill switch / drawdown hard stop active"] : []),
-        ...(dailyDrawdown >= 0.02 ? [`Daily drawdown ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
+        ...(operatorRisk.killSwitchActive ? ["Existing operator hard stop active"] : []),
+        ...(dailyDrawdown >= 0.04 ? ["Verified daily loss hard stop active"] : []),
+        ...(unverifiedLossStop ? ["Unverified legacy loss signal: reconcile account snapshots"] : []),
+        ...(!dailyDrawdownKnown ? ["Daily account baseline unavailable; sizing disabled"] : []),
+        ...(dailyDrawdown >= 0.02 ? [`Snapshot daily loss ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
         ...(correlationRisk >= 0.65 ? [`Correlation risk ${(correlationRisk * 100).toFixed(0)}%`] : []),
         ...(activePositions >= operatorRisk.maxPositions ? [`Max positions (${activePositions}) reached`] : []),
         ...(!hasLiveEquity ? ["No live equity - sizing disabled"] : []),

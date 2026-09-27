@@ -1,4 +1,5 @@
 import { q } from "@/lib/db";
+import { loadAdminRiskSnapshot } from "@/lib/admin/scan-context";
 import { runScan } from "@/lib/operator/orchestrator";
 import type { ScanContext } from "@/lib/operator/orchestrator";
 import { alphaVantageProvider } from "@/lib/operator/market-data";
@@ -36,6 +37,7 @@ export type MorningRiskState = {
   equity: number;
   dailyPnl: number;
   dailyDrawdown: number;
+  dailyDrawdownKnown?: boolean;
   correlationRisk: number;
   maxPositions: number;
   activePositions: number;
@@ -403,25 +405,6 @@ const DEFAULT_CONTEXT: ScanContext = {
     modelHealthScore: 0.7,
   },
   metaHealthThrottle: 1.0,
-};
-
-const FALLBACK_RISK: MorningRiskState = {
-  openExposure: 0,
-  openRiskUsd: 0,
-  exposureUsd: 0,
-  equity: 0,
-  dailyPnl: 0,
-  dailyDrawdown: 0,
-  correlationRisk: 0,
-  maxPositions: 0,
-  activePositions: 0,
-  killSwitchActive: false,
-  permission: "WAIT",
-  sizeMultiplier: 0,
-  source: "fallback",
-  workspaceId: null,
-  lastUpdatedAt: null,
-  notes: ["No live portfolio or operator risk state found; permission is WAIT and sizing is disabled."],
 };
 
 const FALLBACK_LEARNING: MorningLearningSnapshot = {
@@ -1228,128 +1211,7 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
 }
 
 async function loadRiskState(): Promise<MorningRiskState> {
-  const operatorRisk = await loadOperatorRiskState();
-  const workspaceId = await resolveOperatorWorkspaceId();
-  if (!workspaceId) return operatorRisk;
-
-  try {
-    const [positionRows, journalRows, performanceRows] = await Promise.all([
-      q<{ active_positions: number; exposure_usd: string | null; unrealized_pl: string | null; largest_symbol_exposure: string | null; last_updated_at: string | null }>(`
-        SELECT
-          COUNT(*)::int AS active_positions,
-          COALESCE(SUM(ABS(quantity::numeric * current_price::numeric)), 0)::text AS exposure_usd,
-          COALESCE(SUM(CASE WHEN side = 'LONG' THEN (current_price::numeric - entry_price::numeric) * quantity::numeric ELSE (entry_price::numeric - current_price::numeric) * quantity::numeric END), 0)::text AS unrealized_pl,
-          COALESCE(MAX(symbol_exposure), 0)::text AS largest_symbol_exposure,
-          MAX(updated_at)::text AS last_updated_at
-        FROM (
-          SELECT *, SUM(ABS(quantity::numeric * current_price::numeric)) OVER (PARTITION BY symbol) AS symbol_exposure
-          FROM portfolio_positions
-          WHERE workspace_id = $1
-        ) positions
-      `, [workspaceId]).catch(() => []),
-      q<{ open_risk_usd: string | null; daily_pl: string | null; closed_trades_today: number; last_updated_at: string | null }>(`
-        SELECT
-          COALESCE(SUM(risk_amount::numeric) FILTER (WHERE is_open = TRUE), 0)::text AS open_risk_usd,
-          COALESCE(SUM(pl::numeric) FILTER (WHERE COALESCE(exit_date, trade_date) = CURRENT_DATE), 0)::text AS daily_pl,
-          COUNT(*) FILTER (WHERE is_open = FALSE AND COALESCE(exit_date, trade_date) = CURRENT_DATE)::int AS closed_trades_today,
-          MAX(updated_at)::text AS last_updated_at
-        FROM journal_entries
-        WHERE workspace_id = $1
-      `, [workspaceId]).catch(() => []),
-      q<{ latest_equity: string | null; peak_equity: string | null; latest_snapshot: string | null }>(`
-        SELECT
-          (SELECT total_value::text FROM portfolio_performance WHERE workspace_id = $1 ORDER BY snapshot_date DESC LIMIT 1) AS latest_equity,
-          (SELECT MAX(total_value)::text FROM portfolio_performance WHERE workspace_id = $1) AS peak_equity,
-          (SELECT MAX(snapshot_date)::text FROM portfolio_performance WHERE workspace_id = $1) AS latest_snapshot
-      `, [workspaceId]).catch(() => []),
-    ]);
-
-    const positions = positionRows[0];
-    const journal = journalRows[0];
-    const performance = performanceRows[0];
-    const exposureUsd = Number(positions?.exposure_usd ?? 0);
-    const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
-    const dailyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
-    const rawEquity = Number(performance?.latest_equity ?? 0) || Number(operatorRisk.equity ?? 0);
-    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
-    const equity = hasLiveEquity ? rawEquity : 0;
-    const peakEquity = hasLiveEquity ? Math.max(equity, Number(performance?.peak_equity ?? equity)) : 0;
-    const dailyDrawdown = hasLiveEquity
-      ? Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0)
-      : operatorRisk.dailyDrawdown;
-    const largestSymbolExposure = Number(positions?.largest_symbol_exposure ?? 0);
-    const correlationRisk = Math.max(operatorRisk.correlationRisk, exposureUsd > 0 ? largestSymbolExposure / exposureUsd : 0);
-    const activePositions = Number(positions?.active_positions ?? 0);
-    const openExposure = hasLiveEquity && openRiskUsd > 0 ? openRiskUsd / equity : hasLiveEquity && exposureUsd > 0 ? Math.min(0.05, exposureUsd / equity * 0.25) : 0;
-    const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04;
-    const permission = !hasLiveEquity ? "WAIT" : killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
-    const sizeMultiplier = !hasLiveEquity ? 0 : permission === "GO"
-      ? Math.max(0.25, Math.min(1, 1 - Math.max(dailyDrawdown / 0.04, correlationRisk / 1.4)))
-      : permission === "WAIT" ? 0.5 : 0;
-
-    return {
-      openExposure,
-      openRiskUsd,
-      exposureUsd,
-      equity,
-      dailyPnl,
-      dailyDrawdown,
-      correlationRisk,
-      maxPositions: operatorRisk.maxPositions,
-      activePositions,
-      killSwitchActive,
-      permission,
-      sizeMultiplier,
-      source: "portfolio_journal",
-      workspaceId,
-      lastUpdatedAt: positions?.last_updated_at ?? journal?.last_updated_at ?? performance?.latest_snapshot ?? null,
-      notes: [
-        `Risk synced from workspace portfolio/journal (${activePositions} open position${activePositions === 1 ? "" : "s"}).`,
-        ...(hasLiveEquity
-          ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
-          : ["No live equity value found; sizing is disabled and permission is capped at WAIT."]),
-      ],
-    };
-  } catch {
-    return operatorRisk;
-  }
-}
-
-async function loadOperatorRiskState(): Promise<MorningRiskState> {
-  try {
-    const rows = await q<{ context_state: Record<string, any>; updated_at: string | null }>(
-      "SELECT context_state, updated_at::text FROM operator_state ORDER BY created_at DESC LIMIT 1",
-    );
-    const ctx = rows[0]?.context_state;
-    if (!ctx) return FALLBACK_RISK;
-    const rawEquity = Number(ctx.equity ?? 0);
-    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
-    const equity = hasLiveEquity ? rawEquity : 0;
-    const openExposure = Number(ctx.openRisk ?? 0);
-    return {
-      openExposure,
-      openRiskUsd: hasLiveEquity ? openExposure * equity : 0,
-      exposureUsd: Number(ctx.exposureUsd ?? 0),
-      equity,
-      dailyPnl: Number(ctx.dailyPnl ?? 0),
-      dailyDrawdown: Number(ctx.dailyDrawdown ?? 0),
-      correlationRisk: Number(ctx.correlationRisk ?? 0),
-      maxPositions: hasLiveEquity ? Number(ctx.maxPositions ?? 10) : 0,
-      activePositions: Number(ctx.activePositions ?? 0),
-      killSwitchActive: Boolean(ctx.killSwitchActive),
-      permission: !hasLiveEquity ? "WAIT" : ctx.killSwitchActive ? "BLOCK" : String(ctx.permission ?? "WAIT"),
-      sizeMultiplier: hasLiveEquity ? Number(ctx.sizeMultiplier ?? 1) : 0,
-      source: "operator_state",
-      workspaceId: null,
-      lastUpdatedAt: rows[0]?.updated_at ?? null,
-      notes: [
-        "Risk read from latest operator state; portfolio/journal sync was unavailable.",
-        ...(hasLiveEquity ? [] : ["Operator state has no live equity value; sizing is disabled and permission is capped at WAIT."]),
-      ],
-    };
-  } catch {
-    return FALLBACK_RISK;
-  }
+  return loadAdminRiskSnapshot();
 }
 
 async function resolveOperatorWorkspaceId(): Promise<string | null> {
@@ -2177,10 +2039,11 @@ function buildMorningRiskGovernor(
   const portfolioHeatLimitUsd = risk.equity * 0.06;
   const hasLiveEquity = Number.isFinite(risk.equity) && risk.equity > 0;
   const baseMaxTrades = sessionScore.ruleBreaks > 0 || sessionScore.disciplineScore < 60 ? 1 : sessionScore.executionScore >= 75 ? 4 : 3;
-  const maxTradesToday = !hasLiveEquity || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 ? 0 : baseMaxTrades;
+  const maxTradesToday = !hasLiveEquity || risk.permission !== "GO" || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 ? 0 : baseMaxTrades;
   const remainingTrades = Math.max(0, maxTradesToday - sessionScore.closedTrades);
   const lockouts: string[] = [];
   if (!hasLiveEquity) lockouts.push("Live equity unavailable");
+  if (risk.permission !== "GO") lockouts.push(`Canonical account guard: ${risk.permission}`);
   if (risk.killSwitchActive) lockouts.push("Research alerts paused");
   if (risk.dailyDrawdown >= 0.04) lockouts.push("Daily drawdown hard stop reached");
   if (hasLiveEquity && Math.abs(Math.min(0, risk.dailyPnl)) >= dailyStopUsd) lockouts.push("Daily loss cap reached");
@@ -2318,7 +2181,8 @@ function resolveDeskState(
   topPlays: ScannerHit[],
   watchlist: ScannerHit[],
 ): DeskState {
-  if (risk.killSwitchActive || risk.dailyDrawdown >= 0.04 || health.errorsCount && health.errorsCount > Math.max(3, (health.symbolsScanned ?? 0) * 0.25)) return "BLOCK";
+  if (risk.permission === "BLOCK" || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 || health.errorsCount && health.errorsCount > Math.max(3, (health.symbolsScanned ?? 0) * 0.25)) return "BLOCK";
+  if (risk.permission !== "GO") return "WAIT";
   if (risk.correlationRisk >= 0.65 || risk.dailyDrawdown >= 0.02) return "DEFENSIVE";
   if (topPlays.length > 0) return "TRADE";
   if (watchlist.length > 0) return "WAIT";
@@ -2343,7 +2207,7 @@ function buildOperatorNote(
   const learningText = learning.accuracyRate == null
     ? "Learning sample is still building."
     : `Recent signal accuracy is ${learning.accuracyRate.toFixed(1)}%.`;
-  if (state === "BLOCK") return `Operator guard active — execution paused. Drawdown ${(risk.dailyDrawdown * 100).toFixed(1)}%, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
+  if (state === "BLOCK") return `Operator guard active — execution paused. Snapshot daily loss ${risk.dailyDrawdownKnown ? `${(risk.dailyDrawdown * 100).toFixed(1)}%` : "unavailable"}, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
   if (state === "DEFENSIVE") return `Trade smaller, require clean trigger confirmation, and avoid correlated exposure. ${learningText}`;
   if (topPlays.length > 0) return `Start with ${topPlays[0].symbol}; confirm trigger, invalidation, and catalyst risk before taking any exposure. ${learningText}`;
   if (watchlist.length > 0) return `${watchlist.length} setups are worth watching, but none are green-lit yet. ${learningText}`;
@@ -2648,7 +2512,7 @@ function buildResearchSetups(
 ) {
   // researchSetups: market-discovered setups shown even when execution is paused.
   // Operator guard (drawdown, kill switch) does NOT suppress research setup discovery.
-  const executionBlocked = risk.killSwitchActive || risk.permission === "BLOCK" || risk.dailyDrawdown >= 0.02;
+  const executionBlocked = risk.killSwitchActive || risk.permission !== "GO" || risk.dailyDrawdown >= 0.02;
   if (!executionBlocked) return [];
   const used = new Set([...topPlays, ...watchlist].map((hit) => hit.symbol));
   return rankedHits

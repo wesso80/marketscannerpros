@@ -20,7 +20,7 @@ export default function RiskPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
         <MiniStat label="Open Risk" value={`$${openRiskUsd.toLocaleString()}`} />
-        <MiniStat label="Daily Drawdown" value={`${(drawdown * 100).toFixed(2)}%`} />
+        <MiniStat label="Snapshot Daily Loss" value={risk?.dailyDrawdownKnown ? `${(drawdown * 100).toFixed(2)}%` : "Unavailable"} />
         <MiniStat label="Correlation Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />
         <MiniStat label="Open Scenarios" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "\u2014 / \u2014"} />
       </div>
@@ -47,7 +47,7 @@ export default function RiskPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-white/55 text-sm">Open Exposure</span>
-            <span className="text-white/90 text-sm font-mono">{(exposure * 100).toFixed(2)}%</span>
+            <span className="text-white/90 text-sm font-mono">{risk?.equity ? `${(exposure * 100).toFixed(2)}%` : "Unavailable"}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-white/55 text-sm">Size Multiplier</span>
@@ -63,6 +63,15 @@ export default function RiskPage() {
         </div>
       </AdminCard>
 
+      <AdminCard title="Risk Data Basis">
+        <div className="space-y-2 text-sm text-white/70">
+          <p>Account equity: {risk?.equity ? `$${risk.equity.toLocaleString()}` : "Unavailable"}</p>
+          <p>Prior-day baseline: {risk?.dailyRiskBaselineEquity ? `$${risk.dailyRiskBaselineEquity.toLocaleString()}` : "Unavailable"}</p>
+          <p>Snapshot date (UTC): {risk?.dailyRiskAsOf ?? "Unavailable"}</p>
+          {risk?.notes?.map((note, i) => <p key={i}>{note}</p>)}
+        </div>
+      </AdminCard>
+
       <AdminCard title="Research Scenario Limits">
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
@@ -74,12 +83,12 @@ export default function RiskPage() {
             <span className="text-white/90 font-mono">{risk?.activePositions ?? 0}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Daily Drawdown Guard</span>
+            <span className="text-white/55">Daily Loss Guard</span>
             <span className="text-white/90 font-mono">2.0%</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Hard Drawdown Cap</span>
-            <span className="text-white/90 font-mono">6.0%</span>
+            <span className="text-white/55">Daily Loss Hard Stop</span>
+            <span className="text-white/90 font-mono">4.0%</span>
           </div>
         </div>
       </AdminCard>
