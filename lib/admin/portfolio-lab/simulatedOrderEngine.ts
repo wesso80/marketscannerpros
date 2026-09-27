@@ -113,6 +113,12 @@ export function shouldFill(order: ArcaSimOrder, currentPrice: number): boolean {
   return false;
 }
 
+/** Shared price estimate so pre-fill risk checks use exactly the ledger's slippage. */
+export function simulatedFillPrice(portfolio: ArcaPortfolio, order: ArcaSimOrder, currentPrice: number): number {
+  const slip = portfolio.settings.slippagePctEstimate / 100;
+  return currentPrice * (order.side === "BUY" || order.side === "LONG" ? 1 + slip : 1 - slip);
+}
+
 /**
  * Fill a triggered/waiting order — write FILLED_SIM, open a position,
  * deduct cash. All numbers are simulated.
@@ -121,15 +127,13 @@ export async function fillOrderAndOpenPosition(args: {
   portfolio: ArcaPortfolio;
   order: ArcaSimOrder;
   currentPrice: number;
+  validationEvidence?: { packetId: string; priceAt: string; regime: string | null; policyId: string | null };
 }): Promise<ArcaPosition> {
   const { portfolio, order, currentPrice } = args;
   const slipPct = portfolio.settings.slippagePctEstimate / 100;
   const positionSide: "LONG" | "SHORT" =
     order.side === "BUY" || order.side === "LONG" ? "LONG" : "SHORT";
-  const fillPrice =
-    positionSide === "LONG"
-      ? currentPrice * (1 + slipPct)
-      : currentPrice * (1 - slipPct);
+  const fillPrice = simulatedFillPrice(portfolio, order, currentPrice);
 
   await updateSimOrderStatus({ orderId: order.id, status: "FILLED_SIM", filledPrice: fillPrice });
 
@@ -175,12 +179,16 @@ export async function fillOrderAndOpenPosition(args: {
     reasoning: `Sim fill: trigger=${order.triggerPrice}, current=${currentPrice}, slippage=${(slipPct * 100).toFixed(3)}%`,
     evidence: [
       `fill_price=${fillPrice.toFixed(4)}`,
+      ...(args.validationEvidence ? [
+        `validated_packet=${args.validationEvidence.packetId}`, `price_at=${args.validationEvidence.priceAt}`,
+        `regime=${args.validationEvidence.regime}`, `policy_id=${args.validationEvidence.policyId}`,
+      ] : []),
       `qty=${order.quantity}`,
       `open_risk=${openRisk.toFixed(2)}`,
       `stop=${order.stopLoss}`,
       `tp1=${order.takeProfit1}`,
     ],
-    sourcePacketIds: order.sourceEdgePacketId ? [order.sourceEdgePacketId] : [],
+    sourcePacketIds: [...new Set([order.sourceEdgePacketId, args.validationEvidence?.packetId].filter((id): id is string => !!id))],
   });
 
   return position;
