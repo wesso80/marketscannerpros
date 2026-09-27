@@ -85,6 +85,7 @@ interface SummaryPayload {
   risk?: RiskEvent[];
   snapshots?: Snapshot[];
   disclaimer?: string;
+  regimeChecks?: Array<{ assetClass: string; status: string; reason: string; regime?: string | null; observedAt?: string | null; permittedPlaybooks?: string[] }>;
 }
 
 export default function PortfolioLabPage() {
@@ -300,6 +301,18 @@ export default function PortfolioLabPage() {
         {portfolio && (
           <>
             {/* KPI strip */}
+            <section aria-label="Paper regime readiness" style={{ marginBottom: 16, padding: 12, border: "1px solid #334155", borderRadius: 8 }}>
+              <h2 style={{ fontSize: 14, marginBottom: 8 }}>Paper regime readiness</h2>
+              <p style={{ fontSize: 12, color: "#94A3B8" }}>Breadth and volume context for each market. Permission here is one check; position levels, risk and the remaining research checks still apply.</p>
+              {!data?.regimeChecks?.length && <p>Regime readiness unavailable.</p>}
+              {data?.regimeChecks?.map(check => <div key={check.assetClass} style={{ marginTop: 8 }}>
+                <strong>{check.assetClass.toUpperCase()} · {check.status.replaceAll("_", " ")}</strong>
+                <p style={{ fontSize: 12 }}>{check.reason}</p>
+                {check.regime && <p style={{ fontSize: 12 }}>Regime: {check.regime}</p>}
+                {check.observedAt && <p style={{ fontSize: 12 }}>Snapshot: {new Date(check.observedAt).toLocaleString()}</p>}
+                {!!check.permittedPlaybooks?.length && <p style={{ fontSize: 12 }}>Permitted playbooks: {check.permittedPlaybooks.join(", ")}</p>}
+              </div>)}
+            </section>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, marginBottom: 16 }}>
               <Kpi label="Total Equity" value={fmtUsd(portfolio.totalEquity)} sub={`${pct(equityChangePct)} since start`} tone={equityChangePct >= 0 ? "good" : "bad"} />
               <Kpi label="Cash" value={fmtUsd(portfolio.currentCash)} />

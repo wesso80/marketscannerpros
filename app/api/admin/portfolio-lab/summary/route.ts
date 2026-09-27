@@ -18,6 +18,7 @@ import {
   listRiskEvents,
   listSnapshots,
 } from "@/lib/admin/portfolio-lab/portfolioStore";
+import { loadPaperRegimeContext, paperRegimeSummary } from "@/lib/admin/portfolio-lab/paperRegime";
 import { ARCA_DEFAULT_PORTFOLIO_NAME, ARCA_DISCLAIMER } from "@/lib/admin/portfolio-lab/constants";
 
 export const runtime = "nodejs";
@@ -50,9 +51,13 @@ export async function GET(req: NextRequest) {
     listSnapshots(wsid, portfolio.id, { limit: 60 }),
   ]);
 
+  const regimeChecks = await loadPaperRegimeContext(wsid)
+    .then(context => paperRegimeSummary(context, wsid))
+    .catch(() => [{ assetClass: "all", status: "UNAVAILABLE", reason: "Regime evidence or policy could not be loaded. New paper entries remain blocked." }]);
   return NextResponse.json(
     wrapTruth(
       {
+        regimeChecks,
         portfolio,
         positions,
         orders,

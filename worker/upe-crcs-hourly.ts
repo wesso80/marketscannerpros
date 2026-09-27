@@ -3,6 +3,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 import { q } from '../lib/db';
+import { buildMicroEvidence, type MicroInput } from '../lib/upeMicroEvidence';
 import { alertWorkerError } from '../lib/opsAlerting';
 
 type Regime = 'risk_on' | 'neutral' | 'risk_off';
@@ -16,6 +17,8 @@ type SourceRow = {
   asset_type: AssetClass;
   tier: number;
   change_percent: number | null;
+  fetched_at: string | Date | null;
+  observed_at: string | Date | null;
   volume: number | null;
   rsi14: number | null;
   adx14: number | null;
@@ -142,6 +145,8 @@ async function loadSourceRows(): Promise<SourceRow[]> {
         su.asset_type,
         su.tier,
         ql.change_percent,
+        ql.fetched_at,
+        ql.observed_at,
         ql.volume,
         il.rsi14,
         il.adx14,
@@ -238,50 +243,14 @@ function computeEligibility(
   return 'conditional';
 }
 
-async function upsertMicroRegimeSnapshots(
-  rows: Array<{ assetClass: AssetClass; changePercent: number; relVol: number; microAdjustment: number }>,
-  computedAt: Date,
-) {
-  const byAsset = new Map<AssetClass, Array<{ changePercent: number; relVol: number; microAdjustment: number }>>();
-
-  for (const row of rows) {
-    const bucket = byAsset.get(row.assetClass) || [];
-    bucket.push({
-      changePercent: row.changePercent,
-      relVol: row.relVol,
-      microAdjustment: row.microAdjustment,
-    });
-    byAsset.set(row.assetClass, bucket);
-  }
-
-  for (const [assetClass, bucket] of byAsset.entries()) {
-    const positives = bucket.filter((entry) => entry.changePercent > 0).length;
-    const breadth = bucket.length > 0 ? (positives / bucket.length) * 100 : 50;
-    const avgAbsMove = bucket.length > 0
-      ? bucket.reduce((sum, entry) => sum + Math.abs(entry.changePercent), 0) / bucket.length
-      : 0;
-    const avgRelVol = bucket.length > 0
-      ? bucket.reduce((sum, entry) => sum + entry.relVol, 0) / bucket.length
-      : 1;
-
-    const stateScore = ((breadth - 50) * 0.12) + ((avgRelVol - 1) * 4) - Math.max(0, avgAbsMove - 2.5);
-    const microState = stateScore >= 2 ? 'risk_on' : stateScore <= -2 ? 'risk_off' : 'neutral';
-
+async function upsertMicroRegimeSnapshots(rows: MicroInput[], computedAt: Date) {
+  for (const assetClass of ['equity', 'crypto'] as const) {
+    const evidence = buildMicroEvidence(rows.filter(r => r.assetClass === assetClass), computedAt.getTime());
     await q(
       `INSERT INTO micro_regime_snapshots (asset_class, micro_state, adjustment_cap, components_json, computed_at)
        VALUES ($1, $2, $3, $4::jsonb, $5)`,
-      [
-        assetClass,
-        microState,
-        8,
-        JSON.stringify({
-          breadthPercent: Number(breadth.toFixed(2)),
-          avgAbsMove: Number(avgAbsMove.toFixed(4)),
-          avgRelVol: Number(avgRelVol.toFixed(4)),
-          symbolCount: bucket.length,
-        }),
-        computedAt.toISOString(),
-      ],
+      [assetClass, evidence.microState, evidence.components.usable ? 8 : 0,
+        JSON.stringify(evidence.components), computedAt.toISOString()],
     );
   }
 }
@@ -304,7 +273,7 @@ async function runHourly() {
     [hourStart.toISOString(), hourEnd.toISOString()],
   );
 
-  const microInputs: Array<{ assetClass: AssetClass; changePercent: number; relVol: number; microAdjustment: number }> = [];
+  const microInputs: MicroInput[] = [];
 
   for (const row of sourceRows) {
     const cluster = classifyCluster(row);
@@ -371,13 +340,14 @@ async function runHourly() {
 
     microInputs.push({
       assetClass: row.asset_type,
-      changePercent: toFinite(row.change_percent),
+      changePercent: row.change_percent == null ? null : Number(row.change_percent),
       relVol,
-      microAdjustment,
+      fetchedAt: row.fetched_at,
+      observedAt: row.observed_at,
     });
   }
 
-  await upsertMicroRegimeSnapshots(microInputs, computedAt);
+  await upsertMicroRegimeSnapshots(microInputs, new Date());
 
   console.log('[upe-crcs-hourly] completed', {
     symbolsProcessed: sourceRows.length,
