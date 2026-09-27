@@ -30,7 +30,7 @@ import {
   shouldFill,
 } from "./simulatedOrderEngine";
 import { markAndMaybeExit } from "./positionEngine";
-import { sizeForPortfolio } from "./positionSizing";
+import { sizeForPortfolio, floorQuantity } from "./positionSizing";
 import { checkPreTrade, emitRiskEventIfBreached } from "./riskEngine";
 import { writeJournal } from "./journalEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
@@ -260,7 +260,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       notes.push(`skip_candidate:${cand.row.symbol}:existing_position_or_order`);
       continue;
     }
-    const sizing = sizeForPortfolio(runningPortfolio, {
+    const sizing = await sizeForPortfolio(runningPortfolio, {
       entry: cand.entry,
       stop: cand.stop,
       side: cand.side,
@@ -358,12 +358,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       (regimeDecision.status === "UNKNOWN_REGIME" && strictUnknownRegime)
     ) {
       rejections++;
-      const sizingForRow = sizeForPortfolio(runningPortfolio, {
-        entry: cand.entry,
-        stop: cand.stop,
-        side: cand.side,
-        assetClass: cand.assetClass,
-      });
+      const sizingForRow = sizing;
       const stage: RejectionStage =
         regimeDecision.status === "DISABLED" ? "DISABLED_PLAYBOOK" :
         regimeDecision.status === "WAIT_FOR_CONFIRMATION" ? "WAIT_FOR_CONFIRMATION" :
@@ -601,8 +596,9 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
     const allocRatio = baseRiskPct > 0 ? allocPre.riskPercent / baseRiskPct : 1;
     const regimeMult = Math.max(0, Math.min(1, regimeDecision.sizeMultiplier));
     const combined = Math.max(0.05, Math.min(1, mult * allocRatio * regimeMult));
-    const debatedQty = sizing.quantity * combined;
-    const debatedNotional = sizing.notional * combined;
+    const debatedQty = floorQuantity(sizing.quantity * combined, cand.assetClass);
+    if (debatedQty <= 0) { rejections++; notes.push(`skip_candidate:${cand.row.symbol}:allocated_qty_zero`); continue; }
+    const debatedNotional = debatedQty * cand.entry;
 
     // Create as LIMIT_SIM with trigger = entry, waiting for price to come.
     const order = await createSimulatedOrder({
