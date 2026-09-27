@@ -306,6 +306,8 @@ describe("edge packet carries the position levels next to the 15m levels", () =>
     } as unknown as Parameters<typeof projectEdgePacket>[0];
     const ep = projectEdgePacket(packet);
     expect(ep.levelsTimeframe).toBe("15m");
+    expect(ep.positionDoNothing?.version).toBe("position-rr.v1");
+    expect(ep.positionDoNothing?.verdict?.code).toBe("VOL_NOT_READY");
     expect(ep.stopLoss.level).toBe(98.65); // the 15m level is kept
     expect(ep.positionLevels).toMatchObject({ status: "ok", direction: "LONG", stop: levels.long!.stop, tp1: 131 });
   });

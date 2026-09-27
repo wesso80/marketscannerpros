@@ -101,3 +101,11 @@ describe("arca-brain / deriveInformationEdge", () => {
     expect(band).toBe("OBVIOUS_NOISE");
   });
 });
+
+
+it("uses position reward remaining without mutating or falling back to intraday R", () => {
+  const p = makePacket({ riskReward: { rrToTp1: 0.1, rrToTp2: 0.2, rrToTp3: null }, invalidationClarityScore: 80 });
+  expect(deriveInformationEdge(p, { rr: 4 }).inputs.rewardRemaining).toBe(90);
+  expect(deriveInformationEdge(p, { rr: Number.NaN }).inputs.rewardRemaining).toBe(65);
+  expect(p.riskReward.rrToTp2).toBe(0.2);
+});

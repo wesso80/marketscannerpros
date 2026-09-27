@@ -140,6 +140,8 @@ export interface AdminEdgePacket {
    * position trades; entry/stopLoss/takeProfit above are the intraday (scan-timeframe) timing levels. Absent on
    * packets saved before it was added. */
   positionLevels?: PositionLevelView;
+  /** Same safeguards, with weekly/daily R:R; absent on legacy packets. Not trade permission. */
+  positionDoNothing?: { version: "position-rr.v1"; verdict: DoNothingVerdict | null };
 
   /* narrative — short, factual, evidence-bound */
   whyNow: string;
@@ -240,6 +242,7 @@ export function projectEdgePacket(
   });
 
   const doNothing = evaluateDoNothing(packet);
+  const positionLevels = positionLevelView(packet.snapshot?.positionLevels, packet.snapshot?.bias);
   const { price, priceAt } = snapshotPrice(packet, generatedAt);
 
   return {
@@ -275,7 +278,8 @@ export function projectEdgePacket(
 
     ...buildDecisionLevels(packet),
     levelsTimeframe: packet.timeframe,
-    positionLevels: positionLevelView(packet.snapshot?.positionLevels, packet.snapshot?.bias),
+    positionLevels,
+    positionDoNothing: { version: "position-rr.v1", verdict: evaluateDoNothing(packet, positionLevels) },
 
     ...buildNarrative(packet),
     doNotTradeReasons: doNothing ? [doNothing.code, ...doNothing.detail] : [],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { latestPaperPackets, runDecisionEngine } from '@/lib/admin/portfolio-lab/decisionEngine';
+import { gateRow, latestPaperPackets, runDecisionEngine } from '@/lib/admin/portfolio-lab/decisionEngine';
 import { ARCA_DEFAULT_SETTINGS } from '@/lib/admin/portfolio-lab/constants';
 import type { EdgePacketRow } from '@/lib/admin/edgePacketSnapshots';
 import type { ArcaPortfolio } from '@/lib/admin/portfolio-lab/types';
@@ -37,8 +37,8 @@ describe('latest paper evidence', () => {
 });
 it('selects a valid latest position candidate while ignoring an older higher score', async () => {
   const now = Date.now();
-  const current = row('BTC', 10, { doNothing: false, adminState: 'PRIME', thesisStatus: 'alive', freshness: 'real-time', opportunityRankScore: 90, evidenceQualityScore: 90,
-    packetJson: { bias: 'BULLISH_RESEARCH', price: 100, priceAt: new Date(now - 1000).toISOString(), generatedAt: new Date(now - 1000).toISOString(), staleAfter: new Date(now + 600000).toISOString(),
+  const current = row('BTC', 10, { doNothing: true, adminState: 'PRIME', thesisStatus: 'alive', freshness: 'real-time', opportunityRankScore: 90, evidenceQualityScore: 90,
+    packetJson: { doNothing: { code: 'POOR_RR' }, positionDoNothing: { version: 'position-rr.v1', verdict: null }, bias: 'BULLISH_RESEARCH', price: 100, priceAt: new Date(now - 1000).toISOString(), generatedAt: new Date(now - 1000).toISOString(), staleAfter: new Date(now + 600000).toISOString(),
       positionLevels: { status: 'ok', timeframe: '1W/1D', direction: 'LONG', entryStatus: 'in_zone', entryTrigger: 100, entryZoneLow: 100, entryZoneHigh: 101, stop: 90, tp1: 120, minRewardR: 1.5, belowMinR: false, dailyAsOf: new Date(now - 86400000).toISOString() },
     } as EdgePacketRow['packetJson'] });
   const old = row('BTC', 1, { opportunityRankScore: 99 });
@@ -46,4 +46,22 @@ it('selects a valid latest position candidate while ignoring an older higher sco
   expect(result.scannedPackets).toBe(1);
   expect(result.selected).toHaveLength(1);
   expect(result.selected[0]).toMatchObject({ entry: 100, stop: 90, tp1: 120, row: { packetId: 'BTC-10' } });
+  current.packetJson.price = 120;
+  const chased = await runDecisionEngine({ portfolio, rows: [current] });
+  expect(chased.selected).toHaveLength(0);
+  expect(chased.rejected[0].reasons).toContain('current_price_outside_entry_zone');
+});
+
+
+it("uses a newly evaluated position verdict but preserves legacy and independent blocks", () => {
+  const r = row('BTC', 1, { doNothing: true, adminState: 'PRIME', thesisStatus: 'weakening', freshness: 'real-time', opportunityRankScore: 90, evidenceQualityScore: 90,
+    packetJson: { doNothing: { code: 'POOR_RR' }, positionDoNothing: { version: 'position-rr.v1', verdict: null } } as EdgePacketRow['packetJson'] });
+  expect(gateRow(r, portfolio)).toEqual([]);
+  r.packetJson.positionDoNothing!.verdict = { code: 'MACRO_RISK', headline: 'Macro risk', detail: [], severity: 2 };
+  expect(gateRow(r, portfolio)).toContain('do_nothing_reason:MACRO_RISK');
+  delete r.packetJson.positionDoNothing;
+  expect(gateRow(r, portfolio)).toContain('do_nothing_reason:POOR_RR');
+  r.packetJson.positionDoNothing = { version: 'position-rr.v1', verdict: null };
+  r.adminState = 'INVALIDATED'; r.freshness = 'stale';
+  expect(gateRow(r, portfolio)).toEqual(expect.arrayContaining(['admin_state_INVALIDATED', 'freshness_stale']));
 });

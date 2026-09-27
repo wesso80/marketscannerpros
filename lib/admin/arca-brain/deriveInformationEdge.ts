@@ -36,6 +36,7 @@ function present(n: unknown, missing: string[], name: string): number {
  */
 export function deriveInformationEdge(
   packet: AdminEdgePacket | null | undefined,
+  positionRewardRisk?: { rr: number },
 ): DerivedInformationEdgeInputs {
   const missing: string[] = [];
 
@@ -94,7 +95,11 @@ export function deriveInformationEdge(
   // rewardRemaining: best proxy is invalidationClarityScore + rrToTp2
   // (clear invalidation + plenty of R left to TP2).
   const invClarity = typeof packet.invalidationClarityScore === "number" ? packet.invalidationClarityScore : null;
-  const rrTp2 = packet.riskReward?.rrToTp2 ?? null;
+  // The paper caller supplies R measured at the observed price against its
+  // validated position stop/target. Other research callers keep their basis.
+  const rrTp2 = positionRewardRisk
+    ? (Number.isFinite(positionRewardRisk.rr) && positionRewardRisk.rr > 0 ? positionRewardRisk.rr : null)
+    : packet.riskReward?.rrToTp2 ?? null;
   let rewardRemaining: number;
   if (invClarity == null && rrTp2 == null) {
     missing.push("rewardRemaining");

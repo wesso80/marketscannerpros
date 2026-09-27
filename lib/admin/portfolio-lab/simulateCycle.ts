@@ -381,7 +381,9 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
     // Compute BEFORE capital allocation and debate so both gates see
     // the real band. Missing inputs are reported honestly via
     // derivation confidence and recorded in the journal/no-trade row.
-    const derived = deriveInformationEdge(cand.row.packetJson);
+    const positionRewardRisk = Math.abs((cand.tp2 ?? cand.tp1!) - cand.currentPrice) /
+      Math.abs(cand.currentPrice - cand.stop);
+    const derived = deriveInformationEdge(cand.row.packetJson, { rr: positionRewardRisk });
     const { score: edgeScore, band: edgeBand } = computeInformationEdge(derived.inputs);
     // Persist best-effort — never break the cycle on a failed insert.
     scoreInformationEdge({
