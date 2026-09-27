@@ -8,6 +8,7 @@ import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { closedMarketDataTruth, closedSessionForBar } from "@/lib/admin/closedMarket";
 import { barAgeFromClose, formingBarNote } from "@/lib/admin/barAge";
+import { computePositionTrend } from '@/lib/admin/positionTrend';
 import { computePositionLevels } from "@/lib/admin/positionLevels";
 import { lastCompletedUsSessionDate } from "@/lib/time/usSession";
 import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
@@ -353,6 +354,8 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
     ? await provider.getDailyBars(symbol, market).catch(() => [] as Bar[])
     : [];
   const nowMs = Date.now();
+  snapshot.positionEvidenceSource = 'scan_daily_bars';
+  snapshot.positionTrend = computePositionTrend(dailyBars, lastCompletedDailyDate(market, nowMs), nowMs);
   snapshot.positionLevels = computePositionLevels({
     dailyBars,
     price: snapshot.price > 0 ? snapshot.price : null,

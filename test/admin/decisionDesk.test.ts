@@ -9,7 +9,7 @@ function packet(): SavedPacket {
     symbol: 'TEST', market: 'EQUITIES', timeframe: '15m', packetId: 'p1', trustAdjustedScore: 90,
     dataTruth: { status: 'LIVE' }, setup: { type: 'breakout' }, contradictionFlags: [],
     savedScan: { status: 'ok', stale: false, noSetup: false, scannedAt: '2026-09-27T09:00:00Z', quote: {} },
-    snapshot: { bias: 'LONG', price: 101, marketPermission: 'GO', positionLevels: {
+    snapshot: { positionTrend: { version: 'position-trend.v1', status: 'ok', bias: 'LONG', monthlyBias: 'LONG', alignment: 'ALIGNED', dailyAsOf: '2026-09-25', reasons: [] }, bias: 'LONG', price: 101, marketPermission: 'GO', positionLevels: {
       version: 2, status: 'ok', params: POSITION_LEVEL_DEFAULTS, dailyAsOf: '2026-09-25',
       long: { direction: 'LONG', trigger: 100, stop: 90, entryZoneLow: 100, entryZoneHigh: 103,
         tp1: 125, tp1R: 2.5, entryStatus: 'in_zone', targets: [{ price: 125, r: 2.5, timeframe: 'weekly', source: 'weekly high' }], obstacles: [] },
@@ -21,7 +21,7 @@ describe('Decision Desk safeguards', () => {
     const result = assessPosition(packet(), now);
     expect(result.status).toBe('REVIEW_REQUIRED');
     expect(result.research.scorePurpose).toBe('discovery_only');
-    expect(result.decision.status).toBe('NOT_RECORDED');
+    expect(result.decision.status).toBe('SEE_DECISION_HISTORY');
     expect(result.performance.sixWeekResult).toBeNull();
   });
   it.each(['STALE','DEGRADED','MISSING','ERROR','SIMULATED'])('withholds %s evidence', status => {
@@ -63,6 +63,24 @@ describe('Decision Desk safeguards', () => {
     const crypto = packet(); crypto.market = 'CRYPTO';
     const rows = buildDecisionAssessments([older, packet(), crypto], now);
     expect(rows).toHaveLength(2); expect(rows.every(r => r.evidence.packetId === 'p1')).toBe(true);
+  });
+  it('does not inherit intraday direction or invalidation', () => {
+    const p = packet(); p.snapshot.bias = 'SHORT'; p.snapshot.setupState = 'INVALIDATED'; p.savedScan.noSetup = true;
+    const result = assessPosition(p, now);
+    expect(result.research.bias).toBe('LONG'); expect(result.research.discoveryBias).toBe('SHORT');
+    expect(result.status).toBe('REVIEW_REQUIRED');
+  });
+  it('holds conflicting monthly context', () => {
+    const p = packet(); p.snapshot.positionTrend!.alignment = 'CONFLICT';
+    expect(assessPosition(p, now).status).toBe('WATCH');
+  });
+  it('requires independent evidence and fingerprints changing evidence', () => {
+    const p = packet(); const original = assessPosition(p, now).evidenceId;
+    p.snapshot.positionTrend!.bias = 'NEUTRAL';
+    expect(assessPosition(p, now).status).toBe('WATCH');
+    expect(assessPosition(p, now).evidenceId).not.toBe(original);
+    delete p.snapshot.positionTrend;
+    expect(assessPosition(p, now).status).toBe('DATA_UNAVAILABLE');
   });
   it('does not fabricate daily drawdown or account clearance from missing history', () => {
     const result = decisionAccount({ ...FALLBACK_ADMIN_RISK, permission: 'GO', sizeMultiplier: 1 });
