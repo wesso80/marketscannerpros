@@ -217,7 +217,7 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
   const staleData = packets.filter((p) => ["STALE", "DEGRADED", "MISSING", "SIMULATED"].includes(p.dataTruth.status)).length;
   const alertsEligible = packets.filter((p) => p.alertEligibility.eligible).length;
   const alertsSuppressed = packets.length - alertsEligible;
-  const alertsDispatched = alertsEligible; // In Phase 10+, would be updated when alerts actually dispatch
+  const alertsDispatched = 0; // This path evaluates eligibility; it does not call a delivery transport.
   const alertsFailedDispatch = 0;
   const completedAtIso = new Date().toISOString();
   const runtimeMs = Date.now() - startedAtMs;

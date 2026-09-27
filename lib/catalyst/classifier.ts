@@ -155,7 +155,7 @@ const NEWS_RULES: { pattern: RegExp; subtype: CatalystSubtype; severity: Severit
 export function classifyNews(item: NewsItem): ClassificationResult | null {
   // Summaries often contain unrelated companies and historical deals. Require headline evidence.
   const text = item.headline;
-  const portfolioHolding = /\b(?:new holdings?|new position|shares? of|[\d,.]+ shares?|stake in|holdings? in|position in)\b/i.test(text);
+  const portfolioHolding = /\b(?:new holdings?|new position|shares? (?:newly )?(?:acquired|bought|purchased|sold) by|shares? of|[\d,.]+ shares?|stake in|holdings? in|position in)\b/i.test(text);
   const explicitDeal = /\b(?:definitive.?agreement|merger.?agreement|buyout|takeover)\b/i.test(text);
 
   for (const rule of NEWS_RULES) {
