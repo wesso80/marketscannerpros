@@ -210,8 +210,8 @@ export async function labelPositionHorizons(opts: {
       const entry = Number(row.price_at_signal);
       const signalAtMs = new Date(row.signal_at).getTime();
       if (!direction || !asset || !(entry > 0) || !Number.isFinite(signalAtMs)) { t.skipped++; continue; }
-      const k = `${asset}:${row.symbol.toUpperCase()}`;
-      if (Date.now() - started > opts.budgetMs && !memo.has(k)) { result.deferredOverBudget++; continue; }
+      // Cached bars do not make database writes free; defer all remaining rows once the budget expires.
+      if (Date.now() - started >= opts.budgetMs) { result.deferredOverBudget++; continue; }
 
       const bars = await load(row.symbol, asset);
       const m = measurePositionHorizon({
