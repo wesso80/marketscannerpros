@@ -78,9 +78,15 @@ export async function GET(req: NextRequest) {
     const errors = view.rows
       .filter((r) => !isCurrent(r) && !isPaused(r))
       .map((r) => ({ symbol: r.symbol, error: r.status !== "ok" ? r.error ?? r.status : `stale (${r.ageSec == null ? "never scanned" : `${Math.round(r.ageSec / 60)} min old`})` }));
+    if (!marketPaused) {
+      const represented = new Set(view.rows.map(r => r.symbol));
+      for (const symbol of view.missingSymbols) {
+        if (!represented.has(symbol)) errors.push({ symbol, error: 'No saved scan yet' });
+      }
+    }
 
     const health: SystemHealth = {
-      feed: marketPaused ? "PAUSED" : view.available && current.length > 0 ? "HEALTHY" : "DEGRADED",
+      feed: marketPaused ? "PAUSED" : view.available && current.length > 0 && errors.length === 0 ? "HEALTHY" : "DEGRADED",
       // Not measured: there is no websocket, and cache / API latency are not probed.
       websocket: NOT_MONITORED,
       scanner: marketPaused ? "PAUSED" : view.running ? "RUNNING" : "IDLE",

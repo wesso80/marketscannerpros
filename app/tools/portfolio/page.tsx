@@ -22,6 +22,7 @@ import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { localDateInput, paperCloseDateIso, positionLimitWhenReady, profitFactorWhenReady } from '@/lib/portfolio/trackDisplay';
 import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { accountEquityValues, updateTodaySnapshot } from '@/lib/portfolio/equitySnapshot';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
 import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
@@ -1102,43 +1103,18 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     return () => clearTimeout(timeoutId);
   }, [positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger, mounted, dataLoaded]);
 
-  // Track performance snapshots when portfolio changes
+  // Refresh today's observation when marks or cash change. Missing prior days stay missing.
   useEffect(() => {
-    if (!dataLoaded) return;
-    if (positions.length > 0 || closedPositions.length > 0) {
-      const positionMarketValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
-      const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
-      const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
-      const totalPL = unrealizedPL + realizedPL;
-      const startingCapitalForSnapshot = Number(startingCapitalInput || 0);
-      const netDepositsForSnapshot = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
-      const investedNotionalForSnapshot = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
-      const cashForSnapshot = startingCapitalForSnapshot + netDepositsForSnapshot + realizedPL - investedNotionalForSnapshot;
-      const totalValue = cashForSnapshot + positionMarketValue;
-
-      // Add one full account-equity snapshot per day. Legacy position-value
-      // snapshots are replaced for today but retained on prior dates.
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const lastSnapshot = performanceHistory[performanceHistory.length - 1];
-      const lastDate = lastSnapshot ? new Date(lastSnapshot.timestamp).toISOString().split('T')[0] : null;
-
-      const newSnapshot: PerformanceSnapshot = {
-        timestamp: now.toISOString(),
-        totalValue,
-        totalPL,
-        basis: 'account_equity_v2',
-      };
-      if (lastDate !== today) {
-        const updated = [...performanceHistory, newSnapshot];
-        setPerformanceHistory(updated);
-        localStorage.setItem('portfolio_performance', JSON.stringify(updated));
-      } else if (lastSnapshot?.basis !== 'account_equity_v2') {
-        const updated = [...performanceHistory.slice(0, -1), newSnapshot];
-        setPerformanceHistory(updated);
-        localStorage.setItem('portfolio_performance', JSON.stringify(updated));
-      }
-    }
+    if (!dataLoaded || (positions.length === 0 && closedPositions.length === 0)) return;
+    const startingCapital = Number(startingCapitalInput);
+    if (!startingCapitalInput.trim() || !Number.isFinite(startingCapital) || startingCapital < 0) return;
+    const netDeposits = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
+    const realized = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
+    const { equity, totalPL } = accountEquityValues(startingCapital, netDeposits, realized, positions);
+    const snapshot: PerformanceSnapshot = {
+      timestamp: new Date().toISOString(), totalValue: equity, totalPL, basis: 'account_equity_v2',
+    };
+    setPerformanceHistory(history => updateTodaySnapshot(history, snapshot));
   }, [positions, closedPositions, cashLedger, startingCapitalInput, dataLoaded]);
 
   const addPosition = () => {
@@ -1578,9 +1554,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const totalPL = unrealizedPL + realizedPL;
   const startingCapital = Number(startingCapitalInput || 0);
   const netDeposits = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
-  const investedNotional = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
-  const accountCash = startingCapital + netDeposits + realizedPL - investedNotional;
-  const accountEquity = accountCash + totalValue;
+  const { cash: accountCash, equity: accountEquity } = accountEquityValues(startingCapital, netDeposits, realizedPL, positions);
   // "Total return" counts realized + unrealized P&L on the capital put in; open return (unrealized / open cost) is shown separately.
   const { openReturnPct, totalReturnPct } = portfolioReturns({ unrealizedPL, realizedPL, openCost: totalCost, startingCapital, netDeposits });
   const totalReturn = totalReturnPct ?? 0;
