@@ -120,9 +120,14 @@ export function gateRow(row: EdgePacketRow, portfolio: ArcaPortfolio): string[] 
   const reasons: string[] = [];
   const s = portfolio.settings;
 
-  if (row.doNothing) {
+  const positionVerdict = row.packetJson?.positionDoNothing;
+  const hasPositionVerdict = positionVerdict?.version === "position-rr.v1" &&
+    (positionVerdict.verdict === null || !!positionVerdict.verdict?.code);
+  const doNothing = hasPositionVerdict ? !!positionVerdict.verdict : row.doNothing;
+  const verdict = hasPositionVerdict ? positionVerdict.verdict : row.packetJson?.doNothing;
+  if (doNothing) {
     reasons.push("do_nothing_flag");
-    if (row.packetJson?.doNothing?.code) reasons.push(`do_nothing_reason:${row.packetJson.doNothing.code}`);
+    if (verdict?.code) reasons.push(`do_nothing_reason:${verdict.code}`);
   }
   if (row.adminState === "INVALIDATED" || row.adminState === "EXPIRED" || row.adminState === "IGNORE") {
     reasons.push(`admin_state_${row.adminState}`);

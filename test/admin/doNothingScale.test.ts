@@ -80,3 +80,37 @@ describe("evaluateDoNothing on engine (0..1) evidence", () => {
     expect(evaluateDoNothing(stale)?.code).toBe("DATA_DEGRADED");
   });
 });
+
+
+describe("position R:R basis preserves the remaining safeguards", () => {
+  const levels = { status: "ok", direction: "LONG", entryTrigger: 100, stop: 90, tp1: 120,
+    minRewardR: 1.5, belowMinR: false } as import("@/lib/admin/positionLevels").PositionLevelView;
+  function poorIntraday() {
+    const p = packet(); p.snapshot.targets.target1 = 101;
+    return p;
+  }
+  it("keeps the intraday verdict but clears it for a valid 2R position", () => {
+    const p = poorIntraday();
+    expect(evaluateDoNothing(p)?.code).toBe("POOR_RR");
+    expect(evaluateDoNothing(p, levels)).toBeNull();
+  });
+  it("uncovers macro risk that was hidden behind the first intraday failure", () => {
+    const p = poorIntraday(); p.newsContext.status = "ELEVATED";
+    expect(evaluateDoNothing(p, levels)?.code).toBe("MACRO_RISK");
+  });
+  it("still rejects volatility and conflicting evidence after replacing R:R", () => {
+    expect(evaluateDoNothing(packet({ breakoutReadiness: 0.2 }), levels)?.code).toBe("VOL_NOT_READY");
+    expect(evaluateDoNothing(packet({ crossMarket: 0.2 }), levels)?.code).toBe("TF_CONFLICT");
+  });
+  it.each([null, 0, 110, 114, Number.NaN])("rejects invalid or inadequate weekly target %s", tp1 => {
+    expect(evaluateDoNothing(packet(), { ...levels, tp1 })?.code).toBe("POOR_RR");
+  });
+  it("supports shorts and refuses targets on the wrong side", () => {
+    expect(evaluateDoNothing(packet({ bias: "SHORT" }), { ...levels, direction: "SHORT", stop: 110, tp1: 80 })).toBeNull();
+    expect(evaluateDoNothing(packet(), { ...levels, tp1: 80 })?.code).toBe("POOR_RR");
+  });
+  it("never clears data degradation", () => {
+    const p = poorIntraday(); p.dataTruth.status = "STALE";
+    expect(evaluateDoNothing(p, levels)?.code).toBe("DATA_DEGRADED");
+  });
+});

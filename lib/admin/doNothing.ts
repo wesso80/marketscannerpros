@@ -10,6 +10,7 @@
  */
 
 import type { AdminResearchPacket } from "./getAdminResearchPacket";
+import type { PositionLevelView } from "./positionLevels";
 
 export type DoNothingCode =
   | "INSIDE_VALUE"
@@ -32,7 +33,7 @@ export interface DoNothingVerdict {
 }
 
 /** Evaluate; first hard match wins. Returns null if no reason fires. */
-export function evaluateDoNothing(packet: AdminResearchPacket): DoNothingVerdict | null {
+export function evaluateDoNothing(packet: AdminResearchPacket, positionLevels?: PositionLevelView): DoNothingVerdict | null {
   const snap = packet.snapshot;
   const dt = packet.dataTruth;
   const ind = snap?.indicators;
@@ -54,14 +55,27 @@ export function evaluateDoNothing(packet: AdminResearchPacket): DoNothingVerdict
     ], 3);
   }
 
-  // 3. Poor R:R — derive from targets.
-  const rr = computeRR(snap?.targets);
-  if (rr !== null && rr < 1.0) {
-    return verdict("POOR_RR", `Reward-to-risk only ${rr.toFixed(2)}R into target 1.`, [
-      `entry=${snap?.targets.entry}`,
-      `invalidation=${snap?.targets.invalidation}`,
-      `target1=${snap?.targets.target1}`,
-    ], 2);
+  // Position callers replace only the R:R basis. Continue through ALL later
+  // rules so an intraday POOR_RR cannot conceal a macro/flow/conflict block.
+  if (positionLevels) {
+    const { entryTrigger: entry, stop, tp1, direction } = positionLevels;
+    const positive = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
+    const sign = direction === "LONG" ? 1 : direction === "SHORT" ? -1 : 0;
+    const risk = positive(entry) && positive(stop) ? sign * (entry - stop) : 0;
+    const reward = positive(entry) && positive(tp1) ? sign * (tp1 - entry) : 0;
+    const minR = Math.max(1.5, Number.isFinite(positionLevels.minRewardR) ? positionLevels.minRewardR : 1.5);
+    if (positionLevels.status !== "ok" || risk <= 0 || reward <= 0 || reward / risk < minR || positionLevels.belowMinR) {
+      return verdict("POOR_RR", "Position reward-to-risk is unavailable or below the required minimum.", [
+        "basis=1W/1D", `entry=${entry}`, `invalidation=${stop}`, `target1=${tp1}`, `minimumR=${minR}`,
+      ], 2);
+    }
+  } else {
+    const rr = computeRR(snap?.targets);
+    if (rr !== null && rr < 1.0) {
+      return verdict("POOR_RR", `Reward-to-risk only ${rr.toFixed(2)}R into target 1.`, [
+        `entry=${snap?.targets.entry}`, `invalidation=${snap?.targets.invalidation}`, `target1=${snap?.targets.target1}`,
+      ], 2);
+    }
   }
 
   // 4. Inside value — chop-pin.
