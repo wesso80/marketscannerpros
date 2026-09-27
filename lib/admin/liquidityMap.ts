@@ -19,6 +19,9 @@ export interface LiquidityZone {
 }
 
 export interface LiquidityMap {
+  /** Legacy maps lacked symbol isolation and must not be trusted. */
+  integrity?: "symbol_local_v1" | "unavailable_legacy";
+  unavailableReason?: string;
   buyStops: LiquidityZone[];           // resting buy-stop liquidity above
   sellStops: LiquidityZone[];          // resting sell-stop liquidity below
   priorHigh: LiquidityZone | null;     // PDH / weekly high
@@ -35,7 +38,8 @@ export interface LiquidityMap {
   optionsDataMissing: boolean;
 }
 
-const EMPTY_MAP: LiquidityMap = {
+export function emptyLiquidityMap(): LiquidityMap { return {
+  integrity: "symbol_local_v1",
   buyStops: [], sellStops: [],
   priorHigh: null, priorLow: null,
   vwapMagnets: [], gammaWalls: [],
@@ -43,16 +47,18 @@ const EMPTY_MAP: LiquidityMap = {
   failedBreakouts: [], failedReclaims: [],
   forcedBuyerZones: [], forcedSellerZones: [],
   optionsDataMissing: false,
-};
+}; }
 
 export function buildLiquidityMap(packet: AdminResearchPacket): LiquidityMap {
   const lvls = packet.liquidityLevels;
   const snap = packet.snapshot;
   const px = snap?.price ?? 0;
 
-  if (!lvls && !snap) return EMPTY_MAP;
+  if (!lvls && !snap) return emptyLiquidityMap();
 
-  const map: LiquidityMap = { ...EMPTY_MAP };
+  // Every packet owns every array; a shallow copy of a shared template leaked
+  // levels across symbols and grew saved JSON by megabytes per packet.
+  const map = emptyLiquidityMap();
 
   // Prior highs/lows — sweep targets.
   if (lvls?.pdh) {
