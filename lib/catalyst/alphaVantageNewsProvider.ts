@@ -8,6 +8,7 @@
  * so classifyNews() / ingestNews() can categorise and store them.
  */
 
+import { tickerRelevance } from '@/lib/equityNewsRelevance';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import type { NewsProvider } from './newsProvider';
 import type { NewsItem } from './types';
@@ -92,21 +93,22 @@ interface AVArticle {
   }>;
 }
 
-function mapToNewsItem(article: AVArticle): NewsItem | null {
+export function mapToNewsItem(article: AVArticle): NewsItem | null {
   if (!article.title || !article.url) return null;
 
   const ts = parseAVTimestamp(article.time_published);
   if (!ts) return null;
 
-  // Extract tickers with relevance > 0.1
+  // Apply the same ticker relevance and textual evidence gate as the research news feed.
   const tickers = (article.ticker_sentiment || [])
-    .filter((t) => parseFloat(t.relevance_score) > 0.1)
+    .filter((t) => tickerRelevance(article, t.ticker) !== null)
     .map((t) => t.ticker.replace('CRYPTO:', '').replace('FOREX:', ''))
     .filter((t) => t.length <= 10); // filter noise
 
   if (tickers.length === 0) return null;
 
   return {
+    relevanceVerified: true,
     headline: article.title,
     timestamp: ts,
     tickers,

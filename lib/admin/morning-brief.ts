@@ -1,3 +1,5 @@
+import { accountChecklistStatus, accountDisplaySize } from '@/lib/admin/accountPresentation';
+import { reviewStoredCatalyst } from '@/lib/catalyst/researchIntegrity';
 import { q } from "@/lib/db";
 import { loadAdminRiskSnapshot } from "@/lib/admin/scan-context";
 import { runScan } from "@/lib/operator/orchestrator";
@@ -860,7 +862,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
       ? symbolCatalysts.map((event) => `${event.impactLabel} ${event.impactScore}: ${event.headline}`)
       : ["No fresh scanned catalyst attached to this symbol."],
     checklist: [
-      { label: "Risk", status: brief.risk.killSwitchActive ? "BLOCK" : "PASS", instruction: brief.risk.killSwitchActive ? "Account stop active; no new account risk." : "Confirm size before entry." },
+      { label: "Risk", status: accountChecklistStatus(brief.risk), instruction: brief.risk.killSwitchActive ? "Account stop active; no new account risk." : "Confirm size before entry." },
       { label: "Trigger", status: play.permission === "GO" ? "PASS" : "WAIT", instruction: play.permission === "GO" ? "Use planned trigger only; no late chase." : "Wait for permission to clear before action." },
       { label: "Catalyst", status: highImpactCatalysts.length ? "WAIT" : "PASS", instruction: highImpactCatalysts.length ? "Review high-impact catalyst before committing size." : "No high-impact catalyst conflict found." },
       { label: "Review", status: "INFO", instruction: "After the session, label worked, failed, missed, invalidated, or rule broken." },
@@ -1621,14 +1623,14 @@ async function loadWorkerStatus(): Promise<MorningWorkerStatus> {
 
 async function loadCatalystSymbolsForUniverse(market: Market): Promise<string[]> {
   try {
-    const rows = await q<{ ticker: string }>(`
-      SELECT DISTINCT ticker
+    const rows = await q<any>(`
+      SELECT ticker, source, headline, catalyst_type, raw_payload
       FROM catalyst_events
       WHERE event_timestamp_utc >= NOW() - INTERVAL '48 hours'
-      ORDER BY ticker ASC
-      LIMIT 80
+      ORDER BY event_timestamp_utc DESC
+      LIMIT 400
     `);
-    return uniqueSymbols(rows.map((row) => row.ticker), market);
+    return uniqueSymbols(rows.map(reviewStoredCatalyst).filter((row) => row !== null).map((row) => row.ticker), market);
   } catch {
     return [];
   }
@@ -1864,7 +1866,7 @@ function buildTradePlanInvalidation(play: ScannerHit, catalysts: MorningCatalyst
 function buildTradePlanSizing(brief: MorningBrief, play: ScannerHit, catalysts: MorningCatalyst[]) {
   const catalystCut = catalysts.length ? 0.5 : 1;
   const permissionCut = play.permission === "GO" ? 1 : play.permission === "WAIT" ? 0.5 : 0;
-  const size = Math.max(0, Math.min(1, brief.risk.sizeMultiplier * play.sizeMultiplier * catalystCut * permissionCut));
+  const size = accountDisplaySize(brief.risk, brief.risk.sizeMultiplier * play.sizeMultiplier * catalystCut * permissionCut);
   if (size <= 0) return "No new size. Keep this as a watch-only plan.";
   return `Use up to ${size.toFixed(2)}x planned size. Cut in half if the first trigger is late, liquidity is poor, or correlation rises.`;
 }
@@ -2104,7 +2106,7 @@ function buildScenarioTree(
     return {
       symbol: play.symbol,
       bias: play.bias,
-      baseCase: `${play.permission} ${play.bias} setup using ${play.playbook || play.regime}; confidence ${play.confidence}%.`,
+      baseCase: `${play.marketPermission} ${play.bias} research setup using ${play.playbook || play.regime}; confidence ${play.confidence}%.`,
       bullishPath: play.bias === "SHORT" ? `Only flips constructive if ${play.symbol} rejects downside pressure and reclaims structure.` : `Continuation path: trigger holds, volume expands, and ${play.symbol} accepts above the setup area.`,
       bearishPath: play.bias === "LONG" ? `Failure path: trigger loses acceptance or catalyst/news pressure contradicts the long bias.` : `Continuation path: lower high forms, downside pressure expands, and bounce attempts fail.`,
       chopPath: `No trade if ${play.symbol} sits between trigger and invalidation or liquidity is thin in the first impulse.`,
@@ -2140,15 +2142,15 @@ function buildCommanderView(
 async function loadCatalysts(symbols: string[], hits: ScannerHit[]): Promise<MorningCatalyst[]> {
   try {
     const rows = await q<any>(`
-      SELECT ticker, source, headline, url, catalyst_type, catalyst_subtype, event_timestamp_et, severity, confidence
+      SELECT ticker, source, headline, url, catalyst_type, catalyst_subtype, event_timestamp_et, severity, confidence, raw_payload
       FROM catalyst_events
       WHERE event_timestamp_utc >= NOW() - INTERVAL '36 hours'
         AND ticker = ANY($1::text[])
       ORDER BY event_timestamp_et DESC
-      LIMIT 20
+      LIMIT 200
     `, [symbols]);
     const hitBySymbol = new Map(hits.map((hit) => [hit.symbol, hit]));
-    return rows.map((row) => ({
+    return rows.map(reviewStoredCatalyst).filter((row): row is NonNullable<typeof row> => row !== null).map((row) => ({
       ticker: row.ticker,
       source: row.source,
       headline: row.headline,
@@ -2159,7 +2161,7 @@ async function loadCatalysts(symbols: string[], hits: ScannerHit[]): Promise<Mor
       severity: row.severity,
       confidence: row.confidence == null ? null : Number(row.confidence),
       ...scoreCatalystImpact(row, hitBySymbol.get(String(row.ticker || "").toUpperCase())),
-    })).sort((a, b) => b.impactScore - a.impactScore || new Date(b.eventTimestampEt || 0).getTime() - new Date(a.eventTimestampEt || 0).getTime());
+    })).sort((a, b) => b.impactScore - a.impactScore || new Date(b.eventTimestampEt || 0).getTime() - new Date(a.eventTimestampEt || 0).getTime()).slice(0, 20);
   } catch {
     return [];
   }
@@ -2175,14 +2177,14 @@ function scoreCatalystImpact(row: Record<string, any>, hit?: ScannerHit): Pick<M
   else if (severity === "MED") score += 22;
   else if (severity === "LOW") score += 10;
   score += Math.round(Math.max(0, Math.min(1, confidence)) * 20);
-  if (hit?.permission === "GO") score += 18;
-  if (hit?.permission === "WAIT") score += 10;
-  if (/earnings|guidance|sec|offering|lawsuit|merger|cpi|fomc|fed|rate|hack|exploit|delist/.test(`${subtype} ${headline}`)) score += 18;
-  if (/upgrade|partnership|approval|launch|listing/.test(`${subtype} ${headline}`)) score += 8;
+  if (hit?.marketPermission === "GO") score += 18;
+  if (hit?.marketPermission === "WAIT") score += 10;
+  if (/\b(?:earnings|guidance|sec|offering|lawsuit|merger|cpi|fomc|fed|rates?|hack|exploit|delist)\b/.test(`${subtype.replace(/_/g, " ")} ${headline}`)) score += 18;
+  if (/\b(?:upgrade|partnership|approval|launch|listing)\b/.test(`${subtype.replace(/_/g, " ")} ${headline}`)) score += 8;
   const impactScore = clampScore(score);
   const impactLabel = impactScore >= 80 ? "CRITICAL" : impactScore >= 62 ? "HIGH" : impactScore >= 40 ? "MED" : "LOW";
   const impactReason = hit
-    ? `${impactLabel} catalyst impact because ${hit.symbol} is a ${hit.permission} scanner candidate with ${severity || "unknown"} severity news.`
+    ? `${impactLabel} catalyst impact because ${hit.symbol} is a ${hit.marketPermission} research candidate with ${severity || "unknown"} severity news.`
     : `${impactLabel} catalyst impact based on severity, confidence, and headline risk.`;
   return { impactScore, impactLabel, impactReason };
 }
@@ -2245,7 +2247,7 @@ function buildExecutionChecklist(
   const invalidationRule = primary
     ? `For ${primary.symbol}, abandon the idea if permission drops to BLOCK, the setup loses ${primary.playbook || primary.regime} structure, or a fresh catalyst contradicts the bias.`
     : "No primary setup. Do not manufacture a trade until a GO candidate appears.";
-  const sizingRule = state === "TRADE"
+  const sizingRule = accountChecklistStatus(risk) !== "PASS" ? "No new account size until account assessment passes." : state === "TRADE"
     ? `Start at ${Math.max(0.25, Math.min(1, risk.sizeMultiplier)).toFixed(2)}x planned size; reduce by half if correlation rises above 65% or the first trigger is late.`
     : state === "DEFENSIVE"
       ? "Use half size or less, one position at a time, and only after clean confirmation."
@@ -2261,7 +2263,7 @@ function buildExecutionChecklist(
     checklist: [
       {
         label: "Risk Permission",
-        status: state === "BLOCK" ? "BLOCK" : state === "DEFENSIVE" ? "WAIT" : "PASS",
+        status: accountChecklistStatus(risk),
         instruction: risk.killSwitchActive
           ? "Account stop active — no account sizing. Discovery and opportunity ranking continue."
           : `Execution permission: ${risk.permission}; active positions ${risk.activePositions}/${risk.maxPositions}.`,

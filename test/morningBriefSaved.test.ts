@@ -220,6 +220,8 @@ describe('workspace-scoped saved briefs', () => {
 it('builds risk and journal statistics from the explicit workspace rather than the global selector', async () => {
   const result = await buildMorningBrief({ workspaceId: 'workspace-a', market: 'EQUITIES' });
   expect(result.risk.workspaceId).toBe('workspace-a');
+  expect(result.executionChecklist.checklist.find(item => item.label === 'Risk Permission')?.status).toBe('WAIT');
+  expect(result.executionChecklist.sizingRule).toContain('No new account size');
   const riskQuery = m.q.mock.calls.find(([sql]) => sql.includes('FROM operator_state'))!;
   expect(riskQuery[0]).toContain('WHERE workspace_id = $1');
   expect(riskQuery[1]).toEqual(['workspace-a']);
