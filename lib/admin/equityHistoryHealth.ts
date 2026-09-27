@@ -20,6 +20,6 @@ export async function equityHistoryNotes(workspaceId: string): Promise<string[]>
       : count === 1 ? 'A starting-capital entry exists in the persisted cash ledger.'
       : count === 0 ? 'No starting-capital entry exists in the persisted cash ledger. Reconcile starting capital and cash flows before enabling unattended account-equity capture.'
       : 'Multiple starting-capital entries exist; reconcile the cash ledger before enabling unattended account-equity capture.',
-    'Account snapshots currently originate from Portfolio page visits; no background daily capture is configured. Missing dates cannot be reconstructed from current balances.',
+    'Browser-managed Portfolio history is retained separately from scheduled account observations. Missing dates cannot be reconstructed from current balances.',
   ];
 }
