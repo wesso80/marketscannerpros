@@ -168,6 +168,8 @@ export type AdminSymbolIntelligence = {
    * from the daily bars. Absent on packets saved before they were added.
    */
   positionLevels?: PositionLevels;
+  positionTrend?: import('./positionTrend').PositionTrend;
+  positionEvidenceSource?: 'scan_daily_bars' | 'ohlcv_bars_identity_checked';
   /** Evidence breakdown from scoring engine */
   evidence?: {
     regimeFit: number;

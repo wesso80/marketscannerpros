@@ -4,6 +4,7 @@ vi.mock('@/lib/adminAuth', () => ({ requireAdmin: m.auth }));
 vi.mock('@/lib/admin/sharedScan', () => ({ readSavedScan: m.scan, scanStatusForResponse: (v: unknown) => v }));
 vi.mock('@/lib/admin/scan-context', () => ({ buildAdminScanContext: m.risk }));
 vi.mock('@/lib/admin/macroOutlook', () => ({ readStoredMacroEvidence: m.macro }));
+vi.mock('@/lib/admin/decisionEvidence', () => ({ enrichStoredPositionEvidence: async (p: unknown) => p }));
 import { GET } from '@/app/api/admin/decision-desk/route';
 import { NextRequest } from 'next/server';
 beforeEach(() => {
@@ -26,7 +27,7 @@ describe('read-only Decision Desk contract', () => {
     const response = await GET(new NextRequest('https://test/api/admin/decision-desk'));
     const result = await response.json();
     expect(response.headers.get('cache-control')).toBe('private, no-store');
-    expect(result).toMatchObject({ schemaVersion: 'decision-desk.v1', readOnly: true, counts: { total: 0 } });
+    expect(result).toMatchObject({ schemaVersion: 'decision-desk.v2', readOnly: true, counts: { total: 0 } });
     expect(m.risk).toHaveBeenCalledWith('workspace-a');
     expect(m.scan.mock.calls).toEqual([[{ market: 'EQUITIES', timeframe: '15m' }], [{ market: 'CRYPTO', timeframe: '15m' }]]);
   });

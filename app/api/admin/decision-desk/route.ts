@@ -1,3 +1,4 @@
+import { enrichStoredPositionEvidence } from '@/lib/admin/decisionEvidence';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { readSavedScan, scanStatusForResponse } from '@/lib/admin/sharedScan';
@@ -22,13 +23,13 @@ export async function GET(req: NextRequest) {
       readSavedScan({ market: 'CRYPTO', timeframe: '15m' }),
       buildAdminScanContext(auth.workspaceId), readStoredMacroEvidence(),
     ]);
-    const assessments = buildDecisionAssessments([...equities.packets, ...crypto.packets]).filter(row => !symbol || row.symbol === symbol);
+    const assessments = buildDecisionAssessments(await enrichStoredPositionEvidence([...equities.packets, ...crypto.packets])).filter(row => !symbol || row.symbol === symbol);
     const counts = { total: assessments.length, REVIEW_REQUIRED: 0, WATCH: 0, INVALIDATED: 0, DATA_UNAVAILABLE: 0 };
     for (const row of assessments) counts[row.status]++;
-    return NextResponse.json({ schemaVersion: 'decision-desk.v1', servedAt: new Date().toISOString(),
+    return NextResponse.json({ schemaVersion: 'decision-desk.v2', servedAt: new Date().toISOString(),
       readOnly: true, strategies: DECISION_STRATEGIES, account: decisionAccount(risk), macro, counts, assessments,
       savedScans: { equities: scanStatusForResponse(equities), crypto: scanStatusForResponse(crypto) },
-      limitations: ['Position levels do not establish a six-week forecasting edge.', 'Core trend and macro hedge assessments are not implemented.', 'Human decision persistence and 42/84-day strategy outcome tracking are not implemented in this contract.'],
+      limitations: ['Position levels do not establish a six-week forecasting edge.', 'Core trend and macro hedge assessments are not implemented.', 'Research decisions are recorded separately; checkpoint observations are not trade returns or fills.'],
     }, { headers });
   } catch {
     return NextResponse.json({ error: 'Decision evidence unavailable; do not reuse an earlier response as current clearance.' }, { status: 503, headers });
