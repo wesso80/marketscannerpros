@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import PositionHorizonOutcomes from "@/components/admin/PositionHorizonOutcomes";
+import type { PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 
 /* ── Types ── */
 interface Signal {
@@ -66,6 +68,8 @@ interface Stats {
     labeledSinceFix?: number;
     directionalHitRateSinceFix?: number | null;
   }[];
+  /** 6-week / 12-week horizons by setup (migration 105). */
+  positionHorizons?: PositionHorizonStats;
   bySource?: (DirectionalSummary & { source: string; total: number; pending: number; firstAt: string | null })[];
   trend: {
     recent7d: { total: number; correct: number; labeled: number; accuracyRate: number | null };
@@ -113,6 +117,15 @@ function BreakdownRow({ label, s, extra }: { label: string; s: DirectionalSummar
 }
 
 /* ── Helpers ── */
+/** " · 6w/12w: N labelled" from the labeller response (or why 6w/12w was skipped). */
+function positionLabelSummary(raw: unknown): string {
+  const p = raw as { enabled?: boolean; note?: string; horizons?: Record<string, { labeled?: number; noData?: number }> } | undefined;
+  if (!p) return "";
+  if (!p.enabled) return p.note ? ` · ${p.note}` : "";
+  const hs = Object.entries(p.horizons ?? {});
+  return hs.length ? ` · ${hs.map(([h, t]) => `${h}: ${t.labeled ?? 0} labelled${t.noData ? `, ${t.noData} no data` : ""}`).join(", ")}` : "";
+}
+
 function authHeaders(): HeadersInit {
   const secret = typeof window !== "undefined" ? sessionStorage.getItem("admin_secret") : null;
   return secret ? { Authorization: `Bearer ${secret}` } : {};
@@ -290,7 +303,7 @@ export default function OutcomesPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               {labelerResult.success
-                ? `Labeled ${labelerResult.labeled ?? 0} signals`
+                ? `Labeled ${labelerResult.labeled ?? 0} signals${positionLabelSummary(labelerResult.positionHorizons)}`
                 : `${labelerResult.error ?? "Labeling failed"}`}
               {labelerResult.breakdown ? (
                 <span style={{ color: "#9CA3AF", marginLeft: 8 }}>
@@ -433,6 +446,9 @@ export default function OutcomesPage() {
               </table>
             </div>
           )}
+
+          {/* ── 6-week / 12-week position horizons by setup ── */}
+          <PositionHorizonOutcomes stats={stats?.positionHorizons} />
 
           {/* ── Regime Breakdown ── */}
           {stats?.byRegime && stats.byRegime.length > 0 && (

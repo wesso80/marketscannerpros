@@ -11,6 +11,9 @@
  * It used to read `signal_outcomes` / `signals_outcomes` (tables that don't exist) and `admin_research_cases`
  * (no outcome column), so it could never show a win or a loss.
  *
+ * Also returns the 6-week / 12-week horizons by setup (all time, not the 90-day window: a 12-week result needs a call
+ * at least 12 weeks old). See lib/admin/positionHorizonStats; `available: false` until migration 105 is run.
+ *
  * BOUNDARY: read-only. The Backtest Lab is a research analytics surface; no orders, no execution.
  */
 
@@ -18,6 +21,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
+import { loadPositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 import { LABELLER_FIX_AT, pct1, saneMoveSql, signedMoveSql } from "@/lib/admin/signalStats";
 
 export const runtime = "nodejs";
@@ -116,8 +120,11 @@ export async function GET(req: NextRequest) {
   else if (totalCases === 0) note = "No logged calls in the last 90 days yet. Every shared-scan run and every admin page call is logged; rows appear after the next scan.";
   else if (totalWins + totalLosses === 0) note = `Calls are logged but none has been measured by the fixed labeller yet (since ${LABELLER_FIX_AT}). The labeller runs every 6 hours.`;
 
+  const positionHorizons = await loadPositionHorizonStats();
+
   return NextResponse.json({
     ok: true,
+    positionHorizons,
     generatedAt: new Date().toISOString(),
     totalCases,
     totalWins,

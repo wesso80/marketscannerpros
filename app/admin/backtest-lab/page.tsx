@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import PositionHorizonOutcomes from "@/components/admin/PositionHorizonOutcomes";
+import type { PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 
 interface SetupBreakdown {
   setup: string;
@@ -26,6 +28,8 @@ interface BacktestLabResponse {
   breakdown?: SetupBreakdown[];
   note?: string | null;
   error?: string | null;
+  /** 6-week / 12-week horizons by setup, all time (migration 105). */
+  positionHorizons?: PositionHorizonStats;
 }
 
 function authHeaders(): HeadersInit {
@@ -163,6 +167,11 @@ export default function BacktestLabPage() {
                 ))}
               </div>
             )}
+          </section>
+
+          <section style={{ marginBottom: "0.5rem" }}>
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.5rem" }}>6 and 12 Week Results (all time)</h2>
+            <PositionHorizonOutcomes stats={data.positionHorizons} />
           </section>
 
           {data.note && (

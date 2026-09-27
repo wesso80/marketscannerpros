@@ -13,3 +13,10 @@ export function labellerTimeBudgetMs(): number {
   const n = Number(process.env.AI_OUTCOME_TIME_BUDGET_MS);
   return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : 90_000;
 }
+/**
+ * Price-lookup budget for the 6w/12w horizons, which run after 4h/24h: whatever is left of the main budget, at least
+ * 5 s (so rows whose daily bars load quickly still progress) and at most 30 s (keeps the run inside curl's 120 s).
+ */
+export function positionBudgetMs(mainBudgetMs: number, elapsedMs: number): number {
+  return Math.max(5_000, Math.min(30_000, mainBudgetMs - elapsedMs));
+}

@@ -10,12 +10,14 @@
  *   - Recent performance (last 7 days vs prior 30)
  *   - Since the labeller fix: by direction, asset class, 4h horizon, and by source (operator-terminal plus the
  *     admin-call:* page workspaces written by lib/admin/adminCallLog.ts)
+ *   - 6-week / 12-week horizons by setup type (lib/admin/positionHorizonStats; migration 105)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
+import { loadPositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 import { LABELLER_FIX_AT, saneMoveSql, signedMoveSql, summarizeDirectional, type DirectionalCounts } from "@/lib/admin/signalStats";
 
 export const runtime = "nodejs";
@@ -179,6 +181,8 @@ export async function GET(req: NextRequest) {
       [WS, LABELLER_FIX_AT],
     );
     const dirOf = (d: string | null) => (d === "LONG" || d === "SHORT" ? d : null);
+    // 6-week / 12-week horizons by setup type (migration 105; `available: false` until it is run). Never throws.
+    const positionHorizons = await loadPositionHorizonStats();
 
     return NextResponse.json({
       overall: {
@@ -237,6 +241,7 @@ export async function GET(req: NextRequest) {
         firstAt: r.first_at ?? null,
         ...summarizeDirectional(r),
       })),
+      positionHorizons,
       byRegime: byRegime.map((r: Record<string, unknown>) => ({
         regime: r.regime,
         total: r.total,
