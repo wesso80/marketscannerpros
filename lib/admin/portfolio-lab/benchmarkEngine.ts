@@ -1,3 +1,4 @@
+import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '../adminEquities';
 /**
  * lib/admin/portfolio-lab/benchmarkEngine.ts
  *
@@ -28,6 +29,11 @@ export interface CaptureBenchmarkInput {
 
 export async function captureBenchmarkSnapshot(input: CaptureBenchmarkInput): Promise<BenchmarkSnapshotResult> {
   const symbol = (input.benchmarkSymbol || input.portfolio.settings.benchmarkSymbol || "SPY").toUpperCase();
+  if (adminEquitiesPaused()) return {
+    ok: false, benchmarkSymbol: symbol, benchmarkValue: null, benchmarkReturnPct: null,
+    arcaReturnPct: input.portfolio.startingBalance > 0 ? (input.portfolio.totalEquity / input.portfolio.startingBalance - 1) * 100 : 0,
+    relativePerformancePct: null, reason: ADMIN_EQUITIES_PAUSED_MESSAGE,
+  };
   const env = await getQuote(symbol).catch(() => null);
   const price = env?.data?.price ?? null;
   const arcaReturnPct =

@@ -1,3 +1,4 @@
+import { adminEquitiesPaused } from './adminEquities';
 /**
  * Persistence for canonical AdminEdgePacket emitted by the Opportunity
  * Board on every admin scan. See migrations/094_admin_edge_packets.sql.
@@ -318,6 +319,7 @@ export async function loadEdgePackets(input: LoadEdgePacketsInput): Promise<Edge
   const limit = Math.min(500, input.limit ?? 100);
   const params: unknown[] = [input.workspaceId];
   let where = "workspace_id = $1";
+  if (adminEquitiesPaused()) where += " AND asset_class <> 'equity' AND asset_class <> 'options'";
   if (input.symbol) { params.push(input.symbol); where += ` AND symbol = $${params.length}`; }
   if (input.market) { params.push(input.market); where += ` AND market = $${params.length}`; }
   if (input.timeframe) { params.push(input.timeframe); where += ` AND timeframe = $${params.length}`; }

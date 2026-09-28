@@ -1,3 +1,4 @@
+import { pausedAdminAvRequest } from './admin/adminEquities';
 /**
  * Global Alpha Vantage Rate Governor
  * 
@@ -173,6 +174,7 @@ export async function avFetchAdmin<T = any>(
   label?: string,
   options?: RequestInit,
 ): Promise<T | null> {
+  if (pausedAdminAvRequest(url)) return null;
   // Skip avTakeToken — admin traffic is privileged.
   trackCall();
   return _avFetchCore<T>(url, label, options);

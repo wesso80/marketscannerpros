@@ -1,3 +1,4 @@
+import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from './adminEquities';
 /**
  * Shared saved admin scan.
  *
@@ -105,7 +106,7 @@ export interface SharedScanSummary {
 
 export type StartSharedScanResult =
   | { started: true; runId: string; symbolsRequested: number; done: Promise<SharedScanSummary> }
-  | { started: false; reason: "already_running" | "table_missing" | "no_symbols" | "error"; message: string };
+  | { started: false; reason: "already_running" | "table_missing" | "no_symbols" | "paused" | "error"; message: string };
 
 function normalizeSymbols(symbols: string[]): string[] {
   const seen = new Set<string>();
@@ -127,6 +128,9 @@ function normalizeSymbols(symbols: string[]): string[] {
  */
 export async function startSharedScan(req: SharedScanRequest): Promise<StartSharedScanResult> {
   const market = req.market;
+  if (market === 'EQUITIES' && adminEquitiesPaused()) return {
+    started: false, reason: 'paused', message: ADMIN_EQUITIES_PAUSED_MESSAGE,
+  };
   const timeframe = req.timeframe || "15m";
   const symbols = normalizeSymbols(req.symbols?.length ? req.symbols : sharedScanUniverse(market));
   if (symbols.length === 0) return { started: false, reason: "no_symbols", message: "No symbols to scan." };
@@ -479,6 +483,9 @@ export async function readSavedScan(input: { market: SharedScanMarket; timeframe
     available: false, market: input.market, timeframe, packets: [], rows: [], lastRun: null, running: null,
     newestScannedAt: null, oldestScannedAt: null, ageSec: null, ageLabel: "never", missingSymbols: [],
   };
+  if (input.market === 'EQUITIES' && adminEquitiesPaused()) return {
+    ...base, message: ADMIN_EQUITIES_PAUSED_MESSAGE, ageLabel: 'paused',
+  };
   try {
     // Default readers follow the active universe, retaining historical rows in storage.
     // Explicit symbol research can still request an archived symbol.
@@ -562,6 +569,9 @@ export async function requestManualRescan(input: {
   symbols?: string[];
   nowMs?: number;
 }): Promise<ManualRescanResult> {
+  if (input.market === 'EQUITIES' && adminEquitiesPaused()) return {
+    ok: false, status: 503, error: ADMIN_EQUITIES_PAUSED_MESSAGE,
+  };
   const nowMs = input.nowMs ?? Date.now();
   const universe = new Set(sharedScanUniverse(input.market));
   let symbols: string[] | undefined;

@@ -1,3 +1,4 @@
+import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 /**
  * POST /api/operator/engine/auto-scan — trigger the shared saved admin scan
  * GET  /api/operator/engine/auto-scan — saved radar for a watchlist
@@ -122,6 +123,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    if (wl.market === 'EQUITIES' && adminEquitiesPaused()) return NextResponse.json({
+      ok: true, started: false, skipped: true, reason: 'admin_equities_paused', message: ADMIN_EQUITIES_PAUSED_MESSAGE,
+    });
     // The Operator Engine page auto-loop may only start 15m runs (the admin scan timeframe the crons keep
     // fresh). Any other timeframe from a page returns the saved state without starting a run, so a tab left
     // looping on 1H/1D cannot start a whole-universe scan every cycle.

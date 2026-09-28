@@ -1,3 +1,4 @@
+import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 /**
  * POST /api/cron/persist-edge-packets
  *
@@ -69,6 +70,9 @@ export async function POST(req: NextRequest) {
     if (marketRaw !== "CRYPTO" && marketRaw !== "EQUITIES") {
       return NextResponse.json({ ok: false, error: "market must be CRYPTO or EQUITIES" }, { status: 400 });
     }
+    if (marketRaw === 'EQUITIES' && adminEquitiesPaused()) return NextResponse.json({
+      ok: true, started: false, skipped: true, reason: 'admin_equities_paused', message: ADMIN_EQUITIES_PAUSED_MESSAGE,
+    });
     const market = marketRaw as Market;
     const timeframe = typeof body.timeframe === "string" ? body.timeframe : "15m";
     const universe = sharedScanUniverse(market === "CRYPTO" ? "CRYPTO" : "EQUITIES");
