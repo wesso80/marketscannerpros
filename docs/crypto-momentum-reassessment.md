@@ -7,8 +7,8 @@ Six weeks is not the base holding period or a universal eligibility gate for cry
 - The fixed admin watchlists excluded QNT. Major-exchange discovery now finds its CoinGecko ID without requiring static membership.
 - Paper selection still uses intraday scores mixed with weekly/daily position levels. The new momentum review does not yet replace this path.
 - `positionEngine.markAndMaybeExit` performs full exits at fixed targets. It has no partial exit or trailing-stop state.
-- Exit checks use a current sampled price, not the intervening candle path. They can miss an intracycle stop/target touch. If several targets are crossed, the current loop picks the highest target, which does not model an earlier resting take-profit accurately.
-- Initial risk is recomputed from the current stop. Trailing cannot be added safely until initial risk is stored immutably and partial fills have a proper cash/P&L ledger.
+- Exit checks use a current sampled price, not the intervening candle path. They can miss an intracycle stop/target touch. The full-exit model now selects the nearest profitable resting target, including when a later quote crosses several targets.
+- R now uses original filled-order risk through a workspace/portfolio-scoped source-order join, independent of the current position stop or quantity. Missing original evidence leaves R unknown. Source-order fill facts must remain immutable; partial fills still need a proper cash/P&L ledger.
 
 ## New development direction
 
@@ -26,4 +26,4 @@ Measure net expectancy in R, drawdown, profit factor, exposure time, missed-oppo
 
 ## Current boundary
 
-The discovery and candle-review pages are research only. Existing paper entry/exit behavior remains unchanged until the coherent momentum path and ledger are implemented and tested. No real-order execution is introduced.
+The discovery and candle-review pages are research only. Existing paper entries still use the legacy strategy. Exit accounting has the original-risk and nearest-target corrections above; momentum entries, candle-path exits, trailing stops and partial exits are not yet enabled. No real-order execution is introduced.

@@ -157,6 +157,8 @@ export interface ArcaPosition {
   realisedPnl: number;
   unrealisedPnl: number;
   openRisk: number;
+  /** Original filled-order risk; never recomputed from a moved stop. */
+  initialRiskDollars?: number | null;
   currentRMultiple: number | null;
   status: PositionStatus;
   openedAt: string;
