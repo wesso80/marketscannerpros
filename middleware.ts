@@ -1,3 +1,4 @@
+import { discoveryOnlyAction, ADMIN_DISCOVERY_ONLY_MESSAGE } from './lib/admin/discoveryOnly';
 import { pausedAdminRequest, ADMIN_EQUITIES_PAUSED_MESSAGE } from './lib/admin/adminEquities';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -136,6 +137,16 @@ setInterval(() => {
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
+  const discoveryAction = discoveryOnlyAction(pathname);
+  if (discoveryAction === 'pause_page') {
+    const pausedUrl = req.nextUrl.clone();
+    pausedUrl.pathname = '/admin/paused';
+    return NextResponse.rewrite(pausedUrl);
+  }
+  if (discoveryAction === 'pause_api' || discoveryAction === 'skip_job') return NextResponse.json({
+    ok: discoveryAction === 'skip_job', paused: true, skipped: true, started: false,
+    reason: 'admin_discovery_only', error: ADMIN_DISCOVERY_ONLY_MESSAGE,
+  }, { status: discoveryAction === 'skip_job' ? 200 : 503, headers: { 'Cache-Control': 'no-store' } });
   if (pathname.startsWith('/api/admin/')) {
     const values: Record<string, unknown> = Object.fromEntries(req.nextUrl.searchParams);
     if (req.method === 'POST' && req.headers.get('content-type')?.includes('application/json')) {
