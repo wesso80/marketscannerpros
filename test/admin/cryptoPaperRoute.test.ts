@@ -1,3 +1,4 @@
+vi.mock('@/lib/admin/cryptoAutomation',()=>({cryptoAutomationState:vi.fn(async()=>({enabled:false})),setCryptoAutomation:vi.fn()}));
 import {beforeEach,expect,it,vi} from 'vitest';
 vi.mock('@/lib/adminAuth',()=>({requireAdmin:vi.fn()}));
 vi.mock('@/lib/admin/cryptoPaper',()=>({cryptoPaperState:vi.fn(async()=>({portfolio:null})),setCryptoPaperActive:vi.fn(),runCryptoPaperCycle:vi.fn()}));

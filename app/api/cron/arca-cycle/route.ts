@@ -1,3 +1,4 @@
+import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {adminDiscoveryOnly} from '@/lib/admin/discoveryOnly';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 /**
@@ -49,7 +50,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
-  if(adminDiscoveryOnly())return NextResponse.json(cryptoPaper,{status:cryptoPaper.ok?200:503});
+  if(adminDiscoveryOnly()){
+    const scanning=await runCryptoAutomation().catch(()=>({ok:false,error:'Crypto background scan failed'}));
+    const ok=cryptoPaper.ok&&(!('ok' in scanning)||scanning.ok);
+    return NextResponse.json({...cryptoPaper,ok,scanning},{status:ok?200:503});
+  }
   const started = Date.now();
   try {
     let rows: Array<{ workspace_id: string }> = [];
