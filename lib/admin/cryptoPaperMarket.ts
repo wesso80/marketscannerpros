@@ -2,16 +2,27 @@ import {parseExchangeCandles} from './cryptoExchangeVolume';
 import type {PaperExitPath} from './portfolio-lab/paperExitPath';
 import type {VolumeMomentum} from './cryptoVolumeMomentum';
 export class PaperMarketError extends Error {}
-export type CryptoPaperQuote={bid:number;ask:number;priceAt:string;receivedAt:string;product:string};
+export type CryptoPaperQuote={bid:number;ask:number;priceAt:string;receivedAt:string;product:string;source?:string;sequence?:number};
 export function parsePaperQuote(raw:unknown,product:string,now=Date.now()):CryptoPaperQuote{
  const b=raw as Record<string,unknown>;const bid=Number(b?.bid),ask=Number(b?.ask),at=Date.parse(String(b?.time??''));
  if(!Number.isFinite(bid)||!Number.isFinite(ask)||bid<=0||ask<bid||!Number.isFinite(at)||at>now||now-at>60000)throw new PaperMarketError('Ticker has stale last-trade time or invalid bid/ask');
  return {bid,ask,priceAt:new Date(at).toISOString(),receivedAt:new Date(now).toISOString(),product};
 }
+/** Coinbase book time timestamps the quote snapshot; ticker time timestamps its last trade. */
+export function parsePaperBook(raw:unknown,product:string,now=Date.now()):CryptoPaperQuote{
+ const b=raw as {bids?:unknown[][];asks?:unknown[][];time?:string;sequence?:number;auction_mode?:boolean};
+ const bid=b?.bids?.[0],ask=b?.asks?.[0];
+ if(b?.auction_mode===true)throw new PaperMarketError('Order book is in auction mode');
+ if(!bid||!ask||!Number.isFinite(Number(bid[1]))||Number(bid[1])<=0||!Number.isFinite(Number(ask[1]))||Number(ask[1])<=0||!Number.isFinite(b.sequence))throw new PaperMarketError('Order book is empty or invalid');
+ const at=Date.parse(b.time??'');
+ if(!Number.isFinite(at)||at>now||now-at>60000)throw new PaperMarketError('Order book timestamp is missing, future or stale');
+ const quote=parsePaperQuote({bid:bid[0],ask:ask[0],time:b.time},product,now);
+ return {...quote,source:'coinbase_order_book',sequence:b.sequence};
+}
 export async function fetchPaperQuote(product:string):Promise<CryptoPaperQuote>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
- const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/ticker`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Quote provider HTTP ${r.status}`);
- return parsePaperQuote(await r.json(),product);
+ const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/book?level=1`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Quote provider HTTP ${r.status}`);
+ return parsePaperBook(await r.json(),product);
 }
 export async function fetchPaperPath(symbol:string,product:string,from?:string):Promise<PaperExitPath>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
