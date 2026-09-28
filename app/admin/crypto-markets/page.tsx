@@ -3,6 +3,7 @@ import CryptoMarketContext from '@/components/admin/CryptoMarketContext';
 import type {BaseReview} from '@/lib/admin/cryptoBase';
 import dynamic from 'next/dynamic';
 import type { MomentumChart } from '@/lib/admin/cryptoMomentum';
+const CryptoExchangeVolume = dynamic(()=>import('@/components/admin/CryptoExchangeVolume'), {ssr:false});
 const CryptoReviewChart = dynamic(()=>import('@/components/admin/CryptoReviewChart'), {ssr:false});
 import { useEffect, useState } from 'react';
 import type { DiscoveryRow, VenueEvidence } from '@/lib/admin/cryptoDiscovery';
@@ -70,6 +71,7 @@ export default function CryptoMarketsPage() {
         <p className="text-xs text-slate-400">Experimental 21-day base ending before the latest completed 4h candle. No minimum holding period. Thresholds are unvalidated. Volume contraction, breakout volume and market regime are not confirmed. This assessment runs only when you open a coin review; the first scan still ranks price momentum.</p>
       </section>}
       <CryptoReviewChart key={review.coinId} chart={chart} review={review} base={base} />
+      <CryptoExchangeVolume key={review.coinId+review.reviewedAt} coinId={review.coinId} now={now} />
       <p>{review.exitRule}</p>
       <p className="text-sm text-slate-400">Long-side research rule: completed daily and 4h closes above rising SMA20; 1h close above the previous 20-bar high, or reclaim of a pullback near SMA20. Stop below the last six hourly lows minus 0.25 ATR; maximum chase 0.5 ATR and minimum current 1.5R to a model target. Not a calibrated edge or paper-trade permission.</p>
     </section>}
