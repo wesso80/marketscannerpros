@@ -1,4 +1,5 @@
 'use client';
+const CryptoSetupEmail = dynamic(()=>import('@/components/admin/CryptoSetupEmail'), {ssr:false});
 const CryptoPaperAccount = dynamic(()=>import('@/components/admin/CryptoPaperAccount'), {ssr:false});
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
@@ -63,6 +64,7 @@ export default function CryptoMarketsPage() {
     <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page and Refresh saved dashboard read saved discovery, scans and paper results only; they do not request new provider data.</p>
     {error && <p role="alert" className="text-red-300">{error}</p>}
     <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
+    <CryptoSetupEmail refreshVersion={refreshVersion} />
     <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />

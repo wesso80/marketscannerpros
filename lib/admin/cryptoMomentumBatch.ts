@@ -1,3 +1,4 @@
+import {sendCryptoSetupEmails} from './cryptoSetupEmail';
 import {NextResponse} from 'next/server';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
@@ -27,6 +28,7 @@ export async function runMomentumBatch(limit=5){
    if(i+5<pending.length)await new Promise(resolve=>setTimeout(resolve,Math.max(0,1000-(Date.now()-batchStarted))));
    scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   }
-  return NextResponse.json({scan,requestAttempts:requests});
+  const emailAlerts=await sendCryptoSetupEmails(scan);
+  return NextResponse.json({scan,requestAttempts:requests,emailAlerts});
  }catch{return NextResponse.json({error:'Momentum scan storage unavailable; progress may be incomplete'},{status:503});}
 }
