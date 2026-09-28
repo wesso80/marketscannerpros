@@ -1,3 +1,5 @@
+import {adminDiscoveryOnly} from '@/lib/admin/discoveryOnly';
+import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 /**
  * POST /api/cron/arca-cycle
  *
@@ -46,6 +48,8 @@ export async function POST(req: NextRequest) {
   if (!(await authorise(req))) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
+  const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
+  if(adminDiscoveryOnly())return NextResponse.json(cryptoPaper,{status:cryptoPaper.ok?200:503});
   const started = Date.now();
   try {
     let rows: Array<{ workspace_id: string }> = [];

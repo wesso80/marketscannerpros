@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const sections = [
-  {label:"Crypto Markets", items:[{href:"/admin/crypto-markets",label:"Explorer & Charts",icon:"◈"}]},
+  {label:"Crypto Markets", items:[{href:"/admin/crypto-markets",label:"Explorer & Charts",icon:"◈"},{href:"/admin/crypto-markets#crypto-paper",label:"Paper Account",icon:"◈"}]},
   {
     label: "RESEARCH",
     items: [

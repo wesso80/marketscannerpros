@@ -1,0 +1,37 @@
+'use client';
+import {useEffect,useState} from 'react';
+import type {ArcaPortfolio,ArcaPosition,ArcaTrade,ArcaJournalEntry} from '@/lib/admin/portfolio-lab/types';
+type State={portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
+const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
+export default function CryptoPaperAccount({now}:{now:number}){
+ const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ async function load(action?:'enable'|'pause'|'cycle'){
+  setBusy(true);setError('');setNotice('');
+  try{const r=await fetch('/api/admin/crypto-markets/paper',{method:action?'POST':'GET',cache:'no-store',...(action?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action})}:{})}),b=await r.json();if(!r.ok)throw Error(b.error||'Paper account unavailable');setData(b);if(b.cycle?.reason)setNotice(b.cycle.reason);}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ useEffect(()=>{void load();},[]);
+ const p=data?.portfolio,last=data?.journal.find(j=>j.title==='Crypto paper cycle completed');
+ return <section id="crypto-paper" aria-label="Crypto paper account" className="space-y-3 rounded border border-violet-700 p-4 scroll-mt-4">
+  <h2 className="text-xl">Crypto paper account · SIMULATED</h2>
+  <p>Independent $200,000 paper ledger. Coinbase USD momentum breakouts and continuations; no daily base requirement. Other venues remain research-only until quote-currency accounting is connected.</p>
+  <p className="text-xs text-slate-400">0.25% risk per trade · 10% maximum notional per position · five open positions · 2% open-risk cap · ten entries per day · pause new entries below 95% of starting equity. Estimated fee and slippage: 0.05% each, each side. No real orders.</p>
+  <div className="flex flex-wrap gap-3">
+   <button disabled={busy} onClick={()=>void load(p?.status==='ACTIVE'?'pause':'enable')} className="rounded bg-violet-800 px-3 py-2 disabled:opacity-50">{p?.status==='ACTIVE'?'Pause paper entries':p?'Resume paper entries':'Enable crypto paper account'}</button>
+   {p&&<button disabled={busy} onClick={()=>void load('cycle')} className="rounded border px-3 py-2">Run paper cycle</button>}
+   <button disabled={busy} onClick={()=>void load()} className="rounded border px-3 py-2">Refresh paper account</button>
+  </div>
+  {busy&&<p>Updating paper account…</p>}{error&&<p role="alert" className="text-red-300">{error}</p>}{notice&&<p>{notice}</p>}
+  <p className="text-xs text-slate-400">The scheduled paper cycle checks positions every 15 minutes, including when this page is closed. Pausing entries keeps exit monitoring active. New entries use the saved 4h momentum scan and a freshly rechecked setup plus bid/ask. The scan itself still needs to be run. Missing exit data blocks further entries.</p>
+  <p className="text-xs text-slate-400">Stops and targets use completed 15-minute candles plus the latest quote. Both touched in one candle: stop first. Partial entry candle: a possible stop is charged conservatively; its target high is never credited. Gaps can lose more than planned risk. These are simulated results, not exchange fills.</p>
+  {p&&<>
+   <p>Entries: {p.status} · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L {money(p.unrealisedPnl)} (before exit costs)</p>
+   <p>{last?`Last cycle ${new Date(last.createdAt).toLocaleString()}${now-Date.parse(last.createdAt)>25*60000?' · OVERDUE — check monitoring':''}`:'No completed cycle recorded yet'}</p>
+   {last?.arcaReasoning&&<p className="text-sm text-slate-400">{last.arcaReasoning}</p>}
+   <h3 className="font-semibold">Open paper positions ({data!.positions.length})</h3>
+   {!data!.positions.length?<p>No open paper positions. Entries require a qualifying setup and a valid current entry price.</p>:<div className="overflow-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr>{['Coin / source','Entry','Last mark','Stop','Target','Quantity','Open P&L','Marked at'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{data!.positions.map(x=><tr key={x.id} className="border-t border-slate-700"><td className="p-2">{x.symbol}<br/>{x.instrumentType}</td><td className="p-2">{x.averageEntry.toPrecision(6)}</td><td className="p-2">{x.currentPrice?.toPrecision(6)??'—'}</td><td className="p-2">{x.stopLoss?.toPrecision(6)}</td><td className="p-2">{x.takeProfit1?.toPrecision(6)}</td><td className="p-2">{x.quantity}</td><td className="p-2">{money(x.unrealisedPnl)}</td><td className="p-2">{x.lastMarkAt??'Not yet checked'}</td></tr>)}</tbody></table></div>}
+   <h3 className="font-semibold">Closed paper trades (latest 100)</h3>
+   {!data!.trades.length?<p>No closed trades yet.</p>:<div className="overflow-auto"><table className="w-full min-w-[800px] text-left text-sm"><thead><tr>{['Coin','Entry','Exit','Net P&L','R','Reason','Closed at'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{data!.trades.map(x=><tr key={x.id} className="border-t border-slate-700"><td className="p-2">{x.symbol}</td><td className="p-2">{x.entryPrice.toPrecision(6)}</td><td className="p-2">{x.exitPrice.toPrecision(6)}</td><td className="p-2">{money(x.realisedPnl)}</td><td className="p-2">{x.rMultiple?.toFixed(2)??'—'}</td><td className="p-2">{x.exitReason}</td><td className="p-2">{new Date(x.exitTime).toLocaleString()}</td></tr>)}</tbody></table></div>}
+  </>}
+ </section>;
+}

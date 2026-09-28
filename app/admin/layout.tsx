@@ -65,7 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const navSections = [
-    { label: "Crypto Markets", items: [{href:"/admin/crypto-markets", label:"Explorer & Charts", code:"CR"}] },
+    { label: "Crypto Markets", items: [{href:"/admin/crypto-markets", label:"Explorer & Charts", code:"CR"},{href:"/admin/crypto-markets#crypto-paper", label:"Paper Account", code:"CP"}] },
     {
       label: "Command",
       items: [

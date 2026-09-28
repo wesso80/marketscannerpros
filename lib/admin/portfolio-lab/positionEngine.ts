@@ -30,6 +30,7 @@ export interface MarkInput {
   position: ArcaPosition;
   currentPrice: number;
   candlePath?: PaperExitPath;
+  skipLearning?: boolean;
 }
 
 export interface MarkResult {
@@ -211,7 +212,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
 
   // P1 — Closed-trade learning loop. Soft-failed so a labeller/doctrine
   // failure cannot corrupt the close itself.
-  await recordTradeClosureLearning({
+  if(!input.skipLearning) await recordTradeClosureLearning({
     trade,
     portfolio,
     manualClose: false,
