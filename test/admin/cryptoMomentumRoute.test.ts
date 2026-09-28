@@ -1,0 +1,19 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({auth:vi.fn(),redis:vi.fn(),get:vi.fn(),set:vi.fn(),enabled:vi.fn(),ohlc:vi.fn()}));
+vi.mock('@/lib/adminAuth',()=>({requireAdmin:m.auth}));
+vi.mock('@/lib/redis',()=>({getRedis:m.redis}));
+vi.mock('@/lib/coingecko',()=>({getOHLCRange:m.ohlc}));
+vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:m.enabled,isCoinGeckoEnabled:m.enabled}));
+import {POST} from '@/app/api/admin/crypto-discovery/analyze/route';
+const req=(id='quant-network')=>new Request('https://test',{method:'POST',body:JSON.stringify({coinId:id})});
+beforeEach(()=>{vi.resetAllMocks();m.auth.mockResolvedValue({ok:true});m.enabled.mockReturnValue(true);m.redis.mockReturnValue({get:m.get,set:m.set});m.set.mockResolvedValue('OK');m.ohlc.mockResolvedValue(null);
+  m.get.mockImplementation(async(key:string)=>key==='admin:crypto-discovery:v1'?{startedAt:new Date().toISOString(),rows:[{id:'quant-network',symbol:'QNT',stage:'MOMENTUM',price:100,observedAt:new Date().toISOString()}]}:null);});
+describe('momentum analysis budgets and boundaries',()=>{
+  it('does not spend calls for arbitrary coin IDs outside the saved discovery result',async()=>{expect((await POST(req('unknown'))).status).toBe(409);expect(m.ohlc).not.toHaveBeenCalled();});
+  it('rejects unauthorized requests',async()=>{m.auth.mockResolvedValue({ok:false});expect((await POST(req())).status).toBe(403);expect(m.redis).not.toHaveBeenCalled();});
+  it('shares recent analysis without additional provider calls',async()=>{m.get.mockResolvedValue({reviewedAt:new Date().toISOString()});expect((await POST(req())).status).toBe(200);expect(m.set).not.toHaveBeenCalled();expect(m.ohlc).not.toHaveBeenCalled();});
+  it('respects provider pause',async()=>{m.enabled.mockReturnValue(false);expect((await POST(req())).status).toBe(409);expect(m.ohlc).not.toHaveBeenCalled();});
+  it('fails closed if the ten-coin shared budget is exhausted',async()=>{m.set.mockImplementation(async(key:string)=>key.includes(':coin:')?'OK':null);expect((await POST(req())).status).toBe(429);expect(m.ohlc).not.toHaveBeenCalled();expect(m.set).toHaveBeenCalledTimes(11);});
+  it('uses two bounded candle calls and reports unavailable history',async()=>{const res=await POST(req());expect(res.status).toBe(200);expect(m.ohlc).toHaveBeenCalledTimes(2);expect(m.ohlc.mock.calls.map(c=>c[4])).toEqual(['hourly','daily']);expect((await res.json()).review.status).toBe('BLOCKED');});
+  it('fails closed on budget/cache errors',async()=>{m.set.mockRejectedValue(new Error('cache'));expect((await POST(req())).status).toBe(503);expect(m.ohlc).not.toHaveBeenCalled();});
+});
