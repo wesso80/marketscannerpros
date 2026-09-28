@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import CollapsibleAdminGroup from "@/components/admin/CollapsibleAdminGroup";
 import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
 import AdminCommandPalette from "@/components/admin/AdminCommandPalette";
 import { AdminModeProvider, AdminModeSwitcher } from "@/components/admin/AdminModeSwitcher";
@@ -64,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const navSections = [
+    { label: "Crypto Markets", items: [{href:"/admin/crypto-markets", label:"Explorer & Charts", code:"CR"}] },
     {
       label: "Command",
       items: [
@@ -82,7 +84,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       items: [
         { href: "/admin/opportunity-board", label: "Opportunity Board", code: "OB" },
         { href: "/admin/live-scanner", label: "Live Scanner", code: "LS" },
-        { href: "/admin/crypto-discovery", label: "Crypto Discovery", code: "CD" },
         { href: "/admin/scalper", label: "Scalper", code: "SC" },
         { href: "/admin/quant", label: "Quant Terminal", code: "QT" },
         { href: "/admin/learning-engine", label: "Learning Engine", code: "LE" },
@@ -273,18 +274,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <nav style={{ flex: 1 }}>
             {navSections.map((section) => (
-              <div key={section.label} style={{ marginBottom: "1rem" }}>
-                <div style={{
-                  color: "#64748B",
-                  fontSize: "0.68rem",
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                  padding: "0 0.6rem",
-                  marginBottom: "0.4rem",
-                  fontWeight: 800,
-                }}>
-                  {section.label}
-                </div>
+              <CollapsibleAdminGroup key={section.label} label={section.label} active={section.items.some(item=>isActiveRoute(item.href))}>
                 {section.items.map((item) => {
                   const active = isActiveRoute(item.href);
                   return (
@@ -320,7 +310,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </Link>
                   );
                 })}
-              </div>
+              </CollapsibleAdminGroup>
             ))}
           </nav>
 

@@ -73,3 +73,14 @@ export function reviewCryptoMomentum(coin:DiscoveryRow, hourlyRaw:number[][],dai
   result.reasons.push('Price pattern confirmed only; candle-volume confirmation and paper-entry approval are not supplied by this review');
   return result;
 }
+
+export type MomentumChart = {source:'CoinGecko'; timestampBasis:'candle-close-UTC'; hourly:Bar[]; fourHourly:Bar[]; daily:Bar[]; error?:string};
+/** Use the same strict history validation as the review. Never draw invented gap bars. */
+export function momentumChart(hourlyRaw:number[][],dailyRaw:number[][],now=Date.now()):MomentumChart {
+  try {
+    const hourly=candles(hourlyRaw,HOUR,now), daily=candles(dailyRaw,DAY,now);
+    return {source:'CoinGecko',timestampBasis:'candle-close-UTC',hourly,fourHourly:completedFourHourBars(hourly,now),daily};
+  } catch(e) {
+    return {source:'CoinGecko',timestampBasis:'candle-close-UTC',hourly:[],fourHourly:[],daily:[],error:(e as Error).message};
+  }
+}

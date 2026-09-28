@@ -1,9 +1,11 @@
 "use client";
 
+import CollapsibleAdminGroup from "../CollapsibleAdminGroup";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const sections = [
+  {label:"Crypto Markets", items:[{href:"/admin/crypto-markets",label:"Explorer & Charts",icon:"◈"}]},
   {
     label: "RESEARCH",
     items: [
@@ -62,10 +64,7 @@ export default function AdminSidebar() {
     <aside className="flex w-52 flex-col border-r border-white/10 bg-[#0d1524] overflow-y-auto">
       <nav className="flex-1 p-2 space-y-4">
         {sections.map((section) => (
-          <div key={section.label}>
-            <div className="mb-1.5 px-3 text-[10px] uppercase tracking-[0.2em] text-white/30 font-medium">
-              {section.label}
-            </div>
+          <CollapsibleAdminGroup key={section.label} label={section.label} active={section.items.some(item=>pathname===item.href)}>
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = pathname === item.href ||
@@ -86,7 +85,7 @@ export default function AdminSidebar() {
                 );
               })}
             </div>
-          </div>
+          </CollapsibleAdminGroup>
         ))}
       </nav>
     </aside>
