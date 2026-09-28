@@ -1,11 +1,11 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {ArcaPortfolio,ArcaPosition,ArcaTrade,ArcaJournalEntry} from '@/lib/admin/portfolio-lab/types';
-type State={portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
+type State={automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
 export default function CryptoPaperAccount({now}:{now:number}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- async function load(action?:'enable'|'pause'|'cycle'){
+ async function load(action?:'enable'|'pause'|'cycle'|'auto_enable'|'auto_pause'){
   setBusy(true);setError('');setNotice('');
   try{const r=await fetch('/api/admin/crypto-markets/paper',{method:action?'POST':'GET',cache:'no-store',...(action?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action})}:{})}),b=await r.json();if(!r.ok)throw Error(b.error||'Paper account unavailable');setData(b);if(b.cycle?.reason)setNotice(b.cycle.reason);}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
@@ -16,13 +16,17 @@ export default function CryptoPaperAccount({now}:{now:number}){
   <h2 className="text-xl">Crypto paper account · SIMULATED</h2>
   <p>Independent $200,000 paper ledger. Coinbase USD momentum breakouts and continuations; no daily base requirement. Other venues remain research-only until quote-currency accounting is connected.</p>
   <p className="text-xs text-slate-400">0.25% risk per trade · 10% maximum notional per position · five open positions · 2% open-risk cap · ten entries per day · pause new entries below 95% of starting equity. Estimated fee and slippage: 0.05% each, each side. No real orders.</p>
+  <p>Background scans: {data?.automation?.enabled?'ENABLED':'OFF'} · Manual scans remain available.</p>
+  {data?.automation?.last&&<p>Last background scan batch: {new Date(data.automation.last.at).toLocaleString()} · {data.automation.last.ok?'Completed':'FAILED'} {data.automation.last.error??''}</p>}
+  <button disabled={busy||!data} onClick={()=>void load(data?.automation?.enabled?'auto_pause':'auto_enable')} className="rounded border px-3 py-2">{data?.automation?.enabled?'Pause background scans':'Enable background scans'}</button>
+  <p className="text-xs text-slate-400">When enabled, the 15-minute schedule advances up to 100 momentum coins and 20 daily-base coins per run. A new momentum scan starts each UTC 4h window; bases restart daily. Discovery refreshes when a new scan needs fresh coverage. A 300-coin momentum scan takes about 30–45 minutes. Turning this off does not pause paper exits.</p>
   <div className="flex flex-wrap gap-3">
    <button disabled={busy} onClick={()=>void load(p?.status==='ACTIVE'?'pause':'enable')} className="rounded bg-violet-800 px-3 py-2 disabled:opacity-50">{p?.status==='ACTIVE'?'Pause paper entries':p?'Resume paper entries':'Enable crypto paper account'}</button>
    {p&&<button disabled={busy} onClick={()=>void load('cycle')} className="rounded border px-3 py-2">Run paper cycle</button>}
    <button disabled={busy} onClick={()=>void load()} className="rounded border px-3 py-2">Refresh paper account</button>
   </div>
   {busy&&<p>Updating paper account…</p>}{error&&<p role="alert" className="text-red-300">{error}</p>}{notice&&<p>{notice}</p>}
-  <p className="text-xs text-slate-400">The scheduled paper cycle checks positions every 15 minutes, including when this page is closed. Pausing entries keeps exit monitoring active. New entries use the saved 4h momentum scan and a freshly rechecked setup plus bid/ask. The scan itself still needs to be run. Missing exit data blocks further entries.</p>
+  <p className="text-xs text-slate-400">The scheduled paper cycle checks positions every 15 minutes, including when this page is closed. Pausing entries keeps exit monitoring active. New entries use the saved 4h momentum scan and a freshly rechecked setup plus bid/ask. Scans refresh automatically only when background scans are enabled above. Missing exit data blocks further entries.</p>
   <p className="text-xs text-slate-400">Stops and targets use completed 15-minute candles plus the latest quote. Both touched in one candle: stop first. Partial entry candle: a possible stop is charged conservatively; its target high is never credited. Gaps can lose more than planned risk. These are simulated results, not exchange fills.</p>
   {p&&<>
    <p>Entries: {p.status} · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L {money(p.unrealisedPnl)} (before exit costs)</p>

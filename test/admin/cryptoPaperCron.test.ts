@@ -1,3 +1,4 @@
+vi.mock('@/lib/admin/cryptoAutomation',()=>({runCryptoAutomation:vi.fn(async()=>({enabled:false,skipped:true}))}));
 import {beforeEach,afterEach,expect,it,vi} from 'vitest';
 import {NextRequest} from 'next/server';
 vi.mock('@/lib/adminAuth',()=>({requireAdmin:vi.fn(async()=>({ok:false}))}));
