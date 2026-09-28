@@ -87,3 +87,38 @@ it('dashboard never lists stale evidence as permission', () => {
   const c = context(); c.snapshots[0].computed_at = new Date(now - 3 * 3600_000).toISOString();
   expect(paperRegimeSummary(c, 'w', now).every(r => r.permittedPlaybooks.length === 0)).toBe(true);
 });
+
+it('reports overlapping exclusion causes without changing eligibility', () => {
+  const r = rows();
+  r[0] = { ...r[0], observedAt: null, changePercent: null };
+  r[1] = { ...r[1], fetchedAt: new Date(now - 3 * 3600_000), observedAt: new Date(now - 3 * 3600_000), relVol: NaN };
+  r[2].observedAt = new Date(now + 1);
+  const evidence = buildMicroEvidence(r, now);
+  expect(evidence.components).toMatchObject({ usable: true, symbolCount: 22, universeCount: 25, coverage: 22 / 25,
+    diagnosticsVersion: 1, latestObservedAt: at,
+    excluded: { missingTimestamp: 1, futureTimestamp: 1, staleFetch: 1, staleObservation: 1, invalidChange: 1, invalidVolume: 1 } });
+});
+it('keeps stale observations visible diagnostically without treating them as usable', () => {
+  const stale = new Date(now - 3 * 3600_000).toISOString();
+  const evidence = buildMicroEvidence(rows().map(r => ({ ...r, observedAt: stale })), now);
+  expect(evidence).toMatchObject({ microState: 'unknown', components: { usable: false, symbolCount: 0,
+    latestObservedAt: stale, sourceOldestAt: null, excluded: { staleObservation: 25 } } });
+});
+it.each([
+  ['2026-09-28T00:52:00Z', 'REGULAR_CLOSED'], // Sunday in New York
+  ['2026-09-28T13:29:00Z', 'REGULAR_CLOSED'],
+  ['2026-09-28T13:30:00Z', 'REGULAR_OPEN'],
+  ['2026-09-28T20:00:00Z', 'REGULAR_CLOSED'],
+  ['2026-11-27T17:59:00Z', 'REGULAR_OPEN'], // early close / EST
+  ['2026-11-27T18:00:00Z', 'REGULAR_CLOSED'],
+])('exposes US session state at %s without granting permission', (date, session) => {
+  const summary = paperRegimeSummary({ snapshots: [], policies: [] }, 'w', Date.parse(date));
+  expect(summary[0]).toMatchObject({ session, status: 'BLOCKED', symbolCount: null, diagnostics: null, permittedPlaybooks: [] });
+  expect(summary[1].session).toBe('CONTINUOUS');
+});
+it('retains evidence failures and diagnostics outside the regular session', () => {
+  const c = context(); c.snapshots[0].asset_class = 'equity';
+  const summary = paperRegimeSummary(c, 'w', Date.parse('2026-09-28T00:52:00Z'))[0];
+  expect(summary).toMatchObject({ session: 'REGULAR_CLOSED', status: 'BLOCKED', symbolCount: 25, universeCount: 25,
+    reason: 'Regime evidence is expired or has invalid timestamps.', permittedPlaybooks: [] });
+});

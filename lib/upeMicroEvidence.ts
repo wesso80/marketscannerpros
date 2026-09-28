@@ -11,12 +11,26 @@ export interface MicroInput {
   observedAt: string | Date | null;
 }
 export function buildMicroEvidence(rows: MicroInput[], nowMs: number) {
+  // Counts overlap: a row may have both stale observations and missing volume evidence.
+  const excluded = { missingTimestamp: 0, futureTimestamp: 0, staleFetch: 0, staleObservation: 0, invalidChange: 0, invalidVolume: 0 };
+  const timestamp = (value: string | Date | null) => value == null ? NaN : new Date(value).getTime();
   const valid = rows.filter(r => {
-    const fetched = r.fetchedAt == null ? NaN : new Date(r.fetchedAt).getTime();
-    const observed = r.observedAt == null ? NaN : new Date(r.observedAt).getTime();
-    return r.changePercent !== null && Number.isFinite(r.changePercent) && Number.isFinite(r.relVol) && r.relVol > 0 &&
-      [fetched, observed].every(t => Number.isFinite(t) && t <= nowMs && nowMs - t <= MICRO_MAX_AGE_MS);
+    const fetched = timestamp(r.fetchedAt), observed = timestamp(r.observedAt);
+    const failures = {
+      missingTimestamp: !Number.isFinite(fetched) || !Number.isFinite(observed),
+      futureTimestamp: fetched > nowMs || observed > nowMs,
+      staleFetch: Number.isFinite(fetched) && nowMs - fetched > MICRO_MAX_AGE_MS,
+      staleObservation: Number.isFinite(observed) && nowMs - observed > MICRO_MAX_AGE_MS,
+      invalidChange: r.changePercent === null || !Number.isFinite(r.changePercent),
+      invalidVolume: !Number.isFinite(r.relVol) || r.relVol <= 0,
+    };
+    for (const key of Object.keys(excluded) as Array<keyof typeof excluded>) if (failures[key]) excluded[key]++;
+    return !Object.values(failures).some(Boolean);
   });
+  const latestTimestamp = (field: 'fetchedAt' | 'observedAt') => {
+    const times = rows.map(r => timestamp(r[field])).filter(t => Number.isFinite(t) && t <= nowMs);
+    return times.length ? new Date(Math.max(...times)).toISOString() : null;
+  };
   const coverage = rows.length ? valid.length / rows.length : 0;
   const usable = valid.length >= MICRO_MIN_SYMBOLS && coverage >= MICRO_MIN_COVERAGE;
   const breadthPercent = valid.length ? valid.filter(r => r.changePercent! > 0).length / valid.length * 100 : null;
@@ -26,7 +40,8 @@ export function buildMicroEvidence(rows: MicroInput[], nowMs: number) {
   return {
     microState: score === null ? 'unknown' : score >= 2 ? 'risk_on' : score <= -2 ? 'risk_off' : 'neutral',
     components: {
-      evidenceVersion: MICRO_EVIDENCE_VERSION, usable, coverage, symbolCount: valid.length, universeCount: rows.length,
+      evidenceVersion: MICRO_EVIDENCE_VERSION, diagnosticsVersion: 1, usable, coverage, symbolCount: valid.length, universeCount: rows.length,
+      excluded, latestObservedAt: latestTimestamp('observedAt'), latestFetchedAt: latestTimestamp('fetchedAt'),
       breadthPercent, avgAbsMove, avgRelVol,
       sourceOldestAt: valid.length ? new Date(Math.min(...valid.flatMap(r => [new Date(r.fetchedAt!).getTime(), new Date(r.observedAt!).getTime()]))).toISOString() : null,
       source: 'quotes_latest fetched_at and observed_at; UPE breadth/volume micro regime',

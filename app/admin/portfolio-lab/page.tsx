@@ -85,7 +85,7 @@ interface SummaryPayload {
   risk?: RiskEvent[];
   snapshots?: Snapshot[];
   disclaimer?: string;
-  regimeChecks?: Array<{ assetClass: string; status: string; reason: string; regime?: string | null; observedAt?: string | null; permittedPlaybooks?: string[] }>;
+  regimeChecks?: Array<{ assetClass: string; status: string; reason: string; regime?: string | null; observedAt?: string | null; permittedPlaybooks?: string[]; session?: string; symbolCount?: number | null; universeCount?: number | null; coverage?: number | null; minimumSymbols?: number; minimumCoverage?: number; latestObservedAt?: string | null; diagnostics?: Record<string, number> | null }>;
 }
 
 export default function PortfolioLabPage() {
@@ -307,7 +307,11 @@ export default function PortfolioLabPage() {
               {!data?.regimeChecks?.length && <p>Regime readiness unavailable.</p>}
               {data?.regimeChecks?.map(check => <div key={check.assetClass} style={{ marginTop: 8 }}>
                 <strong>{check.assetClass.toUpperCase()} · {check.status.replaceAll("_", " ")}</strong>
+                {check.session === "REGULAR_CLOSED" && <p style={{ fontSize: 12, color: "#FBBF24" }}>US regular session closed. Fresh intraday coverage is not expected outside the session; saved evidence checks below still apply.</p>}
                 <p style={{ fontSize: 12 }}>{check.reason}</p>
+                {check.symbolCount != null && check.universeCount != null && <p style={{ fontSize: 12 }}>Snapshot coverage: {check.symbolCount}/{check.universeCount} valid symbols{check.coverage != null ? ` (${(check.coverage * 100).toFixed(1)}%)` : ""}. Requires {check.minimumSymbols} symbols and {((check.minimumCoverage ?? 0) * 100).toFixed(0)}% coverage.</p>}
+                {check.latestObservedAt && <p style={{ fontSize: 12 }}>Newest source observation: {new Date(check.latestObservedAt).toLocaleString()} (does not establish coverage)</p>}
+                {check.diagnostics && <p style={{ fontSize: 12 }}>Excluded checks (may overlap): {Object.entries(check.diagnostics).filter(([, count]) => count > 0).map(([key, count]) => `${key.replace(/([A-Z])/g, " $1").toLowerCase()}: ${count}`).join(", ") || "none"}.</p>}
                 {check.regime && <p style={{ fontSize: 12 }}>Regime: {check.regime}</p>}
                 {check.observedAt && <p style={{ fontSize: 12 }}>Snapshot: {new Date(check.observedAt).toLocaleString()}</p>}
                 {!!check.permittedPlaybooks?.length && <p style={{ fontSize: 12 }}>Permitted playbooks: {check.permittedPlaybooks.join(", ")}</p>}

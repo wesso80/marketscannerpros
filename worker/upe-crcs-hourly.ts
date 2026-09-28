@@ -246,6 +246,7 @@ function computeEligibility(
 async function upsertMicroRegimeSnapshots(rows: MicroInput[], computedAt: Date) {
   for (const assetClass of ['equity', 'crypto'] as const) {
     const evidence = buildMicroEvidence(rows.filter(r => r.assetClass === assetClass), computedAt.getTime());
+    console.log('[upe-crcs-hourly] micro evidence', JSON.stringify({ assetClass, microState: evidence.microState, ...evidence.components }));
     await q(
       `INSERT INTO micro_regime_snapshots (asset_class, micro_state, adjustment_cap, components_json, computed_at)
        VALUES ($1, $2, $3, $4::jsonb, $5)`,

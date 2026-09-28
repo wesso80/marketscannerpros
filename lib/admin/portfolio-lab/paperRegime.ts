@@ -1,3 +1,4 @@
+import { isUsRegularSessionOpen } from '@/lib/time/usSession';
 import { q } from '@/lib/db';
 import type { EdgePacketRow } from '@/lib/admin/edgePacketSnapshots';
 import { projectCandidate } from './decisionEngine';
@@ -70,7 +71,14 @@ export function paperRegimeSummary(context: PaperRegimeContext, workspaceId: str
     const permitted = decisions.filter(d => d.sizeMultiplier > 0).map(d => d.playbookId!);
     const conditional = decisions.filter(d => d.status === 'WAIT_FOR_CONFIRMATION').map(d => d.playbookId!);
     const standingDown = !!policy && !playbooks.length && decisions[0].status === 'UNKNOWN_PLAYBOOK';
-    return { assetClass, status: permitted.length ? 'POLICY_AVAILABLE' : conditional.length ? 'CONDITIONAL' : 'BLOCKED',
+    const components = snapshot?.components_json ?? {};
+    const numberOrNull = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+    return { assetClass, session: assetClass === 'crypto' ? 'CONTINUOUS' : isUsRegularSessionOpen(nowMs) ? 'REGULAR_OPEN' : 'REGULAR_CLOSED',
+      symbolCount: numberOrNull(components.symbolCount), universeCount: numberOrNull(components.universeCount),
+      latestObservedAt: typeof components.latestObservedAt === 'string' ? components.latestObservedAt : null,
+      diagnostics: components.diagnosticsVersion === 1 ? components.excluded : null,
+      minimumSymbols: MICRO_MIN_SYMBOLS, minimumCoverage: MICRO_MIN_COVERAGE,
+      status: permitted.length ? 'POLICY_AVAILABLE' : conditional.length ? 'CONDITIONAL' : 'BLOCKED',
       policyConfigured: !!policy, conditionalPlaybooks: conditional,
       requiredConfirmations: policy?.requiredConfirmations ?? [],
       reason: permitted.length ? 'Fresh regime evidence and explicit playbook permissions. Other trade checks still apply.'
