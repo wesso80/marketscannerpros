@@ -52,6 +52,8 @@ export async function collectDiscoveryMarkets(
   const venues: Record<string, VenueEvidence[]> = {};
   const coverage: {exchange:string; pages:number; status:'CAPPED'|'END'|'FAILED'; pairsSeen:number}[] = [];
   let requests = 0;
+  let eligiblePairs=0,latestTradeAt:number|null=null;
+  const rejectedPairs:Record<string,number>={};
   for (const exchange of DISCOVERY_EXCHANGES) {
     const entry: typeof coverage[number] = {exchange,pages:0,status:'CAPPED',pairsSeen:0};
     coverage.push(entry);
@@ -61,7 +63,14 @@ export async function collectDiscoveryMarkets(
       if (!batch) {entry.status='FAILED'; break;}
       entry.pairsSeen += batch.length;
       for (const t of batch.slice(0,100)) {
+        const at=Date.parse(t.last_traded_at);
+        if(Number.isFinite(at))latestTradeAt=Math.max(latestTradeAt??at,at);
         const evidence = eligibleVenue(t,exchange,nowMs);
+        if(evidence)eligiblePairs++;
+        else{
+          const reason=!t.coin_id?'missing_coin_id':t.market?.identifier!==exchange?'venue_mismatch':t.is_stale!==false||t.is_anomaly!==false?'stale_or_anomaly_flag':!Number.isFinite(at)||at>nowMs||nowMs-at>DISCOVERY_POLICY.maxAgeMs?'trade_timestamp_outside_window':!finite(t.converted_volume?.usd)||t.converted_volume.usd<DISCOVERY_POLICY.minPairVolumeUsd?'pair_volume_below_floor':'spread_invalid_or_too_wide';
+          rejectedPairs[reason]=(rejectedPairs[reason]??0)+1;
+        }
         if (evidence && !(venues[t.coin_id]??[]).some(v=>v.exchange===exchange && v.pair===evidence.pair))
           (venues[t.coin_id]??=[]).push(evidence);
       }
@@ -80,5 +89,5 @@ export async function collectDiscoveryMarkets(
     rows.push(...batch.filter(r=>requested.has(r.id)));
   }
   const returned = new Set(rows.map(r=>r.id));
-  return {rows,venues,coverage,requests,failedMarketBatches,missingMarketIds:ids.filter(id=>!returned.has(id))};
+  return {rows,venues,coverage,requests,eligiblePairs,rejectedPairs,latestTradeAt:latestTradeAt===null?null:new Date(latestTradeAt).toISOString(),failedMarketBatches,missingMarketIds:ids.filter(id=>!returned.has(id))};
 }

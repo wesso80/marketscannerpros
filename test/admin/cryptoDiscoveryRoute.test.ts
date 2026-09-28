@@ -13,5 +13,5 @@ describe('discovery request boundaries',()=>{
   it('respects provider pause',async()=>{mocks.enabled.mockReturnValue(false);expect((await POST(new Request('https://test'))).status).toBe(409);expect(mocks.tickers).not.toHaveBeenCalled();});
   it('fails closed when the shared budget cannot be reserved',async()=>{mocks.set.mockRejectedValue(new Error('offline'));expect((await POST(new Request('https://test'))).status).toBe(503);expect(mocks.tickers).not.toHaveBeenCalled();});
   it('rejects repeated scans during cooldown',async()=>{mocks.set.mockResolvedValue(null);expect((await POST(new Request('https://test'))).status).toBe(429);expect(mocks.tickers).not.toHaveBeenCalled();});
-  it('saves partial coverage honestly when venues fail',async()=>{mocks.tickers.mockResolvedValue(null);const res=await POST(new Request('https://test'));expect(res.status).toBe(206);expect((await res.json()).snapshot.partial).toBe(true);expect(mocks.markets).not.toHaveBeenCalled();});
+  it('retains previous results and reports failure when all venues fail',async()=>{mocks.tickers.mockResolvedValue(null);const res=await POST(new Request('https://test'));expect(res.status).toBe(503);expect((await res.json()).error).toContain('zero coins');expect(mocks.set).toHaveBeenCalledTimes(1);expect(mocks.markets).not.toHaveBeenCalled();});
 });

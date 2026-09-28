@@ -13,10 +13,10 @@ export async function runBaseBatch(limit=5){
     if(!await redis.set(`${KEY}:batch-lock`,'reserved',{nx:true,ex:limit>5?240:60}))return NextResponse.json({error:'Shared batch active or cooling down; showing latest saved progress',scan:await redis.get<BaseScan>(KEY)},{status:429});
     const now=Date.now();let scan=await redis.get<BaseScan>(KEY);
     const day=Math.floor(now/86400000);
-    if(!scan||scan.version!==2||Math.floor(Date.parse(scan.startedAt)/86400000)!==day){
+    if(!scan||!scan.rows.length||scan.version!==2||Math.floor(Date.parse(scan.startedAt)/86400000)!==day){
       const snapshot=await redis.get<{startedAt:string;rows:(DiscoveryRow&{venues:VenueEvidence[]})[]}>('admin:crypto-discovery:v1');
       const age=now-Date.parse(snapshot?.startedAt??'');
-      if(!snapshot||!Number.isFinite(age)||age<0||age>15*60000)return NextResponse.json({error:'Refresh major-exchange discovery before starting today’s base scan'},{status:409});
+      if(!snapshot||!snapshot.rows?.length||!Number.isFinite(age)||age<0||age>15*60000)return NextResponse.json({error:'Refresh major-exchange discovery before starting today’s base scan'},{status:409});
       const previous=scan;
       scan=createBaseScan(snapshot.rows,snapshot.startedAt,now);
       // Preserve valid Coinbase work from today's v1 run; other venues start with fresh evidence.

@@ -27,14 +27,24 @@ it('refreshes discovery and advances bounded scans',async()=>{
  expect(await runCryptoAutomation()).toMatchObject({ok:true});expect(runDiscoveryBatch).toHaveBeenCalledOnce();expect(runMomentumBatch).toHaveBeenCalledWith(100);expect(runBaseBatch).toHaveBeenCalledWith(20);
 });
 it('reuses a fresh discovery snapshot',async()=>{
- saved['admin:crypto-discovery:v1']={startedAt:new Date(now-1000).toISOString()};await runCryptoAutomation();expect(runDiscoveryBatch).not.toHaveBeenCalled();
+ saved['admin:crypto-discovery:v1']={startedAt:new Date(now-1000).toISOString(),rows:[{}]};await runCryptoAutomation();expect(runDiscoveryBatch).not.toHaveBeenCalled();
 });
 it('completed current scan windows do not refresh discovery each quarter hour',async()=>{
- saved['admin:crypto-markets:momentum-volume:v1']={startedAt:new Date(now).toISOString()};saved['admin:crypto-markets:bases:v1']={startedAt:new Date(now).toISOString(),version:2};await runCryptoAutomation();expect(runDiscoveryBatch).not.toHaveBeenCalled();
+ saved['admin:crypto-markets:momentum-volume:v1']={startedAt:new Date(now).toISOString(),rows:[{}]};saved['admin:crypto-markets:bases:v1']={startedAt:new Date(now).toISOString(),version:2,rows:[{}]};await runCryptoAutomation();expect(runDiscoveryBatch).not.toHaveBeenCalled();
 });
 it('blocks overlapping scheduled invocations',async()=>{
  set.mockResolvedValue(null);expect(await runCryptoAutomation()).toMatchObject({skipped:true,ok:false});expect(runMomentumBatch).not.toHaveBeenCalled();
 });
 it('reports stale discovery rejection honestly rather than success',async()=>{
  vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({error:'Refresh discovery'},{status:409}));expect(await runCryptoAutomation()).toMatchObject({ok:false});expect(runBaseBatch).not.toHaveBeenCalled();
+});
+
+it('retries discovery when a current-window scan contains no coins',async()=>{
+ saved['admin:crypto-markets:momentum-volume:v1']={startedAt:new Date(now).toISOString(),rows:[]};
+ saved['admin:crypto-markets:bases:v1']={startedAt:new Date(now).toISOString(),version:2,rows:[{}]};
+ await runCryptoAutomation();expect(runDiscoveryBatch).toHaveBeenCalledOnce();
+});
+it('does not label a provider cooldown as completed scan work',async()=>{
+ vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({error:'Cooling down'},{status:429}));
+ expect(await runCryptoAutomation()).toMatchObject({ok:false});
 });
