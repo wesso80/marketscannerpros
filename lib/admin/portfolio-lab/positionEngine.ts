@@ -52,10 +52,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
   const direction = side === "LONG" ? 1 : -1;
   const unrealisedPnl = round2(direction * (currentPrice - position.averageEntry) * position.quantity);
 
-  const initialRisk =
-    position.stopLoss == null
-      ? null
-      : Math.abs(position.averageEntry - position.stopLoss) * position.quantity;
+  const initialRisk = originalRisk(position);
   const rMultiple = initialRisk && initialRisk > 0 ? round3(unrealisedPnl / initialRisk) : null;
 
   // SL / TP triggers
@@ -74,8 +71,12 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
       exitPrice = currentPrice; // A gap through the stop cannot fill at the better stop price.
     }
   }
-  // TP3 > TP2 > TP1; close on first touch of any defined TP.
-  const tps: Array<number | null> = [position.takeProfit3, position.takeProfit2, position.takeProfit1];
+  // Full-exit strategy: the nearest profitable resting target closes the position.
+  // A later snapshot beyond several targets cannot award the furthest target.
+  const tps = [position.takeProfit1, position.takeProfit2, position.takeProfit3]
+    .filter((tp): tp is number => tp != null && Number.isFinite(tp) && tp > 0
+      && direction * (tp - position.averageEntry) > 0)
+    .sort((a, b) => direction * (a - b));
   for (const tp of tps) {
     if (tp == null) continue;
     if (side === "LONG" && currentPrice >= tp) {
@@ -212,10 +213,7 @@ export async function manualSimClose(args: {
   const notional = round2(position.quantity * effExit);
   const fees = round2(notional * feePct);
   const realisedNet = round2(realisedPnl - fees);
-  const initialRisk =
-    position.stopLoss == null
-      ? null
-      : Math.abs(position.averageEntry - position.stopLoss) * position.quantity;
+  const initialRisk = originalRisk(position);
   const finalR = initialRisk && initialRisk > 0 ? round3(realisedNet / initialRisk) : null;
   const outcome = realisedNet > 0 ? "WIN" : realisedNet < 0 ? "LOSS" : "BREAKEVEN";
 
@@ -279,6 +277,11 @@ export async function manualSimClose(args: {
   }).catch(() => undefined);
 
   return trade;
+}
+
+function originalRisk(position: ArcaPosition): number | null {
+  const risk = position.initialRiskDollars;
+  return risk != null && Number.isFinite(risk) && risk > 0 ? risk : null;
 }
 
 function round2(n: number): number { return Math.round(n * 100) / 100; }

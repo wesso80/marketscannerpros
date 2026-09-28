@@ -14,7 +14,7 @@ const portfolio = { id: 'p', workspaceId: 'w', currentCash: 190000, realisedPnl:
   settings: { ...ARCA_DEFAULT_SETTINGS, slippagePctEstimate: 0, feesPctEstimate: 1 } } as ArcaPortfolio;
 const position = { id: 'pos', side: 'LONG', symbol: 'TEST', quantity: 100, averageEntry: 100,
   currentPrice: 100, stopLoss: 95, takeProfit1: 120, takeProfit2: null, takeProfit3: null,
-  unrealisedPnl: 0 } as ArcaPosition;
+  unrealisedPnl: 0, initialRiskDollars: 500 } as ArcaPosition;
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(store.listOpenPositions).mockResolvedValue([]); vi.mocked(store.insertTrade).mockResolvedValue({ id: 't' } as never); });
 
 describe('paper exits reconcile the cash ledger', () => {
@@ -30,5 +30,35 @@ describe('paper exits reconcile the cash ledger', () => {
   it('reconciles a manual paper close using the same fee treatment', async () => {
     await manualSimClose({ portfolio, position, exitPrice: 110, reason: 'test' });
     expect(store.updatePortfolioBalances).toHaveBeenCalledWith(expect.objectContaining({ currentCash: 200890, totalEquity: 200890, realisedPnl: 890, unrealisedPnl: 0 }));
+  });
+});
+
+describe('paper exit risk and resting targets', () => {
+  it('keeps original R after moving the stop to breakeven', async () => {
+    const result = await markAndMaybeExit({ portfolio, position: { ...position, stopLoss: 100 }, currentPrice: 110 });
+    expect(result.rMultiple).toBe(2);
+  });
+  it('keeps original R on manual close after tightening the stop', async () => {
+    await manualSimClose({ portfolio, position: { ...position, stopLoss: 105 }, exitPrice: 110, reason: 'test' });
+    expect(store.insertTrade).toHaveBeenCalledWith(expect.objectContaining({ rMultiple: 1.78 }));
+  });
+  it.each([null, undefined, 0, -1, NaN])('does not invent original risk when unavailable: %s', async risk => {
+    await manualSimClose({ portfolio, position: { ...position, initialRiskDollars: risk }, exitPrice: 110, reason: 'test' });
+    expect(store.insertTrade).toHaveBeenCalledWith(expect.objectContaining({ rMultiple: null }));
+  });
+  it.each(['LONG', 'SHORT'] as const)('fills nearest target when a %s quote crosses all targets', async side => {
+    const short = side === 'SHORT';
+    await markAndMaybeExit({ portfolio, position: { ...position, side,
+      stopLoss: short ? 105 : 95, takeProfit1: short ? 70 : 130,
+      takeProfit2: short ? 90 : 110, takeProfit3: short ? 80 : 120 },
+      currentPrice: short ? 60 : 140 });
+    expect(store.insertTrade).toHaveBeenCalledWith(expect.objectContaining({
+      exitPrice: short ? 90 : 110, exitReason: 'TAKE_PROFIT',
+    }));
+  });
+  it('ignores invalid targets instead of realizing a fake profit exit', async () => {
+    const result = await markAndMaybeExit({ portfolio, position: { ...position,
+      takeProfit1: 90, takeProfit2: NaN, takeProfit3: Infinity }, currentPrice: 110 });
+    expect(result.exit).toBeNull();
   });
 });

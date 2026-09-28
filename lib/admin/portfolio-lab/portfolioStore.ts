@@ -135,6 +135,7 @@ function mapPosition(r: any): ArcaPosition {
     realisedPnl: n(r.realised_pnl),
     unrealisedPnl: n(r.unrealised_pnl),
     openRisk: n(r.open_risk),
+    initialRiskDollars: nOrNull(r.initial_risk_dollars),
     currentRMultiple: nOrNull(r.current_r_multiple),
     status: r.status,
     openedAt: new Date(r.opened_at).toISOString(),
@@ -445,7 +446,8 @@ export async function insertPosition(input: {
       input.sourceOrderId, input.sourceEdgePacketId, input.playbookId,
     ],
   );
-  return mapPosition(rows[0]);
+  return mapPosition({ ...rows[0], initial_risk_dollars: input.stopLoss == null ? null
+    : Math.abs(input.averageEntry - input.stopLoss) * input.quantity });
 }
 
 export async function listOpenPositions(
@@ -453,10 +455,17 @@ export async function listOpenPositions(
   portfolioId: string,
 ): Promise<ArcaPosition[]> {
   const rows = await q<any>(
-    `SELECT * FROM arca_positions
-      WHERE workspace_id = $1 AND portfolio_id = $2
-        AND status NOT IN ('CLOSED','STOPPED','TARGET_HIT','EXPIRED','CLOSED_BY_RULE','INVALIDATED')
-      ORDER BY opened_at DESC`,
+    `SELECT p.*, CASE WHEN o.filled_price > 0 AND o.stop_loss > 0 AND o.quantity > 0
+        THEN ABS(o.filled_price - o.stop_loss) * o.quantity
+        ELSE NULL END AS initial_risk_dollars
+      FROM arca_positions p
+      LEFT JOIN arca_simulated_orders o ON o.id = p.source_order_id
+        AND o.workspace_id = p.workspace_id AND o.portfolio_id = p.portfolio_id
+        AND o.symbol = p.symbol AND o.asset_class = p.asset_class AND o.side = p.side
+        AND o.filled_at IS NOT NULL
+      WHERE p.workspace_id = $1 AND p.portfolio_id = $2
+        AND p.status NOT IN ('CLOSED','STOPPED','TARGET_HIT','EXPIRED','CLOSED_BY_RULE','INVALIDATED')
+      ORDER BY p.opened_at DESC`,
     [workspaceId, portfolioId],
   );
   return rows.map(mapPosition);
