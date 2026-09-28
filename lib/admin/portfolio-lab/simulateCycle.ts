@@ -193,7 +193,9 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
       portfolio: runningPortfolio,
       position: pos,
       currentPrice: quote.price,
+      candlePath: evidenceByInstrument.get(paperInstrumentKey(pos.assetClass, pos.symbol))?.packetJson.paperExitPath,
     });
+    if (pos.assetClass === "crypto") notes.push(`exit_evidence:${pos.symbol}:${res.pathStatus ?? "quote_only"}`);
     positionsMarked++;
     if (res.exit) positionsClosed++;
     // Refresh portfolio after each cash-impacting operation.

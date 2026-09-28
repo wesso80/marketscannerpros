@@ -62,3 +62,16 @@ describe('paper exit risk and resting targets', () => {
     expect(result.exit).toBeNull();
   });
 });
+
+it('persists the candle exit, timestamp and fees after a reversal', async () => {
+  const t = Date.parse('2026-09-27T00:00:00Z');
+  const result = await markAndMaybeExit({ portfolio, position: { ...position,
+    symbol: 'BTC', assetClass: 'crypto', openedAt: new Date(t).toISOString(), initialStopLoss: 95 },
+    currentPrice: 99, candlePath: { symbol: 'BTC', market: 'CRYPTO', timeframe: '15m', source: 'admin_scan_bars',
+      candles: [{ openAt: t, closeAt: t + 900000, open: 100, high: 125, low: 98, close: 99 }] } });
+  expect(result.exit?.reason).toBe('TAKE_PROFIT');
+  expect(store.insertTrade).toHaveBeenCalledWith(expect.objectContaining({
+    exitPrice: 120, realisedPnl: 1880, rMultiple: 3.76, exitTime: new Date(t + 900000).toISOString(),
+  }));
+  expect(store.closePositionRow).toHaveBeenCalledWith(expect.objectContaining({ closedAt: new Date(t + 900000).toISOString() }));
+});

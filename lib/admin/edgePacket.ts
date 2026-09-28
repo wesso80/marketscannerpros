@@ -1,3 +1,4 @@
+import type { PaperExitPath } from './portfolio-lab/paperExitPath';
 /**
  * AdminEdgePacket — canonical projection of AdminResearchPacket for the
  * Admin Command surfaces (queue, home, ARCA desk read, change tape).
@@ -72,6 +73,7 @@ export interface CrossAssetConfluence {
 /* ────────────── Canonical edge packet ────────────── */
 
 export interface AdminEdgePacket {
+  paperExitPath?: PaperExitPath;
   /* identity */
   packetId: string;
   symbol: string;
@@ -273,6 +275,7 @@ export function projectEdgePacket(
     trustAdjustedScore: clamp01to100(packet.trustAdjustedScore ?? 0),
     price,
     priceAt,
+    paperExitPath: packet.paperExitPath,
 
     asymmetryScore,
     timingScore,

@@ -1,3 +1,4 @@
+import { evaluatePaperExitPath, nearestPaperTarget, type PaperExitPath } from './paperExitPath';
 /**
  * lib/admin/portfolio-lab/positionEngine.ts
  *
@@ -28,9 +29,11 @@ export interface MarkInput {
   portfolio: ArcaPortfolio;
   position: ArcaPosition;
   currentPrice: number;
+  candlePath?: PaperExitPath;
 }
 
 export interface MarkResult {
+  pathStatus?: string;
   positionId: string;
   unrealisedPnl: number;
   rMultiple: number | null;
@@ -73,10 +76,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
   }
   // Full-exit strategy: the nearest profitable resting target closes the position.
   // A later snapshot beyond several targets cannot award the furthest target.
-  const tps = [position.takeProfit1, position.takeProfit2, position.takeProfit3]
-    .filter((tp): tp is number => tp != null && Number.isFinite(tp) && tp > 0
-      && direction * (tp - position.averageEntry) > 0)
-    .sort((a, b) => direction * (a - b));
+  const tps = [nearestPaperTarget(position)];
   for (const tp of tps) {
     if (tp == null) continue;
     if (side === "LONG" && currentPrice >= tp) {
@@ -97,6 +97,16 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     }
   }
 
+  const path = evaluatePaperExitPath(position, input.candlePath);
+  const pathStatus = path.status + (path.entryCandleExcluded ? ':entry_candle_excluded' : '')
+    + (path.checkedThrough ? `:through=${path.checkedThrough}` : '');
+  // A historical touch precedes the latest quote, including a later reversal.
+  if (path.exit) {
+    exitReason = path.exit.reason;
+    exitStatus = exitReason === 'STOP_LOSS' ? 'STOPPED' : 'TARGET_HIT';
+    exitPrice = path.exit.price;
+  }
+
   if (!exitReason || !exitStatus) {
     await markPosition({
       positionId: position.id,
@@ -104,7 +114,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
       unrealisedPnl,
       currentRMultiple: rMultiple,
     });
-    return { positionId: position.id, unrealisedPnl, rMultiple, exit: null };
+    return { positionId: position.id, unrealisedPnl, rMultiple, pathStatus, exit: null };
   }
 
   // Close.
@@ -124,6 +134,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     positionId: position.id,
     status: exitStatus,
     realisedPnl: realisedNet,
+    closedAt: path.exit?.at,
   });
 
   const trade = await insertTrade({
@@ -143,7 +154,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     takeProfit2: position.takeProfit2,
     takeProfit3: position.takeProfit3,
     entryTime: position.openedAt,
-    exitTime: new Date().toISOString(),
+    exitTime: path.exit?.at ?? new Date().toISOString(),
     realisedPnl: realisedNet,
     rMultiple: finalR,
     feesEstimate: fees,
@@ -177,6 +188,10 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
       `qty=${position.quantity}`,
       `r=${finalR ?? "n/a"}`,
       `fees=${fees}`,
+      `path=${pathStatus}`,
+      `source=${path.exit ? input.candlePath?.source : 'latest_quote'}`,
+      `candle_close_upper_bound=${path.exit?.at ?? 'n/a'}`,
+      `stop_target_order_ambiguous=${path.exit?.ambiguous ?? false}`,
     ],
     sourcePacketIds: position.sourceEdgePacketId ? [position.sourceEdgePacketId] : [],
   });
@@ -193,6 +208,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     positionId: position.id,
     unrealisedPnl,
     rMultiple,
+    pathStatus,
     exit: { reason: exitReason, status: exitStatus, exitPrice: effExit, realisedPnl: realisedNet, trade },
   };
 }

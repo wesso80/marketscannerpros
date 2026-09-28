@@ -7,7 +7,7 @@ Six weeks is not the base holding period or a universal eligibility gate for cry
 - The fixed admin watchlists excluded QNT. Major-exchange discovery now finds its CoinGecko ID without requiring static membership.
 - Paper selection still uses intraday scores mixed with weekly/daily position levels. The new momentum review does not yet replace this path.
 - `positionEngine.markAndMaybeExit` performs full exits at fixed targets. It has no partial exit or trailing-stop state.
-- Exit checks use a current sampled price, not the intervening candle path. They can miss an intracycle stop/target touch. The full-exit model now selects the nearest profitable resting target, including when a later quote crosses several targets.
+- Crypto 15m scans now carry up to 96 completed scanner candles into edge packets. Fixed-stop paper positions replay complete post-entry candles chronologically, with adverse gap fills and stop-first treatment when both levels are touched. The entry-containing candle is excluded and disclosed because its extremes can predate entry. Missing prefixes, gaps, duplicates or changed stops fall back to quote checks with explicit cycle notes. This remains bounded scan-dependent coverage, not independent continuous monitoring; older positions exceeding the saved window need durable candle checkpoints. The full-exit model now selects the nearest profitable resting target, including when a later quote crosses several targets.
 - R now uses original filled-order risk through a workspace/portfolio-scoped source-order join, independent of the current position stop or quantity. Missing original evidence leaves R unknown. Source-order fill facts must remain immutable; partial fills still need a proper cash/P&L ledger.
 
 ## New development direction
@@ -26,4 +26,4 @@ Measure net expectancy in R, drawdown, profit factor, exposure time, missed-oppo
 
 ## Current boundary
 
-The discovery and candle-review pages are research only. Existing paper entries still use the legacy strategy. Exit accounting has the original-risk and nearest-target corrections above; momentum entries, candle-path exits, trailing stops and partial exits are not yet enabled. No real-order execution is introduced.
+The discovery and candle-review pages are research only. Existing paper entries still use the legacy strategy. Exit accounting has the original-risk and nearest-target corrections above; momentum entries, independent continuous exit monitoring, trailing stops and partial exits are not yet enabled. Candle-derived exit times are recorded as the candle-close upper bound, with source and ambiguity in the exit journal. BUY/SELL source orders are normalized when resolving original position risk. No real-order execution is introduced.
