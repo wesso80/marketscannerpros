@@ -82,6 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       items: [
         { href: "/admin/opportunity-board", label: "Opportunity Board", code: "OB" },
         { href: "/admin/live-scanner", label: "Live Scanner", code: "LS" },
+        { href: "/admin/crypto-discovery", label: "Crypto Discovery", code: "CD" },
         { href: "/admin/scalper", label: "Scalper", code: "SC" },
         { href: "/admin/quant", label: "Quant Terminal", code: "QT" },
         { href: "/admin/learning-engine", label: "Learning Engine", code: "LE" },
