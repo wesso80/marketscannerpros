@@ -1,4 +1,5 @@
 'use client';
+const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
 const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
 import type {BaseReview} from '@/lib/admin/cryptoBase';
 import dynamic from 'next/dynamic';
@@ -58,6 +59,7 @@ export default function CryptoMarketsPage() {
     <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page only reads saved results.</p>
     {error && <p role="alert" className="text-red-300">{error}</p>}
     <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
+    <CryptoBaseScanner now={now} />
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
       <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
