@@ -138,3 +138,13 @@ describe("projectEdgePacket — price, priceAt and trust score (fix/admin-call-l
     expect(edgePacketPrice({ price: 10 })).toEqual({ price: 10, at: null });
   });
 });
+
+it('publishes completed-period trend separately from intraday bias for position review', () => {
+  const p = basePacket();
+  p.snapshot.bias = 'SHORT';
+  p.snapshot.positionTrend = { version: 'position-trend.v1', status: 'unavailable', bias: 'LONG', monthlyBias: 'LONG', reasons: ['history short'] } as never;
+  const edge = projectEdgePacket(p);
+  expect(edge.bias).toBe('SHORT');
+  expect(edge.positionResearch).toMatchObject({ version: 'position-research.v1', trend: p.snapshot.positionTrend, source: 'scan_daily_history' });
+  expect(edge.positionResearch?.levels.status).not.toBe('ok');
+});

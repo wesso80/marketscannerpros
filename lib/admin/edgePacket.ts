@@ -140,6 +140,13 @@ export interface AdminEdgePacket {
    * position trades; entry/stopLoss/takeProfit above are the intraday (scan-timeframe) timing levels. Absent on
    * packets saved before it was added. */
   positionLevels?: PositionLevelView;
+  /** Independent completed-week/month direction and levels for six-week comparison; never entry permission. */
+  positionResearch?: {
+    version: 'position-research.v1';
+    trend: import('./positionTrend').PositionTrend | null;
+    levels: PositionLevelView;
+    source: string;
+  };
   /** Same safeguards, with weekly/daily R:R; absent on legacy packets. Not trade permission. */
   positionDoNothing?: { version: "position-rr.v1"; verdict: DoNothingVerdict | null };
 
@@ -279,6 +286,12 @@ export function projectEdgePacket(
     ...buildDecisionLevels(packet),
     levelsTimeframe: packet.timeframe,
     positionLevels,
+    positionResearch: {
+      version: 'position-research.v1',
+      trend: packet.snapshot?.positionTrend ?? null,
+      levels: positionLevelView(packet.snapshot?.positionLevels, packet.snapshot?.positionTrend?.bias),
+      source: packet.snapshot?.positionEvidenceSource ?? 'scan_daily_history',
+    },
     positionDoNothing: { version: "position-rr.v1", verdict: evaluateDoNothing(packet, positionLevels) },
 
     ...buildNarrative(packet),
