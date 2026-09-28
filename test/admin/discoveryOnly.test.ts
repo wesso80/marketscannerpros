@@ -8,7 +8,7 @@ it('defaults to the owner-requested discovery-only scope and can be explicitly r
   expect(discoveryOnlyAction('/api/cron/arca-cycle')).toBe('allow');
   expect(discoveryOnlyAction('/api/admin/live-scanner')).toBe('allow');
 });
-it.each(['/api/cron/arca-cycle', '/api/admin/crypto-markets/paper', '/api/admin/crypto-markets/bases', '/api/admin/crypto-markets/momentum', '/api/admin/crypto-markets/volume', '/api/admin/crypto-markets/context', '/api/admin/verify', '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze', '/admin/crypto-markets', '/admin/crypto-discovery', '/admin/paused'])('allows auth and discovery: %s', path => {
+it.each(['/api/admin/crypto-markets/setup-email', '/api/cron/arca-cycle', '/api/admin/crypto-markets/paper', '/api/admin/crypto-markets/bases', '/api/admin/crypto-markets/momentum', '/api/admin/crypto-markets/volume', '/api/admin/crypto-markets/context', '/api/admin/verify', '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze', '/admin/crypto-markets', '/admin/crypto-discovery', '/admin/paused'])('allows auth and discovery: %s', path => {
   expect(discoveryOnlyAction(path)).toBe('allow');
 });
 it.each(['/api/admin/live-scanner', '/api/admin/portfolio-lab/cycle', '/api/admin/macro-pulse', '/api/admin/crypto-discovery/other', '/api/operator/engine/scan'])('blocks other admin APIs before handler work: %s', path => {
