@@ -14,6 +14,6 @@ export function pausedAdminAvRequest(url: string): boolean {
 }
 export function pausedAdminRequest(path: string, values: Record<string, unknown>): boolean {
   if (!adminEquitiesPaused() || !path.startsWith('/api/admin/')) return false;
-  if (/^\/api\/admin\/(equity-research|options-architect|income|insider|transcripts|sector-rotation|quant-screener)(\/|$)/.test(path)) return true;
+  if (/^\/api\/admin\/(equity-research|options-architect|insider|transcripts|sector-rotation|quant-screener)(\/|$)/.test(path)) return true;
   return [values.market, values.assetClass, values.asset_class, values.assetType].some(isEquityMarket);
 }
