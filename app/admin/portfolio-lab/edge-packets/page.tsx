@@ -12,6 +12,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type InspectedPacket = {
+  levelsTimeframe: string;
+  positionReview: {
+    status: string; side: string | null; rank: number | null; reasons: string[]; rewardRisk: number | null;
+    completedWeeks: number; completedMonths: number; source: string | null;
+    levels: { entryTrigger: number | null; stop: number | null; tp1: number | null } | null;
+  };
   packetId: string;
   symbol: string;
   market: string;
@@ -42,6 +48,7 @@ type InspectedPacket = {
 };
 
 type Summary = {
+  positionReview: { ready: number; blocked: number; readyButCurrentGateBlocked: number; rankingBasis: string };
   scanned: number;
   passing: number;
   gated: number;
@@ -88,7 +95,7 @@ export default function EdgePacketsInspectorPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ sinceMinutes: String(sinceMinutes), limit: "300" });
+      const params = new URLSearchParams({ sinceMinutes: String(sinceMinutes), limit: "500" });
       if (filterMode === "pass") params.set("passOnly", "1");
       if (filterMode === "reject") params.set("rejectedOnly", "1");
       if (assetClass) params.set("assetClass", assetClass);
@@ -143,7 +150,7 @@ export default function EdgePacketsInspectorPage() {
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, margin: 0, marginBottom: 6 }}>ARCA Edge Packet Inspector</h1>
         <div style={{ color: COLORS.dim, fontSize: 13 }}>
-          Live view of every AdminEdgePacket the decision engine can see, with per-row gate evaluation.
+          Latest saved packet per market/symbol, with candidate checks and a separate six-week research comparison.
           SIMULATED context only — no broker, no order routing.
         </div>
       </div>
@@ -165,7 +172,7 @@ export default function EdgePacketsInspectorPage() {
           <select value={filterMode} onChange={(e) => setFilterMode(e.target.value as "all" | "pass" | "reject")}
             style={{ marginLeft: 6, background: COLORS.bg, color: COLORS.text, border: `1px solid ${COLORS.border}`, borderRadius: 4, padding: "4px 8px" }}>
             <option value="all">All</option>
-            <option value="pass">Passing gates only</option>
+            <option value="pass">Passing candidate checks only</option>
             <option value="reject">Rejected only</option>
           </select>
         </label>
@@ -196,13 +203,19 @@ export default function EdgePacketsInspectorPage() {
       {data?.summary && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, marginBottom: 16 }}>
           <Kpi label="Scanned" value={data.summary.scanned} />
-          <Kpi label="Passing gates" value={data.summary.passing} color={COLORS.green} />
+          <Kpi label="Candidate checks passed" value={data.summary.passing} color={COLORS.green} />
           <Kpi label="Gated out" value={data.summary.gated} color={COLORS.red} />
           <Kpi label="Rank ≥" value={data.summary.thresholds.minEdgePacketRankScore} color={COLORS.blue} />
           <Kpi label="Evidence ≥" value={data.summary.thresholds.minEvidenceQualityScore} color={COLORS.blue} />
           <Kpi label="Trap ≤" value={data.summary.thresholds.maxTrapRiskScore} color={COLORS.amber} />
         </div>
       )}
+
+      {data?.summary.positionReview && <section aria-label="Six-week research comparison" style={{ padding: 12, marginBottom: 16, background: COLORS.card, borderRadius: 8 }}>
+        <h2 style={{ fontSize: 16 }}>Six-week research comparison — not trade permission</h2>
+        <p style={{ fontSize: 13 }}>Ready: {data.summary.positionReview.ready} · Blocked: {data.summary.positionReview.blocked} · Ready but blocked by current candidate checks: {data.summary.positionReview.readyButCurrentGateBlocked}</p>
+        <p style={{ fontSize: 12, color: COLORS.dim }}>{data.summary.positionReview.rankingBasis} Requires completed weekly/monthly alignment, daily entry and fresh price. Expand a row for evidence. Existing regime, risk, sizing and later entry checks still apply.</p>
+      </section>}
 
       {/* Aggregations */}
       {data?.summary && (
@@ -248,7 +261,8 @@ export default function EdgePacketsInspectorPage() {
                 {th("trapRiskScore", "Trap")}
                 {th("trustAdjustedScore", "Trust")}
                 {th("bias", "Bias")}
-                {th("gatePassed", "Gate")}
+                {th("gatePassed", "Candidate")}
+                <th>6-week review</th>
                 {th("ageMinutes", "Age")}
               </tr>
             </thead>
@@ -325,11 +339,12 @@ function Row({ p, isOpen, onToggle }: { p: InspectedPacket; isOpen: boolean; onT
             ? <span style={{ color: COLORS.green, fontWeight: 600 }}>✓ pass</span>
             : <span style={{ color: COLORS.red, fontWeight: 600 }}>✗ {p.gateReasons.length}</span>}
         </td>
+        <td style={td}>{p.positionReview?.status === 'RESEARCH_READY' ? `Research #${p.positionReview.rank} · ${p.positionReview.side}` : 'Blocked'}</td>
         <td style={{ ...td, color: COLORS.dim }}>{p.ageMinutes}m</td>
       </tr>
       {isOpen && (
         <tr style={{ background: "rgba(15,23,42,0.5)" }}>
-          <td colSpan={12} style={{ padding: 12 }}>
+          <td colSpan={13} style={{ padding: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10, fontSize: 12 }}>
               <Detail label="Entry" value={fmt(p.entry)} />
               <Detail label="Stop" value={fmt(p.stop)} />
@@ -337,10 +352,16 @@ function Row({ p, isOpen, onToggle }: { p: InspectedPacket; isOpen: boolean; onT
               <Detail label="Current price" value={fmt(p.currentPrice)} />
               <Detail label="RR → TP1" value={p.rrToTp1 != null ? p.rrToTp1.toFixed(2) : "—"} />
               <Detail label="Setup type" value={p.setupType || "—"} />
-              <Detail label="Timeframe" value={p.timeframe} />
+              <Detail label="Level timeframe / scan timeframe" value={`${p.levelsTimeframe} / ${p.timeframe}`} />
               <Detail label="Generated" value={new Date(p.generatedAt).toLocaleString()} />
               <Detail label="Packet ID" value={p.packetId} mono />
             </div>
+            {p.positionReview && <div style={{ marginTop: 12 }}>
+              <strong>Six-week comparison: {p.positionReview.status} · {p.positionReview.side ?? 'no direction'}</strong>
+              <p>{p.positionReview.completedWeeks} completed weeks / {p.positionReview.completedMonths} completed months · source: {p.positionReview.source ?? 'not published'}</p>
+              <p>Weekly-direction levels: entry {fmt(p.positionReview.levels?.entryTrigger ?? null)} · stop {fmt(p.positionReview.levels?.stop ?? null)} · TP1 {fmt(p.positionReview.levels?.tp1 ?? null)} · current R {p.positionReview.rewardRisk?.toFixed(2) ?? '—'}</p>
+              <p>{p.positionReview.reasons.join(', ') || 'Research checks passed. This does not authorize a paper trade.'}</p>
+            </div>}
             {p.gateReasons.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <div style={{ color: COLORS.dim, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>

@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { wrapTruth } from "@/lib/admin/truthLayer";
 import { loadEdgePackets, type EdgePacketRow } from "@/lib/admin/edgePacketSnapshots";
-import { gateRow } from "@/lib/admin/portfolio-lab/decisionEngine";
+import { gateRow, projectCandidate } from "@/lib/admin/portfolio-lab/decisionEngine";
 import { getDefaultPortfolio } from "@/lib/admin/portfolio-lab/portfolioStore";
 import {
   ARCA_DEFAULT_PORTFOLIO_NAME,
@@ -30,9 +30,13 @@ import {
 } from "@/lib/admin/portfolio-lab/constants";
 import type { ArcaPortfolio } from "@/lib/admin/portfolio-lab/types";
 
+import { reviewPositionSetup, rankPositionReviews } from '@/lib/admin/portfolio-lab/positionReview';
+
 export const runtime = "nodejs";
 
 interface InspectedPacket {
+  positionReview: ReturnType<typeof reviewPositionSetup>;
+  levelsTimeframe: string;
   packetId: string;
   symbol: string;
   market: string;
@@ -65,13 +69,17 @@ interface InspectedPacket {
 function shapeRow(row: EdgePacketRow, portfolio: ArcaPortfolio): InspectedPacket {
   const reasons = gateRow(row, portfolio);
   const pkt = row.packetJson;
-  const entry = pkt?.entry?.trigger ?? pkt?.entry?.conservativeEntry ?? pkt?.entry?.aggressiveEntry ?? null;
-  const stop = pkt?.stopLoss?.level ?? null;
-  const snapshotAny = (pkt as unknown as { snapshot?: { price?: number } } | undefined)?.snapshot;
-  const currentPrice = Number.isFinite(snapshotAny?.price) ? Number(snapshotAny!.price) : null;
+  const projection = projectCandidate(row);
+  if (!projection.ok) reasons.push(projection.reason);
+  const levels = pkt?.positionLevels;
+  const entry = levels?.entryTrigger ?? null;
+  const stop = levels?.stop ?? null;
+  const currentPrice = typeof pkt?.price === 'number' && Number.isFinite(pkt.price) ? pkt.price : null;
   const ageMs = Date.now() - new Date(row.generatedAt).getTime();
 
   return {
+    positionReview: reviewPositionSetup(row),
+    levelsTimeframe: "1W/1D",
     packetId: row.packetId,
     symbol: row.symbol,
     market: row.market,
@@ -90,13 +98,13 @@ function shapeRow(row: EdgePacketRow, portfolio: ArcaPortfolio): InspectedPacket
     trustAdjustedScore: row.trustAdjustedScore,
     entry,
     stop,
-    tp1: pkt?.takeProfit?.tp1 ?? null,
-    tp2: pkt?.takeProfit?.tp2 ?? null,
-    tp3: pkt?.takeProfit?.tp3 ?? null,
+    tp1: levels?.tp1 ?? null,
+    tp2: levels?.tp2 ?? null,
+    tp3: levels?.tp3 ?? null,
     currentPrice,
-    rrToTp1: pkt?.riskReward?.rrToTp1 ?? null,
-    gatePassed: reasons.length === 0 && entry != null && stop != null,
-    gateReasons: entry == null || stop == null ? [...reasons, "entry_or_stop_missing"] : reasons,
+    rrToTp1: projection.ok ? projection.candidate.rrToTp1 : null,
+    gatePassed: reasons.length === 0,
+    gateReasons: reasons,
     generatedAt: row.generatedAt,
     ageMinutes: Math.round(ageMs / 60_000),
   };
@@ -136,17 +144,26 @@ export async function GET(req: NextRequest) {
   };
 
   const since = new Date(Date.now() - sinceMinutes * 60_000).toISOString();
-  const rows = await loadEdgePackets({ workspaceId: wsid, since, limit });
+  const rows = await loadEdgePackets({ workspaceId: wsid, since, limit, latestPerSymbol: true });
 
   let inspected = rows.map((r) => shapeRow(r, portfolio));
   if (assetClassFilter) {
     inspected = inspected.filter((p) => p.assetClass.toLowerCase() === assetClassFilter.toLowerCase());
   }
 
+  rankPositionReviews(inspected);
+
   // Summaries computed BEFORE pass/reject filter so KPIs reflect
   // the full scan, not the visible subset.
   const summary = {
     scanned: inspected.length,
+    positionReview: {
+      mode: 'COMPARISON_ONLY',
+      ready: inspected.filter(p => p.positionReview.status === 'RESEARCH_READY').length,
+      blocked: inspected.filter(p => p.positionReview.status !== 'RESEARCH_READY').length,
+      readyButCurrentGateBlocked: inspected.filter(p => p.positionReview.status === 'RESEARCH_READY' && !p.gatePassed).length,
+      rankingBasis: 'Ready research only: current TP1 reward/risk descending, then entry-zone progress ascending. Not a probability or proven edge.',
+    },
     passing: inspected.filter((p) => p.gatePassed).length,
     gated: inspected.filter((p) => !p.gatePassed).length,
     byAssetClass: aggregate(inspected, (p) => p.assetClass || "unknown"),
@@ -177,7 +194,7 @@ export async function GET(req: NextRequest) {
         simulated: true,
         freshness: "real-time",
         confidence: "high",
-        confidenceReason: "Same gate logic as decision engine; thresholds read from active ARCA portfolio settings.",
+        confidenceReason: "Candidate gates and position projection match selection. Regime, account sizing and later checks still apply; six-week review is comparison only.",
       },
     ),
   );
