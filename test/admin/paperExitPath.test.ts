@@ -65,3 +65,40 @@ describe('fixed-level candle exit evidence', () => {
     expect(savePaperExitPath([b], 'BTC', 'CRYPTO', '1h', t + step)).toBeUndefined();
   });
 });
+
+describe('durable candle checkpoints', () => {
+  it('resumes a multi-day trade after the entry candles leave the saved window', () => {
+    const checkpoint = { version: 1 as const, through: new Date(t + 100 * step).toISOString(),
+      entryAt: position.openedAt, side: position.side, stop: 95, target: 110 };
+    const result = evaluatePaperExitPath({ ...position, exitCheckpoint: checkpoint },
+      path(candle(100, { high: 112 })), t + 102 * step);
+    expect(result.exit).toMatchObject({ reason: 'TAKE_PROFIT', price: 110 });
+  });
+  it('advances only through fully checked candles and does not recheck old touches', () => {
+    const first = run(path(candle()));
+    expect(first.checkpoint?.through).toBe(new Date(t + step).toISOString());
+    const result = run(path(candle(0, { low: 90 }), candle(1)), { ...position, exitCheckpoint: first.checkpoint });
+    expect(result.exit).toBeUndefined();
+    expect(result.checkpoint?.through).toBe(new Date(t + 2 * step).toISOString());
+  });
+  it('does not advance or manufacture a target across a checkpoint gap', () => {
+    const checkpoint = run(path(candle())).checkpoint;
+    const result = run(path(candle(2, { high: 112 })), { ...position, exitCheckpoint: checkpoint });
+    expect(result.exit).toBeUndefined();
+    expect(result.checkpoint).toBeUndefined();
+  });
+  it.each([
+    { target: 111 }, { stop: 94 }, { side: 'SHORT' }, { version: 2 },
+    { through: 'bad' }, { through: new Date(t + 9 * step).toISOString() },
+    { through: new Date(t + step + 1).toISOString() }, { entryAt: 'bad' },
+  ])('rejects a checkpoint that no longer matches the trade: %s', patch => {
+    const checkpoint = { ...run(path(candle())).checkpoint!, ...patch };
+    const result = run(path(candle(1)), { ...position, exitCheckpoint: checkpoint as never });
+    expect(result.status).toBe('candle_checkpoint_invalid_or_rules_changed');
+    expect(result.checkpoint).toBeUndefined();
+  });
+  it('does not write another checkpoint when no new candle has closed', () => {
+    const checkpoint = run(path(candle())).checkpoint;
+    expect(run(path(candle()), { ...position, exitCheckpoint: checkpoint }).checkpoint).toBeUndefined();
+  });
+});

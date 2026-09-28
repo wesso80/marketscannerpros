@@ -139,6 +139,15 @@ export interface ArcaSimOrder {
   cancelledAt: string | null;
 }
 
+export interface PaperExitCheckpoint {
+  version: 1;
+  through: string;
+  entryAt: string;
+  side: PositionSide;
+  stop: number;
+  target: number | null;
+}
+
 export interface ArcaPosition {
   id: string;
   workspaceId: string;
@@ -160,6 +169,7 @@ export interface ArcaPosition {
   /** Original filled-order risk; never recomputed from a moved stop. */
   initialRiskDollars?: number | null;
   initialStopLoss?: number | null;
+  exitCheckpoint?: PaperExitCheckpoint | null;
   currentRMultiple: number | null;
   status: PositionStatus;
   openedAt: string;

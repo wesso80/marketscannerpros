@@ -114,6 +114,17 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
       unrealisedPnl,
       currentRMultiple: rMultiple,
     });
+    if (path.checkpoint) {
+      // The cycle transaction commits the mark and checkpoint together; retries cannot skip a failed write.
+      await writeJournal({
+        workspaceId: portfolio.workspaceId, portfolioId: portfolio.id,
+        positionId: position.id, symbol: position.symbol, journalType: 'REVIEW',
+        title: 'Paper candle checkpoint v1',
+        reasoning: 'Fixed exit levels checked through completed candles. Entry-containing candle excluded when applicable.',
+        evidence: [JSON.stringify(path.checkpoint)],
+        dataFreshness: path.checkpoint.through,
+      });
+    }
     return { positionId: position.id, unrealisedPnl, rMultiple, pathStatus, exit: null };
   }
 

@@ -75,3 +75,17 @@ it('persists the candle exit, timestamp and fees after a reversal', async () => 
   }));
   expect(store.closePositionRow).toHaveBeenCalledWith(expect.objectContaining({ closedAt: new Date(t + 900000).toISOString() }));
 });
+
+it('journals a checkpoint only after a completed no-exit candle check', async () => {
+  const { writeJournal } = await import('@/lib/admin/portfolio-lab/journalEngine');
+  const t = Date.parse('2026-09-27T00:00:00Z');
+  await markAndMaybeExit({ portfolio, position: { ...position, symbol: 'BTC',
+    assetClass: 'crypto', openedAt: new Date(t).toISOString(), initialStopLoss: 95 },
+    currentPrice: 101, candlePath: { symbol: 'BTC', market: 'CRYPTO', timeframe: '15m', source: 'admin_scan_bars',
+      candles: [{ openAt: t, closeAt: t + 900000, open: 100, high: 105, low: 98, close: 101 }] } });
+  expect(writeJournal).toHaveBeenCalledWith(expect.objectContaining({
+    title: 'Paper candle checkpoint v1', positionId: 'pos', portfolioId: 'p', workspaceId: 'w',
+    evidence: [JSON.stringify({ version: 1, through: new Date(t + 900000).toISOString(),
+      entryAt: new Date(t).toISOString(), side: 'LONG', stop: 95, target: 120 })],
+  }));
+});
