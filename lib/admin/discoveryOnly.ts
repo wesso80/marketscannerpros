@@ -2,7 +2,7 @@
 export function adminDiscoveryOnly(): boolean {
   return !['false', '0', 'off', 'no'].includes((process.env.ADMIN_DISCOVERY_ONLY ?? 'true').trim().toLowerCase());
 }
-export const ADMIN_DISCOVERY_ONLY_MESSAGE = 'Other admin workflows are paused while Crypto Discovery is developed. Public services continue normally.';
+export const ADMIN_DISCOVERY_ONLY_MESSAGE = 'Other admin workflows are paused while Crypto Markets is developed. Public services continue normally.';
 const background = new Set([
   '/api/cron/admin-scan', '/api/cron/persist-edge-packets', '/api/cron/arca-cycle',
   '/api/cron/arca-daily-report', '/api/cron/edge-label-outcomes', '/api/cron/edge-rebuild-matrix',
@@ -15,7 +15,7 @@ export function discoveryOnlyAction(path: string): 'allow' | 'pause_api' | 'skip
   if (background.has(path)) return 'skip_job';
   if (path === '/api/admin/verify' || path === '/api/admin/crypto-discovery' || path === '/api/admin/crypto-discovery/analyze') return 'allow';
   if (path === '/api/admin' || path.startsWith('/api/admin/') || path.startsWith('/api/operator/engine/')) return 'pause_api';
-  if (path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';
+  if (path === '/admin/crypto-markets' || path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';
   if (path === '/admin' || path.startsWith('/admin/')) return 'pause_page';
   return 'allow';
 }
