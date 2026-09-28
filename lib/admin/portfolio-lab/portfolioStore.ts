@@ -136,6 +136,7 @@ function mapPosition(r: any): ArcaPosition {
     unrealisedPnl: n(r.unrealised_pnl),
     openRisk: n(r.open_risk),
     initialRiskDollars: nOrNull(r.initial_risk_dollars),
+    initialStopLoss: nOrNull(r.initial_stop_loss),
     currentRMultiple: nOrNull(r.current_r_multiple),
     status: r.status,
     openedAt: new Date(r.opened_at).toISOString(),
@@ -446,7 +447,7 @@ export async function insertPosition(input: {
       input.sourceOrderId, input.sourceEdgePacketId, input.playbookId,
     ],
   );
-  return mapPosition({ ...rows[0], initial_risk_dollars: input.stopLoss == null ? null
+  return mapPosition({ ...rows[0], initial_stop_loss: input.stopLoss, initial_risk_dollars: input.stopLoss == null ? null
     : Math.abs(input.averageEntry - input.stopLoss) * input.quantity });
 }
 
@@ -455,13 +456,15 @@ export async function listOpenPositions(
   portfolioId: string,
 ): Promise<ArcaPosition[]> {
   const rows = await q<any>(
-    `SELECT p.*, CASE WHEN o.filled_price > 0 AND o.stop_loss > 0 AND o.quantity > 0
+    `SELECT p.*, o.stop_loss AS initial_stop_loss, CASE WHEN o.filled_price > 0 AND o.stop_loss > 0 AND o.quantity > 0
         THEN ABS(o.filled_price - o.stop_loss) * o.quantity
         ELSE NULL END AS initial_risk_dollars
       FROM arca_positions p
       LEFT JOIN arca_simulated_orders o ON o.id = p.source_order_id
         AND o.workspace_id = p.workspace_id AND o.portfolio_id = p.portfolio_id
-        AND o.symbol = p.symbol AND o.asset_class = p.asset_class AND o.side = p.side
+        AND o.symbol = p.symbol AND o.asset_class = p.asset_class
+        AND ((o.side IN ('BUY', 'LONG') AND p.side = 'LONG')
+          OR (o.side IN ('SELL', 'SHORT') AND p.side = 'SHORT'))
         AND o.filled_at IS NOT NULL
       WHERE p.workspace_id = $1 AND p.portfolio_id = $2
         AND p.status NOT IN ('CLOSED','STOPPED','TARGET_HIT','EXPIRED','CLOSED_BY_RULE','INVALIDATED')
@@ -490,13 +493,14 @@ export async function closePositionRow(input: {
   positionId: string;
   status: PositionStatus;
   realisedPnl: number;
+  closedAt?: string;
 }): Promise<void> {
   await q(
     `UPDATE arca_positions
         SET status = $1, realised_pnl = $2, unrealised_pnl = 0,
-            closed_at = NOW(), last_mark_at = NOW()
+            closed_at = COALESCE($4::timestamptz, NOW()), last_mark_at = NOW()
       WHERE id = $3`,
-    [input.status, input.realisedPnl, input.positionId],
+    [input.status, input.realisedPnl, input.positionId, input.closedAt ?? null],
   );
 }
 

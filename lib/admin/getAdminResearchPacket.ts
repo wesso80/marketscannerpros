@@ -1,3 +1,4 @@
+import { savePaperExitPath, type PaperExitPath } from './portfolio-lab/paperExitPath';
 import { savePositionHistory } from './positionHistory';
 import { marketForSymbol } from "@/lib/admin/adminMarket";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
@@ -32,6 +33,7 @@ export type AdminAssetClass = "equity" | "crypto";
 const FIRST_SCAN_WHAT_CHANGED = "First scan in this context - no prior packet for delta comparison.";
 
 export interface AdminResearchPacket {
+  paperExitPath?: PaperExitPath;
   packetId: string;
   createdAt: string;
   symbol: string;
@@ -554,6 +556,7 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
     alertEligibility: eligibility,
     arcaContext,
   };
+  packet.paperExitPath = savePaperExitPath(bars, symbol, market, timeframe);
   if (params.workspaceId) packet.whatChanged = await whatChangedForWorkspace(packet, params.workspaceId);
   return { packet, result, bars, noBars };
 }
