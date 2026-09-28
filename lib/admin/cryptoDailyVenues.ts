@@ -15,8 +15,8 @@ const number=(v:unknown):number=>{
   const n=Number(v);if(!Number.isFinite(n))throw Error('Invalid numeric candle value');return n;
 };
 /** Normalize base-asset volume and bucket starts into the shared Coinbase-shaped validator. */
-export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end:number):ExchangeBar[]{
-  if(exchange==='gdax')return parseExchangeCandles(raw,D,start,end);
+export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end:number,interval=D):ExchangeBar[]{
+  if(exchange==='gdax')return parseExchangeCandles(raw,interval,start,end);
   let rows:unknown=raw;
   if(exchange==='kucoin'||exchange==='okex'){
     if(!raw||typeof raw!=='object'||!('code' in raw)||!('data' in raw)||raw.code!==(exchange==='kucoin'?'200000':'0'))throw Error('Provider rejected candles');
@@ -28,22 +28,22 @@ export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end
     if(!Array.isArray(row))throw Error('Invalid candle row');
     if(exchange==='binance'){
       if(row.length<7)throw Error('Incomplete Binance candle');
-      const t=number(row[0]);if(t<start||t+D>end)continue;
-      if(number(row[6])!==t+D-1)throw Error('Unexpected Binance candle close time');
+      const t=number(row[0]);if(t<start||t+interval>end)continue;
+      if(number(row[6])!==t+interval-1)throw Error('Unexpected Binance candle close time');
       normalized.push([t/1000,number(row[3]),number(row[2]),number(row[1]),number(row[4]),number(row[5])]);
     }else if(exchange==='kucoin'){
       if(row.length<7)throw Error('Incomplete KuCoin candle');
-      const t=number(row[0]);if(t*1000<start||t*1000+D>end)continue;
+      const t=number(row[0]);if(t*1000<start||t*1000+interval>end)continue;
       normalized.push([t,number(row[4]),number(row[3]),number(row[1]),number(row[2]),number(row[5])]);
     }else{
       if(row.length<9)throw Error('Incomplete OKX candle');
       if(row[8]!=='0'&&row[8]!=='1')throw Error('Unknown OKX candle completion');
       if(row[8]==='0')continue;
-      const t=number(row[0]);if(t<start||t+D>end)continue;
+      const t=number(row[0]);if(t<start||t+interval>end)continue;
       normalized.push([t/1000,number(row[3]),number(row[2]),number(row[1]),number(row[4]),number(row[5])]);
     }
   }
-  return parseExchangeCandles(normalized,D,start,end);
+  return parseExchangeCandles(normalized,interval,start,end);
 }
 export function dailyVenueUrl(pair:DailyPair,now:number):string{
   if(!/^[A-Z0-9]{1,30}-(USD|USDT|USDC)$/.test(pair.product)||pair.product.split('-')[1]!==pair.quote||pair.product.split('-')[0]!==pair.volumeUnit)throw Error('Invalid discovered pair');
