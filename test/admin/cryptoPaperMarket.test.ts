@@ -1,5 +1,5 @@
-import {expect,it} from 'vitest';
-import {parsePaperQuote,planCryptoPaper} from '@/lib/admin/cryptoPaperMarket';
+import {expect,it,vi,afterEach} from 'vitest';
+import {parsePaperQuote,planCryptoPaper,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
 import type {VolumeMomentum} from '@/lib/admin/cryptoVolumeMomentum';
 const now=Date.parse('2026-09-28T05:00:00Z');
 const signal={stage:'MOMENTUM_VOLUME',asOf:'2026-09-28T04:00:00Z',stop:95,target:112,maxEntry:102,entryFloor:99} as VolumeMomentum;
@@ -23,4 +23,22 @@ it('does not enter on missing cash or equity',()=>{
 });
 it('rejects stale/future tick timestamps and crossed bid/ask',()=>{
  for(const raw of [{bid:100,ask:99,time:new Date(now).toISOString()},{bid:100,ask:101,time:new Date(now-61000).toISOString()},{bid:100,ask:101,time:new Date(now+1).toISOString()}])expect(()=>parsePaperQuote(raw,'BTC-USD',now)).toThrow();
+});
+
+afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
+it('fetches only post-entry history, not unrelated pre-entry gaps',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);
+ const fetcher=vi.fn(async(_url:string)=>Response.json([[now/1000-900,98,101,100,100,10]]));vi.stubGlobal('fetch',fetcher);
+ const path=await fetchPaperPath('bitcoin','BTC-USD',new Date(now-600000).toISOString());
+ const url=new URL(fetcher.mock.calls[0][0] as string);
+ expect(url.searchParams.get('start')).toBe(new Date(now-900000).toISOString());
+ expect(path.candles).toHaveLength(1);
+});
+it('retains a precise provider failure instead of a generic monitoring message',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);vi.stubGlobal('fetch',vi.fn(async()=>new Response('',{status:429})));
+ await expect(fetchPaperPath('bitcoin','BTC-USD',new Date(now-900000).toISOString())).rejects.toThrow('HTTP 429');
+});
+it('does not silently discard history outside the recovery window',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+ await expect(fetchPaperPath('bitcoin','BTC-USD',new Date(now-300*900000).toISOString())).rejects.toThrow('requires recovery');expect(fetcher).not.toHaveBeenCalled();
 });

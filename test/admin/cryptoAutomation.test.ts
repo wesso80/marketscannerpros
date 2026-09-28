@@ -33,7 +33,7 @@ it('completed current scan windows do not refresh discovery each quarter hour',a
  saved['admin:crypto-markets:momentum-volume:v1']={startedAt:new Date(now).toISOString()};saved['admin:crypto-markets:bases:v1']={startedAt:new Date(now).toISOString(),version:2};await runCryptoAutomation();expect(runDiscoveryBatch).not.toHaveBeenCalled();
 });
 it('blocks overlapping scheduled invocations',async()=>{
- set.mockResolvedValue(null);expect(await runCryptoAutomation()).toMatchObject({skipped:true});expect(runMomentumBatch).not.toHaveBeenCalled();
+ set.mockResolvedValue(null);expect(await runCryptoAutomation()).toMatchObject({skipped:true,ok:false});expect(runMomentumBatch).not.toHaveBeenCalled();
 });
 it('reports stale discovery rejection honestly rather than success',async()=>{
  vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({error:'Refresh discovery'},{status:409}));expect(await runCryptoAutomation()).toMatchObject({ok:false});expect(runBaseBatch).not.toHaveBeenCalled();

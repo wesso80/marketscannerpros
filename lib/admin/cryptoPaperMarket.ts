@@ -1,23 +1,29 @@
 import {parseExchangeCandles} from './cryptoExchangeVolume';
 import type {PaperExitPath} from './portfolio-lab/paperExitPath';
 import type {VolumeMomentum} from './cryptoVolumeMomentum';
+export class PaperMarketError extends Error {}
 export type CryptoPaperQuote={bid:number;ask:number;priceAt:string;receivedAt:string;product:string};
 export function parsePaperQuote(raw:unknown,product:string,now=Date.now()):CryptoPaperQuote{
  const b=raw as Record<string,unknown>;const bid=Number(b?.bid),ask=Number(b?.ask),at=Date.parse(String(b?.time??''));
- if(!Number.isFinite(bid)||!Number.isFinite(ask)||bid<=0||ask<bid||!Number.isFinite(at)||at>now||now-at>60000)throw Error('Fresh Coinbase quote unavailable');
+ if(!Number.isFinite(bid)||!Number.isFinite(ask)||bid<=0||ask<bid||!Number.isFinite(at)||at>now||now-at>60000)throw new PaperMarketError('Ticker has stale last-trade time or invalid bid/ask');
  return {bid,ask,priceAt:new Date(at).toISOString(),receivedAt:new Date(now).toISOString(),product};
 }
 export async function fetchPaperQuote(product:string):Promise<CryptoPaperQuote>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
- const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/ticker`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error('Quote provider unavailable');
+ const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/ticker`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Quote provider HTTP ${r.status}`);
  return parsePaperQuote(await r.json(),product);
 }
-export async function fetchPaperPath(symbol:string,product:string):Promise<PaperExitPath>{
+export async function fetchPaperPath(symbol:string,product:string,from?:string):Promise<PaperExitPath>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
- const step=900000,end=Math.floor(Date.now()/step)*step,start=end-300*step;
+ const step=900000,end=Math.floor(Date.now()/step)*step;
+ const requested=from?Math.floor(Date.parse(from)/step)*step:end-299*step;
+ if(!Number.isFinite(requested)||requested>end)throw new PaperMarketError('Invalid exit history start');
+ if(requested<end-299*step)throw new PaperMarketError('Exit history requires recovery beyond the 299-candle window');
+ const start=requested;
+ if(start===end)return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[]};
  const params=new URLSearchParams({granularity:'900',start:new Date(start).toISOString(),end:new Date(end).toISOString()});
- const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?${params}`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error('Exit history unavailable');
- const bars=parseExchangeCandles(await r.json(),step,start,end);
+ const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?${params}`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Exit history provider HTTP ${r.status}`);
+ let bars;try{bars=parseExchangeCandles(await r.json(),step,start,end);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle validation failed');}
  return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}))};
 }
 export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now()){
