@@ -1,12 +1,12 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import type {BaseScan} from '@/lib/admin/cryptoBaseScan';
-export default function CryptoBaseScanner({now}:{now:number}){
+export default function CryptoBaseScanner({now,refreshVersion=0}:{now:number;refreshVersion?:number}){
   const [scan,setScan]=useState<BaseScan|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const alive=useRef(true);
   useEffect(()=>{alive.current=true;const controller=new AbortController();
-    void fetch('/api/admin/crypto-markets/bases',{cache:'no-store',signal:controller.signal}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error);if(alive.current)setScan(b.scan);}).catch(e=>{if(alive.current&&e.name!=='AbortError')setError('Saved base scan unavailable');});
-    return()=>{alive.current=false;controller.abort();};},[]);
+    void fetch('/api/admin/crypto-markets/bases',{cache:'no-store',signal:controller.signal}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error);if(alive.current&&!controller.signal.aborted){setScan(b.scan);setError('');}}).catch(e=>{if(alive.current&&e.name!=='AbortError')setError('Saved base scan unavailable');});
+    return()=>{alive.current=false;controller.abort();};},[refreshVersion]);
   useEffect(()=>{
     if(!running)return;
     let cancelled=false,timer:ReturnType<typeof setTimeout>|undefined;
@@ -34,7 +34,7 @@ export default function CryptoBaseScanner({now}:{now:number}){
     <h2 className="text-xl">Daily base watchlist</h2>
     <p className="text-sm">Scans supported Coinbase, Binance, KuCoin and OKX spot pairs for a tight 21-day range and contracting candle volume. Bases appear first, independent of momentum. Experimental watchlist; not entry permission.</p>
     <button disabled={busy&&!running} onClick={()=>setRunning(v=>!v)} className="rounded bg-emerald-800 px-3 py-2">{running?'Pause base scan':'Start / resume base scan'}</button>
-    <p className="text-xs text-slate-400">Five daily-candle requests per batch, at least one minute apart. Runs only while this page is visible; an active batch may finish after pausing. Saved progress resumes on request. No CoinGecko or Alpha Vantage calls here. Kraken-only and unsupported pairs remain unavailable. One venue supplies each coin’s price and base-asset volume; USD, USDT and USDC prices retain their quote currency. Refresh discovery first when starting a new UTC day.</p>
+    <p className="text-xs text-slate-400">Manual scan: five daily-candle requests per batch, at least one minute apart. The manual loop runs only while this page is visible; an active batch may finish after pausing. Enabled background scans continue every 15 minutes with this page closed. Use Refresh saved dashboard to see their latest progress. No CoinGecko or Alpha Vantage calls here. Kraken-only and unsupported pairs remain unavailable. One venue supplies each coin’s price and base-asset volume; USD, USDT and USDC prices retain their quote currency. Refresh discovery first when starting a new UTC day.</p>
     {busy&&<p>Checking next five pairs…</p>}{error&&<p role="alert" className="text-amber-300">{error}</p>}
     {scan&&<>
       <p>{now-Date.parse(scan.updatedAt)>26*3600000?'STALE · ':''}Saved {new Date(scan.updatedAt).toLocaleString()} · Discovery {new Date(scan.discoveryAt).toLocaleString()}</p>
