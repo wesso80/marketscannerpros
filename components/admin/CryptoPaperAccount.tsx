@@ -3,14 +3,14 @@ import {useEffect,useState} from 'react';
 import type {ArcaPortfolio,ArcaPosition,ArcaTrade,ArcaJournalEntry} from '@/lib/admin/portfolio-lab/types';
 type State={automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
-export default function CryptoPaperAccount({now}:{now:number}){
+export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now:number;refreshVersion?:number;onRefresh?:()=>void}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  async function load(action?:'enable'|'pause'|'cycle'|'auto_enable'|'auto_pause'){
   setBusy(true);setError('');setNotice('');
   try{const r=await fetch('/api/admin/crypto-markets/paper',{method:action?'POST':'GET',cache:'no-store',...(action?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action})}:{})}),b=await r.json();if(!r.ok)throw Error(b.error||'Paper account unavailable');setData(b);if(b.cycle?.reason)setNotice(b.cycle.reason);}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- useEffect(()=>{void load();},[]);
+ useEffect(()=>{void load();},[refreshVersion]);
  const p=data?.portfolio,last=data?.journal.find(j=>j.title==='Crypto paper cycle completed');
  return <section id="crypto-paper" aria-label="Crypto paper account" className="space-y-3 rounded border border-violet-700 p-4 scroll-mt-4">
   <h2 className="text-xl">Crypto paper account · SIMULATED</h2>
@@ -23,7 +23,7 @@ export default function CryptoPaperAccount({now}:{now:number}){
   <div className="flex flex-wrap gap-3">
    <button disabled={busy} onClick={()=>void load(p?.status==='ACTIVE'?'pause':'enable')} className="rounded bg-violet-800 px-3 py-2 disabled:opacity-50">{p?.status==='ACTIVE'?'Pause paper entries':p?'Resume paper entries':'Enable crypto paper account'}</button>
    {p&&<button disabled={busy} onClick={()=>void load('cycle')} className="rounded border px-3 py-2">Run paper cycle</button>}
-   <button disabled={busy} onClick={()=>void load()} className="rounded border px-3 py-2">Refresh paper account</button>
+   <button disabled={busy} onClick={()=>onRefresh?onRefresh():void load()} className="rounded border px-3 py-2">Refresh paper account</button>
   </div>
   {busy&&<p>Updating paper account…</p>}{error&&<p role="alert" className="text-red-300">{error}</p>}{notice&&<p>{notice}</p>}
   <p className="text-xs text-slate-400">The scheduled paper cycle checks positions every 15 minutes, including when this page is closed. Pausing entries keeps exit monitoring active. New entries use the saved 4h momentum scan and a freshly rechecked setup plus bid/ask. Scans refresh automatically only when background scans are enabled above. Missing exit data blocks further entries.</p>

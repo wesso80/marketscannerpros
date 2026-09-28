@@ -1,12 +1,12 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import type {MomentumScan as BaseScan} from '@/lib/admin/cryptoVolumeMomentum';
-export default function CryptoMomentumScanner({now}:{now:number}){
+export default function CryptoMomentumScanner({now,refreshVersion=0}:{now:number;refreshVersion?:number}){
   const [scan,setScan]=useState<BaseScan|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const alive=useRef(true);
   useEffect(()=>{alive.current=true;const controller=new AbortController();
-    void fetch('/api/admin/crypto-markets/momentum',{cache:'no-store',signal:controller.signal}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error);if(alive.current)setScan(b.scan);}).catch(e=>{if(alive.current&&e.name!=='AbortError')setError('Saved momentum scan unavailable');});
-    return()=>{alive.current=false;controller.abort();};},[]);
+    void fetch('/api/admin/crypto-markets/momentum',{cache:'no-store',signal:controller.signal}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error);if(alive.current&&!controller.signal.aborted){setScan(b.scan);setError('');}}).catch(e=>{if(alive.current&&e.name!=='AbortError')setError('Saved momentum scan unavailable');});
+    return()=>{alive.current=false;controller.abort();};},[refreshVersion]);
   useEffect(()=>{
     if(!running)return;
     let cancelled=false,timer:ReturnType<typeof setTimeout>|undefined;
@@ -34,7 +34,7 @@ export default function CryptoMomentumScanner({now}:{now:number}){
     <h2 className="text-xl">4h momentum & volume</h2>
     <p>Independent setup: rising trend with a fresh breakout or continuation and increased candle volume. No daily base required.</p>
     <button disabled={busy&&!running} onClick={()=>setRunning(v=>!v)} className="rounded bg-sky-800 px-3 py-2">{running?'Pause momentum scan':'Start / resume momentum scan'}</button>
-    <p className="text-xs text-slate-400">Five exchange requests per batch, at least one minute apart, while this page is visible. An active batch may finish after pausing. Separate from the daily base scan: running both can use ten exchange requests per minute. Coinbase, Binance, KuCoin and OKX; no Alpha Vantage or CoinGecko candle calls. Refresh discovery for each new UTC 4h window.</p>
+    <p className="text-xs text-slate-400">Manual scan: five exchange requests per batch, at least one minute apart, while this page is visible. An active batch may finish after pausing. Separate from the daily base scan: running both can use ten exchange requests per minute. Coinbase, Binance, KuCoin and OKX; no Alpha Vantage or CoinGecko candle calls. Enabled background scans continue every 15 minutes even when this page is closed. Use Refresh saved dashboard to see their latest progress. Refresh discovery for each new manual UTC 4h window.</p>
     {busy&&<p>Checking next five momentum pairs…</p>}{error&&<p role="alert" className="text-amber-300">{error}</p>}
     {scan&&<>
       <p>{Math.floor(now/(4*3600000))!==Math.floor(Date.parse(scan.startedAt)/(4*3600000))?'OLD 4H WINDOW · ':''}Saved {new Date(scan.updatedAt).toLocaleString()} · Started {new Date(scan.startedAt).toLocaleString()}</p>

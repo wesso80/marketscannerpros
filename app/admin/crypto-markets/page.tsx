@@ -19,6 +19,8 @@ export default function CryptoMarketsPage() {
   const [data,setData] = useState<Snapshot|null>(null), [error,setError] = useState('');
   const [busy,setBusy] = useState(false), [query,setQuery] = useState('');
   const [now,setNow] = useState(Date.now());
+  const [refreshVersion,setRefreshVersion] = useState(0);
+  function refreshSaved(){setRefreshVersion(v=>v+1);void load('GET');}
   const [review,setReview] = useState<MomentumReview|null>(null);
   const [base,setBase] = useState<BaseReview|null>(null);
   const [chart,setChart] = useState<MomentumChart|null>(null);
@@ -55,15 +57,15 @@ export default function CryptoMarketsPage() {
     <p className="text-sm text-slate-400">Screens the first 300 pairs by reported volume per exchange, deduplicated by CoinGecko ID. This is a capped discovery window, not every exchange listing. Discovery refreshes do not create trades. The separate paper account below applies its own entry checks.</p>
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
-      <button disabled={busy} onClick={()=>void load('GET')} className="rounded border px-4 py-2">Load saved results</button>
+      <button disabled={busy} onClick={refreshSaved} className="rounded border px-4 py-2">Refresh saved dashboard</button>
       <input aria-label="Find coin" placeholder="Find coin, e.g. QNT" value={query} onChange={e=>setQuery(e.target.value)} className="rounded border bg-slate-900 px-3" />
     </div>
-    <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page only reads saved results.</p>
+    <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page and Refresh saved dashboard read saved discovery, scans and paper results only; they do not request new provider data.</p>
     {error && <p role="alert" className="text-red-300">{error}</p>}
     <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
-    <CryptoPaperAccount now={now} />
-    <CryptoMomentumScanner now={now} />
-    <CryptoBaseScanner now={now} />
+    <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />
+    <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
+    <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
       <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
