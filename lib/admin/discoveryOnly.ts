@@ -13,7 +13,7 @@ export function discoveryOnlyAction(path: string): 'allow' | 'pause_api' | 'skip
   if (!adminDiscoveryOnly()) return 'allow';
   path = path.replace(/\/+$/, '') || '/';
   if (background.has(path)) return 'skip_job';
-  if (path === '/api/admin/crypto-markets/bases' || path === '/api/admin/crypto-markets/volume' || path === '/api/admin/crypto-markets/context' || path === '/api/admin/verify' || path === '/api/admin/crypto-discovery' || path === '/api/admin/crypto-discovery/analyze') return 'allow';
+  if (path === '/api/admin/crypto-markets/momentum' || path === '/api/admin/crypto-markets/bases' || path === '/api/admin/crypto-markets/volume' || path === '/api/admin/crypto-markets/context' || path === '/api/admin/verify' || path === '/api/admin/crypto-discovery' || path === '/api/admin/crypto-discovery/analyze') return 'allow';
   if (path === '/api/admin' || path.startsWith('/api/admin/') || path.startsWith('/api/operator/engine/')) return 'pause_api';
   if (path === '/admin/crypto-markets' || path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';
   if (path === '/admin' || path.startsWith('/admin/')) return 'pause_page';
