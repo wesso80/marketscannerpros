@@ -17,3 +17,8 @@ it('preserves completed Coinbase evidence during the same-day v1 upgrade',async(
  m.get.mockImplementation(async(k:string)=>k==='admin:crypto-discovery:v1'?snapshot():old);
  const b=await (await POST(req())).json();expect(b.scan.version).toBe(2);expect(b.scan.rows[0].reason).toBe('wide range');expect(b.scan.rows[0].exchange).toBe('gdax');expect(m.fetch.mock.calls.some(c=>c[0].id==='coin-0')).toBe(false);
 });
+
+it('returns saved progress when another browser owns the batch reservation',async()=>{
+ const scan={version:2,rows:[{id:'coin-0',stage:'NOT_BASE'}]};m.set.mockResolvedValue(null);m.get.mockResolvedValue(scan);
+ const response=await POST(req());expect(response.status).toBe(429);expect((await response.json()).scan).toEqual(scan);expect(m.fetch).not.toHaveBeenCalled();
+});
