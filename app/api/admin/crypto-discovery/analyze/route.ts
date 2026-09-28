@@ -4,7 +4,7 @@ import {getRedis} from '@/lib/redis';
 import {getOHLCRange} from '@/lib/coingecko';
 import {isAdminCryptoEnabled,isCoinGeckoEnabled} from '@/lib/admin/adminCrypto';
 import type {DiscoveryRow} from '@/lib/admin/cryptoDiscovery';
-import {reviewCryptoMomentum,type MomentumReview} from '@/lib/admin/cryptoMomentum';
+import {reviewCryptoMomentum} from '@/lib/admin/cryptoMomentum';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const PREFIX='admin:crypto-momentum:v1';
@@ -15,14 +15,21 @@ export async function POST(req:Request) {
   catch {return NextResponse.json({error:'A valid discovered CoinGecko ID is required'},{status:400});}
   try {
     const redis=getRedis();if(!redis) throw Error('cache');
-    const cached=await redis.get<MomentumReview>(`${PREFIX}:result:${id}`);
-    if(cached && Date.now()-Date.parse(cached.reviewedAt)<15*60000) return NextResponse.json({review:cached,cached:true});
     if(!isAdminCryptoEnabled()||!isCoinGeckoEnabled()) return NextResponse.json({error:'Crypto or CoinGecko requests are paused'},{status:409});
     const snapshot=await redis.get<{startedAt:string;rows:DiscoveryRow[]}>('admin:crypto-discovery:v1');
     const started=Date.parse(snapshot?.startedAt??'');
     const coin=snapshot?.rows.find(r=>r.id===id);
     if(!coin || coin.stage==='EXCLUDED' || !Number.isFinite(started) || started>Date.now() || Date.now()-started>15*60000)
       return NextResponse.json({error:'Run discovery first: coin must have a recent eligible exchange snapshot'},{status:409});
+    const quoteAt=Date.parse(coin.observedAt??'');
+    if(!Number.isFinite(quoteAt) || quoteAt>Date.now() || Date.now()-quoteAt>15*60000 || !Number.isFinite(coin.price) || coin.price<=0)
+      return NextResponse.json({error:'Discovery quote is stale or unavailable. Refresh discovery before analyzing; no candle calls spent.'},{status:409});
+    const history=await redis.get<{fetchedAt:number;hourly:number[][];daily:number[][]}>(`${PREFIX}:history:${id}`);
+    if(history && Number.isFinite(history.fetchedAt) && Date.now()>=history.fetchedAt && Date.now()-history.fetchedAt<15*60000) {
+      const review=reviewCryptoMomentum(coin,history.hourly,history.daily,Date.now());
+      await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
+      return NextResponse.json({review,cachedHistory:true,requestAttempts:0});
+    }
     if(!await redis.set(`${PREFIX}:coin:${id}`,'reserved',{nx:true,ex:900}))
       return NextResponse.json({error:'This coin is being reviewed or is cooling down after an attempt'},{status:429});
     let reserved=false;
@@ -36,6 +43,7 @@ export async function POST(req:Request) {
     ]);
     const review=reviewCryptoMomentum(coin,hourly??[],daily??[],Date.now());
     if(!hourly || !daily) review.reasons.unshift('Provider history request failed; no substitute history used');
+    else await redis.set(`${PREFIX}:history:${id}`,{fetchedAt:Date.now(),hourly,daily},{ex:900});
     await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
     return NextResponse.json({review,cached:false,requestAttempts:2});
   } catch {return NextResponse.json({error:'Momentum analysis or evidence storage failed; no trade was created'},{status:503});}
