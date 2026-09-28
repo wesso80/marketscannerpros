@@ -14,12 +14,12 @@ const now=Date.parse('2026-09-28T08:15:00Z');
 beforeEach(()=>{
  vi.clearAllMocks();vi.spyOn(Date,'now').mockReturnValue(now);
  saved={'admin:crypto-markets:automation:v1':true};
- set=vi.fn(async()=> 'OK');vi.mocked(getRedis).mockReturnValue({get:vi.fn(async(k:string)=>saved[k]),set} as never);
+ set=vi.fn(async()=> 'OK');vi.mocked(getRedis).mockReturnValue({get:vi.fn(async(k:string)=>saved[k]),set,ttl:vi.fn(async()=>1)} as never);
  vi.mocked(runDiscoveryBatch).mockImplementation(async()=>Response.json({snapshot:{requests:17}}));
  vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({requestAttempts:100,scan:{rows:[]}}));
  vi.mocked(runBaseBatch).mockImplementation(async()=>Response.json({requestAttempts:20,scan:{rows:[]}}));
 });
-afterEach(()=>vi.restoreAllMocks());
+afterEach(()=>{vi.useRealTimers();vi.restoreAllMocks();});
 it('defaults off and never calls providers until enabled',async()=>{
  saved={};expect(await runCryptoAutomation()).toMatchObject({enabled:false});expect(runDiscoveryBatch).not.toHaveBeenCalled();expect(runMomentumBatch).not.toHaveBeenCalled();
 });
@@ -44,7 +44,24 @@ it('retries discovery when a current-window scan contains no coins',async()=>{
  saved['admin:crypto-markets:bases:v1']={startedAt:new Date(now).toISOString(),version:2,rows:[{}]};
  await runCryptoAutomation();expect(runDiscoveryBatch).toHaveBeenCalledOnce();
 });
-it('does not label a provider cooldown as completed scan work',async()=>{
+it('does not label a persistent cooldown as completed scan work',async()=>{
+ vi.useFakeTimers();
  vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({error:'Cooling down'},{status:429}));
- expect(await runCryptoAutomation()).toMatchObject({ok:false});
+ const pending=runCryptoAutomation();await vi.runAllTimersAsync();
+ expect(await pending).toMatchObject({ok:false});
+});
+
+it('waits for a manual batch then resumes scheduled work',async()=>{
+ vi.useFakeTimers();
+ vi.mocked(runMomentumBatch).mockResolvedValueOnce(Response.json({error:'Shared batch active'},{status:429}));
+ const pending=runCryptoAutomation();await vi.runAllTimersAsync();
+ expect(await pending).toMatchObject({ok:true});
+ expect(runMomentumBatch).toHaveBeenCalledTimes(2);expect(runBaseBatch).toHaveBeenCalledOnce();
+});
+it('honours pause while waiting for a manual batch',async()=>{
+ vi.useFakeTimers();
+ vi.mocked(runMomentumBatch).mockImplementation(async()=>{saved['admin:crypto-markets:automation:v1']=false;return Response.json({error:'Shared batch active'},{status:429});});
+ const pending=runCryptoAutomation();await vi.runAllTimersAsync();
+ expect(await pending).toMatchObject({ok:false,error:'Background scans paused while waiting for an active batch'});
+ expect(runMomentumBatch).toHaveBeenCalledOnce();expect(runBaseBatch).not.toHaveBeenCalled();
 });

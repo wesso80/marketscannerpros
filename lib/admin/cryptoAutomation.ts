@@ -31,9 +31,24 @@ export async function runCryptoAutomation(){
    const age=started-Date.parse(saved?.startedAt??'');
    if(!saved?.rows?.length||!Number.isFinite(age)||age<0||age>900000)await record('discovery',await runDiscoveryBatch());
   }
-  await record('momentum',await runMomentumBatch(100));
+  // A manual batch can hold the same reservation when the schedule fires.
+  // Wait for its actual TTL, then retry boundedly; never delete another worker's lock.
+  const coordinatedBatch=async(name:string,key:string,run:()=>Promise<Response>)=>{
+   let response=await run();
+   for(let attempt=0;response.status===429&&attempt<2;attempt++){
+    const ttl=await redis.ttl(`${key}:batch-lock`);
+    if(ttl===-1||ttl>240)break;
+    const delay=(Math.max(0,ttl)+1)*1000;
+    if(Date.now()-started+delay>300000)break;
+    await new Promise(resolve=>setTimeout(resolve,delay));
+    if(await redis.get(KEY)!==true)throw Error('Background scans paused while waiting for an active batch');
+    response=await run();
+   }
+   await record(name,response);
+  };
+  await coordinatedBatch('momentum','admin:crypto-markets:momentum-volume:v1',()=>runMomentumBatch(100));
   // Daily bases are watchlist work; advance a smaller batch without starving four-hour setups.
-  await record('bases',await runBaseBatch(20));
+  await coordinatedBatch('bases','admin:crypto-markets:bases:v1',()=>runBaseBatch(20));
   const last={ok:true,at:new Date().toISOString(),durationMs:Date.now()-started,reports};await redis.set(`${KEY}:last`,last);return {enabled:true,...last};
  }catch(error){
   const last={ok:false,at:new Date().toISOString(),durationMs:Date.now()-started,reports,error:error instanceof Error?error.message:'Background scan failed'};await redis.set(`${KEY}:last`,last);return {enabled:true,...last};
