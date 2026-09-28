@@ -1,5 +1,5 @@
 'use client';
-import CryptoMarketContext from '@/components/admin/CryptoMarketContext';
+const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
 import type {BaseReview} from '@/lib/admin/cryptoBase';
 import dynamic from 'next/dynamic';
 import type { MomentumChart } from '@/lib/admin/cryptoMomentum';
@@ -20,8 +20,9 @@ export default function CryptoMarketsPage() {
   const [base,setBase] = useState<BaseReview|null>(null);
   const [chart,setChart] = useState<MomentumChart|null>(null);
   const [analyzing,setAnalyzing] = useState('');
+  const [researchOpen,setResearchOpen] = useState(false);
   async function analyze(coinId:string) {
-    setAnalyzing(coinId);setError('');setReview(null);setChart(null);setBase(null);
+    setResearchOpen(false);setAnalyzing(coinId);setError('');setReview(null);setChart(null);setBase(null);
     try {
       const res=await fetch('/api/admin/crypto-discovery/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coinId})});
       const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setNow(Date.now());
@@ -34,7 +35,7 @@ export default function CryptoMarketsPage() {
       const res = await fetch('/api/admin/crypto-discovery',{method,cache:'no-store'});
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Discovery request failed');
-      setData(body.snapshot); setReview(null);setChart(null);setBase(null); setNow(Date.now());
+      setData(body.snapshot); setResearchOpen(false);setReview(null);setChart(null);setBase(null); setNow(Date.now());
     } catch(e) {setError(e instanceof Error ? e.message : 'Discovery unavailable');}
     finally {setBusy(false);}
   }
@@ -49,7 +50,6 @@ export default function CryptoMarketsPage() {
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
     <p>Major-exchange momentum research: Binance, Coinbase, Kraken, KuCoin and OKX. No six-week holding requirement.</p>
     <p className="text-sm text-slate-400">Screens the first 300 pairs by reported volume per exchange, deduplicated by CoinGecko ID. This is a capped discovery window, not every exchange listing. No paper orders or entry signals are created here.</p>
-    <CryptoMarketContext now={now} />
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
       <button disabled={busy} onClick={()=>void load('GET')} className="rounded border px-4 py-2">Load saved results</button>
@@ -57,7 +57,7 @@ export default function CryptoMarketsPage() {
     </div>
     <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page only reads saved results.</p>
     {error && <p role="alert" className="text-red-300">{error}</p>}
-    <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. No candle volume is available.</p>
+    <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
       <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
@@ -72,6 +72,11 @@ export default function CryptoMarketsPage() {
       </section>}
       <CryptoReviewChart key={review.coinId} chart={chart} review={review} base={base} />
       <CryptoExchangeVolume key={review.coinId+review.reviewedAt} coinId={review.coinId} now={now} />
+      <section aria-label="Further research" className="rounded border border-slate-700 p-4 space-y-3">
+        <button type="button" aria-expanded={researchOpen} aria-controls="crypto-further-research" onClick={()=>setResearchOpen(open=>!open)} className="rounded border px-3 py-2">{researchOpen?'Close further research':'Open further research'} · {review.symbol}</button>
+        <p className="text-sm text-slate-400">Optional market news and trending context after reviewing the setup. These feeds do not change the initial scan ranking or trade status.</p>
+        {researchOpen&&<div id="crypto-further-research"><CryptoMarketContext now={now} /></div>}
+      </section>
       <p>{review.exitRule}</p>
       <p className="text-sm text-slate-400">Long-side research rule: completed daily and 4h closes above rising SMA20; 1h close above the previous 20-bar high, or reclaim of a pullback near SMA20. Stop below the last six hourly lows minus 0.25 ATR; maximum chase 0.5 ATR and minimum current 1.5R to a model target. Not a calibrated edge or paper-trade permission.</p>
     </section>}

@@ -11,10 +11,10 @@ export default function CryptoMarketContext({now}:{now:number}){
   useEffect(()=>{void load('GET');},[]);
   const globalTime=Date.parse(data?.global?.updatedAt??'');
   return <section aria-label="Crypto market context" className="space-y-3 rounded border border-slate-700 p-4">
-    <h2 className="text-xl">Market context · News & trending</h2>
+    <h2 className="text-xl">Further research · Market news & trending</h2>
     <div className="flex gap-3"><button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-slate-700 px-3 py-2 disabled:opacity-50">{busy?'Loading context…':'Refresh market context'}</button>
       <button disabled={busy} onClick={()=>void load('GET')} className="rounded border px-3 py-2">Load saved context</button></div>
-    <p className="text-xs text-slate-400">Manual refresh: up to 3 CoinGecko requests, shared five-minute cooldown. Opening this section reads saved data only. Trending means search interest over 24 hours, not buying volume. Headlines and market context do not authorize trades.</p>
+    <p className="text-xs text-slate-400">Manual refresh: up to 3 CoinGecko requests, shared five-minute cooldown. Opening this section reads saved data only. Trending means search interest over 24 hours, not buying volume. Headlines cover the whole crypto market, not specifically the selected coin. Headlines and market context do not authorize trades.</p>
     {error&&<p role="alert" className="text-red-300">{error}</p>}
     {!data&&!busy&&<p>No saved context yet.</p>}
     {data&&<>
