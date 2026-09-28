@@ -220,7 +220,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
     let reason = validation.ok ? null : validation.reason;
     if (filledSymbols.has(order.symbol)) reason = 'existing_position_for_symbol';
     const regime = validation.ok && !reason
-      ? assessPaperRegime(await regimeContextForCycle(), opts.workspaceId, order.assetClass, order.playbookId)
+      ? assessPaperRegime(await regimeContextForCycle(), opts.workspaceId, order.assetClass, order.playbookId, Date.now(), row)
       : null;
     if (regime && regime.sizeMultiplier <= 0) reason = regime.reason;
     if (validation.ok && !reason && regime) {
@@ -267,7 +267,7 @@ async function runCycle(opts: SimulateCycleOptions, portfolio: ArcaPortfolio): P
   ]);
   for (const cand of decision.selected) {
     const playbookId = cand.row.setupType || null;
-    const regimeDecision = assessPaperRegime(regimeContext, opts.workspaceId, cand.assetClass, playbookId);
+    const regimeDecision = assessPaperRegime(regimeContext, opts.workspaceId, cand.assetClass, playbookId, Date.now(), cand.row);
     const currentRegime = regimeDecision.regime;
     if (occupied.has(cand.row.symbol)) {
       rejections++;
