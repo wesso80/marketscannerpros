@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { DiscoveryRow, VenueEvidence } from '@/lib/admin/cryptoDiscovery';
+import type { MomentumReview } from '@/lib/admin/cryptoMomentum';
 type Snapshot = { startedAt:string; finishedAt:string; requests:number; partial:boolean; uniqueCoins:number;
   coverage:{exchange:string; pages:number; status:string; pairsSeen:number}[];
   rows:(DiscoveryRow & {venues:VenueEvidence[]})[] };
@@ -9,6 +10,16 @@ export default function CryptoDiscoveryPage() {
   const [data,setData] = useState<Snapshot|null>(null), [error,setError] = useState('');
   const [busy,setBusy] = useState(false), [query,setQuery] = useState('');
   const [now,setNow] = useState(Date.now());
+  const [review,setReview] = useState<MomentumReview|null>(null);
+  const [analyzing,setAnalyzing] = useState('');
+  async function analyze(coinId:string) {
+    setAnalyzing(coinId);setError('');setReview(null);
+    try {
+      const res=await fetch('/api/admin/crypto-discovery/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coinId})});
+      const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setNow(Date.now());
+    } catch(e) {setError(e instanceof Error?e.message:'Analysis failed');}
+    finally {setAnalyzing('');}
+  }
   async function load(method:'GET'|'POST') {
     setBusy(true); setError('');
     try {
@@ -37,6 +48,17 @@ export default function CryptoDiscoveryPage() {
     </div>
     <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page only reads saved results.</p>
     {error && <p role="alert" className="text-red-300">{error}</p>}
+    <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. No candle volume is available.</p>
+    {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
+      <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
+      <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
+      <p>{review.reasons.join(' · ')}</p>
+      <p>Daily trend rising: {String(review.evidence.dailyTrend)} · 4h trend rising: {String(review.evidence.fourHourTrend)} · Hourly bars: {review.evidence.hourlyBars} · Daily bars: {review.evidence.dailyBars}</p>
+      <p>Last closed 1h: {review.evidence.hourlyAsOf??'unavailable'} · 4h: {review.evidence.fourHourAsOf??'unavailable'} · Daily: {review.evidence.dailyAsOf??'unavailable'} · Quote: {review.evidence.quoteAsOf??'unavailable'}</p>
+      {review.levels && <p>Observed price: {review.levels.entry.toPrecision(6)} · Trigger: {review.levels.trigger.toPrecision(6)} · Maximum entry: {review.levels.maxEntry.toPrecision(6)} · Structural stop: {review.levels.stop.toPrecision(6)} · Model 2R target: {review.levels.target.toPrecision(6)} · Current R:R: {review.levels.currentRewardRisk.toFixed(2)}</p>}
+      <p>{review.exitRule}</p>
+      <p className="text-sm text-slate-400">Long-side research rule: completed daily and 4h closes above rising SMA20; 1h close above the previous 20-bar high, or reclaim of a pullback near SMA20. Stop below the last six hourly lows minus 0.25 ATR; maximum chase 0.5 ATR and minimum current 1.5R to a model target. Not a calibrated edge or paper-trade permission.</p>
+    </section>}
     {!data && !busy && <p>No saved discovery snapshot. Run a scan to establish coverage.</p>}
     {data && <>
       <p>{stale?'STALE SNAPSHOT':data.partial?'PARTIAL COVERAGE':'SNAPSHOT AVAILABLE'} · {data.uniqueCoins} coins with market data · {data.requests} request attempts · Started {new Date(data.startedAt).toLocaleString()} · Finished {new Date(data.finishedAt).toLocaleString()}</p>
@@ -45,7 +67,7 @@ export default function CryptoDiscoveryPage() {
       <p className="text-sm text-slate-400">MOMENTUM: 1h ≥ 1% and 24h ≥ 3%. EXTENDED: 1h ≥ 10% or 24h ≥ 30%; retained for review, not a buy signal. WATCH: other passing screens. These are unvalidated discovery rules, not a profitability score. Ordered by stage then 1h change.</p>
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{['Coin / ID','Stage at scan','Price USD','1h','24h','7d','Venues / pair spreads','Fixed scanner','Exclusions'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
         <tbody>{rows.map(r=><tr key={r.id} className="border-t border-slate-700">
-          <td className="p-2">{r.symbol}<br/><span className="text-slate-400">{r.id}</span></td><td>{r.stage}</td><td>{r.price?.toLocaleString(undefined,{maximumSignificantDigits:7}) ?? 'Unavailable'}</td>
+          <td className="p-2">{r.symbol}<br/><span className="text-slate-400">{r.id}</span><br/><button className="underline disabled:opacity-40" disabled={!!analyzing||busy||stale||r.stage==='EXCLUDED'} onClick={()=>void analyze(r.id)}>{analyzing===r.id?'Analyzing…':`Analyze ${r.symbol} candles`}</button></td><td>{r.stage}</td><td>{r.price?.toLocaleString(undefined,{maximumSignificantDigits:7}) ?? 'Unavailable'}</td>
           <td>{pct(r.change1h)}</td><td>{pct(r.change24h)}</td><td>{pct(r.change7d)}</td>
           <td>{r.venues.map(v=>`${v.exchange} ${v.pair} (${v.spreadPct.toFixed(3)}%)`).join(', ')}</td>
           <td>{r.fixedScanCovered?'Covered':'Outside fixed list'}</td><td>{r.reasons.join(', ') || 'None at scan'}</td>
