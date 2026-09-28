@@ -87,3 +87,9 @@ it('does not create a position when cash covers notional but not the fee', async
   expect(store.insertPosition).not.toHaveBeenCalled();
   expect(store.updateSimOrderStatus).not.toHaveBeenCalled();
 });
+it('crypto paper exit reconciles fees without restarting legacy learning jobs',async()=>{
+ const position=await enter();
+ await markAndMaybeExit({portfolio:{...portfolio},position,currentPrice:125,skipLearning:true});
+ expect(portfolio.currentCash).toBe(10195.6);
+ expect(recordTradeClosureLearning).not.toHaveBeenCalled();
+});

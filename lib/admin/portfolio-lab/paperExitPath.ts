@@ -8,7 +8,7 @@ export interface PaperExitCandle {
 }
 export interface PaperExitPath {
   symbol: string; market: 'CRYPTO'; timeframe: '15m';
-  source: 'admin_scan_bars'; candles: PaperExitCandle[];
+  source: 'admin_scan_bars'|'crypto_exchange'; candles: PaperExitCandle[];
 }
 
 /** Reuses the scanner's AV bar-start contract. Never accepts CoinGecko close timestamps here. */
@@ -48,13 +48,14 @@ export function evaluatePaperExitPath(position: ArcaPosition, path: PaperExitPat
   const reject = (status: string): PaperPathResult => ({ status });
   if (!path) return reject('candle_path_unavailable');
   if (position.assetClass !== 'crypto' || path.market !== 'CRYPTO' || path.symbol !== position.symbol ||
-      path.timeframe !== '15m' || path.source !== 'admin_scan_bars' || !Array.isArray(path.candles)) return reject('candle_path_scope_mismatch');
+      path.timeframe !== '15m' || !['admin_scan_bars','crypto_exchange'].includes(path.source) || !Array.isArray(path.candles)) return reject('candle_path_scope_mismatch');
   const entry = Date.parse(position.openedAt);
   if (!Number.isFinite(entry) || entry > now) return reject('candle_path_entry_invalid');
   // Fixed levels only. Replaying changed stops over old bars would introduce hindsight.
   if (position.initialStopLoss == null || position.stopLoss !== position.initialStopLoss) return reject('candle_path_original_stop_unavailable_or_changed');
-  const entryOpen = Math.ceil(entry / STEP) * STEP;
-  const entryCandleExcluded = entryOpen !== entry;
+  const conservativeEntry=path.source==='crypto_exchange';
+  const entryOpen = (conservativeEntry?Math.floor(entry/STEP):Math.ceil(entry/STEP))*STEP;
+  const entryCandleExcluded = !conservativeEntry && entryOpen !== entry;
   const target = nearestPaperTarget(position);
   let firstOpen = entryOpen;
   const checkpoint = position.exitCheckpoint;
@@ -77,14 +78,15 @@ export function evaluatePaperExitPath(position: ArcaPosition, path: PaperExitPat
         b.openAt !== expected || b.closeAt - b.openAt !== STEP || b.low <= 0 ||
         b.low > Math.min(b.open, b.close) || b.high < Math.max(b.open, b.close)) return reject('candle_path_gap_or_invalid_bar');
     const stopHit = long ? b.low <= position.stopLoss! : b.high >= position.stopLoss!;
-    const targetHit = target != null && (long ? b.high >= target : b.low <= target);
+    const partialEntry=conservativeEntry && b.openAt<entry;
+    const targetHit = !partialEntry && target != null && (long ? b.high >= target : b.low <= target);
     if (stopHit || targetHit) {
       const gapStop = long ? b.open <= position.stopLoss! : b.open >= position.stopLoss!;
       // Stop first on unresolved OHLC ordering; gap losses fill at the adverse open.
       return { status: 'candle_path_exit', entryCandleExcluded, exit: {
         reason: stopHit ? 'STOP_LOSS' : 'TAKE_PROFIT',
-        price: stopHit ? (gapStop ? b.open : position.stopLoss!) : target!,
-        at: new Date(b.closeAt).toISOString(), ambiguous: stopHit && targetHit,
+        price: stopHit ? (gapStop && !partialEntry ? b.open : position.stopLoss!) : target!,
+        at: new Date(b.closeAt).toISOString(), ambiguous: (stopHit && targetHit) || (partialEntry && stopHit),
       } };
     }
     expected = b.closeAt;

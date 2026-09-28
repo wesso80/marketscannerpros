@@ -102,3 +102,19 @@ describe('durable candle checkpoints', () => {
     expect(run(path(candle()), { ...position, exitCheckpoint: checkpoint }).checkpoint).toBeUndefined();
   });
 });
+
+describe('crypto exchange partial entry candle',()=>{
+ const p={...position,openedAt:new Date(t+60000).toISOString()};
+ it('does not credit the partial entry high as a target',()=>{
+  expect(run({...path(candle(0,{high:120})),source:'crypto_exchange'},p).exit).toBeUndefined();
+ });
+ it('charges a possible partial entry stop conservatively with an ambiguity flag',()=>{
+  expect(run({...path(candle(0,{open:90,low:88,high:120})),source:'crypto_exchange'},p).exit).toMatchObject({reason:'STOP_LOSS',price:95,ambiguous:true});
+ });
+ it('requires the partial entry bar before allowing a later target',()=>{
+  expect(run({...path(candle(1,{high:120})),source:'crypto_exchange'},p).status).toBe('candle_path_entry_prefix_unresolved');
+ });
+ it('continues to a target on the next complete candle',()=>{
+  expect(run({...path(candle(),candle(1,{high:120})),source:'crypto_exchange'},p).exit).toMatchObject({reason:'TAKE_PROFIT',price:110});
+ });
+});

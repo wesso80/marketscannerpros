@@ -3,7 +3,7 @@ import {parseDailyVenue,selectDailyPair,type DailyPair} from './cryptoDailyVenue
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {createBaseScan} from './cryptoBaseScan';
 const H=3600000,F=4*H;
-export type VolumeMomentum={stage:'PENDING'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;kind:'BREAKOUT'|'CONTINUATION'|null};
+export type VolumeMomentum={stage:'PENDING'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;kind:'BREAKOUT'|'CONTINUATION'|null};
 export type MomentumScanRow=VolumeMomentum&{id:string;symbol:string;pair:DailyPair|null};
 export type MomentumScan={version:1;startedAt:string;updatedAt:string;discoveryAt:string;rows:MomentumScanRow[]};
 export const blankMomentum=(reason='Waiting for completed 4h candles'):VolumeMomentum=>({stage:'PENDING',reason,asOf:null,relativeVolume:null,changePct:null,trigger:null,close:null,atr:null,kind:null});
@@ -35,6 +35,9 @@ export function assessVolumeMomentum(bars:ExchangeBar[],now:number):VolumeMoment
  const expanded=rv>=1.5;
  if(expanded&&rising&&(breakout||continuation)){
   result.kind=breakout?'BREAKOUT':'CONTINUATION';
+  const stop=Math.min(...b.slice(-6).map(x=>x.l))-0.25*atr,risk=last.c-stop;
+  if(stop<=0||risk<=0)return fail('Invalid structural stop');
+  Object.assign(result,{stop,target:last.c+2*risk,maxEntry:Math.min(last.c+0.5*atr,(last.c+2*risk+1.5*stop)/2.5),entryFloor:breakout?trigger:prev.h});
   const stretched=last.c-sma>2.5*atr||last.c-trigger>atr||Math.max(last.h-last.l,Math.abs(last.h-prev.c),Math.abs(last.l-prev.c))>3*atr;
   result.stage=stretched?'EXTENDED':'MOMENTUM_VOLUME';
   result.reason=stretched?'Price and volume advanced, but the completed move exceeds the ATR chase limits':'Completed 4h '+(breakout?'20-bar breakout':'trend continuation')+' with at least 1.5× prior 20-bar volume; no base required';
