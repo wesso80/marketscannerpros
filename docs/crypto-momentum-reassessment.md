@@ -27,3 +27,9 @@ Measure net expectancy in R, drawdown, profit factor, exposure time, missed-oppo
 ## Current boundary
 
 The discovery and candle-review pages are research only. Existing paper entries still use the legacy strategy. Exit accounting has the original-risk and nearest-target corrections above; momentum entries, independent continuous exit monitoring, trailing stops and partial exits are not yet enabled. Candle-derived exit times are recorded as the candle-close upper bound, with source and ambiguity in the exit journal. BUY/SELL source orders are normalized when resolving original position risk. No real-order execution is introduced.
+
+## Mechanical validation checkpoint — 28 September 2026
+
+Production paper fill and exit functions now debit entry fees, retain the charged amount in the existing scoped fill journal, and include both fees in closed-trade P&L/R. Portfolio realised P&L expenses the entry charge immediately and does not deduct it twice at exit. Legacy fills retain zero entry fees because none were charged. Cash sufficiency includes the entry fee. Manual closes use a transaction and the same portfolio row lock as the scheduled cycle, then re-read balances and open positions.
+
+The isolated round-trip suite exercises the actual order, fill, exit, balance, journal and closure-learning calls against an in-memory persistence boundary: long/short targets, adverse stop gaps, flat manual closes, intrabar target/reversal, and insufficient cash. Additional tests cover fee evidence reload, stale fills, exit checkpoints and manual-close locking. This is deterministic mechanical coverage, not a live database concurrency test, historical strategy backtest or live paper track record. No test trades are inserted into production. The momentum entry/monitoring connection remains unfinished.

@@ -75,8 +75,8 @@ it('fills a fully revalidated pending order and reconciles the simulated ledger'
   const result = await cycle();
   expect(result).toMatchObject({ positionsOpened: 1, ordersTriggered: 1, ordersCancelled: 0 });
   expect(positions[0]).toMatchObject({ averageEntry: 100.05, quantity: 10, stopLoss: 90, takeProfit1: 120 });
-  expect(portfolio.currentCash).toBe(198999.5);
-  expect(portfolio.totalEquity).toBe(200000);
+  expect(portfolio.currentCash).toBe(198999);
+  expect(portfolio.totalEquity).toBe(199999.5);
   expect(writeJournal).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('FILLED LONG'),
     sourcePacketIds: ['original-BTC', 'current-BTC'], evidence: expect.arrayContaining([`price_at=${at}`, 'policy_id=policy']) }));
 });
@@ -134,8 +134,8 @@ it('supports a revalidated short fill with consistent proceeds and liability acc
   const result = await cycle();
   expect(result.positionsOpened).toBe(1);
   expect(positions[0].averageEntry).toBe(99.95);
-  expect(portfolio.currentCash).toBe(200999.5);
-  expect(portfolio.totalEquity).toBe(200000);
+  expect(portfolio.currentCash).toBe(200999);
+  expect(portfolio.totalEquity).toBe(199999.5);
 });
 it('cancels a newly invalidated thesis before it can fill', async () => {
   packets[0].adminState = 'INVALIDATED';

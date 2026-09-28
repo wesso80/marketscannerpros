@@ -143,6 +143,7 @@ function mapPosition(r: any): ArcaPosition {
     openRisk: n(r.open_risk),
     initialRiskDollars: nOrNull(r.initial_risk_dollars),
     initialStopLoss: nOrNull(r.initial_stop_loss),
+    entryFee: parsePaperEntryFee(r.fill_accounting),
     exitCheckpoint: parseExitCheckpoint(r.exit_checkpoint),
     currentRMultiple: nOrNull(r.current_r_multiple),
     status: r.status,
@@ -463,7 +464,7 @@ export async function listOpenPositions(
   portfolioId: string,
 ): Promise<ArcaPosition[]> {
   const rows = await q<any>(
-    `SELECT p.*, checkpoint.exit_checkpoint, o.stop_loss AS initial_stop_loss, CASE WHEN o.filled_price > 0 AND o.stop_loss > 0 AND o.quantity > 0
+    `SELECT p.*, fill.fill_accounting, checkpoint.exit_checkpoint, o.stop_loss AS initial_stop_loss, CASE WHEN o.filled_price > 0 AND o.stop_loss > 0 AND o.quantity > 0
         THEN ABS(o.filled_price - o.stop_loss) * o.quantity
         ELSE NULL END AS initial_risk_dollars
       FROM arca_positions p
@@ -473,6 +474,13 @@ export async function listOpenPositions(
         AND ((o.side IN ('BUY', 'LONG') AND p.side = 'LONG')
           OR (o.side IN ('SELL', 'SHORT') AND p.side = 'SHORT'))
         AND o.filled_at IS NOT NULL
+      LEFT JOIN LATERAL (
+        SELECT j.evidence->>0 AS fill_accounting FROM arca_trade_journal j
+        WHERE j.workspace_id = p.workspace_id AND j.portfolio_id = p.portfolio_id
+          AND j.position_id = p.id AND j.order_id = p.source_order_id
+          AND j.journal_type = 'ENTRY' AND j.title LIKE 'FILLED %'
+        ORDER BY j.created_at ASC, j.id ASC LIMIT 1
+      ) fill ON TRUE
       LEFT JOIN LATERAL (
         SELECT j.evidence->>0 AS exit_checkpoint FROM arca_trade_journal j
         WHERE j.workspace_id = p.workspace_id AND j.portfolio_id = p.portfolio_id
@@ -770,4 +778,14 @@ export async function listDailySnapshots(
     [workspaceId, portfolioId, limit],
   );
   return rows.map(mapSnapshot);
+}
+
+/** Legacy fills did not debit an entry fee; never reconstruct one from today's settings. */
+export function parsePaperEntryFee(raw: unknown): number {
+  if (raw == null || typeof raw !== 'string' || !raw.startsWith('{')) return 0;
+  const value = JSON.parse(raw);
+  if (value.version !== 'paper-fill-accounting.v1' || !Number.isFinite(value.entryFee) || value.entryFee < 0) {
+    throw new Error('Invalid recorded paper fill accounting');
+  }
+  return value.entryFee;
 }

@@ -136,7 +136,8 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
   const realisedPnl = round2(direction * (effExit - position.averageEntry) * position.quantity);
   const notional = round2(position.quantity * effExit);
   const fees = round2(notional * feePct);
-  const realisedNet = round2(realisedPnl - fees);
+  const entryFee = position.entryFee ?? 0;
+  const realisedNet = round2(realisedPnl - fees - entryFee);
   const finalR = initialRisk && initialRisk > 0 ? round3(realisedNet / initialRisk) : null;
   const outcome =
     realisedNet > 0 ? "WIN" : realisedNet < 0 ? "LOSS" : "BREAKEVEN";
@@ -168,7 +169,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     exitTime: path.exit?.at ?? new Date().toISOString(),
     realisedPnl: realisedNet,
     rMultiple: finalR,
-    feesEstimate: fees,
+    feesEstimate: round2(fees + entryFee),
     slippageEstimate: round2(Math.abs(effExit - exitPrice) * position.quantity),
     outcome,
     exitReason,
@@ -181,7 +182,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
   // Reflect cash: long close returns notional; short close pays notional (already received at fill).
   const cashDelta = side === "LONG" ? notional : -notional;
   const newCash = round2(portfolio.currentCash + cashDelta - fees);
-  const newRealised = round2(portfolio.realisedPnl + realisedNet);
+  const newRealised = round2(portfolio.realisedPnl + realisedNet + entryFee);
   await refreshPaperBalances(portfolio, newCash, newRealised);
 
   await writeJournal({
@@ -198,7 +199,8 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
       `exit=${effExit.toFixed(4)}`,
       `qty=${position.quantity}`,
       `r=${finalR ?? "n/a"}`,
-      `fees=${fees}`,
+      `exit_fee=${fees}`,
+      `entry_fee=${entryFee}`,
       `path=${pathStatus}`,
       `source=${path.exit ? input.candlePath?.source : 'latest_quote'}`,
       `candle_close_upper_bound=${path.exit?.at ?? 'n/a'}`,
@@ -239,7 +241,8 @@ export async function manualSimClose(args: {
   const realisedPnl = round2(direction * (effExit - position.averageEntry) * position.quantity);
   const notional = round2(position.quantity * effExit);
   const fees = round2(notional * feePct);
-  const realisedNet = round2(realisedPnl - fees);
+  const entryFee = position.entryFee ?? 0;
+  const realisedNet = round2(realisedPnl - fees - entryFee);
   const initialRisk = originalRisk(position);
   const finalR = initialRisk && initialRisk > 0 ? round3(realisedNet / initialRisk) : null;
   const outcome = realisedNet > 0 ? "WIN" : realisedNet < 0 ? "LOSS" : "BREAKEVEN";
@@ -269,7 +272,7 @@ export async function manualSimClose(args: {
     exitTime: new Date().toISOString(),
     realisedPnl: realisedNet,
     rMultiple: finalR,
-    feesEstimate: fees,
+    feesEstimate: round2(fees + entryFee),
     slippageEstimate: round2(Math.abs(effExit - exitPrice) * position.quantity),
     outcome,
     exitReason: "MANUAL_SIM_CLOSE",
@@ -281,7 +284,7 @@ export async function manualSimClose(args: {
 
   const cashDelta = position.side === "LONG" ? notional : -notional;
   const newCash = round2(portfolio.currentCash + cashDelta - fees);
-  const newRealised = round2(portfolio.realisedPnl + realisedNet);
+  const newRealised = round2(portfolio.realisedPnl + realisedNet + entryFee);
   await refreshPaperBalances(portfolio, newCash, newRealised);
   await writeJournal({
     workspaceId: portfolio.workspaceId,
