@@ -20,16 +20,16 @@ export async function runCryptoAutomation(){
  const started=Date.now(),reports:Record<string,unknown>={};
  const record=async(name:string,response:Response)=>{
   const b=await response.json();reports[name]={status:response.status,requests:b.requestAttempts??b.snapshot?.requests??0,error:b.error??null,pending:b.scan?.rows?.filter((r:{stage:string})=>r.stage==='PENDING').length??null};
-  if(!response.ok&&response.status!==429)throw Error(`${name}: ${b.error??'request failed'}`);
+  if(!response.ok)throw Error(`${name}: ${b.error??'request failed'}`);
  };
  try{
-  const momentum=await redis.get<{startedAt:string}>('admin:crypto-markets:momentum-volume:v1');
-  const base=await redis.get<{startedAt:string;version:number}>('admin:crypto-markets:bases:v1');
-  const needDiscovery=!momentum||Math.floor(Date.parse(momentum.startedAt)/F)!==Math.floor(started/F)||!base||base.version!==2||Math.floor(Date.parse(base.startedAt)/86400000)!==Math.floor(started/86400000);
+  const momentum=await redis.get<{startedAt:string;rows:unknown[]}>('admin:crypto-markets:momentum-volume:v1');
+  const base=await redis.get<{startedAt:string;version:number;rows:unknown[]}>('admin:crypto-markets:bases:v1');
+  const needDiscovery=!momentum||!momentum.rows?.length||Math.floor(Date.parse(momentum.startedAt)/F)!==Math.floor(started/F)||!base||!base.rows?.length||base.version!==2||Math.floor(Date.parse(base.startedAt)/86400000)!==Math.floor(started/86400000);
   if(needDiscovery){
-   const saved=await redis.get<{startedAt:string}>('admin:crypto-discovery:v1');
+   const saved=await redis.get<{startedAt:string;rows:unknown[]}>('admin:crypto-discovery:v1');
    const age=started-Date.parse(saved?.startedAt??'');
-   if(!Number.isFinite(age)||age<0||age>900000)await record('discovery',await runDiscoveryBatch());
+   if(!saved?.rows?.length||!Number.isFinite(age)||age<0||age>900000)await record('discovery',await runDiscoveryBatch());
   }
   await record('momentum',await runMomentumBatch(100));
   // Daily bases are watchlist work; advance a smaller batch without starving four-hour setups.

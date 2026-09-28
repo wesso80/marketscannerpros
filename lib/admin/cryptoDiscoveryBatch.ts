@@ -19,6 +19,7 @@ export async function runDiscoveryBatch() {
       ids => getMarketData({ids, per_page:250, price_change_percentage:['1h','24h','7d'], precision:'full'}, {retries:0, timeoutMs:5000}), Date.now());
     const covered = new Set(sharedScanUniverse('CRYPTO').map(s => COINGECKO_ID_MAP[s]).filter(Boolean));
     const rows = screenCryptoMarkets(collected.rows, covered, Date.now()).map(r=>({...r,venues:collected.venues[r.id]}));
+    if(!rows.length)return NextResponse.json({error:`Discovery returned zero coins with market data; ${collected.eligiblePairs} eligible pairs. Rejections: ${JSON.stringify(collected.rejectedPairs)}. Latest trade: ${collected.latestTradeAt??'unavailable'}. Previous snapshot retained.`,requestAttempts:collected.requests},{status:503});
     const partial = collected.coverage.some(c=>c.status==='FAILED') || collected.failedMarketBatches.length > 0 || collected.missingMarketIds.length > 0;
     const snapshot = { version:'crypto-discovery.v1', mode:'RESEARCH_ONLY', startedAt, finishedAt:new Date().toISOString(),
       requests:collected.requests, coverage:collected.coverage, partial, missingMarketIds:collected.missingMarketIds,
