@@ -17,7 +17,7 @@ export default function CryptoBaseScanner({now}:{now:number}){
       try{
         const r=await fetch('/api/admin/crypto-markets/bases',{method:'POST'}),b=await r.json();
         if(cancelled||!alive.current)return;
-        if(r.status===429){setError(b.error);timer=setTimeout(()=>void batch(),61000);return;}
+        if(r.status===429){if(b.scan)setScan(b.scan);setError(b.error);if(b.scan?.version===2&&!b.scan.rows.some((row:{stage:string})=>row.stage==='PENDING'))setRunning(false);else timer=setTimeout(()=>void batch(),61000);return;}
         if(!r.ok)throw Error(b.error||'Base scan failed');
         setScan(b.scan);
         if(b.scan.rows.some((row:{stage:string})=>row.stage==='PENDING'))timer=setTimeout(()=>void batch(),61000);else setRunning(false);

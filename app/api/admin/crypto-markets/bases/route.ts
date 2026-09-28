@@ -18,7 +18,7 @@ export async function POST(req:Request){
     const redis=getRedis();if(!redis)throw Error();
     // Five requests at most, sequentially, with an eight-second timeout each.
     // Reservation outlives the bounded batch; it is never deleted by another caller.
-    if(!await redis.set(`${KEY}:batch-lock`,'reserved',{nx:true,ex:60}))return NextResponse.json({error:'Batch cooling down; resume after one minute'},{status:429});
+    if(!await redis.set(`${KEY}:batch-lock`,'reserved',{nx:true,ex:60}))return NextResponse.json({error:'Shared batch active or cooling down; showing latest saved progress',scan:await redis.get<BaseScan>(KEY)},{status:429});
     const now=Date.now();let scan=await redis.get<BaseScan>(KEY);
     const day=Math.floor(now/86400000);
     if(!scan||scan.version!==2||Math.floor(Date.parse(scan.startedAt)/86400000)!==day){
