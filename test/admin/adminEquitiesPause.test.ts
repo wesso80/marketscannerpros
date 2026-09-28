@@ -6,6 +6,7 @@ describe('admin-only equity pause', () => {
     vi.stubEnv('ADMIN_EQUITIES_PAUSED', 'true');
     expect(pausedAdminRequest('/api/scanner/run', { market: 'EQUITIES' })).toBe(false);
     expect(pausedAdminRequest('/api/options', {})).toBe(false);
+    expect(pausedAdminRequest('/api/admin/income', {})).toBe(false);
     expect(pausedAdminRequest('/api/admin/scanner/live', { market: 'CRYPTO' })).toBe(false);
   });
   it('blocks admin equity and options research', () => {
