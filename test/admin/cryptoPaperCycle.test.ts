@@ -16,7 +16,7 @@ import {createSimulatedOrder,fillOrderAndOpenPosition} from '@/lib/admin/portfol
 import {markAndMaybeExit} from '@/lib/admin/portfolio-lab/positionEngine';
 import {fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {fetchPaperQuote,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
-import {runCryptoPaperCycle} from '@/lib/admin/cryptoPaper';
+import {runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import type {ArcaPortfolio,ArcaPosition} from '@/lib/admin/portfolio-lab/types';
 const now=Date.parse('2026-09-28T05:00:00Z'),step=900000;
 let portfolio:ArcaPortfolio,positions:ArcaPosition[],scan:MomentumScan;
@@ -76,4 +76,10 @@ it('fails closed when shared coordination is unavailable',async()=>{
 it('does not mix USDT research prices into the USD ledger',async()=>{
  scan.rows[0].pair={exchange:'okex',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
  expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0});expect(fetchVolumeMomentum).not.toHaveBeenCalled();
+});
+
+it('does not report success when a failed-cycle retry encounters the cooldown',async()=>{
+ vi.mocked(q).mockResolvedValue([{workspace_id:'w'}] as never);
+ vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=>null)} as never);
+ expect(await runCryptoPaperAll()).toMatchObject({ok:false,results:[{skipped:true}]});
 });

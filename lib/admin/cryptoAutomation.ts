@@ -16,7 +16,7 @@ export async function setCryptoAutomation(enabled:boolean){
 export async function runCryptoAutomation(){
  const redis=getRedis();if(!redis)throw Error('Automation cache unavailable');
  if(!isAdminCryptoEnabled()||await redis.get(KEY)!==true)return {enabled:false,skipped:true};
- if(!await redis.set(`${KEY}:lock`,'reserved',{nx:true,ex:600}))return {enabled:true,skipped:true,reason:'Background batch already running or cooling down'};
+ if(!await redis.set(`${KEY}:lock`,'reserved',{nx:true,ex:600}))return {enabled:true,ok:false,skipped:true,reason:'Background batch already running or cooling down'};
  const started=Date.now(),reports:Record<string,unknown>={};
  const record=async(name:string,response:Response)=>{
   const b=await response.json();reports[name]={status:response.status,requests:b.requestAttempts??b.snapshot?.requests??0,error:b.error??null,pending:b.scan?.rows?.filter((r:{stage:string})=>r.stage==='PENDING').length??null};

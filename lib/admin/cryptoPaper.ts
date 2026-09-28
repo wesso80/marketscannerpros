@@ -9,7 +9,7 @@ import {evaluatePaperExitPath} from './portfolio-lab/paperExitPath';
 import {refreshPaperBalances} from './portfolio-lab/refreshPaperBalances';
 import {writeJournal} from './portfolio-lab/journalEngine';
 import {fetchVolumeMomentum,type MomentumScan} from './cryptoVolumeMomentum';
-import {fetchPaperQuote,fetchPaperPath,planCryptoPaper} from './cryptoPaperMarket';
+import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
 export async function cryptoPaperState(workspaceId:string){
@@ -43,8 +43,8 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
   try{
    const product=position.instrumentType.startsWith('coinbase:')?position.instrumentType.slice(9):'';
    if(position.assetClass!=='crypto'||position.side!=='LONG'||!product.endsWith('-USD'))throw Error('Unsupported position scope');
-   const [quoteResult,pathResult]=await Promise.allSettled([fetchPaperQuote(product),fetchPaperPath(position.symbol,product)]);
-   if(pathResult.status!=='fulfilled')throw Error('Exit history unavailable');
+   const [quoteResult,pathResult]=await Promise.allSettled([fetchPaperQuote(product),fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
+   if(pathResult.status!=='fulfilled')throw new PaperMarketError(pathResult.reason instanceof PaperMarketError?pathResult.reason.message:'Exit history request failed or timed out');
    const path=pathResult.value,quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
@@ -52,18 +52,18 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     const pos=(await listOpenPositions(workspaceId,current.id)).find(p=>p.id===position.id);if(!pos)return;
     const checked=evaluatePaperExitPath(pos,path);
     // Missing chronology blocks valuation/target awards and further entries. Never skip a missing prefix.
-    if(!['candle_path_checked','candle_path_exit','candle_path_no_closed_bars'].includes(checked.status))throw Error('Exit chronology unavailable');
+    if(!['candle_path_checked','candle_path_exit','candle_path_no_closed_bars'].includes(checked.status))throw new PaperMarketError(`Exit chronology: ${checked.status}`);
     const through=Date.parse(checked.checkedThrough??pos.exitCheckpoint?.through??pos.openedAt);
-    if(!checked.exit&&through<Math.floor(Date.now()/900000)*900000)throw Error('Exit history does not reach the last completed candle');
+    if(!checked.exit&&through<Math.floor(Date.now()/900000)*900000)throw new PaperMarketError('Exit history does not reach the last completed candle');
     const freshQuote=quote&&Date.now()-Date.parse(quote.priceAt)<=60000;
-    if(!checked.exit&&!freshQuote)throw Error('Exit quote unavailable');
+    if(!checked.exit&&!freshQuote)throw new PaperMarketError(quoteResult.status==='rejected'&&quoteResult.reason instanceof PaperMarketError?quoteResult.reason.message:'Exit quote unavailable or expired');
     // A proven earlier stop/target can settle even if the ticker is down.
     const result=await markAndMaybeExit({portfolio:current,position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,skipLearning:true});
     const updated=await getPortfolioById(workspaceId,current.id);if(!updated)throw Error('Paper account unavailable');
     await refreshPaperBalances(updated,updated.currentCash,updated.realisedPnl);
     marked++;if(result.exit)closed++;
    });
-  }catch{monitorHealthy=false;notes.push(`${position.symbol}: exit data unavailable; entries blocked until monitoring recovers`);}
+  }catch(error){monitorHealthy=false;notes.push(`${position.symbol}: ${error instanceof PaperMarketError?error.message:'Exit accounting failed'}; entries blocked until monitoring recovers`);}
  }
  portfolio=await getPortfolioById(workspaceId,portfolio.id);if(!portfolio)throw Error('Paper account unavailable');
  const scan=await redis.get<MomentumScan>('admin:crypto-markets:momentum-volume:v1');
@@ -115,5 +115,5 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
 export async function runCryptoPaperAll(){
  const accounts=await q<{workspace_id:string}>("SELECT workspace_id FROM arca_portfolios WHERE name=$1 AND mode='SIMULATED' AND status IN ('ACTIVE','PAUSED')",[CRYPTO_PAPER_NAME]);
  const results=[];for(const a of accounts){try{results.push(await runCryptoPaperCycle(a.workspace_id,'cron'));}catch{results.push({error:'Crypto paper cycle failed; check account status'});}}
- return {ok:!results.some(r=>'error' in r||('monitorHealthy' in r&&!r.monitorHealthy)),simulated:true,accounts:accounts.length,results};
+ return {ok:!results.some(r=>'error' in r||('monitorHealthy' in r&&!r.monitorHealthy)||('skipped' in r&&r.reason==='Crypto paper cycle already running or cooling down')),simulated:true,accounts:accounts.length,results};
 }
