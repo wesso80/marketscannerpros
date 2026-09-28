@@ -8,7 +8,7 @@ export type DiscoveryRow = { id: string; symbol: string; name: string; price: nu
   reasons: string[]; fixedScanCovered: boolean };
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 // Identity/name screening is a first pass, not a verified token-category or venue-liquidity assessment.
-const pegged = /stablecoin|wrapped|bridged|staked|restaked|synthetic|(?:^|[- ])(?:usd[tcde]?|dai|eurc|paxg|xaut)(?:$|[- ])/i;
+const pegged = /stablecoin|wrapped|bridged|staked|restaked|synthetic|xstock|tokenized.?stock|tether|(?:^|[- ])(?:usd[tcde]?|dai|eurc|paxg|xaut)(?:$|[- ])/i;
 export function screenCryptoMarkets(rows: CoinGeckoMarketData[], coveredIds: ReadonlySet<string>, nowMs: number): DiscoveryRow[] {
   const unique = new Map<string, CoinGeckoMarketData>();
   for (const r of rows) if (r.id && (!unique.has(r.id) || Date.parse(r.last_updated ?? '') > Date.parse(unique.get(r.id)!.last_updated ?? ''))) unique.set(r.id, r);
@@ -32,7 +32,7 @@ export function screenCryptoMarkets(rows: CoinGeckoMarketData[], coveredIds: Rea
     (b.change1h ?? -Infinity) - (a.change1h ?? -Infinity) || a.id.localeCompare(b.id));
 }
 
-export const DISCOVERY_EXCHANGES = ['binance', 'gdax', 'kraken', 'kucoin', 'okx'] as const;
+export const DISCOVERY_EXCHANGES = ['binance', 'gdax', 'kraken', 'kucoin', 'okex'] as const;
 export type VenueEvidence = { exchange: string; pair: string; volumeUsd: number; spreadPct: number; observedAt: string };
 export function eligibleVenue(t: CoinTicker, exchange: string, nowMs: number): VenueEvidence | null {
   const at = Date.parse(t.last_traded_at);
