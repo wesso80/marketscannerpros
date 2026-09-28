@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({ q: vi.fn() }));
 vi.mock("@/lib/db", () => ({ q: mocks.q }));
 vi.mock("@/lib/admin/adminCallLog", () => ({ recordAdminCalls: vi.fn(async () => undefined) }));
 
+import { recordAdminCalls } from "@/lib/admin/adminCallLog";
+import { latestPaperPackets } from "@/lib/admin/portfolio-lab/decisionEngine";
 import { projectEdgePacket, type AdminEdgePacket } from "../../lib/admin/edgePacket";
 import type { AdminResearchPacket } from "../../lib/admin/getAdminResearchPacket";
 import { oneDirectionPerDay, packetDirection, persistEdgePackets, symbolDayKey } from "../../lib/admin/edgePacketSnapshots";
@@ -154,10 +156,10 @@ describe("one direction per coin per day", () => {
   });
 });
 
-describe("persistEdgePackets writes one direction per coin per day", () => {
-  beforeEach(() => { mocks.q.mockReset(); });
+describe("persistEdgePackets retains reversals but restricts call direction", () => {
+  beforeEach(() => { mocks.q.mockReset(); vi.mocked(recordAdminCalls).mockClear(); });
 
-  it("skips a SHORT packet when a LONG was already stored for that coin today", async () => {
+  it("persists a later SHORT observation even when the day started LONG", async () => {
     const inserted: string[] = [];
     mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
       if (sql.includes("SELECT symbol, market, bias, generated_at")) {
@@ -168,9 +170,33 @@ describe("persistEdgePackets writes one direction per coin per day", () => {
     });
     const base = projectEdgePacket(basePacket());
     const mk = (symbol: string, bias: string): AdminEdgePacket =>
-      ({ ...base, packetId: `${symbol}-${bias}`, symbol, market: "CRYPTO", bias: bias as AdminEdgePacket["bias"], generatedAt: "2026-09-25T18:00:00Z" });
+      ({ ...base, doNothing: null, simulated: false, packetId: `${symbol}-${bias}`, symbol, market: "CRYPTO", bias: bias as AdminEdgePacket["bias"], generatedAt: "2026-09-25T18:00:00Z" });
     const written = await persistEdgePackets({ workspaceId: "ws", packets: [mk("SOL", "SHORT"), mk("ETH", "SHORT")] });
-    expect(written).toBe(1);
-    expect(inserted).toEqual(["ETH:SHORT"]);
+    expect(written).toBe(2);
+    expect(inserted).toEqual(["SOL:SHORT", "ETH:SHORT"]);
+    expect(recordAdminCalls).toHaveBeenCalledWith([expect.objectContaining({ symbol: 'ETH', direction: 'SHORT' })]);
+    const newer = mk('SOL', 'SHORT'), older = { ...mk('SOL', 'LONG'), generatedAt: '2026-09-25T14:00:00Z' };
+    expect(latestPaperPackets([older, newer] as never)[0].bias).toBe('SHORT');
   });
+});
+
+it('publishes evidence but suppresses new calls when the daily direction lookup fails', async () => {
+  vi.mocked(recordAdminCalls).mockClear();
+  mocks.q.mockImplementation(async (sql: string) => {
+    if (sql.includes('SELECT symbol, market, bias, generated_at')) throw new Error('lookup unavailable');
+    return [];
+  });
+  const packet = { ...projectEdgePacket(basePacket()), doNothing: null, simulated: false };
+  expect(await persistEdgePackets({ workspaceId: 'ws', packets: [packet] })).toBe(1);
+  expect(recordAdminCalls).not.toHaveBeenCalled();
+});
+it('propagates publication failure and never logs an unsaved packet as a call', async () => {
+  vi.mocked(recordAdminCalls).mockClear();
+  mocks.q.mockImplementation(async (sql: string) => {
+    if (sql.includes('INSERT INTO admin_edge_packets')) throw new Error('insert unavailable');
+    return [];
+  });
+  const packet = { ...projectEdgePacket(basePacket()), doNothing: null, simulated: false };
+  await expect(persistEdgePackets({ workspaceId: 'ws', packets: [packet] })).rejects.toThrow('publication incomplete');
+  expect(recordAdminCalls).not.toHaveBeenCalled();
 });

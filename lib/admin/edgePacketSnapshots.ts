@@ -67,8 +67,8 @@ export function oneDirectionPerDay<T extends Pick<AdminEdgePacket, "symbol" | "m
   return { kept, dropped };
 }
 
-/** Directions already stored today (per symbol-day) for this workspace. Best-effort: empty on a lookup error. */
-async function loadDirectionLocks(workspaceId: string, packets: AdminEdgePacket[]): Promise<Map<string, PacketDirection>> {
+/** First recorded evidence direction today. On failure suppress new calls, not evidence publication. */
+async function loadDirectionLocks(workspaceId: string, packets: AdminEdgePacket[]): Promise<Map<string, PacketDirection> | null> {
   const locks = new Map<string, PacketDirection>();
   const symbols = [...new Set(packets.filter((p) => packetDirection(p.bias)).map((p) => p.symbol))];
   if (!symbols.length) return locks;
@@ -88,6 +88,7 @@ async function loadDirectionLocks(workspaceId: string, packets: AdminEdgePacket[
     }
   } catch (err) {
     console.error("[admin-edge-packets] direction lookup failed:", err);
+    return null;
   }
   return locks;
 }
@@ -196,12 +197,13 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
   if (!input.packets.length) return 0;
   await ensureTable();
 
-  // One direction per symbol per New York day: a packet opposite to the direction already stored today is not
-  // written (and not logged as a call).
-  const { kept } = oneDirectionPerDay(input.packets, await loadDirectionLocks(input.workspaceId, input.packets));
-
+  // A later reversal is evidence, not a second position. Never hide it from latest-evidence readers.
+  // Preserve the daily direction restriction only for new outcome calls.
+  const locks = await loadDirectionLocks(input.workspaceId, input.packets);
+  const persisted: AdminEdgePacket[] = [];
+  let failed = 0;
   let written = 0;
-  for (const packet of kept) {
+  for (const packet of input.packets) {
     try {
       await q(
         `INSERT INTO admin_edge_packets (
@@ -238,14 +240,20 @@ export async function persistEdgePackets(input: PersistEdgePacketsInput): Promis
         ],
       );
       written += 1;
+      persisted.push(packet);
     } catch (err) {
+      failed++;
       console.error("[admin-edge-packets] insert failed for", packet.symbol, err);
     }
   }
   // Log the new packets' LONG/SHORT calls for outcome labelling. Every workspace persists the same saved-scan
   // packets; the per symbol + direction + NY-day dedupe keeps one call.
-  const calls = kept.map((p) => edgePacketCall(p)).filter((c): c is AdminCallInput => c !== null);
+  const callEligible = locks === null ? [] : oneDirectionPerDay(persisted, locks).kept;
+  const calls = callEligible.map((p) => edgePacketCall(p)).filter((c): c is AdminCallInput => c !== null);
   if (calls.length) await recordAdminCalls(calls).catch(() => undefined);
+  console.log('[admin-edge-packets] publication', { received: input.packets.length, written, failed,
+    callDirectionSuppressed: persisted.length - callEligible.length });
+  if (failed) throw new Error(`Edge packet publication incomplete: ${failed} insert(s) failed; ${written} saved.`);
   return written;
 }
 
