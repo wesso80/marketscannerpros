@@ -14,7 +14,7 @@ describe('major exchange discovery',()=>{
   it('retains extended moves for review rather than issuing entry permission',()=>{
     expect(screenCryptoMarkets([{...coin(),price_change_percentage_24h:60}],new Set(),now)[0].stage).toBe('EXTENDED');
   });
-  it.each([{last_updated:'bad'},{total_volume:null},{price_change_percentage_1h_in_currency:undefined},{id:'wrapped-bitcoin'}])('does not invent missing quality/momentum data %j',patch=>{
+  it.each([{last_updated:'bad'},{total_volume:null},{price_change_percentage_1h_in_currency:undefined},{id:'wrapped-bitcoin'},{id:'tether'},{id:'microstrategy-xstock'}])('does not invent missing quality/momentum data %j',patch=>{
     expect(screenCryptoMarkets([{...coin(),...patch}],new Set(),now)[0].stage).toBe('EXCLUDED');
   });
   it.each([{is_stale:true},{is_anomaly:true},{bid_ask_spread_percentage:null},{bid_ask_spread_percentage:1},
