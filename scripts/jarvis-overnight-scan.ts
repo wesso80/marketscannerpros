@@ -1,3 +1,4 @@
+import { adminDiscoveryOnly, ADMIN_DISCOVERY_ONLY_MESSAGE } from '../lib/admin/discoveryOnly';
 /**
  * Private Jarvis — Overnight Opportunity Radar runner.
  *
@@ -35,6 +36,7 @@ function nyNow(nowMs: number) {
 const hhmm = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
 
 async function main() {
+  if (adminDiscoveryOnly()) { log(ADMIN_DISCOVERY_ONLY_MESSAGE); return; }
   const { renderMorning } = await import('../lib/jarvis/radar/render');
   const { saveRun, loadLatestRun, kvGet, kvSet } = await import('../lib/jarvis/radar/store');
   const dir = path.resolve(process.cwd(), 'reports');
