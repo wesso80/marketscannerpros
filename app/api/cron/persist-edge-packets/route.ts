@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const results: Array<{ workspaceId: string; written: number; packetsBuilt: number; error?: string }> = [];
+    const results: Array<{ workspaceId: string; written: number; packetsBuilt: number; alreadyStored?: number; newPackets?: number; error?: string }> = [];
     for (const w of workspaces) {
       try {
         const history = await loadPriorPacketSnapshots(w.workspace_id, current);
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
         edgePackets.forEach((p, i) => { p.opportunityRank = i + 1; });
         const fresh = await filterNewEdgePackets(w.workspace_id, edgePackets);
         const written = await persistEdgePackets({ workspaceId: w.workspace_id, packets: fresh });
-        results.push({ workspaceId: w.workspace_id, written, packetsBuilt: edgePackets.length });
+        results.push({ workspaceId: w.workspace_id, written, packetsBuilt: edgePackets.length, alreadyStored: edgePackets.length - fresh.length, newPackets: fresh.length });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         results.push({ workspaceId: w.workspace_id, written: 0, packetsBuilt: 0, error: msg });
