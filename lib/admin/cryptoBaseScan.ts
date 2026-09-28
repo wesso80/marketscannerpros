@@ -1,15 +1,16 @@
-import {parseExchangeCandles,type ExchangeBar,selectCoinbasePair} from './cryptoExchangeVolume';
+import type {ExchangeBar} from './cryptoExchangeVolume';
+import {selectDailyPair,fetchDailyVenue,type DailyVenue} from './cryptoDailyVenues';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
-export type BaseScanRow={id:string;symbol:string;product:string|null;stage:'PENDING'|'BASE'|'NOT_BASE'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;high:number|null;low:number|null;widthPct:number|null;gapPct:number|null;slopePct:number|null;contraction:number|null};
-export type BaseScan={version:1;discoveryAt:string;startedAt:string;updatedAt:string;rows:BaseScanRow[]};
+export type BaseScanRow={id:string;symbol:string;product:string|null;exchange:DailyVenue|null;quote:string|null;volumeUnit:string|null;stage:'PENDING'|'BASE'|'NOT_BASE'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;high:number|null;low:number|null;widthPct:number|null;gapPct:number|null;slopePct:number|null;contraction:number|null};
+export type BaseScan={version:2;discoveryAt:string;startedAt:string;updatedAt:string;rows:BaseScanRow[]};
 const D=86400000;
 export function createBaseScan(rows:(DiscoveryRow&{venues:VenueEvidence[]})[],discoveryAt:string,now:number):BaseScan{
-  return {version:1,discoveryAt,startedAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),rows:rows.map((r):BaseScanRow=>{
-    const product=selectCoinbasePair(r.venues,now);
+  return {version:2,discoveryAt,startedAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),rows:rows.map((r):BaseScanRow=>{
+    const pair=selectDailyPair(r.venues,now),product=pair?.product??null;
     // Supplement discovery's heuristic: a near-dollar peg must not become a tight-base candidate.
     const pegged=/stablecoin|wrapped|bridged|staked|(?:^|[\s-])(?:usd[a-z0-9]*|[a-z]*usd|dai|eurc|paxg|xaut)(?:$|[\s-])/i.test(`${r.id} ${r.symbol} ${r.name}`);
     const excluded=r.stage==='EXCLUDED'||pegged;
-    return {id:r.id,symbol:r.symbol,product,stage:excluded?'EXCLUDED':product?'PENDING':'UNAVAILABLE',reason:excluded?'Excluded by discovery or pegged-asset screening':product?'Waiting for completed daily candles':'No supported Coinbase USD pair in discovery',asOf:null,high:null,low:null,widthPct:null,gapPct:null,slopePct:null,contraction:null};
+    return {id:r.id,symbol:r.symbol,product,exchange:pair?.exchange??null,quote:pair?.quote??null,volumeUnit:pair?.volumeUnit??null,stage:excluded?'EXCLUDED':product?'PENDING':'UNAVAILABLE',reason:excluded?'Excluded by discovery or pegged-asset screening':product?'Waiting for completed daily candles':'No supported fresh USD/USDT/USDC pair in discovery',asOf:null,high:null,low:null,widthPct:null,gapPct:null,slopePct:null,contraction:null};
   }).sort((a,b)=>a.id.localeCompare(b.id))};
 }
 /** A daily watchlist only. No breakout, live quote or trade permission is inferred. */
@@ -34,10 +35,6 @@ export function assessDailyBase(row:BaseScanRow,bars:ExchangeBar[],now:number):B
   return {...result,stage:passes?'BASE':'NOT_BASE',reason:passes?'Tight flat 21-day range with contracting daily volume; watchlist only':'Failed: '+[widthPct>15?'range width >15%':null,gapPct>3?'MA gap >3%':null,slopePct>3?'MA slope >3%':null,contraction>0.7?'volume ratio >0.70':null].filter(Boolean).join(', ')};
 }
 export async function fetchDailyBase(row:BaseScanRow,now:number):Promise<BaseScanRow>{
-  if(!row.product||!/^[A-Z0-9]{1,30}-USD$/.test(row.product))throw Error('Unsupported pair');
-  const end=Math.floor(now/D)*D,start=end-30*D;
-  const params=new URLSearchParams({granularity:'86400',start:new Date(start).toISOString(),end:new Date(end).toISOString()});
-  const res=await fetch(`https://api.exchange.coinbase.com/products/${row.product}/candles?${params}`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});
-  if(!res.ok)throw Error('Daily provider unavailable');
-  return assessDailyBase(row,parseExchangeCandles(await res.json(),D,start,end),now);
+  if(!row.product||!row.exchange||!row.quote||!row.volumeUnit)throw Error('Unsupported pair');
+  return assessDailyBase(row,await fetchDailyVenue({exchange:row.exchange,product:row.product,quote:row.quote,volumeUnit:row.volumeUnit},now),now);
 }
