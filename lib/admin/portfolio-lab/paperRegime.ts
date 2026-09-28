@@ -1,4 +1,6 @@
 import { q } from '@/lib/db';
+import type { EdgePacketRow } from '@/lib/admin/edgePacketSnapshots';
+import { projectCandidate } from './decisionEngine';
 import { listRegimeMatrix } from '@/lib/admin/arca-brain/regimePlaybookMatrix';
 import { evaluateRegimePlaybook, type RegimePlaybookDecision } from '@/lib/admin/arca-brain/regimePlaybookDecision';
 import type { RegimePlaybookMatrixRow } from '@/lib/admin/arca-brain/types';
@@ -24,7 +26,7 @@ export async function loadPaperRegimeContext(workspaceId: string): Promise<Paper
   return { snapshots, policies: await listRegimeMatrix(workspaceId) };
 }
 
-export function assessPaperRegime(context: PaperRegimeContext, workspaceId: string, assetClass: string, playbook: string | null, nowMs = Date.now()): RegimePlaybookDecision {
+export function assessPaperRegime(context: PaperRegimeContext, workspaceId: string, assetClass: string, playbook: string | null, nowMs = Date.now(), candidateRow?: EdgePacketRow): RegimePlaybookDecision {
   const snapshot = context.snapshots.find(s => s.asset_class === assetClass);
   const unknown = (reason: string): RegimePlaybookDecision => ({
     ...evaluateRegimePlaybook(null, playbook), reason, disqualifiers: [reason],
@@ -47,7 +49,15 @@ export function assessPaperRegime(context: PaperRegimeContext, workspaceId: stri
   const key = `${assetClass}:${snapshot.micro_state}`;
   const policy = context.policies.find(p => p.workspaceId === workspaceId && p.regime === key);
   if (!policy) return { ...unknown(`regime_policy_missing:${key}`), regime: key };
-  return evaluateRegimePlaybook(policy, playbook, { strict: true, assetClass });
+  const confirmedConditions: string[] = [];
+  if (candidateRow && candidateRow.assetClass === assetClass && candidateRow.setupType === playbook) {
+    const projection = projectCandidate(candidateRow, nowMs);
+    if (projection.ok) {
+      confirmedConditions.push('position_levels_valid');
+      if (projection.candidate.side === 'LONG') confirmedConditions.push('long_only');
+    }
+  }
+  return evaluateRegimePlaybook(policy, playbook, { strict: true, assetClass, confirmedConditions });
 }
 
 export function paperRegimeSummary(context: PaperRegimeContext, workspaceId: string, nowMs = Date.now()) {
@@ -58,8 +68,14 @@ export function paperRegimeSummary(context: PaperRegimeContext, workspaceId: str
     const playbooks = [...new Set([...(policy?.enabledPlaybooks ?? []), ...(policy?.reducedSizePlaybooks ?? [])])];
     const decisions = (playbooks.length ? playbooks : [null]).map(p => assessPaperRegime(context, workspaceId, assetClass, p, nowMs));
     const permitted = decisions.filter(d => d.sizeMultiplier > 0).map(d => d.playbookId!);
-    return { assetClass, status: permitted.length ? 'POLICY_AVAILABLE' : 'BLOCKED',
-      reason: permitted.length ? 'Fresh regime evidence and explicit playbook permissions. Other trade checks still apply.' : regimeReasonText(decisions[0].reason),
+    const conditional = decisions.filter(d => d.status === 'WAIT_FOR_CONFIRMATION').map(d => d.playbookId!);
+    const standingDown = !!policy && !playbooks.length && decisions[0].status === 'UNKNOWN_PLAYBOOK';
+    return { assetClass, status: permitted.length ? 'POLICY_AVAILABLE' : conditional.length ? 'CONDITIONAL' : 'BLOCKED',
+      policyConfigured: !!policy, conditionalPlaybooks: conditional,
+      requiredConfirmations: policy?.requiredConfirmations ?? [],
+      reason: permitted.length ? 'Fresh regime evidence and explicit playbook permissions. Other trade checks still apply.'
+        : conditional.length ? 'Policy configured; each candidate must satisfy its required confirmations before entry.'
+        : standingDown ? 'Configured stand-down policy: no new entries in this regime.' : regimeReasonText(decisions[0].reason),
       regime: key, observedAt: snapshot?.computed_at ?? null,
       sourceOldestAt: snapshot?.components_json?.sourceOldestAt ?? null,
       coverage: snapshot?.components_json?.coverage ?? null, permittedPlaybooks: permitted };

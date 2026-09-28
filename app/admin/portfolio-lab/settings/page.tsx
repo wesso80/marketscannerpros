@@ -144,6 +144,7 @@ export default function PortfolioLabSettingsPage() {
           </div>
         </div>
 
+        <PaperRegimePolicies />
         {error && <div style={errBox}>Error: {error}</div>}
         {violations.length > 0 && (
           <div style={errBox}>
@@ -244,6 +245,66 @@ export default function PortfolioLabSettingsPage() {
       </div>
     </div>
   );
+}
+
+interface PaperPolicyRow {
+  regime: string;
+  enabledPlaybooks: string[];
+  reducedSizePlaybooks: string[];
+  requiredConfirmations: string[];
+  notes: string | null;
+}
+function PaperRegimePolicies() {
+  const [data, setData] = useState<{ version: string; policies: PaperPolicyRow[]; baseline: PaperPolicyRow[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const response = await fetch('/api/admin/portfolio-lab/regime-policy', { cache: 'no-store' });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    setData(body);
+  }, []);
+  useEffect(() => { load().catch(e => setError(e instanceof Error ? e.message : String(e))); }, [load]);
+  const save = async (action: string, regime?: string) => {
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const response = await fetch('/api/admin/portfolio-lab/regime-policy', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, regime }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+      setNotice(body.inserted.length ? `Saved policy: ${body.inserted.join(', ')}.` : 'All baseline keys already exist; existing policies preserved.');
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(false); }
+  };
+  return <section aria-label="Paper regime policies" style={{ background: '#111827', border: '1px solid #334155', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+    <h2 style={{ fontSize: 17, marginBottom: 8 }}>Paper regime policies</h2>
+    <p style={{ fontSize: 13, color: '#CBD5E1', marginBottom: 10 }}>Starting paper pilot: risk-on permits long TREND_CONTINUATION setups at 0.5× regime size, after weekly/daily levels pass validation. Neutral and risk-off permit no new entries. Unknown or stale regime evidence blocks entry. This is unproven; all other setup and account checks still apply.</p>
+    {error && <p role="alert" style={errBox}>{error}</p>}
+    {notice && <p role="status" style={okBox}>{notice}</p>}
+    {!data ? <p>{error ? 'Policies unavailable.' : 'Loading policies…'}</p> : <>
+      <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', fontSize: 12, textAlign: 'left', borderCollapse: 'collapse' }}>
+        <thead><tr><th>Market / regime</th><th>Current permission</th><th>Required confirmations</th><th>Change policy</th></tr></thead>
+        <tbody>{data.baseline.map(template => {
+          const current = data.policies.find(p => p.regime === template.regime);
+          const active = !!current && !!(current.enabledPlaybooks.length || current.reducedSizePlaybooks.length);
+          return <tr key={template.regime} style={{ borderTop: '1px solid #334155' }}>
+            <td style={{ padding: '10px 5px' }}>{template.regime}</td>
+            <td>{!current ? 'Missing configuration' : !active ? 'Stand down' : [
+              ...current.enabledPlaybooks.map(p => `${p}: 1×`), ...current.reducedSizePlaybooks.map(p => `${p}: 0.5×`),
+            ].join(', ')}</td>
+            <td>{current?.requiredConfirmations.join(', ') || '—'}</td>
+            <td>{template.reducedSizePlaybooks.length > 0 && <button style={btnGhost} disabled={busy} onClick={() => save('apply-baseline-rule', template.regime)} aria-label={`Apply long pilot ${template.regime}`}>Apply long pilot</button>}
+              {active && <button style={btnGhost} disabled={busy} onClick={() => save('stand-down', template.regime)} aria-label={`Stand down ${template.regime}`}>Stand down</button>}</td>
+          </tr>;
+        })}</tbody>
+      </table></div>
+      <button style={{ ...btnPrimary, marginTop: 10 }} disabled={busy} onClick={() => save('install-missing-baseline')}>{busy ? 'Saving policy…' : 'Install missing pilot policies'}</button>
+      <p style={hint}>Installation preserves existing policies. Individual buttons replace only the named policy. Every change is journaled; account risk limits remain separate.</p>
+    </>}
+  </section>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

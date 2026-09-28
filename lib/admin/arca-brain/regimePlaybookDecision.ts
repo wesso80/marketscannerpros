@@ -40,6 +40,8 @@ export interface EvaluateRegimePlaybookOpts {
   strict?: boolean;
   /** Optional asset class to enforce preferred/avoided lists. */
   assetClass?: string | null;
+  /** Conditions verified by the caller from current candidate evidence. Never inferred from policy text. */
+  confirmedConditions?: readonly string[];
   /** Reduced-size multiplier (default 0.5). */
   reducedMultiplier?: number;
   /** Experimental multiplier for UNKNOWN_PLAYBOOK (default 0.25). */
@@ -137,15 +139,17 @@ export function evaluateRegimePlaybook(
     };
   }
 
-  // 7. Required confirmations gate
-  if (matrix.requiredConfirmations.length > 0) {
+  // Required conditions remain blocking unless current candidate evidence verifies each one.
+  const missingConfirmations = matrix.requiredConfirmations.filter(c => !opts.confirmedConditions?.includes(c));
+  if (missingConfirmations.length > 0) {
     return {
       ...base,
       status: "WAIT_FOR_CONFIRMATION",
       sizeMultiplier: 0,
       reason:
         `regime=${matrix.regime} requires confirmation(s): ` +
-        matrix.requiredConfirmations.join(", "),
+        missingConfirmations.join(", "),
+      requiredConfirmations: missingConfirmations,
     };
   }
 
@@ -154,6 +158,7 @@ export function evaluateRegimePlaybook(
     return {
       ...base,
       status: "REDUCE_SIZE",
+      requiredConfirmations: [],
       sizeMultiplier: reduced,
       reason: `playbook=${playbookId} REDUCE_SIZE in regime=${matrix.regime}`,
     };
@@ -163,6 +168,7 @@ export function evaluateRegimePlaybook(
   return {
     ...base,
     status: "ENABLED",
+    requiredConfirmations: [],
     sizeMultiplier: 1,
     reason: `playbook=${playbookId} ENABLED in regime=${matrix.regime}`,
   };
