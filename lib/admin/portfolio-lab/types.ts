@@ -169,6 +169,8 @@ export interface ArcaPosition {
   /** Original filled-order risk; never recomputed from a moved stop. */
   initialRiskDollars?: number | null;
   initialStopLoss?: number | null;
+  /** Fee actually debited at fill; legacy fills had no entry charge. */
+  entryFee?: number;
   exitCheckpoint?: PaperExitCheckpoint | null;
   currentRMultiple: number | null;
   status: PositionStatus;

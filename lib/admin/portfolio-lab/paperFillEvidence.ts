@@ -1,6 +1,6 @@
 import type { EdgePacketRow } from '@/lib/admin/edgePacketSnapshots';
 import { gateRow, projectCandidate } from './decisionEngine';
-import { simulatedFillPrice } from './simulatedOrderEngine';
+import { simulatedFillPrice, paperEntryFee } from './simulatedOrderEngine';
 import type { ArcaPortfolio, ArcaSimOrder } from './types';
 
 export const paperInstrumentKey = (assetClass: string, symbol: string) => `${assetClass}:${symbol}`;
@@ -60,6 +60,6 @@ export function validatePaperFill(order: ArcaSimOrder, row: EdgePacketRow, portf
       fillPrice < levels.entryZoneLow! || fillPrice > levels.entryZoneHigh!) return reject('fill_price_outside_position_rules_after_slippage');
   const riskDollars = risk * order.quantity, notional = fillPrice * order.quantity;
   if (!Number.isFinite(riskDollars) || !Number.isFinite(notional) || portfolio.totalEquity <= 0 || !Number.isFinite(portfolio.totalEquity)) return reject('fill_sizing_invalid');
-  if (side === 'LONG' && notional > portfolio.currentCash) return reject('fill_cash_insufficient');
+  if (side === 'LONG' && notional + paperEntryFee(portfolio, notional) > portfolio.currentCash) return reject('fill_cash_insufficient');
   return { ok: true, fillPrice, riskDollars, notional };
 }

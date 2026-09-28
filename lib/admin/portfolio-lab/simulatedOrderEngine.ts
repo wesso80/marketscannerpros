@@ -119,6 +119,12 @@ export function simulatedFillPrice(portfolio: ArcaPortfolio, order: ArcaSimOrder
   return currentPrice * (order.side === "BUY" || order.side === "LONG" ? 1 + slip : 1 - slip);
 }
 
+export function paperEntryFee(portfolio: ArcaPortfolio, notional: number): number {
+  const pct = portfolio.settings.feesPctEstimate;
+  if (!Number.isFinite(pct) || pct < 0 || !Number.isFinite(notional) || notional <= 0) throw new Error('Invalid paper fee inputs');
+  return round2(notional * pct / 100);
+}
+
 /**
  * Fill a triggered/waiting order — write FILLED_SIM, open a position,
  * deduct cash. All numbers are simulated.
@@ -135,6 +141,8 @@ export async function fillOrderAndOpenPosition(args: {
     order.side === "BUY" || order.side === "LONG" ? "LONG" : "SHORT";
   const fillPrice = simulatedFillPrice(portfolio, order, currentPrice);
 
+  const entryFee = paperEntryFee(portfolio, fillPrice * order.quantity);
+  if (positionSide === 'LONG' && fillPrice * order.quantity + entryFee > portfolio.currentCash) throw new Error('Insufficient paper cash including entry fee');
   await updateSimOrderStatus({ orderId: order.id, status: "FILLED_SIM", filledPrice: fillPrice });
 
   const openRisk =
@@ -165,8 +173,9 @@ export async function fillOrderAndOpenPosition(args: {
   const cashDelta = positionSide === "LONG"
     ? -(fillPrice * order.quantity)
     : (fillPrice * order.quantity);
-  const newCash = round2(portfolio.currentCash + cashDelta);
-  await refreshPaperBalances(portfolio, newCash, portfolio.realisedPnl);
+  const newCash = round2(portfolio.currentCash + cashDelta - entryFee);
+  await refreshPaperBalances(portfolio, newCash, round2(portfolio.realisedPnl - entryFee));
+  position.entryFee = entryFee;
 
   await writeJournal({
     workspaceId: portfolio.workspaceId,
@@ -178,6 +187,7 @@ export async function fillOrderAndOpenPosition(args: {
     positionId: position.id,
     reasoning: `Sim fill: trigger=${order.triggerPrice}, current=${currentPrice}, slippage=${(slipPct * 100).toFixed(3)}%`,
     evidence: [
+      JSON.stringify({ version: "paper-fill-accounting.v1", entryFee }),
       `fill_price=${fillPrice.toFixed(4)}`,
       ...(args.validationEvidence ? [
         `validated_packet=${args.validationEvidence.packetId}`, `price_at=${args.validationEvidence.priceAt}`,

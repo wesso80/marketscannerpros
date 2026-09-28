@@ -8,11 +8,12 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { wrapTruth } from "@/lib/admin/truthLayer";
 import {
   getDefaultPortfolio,
+  getPortfolioById,
   listOpenPositions,
 } from "@/lib/admin/portfolio-lab/portfolioStore";
 import { manualSimClose } from "@/lib/admin/portfolio-lab/positionEngine";
 import { ARCA_DEFAULT_PORTFOLIO_NAME } from "@/lib/admin/portfolio-lab/constants";
-import { q } from "@/lib/db";
+import { q, atomicQueries } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -39,26 +40,21 @@ export async function POST(req: NextRequest) {
     exitPrice?: number;
     reason?: string;
   };
-  if (!body.positionId || !Number.isFinite(body.exitPrice)) {
+  if (!body.positionId || (!Number.isFinite(body.exitPrice) || Number(body.exitPrice) <= 0)) {
     return NextResponse.json({ error: "positionId and exitPrice required" }, { status: 400 });
   }
-  const portfolio = await getDefaultPortfolio(admin.workspaceId, ARCA_DEFAULT_PORTFOLIO_NAME);
-  if (!portfolio) return NextResponse.json({ error: "No ARCA portfolio" }, { status: 404 });
-
-  // Fetch single position row.
-  const opens = await listOpenPositions(admin.workspaceId, portfolio.id);
-  const pos = opens.find((p) => p.id === body.positionId);
-  if (!pos) return NextResponse.json({ error: "Position not found or already closed" }, { status: 404 });
-
-  const result = await manualSimClose({
-    portfolio,
-    position: pos,
-    exitPrice: Number(body.exitPrice),
-    reason: body.reason || "manual_close",
+  return atomicQueries(async () => {
+    const portfolio = await getDefaultPortfolio(admin.workspaceId!, ARCA_DEFAULT_PORTFOLIO_NAME);
+    if (!portfolio) return NextResponse.json({ error: "No ARCA portfolio" }, { status: 404 });
+    // Same balance-row lock as the scheduled cycle/reset. Re-read after waiting for it.
+    await q(`SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE`, [admin.workspaceId, portfolio.id]);
+    const current = await getPortfolioById(admin.workspaceId!, portfolio.id);
+    if (!current || current.mode !== 'SIMULATED') return NextResponse.json({ error: 'Simulated portfolio required' }, { status: 409 });
+    const opens = await listOpenPositions(admin.workspaceId!, portfolio.id);
+    const pos = opens.find(p => p.id === body.positionId);
+    if (!pos) return NextResponse.json({ error: "Position not found or already closed" }, { status: 404 });
+    const result = await manualSimClose({ portfolio: current, position: pos,
+      exitPrice: Number(body.exitPrice), reason: body.reason || "manual_close" });
+    return NextResponse.json(wrapTruth(result, { source: "arca:positions:close", simulated: true, freshness: "real-time", confidence: "high" }));
   });
-  // touch to avoid unused warning of q
-  void q;
-  return NextResponse.json(
-    wrapTruth(result, { source: "arca:positions:close", simulated: true, freshness: "real-time", confidence: "high" }),
-  );
 }
