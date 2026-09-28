@@ -1,0 +1,5 @@
+import {it,expect} from 'vitest';
+import {normalizeMarketContext} from '@/lib/admin/cryptoMarketContext';
+const ok=(value:unknown)=>({status:'fulfilled' as const,value});
+it('preserves failures instead of reporting zeros',()=>{const r=normalizeMarketContext([{status:'rejected',reason:'429'},ok(null),ok({})]);expect(r.failures).toEqual(['news','trending','global']);expect(r.global).toBeNull();});
+it('filters dangerous URLs and future headlines and retains provider time',()=>{const r=normalizeMarketContext([ok([{title:'Bad',url:'javascript:alert(1)',posted_at:'2026-01-01'},{title:'News',url:'https://example.com/news',posted_at:'2026-01-01'}]),ok({coins:[{item:{id:'bitcoin',name:'Bitcoin',symbol:'BTC'}}]}),ok({data:{market_cap_percentage:{btc:55},market_cap_change_percentage_24h_usd:2,updated_at:1767225600}})],Date.parse('2026-09-28'));expect(r.news).toHaveLength(1);expect(r.trending[0].id).toBe('bitcoin');expect(r.global?.btcDominance).toBe(55);expect(r.global?.updatedAt).toBe('2026-01-01T00:00:00.000Z');});

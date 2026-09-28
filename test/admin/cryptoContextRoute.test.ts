@@ -1,0 +1,12 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({auth:vi.fn(),redis:vi.fn(),get:vi.fn(),set:vi.fn(),enabled:vi.fn(),part:vi.fn()}));
+vi.mock('@/lib/adminAuth',()=>({requireAdmin:m.auth}));
+vi.mock('@/lib/redis',()=>({getRedis:m.redis}));
+vi.mock('@/lib/coingecko',()=>({getCryptoMarketsContextPart:m.part}));
+vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:m.enabled,isCoinGeckoEnabled:m.enabled}));
+import {GET,POST} from '@/app/api/admin/crypto-markets/context/route';
+const req=new Request('https://test');
+beforeEach(()=>{vi.resetAllMocks();m.auth.mockResolvedValue({ok:true});m.enabled.mockReturnValue(true);m.redis.mockReturnValue({get:m.get,set:m.set});m.set.mockResolvedValue('OK');m.get.mockResolvedValue(null);m.part.mockRejectedValue(Error('provider'));});
+it('reads saved context with no provider calls',async()=>{expect((await GET(req)).status).toBe(200);expect(m.part).not.toHaveBeenCalled();});
+it('honors auth, provider pause and shared cooldown before provider calls',async()=>{m.auth.mockResolvedValue({ok:false});expect((await POST(req)).status).toBe(403);m.auth.mockResolvedValue({ok:true});m.enabled.mockReturnValue(false);expect((await POST(req)).status).toBe(409);m.enabled.mockReturnValue(true);m.set.mockResolvedValue(null);expect((await POST(req)).status).toBe(429);expect(m.part).not.toHaveBeenCalled();});
+it('records failures honestly with three bounded fetches',async()=>{const r=await POST(req);expect(r.status).toBe(206);expect(m.part).toHaveBeenCalledTimes(3);expect((await r.json()).context.failures).toEqual(['news','trending','global']);});

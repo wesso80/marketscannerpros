@@ -1,3 +1,4 @@
+import {reviewCryptoBase} from '@/lib/admin/cryptoBase';
 import {NextResponse} from 'next/server';
 import {requireAdmin} from '@/lib/adminAuth';
 import {getRedis} from '@/lib/redis';
@@ -28,7 +29,7 @@ export async function POST(req:Request) {
     if(history && Number.isFinite(history.fetchedAt) && Date.now()>=history.fetchedAt && Date.now()-history.fetchedAt<15*60000) {
       const review=reviewCryptoMomentum(coin,history.hourly,history.daily,Date.now());
       await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
-      return NextResponse.json({review,chart:momentumChart(history.hourly,history.daily),cachedHistory:true,requestAttempts:0});
+      return NextResponse.json({review,chart:momentumChart(history.hourly,history.daily),base:reviewCryptoBase(history.hourly,history.daily,coin.price),cachedHistory:true,requestAttempts:0});
     }
     if(!await redis.set(`${PREFIX}:coin:${id}`,'reserved',{nx:true,ex:900}))
       return NextResponse.json({error:'This coin is being reviewed or is cooling down after an attempt'},{status:429});
@@ -45,6 +46,6 @@ export async function POST(req:Request) {
     if(!hourly || !daily) review.reasons.unshift('Provider history request failed; no substitute history used');
     else await redis.set(`${PREFIX}:history:${id}`,{fetchedAt:Date.now(),hourly,daily},{ex:900});
     await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
-    return NextResponse.json({review,chart:momentumChart(hourly??[],daily??[]),cached:false,requestAttempts:2});
+    return NextResponse.json({review,chart:momentumChart(hourly??[],daily??[]),base:reviewCryptoBase(hourly??[],daily??[],coin.price),cached:false,requestAttempts:2});
   } catch {return NextResponse.json({error:'Momentum analysis or evidence storage failed; no trade was created'},{status:503});}
 }
