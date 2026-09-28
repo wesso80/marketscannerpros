@@ -1,9 +1,10 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {createChart,CandlestickSeries,ColorType,type UTCTimestamp} from 'lightweight-charts';
+import type {BaseReview} from '@/lib/admin/cryptoBase';
 import type {MomentumChart,MomentumReview} from '@/lib/admin/cryptoMomentum';
 
-export default function CryptoReviewChart({chart,review}:{chart:MomentumChart|null;review:MomentumReview}) {
+export default function CryptoReviewChart({chart,review,base}:{chart:MomentumChart|null;review:MomentumReview;base?:BaseReview|null}) {
   const container=useRef<HTMLDivElement>(null);
   const [timeframe,setTimeframe]=useState<'hourly'|'fourHourly'|'daily'>('fourHourly');
   const bars=chart?.[timeframe];
@@ -24,9 +25,13 @@ export default function CryptoReviewChart({chart,review}:{chart:MomentumChart|nu
       ['Maximum entry',levels.maxEntry,'#fbbf24'],['Structural stop',levels.stop,'#f87171'],
       ['Model 2R target',levels.target,'#10b981'],
     ] as const) series.createPriceLine({price,color,lineWidth:1,axisLabelVisible:true,title});
+    if(base?.stage==='BASE'||base?.stage==='BREAKOUT_PRICE_ONLY'||base?.stage==='EXTENDED'||base?.stage==='FAILED_BREAKOUT') {
+      if(base.high)series.createPriceLine({price:base.high,color:'#a78bfa',lineWidth:1,axisLabelVisible:true,title:'Base high'});
+      if(base.low)series.createPriceLine({price:base.low,color:'#818cf8',lineWidth:1,axisLabelVisible:true,title:'Base low'});
+    }
     api.timeScale().fitContent();
     return ()=>api.remove();
-  },[bars,review]);
+  },[bars,review,base]);
   return <section aria-label={`${review.symbol} price chart`} className="space-y-2 rounded border border-slate-700 p-3">
     <div className="flex flex-wrap items-center gap-2"><h3>{review.symbol} · USD chart</h3>
       {(['hourly','fourHourly','daily'] as const).map((value,i)=><button key={value} type="button" aria-pressed={timeframe===value}

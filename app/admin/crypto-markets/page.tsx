@@ -1,4 +1,6 @@
 'use client';
+import CryptoMarketContext from '@/components/admin/CryptoMarketContext';
+import type {BaseReview} from '@/lib/admin/cryptoBase';
 import dynamic from 'next/dynamic';
 import type { MomentumChart } from '@/lib/admin/cryptoMomentum';
 const CryptoReviewChart = dynamic(()=>import('@/components/admin/CryptoReviewChart'), {ssr:false});
@@ -14,13 +16,14 @@ export default function CryptoMarketsPage() {
   const [busy,setBusy] = useState(false), [query,setQuery] = useState('');
   const [now,setNow] = useState(Date.now());
   const [review,setReview] = useState<MomentumReview|null>(null);
+  const [base,setBase] = useState<BaseReview|null>(null);
   const [chart,setChart] = useState<MomentumChart|null>(null);
   const [analyzing,setAnalyzing] = useState('');
   async function analyze(coinId:string) {
-    setAnalyzing(coinId);setError('');setReview(null);setChart(null);
+    setAnalyzing(coinId);setError('');setReview(null);setChart(null);setBase(null);
     try {
       const res=await fetch('/api/admin/crypto-discovery/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coinId})});
-      const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setNow(Date.now());
+      const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setNow(Date.now());
     } catch(e) {setError(e instanceof Error?e.message:'Analysis failed');}
     finally {setAnalyzing('');}
   }
@@ -30,7 +33,7 @@ export default function CryptoMarketsPage() {
       const res = await fetch('/api/admin/crypto-discovery',{method,cache:'no-store'});
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Discovery request failed');
-      setData(body.snapshot); setReview(null);setChart(null); setNow(Date.now());
+      setData(body.snapshot); setReview(null);setChart(null);setBase(null); setNow(Date.now());
     } catch(e) {setError(e instanceof Error ? e.message : 'Discovery unavailable');}
     finally {setBusy(false);}
   }
@@ -45,6 +48,7 @@ export default function CryptoMarketsPage() {
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
     <p>Major-exchange momentum research: Binance, Coinbase, Kraken, KuCoin and OKX. No six-week holding requirement.</p>
     <p className="text-sm text-slate-400">Screens the first 300 pairs by reported volume per exchange, deduplicated by CoinGecko ID. This is a capped discovery window, not every exchange listing. No paper orders or entry signals are created here.</p>
+    <CryptoMarketContext now={now} />
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
       <button disabled={busy} onClick={()=>void load('GET')} className="rounded border px-4 py-2">Load saved results</button>
@@ -60,7 +64,12 @@ export default function CryptoMarketsPage() {
       <p>Daily trend rising: {review.evidence.dailyAsOf?String(review.evidence.dailyTrend):'unavailable'} · 4h trend rising: {review.evidence.fourHourAsOf?String(review.evidence.fourHourTrend):'unavailable'} · Hourly bars: {review.evidence.hourlyBars} · Daily bars: {review.evidence.dailyBars}</p>
       <p>Last closed 1h: {review.evidence.hourlyAsOf??'unavailable'} · 4h: {review.evidence.fourHourAsOf??'unavailable'} · Daily: {review.evidence.dailyAsOf??'unavailable'} · Quote: {review.evidence.quoteAsOf??'unavailable'}</p>
       {review.levels && <p>Observed price: {review.levels.entry.toPrecision(6)} · Trigger: {review.levels.trigger.toPrecision(6)} · Maximum entry: {review.levels.maxEntry.toPrecision(6)} · Structural stop: {review.levels.stop.toPrecision(6)} · Model 2R target: {review.levels.target.toPrecision(6)} · Current R:R: {review.levels.currentRewardRisk.toFixed(2)}</p>}
-      <CryptoReviewChart key={review.coinId} chart={chart} review={review} />
+      {base&&<section aria-label="Base and breakout evidence" className="rounded border border-sky-800 p-3">
+        <h3>Base strategy · {base.stage} · Price only</h3><p>{base.reason}</p>
+        <p>Range low: {base.low?.toPrecision(6)??'Unavailable'} · Range high: {base.high?.toPrecision(6)??'Unavailable'} · Width: {base.widthPct?.toFixed(2)??'Unavailable'}% · MA gap: {base.maGapPct?.toFixed(2)??'Unavailable'}% · MA slope: {base.slopePct?.toFixed(2)??'Unavailable'}%</p>
+        <p className="text-xs text-slate-400">Experimental 21-day base ending before the latest completed 4h candle. No minimum holding period. Thresholds are unvalidated. Volume contraction, breakout volume and market regime are not confirmed. This assessment runs only when you open a coin review; the first scan still ranks price momentum.</p>
+      </section>}
+      <CryptoReviewChart key={review.coinId} chart={chart} review={review} base={base} />
       <p>{review.exitRule}</p>
       <p className="text-sm text-slate-400">Long-side research rule: completed daily and 4h closes above rising SMA20; 1h close above the previous 20-bar high, or reclaim of a pullback near SMA20. Stop below the last six hourly lows minus 0.25 ATR; maximum chase 0.5 ATR and minimum current 1.5R to a model target. Not a calibrated edge or paper-trade permission.</p>
     </section>}

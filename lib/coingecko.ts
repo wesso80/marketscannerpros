@@ -2220,3 +2220,10 @@ export async function getPoolWithVolumeBreakdown(
     return null;
   }
 }
+
+/** Admin-only bounded context fetch. Separate from public wrappers and their retry policy. */
+export async function getCryptoMarketsContextPart(part:'news'|'trending'|'global'):Promise<unknown> {
+  const path={news:'/news',trending:'/search/trending',global:'/global'}[part];
+  return cgFetch<unknown>(path,{params:part==='news'?new URLSearchParams({per_page:'10',language:'en',type:'news'}):undefined,
+    retries:0,timeoutMs:10000,init:{next:{revalidate:300}}});
+}
