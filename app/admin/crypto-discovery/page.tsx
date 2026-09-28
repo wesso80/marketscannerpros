@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { DiscoveryRow, VenueEvidence } from '@/lib/admin/cryptoDiscovery';
 import type { MomentumReview } from '@/lib/admin/cryptoMomentum';
-type Snapshot = { startedAt:string; finishedAt:string; requests:number; partial:boolean; uniqueCoins:number;
+type Snapshot = { startedAt:string; finishedAt:string; requests:number; partial:boolean; uniqueCoins:number; missingMarketIds?:string[]; failedMarketBatches?:number[];
   coverage:{exchange:string; pages:number; status:string; pairsSeen:number}[];
   rows:(DiscoveryRow & {venues:VenueEvidence[]})[] };
 const pct = (n:number|null) => n === null ? 'Unavailable' : `${n.toFixed(2)}%`;
@@ -26,7 +26,7 @@ export default function CryptoDiscoveryPage() {
       const res = await fetch('/api/admin/crypto-discovery',{method,cache:'no-store'});
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Discovery request failed');
-      setData(body.snapshot); setNow(Date.now());
+      setData(body.snapshot); setReview(null); setNow(Date.now());
     } catch(e) {setError(e instanceof Error ? e.message : 'Discovery unavailable');}
     finally {setBusy(false);}
   }
@@ -53,7 +53,7 @@ export default function CryptoDiscoveryPage() {
       <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
       <p>{review.reasons.join(' · ')}</p>
-      <p>Daily trend rising: {String(review.evidence.dailyTrend)} · 4h trend rising: {String(review.evidence.fourHourTrend)} · Hourly bars: {review.evidence.hourlyBars} · Daily bars: {review.evidence.dailyBars}</p>
+      <p>Daily trend rising: {review.evidence.dailyAsOf?String(review.evidence.dailyTrend):'unavailable'} · 4h trend rising: {review.evidence.fourHourAsOf?String(review.evidence.fourHourTrend):'unavailable'} · Hourly bars: {review.evidence.hourlyBars} · Daily bars: {review.evidence.dailyBars}</p>
       <p>Last closed 1h: {review.evidence.hourlyAsOf??'unavailable'} · 4h: {review.evidence.fourHourAsOf??'unavailable'} · Daily: {review.evidence.dailyAsOf??'unavailable'} · Quote: {review.evidence.quoteAsOf??'unavailable'}</p>
       {review.levels && <p>Observed price: {review.levels.entry.toPrecision(6)} · Trigger: {review.levels.trigger.toPrecision(6)} · Maximum entry: {review.levels.maxEntry.toPrecision(6)} · Structural stop: {review.levels.stop.toPrecision(6)} · Model 2R target: {review.levels.target.toPrecision(6)} · Current R:R: {review.levels.currentRewardRisk.toFixed(2)}</p>}
       <p>{review.exitRule}</p>
@@ -63,6 +63,8 @@ export default function CryptoDiscoveryPage() {
     {data && <>
       <p>{stale?'STALE SNAPSHOT':data.partial?'PARTIAL COVERAGE':'SNAPSHOT AVAILABLE'} · {data.uniqueCoins} coins with market data · {data.requests} request attempts · Started {new Date(data.startedAt).toLocaleString()} · Finished {new Date(data.finishedAt).toLocaleString()}</p>
       <p className="text-sm">{data.coverage.map(c=>`${c.exchange}: ${c.pairsSeen} pairs, ${c.status}`).join(' · ')}</p>
+      {!!data.missingMarketIds?.length && <p className="text-amber-300">Market data not returned for: {data.missingMarketIds.join(', ')}</p>}
+      {!!data.failedMarketBatches?.length && <p className="text-amber-300">Failed market-data batches: {data.failedMarketBatches.join(', ')}</p>}
       <p className="text-sm text-slate-400">Screen: market cap ≥ $10m, global 24h volume ≥ $2m; at least one observed pair with ≥ $250k volume, spread ≤ 0.5%, no stale/anomaly flag and a trade within 15 minutes of scan start. Reported volume is not order-book depth. Stable/wrapped screening is heuristic.</p>
       <p className="text-sm text-slate-400">MOMENTUM: 1h ≥ 1% and 24h ≥ 3%. EXTENDED: 1h ≥ 10% or 24h ≥ 30%; retained for review, not a buy signal. WATCH: other passing screens. These are unvalidated discovery rules, not a profitability score. Ordered by stage then 1h change.</p>
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{['Coin / ID','Stage at scan','Price USD','1h','24h','7d','Venues / pair spreads','Fixed scanner','Exclusions'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
