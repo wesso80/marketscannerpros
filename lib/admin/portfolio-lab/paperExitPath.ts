@@ -1,5 +1,5 @@
 import type { Bar } from '@/types/operator';
-import type { ArcaPosition } from './types';
+import type { ArcaPosition, PaperExitCheckpoint } from './types';
 
 const STEP = 15 * 60_000;
 export interface PaperExitCandle {
@@ -34,11 +34,12 @@ export interface PaperPathResult {
   status: string;
   entryCandleExcluded?: boolean;
   checkedThrough?: string;
+  checkpoint?: PaperExitCheckpoint;
   exit?: { reason: 'STOP_LOSS' | 'TAKE_PROFIT'; price: number; at: string; ambiguous: boolean };
 }
 
 /**
- * Replay fixed levels from entry, not last_mark_at (a quote mark is not a candle checkpoint).
+ * Resume from a validated journal checkpoint, never last_mark_at (a quote is not a candle check).
  * Any missing prefix/gap prevents a later target being credited after an unknown earlier stop.
  * The entry-containing candle cannot be replayed: its extremes may predate the fill.
  * Coverage explicitly excludes that partial entry candle; do not label it complete.
@@ -52,13 +53,23 @@ export function evaluatePaperExitPath(position: ArcaPosition, path: PaperExitPat
   if (!Number.isFinite(entry) || entry > now) return reject('candle_path_entry_invalid');
   // Fixed levels only. Replaying changed stops over old bars would introduce hindsight.
   if (position.initialStopLoss == null || position.stopLoss !== position.initialStopLoss) return reject('candle_path_original_stop_unavailable_or_changed');
-  const firstOpen = Math.ceil(entry / STEP) * STEP;
-  const entryCandleExcluded = firstOpen !== entry;
+  const entryOpen = Math.ceil(entry / STEP) * STEP;
+  const entryCandleExcluded = entryOpen !== entry;
+  const target = nearestPaperTarget(position);
+  let firstOpen = entryOpen;
+  const checkpoint = position.exitCheckpoint;
+  if (checkpoint != null) {
+    const through = Date.parse(checkpoint.through);
+    if (checkpoint.version !== 1 || checkpoint.entryAt !== position.openedAt ||
+        checkpoint.side !== position.side || checkpoint.stop !== position.stopLoss ||
+        checkpoint.target !== (target ?? null) || !Number.isFinite(through) ||
+        through < entryOpen || through > now || through % STEP !== 0) return reject('candle_checkpoint_invalid_or_rules_changed');
+    firstOpen = through;
+  }
   const bars = path.candles.filter(b => b.openAt >= firstOpen && b.closeAt <= now).sort((a, b) => a.openAt - b.openAt);
   if (!bars.length) return reject('candle_path_no_closed_bars');
   if (new Set(bars.map(b => b.openAt)).size !== bars.length) return reject('candle_path_duplicate_bar');
   if (bars[0].openAt !== firstOpen) return reject('candle_path_entry_prefix_unresolved');
-  const target = nearestPaperTarget(position);
   const long = position.side === 'LONG';
   let expected = firstOpen;
   for (const b of bars) {
@@ -78,5 +89,9 @@ export function evaluatePaperExitPath(position: ArcaPosition, path: PaperExitPat
     }
     expected = b.closeAt;
   }
-  return { status: 'candle_path_checked', entryCandleExcluded, checkedThrough: new Date(expected).toISOString() };
+  const checkedThrough = new Date(expected).toISOString();
+  return { status: 'candle_path_checked', entryCandleExcluded, checkedThrough, checkpoint: {
+    version: 1, through: checkedThrough, entryAt: position.openedAt, side: position.side,
+    stop: position.stopLoss!, target: target ?? null,
+  } };
 }
