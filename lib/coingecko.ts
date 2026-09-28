@@ -1803,6 +1803,17 @@ export async function getExchangeDetail(exchangeId: string): Promise<any | null>
   }
 }
 
+/** Bounded spot discovery. Caller owns page/call budget; no retries. */
+export async function getDiscoveryExchangeTickers(exchangeId: string, page: number): Promise<CoinTicker[] | null> {
+  try {
+    const result = await cgFetch<{ tickers: CoinTicker[] }>(`/exchanges/${encodeURIComponent(exchangeId)}/tickers`, {
+      params: new URLSearchParams({ page: String(page), order: 'volume_desc' }),
+      retries: 0, timeoutMs: 5000, init: { next: { revalidate: 300 } },
+    });
+    return Array.isArray(result?.tickers) ? result.tickers : null;
+  } catch { return null; }
+}
+
 // ============================================
 // HISTORICAL COIN DATA (Snapshot at Date)
 // ============================================
