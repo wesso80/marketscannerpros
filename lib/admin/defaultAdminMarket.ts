@@ -1,3 +1,4 @@
+import { adminEquitiesPaused } from './adminEquities';
 /**
  * Server-side admin market default: always EQUITIES (admin landing, Morning Brief, API fallbacks and jobs), whatever
  * the crypto switches say. Crypto is opened explicitly (market=CRYPTO / the Crypto toggle); whether it is available
@@ -9,7 +10,7 @@ import { parseAdminMarket, type AdminMarket } from "@/lib/admin/adminMarket";
 export type { AdminMarket };
 
 export function defaultAdminMarket(): AdminMarket {
-  return "EQUITIES";
+  return adminEquitiesPaused() ? "CRYPTO" : "EQUITIES";
 }
 
 /** A requested market, or the default when the value is missing/unknown. */

@@ -1,3 +1,4 @@
+import { pausedAdminRequest, ADMIN_EQUITIES_PAUSED_MESSAGE } from './lib/admin/adminEquities';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isFreeForAllMode } from '@/lib/entitlements';
@@ -135,6 +136,16 @@ setInterval(() => {
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
+  if (pathname.startsWith('/api/admin/')) {
+    const values: Record<string, unknown> = Object.fromEntries(req.nextUrl.searchParams);
+    if (req.method === 'POST' && req.headers.get('content-type')?.includes('application/json')) {
+      const body = await req.clone().json().catch(() => null);
+      if (body && typeof body === 'object' && !Array.isArray(body)) Object.assign(values, body);
+    }
+    if (pausedAdminRequest(pathname, values)) return NextResponse.json({
+      ok: false, paused: true, reason: 'admin_equities_paused', error: ADMIN_EQUITIES_PAUSED_MESSAGE,
+    }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+  }
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/internal/') && !pathname.startsWith('/api/scanner/') && !pathname.startsWith('/api/jobs/') && !pathname.startsWith('/api/catalyst/') && !pathname.startsWith('/api/alerts/')) {
     const ip = getClientIP(req);
     if (isApiRateLimited(ip)) {

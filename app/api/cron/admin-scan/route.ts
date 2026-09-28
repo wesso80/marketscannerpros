@@ -1,3 +1,4 @@
+import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 /**
  * POST /api/cron/admin-scan — run the shared saved admin scan (lib/admin/sharedScan.ts).
  *
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
   if (market !== "EQUITIES" && market !== "CRYPTO") {
     return NextResponse.json({ ok: false, error: "market must be EQUITIES or CRYPTO" }, { status: 400 });
   }
+    if (market === 'EQUITIES' && adminEquitiesPaused()) return NextResponse.json({
+      ok: true, started: false, skipped: true, reason: 'admin_equities_paused', message: ADMIN_EQUITIES_PAUSED_MESSAGE,
+    });
   const timeframe = typeof body?.timeframe === "string" && body.timeframe ? body.timeframe : "15m";
   const result = await startSharedScan({ market, timeframe, trigger: "cron" });
   if (result.started) {

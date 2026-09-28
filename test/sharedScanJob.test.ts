@@ -99,6 +99,7 @@ beforeEach(() => {
   delete process.env.ADMIN_RESCAN_MIN_INTERVAL_SEC;
   delete process.env.ADMIN_RESCAN_DAILY_CAP;
   delete process.env.ADMIN_CRYPTO_ENABLED;
+  delete process.env.ADMIN_EQUITIES_PAUSED;
   m.entitlement.downgraded = false;
   for (const fn of Object.values(m.store)) if (typeof fn === 'function' && 'mockClear' in fn) (fn as ReturnType<typeof vi.fn>).mockClear();
   m.store.acquireRunLock.mockReset().mockResolvedValue(true);
@@ -411,5 +412,26 @@ describe('saved packet labelling', () => {
     expect(q.packetId).not.toBe(p.packetId);
     const older = toSavedPacket(row({ price: 105, quoteAt: '2026-09-25T16:00:00.000Z' }))!;
     expect(withFreshQuote(older)).toBe(older);
+  });
+});
+
+describe('admin equity cost pause', () => {
+  it('skips scheduled equity scans before any database or provider work', async () => {
+    process.env.ADMIN_EQUITIES_PAUSED = 'true';
+    expect(await startSharedScan({ market: 'EQUITIES', trigger: 'cron' })).toMatchObject({ started: false, reason: 'paused' });
+    expect(m.store.acquireRunLock).not.toHaveBeenCalled();
+    expect(m.avFetch).not.toHaveBeenCalled();
+  });
+  it('skips equity reads and manual scan bookkeeping while paused', async () => {
+    process.env.ADMIN_EQUITIES_PAUSED = 'true';
+    expect(await readSavedScan({ market: 'EQUITIES' })).toMatchObject({ available: false, ageLabel: 'paused' });
+    expect(await requestManualRescan({ market: 'EQUITIES' })).toMatchObject({ ok: false, status: 503 });
+    expect(m.store.loadSavedResults).not.toHaveBeenCalled();
+    expect(m.store.lastManualRunAt).not.toHaveBeenCalled();
+  });
+  it('keeps crypto saved results available', async () => {
+    process.env.ADMIN_EQUITIES_PAUSED = 'true';
+    await readSavedScan({ market: 'CRYPTO' });
+    expect(m.store.loadSavedResults).toHaveBeenCalledWith(expect.objectContaining({ market: 'CRYPTO' }));
   });
 });

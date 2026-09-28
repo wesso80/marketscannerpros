@@ -1,3 +1,4 @@
+import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from './adminEquities';
 import { savePaperExitPath, type PaperExitPath } from './portfolio-lab/paperExitPath';
 import { savePositionHistory } from './positionHistory';
 import { marketForSymbol } from "@/lib/admin/adminMarket";
@@ -298,6 +299,7 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   const symbol = params.symbol.toUpperCase();
   // No market given: infer from the symbol, else the admin default (EQUITIES while crypto data is off).
   const market = (params.market ? String(params.market).toUpperCase() : marketForSymbol(symbol, defaultAdminMarket())) as Market;
+  if (market === 'EQUITIES' && adminEquitiesPaused()) throw new Error(ADMIN_EQUITIES_PAUSED_MESSAGE);
   const timeframe = params.timeframe || "15m";
 
   const context = params.scanContext ?? (await buildAdminScanContext()).context;
