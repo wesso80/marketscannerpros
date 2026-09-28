@@ -12,3 +12,8 @@ it('bounds each batch to five and retains pending rows',async()=>{const b=await 
 it('requires fresh discovery and respects the shared lock',async()=>{m.get.mockResolvedValue(null);expect((await POST(req())).status).toBe(409);m.set.mockResolvedValue(null);expect((await POST(req())).status).toBe(429);expect(m.fetch).not.toHaveBeenCalled();});
 it('continues past failed providers without fabricating bases',async()=>{m.fetch.mockRejectedValue(Error('provider'));const b=await (await POST(req())).json();expect(b.scan.rows.filter((r:{stage:string})=>r.stage==='UNAVAILABLE')).toHaveLength(5);});
 it('saved reads spend no provider calls',async()=>{await GET(req());expect(m.fetch).not.toHaveBeenCalled();});
+it('preserves completed Coinbase evidence during the same-day v1 upgrade',async()=>{
+ const old={version:1,startedAt:new Date().toISOString(),rows:[{id:'coin-0',product:'C0-USD',stage:'NOT_BASE',reason:'wide range',asOf:'2026-09-28T00:00:00.000Z',high:12,low:8,widthPct:50,gapPct:0,slopePct:0,contraction:1}]};
+ m.get.mockImplementation(async(k:string)=>k==='admin:crypto-discovery:v1'?snapshot():old);
+ const b=await (await POST(req())).json();expect(b.scan.version).toBe(2);expect(b.scan.rows[0].reason).toBe('wide range');expect(b.scan.rows[0].exchange).toBe('gdax');expect(m.fetch.mock.calls.some(c=>c[0].id==='coin-0')).toBe(false);
+});
