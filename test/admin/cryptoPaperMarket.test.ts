@@ -1,5 +1,5 @@
 import {expect,it,vi,afterEach} from 'vitest';
-import {parsePaperQuote,planCryptoPaper,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
+import {parsePaperQuote,planCryptoPaper,fetchPaperPath,parsePaperBook,fetchPaperQuote} from '@/lib/admin/cryptoPaperMarket';
 import type {VolumeMomentum} from '@/lib/admin/cryptoVolumeMomentum';
 const now=Date.parse('2026-09-28T05:00:00Z');
 const signal={stage:'MOMENTUM_VOLUME',asOf:'2026-09-28T04:00:00Z',stop:95,target:112,maxEntry:102,entryFloor:99} as VolumeMomentum;
@@ -41,4 +41,20 @@ it('retains a precise provider failure instead of a generic monitoring message',
 it('does not silently discard history outside the recovery window',async()=>{
  vi.spyOn(Date,'now').mockReturnValue(now);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
  await expect(fetchPaperPath('bitcoin','BTC-USD',new Date(now-300*900000).toISOString())).rejects.toThrow('requires recovery');expect(fetcher).not.toHaveBeenCalled();
+});
+
+it('values from a fresh order book without requiring a recent last trade',()=>{
+ expect(parsePaperBook({bids:[['99','10',1]],asks:[['100','10',1]],time:new Date(now).toISOString(),sequence:123},'BTC-USD',now)).toMatchObject({bid:99,ask:100,source:'coinbase_order_book',sequence:123});
+});
+it.each([
+ {time:new Date(now-61000).toISOString()}, {time:new Date(now+1).toISOString()}, {time:undefined},
+ {auction_mode:true}, {bids:[]}, {asks:[['100','0',1]]}, {bids:[['101','10',1]]},
+])('rejects unsafe order books %j',patch=>{
+ expect(()=>parsePaperBook({bids:[['99','10',1]],asks:[['100','10',1]],time:new Date(now).toISOString(),sequence:123,...patch},'BTC-USD',now)).toThrow();
+});
+it('fetches the timestamped book instead of the last-trade ticker',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);
+ const fetcher=vi.fn(async()=>Response.json({bids:[['99','10',1]],asks:[['100','10',1]],time:new Date(now).toISOString(),sequence:123}));vi.stubGlobal('fetch',fetcher);
+ await expect(fetchPaperQuote('BTC-USD')).resolves.toMatchObject({source:'coinbase_order_book'});
+ expect(fetcher).toHaveBeenCalledWith('https://api.exchange.coinbase.com/products/BTC-USD/book?level=1',expect.objectContaining({cache:'no-store'}));
 });
