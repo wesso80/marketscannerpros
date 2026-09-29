@@ -14,3 +14,8 @@ it('reports UNAVAILABLE for short or stale history instead of guessing',()=>{
  expect(assessBtcRegime(bars(i=>50000+i,40),now).state).toBe('UNAVAILABLE');
  expect(assessBtcRegime(bars(i=>50000+i).slice(0,-1),now)).toMatchObject({state:'UNAVAILABLE',reason:expect.stringContaining('missing')});
 });
+it('records the 200-day bull/bear state with the daily trend, UNAVAILABLE when history is too short',()=>{
+ expect(assessBtcRegime(bars(i=>50000+i*100,230),now).longTrend).toBe('BULL');
+ expect(assessBtcRegime(bars(i=>90000-i*100,230),now).longTrend).toBe('BEAR');
+ expect(assessBtcRegime(bars(i=>50000+i*100),now)).toMatchObject({state:'UP',longTrend:'UNAVAILABLE'});
+});

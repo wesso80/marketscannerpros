@@ -31,3 +31,12 @@ export function bullGate(trend:LongTrend,breadth:{fraction:number}|null):'ON'|'O
  if(trend==='UNAVAILABLE'||!breadth)return 'UNAVAILABLE';
  return trend==='BULL'&&breadth.fraction>=REGIME.gateBreadth?'ON':'OFF';
 }
+/**
+ * Shadow entry filter, chosen from two backtest windows (Apr–Jul and Jul–Sep 2026) where entries with BTC's daily
+ * trend DOWN lost money. Evidence only: it labels paper trades and never blocks them.
+ */
+export const BTC_DOWN_FILTER='skip-btc-daily-down-v1';
+export type ShadowFilterDecision='PASS'|'WOULD_SKIP'|'UNAVAILABLE'|'NOT_RECORDED';
+export function btcDownFilter(state:string|null|undefined):ShadowFilterDecision{
+ return state==null?'NOT_RECORDED':state==='DOWN'?'WOULD_SKIP':state==='UP'||state==='MIXED'?'PASS':'UNAVAILABLE';
+}
