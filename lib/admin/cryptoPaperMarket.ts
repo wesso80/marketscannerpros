@@ -1,4 +1,5 @@
 import {parseExchangeCandles} from './cryptoExchangeVolume';
+import {fillNoTradeGaps,NO_TRADE_MAX_BARS,type FilledBar} from './cryptoCandleGaps';
 import type {PaperExitPath} from './portfolio-lab/paperExitPath';
 import type {VolumeMomentum} from './cryptoVolumeMomentum';
 export class PaperMarketError extends Error {}
@@ -27,19 +28,24 @@ export async function fetchPaperQuote(product:string):Promise<CryptoPaperQuote>{
 /** Exit catch-up bound: seven days of 15m candles. Older gaps still require manual recovery. */
 export const PAPER_RECOVERY_CANDLES=672;
 const COINBASE_PAGE=299;
-/** Pages Coinbase candles oldest-first so a missed interval is replayed in full, never truncated. */
-export async function fetchCoinbaseCandles(product:string,start:number,end:number,step=900000){
- const bars=[];
- for(let from=start;from<end;from+=COINBASE_PAGE*step){
+/**
+ * Pages Coinbase candles oldest-first so a missed interval is replayed in full, never truncated.
+ * fillGaps>0: also reads that many candles before `start` as an anchor, fills bounded no-trade gaps between real
+ * candles (see fillNoTradeGaps), then returns only candles closing after `start`.
+ */
+export async function fetchCoinbaseCandles(product:string,start:number,end:number,step=900000,fillGaps=0):Promise<FilledBar[]>{
+ const bars:FilledBar[]=[],from0=start-fillGaps*step;
+ for(let from=from0;from<end;from+=COINBASE_PAGE*step){
   const to=Math.min(end,from+COINBASE_PAGE*step);
   const params=new URLSearchParams({granularity:String(step/1000),start:new Date(from).toISOString(),end:new Date(to).toISOString()});
   const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?${params}`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Exit history provider HTTP ${r.status}`);
-  let page;try{page=parseExchangeCandles(await r.json(),step,from,to);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle validation failed');}
+  let page;try{page=parseExchangeCandles(await r.json(),step,from,to,fillGaps>0);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle validation failed');}
   // Each page must join the previous one exactly; a missing boundary candle is a gap, not a skip.
-  if(bars.length&&page.length&&page[0].t-bars.at(-1)!.t!==step)throw new PaperMarketError('Missing exit candles between history pages');
+  if(!fillGaps&&bars.length&&page.length&&page[0].t-bars.at(-1)!.t!==step)throw new PaperMarketError('Missing exit candles between history pages');
   bars.push(...page);
  }
- return bars;
+ if(!fillGaps)return bars;
+ try{return fillNoTradeGaps(bars,step,fillGaps).filter(b=>b.t>start);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle gap');}
 }
 export async function fetchPaperPath(symbol:string,product:string,from?:string):Promise<PaperExitPath>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
@@ -49,8 +55,8 @@ export async function fetchPaperPath(symbol:string,product:string,from?:string):
  if(requested<end-PAPER_RECOVERY_CANDLES*step)throw new PaperMarketError('Exit history requires recovery beyond the seven-day catch-up window');
  const start=requested;
  if(start===end)return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[]};
- const bars=await fetchCoinbaseCandles(product,start,end,step);
- return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}))};
+ const bars=await fetchCoinbaseCandles(product,start,end,step,NO_TRADE_MAX_BARS);
+ return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c})),filledBars:bars.filter(b=>b.filled).length};
 }
 /** maxNotional: optional liquidity cap in USD; riskScale (0,1]: correlation reduction of the 0.25% risk budget. The smallest size wins. */
 export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now(),costRate=.0005,maxNotional=Infinity,riskScale=1){

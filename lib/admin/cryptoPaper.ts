@@ -18,6 +18,7 @@ import {fetchVolumeMomentum,type MomentumScan} from './cryptoVolumeMomentum';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {fourHourBars,instrumentPair,correlationScale} from './cryptoCorrelation';
 import {fetchDerivatives} from './cryptoDerivatives';
+import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
@@ -65,6 +66,16 @@ async function advanceShadows(workspaceId:string,portfolioId:string,notes:string
    else notes.push(`Shadow exit ${st.symbol}: ${message}; retried next cycle`);
   }
  }
+}
+/** CSV of every filled paper order with its entry evidence and outcome. Read-only; null when the account does not exist. */
+export async function cryptoPaperTradeLog(workspaceId:string):Promise<string|null>{
+ const portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);if(!portfolio)return null;
+ const rows=await q<PaperLogRow>(`SELECT o.id AS order_id,o.symbol,o.instrument_type,o.created_reason,o.filled_at,o.filled_price,o.quantity,o.notional_value,o.stop_loss,o.take_profit_1,
+  p.id AS position_id,p.status AS position_status,p.current_price,p.unrealised_pnl,t.exit_time,t.exit_price,t.exit_reason,t.realised_pnl,t.r_multiple,t.fees_estimate,t.outcome
+  FROM arca_simulated_orders o LEFT JOIN arca_positions p ON p.source_order_id=o.id AND p.workspace_id=o.workspace_id
+  LEFT JOIN arca_trades t ON t.position_id=p.id AND t.workspace_id=o.workspace_id
+  WHERE o.workspace_id=$1 AND o.portfolio_id=$2 AND o.filled_at IS NOT NULL ORDER BY o.filled_at`,[workspaceId,portfolio.id]);
+ return paperTradeLog(rows,await shadowStates(workspaceId,portfolio.id));
 }
 export async function cryptoPaperState(workspaceId:string){
  return atomicQueries(async()=>{
@@ -118,6 +129,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    const [quoteResult,pathResult]=await Promise.allSettled([converted?fetchOkxUsdQuote(product):fetchPaperQuote(product),converted?fetchOkxUsdPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt):fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
    if(pathResult.status!=='fulfilled')throw new PaperMarketError(pathResult.reason instanceof PaperMarketError?pathResult.reason.message:'Exit history request failed or timed out');
    const path=pathResult.value,quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
+   if(path.filledBars)notes.push(`${position.symbol}: ${path.filledBars} no-trade 15m candle(s) filled flat at the prior close`);
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
     const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');

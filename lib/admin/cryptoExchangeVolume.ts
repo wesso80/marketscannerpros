@@ -9,7 +9,8 @@ export function selectCoinbasePair(venues:VenueEvidence[],now=Date.now()):string
   return v?v.pair.replace('/','-'):null;
 }
 /** Coinbase time is bucket START, unlike CoinGecko's close timestamps. */
-export function parseExchangeCandles(raw:unknown,interval:number,start:number,end:number):ExchangeBar[]{
+/** allowGaps: return validated bars with gaps left in place (callers must fill or reject them explicitly). */
+export function parseExchangeCandles(raw:unknown,interval:number,start:number,end:number,allowGaps=false):ExchangeBar[]{
   if(!Array.isArray(raw))throw Error('Exchange returned no candle array');
   const bars=new Map<number,ExchangeBar>();
   for(const row of raw){
@@ -22,7 +23,7 @@ export function parseExchangeCandles(raw:unknown,interval:number,start:number,en
     bars.set(t,b);
   }
   const sorted=[...bars.values()].sort((a,b)=>a.t-b.t);
-  for(let i=1;i<sorted.length;i++)if(sorted[i].t-sorted[i-1].t!==interval)throw Error('Missing exchange candle periods; no volume was invented');
+  if(!allowGaps)for(let i=1;i<sorted.length;i++)if(sorted[i].t-sorted[i-1].t!==interval)throw Error('Missing exchange candle periods; no volume was invented');
   return sorted;
 }
 export function exchangeVolumeReview(coinId:string,product:string,hourly:ExchangeBar[],daily:ExchangeBar[],now=Date.now()):ExchangeVolume{

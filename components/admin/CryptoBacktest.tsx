@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import type {CryptoPaperStats as Stats,CryptoStatsGroup,ExitPlanComparison} from '@/lib/admin/cryptoPaperStats';
 import CryptoPaperStats,{Table} from './CryptoPaperStats';
-type Counts={coins:number;done:number;failed:number;signals:number;noEntry:number;overlapping:number;trades:number;openAtHorizon:number;dataGaps:number;requests:number;droppedRows:number};
+type Counts={filledBars?:number;tradesWithFilledBars?:number;coins:number;done:number;failed:number;signals:number;noEntry:number;overlapping:number;trades:number;openAtHorizon:number;dataGaps:number;requests:number;droppedRows:number};
 type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison;counts:Counts}|null};
 export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:number}){
  const [data,setData]=useState<View|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -40,16 +40,18 @@ export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:numbe
   {busy&&<p>Running backtest batch…</p>}{error&&<p role="alert" className="text-amber-300">{error}</p>}
   {s&&c&&<>
    <p>{s.status==='COMPLETE'?'COMPLETE':'IN PROGRESS'} · coins {c.done}/{c.coins} done{c.failed?` · ${c.failed} failed`:''} · window {s.from.slice(0,10)} → {s.to.slice(0,10)} · universe from discovery {new Date(s.universeAt).toLocaleString()} · updated {new Date(s.updatedAt).toLocaleString()} · source Coinbase public candles ({c.requests} requests)</p>
-   <p className="text-sm">Signals {c.signals} · traded {c.trades} · no valid entry within 4h {c.noEntry} · skipped while a trade was open in that coin {c.overlapping} · open at 7-day horizon (excluded) {c.openAtHorizon} · 15m data gaps (excluded) {c.dataGaps} · invalid candle rows dropped {c.droppedRows}</p>
+   <p className="text-sm">Signals {c.signals} · traded {c.trades} · no valid entry within 4h {c.noEntry} · skipped while a trade was open in that coin {c.overlapping} · open at 7-day horizon (excluded) {c.openAtHorizon} · 15m data gaps over 2h (excluded) {c.dataGaps} · no-trade 15m candles filled flat {c.filledBars??0} across {c.tradesWithFilledBars??0} trades · invalid candle rows dropped {c.droppedRows}</p>
    <details className="rounded border border-slate-700 p-3"><summary>Integrity findings (read before trusting results)</summary><ul className="list-disc space-y-1 pl-5 text-sm">
     <li><b>HIGH · Survivorship bias:</b> the universe is coins liquid on Coinbase today. Coins that collapsed or were delisted in the window are missing, so results are likely optimistic.</li>
     <li><b>MEDIUM · Fills:</b> historical bid/ask is unavailable. Entries assume a 0.05% half-spread at the first in-zone hourly open, plus 0.05% slippage and 0.05% fees per side. The live system checks real order books every 15 minutes.</li>
     <li><b>MEDIUM · Independent trades:</b> no portfolio, cash, correlation or daily caps; one position per coin at a time. Account-level drawdown is not modelled; judge by R per trade.</li>
     <li><b>MEDIUM · Coinbase only:</b> OKX USDT pairs traded by the paper account are not included.</li>
+    <li><b>LOW · No-trade candles:</b> Coinbase omits 15m candles with no trades. Runs of up to 8 missing candles (2h) between real candles are filled flat at the prior close, the same rule as live exits; longer gaps exclude the trade. A later real candle that opens away from that close is treated as a gap at its open.</li>
     <li><b>LOW · Horizon:</b> fixed-plan trades unresolved after 7 days are excluded ({c.openAtHorizon}). Shadow trails still running at 7 days are closed at that candle's close (HORIZON) so long winners are not dropped.</li>
     <li><b>INFO · No lookahead:</b> signals, entries, exits, trails and the BTC trend use only candles completed before each decision. Rules were not fitted to this window; compare the two halves below for stability.</li>
     <li><b>Re-test before relying on it:</b> a different 90-day window, a universe that includes delisted coins, and live spreads.</li>
    </ul></details>
+   <p><a href="/api/admin/crypto-markets/backtest?format=csv" className="underline">Download backtest trades (CSV)</a></p>
    {!!sum.halves.length&&<Table title="Stability: first vs second half of window" rows={sum.halves} />}
    <CryptoPaperStats stats={sum.stats} exitPlans={sum.exitPlans} title="Backtest statistics" source={`backtest trades on Coinbase history, 1R = $500 (0.25% of $200k)`} />
   </>}

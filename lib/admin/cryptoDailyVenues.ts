@@ -15,8 +15,8 @@ const number=(v:unknown):number=>{
   const n=Number(v);if(!Number.isFinite(n))throw Error('Invalid numeric candle value');return n;
 };
 /** Normalize base-asset volume and bucket starts into the shared Coinbase-shaped validator. */
-export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end:number,interval=D):ExchangeBar[]{
-  if(exchange==='gdax')return parseExchangeCandles(raw,interval,start,end);
+export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end:number,interval=D,allowGaps=false):ExchangeBar[]{
+  if(exchange==='gdax')return parseExchangeCandles(raw,interval,start,end,allowGaps);
   let rows:unknown=raw;
   if(exchange==='kucoin'||exchange==='okex'){
     if(!raw||typeof raw!=='object'||!('code' in raw)||!('data' in raw)||raw.code!==(exchange==='kucoin'?'200000':'0'))throw Error('Provider rejected candles');
@@ -43,7 +43,7 @@ export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end
       normalized.push([t/1000,number(row[3]),number(row[2]),number(row[1]),number(row[4]),number(row[5])]);
     }
   }
-  return parseExchangeCandles(normalized,interval,start,end);
+  return parseExchangeCandles(normalized,interval,start,end,allowGaps);
 }
 export function dailyVenueUrl(pair:DailyPair,now:number):string{
   if(!/^[A-Z0-9]{1,30}-(USD|USDT|USDC)$/.test(pair.product)||pair.product.split('-')[1]!==pair.quote||pair.product.split('-')[0]!==pair.volumeUnit)throw Error('Invalid discovered pair');

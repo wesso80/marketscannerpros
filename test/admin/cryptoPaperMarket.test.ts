@@ -26,13 +26,13 @@ it('rejects stale/future tick timestamps and crossed bid/ask',()=>{
 });
 
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
-it('fetches only post-entry history, not unrelated pre-entry gaps',async()=>{
+it('returns only post-entry history; earlier candles are read only as a gap-fill anchor',async()=>{
  vi.spyOn(Date,'now').mockReturnValue(now);
  const fetcher=vi.fn(async(_url:string)=>Response.json([[now/1000-900,98,101,100,100,10]]));vi.stubGlobal('fetch',fetcher);
  const path=await fetchPaperPath('bitcoin','BTC-USD',new Date(now-600000).toISOString());
  const url=new URL(fetcher.mock.calls[0][0] as string);
- expect(url.searchParams.get('start')).toBe(new Date(now-900000).toISOString());
- expect(path.candles).toHaveLength(1);
+ expect(url.searchParams.get('start')).toBe(new Date(now-9*900000).toISOString());
+ expect(path.candles).toHaveLength(1);expect(path.filledBars).toBe(0);
 });
 it('retains a precise provider failure instead of a generic monitoring message',async()=>{
  vi.spyOn(Date,'now').mockReturnValue(now);vi.stubGlobal('fetch',vi.fn(async()=>new Response('',{status:429})));
@@ -66,8 +66,21 @@ it('catches up a missed interval longer than one provider page without skipping 
  expect(fetcher).toHaveBeenCalledTimes(2);expect(path.candles).toHaveLength(400);
  expect(path.candles[0].openAt).toBe(now-400*900000);expect(path.candles.at(-1)!.closeAt).toBe(now);
 });
-it('rejects a gap at a page boundary instead of skipping it',async()=>{
+it('fills a short no-trade run flat at the prior close, flags it, and rejects longer gaps',async()=>{
  vi.spyOn(Date,'now').mockReturnValue(now);
- vi.stubGlobal('fetch',vi.fn(async(url:string)=>{const p=new URL(url).searchParams,a=Date.parse(p.get('start')!),b=Date.parse(p.get('end')!),rows=[];for(let t=a;t<b;t+=900000)if(t!==a||a===now-400*900000)rows.push([t/1000,98,101,100,100,10]);return Response.json(rows);}));
- await expect(fetchPaperPath('bitcoin','BTC-USD',new Date(now-400*900000).toISOString())).rejects.toThrow('between history pages');
+ const serve=(missing:(t:number)=>boolean)=>vi.fn(async(url:string)=>{const p=new URL(url).searchParams,a=Date.parse(p.get('start')!),b=Date.parse(p.get('end')!),rows=[];for(let t=a;t<b;t+=900000)if(!missing(t))rows.unshift([t/1000,98,101,100,99,10]);return Response.json(rows);});
+ // 3 missing candles across the page boundary of a 400-candle catch-up.
+ vi.stubGlobal('fetch',serve(t=>t>=now-110*900000&&t<now-107*900000));
+ const path=await fetchPaperPath('bitcoin','BTC-USD',new Date(now-400*900000).toISOString());
+ expect(path.candles).toHaveLength(400);expect(path.filledBars).toBe(3);
+ expect(path.candles.find(c=>c.openAt===now-109*900000)).toMatchObject({open:99,high:99,low:99,close:99});
+ vi.stubGlobal('fetch',serve(t=>t>=now-120*900000&&t<now-110*900000));
+ await expect(fetchPaperPath('bitcoin','BTC-USD',new Date(now-400*900000).toISOString())).rejects.toThrow('no-trade limit');
+});
+it('fills a no-trade run right after the checkpoint from a real anchor candle, never past the last real candle',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);
+ vi.stubGlobal('fetch',vi.fn(async()=>Response.json([[(now-900000)/1000,98,101,100,100,10],[(now-10*900000)/1000,95,97,96,96.5,10]])));
+ const path=await fetchPaperPath('bitcoin','BTC-USD',new Date(now-4*900000).toISOString());
+ expect(path.candles.map(c=>c.openAt)).toEqual([now-4*900000,now-3*900000,now-2*900000,now-900000]);
+ expect(path.candles[0]).toMatchObject({open:96.5,close:96.5});expect(path.filledBars).toBe(3);
 });

@@ -28,15 +28,21 @@ export function attentionChips(paper:Paper|null,scan:Scan,ops:Ops|null,now:numbe
 }
 const tones={ok:'border-emerald-700 text-emerald-200',warn:'border-amber-600 text-amber-200',bad:'border-red-600 text-red-200',info:'border-slate-600 text-slate-200'};
 export default function CryptoAttentionStrip({now,refreshVersion=0,onOpen}:{now:number;refreshVersion?:number;onOpen?:(tab:string)=>void}){
- const [data,setData]=useState<{paper:Paper|null;scan:Scan;ops:Ops|null}|null>(null);
- useEffect(()=>{const c=new AbortController();const get=(u:string)=>fetch(u,{cache:'no-store',signal:c.signal}).then(async r=>r.ok?r.json():null).catch(()=>null);
-  // Saved data only: these GET routes never call providers.
-  void Promise.all([get('/api/admin/crypto-markets/paper'),get('/api/admin/crypto-markets/momentum'),get('/api/admin/crypto-markets/setup-email')]).then(([paper,m,ops])=>{if(!c.signal.aborted)setData({paper,scan:m?.scan??null,ops});});
-  return()=>c.abort();},[refreshVersion]);
+ const [data,setData]=useState<{paper:Paper|null;scan:Scan;ops:Ops|null;loadedAt:number}|null>(null);
+ // Saved data only: these GET routes never call providers. Reloaded every minute while visible, so the chips are
+ // never a page-load snapshot judged against a live clock (that produced false OVERDUE states).
+ useEffect(()=>{let c=new AbortController();
+  const load=()=>{if(document.hidden)return;c.abort();c=new AbortController();const signal=c.signal;
+   const get=(u:string)=>fetch(u,{cache:'no-store',signal}).then(async r=>r.ok?r.json():null).catch(()=>null);
+   void Promise.all([get('/api/admin/crypto-markets/paper'),get('/api/admin/crypto-markets/momentum'),get('/api/admin/crypto-markets/setup-email')]).then(([paper,m,ops])=>{if(!signal.aborted)setData({paper,scan:m?.scan??null,ops,loadedAt:Date.now()});});};
+  load();const id=setInterval(load,60000);document.addEventListener('visibilitychange',load);
+  return()=>{clearInterval(id);document.removeEventListener('visibilitychange',load);c.abort();};},[refreshVersion]);
  if(!data)return <p className="text-sm text-slate-400">Loading attention summary…</p>;
- const chips=attentionChips(data.paper,data.scan,data.ops,now);
+ // Judge freshness at load time; a snapshot older than 3 minutes (e.g. hidden tab) is labelled rather than trusted.
+ const snapshotAge=Date.now()-data.loadedAt,chips=attentionChips(data.paper,data.scan,data.ops,snapshotAge>180000?now:data.loadedAt);
  return <section aria-label="Needs attention" className="flex flex-wrap gap-2">
   {chips.map(c=><button key={c.label} type="button" title={c.detail} onClick={()=>onOpen?.(c.label==='Confirmed 4h setups'?'setups':c.label==='Ops health'?'alerts':'paper')} className={`rounded border px-3 py-2 text-left text-sm ${tones[c.tone]}`}>
    <span className="block text-xs text-slate-400">{c.label}</span>{c.value}</button>)}
+  <p className="w-full text-xs text-slate-400">Saved data loaded {new Date(data.loadedAt).toLocaleTimeString()}{snapshotAge>180000?' · STALE SNAPSHOT — reloading when visible':''} · refreshes every minute while this page is visible.</p>
  </section>;
 }
