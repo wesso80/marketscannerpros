@@ -1,10 +1,15 @@
 import {cryptoAutomationState,setCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {NextResponse} from 'next/server';
 import {requireAdmin} from '@/lib/adminAuth';
-import {cryptoPaperState,setCryptoPaperActive,runCryptoPaperCycle} from '@/lib/admin/cryptoPaper';
+import {cryptoPaperState,setCryptoPaperActive,runCryptoPaperCycle,cryptoPaperTradeLog} from '@/lib/admin/cryptoPaper';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const auth=await requireAdmin(req);if(!auth.ok||!auth.workspaceId)return NextResponse.json({error:'Unauthorized'},{status:403});
+ if(new URL(req.url).searchParams.get('format')==='csv'){
+  try{const csv=await cryptoPaperTradeLog(auth.workspaceId);if(csv==null)return NextResponse.json({error:'Crypto paper account not enabled'},{status:404});
+   return new NextResponse(csv,{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="crypto-paper-trades-${new Date().toISOString().slice(0,10)}.csv"`,'Cache-Control':'no-store'}});}
+  catch{return NextResponse.json({error:'Trade log unavailable'},{status:503});}
+ }
  try{return NextResponse.json({simulated:true,automation:await cryptoAutomationState(),...await cryptoPaperState(auth.workspaceId)});}catch{return NextResponse.json({error:'Crypto paper ledger unavailable'},{status:503});}
 }
 export async function POST(req:Request){

@@ -8,11 +8,12 @@ import {selectCoinbasePair,type ExchangeBar} from './cryptoExchangeVolume';
 import {summarizeCryptoPaper,compareExitPlans,type CryptoStatsRow} from './cryptoPaperStats';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import type {ArcaPosition} from './portfolio-lab/types';
+import {fillNoTradeGaps,NO_TRADE_MAX_BARS} from './cryptoCandleGaps';
 const KEY='admin:crypto-markets:backtest:v1',H=3600000,F=4*H,D=24*H,M15=900000;
 /** Live entry/exit code replayed on Coinbase history. Parameters are the live rules; nothing is fitted to this data. */
 export const BACKTEST={days:90,maxCoins:40,coinsPerBatch:3,horizonDays:7,halfSpread:.0005,cost:.0005,riskUsd:500};
-export type BacktestTrade={id:string;coin:string;product:string;kind:string;signalAt:string;entryAt:string;fill:number;stop:number;target:number;btcRegime:string;half:'FIRST'|'SECOND';
- fixed:{status:'CLOSED'|'OPEN_AT_HORIZON'|'DATA_GAP';r:number|null;exit:string|null;at:string|null};shadow:{status:string;r:number|null;legs:{reason:ShadowLeg['reason']}[]}};
+export type BacktestTrade={filledBars?:number;id:string;coin:string;product:string;kind:string;signalAt:string;entryAt:string;fill:number;stop:number;target:number;btcRegime:string;half:'FIRST'|'SECOND';
+ fixed:{status:'CLOSED'|'OPEN_AT_HORIZON'|'DATA_GAP';r:number|null;exit:string|null;at:string|null};shadow:{plan?:string;status:string;r:number|null;legs:{reason:ShadowLeg['reason']}[]}};
 export type BacktestCoin={id:string;symbol:string;product:string;status:'PENDING'|'DONE'|'FAILED';signals?:number;noEntry?:number;overlapping?:number;error?:string};
 export type BacktestState={version:1;status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:BacktestCoin[];trades:BacktestTrade[];btcDaily:ExchangeBar[];requests:number;droppedRows:number};
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -55,8 +56,11 @@ export async function backtestCoin(coin:{id:string;product:string},from:number,t
   }
   if(!entry){noEntry++;continue;}
   const pathEnd=Math.min(Math.floor(to/M15)*M15,entry.at+BACKTEST.horizonDays*D);
-  const m15=await fetcher(coin.product,Math.floor(entry.at/M15)*M15,pathEnd,M15);requests+=m15.requests;dropped+=m15.dropped;
-  const path:PaperExitCandle[]=m15.bars.map(b=>({openAt:b.t-M15,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}));
+  // Same no-trade gap rule as live exits: anchored on a real earlier candle, bounded, never past the last real candle.
+  const entryOpen=Math.floor(entry.at/M15)*M15,m15=await fetcher(coin.product,entryOpen-NO_TRADE_MAX_BARS*M15,pathEnd,M15);requests+=m15.requests;dropped+=m15.dropped;
+  let bars15:(ExchangeBar&{filled?:true})[]=m15.bars;try{bars15=fillNoTradeGaps(m15.bars,M15);}catch{/* longer gap: left in place so replay fails closed */}
+  bars15=bars15.filter(b=>b.t>entryOpen);
+  const path:PaperExitCandle[]=bars15.map(b=>({openAt:b.t-M15,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}));
   const {fill,stop,target}=entry.plan,id=`${coin.id}|${sig.asOf}`;
   const pos={id,symbol:coin.id,assetClass:'crypto',side:'LONG',instrumentType:`coinbase:${coin.product}`,averageEntry:fill,stopLoss:stop,initialStopLoss:stop,takeProfit1:target,takeProfit2:null,takeProfit3:null,openedAt:new Date(entry.at).toISOString(),exitCheckpoint:null,quantity:1,entryFee:fill*BACKTEST.cost} as unknown as ArcaPosition;
   const checked=evaluatePaperExitPath(pos,{symbol:coin.id,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:path},pathEnd);
@@ -67,9 +71,9 @@ export async function backtestCoin(coin:{id:string;product:string},from:number,t
   const last=path.at(-1);
   if(shadow.status==='OPEN'&&last&&last.closeAt===pathEnd&&Date.parse(shadow.through)===pathEnd)shadow=closeShadowAt(shadow,last.close,last.closeAt);
   const day=Math.floor(four[i].t/D)*D;
-  trades.push({id,coin:coin.id,product:coin.product,kind:sig.kind??'UNKNOWN',signalAt:sig.asOf!,entryAt:new Date(entry.at).toISOString(),fill,stop,target,
+  trades.push({filledBars:bars15.filter(b=>b.filled).length,id,coin:coin.id,product:coin.product,kind:sig.kind??'UNKNOWN',signalAt:sig.asOf!,entryAt:new Date(entry.at).toISOString(),fill,stop,target,
    btcRegime:assessBtcRegime(btcDaily.filter(b=>b.t<=day),four[i].t).state,half:four[i].t<from+(to-from)/2?'FIRST':'SECOND',fixed,
-   shadow:{status:shadow.status,r:shadow.r,legs:shadow.legs.map(l=>({reason:l.reason}))}});
+   shadow:{plan:shadow.plan,status:shadow.status,r:shadow.r,legs:shadow.legs.map(l=>({reason:l.reason}))}});
   busyUntil=fixed.at?Date.parse(fixed.at):pathEnd;
  }
  return {trades,requests,dropped,signals,noEntry,overlapping};
@@ -106,6 +110,6 @@ export function summarizeBacktest(state:BacktestState){
  const rows=(ts:BacktestTrade[]):CryptoStatsRow[]=>ts.filter(t=>t.fixed.r!=null).map(t=>({position_id:t.id,r_multiple:t.fixed.r,realised_pnl:t.fixed.r!*BACKTEST.riskUsd,outcome:t.fixed.r!>0?'WIN':'LOSS',exit_reason:t.fixed.exit!,instrument_type:`coinbase:${t.product}`,entry_time:t.entryAt,exit_time:t.fixed.at!,created_reason:'backtest|'+JSON.stringify({signal:{kind:t.kind},btcRegime:{state:t.btcRegime}})}));
  const all=rows(state.trades);
  const halves=(['FIRST','SECOND'] as const).map(h=>({...summarizeCryptoPaper(rows(state.trades.filter(t=>t.half===h))).overall,label:h==='FIRST'?'First half of window':'Second half of window'}));
- return {stats:summarizeCryptoPaper(all),halves,exitPlans:compareExitPlans(all,state.trades.map(t=>({positionId:t.id,status:t.shadow.status,r:t.shadow.r,legs:t.shadow.legs}))),
-  counts:{coins:state.coins.length,done:state.coins.filter(c=>c.status==='DONE').length,failed:state.coins.filter(c=>c.status==='FAILED').length,signals:state.coins.reduce((s,c)=>s+(c.signals??0),0),noEntry:state.coins.reduce((s,c)=>s+(c.noEntry??0),0),overlapping:state.coins.reduce((s,c)=>s+(c.overlapping??0),0),trades:state.trades.length,openAtHorizon:state.trades.filter(t=>t.fixed.status==='OPEN_AT_HORIZON').length,dataGaps:state.trades.filter(t=>t.fixed.status==='DATA_GAP').length,requests:state.requests,droppedRows:state.droppedRows}};
+ return {stats:summarizeCryptoPaper(all),halves,exitPlans:compareExitPlans(all,state.trades.map(t=>({positionId:t.id,plan:t.shadow.plan,status:t.shadow.status,r:t.shadow.r,legs:t.shadow.legs}))),
+  counts:{coins:state.coins.length,done:state.coins.filter(c=>c.status==='DONE').length,failed:state.coins.filter(c=>c.status==='FAILED').length,signals:state.coins.reduce((s,c)=>s+(c.signals??0),0),noEntry:state.coins.reduce((s,c)=>s+(c.noEntry??0),0),overlapping:state.coins.reduce((s,c)=>s+(c.overlapping??0),0),trades:state.trades.length,openAtHorizon:state.trades.filter(t=>t.fixed.status==='OPEN_AT_HORIZON').length,dataGaps:state.trades.filter(t=>t.fixed.status==='DATA_GAP').length,filledBars:state.trades.reduce((s,t)=>s+(t.filledBars??0),0),tradesWithFilledBars:state.trades.filter(t=>(t.filledBars??0)>0).length,requests:state.requests,droppedRows:state.droppedRows}};
 }

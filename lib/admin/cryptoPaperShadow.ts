@@ -1,10 +1,20 @@
 import type {PaperExitCandle} from './portfolio-lab/paperExitPath';
 const STEP=900000,H=3600000;
-export const SHADOW_PLAN='partial-trail-v1' as const,SHADOW_TITLE='Crypto shadow exit plan partial-trail-v1';
-/** Research-only alternative exit, replayed on the same candles as the ledger. It never changes a paper position. */
-export const SHADOW_RULES={partialR:1.5,partialFraction:.5,trailAtr:2,timeStopHours:24,timeStopMinR:1};
+/** New shadows use the current plan; earlier states keep the rules they started with. The journal title stays stable for lookup. */
+export const SHADOW_PLAN='partial-trail-v2' as const,SHADOW_TITLE='Crypto shadow exit plan partial-trail-v1';
+export type ShadowPlan='partial-trail-v1'|'partial-trail-v2';
+/**
+ * Research-only alternative exit, replayed on the same candles as the ledger. It never changes a paper position.
+ * v2 (rule change): the time stop is 72h (18 completed 4h candles), matched to the 4h signal timeframe. v1 used 24h,
+ * which is shorter than typical 4h winners take to develop. The value comes from the timeframe, not a search over results.
+ */
+export const SHADOW_RULES_BY_PLAN:Record<ShadowPlan,{partialR:number;partialFraction:number;trailAtr:number;timeStopHours:number;timeStopMinR:number}>={
+ 'partial-trail-v1':{partialR:1.5,partialFraction:.5,trailAtr:2,timeStopHours:24,timeStopMinR:1},
+ 'partial-trail-v2':{partialR:1.5,partialFraction:.5,trailAtr:2,timeStopHours:72,timeStopMinR:1},
+};
+export const SHADOW_RULES=SHADOW_RULES_BY_PLAN[SHADOW_PLAN];
 export type ShadowLeg={fraction:number;price:number;at:string;reason:'PARTIAL_TARGET'|'STOP'|'BREAKEVEN_STOP'|'TRAIL_STOP'|'TIME_STOP'|'HORIZON'};
-export type ShadowState={version:1;plan:typeof SHADOW_PLAN;positionId:string;symbol:string;instrumentType:string;entry:number;entryAt:string;stop0:number;atr:number;costRate:number;entryFeePerUnit:number;through:string;status:'OPEN'|'CLOSED'|'UNAVAILABLE';stop:number;highest:number|null;remaining:number;legs:ShadowLeg[];r:number|null;reason?:string};
+export type ShadowState={version:1;plan:ShadowPlan;positionId:string;symbol:string;instrumentType:string;entry:number;entryAt:string;stop0:number;atr:number;costRate:number;entryFeePerUnit:number;through:string;status:'OPEN'|'CLOSED'|'UNAVAILABLE';stop:number;highest:number|null;remaining:number;legs:ShadowLeg[];r:number|null;reason?:string};
 export function initShadow(p:{id:string;symbol:string;instrumentType:string;averageEntry:number;openedAt:string;initialStopLoss?:number|null;quantity:number;entryFee?:number},atr:number,costRate:number):ShadowState{
  const stop0=p.initialStopLoss,entryAt=Date.parse(p.openedAt);
  const base:ShadowState={version:1,plan:SHADOW_PLAN,positionId:p.id,symbol:p.symbol,instrumentType:p.instrumentType,entry:p.averageEntry,entryAt:p.openedAt,stop0:stop0??NaN,atr,costRate,entryFeePerUnit:p.entryFee!=null&&p.quantity>0?p.entryFee/p.quantity:p.averageEntry*costRate,
@@ -30,7 +40,7 @@ export function closeShadowAt(s:ShadowState,price:number,at:number):ShadowState{
 export function advanceShadow(state:ShadowState,candles:PaperExitCandle[],now=Date.now()):ShadowState{
  if(state.status!=='OPEN')return state;
  let s={...state,legs:[...state.legs]};
- const entryAt=Date.parse(s.entryAt),risk=s.entry-s.stop0,rules=SHADOW_RULES;
+ const entryAt=Date.parse(s.entryAt),risk=s.entry-s.stop0,rules=SHADOW_RULES_BY_PLAN[s.plan]??SHADOW_RULES_BY_PLAN['partial-trail-v1'];
  const bars=candles.filter(b=>b.openAt>=Date.parse(s.through)&&b.closeAt<=now).sort((a,b)=>a.openAt-b.openAt);
  let expected=Date.parse(s.through);
  for(const b of bars){

@@ -27,10 +27,11 @@ it('charges a same-candle breakeven after a partial because intra-candle order i
  const s=advanceShadow(initShadow(pos(),2,c),[bar(0,100,108,99.5,104)],now);
  expect(s).toMatchObject({status:'CLOSED',legs:[{reason:'PARTIAL_TARGET'},{price:100,reason:'BREAKEVEN_STOP'}]});
 });
-it('exits after 24 hours when +1R was never reached',()=>{
- const bars=Array.from({length:100},(_,i)=>bar(i,100,103,98,101));
- const s=advanceShadow(initShadow(pos(),2,c),bars,now);
- expect(s).toMatchObject({status:'CLOSED',legs:[{price:101,reason:'TIME_STOP',at:new Date(t0+24*3600000).toISOString()}]});
+it('v2 exits after 72 hours when +1R was never reached; earlier v1 shadows keep their 24h rule',()=>{
+ const bars=Array.from({length:300},(_,i)=>bar(i,100,103,98,101)),later=t0+300*step;
+ expect(advanceShadow(initShadow(pos(),2,c),bars,later)).toMatchObject({plan:'partial-trail-v2',status:'CLOSED',legs:[{price:101,reason:'TIME_STOP',at:new Date(t0+72*3600000).toISOString()}]});
+ const v1={...initShadow(pos(),2,c),plan:'partial-trail-v1' as const};
+ expect(advanceShadow(v1,bars,later).legs[0]).toMatchObject({reason:'TIME_STOP',at:new Date(t0+24*3600000).toISOString()});
 });
 it('does not credit highs from the partial entry candle but still charges its stop',()=>{
  const p=pos({openedAt:new Date(t0+60000).toISOString()});
@@ -44,8 +45,9 @@ it('refuses gaps and marks missing inputs UNAVAILABLE instead of guessing',()=>{
 });
 it('compares plans only on positions closed under both',()=>{
  const rows=[{position_id:'a',r_multiple:'2'},{position_id:'b',r_multiple:'-1'},{position_id:'c',r_multiple:'1'}] as never;
- const cmp=compareExitPlans(rows,[{positionId:'a',status:'CLOSED',r:3,legs:[{reason:'TRAIL_STOP'}]},{positionId:'b',status:'CLOSED',r:-1,legs:[{reason:'STOP'}]},{positionId:'c',status:'OPEN',r:null,legs:[]}]);
- expect(cmp).toMatchObject({pairs:2,openShadows:1,fixed:{avgR:.5,totalR:1},trail:{avgR:1,totalR:2},trailExitReasons:{TRAIL_STOP:1,STOP:1}});
+ const v2='partial-trail-v2';
+ const cmp=compareExitPlans(rows,[{positionId:'a',plan:v2,status:'CLOSED',r:3,legs:[{reason:'TRAIL_STOP'}]},{positionId:'b',plan:v2,status:'CLOSED',r:-1,legs:[{reason:'STOP'}]},{positionId:'c',plan:v2,status:'OPEN',r:null,legs:[]},{positionId:'c',status:'CLOSED',r:9,legs:[{reason:'TIME_STOP'}]}]);
+ expect(cmp).toMatchObject({plan:v2,earlierPlanShadows:1,pairs:2,openShadows:1,fixed:{avgR:.5,totalR:1},trail:{avgR:1,totalR:2},trailExitReasons:{TRAIL_STOP:1,STOP:1}});
 });
 it('backtest horizon closes a still-running remainder at a completed close, and leaves closed shadows alone',async()=>{
  const {closeShadowAt}=await import('@/lib/admin/cryptoPaperShadow');

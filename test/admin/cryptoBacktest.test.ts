@@ -18,8 +18,9 @@ const btc:ExchangeBar[]=Array.from({length:70},(_,i)=>({t:T0+N*F-(69-i)*D-((T0+N
 function fetcher(m:ReturnType<typeof market>){
  return async(_p:string,start:number,end:number,step:number)=>{
   if(step===H)return {bars:m.hourly.filter(b=>b.t>start&&b.t<=end),requests:1,dropped:0};
-  const C=m.C,bars:ExchangeBar[]=[{t:start+M15,o:C,h:C+.2,l:C-.1,c:C+.1,v:1},{t:start+2*M15,o:C+.1,h:C+6,l:C,c:C+5.5,v:1}];
-  for(let t=start+3*M15;t<=end;t+=M15)bars.push({t,o:C+5.5,h:C+5.6,l:C+5.4,c:C+5.5,v:1});
+  // The backtest reads 8 anchor candles before the entry candle; one real anchor, then a gap-free path from entry.
+  const C=m.C,e=start+8*M15,bars:ExchangeBar[]=[{t:e,o:C,h:C,l:C,c:C,v:1},{t:e+M15,o:C,h:C+.2,l:C-.1,c:C+.1,v:1},{t:e+2*M15,o:C+.1,h:C+6,l:C,c:C+5.5,v:1}];
+  for(let t=e+3*M15;t<=end;t+=M15)bars.push({t,o:C+5.5,h:C+5.6,l:C+5.4,c:C+5.5,v:1});
   return {bars,requests:1,dropped:0};
  };
 }
@@ -30,7 +31,7 @@ it('enters at the first in-zone hourly open after the signal and replays the liv
  const t=r.trades[0];
  expect(t).toMatchObject({kind:'BREAKOUT',entryAt:new Date(m.signalAt).toISOString(),btcRegime:'UP',fixed:{status:'CLOSED',exit:'TAKE_PROFIT'}});
  expect(t.fixed.r!).toBeGreaterThan(1.5);expect(t.fixed.r!).toBeLessThan(2);
- expect(t.shadow.legs[0]).toEqual({reason:'PARTIAL_TARGET'});
+ expect(t.shadow.legs[0]).toEqual({reason:'PARTIAL_TARGET'});expect(t.filledBars).toBe(0);
 });
 it('does not chase: a gap above the live maximum entry records no trade',async()=>{
  const m=market(true),r=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*H,btc,fetcher(m));

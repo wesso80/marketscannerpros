@@ -9,6 +9,8 @@ export interface PaperExitCandle {
 export interface PaperExitPath {
   symbol: string; market: 'CRYPTO'; timeframe: '15m';
   source: 'admin_scan_bars'|'crypto_exchange'; candles: PaperExitCandle[];
+  /** Flat no-trade candles inserted between real candles (crypto exchange paths only). */
+  filledBars?: number;
 }
 
 /** Reuses the scanner's AV bar-start contract. Never accepts CoinGecko close timestamps here. */

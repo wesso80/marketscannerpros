@@ -33,15 +33,17 @@ export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):Crypt
  return {checkedAt:new Date(now).toISOString(),sample,sampleNote,overall:group('All trades',trades),bySetup:by(trades,t=>t.setup),byVenue:by(trades,t=>t.venue),byBtcRegime:by(trades,t=>t.regime),byFunding:by(trades,t=>t.funding),byExit:by(trades,t=>t.exit)};
 }
 export type ExitPlanSide={trades:number;avgR:number|null;winRate:number|null;totalR:number};
-export type ExitPlanComparison={pairs:number;openShadows:number;unavailableShadows:number;fixed:ExitPlanSide;trail:ExitPlanSide;trailExitReasons:Record<string,number>;note:string};
+export type ExitPlanComparison={plan:string;earlierPlanShadows:number;pairs:number;openShadows:number;unavailableShadows:number;fixed:ExitPlanSide;trail:ExitPlanSide;trailExitReasons:Record<string,number>;note:string};
 /** Compares the ledger's fixed-target result with the shadow plan on the SAME closed positions only. */
-export function compareExitPlans(rows:CryptoStatsRow[],shadows:{positionId:string;status:string;r:number|null;legs:{reason:string}[]}[]):ExitPlanComparison{
+/** Only shadows on the current plan are compared, so different rule versions are never mixed. */
+export function compareExitPlans(rows:CryptoStatsRow[],allShadows:{positionId:string;plan?:string;status:string;r:number|null;legs:{reason:string}[]}[],plan='partial-trail-v2'):ExitPlanComparison{
+ const shadows=allShadows.filter(s=>(s.plan??'partial-trail-v1')===plan),earlierPlanShadows=allShadows.length-shadows.length;
  const fixedByPosition=new Map(rows.filter(r=>r.position_id&&r.r_multiple!=null&&Number.isFinite(Number(r.r_multiple))).map(r=>[r.position_id!,Number(r.r_multiple)]));
  const pairs=shadows.filter(s=>s.status==='CLOSED'&&s.r!=null&&Number.isFinite(s.r)&&fixedByPosition.has(s.positionId));
  const side=(rs:number[]):ExitPlanSide=>({trades:rs.length,avgR:rs.length?rs.reduce((a,b)=>a+b,0)/rs.length:null,winRate:rs.length?rs.filter(r=>r>0).length/rs.length:null,totalR:Math.round(rs.reduce((a,b)=>a+b,0)*1000)/1000});
  const reasons:Record<string,number>={};for(const s of pairs){const last=s.legs.at(-1)?.reason??'UNKNOWN';reasons[last]=(reasons[last]??0)+1;}
  const n=pairs.length;
- return {pairs:n,openShadows:shadows.filter(s=>s.status==='OPEN').length,unavailableShadows:shadows.filter(s=>s.status==='UNAVAILABLE').length,
+ return {plan,earlierPlanShadows,pairs:n,openShadows:shadows.filter(s=>s.status==='OPEN').length,unavailableShadows:shadows.filter(s=>s.status==='UNAVAILABLE').length,
   fixed:side(pairs.map(s=>fixedByPosition.get(s.positionId)!)),trail:side(pairs.map(s=>s.r!)),trailExitReasons:reasons,
   note:n<30?`${n} matched trades. Under 30, the difference between plans is mostly noise.`:`${n} matched trades. Compare average R; check that the difference is consistent over time before switching.`};
 }
