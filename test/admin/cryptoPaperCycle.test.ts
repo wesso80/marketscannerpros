@@ -8,6 +8,7 @@ vi.mock('@/lib/admin/portfolio-lab/positionEngine',()=>({markAndMaybeExit:vi.fn(
 vi.mock('@/lib/admin/portfolio-lab/refreshPaperBalances',()=>({refreshPaperBalances:vi.fn()}));
 vi.mock('@/lib/admin/portfolio-lab/journalEngine',()=>({writeJournal:vi.fn()}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',()=>({fetchVolumeMomentum:vi.fn()}));
+vi.mock('@/lib/admin/cryptoBtcRegime',()=>({currentBtcRegime:vi.fn(async()=>({state:'DOWN',asOf:'2026-09-28T00:00:00.000Z'})),savedBtcRegime:vi.fn(async()=>null)}));
 vi.mock('@/lib/admin/cryptoPaperOkx',async(importOriginal)=>({...await importOriginal<object>(),fetchOkxUsdQuote:vi.fn(),fetchOkxUsdPath:vi.fn()}));
 vi.mock('@/lib/admin/cryptoPaperMarket',async(importOriginal)=>({...await importOriginal<object>(),fetchPaperQuote:vi.fn(),fetchPaperPath:vi.fn()}));
 import {fetchOkxUsdQuote,fetchOkxUsdPath} from '@/lib/admin/cryptoPaperOkx';
@@ -120,6 +121,19 @@ it('monitors converted OKX positions while entries are paused using their own co
  vi.mocked(fetchOkxUsdPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:94,close:99}]});
  expect(await runCryptoPaperCycle('w')).toMatchObject({monitorHealthy:true,marked:1});
  expect(markAndMaybeExit).toHaveBeenCalledWith(expect.objectContaining({portfolio:expect.objectContaining({settings:expect.objectContaining({feesPctEstimate:.1,slippagePctEstimate:.1})})}));
+});
+it('beta limits allow entries beyond the former five-position cap and still enforce the new cap',async()=>{
+ positions=Array.from({length:6},(_,i)=>({...position(),id:`pos${i}`,symbol:`coin${i}`}));
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:1});
+ vi.clearAllMocks();vi.mocked(fetchVolumeMomentum).mockResolvedValue(signal);
+ positions=Array.from({length:20},(_,i)=>({...position(),id:`pos${i}`,symbol:`coin${i}`}));
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:'20-position cap'}]});
+});
+it('records the BTC daily trend on each entry without using it as a filter',async()=>{
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,btcRegime:{state:'DOWN'}});
+ const reason=vi.mocked(createSimulatedOrder).mock.calls[0][0].createdReason;
+ expect(JSON.parse(reason.slice(reason.indexOf('{'))).btcRegime).toMatchObject({state:'DOWN'});
 });
 it('does not report a cron skip after a recent manual cycle as unhealthy, but still flags overlapping cron runs',async()=>{
  vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('FROM arca_portfolios WHERE name')?[{workspace_id:'w'}] as never:[]);
