@@ -123,8 +123,10 @@ it('monitors converted OKX positions while entries are paused using their own co
  expect(markAndMaybeExit).toHaveBeenCalledWith(expect.objectContaining({portfolio:expect.objectContaining({settings:expect.objectContaining({feesPctEstimate:.1,slippagePctEstimate:.1})})}));
 });
 it('beta limits allow entries beyond the former five-position cap and still enforce the new cap',async()=>{
+ // Exit history must match each position's own symbol, or monitoring (correctly) blocks entries.
+ vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
  positions=Array.from({length:6},(_,i)=>({...position(),id:`pos${i}`,symbol:`coin${i}`}));
- expect(await runCryptoPaperCycle('w')).toMatchObject({opened:1});
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:1,monitorHealthy:true});
  vi.clearAllMocks();vi.mocked(fetchVolumeMomentum).mockResolvedValue(signal);
  positions=Array.from({length:20},(_,i)=>({...position(),id:`pos${i}`,symbol:`coin${i}`}));
  expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:'20-position cap'}]});
