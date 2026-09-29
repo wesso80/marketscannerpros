@@ -2,6 +2,8 @@ import {supportsPaperPair,fetchOkxUsdQuote,fetchOkxUsdPath,usdSignal,paperCostPo
 import {reconcileCryptoPaper,type CryptoReconciliation} from './cryptoPaperReconciliation';
 import {summarizeCryptoPaper,type CryptoPaperStats,type CryptoStatsRow} from './cryptoPaperStats';
 import {BTC_DOWN_FILTER,btcDownFilter} from './cryptoMarketRegime';
+import {mergeDerivativesEvidence} from './cryptoMarketData';
+import {latestDerivatives,savedTrending} from './cryptoMarketDataJob';
 import {currentRsSnapshot,rsEvidence,type RsSnapshot} from './cryptoRelativeStrength';
 import {currentBtcRegime,savedBtcRegime,type BtcRegime} from './cryptoBtcRegime';
 import {initShadow,advanceShadow,shadowChanged,SHADOW_TITLE,type ShadowState} from './cryptoPaperShadow';
@@ -95,7 +97,7 @@ export async function cryptoPaperState(workspaceId:string){
  }catch{reconciliation={status:'UNAVAILABLE',checkedAt:new Date().toISOString(),reason:'Ledger totals could not be read'};}
  let stats:CryptoPaperStats|null=null,exitPlans:ReturnType<typeof compareExitPlans>|null=null;
  try{const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,o.created_reason FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);exitPlans=compareExitPlans(rows,[...(await shadowStates(workspaceId,portfolio.id)).values()]);}catch{stats=null;exitPlans=null;}
- return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans};
+ return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null)};
  });
 }
 export async function setCryptoPaperActive(workspaceId:string,active:boolean){
@@ -226,8 +228,9 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    const openBars:{coin:string;bars:Awaited<ReturnType<typeof fourHourBars>>|null}[]=[];
    for(const p of currentOpens){const ip=instrumentPair(p.instrumentType);openBars.push({coin:p.symbol,bars:ip?await fourHourBars(ip).catch(()=>null):null});}
    const corr=correlationScale(candidateBars,openBars);
-   // Evidence only: OKX perpetual funding/open interest is recorded for later comparison and never blocks an entry.
-   const derivatives=await fetchDerivatives(pair.product.split('-')[0],candidateBars);
+   // Evidence only: OKX perpetual funding/open interest (CoinGecko multi-venue fallback/context) is recorded for later comparison and never blocks an entry.
+   const base=pair.product.split('-')[0],cgDeriv=await latestDerivatives().catch(()=>null);
+   const derivatives=mergeDerivativesEvidence(await fetchDerivatives(base,candidateBars),cgDeriv?.rows.find(r=>r.base===base)??null,cgDeriv?.snap.at??null);
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
     const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED'||current.status!=='ACTIVE')throw Error('Entries paused');
@@ -247,7 +250,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,simulation:true}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
-    decide(candidate,'OPENED',['Fresh signal, quote and account checks passed',...(corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(cluster.capped?[`risk capped to ${Math.round(cluster.scale*100)}% by the ${CORRELATION.clusterRiskPct}% correlated-cluster cap`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[]),...(btcRegime?.state==='DOWN'?['shadow filter: would skip (BTC daily trend DOWN); opened anyway for comparison']:[])].join('; '),quote);
+    decide(candidate,'OPENED',['Fresh signal, quote and account checks passed',...(corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(cluster.capped?[`risk capped to ${Math.round(cluster.scale*100)}% by the ${CORRELATION.clusterRiskPct}% correlated-cluster cap`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[]),...(btcRegime?.state==='DOWN'?['shadow filter: would skip (BTC daily trend DOWN); opened anyway for comparison']:[]),...(derivatives.flags.some(f=>/EXTREME_FUNDING|OI_SURGE|CROWDED_FUNDING|LEVERAGE_DRIVEN/.test(f))?[`derivatives flags: ${derivatives.flags.join(' ')} (evidence only; not a filter)`]:[])].join('; '),quote);
    });
   }catch(error){decide(candidate,'BLOCKED',error instanceof Error?error.message:'Entry validation failed',checkedQuote);notes.push(`${candidate.id}: ${error instanceof Error?error.message:'entry validation failed'}`);}
  }

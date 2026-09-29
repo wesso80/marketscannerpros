@@ -3,8 +3,9 @@ const CryptoSetupEmail = dynamic(()=>import('@/components/admin/CryptoSetupEmail
 const CryptoPaperAccount = dynamic(()=>import('@/components/admin/CryptoPaperAccount'), {ssr:false});
 const CryptoBacktest = dynamic(()=>import('@/components/admin/CryptoBacktest'), {ssr:false});
 const CryptoRotation = dynamic(()=>import('@/components/admin/CryptoRotation'), {ssr:false});
+const CryptoMarketData = dynamic(()=>import('@/components/admin/CryptoMarketData'), {ssr:false});
 const CryptoAttentionStrip = dynamic(()=>import('@/components/admin/CryptoAttentionStrip'), {ssr:false});
-const TABS = [['paper','Paper account'],['setups','Setups'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['alerts','Alerts']] as const;
+const TABS = [['paper','Paper account'],['setups','Setups'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['alerts','Alerts']] as const;
 type Tab = typeof TABS[number][0];
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
@@ -83,6 +84,7 @@ export default function CryptoMarketsPage() {
     {tab==='paper' && <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />}
     {tab==='backtest' && <CryptoBacktest refreshVersion={refreshVersion} />}
     {tab==='rotation' && <CryptoRotation refreshVersion={refreshVersion} />}
+    {tab==='marketdata' && <CryptoMarketData refreshVersion={refreshVersion} />}
     {tab==='setups' && <>
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />

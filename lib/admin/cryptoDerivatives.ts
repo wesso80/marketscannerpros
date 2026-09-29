@@ -3,7 +3,7 @@ const H=3600000;
 /** Funding per 8h settlement. OKX's neutral baseline is about +0.01%; thresholds are research labels, not signals. */
 export const FUNDING={elevated:.0002,crowded:.0005,shortSkew:-.00005,oiSurgePct:15,oiDropPct:-10,maxFundingAgeHours:9};
 export type FundingState='CROWDED_LONG'|'ELEVATED_LONG'|'NEUTRAL'|'SHORT_SKEW'|'UNAVAILABLE';
-export type DerivativesEvidence={source:'okx:USDT-SWAP';instId:string;checkedAt:string;status:'OK'|'UNAVAILABLE';reason?:string;
+export type DerivativesEvidence={source:'okx:USDT-SWAP'|'coingecko:perp-aggregate';crossVenue?:{source:string;at:string;venues:number;fundingRate:number|null;oiUsd:number|null;oiChange24hPct:number|null;flags:string[]};instId:string;checkedAt:string;status:'OK'|'UNAVAILABLE';reason?:string;
  fundingRate:number|null;fundingAt:string|null;fundingState:FundingState;oiUsd:number|null;oiChange24hPct:number|null;oiAt:string|null;priceChange24hPct:number|null;flags:string[];caveat:string};
 const CAVEAT='Single venue (OKX USDT perpetual). Funding and open interest describe leveraged derivatives positioning, not spot demand, and can reverse quickly. Evidence only; not an entry filter.';
 export function classifyFunding(rate:number|null):FundingState{

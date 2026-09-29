@@ -34,6 +34,7 @@ const getWebSocketUrl = () => process.env.COINGECKO_WS_URL || '';
 
 // Circuit breaker — trips after repeated non-429 failures (500s, timeouts)
 import { coinGeckoCircuit } from '@/lib/circuitBreaker';
+import { recordCgCall } from '@/lib/admin/cgCredits';
 import {
   recordProviderFailure,
   recordProviderSuccess,
@@ -250,14 +251,15 @@ async function cgFetch<T>(
     const startedAt = Date.now();
 
     try {
-      const response = await coinGeckoCircuit.call(() => fetch(url, {
+      // Every HTTP attempt (retries included) is counted toward the credit budget.
+      const response = await coinGeckoCircuit.call(() => (recordCgCall(endpointFamily), fetch(url, {
         ...(options?.init || {}),
         headers: {
           ...getHeaders(),
           ...(options?.init?.headers || {}),
         },
         signal: controller.signal,
-      }));
+      })));
 
       if (response.status === 429) {
         recordProviderFailure('COINGECKO', endpointFamily, 'RATE_LIMIT', Date.now() - startedAt);
@@ -1111,10 +1113,10 @@ function usableDerivativesCache(nowMs: number): DerivativeTicker[] | null {
  * This preserves independent multi-venue funding/OI evidence while keeping the
  * response size and latency bounded.
  */
-async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> {
+async function getMajorDerivativeExchangeTickers(count = 3): Promise<DerivativeTicker[]> {
   const exchangeParams = new URLSearchParams({
     order: 'open_interest_btc_desc',
-    per_page: '3',
+    per_page: String(count),
     page: '1',
   });
 
@@ -1125,7 +1127,7 @@ async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> 
     timeoutMs: 10_000,
   });
 
-  const top = (exchanges || []).filter((exchange) => exchange?.id).slice(0, 3);
+  const top = (exchanges || []).filter((exchange) => exchange?.id).slice(0, count);
   if (top.length === 0) {
     throw new Error('[CoinGecko] No ranked derivatives exchanges returned');
   }
@@ -1219,6 +1221,15 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
     console.error('[CoinGecko] Derivatives fetch error:', error);
     return null;
   }
+}
+
+/**
+ * Uncached perpetual/futures tickers from the top `count` derivatives exchanges by open interest, for the scheduled
+ * admin snapshot. Uses the bounded per-exchange route (the all-tickers /derivatives payload exceeded production
+ * limits). Costs 1 + count calls. Throws when no exchange returns usable tickers.
+ */
+export async function getDerivativesSnapshot(count = 6): Promise<DerivativeTicker[]> {
+  return getMajorDerivativeExchangeTickers(count);
 }
 
 export async function warmDerivativesCache(): Promise<void> {
