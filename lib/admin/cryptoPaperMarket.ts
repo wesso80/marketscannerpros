@@ -52,7 +52,8 @@ export async function fetchPaperPath(symbol:string,product:string,from?:string):
  const bars=await fetchCoinbaseCandles(product,start,end,step);
  return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}))};
 }
-export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now(),costRate=.0005){
+/** maxNotional: optional liquidity cap in USD; the smallest of risk, notional, cash and liquidity sizes wins. */
+export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now(),costRate=.0005,maxNotional=Infinity){
  const fail=(reason:string)=>({ok:false as const,reason});
  if(signal.stage!=='MOMENTUM_VOLUME'||!signal.asOf||!Number.isFinite(Date.parse(signal.asOf))||now-Date.parse(signal.asOf)>4*3600000+900000||Date.parse(signal.asOf)>now)return fail('No current confirmed momentum setup');
  if(![signal.stop,signal.target,signal.maxEntry,signal.entryFloor,equity,cash,quote.ask,quote.bid].every(v=>typeof v==='number'&&Number.isFinite(v)))return fail('Missing plan or account inputs');
@@ -66,7 +67,8 @@ export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equ
  const loss=fill-stop*(1-costRate)+fee*(fill+stop*(1-costRate));
  const reward=target*(1-costRate)-fill-fee*(fill+target*(1-costRate));
  if(loss<=0||reward/loss<1.5)return fail('Reward/risk below 1.5 after estimated costs');
- const quantity=Math.floor(Math.min(equity*.0025/loss,equity*.1/fill,cash/(fill*(1+fee)))*1e8)/1e8;
+ const unbounded=Math.min(equity*.0025/loss,equity*.1/fill,cash/(fill*(1+fee))),liquidityCapped=maxNotional/fill<unbounded;
+ const quantity=Math.floor(Math.min(unbounded,maxNotional/fill)*1e8)/1e8;
  if(quantity<=0||quantity>=1e12||quantity*fill<10)return fail('Insufficient size');
- return {ok:true as const,fill,stop,target,quantity,notional:quantity*fill,risk:quantity*loss,rewardRisk:reward/loss};
+ return {ok:true as const,fill,stop,target,quantity,notional:quantity*fill,risk:quantity*loss,rewardRisk:reward/loss,liquidityCapped};
 }
