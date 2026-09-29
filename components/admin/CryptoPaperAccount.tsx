@@ -1,7 +1,9 @@
 'use client';
+import type {CryptoPaperDecision} from '@/lib/admin/cryptoPaper';
+import type {CryptoReconciliation} from '@/lib/admin/cryptoPaperReconciliation';
 import {useEffect,useState} from 'react';
 import type {ArcaPortfolio,ArcaPosition,ArcaTrade,ArcaJournalEntry} from '@/lib/admin/portfolio-lab/types';
-type State={automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
+type State={reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
 export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now:number;refreshVersion?:number;onRefresh?:()=>void}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -11,6 +13,8 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  useEffect(()=>{void load();},[refreshVersion]);
+ const decisions:CryptoPaperDecision[]=[];
+ for(const j of data?.journal??[])for(const evidence of j.evidence??[]){try{const report=JSON.parse(evidence);if(Array.isArray(report.decisions))decisions.push(...report.decisions);}catch{}}
  const p=data?.portfolio,last=data?.journal.find(j=>j.title==='Crypto paper cycle completed');
  return <section id="crypto-paper" aria-label="Crypto paper account" className="space-y-3 rounded border border-violet-700 p-4 scroll-mt-4">
   <h2 className="text-xl">Crypto paper account · SIMULATED</h2>
@@ -26,12 +30,22 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
    <button disabled={busy} onClick={()=>onRefresh?onRefresh():void load()} className="rounded border px-3 py-2">Refresh paper account</button>
   </div>
   {busy&&<p>Updating paper account…</p>}{error&&<p role="alert" className="text-red-300">{error}</p>}{notice&&<p>{notice}</p>}
-  <p className="text-xs text-slate-400">The scheduled paper cycle checks positions every 15 minutes, including when this page is closed. Pausing entries keeps exit monitoring active. New entries use the saved 4h momentum scan and a freshly rechecked setup plus bid/ask. Scans refresh automatically only when background scans are enabled above. Missing exit data blocks further entries.</p>
+  <p className="text-xs text-slate-400">The scheduled paper cycle checks positions every 15 minutes, including when this page is closed. Pausing entries keeps exit monitoring active. Scheduled runs monitor exits first, advance the scan, then recheck positions and evaluate entries in the same run. New entries use the saved 4h momentum scan and a freshly rechecked setup plus bid/ask. Scans refresh automatically only when background scans are enabled above. Missing exit data blocks further entries.</p>
   <p className="text-xs text-slate-400">Stops and targets use completed 15-minute candles plus the latest quote. Both touched in one candle: stop first. Partial entry candle: a possible stop is charged conservatively; its target high is never credited. Gaps can lose more than planned risk. These are simulated results, not exchange fills.</p>
   {p&&<>
    <p>Entries: {p.status} · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L {money(p.unrealisedPnl)} (before exit costs)</p>
    <p>{last?`Last cycle ${new Date(last.createdAt).toLocaleString()}${now-Date.parse(last.createdAt)>25*60000?' · OVERDUE — check monitoring':''}`:'No completed cycle recorded yet'}</p>
    {last?.arcaReasoning&&<p className="text-sm text-slate-400">{last.arcaReasoning}</p>}
+   {data?.reconciliation&&<section aria-label="Paper account reconciliation" className="rounded border border-slate-700 p-3">
+    <h3>Account reconciliation: {data.reconciliation.status}</h3>
+    <p>Read-only check against starting cash, open-position costs and all closed trades. No balancing adjustment is made. Tolerance: $0.05.</p>
+    {data.reconciliation.expectedCash!==undefined&&<p>Expected cash {money(data.reconciliation.expectedCash)} · Expected equity {money(data.reconciliation.expectedEquity!)} · Cash difference {money(data.reconciliation.cashDifference!)} · Equity difference {money(data.reconciliation.equityDifference!)} · Realised difference {money(data.reconciliation.realisedDifference!)}</p>}
+    <p>Closed trades checked: {data.reconciliation.closedTrades??'—'} · Closed-trade fees: {data.reconciliation.closedFees===undefined?'—':money(data.reconciliation.closedFees)} · Open entry fees: {data.reconciliation.openEntryFees===undefined?'—':money(data.reconciliation.openEntryFees)} · Closed-trade mismatches: {data.reconciliation.invalidClosedTrades??'—'}</p>
+    <p>{data.reconciliation.reason??'A matched ledger does not prove execution quality or profitability. Checks use a consistent account snapshot.'}</p>
+   </section>}
+   <details><summary>Recent setup decisions ({decisions.length})</summary>
+    {!decisions.length?<p>Decision records appear after the next entry cycle.</p>:<div className="overflow-auto"><table className="w-full text-left text-sm"><thead><tr>{['Coin / venue','Decision','Reason','Observed bid / ask','Quote time','Checked'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{decisions.slice(0,100).map((d,i)=><tr key={i}><td>{d.coin} · {d.venue} · {d.product}</td><td>{d.status}</td><td>{d.reason}</td><td>{d.bid??'Not requested'} / {d.ask??'Not requested'}</td><td>{d.quoteAt??'—'}</td><td>{new Date(d.checkedAt).toLocaleString()}</td></tr>)}</tbody></table></div>}
+   </details>
    <h3 className="font-semibold">Open paper positions ({data!.positions.length})</h3>
    {!data!.positions.length?<p>No open paper positions. Entries require a qualifying setup and a valid current entry price.</p>:<div className="overflow-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr>{['Coin / source','Entry','Last mark','Stop','Target','Quantity','Open P&L','Marked at'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{data!.positions.map(x=><tr key={x.id} className="border-t border-slate-700"><td className="p-2">{x.symbol}<br/>{x.instrumentType}</td><td className="p-2">{x.averageEntry.toPrecision(6)}</td><td className="p-2">{x.currentPrice?.toPrecision(6)??'—'}</td><td className="p-2">{x.stopLoss?.toPrecision(6)}</td><td className="p-2">{x.takeProfit1?.toPrecision(6)}</td><td className="p-2">{x.quantity}</td><td className="p-2">{money(x.unrealisedPnl)}</td><td className="p-2">{x.lastMarkAt??'Not yet checked'}</td></tr>)}</tbody></table></div>}
    <h3 className="font-semibold">Closed paper trades (latest 100)</h3>
