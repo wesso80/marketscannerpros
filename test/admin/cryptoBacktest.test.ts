@@ -18,6 +18,7 @@ const btc:ExchangeBar[]=Array.from({length:70},(_,i)=>({t:T0+N*F-(69-i)*D-((T0+N
 function fetcher(m:ReturnType<typeof market>){
  return async(_p:string,start:number,end:number,step:number)=>{
   if(step===H)return {bars:m.hourly.filter(b=>b.t>start&&b.t<=end),requests:1,dropped:0};
+  if(step===D)return {bars:[] as ExchangeBar[],requests:1,dropped:0};
   // The backtest reads 8 anchor candles before the entry candle; one real anchor, then a gap-free path from entry.
   const C=m.C,e=start+8*M15,bars:ExchangeBar[]=[{t:e,o:C,h:C,l:C,c:C,v:1},{t:e+M15,o:C,h:C+.2,l:C-.1,c:C+.1,v:1},{t:e+2*M15,o:C+.1,h:C+6,l:C,c:C+5.5,v:1}];
   for(let t=e+3*M15;t<=end;t+=M15)bars.push({t,o:C+5.5,h:C+5.6,l:C+5.4,c:C+5.5,v:1});
@@ -44,4 +45,15 @@ it('summarizes in R with $500 per R and reports excluded trades separately',asyn
  const s=summarizeBacktest(state);
  expect(s.stats.overall).toMatchObject({trades:1});expect(s.stats.overall.netPnl).toBeCloseTo(r.trades[0].fixed.r!*500,1);
  expect(s.counts).toMatchObject({trades:2,openAtHorizon:1,signals:2});
+});
+it('marks a trade that hits neither stop nor target at the horizon close instead of dropping it',async()=>{
+ const m=market();
+ const flat=async(p:string,start:number,end:number,step:number)=>{
+  if(step!==M15)return fetcher(m)(p,start,end,step);
+  const bars:ExchangeBar[]=[];for(let t=start+M15;t<=end;t+=M15)bars.push({t,o:m.C,h:m.C+.05,l:m.C-.05,c:m.C+.02,v:1});return {bars,requests:1,dropped:0};
+ };
+ const r=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*D,btc,flat);
+ expect(r.trades[0].fixed).toMatchObject({status:'CLOSED',marked:true,exit:'HORIZON',at:new Date(m.signalAt+7*D).toISOString()});
+ expect(Math.abs(r.trades[0].fixed.r!)).toBeLessThan(.2);
+ expect(r.daily).toEqual([]);
 });
