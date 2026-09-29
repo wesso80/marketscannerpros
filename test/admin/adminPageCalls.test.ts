@@ -129,10 +129,11 @@ describe("edge packets", () => {
 });
 
 describe("ARCA simulator prices (source check)", () => {
-  it("reads the edge-packet price (edgePacketPrice), not the nonexistent snapshot.price, and logs planned orders", async () => {
+  it("marks and fills from a fresh edge-packet quote (freshPaperQuote), not the nonexistent snapshot.price, and logs planned orders", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("lib/admin/portfolio-lab/simulateCycle.ts", "utf8");
-    expect(src).toContain("edgePacketPrice(r.packetJson)");
+    expect(src).toContain("freshPaperQuote(row)");
+    expect(src).toContain("currentPrice: quote.price");
     expect(src).not.toMatch(/snapshot\?: \{ price\?: number \}/);
     expect(src).toMatch(/source: "arca"/);
     expect(src).toContain("recordAdminCalls(plannedCalls)");

@@ -3,7 +3,11 @@ import type {CryptoPaperDecision} from '@/lib/admin/cryptoPaper';
 import type {CryptoReconciliation} from '@/lib/admin/cryptoPaperReconciliation';
 import {useEffect,useState} from 'react';
 import type {ArcaPortfolio,ArcaPosition,ArcaTrade,ArcaJournalEntry} from '@/lib/admin/portfolio-lab/types';
-type State={reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
+import type {CryptoPaperStats as Stats} from '@/lib/admin/cryptoPaperStats';
+import type {BtcRegime} from '@/lib/admin/cryptoBtcRegime';
+import CryptoPaperStats from './CryptoPaperStats';
+type Limits={riskPerTradePct:number;notionalPct:number;positions:number;openRiskPct:number;dailyEntries:number;lossFromStartPct:number};
+type State={limits?:Limits;btcRegime?:BtcRegime|null;stats?:Stats|null;reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
 export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now:number;refreshVersion?:number;onRefresh?:()=>void}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -19,7 +23,9 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
  return <section id="crypto-paper" aria-label="Crypto paper account" className="space-y-3 rounded border border-violet-700 p-4 scroll-mt-4">
   <h2 className="text-xl">Crypto paper account · SIMULATED</h2>
   <p>Independent $200,000 paper ledger. Coinbase USD and OKX USDT momentum breakouts and continuations; no daily base requirement. OKX prices are converted into USD using observed Coinbase USDT/USD quotes. Other venues remain research-only.</p>
-  <p className="text-xs text-slate-400">0.25% risk per trade · 10% maximum notional per position · five open positions · 2% open-risk cap · ten entries per day · pause new entries below 95% of starting equity. Estimated fee and slippage: 0.05% each per side for Coinbase; 0.10% each per side for OKX including the conversion leg. No real orders.</p>
+  {data?.limits&&<p className="text-xs text-slate-400">BETA DATA-COLLECTION LIMITS: {data.limits.riskPerTradePct}% risk per trade · {data.limits.notionalPct}% maximum notional per position · {data.limits.positions} open positions · {data.limits.openRiskPct}% open-risk cap · {data.limits.dailyEntries} entries per day · pause new entries below {100-data.limits.lossFromStartPct}% of starting equity. Raised to collect more trade outcomes; open positions are often correlated, so account-level drawdown is not representative of a live allocation. Judge the strategy by expectancy in R below.</p>}
+  <p>BTC daily trend: {data?.btcRegime?<>{data.btcRegime.state}{data.btcRegime.state!=='UNAVAILABLE'&&<> · close {data.btcRegime.close?.toLocaleString()} vs 20d {data.btcRegime.sma20?.toFixed(0)} / 50d {data.btcRegime.sma50?.toFixed(0)}</>} · {data.btcRegime.reason} · {data.btcRegime.source}, candle {data.btcRegime.asOf??'—'} · checked {new Date(data.btcRegime.checkedAt).toLocaleString()}{now-Date.parse(data.btcRegime.checkedAt)>26*3600000?' · STALE':''}</>:'Not checked yet (checked during the next entry cycle with candidates)'}. Recorded on each entry for comparison; it does not block entries during beta.</p>
+  <p className="text-xs text-slate-400">Estimated fee and slippage: 0.05% each per side for Coinbase; 0.10% each per side for OKX including the conversion leg. No real orders.</p>
   <p>Background scans: {data?.automation?.enabled?'ENABLED':'OFF'} · Manual scans remain available.</p>
   {data?.automation?.last&&<p>Last background scan batch: {new Date(data.automation.last.at).toLocaleString()} · {data.automation.last.ok?'Completed':'FAILED'} {data.automation.last.error??''}</p>}
   <button disabled={busy||!data} onClick={()=>void load(data?.automation?.enabled?'auto_pause':'auto_enable')} className="rounded border px-3 py-2">{data?.automation?.enabled?'Pause background scans':'Enable background scans'}</button>
@@ -37,6 +43,7 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
    <p>Entries: {p.status} · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L {money(p.unrealisedPnl)} (before exit costs)</p>
    <p>{last?`Last cycle ${new Date(last.createdAt).toLocaleString()}${now-Date.parse(last.createdAt)>25*60000?' · OVERDUE — check monitoring':''}`:'No completed cycle recorded yet'}</p>
    {last?.arcaReasoning&&<p className="text-sm text-slate-400">{last.arcaReasoning}</p>}
+   <CryptoPaperStats stats={data?.stats} />
    {data?.reconciliation&&<section aria-label="Paper account reconciliation" className="rounded border border-slate-700 p-3">
     <h3>Account reconciliation: {data.reconciliation.status}</h3>
     <p>Read-only check against starting cash, open-position costs and all closed trades. No balancing adjustment is made. Tolerance: $0.05.</p>

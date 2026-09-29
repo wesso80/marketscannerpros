@@ -15,7 +15,7 @@ Scope: simulated crypto-admin positions only, stored in the existing USD ledger.
 
 ## Exit chronology
 
-The monitor fetches matching completed 15-minute OKX asset candles and Coinbase USDT/USD candles. It does not revalue old candles with today's conversion rate. Missing prefixes, missing conversion bars or history beyond 299 candles block monitoring and further entries.
+The monitor fetches matching completed 15-minute OKX asset candles and Coinbase USDT/USD candles. It does not revalue old candles with today's conversion rate. Missing prefixes, missing conversion bars or history older than the seven-day catch-up window (672 candles) block monitoring and further entries. Shorter outages are replayed in full: OKX history is paged 100 candles at a time and Coinbase USDT/USD 299 at a time, and any gap at a page boundary blocks rather than skips.
 
 Cross-exchange extrema do not necessarily occur simultaneously. For positive asset A and conversion F, the path uses conservative bounds:
 
