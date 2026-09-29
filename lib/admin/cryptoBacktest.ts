@@ -20,7 +20,7 @@ export type BacktestCoin={id:string;symbol:string;product:string;status:'PENDING
 export type BacktestState={version:1;status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:BacktestCoin[];trades:BacktestTrade[];btcDaily:ExchangeBar[];coinDaily?:Record<string,[number,number][]>;endDaysAgo?:number;requests:number;droppedRows:number};
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
 /** Coinbase candles, paged. Gaps are kept as gaps (signals and exits then fail closed); invalid rows are dropped and counted. */
-async function candles(product:string,start:number,end:number,step:number){
+export async function candles(product:string,start:number,end:number,step:number){
  const out=new Map<number,ExchangeBar>();let requests=0,dropped=0;
  for(let from=start;from<end;from+=299*step){
   const to=Math.min(end,from+299*step);
