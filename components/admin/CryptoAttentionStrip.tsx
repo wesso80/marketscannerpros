@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-type Chip={label:string;value:string;tone:'ok'|'warn'|'bad'|'info';detail:string};
+type Chip={label:string;value:string;tone:'ok'|'warn'|'bad'|'info';detail:string;reasons?:string[]};
 type Paper={portfolio:{status:string;unrealisedPnl:number}|null;positions:unknown[];reconciliation?:{status:string;checkedAt:string};journal:{title:string;createdAt:string;evidence?:string[]}[]};
 type Scan={startedAt:string;rows:{stage:string}[]}|null;
 type Ops={operations?:{state?:{checkedAt:string;healthy:boolean;issues:string[]}}};
@@ -13,10 +13,13 @@ export function attentionChips(paper:Paper|null,scan:Scan,ops:Ops|null,now:numbe
  else if(!paper.portfolio)chips.push({label:'Paper account',value:'NOT ENABLED',tone:'info',detail:'Enable it in the Paper account tab'});
  else{
   const last=paper.journal.find(j=>j.title==='Crypto paper cycle completed');
-  let healthy:boolean|null=null;try{healthy=last?.evidence?.[0]?JSON.parse(last.evidence[0]).monitorHealthy!==false:null;}catch{healthy=null;}
+  let healthy:boolean|null=null,reasons:string[]=[];
+  try{const r=last?.evidence?.[0]?JSON.parse(last.evidence[0]):null;healthy=r?r.monitorHealthy!==false:null;
+   // The cycle's own notes name each position that could not be verified; nothing is inferred when they are absent.
+   reasons=Array.isArray(r?.notes)?r.notes.filter((n:unknown):n is string=>typeof n==='string'&&/entries blocked/i.test(n)):[];}catch{healthy=null;}
   const overdue=!last||now-Date.parse(last.createdAt)>25*60000;
   chips.push({label:'Last cycle',value:last?(overdue?'OVERDUE':ago(last.createdAt,now)):'NONE YET',tone:overdue?'bad':'ok',detail:last?`Paper cycle journal · ${new Date(last.createdAt).toLocaleString()}`:'No completed cycle recorded'});
-  chips.push({label:'Exit monitoring',value:healthy==null?'UNKNOWN':healthy?'HEALTHY':'UNHEALTHY — entries blocked',tone:healthy==null?'warn':healthy?'ok':'bad',detail:'From the latest cycle report'});
+  chips.push({label:'Exit monitoring',value:healthy==null?'UNKNOWN':healthy?'HEALTHY':'UNHEALTHY — entries blocked',tone:healthy==null?'warn':healthy?'ok':'bad',detail:healthy===false?(reasons.length?reasons.join('\n'):'No reason recorded in the cycle report; see ARCA Journal')+` · cycle ${last?new Date(last.createdAt).toLocaleString():''}`:'From the latest cycle report',...(healthy===false?{reasons}:{})});
   chips.push({label:'Open positions',value:`${paper.positions.length} · ${money(paper.portfolio.unrealisedPnl)}`,tone:'info',detail:`Entries ${paper.portfolio.status} · open P&L before exit costs, marked at last cycle`});
   if(paper.reconciliation)chips.push({label:'Ledger check',value:paper.reconciliation.status,tone:paper.reconciliation.status==='MATCHED'?'ok':'bad',detail:`Reconciliation · ${new Date(paper.reconciliation.checkedAt).toLocaleString()}`});
  }
@@ -43,6 +46,7 @@ export default function CryptoAttentionStrip({now,refreshVersion=0,onOpen}:{now:
  return <section aria-label="Needs attention" className="flex flex-wrap gap-2">
   {chips.map(c=><button key={c.label} type="button" title={c.detail} onClick={()=>onOpen?.(c.label==='Confirmed 4h setups'?'setups':c.label==='Ops health'?'alerts':'paper')} className={`rounded border px-3 py-2 text-left text-sm ${tones[c.tone]}`}>
    <span className="block text-xs text-slate-400">{c.label}</span>{c.value}</button>)}
+  {chips.filter(c=>c.reasons?.length).map(c=><p key={c.label} role="status" className="w-full text-xs text-red-200">{c.label}: {c.reasons![0]}{c.reasons!.length>1?` (+${c.reasons!.length-1} more; hover the chip)`:''}</p>)}
   <p className="w-full text-xs text-slate-400">Saved data loaded {new Date(data.loadedAt).toLocaleTimeString()}{snapshotAge>180000?' · STALE SNAPSHOT — reloading when visible':''} · refreshes every minute while this page is visible.</p>
  </section>;
 }
