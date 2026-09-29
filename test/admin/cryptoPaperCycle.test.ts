@@ -23,7 +23,7 @@ import {fetchPaperQuote,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
 import {runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import type {ArcaPortfolio,ArcaPosition} from '@/lib/admin/portfolio-lab/types';
 const now=Date.parse('2026-09-28T05:00:00Z'),step=900000;
-let portfolio:ArcaPortfolio,positions:ArcaPosition[],scan:MomentumScan;
+let portfolio:ArcaPortfolio,positions:ArcaPosition[],scan:MomentumScan,discovery:{rows:{id:string;venues:{exchange:string;pair:string;volumeUsd:number;observedAt:string}[]}[]};
 const signal={stage:'MOMENTUM_VOLUME' as const,asOf:'2026-09-28T04:00:00Z',kind:'CONTINUATION' as const,stop:95,target:112,maxEntry:102,entryFloor:99,close:100,reason:'test',relativeVolume:2,changePct:2,trigger:101,atr:2};
 const pair={exchange:'gdax' as const,product:'BTC-USD',quote:'USD' as const,volumeUnit:'BTC'};
 const position=()=>({id:'pos',symbol:'bitcoin',assetClass:'crypto',instrumentType:'coinbase:BTC-USD',side:'LONG',averageEntry:100,stopLoss:95,initialStopLoss:95,takeProfit1:112,openedAt:new Date(now-step).toISOString(),quantity:10} as ArcaPosition);
@@ -31,7 +31,8 @@ beforeEach(()=>{
  vi.clearAllMocks();vi.spyOn(Date,'now').mockReturnValue(now);
  portfolio={id:'p',workspaceId:'w',mode:'SIMULATED',status:'ACTIVE',startingBalance:200000,totalEquity:200000,currentCash:200000,realisedPnl:0,settings:{feesPctEstimate:.05,slippagePctEstimate:.05}} as ArcaPortfolio;
  positions=[];scan={version:1,startedAt:new Date(now-1000).toISOString(),updatedAt:new Date(now).toISOString(),discoveryAt:new Date(now).toISOString(),rows:[{...signal,id:'bitcoin',symbol:'BTC',pair}]};
- vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=> 'OK'),get:vi.fn(async()=>scan)} as never);
+ discovery={rows:[{id:'bitcoin',venues:[{exchange:'gdax',pair:'BTC/USD',volumeUsd:1e9,observedAt:new Date(now-600000).toISOString()},{exchange:'okex',pair:'BTC/USDT',volumeUsd:1e9,observedAt:new Date(now-600000).toISOString()}]}]};
+ vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=> 'OK'),get:vi.fn(async(key:string)=>key==='admin:crypto-discovery:v1'?discovery:scan)} as never);
  vi.mocked(store.getDefaultPortfolio).mockImplementation(async()=>portfolio);
  vi.mocked(store.getPortfolioById).mockImplementation(async()=>portfolio);
  vi.mocked(store.listOpenPositions).mockImplementation(async()=>positions);
@@ -149,6 +150,22 @@ it('starts a research-only shadow exit for open positions, and shadow failures n
  expect(report).toMatchObject({opened:1,monitorHealthy:true});
  expect(report.notes).toContain('Shadow exit gone: shadow provider down; retried next cycle');
  expect(vi.mocked(writeJournal).mock.calls.some(([a])=>a.title==='Crypto shadow exit plan partial-trail-v1'&&a.positionId==='pos')).toBe(true);
+});
+it('caps entry size at 1% of the pair 24h volume and records the evidence',async()=>{
+ // Risk sizing alone gives ~$9.6k here, so $500k volume (cap $5k) makes liquidity the binding limit.
+ discovery.rows[0].venues[0].volumeUsd=5e5;
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,decisions:[{status:'OPENED',reason:expect.stringContaining('capped at 1%')}]});
+ const order=vi.mocked(createSimulatedOrder).mock.calls[0][0];
+ expect(order.notional).toBeLessThanOrEqual(5000);expect(order.notional).toBeGreaterThan(4990);
+ expect(JSON.parse(order.createdReason.slice(order.createdReason.indexOf('{'))).liquidity).toMatchObject({volumeUsd:5e5,capUsd:5000,capped:true});
+});
+it('blocks entry when pair volume evidence is missing or stale instead of assuming liquidity',async()=>{
+ discovery.rows[0].venues[0].observedAt=new Date(now-7*3600000).toISOString();
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:expect.stringContaining('liquidity cap cannot be verified')}]});
+ discovery.rows=[];
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:expect.stringContaining('24h volume unavailable')}]});
+ expect(createSimulatedOrder).not.toHaveBeenCalled();
 });
 it('does not report a cron skip after a recent manual cycle as unhealthy, but still flags overlapping cron runs',async()=>{
  vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('FROM arca_portfolios WHERE name')?[{workspace_id:'w'}] as never:[]);
