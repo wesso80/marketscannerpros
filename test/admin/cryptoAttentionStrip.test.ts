@@ -22,3 +22,11 @@ it('flags overdue cycles, unhealthy monitoring, stale scans and missing data ins
  expect(by(c,'Ops health')).toMatchObject({value:'NOT CHECKED'});
  expect(by(attentionChips(null,null,null,now),'Paper account')).toMatchObject({value:'UNAVAILABLE',tone:'bad'});
 });
+it('shows the cycle\'s own reasons when exit monitoring is unhealthy, and says so when none were recorded',()=>{
+ const withNotes={...paper(5,false),journal:[{title:'Crypto paper cycle completed',createdAt:new Date(now-300000).toISOString(),evidence:[JSON.stringify({monitorHealthy:false,notes:['grass: Exit quote unavailable or expired; entries blocked until monitoring recovers','cron: 2 setups use other quote/venue combinations']})]}]};
+ const chip=by(attentionChips(withNotes,scan,ops,now),'Exit monitoring');
+ expect(chip.reasons).toEqual(['grass: Exit quote unavailable or expired; entries blocked until monitoring recovers']);
+ expect(chip.detail).toContain('grass: Exit quote unavailable');
+ expect(by(attentionChips(paper(5,false),scan,ops,now),'Exit monitoring').detail).toContain('No reason recorded');
+ expect(by(attentionChips(paper(5),scan,ops,now),'Exit monitoring').reasons).toBeUndefined();
+});
