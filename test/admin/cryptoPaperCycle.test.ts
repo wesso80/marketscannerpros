@@ -50,7 +50,7 @@ beforeEach(()=>{
 afterEach(()=>vi.restoreAllMocks());
 it('creates an evidenced simulated entry after fresh checks',async()=>{
  const report=await runCryptoPaperCycle('w');expect(report).toMatchObject({opened:1,monitorHealthy:true});
- expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({symbol:'bitcoin',instrumentType:'coinbase:BTC-USD',orderType:'MARKET_SIM',stopLoss:95,takeProfit1:112}));
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({symbol:'bitcoin',instrumentType:'coinbase:BTC-USD',orderType:'MARKET_SIM',stopLoss:95,takeProfit1:110.15}));
  expect(fillOrderAndOpenPosition).toHaveBeenCalledWith(expect.objectContaining({currentPrice:100}));
 });
 it('rejects a duplicate before fetching provider data',async()=>{

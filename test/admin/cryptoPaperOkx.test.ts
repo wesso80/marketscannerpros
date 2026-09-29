@@ -66,3 +66,9 @@ it('still refuses OKX catch-up beyond seven days',async()=>{
  vi.spyOn(Date,'now').mockReturnValue(now);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
  await expect(fetchOkxUsdPath('celo','CELO-USDT',new Date(now-673*step).toISOString())).rejects.toThrow('requires recovery');expect(fetcher).not.toHaveBeenCalled();
 });
+it('CELO near-miss: an OKX high on the target is not a USD fill when USDT/USD dipped in that candle; the best case is kept for reporting',()=>{
+ const t=Date.UTC(2026,8,29,11,15);
+ const path=convertedExitPath('celo',[{t,o:.1165,h:.11768,l:.1160,c:.1162,v:1}],[{t,o:1,h:1.0001,l:.9998,c:1,v:1}]);
+ expect(path.candles[0].high).toBeLessThan(.117676);
+ expect(path.bestCaseHigh!).toBeGreaterThanOrEqual(.117676);
+});

@@ -41,8 +41,14 @@ export function usdSignal(signal:VolumeMomentum,quote:ConvertedPaperQuote):Volum
 /** Conservative USD path: low is a lower bound; high proves only a minimum reached high.
  * Multiplying two highs would invent a target when extremes happened at different times.
  * Possible stops may be charged conservatively; these are not exact synthetic OHLC/fills.
+ *
+ * INTENDED TARGET RULE (OKX): a target counts as reached only when the OKX high converted at the LOWEST Coinbase
+ * USDT/USD price in the same 15m candle (or the OKX low at the highest) reaches it. A USD holder must convert, and
+ * the two venues' extremes need not coincide. A USDT move of a few hundredths of a cent can therefore leave a target
+ * untouched in USD that OKX shows as touched in USDT; bestCaseHigh (high x highest USDT/USD) is kept so these
+ * near-misses are reported, never filled.
  */
-export function convertedExitPath(symbol:string,native:ExchangeBar[],fx:ExchangeBar[]):PaperExitPath{
+export function convertedExitPath(symbol:string,native:ExchangeBar[],fx:ExchangeBar[]):PaperExitPath&{bestCaseHigh:number|null}{
  const byTime=new Map(fx.map(b=>[b.t,b]));
  const candles=native.map(b=>{
   const f=byTime.get(b.t);if(!f)throw new PaperMarketError('Missing matching USDT/USD exit candle');
@@ -51,7 +57,8 @@ export function convertedExitPath(symbol:string,native:ExchangeBar[],fx:Exchange
   const high=Math.max(b.h*f.l,b.l*f.h);
   return {openAt:b.t-STEP,closeAt:b.t,open,close,low,high};
  });
- return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles};
+ const bestCaseHigh=native.length?Math.max(...native.map(b=>b.h*byTime.get(b.t)!.h)):null;
+ return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles,bestCaseHigh};
 }
 /** OKX history-candles returns at most 100 rows; walk the `after` cursor back to the checkpoint. */
 async function fetchOkxCandles(product:string,start:number,end:number):Promise<ExchangeBar[]>{
@@ -67,7 +74,7 @@ async function fetchOkxCandles(product:string,start:number,end:number):Promise<E
  }
  return fillNoTradeGaps([...bars.values()],STEP).filter(b=>b.t>start);
 }
-export async function fetchOkxUsdPath(symbol:string,product:string,from:string):Promise<PaperExitPath>{
+export async function fetchOkxUsdPath(symbol:string,product:string,from:string):Promise<PaperExitPath&{bestCaseHigh?:number|null}>{
  if(!/^[A-Z0-9]{1,30}-USDT$/.test(product))throw new PaperMarketError('OKX USDT product required');
  const end=Math.floor(Date.now()/STEP)*STEP,start=Math.floor(Date.parse(from)/STEP)*STEP;
  if(!Number.isFinite(start)||start>end||start<end-PAPER_RECOVERY_CANDLES*STEP)throw new PaperMarketError('OKX/FX exit history requires recovery beyond the seven-day catch-up window or has invalid start');
