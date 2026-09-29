@@ -2,11 +2,11 @@ import {btcDownFilter} from './cryptoMarketRegime';
 /** Closed-trade expectancy in R for the crypto paper beta. Read-only; no row is adjusted or inferred. */
 export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null};
 export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null};
-export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byFunding:CryptoStatsGroup[];byShadowFilter:CryptoStatsGroup[];byExit:CryptoStatsGroup[]};
-type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;funding:string;exit:string};
-function evidence(reason:string|null):{kind?:string;regime?:string;funding?:string}{
+export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byFunding:CryptoStatsGroup[];byShadowFilter:CryptoStatsGroup[];byBtc200:CryptoStatsGroup[];byExit:CryptoStatsGroup[]};
+type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;funding:string;exit:string};
+function evidence(reason:string|null):{kind?:string;regime?:string;long?:string;funding?:string}{
  const i=reason?.indexOf('{')??-1;if(!reason||i<0)return {};
- try{const e=JSON.parse(reason.slice(i));return {kind:e?.signal?.kind,regime:e?.btcRegime?.state,funding:e?.derivatives?.fundingState};}catch{return {};}
+ try{const e=JSON.parse(reason.slice(i));return {kind:e?.signal?.kind,regime:e?.btcRegime?.state,long:e?.btcRegime?.longTrend,funding:e?.derivatives?.fundingState};}catch{return {};}
 }
 function group(label:string,trades:Trade[]):CryptoStatsGroup{
  const rs=trades.map(t=>t.r).filter((r):r is number=>r!=null&&Number.isFinite(r));
@@ -26,12 +26,12 @@ export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):Crypt
   const r=row.r_multiple==null?null:Number(row.r_multiple);
   return {r:r!=null&&Number.isFinite(r)?r:null,pnl:Number(row.realised_pnl)||0,holdHours:Number.isFinite(entry)&&Number.isFinite(exit)&&exit>=entry?(exit-entry)/3600000:null,
    setup:e.kind??'NOT_RECORDED',venue:row.instrument_type.startsWith('okx-usd-v1:')?'OKX USDT→USD':row.instrument_type.startsWith('coinbase:')?'Coinbase USD':'OTHER',
-   regime:e.regime??'NOT_RECORDED',funding:e.funding??'NOT_RECORDED',exit:row.exit_reason};
+   regime:e.regime??'NOT_RECORDED',long:e.long??'NOT_RECORDED',funding:e.funding??'NOT_RECORDED',exit:row.exit_reason};
  });
  const n=trades.filter(t=>t.r!=null).length;
  const sample=!trades.length?'NO_TRADES':n<30?'INSUFFICIENT':n<100?'EARLY':'USABLE';
  const sampleNote={NO_TRADES:'No closed paper trades yet.',INSUFFICIENT:`${n} closed trades with R. Under 30 trades, results are mostly noise; do not draw conclusions.`,EARLY:`${n} closed trades with R. Directional evidence only; breakdowns with few trades remain unreliable.`,USABLE:`${n} closed trades with R. Overall figures are usable; still check each breakdown's own trade count.`}[sample];
- return {checkedAt:new Date(now).toISOString(),sample,sampleNote,overall:group('All trades',trades),bySetup:by(trades,t=>t.setup),byVenue:by(trades,t=>t.venue),byBtcRegime:by(trades,t=>t.regime),byFunding:by(trades,t=>t.funding),byShadowFilter:by(trades,t=>btcDownFilter(t.regime==='NOT_RECORDED'?null:t.regime)),byExit:by(trades,t=>t.exit)};
+ return {checkedAt:new Date(now).toISOString(),sample,sampleNote,overall:group('All trades',trades),bySetup:by(trades,t=>t.setup),byVenue:by(trades,t=>t.venue),byBtcRegime:by(trades,t=>t.regime),byFunding:by(trades,t=>t.funding),byShadowFilter:by(trades,t=>btcDownFilter(t.regime==='NOT_RECORDED'?null:t.regime)),byBtc200:by(trades,t=>t.long),byExit:by(trades,t=>t.exit)};
 }
 export type ExitPlanSide={trades:number;avgR:number|null;winRate:number|null;totalR:number};
 export type ExitPlanComparison={plan:string;earlierPlanShadows:number;pairs:number;openShadows:number;unavailableShadows:number;fixed:ExitPlanSide;trail:ExitPlanSide;trailExitReasons:Record<string,number>;note:string};

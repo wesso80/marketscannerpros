@@ -30,6 +30,7 @@ export default function CryptoPaperStats({stats,exitPlans,title='Strategy statis
    {stats.overall.trades>0&&<>
     <Table title="Overall" rows={[stats.overall]} />
     <Table title="By BTC daily trend at entry" rows={stats.byBtcRegime} />
+    {stats.byBtc200?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By BTC 200-day regime at entry (bull-market hypothesis; evidence only, never blocks)" rows={stats.byBtc200} />}
     {stats.byShadowFilter?.some(g=>g.label==='PASS'||g.label==='WOULD_SKIP')&&<>
      <Table title="Shadow filter: skip new entries when BTC daily trend is DOWN (evidence only; never blocks a trade)" rows={stats.byShadowFilter} />
      <p className="text-xs text-slate-400">PASS is what the account would have traded with the filter on; WOULD_SKIP trades were still taken for comparison. The filter is judged on these rows only; with few trades in either row the difference is noise. Trades without a recorded BTC trend show NOT_RECORDED and are never assigned a side.</p>

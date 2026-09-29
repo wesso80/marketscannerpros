@@ -26,3 +26,9 @@ it('shadow BTC-down filter labels only from the recorded trend and never guesses
  const {btcDownFilter}=await import('@/lib/admin/cryptoMarketRegime');
  expect(['UP','MIXED','DOWN','UNAVAILABLE',null].map(btcDownFilter)).toEqual(['PASS','PASS','WOULD_SKIP','UNAVAILABLE','NOT_RECORDED']);
 });
+it('groups live paper trades by the recorded 200-day regime and never infers it for older trades',()=>{
+ const r=(x:number,long?:string)=>({...row(x,'CONTINUATION','UP'),created_reason:'crypto-v1|x|'+JSON.stringify({signal:{kind:'CONTINUATION'},btcRegime:{state:'UP',...(long?{longTrend:long}:{})}})});
+ const s=summarizeCryptoPaper([r(2,'BULL'),r(-1,'BULL'),r(-1)]);
+ expect(s.byBtc200.find(g=>g.label==='BULL')).toMatchObject({trades:2,avgR:.5});
+ expect(s.byBtc200.find(g=>g.label==='NOT_RECORDED')?.trades).toBe(1);
+});
