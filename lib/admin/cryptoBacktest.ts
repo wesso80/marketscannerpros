@@ -4,12 +4,13 @@ import {planCryptoPaper} from './cryptoPaperMarket';
 import {evaluatePaperExitPath,type PaperExitCandle} from './portfolio-lab/paperExitPath';
 import {initShadow,advanceShadow,closeShadowAt,type ShadowLeg} from './cryptoPaperShadow';
 import {assessBtcRegime} from './cryptoBtcRegime';
-import {selectCoinbasePair,type ExchangeBar} from './cryptoExchangeVolume';
+import type {ExchangeBar} from './cryptoExchangeVolume';
+import {coinbaseUniverse} from './cryptoRelativeStrength';
 import {summarizeCryptoPaper,compareExitPlans,type CryptoStatsRow} from './cryptoPaperStats';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import type {ArcaPosition} from './portfolio-lab/types';
 import {fillNoTradeGaps,NO_TRADE_MAX_BARS} from './cryptoCandleGaps';
-import {btcLongTrend,breadthAt,breadthBucket,bullGate} from './cryptoMarketRegime';
+import {btcLongTrend,breadthAt,breadthBucket,bullGate,relativeStrengthAt,type RsTag} from './cryptoMarketRegime';
 const KEY='admin:crypto-markets:backtest:v1',H=3600000,F=4*H,D=24*H,M15=900000;
 /** Live entry/exit code replayed on Coinbase history. Parameters are the live rules; nothing is fitted to this data. */
 export const BACKTEST={windowOffsets:[0,90,180] as number[],days:90,maxCoins:40,coinsPerBatch:3,horizonDays:7,halfSpread:.0005,cost:.0005,riskUsd:500};
@@ -90,8 +91,7 @@ export async function startBacktest(now=Date.now(),endDaysAgo=0){
  const redis=getRedis();if(!redis)throw Error('Backtest storage unavailable');
  const snap=await redis.get<{startedAt:string;finishedAt?:string;rows:(DiscoveryRow&{venues:VenueEvidence[]})[]}>('admin:crypto-discovery:v1');
  if(!snap?.rows?.length)throw Error('Run a discovery scan first; the backtest universe comes from it');
- const at=Date.parse(snap.finishedAt??snap.startedAt),coins:BacktestCoin[]=[];
- for(const r of snap.rows){if(r.stage==='EXCLUDED')continue;const p=selectCoinbasePair(r.venues,at);if(p&&!coins.some(c=>c.product===p))coins.push({id:r.id,symbol:r.symbol,product:p,status:'PENDING'});if(coins.length>=BACKTEST.maxCoins)break;}
+ const coins:BacktestCoin[]=coinbaseUniverse(snap.rows,Date.parse(snap.finishedAt??snap.startedAt)).slice(0,BACKTEST.maxCoins).map(c=>({...c,status:'PENDING'}));
  if(!coins.length)throw Error('No Coinbase USD pairs in the saved discovery snapshot');
  const to=Math.floor((now-endDaysAgo*D)/F)*F,from=to-BACKTEST.days*D;
  // 260 days of BTC history before the window so the 200-day regime is available from the first signal.
@@ -122,15 +122,18 @@ export function summarizeBacktest(state:BacktestState){
  const groupBy=(key:(t:BacktestTrade)=>string,order:string[])=>order.map(k=>sub(k,state.trades.filter(t=>key(t)===k))).filter(g=>g.trades>0);
  const regimes={byBtc200:groupBy(t=>t.btc200??'NOT_RECORDED',['BULL','TRANSITION','BEAR','UNAVAILABLE','NOT_RECORDED']),
   byBreadth:groupBy(t=>tag.get(t.id)!.bucket,['>60% above 50d','40–60% above 50d','<40% above 50d','UNAVAILABLE']),
-  byGate:groupBy(t=>tag.get(t.id)!.gate,['ON','OFF','UNAVAILABLE'])};
+  byGate:groupBy(t=>tag.get(t.id)!.gate,['ON','OFF','UNAVAILABLE']),
+  byRsRule:groupBy(t=>tag.get(t.id)!.rs.rule,['LEADER','NOT_LEADER','UNAVAILABLE']),
+  byRsTercile:groupBy(t=>tag.get(t.id)!.rs.tercile,['TOP','MIDDLE','BOTTOM','UNAVAILABLE']),
+  byCoinTrend:groupBy(t=>{const a=tag.get(t.id)!.rs.above50;return a==null?'UNAVAILABLE':a?'Above own 50d':'Below own 50d';},['Above own 50d','Below own 50d','UNAVAILABLE'])};
  const halves=(['FIRST','SECOND'] as const).map(h=>({...summarizeCryptoPaper(rows(state.trades.filter(t=>t.half===h))).overall,label:h==='FIRST'?'First half of window':'Second half of window'}));
  return {stats:summarizeCryptoPaper(all),halves,regimes,endDaysAgo:state.endDaysAgo??0,exitPlans:compareExitPlans(all,state.trades.map(t=>({positionId:t.id,plan:t.shadow.plan,status:t.shadow.status,r:t.shadow.r,legs:t.shadow.legs}))),
   counts:{coins:state.coins.length,done:state.coins.filter(c=>c.status==='DONE').length,failed:state.coins.filter(c=>c.status==='FAILED').length,signals:state.coins.reduce((s,c)=>s+(c.signals??0),0),noEntry:state.coins.reduce((s,c)=>s+(c.noEntry??0),0),overlapping:state.coins.reduce((s,c)=>s+(c.overlapping??0),0),trades:state.trades.length,openAtHorizon:state.trades.filter(t=>t.fixed.status==='OPEN_AT_HORIZON').length,markedAtHorizon:state.trades.filter(t=>t.fixed.marked).length,dataGaps:state.trades.filter(t=>t.fixed.status==='DATA_GAP').length,filledBars:state.trades.reduce((s,t)=>s+(t.filledBars??0),0),tradesWithFilledBars:state.trades.filter(t=>(t.filledBars??0)>0).length,requests:state.requests,droppedRows:state.droppedRows}};
 }
-/** Breadth and bull gate per trade, from daily candles completed before each signal across the saved universe. */
+/** Breadth, bull gate and relative strength per trade, from daily candles completed before each signal across the saved universe. */
 export function regimeTags(state:BacktestState){
- const m=new Map<string,{breadth:number|null;bucket:string;gate:string}>();
+ const m=new Map<string,{breadth:number|null;bucket:string;gate:string;rs:RsTag}>(),btc=(state.btcDaily??[]).map(b=>[b.t,b.c] as [number,number]);
  for(const t of state.trades){const at=Date.parse(t.signalAt),b=state.coinDaily?breadthAt(state.coinDaily,at):null;
-  m.set(t.id,{breadth:b?.fraction??null,bucket:breadthBucket(b),gate:t.btc200?bullGate(t.btc200 as never,b):'UNAVAILABLE'});}
+  m.set(t.id,{breadth:b?.fraction??null,bucket:breadthBucket(b),gate:t.btc200?bullGate(t.btc200 as never,b):'UNAVAILABLE',rs:relativeStrengthAt(state.coinDaily??{},btc,t.coin,at)});}
  return m;
 }

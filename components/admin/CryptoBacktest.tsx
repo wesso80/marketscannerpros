@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {CryptoPaperStats as Stats,CryptoStatsGroup,ExitPlanComparison} from '@/lib/admin/cryptoPaperStats';
 import CryptoPaperStats,{Table} from './CryptoPaperStats';
 type Counts={markedAtHorizon?:number;filledBars?:number;tradesWithFilledBars?:number;coins:number;done:number;failed:number;signals:number;noEntry:number;overlapping:number;trades:number;openAtHorizon:number;dataGaps:number;requests:number;droppedRows:number};
-type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{endDaysAgo?:number;regimes?:{byBtc200:CryptoStatsGroup[];byBreadth:CryptoStatsGroup[];byGate:CryptoStatsGroup[]};stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison;counts:Counts}|null};
+type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{endDaysAgo?:number;regimes?:{byBtc200:CryptoStatsGroup[];byBreadth:CryptoStatsGroup[];byGate:CryptoStatsGroup[];byRsRule?:CryptoStatsGroup[];byRsTercile?:CryptoStatsGroup[];byCoinTrend?:CryptoStatsGroup[]};stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison;counts:Counts}|null};
 export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:number}){
  const [windowOffset,setWindowOffset]=useState(0);
  const [data,setData]=useState<View|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -62,6 +62,13 @@ export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:numbe
     <Table title="By bull gate" rows={sum.regimes.byGate} />
     <Table title="By BTC 200-day regime" rows={sum.regimes.byBtc200} />
     <Table title="By altcoin breadth" rows={sum.regimes.byBreadth} />
+   </div>}
+   {!!sum.regimes?.byRsRule?.length&&<div className="space-y-1 rounded border border-sky-800 p-3">
+    <h3 className="font-semibold">Relative-strength test (rule fixed before testing · evidence only)</h3>
+    <p className="text-xs text-slate-400">Each coin's 30-day return minus BTC's 30-day return, ranked across this backtest's coins on the last completed day before the signal. LEADER = top third of that ranking AND the coin's own daily close above its 50-day average. UNAVAILABLE when fewer than 10 coins or the coin lacks 30/50 days of completed daily candles. Judge it across all three windows before changing any entry rule.</p>
+    <Table title="By leader rule" rows={sum.regimes.byRsRule} />
+    <Table title="By relative-strength third" rows={sum.regimes.byRsTercile??[]} />
+    <Table title="By coin's own 50-day trend" rows={sum.regimes.byCoinTrend??[]} />
    </div>}
    <CryptoPaperStats stats={sum.stats} exitPlans={sum.exitPlans} title="Backtest statistics" source={`backtest trades on Coinbase history, 1R = $500 (0.25% of $200k)`} />
   </>}
