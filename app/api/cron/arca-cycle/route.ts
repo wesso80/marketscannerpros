@@ -49,12 +49,17 @@ export async function POST(req: NextRequest) {
   if (!(await authorise(req))) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
-  const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   if(adminDiscoveryOnly()){
+    // Exit-only work runs before any potentially slow/failed discovery request.
+    const monitoring=await runCryptoPaperAll(true).catch(()=>({ok:false,error:'Crypto exit monitoring failed'}));
     const scanning=await runCryptoAutomation().catch(()=>({ok:false,error:'Crypto background scan failed'}));
-    const ok=cryptoPaper.ok&&(!('ok' in scanning)||scanning.ok);
-    return NextResponse.json({...cryptoPaper,ok,scanning},{status:ok?200:503});
+    const scanFailed='ok' in scanning&&!scanning.ok;
+    // Full cycle rechecks protection and then uses the newly saved scan immediately.
+    const cryptoPaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper entry cycle failed'}));
+    const ok=monitoring.ok&&cryptoPaper.ok&&!scanFailed;
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning},{status:ok?200:503});
   }
+  const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   const started = Date.now();
   try {
     let rows: Array<{ workspace_id: string }> = [];

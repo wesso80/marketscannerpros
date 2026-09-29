@@ -6,6 +6,7 @@ vi.mock('@/lib/admin/cryptoPaper',()=>({runCryptoPaperAll:vi.fn(async()=>({ok:tr
 vi.mock('@/lib/db',()=>({q:vi.fn(async()=>[])}));
 vi.mock('@/lib/admin/portfolio-lab/simulateCycle',()=>({simulateArcaCycle:vi.fn()}));
 vi.mock('@/lib/admin/notifyAdmin',()=>({notifyAdmin:vi.fn()}));
+import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import {q} from '@/lib/db';
 import {simulateArcaCycle} from '@/lib/admin/portfolio-lab/simulateCycle';
@@ -17,9 +18,15 @@ it('rejects unauthenticated cron before any work',async()=>{
 });
 it('runs only the crypto paper cycle while other admin jobs are paused',async()=>{
  expect((await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}))).status).toBe(200);
- expect(runCryptoPaperAll).toHaveBeenCalledOnce();expect(q).not.toHaveBeenCalled();expect(simulateArcaCycle).not.toHaveBeenCalled();
+ expect(runCryptoPaperAll).toHaveBeenCalledTimes(2);expect(runCryptoPaperAll).toHaveBeenNthCalledWith(1,true);expect(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]);expect(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[1]);expect(q).not.toHaveBeenCalled();expect(simulateArcaCycle).not.toHaveBeenCalled();
 });
 it('reports paper failure as a failed cron',async()=>{
  vi.mocked(runCryptoPaperAll).mockRejectedValueOnce(Error('db offline'));
  expect((await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}))).status).toBe(503);
+});
+
+it('a scan failure cannot prevent the initial exit pass or permit new entries',async()=>{
+ vi.mocked(runCryptoAutomation).mockRejectedValueOnce(Error('scan offline'));
+ const response=await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}));
+ expect(response.status).toBe(503);expect(runCryptoPaperAll).toHaveBeenCalledTimes(1);expect(runCryptoPaperAll).toHaveBeenCalledWith(true);
 });

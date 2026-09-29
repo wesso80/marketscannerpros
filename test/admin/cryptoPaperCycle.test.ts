@@ -83,3 +83,16 @@ it('does not report success when a failed-cycle retry encounters the cooldown',a
  vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=>null)} as never);
  expect(await runCryptoPaperAll()).toMatchObject({ok:false,results:[{skipped:true}]});
 });
+
+it('the exit-only pass never fetches or opens a new candidate',async()=>{
+ expect(await runCryptoPaperCycle('w','cron',true)).toMatchObject({phase:'monitor',opened:0});
+ expect(fetchVolumeMomentum).not.toHaveBeenCalled();expect(createSimulatedOrder).not.toHaveBeenCalled();
+});
+it('records unsupported venues and duplicates explicitly',async()=>{
+ scan.rows[0].pair={exchange:'okex',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
+ expect(await runCryptoPaperCycle('w')).toMatchObject({decisions:[{coin:'bitcoin',status:'BLOCKED',reason:'Unsupported paper venue/quote; Coinbase USD required'}]});
+});
+it('records the observed quote for an entry price rejection',async()=>{
+ vi.mocked(fetchPaperQuote).mockResolvedValue({bid:110,ask:110.01,product:'BTC-USD',priceAt:new Date(now).toISOString(),receivedAt:new Date(now).toISOString()});
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',bid:110,ask:110.01,quoteAt:new Date(now).toISOString()}]});
+});
