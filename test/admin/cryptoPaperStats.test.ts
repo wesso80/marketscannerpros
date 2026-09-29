@@ -7,6 +7,7 @@ it('computes expectancy in R and groups by setup, venue and recorded BTC trend',
  expect(s.overall).toMatchObject({trades:4,winRate:.5,avgR:.5,avgWinR:2,avgLossR:-1,profitFactor:2,netPnl:1000,avgHoldHours:6});
  expect(s.byBtcRegime.find(g=>g.label==='DOWN')).toMatchObject({trades:2,avgR:-1});
  expect(s.byBtcRegime.find(g=>g.label==='NOT_RECORDED')?.trades).toBe(1);
+ expect(s.byShadowFilter).toEqual(expect.arrayContaining([expect.objectContaining({label:'WOULD_SKIP',trades:2,avgR:-1}),expect.objectContaining({label:'PASS',trades:1,avgR:2}),expect.objectContaining({label:'NOT_RECORDED',trades:1})]));
  expect(s.byVenue.map(g=>g.label).sort()).toEqual(['Coinbase USD','OKX USDT→USD']);
  expect(s.bySetup.find(g=>g.label==='BREAKOUT')?.trades).toBe(2);
 });
@@ -20,4 +21,8 @@ it('labels small samples as insufficient and never invents R for missing values'
 it('groups trades by recorded funding state, keeping untagged trades separate',()=>{
  const s=summarizeCryptoPaper([{...row(2,'BREAKOUT'),created_reason:reason('BREAKOUT','UP','CROWDED_LONG')},{...row(-1,'BREAKOUT'),created_reason:reason('BREAKOUT','UP','NEUTRAL')},row(1,'BREAKOUT')]);
  expect(s.byFunding.map(g=>g.label).sort()).toEqual(['CROWDED_LONG','NEUTRAL','NOT_RECORDED']);
+});
+it('shadow BTC-down filter labels only from the recorded trend and never guesses a side',async()=>{
+ const {btcDownFilter}=await import('@/lib/admin/cryptoMarketRegime');
+ expect(['UP','MIXED','DOWN','UNAVAILABLE',null].map(btcDownFilter)).toEqual(['PASS','PASS','WOULD_SKIP','UNAVAILABLE','NOT_RECORDED']);
 });
