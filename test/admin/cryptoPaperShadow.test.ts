@@ -47,3 +47,11 @@ it('compares plans only on positions closed under both',()=>{
  const cmp=compareExitPlans(rows,[{positionId:'a',status:'CLOSED',r:3,legs:[{reason:'TRAIL_STOP'}]},{positionId:'b',status:'CLOSED',r:-1,legs:[{reason:'STOP'}]},{positionId:'c',status:'OPEN',r:null,legs:[]}]);
  expect(cmp).toMatchObject({pairs:2,openShadows:1,fixed:{avgR:.5,totalR:1},trail:{avgR:1,totalR:2},trailExitReasons:{TRAIL_STOP:1,STOP:1}});
 });
+it('backtest horizon closes a still-running remainder at a completed close, and leaves closed shadows alone',async()=>{
+ const {closeShadowAt}=await import('@/lib/admin/cryptoPaperShadow');
+ const s1=advanceShadow(initShadow(pos(),2,c),[bar(0,100,107.5,101,107)],now);
+ const h=closeShadowAt(s1,110,t0+step);
+ expect(h).toMatchObject({status:'CLOSED',legs:[{reason:'PARTIAL_TARGET'},{fraction:.5,price:110,reason:'HORIZON'}]});
+ expect(h.r).toBeCloseTo((.5*net(107.5)+.5*net(110))/5,3);
+ expect(closeShadowAt(h,1,t0)).toBe(h);
+});

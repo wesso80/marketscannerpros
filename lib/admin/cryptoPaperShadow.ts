@@ -3,7 +3,7 @@ const STEP=900000,H=3600000;
 export const SHADOW_PLAN='partial-trail-v1' as const,SHADOW_TITLE='Crypto shadow exit plan partial-trail-v1';
 /** Research-only alternative exit, replayed on the same candles as the ledger. It never changes a paper position. */
 export const SHADOW_RULES={partialR:1.5,partialFraction:.5,trailAtr:2,timeStopHours:24,timeStopMinR:1};
-export type ShadowLeg={fraction:number;price:number;at:string;reason:'PARTIAL_TARGET'|'STOP'|'BREAKEVEN_STOP'|'TRAIL_STOP'|'TIME_STOP'};
+export type ShadowLeg={fraction:number;price:number;at:string;reason:'PARTIAL_TARGET'|'STOP'|'BREAKEVEN_STOP'|'TRAIL_STOP'|'TIME_STOP'|'HORIZON'};
 export type ShadowState={version:1;plan:typeof SHADOW_PLAN;positionId:string;symbol:string;instrumentType:string;entry:number;entryAt:string;stop0:number;atr:number;costRate:number;entryFeePerUnit:number;through:string;status:'OPEN'|'CLOSED'|'UNAVAILABLE';stop:number;highest:number|null;remaining:number;legs:ShadowLeg[];r:number|null;reason?:string};
 export function initShadow(p:{id:string;symbol:string;instrumentType:string;averageEntry:number;openedAt:string;initialStopLoss?:number|null;quantity:number;entryFee?:number},atr:number,costRate:number):ShadowState{
  const stop0=p.initialStopLoss,entryAt=Date.parse(p.openedAt);
@@ -20,6 +20,8 @@ function close(s:ShadowState,price:number,at:number,reason:ShadowLeg['reason']):
  const r=legs.reduce((sum,l)=>sum+l.fraction*netPerUnit(s,l.price),0)/(s.entry-s.stop0);
  return {...s,legs,remaining:0,status:'CLOSED',r:Math.round(r*1000)/1000,through:new Date(at).toISOString()};
 }
+/** Backtest only: marks a still-open remainder at a completed candle close so long-running winners are not dropped. */
+export function closeShadowAt(s:ShadowState,price:number,at:number):ShadowState{return s.status==='OPEN'?close(s,price,at,'HORIZON'):s;}
 /**
  * Replays completed 15m candles from the saved checkpoint. Order inside a candle is unknown, so the stop is
  * checked first; after a same-candle partial, a breakeven touch is also charged. Trail and time-stop levels use

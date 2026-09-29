@@ -1,6 +1,7 @@
 'use client';
 const CryptoSetupEmail = dynamic(()=>import('@/components/admin/CryptoSetupEmail'), {ssr:false});
 const CryptoPaperAccount = dynamic(()=>import('@/components/admin/CryptoPaperAccount'), {ssr:false});
+const CryptoBacktest = dynamic(()=>import('@/components/admin/CryptoBacktest'), {ssr:false});
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
 const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
@@ -66,6 +67,7 @@ export default function CryptoMarketsPage() {
     <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
     <CryptoSetupEmail refreshVersion={refreshVersion} />
     <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />
+    <CryptoBacktest refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
