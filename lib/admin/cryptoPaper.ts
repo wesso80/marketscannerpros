@@ -17,6 +17,7 @@ import {writeJournal} from './portfolio-lab/journalEngine';
 import {fetchVolumeMomentum,type MomentumScan} from './cryptoVolumeMomentum';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {fourHourBars,instrumentPair,correlationScale} from './cryptoCorrelation';
+import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
@@ -195,6 +196,8 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    const openBars:{coin:string;bars:Awaited<ReturnType<typeof fourHourBars>>|null}[]=[];
    for(const p of currentOpens){const ip=instrumentPair(p.instrumentType);openBars.push({coin:p.symbol,bars:ip?await fourHourBars(ip).catch(()=>null):null});}
    const corr=correlationScale(candidateBars,openBars);
+   // Evidence only: OKX perpetual funding/open interest is recorded for later comparison and never blocks an entry.
+   const derivatives=await fetchDerivatives(pair.product.split('-')[0],candidateBars);
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
     const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED'||current.status!=='ACTIVE')throw Error('Entries paused');
@@ -208,7 +211,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     if(Number(daily?.n)>=L.dailyEntries)throw Error(`Daily ${L.dailyEntries}-entry cap`);
     const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,corr.scale);if(!plan.ok)throw Error(plan.reason);
     if(opens.reduce((s,p)=>{const cost=p.instrumentType.startsWith('okx-usd-v1:') ? .001 : .0005;return s+(p.stopLoss==null?Infinity:Math.max(0,p.averageEntry-p.stopLoss*(1-cost))*p.quantity+(p.entryFee??p.averageEntry*p.quantity*cost)+p.stopLoss*(1-cost)*p.quantity*cost);},0)+plan.risk>current.totalEquity*L.openRiskPct/100)throw Error(`${L.openRiskPct}% portfolio risk cap`);
-    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',btcRegime,liquidity:{...liq,capped:plan.liquidityCapped},correlation:corr,simulation:true}),arcaConfidence:null});
+    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',btcRegime,liquidity:{...liq,capped:plan.liquidityCapped},correlation:corr,derivatives,simulation:true}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
     decide(candidate,'OPENED',['Fresh signal, quote and account checks passed',...(corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[])].join('; '),quote);

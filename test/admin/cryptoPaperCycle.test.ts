@@ -10,6 +10,7 @@ vi.mock('@/lib/admin/portfolio-lab/journalEngine',()=>({writeJournal:vi.fn()}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',()=>({fetchVolumeMomentum:vi.fn()}));
 vi.mock('@/lib/admin/cryptoBtcRegime',()=>({currentBtcRegime:vi.fn(async()=>({state:'DOWN',asOf:'2026-09-28T00:00:00.000Z'})),savedBtcRegime:vi.fn(async()=>null)}));
 vi.mock('@/lib/admin/cryptoCorrelation',async(importOriginal)=>({...await importOriginal<object>(),fourHourBars:vi.fn()}));
+vi.mock('@/lib/admin/cryptoDerivatives',()=>({fetchDerivatives:vi.fn(async()=>({status:'OK',source:'okx:USDT-SWAP',fundingState:'ELEVATED_LONG',flags:['LEVERAGE_DRIVEN']}))}));
 vi.mock('@/lib/admin/cryptoPaperOkx',async(importOriginal)=>({...await importOriginal<object>(),fetchOkxUsdQuote:vi.fn(),fetchOkxUsdPath:vi.fn()}));
 vi.mock('@/lib/admin/cryptoPaperMarket',async(importOriginal)=>({...await importOriginal<object>(),fetchPaperQuote:vi.fn(),fetchPaperPath:vi.fn()}));
 import {fetchOkxUsdQuote,fetchOkxUsdPath} from '@/lib/admin/cryptoPaperOkx';
@@ -182,6 +183,11 @@ it('scales risk down for open positions that move with the candidate, and record
  expect(evidence.correlation).toMatchObject({correlated:[{coin:'eth'}],unavailable:['gone']});
  expect(evidence.correlation.scale).toBeCloseTo(1/Math.sqrt(3),6);
  expect(evidence.plan.risk).toBeLessThanOrEqual(500/Math.sqrt(3)+1e-6);
+});
+it('records OKX perpetual funding evidence on entries without using it as a filter',async()=>{
+ const report=await runCryptoPaperCycle('w');expect(report).toMatchObject({opened:1});
+ const order=vi.mocked(createSimulatedOrder).mock.calls[0][0];
+ expect(JSON.parse(order.createdReason.slice(order.createdReason.indexOf('{'))).derivatives).toMatchObject({source:'okx:USDT-SWAP',fundingState:'ELEVATED_LONG',flags:['LEVERAGE_DRIVEN']});
 });
 it('blocks entry when the candidate history for the correlation check is unavailable',async()=>{
  vi.mocked(fourHourBars).mockRejectedValue(Error('down'));
