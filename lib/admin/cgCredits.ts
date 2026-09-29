@@ -7,7 +7,7 @@ import {getRedis} from '@/lib/redis';
 export const CG_BUDGET={
  monthlyCredits:Number(process.env.CG_MONTHLY_CREDITS)>0?Number(process.env.CG_MONTHLY_CREDITS):500000,
  pauseBelowPct:Number(process.env.CG_PAUSE_BELOW_PCT)>0?Number(process.env.CG_PAUSE_BELOW_PCT):15,
- /** Credits per call; CoinGecko paid plans bill 1 credit per request for the endpoints used here (verify on docs). */
+ /** REST: 1 credit per call (docs.coingecko.com/docs/data-delivery-methods; webhooks are 10 per event, WebSocket 0.1 per response). */
  creditsPerCall:1,
  keyCacheSeconds:600,
 };

@@ -6,7 +6,11 @@ import {classifyFunding,type FundingState,type DerivativesEvidence} from './cryp
  * missing stays null/UNAVAILABLE and is never estimated.
  */
 export const CG_MARKET={
- /** Cadence of the scheduled job (existing 15-minute paper cron). Trending is refreshed at most hourly. */
+ /**
+  * Cadence of the scheduled job (existing 15-minute paper cron); trending at most hourly. Never faster than CoinGecko's
+  * documented paid-plan cache: derivatives tickers 30s, derivatives exchanges 60s, /global 10 min, categories 5 min,
+  * top gainers/losers 5 min (Analyst plan and above), /search/trending 10 min.
+  */
  snapshotMinutes:15,trendingMinutes:60,
  /** Top derivatives exchanges by open interest fetched per snapshot (1 + N calls). */
  derivativeExchanges:6,
