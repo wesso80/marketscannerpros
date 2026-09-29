@@ -8,7 +8,9 @@ vi.mock('@/lib/admin/portfolio-lab/positionEngine',()=>({markAndMaybeExit:vi.fn(
 vi.mock('@/lib/admin/portfolio-lab/refreshPaperBalances',()=>({refreshPaperBalances:vi.fn()}));
 vi.mock('@/lib/admin/portfolio-lab/journalEngine',()=>({writeJournal:vi.fn()}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',()=>({fetchVolumeMomentum:vi.fn()}));
+vi.mock('@/lib/admin/cryptoPaperOkx',async(importOriginal)=>({...await importOriginal<object>(),fetchOkxUsdQuote:vi.fn(),fetchOkxUsdPath:vi.fn()}));
 vi.mock('@/lib/admin/cryptoPaperMarket',async(importOriginal)=>({...await importOriginal<object>(),fetchPaperQuote:vi.fn(),fetchPaperPath:vi.fn()}));
+import {fetchOkxUsdQuote,fetchOkxUsdPath} from '@/lib/admin/cryptoPaperOkx';
 import {q} from '@/lib/db';
 import {getRedis} from '@/lib/redis';
 import * as store from '@/lib/admin/portfolio-lab/portfolioStore';
@@ -74,7 +76,7 @@ it('fails closed when shared coordination is unavailable',async()=>{
  vi.mocked(getRedis).mockReturnValue(null);await expect(runCryptoPaperCycle('w')).rejects.toThrow();expect(createSimulatedOrder).not.toHaveBeenCalled();
 });
 it('does not mix USDT research prices into the USD ledger',async()=>{
- scan.rows[0].pair={exchange:'okex',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
+ scan.rows[0].pair={exchange:'binance',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
  expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0});expect(fetchVolumeMomentum).not.toHaveBeenCalled();
 });
 
@@ -89,10 +91,33 @@ it('the exit-only pass never fetches or opens a new candidate',async()=>{
  expect(fetchVolumeMomentum).not.toHaveBeenCalled();expect(createSimulatedOrder).not.toHaveBeenCalled();
 });
 it('records unsupported venues and duplicates explicitly',async()=>{
- scan.rows[0].pair={exchange:'okex',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
- expect(await runCryptoPaperCycle('w')).toMatchObject({decisions:[{coin:'bitcoin',status:'BLOCKED',reason:'Unsupported paper venue/quote; Coinbase USD required'}]});
+ scan.rows[0].pair={exchange:'binance',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
+ expect(await runCryptoPaperCycle('w')).toMatchObject({decisions:[{coin:'bitcoin',status:'BLOCKED',reason:'Unsupported paper venue/quote; Coinbase USD or OKX USDT required'}]});
 });
 it('records the observed quote for an entry price rejection',async()=>{
  vi.mocked(fetchPaperQuote).mockResolvedValue({bid:110,ask:110.01,product:'BTC-USD',priceAt:new Date(now).toISOString(),receivedAt:new Date(now).toISOString()});
  expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',bid:110,ask:110.01,quoteAt:new Date(now).toISOString()}]});
+});
+
+it('opens OKX only with converted USD pricing, doubled costs and exit history ready',async()=>{
+ scan.rows[0].pair={exchange:'okex',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
+ vi.mocked(fetchOkxUsdQuote).mockResolvedValue({bid:99.49,ask:99.5,product:'BTC-USDT',priceAt:new Date(now).toISOString(),receivedAt:new Date(now).toISOString(),conversion:{pair:'USDT-USD',bid:.995,ask:.995,at:new Date(now).toISOString(),nativeBid:99.99,nativeAsk:100,nativeAt:new Date(now).toISOString()}});
+ vi.mocked(fetchOkxUsdPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[]});
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:1});
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({instrumentType:'okx-usd-v1:BTC-USDT',stopLoss:94.525,portfolio:expect.objectContaining({settings:expect.objectContaining({feesPctEstimate:.1,slippagePctEstimate:.1})})}));
+ expect(fillOrderAndOpenPosition).toHaveBeenCalledWith(expect.objectContaining({currentPrice:99.5}));
+ expect(portfolio.settings.feesPctEstimate).toBe(.05);expect(fetchOkxUsdPath).toHaveBeenCalled();
+});
+it('blocks OKX entry if conversion history cannot be monitored',async()=>{
+ scan.rows[0].pair={exchange:'okex',product:'BTC-USDT',quote:'USDT',volumeUnit:'BTC'};
+ vi.mocked(fetchOkxUsdQuote).mockResolvedValue({bid:99.99,ask:100,product:'BTC-USDT',priceAt:new Date(now).toISOString(),receivedAt:new Date(now).toISOString(),conversion:{pair:'USDT-USD',bid:1,ask:1,at:new Date(now).toISOString(),nativeBid:99.99,nativeAsk:100,nativeAt:new Date(now).toISOString()}});
+ vi.mocked(fetchOkxUsdPath).mockRejectedValue(Error('Missing matching USDT/USD exit candle'));
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:'Missing matching USDT/USD exit candle'}]});expect(createSimulatedOrder).not.toHaveBeenCalled();
+});
+it('monitors converted OKX positions while entries are paused using their own cost model',async()=>{
+ portfolio.status='PAUSED';positions=[{...position(),instrumentType:'okx-usd-v1:BTC-USDT'}];
+ vi.mocked(fetchOkxUsdQuote).mockRejectedValue(Error('ticker down'));
+ vi.mocked(fetchOkxUsdPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:94,close:99}]});
+ expect(await runCryptoPaperCycle('w')).toMatchObject({monitorHealthy:true,marked:1});
+ expect(markAndMaybeExit).toHaveBeenCalledWith(expect.objectContaining({portfolio:expect.objectContaining({settings:expect.objectContaining({feesPctEstimate:.1,slippagePctEstimate:.1})})}));
 });
