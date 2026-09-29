@@ -40,3 +40,24 @@ export type ShadowFilterDecision='PASS'|'WOULD_SKIP'|'UNAVAILABLE'|'NOT_RECORDED
 export function btcDownFilter(state:string|null|undefined):ShadowFilterDecision{
  return state==null?'NOT_RECORDED':state==='DOWN'?'WOULD_SKIP':state==='UP'||state==='MIXED'?'PASS':'UNAVAILABLE';
 }
+/**
+ * Relative-strength leader rule, fixed BEFORE testing (not fitted): a coin's 30-day return minus BTC's, ranked across
+ * the coin universe on the last completed day; LEADER = top third AND the coin's own daily close above its 50-day
+ * average. Evidence only; it never blocks a trade.
+ */
+export const RS_RULE='rs-leader-v1';
+export const RS={lookbackDays:30,trendDays:50,topFraction:1/3};
+export type RsTag={excess:number|null;tercile:'TOP'|'MIDDLE'|'BOTTOM'|'UNAVAILABLE';above50:boolean|null;rule:'LEADER'|'NOT_LEADER'|'UNAVAILABLE';coins:number};
+const closeOn=(series:[number,number][],t:number)=>series.find(([x])=>x===t)?.[1];
+export function relativeStrengthAt(coinDaily:Record<string,[number,number][]>,btcDaily:[number,number][],coin:string,at:number):RsTag{
+ const day=Math.floor(at/D)*D,back=day-RS.lookbackDays*D,bNow=closeOn(btcDaily,day),bBack=closeOn(btcDaily,back);
+ const excess=new Map<string,number>();
+ if(bNow&&bBack)for(const [id,s] of Object.entries(coinDaily)){const c=closeOn(s,day),cb=closeOn(s,back);if(c&&cb)excess.set(id,c/cb-bNow/bBack);}
+ const own=coinDaily[coin]?.filter(([t])=>t<=day)??[];
+ const above50=own.length>=RS.trendDays&&own.at(-1)![0]===day?own.at(-1)![1]>mean(own.slice(-RS.trendDays).map(([,c])=>c)):null;
+ const mine=excess.get(coin),n=excess.size;
+ if(mine==null||n<REGIME.minBreadthCoins)return {excess:mine??null,tercile:'UNAVAILABLE',above50,rule:'UNAVAILABLE',coins:n};
+ const ahead=[...excess.values()].filter(x=>x>mine).length;
+ const tercile=ahead<n*RS.topFraction?'TOP':ahead>=n*(1-RS.topFraction)?'BOTTOM':'MIDDLE';
+ return {excess:Math.round(mine*10000)/10000,tercile,above50,rule:above50==null?'UNAVAILABLE':tercile==='TOP'&&above50?'LEADER':'NOT_LEADER',coins:n};
+}
