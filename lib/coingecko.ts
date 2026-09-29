@@ -2279,3 +2279,36 @@ export async function getTopTokenHolders(network: string, address: string, holde
     return null;
   }
 }
+
+// ============================================
+// HISTORY LOADER (admin research backtests)
+// ============================================
+
+export interface CoinListEntry { id: string; symbol: string; name: string }
+/** Full coin list in one response. status 'inactive' (Analyst plan and above) returns coins no longer listed. */
+export async function getCoinsList(status: 'active' | 'inactive' = 'active'): Promise<CoinListEntry[] | null> {
+  try {
+    const params = new URLSearchParams(status === 'inactive' ? { status: 'inactive' } : {});
+    const data = await cgFetch<CoinListEntry[]>('/coins/list', { params, init: { cache: 'no-store' }, timeoutMs: 30_000 });
+    return Array.isArray(data) ? data : null;
+  } catch (error) {
+    console.error('[CoinGecko] Coins list error:', error);
+    return null;
+  }
+}
+
+/** Global market cap AND volume history; daily granularity for 2+ days. Endpoint: /global/market_cap_chart. */
+export async function getGlobalMarketCapHistory(days: number): Promise<{ market_cap: [number, number][]; volume: [number, number][] } | null> {
+  try {
+    const data = await cgFetch<{ market_cap_chart?: { market_cap?: [number, number][]; volume?: [number, number][] } }>('/global/market_cap_chart', {
+      params: new URLSearchParams({ days: String(Math.max(2, Math.floor(days))) }),
+      init: { cache: 'no-store' },
+      timeoutMs: 30_000,
+    });
+    const c = data?.market_cap_chart;
+    return c && Array.isArray(c.market_cap) ? { market_cap: c.market_cap, volume: Array.isArray(c.volume) ? c.volume : [] } : null;
+  } catch (error) {
+    console.error('[CoinGecko] Global market cap history error:', error);
+    return null;
+  }
+}
