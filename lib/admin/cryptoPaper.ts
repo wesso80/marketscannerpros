@@ -1,3 +1,4 @@
+import {supportsPaperPair,fetchOkxUsdQuote,fetchOkxUsdPath,usdSignal,paperCostPortfolio,type ConvertedPaperQuote} from './cryptoPaperOkx';
 import {reconcileCryptoPaper,type CryptoReconciliation} from './cryptoPaperReconciliation';
 import {q,atomicQueries} from '@/lib/db';
 import {getRedis} from '@/lib/redis';
@@ -12,7 +13,7 @@ import {writeJournal} from './portfolio-lab/journalEngine';
 import {fetchVolumeMomentum,type MomentumScan} from './cryptoVolumeMomentum';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
-export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number};
+export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
 const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
 export async function cryptoPaperState(workspaceId:string){
  return atomicQueries(async()=>{
@@ -38,7 +39,7 @@ export async function setCryptoPaperActive(workspaceId:string,active:boolean){
   if(!portfolio)return null;
   await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio.id]);
   await q('UPDATE arca_portfolios SET status=$1,updated_at=NOW() WHERE workspace_id=$2 AND id=$3',[active?'ACTIVE':'PAUSED',workspaceId,portfolio.id]);
-  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD momentum entries. Exit monitoring continues when entries are paused. 0.25% risk, 10% notional cap per trade, five positions, 2% portfolio risk, 5% loss-from-start entry stop. Fees and slippage 0.05% each side. No changes to personal holdings or other paper portfolios.'});
+  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD and converted OKX USDT momentum entries. Exit monitoring continues when entries are paused. 0.25% risk, 10% notional cap per trade, five positions, 2% portfolio risk, 5% loss-from-start entry stop. Fees and slippage each 0.05% per side for Coinbase, 0.10% per side for two-leg OKX conversions. No changes to personal holdings or other paper portfolios.'});
   return portfolio.id;
  });
 }
@@ -54,9 +55,10 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  if(positions.length>5){monitorHealthy=false;notes.push('Unexpected position count; entries blocked');}
  for(const position of positions){
   try{
-   const product=position.instrumentType.startsWith('coinbase:')?position.instrumentType.slice(9):'';
-   if(position.assetClass!=='crypto'||position.side!=='LONG'||!product.endsWith('-USD'))throw Error('Unsupported position scope');
-   const [quoteResult,pathResult]=await Promise.allSettled([fetchPaperQuote(product),fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
+   const converted=position.instrumentType.startsWith('okx-usd-v1:');
+   const product=converted?position.instrumentType.slice(11):position.instrumentType.startsWith('coinbase:')?position.instrumentType.slice(9):'';
+   if(position.assetClass!=='crypto'||position.side!=='LONG'||!(converted?/^[A-Z0-9]{1,30}-USDT$/.test(product):/^[A-Z0-9]{1,30}-USD$/.test(product)))throw Error('Unsupported position scope');
+   const [quoteResult,pathResult]=await Promise.allSettled([converted?fetchOkxUsdQuote(product):fetchPaperQuote(product),converted?fetchOkxUsdPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt):fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
    if(pathResult.status!=='fulfilled')throw new PaperMarketError(pathResult.reason instanceof PaperMarketError?pathResult.reason.message:'Exit history request failed or timed out');
    const path=pathResult.value,quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
    await atomicQueries(async()=>{
@@ -71,7 +73,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     const freshQuote=quote&&Date.now()-Date.parse(quote.priceAt)<=60000;
     if(!checked.exit&&!freshQuote)throw new PaperMarketError(quoteResult.status==='rejected'&&quoteResult.reason instanceof PaperMarketError?quoteResult.reason.message:'Exit quote unavailable or expired');
     // A proven earlier stop/target can settle even if the ticker is down.
-    const result=await markAndMaybeExit({portfolio:current,position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,skipLearning:true});
+    const result=await markAndMaybeExit({portfolio:paperCostPortfolio(current,pos.instrumentType),position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,skipLearning:true});
     const updated=await getPortfolioById(workspaceId,current.id);if(!updated)throw Error('Paper account unavailable');
     await refreshPaperBalances(updated,updated.currentCash,updated.realisedPnl);
     marked++;if(result.exit)closed++;
@@ -90,12 +92,12 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  const all=recent?scan.rows.filter(r=>r.stage==='MOMENTUM_VOLUME'):[];
  if(!recent)notes.push('No current 4h momentum scan; no entries');
  const decide=(candidate:typeof all[number],status:CryptoPaperDecision['status'],reason:string,quote?:Awaited<ReturnType<typeof fetchPaperQuote>>)=>{
-  decisions.push({coin:candidate.id,product:candidate.pair?.product??null,venue:candidate.pair?.exchange??null,signalAt:candidate.asOf,checkedAt:new Date().toISOString(),status,reason,...(quote?{quoteAt:quote.priceAt,bid:quote.bid,ask:quote.ask}:{})});
+  decisions.push({coin:candidate.id,product:candidate.pair?.product??null,venue:candidate.pair?.exchange??null,signalAt:candidate.asOf,checkedAt:new Date().toISOString(),status,reason,...(quote?{quoteAt:quote.priceAt,bid:quote.bid,ask:quote.ask,quoteCurrency:'USD' as const,...('conversion' in quote?{conversion:(quote as ConvertedPaperQuote).conversion}:{})}:{})});
  };
- for(const candidate of all)if(candidate.pair?.exchange!=='gdax'||candidate.pair?.quote!=='USD')decide(candidate,'BLOCKED','Unsupported paper venue/quote; Coinbase USD required');
- const candidates=all.filter(r=>r.pair?.exchange==='gdax'&&r.pair.quote==='USD');
+ for(const candidate of all)if(!supportsPaperPair(candidate.pair))decide(candidate,'BLOCKED','Unsupported paper venue/quote; Coinbase USD or OKX USDT required');
+ const candidates=all.filter(r=>supportsPaperPair(r.pair));
  if(all.length>candidates.length)notes.push(`${all.length-candidates.length} setups use other quote/venue combinations; paper support pending`);
- if(!candidates.length&&recent)notes.push('No confirmed Coinbase USD momentum setups in saved scan');
+ if(!candidates.length&&recent)notes.push('No confirmed supported momentum setups in saved scan');
  if(portfolio.status!=='ACTIVE')notes.push('Entries paused; exits checked');
  for(const candidate of candidates)if(!monitorHealthy||portfolio.status!=='ACTIVE')decide(candidate,'BLOCKED',!monitorHealthy?'Exit monitoring unhealthy':'Paper entries paused');
  let attempts=0;
@@ -111,7 +113,13 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    if(currentOpens.length>=5){decide(candidate,'BLOCKED','Five-position cap');continue;}
    if(currentOpens.some(p=>p.symbol===candidate.id)){decide(candidate,'BLOCKED','Position already open');continue;}
    attempts++;
-   const [signal,quote]=await Promise.all([fetchVolumeMomentum(pair,Date.now()),fetchPaperQuote(pair.product)]);
+   const converted=pair.exchange==='okex',instrument=converted?`okx-usd-v1:${pair.product}`:`coinbase:${pair.product}`;
+   const [nativeSignal,quote]=await Promise.all([fetchVolumeMomentum(pair,Date.now()),converted?fetchOkxUsdQuote(pair.product):fetchPaperQuote(pair.product)]);
+   checkedQuote=quote;
+   if(converted&&nativeSignal.stage==='MOMENTUM_VOLUME'){const c=(quote as ConvertedPaperQuote).conversion;if(c.nativeAsk<nativeSignal.entryFloor!||c.nativeAsk*1.001>nativeSignal.maxEntry!)throw Error('Native USDT quote is outside the valid entry zone');}
+   const signal=converted?usdSignal(nativeSignal,quote as ConvertedPaperQuote):nativeSignal;
+   // Prove both exit providers can cover a completed interval before opening this venue.
+   if(converted)await fetchOkxUsdPath(candidate.id,pair.product,new Date(Math.floor(Date.now()/900000)*900000-900000).toISOString());
    checkedQuote=quote;
    if(signal.asOf!==candidate.asOf||signal.kind!==candidate.kind)throw Error('Setup candle changed; refresh momentum scan');
    await atomicQueries(async()=>{
@@ -125,10 +133,10 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     if(current.totalEquity<current.startingBalance*.95)throw Error('5% loss-from-start entry stop');
     const [daily]=await q<{n:string}>('SELECT COUNT(*) AS n FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND filled_at >= date_trunc(\'day\',NOW() AT TIME ZONE \'UTC\') AT TIME ZONE \'UTC\'',[workspaceId,current.id]);
     if(Number(daily?.n)>=10)throw Error('Daily ten-entry cap');
-    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash);if(!plan.ok)throw Error(plan.reason);
-    if(opens.reduce((s,p)=>s+(p.stopLoss==null?Infinity:Math.max(0,p.averageEntry-p.stopLoss*.9995)*p.quantity+(p.entryFee??p.averageEntry*p.quantity*.0005)+p.stopLoss*.9995*p.quantity*.0005),0)+plan.risk>current.totalEquity*.02)throw Error('2% portfolio risk cap');
-    const order=await createSimulatedOrder({portfolio:current,symbol:candidate.id,assetClass:'crypto',instrumentType:`coinbase:${pair.product}`,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:1,signal,pair,quote,plan,simulation:true}),arcaConfidence:null});
-    await fillOrderAndOpenPosition({portfolio:current,order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
+    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005);if(!plan.ok)throw Error(plan.reason);
+    if(opens.reduce((s,p)=>{const cost=p.instrumentType.startsWith('okx-usd-v1:') ? .001 : .0005;return s+(p.stopLoss==null?Infinity:Math.max(0,p.averageEntry-p.stopLoss*(1-cost))*p.quantity+(p.entryFee??p.averageEntry*p.quantity*cost)+p.stopLoss*(1-cost)*p.quantity*cost);},0)+plan.risk>current.totalEquity*.02)throw Error('2% portfolio risk cap');
+    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',simulation:true}),arcaConfidence:null});
+    await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
     decide(candidate,'OPENED','Fresh signal, quote and account checks passed',quote);
    });
