@@ -1,3 +1,5 @@
+vi.mock('@/lib/admin/cryptoOpsAlerts',()=>({reportCryptoCycleHealth:vi.fn(async()=>({ok:true}))}));
+import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 vi.mock('@/lib/admin/cryptoAutomation',()=>({runCryptoAutomation:vi.fn(async()=>({enabled:false,skipped:true}))}));
 import {beforeEach,afterEach,expect,it,vi} from 'vitest';
 import {NextRequest} from 'next/server';
@@ -30,3 +32,5 @@ it('a scan failure cannot prevent the initial exit pass or permit new entries',a
  const response=await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}));
  expect(response.status).toBe(503);expect(runCryptoPaperAll).toHaveBeenCalledTimes(1);expect(runCryptoPaperAll).toHaveBeenCalledWith(true);
 });
+
+it('keeps paper work successful even if email delivery fails',async()=>{vi.mocked(reportCryptoCycleHealth).mockRejectedValueOnce(Error('email down'));const r=await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}));expect(r.status).toBe(200);expect((await r.json()).operationalAlerts.ok).toBe(false);});
