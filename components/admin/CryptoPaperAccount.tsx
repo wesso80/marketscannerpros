@@ -3,11 +3,11 @@ import type {CryptoPaperDecision} from '@/lib/admin/cryptoPaper';
 import type {CryptoReconciliation} from '@/lib/admin/cryptoPaperReconciliation';
 import {useEffect,useState} from 'react';
 import type {ArcaPortfolio,ArcaPosition,ArcaTrade,ArcaJournalEntry} from '@/lib/admin/portfolio-lab/types';
-import type {CryptoPaperStats as Stats} from '@/lib/admin/cryptoPaperStats';
+import type {CryptoPaperStats as Stats,ExitPlanComparison} from '@/lib/admin/cryptoPaperStats';
 import type {BtcRegime} from '@/lib/admin/cryptoBtcRegime';
 import CryptoPaperStats from './CryptoPaperStats';
 type Limits={riskPerTradePct:number;notionalPct:number;positions:number;openRiskPct:number;dailyEntries:number;lossFromStartPct:number};
-type State={limits?:Limits;btcRegime?:BtcRegime|null;stats?:Stats|null;reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
+type State={limits?:Limits;btcRegime?:BtcRegime|null;stats?:Stats|null;exitPlans?:ExitPlanComparison|null;reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
 export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now:number;refreshVersion?:number;onRefresh?:()=>void}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -43,7 +43,7 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
    <p>Entries: {p.status} · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L {money(p.unrealisedPnl)} (before exit costs)</p>
    <p>{last?`Last cycle ${new Date(last.createdAt).toLocaleString()}${now-Date.parse(last.createdAt)>25*60000?' · OVERDUE — check monitoring':''}`:'No completed cycle recorded yet'}</p>
    {last?.arcaReasoning&&<p className="text-sm text-slate-400">{last.arcaReasoning}</p>}
-   <CryptoPaperStats stats={data?.stats} />
+   <CryptoPaperStats stats={data?.stats} exitPlans={data?.exitPlans} />
    {data?.reconciliation&&<section aria-label="Paper account reconciliation" className="rounded border border-slate-700 p-3">
     <h3>Account reconciliation: {data.reconciliation.status}</h3>
     <p>Read-only check against starting cash, open-position costs and all closed trades. No balancing adjustment is made. Tolerance: $0.05.</p>

@@ -17,6 +17,7 @@ import {getRedis} from '@/lib/redis';
 import * as store from '@/lib/admin/portfolio-lab/portfolioStore';
 import {createSimulatedOrder,fillOrderAndOpenPosition} from '@/lib/admin/portfolio-lab/simulatedOrderEngine';
 import {markAndMaybeExit} from '@/lib/admin/portfolio-lab/positionEngine';
+import {writeJournal} from '@/lib/admin/portfolio-lab/journalEngine';
 import {fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {fetchPaperQuote,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
 import {runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
@@ -136,6 +137,18 @@ it('records the BTC daily trend on each entry without using it as a filter',asyn
  expect(report).toMatchObject({opened:1,btcRegime:{state:'DOWN'}});
  const reason=vi.mocked(createSimulatedOrder).mock.calls[0][0].createdReason;
  expect(JSON.parse(reason.slice(reason.indexOf('{'))).btcRegime).toMatchObject({state:'DOWN'});
+});
+it('starts a research-only shadow exit for open positions, and shadow failures never block entries',async()=>{
+ positions=[{...position(),symbol:'other'}];
+ vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
+ const shadow={version:1,plan:'partial-trail-v1',positionId:'old',symbol:'gone',instrumentType:'coinbase:GONE-USD',entry:100,entryAt:new Date(now-2*step).toISOString(),stop0:95,atr:2,costRate:.0005,entryFeePerUnit:.05,through:new Date(now-2*step).toISOString(),status:'OPEN',stop:95,highest:null,remaining:1,legs:[],r:null};
+ vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('DISTINCT ON (position_id)')?[{state:JSON.stringify(shadow)}] as never:[]);
+ vi.mocked(fetchPaperPath).mockImplementationOnce(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}))
+  .mockImplementationOnce(async()=>{throw Error('shadow provider down');});
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,monitorHealthy:true});
+ expect(report.notes).toContain('Shadow exit gone: shadow provider down; retried next cycle');
+ expect(vi.mocked(writeJournal).mock.calls.some(([a])=>a.title==='Crypto shadow exit plan partial-trail-v1'&&a.positionId==='pos')).toBe(true);
 });
 it('does not report a cron skip after a recent manual cycle as unhealthy, but still flags overlapping cron runs',async()=>{
  vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('FROM arca_portfolios WHERE name')?[{workspace_id:'w'}] as never:[]);

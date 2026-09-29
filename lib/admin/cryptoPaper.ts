@@ -2,6 +2,8 @@ import {supportsPaperPair,fetchOkxUsdQuote,fetchOkxUsdPath,usdSignal,paperCostPo
 import {reconcileCryptoPaper,type CryptoReconciliation} from './cryptoPaperReconciliation';
 import {summarizeCryptoPaper,type CryptoPaperStats,type CryptoStatsRow} from './cryptoPaperStats';
 import {currentBtcRegime,savedBtcRegime,type BtcRegime} from './cryptoBtcRegime';
+import {initShadow,advanceShadow,shadowChanged,SHADOW_TITLE,type ShadowState} from './cryptoPaperShadow';
+import {compareExitPlans} from './cryptoPaperStats';
 import {q,atomicQueries} from '@/lib/db';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from './adminCrypto';
@@ -21,22 +23,63 @@ const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
 export const CRYPTO_PAPER_LIMITS={riskPerTradePct:.25,notionalPct:10,positions:20,openRiskPct:5,dailyEntries:30,cycleEntries:4,cycleValidations:8,lossFromStartPct:5};
 const L=CRYPTO_PAPER_LIMITS;
 const BUSY='Crypto paper cycle already running or cooling down',MANUAL_RECENT='Manual crypto paper cycle ran within the last three minutes';
+/** Latest saved shadow exit state per position. Unparseable rows are skipped, never reconstructed. */
+async function shadowStates(workspaceId:string,portfolioId:string):Promise<Map<string,ShadowState>>{
+ const rows=await q<{state:string|null}>('SELECT DISTINCT ON (position_id) evidence->>0 AS state FROM arca_trade_journal WHERE workspace_id=$1 AND portfolio_id=$2 AND title=$3 AND position_id IS NOT NULL ORDER BY position_id,created_at DESC',[workspaceId,portfolioId,SHADOW_TITLE]);
+ const m=new Map<string,ShadowState>();
+ for(const row of rows){try{const st=JSON.parse(row.state??'') as ShadowState;if(st?.positionId)m.set(st.positionId,st);}catch{}}
+ return m;
+}
+async function saveShadow(workspaceId:string,portfolioId:string,st:ShadowState){
+ await writeJournal({workspaceId,portfolioId,positionId:st.positionId,symbol:st.symbol,journalType:'REVIEW',title:SHADOW_TITLE,reasoning:`RESEARCH ONLY: alternative exit replayed on the ledger's candles; the paper position is unchanged. ${st.status}${st.reason?` · ${st.reason}`:''}`,evidence:[JSON.stringify(st)],dataFreshness:st.through});
+}
+/** Starts a shadow for every open position before exits are checked, so none can close unobserved. */
+async function initShadows(workspaceId:string,portfolioId:string,positions:Awaited<ReturnType<typeof listOpenPositions>>,notes:string[]){
+ try{
+  const known=await shadowStates(workspaceId,portfolioId);
+  for(const p of positions){
+   if(known.has(p.id))continue;
+   const [order]=p.sourceOrderId?await q<{created_reason:string|null}>('SELECT created_reason FROM arca_simulated_orders WHERE workspace_id=$1 AND id=$2',[workspaceId,p.sourceOrderId]):[];
+   let atr=NaN;try{const r=order?.created_reason??'';atr=Number(JSON.parse(r.slice(r.indexOf('{'))).signal?.atr);}catch{}
+   await saveShadow(workspaceId,portfolioId,initShadow(p,atr,p.instrumentType.startsWith('okx-usd-v1:')?.001:.0005));
+  }
+ }catch{notes.push('Shadow exit plan could not start for new positions; paper exits unaffected');}
+}
+/** Advances open shadows on completed candles. Failures are research gaps only and never block entries. */
+async function advanceShadows(workspaceId:string,portfolioId:string,notes:string[]){
+ let states:Map<string,ShadowState>;
+ try{states=await shadowStates(workspaceId,portfolioId);}catch{notes.push('Shadow exit plan state unavailable; paper exits unaffected');return;}
+ for(const st of states.values()){
+  if(st.status!=='OPEN')continue;
+  try{
+   const converted=st.instrumentType.startsWith('okx-usd-v1:'),product=converted?st.instrumentType.slice(11):st.instrumentType.slice(9);
+   const path=converted?await fetchOkxUsdPath(st.symbol,product,st.through):await fetchPaperPath(st.symbol,product,st.through);
+   const next=advanceShadow(st,path.candles);
+   if(shadowChanged(st,next))await saveShadow(workspaceId,portfolioId,next);
+  }catch(error){
+   const message=error instanceof Error?error.message:'request failed';
+   if(/requires recovery/.test(message))await saveShadow(workspaceId,portfolioId,{...st,status:'UNAVAILABLE',reason:'Shadow history is beyond the seven-day catch-up window'}).catch(()=>undefined);
+   else notes.push(`Shadow exit ${st.symbol}: ${message}; retried next cycle`);
+  }
+ }
+}
 export async function cryptoPaperState(workspaceId:string){
  return atomicQueries(async()=>{
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
- if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:L,btcRegime:await savedBtcRegime(),stats:null};
+ if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:L,btcRegime:await savedBtcRegime(),stats:null,exitPlans:null};
  await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR SHARE',[workspaceId,portfolio.id]);
  portfolio=await getPortfolioById(workspaceId,portfolio.id);if(!portfolio)throw Error('Paper account unavailable');
- const [positions,trades,journal]=await Promise.all([listOpenPositions(workspaceId,portfolio.id),listTrades(workspaceId,portfolio.id,{limit:100}),listJournal(workspaceId,portfolio.id,{limit:25})]);
+ const [positions,trades,journal]=await Promise.all([listOpenPositions(workspaceId,portfolio.id),listTrades(workspaceId,portfolio.id,{limit:100}),listJournal(workspaceId,portfolio.id,{limit:500})]).then(([a,b,j])=>[a,b,j.filter(e=>e.title!=='Paper candle checkpoint v1'&&e.title!==SHADOW_TITLE).slice(0,25)] as const);
+ // Per-position checkpoint and shadow rows are bookkeeping; keep them from hiding cycle reports and decisions.
  let reconciliation:CryptoReconciliation;
  try{
   const [totals]=await q<{net:string;fees:string;count:string;invalid:string}>(`SELECT COALESCE(SUM(realised_pnl),0) AS net,COALESCE(SUM(fees_estimate),0) AS fees,COUNT(*) AS count,COUNT(*) FILTER (WHERE side<>'LONG' OR ABS(realised_pnl-((exit_price-entry_price)*quantity-fees_estimate))>0.03) AS invalid FROM arca_trades WHERE workspace_id=$1 AND portfolio_id=$2`,[workspaceId,portfolio.id]);
   if(!totals)throw Error('Missing ledger totals');
   reconciliation=reconcileCryptoPaper(portfolio,positions,{net:Number(totals.net),fees:Number(totals.fees),count:Number(totals.count),invalid:Number(totals.invalid)});
  }catch{reconciliation={status:'UNAVAILABLE',checkedAt:new Date().toISOString(),reason:'Ledger totals could not be read'};}
- let stats:CryptoPaperStats|null=null;
- try{stats=summarizeCryptoPaper(await q<CryptoStatsRow>('SELECT t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,o.created_reason FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]));}catch{stats=null;}
- return {portfolio,positions,trades,journal,reconciliation,limits:L,btcRegime:await savedBtcRegime(),stats};
+ let stats:CryptoPaperStats|null=null,exitPlans:ReturnType<typeof compareExitPlans>|null=null;
+ try{const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,o.created_reason FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);exitPlans=compareExitPlans(rows,[...(await shadowStates(workspaceId,portfolio.id)).values()]);}catch{stats=null;exitPlans=null;}
+ return {portfolio,positions,trades,journal,reconciliation,limits:L,btcRegime:await savedBtcRegime(),stats,exitPlans};
  });
 }
 export async function setCryptoPaperActive(workspaceId:string,active:boolean){
@@ -63,6 +106,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  const notes:string[]=[];let opened=0,closed=0,marked=0,monitorHealthy=true;
  const positions=await listOpenPositions(workspaceId,portfolio.id);
  if(positions.length>L.positions){monitorHealthy=false;notes.push('Unexpected position count; entries blocked');}
+ await initShadows(workspaceId,portfolio.id,positions,notes);
  for(const position of positions){
   try{
    const converted=position.instrumentType.startsWith('okx-usd-v1:');
@@ -90,6 +134,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    });
   }catch(error){monitorHealthy=false;notes.push(`${position.symbol}: ${error instanceof PaperMarketError?error.message:'Exit accounting failed'}; entries blocked until monitoring recovers`);}
  }
+ await advanceShadows(workspaceId,portfolio.id,notes);
  if(monitorOnly){
   const report={trigger,phase:'monitor',at:new Date().toISOString(),opened,closed,marked,monitorHealthy,notes};
   await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:'Crypto paper exit monitoring completed',reasoning:notes.join('; ')||'Exit monitoring completed before scanning',evidence:[JSON.stringify(report)]});

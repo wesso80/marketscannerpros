@@ -1,5 +1,5 @@
 /** Closed-trade expectancy in R for the crypto paper beta. Read-only; no row is adjusted or inferred. */
-export type CryptoStatsRow={r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null};
+export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null};
 export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null};
 export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byExit:CryptoStatsGroup[]};
 type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;exit:string};
@@ -31,4 +31,17 @@ export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):Crypt
  const sample=!trades.length?'NO_TRADES':n<30?'INSUFFICIENT':n<100?'EARLY':'USABLE';
  const sampleNote={NO_TRADES:'No closed paper trades yet.',INSUFFICIENT:`${n} closed trades with R. Under 30 trades, results are mostly noise; do not draw conclusions.`,EARLY:`${n} closed trades with R. Directional evidence only; breakdowns with few trades remain unreliable.`,USABLE:`${n} closed trades with R. Overall figures are usable; still check each breakdown's own trade count.`}[sample];
  return {checkedAt:new Date(now).toISOString(),sample,sampleNote,overall:group('All trades',trades),bySetup:by(trades,t=>t.setup),byVenue:by(trades,t=>t.venue),byBtcRegime:by(trades,t=>t.regime),byExit:by(trades,t=>t.exit)};
+}
+export type ExitPlanSide={trades:number;avgR:number|null;winRate:number|null;totalR:number};
+export type ExitPlanComparison={pairs:number;openShadows:number;unavailableShadows:number;fixed:ExitPlanSide;trail:ExitPlanSide;trailExitReasons:Record<string,number>;note:string};
+/** Compares the ledger's fixed-target result with the shadow plan on the SAME closed positions only. */
+export function compareExitPlans(rows:CryptoStatsRow[],shadows:{positionId:string;status:string;r:number|null;legs:{reason:string}[]}[]):ExitPlanComparison{
+ const fixedByPosition=new Map(rows.filter(r=>r.position_id&&r.r_multiple!=null&&Number.isFinite(Number(r.r_multiple))).map(r=>[r.position_id!,Number(r.r_multiple)]));
+ const pairs=shadows.filter(s=>s.status==='CLOSED'&&s.r!=null&&Number.isFinite(s.r)&&fixedByPosition.has(s.positionId));
+ const side=(rs:number[]):ExitPlanSide=>({trades:rs.length,avgR:rs.length?rs.reduce((a,b)=>a+b,0)/rs.length:null,winRate:rs.length?rs.filter(r=>r>0).length/rs.length:null,totalR:Math.round(rs.reduce((a,b)=>a+b,0)*1000)/1000});
+ const reasons:Record<string,number>={};for(const s of pairs){const last=s.legs.at(-1)?.reason??'UNKNOWN';reasons[last]=(reasons[last]??0)+1;}
+ const n=pairs.length;
+ return {pairs:n,openShadows:shadows.filter(s=>s.status==='OPEN').length,unavailableShadows:shadows.filter(s=>s.status==='UNAVAILABLE').length,
+  fixed:side(pairs.map(s=>fixedByPosition.get(s.positionId)!)),trail:side(pairs.map(s=>s.r!)),trailExitReasons:reasons,
+  note:n<30?`${n} matched trades. Under 30, the difference between plans is mostly noise.`:`${n} matched trades. Compare average R; check that the difference is consistent over time before switching.`};
 }
