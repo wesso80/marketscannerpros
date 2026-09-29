@@ -3,7 +3,9 @@ vi.mock('@/lib/redis',()=>({getRedis:vi.fn()}));
 vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:()=>true}));
 vi.mock('@/lib/admin/cryptoDiscoveryBatch',()=>({runDiscoveryBatch:vi.fn()}));
 vi.mock('@/lib/admin/cryptoMomentumBatch',()=>({runMomentumBatch:vi.fn()}));
+vi.mock('@/lib/admin/cryptoEarlyMomentumBatch',()=>({runEarlyMomentumBatch:vi.fn(async()=>Response.json({requestAttempts:100,scan:{rows:[]}}))}));
 vi.mock('@/lib/admin/cryptoBaseBatch',()=>({runBaseBatch:vi.fn()}));
+import {runEarlyMomentumBatch} from '@/lib/admin/cryptoEarlyMomentumBatch';
 import {getRedis} from '@/lib/redis';
 import {runDiscoveryBatch} from '@/lib/admin/cryptoDiscoveryBatch';
 import {runMomentumBatch} from '@/lib/admin/cryptoMomentumBatch';
@@ -64,4 +66,9 @@ it('honours pause while waiting for a manual batch',async()=>{
  const pending=runCryptoAutomation();await vi.runAllTimersAsync();
  expect(await pending).toMatchObject({ok:false,error:'Background scans paused while waiting for an active batch'});
  expect(runMomentumBatch).toHaveBeenCalledOnce();expect(runBaseBatch).not.toHaveBeenCalled();
+});
+
+it('keeps confirmed entry scanning healthy if supplementary hourly research fails',async()=>{
+ vi.mocked(runEarlyMomentumBatch).mockResolvedValueOnce(Response.json({error:'Hourly provider down'},{status:503}));
+ const result=await runCryptoAutomation();expect(result).toMatchObject({ok:true,reports:{earlyWatch:{ok:false}}});
 });

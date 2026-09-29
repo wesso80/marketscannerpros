@@ -3,7 +3,7 @@ import {parseDailyVenue,selectDailyPair,type DailyPair} from './cryptoDailyVenue
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {createBaseScan} from './cryptoBaseScan';
 const H=3600000,F=4*H;
-export type VolumeMomentum={stage:'PENDING'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;kind:'BREAKOUT'|'CONTINUATION'|null};
+export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;kind:'BREAKOUT'|'CONTINUATION'|null};
 export type MomentumScanRow=VolumeMomentum&{id:string;symbol:string;pair:DailyPair|null};
 export type MomentumScan={version:1;startedAt:string;updatedAt:string;discoveryAt:string;rows:MomentumScanRow[]};
 export const blankMomentum=(reason='Waiting for completed 4h candles'):VolumeMomentum=>({stage:'PENDING',reason,asOf:null,relativeVolume:null,changePct:null,trigger:null,close:null,atr:null,kind:null});
@@ -14,13 +14,14 @@ export function createMomentumScan(rows:(DiscoveryRow&{venues:VenueEvidence[]})[
   return {...blankMomentum(),id:r.id,symbol:r.symbol,pair,stage:r.stage==='EXCLUDED'?'EXCLUDED':pair?'PENDING':'UNAVAILABLE',reason:r.stage==='EXCLUDED'?r.reason:pair?'Waiting for completed 4h candles':'No supported fresh pair'};
  })};
 }
-export function assessVolumeMomentum(bars:ExchangeBar[],now:number):VolumeMomentum{
+export function assessVolumeMomentum(bars:ExchangeBar[],now:number,interval=F):VolumeMomentum{
+ const label=interval===H?'1h':'4h';
  const result=blankMomentum(),fail=(reason:string):VolumeMomentum=>({...result,stage:'UNAVAILABLE',reason});
- if(bars.length<25)return fail('At least 25 completed 4h candles required');
+ if(bars.length<25)return fail(`At least 25 completed ${label} candles required`);
  const b=bars.slice(-25),last=b.at(-1)!,prev=b.at(-2)!;
- if(last.t>now||now-last.t>F+15*60000)return fail('4h candles stale or future dated');
+ if(last.t>now||now-last.t>interval+15*60000)return fail(`${label} candles stale or future dated`);
  for(let i=0;i<b.length;i++){
-  const x=b[i];if(![x.t,x.o,x.h,x.l,x.c,x.v].every(Number.isFinite)||x.t%F!==0||Math.min(x.o,x.h,x.l,x.c)<=0||x.v<0||x.h<Math.max(x.o,x.l,x.c)||x.l>Math.min(x.o,x.c)||(i>0&&x.t-b[i-1].t!==F))return fail('Invalid or missing 4h candles');
+  const x=b[i];if(![x.t,x.o,x.h,x.l,x.c,x.v].every(Number.isFinite)||x.t%interval!==0||Math.min(x.o,x.h,x.l,x.c)<=0||x.v<0||x.h<Math.max(x.o,x.l,x.c)||x.l>Math.min(x.o,x.c)||(i>0&&x.t-b[i-1].t!==interval))return fail(`Invalid or missing ${label} candles`);
  }
  const mean=(a:number[])=>a.reduce((s,n)=>s+n,0)/a.length;
  const prior=b.slice(-21,-1),avgVolume=mean(prior.map(x=>x.v));
@@ -40,9 +41,9 @@ export function assessVolumeMomentum(bars:ExchangeBar[],now:number):VolumeMoment
   Object.assign(result,{stop,target:last.c+2*risk,maxEntry:Math.min(last.c+0.5*atr,(last.c+2*risk+1.5*stop)/2.5),entryFloor:breakout?trigger:prev.h});
   const stretched=last.c-sma>2.5*atr||last.c-trigger>atr||Math.max(last.h-last.l,Math.abs(last.h-prev.c),Math.abs(last.l-prev.c))>3*atr;
   result.stage=stretched?'EXTENDED':'MOMENTUM_VOLUME';
-  result.reason=stretched?'Price and volume advanced, but the completed move exceeds the ATR chase limits':'Completed 4h '+(breakout?'20-bar breakout':'trend continuation')+' with at least 1.5× prior 20-bar volume; no base required';
- }else if(expanded){result.stage='VOLUME_WATCH';result.reason='Elevated 4h volume without the required upward price confirmation; not a buy signal';}
- else{result.stage='NO_SIGNAL';result.reason='No qualifying price-and-volume momentum setup on the latest completed 4h candle';}
+  result.reason=stretched?'Price and volume advanced, but the completed move exceeds the ATR chase limits':'Completed '+label+' '+(breakout?'20-bar breakout':'trend continuation')+' with at least 1.5× prior 20-bar volume; no base required';
+ }else if(expanded){result.stage='VOLUME_WATCH';result.reason=`Elevated ${label} volume without the required upward price confirmation; not a buy signal`;}
+ else{result.stage='NO_SIGNAL';result.reason=`No qualifying price-and-volume momentum setup on the latest completed ${label} candle`;}
  return result;
 }
 export function fourHourUrl(pair:DailyPair,now:number):string{

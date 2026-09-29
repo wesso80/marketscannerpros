@@ -66,6 +66,7 @@ export default function CryptoMarketsPage() {
     <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
     <CryptoSetupEmail refreshVersion={refreshVersion} />
     <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />
+    <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">

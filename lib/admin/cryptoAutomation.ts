@@ -2,6 +2,7 @@ import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from './adminCrypto';
 import {runDiscoveryBatch} from './cryptoDiscoveryBatch';
 import {runMomentumBatch} from './cryptoMomentumBatch';
+import {runEarlyMomentumBatch} from './cryptoEarlyMomentumBatch';
 import {runBaseBatch} from './cryptoBaseBatch';
 const KEY='admin:crypto-markets:automation:v1',F=4*3600000;
 export async function cryptoAutomationState(){
@@ -49,6 +50,9 @@ export async function runCryptoAutomation(){
   await coordinatedBatch('momentum','admin:crypto-markets:momentum-volume:v1',()=>runMomentumBatch(100));
   // Daily bases are watchlist work; advance a smaller batch without starving four-hour setups.
   await coordinatedBatch('bases','admin:crypto-markets:bases:v1',()=>runBaseBatch(20));
+  // Supplementary research failure must not disable independently validated 4h entries.
+  try{await record('earlyWatch',await runEarlyMomentumBatch(100));}
+  catch(error){reports.earlyWatch={ok:false,error:error instanceof Error?error.message:'Hourly research unavailable'};}
   const last={ok:true,at:new Date().toISOString(),durationMs:Date.now()-started,reports};await redis.set(`${KEY}:last`,last);return {enabled:true,...last};
  }catch(error){
   const last={ok:false,at:new Date().toISOString(),durationMs:Date.now()-started,reports,error:error instanceof Error?error.message:'Background scan failed'};await redis.set(`${KEY}:last`,last);return {enabled:true,...last};
