@@ -30,6 +30,7 @@ export default function CryptoPaperStats({stats,exitPlans,title='Strategy statis
    {stats.overall.trades>0&&<>
     <Table title="Overall" rows={[stats.overall]} />
     <Table title="By BTC daily trend at entry" rows={stats.byBtcRegime} />
+    {stats.byFunding?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By OKX perpetual funding state at entry (evidence only)" rows={stats.byFunding} />}
     <Table title="By setup type" rows={stats.bySetup} />
     <Table title="By venue" rows={stats.byVenue} />
     <Table title="By exit reason" rows={stats.byExit} />

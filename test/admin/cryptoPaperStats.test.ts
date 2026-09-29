@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {summarizeCryptoPaper,type CryptoStatsRow} from '@/lib/admin/cryptoPaperStats';
-const reason=(kind:string,regime?:string)=>`crypto-v1|x|X-USD|t|`+JSON.stringify({signal:{kind},...(regime?{btcRegime:{state:regime}}:{})});
+const reason=(kind:string,regime?:string,funding?:string)=>`crypto-v1|x|X-USD|t|`+JSON.stringify({signal:{kind},...(regime?{btcRegime:{state:regime}}:{}),...(funding?{derivatives:{fundingState:funding}}:{})});
 const row=(r:number,kind:string,regime?:string,instrument='coinbase:X-USD'):CryptoStatsRow=>({r_multiple:String(r),realised_pnl:String(r*500),outcome:r>0?'WIN':'LOSS',exit_reason:r>0?'TAKE_PROFIT':'STOP_LOSS',instrument_type:instrument,entry_time:'2026-09-28T00:00:00Z',exit_time:'2026-09-28T06:00:00Z',created_reason:reason(kind,regime)});
 it('computes expectancy in R and groups by setup, venue and recorded BTC trend',()=>{
  const s=summarizeCryptoPaper([row(2,'BREAKOUT','UP'),row(-1,'BREAKOUT','DOWN'),row(-1,'CONTINUATION','DOWN',"okx-usd-v1:X-USDT"),row(2,'CONTINUATION')]);
@@ -16,4 +16,8 @@ it('labels small samples as insufficient and never invents R for missing values'
  expect(s.bySetup[0].label).toBe('NOT_RECORDED');
  expect(summarizeCryptoPaper([]).sample).toBe('NO_TRADES');
  expect(summarizeCryptoPaper(Array.from({length:30},()=>row(1,'BREAKOUT'))).sample).toBe('EARLY');
+});
+it('groups trades by recorded funding state, keeping untagged trades separate',()=>{
+ const s=summarizeCryptoPaper([{...row(2,'BREAKOUT'),created_reason:reason('BREAKOUT','UP','CROWDED_LONG')},{...row(-1,'BREAKOUT'),created_reason:reason('BREAKOUT','UP','NEUTRAL')},row(1,'BREAKOUT')]);
+ expect(s.byFunding.map(g=>g.label).sort()).toEqual(['CROWDED_LONG','NEUTRAL','NOT_RECORDED']);
 });

@@ -16,6 +16,8 @@ import {refreshPaperBalances} from './portfolio-lab/refreshPaperBalances';
 import {writeJournal} from './portfolio-lab/journalEngine';
 import {fetchVolumeMomentum,type MomentumScan} from './cryptoVolumeMomentum';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
+import {fourHourBars,instrumentPair,correlationScale} from './cryptoCorrelation';
+import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
@@ -91,7 +93,7 @@ export async function setCryptoPaperActive(workspaceId:string,active:boolean){
   if(!portfolio)return null;
   await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio.id]);
   await q('UPDATE arca_portfolios SET status=$1,updated_at=NOW() WHERE workspace_id=$2 AND id=$3',[active?'ACTIVE':'PAUSED',workspaceId,portfolio.id]);
-  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD and converted OKX USDT momentum entries. Exit monitoring continues when entries are paused. '+`${L.riskPerTradePct}% risk, ${L.notionalPct}% notional cap per trade, ${L.positions} positions, ${L.openRiskPct}% portfolio risk, ${L.dailyEntries} entries per day, ${L.lossFromStartPct}% loss-from-start entry stop, trade size at most ${L.maxPairVolumePct}% of the pair's 24h volume (beta data-collection limits). BTC daily trend is recorded on each entry, not used as a filter.`+' Fees and slippage each 0.05% per side for Coinbase, 0.10% per side for two-leg OKX conversions. No changes to personal holdings or other paper portfolios.'});
+  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD and converted OKX USDT momentum entries. Exit monitoring continues when entries are paused. '+`${L.riskPerTradePct}% risk, ${L.notionalPct}% notional cap per trade, ${L.positions} positions, ${L.openRiskPct}% portfolio risk, ${L.dailyEntries} entries per day, ${L.lossFromStartPct}% loss-from-start entry stop, trade size at most ${L.maxPairVolumePct}% of the pair's 24h volume, risk scaled by 1/sqrt(1+n) for n open positions with 4h return correlation >= 0.7 (floor 25%) (beta data-collection limits). BTC daily trend is recorded on each entry, not used as a filter.`+' Fees and slippage each 0.05% per side for Coinbase, 0.10% per side for two-leg OKX conversions. No changes to personal holdings or other paper portfolios.'});
   return portfolio.id;
  });
 }
@@ -189,6 +191,13 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    if(converted)await fetchOkxUsdPath(candidate.id,pair.product,new Date(Math.floor(Date.now()/900000)*900000-900000).toISOString());
    checkedQuote=quote;
    if(signal.asOf!==candidate.asOf||signal.kind!==candidate.kind)throw Error('Setup candle changed; refresh momentum scan');
+   // Correlation with open positions, checked before the lock (sequential, cached per 4h window). Missing history counts as correlated.
+   const candidateBars=await fourHourBars(pair).catch(()=>{throw Error('Candidate 4h history unavailable for correlation check');});
+   const openBars:{coin:string;bars:Awaited<ReturnType<typeof fourHourBars>>|null}[]=[];
+   for(const p of currentOpens){const ip=instrumentPair(p.instrumentType);openBars.push({coin:p.symbol,bars:ip?await fourHourBars(ip).catch(()=>null):null});}
+   const corr=correlationScale(candidateBars,openBars);
+   // Evidence only: OKX perpetual funding/open interest is recorded for later comparison and never blocks an entry.
+   const derivatives=await fetchDerivatives(pair.product.split('-')[0],candidateBars);
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
     const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED'||current.status!=='ACTIVE')throw Error('Entries paused');
@@ -200,12 +209,12 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     if(current.totalEquity<current.startingBalance*(1-L.lossFromStartPct/100))throw Error(`${L.lossFromStartPct}% loss-from-start entry stop`);
     const [daily]=await q<{n:string}>('SELECT COUNT(*) AS n FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND filled_at >= date_trunc(\'day\',NOW() AT TIME ZONE \'UTC\') AT TIME ZONE \'UTC\'',[workspaceId,current.id]);
     if(Number(daily?.n)>=L.dailyEntries)throw Error(`Daily ${L.dailyEntries}-entry cap`);
-    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd);if(!plan.ok)throw Error(plan.reason);
+    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,corr.scale);if(!plan.ok)throw Error(plan.reason);
     if(opens.reduce((s,p)=>{const cost=p.instrumentType.startsWith('okx-usd-v1:') ? .001 : .0005;return s+(p.stopLoss==null?Infinity:Math.max(0,p.averageEntry-p.stopLoss*(1-cost))*p.quantity+(p.entryFee??p.averageEntry*p.quantity*cost)+p.stopLoss*(1-cost)*p.quantity*cost);},0)+plan.risk>current.totalEquity*L.openRiskPct/100)throw Error(`${L.openRiskPct}% portfolio risk cap`);
-    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',btcRegime,liquidity:{...liq,capped:plan.liquidityCapped},simulation:true}),arcaConfidence:null});
+    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',btcRegime,liquidity:{...liq,capped:plan.liquidityCapped},correlation:corr,derivatives,simulation:true}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
-    decide(candidate,'OPENED',plan.liquidityCapped?`Fresh signal, quote and account checks passed; size capped at ${L.maxPairVolumePct}% of pair 24h volume`:'Fresh signal, quote and account checks passed',quote);
+    decide(candidate,'OPENED',['Fresh signal, quote and account checks passed',...(corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[])].join('; '),quote);
    });
   }catch(error){decide(candidate,'BLOCKED',error instanceof Error?error.message:'Entry validation failed',checkedQuote);notes.push(`${candidate.id}: ${error instanceof Error?error.message:'entry validation failed'}`);}
  }

@@ -9,6 +9,8 @@ vi.mock('@/lib/admin/portfolio-lab/refreshPaperBalances',()=>({refreshPaperBalan
 vi.mock('@/lib/admin/portfolio-lab/journalEngine',()=>({writeJournal:vi.fn()}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',()=>({fetchVolumeMomentum:vi.fn()}));
 vi.mock('@/lib/admin/cryptoBtcRegime',()=>({currentBtcRegime:vi.fn(async()=>({state:'DOWN',asOf:'2026-09-28T00:00:00.000Z'})),savedBtcRegime:vi.fn(async()=>null)}));
+vi.mock('@/lib/admin/cryptoCorrelation',async(importOriginal)=>({...await importOriginal<object>(),fourHourBars:vi.fn()}));
+vi.mock('@/lib/admin/cryptoDerivatives',()=>({fetchDerivatives:vi.fn(async()=>({status:'OK',source:'okx:USDT-SWAP',fundingState:'ELEVATED_LONG',flags:['LEVERAGE_DRIVEN']}))}));
 vi.mock('@/lib/admin/cryptoPaperOkx',async(importOriginal)=>({...await importOriginal<object>(),fetchOkxUsdQuote:vi.fn(),fetchOkxUsdPath:vi.fn()}));
 vi.mock('@/lib/admin/cryptoPaperMarket',async(importOriginal)=>({...await importOriginal<object>(),fetchPaperQuote:vi.fn(),fetchPaperPath:vi.fn()}));
 import {fetchOkxUsdQuote,fetchOkxUsdPath} from '@/lib/admin/cryptoPaperOkx';
@@ -18,6 +20,7 @@ import * as store from '@/lib/admin/portfolio-lab/portfolioStore';
 import {createSimulatedOrder,fillOrderAndOpenPosition} from '@/lib/admin/portfolio-lab/simulatedOrderEngine';
 import {markAndMaybeExit} from '@/lib/admin/portfolio-lab/positionEngine';
 import {writeJournal} from '@/lib/admin/portfolio-lab/journalEngine';
+import {fourHourBars} from '@/lib/admin/cryptoCorrelation';
 import {fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {fetchPaperQuote,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
 import {runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
@@ -25,6 +28,8 @@ import type {ArcaPortfolio,ArcaPosition} from '@/lib/admin/portfolio-lab/types';
 const now=Date.parse('2026-09-28T05:00:00Z'),step=900000;
 let portfolio:ArcaPortfolio,positions:ArcaPosition[],scan:MomentumScan,discovery:{rows:{id:string;venues:{exchange:string;pair:string;volumeUsd:number;observedAt:string}[]}[]};
 const signal={stage:'MOMENTUM_VOLUME' as const,asOf:'2026-09-28T04:00:00Z',kind:'CONTINUATION' as const,stop:95,target:112,maxEntry:102,entryFloor:99,close:100,reason:'test',relativeVolume:2,changePct:2,trigger:101,atr:2};
+const F4=4*3600000,bars4=(f:(k:number)=>number)=>Array.from({length:40},(_,k)=>({t:(k+1)*F4,o:1,h:1,l:1,c:f(k),v:1}));
+const trend=bars4(k=>100*Math.exp(.02*Math.sin(k*1.3))),other=bars4(k=>80*Math.exp(.02*Math.sin(k*2.9+1)*Math.cos(k*.7)));
 const pair={exchange:'gdax' as const,product:'BTC-USD',quote:'USD' as const,volumeUnit:'BTC'};
 const position=()=>({id:'pos',symbol:'bitcoin',assetClass:'crypto',instrumentType:'coinbase:BTC-USD',side:'LONG',averageEntry:100,stopLoss:95,initialStopLoss:95,takeProfit1:112,openedAt:new Date(now-step).toISOString(),quantity:10} as ArcaPosition);
 beforeEach(()=>{
@@ -38,6 +43,7 @@ beforeEach(()=>{
  vi.mocked(store.listOpenPositions).mockImplementation(async()=>positions);
  vi.mocked(q).mockResolvedValue([]);
  vi.mocked(fetchVolumeMomentum).mockResolvedValue(signal);
+ vi.mocked(fourHourBars).mockResolvedValue(trend);
  vi.mocked(fetchPaperQuote).mockResolvedValue({bid:99.99,ask:100,product:'BTC-USD',priceAt:new Date(now).toISOString(),receivedAt:new Date(now).toISOString()});
  vi.mocked(fetchPaperPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]});
 });
@@ -166,6 +172,26 @@ it('blocks entry when pair volume evidence is missing or stale instead of assumi
  discovery.rows=[];
  expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:expect.stringContaining('24h volume unavailable')}]});
  expect(createSimulatedOrder).not.toHaveBeenCalled();
+});
+it('scales risk down for open positions that move with the candidate, and records the evidence',async()=>{
+ vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
+ positions=[{...position(),id:'p1',symbol:'eth',instrumentType:'coinbase:ETH-USD'},{...position(),id:'p2',symbol:'doge',instrumentType:'coinbase:DOGE-USD'},{...position(),id:'p3',symbol:'gone',instrumentType:'coinbase:GONE-USD'}];
+ vi.mocked(fourHourBars).mockImplementation(async(p)=>{if(p.product==='GONE-USD')throw Error('down');return p.product==='DOGE-USD'?other:trend;});
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,decisions:[{status:'OPENED',reason:expect.stringContaining('risk scaled to 58%')}]});
+ const order=vi.mocked(createSimulatedOrder).mock.calls[0][0],evidence=JSON.parse(order.createdReason.slice(order.createdReason.indexOf('{')));
+ expect(evidence.correlation).toMatchObject({correlated:[{coin:'eth'}],unavailable:['gone']});
+ expect(evidence.correlation.scale).toBeCloseTo(1/Math.sqrt(3),6);
+ expect(evidence.plan.risk).toBeLessThanOrEqual(500/Math.sqrt(3)+1e-6);
+});
+it('records OKX perpetual funding evidence on entries without using it as a filter',async()=>{
+ const report=await runCryptoPaperCycle('w');expect(report).toMatchObject({opened:1});
+ const order=vi.mocked(createSimulatedOrder).mock.calls[0][0];
+ expect(JSON.parse(order.createdReason.slice(order.createdReason.indexOf('{'))).derivatives).toMatchObject({source:'okx:USDT-SWAP',fundingState:'ELEVATED_LONG',flags:['LEVERAGE_DRIVEN']});
+});
+it('blocks entry when the candidate history for the correlation check is unavailable',async()=>{
+ vi.mocked(fourHourBars).mockRejectedValue(Error('down'));
+ expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:'Candidate 4h history unavailable for correlation check'}]});
 });
 it('does not report a cron skip after a recent manual cycle as unhealthy, but still flags overlapping cron runs',async()=>{
  vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('FROM arca_portfolios WHERE name')?[{workspace_id:'w'}] as never:[]);

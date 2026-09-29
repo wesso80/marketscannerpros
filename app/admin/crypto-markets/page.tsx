@@ -2,6 +2,9 @@
 const CryptoSetupEmail = dynamic(()=>import('@/components/admin/CryptoSetupEmail'), {ssr:false});
 const CryptoPaperAccount = dynamic(()=>import('@/components/admin/CryptoPaperAccount'), {ssr:false});
 const CryptoBacktest = dynamic(()=>import('@/components/admin/CryptoBacktest'), {ssr:false});
+const CryptoAttentionStrip = dynamic(()=>import('@/components/admin/CryptoAttentionStrip'), {ssr:false});
+const TABS = [['paper','Paper account'],['setups','Setups'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['alerts','Alerts']] as const;
+type Tab = typeof TABS[number][0];
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
 const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
@@ -22,6 +25,10 @@ export default function CryptoMarketsPage() {
   const [busy,setBusy] = useState(false), [query,setQuery] = useState('');
   const [now,setNow] = useState(Date.now());
   const [refreshVersion,setRefreshVersion] = useState(0);
+  // Remembered per browser only; the page renders the default tab when storage is unavailable.
+  const [tab,setTabState] = useState<Tab>('paper');
+  useEffect(()=>{try{const t=localStorage.getItem('crypto-markets-tab');if(TABS.some(([k])=>k===t))setTabState(t as Tab);}catch{}},[]);
+  function setTab(t:string){if(!TABS.some(([k])=>k===t))return;setTabState(t as Tab);try{localStorage.setItem('crypto-markets-tab',t);}catch{}}
   function refreshSaved(){setRefreshVersion(v=>v+1);void load('GET');}
   const [review,setReview] = useState<MomentumReview|null>(null);
   const [base,setBase] = useState<BaseReview|null>(null);
@@ -29,7 +36,7 @@ export default function CryptoMarketsPage() {
   const [analyzing,setAnalyzing] = useState('');
   const [researchOpen,setResearchOpen] = useState(false);
   async function analyze(coinId:string) {
-    setResearchOpen(false);setAnalyzing(coinId);setError('');setReview(null);setChart(null);setBase(null);
+    setTab('watchlists');setResearchOpen(false);setAnalyzing(coinId);setError('');setReview(null);setChart(null);setBase(null);
     try {
       const res=await fetch('/api/admin/crypto-discovery/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coinId})});
       const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setNow(Date.now());
@@ -55,21 +62,30 @@ export default function CryptoMarketsPage() {
   const rows = data?.rows.filter(r=>`${r.symbol} ${r.name} ${r.id}`.toLowerCase().includes(query.toLowerCase())).slice(0,100) ?? [];
   return <div className="space-y-5 p-6 text-slate-100">
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
-    <p>Major-exchange momentum research: Binance, Coinbase, Kraken, KuCoin and OKX. No six-week holding requirement.</p>
-    <p className="text-sm text-slate-400">Screens the first 300 pairs by reported volume per exchange, deduplicated by CoinGecko ID. This is a capped discovery window, not every exchange listing. Discovery refreshes do not create trades. The separate paper account below applies its own entry checks.</p>
+    <p>Major-exchange momentum research: Binance, Coinbase, Kraken, KuCoin and OKX. SIMULATED paper trading only; no real orders.</p>
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
       <button disabled={busy} onClick={refreshSaved} className="rounded border px-4 py-2">Refresh saved dashboard</button>
-      <input aria-label="Find coin" placeholder="Find coin, e.g. QNT" value={query} onChange={e=>setQuery(e.target.value)} className="rounded border bg-slate-900 px-3" />
+      <input aria-label="Find coin" placeholder="Find coin, e.g. QNT" value={query} onChange={e=>{setQuery(e.target.value);setTab('watchlists');}} className="rounded border bg-slate-900 px-3" />
     </div>
-    <p className="text-sm">Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page and Refresh saved dashboard read saved discovery, scans and paper results only; they do not request new provider data.</p>
     {error && <p role="alert" className="text-red-300">{error}</p>}
-    <p className="text-sm">Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
-    <CryptoSetupEmail refreshVersion={refreshVersion} />
-    <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />
-    <CryptoBacktest refreshVersion={refreshVersion} />
-    <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
+    <details className="rounded border border-slate-700 p-3 text-sm"><summary className="cursor-pointer">About discovery scans and provider budgets</summary>
+      <p className="text-slate-400">Screens the first 300 pairs by reported volume per exchange, deduplicated by CoinGecko ID. This is a capped discovery window, not every exchange listing. Discovery refreshes do not create trades. The paper account applies its own entry checks.</p>
+      <p>Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page and Refresh saved dashboard read saved discovery, scans and paper results only; they do not request new provider data.</p>
+      <p>Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
+    </details>
+    <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
+    <nav role="tablist" aria-label="Crypto Markets sections" className="flex flex-wrap gap-1 border-b border-slate-700">
+      {TABS.map(([k,label])=><button key={k} role="tab" aria-selected={tab===k} onClick={()=>setTab(k)} className={`rounded-t px-3 py-2 text-sm ${tab===k?'bg-slate-800 font-semibold':'text-slate-400 hover:text-slate-200'}`}>{label}</button>)}
+    </nav>
+    {tab==='alerts' && <CryptoSetupEmail refreshVersion={refreshVersion} />}
+    {tab==='paper' && <CryptoPaperAccount now={now} refreshVersion={refreshVersion} onRefresh={refreshSaved} />}
+    {tab==='backtest' && <CryptoBacktest refreshVersion={refreshVersion} />}
+    {tab==='setups' && <>
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
+    <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
+    </>}
+    {tab==='watchlists' && <>
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
       <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
@@ -109,6 +125,7 @@ export default function CryptoMarketsPage() {
           <td>{r.fixedScanCovered?'Covered':'Outside fixed list'}</td><td>{r.reasons.join(', ') || 'None at scan'}</td>
         </tr>)}</tbody></table></div>
       <p>Showing {rows.length} matching coins (maximum 100). Search the complete saved snapshot by coin name or ID. Missing here can mean outside the capped pair window, failed venue checks or missing market data.</p>
+    </>}
     </>}
   </div>;
 }
