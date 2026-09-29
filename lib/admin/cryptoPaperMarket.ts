@@ -24,17 +24,32 @@ export async function fetchPaperQuote(product:string):Promise<CryptoPaperQuote>{
  const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/book?level=1`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Quote provider HTTP ${r.status}`);
  return parsePaperBook(await r.json(),product);
 }
+/** Exit catch-up bound: seven days of 15m candles. Older gaps still require manual recovery. */
+export const PAPER_RECOVERY_CANDLES=672;
+const COINBASE_PAGE=299;
+/** Pages Coinbase candles oldest-first so a missed interval is replayed in full, never truncated. */
+export async function fetchCoinbaseCandles(product:string,start:number,end:number,step=900000){
+ const bars=[];
+ for(let from=start;from<end;from+=COINBASE_PAGE*step){
+  const to=Math.min(end,from+COINBASE_PAGE*step);
+  const params=new URLSearchParams({granularity:String(step/1000),start:new Date(from).toISOString(),end:new Date(to).toISOString()});
+  const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?${params}`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Exit history provider HTTP ${r.status}`);
+  let page;try{page=parseExchangeCandles(await r.json(),step,from,to);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle validation failed');}
+  // Each page must join the previous one exactly; a missing boundary candle is a gap, not a skip.
+  if(bars.length&&page.length&&page[0].t-bars.at(-1)!.t!==step)throw new PaperMarketError('Missing exit candles between history pages');
+  bars.push(...page);
+ }
+ return bars;
+}
 export async function fetchPaperPath(symbol:string,product:string,from?:string):Promise<PaperExitPath>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
  const step=900000,end=Math.floor(Date.now()/step)*step;
- const requested=from?Math.floor(Date.parse(from)/step)*step:end-299*step;
+ const requested=from?Math.floor(Date.parse(from)/step)*step:end-COINBASE_PAGE*step;
  if(!Number.isFinite(requested)||requested>end)throw new PaperMarketError('Invalid exit history start');
- if(requested<end-299*step)throw new PaperMarketError('Exit history requires recovery beyond the 299-candle window');
+ if(requested<end-PAPER_RECOVERY_CANDLES*step)throw new PaperMarketError('Exit history requires recovery beyond the seven-day catch-up window');
  const start=requested;
  if(start===end)return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[]};
- const params=new URLSearchParams({granularity:'900',start:new Date(start).toISOString(),end:new Date(end).toISOString()});
- const r=await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?${params}`,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(8000)});if(!r.ok)throw new PaperMarketError(`Exit history provider HTTP ${r.status}`);
- let bars;try{bars=parseExchangeCandles(await r.json(),step,start,end);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle validation failed');}
+ const bars=await fetchCoinbaseCandles(product,start,end,step);
  return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}))};
 }
 export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now(),costRate=.0005){

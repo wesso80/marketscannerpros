@@ -51,3 +51,17 @@ it('blocks incomplete historical conversion instead of assuming parity',async()=
  vi.spyOn(Date,'now').mockReturnValue(now);vi.stubGlobal('fetch',vi.fn(async(url:string)=>Response.json(url.includes('okx.com')?{code:'0',data:[[String(now-step),'100','110','90','100','20','0','0','1']]}:[])));
  await expect(fetchOkxUsdPath('celo','CELO-USDT',new Date(now-step).toISOString())).rejects.toThrow('Incomplete');
 });
+it('walks OKX 100-candle pages back to the checkpoint during catch-up',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);const n=250,start=now-n*step;
+ const okx=vi.fn((after:number)=>{const rows=[];for(let t=after-step;t>=Math.max(start,after-100*step);t-=step)rows.push([String(t),'100','110','90','100','20','0','0','1']);return {code:'0',data:rows};});
+ const fetcher=vi.fn(async(url:string)=>{const p=new URL(url).searchParams;if(url.includes('okx.com')){expect(p.get('limit')).toBe('100');return Response.json(okx(Number(p.get('after'))));}
+  const a=Date.parse(p.get('start')!),b=Date.parse(p.get('end')!),rows=[];for(let t=a;t<b;t+=step)rows.push([t/1000,.98,1,.99,.99,100]);return Response.json(rows);});
+ vi.stubGlobal('fetch',fetcher);
+ const path=await fetchOkxUsdPath('celo','CELO-USDT',new Date(start).toISOString());
+ expect(path.candles).toHaveLength(n);expect(path.candles[0].openAt).toBe(start);
+ expect(fetcher.mock.calls.filter(([u])=>String(u).includes('okx.com'))).toHaveLength(3);
+});
+it('still refuses OKX catch-up beyond seven days',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(now);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+ await expect(fetchOkxUsdPath('celo','CELO-USDT',new Date(now-673*step).toISOString())).rejects.toThrow('requires recovery');expect(fetcher).not.toHaveBeenCalled();
+});

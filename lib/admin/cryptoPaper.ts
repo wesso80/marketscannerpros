@@ -15,6 +15,7 @@ import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from '.
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
 const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
+const BUSY='Crypto paper cycle already running or cooling down',MANUAL_RECENT='Manual crypto paper cycle ran within the last three minutes';
 export async function cryptoPaperState(workspaceId:string){
  return atomicQueries(async()=>{
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
@@ -46,7 +47,9 @@ export async function setCryptoPaperActive(workspaceId:string,active:boolean){
 export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'cron'='manual',monitorOnly=false){
  const redis=getRedis();if(!redis)throw Error('Paper coordination cache unavailable');
  if(!isAdminCryptoEnabled())return {skipped:true,reason:'Admin crypto disabled'};
- if(!await redis.set(`admin:crypto-paper:cycle:${workspaceId}${monitorOnly?':monitor':''}`,'reserved',{nx:true,ex:180}))return {skipped:true,reason:'Crypto paper cycle already running or cooling down'};
+ const lock=`admin:crypto-paper:cycle:${workspaceId}${monitorOnly?':monitor':''}`;
+ // The holder is recorded so a recent manual cycle is not reported as a cron failure; it already checked exits.
+ if(!await redis.set(lock,trigger,{nx:true,ex:180}))return (await redis.get(lock))==='manual'?{skipped:true,reason:MANUAL_RECENT}:{skipped:true,reason:BUSY};
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
  if(!portfolio)return {skipped:true,reason:'Crypto paper account not enabled'};
  const decisions:CryptoPaperDecision[]=[];
@@ -149,5 +152,5 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
 export async function runCryptoPaperAll(monitorOnly=false){
  const accounts=await q<{workspace_id:string}>("SELECT workspace_id FROM arca_portfolios WHERE name=$1 AND mode='SIMULATED' AND status IN ('ACTIVE','PAUSED')",[CRYPTO_PAPER_NAME]);
  const results=[];for(const a of accounts){try{results.push(await runCryptoPaperCycle(a.workspace_id,'cron',monitorOnly));}catch{results.push({error:'Crypto paper cycle failed; check account status'});}}
- return {ok:!results.some(r=>'error' in r||('monitorHealthy' in r&&!r.monitorHealthy)||('skipped' in r&&r.reason==='Crypto paper cycle already running or cooling down')),simulated:true,accounts:accounts.length,results};
+ return {ok:!results.some(r=>'error' in r||('monitorHealthy' in r&&!r.monitorHealthy)||('skipped' in r&&r.reason===BUSY)),simulated:true,accounts:accounts.length,results};
 }

@@ -1,6 +1,6 @@
-import {fetchPaperQuote,parsePaperQuote,PaperMarketError,type CryptoPaperQuote} from './cryptoPaperMarket';
+import {fetchPaperQuote,fetchCoinbaseCandles,parsePaperQuote,PaperMarketError,PAPER_RECOVERY_CANDLES,type CryptoPaperQuote} from './cryptoPaperMarket';
 import {parseDailyVenue,type DailyPair} from './cryptoDailyVenues';
-import {parseExchangeCandles,type ExchangeBar} from './cryptoExchangeVolume';
+import type {ExchangeBar} from './cryptoExchangeVolume';
 import type {VolumeMomentum} from './cryptoVolumeMomentum';
 import type {PaperExitPath} from './portfolio-lab/paperExitPath';
 import type {ArcaPortfolio} from './portfolio-lab/types';
@@ -52,18 +52,29 @@ export function convertedExitPath(symbol:string,native:ExchangeBar[],fx:Exchange
  });
  return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles};
 }
+/** OKX history-candles returns at most 100 rows; walk the `after` cursor back to the checkpoint. */
+async function fetchOkxCandles(product:string,start:number,end:number):Promise<ExchangeBar[]>{
+ const bars=new Map<number,ExchangeBar>();let cursor=end;
+ for(let page=0;page<Math.ceil(PAPER_RECOVERY_CANDLES/100)+1&&cursor>start;page++){
+  const raw=await json('https://www.okx.com/api/v5/market/history-candles?'+new URLSearchParams({instId:product,bar:'15m',after:String(cursor),limit:'100'}));
+  const rows:unknown[]=Array.isArray(raw?.data)?raw.data:[];
+  for(const b of parseDailyVenue('okex',raw,start,end,STEP)){const prior=bars.get(b.t);if(prior&&JSON.stringify(prior)!==JSON.stringify(b))throw Error('Conflicting OKX exit candles');bars.set(b.t,b);}
+  const oldest=Math.min(...rows.map(r=>Array.isArray(r)?Number(r[0]):NaN));
+  if(!rows.length||!Number.isFinite(oldest)||oldest>=cursor)break;
+  cursor=oldest;
+ }
+ const sorted=[...bars.values()].sort((a,b)=>a.t-b.t);
+ for(let i=1;i<sorted.length;i++)if(sorted[i].t-sorted[i-1].t!==STEP)throw Error('Missing OKX exit candles between history pages');
+ return sorted;
+}
 export async function fetchOkxUsdPath(symbol:string,product:string,from:string):Promise<PaperExitPath>{
  if(!/^[A-Z0-9]{1,30}-USDT$/.test(product))throw new PaperMarketError('OKX USDT product required');
  const end=Math.floor(Date.now()/STEP)*STEP,start=Math.floor(Date.parse(from)/STEP)*STEP;
- if(!Number.isFinite(start)||start>end||start<end-299*STEP)throw new PaperMarketError('OKX/FX exit history requires recovery or has invalid start');
+ if(!Number.isFinite(start)||start>end||start<end-PAPER_RECOVERY_CANDLES*STEP)throw new PaperMarketError('OKX/FX exit history requires recovery beyond the seven-day catch-up window or has invalid start');
  if(start===end)return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[]};
- const [raw,fxRaw]=await Promise.all([
-  json('https://www.okx.com/api/v5/market/history-candles?'+new URLSearchParams({instId:product,bar:'15m',after:String(end),limit:'300'})),
-  json('https://api.exchange.coinbase.com/products/USDT-USD/candles?'+new URLSearchParams({granularity:'900',start:new Date(start).toISOString(),end:new Date(end).toISOString()}))
- ]);
  try{
-  const native=parseDailyVenue('okex',raw,start,end,STEP),fx=parseExchangeCandles(fxRaw,STEP,start,end);
+  const [native,fx]=await Promise.all([fetchOkxCandles(product,start,end),fetchCoinbaseCandles('USDT-USD',start,end,STEP)]);
   if(native[0]?.t!==start+STEP||native.at(-1)?.t!==end||fx[0]?.t!==start+STEP||fx.at(-1)?.t!==end)throw Error('Incomplete OKX/FX exit history');
   return convertedExitPath(symbol,native,fx);
- }catch(e){throw new PaperMarketError(e instanceof Error?e.message:'OKX/FX history invalid');}
+ }catch(e){throw e instanceof PaperMarketError?e:new PaperMarketError(e instanceof Error?e.message:'OKX/FX history invalid');}
 }

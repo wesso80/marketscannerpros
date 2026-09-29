@@ -82,7 +82,7 @@ it('does not mix USDT research prices into the USD ledger',async()=>{
 
 it('does not report success when a failed-cycle retry encounters the cooldown',async()=>{
  vi.mocked(q).mockResolvedValue([{workspace_id:'w'}] as never);
- vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=>null)} as never);
+ vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=>null),get:vi.fn(async()=>'cron')} as never);
  expect(await runCryptoPaperAll()).toMatchObject({ok:false,results:[{skipped:true}]});
 });
 
@@ -120,4 +120,12 @@ it('monitors converted OKX positions while entries are paused using their own co
  vi.mocked(fetchOkxUsdPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:94,close:99}]});
  expect(await runCryptoPaperCycle('w')).toMatchObject({monitorHealthy:true,marked:1});
  expect(markAndMaybeExit).toHaveBeenCalledWith(expect.objectContaining({portfolio:expect.objectContaining({settings:expect.objectContaining({feesPctEstimate:.1,slippagePctEstimate:.1})})}));
+});
+it('does not report a cron skip after a recent manual cycle as unhealthy, but still flags overlapping cron runs',async()=>{
+ vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('FROM arca_portfolios WHERE name')?[{workspace_id:'w'}] as never:[]);
+ let holder='manual';
+ vi.mocked(getRedis).mockReturnValue({set:vi.fn(async()=>null),get:vi.fn(async(key:string)=>key.startsWith('admin:crypto-paper:cycle:')?holder:scan)} as never);
+ expect(await runCryptoPaperAll()).toMatchObject({ok:true,results:[{skipped:true,reason:'Manual crypto paper cycle ran within the last three minutes'}]});
+ holder='cron';
+ expect(await runCryptoPaperAll()).toMatchObject({ok:false,results:[{skipped:true,reason:'Crypto paper cycle already running or cooling down'}]});
 });
