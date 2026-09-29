@@ -1,3 +1,4 @@
+import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {adminDiscoveryOnly} from '@/lib/admin/discoveryOnly';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
     // Full cycle rechecks protection and then uses the newly saved scan immediately.
     const cryptoPaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper entry cycle failed'}));
     const ok=monitoring.ok&&cryptoPaper.ok&&!scanFailed;
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning},{status:ok?200:503});
+    const operationalAlerts=await reportCryptoCycleHealth({monitoring,scanning,paper:cryptoPaper}).catch(()=>({ok:false,error:'Operational alert failed'}));
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   const started = Date.now();

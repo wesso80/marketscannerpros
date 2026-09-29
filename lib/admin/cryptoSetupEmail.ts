@@ -37,7 +37,7 @@ export async function sendCryptoSetupEmails(scan:MomentumScan,now=Date.now()){
     `Candle closed: ${row.asOf}`,`Volume: ${row.relativeVolume?.toFixed(2)}x the preceding 20 candles · Change: ${row.changePct?.toFixed(2)}%`,
     `Signal close: ${row.close} · Entry floor: ${row.entryFloor} · Maximum chase price: ${row.maxEntry}`,
     `Structural stop: ${row.stop} · Model target: ${row.target}`,row.reason,
-    'This is a confirmed candle setup, not live trade permission or a fill. Current price, spread, risk limits and existing positions can block paper entry. Other venues remain research-only; paper entries use Coinbase USD.',
+    'This is a confirmed candle setup, not live trade permission or a fill. Current price, spread, risk limits and existing positions can block paper entry. Paper entries support Coinbase USD and OKX USDT with validated USD conversion. Other venues remain research-only.',
     'Review: https://marketscannerpros.app/admin/crypto-markets'].join('\n\n');
    if(await deliver(`${row.id}|${row.pair.exchange}|${row.pair.product}|${row.asOf}|${row.kind}`,subject,text))accepted++;
    if(accepted>=20)break;
