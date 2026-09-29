@@ -1668,6 +1668,9 @@ export interface CoinTicker {
   trade_url: string | null;
   coin_id: string;
   target_coin_id?: string;
+  /** Present with depth=true: USD cost to move price 2% up / down. */
+  cost_to_move_up_usd?: number | null;
+  cost_to_move_down_usd?: number | null;
 }
 
 /**
@@ -2237,4 +2240,42 @@ export async function getCryptoMarketsContextPart(part:'news'|'trending'|'global
   const path={news:'/news',trending:'/search/trending',global:'/global'}[part];
   return cgFetch<unknown>(path,{params:part==='news'?new URLSearchParams({per_page:'10',language:'en',type:'news'}):undefined,
     retries:0,timeoutMs:10000,init:{next:{revalidate:300}}});
+}
+
+// ============================================
+// ONCHAIN NETWORKS + TOP HOLDERS (admin new-listings checks)
+// ============================================
+
+export interface OnchainNetwork { id: string; attributes?: { name?: string; coingecko_asset_platform_id?: string | null } }
+/** GeckoTerminal networks with their CoinGecko asset-platform id. Endpoint: /onchain/networks (paginated). */
+export async function getOnchainNetworksPage(page: number): Promise<OnchainNetwork[] | null> {
+  try {
+    const data = await cgFetch<{ data: OnchainNetwork[] }>('/onchain/networks', {
+      params: new URLSearchParams({ page: String(page) }),
+      init: { next: { revalidate: 86400 } },
+    });
+    return Array.isArray(data?.data) ? data.data : null;
+  } catch (error) {
+    console.error('[CoinGecko] Onchain networks error:', error);
+    return null;
+  }
+}
+
+export interface TopHolder { rank: number; address: string; label: string | null; amount: string; percentage: string; value?: string | null }
+/**
+ * Top token holders (Beta; Analyst plan and above). Endpoint: /onchain/networks/{network}/tokens/{address}/top_holders.
+ * Max 50 holders (40 on Solana). Returns null on any failure; callers must treat that as unavailable.
+ */
+export async function getTopTokenHolders(network: string, address: string, holders = 20): Promise<{ lastUpdatedAt: string | null; holders: TopHolder[] } | null> {
+  try {
+    const data = await cgFetch<{ data?: { attributes?: { last_updated_at?: string; holders?: TopHolder[] } } }>(
+      `/onchain/networks/${encodeURIComponent(network)}/tokens/${encodeURIComponent(address)}/top_holders`,
+      { params: new URLSearchParams({ holders: String(holders) }), init: { next: { revalidate: 3600 } } },
+    );
+    const a = data?.data?.attributes;
+    return a && Array.isArray(a.holders) ? { lastUpdatedAt: a.last_updated_at ?? null, holders: a.holders } : null;
+  } catch (error) {
+    console.error('[CoinGecko] Top holders error:', error);
+    return null;
+  }
 }

@@ -3,6 +3,7 @@ import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {adminDiscoveryOnly} from '@/lib/admin/discoveryOnly';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import {runCryptoMarketData} from '@/lib/admin/cryptoMarketDataJob';
+import {runNewListings} from '@/lib/admin/cryptoNewListingsJob';
 /**
  * POST /api/cron/arca-cycle
  *
@@ -62,10 +63,12 @@ export async function POST(req: NextRequest) {
     const operationalAlerts=await reportCryptoCycleHealth({monitoring,scanning,paper:cryptoPaper}).catch(()=>({ok:false,error:'Operational alert failed'}));
     // Non-essential CoinGecko market context runs last and never affects this run's health status.
     const marketData=await runCryptoMarketData().catch(()=>({ok:false,error:'CoinGecko market data failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,marketData},{status:ok?200:503});
+    const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,marketData,newListings},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   await runCryptoMarketData().catch(()=>undefined);
+  await runNewListings().catch(()=>undefined);
   const started = Date.now();
   try {
     let rows: Array<{ workspace_id: string }> = [];

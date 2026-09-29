@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import type {DerivRow,CategoryRow,MoverRow,TrendingRow,GlobalPoint} from '@/lib/admin/cryptoMarketData';
 import type {CgBudget} from '@/lib/admin/cgCredits';
+import CryptoNewListings from './CryptoNewListings';
 type Status={ok:boolean;at:string;skipped?:string;error?:string;calls:number};
 type View={error?:string;config:Record<string,number>;status:{status:Record<string,Status>;lastRunAt:string|null};budget:CgBudget|null;
  derivatives:{at:string;source:string;exchanges:number;tickers:number;dayAgoAt:string|null;flagged:DerivRow[];topFunding:DerivRow[];topOiChange:DerivRow[]}|null;
@@ -83,5 +84,6 @@ export default function CryptoMarketData({refreshVersion=0}:{refreshVersion?:num
     {!data.trending?<p>No data yet.</p>:<ul className="text-sm">{data.trending.rows.map(t=><li key={t.id} className={t.openPosition||t.watchlist?'text-amber-300':''}>#{t.rank} {t.name} ({t.symbol}){t.marketCapRank?` · rank ${t.marketCapRank}`:''}{t.openPosition?' · OPEN PAPER POSITION: possible crowding':''}{t.watchlist?' · on momentum watchlist: possible crowding':''}</li>)}</ul>}
    </Panel>
   </>}
+  <CryptoNewListings refreshVersion={refreshVersion} />
  </section>;
 }
