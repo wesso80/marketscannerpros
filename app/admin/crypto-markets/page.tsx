@@ -19,7 +19,7 @@ const CryptoExchangeVolume = dynamic(()=>import('@/components/admin/CryptoExchan
 const CryptoReviewChart = dynamic(()=>import('@/components/admin/CryptoReviewChart'), {ssr:false});
 import { useEffect, useState } from 'react';
 import type { DiscoveryRow, VenueEvidence } from '@/lib/admin/cryptoDiscovery';
-import type { MomentumReview } from '@/lib/admin/cryptoMomentum';
+import {reviewStatusLabel,type MomentumReview} from '@/lib/admin/cryptoMomentum';
 type Snapshot = { startedAt:string; finishedAt:string; requests:number; partial:boolean; uniqueCoins:number; missingMarketIds?:string[]; failedMarketBatches?:number[];
   coverage:{exchange:string; pages:number; status:string; pairsSeen:number}[];
   rows:(DiscoveryRow & {venues:VenueEvidence[]})[] };
@@ -35,6 +35,7 @@ export default function CryptoMarketsPage() {
   function setTab(t:string){if(!TABS.some(([k])=>k===t))return;setTabState(t as Tab);try{localStorage.setItem('crypto-markets-tab',t);}catch{}}
   function refreshSaved(){setRefreshVersion(v=>v+1);void load('GET');}
   const [review,setReview] = useState<MomentumReview|null>(null);
+  const [volumeLabel,setVolumeLabel] = useState<string|null>(null);
   const [base,setBase] = useState<BaseReview|null>(null);
   const [chart,setChart] = useState<MomentumChart|null>(null);
   const [analyzing,setAnalyzing] = useState('');
@@ -66,19 +67,21 @@ export default function CryptoMarketsPage() {
   const rows = data?.rows.filter(r=>`${r.symbol} ${r.name} ${r.id}`.toLowerCase().includes(query.toLowerCase())).slice(0,100) ?? [];
   return <div className="space-y-5 p-6 text-slate-100">
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
-    <p>Major-exchange momentum research: Binance, Coinbase, Kraken, KuCoin and OKX. SIMULATED paper trading only; no real orders.</p>
+    <p>SIMULATED paper trading only; no real orders.</p>
+    {error && <p role="alert" className="text-red-300">{error}</p>}
+    <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
       <button disabled={busy} onClick={refreshSaved} className="rounded border px-4 py-2">Refresh saved dashboard</button>
       <input aria-label="Find coin" placeholder="Find coin, e.g. QNT" value={query} onChange={e=>{setQuery(e.target.value);setTab('watchlists');}} className="rounded border bg-slate-900 px-3" />
     </div>
-    {error && <p role="alert" className="text-red-300">{error}</p>}
     <details className="rounded border border-slate-700 p-3 text-sm"><summary className="cursor-pointer">About discovery scans and provider budgets</summary>
+      <p>Major-exchange momentum research: Binance, Coinbase, Kraken, KuCoin and OKX.</p>
       <p className="text-slate-400">Screens the first 300 pairs by reported volume per exchange, deduplicated by CoinGecko ID. This is a capped discovery window, not every exchange listing. Discovery refreshes do not create trades. The paper account applies its own entry checks.</p>
       <p>Manual scan: at most 21 CoinGecko request attempts, no Alpha Vantage requests. Shared 15-minute cooldown. Opening this page and Refresh saved dashboard read saved discovery, scans and paper results only; they do not request new provider data.</p>
       <p>Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
+      <p>4-hour entry zone: a MOMENTUM_VOLUME close between the entry floor and the chase limit. EXTENDED names, and cycle decisions marked BLOCKED, are listed with one reason. That list is not a new scan.</p>
     </details>
-    <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
     <nav role="tablist" aria-label="Crypto Markets sections" className="flex flex-wrap gap-1 border-b border-slate-700">
       {TABS.map(([k,label])=><button key={k} role="tab" aria-selected={tab===k} onClick={()=>setTab(k)} className={`rounded-t px-3 py-2 text-sm ${tab===k?'bg-slate-800 font-semibold':'text-slate-400 hover:text-slate-200'}`}>{label}</button>)}
     </nav>
@@ -96,9 +99,9 @@ export default function CryptoMarketsPage() {
     {tab==='watchlists' && <>
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
-      <h2 className="text-xl">{review.symbol} · {review.status} · Research only</h2>
+      <h2 className="text-xl">{review.symbol} · {(volumeLabel&&volumeLabel!=='confirmed'?reviewStatusLabel(review).replace('_CONFIRMED',''):reviewStatusLabel(review))} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
-      <p>{review.reasons.join(' · ')}</p>
+      <p>{((volumeLabel&&volumeLabel!=='confirmed')||!reviewStatusLabel(review).includes('CONFIRMED')?review.reasons.map(r=>r.replace(/\bconfirmed\b/gi,'matched')):review.reasons).join(' · ')}</p>
       <p>Daily trend rising: {review.evidence.dailyAsOf?String(review.evidence.dailyTrend):'unavailable'} · 4h trend rising: {review.evidence.fourHourAsOf?String(review.evidence.fourHourTrend):'unavailable'} · Hourly bars: {review.evidence.hourlyBars} · Daily bars: {review.evidence.dailyBars}</p>
       <p>Last closed 1h: {review.evidence.hourlyAsOf??'unavailable'} · 4h: {review.evidence.fourHourAsOf??'unavailable'} · Daily: {review.evidence.dailyAsOf??'unavailable'} · Quote: {review.evidence.quoteAsOf??'unavailable'}</p>
       {review.levels && <p>Observed price: {review.levels.entry.toPrecision(6)} · Trigger: {review.levels.trigger.toPrecision(6)} · Maximum entry: {review.levels.maxEntry.toPrecision(6)} · Structural stop: {review.levels.stop.toPrecision(6)} · Model 2R target: {review.levels.target.toPrecision(6)} · Current R:R: {review.levels.currentRewardRisk.toFixed(2)}</p>}
@@ -107,7 +110,7 @@ export default function CryptoMarketsPage() {
         <p>Range low: {base.low?.toPrecision(6)??'Unavailable'} · Range high: {base.high?.toPrecision(6)??'Unavailable'} · Width: {base.widthPct?.toFixed(2)??'Unavailable'}% · MA gap: {base.maGapPct?.toFixed(2)??'Unavailable'}% · MA slope: {base.slopePct?.toFixed(2)??'Unavailable'}%</p>
         <p className="text-xs text-slate-400">Experimental 21-day base ending before the latest completed 4h candle. No minimum holding period. Thresholds are unvalidated. Volume contraction, breakout volume and market regime are not confirmed. This assessment runs only when you open a coin review; the first scan still ranks price momentum.</p>
       </section>}
-      <CryptoReviewChart key={review.coinId} chart={chart} review={review} base={base} />
+      <CryptoReviewChart key={review.coinId} chart={chart} review={review} base={base} onLabel={setVolumeLabel} />
       <CryptoExchangeVolume key={review.coinId+review.reviewedAt} coinId={review.coinId} now={now} />
       <section aria-label="Further research" className="rounded border border-slate-700 p-4 space-y-3">
         <button type="button" aria-expanded={researchOpen} aria-controls="crypto-further-research" onClick={()=>setResearchOpen(open=>!open)} className="rounded border px-3 py-2">{researchOpen?'Close further research':'Open further research'} · {review.symbol}</button>

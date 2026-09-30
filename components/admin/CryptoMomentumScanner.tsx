@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import type {MomentumScan as BaseScan} from '@/lib/admin/cryptoVolumeMomentum';
+import {setupDisplayLabel,type MomentumScan as BaseScan} from '@/lib/admin/cryptoVolumeMomentum';
+import {VolumeRuleChart} from '@/components/admin/CryptoReviewChart';
 export default function CryptoMomentumScanner({now,refreshVersion=0,hourly=false}:{now:number;refreshVersion?:number;hourly?:boolean}){
   const endpoint=hourly?'/api/admin/crypto-markets/early-momentum':'/api/admin/crypto-markets/momentum';
   const label=hourly?'1h':'4h';
@@ -43,7 +44,8 @@ export default function CryptoMomentumScanner({now,refreshVersion=0,hourly=false
       <p>{Math.floor(now/((hourly?1:4)*3600000))!==Math.floor(Date.parse(scan.startedAt)/((hourly?1:4)*3600000))?'OLD SCAN WINDOW · ':''}Saved {new Date(scan.updatedAt).toLocaleString()} · Started {new Date(scan.startedAt).toLocaleString()} · Discovery universe {new Date(scan.discoveryAt).toLocaleString()}</p>
       <p>{Object.keys(order).map(stage=>`${stage}: ${rows.filter(r=>r.stage===stage).length}`).join(' · ')}</p>
       <p className="text-xs text-slate-400">Volume ≥1.5× the preceding 20 completed {label} candles; close above a rising SMA20; either a 20-bar high breakout or ≥1% advance above the previous candle high. EXTENDED if more than 2.5 prior ATR above SMA20, 1 ATR past the breakout level, or signal range exceeds 3 ATR. Volume surges without upward confirmation are VOLUME_WATCH. Experimental research only: completed candle prices, not live entry quotes or trade permission.</p>
-      <div className="max-h-96 overflow-auto"><table className="w-full min-w-[1250px] text-left text-sm"><thead><tr>{['Coin / venue','Setup',`${label} close / change`,'Volume ratio','20-bar high','Candle close time','Reason'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(r=><tr className="border-t border-slate-700" key={r.id}><td className="p-2">{r.symbol} · {r.id}<br/>{r.pair?.exchange??'Unavailable'} · {r.pair?.product??'Unsupported'}<br/>Volume: {r.pair?.volumeUnit??'—'}</td><td>{r.stage}<br/>{r.kind??''}</td><td>{r.close?.toPrecision(5)??'—'} {r.pair?.quote??''}<br/>{r.changePct?.toFixed(2)??'—'}%</td><td>{r.relativeVolume?.toFixed(2)??'—'}×</td><td>{r.trigger?.toPrecision(5)??'—'}</td><td>{r.asOf??'—'}</td><td>{r.reason}</td></tr>)}</tbody></table></div>
+      <div className="max-h-96 overflow-auto"><table className="w-full min-w-[1250px] text-left text-sm"><thead><tr>{['Coin / venue','Setup',`${label} close / change`,'Volume ratio','20-bar high','Candle close time','Reason'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(r=><tr className="border-t border-slate-700" key={r.id}><td className="p-2">{r.symbol} · {r.id}<br/>{r.pair?.exchange??'Unavailable'} · {r.pair?.product??'Unsupported'}<br/>Volume: {r.pair?.volumeUnit??'—'}</td><td>{r.stage==='MOMENTUM_VOLUME'?setupDisplayLabel(r):r.stage}<br/>{r.kind??''}</td><td>{r.close?.toPrecision(5)??'—'} {r.pair?.quote??''}<br/>{r.changePct?.toFixed(2)??'—'}%</td><td>{r.relativeVolume?.toFixed(2)??'—'}×</td><td>{r.trigger?.toPrecision(5)??'—'}</td><td>{r.asOf??'—'}</td><td>{r.reason}</td></tr>)}</tbody></table></div>
+      {!hourly&&<div className="space-y-4">{rows.filter(r=>r.stage==='MOMENTUM_VOLUME').map(r=><VolumeRuleChart key={r.id} row={r}/>)}</div>}
     </>}
   </section>;
 }

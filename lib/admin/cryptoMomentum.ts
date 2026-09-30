@@ -73,6 +73,12 @@ export function reviewCryptoMomentum(coin:DiscoveryRow, hourlyRaw:number[][],dai
   result.reasons.push('Price pattern confirmed only; candle-volume confirmation and paper-entry approval are not supplied by this review');
   return result;
 }
+/** Drops the word confirmed when the long stop is not under the quote, or the quote has left the entry zone. */
+export function reviewStatusLabel(review:Pick<MomentumReview,'status'|'levels'>):string{
+ const L=review.levels;
+ const invalid=!!L&&(!(L.stop<L.entry)||L.entry>L.maxEntry||L.entry<L.trigger);
+ return invalid?review.status.replace('_CONFIRMED',''):review.status;
+}
 
 export type MomentumChart = {source:'CoinGecko'; timestampBasis:'candle-close-UTC'; hourly:Bar[]; fourHourly:Bar[]; daily:Bar[]; error?:string};
 /** Use the same strict history validation as the review. Never draw invented gap bars. */
