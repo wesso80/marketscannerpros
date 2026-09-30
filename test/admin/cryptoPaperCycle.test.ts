@@ -10,6 +10,7 @@ vi.mock('@/lib/admin/portfolio-lab/journalEngine',()=>({writeJournal:vi.fn()}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',()=>({fetchVolumeMomentum:vi.fn()}));
 vi.mock('@/lib/admin/cryptoBtcRegime',()=>({currentBtcRegime:vi.fn(async()=>({state:'DOWN',asOf:'2026-09-28T00:00:00.000Z'})),savedBtcRegime:vi.fn(async()=>null)}));
 vi.mock('@/lib/admin/cryptoCorrelation',async(importOriginal)=>({...await importOriginal<object>(),fourHourBars:vi.fn()}));
+vi.mock('@/lib/admin/cryptoFlow',()=>({fetchFlow:vi.fn(async()=>({rule:'flow-v1',source:'okx:public',state:'TAKER_SELL_HEAVY',flags:['TAKER_SELL_HEAVY']}))}));
 vi.mock('@/lib/admin/cryptoDerivatives',()=>({fetchDerivatives:vi.fn(async()=>({status:'OK',source:'okx:USDT-SWAP',fundingState:'ELEVATED_LONG',flags:['LEVERAGE_DRIVEN']}))}));
 vi.mock('@/lib/admin/cryptoPaperOkx',async(importOriginal)=>({...await importOriginal<object>(),fetchOkxUsdQuote:vi.fn(),fetchOkxUsdPath:vi.fn()}));
 vi.mock('@/lib/admin/cryptoPaperMarket',async(importOriginal)=>({...await importOriginal<object>(),fetchPaperQuote:vi.fn(),fetchPaperPath:vi.fn()}));
@@ -50,6 +51,7 @@ beforeEach(()=>{
 afterEach(()=>vi.restoreAllMocks());
 it('creates an evidenced simulated entry after fresh checks',async()=>{
  const report=await runCryptoPaperCycle('w');expect(report).toMatchObject({opened:1,monitorHealthy:true});
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({createdReason:expect.stringContaining('"flow":{"rule":"flow-v1"')}));
  expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({symbol:'bitcoin',instrumentType:'coinbase:BTC-USD',orderType:'MARKET_SIM',stopLoss:95,takeProfit1:110.15}));
  expect(fillOrderAndOpenPosition).toHaveBeenCalledWith(expect.objectContaining({currentPrice:100}));
 });
