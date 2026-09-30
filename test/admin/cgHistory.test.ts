@@ -6,7 +6,7 @@ const sql:string[]=[];
 vi.mock('@/lib/db',()=>({q:vi.fn(async(s:string)=>{sql.push(s);if(/GROUP BY status/.test(s))return [{status:'active',n:'2400'},{status:'inactive',n:'9000'}];if(/SELECT id FROM cg_hist_coins WHERE chart_status='PENDING'/.test(s))return [{id:'a'},{id:'b'}];return [];})}));
 const cg={getCoinsList:vi.fn(async()=>[{id:'dead',symbol:'d',name:'Dead'}]),getMarketData:vi.fn(async()=>[{id:'bitcoin',symbol:'btc',name:'Bitcoin'}]),getMarketChartRange:vi.fn(async()=>null),getOHLCRange:vi.fn(async()=>null),getGlobalMarketCapHistory:vi.fn(async()=>null),getApiUsage:vi.fn(async()=>({monthly_call_credit:500000,current_total_monthly_calls:100000,current_remaining_monthly_calls:400000}))};
 vi.mock('@/lib/coingecko',()=>cg);
-import {CG_HISTORY,CG_HISTORY_DDL,parseMarketChart,parseOhlc,peakMarketCap,looksStable,ohlcChunks,estimateCredits,jobCap,spentSinceApproval,dayKey} from '@/lib/admin/cgHistory';
+import {CG_HISTORY,CG_HISTORY_DDL,ddlStatements,parseMarketChart,parseOhlc,peakMarketCap,looksStable,ohlcChunks,estimateCredits,jobCap,spentSinceApproval,dayKey} from '@/lib/admin/cgHistory';
 const D=86400000,t0=Date.UTC(2022,0,1);
 beforeEach(()=>{store.clear();sql.length=0;Object.values(cg).forEach(f=>f.mockClear());});
 it('keeps only 00:00 UTC daily points and merges price, market cap and volume by day',()=>{
@@ -58,4 +58,11 @@ it('downloads nothing before approval, stops at the cap, and pauses while credit
  await job.approveHistory();cg.getApiUsage.mockResolvedValue({monthly_call_credit:500000,current_total_monthly_calls:450000,current_remaining_monthly_calls:50000});store.delete('admin:cg-credits:v1:key');
  expect(await job.historyStep(40)).toMatchObject({paused:true});expect(cg.getMarketChartRange).not.toHaveBeenCalled();
  expect(CG_HISTORY.maxShareOfRemaining).toBe(.5);
+});
+it('splits the DDL into runnable statements even when a comment contains a semicolon',()=>{
+ const st=ddlStatements();
+ expect(st.length).toBe(5);
+ for(const x of st)expect(x).toMatch(/^CREATE (TABLE|INDEX) IF NOT EXISTS /);
+ expect(st.join(' ')).not.toContain('no trading use');
+ expect(ddlStatements('-- a; b\nCREATE TABLE t (x int);')).toEqual(['CREATE TABLE t (x int)']);
 });

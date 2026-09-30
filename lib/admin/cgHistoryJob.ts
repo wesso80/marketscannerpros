@@ -2,7 +2,7 @@ import {getRedis} from '@/lib/redis';
 import {q} from '@/lib/db';
 import {getCoinsList,getMarketData,getMarketChartRange,getOHLCRange,getGlobalMarketCapHistory,getApiUsage} from '@/lib/coingecko';
 import {cgBudgetStatus} from './cgCredits';
-import {CG_HISTORY,dayKey,parseMarketChart,parseOhlc,peakMarketCap,looksStable,ohlcChunks,estimateCredits,jobCap,spentSinceApproval,CG_HISTORY_DDL,type Estimate} from './cgHistory';
+import {CG_HISTORY,dayKey,parseMarketChart,parseOhlc,peakMarketCap,looksStable,ohlcChunks,estimateCredits,jobCap,spentSinceApproval,ddlStatements,type Estimate} from './cgHistory';
 const K='admin:crypto-markets:cg-history:v1',D=86400000;
 export type HistPhase='IDLE'|'ESTIMATED'|'RUNNING'|'PAUSED_CAP'|'PAUSED_BUDGET'|'PAUSED_MANUAL'|'BACKFILL_DONE';
 export type HistState={phase:HistPhase;estimate?:Estimate;estimateCalls:number;approvedAt?:string;startRemaining?:number;remainingSource?:string;cap?:number;jobCalls:number;
@@ -14,7 +14,7 @@ let schemaReady=false;
 /** Same DDL as migrations/108_cg_history.sql (kept in code), applied idempotently so the job works before a manual migration. */
 export async function ensureCgHistoryTables(){
  if(schemaReady)return;
- for(const stmt of CG_HISTORY_DDL.split(';').map(s=>s.replace(/--.*$/gm,'').trim()).filter(Boolean))await q(stmt);
+ for(const stmt of ddlStatements())await q(stmt);
  schemaReady=true;
 }
 async function upsertCoins(rows:{id:string;symbol:string;name:string;status:'active'|'inactive';source:string}[]){
