@@ -1,4 +1,5 @@
 import type {ExchangeBar} from './cryptoExchangeVolume';
+import type {PaperExitCandle} from './portfolio-lab/paperExitPath';
 /** Longest run of missing 15m candles treated as "no trades" (2h). Longer gaps may be outages and still fail closed. */
 export const NO_TRADE_MAX_BARS=8;
 export type FilledBar=ExchangeBar&{filled?:true};
@@ -20,4 +21,16 @@ export function fillNoTradeGaps(bars:ExchangeBar[],step:number,maxBars=NO_TRADE_
   out.push(b);
  }
  return out;
+}
+/**
+ * Trailing no-trade candles: a quiet coin may have no trades (so no candles) after its last real candle. Only when a
+ * FRESH quote shows the market is live, and for at most maxBars candles (2h), the missing candles up to the last
+ * completed boundary are flat at the last real close. No trades means the venue price could not have touched a
+ * stop or target in that time; the live quote is still checked separately. Otherwise nothing is filled (fail closed).
+ */
+export function fillTrailingNoTrade(candles:PaperExitCandle[],end:number,quoteFresh:boolean,step=900000,maxBars=NO_TRADE_MAX_BARS){
+ const last=candles.at(-1);if(!quoteFresh||!last||last.closeAt>=end)return {candles,filled:0};
+ const missing=(end-last.closeAt)/step;if(!Number.isInteger(missing)||missing<1||missing>maxBars)return {candles,filled:0};
+ const add=Array.from({length:missing},(_,k)=>({openAt:last.closeAt+k*step,closeAt:last.closeAt+(k+1)*step,open:last.close,high:last.close,low:last.close,close:last.close}));
+ return {candles:[...candles,...add],filled:missing};
 }
