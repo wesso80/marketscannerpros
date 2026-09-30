@@ -112,3 +112,7 @@ CREATE TABLE IF NOT EXISTS cg_hist_global (
   volume      DOUBLE PRECISION
 );
 `;
+/** Executable statements from the DDL: comments are stripped BEFORE splitting, so a ';' inside a comment cannot break a statement. */
+export function ddlStatements(sql=CG_HISTORY_DDL):string[]{
+ return sql.replace(/--.*$/gm,'').split(';').map(x=>x.trim()).filter(Boolean);
+}
