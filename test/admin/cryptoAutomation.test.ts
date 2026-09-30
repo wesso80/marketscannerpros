@@ -11,12 +11,12 @@ import {runDiscoveryBatch} from '@/lib/admin/cryptoDiscoveryBatch';
 import {runMomentumBatch} from '@/lib/admin/cryptoMomentumBatch';
 import {runBaseBatch} from '@/lib/admin/cryptoBaseBatch';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
-let saved:Record<string,unknown>,set:ReturnType<typeof vi.fn>;
+let saved:Record<string,unknown>,set:ReturnType<typeof vi.fn>,release:ReturnType<typeof vi.fn>;
 const now=Date.parse('2026-09-28T08:15:00Z');
 beforeEach(()=>{
  vi.clearAllMocks();vi.spyOn(Date,'now').mockReturnValue(now);
  saved={'admin:crypto-markets:automation:v1':true};
- set=vi.fn(async()=> 'OK');vi.mocked(getRedis).mockReturnValue({get:vi.fn(async(k:string)=>saved[k]),set,ttl:vi.fn(async()=>1)} as never);
+ set=vi.fn(async()=> 'OK');release=vi.fn(async()=>1);vi.mocked(getRedis).mockReturnValue({get:vi.fn(async(k:string)=>saved[k]),set,ttl:vi.fn(async()=>1),eval:release} as never);
  vi.mocked(runDiscoveryBatch).mockImplementation(async()=>Response.json({snapshot:{requests:17}}));
  vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({requestAttempts:100,scan:{rows:[]}}));
  vi.mocked(runBaseBatch).mockImplementation(async()=>Response.json({requestAttempts:20,scan:{rows:[]}}));
@@ -35,7 +35,21 @@ it('completed current scan windows do not refresh discovery each quarter hour',a
  saved['admin:crypto-markets:momentum-volume:v1']={startedAt:new Date(now).toISOString(),rows:[{}]};saved['admin:crypto-markets:bases:v1']={startedAt:new Date(now).toISOString(),version:2,rows:[{}]};await runCryptoAutomation();expect(runDiscoveryBatch).not.toHaveBeenCalled();
 });
 it('blocks overlapping scheduled invocations',async()=>{
- set.mockResolvedValue(null);expect(await runCryptoAutomation()).toMatchObject({skipped:true,ok:false});expect(runMomentumBatch).not.toHaveBeenCalled();
+ set.mockResolvedValue(null);expect(await runCryptoAutomation()).toMatchObject({skipped:true,ok:false});expect(runMomentumBatch).not.toHaveBeenCalled();expect(release).not.toHaveBeenCalled();
+});
+it('releases its lock after success so a retry is not blocked for ten minutes',async()=>{
+ await runCryptoAutomation();
+ const lockCall=set.mock.calls.find(c=>c[0]==='admin:crypto-markets:automation:v1:lock');
+ expect(lockCall?.[1]).toEqual(expect.any(String));
+ expect(release).toHaveBeenCalledWith(expect.stringContaining("redis.call('get', KEYS[1]) == ARGV[1]"),['admin:crypto-markets:automation:v1:lock'],[lockCall?.[1]]);
+ expect(release).toHaveBeenCalledOnce();
+});
+it('releases its lock after failure but never clears a successor reservation',async()=>{
+ vi.mocked(runDiscoveryBatch).mockRejectedValueOnce(new Error('Provider unavailable'));
+ release.mockResolvedValueOnce(0); // Atomic compare found a different owner after TTL expiry.
+ expect(await runCryptoAutomation()).toMatchObject({ok:false,error:'Provider unavailable'});
+ expect(release).toHaveBeenCalledOnce();
+ expect(release.mock.calls[0][0]).toContain("else return 0 end");
 });
 it('reports stale discovery rejection honestly rather than success',async()=>{
  vi.mocked(runMomentumBatch).mockImplementation(async()=>Response.json({error:'Refresh discovery'},{status:409}));expect(await runCryptoAutomation()).toMatchObject({ok:false});expect(runBaseBatch).not.toHaveBeenCalled();

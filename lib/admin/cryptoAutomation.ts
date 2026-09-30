@@ -1,3 +1,4 @@
+import {randomUUID} from 'crypto';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from './adminCrypto';
 import {runDiscoveryBatch} from './cryptoDiscoveryBatch';
@@ -17,7 +18,8 @@ export async function setCryptoAutomation(enabled:boolean){
 export async function runCryptoAutomation(){
  const redis=getRedis();if(!redis)throw Error('Automation cache unavailable');
  if(!isAdminCryptoEnabled()||await redis.get(KEY)!==true)return {enabled:false,skipped:true};
- if(!await redis.set(`${KEY}:lock`,'reserved',{nx:true,ex:600}))return {enabled:true,ok:false,skipped:true,reason:'Background batch already running or cooling down'};
+ const lockToken=randomUUID();
+ if(!await redis.set(`${KEY}:lock`,lockToken,{nx:true,ex:600}))return {enabled:true,ok:false,skipped:true,reason:'Background batch already running or recovering from an interrupted run'};
  const started=Date.now(),reports:Record<string,unknown>={};
  const record=async(name:string,response:Response)=>{
   const b=await response.json();reports[name]={status:response.status,requests:b.requestAttempts??b.snapshot?.requests??0,error:b.error??null,pending:b.scan?.rows?.filter((r:{stage:string})=>r.stage==='PENDING').length??null};
@@ -56,5 +58,9 @@ export async function runCryptoAutomation(){
   const last={ok:true,at:new Date().toISOString(),durationMs:Date.now()-started,reports};await redis.set(`${KEY}:last`,last);return {enabled:true,...last};
  }catch(error){
   const last={ok:false,at:new Date().toISOString(),durationMs:Date.now()-started,reports,error:error instanceof Error?error.message:'Background scan failed'};await redis.set(`${KEY}:last`,last);return {enabled:true,...last};
+ }finally{
+  // Release only our reservation, atomically. If its TTL expired and a new run
+  // acquired it, that run must retain its lock. TTL still recovers crashed runs.
+  await redis.eval("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",[`${KEY}:lock`],[lockToken]).catch(error=>console.error('[crypto-automation] Lock release failed',error));
  }
 }
