@@ -2,55 +2,119 @@
 import {useEffect,useState} from 'react';
 import {publishPaperSnapshot,usePaperSnapshot} from './cryptoPaperSnapshot';
 import {latestCryptoCycle} from '@/lib/admin/cryptoCycleReport';
-type Chip={label:string;value:string;tone:'ok'|'warn'|'bad'|'info';detail:string;reasons?:string[]};
-type Paper={portfolio:{status:string;unrealisedPnl:number}|null;positions:unknown[];reconciliation?:{status:string;checkedAt:string};journal:{title:string;createdAt:string;evidence?:string[]}[]};
-type Scan={startedAt:string;rows:{stage:string}[]}|null;
-type Ops={operations?:{state?:{checkedAt:string;healthy:boolean;issues:string[]}}};
-const ago=(at:string,now:number)=>{const m=Math.round((now-Date.parse(at))/60000);return m<60?`${m} min ago`:`${Math.round(m/60)} h ago`;};
+
+type JournalEntry={title:string;createdAt:string;evidence?:string[]};
+type Paper={portfolio:{status:string;unrealisedPnl:number}|null;positions:unknown[];journal:JournalEntry[]};
+type ScanRow={id?:string;symbol?:string;stage:string;reason?:string;close?:number|null;entryFloor?:number;maxEntry?:number;kind?:string|null};
+type Scan={startedAt:string;rows:ScanRow[]}|null;
+type CycleDecision={coin?:string;status?:string;reason?:string;ask?:number};
+type CycleCluster={coins?:string[];overCap?:boolean;riskUsd?:number;capUsd?:number};
+export type BookHealth={
+ positions:number|null;openPnl:number|null;
+ cluster:'OVER CAP'|'INSIDE CAP'|'NOT RECORDED';
+ clusterDetail:string;
+ exits:'HEALTHY'|'UNHEALTHY'|'UNKNOWN';
+};
+export type ScanDecision={
+ stale:boolean;
+ inZone:{symbol:string;kind:string|null}[];
+ blocked:{symbol:string;reason:string}[];
+ health:BookHealth;
+};
+
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
-/** Pure: turns saved dashboard data into attention chips. Missing inputs become explicit UNAVAILABLE chips. */
-export function attentionChips(paper:Paper|null,scan:Scan,ops:Ops|null,now:number):Chip[]{
- const chips:Chip[]=[];
- if(!paper)chips.push({label:'Paper account',value:'UNAVAILABLE',tone:'bad',detail:'Saved paper ledger could not be read'});
- else if(!paper.portfolio)chips.push({label:'Paper account',value:'NOT ENABLED',tone:'info',detail:'Enable it in the Paper account tab'});
- else{
-  const last=latestCryptoCycle(paper.journal);
-  let healthy:boolean|null=null,reasons:string[]=[];
-  try{const r=last?.evidence?.[0]?JSON.parse(last.evidence[0]):null;healthy=typeof r?.monitorHealthy==='boolean'?r.monitorHealthy:null;
-   // The cycle's own notes name each position that could not be verified; nothing is inferred when they are absent.
-   reasons=Array.isArray(r?.notes)?r.notes.filter((n:unknown):n is string=>typeof n==='string'&&/entries blocked/i.test(n)):[];}catch{healthy=null;}
-  const overdue=!last||now-Date.parse(last.createdAt)>25*60000;
-  chips.push({label:'Last cycle',value:last?(overdue?'OVERDUE':ago(last.createdAt,now)):'NONE YET',tone:overdue?'bad':'ok',detail:last?`Paper cycle journal · ${new Date(last.createdAt).toLocaleString()}`:'No completed cycle recorded'});
-  chips.push({label:'Exit monitoring',value:healthy==null?'UNKNOWN':healthy?(overdue?'OVERDUE':'HEALTHY'):'UNHEALTHY — entries blocked',tone:healthy==null?'warn':healthy&&!overdue?'ok':'bad',detail:healthy===false?(reasons.length?reasons.join('\n'):'No reason recorded in the cycle report; see ARCA Journal')+` · cycle ${last?new Date(last.createdAt).toLocaleString():''}`:`${last?.title??'No monitoring report'}${overdue?' · current monitoring not verified':''}`,...(healthy===false?{reasons}:{})});
-  chips.push({label:'Open positions',value:`${paper.positions.length} · ${money(paper.portfolio.unrealisedPnl)}`,tone:'info',detail:`Entries ${paper.portfolio.status} · open P&L before exit costs, marked at last cycle`});
-  if(paper.reconciliation)chips.push({label:'Ledger check',value:paper.reconciliation.status,tone:paper.reconciliation.status==='MATCHED'?'ok':'bad',detail:`Reconciliation · ${new Date(paper.reconciliation.checkedAt).toLocaleString()}`});
- }
- const F=4*3600000,current=scan&&Math.floor(Date.parse(scan.startedAt)/F)===Math.floor(now/F);
- chips.push({label:'Confirmed 4h setups',value:!scan?'NO SCAN':current?String(scan.rows.filter(r=>r.stage==='MOMENTUM_VOLUME').length):'STALE SCAN',tone:!scan||!current?'warn':'info',detail:scan?`Momentum scan started ${new Date(scan.startedAt).toLocaleString()}${scan.rows.some(r=>r.stage==='PENDING')?' · still scanning':''}`:'No saved 4h scan'});
- const st=ops?.operations?.state;
- chips.push({label:'Ops health',value:!st?'NOT CHECKED':now-Date.parse(st.checkedAt)>25*60000?'OVERDUE':st.healthy?'HEALTHY':'ATTENTION',tone:!st?'warn':now-Date.parse(st.checkedAt)>25*60000||!st.healthy?'bad':'ok',detail:st?`${st.issues.join('; ')||'No issues'} · ${new Date(st.checkedAt).toLocaleString()}`:'Scheduled cycle health not recorded'});
- return chips;
+const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
+function cycleReport(journal:JournalEntry[]|undefined):{decisions:CycleDecision[];clusters:CycleCluster[]|null;healthy:boolean|null;at:string|null}{
+ const last=latestCryptoCycle(journal??[]);
+ if(!last)return {decisions:[],clusters:null,healthy:null,at:null};
+ try{
+  const r=last.evidence?.[0]?JSON.parse(last.evidence[0]):null;
+  return {
+   decisions:Array.isArray(r?.decisions)?r.decisions:[],
+   clusters:Array.isArray(r?.clusters)?r.clusters:null,
+   healthy:typeof r?.monitorHealthy==='boolean'?r.monitorHealthy:null,
+   at:last.createdAt,
+  };
+ }catch{return {decisions:[],clusters:null,healthy:null,at:last.createdAt};}
 }
-const tones={ok:'border-emerald-700 text-emerald-200',warn:'border-amber-600 text-amber-200',bad:'border-red-600 text-red-200',info:'border-slate-600 text-slate-200'};
-export default function CryptoAttentionStrip({now,refreshVersion=0,onOpen}:{now:number;refreshVersion?:number;onOpen?:(tab:string)=>void}){
- const [data,setData]=useState<{paper:Paper|null;scan:Scan;ops:Ops|null;loadedAt:number}|null>(null);
- // Saved data only: these GET routes never call providers. Reloaded every minute while visible, so the chips are
- // never a page-load snapshot judged against a live clock (that produced false OVERDUE states).
+/** Pure: the 4-hour decision from the saved scan and the last paper cycle. No provider calls. */
+export function scanDecision(paper:Paper|null,scan:Scan,now:number):ScanDecision{
+ const F=4*3600000;
+ const report=cycleReport(paper?.journal);
+ const ask=new Map<string,number>();
+ for(const d of report.decisions)if(d.coin&&finite(d.ask))ask.set(d.coin,d.ask);
+ const inZone:{symbol:string;kind:string|null}[]=[];
+ const blocked:{symbol:string;reason:string}[]=[];
+ const seen=new Set<string>();
+ const mark=(s:string)=>s.toLowerCase();
+ for(const d of report.decisions){
+  if(d.status!=='BLOCKED'||!d.coin||seen.has(mark(d.coin)))continue;
+  seen.add(mark(d.coin));
+  blocked.push({symbol:d.coin,reason:d.reason?.trim()||'Blocked, no reason recorded'});
+ }
+ for(const row of scan?.rows??[]){
+  const symbol=row.symbol||row.id;
+  if(!symbol)continue;
+  const already=seen.has(mark(symbol))||seen.has(mark(row.id??''));
+  const price=ask.get(row.id??symbol)??ask.get(symbol)??row.close;
+  const inside=row.stage==='MOMENTUM_VOLUME'&&finite(price)&&finite(row.entryFloor)&&finite(row.maxEntry)&&row.entryFloor<=price&&price<=row.maxEntry;
+  if(inside){if(!already)inZone.push({symbol,kind:row.kind??null});continue;}
+  if(already)continue;
+  const refused=row.stage==='EXTENDED'||row.stage==='VOLUME_WATCH'||row.stage==='UNAVAILABLE'||(row.stage==='MOMENTUM_VOLUME'&&finite(row.entryFloor)&&finite(row.maxEntry));
+  if(refused){
+   seen.add(symbol);
+   blocked.push({symbol,reason:row.stage==='MOMENTUM_VOLUME'?'Outside the entry zone':(row.reason?.trim()||row.stage)});
+  }
+ }
+ const over=report.clusters?.filter(c=>c.overCap);
+ const cluster:BookHealth['cluster']=!report.clusters?'NOT RECORDED':over?.length?'OVER CAP':'INSIDE CAP';
+ const clusterDetail=!report.clusters?'Last cycle did not record a cluster check':over?.length
+  ?over.map(c=>`${(c.coins??[]).join(', ')} · ${money(c.riskUsd??0)} of ${money(c.capUsd??0)}`).join(' · ')
+  :'No open cluster is over its cap';
+ const overdue=!!report.at&&now-Date.parse(report.at)>25*60000;
+ const exits:BookHealth['exits']=report.healthy==null?'UNKNOWN':report.healthy&&!overdue?'HEALTHY':'UNHEALTHY';
+ return {
+  stale:!scan||Math.floor(Date.parse(scan.startedAt)/F)!==Math.floor(now/F),
+  inZone,blocked,
+  health:{
+   positions:paper?.portfolio?paper.positions.length:null,
+   openPnl:paper?.portfolio?paper.portfolio.unrealisedPnl:null,
+   cluster,clusterDetail,exits,
+  },
+ };
+}
+
+export default function CryptoAttentionStrip({now,refreshVersion=0}:{now:number;refreshVersion?:number;onOpen?:(tab:string)=>void}){
+ const [data,setData]=useState<{paper:Paper|null;scan:Scan;loadedAt:number}|null>(null);
  useEffect(()=>{let c=new AbortController();
   const load=()=>{if(document.hidden)return;c.abort();c=new AbortController();const signal=c.signal;
    const get=(u:string)=>fetch(u,{cache:'no-store',signal}).then(async r=>r.ok?r.json():null).catch(()=>null);
-   void Promise.all([get('/api/admin/crypto-markets/paper'),get('/api/admin/crypto-markets/momentum'),get('/api/admin/crypto-markets/setup-email')]).then(([paper,m,ops])=>{if(signal.aborted)return;if(paper)publishPaperSnapshot(paper);setData({paper,scan:m?.scan??null,ops,loadedAt:Date.now()});});};
+   void Promise.all([get('/api/admin/crypto-markets/paper'),get('/api/admin/crypto-markets/momentum')]).then(([paper,m])=>{if(signal.aborted)return;if(paper)publishPaperSnapshot(paper);setData({paper,scan:m?.scan??null,loadedAt:Date.now()});});};
   load();const id=setInterval(load,60000);document.addEventListener('visibilitychange',load);
   return()=>{clearInterval(id);document.removeEventListener('visibilitychange',load);c.abort();};},[refreshVersion]);
- // Paper chips use the shared snapshot (the latest read by this strip OR the paper panel), never a separate read.
  const shared=usePaperSnapshot();
- if(!data)return <p className="text-sm text-slate-400">Loading attention summary…</p>;
- // Judge freshness at load time; a snapshot older than 3 minutes (e.g. hidden tab) is labelled rather than trusted.
- const snapshotAge=Date.now()-data.loadedAt,chips=attentionChips(shared&&shared.loadedAt>=data.loadedAt?shared.data:data.paper,data.scan,data.ops,snapshotAge>180000?now:data.loadedAt);
- return <section aria-label="Needs attention" className="flex flex-wrap gap-2">
-  {chips.map(c=><button key={c.label} type="button" title={c.detail} onClick={()=>onOpen?.(c.label==='Confirmed 4h setups'?'setups':c.label==='Ops health'?'alerts':'paper')} className={`rounded border px-3 py-2 text-left text-sm ${tones[c.tone]}`}>
-   <span className="block text-xs text-slate-400">{c.label}</span>{c.value}</button>)}
-  {chips.filter(c=>c.reasons?.length).map(c=><p key={c.label} role="status" className="w-full text-xs text-red-200">{c.label}: {c.reasons![0]}{c.reasons!.length>1?` (+${c.reasons!.length-1} more; hover the chip)`:''}</p>)}
-  <p className="w-full text-xs text-slate-400">Saved data loaded {new Date(data.loadedAt).toLocaleTimeString()}{snapshotAge>180000?' · STALE SNAPSHOT — reloading when visible':''} · refreshes every minute while this page is visible.</p>
+ if(!data)return <p className="text-sm text-slate-400">Loading the 4-hour decision…</p>;
+ const snapshotAge=Date.now()-data.loadedAt;
+ const decision=scanDecision(shared&&shared.loadedAt>=data.loadedAt?shared.data:data.paper,data.scan,snapshotAge>180000?now:data.loadedAt);
+ const h=decision.health;
+ return <section aria-label="4-hour decision" className="space-y-3 rounded border border-slate-600 p-4">
+  <h2 className="text-lg font-semibold">4-hour decision{decision.stale?' · STALE SCAN':''}</h2>
+  <div>
+   <h3 className="text-sm text-slate-400">Inside the entry zone</h3>
+   {decision.inZone.length
+    ?<p>{decision.inZone.map(c=>`${c.symbol}${c.kind?` ${c.kind}`:''}`).join(' · ')}</p>
+    :<p>None. No saved 4-hour setup has its close inside the entry floor and chase limit.</p>}
+  </div>
+  <div>
+   <h3 className="text-sm text-slate-400">Blocked</h3>
+   {decision.blocked.length
+    ?<ul className="max-h-36 space-y-1 overflow-auto text-sm">{decision.blocked.map(c=><li key={c.symbol}><span className="font-medium">{c.symbol}</span> — {c.reason}</li>)}</ul>
+    :<p>None recorded on the last cycle or the saved scan.</p>}
+  </div>
+  <div>
+   <h3 className="text-sm text-slate-400">Book health · SIMULATED</h3>
+   <p>{h.positions==null?'Open positions unavailable':`${h.positions} open`} · {h.openPnl==null?'Open P&L unavailable':`${money(h.openPnl)} open P&L`} · Cluster {h.cluster} · Exits {h.exits}</p>
+   <p className="text-xs text-slate-400">{h.clusterDetail}{snapshotAge>180000?' · STALE SNAPSHOT':''}</p>
+  </div>
  </section>;
 }

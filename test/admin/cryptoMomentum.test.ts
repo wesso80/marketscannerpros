@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {reviewCryptoMomentum,completedFourHourBars} from '@/lib/admin/cryptoMomentum';
+import {reviewCryptoMomentum,completedFourHourBars,reviewStatusLabel} from '@/lib/admin/cryptoMomentum';
 import type {DiscoveryRow} from '@/lib/admin/cryptoDiscovery';
 const H=3600000,D=24*H,now=Date.parse('2026-09-28T02:30:00Z');
 function fixture(){
@@ -33,4 +33,10 @@ describe('completed-candle momentum research',()=>{
   });
   it('does not force a trade when higher-timeframe trend disagrees',()=>{const f=fixture();f.daily=f.daily.map(b=>[b[0],200-b[1],200-b[3],200-b[2],200-b[4]]);expect(reviewCryptoMomentum(f.coin,f.hourly,f.daily,now).status).toBe('WATCH');});
   it('does not resurrect a breakout after price falls through its stop',()=>{const f=fixture();f.coin.price=100;expect(reviewCryptoMomentum(f.coin,f.hourly,f.daily,now).status).toBe('BLOCKED');});
+  it('does not display confirmed when the stop is above the quote or the quote has left the zone',()=>{
+    const f=fixture(),r=reviewCryptoMomentum(f.coin,f.hourly,f.daily,now);
+    expect(reviewStatusLabel(r)).toBe('BREAKOUT_CONFIRMED');
+    expect(reviewStatusLabel({...r,levels:{...r.levels!,stop:r.levels!.entry}})).toBe('BREAKOUT');
+    expect(reviewStatusLabel({...r,levels:{...r.levels!,entry:r.levels!.maxEntry+1}})).not.toMatch(/CONFIRMED/);
+  });
 });

@@ -1,43 +1,42 @@
 import {it,expect} from 'vitest';
-import {attentionChips} from '@/components/admin/CryptoAttentionStrip';
+import {scanDecision} from '@/components/admin/CryptoAttentionStrip';
 const now=Date.UTC(2026,8,29,9,10),F=4*3600000;
-const paper=(minutesAgo:number,healthy=true)=>({portfolio:{status:'ACTIVE',unrealisedPnl:1234},positions:[1,2],reconciliation:{status:'MATCHED',checkedAt:new Date(now).toISOString()},journal:[{title:'Crypto paper cycle completed',createdAt:new Date(now-minutesAgo*60000).toISOString(),evidence:[JSON.stringify({monitorHealthy:healthy})]}]});
-const scan={startedAt:new Date(Math.floor(now/F)*F+60000).toISOString(),rows:[{stage:'MOMENTUM_VOLUME'},{stage:'NO_SIGNAL'},{stage:'MOMENTUM_VOLUME'}]};
-const ops={operations:{state:{checkedAt:new Date(now-5*60000).toISOString(),healthy:true,issues:[]}}};
-const by=(c:ReturnType<typeof attentionChips>,l:string)=>c.find(x=>x.label===l)!;
-it('uses the newer exit-only report when discovery prevented an entry cycle',()=>{
- const p=paper(40);p.journal.push({title:'Crypto paper exit monitoring completed',createdAt:new Date(now-60000).toISOString(),evidence:[JSON.stringify({monitorHealthy:false,notes:['MINA: missing history; entries blocked until monitoring recovers']})]});
- const c=attentionChips(p,scan,ops,now);
- expect(by(c,'Last cycle').value).toBe('1 min ago');
- expect(by(c,'Exit monitoring')).toMatchObject({value:'UNHEALTHY — entries blocked',reasons:['MINA: missing history; entries blocked until monitoring recovers']});
+const scan={startedAt:new Date(Math.floor(now/F)*F+60000).toISOString(),rows:[
+ {id:'tosh',symbol:'TOSH',stage:'MOMENTUM_VOLUME',kind:'CONTINUATION',close:1,entryFloor:0.9,maxEntry:1.2,reason:'in zone'},
+ {id:'axs',symbol:'AXS',stage:'MOMENTUM_VOLUME',kind:'CONTINUATION',close:5,entryFloor:4,maxEntry:4.5,reason:'chased'},
+ {id:'mew',symbol:'MEW',stage:'EXTENDED',reason:'Price and volume advanced, but the completed move exceeds the ATR chase limits'},
+ {id:'btc',symbol:'BTC',stage:'NO_SIGNAL',reason:'No qualifying setup'},
+]};
+const paper=(healthy=true,extra:Record<string,unknown>={})=>({
+ portfolio:{status:'ACTIVE',unrealisedPnl:-1145},positions:[1,2],
+ journal:[{title:'Crypto paper cycle completed',createdAt:new Date(now-5*60000).toISOString(),evidence:[JSON.stringify({monitorHealthy:healthy,decisions:[],clusters:[{coins:['a','b'],overCap:false,riskUsd:100,capUsd:500}],...extra})]}],
 });
-it('does not invent healthy monitoring from an incomplete or overdue report',()=>{
- const p=paper(5);p.journal[0].evidence=['{}'];
- expect(by(attentionChips(p,scan,ops,now),'Exit monitoring').value).toBe('UNKNOWN');
- expect(by(attentionChips(paper(40),scan,ops,now),'Exit monitoring').value).toBe('OVERDUE');
+it('lists saved closes inside the entry zone and leaves no-signal coins out',()=>{
+ const d=scanDecision(paper(),scan,now);
+ expect(d.stale).toBe(false);
+ expect(d.inZone).toEqual([{symbol:'TOSH',kind:'CONTINUATION'}]);
+ expect(d.blocked.map(b=>b.symbol)).toEqual(['AXS','MEW']);
+ expect(d.blocked.find(b=>b.symbol==='AXS')?.reason).toBe('Outside the entry zone');
+ expect(d.blocked.find(b=>b.symbol==='MEW')?.reason).toContain('chase');
 });
-it('summarizes a healthy account from saved data with sources',()=>{
- const c=attentionChips(paper(5),scan,ops,now);
- expect(by(c,'Last cycle')).toMatchObject({value:'5 min ago',tone:'ok'});
- expect(by(c,'Exit monitoring')).toMatchObject({value:'HEALTHY',tone:'ok'});
- expect(by(c,'Open positions').value).toContain('2 ·');
- expect(by(c,'Confirmed 4h setups')).toMatchObject({value:'2'});
- expect(by(c,'Ledger check')).toMatchObject({value:'MATCHED',tone:'ok'});
- expect(by(c,'Ops health')).toMatchObject({value:'HEALTHY'});
+it('uses one reason from the last cycle when a coin was blocked',()=>{
+ const d=scanDecision(paper(true,{decisions:[{coin:'tosh',status:'BLOCKED',reason:'Correlated cluster risk cap',ask:1}]}),scan,now);
+ expect(d.inZone.map(c=>c.symbol)).not.toContain('TOSH');
+ expect(d.blocked.filter(b=>b.symbol==='tosh')).toEqual([{symbol:'tosh',reason:'Correlated cluster risk cap'}]);
 });
-it('flags overdue cycles, unhealthy monitoring, stale scans and missing data instead of showing them as current',()=>{
- const c=attentionChips(paper(40,false),{...scan,startedAt:new Date(Math.floor(now/F)*F-F).toISOString()},{},now);
- expect(by(c,'Last cycle')).toMatchObject({value:'OVERDUE',tone:'bad'});
- expect(by(c,'Exit monitoring')).toMatchObject({value:'UNHEALTHY — entries blocked',tone:'bad'});
- expect(by(c,'Confirmed 4h setups')).toMatchObject({value:'STALE SCAN',tone:'warn'});
- expect(by(c,'Ops health')).toMatchObject({value:'NOT CHECKED'});
- expect(by(attentionChips(null,null,null,now),'Paper account')).toMatchObject({value:'UNAVAILABLE',tone:'bad'});
+it('reads book health from the saved ledger and the last cycle',()=>{
+ const healthy=scanDecision(paper(),scan,now);
+ expect(healthy.health).toMatchObject({positions:2,openPnl:-1145,cluster:'INSIDE CAP',exits:'HEALTHY'});
+ const over=scanDecision(paper(false,{clusters:[{coins:['ASTER','SYRUP'],overCap:true,riskUsd:3263,capUsd:1508}]}),scan,now);
+ expect(over.health.cluster).toBe('OVER CAP');
+ expect(over.health.clusterDetail).toContain('ASTER');
+ expect(over.health.exits).toBe('UNHEALTHY');
+ expect(scanDecision(null,null,now).health).toMatchObject({positions:null,cluster:'NOT RECORDED',exits:'UNKNOWN'});
 });
-it('shows the cycle\'s own reasons when exit monitoring is unhealthy, and says so when none were recorded',()=>{
- const withNotes={...paper(5,false),journal:[{title:'Crypto paper cycle completed',createdAt:new Date(now-300000).toISOString(),evidence:[JSON.stringify({monitorHealthy:false,notes:['grass: Exit quote unavailable or expired; entries blocked until monitoring recovers','cron: 2 setups use other quote/venue combinations']})]}]};
- const chip=by(attentionChips(withNotes,scan,ops,now),'Exit monitoring');
- expect(chip.reasons).toEqual(['grass: Exit quote unavailable or expired; entries blocked until monitoring recovers']);
- expect(chip.detail).toContain('grass: Exit quote unavailable');
- expect(by(attentionChips(paper(5,false),scan,ops,now),'Exit monitoring').detail).toContain('No reason recorded');
- expect(by(attentionChips(paper(5),scan,ops,now),'Exit monitoring').reasons).toBeUndefined();
+it('marks an old scan window stale and an overdue monitor unhealthy',()=>{
+ const old={...scan,startedAt:new Date(Math.floor(now/F)*F-F).toISOString()};
+ const late=paper();late.journal[0].createdAt=new Date(now-40*60000).toISOString();
+ const d=scanDecision(late,old,now);
+ expect(d.stale).toBe(true);
+ expect(d.health.exits).toBe('UNHEALTHY');
 });

@@ -3,7 +3,7 @@ import {parseDailyVenue,selectDailyPair,type DailyPair} from './cryptoDailyVenue
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {createBaseScan} from './cryptoBaseScan';
 const H=3600000,F=4*H;
-export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;kind:'BREAKOUT'|'CONTINUATION'|null};
+export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;sma20?:number;signal?:{t:number;o:number;h:number;l:number;c:number};kind:'BREAKOUT'|'CONTINUATION'|null};
 export type MomentumScanRow=VolumeMomentum&{id:string;symbol:string;pair:DailyPair|null};
 export type MomentumScan={version:1;startedAt:string;updatedAt:string;discoveryAt:string;rows:MomentumScanRow[]};
 export const blankMomentum=(reason='Waiting for completed 4h candles'):VolumeMomentum=>({stage:'PENDING',reason,asOf:null,relativeVolume:null,changePct:null,trigger:null,close:null,atr:null,kind:null});
@@ -31,7 +31,7 @@ export function assessVolumeMomentum(bars:ExchangeBar[],now:number,interval=F):V
  // ATR baseline excludes the signal bar so a large breakout cannot inflate its own allowance.
  const tr=b.slice(1,-1).map((x,i)=>Math.max(x.h-x.l,Math.abs(x.h-b[i].c),Math.abs(x.l-b[i].c)));
  const atr=mean(tr.slice(-14));if(atr<=0)return fail('No usable range baseline');
- Object.assign(result,{asOf:new Date(last.t).toISOString(),relativeVolume:rv,changePct:change,trigger,close:last.c,atr});
+  Object.assign(result,{asOf:new Date(last.t).toISOString(),relativeVolume:rv,changePct:change,trigger,close:last.c,atr,sma20:sma,signal:{t:last.t,o:last.o,h:last.h,l:last.l,c:last.c}});
  const rising=last.c>sma&&sma>oldSma,breakout=last.c>trigger,continuation=change>=1&&last.c>prev.h;
  const expanded=rv>=1.5;
  if(expanded&&rising&&(breakout||continuation)){
@@ -45,6 +45,15 @@ export function assessVolumeMomentum(bars:ExchangeBar[],now:number,interval=F):V
  }else if(expanded){result.stage='VOLUME_WATCH';result.reason=`Elevated ${label} volume without the required upward price confirmation; not a buy signal`;}
  else{result.stage='NO_SIGNAL';result.reason=`No qualifying price-and-volume momentum setup on the latest completed ${label} candle`;}
  return result;
+}
+const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
+/** The word "confirmed" is allowed only while the saved close or quote is inside the zone and the long stop is under that price. */
+export function setupDisplayLabel(row:Pick<VolumeMomentum,'stage'|'stop'|'close'|'entryFloor'|'maxEntry'>,quote?:number|null):string{
+ if(row.stage!=='MOMENTUM_VOLUME')return row.stage;
+ const price=finite(quote)?quote:row.close;
+ if(!finite(row.stop)||!finite(price)||!(row.stop<price))return 'invalid stop';
+ if(!finite(row.entryFloor)||!finite(row.maxEntry)||price<row.entryFloor||price>row.maxEntry)return 'outside entry zone';
+ return 'confirmed';
 }
 export function fourHourUrl(pair:DailyPair,now:number):string{
  if(!/^[A-Z0-9]{1,30}-(USD|USDT|USDC)$/.test(pair.product)||pair.product.split('-')[0]!==pair.volumeUnit||pair.product.split('-')[1]!==pair.quote)throw Error('Unsupported pair');
