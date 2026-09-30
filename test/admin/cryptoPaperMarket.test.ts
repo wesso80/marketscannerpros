@@ -10,7 +10,7 @@ it('sizes to risk and notional limits including entry/exit friction',()=>{
 });
 it.each([
  {stage:'EXTENDED'}, {asOf:'2026-09-27T04:00:00Z'}, {asOf:'2026-09-29T04:00:00Z'},
- {stop:101}, {target:104}, {maxEntry:100}, {entryFloor:101}, {stop:undefined}, {stop:NaN}, {stop:0.000000001},
+ {stop:101}, {maxEntry:100}, {entryFloor:101}, {stop:undefined}, {stop:NaN}, {stop:0.000000001},
 ])('rejects stale, incomplete, chased, invalid and poor reward/risk setups %j',patch=>{
  expect(planCryptoPaper({...signal,...patch} as VolumeMomentum,quote,200000,200000,now).ok).toBe(false);
 });
@@ -83,4 +83,11 @@ it('fills a no-trade run right after the checkpoint from a real anchor candle, n
  const path=await fetchPaperPath('bitcoin','BTC-USD',new Date(now-4*900000).toISOString());
  expect(path.candles.map(c=>c.openAt)).toEqual([now-4*900000,now-3*900000,now-2*900000,now-900000]);
  expect(path.candles[0]).toMatchObject({open:96.5,close:96.5});expect(path.filledBars).toBe(3);
+});
+it('anchors the target to the actual fill (paper and backtest share this), so R at target does not depend on entry timing',()=>{
+ for(const ask of ['99.2','100','101.5']){
+  const q=parsePaperQuote({bid:String(Number(ask)-.01),ask,time:new Date(now).toISOString()},'BTC-USD',now),p=planCryptoPaper(signal,q,200000,200000,now);
+  expect(p.ok).toBe(true);
+  if(p.ok){expect(p.target).toBeCloseTo(p.fill+2*(p.fill-p.stop),6);expect(p.signalTarget).toBe(112);expect(p.targetRule).toBe('fill-2R-v1');expect(p.rewardRisk).toBeGreaterThan(1.88);expect(p.rewardRisk).toBeLessThan(2);}
+ }
 });

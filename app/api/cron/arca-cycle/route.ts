@@ -2,6 +2,10 @@ import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {adminDiscoveryOnly} from '@/lib/admin/discoveryOnly';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
+import {runCryptoMarketData} from '@/lib/admin/cryptoMarketDataJob';
+import {runNewListings} from '@/lib/admin/cryptoNewListingsJob';
+import {historyStep} from '@/lib/admin/cgHistoryJob';
+import {CG_HISTORY} from '@/lib/admin/cgHistory';
 /**
  * POST /api/cron/arca-cycle
  *
@@ -59,9 +63,17 @@ export async function POST(req: NextRequest) {
     const cryptoPaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper entry cycle failed'}));
     const ok=monitoring.ok&&cryptoPaper.ok&&!scanFailed;
     const operationalAlerts=await reportCryptoCycleHealth({monitoring,scanning,paper:cryptoPaper}).catch(()=>({ok:false,error:'Operational alert failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts},{status:ok?200:503});
+    // Non-essential CoinGecko market context runs last and never affects this run's health status.
+    const marketData=await runCryptoMarketData().catch(()=>({ok:false,error:'CoinGecko market data failed'}));
+    const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
+    // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
+    const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,marketData,newListings,history},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
+  await runCryptoMarketData().catch(()=>undefined);
+  await runNewListings().catch(()=>undefined);
+  await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>undefined);
   const started = Date.now();
   try {
     let rows: Array<{ workspace_id: string }> = [];

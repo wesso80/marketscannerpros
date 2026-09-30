@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {publishPaperSnapshot,usePaperSnapshot} from './cryptoPaperSnapshot';
 type Chip={label:string;value:string;tone:'ok'|'warn'|'bad'|'info';detail:string;reasons?:string[]};
 type Paper={portfolio:{status:string;unrealisedPnl:number}|null;positions:unknown[];reconciliation?:{status:string;checkedAt:string};journal:{title:string;createdAt:string;evidence?:string[]}[]};
 type Scan={startedAt:string;rows:{stage:string}[]}|null;
@@ -37,12 +38,14 @@ export default function CryptoAttentionStrip({now,refreshVersion=0,onOpen}:{now:
  useEffect(()=>{let c=new AbortController();
   const load=()=>{if(document.hidden)return;c.abort();c=new AbortController();const signal=c.signal;
    const get=(u:string)=>fetch(u,{cache:'no-store',signal}).then(async r=>r.ok?r.json():null).catch(()=>null);
-   void Promise.all([get('/api/admin/crypto-markets/paper'),get('/api/admin/crypto-markets/momentum'),get('/api/admin/crypto-markets/setup-email')]).then(([paper,m,ops])=>{if(!signal.aborted)setData({paper,scan:m?.scan??null,ops,loadedAt:Date.now()});});};
+   void Promise.all([get('/api/admin/crypto-markets/paper'),get('/api/admin/crypto-markets/momentum'),get('/api/admin/crypto-markets/setup-email')]).then(([paper,m,ops])=>{if(signal.aborted)return;if(paper)publishPaperSnapshot(paper);setData({paper,scan:m?.scan??null,ops,loadedAt:Date.now()});});};
   load();const id=setInterval(load,60000);document.addEventListener('visibilitychange',load);
   return()=>{clearInterval(id);document.removeEventListener('visibilitychange',load);c.abort();};},[refreshVersion]);
+ // Paper chips use the shared snapshot (the latest read by this strip OR the paper panel), never a separate read.
+ const shared=usePaperSnapshot();
  if(!data)return <p className="text-sm text-slate-400">Loading attention summary…</p>;
  // Judge freshness at load time; a snapshot older than 3 minutes (e.g. hidden tab) is labelled rather than trusted.
- const snapshotAge=Date.now()-data.loadedAt,chips=attentionChips(data.paper,data.scan,data.ops,snapshotAge>180000?now:data.loadedAt);
+ const snapshotAge=Date.now()-data.loadedAt,chips=attentionChips(shared&&shared.loadedAt>=data.loadedAt?shared.data:data.paper,data.scan,data.ops,snapshotAge>180000?now:data.loadedAt);
  return <section aria-label="Needs attention" className="flex flex-wrap gap-2">
   {chips.map(c=><button key={c.label} type="button" title={c.detail} onClick={()=>onOpen?.(c.label==='Confirmed 4h setups'?'setups':c.label==='Ops health'?'alerts':'paper')} className={`rounded border px-3 py-2 text-left text-sm ${tones[c.tone]}`}>
    <span className="block text-xs text-slate-400">{c.label}</span>{c.value}</button>)}

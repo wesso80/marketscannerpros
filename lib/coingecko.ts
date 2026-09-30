@@ -34,6 +34,7 @@ const getWebSocketUrl = () => process.env.COINGECKO_WS_URL || '';
 
 // Circuit breaker — trips after repeated non-429 failures (500s, timeouts)
 import { coinGeckoCircuit } from '@/lib/circuitBreaker';
+import { recordCgCall } from '@/lib/admin/cgCredits';
 import {
   recordProviderFailure,
   recordProviderSuccess,
@@ -250,14 +251,15 @@ async function cgFetch<T>(
     const startedAt = Date.now();
 
     try {
-      const response = await coinGeckoCircuit.call(() => fetch(url, {
+      // Every HTTP attempt (retries included) is counted toward the credit budget.
+      const response = await coinGeckoCircuit.call(() => (recordCgCall(endpointFamily), fetch(url, {
         ...(options?.init || {}),
         headers: {
           ...getHeaders(),
           ...(options?.init?.headers || {}),
         },
         signal: controller.signal,
-      }));
+      })));
 
       if (response.status === 429) {
         recordProviderFailure('COINGECKO', endpointFamily, 'RATE_LIMIT', Date.now() - startedAt);
@@ -1111,10 +1113,10 @@ function usableDerivativesCache(nowMs: number): DerivativeTicker[] | null {
  * This preserves independent multi-venue funding/OI evidence while keeping the
  * response size and latency bounded.
  */
-async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> {
+async function getMajorDerivativeExchangeTickers(count = 3): Promise<DerivativeTicker[]> {
   const exchangeParams = new URLSearchParams({
     order: 'open_interest_btc_desc',
-    per_page: '3',
+    per_page: String(count),
     page: '1',
   });
 
@@ -1125,7 +1127,7 @@ async function getMajorDerivativeExchangeTickers(): Promise<DerivativeTicker[]> 
     timeoutMs: 10_000,
   });
 
-  const top = (exchanges || []).filter((exchange) => exchange?.id).slice(0, 3);
+  const top = (exchanges || []).filter((exchange) => exchange?.id).slice(0, count);
   if (top.length === 0) {
     throw new Error('[CoinGecko] No ranked derivatives exchanges returned');
   }
@@ -1219,6 +1221,15 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
     console.error('[CoinGecko] Derivatives fetch error:', error);
     return null;
   }
+}
+
+/**
+ * Uncached perpetual/futures tickers from the top `count` derivatives exchanges by open interest, for the scheduled
+ * admin snapshot. Uses the bounded per-exchange route (the all-tickers /derivatives payload exceeded production
+ * limits). Costs 1 + count calls. Throws when no exchange returns usable tickers.
+ */
+export async function getDerivativesSnapshot(count = 6): Promise<DerivativeTicker[]> {
+  return getMajorDerivativeExchangeTickers(count);
 }
 
 export async function warmDerivativesCache(): Promise<void> {
@@ -1657,6 +1668,9 @@ export interface CoinTicker {
   trade_url: string | null;
   coin_id: string;
   target_coin_id?: string;
+  /** Present with depth=true: USD cost to move price 2% up / down. */
+  cost_to_move_up_usd?: number | null;
+  cost_to_move_down_usd?: number | null;
 }
 
 /**
@@ -2226,4 +2240,75 @@ export async function getCryptoMarketsContextPart(part:'news'|'trending'|'global
   const path={news:'/news',trending:'/search/trending',global:'/global'}[part];
   return cgFetch<unknown>(path,{params:part==='news'?new URLSearchParams({per_page:'10',language:'en',type:'news'}):undefined,
     retries:0,timeoutMs:10000,init:{next:{revalidate:300}}});
+}
+
+// ============================================
+// ONCHAIN NETWORKS + TOP HOLDERS (admin new-listings checks)
+// ============================================
+
+export interface OnchainNetwork { id: string; attributes?: { name?: string; coingecko_asset_platform_id?: string | null } }
+/** GeckoTerminal networks with their CoinGecko asset-platform id. Endpoint: /onchain/networks (paginated). */
+export async function getOnchainNetworksPage(page: number): Promise<OnchainNetwork[] | null> {
+  try {
+    const data = await cgFetch<{ data: OnchainNetwork[] }>('/onchain/networks', {
+      params: new URLSearchParams({ page: String(page) }),
+      init: { next: { revalidate: 86400 } },
+    });
+    return Array.isArray(data?.data) ? data.data : null;
+  } catch (error) {
+    console.error('[CoinGecko] Onchain networks error:', error);
+    return null;
+  }
+}
+
+export interface TopHolder { rank: number; address: string; label: string | null; amount: string; percentage: string; value?: string | null }
+/**
+ * Top token holders (Beta; Analyst plan and above). Endpoint: /onchain/networks/{network}/tokens/{address}/top_holders.
+ * Max 50 holders (40 on Solana). Returns null on any failure; callers must treat that as unavailable.
+ */
+export async function getTopTokenHolders(network: string, address: string, holders = 20): Promise<{ lastUpdatedAt: string | null; holders: TopHolder[] } | null> {
+  try {
+    const data = await cgFetch<{ data?: { attributes?: { last_updated_at?: string; holders?: TopHolder[] } } }>(
+      `/onchain/networks/${encodeURIComponent(network)}/tokens/${encodeURIComponent(address)}/top_holders`,
+      { params: new URLSearchParams({ holders: String(holders) }), init: { next: { revalidate: 3600 } } },
+    );
+    const a = data?.data?.attributes;
+    return a && Array.isArray(a.holders) ? { lastUpdatedAt: a.last_updated_at ?? null, holders: a.holders } : null;
+  } catch (error) {
+    console.error('[CoinGecko] Top holders error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// HISTORY LOADER (admin research backtests)
+// ============================================
+
+export interface CoinListEntry { id: string; symbol: string; name: string }
+/** Full coin list in one response. status 'inactive' (Analyst plan and above) returns coins no longer listed. */
+export async function getCoinsList(status: 'active' | 'inactive' = 'active'): Promise<CoinListEntry[] | null> {
+  try {
+    const params = new URLSearchParams(status === 'inactive' ? { status: 'inactive' } : {});
+    const data = await cgFetch<CoinListEntry[]>('/coins/list', { params, init: { cache: 'no-store' }, timeoutMs: 30_000 });
+    return Array.isArray(data) ? data : null;
+  } catch (error) {
+    console.error('[CoinGecko] Coins list error:', error);
+    return null;
+  }
+}
+
+/** Global market cap AND volume history; daily granularity for 2+ days. Endpoint: /global/market_cap_chart. */
+export async function getGlobalMarketCapHistory(days: number): Promise<{ market_cap: [number, number][]; volume: [number, number][] } | null> {
+  try {
+    const data = await cgFetch<{ market_cap_chart?: { market_cap?: [number, number][]; volume?: [number, number][] } }>('/global/market_cap_chart', {
+      params: new URLSearchParams({ days: String(Math.max(2, Math.floor(days))) }),
+      init: { cache: 'no-store' },
+      timeoutMs: 30_000,
+    });
+    const c = data?.market_cap_chart;
+    return c && Array.isArray(c.market_cap) ? { market_cap: c.market_cap, volume: Array.isArray(c.volume) ? c.volume : [] } : null;
+  } catch (error) {
+    console.error('[CoinGecko] Global market cap history error:', error);
+    return null;
+  }
 }

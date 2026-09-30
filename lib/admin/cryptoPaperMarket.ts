@@ -59,6 +59,12 @@ export async function fetchPaperPath(symbol:string,product:string,from?:string):
  return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c})),filledBars:bars.filter(b=>b.filled).length};
 }
 /** maxNotional: optional liquidity cap in USD; riskScale (0,1]: correlation reduction of the 0.25% risk budget. The smallest size wins. */
+/**
+ * Target rule (paper and backtest share this planner): the target is anchored to the actual fill, TARGET_R x the
+ * fill-to-stop distance above it. Before 2026-09-30 it was the signal candle's close + 2R, so a later live fill gave
+ * 1.8-2.5R at the target while the backtest (filled at the next hourly open) clustered near 1.95R.
+ */
+export const TARGET_RULE={id:'fill-2R-v1',targetR:2};
 export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now(),costRate=.0005,maxNotional=Infinity,riskScale=1){
  const fail=(reason:string)=>({ok:false as const,reason});
  if(signal.stage!=='MOMENTUM_VOLUME'||!signal.asOf||!Number.isFinite(Date.parse(signal.asOf))||now-Date.parse(signal.asOf)>4*3600000+900000||Date.parse(signal.asOf)>now)return fail('No current confirmed momentum setup');
@@ -66,7 +72,7 @@ export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equ
  if(quote.bid<=0||quote.ask<quote.bid||!Number.isFinite(Date.parse(quote.priceAt))||Date.parse(quote.priceAt)>now||now-Date.parse(quote.priceAt)>60000)return fail('Quote stale or invalid');
  if((quote.ask/quote.bid-1)*100>0.5)return fail('Spread above 0.5%');
  if(costRate!==.0005&&costRate!==.001)return fail('Unsupported paper costs');
- const fill=quote.ask*(1+costRate),stop=Number(signal.stop!.toFixed(8)),target=Number(signal.target!.toFixed(8)),fee=costRate;
+ const fill=quote.ask*(1+costRate),stop=Number(signal.stop!.toFixed(8)),target=Number((fill+TARGET_RULE.targetR*(fill-stop)).toFixed(8)),fee=costRate;
  // Bound rounding error from the existing NUMERIC(18,8) ledger.
  if(Math.min(fill,stop,target)<0.0001||Math.max(fill,stop,target)>=1e10)return fail('Price outside supported paper precision');
  if(equity<=0||cash<=0||stop<=0||fill<=stop||fill>=target||fill>signal.maxEntry!||quote.ask<signal.entryFloor!)return fail('Current quote is outside the valid entry zone');
@@ -77,5 +83,5 @@ export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equ
  const unbounded=Math.min(equity*.0025*riskScale/loss,equity*.1/fill,cash/(fill*(1+fee))),liquidityCapped=maxNotional/fill<unbounded;
  const quantity=Math.floor(Math.min(unbounded,maxNotional/fill)*1e8)/1e8;
  if(quantity<=0||quantity>=1e12||quantity*fill<10)return fail('Insufficient size');
- return {ok:true as const,fill,stop,target,quantity,notional:quantity*fill,risk:quantity*loss,rewardRisk:reward/loss,liquidityCapped};
+ return {ok:true as const,fill,stop,target,signalTarget:signal.target!,targetRule:TARGET_RULE.id,quantity,notional:quantity*fill,risk:quantity*loss,rewardRisk:reward/loss,liquidityCapped};
 }
