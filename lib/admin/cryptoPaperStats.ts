@@ -1,9 +1,10 @@
 import {btcDownFilter} from './cryptoMarketRegime';
+import {giveBackSummary,type GiveBackSummary} from './cryptoExcursion';
 /** Closed-trade expectancy in R for the crypto paper beta. Read-only; no row is adjusted or inferred. */
-export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null};
-export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null};
+export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null;mfe_r?:string|number|null;mae_r?:string|number|null};
+export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null;giveBack:GiveBackSummary};
 export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byFunding:CryptoStatsGroup[];byShadowFilter:CryptoStatsGroup[];byBtc200:CryptoStatsGroup[];byRsRule:CryptoStatsGroup[];byFlow:CryptoStatsGroup[];byExit:CryptoStatsGroup[]};
-type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;rs:string;flow:string;funding:string;exit:string};
+type Trade={mfe:number|null;mae:number|null;r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;rs:string;flow:string;funding:string;exit:string};
 function evidence(reason:string|null):{kind?:string;regime?:string;long?:string;rs?:string;flow?:string;funding?:string}{
  const i=reason?.indexOf('{')??-1;if(!reason||i<0)return {};
  try{const e=JSON.parse(reason.slice(i));return {kind:e?.signal?.kind,regime:e?.btcRegime?.state,long:e?.btcRegime?.longTrend,rs:e?.relativeStrength?.rule,flow:e?.flow?.state,funding:e?.derivatives?.fundingState};}catch{return {};}
@@ -14,7 +15,7 @@ function group(label:string,trades:Trade[]):CryptoStatsGroup{
  const wins=rs.filter(r=>r>0),losses=rs.filter(r=>r<0);
  const grossWin=trades.filter(t=>t.pnl>0).reduce((s,t)=>s+t.pnl,0),grossLoss=-trades.filter(t=>t.pnl<0).reduce((s,t)=>s+t.pnl,0);
  const holds=trades.map(t=>t.holdHours).filter((h):h is number=>h!=null);
- return {label,trades:trades.length,withR:rs.length,winRate:rs.length?wins.length/rs.length:null,avgR:avg(rs),avgWinR:avg(wins),avgLossR:avg(losses),profitFactor:grossLoss>0?grossWin/grossLoss:null,netPnl:Math.round(trades.reduce((s,t)=>s+t.pnl,0)*100)/100,avgHoldHours:avg(holds)};
+ return {label,trades:trades.length,withR:rs.length,winRate:rs.length?wins.length/rs.length:null,avgR:avg(rs),avgWinR:avg(wins),avgLossR:avg(losses),profitFactor:grossLoss>0?grossWin/grossLoss:null,netPnl:Math.round(trades.reduce((s,t)=>s+t.pnl,0)*100)/100,avgHoldHours:avg(holds),giveBack:giveBackSummary(trades.map(t=>({mfeR:t.mfe,maeR:t.mae,finalR:t.r})))};
 }
 function by(trades:Trade[],key:(t:Trade)=>string):CryptoStatsGroup[]{
  const m=new Map<string,Trade[]>();for(const t of trades)m.set(key(t),[...(m.get(key(t))??[]),t]);
@@ -24,7 +25,8 @@ export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):Crypt
  const trades:Trade[]=rows.map(row=>{
   const e=evidence(row.created_reason),entry=new Date(row.entry_time).getTime(),exit=new Date(row.exit_time).getTime();
   const r=row.r_multiple==null?null:Number(row.r_multiple);
-  return {r:r!=null&&Number.isFinite(r)?r:null,pnl:Number(row.realised_pnl)||0,holdHours:Number.isFinite(entry)&&Number.isFinite(exit)&&exit>=entry?(exit-entry)/3600000:null,
+  const x=(v:unknown)=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
+  return {mfe:x(row.mfe_r),mae:x(row.mae_r),r:r!=null&&Number.isFinite(r)?r:null,pnl:Number(row.realised_pnl)||0,holdHours:Number.isFinite(entry)&&Number.isFinite(exit)&&exit>=entry?(exit-entry)/3600000:null,
    setup:e.kind??'NOT_RECORDED',venue:row.instrument_type.startsWith('okx-usd-v1:')?'OKX USDT→USD':row.instrument_type.startsWith('coinbase:')?'Coinbase USD':'OTHER',
    regime:e.regime??'NOT_RECORDED',long:e.long??'NOT_RECORDED',rs:e.rs??'NOT_RECORDED',flow:e.flow??'NOT_RECORDED',funding:e.funding??'NOT_RECORDED',exit:row.exit_reason};
  });
