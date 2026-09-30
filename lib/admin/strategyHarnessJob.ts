@@ -5,7 +5,7 @@ import {ensureCgHistoryTables} from './cgHistoryJob';
 import {HARNESS,VARIANTS,dayKey,aggregate,runCoin,verifyMapping,stats,rankTopThird,type HarnessTrade,type Stats,type VariantId} from './strategyHarness';
 const K='admin:crypto-markets:harness:v1',D=86400000,H=3600000,TTL=30*86400;
 type CoinJob={coin:string;symbol:string;product:string|null;status:'PENDING'|'DONE'|'NO_COINBASE_PAIR'|'MAPPING_REJECTED'|'FAILED';trades?:number;overlap?:number;share?:number;error?:string;firstDay:string;lastDay:string};
-export type HarnessState={version:string;status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;dataEnd:string;coins:CoinJob[];requests:number};
+export type HarnessState={version:string;status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;dataEnd:string;coins:CoinJob[];requests:number;pendingPass1?:number};
 type Ctx={universeDays:string[];rankDays:string[]};
 async function state(){return getRedis()?.get<HarnessState>(K)??null;}
 export async function savedHarnessResult(){return getRedis()?.get<HarnessResult>(`${K}:result`)??null;}
@@ -23,7 +23,8 @@ export async function startHarness(now=Date.now()){
  const [btc]=await q<{n:string}>(`SELECT COUNT(*) n FROM cg_hist_daily WHERE coin_id='bitcoin' AND price IS NOT NULL AND day<'2022-01-01'`);
  if(Number(btc?.n??0)<200)throw Error('Phase 4 history is not ready: BTC needs 200 daily closes before 2022 (run the History data job first)');
  const [pend]=await q<{n:string}>(`SELECT COUNT(*) n FROM cg_hist_coins WHERE chart_status='PENDING'`);
- if(Number(pend?.n??0)>0)throw Error(`Phase 4 pass 1 is not finished (${pend!.n} coins pending); the point-in-time universe would be incomplete`);
+ const pendingPass1=Number(pend?.n??0);
+ if(pendingPass1>HARNESS.maxPendingPass1)throw Error(`Phase 4 pass 1 is not finished (${pendingPass1} coins pending, at most ${HARNESS.maxPendingPass1} allowed); the point-in-time universe would be incomplete`);
  const members=await q<{coin_id:string;days:string[]}>(`SELECT coin_id,array_agg(day::text ORDER BY day) days FROM (SELECT d.coin_id,d.day,rank() OVER (PARTITION BY d.day ORDER BY d.market_cap DESC) r FROM cg_hist_daily d JOIN cg_hist_coins c ON c.id=d.coin_id AND NOT c.stable WHERE d.market_cap IS NOT NULL AND d.day>=$1::date) x WHERE r<=$2 GROUP BY coin_id`,[HARNESS.from,HARNESS.universeTop]);
  const ids=members.map(m=>m.coin_id),prices=await pricesFor([...new Set([...ids,'bitcoin'])],'2021-06-01');
  // BTC regime per day key: CoinGecko 00:00 price = previous day's close; bull when above the mean of the last 200 closes.
@@ -39,7 +40,7 @@ export async function startHarness(now=Date.now()){
   return {coin:m.coin_id,symbol:sym,product:p?.id??null,status:p?'PENDING':'NO_COINBASE_PAIR',firstDay:m.days[0],lastDay:m.days.at(-1)!};});
  for(const m of members)await redis.set(`${K}:ctx:${m.coin_id}`,{universeDays:m.days,rankDays:rankByCoin.get(m.coin_id)??[]} satisfies Ctx,{ex:TTL});
  await redis.set(`${K}:btc`,bull,{ex:TTL});
- const st:HarnessState={version:HARNESS.version,status:'RUNNING',startedAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),dataEnd:dayKey(now),coins,requests:1};
+ const st:HarnessState={version:HARNESS.version,status:'RUNNING',startedAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),dataEnd:dayKey(now),coins,requests:1,pendingPass1};
  await redis.set(K,st,{ex:TTL});await redis.del(`${K}:result`);return st;
 }
 /** Processes coins until ~100s elapse. Coinbase hourly candles cover only the coin's universe days plus warm-up/exit room. */

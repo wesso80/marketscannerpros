@@ -7,8 +7,8 @@ vi.mock('@/lib/admin/cgHistoryJob',()=>({ensureCgHistoryTables:async()=>undefine
 import {startHarness,computeHarness,harnessBatch} from '@/lib/admin/strategyHarnessJob';
 it('refuses to run on an incomplete point-in-time universe instead of silently using partial data',async()=>{
  await expect(startHarness()).rejects.toThrow('BTC needs 200 daily closes');
- btcDays='210';pending='12';
- await expect(startHarness()).rejects.toThrow('12 coins pending');
+ btcDays='210';pending='26';
+ await expect(startHarness()).rejects.toThrow('26 coins pending, at most 25 allowed');
  await expect(computeHarness()).rejects.toThrow('not complete');
  await expect(harnessBatch()).rejects.toThrow('Start the harness first');
 });

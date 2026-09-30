@@ -18,6 +18,11 @@ export const HARNESS={
  /** Coinbase product accepted for a CoinGecko id only if >= 90% of overlapping daily closes agree within 3%. */
  mapping:{maxDiff:.03,minShare:.9,minOverlapDays:30},
  benchmarkTop:50,
+ /**
+  * After the backfill, the daily top-up adds a few new top-2,500 coins (and Retry errors re-queues failures) as pass-1
+  * pending. Up to this many may still be pending at start; the count is recorded and shown with the results.
+  */
+ maxPendingPass1:25,
 };
 export const VARIANTS=[
  {id:'A',label:'Current system as-is (4h breakout + continuation, 2R target from fill, stop, 7-day horizon)'},

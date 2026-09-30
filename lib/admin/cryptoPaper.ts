@@ -23,7 +23,7 @@ import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {fourHourBars,instrumentPair,correlationScale,clusterAllowance,portfolioClusters,positionRiskUsd,CORRELATION,type PortfolioCluster} from './cryptoCorrelation';
 import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchFlow} from './cryptoFlow';
-import {fillTrailingNoTrade} from './cryptoCandleGaps';
+import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
@@ -137,7 +137,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    let path=pathResult.value;const quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
    if(path.filledBars)notes.push(`${position.symbol}: ${path.filledBars} no-trade 15m candle(s) filled flat at the prior close`);
    // A quiet coin with no trades since its last candle must not block the whole account while its market is live.
-   const trailing=fillTrailingNoTrade(path.candles,Math.floor(Date.now()/900000)*900000,!!quote&&Date.now()-Date.parse(quote.priceAt)<=60000);
+   const trailing=fillTrailingNoTrade(path.candles,Math.floor(Date.now()/900000)*900000,!!quote&&Date.now()-Date.parse(quote.priceAt)<=60000,900000,undefined,(path as {trailingAnchor?:TrailingAnchor}).trailingAnchor);
    if(trailing.filled){path={...path,candles:trailing.candles};notes.push(`${position.symbol}: ${trailing.filled} trailing no-trade 15m candle(s) filled flat at the last close (fresh quote confirms the market is live)`);}
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
