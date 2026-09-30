@@ -34,29 +34,45 @@ function CostSensitivity({rows}:{rows:CostSensitivityRow[]|undefined}){
   </tbody></table></div>}
  </div>;
 }
-export default function CryptoPaperStats({stats,exitPlans,title='Strategy statistics',source='closed trades in this paper ledger'}:{stats:Stats|null|undefined;exitPlans?:ExitPlanComparison[]|null;title?:string;source?:string}){
- return <section aria-label="Strategy statistics" className="space-y-2 rounded border border-emerald-800 p-3">
-  <h3 className="font-semibold">{title} · SIMULATED · {stats?.sample.replace('_',' ')??'UNAVAILABLE'}</h3>
-  {!stats?<p>Statistics unavailable: closed trades could not be read. No figures are estimated.</p>:<>
-   <p className={stats.sample==='USABLE'?'':'text-amber-300'}>{stats.sampleNote}</p>
-   <p className="text-xs text-slate-400">Expectancy is the average result per trade in R (1R = the planned risk at entry), after estimated fees and slippage. Above +0R means the rules made money on paper. Source: {source} · computed {new Date(stats.checkedAt).toLocaleString()}. Trades opened before BTC trend tagging show NOT_RECORDED.</p>
-   {stats.overall.trades>0&&<>
-    <Table title="Overall" rows={[stats.overall]} />
-    <Table title="By BTC daily trend at entry" rows={stats.byBtcRegime} />
-    {stats.byBtc200?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By BTC 200-day regime at entry (bull-market hypothesis; evidence only, never blocks)" rows={stats.byBtc200} />}
-    {stats.byRsRule?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By relative-strength leader rule at entry (top third vs BTC over 30 days and above own 50d; evidence only, never blocks)" rows={stats.byRsRule} />}
-    {stats.byFlow?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By liquidation / taker-flow state at entry (flow-v1 shadow label: OKX, evidence only, never blocks)" rows={stats.byFlow} />}
-    {stats.byShadowFilter?.some(g=>g.label==='PASS'||g.label==='WOULD_SKIP')&&<>
-     <Table title="Shadow filter: skip new entries when BTC daily trend is DOWN (evidence only; never blocks a trade)" rows={stats.byShadowFilter} />
-     <p className="text-xs text-slate-400">PASS is what the account would have traded with the filter on; WOULD_SKIP trades were still taken for comparison. The filter is judged on these rows only; with few trades in either row the difference is noise. Trades without a recorded BTC trend show NOT_RECORDED and are never assigned a side.</p>
-    </>}
-    {stats.byFunding?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By OKX perpetual funding state at entry (evidence only)" rows={stats.byFunding} />}
-    <Table title="By setup type" rows={stats.bySetup} />
-    <Table title="By venue" rows={stats.byVenue} />
-    <Table title="By exit reason" rows={stats.byExit} />
-    <CostSensitivity rows={stats.costSensitivity} />
+function Breakdown({stats,exitPlans,source}:{stats:Stats;exitPlans?:ExitPlanComparison[]|null;source:string}){
+ return <>
+  <p className={stats.sample==='USABLE'?'':'text-amber-300'}>{stats.sampleNote}</p>
+  <p className="text-xs text-slate-400">Expectancy is the average result per trade in R (1R = the planned risk at entry), after estimated fees and slippage. Above +0R means the rules made money on paper. Source: {source} · computed {new Date(stats.checkedAt).toLocaleString()}. Trades opened before BTC trend tagging show NOT_RECORDED.</p>
+  {stats.overall.trades>0&&<>
+   <Table title="Overall" rows={[stats.overall]} />
+   <Table title="By BTC daily trend at entry" rows={stats.byBtcRegime} />
+   {stats.byBtc200?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By BTC 200-day regime at entry (bull-market hypothesis; evidence only, never blocks)" rows={stats.byBtc200} />}
+   {stats.byRsRule?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By relative-strength leader rule at entry (top third vs BTC over 30 days and above own 50d; evidence only, never blocks)" rows={stats.byRsRule} />}
+   {stats.byFlow?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By liquidation / taker-flow state at entry (flow-v1 shadow label: OKX, evidence only, never blocks)" rows={stats.byFlow} />}
+   {stats.byShadowFilter?.some(g=>g.label==='PASS'||g.label==='WOULD_SKIP')&&<>
+    <Table title="Shadow filter: skip new entries when BTC daily trend is DOWN (evidence only; never blocks a trade)" rows={stats.byShadowFilter} />
+    <p className="text-xs text-slate-400">PASS is what the account would have traded with the filter on; WOULD_SKIP trades were still taken for comparison. The filter is judged on these rows only; with few trades in either row the difference is noise. Trades without a recorded BTC trend show NOT_RECORDED and are never assigned a side.</p>
    </>}
+   {stats.byFunding?.some(g=>g.label!=='NOT_RECORDED')&&<Table title="By OKX perpetual funding state at entry (evidence only)" rows={stats.byFunding} />}
+   <Table title="By setup type" rows={stats.bySetup} />
+   <Table title="By venue" rows={stats.byVenue} />
+   <Table title="By exit reason" rows={stats.byExit} />
+   <CostSensitivity rows={stats.costSensitivity} />
   </>}
   <ExitPlans plans={exitPlans} />
+ </>;
+}
+export default function CryptoPaperStats({stats,exitPlans,title='Strategy statistics',source='closed trades in this paper ledger',openRiskUsd=null,openRiskCapPct=null,equity=null,clusterCapPct=null}:{stats:Stats|null|undefined;exitPlans?:ExitPlanComparison[]|null;title?:string;source?:string;openRiskUsd?:number|null;openRiskCapPct?:number|null;equity?:number|null;clusterCapPct?:number|null}){
+ const withR=stats?.overall.withR??0;
+ const noise=!stats||withR<30;
+ const capUsd=(pct:number|null|undefined)=>equity!=null&&pct!=null?money(equity*pct/100):'—';
+ return <section aria-label="Strategy statistics" className="space-y-2 rounded border border-emerald-800 p-3">
+  {noise?<>
+   <h3 className="font-semibold">Closed trades with R · SIMULATED</h3>
+   <p>{stats?`${withR} of 30 closed trades with R`:'Closed trades with R could not be read. No figures are estimated.'}</p>
+   <p>Open risk {openRiskUsd==null?'—':money(openRiskUsd)} · cap {openRiskCapPct??'—'}% ({capUsd(openRiskCapPct)})</p>
+   <p>Cluster cap {clusterCapPct??'—'}% of equity ({capUsd(clusterCapPct)})</p>
+   <details><summary className="cursor-pointer">sample is noise</summary>
+    {stats?<Breakdown stats={stats} exitPlans={exitPlans} source={source} />:<p>Statistics unavailable: closed trades could not be read. No figures are estimated.</p>}
+   </details>
+  </>:stats?<>
+   <h3 className="font-semibold">{title} · SIMULATED · {stats.sample.replace('_',' ')}</h3>
+   <Breakdown stats={stats} exitPlans={exitPlans} source={source} />
+  </>:<p>Statistics unavailable: closed trades could not be read. No figures are estimated.</p>}
  </section>;
 }

@@ -24,7 +24,7 @@ import {writeJournal} from '@/lib/admin/portfolio-lab/journalEngine';
 import {fourHourBars} from '@/lib/admin/cryptoCorrelation';
 import {fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {fetchPaperQuote,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
-import {runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
+import {CRYPTO_PAPER_LIVE_NAME,CRYPTO_PAPER_NAME,runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import type {ArcaPortfolio,ArcaPosition} from '@/lib/admin/portfolio-lab/types';
 const now=Date.parse('2026-09-28T05:00:00Z'),step=900000;
 let portfolio:ArcaPortfolio,positions:ArcaPosition[],scan:MomentumScan,discovery:{rows:{id:string;venues:{exchange:string;pair:string;volumeUsd:number;observedAt:string}[]}[]};
@@ -49,6 +49,13 @@ beforeEach(()=>{
  vi.mocked(fetchPaperPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]});
 });
 afterEach(()=>vi.restoreAllMocks());
+it('stores a divergence stamp as evidence and still opens the simulated entry',async()=>{
+ scan.rows[0]={...scan.rows[0],flowStamp:{rule:'flow-stamp-v1',stamp:'divergence',takerBuyShare4h:.4,source:'okx:public',checkedAt:new Date(now).toISOString()}};
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,decisions:[{status:'OPENED'}]});
+ expect(report.decisions[0].reason).not.toMatch(/divergence|aggressive buying/);
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({createdReason:expect.stringContaining('"flowStamp":{"rule":"flow-stamp-v1","stamp":"divergence"')}));
+});
 it('creates an evidenced simulated entry after fresh checks',async()=>{
  const report=await runCryptoPaperCycle('w');expect(report).toMatchObject({opened:1,monitorHealthy:true});
  expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({createdReason:expect.stringContaining('"flow":{"rule":"flow-v1"')}));
@@ -203,4 +210,36 @@ it('does not report a cron skip after a recent manual cycle as unhealthy, but st
  expect(await runCryptoPaperAll()).toMatchObject({ok:true,results:[{skipped:true,reason:'Manual crypto paper cycle ran within the last three minutes'}]});
  holder='cron';
  expect(await runCryptoPaperAll()).toMatchObject({ok:false,results:[{skipped:true,reason:'Crypto paper cycle already running or cooling down'}]});
+});
+it('refuses the next correlated add on the live sleeve and records it on the research sleeve',async()=>{
+ const research={...portfolio,id:'research',name:CRYPTO_PAPER_NAME};
+ const live={...portfolio,id:'live',name:CRYPTO_PAPER_LIVE_NAME};
+ const held={...position(),id:'live-eth',symbol:'eth',instrumentType:'coinbase:ETH-USD',quantity:10};
+ vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
+ vi.mocked(store.getDefaultPortfolio).mockImplementation(async(_w,name)=>name===CRYPTO_PAPER_LIVE_NAME?live:research);
+ vi.mocked(store.getPortfolioById).mockImplementation(async(_w,id)=>id==='live'?live:research);
+ vi.mocked(store.listOpenPositions).mockImplementation(async(_w,id)=>id==='live'?[held]:[]);
+ vi.mocked(fourHourBars).mockResolvedValue(trend);
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,decisions:[{status:'OPENED',sleeve:'research',reason:expect.stringMatching(/Live sleeve refuses the next correlated add \(eth\).*Research sleeve recorded the entry under beta limits/)}]});
+ expect(createSimulatedOrder).toHaveBeenCalledTimes(1);
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({portfolio:expect.objectContaining({id:'research'}),createdReason:expect.stringContaining('"sleeve":"research"')}));
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({createdReason:expect.stringContaining('"exchangeOrder":false')}));
+ expect(held.quantity).toBe(10);
+});
+it('refuses a live entry when that cluster is over the cap and still records it on the research sleeve',async()=>{
+ const research={...portfolio,id:'research',name:CRYPTO_PAPER_NAME};
+ const live={...portfolio,id:'live',name:CRYPTO_PAPER_LIVE_NAME};
+ const held={...position(),id:'live-eth',symbol:'eth',instrumentType:'coinbase:ETH-USD',quantity:4000};
+ vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
+ vi.mocked(store.getDefaultPortfolio).mockImplementation(async(_w,name)=>name===CRYPTO_PAPER_LIVE_NAME?live:research);
+ vi.mocked(store.getPortfolioById).mockImplementation(async(_w,id)=>id==='live'?live:research);
+ vi.mocked(store.listOpenPositions).mockImplementation(async(_w,id)=>id==='live'?[held]:[]);
+ vi.mocked(fourHourBars).mockResolvedValue(trend);
+ const report=await runCryptoPaperCycle('w');
+ expect(report.decisions[0]).toMatchObject({status:'OPENED',sleeve:'research'});
+ expect(report.decisions[0].reason).toMatch(/over the .* cap/);
+ expect(report.decisions[0].reason).toMatch(/Research sleeve recorded/);
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({portfolio:expect.objectContaining({id:'research'})}));
+ expect(held.quantity).toBe(4000);
 });

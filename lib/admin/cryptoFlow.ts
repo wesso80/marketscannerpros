@@ -15,6 +15,17 @@ export const FLOW={
  liqMaxPages:12,
 };
 export type FlowState='LONG_LIQ_HEAVY'|'SHORT_LIQ_HEAVY'|'TAKER_SELL_HEAVY'|'TAKER_BUY_HEAVY'|'NEUTRAL'|'UNAVAILABLE';
+/** One label on a MOMENTUM_VOLUME setup. Evidence only: it never blocks and never opens a trade. */
+export const FLOW_STAMP_RULE='flow-stamp-v1' as const;
+export type FlowStampLabel='aggressive buying'|'divergence'|'unavailable';
+export type FlowStamp={rule:typeof FLOW_STAMP_RULE;stamp:FlowStampLabel;takerBuyShare4h:number|null;source:'okx:public';checkedAt:string};
+export function flowStampLabel(share4h:number|null):FlowStampLabel{
+ if(share4h==null||!Number.isFinite(share4h))return 'unavailable';
+ return share4h>FLOW.takerBuyHeavy?'aggressive buying':'divergence';
+}
+export function unavailableFlowStamp(now=Date.now()):FlowStamp{
+ return {rule:FLOW_STAMP_RULE,stamp:'unavailable',takerBuyShare4h:null,source:'okx:public',checkedAt:new Date(now).toISOString()};
+}
 export type FlowEvidence={rule:string;source:'okx:public';checkedAt:string;state:FlowState;flags:string[];reasons:string[];
  takerBuyShare4h:number|null;takerBuyShare24h:number|null;takerHours:number;
  liqLongUsd24h:number|null;liqShortUsd24h:number|null;liqOrders:number;liqCoverageHours:number|null;liqPartial:boolean;oiUsd:number|null;caveat:string};
@@ -81,6 +92,21 @@ async function contractValue(instId:string):Promise<number|null>{
  const k=`admin:crypto-flow:ctval:${instId}`,r=getRedis(),c=await r?.get<number>(k).catch(()=>null);if(c!=null&&c>0)return c;
  const raw=await okx('/api/v5/public/instruments',{instType:'SWAP',instId}).catch(()=>null) as {code?:string;data?:{ctVal?:string}[]}|null;
  const v=raw?.code==='0'?num(raw.data?.[0]?.ctVal):null;if(v!=null&&v>0)await r?.set(k,v,{ex:FLOW.instrumentCacheSeconds}).catch(()=>undefined);return v;
+}
+/** Taker-volume stamp for one base. Never throws: a failed or incomplete feed is unavailable. */
+export async function fetchFlowStamp(base:string,now=Date.now()):Promise<FlowStamp>{
+ try{
+  if(!/^[A-Z0-9]{1,30}$/.test(base))return unavailableFlowStamp(now);
+  const raw=await okx('/api/v5/rubik/stat/taker-volume',{ccy:base,instType:'CONTRACTS',period:'1H'});
+  const share=takerShares(raw,now).share4h;
+  return {rule:FLOW_STAMP_RULE,stamp:flowStampLabel(share),takerBuyShare4h:share,source:'okx:public',checkedAt:new Date(now).toISOString()};
+ }catch{return unavailableFlowStamp(now);}
+}
+/** Stamps MOMENTUM_VOLUME rows only. Other stages are left untouched. Never throws and never changes a stage. */
+export async function stampMomentumVolume<T extends {stage:string;pair:{product:string}|null;flowStamp?:FlowStamp}>(rows:T[],now=Date.now()){
+ await Promise.all(rows.filter(r=>r.stage==='MOMENTUM_VOLUME'&&!r.flowStamp).map(async row=>{
+  try{row.flowStamp=await fetchFlowStamp(row.pair?.product.split('-')[0]??'',now);}catch{row.flowStamp=unavailableFlowStamp(now);}
+ }));
 }
 /** Never throws: every missing piece is recorded as unavailable. 2-13 OKX public requests (instrument cached daily). */
 export async function fetchFlow(base:string,oiUsd:number|null,now=Date.now()):Promise<FlowEvidence>{

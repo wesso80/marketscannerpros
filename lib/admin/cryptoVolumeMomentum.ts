@@ -1,10 +1,11 @@
+import type {FlowStamp} from './cryptoFlow';
 import type {ExchangeBar} from './cryptoExchangeVolume';
 import {parseDailyVenue,selectDailyPair,type DailyPair} from './cryptoDailyVenues';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {createBaseScan} from './cryptoBaseScan';
 const H=3600000,F=4*H;
 export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;sma20?:number;signal?:{t:number;o:number;h:number;l:number;c:number};kind:'BREAKOUT'|'CONTINUATION'|null};
-export type MomentumScanRow=VolumeMomentum&{id:string;symbol:string;pair:DailyPair|null};
+export type MomentumScanRow=VolumeMomentum&{id:string;symbol:string;pair:DailyPair|null;flowStamp?:FlowStamp};
 export type MomentumScan={version:1;startedAt:string;updatedAt:string;discoveryAt:string;rows:MomentumScanRow[]};
 export const blankMomentum=(reason='Waiting for completed 4h candles'):VolumeMomentum=>({stage:'PENDING',reason,asOf:null,relativeVolume:null,changePct:null,trigger:null,close:null,atr:null,kind:null});
 export function createMomentumScan(rows:(DiscoveryRow&{venues:VenueEvidence[]})[],discoveryAt:string,now:number):MomentumScan{

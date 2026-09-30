@@ -1,6 +1,6 @@
 import {it,expect,vi,afterEach} from 'vitest';
 vi.mock('@/lib/redis',()=>({getRedis:()=>null}));
-import {takerShares,liquidations,classifyFlow,fetchFlow,FLOW} from '@/lib/admin/cryptoFlow';
+import {takerShares,liquidations,classifyFlow,fetchFlow,fetchFlowStamp,flowStampLabel,stampMomentumVolume,FLOW} from '@/lib/admin/cryptoFlow';
 import {summarizeCryptoPaper} from '@/lib/admin/cryptoPaperStats';
 const H=3600000,now=Date.UTC(2026,8,30,12,20);
 afterEach(()=>vi.unstubAllGlobals());
@@ -29,6 +29,27 @@ it('classifies with liquidations first (share of OI), then taker pressure; never
  expect(classifyFlow({share4h:.5},{long:1e9,short:0},null).state).toBe('NEUTRAL');
  expect(classifyFlow({share4h:null},null,null).state).toBe('UNAVAILABLE');
  expect(FLOW.takerSellHeavy).toBe(.45);
+});
+it('flow stamp is aggressive buying only above the existing taker threshold, otherwise divergence, and never a fourth label',()=>{
+ expect(flowStampLabel(.56)).toBe('aggressive buying');
+ expect(flowStampLabel(FLOW.takerBuyHeavy)).toBe('divergence');
+ expect(flowStampLabel(.4)).toBe('divergence');
+ expect(flowStampLabel(null)).toBe('unavailable');
+});
+it('a buy-heavy taker feed stamps aggressive buying from the same 4h share',async()=>{
+ const payload={code:'0',data:Array.from({length:4},(_,i)=>[String(Math.floor(now/H)*H-(i+1)*H),'40','60'])};
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>payload})));
+ expect(await fetchFlowStamp('MON',now)).toMatchObject({rule:'flow-stamp-v1',stamp:'aggressive buying',takerBuyShare4h:.6,source:'okx:public'});
+});
+it('a missing taker feed stamps MOMENTUM_VOLUME unavailable and leaves every other stage alone',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>{throw new Error('down');}));
+ const rows=[{stage:'MOMENTUM_VOLUME',pair:{product:'MON-USDT'},flowStamp:undefined},{stage:'VOLUME_WATCH',pair:{product:'AXS-USDT'},flowStamp:undefined},{stage:'NO_SIGNAL',pair:null,flowStamp:undefined}];
+ await expect(stampMomentumVolume(rows,now)).resolves.toBeUndefined();
+ expect(rows[0].flowStamp).toMatchObject({rule:'flow-stamp-v1',stamp:'unavailable',takerBuyShare4h:null});
+ expect(rows[0].stage).toBe('MOMENTUM_VOLUME');
+ expect(rows[1].flowStamp).toBeUndefined();
+ expect(rows[2].flowStamp).toBeUndefined();
+ expect(await fetchFlowStamp('MON',now)).toMatchObject({stamp:'unavailable',rule:'flow-stamp-v1'});
 });
 it('fetchFlow never throws: an OKX outage records UNAVAILABLE evidence',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>{throw new Error('down');}));

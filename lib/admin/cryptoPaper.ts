@@ -21,14 +21,15 @@ import {refreshPaperBalances} from './portfolio-lab/refreshPaperBalances';
 import {writeJournal} from './portfolio-lab/journalEngine';
 import {fetchVolumeMomentum,type MomentumScan} from './cryptoVolumeMomentum';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
-import {fourHourBars,instrumentPair,correlationScale,clusterAllowance,portfolioClusters,positionRiskUsd,CORRELATION,type PortfolioCluster} from './cryptoCorrelation';
+import {fourHourBars,instrumentPair,correlationScale,clusterAllowance,portfolioClusters,positionRiskUsd,liveSleeveRefusal,CORRELATION,type PortfolioCluster} from './cryptoCorrelation';
 import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchFlow} from './cryptoFlow';
 import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError,CRYPTO_TIME_STOP} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
-export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
+export const CRYPTO_PAPER_LIVE_NAME='Crypto Markets Paper Live';
+export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;sleeve?:'live'|'research';quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
 const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
 /** v2 playbook (entries from 2026-09-30): same signal, sizing and fixed stop/2R target, plus a 72h time stop when +1R was never reached. v1 positions keep fixed levels only. */
 export const PLAYBOOK_V2='crypto-momentum-v2';
@@ -102,7 +103,7 @@ export async function cryptoPaperTradeLog(workspaceId:string):Promise<string|nul
 export async function cryptoPaperState(workspaceId:string){
  return atomicQueries(async()=>{
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
- if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats:null,exitPlans:null};
+ if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats:null,exitPlans:null,research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:null,positions:[]}};
  await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR SHARE',[workspaceId,portfolio.id]);
  portfolio=await getPortfolioById(workspaceId,portfolio.id);if(!portfolio)throw Error('Paper account unavailable');
  const [positions,trades,journal]=await Promise.all([listOpenPositions(workspaceId,portfolio.id),listTrades(workspaceId,portfolio.id,{limit:100}),listJournal(workspaceId,portfolio.id,{limit:500})]).then(([a,b,j])=>[a,b,j.filter(e=>e.title!=='Paper candle checkpoint v1'&&!ALL_SHADOW_TITLES.includes(e.title)).slice(0,25)] as const);
@@ -115,7 +116,9 @@ export async function cryptoPaperState(workspaceId:string){
  }catch{reconciliation={status:'UNAVAILABLE',checkedAt:new Date().toISOString(),reason:'Ledger totals could not be read'};}
  let stats:CryptoPaperStats|null=null,exitPlans:ReturnType<typeof compareExitPlans>[]|null=null;
  try{const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,t.entry_price,t.exit_price,t.quantity,t.stop_loss,o.created_reason FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);const shadows=[...(await shadowStates(workspaceId,portfolio.id)).values()];exitPlans=SHADOW_PLANS_ACTIVE.map(plan=>compareExitPlans(rows,shadows,plan));}catch{stats=null;exitPlans=null;}
- return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null)};
+ const livePortfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_LIVE_NAME);
+ const livePositions=livePortfolio?await listOpenPositions(workspaceId,livePortfolio.id):[];
+ return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null),research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:livePortfolio,positions:livePositions}};
  });
 }
 export async function setCryptoPaperActive(workspaceId:string,active:boolean){
@@ -126,6 +129,9 @@ export async function setCryptoPaperActive(workspaceId:string,active:boolean){
   if(!portfolio)return null;
   await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio.id]);
   await q('UPDATE arca_portfolios SET status=$1,updated_at=NOW() WHERE workspace_id=$2 AND id=$3',[active?'ACTIVE':'PAUSED',workspaceId,portfolio.id]);
+  let live=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_LIVE_NAME);
+  if(!live&&active)live=await insertPortfolio({workspaceId,name:CRYPTO_PAPER_LIVE_NAME,startingBalance:portfolio.startingBalance,baseCurrency:portfolio.baseCurrency||'USD',settings:portfolio.settings});
+  if(live&&live.id!==portfolio.id)await q('UPDATE arca_portfolios SET status=$1,updated_at=NOW() WHERE workspace_id=$2 AND id=$3',[active?'ACTIVE':'PAUSED',workspaceId,live.id]);
   await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD and converted OKX USDT momentum entries. Exit monitoring continues when entries are paused. '+`${L.riskPerTradePct}% risk, ${L.notionalPct}% notional cap per trade, ${L.positions} positions, ${L.openRiskPct}% portfolio risk, ${L.dailyEntries} entries per day, ${L.lossFromStartPct}% loss-from-start entry stop, trade size at most ${L.maxPairVolumePct}% of the pair's 24h volume, risk scaled by 1/sqrt(1+n) for n open positions with 4h return correlation >= 0.7 (floor 25%), combined risk of one correlated cluster capped at ${CORRELATION.clusterRiskPct}% of equity (existing positions never resized), targets 2R from the actual fill (beta data-collection limits). Entries from 2026-09-30 (${PLAYBOOK_V2}) also close at the first completed 15m candle at or after 72h if the position never reached +1R; earlier positions keep fixed levels only. BTC daily trend is recorded on each entry, not used as a filter.`+' Fees and slippage each 0.05% per side for Coinbase, 0.10% per side for two-leg OKX conversions. No changes to personal holdings or other paper portfolios.'});
   return portfolio.id;
  });
@@ -138,11 +144,16 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  if(!await redis.set(lock,trigger,{nx:true,ex:180}))return (await redis.get(lock))==='manual'?{skipped:true,reason:MANUAL_RECENT}:{skipped:true,reason:BUSY};
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
  if(!portfolio)return {skipped:true,reason:'Crypto paper account not enabled'};
+ let liveBook=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_LIVE_NAME);
+ if(!liveBook){try{liveBook=await insertPortfolio({workspaceId,name:CRYPTO_PAPER_LIVE_NAME,startingBalance:portfolio.startingBalance,baseCurrency:portfolio.baseCurrency||'USD',settings:portfolio.settings});}catch{liveBook=null;}}
+ const books=[portfolio,...(liveBook&&liveBook.id!==portfolio.id?[liveBook]:[])];
  const decisions:CryptoPaperDecision[]=[];
  const notes:string[]=[];let opened=0,closed=0,marked=0,monitorHealthy=true;
- const positions=await listOpenPositions(workspaceId,portfolio.id);
+ let clusters:PortfolioCluster[]|null=null;
+ for(const book of books){
+ const positions=await listOpenPositions(workspaceId,book.id);
  if(positions.length>L.positions){monitorHealthy=false;notes.push('Unexpected position count; entries blocked');}
- await initShadows(workspaceId,portfolio.id,positions,notes);
+ await initShadows(workspaceId,book.id,positions,notes);
  for(const position of positions){
   try{
    const converted=position.instrumentType.startsWith('okx-usd-v1:');
@@ -156,8 +167,8 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    const trailing=fillTrailingNoTrade(path.candles,Math.floor(Date.now()/900000)*900000,!!quote&&Date.now()-Date.parse(quote.priceAt)<=60000,900000,undefined,(path as {trailingAnchor?:TrailingAnchor}).trailingAnchor);
    if(trailing.filled){path={...path,candles:trailing.candles};notes.push(`${position.symbol}: ${trailing.filled} trailing no-trade 15m candle(s) filled flat at the last close (fresh quote confirms the market is live)`);}
    await atomicQueries(async()=>{
-    await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
-    const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');
+    await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,book.id]);
+    const current=await getPortfolioById(workspaceId,book.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');
     const pos=(await listOpenPositions(workspaceId,current.id)).find(p=>p.id===position.id);if(!pos)return;
     const checked=evaluatePaperExitPath(pos,path,Date.now(),exitRulesFor(pos.playbookId));
     // Missing chronology blocks valuation/target awards and further entries. Never skip a missing prefix.
@@ -176,20 +187,20 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    });
   }catch(error){monitorHealthy=false;notes.push(`${position.symbol}: ${error instanceof PaperMarketError?error.message:'Exit accounting failed'}; entries blocked until monitoring recovers`);}
  }
- await advanceShadows(workspaceId,portfolio.id,notes);
+ await advanceShadows(workspaceId,book.id,notes);
  // Every cycle: correlation across ALL open positions. Over-cap clusters are logged; positions are never resized here.
- let clusters:PortfolioCluster[]|null=null;
  try{
-  const opens=await listOpenPositions(workspaceId,portfolio.id),withBars=[];
+  const opens=await listOpenPositions(workspaceId,book.id),withBars=[];
   for(const p of opens){const ip=instrumentPair(p.instrumentType);withBars.push({coin:p.symbol,riskUsd:positionRiskUsd(p),bars:ip?await fourHourBars(ip).catch(()=>null):null});}
-  const pc=portfolioClusters(withBars,portfolio.totalEquity);clusters=pc.clusters;
+  const pc=portfolioClusters(withBars,book.totalEquity);if(book.id===portfolio.id)clusters=pc.clusters;
   if(pc.unavailable.length)notes.push(`Correlation history unavailable for ${pc.unavailable.join(', ')}; treated as correlated with any new entry`);
   for(const c of pc.clusters.filter(c=>c.overCap)){
-   const msg=`Correlated cluster over the ${CORRELATION.clusterRiskPct}% risk cap: ${c.coins.join(', ')} risk USD ${c.riskUsd.toFixed(2)} vs cap USD ${c.capUsd.toFixed(2)}. Existing positions are NOT resized (no partial exits in this ledger); new entries correlated with this cluster are blocked.`;
+   const msg=`Correlated cluster over the ${CORRELATION.clusterRiskPct}% risk cap: ${c.coins.join(', ')} risk USD ${c.riskUsd.toFixed(2)} vs cap USD ${c.capUsd.toFixed(2)}. Existing positions are NOT resized (no partial exits in this ledger); the live sleeve refuses the next correlated add.`;
    notes.push(msg);
-   await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:'Crypto paper correlated cluster over cap',reasoning:`SIMULATED. ${msg}`,evidence:[JSON.stringify({clusters:pc.clusters,pairs:pc.pairs,unavailable:pc.unavailable,at:new Date().toISOString()})]});
+   await writeJournal({workspaceId,portfolioId:book.id,journalType:'REVIEW',title:'Crypto paper correlated cluster over cap',reasoning:`SIMULATED. ${msg}`,evidence:[JSON.stringify({clusters:pc.clusters,pairs:pc.pairs,unavailable:pc.unavailable,at:new Date().toISOString()})]});
   }
  }catch{notes.push('Portfolio correlation recheck unavailable this cycle');}
+ }
  if(monitorOnly){
   const report={trigger,phase:'monitor',at:new Date().toISOString(),opened,closed,marked,monitorHealthy,notes,clusters};
   if(!monitorHealthy)console.error('[crypto-paper] Exit monitoring unhealthy',JSON.stringify({at:report.at,marked,closed,notes}));
@@ -202,8 +213,8 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  const recent=scan&&Number.isFinite(scanAge)&&scanAge>=0&&Math.floor(Date.parse(scan.startedAt)/(4*3600000))===Math.floor(Date.now()/(4*3600000));
  const all=recent?scan.rows.filter(r=>r.stage==='MOMENTUM_VOLUME'):[];
  if(!recent)notes.push('No current 4h momentum scan; no entries');
- const decide=(candidate:typeof all[number],status:CryptoPaperDecision['status'],reason:string,quote?:Awaited<ReturnType<typeof fetchPaperQuote>>)=>{
-  decisions.push({coin:candidate.id,product:candidate.pair?.product??null,venue:candidate.pair?.exchange??null,signalAt:candidate.asOf,checkedAt:new Date().toISOString(),status,reason,...(quote?{quoteAt:quote.priceAt,bid:quote.bid,ask:quote.ask,quoteCurrency:'USD' as const,...('conversion' in quote?{conversion:(quote as ConvertedPaperQuote).conversion}:{})}:{})});
+ const decide=(candidate:typeof all[number],status:CryptoPaperDecision['status'],reason:string,quote?:Awaited<ReturnType<typeof fetchPaperQuote>>,sleeve?:'live'|'research')=>{
+  decisions.push({coin:candidate.id,product:candidate.pair?.product??null,venue:candidate.pair?.exchange??null,signalAt:candidate.asOf,checkedAt:new Date().toISOString(),status,reason,...(sleeve?{sleeve}:{}),...(quote?{quoteAt:quote.priceAt,bid:quote.bid,ask:quote.ask,quoteCurrency:'USD' as const,...('conversion' in quote?{conversion:(quote as ConvertedPaperQuote).conversion}:{})}:{})});
  };
  for(const candidate of all)if(!supportsPaperPair(candidate.pair))decide(candidate,'BLOCKED','Unsupported paper venue/quote; Coinbase USD or OKX USDT required');
  const candidates=all.filter(r=>supportsPaperPair(r.pair));
@@ -229,11 +240,14 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
   let checkedQuote:Awaited<ReturnType<typeof fetchPaperQuote>>|undefined;
   try{
    const key=`crypto-v1|${candidate.id}|${pair.product}|${candidate.asOf}|`;
-   // Cheap duplicate check before provider requests; transaction repeats it under the portfolio lock.
-   if((await q('SELECT id FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND left(created_reason,length($3))=$3 LIMIT 1',[workspaceId,portfolio.id,key])).length){decide(candidate,'BLOCKED','Signal already traded');continue;}
-   const currentOpens=await listOpenPositions(workspaceId,portfolio.id);
-   if(currentOpens.length>=L.positions){decide(candidate,'BLOCKED',`${L.positions}-position cap`);continue;}
-   if(currentOpens.some(p=>p.symbol===candidate.id)){decide(candidate,'BLOCKED','Position already open');continue;}
+   const separateLive=!!(liveBook&&liveBook.id!==portfolio.id);
+   // Same-book cycles keep the cheap duplicate and cap checks before any provider request.
+   if(!separateLive){
+    if((await q('SELECT id FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND left(created_reason,length($3))=$3 LIMIT 1',[workspaceId,portfolio.id,key])).length){decide(candidate,'BLOCKED','Signal already traded');continue;}
+    const currentOpens=await listOpenPositions(workspaceId,portfolio.id);
+    if(currentOpens.length>=L.positions){decide(candidate,'BLOCKED',`${L.positions}-position cap`);continue;}
+    if(currentOpens.some(p=>p.symbol===candidate.id)){decide(candidate,'BLOCKED','Position already open');continue;}
+   }
    attempts++;
    const converted=pair.exchange==='okex',instrument=converted?`okx-usd-v1:${pair.product}`:`coinbase:${pair.product}`;
    const liq=liquidity(candidate.id,pair);
@@ -247,17 +261,32 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    if(signal.asOf!==candidate.asOf||signal.kind!==candidate.kind)throw Error('Setup candle changed; refresh momentum scan');
    // Correlation with open positions, checked before the lock (sequential, cached per 4h window). Missing history counts as correlated.
    const candidateBars=await fourHourBars(pair).catch(()=>{throw Error('Candidate 4h history unavailable for correlation check');});
-   const openBars:{coin:string;bars:Awaited<ReturnType<typeof fourHourBars>>|null}[]=[];
-   for(const p of currentOpens){const ip=instrumentPair(p.instrumentType);openBars.push({coin:p.symbol,bars:ip?await fourHourBars(ip).catch(()=>null):null});}
-   const corr=correlationScale(candidateBars,openBars);
+   const barsFor=async(opens:Awaited<ReturnType<typeof listOpenPositions>>)=>{const out:{coin:string;bars:Awaited<ReturnType<typeof fourHourBars>>|null}[]=[];for(const p of opens){const ip=instrumentPair(p.instrumentType);out.push({coin:p.symbol,bars:ip?await fourHourBars(ip).catch(()=>null):null});}return out;};
+   const researchOpens=await listOpenPositions(workspaceId,portfolio.id);
+   const liveOpens=separateLive?await listOpenPositions(workspaceId,liveBook!.id):researchOpens;
+   const liveBars=await barsFor(liveOpens);
+   const liveCorr=correlationScale(candidateBars,liveBars);
+   const liveEquity=(separateLive?liveBook!:portfolio).totalEquity;
+   const liveCluster=clusterAllowance(liveCorr,liveOpens.map(p=>({coin:p.symbol,riskUsd:positionRiskUsd(p)})),liveBars.map(o=>o.coin),liveEquity,liveEquity*L.riskPerTradePct/100);
+   const refusal=liveSleeveRefusal([...liveCorr.correlated.map(c=>c.coin),...liveCorr.unavailable,...liveOpens.map(p=>p.symbol).filter(c=>!liveBars.some(o=>o.coin===c))],liveCluster.clusterRiskUsd,liveCluster.capUsd);
+   const sleeve: 'live'|'research'=refusal?'research':'live';
+   const target=sleeve==='research'||!separateLive?portfolio:liveBook!;
+   const openBars=sleeve==='research'&&separateLive?await barsFor(researchOpens):liveBars;
+   const corr=sleeve==='research'&&separateLive?correlationScale(candidateBars,openBars):liveCorr;
+   if(separateLive){
+    if((await q('SELECT id FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND left(created_reason,length($3))=$3 LIMIT 1',[workspaceId,target.id,key])).length){decide(candidate,'BLOCKED',refusal?`${refusal}. Research sleeve already recorded this signal`:'Signal already traded',quote,sleeve);continue;}
+    const gate=sleeve==='research'?researchOpens:liveOpens;
+    if(gate.length>=L.positions){decide(candidate,'BLOCKED',refusal?`${refusal}. Research sleeve is at the ${L.positions}-position cap`:`${L.positions}-position cap`,quote,sleeve);continue;}
+    if(gate.some(p=>p.symbol===candidate.id)){decide(candidate,'BLOCKED',refusal?`${refusal}. Research sleeve already has this position`:'Position already open',quote,sleeve);continue;}
+   }
    // Evidence only: OKX perpetual funding/open interest (CoinGecko multi-venue fallback/context) is recorded for later comparison and never blocks an entry.
    const base=pair.product.split('-')[0],cgDeriv=await latestDerivatives().catch(()=>null);
    const derivatives=mergeDerivativesEvidence(await fetchDerivatives(base,candidateBars),cgDeriv?.rows.find(r=>r.base===base)??null,cgDeriv?.snap.at??null);
    // Shadow label only: OKX liquidations and taker flow are recorded for later comparison and never block an entry.
    const flow=await fetchFlow(base,derivatives.oiUsd);
    await atomicQueries(async()=>{
-    await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
-    const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED'||current.status!=='ACTIVE')throw Error('Entries paused');
+    await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,target.id]);
+    const current=await getPortfolioById(workspaceId,target.id);if(!current||current.mode!=='SIMULATED'||current.status!=='ACTIVE')throw Error('Entries paused');
     if((await q('SELECT id FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND left(created_reason,length($3))=$3 LIMIT 1',[workspaceId,current.id,key])).length)throw Error('Signal already traded');
     const opens=await listOpenPositions(workspaceId,current.id);
     if(opens.some(p=>p.symbol===candidate.id))throw Error('Position already open');
@@ -268,13 +297,13 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     if(Number(daily?.n)>=L.dailyEntries)throw Error(`Daily ${L.dailyEntries}-entry cap`);
     // Portfolio-level cap on the candidate's correlated cluster (existing positions are only counted, never resized).
     const cluster=clusterAllowance(corr,opens.map(p=>({coin:p.symbol,riskUsd:positionRiskUsd(p)})),openBars.map(o=>o.coin),current.totalEquity,current.totalEquity*L.riskPerTradePct/100);
-    if(cluster.blocked)throw Error(`Correlated cluster risk cap: ${cluster.members.join(', ')} already risk USD ${cluster.clusterRiskUsd.toFixed(2)} of USD ${cluster.capUsd.toFixed(2)}`);
-    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,cluster.scale);if(!plan.ok)throw Error(plan.reason);
+    if(refusal&&cluster.blocked)throw Error(`Correlated cluster risk cap: ${cluster.members.join(', ')} already risk USD ${cluster.clusterRiskUsd.toFixed(2)} of USD ${cluster.capUsd.toFixed(2)}`);
+    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,refusal?cluster.scale:1);if(!plan.ok)throw Error(plan.reason);
     if(opens.reduce((s,p)=>s+positionRiskUsd(p),0)+plan.risk>current.totalEquity*L.openRiskPct/100)throw Error(`${L.openRiskPct}% portfolio risk cap`);
-    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK_V2,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',exitRules:CRYPTO_TIME_STOP,btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true}),arcaConfidence:null});
+    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK_V2,createdReason:key+JSON.stringify({sleeve,version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',exitRules:CRYPTO_TIME_STOP,btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},flowStamp:candidate.flowStamp??{rule:'flow-stamp-v1',stamp:'unavailable',takerBuyShare4h:null,source:'okx:public',checkedAt:new Date().toISOString()},relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true,exchangeOrder:false}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
-    decide(candidate,'OPENED',['Fresh signal, quote and account checks passed',...(corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(cluster.capped?[`risk capped to ${Math.round(cluster.scale*100)}% by the ${CORRELATION.clusterRiskPct}% correlated-cluster cap`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[]),...(btcRegime?.state==='DOWN'?['shadow filter: would skip (BTC daily trend DOWN); opened anyway for comparison']:[]),...(flow.state!=='NEUTRAL'&&flow.state!=='UNAVAILABLE'?[`flow shadow label: ${flow.state} (evidence only; not a filter)`]:[]),...(derivatives.flags.some(f=>/EXTREME_FUNDING|OI_SURGE|CROWDED_FUNDING|LEVERAGE_DRIVEN/.test(f))?[`derivatives flags: ${derivatives.flags.join(' ')} (evidence only; not a filter)`]:[])].join('; '),quote);
+    decide(candidate,'OPENED',[refusal?`${refusal}. Research sleeve recorded the entry under beta limits`:'Live sleeve entry. SIMULATED',...(refusal&&corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(refusal&&cluster.capped?[`risk capped to ${Math.round(cluster.scale*100)}% by the ${CORRELATION.clusterRiskPct}% correlated-cluster cap`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[]),...(btcRegime?.state==='DOWN'?['shadow filter: would skip (BTC daily trend DOWN); opened anyway for comparison']:[]),...(flow.state!=='NEUTRAL'&&flow.state!=='UNAVAILABLE'?[`flow shadow label: ${flow.state} (evidence only; not a filter)`]:[]),...(derivatives.flags.some(f=>/EXTREME_FUNDING|OI_SURGE|CROWDED_FUNDING|LEVERAGE_DRIVEN/.test(f))?[`derivatives flags: ${derivatives.flags.join(' ')} (evidence only; not a filter)`]:[])].join('; '),quote,sleeve);
    });
   }catch(error){decide(candidate,'BLOCKED',error instanceof Error?error.message:'Entry validation failed',checkedQuote);notes.push(`${candidate.id}: ${error instanceof Error?error.message:'entry validation failed'}`);}
  }
