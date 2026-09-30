@@ -23,6 +23,7 @@ import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {fourHourBars,instrumentPair,correlationScale,clusterAllowance,portfolioClusters,positionRiskUsd,CORRELATION,type PortfolioCluster} from './cryptoCorrelation';
 import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchFlow} from './cryptoFlow';
+import {fillTrailingNoTrade} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
@@ -133,8 +134,11 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    if(position.assetClass!=='crypto'||position.side!=='LONG'||!(converted?/^[A-Z0-9]{1,30}-USDT$/.test(product):/^[A-Z0-9]{1,30}-USD$/.test(product)))throw Error('Unsupported position scope');
    const [quoteResult,pathResult]=await Promise.allSettled([converted?fetchOkxUsdQuote(product):fetchPaperQuote(product),converted?fetchOkxUsdPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt):fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
    if(pathResult.status!=='fulfilled')throw new PaperMarketError(pathResult.reason instanceof PaperMarketError?pathResult.reason.message:'Exit history request failed or timed out');
-   const path=pathResult.value,quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
+   let path=pathResult.value;const quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
    if(path.filledBars)notes.push(`${position.symbol}: ${path.filledBars} no-trade 15m candle(s) filled flat at the prior close`);
+   // A quiet coin with no trades since its last candle must not block the whole account while its market is live.
+   const trailing=fillTrailingNoTrade(path.candles,Math.floor(Date.now()/900000)*900000,!!quote&&Date.now()-Date.parse(quote.priceAt)<=60000);
+   if(trailing.filled){path={...path,candles:trailing.candles};notes.push(`${position.symbol}: ${trailing.filled} trailing no-trade 15m candle(s) filled flat at the last close (fresh quote confirms the market is live)`);}
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
     const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');
