@@ -3,6 +3,7 @@ import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
 import {createMomentumScan,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {fetchEarlyMomentum} from './cryptoEarlyMomentum';
+import {persistForwardScores} from './cryptoForwardScore';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 const KEY='admin:crypto-markets:early-momentum:v1',F=3600000;
 export async function runEarlyMomentumBatch(limit=5){
@@ -28,6 +29,7 @@ export async function runEarlyMomentumBatch(limit=5){
    if(i+5<pending.length)await new Promise(resolve=>setTimeout(resolve,Math.max(0,1000-(Date.now()-batchStarted))));
    scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   }
+  await persistForwardScores(redis,now);
   return NextResponse.json({scan,requestAttempts:requests});
  }catch{return NextResponse.json({error:'Hourly watchlist storage unavailable; progress may be incomplete'},{status:503});}
 }

@@ -7,9 +7,11 @@ const CryptoMarketData = dynamic(()=>import('@/components/admin/CryptoMarketData
 const CryptoHistoryData = dynamic(()=>import('@/components/admin/CryptoHistoryData'), {ssr:false});
 const CryptoHarness = dynamic(()=>import('@/components/admin/CryptoHarness'), {ssr:false});
 const CryptoAttentionStrip = dynamic(()=>import('@/components/admin/CryptoAttentionStrip'), {ssr:false});
-const TABS = [['paper','Paper account'],['setups','Setups'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['history','History data'],['harness','Strategy harness'],['alerts','Alerts']] as const;
+const TABS = [['paper','Paper account'],['setups','Setups'],['recommendations','Recommendations'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['history','History data'],['harness','Strategy harness'],['alerts','Alerts']] as const;
 type Tab = typeof TABS[number][0];
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
+const CryptoForwardScore = dynamic(()=>import('@/components/admin/CryptoForwardScore'), {ssr:false});
+const CryptoRecommendations = dynamic(()=>import('@/components/admin/CryptoRecommendations'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
 const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
 import type {BaseReview} from '@/lib/admin/cryptoBase';
@@ -92,7 +94,9 @@ export default function CryptoMarketsPage() {
     {tab==='marketdata' && <CryptoMarketData refreshVersion={refreshVersion} />}
     {tab==='history' && <CryptoHistoryData refreshVersion={refreshVersion} />}
     {tab==='harness' && <CryptoHarness refreshVersion={refreshVersion} />}
+    {tab==='recommendations' && <CryptoRecommendations refreshVersion={refreshVersion} />}
     {tab==='setups' && <>
+    <CryptoForwardScore refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
     </>}

@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 vi.mock('@/lib/redis',()=>({getRedis:()=>null}));
-import {clusterAllowance,portfolioClusters,positionRiskUsd,correlationScale,instrumentPair,returnCorrelation,CORRELATION} from '@/lib/admin/cryptoCorrelation';
+import {clusterAllowance,portfolioClusters,positionRiskUsd,correlationScale,instrumentPair,returnCorrelation,liveSleeveRefusal,CORRELATION} from '@/lib/admin/cryptoCorrelation';
 import {parseFourHour} from '@/lib/admin/cryptoVolumeMomentum';
 import type {ExchangeBar} from '@/lib/admin/cryptoExchangeVolume';
 const F=4*3600000,H=3600000,t0=Date.UTC(2026,8,20);
@@ -38,4 +38,10 @@ it('OKX pairs go through the same check: OKX 4h and Coinbase hourly candles alig
  expect(returnCorrelation(okx,cb)!.rho).toBeCloseTo(1,6);
  // Missing history for an open position counts as correlated (documented rule).
  expect(correlationScale(okx,[{coin:'celo',bars:null}])).toMatchObject({unavailable:['celo'],scale:1/Math.sqrt(2)});
+});
+it('the live sleeve refuses a correlated add and an over-cap cluster without resizing language that opens a trade',()=>{
+ expect(liveSleeveRefusal([],100,cap)).toBeNull();
+ expect(liveSleeveRefusal(['eth'],100,cap)).toMatch(/refuses the next correlated add \(eth\)/);
+ expect(liveSleeveRefusal(['eth'],cap,cap)).toMatch(/over the .* cap/);
+ expect(liveSleeveRefusal(['eth'],cap+1,cap)).toMatch(/not resized/);
 });

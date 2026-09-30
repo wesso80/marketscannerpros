@@ -62,6 +62,13 @@ export function clusterAllowance(corr:{scale:number;correlated:{coin:string}[];u
  const room=Math.max(0,capUsd-clusterRiskUsd),scale=Math.min(corr.scale,baseRiskUsd>0?room/baseRiskUsd:0);
  return {members:members.map(o=>o.coin),clusterRiskUsd:Math.round(clusterRiskUsd*100)/100,capUsd:Math.round(capUsd*100)/100,scale,blocked:!(scale>=CORRELATION.minRiskFraction),capped:scale<corr.scale};
 }
+/** Live sleeve only. One open position per cluster, and no new entry once that cluster is over the cap. Nothing here resizes an open position. */
+export function liveSleeveRefusal(mates:string[],clusterRiskUsd:number,capUsd:number):string|null{
+ const names=[...new Set(mates.filter(Boolean))];
+ if(capUsd>0&&clusterRiskUsd>=capUsd)return `Live sleeve refuses this entry: correlation cluster is over the ${CORRELATION.clusterRiskPct}% cap (risk USD ${clusterRiskUsd.toFixed(2)} vs cap USD ${capUsd.toFixed(2)}). Existing positions are not resized`;
+ if(names.length)return `Live sleeve refuses the next correlated add (${names.join(', ')}): one open position per correlation cluster`;
+ return null;
+}
 export type PortfolioCluster={coins:string[];riskUsd:number;capUsd:number;overCap:boolean};
 /**
  * Every-cycle recheck across ALL open positions: groups positions linked by correlation >= threshold (single linkage).

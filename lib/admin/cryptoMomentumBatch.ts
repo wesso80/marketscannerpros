@@ -3,6 +3,8 @@ import {NextResponse} from 'next/server';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
 import {createMomentumScan,fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
+import {persistForwardScores} from '@/lib/admin/cryptoForwardScore';
+import {stampMomentumVolume,unavailableFlowStamp} from '@/lib/admin/cryptoFlow';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 const KEY='admin:crypto-markets:momentum-volume:v1',F=4*3600000;
 export async function runMomentumBatch(limit=5){
@@ -28,7 +30,10 @@ export async function runMomentumBatch(limit=5){
    if(i+5<pending.length)await new Promise(resolve=>setTimeout(resolve,Math.max(0,1000-(Date.now()-batchStarted))));
    scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   }
+  try{await stampMomentumVolume(scan.rows,now);}catch{for(const row of scan.rows)if(row.stage==='MOMENTUM_VOLUME'&&!row.flowStamp)row.flowStamp=unavailableFlowStamp(now);}
+  scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   const emailAlerts=await sendCryptoSetupEmails(scan);
+  await persistForwardScores(redis,now);
   return NextResponse.json({scan,requestAttempts:requests,emailAlerts});
  }catch{return NextResponse.json({error:'Momentum scan storage unavailable; progress may be incomplete'},{status:503});}
 }
