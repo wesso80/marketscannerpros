@@ -171,6 +171,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  }catch{notes.push('Portfolio correlation recheck unavailable this cycle');}
  if(monitorOnly){
   const report={trigger,phase:'monitor',at:new Date().toISOString(),opened,closed,marked,monitorHealthy,notes,clusters};
+  if(!monitorHealthy)console.error('[crypto-paper] Exit monitoring unhealthy',JSON.stringify({at:report.at,marked,closed,notes}));
   await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:'Crypto paper exit monitoring completed',reasoning:notes.join('; ')||'Exit monitoring completed before scanning',evidence:[JSON.stringify(report)]});
   return report;
  }
@@ -260,6 +261,6 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
 }
 export async function runCryptoPaperAll(monitorOnly=false){
  const accounts=await q<{workspace_id:string}>("SELECT workspace_id FROM arca_portfolios WHERE name=$1 AND mode='SIMULATED' AND status IN ('ACTIVE','PAUSED')",[CRYPTO_PAPER_NAME]);
- const results=[];for(const a of accounts){try{results.push(await runCryptoPaperCycle(a.workspace_id,'cron',monitorOnly));}catch{results.push({error:'Crypto paper cycle failed; check account status'});}}
+ const results=[];for(const a of accounts){try{results.push(await runCryptoPaperCycle(a.workspace_id,'cron',monitorOnly));}catch(error){console.error('[crypto-paper] Cycle failed',error);results.push({error:'Crypto paper cycle failed; check account status'});}}
  return {ok:!results.some(r=>'error' in r||('monitorHealthy' in r&&!r.monitorHealthy)||('skipped' in r&&r.reason===BUSY)),simulated:true,accounts:accounts.length,results};
 }

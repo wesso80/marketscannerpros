@@ -5,6 +5,17 @@ const paper=(minutesAgo:number,healthy=true)=>({portfolio:{status:'ACTIVE',unrea
 const scan={startedAt:new Date(Math.floor(now/F)*F+60000).toISOString(),rows:[{stage:'MOMENTUM_VOLUME'},{stage:'NO_SIGNAL'},{stage:'MOMENTUM_VOLUME'}]};
 const ops={operations:{state:{checkedAt:new Date(now-5*60000).toISOString(),healthy:true,issues:[]}}};
 const by=(c:ReturnType<typeof attentionChips>,l:string)=>c.find(x=>x.label===l)!;
+it('uses the newer exit-only report when discovery prevented an entry cycle',()=>{
+ const p=paper(40);p.journal.push({title:'Crypto paper exit monitoring completed',createdAt:new Date(now-60000).toISOString(),evidence:[JSON.stringify({monitorHealthy:false,notes:['MINA: missing history; entries blocked until monitoring recovers']})]});
+ const c=attentionChips(p,scan,ops,now);
+ expect(by(c,'Last cycle').value).toBe('1 min ago');
+ expect(by(c,'Exit monitoring')).toMatchObject({value:'UNHEALTHY — entries blocked',reasons:['MINA: missing history; entries blocked until monitoring recovers']});
+});
+it('does not invent healthy monitoring from an incomplete or overdue report',()=>{
+ const p=paper(5);p.journal[0].evidence=['{}'];
+ expect(by(attentionChips(p,scan,ops,now),'Exit monitoring').value).toBe('UNKNOWN');
+ expect(by(attentionChips(paper(40),scan,ops,now),'Exit monitoring').value).toBe('OVERDUE');
+});
 it('summarizes a healthy account from saved data with sources',()=>{
  const c=attentionChips(paper(5),scan,ops,now);
  expect(by(c,'Last cycle')).toMatchObject({value:'5 min ago',tone:'ok'});

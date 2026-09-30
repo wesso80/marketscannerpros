@@ -7,6 +7,7 @@ import type {CryptoPaperStats as Stats,ExitPlanComparison} from '@/lib/admin/cry
 import type {BtcRegime} from '@/lib/admin/cryptoBtcRegime';
 import CryptoPaperStats from './CryptoPaperStats';
 import {publishPaperSnapshot,usePaperSnapshot} from './cryptoPaperSnapshot';
+import {latestCryptoCycle} from '@/lib/admin/cryptoCycleReport';
 type Limits={clusterRiskPct?:number;riskPerTradePct:number;notionalPct:number;maxPairVolumePct:number;maxVolumeAgeHours:number;positions:number;openRiskPct:number;dailyEntries:number;lossFromStartPct:number};
 type State={trending?:{at:string;ids:string[];source:string}|null;limits?:Limits;btcRegime?:BtcRegime|null;stats?:Stats|null;exitPlans?:ExitPlanComparison|null;reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[]};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
@@ -23,7 +24,7 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
  useEffect(()=>{if(shared?.data?.portfolio!==undefined&&shared.data!==data)setData(d=>({...shared.data,cycle:(d as {cycle?:unknown}|null)?.cycle}));},[shared]);
  const decisions:CryptoPaperDecision[]=[];
  for(const j of data?.journal??[])for(const evidence of j.evidence??[]){try{const report=JSON.parse(evidence);if(Array.isArray(report.decisions))decisions.push(...report.decisions);}catch{}}
- const p=data?.portfolio,last=data?.journal.find(j=>j.title==='Crypto paper cycle completed');
+ const p=data?.portfolio,last=latestCryptoCycle(data?.journal??[]);
  return <section id="crypto-paper" aria-label="Crypto paper account" className="space-y-3 rounded border border-violet-700 p-4 scroll-mt-4">
   <h2 className="text-xl">Crypto paper account · SIMULATED</h2>
   <p>Independent $200,000 paper ledger. Coinbase USD and OKX USDT momentum breakouts and continuations; no daily base requirement. OKX prices are converted into USD using observed Coinbase USDT/USD quotes. Other venues remain research-only.</p>
@@ -50,7 +51,7 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
   </details>
   {p&&<>
    <p>Entries: {p.status} · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L {money(p.unrealisedPnl)} (before exit costs)</p>
-   <p>{last?`Last cycle ${new Date(last.createdAt).toLocaleString()}${now-Date.parse(last.createdAt)>25*60000?' · OVERDUE — check monitoring':''}`:'No completed cycle recorded yet'}</p>
+   <p>{last?`${last.title} · ${new Date(last.createdAt).toLocaleString()}${now-Date.parse(last.createdAt)>25*60000?' · OVERDUE — check monitoring':''}`:'No completed cycle recorded yet'}</p>
    {last?.arcaReasoning&&<p className="text-sm text-slate-400">{last.arcaReasoning}</p>}
    <CryptoPaperStats stats={data?.stats} exitPlans={data?.exitPlans} />
    {data?.reconciliation&&<section aria-label="Paper account reconciliation" className="rounded border border-slate-700 p-3">

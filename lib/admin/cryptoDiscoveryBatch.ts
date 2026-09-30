@@ -16,7 +16,7 @@ export async function runDiscoveryBatch() {
       return NextResponse.json({error:'A scan is running or the 15-minute shared cooldown is active. Load saved results.'}, {status:429});
     const startedAt = new Date().toISOString();
     const collected = await collectDiscoveryMarkets(getDiscoveryExchangeTickers,
-      ids => getMarketData({ids, per_page:250, price_change_percentage:['1h','24h','7d'], precision:'full'}, {retries:0, timeoutMs:5000}), Date.now());
+      ids => getMarketData({ids, per_page:250, price_change_percentage:['1h','24h','7d'], precision:'full'}, {retries:0, timeoutMs:5000, noStore:true}), Date.now(), Date.now);
     const covered = new Set(sharedScanUniverse('CRYPTO').map(s => COINGECKO_ID_MAP[s]).filter(Boolean));
     const rows = screenCryptoMarkets(collected.rows, covered, Date.now()).map(r=>({...r,venues:collected.venues[r.id]}));
     if(!rows.length)return NextResponse.json({error:`Discovery returned zero coins with market data; ${collected.eligiblePairs} eligible pairs. Rejections: ${JSON.stringify(collected.rejectedPairs)}. Latest trade: ${collected.latestTradeAt??'unavailable'}. Previous snapshot retained.`,requestAttempts:collected.requests},{status:503});

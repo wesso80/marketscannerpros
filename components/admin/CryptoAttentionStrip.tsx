@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {publishPaperSnapshot,usePaperSnapshot} from './cryptoPaperSnapshot';
+import {latestCryptoCycle} from '@/lib/admin/cryptoCycleReport';
 type Chip={label:string;value:string;tone:'ok'|'warn'|'bad'|'info';detail:string;reasons?:string[]};
 type Paper={portfolio:{status:string;unrealisedPnl:number}|null;positions:unknown[];reconciliation?:{status:string;checkedAt:string};journal:{title:string;createdAt:string;evidence?:string[]}[]};
 type Scan={startedAt:string;rows:{stage:string}[]}|null;
@@ -13,14 +14,14 @@ export function attentionChips(paper:Paper|null,scan:Scan,ops:Ops|null,now:numbe
  if(!paper)chips.push({label:'Paper account',value:'UNAVAILABLE',tone:'bad',detail:'Saved paper ledger could not be read'});
  else if(!paper.portfolio)chips.push({label:'Paper account',value:'NOT ENABLED',tone:'info',detail:'Enable it in the Paper account tab'});
  else{
-  const last=paper.journal.find(j=>j.title==='Crypto paper cycle completed');
+  const last=latestCryptoCycle(paper.journal);
   let healthy:boolean|null=null,reasons:string[]=[];
-  try{const r=last?.evidence?.[0]?JSON.parse(last.evidence[0]):null;healthy=r?r.monitorHealthy!==false:null;
+  try{const r=last?.evidence?.[0]?JSON.parse(last.evidence[0]):null;healthy=typeof r?.monitorHealthy==='boolean'?r.monitorHealthy:null;
    // The cycle's own notes name each position that could not be verified; nothing is inferred when they are absent.
    reasons=Array.isArray(r?.notes)?r.notes.filter((n:unknown):n is string=>typeof n==='string'&&/entries blocked/i.test(n)):[];}catch{healthy=null;}
   const overdue=!last||now-Date.parse(last.createdAt)>25*60000;
   chips.push({label:'Last cycle',value:last?(overdue?'OVERDUE':ago(last.createdAt,now)):'NONE YET',tone:overdue?'bad':'ok',detail:last?`Paper cycle journal · ${new Date(last.createdAt).toLocaleString()}`:'No completed cycle recorded'});
-  chips.push({label:'Exit monitoring',value:healthy==null?'UNKNOWN':healthy?'HEALTHY':'UNHEALTHY — entries blocked',tone:healthy==null?'warn':healthy?'ok':'bad',detail:healthy===false?(reasons.length?reasons.join('\n'):'No reason recorded in the cycle report; see ARCA Journal')+` · cycle ${last?new Date(last.createdAt).toLocaleString():''}`:'From the latest cycle report',...(healthy===false?{reasons}:{})});
+  chips.push({label:'Exit monitoring',value:healthy==null?'UNKNOWN':healthy?(overdue?'OVERDUE':'HEALTHY'):'UNHEALTHY — entries blocked',tone:healthy==null?'warn':healthy&&!overdue?'ok':'bad',detail:healthy===false?(reasons.length?reasons.join('\n'):'No reason recorded in the cycle report; see ARCA Journal')+` · cycle ${last?new Date(last.createdAt).toLocaleString():''}`:`${last?.title??'No monitoring report'}${overdue?' · current monitoring not verified':''}`,...(healthy===false?{reasons}:{})});
   chips.push({label:'Open positions',value:`${paper.positions.length} · ${money(paper.portfolio.unrealisedPnl)}`,tone:'info',detail:`Entries ${paper.portfolio.status} · open P&L before exit costs, marked at last cycle`});
   if(paper.reconciliation)chips.push({label:'Ledger check',value:paper.reconciliation.status,tone:paper.reconciliation.status==='MATCHED'?'ok':'bad',detail:`Reconciliation · ${new Date(paper.reconciliation.checkedAt).toLocaleString()}`});
  }

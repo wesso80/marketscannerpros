@@ -7,6 +7,14 @@ const ticker = (id='quant',exchange='binance') => ({coin_id:id,base:'QNT',target
 const coin = (id='quant') => ({id,symbol:'qnt',name:'Quant',current_price:100,market_cap:1e9,total_volume:1e8,
   last_updated:new Date(now-60000).toISOString(),price_change_percentage_1h_in_currency:2,price_change_percentage_24h:9}) as CoinGeckoMarketData;
 describe('major exchange discovery',()=>{
+  it('validates trade times at response receipt, including trades after the scan began',async()=>{
+    const result=await collectDiscoveryMarkets(async ex=>[{...ticker('quant',ex),last_traded_at:new Date(now+1000).toISOString()}],async()=>[coin()],now,()=>now+2000);
+    expect(result.eligiblePairs).toBe(5);expect(result.rejectedPairs).toEqual({});
+  });
+  it('still rejects genuinely stale or future trades at response receipt',async()=>{
+    const result=await collectDiscoveryMarkets(async ex=>[{...ticker('quant',ex),last_traded_at:new Date(now+3000).toISOString()},{...ticker('old',ex),last_traded_at:new Date(now-900001).toISOString()}],async()=>[],now,()=>now+2000);
+    expect(result.eligiblePairs).toBe(0);expect(result.rejectedPairs.trade_timestamp_outside_window).toBe(10);
+  });
   it('keeps identities separate when symbols collide, deduplicates identical IDs',()=>{
     const rows=screenCryptoMarkets([coin(),coin(),coin('other-quant')],new Set(['quant']),now);
     expect(rows).toHaveLength(2); expect(rows.find(r=>r.id==='other-quant')?.fixedScanCovered).toBe(false);
