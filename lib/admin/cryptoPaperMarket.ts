@@ -1,5 +1,5 @@
-import {parseExchangeCandles} from './cryptoExchangeVolume';
-import {fillNoTradeGaps,NO_TRADE_MAX_BARS,type FilledBar} from './cryptoCandleGaps';
+import {parseExchangeCandles,type ExchangeBar} from './cryptoExchangeVolume';
+import {fillNoTradeGaps,NO_TRADE_MAX_BARS,type FilledBar,type TrailingAnchor} from './cryptoCandleGaps';
 import type {PaperExitPath} from './portfolio-lab/paperExitPath';
 import type {VolumeMomentum} from './cryptoVolumeMomentum';
 export class PaperMarketError extends Error {}
@@ -33,7 +33,8 @@ const COINBASE_PAGE=299;
  * fillGaps>0: also reads that many candles before `start` as an anchor, fills bounded no-trade gaps between real
  * candles (see fillNoTradeGaps), then returns only candles closing after `start`.
  */
-export async function fetchCoinbaseCandles(product:string,start:number,end:number,step=900000,fillGaps=0):Promise<FilledBar[]>{
+/** anchor (optional, with fillGaps): receives the last REAL candle in the fetched window, including the pre-start look-back. */
+export async function fetchCoinbaseCandles(product:string,start:number,end:number,step=900000,fillGaps=0,anchor?:{last?:ExchangeBar}):Promise<FilledBar[]>{
  const bars:FilledBar[]=[],from0=start-fillGaps*step;
  for(let from=from0;from<end;from+=COINBASE_PAGE*step){
   const to=Math.min(end,from+COINBASE_PAGE*step);
@@ -45,9 +46,10 @@ export async function fetchCoinbaseCandles(product:string,start:number,end:numbe
   bars.push(...page);
  }
  if(!fillGaps)return bars;
+ if(anchor)anchor.last=bars.at(-1);
  try{return fillNoTradeGaps(bars,step,fillGaps).filter(b=>b.t>start);}catch(error){throw new PaperMarketError(error instanceof Error?error.message:'Exit candle gap');}
 }
-export async function fetchPaperPath(symbol:string,product:string,from?:string):Promise<PaperExitPath>{
+export async function fetchPaperPath(symbol:string,product:string,from?:string):Promise<PaperExitPath&{trailingAnchor?:TrailingAnchor}>{
  if(!/^[A-Z0-9]{1,30}-USD$/.test(product))throw Error('Coinbase USD required');
  const step=900000,end=Math.floor(Date.now()/step)*step;
  const requested=from?Math.floor(Date.parse(from)/step)*step:end-COINBASE_PAGE*step;
@@ -55,8 +57,11 @@ export async function fetchPaperPath(symbol:string,product:string,from?:string):
  if(requested<end-PAPER_RECOVERY_CANDLES*step)throw new PaperMarketError('Exit history requires recovery beyond the seven-day catch-up window');
  const start=requested;
  if(start===end)return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[]};
- const bars=await fetchCoinbaseCandles(product,start,end,step,NO_TRADE_MAX_BARS);
- return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c})),filledBars:bars.filter(b=>b.filled).length};
+ const anchor:{last?:ExchangeBar}={};
+ const bars=await fetchCoinbaseCandles(product,start,end,step,NO_TRADE_MAX_BARS,anchor);
+ // The last real trade candle may sit before the checkpoint when a quiet coin had no trades since the previous cycle.
+ const trailingAnchor=anchor.last?{closeAt:anchor.last.t,close:anchor.last.c,from:start}:undefined;
+ return {symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:bars.map(b=>({openAt:b.t-step,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c})),filledBars:bars.filter(b=>b.filled).length,trailingAnchor};
 }
 /** maxNotional: optional liquidity cap in USD; riskScale (0,1]: correlation reduction of the 0.25% risk budget. The smallest size wins. */
 /**

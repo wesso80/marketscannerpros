@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import type {HarnessResult} from '@/lib/admin/strategyHarnessJob';
 type View={error?:string;config:{version:string;from:string;inSampleEnd:string;universeTop:number;halfSpread:number;cost:number;fixedHorizonDays:number};variants:{id:string;label:string}[];
- state:{status:string;startedAt:string;updatedAt:string;dataEnd:string;requests:number;counts:Record<string,number>;problems:{coin:string;status:string;error?:string}[]}|null;result:(Omit<HarnessResult,'trades'>&{tradeCount:number})|null};
+ state:{status:string;startedAt:string;updatedAt:string;dataEnd:string;requests:number;pendingPass1?:number;counts:Record<string,number>;problems:{coin:string;status:string;error?:string}[]}|null;result:(Omit<HarnessResult,'trades'>&{tradeCount:number})|null};
 const r2=(n:number|null|undefined,s='')=>n==null?'—':`${n>=0&&s==='R'?'+':''}${n.toFixed(2)}${s}`;
 const pct=(n:number|null|undefined)=>n==null?'—':`${n>=0?'+':''}${(n*100).toFixed(1)}%`;
 const tone=(n:number|null|undefined)=>n==null?'':n>0?'text-emerald-300':n<0?'text-red-300':'';
@@ -43,6 +43,7 @@ export default function CryptoHarness({refreshVersion=0}:{refreshVersion?:number
   <p className="text-xs text-slate-400">Requires the History data job (Phase 4) to have finished pass 1. Uses no CoinGecko credits: CoinGecko data comes from the database; candles come from Coinbase&apos;s public API. Each coin needs up to ~140 Coinbase requests.</p>
   {busy&&<p>Working…</p>}{error&&<p role="alert" className="text-amber-300">{error}</p>}
   {s&&<p className="text-sm">{s.status} · coins: {Object.entries(s.counts).map(([k,v])=>`${k} ${v}`).join(' · ')} · {s.requests.toLocaleString()} Coinbase requests · data to {s.dataEnd} · updated {new Date(s.updatedAt).toLocaleString()}</p>}
+  {s&&(s.pendingPass1??0)>0&&<p className="text-xs text-amber-300">{s.pendingPass1} coin(s) were still pending in History pass 1 at start (daily top-up or retried errors); the universe may miss them if they were ever in the top 100.</p>}
   {!!s?.problems.length&&<details className="text-xs"><summary>Excluded or failed coins ({s.problems.length} shown)</summary><ul className="pl-5">{s.problems.map(p=><li key={p.coin}>{p.coin}: {p.status} {p.error??''}</li>)}</ul></details>}
   {res&&res.periods.map((p,k)=><div key={p.label} className="overflow-auto">
    <h3 className="mt-2 text-sm font-semibold">{p.label} · {p.from} → {p.to}</h3>
