@@ -6,12 +6,13 @@ import {mergeDerivativesEvidence} from './cryptoMarketData';
 import {latestDerivatives,savedTrending} from './cryptoMarketDataJob';
 import {currentRsSnapshot,rsEvidence,type RsSnapshot} from './cryptoRelativeStrength';
 import {currentBtcRegime,savedBtcRegime,type BtcRegime} from './cryptoBtcRegime';
-import {initShadow,advanceShadow,shadowChanged,SHADOW_TITLE,type ShadowState} from './cryptoPaperShadow';
+import {initShadow,advanceShadow,shadowChanged,SHADOW_TITLE,SHADOW_TITLES,SHADOW_PLANS_ACTIVE,shadowTitle,type ShadowState} from './cryptoPaperShadow';
 import {compareExitPlans} from './cryptoPaperStats';
 import {q,atomicQueries} from '@/lib/db';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from './adminCrypto';
 import {ARCA_DEFAULT_SETTINGS} from './portfolio-lab/constants';
+import type {PaperExitRules} from './portfolio-lab/types';
 import {getDefaultPortfolio,getPortfolioById,insertPortfolio,listOpenPositions,listTrades,listJournal} from './portfolio-lab/portfolioStore';
 import {createSimulatedOrder,fillOrderAndOpenPosition} from './portfolio-lab/simulatedOrderEngine';
 import {markAndMaybeExit} from './portfolio-lab/positionEngine';
@@ -25,51 +26,66 @@ import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchFlow} from './cryptoFlow';
 import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
-import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError} from './cryptoPaperMarket';
+import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError,CRYPTO_TIME_STOP} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
 const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
+/** v2 playbook (entries from 2026-09-30): same signal, sizing and fixed stop/2R target, plus a 72h time stop when +1R was never reached. v1 positions keep fixed levels only. */
+export const PLAYBOOK_V2='crypto-momentum-v2';
+export const exitRulesFor=(playbookId:string|null):PaperExitRules|null=>playbookId===PLAYBOOK_V2?CRYPTO_TIME_STOP:null;
 /** Beta data-collection limits: raised from 5 positions / 2% open risk / 10 daily entries so more setups reach an outcome. Per-trade risk is unchanged. */
 export const CRYPTO_PAPER_LIMITS={riskPerTradePct:.25,notionalPct:10,maxPairVolumePct:1,maxVolumeAgeHours:6,positions:20,openRiskPct:5,dailyEntries:30,cycleEntries:4,cycleValidations:8,lossFromStartPct:5};
 const L=CRYPTO_PAPER_LIMITS;
 const BUSY='Crypto paper cycle already running or cooling down',MANUAL_RECENT='Manual crypto paper cycle ran within the last three minutes';
-/** Latest saved shadow exit state per position. Unparseable rows are skipped, never reconstructed. */
+/** Latest saved shadow state per position and plan, keyed `${positionId}|${plan}`. Unparseable rows are skipped, never reconstructed. */
+const ALL_SHADOW_TITLES=[...new Set([SHADOW_TITLE,...SHADOW_TITLES])];
+export const shadowKey=(positionId:string,plan:string)=>`${positionId}|${plan}`;
 async function shadowStates(workspaceId:string,portfolioId:string):Promise<Map<string,ShadowState>>{
- const rows=await q<{state:string|null}>('SELECT DISTINCT ON (position_id) evidence->>0 AS state FROM arca_trade_journal WHERE workspace_id=$1 AND portfolio_id=$2 AND title=$3 AND position_id IS NOT NULL ORDER BY position_id,created_at DESC',[workspaceId,portfolioId,SHADOW_TITLE]);
+ const rows=await q<{state:string|null}>('SELECT DISTINCT ON (position_id,title) evidence->>0 AS state FROM arca_trade_journal WHERE workspace_id=$1 AND portfolio_id=$2 AND title = ANY($3::text[]) AND position_id IS NOT NULL ORDER BY position_id,title,created_at DESC',[workspaceId,portfolioId,ALL_SHADOW_TITLES]);
  const m=new Map<string,ShadowState>();
- for(const row of rows){try{const st=JSON.parse(row.state??'') as ShadowState;if(st?.positionId)m.set(st.positionId,st);}catch{}}
+ for(const row of rows){try{const st=JSON.parse(row.state??'') as ShadowState;if(st?.positionId)m.set(shadowKey(st.positionId,st.plan??'partial-trail-v1'),st);}catch{}}
  return m;
 }
 async function saveShadow(workspaceId:string,portfolioId:string,st:ShadowState){
- await writeJournal({workspaceId,portfolioId,positionId:st.positionId,symbol:st.symbol,journalType:'REVIEW',title:SHADOW_TITLE,reasoning:`RESEARCH ONLY: alternative exit replayed on the ledger's candles; the paper position is unchanged. ${st.status}${st.reason?` · ${st.reason}`:''}`,evidence:[JSON.stringify(st)],dataFreshness:st.through});
+ await writeJournal({workspaceId,portfolioId,positionId:st.positionId,symbol:st.symbol,journalType:'REVIEW',title:shadowTitle(st.plan),reasoning:`RESEARCH ONLY: alternative exit (${st.plan}) replayed on the ledger's candles; the paper position is unchanged. ${st.status}${st.reason?` · ${st.reason}`:''}`,evidence:[JSON.stringify(st)],dataFreshness:st.through});
 }
-/** Starts a shadow for every open position before exits are checked, so none can close unobserved. */
+/** Starts every active shadow plan for every open position before exits are checked, so none can close unobserved. */
 async function initShadows(workspaceId:string,portfolioId:string,positions:Awaited<ReturnType<typeof listOpenPositions>>,notes:string[]){
  try{
   const known=await shadowStates(workspaceId,portfolioId);
   for(const p of positions){
-   if(known.has(p.id))continue;
+   // Plans sharing a journal title (v1/v2) are one slot: a position already on v1 does not also start v2.
+   const titles=new Set([...known.values()].filter(s=>s.positionId===p.id).map(s=>shadowTitle(s.plan??'partial-trail-v1')));
+   const missing=SHADOW_PLANS_ACTIVE.filter(plan=>!titles.has(shadowTitle(plan)));
+   if(!missing.length)continue;
    const [order]=p.sourceOrderId?await q<{created_reason:string|null}>('SELECT created_reason FROM arca_simulated_orders WHERE workspace_id=$1 AND id=$2',[workspaceId,p.sourceOrderId]):[];
-   let atr=NaN;try{const r=order?.created_reason??'';atr=Number(JSON.parse(r.slice(r.indexOf('{'))).signal?.atr);}catch{}
-   await saveShadow(workspaceId,portfolioId,initShadow(p,atr,p.instrumentType.startsWith('okx-usd-v1:')?.001:.0005));
+   let atr=NaN,entryFloor:number|null=null;try{const r=order?.created_reason??'';const sig=JSON.parse(r.slice(r.indexOf('{'))).signal;atr=Number(sig?.atr);entryFloor=typeof sig?.entryFloor==='number'?sig.entryFloor:null;}catch{}
+   for(const plan of missing)await saveShadow(workspaceId,portfolioId,initShadow(p,atr,p.instrumentType.startsWith('okx-usd-v1:')?.001:.0005,plan,entryFloor));
   }
  }catch{notes.push('Shadow exit plan could not start for new positions; paper exits unaffected');}
 }
-/** Advances open shadows on completed candles. Failures are research gaps only and never block entries. */
+/** Advances open shadows on completed candles. One history request per position covers all its plans. Failures are research gaps only and never block entries. */
 async function advanceShadows(workspaceId:string,portfolioId:string,notes:string[]){
  let states:Map<string,ShadowState>;
  try{states=await shadowStates(workspaceId,portfolioId);}catch{notes.push('Shadow exit plan state unavailable; paper exits unaffected');return;}
- for(const st of states.values()){
-  if(st.status!=='OPEN')continue;
-  try{
-   const converted=st.instrumentType.startsWith('okx-usd-v1:'),product=converted?st.instrumentType.slice(11):st.instrumentType.slice(9);
-   const path=converted?await fetchOkxUsdPath(st.symbol,product,st.through):await fetchPaperPath(st.symbol,product,st.through);
-   const next=advanceShadow(st,path.candles);
-   if(shadowChanged(st,next))await saveShadow(workspaceId,portfolioId,next);
-  }catch(error){
-   const message=error instanceof Error?error.message:'request failed';
-   if(/requires recovery/.test(message))await saveShadow(workspaceId,portfolioId,{...st,status:'UNAVAILABLE',reason:'Shadow history is beyond the seven-day catch-up window'}).catch(()=>undefined);
-   else notes.push(`Shadow exit ${st.symbol}: ${message}; retried next cycle`);
+ const open=[...states.values()].filter(s=>s.status==='OPEN'),byPosition=new Map<string,ShadowState[]>();
+ for(const st of open)byPosition.set(st.positionId,[...(byPosition.get(st.positionId)??[]),st]);
+ for(const group of byPosition.values()){
+  const first=group[0],converted=first.instrumentType.startsWith('okx-usd-v1:'),product=converted?first.instrumentType.slice(11):first.instrumentType.slice(9);
+  const from=group.map(s=>s.through).sort()[0];
+  let candles:Awaited<ReturnType<typeof fetchPaperPath>>['candles']|null=null,failure:string|null=null;
+  try{candles=(converted?await fetchOkxUsdPath(first.symbol,product,from):await fetchPaperPath(first.symbol,product,from)).candles;}
+  catch(error){failure=error instanceof Error?error.message:'request failed';}
+  for(const st of group){
+   try{
+    if(!candles)throw Error(failure??'request failed');
+    const next=advanceShadow(st,candles);
+    if(shadowChanged(st,next))await saveShadow(workspaceId,portfolioId,next);
+   }catch(error){
+    const message=error instanceof Error?error.message:'request failed';
+    if(/requires recovery/.test(message))await saveShadow(workspaceId,portfolioId,{...st,status:'UNAVAILABLE',reason:'Shadow history is beyond the seven-day catch-up window'}).catch(()=>undefined);
+    else notes.push(`Shadow exit ${st.symbol} (${st.plan}): ${message}; retried next cycle`);
+   }
   }
  }
 }
@@ -89,7 +105,7 @@ export async function cryptoPaperState(workspaceId:string){
  if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats:null,exitPlans:null};
  await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR SHARE',[workspaceId,portfolio.id]);
  portfolio=await getPortfolioById(workspaceId,portfolio.id);if(!portfolio)throw Error('Paper account unavailable');
- const [positions,trades,journal]=await Promise.all([listOpenPositions(workspaceId,portfolio.id),listTrades(workspaceId,portfolio.id,{limit:100}),listJournal(workspaceId,portfolio.id,{limit:500})]).then(([a,b,j])=>[a,b,j.filter(e=>e.title!=='Paper candle checkpoint v1'&&e.title!==SHADOW_TITLE).slice(0,25)] as const);
+ const [positions,trades,journal]=await Promise.all([listOpenPositions(workspaceId,portfolio.id),listTrades(workspaceId,portfolio.id,{limit:100}),listJournal(workspaceId,portfolio.id,{limit:500})]).then(([a,b,j])=>[a,b,j.filter(e=>e.title!=='Paper candle checkpoint v1'&&!ALL_SHADOW_TITLES.includes(e.title)).slice(0,25)] as const);
  // Per-position checkpoint and shadow rows are bookkeeping; keep them from hiding cycle reports and decisions.
  let reconciliation:CryptoReconciliation;
  try{
@@ -97,8 +113,8 @@ export async function cryptoPaperState(workspaceId:string){
   if(!totals)throw Error('Missing ledger totals');
   reconciliation=reconcileCryptoPaper(portfolio,positions,{net:Number(totals.net),fees:Number(totals.fees),count:Number(totals.count),invalid:Number(totals.invalid)});
  }catch{reconciliation={status:'UNAVAILABLE',checkedAt:new Date().toISOString(),reason:'Ledger totals could not be read'};}
- let stats:CryptoPaperStats|null=null,exitPlans:ReturnType<typeof compareExitPlans>|null=null;
- try{const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,o.created_reason FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);exitPlans=compareExitPlans(rows,[...(await shadowStates(workspaceId,portfolio.id)).values()]);}catch{stats=null;exitPlans=null;}
+ let stats:CryptoPaperStats|null=null,exitPlans:ReturnType<typeof compareExitPlans>[]|null=null;
+ try{const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,t.entry_price,t.exit_price,t.quantity,t.stop_loss,o.created_reason FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);const shadows=[...(await shadowStates(workspaceId,portfolio.id)).values()];exitPlans=SHADOW_PLANS_ACTIVE.map(plan=>compareExitPlans(rows,shadows,plan));}catch{stats=null;exitPlans=null;}
  return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null)};
  });
 }
@@ -106,11 +122,11 @@ export async function setCryptoPaperActive(workspaceId:string,active:boolean){
  return atomicQueries(async()=>{
   await q('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`crypto-paper-create:${workspaceId}`]);
   let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
-  if(!portfolio&&active)portfolio=await insertPortfolio({workspaceId,name:CRYPTO_PAPER_NAME,startingBalance:200000,baseCurrency:'USD',settings:{...ARCA_DEFAULT_SETTINGS,riskPerTradePct:.25,maxSingleTradeRiskPct:.25,maxOpenPortfolioRiskPct:2,enabledAssetClasses:['crypto'],enabledPlaybooks:[PLAYBOOK],maxAssetClassExposurePct:{...ARCA_DEFAULT_SETTINGS.maxAssetClassExposurePct,crypto:50},feesPctEstimate:.05,slippagePctEstimate:.05,benchmarkSymbol:'BTC'}});
+  if(!portfolio&&active)portfolio=await insertPortfolio({workspaceId,name:CRYPTO_PAPER_NAME,startingBalance:200000,baseCurrency:'USD',settings:{...ARCA_DEFAULT_SETTINGS,riskPerTradePct:.25,maxSingleTradeRiskPct:.25,maxOpenPortfolioRiskPct:2,enabledAssetClasses:['crypto'],enabledPlaybooks:[PLAYBOOK,PLAYBOOK_V2],maxAssetClassExposurePct:{...ARCA_DEFAULT_SETTINGS.maxAssetClassExposurePct,crypto:50},feesPctEstimate:.05,slippagePctEstimate:.05,benchmarkSymbol:'BTC'}});
   if(!portfolio)return null;
   await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio.id]);
   await q('UPDATE arca_portfolios SET status=$1,updated_at=NOW() WHERE workspace_id=$2 AND id=$3',[active?'ACTIVE':'PAUSED',workspaceId,portfolio.id]);
-  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD and converted OKX USDT momentum entries. Exit monitoring continues when entries are paused. '+`${L.riskPerTradePct}% risk, ${L.notionalPct}% notional cap per trade, ${L.positions} positions, ${L.openRiskPct}% portfolio risk, ${L.dailyEntries} entries per day, ${L.lossFromStartPct}% loss-from-start entry stop, trade size at most ${L.maxPairVolumePct}% of the pair's 24h volume, risk scaled by 1/sqrt(1+n) for n open positions with 4h return correlation >= 0.7 (floor 25%), combined risk of one correlated cluster capped at ${CORRELATION.clusterRiskPct}% of equity (existing positions never resized), targets 2R from the actual fill (beta data-collection limits). BTC daily trend is recorded on each entry, not used as a filter.`+' Fees and slippage each 0.05% per side for Coinbase, 0.10% per side for two-leg OKX conversions. No changes to personal holdings or other paper portfolios.'});
+  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:active?'Crypto paper entries enabled':'Crypto paper entries paused',reasoning:'SIMULATED ONLY. Coinbase USD and converted OKX USDT momentum entries. Exit monitoring continues when entries are paused. '+`${L.riskPerTradePct}% risk, ${L.notionalPct}% notional cap per trade, ${L.positions} positions, ${L.openRiskPct}% portfolio risk, ${L.dailyEntries} entries per day, ${L.lossFromStartPct}% loss-from-start entry stop, trade size at most ${L.maxPairVolumePct}% of the pair's 24h volume, risk scaled by 1/sqrt(1+n) for n open positions with 4h return correlation >= 0.7 (floor 25%), combined risk of one correlated cluster capped at ${CORRELATION.clusterRiskPct}% of equity (existing positions never resized), targets 2R from the actual fill (beta data-collection limits). Entries from 2026-09-30 (${PLAYBOOK_V2}) also close at the first completed 15m candle at or after 72h if the position never reached +1R; earlier positions keep fixed levels only. BTC daily trend is recorded on each entry, not used as a filter.`+' Fees and slippage each 0.05% per side for Coinbase, 0.10% per side for two-leg OKX conversions. No changes to personal holdings or other paper portfolios.'});
   return portfolio.id;
  });
 }
@@ -143,7 +159,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,portfolio!.id]);
     const current=await getPortfolioById(workspaceId,portfolio!.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');
     const pos=(await listOpenPositions(workspaceId,current.id)).find(p=>p.id===position.id);if(!pos)return;
-    const checked=evaluatePaperExitPath(pos,path);
+    const checked=evaluatePaperExitPath(pos,path,Date.now(),exitRulesFor(pos.playbookId));
     // Missing chronology blocks valuation/target awards and further entries. Never skip a missing prefix.
     if(!['candle_path_checked','candle_path_exit','candle_path_no_closed_bars'].includes(checked.status))throw new PaperMarketError(`Exit chronology: ${checked.status}`);
     const through=Date.parse(checked.checkedThrough??pos.exitCheckpoint?.through??pos.openedAt);
@@ -153,7 +169,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     // A proven earlier stop/target can settle even if the ticker is down.
     const best=(path as {bestCaseHigh?:number|null}).bestCaseHigh;
     if(converted&&!checked.exit&&pos.takeProfit1!=null&&best!=null&&best>=pos.takeProfit1)notes.push(`${pos.symbol}: OKX high reached the target only at the best USDT/USD rate (${best.toPrecision(6)} vs ${pos.takeProfit1}); not filled under the conservative conversion rule`);
-    const result=await markAndMaybeExit({portfolio:paperCostPortfolio(current,pos.instrumentType),position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,skipLearning:true});
+    const result=await markAndMaybeExit({portfolio:paperCostPortfolio(current,pos.instrumentType),position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,exitRules:exitRulesFor(pos.playbookId),skipLearning:true});
     const updated=await getPortfolioById(workspaceId,current.id);if(!updated)throw Error('Paper account unavailable');
     await refreshPaperBalances(updated,updated.currentCash,updated.realisedPnl);
     marked++;if(result.exit)closed++;
@@ -255,7 +271,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     if(cluster.blocked)throw Error(`Correlated cluster risk cap: ${cluster.members.join(', ')} already risk USD ${cluster.clusterRiskUsd.toFixed(2)} of USD ${cluster.capUsd.toFixed(2)}`);
     const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,cluster.scale);if(!plan.ok)throw Error(plan.reason);
     if(opens.reduce((s,p)=>s+positionRiskUsd(p),0)+plan.risk>current.totalEquity*L.openRiskPct/100)throw Error(`${L.openRiskPct}% portfolio risk cap`);
-    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true}),arcaConfidence:null});
+    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK_V2,createdReason:key+JSON.stringify({version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',exitRules:CRYPTO_TIME_STOP,btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
     decide(candidate,'OPENED',['Fresh signal, quote and account checks passed',...(corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(cluster.capped?[`risk capped to ${Math.round(cluster.scale*100)}% by the ${CORRELATION.clusterRiskPct}% correlated-cluster cap`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[]),...(btcRegime?.state==='DOWN'?['shadow filter: would skip (BTC daily trend DOWN); opened anyway for comparison']:[]),...(flow.state!=='NEUTRAL'&&flow.state!=='UNAVAILABLE'?[`flow shadow label: ${flow.state} (evidence only; not a filter)`]:[]),...(derivatives.flags.some(f=>/EXTREME_FUNDING|OI_SURGE|CROWDED_FUNDING|LEVERAGE_DRIVEN/.test(f))?[`derivatives flags: ${derivatives.flags.join(' ')} (evidence only; not a filter)`]:[])].join('; '),quote);

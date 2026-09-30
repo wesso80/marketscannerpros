@@ -46,13 +46,20 @@ it('summarizes in R with $500 per R and reports excluded trades separately',asyn
  expect(s.stats.overall).toMatchObject({trades:1});expect(s.stats.overall.netPnl).toBeCloseTo(r.trades[0].fixed.r!*500,1);
  expect(s.counts).toMatchObject({trades:2,openAtHorizon:1,signals:2});
 });
-it('marks a trade that hits neither stop nor target at the horizon close instead of dropping it',async()=>{
+it('closes a trade that never reaches +1R at the 72h time stop, and marks one that did at the horizon close instead of dropping it',async()=>{
  const m=market();
- const flat=async(p:string,start:number,end:number,step:number)=>{
+ const flat=(spike:boolean)=>async(p:string,start:number,end:number,step:number)=>{
   if(step!==M15)return fetcher(m)(p,start,end,step);
-  const bars:ExchangeBar[]=[];for(let t=start+M15;t<=end;t+=M15)bars.push({t,o:m.C,h:m.C+.05,l:m.C-.05,c:m.C+.02,v:1});return {bars,requests:1,dropped:0};
+  const bars:ExchangeBar[]=[];for(let t=start+M15;t<=end;t+=M15)bars.push({t,o:m.C,h:m.C+.05,l:m.C-.05,c:m.C+.02,v:1});
+  // One early spike above +1R but below the 2R target keeps the position alive past 72h.
+  if(spike)bars[10].h=m.C+3;
+  return {bars,requests:1,dropped:0};
  };
- const r=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*D,btc,flat);
+ const timed=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*D,btc,flat(false));
+ expect(timed.trades[0].fixed).toMatchObject({status:'CLOSED',exit:'TIME_EXIT',at:new Date(m.signalAt+72*H).toISOString()});
+ expect(timed.trades[0].fixed.marked).toBeUndefined();
+ expect(Object.keys(timed.trades[0].shadows!)).toEqual(['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4']);
+ const r=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*D,btc,flat(true));
  expect(r.trades[0].fixed).toMatchObject({status:'CLOSED',marked:true,exit:'HORIZON',at:new Date(m.signalAt+7*D).toISOString()});
  expect(Math.abs(r.trades[0].fixed.r!)).toBeLessThan(.2);
  expect(r.daily).toEqual([]);

@@ -151,13 +151,14 @@ it('starts a research-only shadow exit for open positions, and shadow failures n
  positions=[{...position(),symbol:'other'}];
  vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
  const shadow={version:1,plan:'partial-trail-v1',positionId:'old',symbol:'gone',instrumentType:'coinbase:GONE-USD',entry:100,entryAt:new Date(now-2*step).toISOString(),stop0:95,atr:2,costRate:.0005,entryFeePerUnit:.05,through:new Date(now-2*step).toISOString(),status:'OPEN',stop:95,highest:null,remaining:1,legs:[],r:null};
- vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('DISTINCT ON (position_id)')?[{state:JSON.stringify(shadow)}] as never:[]);
+ vi.mocked(q).mockImplementation(async(sql:string)=>sql.includes('DISTINCT ON (position_id,title)')?[{state:JSON.stringify(shadow)}] as never:[]);
  vi.mocked(fetchPaperPath).mockImplementationOnce(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}))
   .mockImplementationOnce(async()=>{throw Error('shadow provider down');});
  const report=await runCryptoPaperCycle('w');
  expect(report).toMatchObject({opened:1,monitorHealthy:true});
- expect(report.notes).toContain('Shadow exit gone: shadow provider down; retried next cycle');
- expect(vi.mocked(writeJournal).mock.calls.some(([a])=>a.title==='Crypto shadow exit plan partial-trail-v1'&&a.positionId==='pos')).toBe(true);
+ expect(report.notes).toContain('Shadow exit gone (partial-trail-v1): shadow provider down; retried next cycle');
+ // Every active plan starts for the open position: v2 under the legacy title, v3 and v4 under their own.
+ for(const title of ['Crypto shadow exit plan partial-trail-v1','Crypto shadow exit plan failed-breakout-trail-v3','Crypto shadow exit plan trail-only-v4'])expect(vi.mocked(writeJournal).mock.calls.some(([a])=>a.title===title&&a.positionId==='pos')).toBe(true);
 });
 it('caps entry size at 1% of the pair 24h volume and records the evidence',async()=>{
  // Risk sizing alone gives ~$9.6k here, so $500k volume (cap $5k) makes liquidity the binding limit.

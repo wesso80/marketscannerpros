@@ -139,6 +139,13 @@ export interface ArcaSimOrder {
   cancelledAt: string | null;
 }
 
+/** Optional rule exits replayed alongside the fixed levels. Absent = fixed stop/target only. */
+export interface PaperExitRules {
+  /** Close at the first completed candle at/after entry + hours if the best excursion never reached minR. */
+  timeStopHours: number;
+  timeStopMinR: number;
+}
+
 export interface PaperExitCheckpoint {
   version: 1;
   through: string;
@@ -146,6 +153,9 @@ export interface PaperExitCheckpoint {
   side: PositionSide;
   stop: number;
   target: number | null;
+  /** Present only when rule exits apply; best favourable extreme over completed candles after entry. */
+  rules?: PaperExitRules | null;
+  best?: number | null;
 }
 
 export interface ArcaPosition {

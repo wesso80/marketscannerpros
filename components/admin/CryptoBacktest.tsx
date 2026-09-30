@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {CryptoPaperStats as Stats,CryptoStatsGroup,ExitPlanComparison} from '@/lib/admin/cryptoPaperStats';
 import CryptoPaperStats,{Table} from './CryptoPaperStats';
 type Counts={markedAtHorizon?:number;filledBars?:number;tradesWithFilledBars?:number;coins:number;done:number;failed:number;signals:number;noEntry:number;overlapping:number;trades:number;openAtHorizon:number;dataGaps:number;requests:number;droppedRows:number};
-type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{endDaysAgo?:number;regimes?:{byBtc200:CryptoStatsGroup[];byBreadth:CryptoStatsGroup[];byGate:CryptoStatsGroup[];byRsRule?:CryptoStatsGroup[];byRsTercile?:CryptoStatsGroup[];byCoinTrend?:CryptoStatsGroup[]};stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison;counts:Counts}|null};
+type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{endDaysAgo?:number;regimes?:{byBtc200:CryptoStatsGroup[];byBreadth:CryptoStatsGroup[];byGate:CryptoStatsGroup[];byRsRule?:CryptoStatsGroup[];byRsTercile?:CryptoStatsGroup[];byCoinTrend?:CryptoStatsGroup[]};stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison[];counts:Counts}|null};
 export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:number}){
  const [windowOffset,setWindowOffset]=useState(0);
  const [data,setData]=useState<View|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
