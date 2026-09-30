@@ -658,7 +658,7 @@ export async function getMarketData(
     /** 'full' returns un-rounded prices (same as /simple/price precision=full), needed for sub-cent coins. */
     precision?: 'full';
   },
-  requestOptions?: { retries?: number; timeoutMs?: number },
+  requestOptions?: { retries?: number; timeoutMs?: number; noStore?: boolean },
 ): Promise<CoinGeckoMarketData[] | null> {
   try {
     const params = new URLSearchParams({
@@ -685,7 +685,7 @@ export async function getMarketData(
       params,
       retries: requestOptions?.retries,
       timeoutMs: requestOptions?.timeoutMs,
-      init: { next: { revalidate: 90 } },
+      init: requestOptions?.noStore ? { cache: 'no-store' } : { next: { revalidate: 90 } },
     });
   } catch (error) {
     console.error('[CoinGecko] Markets fetch error:', error);
@@ -1822,7 +1822,9 @@ export async function getDiscoveryExchangeTickers(exchangeId: string, page: numb
   try {
     const result = await cgFetch<{ tickers: CoinTicker[] }>(`/exchanges/${encodeURIComponent(exchangeId)}/tickers`, {
       params: new URLSearchParams({ page: String(page), order: 'volume_desc' }),
-      retries: 0, timeoutMs: 5000, init: { next: { revalidate: 300 } },
+      // This admin-only job already has a shared 15-minute budget and saved snapshot.
+      // Next's stale-while-revalidate response would be a whole scan interval old.
+      retries: 0, timeoutMs: 5000, init: { cache: 'no-store' },
     });
     return Array.isArray(result?.tickers) ? result.tickers : null;
   } catch { return null; }

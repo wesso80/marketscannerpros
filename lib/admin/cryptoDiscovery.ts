@@ -47,7 +47,7 @@ export function eligibleVenue(t: CoinTicker, exchange: string, nowMs: number): V
  * At most 15 ticker + 6 market requests, no retries or per-coin candle requests. */
 export async function collectDiscoveryMarkets(
   fetchTickers: (exchange: string, page: number) => Promise<CoinTicker[] | null>,
-  fetchMarkets: (ids: string[]) => Promise<CoinGeckoMarketData[] | null>, nowMs: number,
+  fetchMarkets: (ids: string[]) => Promise<CoinGeckoMarketData[] | null>, nowMs: number, clock:()=>number=()=>nowMs,
 ) {
   const venues: Record<string, VenueEvidence[]> = {};
   const coverage: {exchange:string; pages:number; status:'CAPPED'|'END'|'FAILED'; pairsSeen:number}[] = [];
@@ -61,14 +61,16 @@ export async function collectDiscoveryMarkets(
       requests++; entry.pages++;
       const batch = await fetchTickers(exchange,page).catch(()=>null);
       if (!batch) {entry.status='FAILED'; break;}
+      // Validate against receipt time, not the beginning of a multi-request scan.
+      const checkedAt=clock();
       entry.pairsSeen += batch.length;
       for (const t of batch.slice(0,100)) {
         const at=Date.parse(t.last_traded_at);
         if(Number.isFinite(at))latestTradeAt=Math.max(latestTradeAt??at,at);
-        const evidence = eligibleVenue(t,exchange,nowMs);
+        const evidence = eligibleVenue(t,exchange,checkedAt);
         if(evidence)eligiblePairs++;
         else{
-          const reason=!t.coin_id?'missing_coin_id':t.market?.identifier!==exchange?'venue_mismatch':t.is_stale!==false||t.is_anomaly!==false?'stale_or_anomaly_flag':!Number.isFinite(at)||at>nowMs||nowMs-at>DISCOVERY_POLICY.maxAgeMs?'trade_timestamp_outside_window':!finite(t.converted_volume?.usd)||t.converted_volume.usd<DISCOVERY_POLICY.minPairVolumeUsd?'pair_volume_below_floor':'spread_invalid_or_too_wide';
+          const reason=!t.coin_id?'missing_coin_id':t.market?.identifier!==exchange?'venue_mismatch':t.is_stale!==false||t.is_anomaly!==false?'stale_or_anomaly_flag':!Number.isFinite(at)||at>checkedAt||checkedAt-at>DISCOVERY_POLICY.maxAgeMs?'trade_timestamp_outside_window':!finite(t.converted_volume?.usd)||t.converted_volume.usd<DISCOVERY_POLICY.minPairVolumeUsd?'pair_volume_below_floor':'spread_invalid_or_too_wide';
           rejectedPairs[reason]=(rejectedPairs[reason]??0)+1;
         }
         if (evidence && !(venues[t.coin_id]??[]).some(v=>v.exchange===exchange && v.pair===evidence.pair))
