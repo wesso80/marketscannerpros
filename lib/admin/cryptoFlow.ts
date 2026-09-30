@@ -11,6 +11,8 @@ export const FLOW={
  /** Long (short) liquidations over the last 24h at or above this share of open interest mark a flush (squeeze). */
  liqShareOfOi:.005,
  liqWindowHours:24,instrumentCacheSeconds:86400,
+ /** OKX returns 100 liquidation orders per page; busy coins (BTC) need ~7 pages for 24h. Coverage is recorded when capped. */
+ liqMaxPages:12,
 };
 export type FlowState='LONG_LIQ_HEAVY'|'SHORT_LIQ_HEAVY'|'TAKER_SELL_HEAVY'|'TAKER_BUY_HEAVY'|'NEUTRAL'|'UNAVAILABLE';
 export type FlowEvidence={rule:string;source:'okx:public';checkedAt:string;state:FlowState;flags:string[];reasons:string[];
@@ -30,7 +32,7 @@ export function takerShares(raw:unknown,now:number){
  return {share4h:share(4),share24h:share(24),hours:rows.length};
 }
 /** OKX liquidation orders -> USD by side over the last 24h. sz is in contracts; USD = sz x ctVal x bankruptcy price. */
-export function liquidations(raw:unknown,ctVal:number|null,now:number){
+export function liquidations(raw:unknown,ctVal:number|null,now:number,capped=false){
  const d=(raw as {code?:string;data?:unknown[]})?.code==='0'?(raw as {data:{details?:unknown[]}[]}).data:null;
  if(!Array.isArray(d)||ctVal==null||!(ctVal>0))return null;
  const since=now-FLOW.liqWindowHours*H;let long=0,short=0,n=0,oldest=Infinity;
@@ -42,7 +44,21 @@ export function liquidations(raw:unknown,ctVal:number|null,now:number){
   if(x.posSide==='long'||(x.posSide==null&&x.side==='sell'))long+=usd;else if(x.posSide==='short'||(x.posSide==null&&x.side==='buy'))short+=usd;
  }
  const coverage=Number.isFinite(oldest)?(now-oldest)/H:null;
- return {long,short,orders:n,coverageHours:coverage,partial:coverage==null?false:coverage<FLOW.liqWindowHours&&n>=100};
+ // Partial only when paging stopped at the cap before reaching 24h; a short span with no older orders is complete.
+ return {long,short,orders:n,coverageHours:coverage,partial:capped&&coverage!=null&&coverage<FLOW.liqWindowHours};
+}
+/** Pages back with the `after` timestamp cursor until 24h are covered or the page cap is hit; merged into one response. */
+async function liquidationPages(uly:string,now:number){
+ const all:unknown[]=[];let after:string|null=null;
+ for(let p=0;p<FLOW.liqMaxPages;p++){
+  const raw=await okx('/api/v5/public/liquidation-orders',{instType:'SWAP',uly,state:'filled',limit:'100',...(after?{after}:{})}) as {code?:string;data?:{details?:{ts?:string}[]}[]};
+  if(raw?.code!=='0')return p?{raw:{code:'0',data:[{details:all}]},capped:false}:null;
+  const det=(raw.data??[]).flatMap(g=>Array.isArray(g?.details)?g.details:[]);all.push(...det);
+  const ts=det.map(d=>Number(d.ts)).filter(Number.isFinite);if(det.length<100||!ts.length)break;
+  const oldest=Math.min(...ts);if(oldest<now-FLOW.liqWindowHours*H)break;after=String(oldest);
+  if(p===FLOW.liqMaxPages-1)return {raw:{code:'0',data:[{details:all}]},capped:true};
+ }
+ return {raw:{code:'0',data:[{details:all}]},capped:false};
 }
 /** Priority: liquidation flush/squeeze (needs OI), then taker pressure, else NEUTRAL; no taker data -> UNAVAILABLE. */
 export function classifyFlow(t:{share4h:number|null},liq:{long:number;short:number}|null,oiUsd:number|null):{state:FlowState;flags:string[];reasons:string[]}{
@@ -66,7 +82,7 @@ async function contractValue(instId:string):Promise<number|null>{
  const raw=await okx('/api/v5/public/instruments',{instType:'SWAP',instId}).catch(()=>null) as {code?:string;data?:{ctVal?:string}[]}|null;
  const v=raw?.code==='0'?num(raw.data?.[0]?.ctVal):null;if(v!=null&&v>0)await r?.set(k,v,{ex:FLOW.instrumentCacheSeconds}).catch(()=>undefined);return v;
 }
-/** Never throws: every missing piece is recorded as unavailable. 3 OKX requests (instrument cached daily). */
+/** Never throws: every missing piece is recorded as unavailable. 2-13 OKX public requests (instrument cached daily). */
 export async function fetchFlow(base:string,oiUsd:number|null,now=Date.now()):Promise<FlowEvidence>{
  const out=(t:ReturnType<typeof takerShares>,l:ReturnType<typeof liquidations>,extra:string[]=[]):FlowEvidence=>{const c=classifyFlow({share4h:t.share4h},l,oiUsd);
   return {rule:FLOW.rule,source:'okx:public',checkedAt:new Date(now).toISOString(),state:c.state,flags:c.flags,reasons:[...extra,...c.reasons],takerBuyShare4h:t.share4h,takerBuyShare24h:t.share24h,takerHours:t.hours,
@@ -75,7 +91,7 @@ export async function fetchFlow(base:string,oiUsd:number|null,now=Date.now()):Pr
  const instId=`${base}-USDT-SWAP`;
  const [taker,liqRaw,ctVal]=await Promise.all([
   okx('/api/v5/rubik/stat/taker-volume',{ccy:base,instType:'CONTRACTS',period:'1H'}).catch(()=>null),
-  okx('/api/v5/public/liquidation-orders',{instType:'SWAP',uly:`${base}-USDT`,state:'filled',limit:'100'}).catch(()=>null),
+  liquidationPages(`${base}-USDT`,now).catch(()=>null),
   contractValue(instId).catch(()=>null)]);
- return out(takerShares(taker,now),liquidations(liqRaw,ctVal,now));
+ return out(takerShares(taker,now),liquidations(liqRaw?.raw??null,ctVal,now,liqRaw?.capped??false));
 }

@@ -17,6 +17,10 @@ it('liquidations convert contracts to USD by side within 24h and report coverage
  expect(liquidations(raw,10,now)).toMatchObject({long:200,short:100,orders:2,partial:false});
  expect(liquidations(raw,10,now)!.coverageHours).toBeCloseTo(30,6);
  expect(liquidations(raw,null,now)).toBeNull();
+ // A short span is complete unless paging stopped at the cap.
+ expect(liquidations(raw,10,now,true)!.partial).toBe(false);
+ const recent={code:'0',data:[{details:[{posSide:'long',sz:'1',bkPx:'1',ts:String(now-2*H)}]}]};
+ expect(liquidations(recent,10,now,true)!.partial).toBe(true);expect(liquidations(recent,10,now,false)!.partial).toBe(false);
 });
 it('classifies with liquidations first (share of OI), then taker pressure; never guesses without data',()=>{
  expect(classifyFlow({share4h:.5},{long:6e5,short:0},1e8)).toMatchObject({state:'LONG_LIQ_HEAVY'});
