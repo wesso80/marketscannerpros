@@ -103,6 +103,50 @@ describe('durable candle checkpoints', () => {
   });
 });
 
+describe('rule exits: 72h time stop when +1R was never reached', () => {
+  const rules = { timeStopHours: 72, timeStopMinR: 1 };
+  const H = 3_600_000, n = 72 * 4; // 15m candles in 72h
+  const quiet = (i: number) => candle(i, { high: 103, low: 98, close: 101 });
+  const withRules = (p: PaperExitPath, pos = position, now = t + 400 * step) => evaluatePaperExitPath(pos, p, now, rules);
+  it('closes at the first completed candle at or after 72h when the best high stayed below +1R', () => {
+    const bars = Array.from({ length: n + 4 }, (_, i) => quiet(i));
+    const result = withRules(path(...bars));
+    // Candle n-1 closes exactly at entry + 72h.
+    expect(result.exit).toEqual({ reason: 'TIME_EXIT', price: 101, at: new Date(t + 72 * H).toISOString(), ambiguous: false });
+  });
+  it('keeps a trade that once reached +1R, even if it later fades, and holds fixed levels first', () => {
+    const bars = Array.from({ length: n + 4 }, (_, i) => i === 3 ? candle(i, { high: 105.5 }) : quiet(i));
+    const result = withRules(path(...bars));
+    expect(result.exit).toBeUndefined();
+    expect(result.checkpoint).toMatchObject({ rules, best: 105.5, through: new Date(t + (n + 4) * step).toISOString() });
+    // A stop touch on the 72h candle still wins over the time exit.
+    const stopped = bars.map((b, i) => i === n - 1 ? candle(i, { low: 94 }) : b);
+    expect(withRules(path(...stopped)).exit).toMatchObject({ reason: 'STOP_LOSS', price: 95 });
+  });
+  it('carries the best excursion through checkpoints instead of re-reading old candles', () => {
+    const first = withRules(path(candle(0, { high: 105.5 })));
+    expect(first.checkpoint).toMatchObject({ best: 105.5, rules });
+    const later = Array.from({ length: n + 4 }, (_, i) => quiet(i)).slice(1);
+    expect(withRules(path(...later), { ...position, exitCheckpoint: first.checkpoint }).exit).toBeUndefined();
+    // Without the checkpoint's best, the same tail would time out.
+    const forgot = { ...first.checkpoint!, best: null };
+    expect(withRules(path(...later), { ...position, exitCheckpoint: forgot }).exit).toMatchObject({ reason: 'TIME_EXIT' });
+  });
+  it('never applies rules to a position whose checkpoint was written without them, or vice versa', () => {
+    const fixedOnly = run(path(candle())).checkpoint;
+    expect(withRules(path(candle(1)), { ...position, exitCheckpoint: fixedOnly }).status).toBe('candle_checkpoint_invalid_or_rules_changed');
+    const ruled = withRules(path(candle())).checkpoint;
+    expect(run(path(candle(1)), { ...position, exitCheckpoint: ruled }).status).toBe('candle_checkpoint_invalid_or_rules_changed');
+    expect(withRules(path(candle(1)), { ...position, exitCheckpoint: { ...ruled!, rules: { timeStopHours: 48, timeStopMinR: 1 } } }).status).toBe('candle_checkpoint_invalid_or_rules_changed');
+    expect(run(path(candle())).checkpoint).not.toHaveProperty('rules');
+  });
+  it('ignores the partial entry candle for the best excursion on exchange paths', () => {
+    const p = { ...position, openedAt: new Date(t + 60_000).toISOString() };
+    const result = withRules({ ...path(candle(0, { high: 120 }), candle(1)), source: 'crypto_exchange' }, p);
+    expect(result.checkpoint).toMatchObject({ best: 105 });
+  });
+});
+
 describe('crypto exchange partial entry candle',()=>{
  const p={...position,openedAt:new Date(t+60000).toISOString()};
  it('does not credit the partial entry high as a target',()=>{

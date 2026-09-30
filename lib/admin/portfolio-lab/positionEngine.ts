@@ -21,6 +21,7 @@ import type {
   ArcaPortfolio,
   ArcaPosition,
   ArcaTrade,
+  PaperExitRules,
   PositionStatus,
   TradeExitReason,
 } from "./types";
@@ -30,6 +31,8 @@ export interface MarkInput {
   position: ArcaPosition;
   currentPrice: number;
   candlePath?: PaperExitPath;
+  /** Rule exits (e.g. time stop) replayed on the candle path; must match the position's checkpoint. */
+  exitRules?: PaperExitRules | null;
   skipLearning?: boolean;
 }
 
@@ -98,13 +101,13 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
     }
   }
 
-  const path = evaluatePaperExitPath(position, input.candlePath);
+  const path = evaluatePaperExitPath(position, input.candlePath, Date.now(), input.exitRules);
   const pathStatus = path.status + (path.entryCandleExcluded ? ':entry_candle_excluded' : '')
     + (path.checkedThrough ? `:through=${path.checkedThrough}` : '');
   // A historical touch precedes the latest quote, including a later reversal.
   if (path.exit) {
     exitReason = path.exit.reason;
-    exitStatus = exitReason === 'STOP_LOSS' ? 'STOPPED' : 'TARGET_HIT';
+    exitStatus = exitReason === 'STOP_LOSS' ? 'STOPPED' : exitReason === 'TIME_EXIT' ? 'CLOSED_BY_RULE' : 'TARGET_HIT';
     exitPrice = path.exit.price;
   }
 
@@ -121,7 +124,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
         workspaceId: portfolio.workspaceId, portfolioId: portfolio.id,
         positionId: position.id, symbol: position.symbol, journalType: 'REVIEW',
         title: 'Paper candle checkpoint v1',
-        reasoning: 'Fixed exit levels checked through completed candles. Entry-containing candle excluded when applicable.',
+        reasoning: path.checkpoint.rules ? 'Fixed exit levels and the 72h/1R time stop checked through completed candles. Entry-containing candle excluded when applicable.' : 'Fixed exit levels checked through completed candles. Entry-containing candle excluded when applicable.',
         evidence: [JSON.stringify(path.checkpoint)],
         dataFreshness: path.checkpoint.through,
       });

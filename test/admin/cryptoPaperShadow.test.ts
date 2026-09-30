@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
-import {initShadow,advanceShadow,shadowChanged} from '@/lib/admin/cryptoPaperShadow';
-import {compareExitPlans} from '@/lib/admin/cryptoPaperStats';
+import {initShadow,advanceShadow,shadowChanged,shadowTitle,SHADOW_PLANS_ACTIVE} from '@/lib/admin/cryptoPaperShadow';
+import {compareExitPlans,summarizeCryptoPaper} from '@/lib/admin/cryptoPaperStats';
 const step=900000,t0=Date.UTC(2026,8,29,0),c=.0005;
 const pos=(over={})=>({id:'p1',symbol:'bitcoin',instrumentType:'coinbase:BTC-USD',averageEntry:100,openedAt:new Date(t0).toISOString(),initialStopLoss:95,quantity:10,entryFee:.5,...over});
 const bar=(i:number,o:number,h:number,l:number,cl:number)=>({openAt:t0+i*step,closeAt:t0+(i+1)*step,open:o,high:h,low:l,close:cl});
@@ -56,4 +56,51 @@ it('backtest horizon closes a still-running remainder at a completed close, and 
  expect(h).toMatchObject({status:'CLOSED',legs:[{reason:'PARTIAL_TARGET'},{fraction:.5,price:110,reason:'HORIZON'}]});
  expect(h.r).toBeCloseTo((.5*net(107.5)+.5*net(110))/5,3);
  expect(closeShadowAt(h,1,t0)).toBe(h);
+});
+it('v3 exits the remainder when a completed 4h candle that began after entry closes below the entry floor',()=>{
+ const v3=(over={})=>initShadow(pos(over),2,c,'failed-breakout-trail-v3',99);
+ expect(initShadow(pos(),2,c,'failed-breakout-trail-v3')).toMatchObject({status:'UNAVAILABLE',reason:expect.stringContaining('entry floor')});
+ // 16 bars = 4h from t0 (entry). Bar 15 closes the first 4h period; below 99 there closes the position at that close.
+ const flat=Array.from({length:16},(_,i)=>bar(i,100,100.5,99.5,100));
+ const failed=[...flat.slice(0,15),bar(15,99.6,99.7,98.6,98.7)];
+ expect(advanceShadow(v3(),failed,now)).toMatchObject({status:'CLOSED',legs:[{fraction:1,price:98.7,reason:'FAILED_BREAKOUT',at:new Date(t0+16*step).toISOString()}]});
+ // A 4h close below the floor only inside the entry's own 4h period is not a completed post-entry candle.
+ const late=(over={})=>initShadow(pos({openedAt:new Date(t0+step).toISOString(),...over}),2,c,'failed-breakout-trail-v3',99);
+ expect(advanceShadow(late(),failed,now).status).toBe('OPEN');
+ // 15m closes below the floor that are not 4h closes do not trigger it; v2 on the same bars stays open.
+ expect(advanceShadow(v3(),[...flat.slice(0,5),bar(5,99.6,99.7,98.6,98.7)],now).status).toBe('OPEN');
+ expect(advanceShadow(initShadow(pos(),2,c),failed,now).status).toBe('OPEN');
+});
+it('v4 trails the whole position from entry with no partial, labelling a stop raised above the original as a trail',()=>{
+ const v4=initShadow(pos(),2,c,'trail-only-v4');
+ const s1=advanceShadow(v4,[bar(0,100,107.5,101,107)],now);
+ expect(s1).toMatchObject({status:'OPEN',remaining:1,legs:[],stop:103.5});
+ const s2=advanceShadow(s1,[bar(1,107,112,104,111)],now);
+ expect(s2).toMatchObject({status:'OPEN',stop:108});
+ const s3=advanceShadow(s2,[bar(2,110,110,107,107)],now);
+ expect(s3).toMatchObject({status:'CLOSED',legs:[{fraction:1,price:108,reason:'TRAIL_STOP'}]});
+ expect(s3.r).toBeCloseTo(net(108)/5,3);
+ // A trailed stop still below entry (97 = 101 high - 2 ATR) is a trail exit, not the original stop.
+ const s4=advanceShadow(advanceShadow(initShadow(pos(),2,c,'trail-only-v4'),[bar(0,100,101,99.5,100.5)],now),[bar(1,100.5,100.6,96.9,97.5)],now);
+ expect(s4).toMatchObject({status:'CLOSED',legs:[{price:97,reason:'TRAIL_STOP'}]});
+});
+it('stores v3 and v4 under their own journal titles and compares each plan separately',()=>{
+ expect(SHADOW_PLANS_ACTIVE).toEqual(['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4']);
+ expect(shadowTitle('partial-trail-v2')).toBe(shadowTitle('partial-trail-v1'));
+ expect(shadowTitle('failed-breakout-trail-v3')).toBe('Crypto shadow exit plan failed-breakout-trail-v3');
+ const rows=[{position_id:'a',r_multiple:'2'},{position_id:'b',r_multiple:'-1'}] as never;
+ const shadows=[{positionId:'a',plan:'partial-trail-v2',status:'CLOSED',r:3,legs:[{reason:'TRAIL_STOP'}]},{positionId:'a',plan:'trail-only-v4',status:'CLOSED',r:4,legs:[{reason:'TRAIL_STOP'}]},{positionId:'b',plan:'trail-only-v4',status:'OPEN',r:null,legs:[]}];
+ expect(compareExitPlans(rows,shadows,'trail-only-v4')).toMatchObject({plan:'trail-only-v4',pairs:1,openShadows:1,earlierPlanShadows:0,trail:{avgR:4}});
+ expect(compareExitPlans(rows,shadows,'failed-breakout-trail-v3')).toMatchObject({pairs:0,openShadows:0});
+});
+it('recomputes ledger R at higher per-side costs from the slippage-free quote, excluding rows without prices',()=>{
+ // Fill 100.05 = ask 100 * (1 + 0.05% slippage); exit_price 109.945 = 110 * (1 - 0.05%); stop 95 → 1R = 5.05.
+ const row={position_id:'p',r_multiple:'1.9',realised_pnl:'9.5',outcome:'WIN',exit_reason:'TAKE_PROFIT',instrument_type:'coinbase:X-USD',entry_time:'2026-09-01T00:00:00Z',exit_time:'2026-09-02T00:00:00Z',created_reason:'k|'+JSON.stringify({plan:{stop:95}}),entry_price:'100.05',exit_price:'109.945',quantity:'1',stop_loss:'95'};
+ const s=summarizeCryptoPaper([row,{...row,position_id:'q',entry_price:null,exit_price:null}]);
+ expect(s.costSensitivity.map(x=>x.feePctPerSide)).toEqual([0.1,0.3,0.6,0.9]);
+ const at=(pct:number)=>s.costSensitivity.find(x=>x.feePctPerSide===pct)!;
+ expect(at(0.1)).toMatchObject({trades:1,excluded:1});
+ expect(at(0.1).avgR).toBeCloseTo((110*.999-100*1.001)/5.05,4);
+ expect(at(0.6).avgR).toBeCloseTo((110*.994-100*1.006)/5.05,4);
+ expect(at(0.6).avgR!).toBeLessThan(at(0.1).avgR!);
 });

@@ -1,6 +1,7 @@
 import {parseExchangeCandles,type ExchangeBar} from './cryptoExchangeVolume';
 import {fillNoTradeGaps,NO_TRADE_MAX_BARS,type FilledBar,type TrailingAnchor} from './cryptoCandleGaps';
 import type {PaperExitPath} from './portfolio-lab/paperExitPath';
+import type {PaperExitRules} from './portfolio-lab/types';
 import type {VolumeMomentum} from './cryptoVolumeMomentum';
 export class PaperMarketError extends Error {}
 export type CryptoPaperQuote={bid:number;ask:number;priceAt:string;receivedAt:string;product:string;source?:string;sequence?:number};
@@ -70,6 +71,8 @@ export async function fetchPaperPath(symbol:string,product:string,from?:string):
  * 1.8-2.5R at the target while the backtest (filled at the next hourly open) clustered near 1.95R.
  */
 export const TARGET_RULE={id:'fill-2R-v1',targetR:2};
+/** Ledger time stop (crypto-momentum-v2, from 2026-09-30): close at the first completed 15m candle at/after 72h if +1R was never reached. 72h = 18 completed 4h signal candles; not fitted. */
+export const CRYPTO_TIME_STOP:PaperExitRules={timeStopHours:72,timeStopMinR:1};
 export function planCryptoPaper(signal:VolumeMomentum,quote:CryptoPaperQuote,equity:number,cash:number,now=Date.now(),costRate=.0005,maxNotional=Infinity,riskScale=1){
  const fail=(reason:string)=>({ok:false as const,reason});
  if(signal.stage!=='MOMENTUM_VOLUME'||!signal.asOf||!Number.isFinite(Date.parse(signal.asOf))||now-Date.parse(signal.asOf)>4*3600000+900000||Date.parse(signal.asOf)>now)return fail('No current confirmed momentum setup');
