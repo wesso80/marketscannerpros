@@ -1,15 +1,16 @@
 import {btcDownFilter} from './cryptoMarketRegime';
+import {giveBackSummary,type GiveBackSummary} from './cryptoExcursion';
 import type {JevStamp} from './cryptoJev';
 import {JEV_QUESTION_IDS,jevFromReason,jevSideLabel} from './cryptoJevEvidence';
 /** Closed-trade expectancy in R for the crypto paper beta. Read-only; no row is adjusted or inferred. */
-export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null;entry_price?:string|number|null;exit_price?:string|number|null;quantity?:string|number|null;stop_loss?:string|number|null};
-export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null};
+export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null;entry_price?:string|number|null;exit_price?:string|number|null;quantity?:string|number|null;stop_loss?:string|number|null;mfe_r?:string|number|null;mae_r?:string|number|null};
+export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null;giveBack:GiveBackSummary};
 /** The ledger's R recomputed as if each side had cost feePctPerSide (fee plus slippage). Rows missing prices or the original stop are excluded, never estimated. */
 export type CostSensitivityRow={feePctPerSide:number;trades:number;excluded:number;winRate:number|null;avgR:number|null;totalR:number};
 /** Ledger cost is 0.05% fee + 0.05% slippage per side. Retail Coinbase Advanced taker fees alone run roughly 0.4-0.6%. */
 export const COST_SENSITIVITY_PCT=[0.1,0.3,0.6,0.9];
 export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byFunding:CryptoStatsGroup[];byShadowFilter:CryptoStatsGroup[];byBtc200:CryptoStatsGroup[];byRsRule:CryptoStatsGroup[];byFlow:CryptoStatsGroup[];byJev:CryptoStatsGroup[];byExit:CryptoStatsGroup[];costSensitivity:CostSensitivityRow[]};
-type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;rs:string;flow:string;funding:string;exit:string;jev:JevStamp|undefined;prices:{entry:number;exit:number;stop:number;slip:number}|null};
+type Trade={mfe:number|null;mae:number|null;r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;rs:string;flow:string;funding:string;exit:string;jev:JevStamp|undefined;prices:{entry:number;exit:number;stop:number;slip:number}|null};
 function evidence(reason:string|null):{kind?:string;regime?:string;long?:string;rs?:string;flow?:string;funding?:string;stop?:number}{
  const i=reason?.indexOf('{')??-1;if(!reason||i<0)return {};
  try{const e=JSON.parse(reason.slice(i));return {kind:e?.signal?.kind,regime:e?.btcRegime?.state,long:e?.btcRegime?.longTrend,rs:e?.relativeStrength?.rule,flow:e?.flow?.state,funding:e?.derivatives?.fundingState,stop:typeof e?.plan?.stop==='number'?e.plan.stop:undefined};}catch{return {};}
@@ -20,7 +21,7 @@ function group(label:string,trades:Trade[]):CryptoStatsGroup{
  const wins=rs.filter(r=>r>0),losses=rs.filter(r=>r<0);
  const grossWin=trades.filter(t=>t.pnl>0).reduce((s,t)=>s+t.pnl,0),grossLoss=-trades.filter(t=>t.pnl<0).reduce((s,t)=>s+t.pnl,0);
  const holds=trades.map(t=>t.holdHours).filter((h):h is number=>h!=null);
- return {label,trades:trades.length,withR:rs.length,winRate:rs.length?wins.length/rs.length:null,avgR:avg(rs),avgWinR:avg(wins),avgLossR:avg(losses),profitFactor:grossLoss>0?grossWin/grossLoss:null,netPnl:Math.round(trades.reduce((s,t)=>s+t.pnl,0)*100)/100,avgHoldHours:avg(holds)};
+ return {label,trades:trades.length,withR:rs.length,winRate:rs.length?wins.length/rs.length:null,avgR:avg(rs),avgWinR:avg(wins),avgLossR:avg(losses),profitFactor:grossLoss>0?grossWin/grossLoss:null,netPnl:Math.round(trades.reduce((s,t)=>s+t.pnl,0)*100)/100,avgHoldHours:avg(holds),giveBack:giveBackSummary(trades.map(t=>({mfeR:t.mfe,maeR:t.mae,finalR:t.r})))};
 }
 function by(trades:Trade[],key:(t:Trade)=>string):CryptoStatsGroup[]{
  const m=new Map<string,Trade[]>();for(const t of trades)m.set(key(t),[...(m.get(key(t))??[]),t]);
@@ -36,7 +37,8 @@ export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):Crypt
   const e=evidence(row.created_reason),entry=new Date(row.entry_time).getTime(),exit=new Date(row.exit_time).getTime();
   const r=row.r_multiple==null?null:Number(row.r_multiple);
   const px={entry:Number(row.entry_price),exit:Number(row.exit_price),stop:e.stop??Number(row.stop_loss),slip:row.instrument_type.startsWith('okx-usd-v1:')?.001:.0005};
-  return {r:r!=null&&Number.isFinite(r)?r:null,pnl:Number(row.realised_pnl)||0,holdHours:Number.isFinite(entry)&&Number.isFinite(exit)&&exit>=entry?(exit-entry)/3600000:null,
+  const x=(v:unknown)=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
+  return {mfe:x(row.mfe_r),mae:x(row.mae_r),r:r!=null&&Number.isFinite(r)?r:null,pnl:Number(row.realised_pnl)||0,holdHours:Number.isFinite(entry)&&Number.isFinite(exit)&&exit>=entry?(exit-entry)/3600000:null,
    setup:e.kind??'NOT_RECORDED',venue:row.instrument_type.startsWith('okx-usd-v1:')?'OKX USDT→USD':row.instrument_type.startsWith('coinbase:')?'Coinbase USD':'OTHER',
    regime:e.regime??'NOT_RECORDED',long:e.long??'NOT_RECORDED',rs:e.rs??'NOT_RECORDED',flow:e.flow??'NOT_RECORDED',funding:e.funding??'NOT_RECORDED',exit:row.exit_reason,jev:jevFromReason(row.created_reason),
    prices:row.entry_price!=null&&row.exit_price!=null&&[px.entry,px.exit,px.stop].every(Number.isFinite)&&px.entry>px.stop&&px.stop>0?px:null};

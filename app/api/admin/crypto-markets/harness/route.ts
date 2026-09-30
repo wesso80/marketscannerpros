@@ -1,3 +1,4 @@
+import {giveBack} from '@/lib/admin/cryptoExcursion';
 import {NextResponse} from 'next/server';
 import {requireAdmin} from '@/lib/adminAuth';
 import {harnessView,startHarness,harnessBatch,computeHarness,savedHarnessResult} from '@/lib/admin/strategyHarnessJob';
@@ -10,7 +11,7 @@ export async function GET(req:Request){
  try{
   if(new URL(req.url).searchParams.get('format')==='csv'){
    const r=await savedHarnessResult();if(!r)return NextResponse.json({error:'No harness result'},{status:404});
-   return new NextResponse(toCsv(['simulated','version','variant','coin','setup','signal_candle','entry_time','exit_time','fill','stop','exit_price','r_after_costs','exit_reason','marked_not_realised'],r.trades.map(t=>[true,r.version,t.variant,t.coin,t.kind,t.signalAt,t.entryAt,t.exitAt,t.fill,t.stop,t.exit,Math.round(t.r*1000)/1000,t.reason,t.marked])),
+   return new NextResponse(toCsv(['simulated','version','variant','coin','setup','signal_candle','entry_time','exit_time','fill','stop','exit_price','r_after_costs','exit_reason','marked_not_realised','mfe_r','mae_r','give_back'],r.trades.map(t=>[true,r.version,t.variant,t.coin,t.kind,t.signalAt,t.entryAt,t.exitAt,t.fill,t.stop,t.exit,Math.round(t.r*1000)/1000,t.reason,t.marked,t.mfeR,t.maeR,giveBack(t.mfeR,Math.round(t.r*1000)/1000)])),
     {headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename="crypto-harness-trades-${r.computedAt.slice(0,10)}.csv"`,'Cache-Control':'no-store'}});
   }
   return NextResponse.json(await harnessView());
