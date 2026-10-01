@@ -11,7 +11,7 @@ it('sends one request with the three fixed questions and does not send candles',
  const named=row('VOLUME_WATCH'),silent=row('NO_SIGNAL'),pending={...row('PENDING'),asOf:null};
  await scoreJevRows([named,silent,pending], 'DOWN', now);
  expect(named.stage).toBe('VOLUME_WATCH');
- expect(named.jev).toMatchObject({rule:'jev-shadow-v1',status:'scored',chase:.22,flowAgrees:.81,btcHeadwind:.14,btcTrend:'DOWN',flowStamp:'aggressive buying',model:'typesafe-ai/jev'});
+ expect(named.jev).toMatchObject({rule:'jev-shadow-v2',status:'scored',chase:.22,flowAgrees:.81,btcHeadwind:.14,btcTrend:'DOWN',flowStamp:'aggressive buying',model:'typesafe-ai/jev'});
  expect(silent.jev).toBeUndefined();
  expect(pending.jev).toBeUndefined();
  expect(fetch).toHaveBeenCalledTimes(1);
