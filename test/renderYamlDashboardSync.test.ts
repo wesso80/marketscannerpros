@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
  * Blueprint sync silently reverts them. Parsed as text (no yaml dependency):
  * each service block starts at "  - type:" and runs to the next one.
  */
-const yaml = readFileSync(join(__dirname, '..', 'render.yaml'), 'utf8');
+const yaml = readFileSync(join(__dirname, '..', 'render.yaml'), 'utf8').replace(/\r\n/g, '\n'); // CRLF on Windows checkouts
 
 function serviceBlock(name: string): string {
   const blocks = yaml.split(/\n(?=  - type: )/);
@@ -22,16 +22,11 @@ function envValue(block: string, key: string): string | null {
 }
 
 describe('render.yaml matches the Render dashboard (2026-09-27)', () => {
-  it('persist-edge-packets-crypto runs every 15 minutes (no longer the Feb-30 pause)', () => {
-    const block = serviceBlock('persist-edge-packets-crypto');
-    expect(block).toMatch(/\n    schedule: "\*\/15 \* \* \* \*"/);
-    expect(block).not.toContain('"0 0 30 2 *"');
-    expect(block).toContain(`--data '{"market":"CRYPTO","timeframe":"15m"}'`);
-  });
-
-  it('daily-operator-morning-brief posts an explicit EQUITIES market', () => {
-    const block = serviceBlock('daily-operator-morning-brief');
-    expect(block).toContain(`--data '{"scanLimit":80,"market":"EQUITIES"}'`);
+  // persist-edge-packets-crypto and daily-operator-morning-brief moved into the worker schedule on 2026-10-02;
+  // their schedule/body pins now live in test/worker/scheduler.test.ts against lib/worker/schedule.ts.
+  it('the migrated cron services are gone from render.yaml', () => {
+    expect(() => serviceBlock('persist-edge-packets-crypto')).toThrow();
+    expect(() => serviceBlock('daily-operator-morning-brief')).toThrow();
   });
 
   it('web service ALPHA_VANTAGE_RPM is 600', () => {
