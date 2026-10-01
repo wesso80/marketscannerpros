@@ -12,7 +12,7 @@ import {JEV_STAGES} from './cryptoJev';
  */
 export const CATALYST_RULE='jev-catalyst-v2' as const;
 export const CATALYST_SOURCE='coingecko:/news?coin_id' as const;
-export const CATALYST={windowHours:48,maxHeadlines:8,cacheSec:4*3600,providerCallsPerBatch:40,perPage:25,titleChars:200} as const;
+export const CATALYST={windowHours:48,maxHeadlines:8,cacheSec:4*3600,providerCallsPerBatch:40,perPage:20,titleChars:200} as const;
 const CACHE='admin:crypto-markets:catalyst-news:v2';
 /** Fixed questions. Each is one event class; the code decides what the combination means. */
 export const CATALYST_QUESTIONS={
@@ -58,7 +58,7 @@ export function parseHeadlines(body:unknown,coinId:string,now:number):CatalystHe
 }
 type Cached={headlines:CatalystHeadline[];fetchedAt:string;reason?:string;detail?:string};
 type Fetcher=(coinId:string)=>Promise<unknown>;
-const defaultFetch:Fetcher=coinId=>getCryptoNews({coin_id:coinId,per_page:CATALYST.perPage});
+const defaultFetch:Fetcher=coinId=>getCryptoNews({coin_id:coinId,per_page:CATALYST.perPage,throwOnError:true});
 /** One CoinGecko call per coin per cache window. Returns null when this batch's budget is spent. */
 async function headlinesFor(redis:Redis,coinId:string,now:number,budget:{left:number},fetcher:Fetcher):Promise<Cached|null>{
  const key=`${CACHE}:${coinId}`;
@@ -83,7 +83,9 @@ export function catalystState(row:CatalystRow,headlines:CatalystHeadline[]){
  * Order: credit-budget check → cached headlines → CoinGecko call (while batch budget lasts) → one Jev request per coin with headlines.
  */
 export async function attachCatalystShadow<T extends CatalystRow>(redis:Redis,rows:T[],now=Date.now(),deps:{fetcher?:Fetcher;budgetPaused?:()=>Promise<boolean>}={}){
- const due=rows.filter(r=>JEV_STAGES.includes(r.stage as typeof JEV_STAGES[number])&&r.asOf&&r.id&&r.catalyst?.rule!==CATALYST_RULE);
+ // A provider-side failure (cg-*) is retried after an hour; a Jev answer, no-headlines, or a Jev failure is final for the row.
+ const retryable=(c:CatalystStamp|undefined)=>!!c&&c.status==='unavailable'&&typeof c.reason==='string'&&c.reason.startsWith('cg-')&&now-Date.parse(c.checkedAt)>3600000;
+ const due=rows.filter(r=>JEV_STAGES.includes(r.stage as typeof JEV_STAGES[number])&&r.asOf&&r.id&&(r.catalyst?.rule!==CATALYST_RULE||retryable(r.catalyst)));
  if(!due.length)return;
  const paused=await (deps.budgetPaused??(async()=>(await cgBudgetStatus(getApiUsage,now)).pauseNonEssential))().catch(()=>false);
  if(paused){for(const row of due)row.catalyst=unavailableCatalyst(now,'cg-paused',0,null,'CoinGecko credits below the pause threshold; no headline call was made');return;}

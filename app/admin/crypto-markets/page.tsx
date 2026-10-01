@@ -69,6 +69,8 @@ export default function CryptoMarketsPage() {
     document.addEventListener('visibilitychange',update);
     return ()=>{clearInterval(id); document.removeEventListener('visibilitychange',update);};},[]);
   const stale = !!data && now - Date.parse(data.startedAt) > 15*60000;
+  // The review route accepts a snapshot up to four hours old (levels need a quote under 15 min; the chart does not).
+  const reviewable = !!data && now - Date.parse(data.startedAt) <= 4*3600000;
   const rows = data?.rows.filter(r=>`${r.symbol} ${r.name} ${r.id}`.toLowerCase().includes(query.toLowerCase())).slice(0,100) ?? [];
   return <div className="space-y-5 p-6 text-slate-100">
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
@@ -143,7 +145,7 @@ export default function CryptoMarketsPage() {
       <p className="text-sm text-slate-400">MOMENTUM: 1h ≥ 1% and 24h ≥ 3%. EXTENDED: 1h ≥ 10% or 24h ≥ 30%; retained for review, not a buy signal. WATCH: other passing screens. These are unvalidated discovery rules, not a profitability score. Ordered by stage then 1h change.</p>
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{['Coin / ID','Stage at scan','Price USD','1h','24h','7d','Venues / pair spreads','Fixed scanner','Exclusions'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
         <tbody>{rows.map(r=><tr key={r.id} className="border-t border-slate-700">
-          <td className="p-2">{r.symbol}<br/><span className="text-slate-400">{r.id}</span><br/><button className="underline disabled:opacity-40" disabled={!!analyzing||busy||stale||r.stage==='EXCLUDED'} onClick={()=>void analyze(r.id)}>{analyzing===r.id?'Analyzing…':`Chart & review ${r.symbol}`}</button></td><td>{r.stage}</td><td>{r.price?.toLocaleString(undefined,{maximumSignificantDigits:7}) ?? 'Unavailable'}</td>
+          <td className="p-2">{r.symbol}<br/><span className="text-slate-400">{r.id}</span><br/><button className="underline disabled:opacity-40" disabled={!!analyzing||busy||!reviewable||r.stage==='EXCLUDED'} title={!reviewable?'Discovery snapshot is over four hours old: use Scan major exchanges first':stale?'Opens the chart from this snapshot; levels need a scan under 15 minutes old':undefined} onClick={()=>void analyze(r.id)}>{analyzing===r.id?'Analyzing…':`Chart & review ${r.symbol}`}</button></td><td>{r.stage}</td><td>{r.price?.toLocaleString(undefined,{maximumSignificantDigits:7}) ?? 'Unavailable'}</td>
           <td>{pct(r.change1h)}</td><td>{pct(r.change24h)}</td><td>{pct(r.change7d)}</td>
           <td>{r.venues.map(v=>`${v.exchange} ${v.pair} (${v.spreadPct.toFixed(3)}%)`).join(', ')}</td>
           <td>{r.fixedScanCovered?'Covered':'Outside fixed list'}</td><td>{r.reasons.join(', ') || 'None at scan'}</td>

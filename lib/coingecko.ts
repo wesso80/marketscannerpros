@@ -2048,20 +2048,24 @@ export async function getCryptoNews(options?: {
   type?: 'news' | 'guides';
   page?: number;
   per_page?: number;
+  /** Rethrow instead of returning null, so an admin caller can record the provider's reason. */
+  throwOnError?: boolean;
 }): Promise<CryptoNewsItem[] | null> {
   try {
     const params = new URLSearchParams();
     if (options?.coin_id) params.set('coin_id', options.coin_id);
     if (options?.language) params.set('language', options.language);
     if (options?.type) params.set('type', options.type);
-    if (options?.page) params.set('page', String(options.page));
-    if (options?.per_page) params.set('per_page', String(options.per_page));
+    if (options?.page) params.set('page', String(Math.min(20, Math.max(1, options.page))));
+    // CoinGecko rejects per_page above 20 with a 4xx; clamp rather than fail the whole call.
+    if (options?.per_page) params.set('per_page', String(Math.min(20, Math.max(1, options.per_page))));
     return await cgFetch<CryptoNewsItem[]>('/news', {
       params,
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
     console.error('[CoinGecko] Crypto news error:', error);
+    if (options?.throwOnError) throw error;
     return null;
   }
 }
