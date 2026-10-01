@@ -57,6 +57,6 @@ export function catalystDetail(c:CatalystStamp|null|undefined){
  if(c.newestAt)parts.push(`newest ${c.newestAt}`);
  if(c.status==='scored')parts.push(`listing ${c.listingNews?.toFixed(2)} · supply ${c.supplyEvent?.toFixed(2)} · exploit ${c.exploitOrOutage?.toFixed(2)} · regulatory ${c.regulatoryNegative?.toFixed(2)} · narrative ${c.narrativeOnly?.toFixed(2)}`);
  if(c.model)parts.push(`model ${c.model}`);
- if(c.status==='unavailable')parts.push(`unavailable: ${c.reason??'reason not recorded'}`);
+ if(c.status==='unavailable')parts.push(`unavailable: ${c.reason??'reason not recorded'}${c.detail?` — ${c.detail}`:''}`);
  return parts.join(' · ');
 }

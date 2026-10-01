@@ -157,3 +157,9 @@ export async function runNewsJevDaily(now=Date.now()){
  const labelling=await labelNewsOutcomes(now).catch(e=>{console.error('[news-jev] labelling failed',e);return {labelled:0,waiting:0,noBars:0,error:'labelling failed'};});
  return {scoring,labelling};
 }
+/** Same step behind a once-per-UTC-day key, for a cron that runs every 15 minutes (the evening cron is skipped while ADMIN_DISCOVERY_ONLY is on). */
+export async function runNewsJevDailyOnce(redis:{set:(key:string,value:string,opts:{nx:true;ex:number})=>Promise<unknown>},now=Date.now()){
+ const day=new Date(now).toISOString().slice(0,10);
+ if(!await redis.set(`admin:equity-news-jev:day:${day}`,'done',{nx:true,ex:36*3600}))return {ok:true,skipped:true as const};
+ return {ok:true,skipped:false as const,...(await runNewsJevDaily(now))};
+}
