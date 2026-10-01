@@ -5,6 +5,7 @@ import {JEV_STAGES} from './cryptoJev';
 import {jevCoverage} from './cryptoJevEvidence';
 import {EARLY_SCAN_KEY,FORWARD_BOOK_KEY,MOMENTUM_SCAN_KEY,forwardResolved,type ForwardBook} from './cryptoForwardScore';
 import {CALIBRATION_FILED_KEY,CALIBRATION_KEY,type CalibrationLedger} from './cryptoCalibration';
+import {SHADOW,SHADOW_WEIGHTS_KEY,type ShadowWeights} from './cryptoShadowScore';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 /**
  * One read-only health view of the crypto Jev learning loop: which stamps are being written, whether they are scoring,
@@ -13,7 +14,7 @@ import type {MomentumScan} from './cryptoVolumeMomentum';
  */
 export type LearningState='ok'|'collecting'|'attention'|'paused'|'off';
 export type LearningItem={id:string;label:string;state:LearningState;summary:string;lastAt:string|null;gradedAgainst:string;where:string;next:string|null;counts:Record<string,number>};
-export type LearningStatus={checkedAt:string;mode:{discoveryOnly:boolean;jevKey:boolean};items:LearningItem[]};
+export type LearningStatus={checkedAt:string;mode:{discoveryOnly:boolean;jevKey:boolean};items:LearningItem[];shadowWeights:ShadowWeights|null};
 const ago=(iso:string|null|undefined,now:number)=>iso&&Number.isFinite(Date.parse(iso))?Math.round((now-Date.parse(iso))/60000):null;
 const reasons=(r:Record<string,number>)=>Object.entries(r).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ${v}`).join(', ');
 function stampCoverage(rows:MomentumScan['rows']){
@@ -30,7 +31,7 @@ function stampCoverage(rows:MomentumScan['rows']){
 export async function learningStatus(redis:Redis|null,now=Date.now()):Promise<LearningStatus>{
  const items:LearningItem[]=[];
  const jevKey=jevConfigured(),discoveryOnly=adminDiscoveryOnly();
- const [four,early,book,ledger,filed]=redis?await Promise.all([redis.get<MomentumScan>(MOMENTUM_SCAN_KEY),redis.get<MomentumScan>(EARLY_SCAN_KEY),redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<CalibrationLedger>(CALIBRATION_KEY),redis.get<Record<string,string>>(CALIBRATION_FILED_KEY)]):[null,null,null,null,null];
+ const [four,early,book,ledger,filed,weights]=redis?await Promise.all([redis.get<MomentumScan>(MOMENTUM_SCAN_KEY),redis.get<MomentumScan>(EARLY_SCAN_KEY),redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<CalibrationLedger>(CALIBRATION_KEY),redis.get<Record<string,string>>(CALIBRATION_FILED_KEY),redis.get<ShadowWeights>(SHADOW_WEIGHTS_KEY)]):[null,null,null,null,null,null];
  // 1. Jev shadow on crypto setups
  const c4=stampCoverage(four?.rows??[]),c1=stampCoverage(early?.rows??[]);
  const shadowScored=c4.jev.scored+c1.jev.scored,shadowUnavailable=c4.jev.unavailable+c1.jev.unavailable,shadowUnstamped=c4.jev.unscored+c1.jev.unscored,shadowNamed=c4.named+c1.named;
@@ -59,7 +60,14 @@ export async function learningStatus(redis:Redis|null,now=Date.now()):Promise<Le
  items.push({id:'calibration',label:'Calibration ledger and proposals',state:!ledger?'collecting':stale?'attention':'ok',
   summary:!ledger?'No ledger saved yet. The daily pass writes one after the first paper cycle of the day; Recompute runs it now.':`${ledger.source.withR} closed trades with R · ${ledger.source.forwardFilled24h} forward rows with a 24h mark · ${graded} graded sides · ${confirmed} confirmed · ${Object.keys(filed??{}).length} proposals filed so far${stale?' · STALE (over 36h)':''}.`,
   lastAt:ledger?.checkedAt??null,gradedAgainst:'two-window lift on paper R and forward 24h',where:'Learning tab (this page); proposals appear in Recommendations',next:ledger&&ledger.source.withR<30&&ledger.source.forwardFilled24h<30?'Collecting. Nothing can confirm until a side has 30 rows; the forward book fills faster than the paper ledger.':null,counts:{withR:ledger?.source.withR??0,forward24h:ledger?.source.forwardFilled24h??0,confirmed,filed:Object.keys(filed??{}).length}});
- // 5. Equity surfaces are out of scope: this desk is crypto-only and every market-data call goes to CoinGecko or the exchanges.
+ // 5. Composite shadow score: gated on confirmed sides; stamped on named rows only when available.
+ const shadowStamped=[...(four?.rows??[]),...(early?.rows??[])].filter(r=>r.shadow&&r.shadow.weightsVersion===weights?.version).length;
+ items.push({id:'shadowScore',label:'Composite shadow score (shadow-score-v1)',
+  state:!weights?'collecting':weights.available?'ok':'collecting',
+  summary:!weights?'No weights derived yet; the daily calibration pass derives them from confirmed ledger sides.':weights.available?`Available: ${weights.weights.length} weights from ${weights.confirmedFields} confirmed fields (version ${weights.version}). ${shadowStamped} named rows carry a current stamp. Weights are each confirmed side’s lift in multiples of the confirmation floor, clipped at ±${SHADOW.clip}; nothing is fitted.`:`Not available: ${weights.reason} No row is scored until then.`,
+  lastAt:weights?.computedAt??null,gradedAgainst:'sign of the stamped score against paper R and forward 24h (shadow.sign field), out of sample by construction',where:'Learning tab → weights table below; ledger field shadow.sign',
+  next:weights&&!weights.available?`Waiting for the ledger: needs confirmed sides on at least ${SHADOW.minConfirmedFields} different fields.`:null,counts:{weights:weights?.weights.length??0,confirmedFields:weights?.confirmedFields??0,stamped:shadowStamped}});
+ // 6. Equity surfaces are out of scope here: this desk is crypto-only and every market-data call goes to CoinGecko or the exchanges.
  for(const i of items)if(i.lastAt){const m=ago(i.lastAt,now);if(m!=null&&m>36*60&&i.state==='ok')i.state='attention';}
- return {checkedAt:new Date(now).toISOString(),mode:{discoveryOnly,jevKey},items};
+ return {checkedAt:new Date(now).toISOString(),mode:{discoveryOnly,jevKey},items,shadowWeights:weights??null};
 }

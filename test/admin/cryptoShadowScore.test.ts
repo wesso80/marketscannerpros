@@ -1,0 +1,66 @@
+import {it,expect} from 'vitest';
+import {readFileSync} from 'node:fs';
+import {SHADOW,attachShadowScore,deriveShadowWeights,rowSide,scoreRow,shadowSideLabel} from '@/lib/admin/cryptoShadowScore';
+import {buildCalibration,type CalibrationLedger,type PaperObs} from '@/lib/admin/cryptoCalibration';
+const now=Date.UTC(2026,9,1,12);
+const side=(side:string,status:'confirmed'|'collecting'|'flat',lift:number,n=40,informational=false)=>({side,n,mean:lift,lift,se:.1,halfA:{n:20,lift},halfB:{n:20,lift},status,informational});
+const field=(id:string,unit:'R'|'%',sides:ReturnType<typeof side>[],outcome:'paperR'|'forward24h'='paperR'):CalibrationLedger['fields'][number]=>({id,label:id,file:'f',ruleVersion:'v',outcome,unit,observations:80,sides});
+const ledgerWith=(fields:CalibrationLedger['fields']):CalibrationLedger=>({version:1,checkedAt:'2026-10-01T00:00:00Z',source:{closedTrades:80,withR:80,forwardRows:0,forwardFilled24h:0,splitAt:{paper:null,forward:null}},fields,note:''});
+const jev=(chase:number)=>({rule:'jev-shadow-v2' as const,status:'scored' as const,chase,flowAgrees:.8,btcHeadwind:.1,btcTrend:'UP',flowStamp:'x',model:'m',checkedAt:''});
+it('derives one weight per confirmed side as lift over the floor, clipped, and gates on two distinct fields',()=>{
+ const one=deriveShadowWeights(ledgerWith([field('jev.chase','R',[side('chase ≥0.50','confirmed',-0.5),side('chase <0.50','confirmed',.3),side('NOT_RECORDED','collecting',0,5,true)])]),now);
+ expect(one.available).toBe(false);
+ expect(one.weights.map(w=>[w.side,w.weight])).toEqual([[ 'chase <0.50',1.2],['chase ≥0.50',-2]]);
+ expect(one.reason).toContain('1 confirmed field');
+ const two=deriveShadowWeights(ledgerWith([field('jev.chase','R',[side('chase ≥0.50','confirmed',-0.5)]),field('forward.bucket','%',[side('EARLY_WATCH','confirmed',1.5),side('EXTENDED','flat',0)],'forward24h')]),now);
+ expect(two.available).toBe(true);
+ expect(two.confirmedFields).toBe(2);
+ expect(two.weights.find(w=>w.field==='forward.bucket')?.weight).toBe(1.5);
+ expect(deriveShadowWeights(null).available).toBe(false);
+ expect(two.version).not.toBe(one.version);
+});
+it('scores a live row as the sum of matched confirmed-side weights, and reports what it could not read',()=>{
+ const weights=deriveShadowWeights(ledgerWith([field('jev.chase','R',[side('chase ≥0.50','confirmed',-0.5)]),field('signal.kind','R',[side('BREAKOUT','confirmed',.5)]),field('relativeStrength.rule','R',[side('pass','confirmed',.5)])]),now);
+ const row={stage:'MOMENTUM_VOLUME',kind:'BREAKOUT',jev:jev(.9)};
+ const s=scoreRow(row,weights,{},now)!;
+ expect(s.score).toBe(0);
+ expect(s.matched.map(m=>m.field).sort()).toEqual(['jev.chase','signal.kind']);
+ expect(s.skipped).toEqual(['relativeStrength.rule']);
+ expect(s.evaluable).toBe(2);
+ expect(scoreRow({stage:'MOMENTUM_VOLUME',kind:'CONTINUATION',jev:jev(.1)},weights,{},now)!.score).toBe(0);
+ expect(rowSide('btcRegime.state',row,{btcState:'DOWN'})).toBe('DOWN');
+ expect(rowSide('venue',row,{})).toBeNull();
+ expect(scoreRow(row,{...weights,available:false},{},now)).toBeNull();
+});
+it('stamps named rows once per weights version and never touches a stage or an unnamed row',async()=>{
+ const weights=deriveShadowWeights(ledgerWith([field('jev.chase','R',[side('chase ≥0.50','confirmed',-0.5)]),field('signal.kind','R',[side('BREAKOUT','confirmed',.5)])]),now);
+ const redis={get:async()=>weights} as never;
+ const rows=[{id:'a',stage:'VOLUME_WATCH',asOf:'x',kind:'BREAKOUT',jev:jev(.9)},{id:'b',stage:'NO_SIGNAL',asOf:'x',kind:'BREAKOUT',jev:jev(.9)},{id:'c',stage:'EXTENDED',asOf:'x',kind:'CONTINUATION',jev:jev(.2)}] as Array<{id:string;stage:string;asOf:string;kind:string;jev:ReturnType<typeof jev>;shadow?:{score:number;weightsVersion:string}}>;
+ expect(await attachShadowScore(redis,rows,{},now)).toEqual({stamped:2,available:true});
+ expect(rows[0].shadow?.score).toBe(0);
+ expect(rows[1].shadow).toBeUndefined();
+ expect(rows[2].shadow?.score).toBe(0);
+ expect(rows.map(r=>r.stage)).toEqual(['VOLUME_WATCH','NO_SIGNAL','EXTENDED']);
+ expect(await attachShadowScore(redis,rows,{},now)).toEqual({stamped:0,available:true});
+ expect(await attachShadowScore({get:async()=>({...weights,available:false})} as never,[{id:'d',stage:'VOLUME_WATCH',asOf:'x'}],{},now)).toEqual({stamped:0,available:false});
+});
+it('the ledger grades the stamped sign only under the current weights version',()=>{
+ expect(shadowSideLabel({rule:'shadow-score-v1',weightsVersion:'v1',score:1.2,matched:[],evaluable:1,skipped:[],checkedAt:''},'v1')).toBe('shadow score >0');
+ expect(shadowSideLabel({rule:'shadow-score-v1',weightsVersion:'v0',score:1.2,matched:[],evaluable:1,skipped:[],checkedAt:''},'v1')).toBe('Shadow older weights');
+ expect(shadowSideLabel(undefined,'v1')).toBe('NOT_RECORDED');
+ const mk=(i:number,r:number,score:number|null,ver='v1'):PaperObs=>({at:now+i*3600000,r,reason:null,jev:undefined,catalyst:undefined,shadow:score==null?undefined:{rule:'shadow-score-v1',weightsVersion:ver,score,matched:[],evaluable:1,skipped:[],checkedAt:''},venue:'Coinbase USD',exit:'x'});
+ const obs=[...Array.from({length:70},(_,i)=>mk(i,i%2?1:-1,i%2?.8:-.8)),mk(300,0,.5,'v0'),mk(301,0,null)];
+ const ledger=buildCalibration(obs,[],{closedTrades:72,forwardRows:0,shadowVersion:'v1'},now);
+ const f=ledger.fields.find(x=>x.id==='shadow.sign')!;
+ expect(f.sides.find(s=>s.side==='shadow score >0')).toMatchObject({n:35,status:'confirmed',informational:false});
+ expect(f.sides.find(s=>s.side==='Shadow older weights')).toMatchObject({n:1,informational:true});
+ expect(f.sides.find(s=>s.side==='NOT_RECORDED')).toMatchObject({n:1,informational:true});
+ expect(SHADOW.minConfirmedFields).toBe(2);
+});
+it('the shadow score never reaches the planner, sizing, or the recommendations store',()=>{
+ for(const f of ['lib/admin/cryptoPaperMarket.ts','lib/admin/cryptoRecommendations.ts','lib/admin/cryptoAutomation.ts'])expect(readFileSync(f,'utf8')).not.toMatch(/cryptoShadowScore|shadowScore|attachShadowScore/);
+ const paper=readFileSync('lib/admin/cryptoPaper.ts','utf8');
+ expect(paper).toMatch(/shadow:candidate\.shadow\?\?null/);
+ expect(paper).not.toMatch(/shadow\.score|scoreRow|loadShadowWeights/);
+ expect(readFileSync('lib/admin/cryptoShadowScore.ts','utf8')).not.toMatch(/askJev|avFetch|getCryptoNews|fetch\(/);
+});
