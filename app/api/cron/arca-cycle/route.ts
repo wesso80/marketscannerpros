@@ -1,6 +1,7 @@
 import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
-import {adminDiscoveryOnly} from '@/lib/admin/discoveryOnly';
+import {adminDiscoveryOnly,discoveryOnlyAction} from '@/lib/admin/discoveryOnly';
+import {runNewsJevDailyOnce} from '@/lib/admin/equityNewsJev';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import {runCryptoMarketData} from '@/lib/admin/cryptoMarketDataJob';
 import {runNewListings} from '@/lib/admin/cryptoNewListingsJob';
@@ -68,12 +69,14 @@ export async function POST(req: NextRequest) {
     // Daily calibration reads saved rows only; it never affects this run's health status.
     const calibrationRedis=getRedis();
     const calibration=calibrationRedis?await runDailyCalibration(calibrationRedis).catch(()=>({ok:false,error:'Calibration failed'})):{ok:false,error:'Redis unavailable'};
+    // The two Jev equity pages are open while the evening cron is skipped, so their daily scoring step runs here, once per UTC day. Evidence only.
+    const newsJev=calibrationRedis&&discoveryOnlyAction('/api/cron/evening-packet')==='skip_job'?await runNewsJevDailyOnce(calibrationRedis).catch(()=>({ok:false,error:'News verification failed'})):{ok:true,skipped:true,reason:'Evening cron handles it'};
     // Non-essential CoinGecko market context runs last and never affects this run's health status.
     const marketData=await runCryptoMarketData().catch(()=>({ok:false,error:'CoinGecko market data failed'}));
     const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
     // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
     const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,marketData,newListings,history},{status:ok?200:503});
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   const calibrationRedis=getRedis();
