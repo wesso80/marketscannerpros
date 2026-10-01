@@ -48,7 +48,7 @@ export default function CryptoMarketsPage() {
     setTab('watchlists');setResearchOpen(false);setAnalyzing(coinId);setError('');setReviewNotice('');setReview(null);setChart(null);setBase(null);
     try {
       const res=await fetch('/api/admin/crypto-discovery/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coinId})});
-      const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setReviewNotice(body.notice??'');setNow(Date.now());
+      const body=await res.json();if(!res.ok) throw new Error(`${body.error||'Analysis failed'}${body.detail?` (${body.detail})`:''} [HTTP ${res.status}]`);setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setReviewNotice(body.notice??'');setNow(Date.now());
       requestAnimationFrame(()=>document.getElementById('crypto-review')?.scrollIntoView({behavior:'smooth',block:'start'}));
     } catch(e) {setError(e instanceof Error?e.message:'Analysis failed');}
     finally {setAnalyzing('');}

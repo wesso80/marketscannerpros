@@ -101,7 +101,10 @@ it('calibration reads the catalyst stamp from createdReason and grades no-headli
  expect(high.lift).toBeGreaterThan(0);expect(noneSide.lift).toBeLessThan(0);
 });
 it('the crypto desk makes no Alpha Vantage call from any Jev or learning module',()=>{
- for(const f of ['lib/admin/cryptoJevCatalyst.ts','lib/admin/cryptoJev.ts','lib/admin/cryptoCalibration.ts','lib/admin/learningStatus.ts','lib/admin/cryptoJevEvidence.ts','app/api/cron/arca-cycle/route.ts'])expect(readFileSync(f,'utf8')).not.toMatch(/avFetch|alphavantage|ALPHA_VANTAGE|equityNewsJev|transcriptJevAudit/);
+ for(const f of ['lib/admin/cryptoJevCatalyst.ts','lib/admin/cryptoJev.ts','lib/admin/cryptoCalibration.ts','lib/admin/learningStatus.ts','lib/admin/cryptoJevEvidence.ts'])expect(readFileSync(f,'utf8')).not.toMatch(/avFetch|alphavantage|ALPHA_VANTAGE|equityNewsJev|transcriptJevAudit/);
+ // The crypto cron may host the equity news daily step (DB + Jev only, owner-approved) but must never reach Alpha Vantage itself.
+ expect(readFileSync('app/api/cron/arca-cycle/route.ts','utf8')).not.toMatch(/avFetch|alphavantage|ALPHA_VANTAGE|transcriptJevAudit/);
+ expect(readFileSync('lib/admin/equityNewsJev.ts','utf8')).not.toMatch(/avFetch|alphavantage\.co/);
  expect(readFileSync('lib/admin/cryptoPaperMarket.ts','utf8')).not.toMatch(/cryptoJevCatalyst|catalyst/i);
  expect(readFileSync('lib/admin/cryptoAutomation.ts','utf8')).not.toMatch(/cryptoJevCatalyst|attachCatalystShadow/);
 });
