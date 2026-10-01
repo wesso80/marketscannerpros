@@ -7,12 +7,13 @@ const CryptoMarketData = dynamic(()=>import('@/components/admin/CryptoMarketData
 const CryptoHistoryData = dynamic(()=>import('@/components/admin/CryptoHistoryData'), {ssr:false});
 const CryptoHarness = dynamic(()=>import('@/components/admin/CryptoHarness'), {ssr:false});
 const CryptoAttentionStrip = dynamic(()=>import('@/components/admin/CryptoAttentionStrip'), {ssr:false});
-const TABS = [['paper','Paper account'],['setups','Setups'],['learning','Learning'],['recommendations','Recommendations'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['history','History data'],['harness','Strategy harness'],['alerts','Alerts']] as const;
+const TABS = [['paper','Paper account'],['setups','Setups'],['jev','Jev'],['learning','Learning'],['recommendations','Recommendations'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['history','History data'],['harness','Strategy harness'],['alerts','Alerts']] as const;
 type Tab = typeof TABS[number][0];
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoForwardScore = dynamic(()=>import('@/components/admin/CryptoForwardScore'), {ssr:false});
 const CryptoRecommendations = dynamic(()=>import('@/components/admin/CryptoRecommendations'), {ssr:false});
 const CryptoLearning = dynamic(()=>import('@/components/admin/CryptoLearning'), {ssr:false});
+const CryptoJevBoard = dynamic(()=>import('@/components/admin/CryptoJevBoard'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
 const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
 import type {BaseReview} from '@/lib/admin/cryptoBase';
@@ -100,6 +101,7 @@ export default function CryptoMarketsPage() {
     {tab==='harness' && <CryptoHarness refreshVersion={refreshVersion} />}
     {tab==='recommendations' && <CryptoRecommendations refreshVersion={refreshVersion} />}
     {tab==='learning' && <CryptoLearning refreshVersion={refreshVersion} />}
+    {tab==='jev' && <CryptoJevBoard refreshVersion={refreshVersion} />}
     {tab==='setups' && <>
     <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
