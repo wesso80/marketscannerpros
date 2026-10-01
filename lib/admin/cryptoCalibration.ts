@@ -39,7 +39,7 @@ export function catalystFromReason(reason:string|null|undefined):CatalystStamp|u
  const c=reasonJson(reason)?.catalyst as CatalystStamp|undefined;
  return c&&typeof c==='object'&&typeof c.rule==='string'&&['scored','no-headlines','unavailable'].includes(c.status)?c:undefined;
 }
-const catalystField=<O extends {catalyst:CatalystStamp|undefined}>(qid:typeof CATALYST_IDS[number],file:string):FieldDef<O>=>({id:`catalyst.${qid}`,label:`Catalyst ${CATALYST_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-catalyst-v1',side:o=>catalystSideLabel(qid,o.catalyst)});
+const catalystField=<O extends {catalyst:CatalystStamp|undefined}>(qid:typeof CATALYST_IDS[number],file:string):FieldDef<O>=>({id:`catalyst.${qid}`,label:`Catalyst ${CATALYST_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-catalyst-v2',side:o=>catalystSideLabel(qid,o.catalyst)});
 /** Paper-ledger fields, read from the createdReason JSON saved with each entry. Adding a field is one line. */
 export const PAPER_FIELDS:FieldDef<PaperObs>[]=[
  {id:'btcRegime.state',label:'BTC daily trend at entry',file:'lib/admin/cryptoPaperMarket.ts',ruleVersion:'btc-regime-v1',side:o=>path(o.reason,'btcRegime','state')??'NOT_RECORDED'},

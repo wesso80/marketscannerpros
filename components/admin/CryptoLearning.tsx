@@ -16,15 +16,15 @@ export default function CryptoLearning({refreshVersion=0}:{refreshVersion?:numbe
    <h2 className="text-xl">Learning loop · what is recorded, what it is graded against, and whether it is working</h2>
    <p className="text-sm text-slate-300">Every panel below is evidence. Jev (TypeSafe) answers fixed questions and returns probabilities; this code stores them beside the outcome that later arrives, and the ledger reports which answers separated good from bad. Nothing opens, blocks, or edits a rule; a confirmed finding becomes a text recommendation for a person.</p>
    <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-300">
-    <li><span className="font-semibold">Record</span> — each named setup gets a Jev shadow and a catalyst stamp; each equity headline gets a verification stamp; each transcript summary gets an audit.</li>
-    <li><span className="font-semibold">Outcome</span> — paper R, forward 4h/24h marks, next-day equity return arrive on their own schedule.</li>
+    <li><span className="font-semibold">Record</span> — each named setup gets a Jev shadow (three answers from its candle numbers) and a catalyst stamp (five answers from its CoinGecko headlines).</li>
+    <li><span className="font-semibold">Outcome</span> — paper R and forward 4h/24h marks arrive on their own schedule.</li>
     <li><span className="font-semibold">Grade</span> — the calibration ledger splits every answer at 0.50 and requires the same sign of lift in both time halves before calling anything confirmed.</li>
     <li><span className="font-semibold">Propose</span> — confirmed sides file a recommendation (max 3 a week). You accept, you change code, you bump the rule id, the sample restarts.</li>
    </ol>
    {error&&<p role="alert" className="text-amber-300">{error}</p>}
    {!status&&!error&&<p>Checking…</p>}
    {status&&<>
-    <p className="text-xs text-slate-400">Checked {new Date(status.checkedAt).toLocaleString()} · Jev gateway key {status.mode.jevKey?'set':<span className="text-red-300">missing</span>} · Alpha Vantage key {status.mode.avKey?'set':<span className="text-red-300">missing</span>} · ADMIN_DISCOVERY_ONLY {status.mode.discoveryOnly?'on (equity admin pages paused; crypto and background evidence continue)':'off'}</p>
+    <p className="text-xs text-slate-400">Checked {new Date(status.checkedAt).toLocaleString()} · Jev gateway key {status.mode.jevKey?'set':<span className="text-red-300">missing</span>} · market data: CoinGecko and exchange candles only · ADMIN_DISCOVERY_ONLY {status.mode.discoveryOnly?'on (crypto admin only)':'off'}</p>
     <div className="overflow-auto"><table className="w-full min-w-[1000px] text-left text-sm"><thead><tr>{['Stamp','State','What is happening','Last written','Graded against','Where to look'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
      {status.items.map(i=><tr key={i.id} className="border-t border-slate-700 align-top">
       <td className="p-2 font-semibold">{i.label}</td>
