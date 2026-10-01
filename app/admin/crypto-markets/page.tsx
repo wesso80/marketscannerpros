@@ -12,6 +12,7 @@ type Tab = typeof TABS[number][0];
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoForwardScore = dynamic(()=>import('@/components/admin/CryptoForwardScore'), {ssr:false});
 const CryptoRecommendations = dynamic(()=>import('@/components/admin/CryptoRecommendations'), {ssr:false});
+const CryptoCalibration = dynamic(()=>import('@/components/admin/CryptoCalibration'), {ssr:false});
 const CryptoBaseScanner = dynamic(()=>import('@/components/admin/CryptoBaseScanner'), {ssr:false});
 const CryptoMarketContext = dynamic(()=>import('@/components/admin/CryptoMarketContext'), {ssr:false});
 import type {BaseReview} from '@/lib/admin/cryptoBase';
@@ -94,7 +95,10 @@ export default function CryptoMarketsPage() {
     {tab==='marketdata' && <CryptoMarketData refreshVersion={refreshVersion} />}
     {tab==='history' && <CryptoHistoryData refreshVersion={refreshVersion} />}
     {tab==='harness' && <CryptoHarness refreshVersion={refreshVersion} />}
-    {tab==='recommendations' && <CryptoRecommendations refreshVersion={refreshVersion} />}
+    {tab==='recommendations' && <>
+    <CryptoRecommendations refreshVersion={refreshVersion} />
+    <CryptoCalibration refreshVersion={refreshVersion} />
+    </>}
     {tab==='setups' && <>
     <CryptoForwardScore refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />

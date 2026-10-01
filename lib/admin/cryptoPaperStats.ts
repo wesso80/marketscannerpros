@@ -1,4 +1,6 @@
 import {btcDownFilter} from './cryptoMarketRegime';
+import type {JevStamp} from './cryptoJev';
+import {JEV_QUESTION_IDS,jevFromReason,jevSideLabel} from './cryptoJevEvidence';
 /** Closed-trade expectancy in R for the crypto paper beta. Read-only; no row is adjusted or inferred. */
 export type CryptoStatsRow={position_id?:string|null;r_multiple:string|number|null;realised_pnl:string|number;outcome:string;exit_reason:string;instrument_type:string;entry_time:string|Date;exit_time:string|Date;created_reason:string|null;entry_price?:string|number|null;exit_price?:string|number|null;quantity?:string|number|null;stop_loss?:string|number|null};
 export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:number|null;avgR:number|null;avgWinR:number|null;avgLossR:number|null;profitFactor:number|null;netPnl:number;avgHoldHours:number|null};
@@ -6,8 +8,8 @@ export type CryptoStatsGroup={label:string;trades:number;withR:number;winRate:nu
 export type CostSensitivityRow={feePctPerSide:number;trades:number;excluded:number;winRate:number|null;avgR:number|null;totalR:number};
 /** Ledger cost is 0.05% fee + 0.05% slippage per side. Retail Coinbase Advanced taker fees alone run roughly 0.4-0.6%. */
 export const COST_SENSITIVITY_PCT=[0.1,0.3,0.6,0.9];
-export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byFunding:CryptoStatsGroup[];byShadowFilter:CryptoStatsGroup[];byBtc200:CryptoStatsGroup[];byRsRule:CryptoStatsGroup[];byFlow:CryptoStatsGroup[];byExit:CryptoStatsGroup[];costSensitivity:CostSensitivityRow[]};
-type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;rs:string;flow:string;funding:string;exit:string;prices:{entry:number;exit:number;stop:number;slip:number}|null};
+export type CryptoPaperStats={checkedAt:string;sample:'NO_TRADES'|'INSUFFICIENT'|'EARLY'|'USABLE';sampleNote:string;overall:CryptoStatsGroup;bySetup:CryptoStatsGroup[];byVenue:CryptoStatsGroup[];byBtcRegime:CryptoStatsGroup[];byFunding:CryptoStatsGroup[];byShadowFilter:CryptoStatsGroup[];byBtc200:CryptoStatsGroup[];byRsRule:CryptoStatsGroup[];byFlow:CryptoStatsGroup[];byJev:CryptoStatsGroup[];byExit:CryptoStatsGroup[];costSensitivity:CostSensitivityRow[]};
+type Trade={r:number|null;pnl:number;holdHours:number|null;setup:string;venue:string;regime:string;long:string;rs:string;flow:string;funding:string;exit:string;jev:JevStamp|undefined;prices:{entry:number;exit:number;stop:number;slip:number}|null};
 function evidence(reason:string|null):{kind?:string;regime?:string;long?:string;rs?:string;flow?:string;funding?:string;stop?:number}{
  const i=reason?.indexOf('{')??-1;if(!reason||i<0)return {};
  try{const e=JSON.parse(reason.slice(i));return {kind:e?.signal?.kind,regime:e?.btcRegime?.state,long:e?.btcRegime?.longTrend,rs:e?.relativeStrength?.rule,flow:e?.flow?.state,funding:e?.derivatives?.fundingState,stop:typeof e?.plan?.stop==='number'?e.plan.stop:undefined};}catch{return {};}
@@ -24,6 +26,11 @@ function by(trades:Trade[],key:(t:Trade)=>string):CryptoStatsGroup[]{
  const m=new Map<string,Trade[]>();for(const t of trades)m.set(key(t),[...(m.get(key(t))??[]),t]);
  return [...m].map(([k,v])=>group(k,v)).sort((a,b)=>b.trades-a.trades||a.label.localeCompare(b.label));
 }
+/** One pair of rows per Jev question (≥0.50 / <0.50) plus a single unavailable and NOT_RECORDED row. Each trade sits in one row per question. */
+function byJev(trades:Trade[]):CryptoStatsGroup[]{
+ const scored=trades.filter(t=>t.jev?.status==='scored'),rest=trades.filter(t=>t.jev?.status!=='scored');
+ return [...JEV_QUESTION_IDS.flatMap(q=>by(scored,t=>jevSideLabel(q,t.jev)).sort((a,b)=>a.label.localeCompare(b.label))),...by(rest,t=>jevSideLabel('chase',t.jev))];
+}
 export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):CryptoPaperStats{
  const trades:Trade[]=rows.map(row=>{
   const e=evidence(row.created_reason),entry=new Date(row.entry_time).getTime(),exit=new Date(row.exit_time).getTime();
@@ -31,13 +38,13 @@ export function summarizeCryptoPaper(rows:CryptoStatsRow[],now=Date.now()):Crypt
   const px={entry:Number(row.entry_price),exit:Number(row.exit_price),stop:e.stop??Number(row.stop_loss),slip:row.instrument_type.startsWith('okx-usd-v1:')?.001:.0005};
   return {r:r!=null&&Number.isFinite(r)?r:null,pnl:Number(row.realised_pnl)||0,holdHours:Number.isFinite(entry)&&Number.isFinite(exit)&&exit>=entry?(exit-entry)/3600000:null,
    setup:e.kind??'NOT_RECORDED',venue:row.instrument_type.startsWith('okx-usd-v1:')?'OKX USDT→USD':row.instrument_type.startsWith('coinbase:')?'Coinbase USD':'OTHER',
-   regime:e.regime??'NOT_RECORDED',long:e.long??'NOT_RECORDED',rs:e.rs??'NOT_RECORDED',flow:e.flow??'NOT_RECORDED',funding:e.funding??'NOT_RECORDED',exit:row.exit_reason,
+   regime:e.regime??'NOT_RECORDED',long:e.long??'NOT_RECORDED',rs:e.rs??'NOT_RECORDED',flow:e.flow??'NOT_RECORDED',funding:e.funding??'NOT_RECORDED',exit:row.exit_reason,jev:jevFromReason(row.created_reason),
    prices:row.entry_price!=null&&row.exit_price!=null&&[px.entry,px.exit,px.stop].every(Number.isFinite)&&px.entry>px.stop&&px.stop>0?px:null};
  });
  const n=trades.filter(t=>t.r!=null).length;
  const sample=!trades.length?'NO_TRADES':n<30?'INSUFFICIENT':n<100?'EARLY':'USABLE';
  const sampleNote={NO_TRADES:'No closed paper trades yet.',INSUFFICIENT:`${n} closed trades with R. Under 30 trades, results are mostly noise; do not draw conclusions.`,EARLY:`${n} closed trades with R. Directional evidence only; breakdowns with few trades remain unreliable.`,USABLE:`${n} closed trades with R. Overall figures are usable; still check each breakdown's own trade count.`}[sample];
- return {checkedAt:new Date(now).toISOString(),sample,sampleNote,overall:group('All trades',trades),bySetup:by(trades,t=>t.setup),byVenue:by(trades,t=>t.venue),byBtcRegime:by(trades,t=>t.regime),byFunding:by(trades,t=>t.funding),byShadowFilter:by(trades,t=>btcDownFilter(t.regime==='NOT_RECORDED'?null:t.regime)),byBtc200:by(trades,t=>t.long),byRsRule:by(trades,t=>t.rs),byFlow:by(trades,t=>t.flow),byExit:by(trades,t=>t.exit),costSensitivity:costSensitivity(trades)};
+ return {checkedAt:new Date(now).toISOString(),sample,sampleNote,overall:group('All trades',trades),bySetup:by(trades,t=>t.setup),byVenue:by(trades,t=>t.venue),byBtcRegime:by(trades,t=>t.regime),byFunding:by(trades,t=>t.funding),byShadowFilter:by(trades,t=>btcDownFilter(t.regime==='NOT_RECORDED'?null:t.regime)),byBtc200:by(trades,t=>t.long),byRsRule:by(trades,t=>t.rs),byFlow:by(trades,t=>t.flow),byJev:byJev(trades),byExit:by(trades,t=>t.exit),costSensitivity:costSensitivity(trades)};
 }
 /**
  * Ledger entry_price already includes the venue's entry slippage (0.05% Coinbase, 0.10% OKX conversion) and exit_price
