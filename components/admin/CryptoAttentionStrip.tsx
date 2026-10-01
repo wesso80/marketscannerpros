@@ -15,10 +15,12 @@ export type BookHealth={
  clusterDetail:string;
  exits:'HEALTHY'|'UNHEALTHY'|'UNKNOWN';
 };
+/** cycle = the paper cycle refused a named setup; setup = a MOMENTUM_VOLUME close outside its zone; bucket = a VOLUME_WATCH/EXTENDED/UNAVAILABLE row that never qualified. */
+export type BlockedSource='cycle'|'setup'|'bucket';
 export type ScanDecision={
  stale:boolean;
  inZone:{symbol:string;kind:string|null}[];
- blocked:{symbol:string;reason:string}[];
+ blocked:{symbol:string;reason:string;source:BlockedSource}[];
  health:BookHealth;
 };
 
@@ -44,13 +46,13 @@ export function scanDecision(paper:Paper|null,scan:Scan,now:number):ScanDecision
  const ask=new Map<string,number>();
  for(const d of report.decisions)if(d.coin&&finite(d.ask))ask.set(d.coin,d.ask);
  const inZone:{symbol:string;kind:string|null}[]=[];
- const blocked:{symbol:string;reason:string}[]=[];
+ const blocked:ScanDecision['blocked']=[];
  const seen=new Set<string>();
  const mark=(s:string)=>s.toLowerCase();
  for(const d of report.decisions){
   if(d.status!=='BLOCKED'||!d.coin||seen.has(mark(d.coin)))continue;
   seen.add(mark(d.coin));
-  blocked.push({symbol:d.coin,reason:d.reason?.trim()||'Blocked, no reason recorded'});
+  blocked.push({symbol:d.coin,reason:d.reason?.trim()||'Blocked, no reason recorded',source:'cycle'});
  }
  for(const row of scan?.rows??[]){
   const symbol=row.symbol||row.id;
@@ -63,7 +65,7 @@ export function scanDecision(paper:Paper|null,scan:Scan,now:number):ScanDecision
   const refused=row.stage==='EXTENDED'||row.stage==='VOLUME_WATCH'||row.stage==='UNAVAILABLE'||(row.stage==='MOMENTUM_VOLUME'&&finite(row.entryFloor)&&finite(row.maxEntry));
   if(refused){
    seen.add(symbol);
-   blocked.push({symbol,reason:row.stage==='MOMENTUM_VOLUME'?'Outside the entry zone':(row.reason?.trim()||row.stage)});
+   blocked.push(row.stage==='MOMENTUM_VOLUME'?{symbol,reason:'Outside the entry zone',source:'setup'}:{symbol,reason:row.reason?.trim()||row.stage,source:'bucket'});
   }
  }
  const over=report.clusters?.filter(c=>c.overCap);
@@ -82,6 +84,25 @@ export function scanDecision(paper:Paper|null,scan:Scan,now:number):ScanDecision
    cluster,clusterDetail,exits,
   },
  };
+}
+
+/** Named setups the cycle or the zone refused are listed; rows that never qualified are grouped by reason so the list stays readable. */
+function BlockedList({blocked}:{blocked:ScanDecision['blocked']}){
+ const refused=blocked.filter(b=>b.source!=='bucket');
+ const buckets=blocked.filter(b=>b.source==='bucket');
+ const groups=new Map<string,string[]>();
+ for(const b of buckets)groups.set(b.reason,[...(groups.get(b.reason)??[]),b.symbol]);
+ const grouped=[...groups].sort((a,b)=>b[1].length-a[1].length);
+ return <div>
+  <h3 className="text-sm text-slate-400">Refused setups{refused.length?` (${refused.length})`:''}</h3>
+  {refused.length
+   ?<ul className="space-y-1 text-sm">{refused.map(c=><li key={c.symbol}><span className="font-medium">{c.symbol}</span> — {c.reason}</li>)}</ul>
+   :<p className="text-sm">None. No named setup was refused on the last cycle or in the saved scan.</p>}
+  {!!buckets.length&&<details className="mt-2 text-sm">
+   <summary className="cursor-pointer text-slate-400">Not a setup · {buckets.length} coin{buckets.length===1?'':'s'} in {grouped.length} reason{grouped.length===1?'':'s'}</summary>
+   <ul className="mt-1 space-y-1">{grouped.map(([reason,symbols])=><li key={reason}><span className="font-medium">{symbols.length}</span> · {reason}<div className="text-xs text-slate-400">{symbols.join(', ')}</div></li>)}</ul>
+  </details>}
+ </div>;
 }
 
 export default function CryptoAttentionStrip({now,refreshVersion=0}:{now:number;refreshVersion?:number;onOpen?:(tab:string)=>void}){
@@ -105,12 +126,7 @@ export default function CryptoAttentionStrip({now,refreshVersion=0}:{now:number;
     ?<p>{decision.inZone.map(c=>`${c.symbol}${c.kind?` ${c.kind}`:''}`).join(' · ')}</p>
     :<p>None. No saved 4-hour setup has its close inside the entry floor and chase limit.</p>}
   </div>
-  <div>
-   <h3 className="text-sm text-slate-400">Blocked</h3>
-   {decision.blocked.length
-    ?<ul className="max-h-36 space-y-1 overflow-auto text-sm">{decision.blocked.map(c=><li key={c.symbol}><span className="font-medium">{c.symbol}</span> — {c.reason}</li>)}</ul>
-    :<p>None recorded on the last cycle or the saved scan.</p>}
-  </div>
+  <BlockedList blocked={decision.blocked}/>
   <div>
    <h3 className="text-sm text-slate-400">Book health · SIMULATED</h3>
    <p>{h.positions==null?'Open positions unavailable':`${h.positions} open`} · {h.openPnl==null?'Open P&L unavailable':`${money(h.openPnl)} open P&L`} · Cluster {h.cluster} · Exits {h.exits}</p>

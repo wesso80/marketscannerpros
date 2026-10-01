@@ -75,7 +75,7 @@ export default function CryptoMarketsPage() {
   return <div className="space-y-5 p-6 text-slate-100">
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
     <p>SIMULATED paper trading only; no real orders.</p>
-    {error && <p role="alert" className="text-red-300">{error}</p>}
+    {error && tab!=='watchlists' && <p role="alert" className="text-red-300">{error}</p>}
     <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
@@ -102,17 +102,31 @@ export default function CryptoMarketsPage() {
     {tab==='recommendations' && <CryptoRecommendations refreshVersion={refreshVersion} />}
     {tab==='learning' && <CryptoLearning refreshVersion={refreshVersion} />}
     {tab==='setups' && <>
-    <CryptoForwardScore refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
+    <CryptoForwardScore refreshVersion={refreshVersion} />
     </>}
     {tab==='watchlists' && <>
-    <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
-    <div id="crypto-review">
-    {analyzing && <p role="status" className="rounded border border-slate-700 p-3">Opening chart and review for {analyzing}… up to two CoinGecko candle requests.</p>}
-    {!analyzing && error && !review && <p role="alert" className="rounded border border-amber-700 p-3 text-amber-300">Chart did not open: {error} Use <strong>Scan major exchanges</strong> to refresh discovery, then click the coin again.</p>}
-    {reviewNotice && review && <p role="status" className="rounded border border-amber-700 p-3 text-amber-300">{reviewNotice}</p>}
-    </div>
+    <section aria-label="Exchange discovery snapshot" className="space-y-3 rounded border border-slate-600 p-4">
+    <h2 className="text-xl">Exchange discovery snapshot <span className="text-sm font-normal text-slate-400">· the universe every scan and chart reads</span></h2>
+    {!data && !busy && <p>No saved discovery snapshot. Run a scan to establish coverage.</p>}
+    {data && <>
+      <p>{(()=>{const age=now-Date.parse(data.startedAt);const h=Math.floor(age/3600000),m=Math.floor(age%3600000/60000);const ageText=h?`${h}h ${m}m old`:`${m} min old`;
+        return <>{data.partial?<span className="text-amber-300">PARTIAL COVERAGE · </span>:null}{data.uniqueCoins} coins with market data · snapshot {ageText} · {reviewable?<span className={stale?'text-amber-300':'text-emerald-300'}>{stale?'charts open from this snapshot; fresh levels need a scan under 15 min old':'charts and fresh levels available'}</span>:<span className="text-red-300">over four hours old: Scan major exchanges before opening a chart</span>}</>;})()}</p>
+      <p className="text-xs text-slate-400">Started {new Date(data.startedAt).toLocaleString()} · Finished {new Date(data.finishedAt).toLocaleString()} · {data.requests} request attempts · {data.coverage.map(c=>`${c.exchange} ${c.pairsSeen} pairs (${c.status.toLowerCase()})`).join(' · ')}</p>
+      {!!data.missingMarketIds?.length && <p className="text-sm text-amber-300">Market data not returned for: {data.missingMarketIds.join(', ')}</p>}
+      {!!data.failedMarketBatches?.length && <p className="text-sm text-amber-300">Failed market-data batches: {data.failedMarketBatches.join(', ')}</p>}
+      <details className="text-xs text-slate-400"><summary className="cursor-pointer text-sm text-slate-300">Screen and stage rules</summary>
+        <p className="mt-1">Screen: market cap ≥ $10m, global 24h volume ≥ $2m; at least one observed pair with ≥ $250k volume, spread ≤ 0.5%, no stale/anomaly flag and a trade within 15 minutes of scan start. Reported volume is not order-book depth. Stable/wrapped screening is heuristic.</p>
+        <p className="mt-1">MOMENTUM: 1h ≥ 1% and 24h ≥ 3%. EXTENDED: 1h ≥ 10% or 24h ≥ 30%; retained for review, not a buy signal. WATCH: other passing screens. These are unvalidated discovery rules, not a profitability score. Ordered by stage then 1h change.</p>
+      </details>
+      <div id="crypto-review">
+      {analyzing && <p role="status" className="rounded border border-slate-700 p-3">Opening chart and review for {analyzing}… up to two CoinGecko candle requests.</p>}
+      {!analyzing && error && !review && <p role="alert" className="rounded border border-amber-700 p-3 text-amber-300">Chart did not open: {error} Use <strong>Scan major exchanges</strong> to refresh discovery, then click the coin again.</p>}
+      {reviewNotice && review && <p role="status" className="rounded border border-amber-700 p-3 text-amber-300">{reviewNotice}</p>}
+      </div>
+    </>}
+    </section>
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
       <h2 className="text-xl">{review.symbol} · {(volumeLabel&&volumeLabel!=='confirmed'?reviewStatusLabel(review).replace('_CONFIRMED',''):reviewStatusLabel(review))} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
@@ -135,23 +149,17 @@ export default function CryptoMarketsPage() {
       <p>{review.exitRule}</p>
       <p className="text-sm text-slate-400">Long-side research rule: completed daily and 4h closes above rising SMA20; 1h close above the previous 20-bar high, or reclaim of a pullback near SMA20. Stop below the last six hourly lows minus 0.25 ATR; maximum chase 0.5 ATR and minimum current 1.5R to a model target. Not a calibrated edge or paper-trade permission.</p>
     </section>}
-    {!data && !busy && <p>No saved discovery snapshot. Run a scan to establish coverage.</p>}
-    {data && <>
-      <p>{stale?'STALE SNAPSHOT':data.partial?'PARTIAL COVERAGE':'SNAPSHOT AVAILABLE'} · {data.uniqueCoins} coins with market data · {data.requests} request attempts · Started {new Date(data.startedAt).toLocaleString()} · Finished {new Date(data.finishedAt).toLocaleString()}</p>
-      <p className="text-sm">{data.coverage.map(c=>`${c.exchange}: ${c.pairsSeen} pairs, ${c.status}`).join(' · ')}</p>
-      {!!data.missingMarketIds?.length && <p className="text-amber-300">Market data not returned for: {data.missingMarketIds.join(', ')}</p>}
-      {!!data.failedMarketBatches?.length && <p className="text-amber-300">Failed market-data batches: {data.failedMarketBatches.join(', ')}</p>}
-      <p className="text-sm text-slate-400">Screen: market cap ≥ $10m, global 24h volume ≥ $2m; at least one observed pair with ≥ $250k volume, spread ≤ 0.5%, no stale/anomaly flag and a trade within 15 minutes of scan start. Reported volume is not order-book depth. Stable/wrapped screening is heuristic.</p>
-      <p className="text-sm text-slate-400">MOMENTUM: 1h ≥ 1% and 24h ≥ 3%. EXTENDED: 1h ≥ 10% or 24h ≥ 30%; retained for review, not a buy signal. WATCH: other passing screens. These are unvalidated discovery rules, not a profitability score. Ordered by stage then 1h change.</p>
-      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{['Coin / ID','Stage at scan','Price USD','1h','24h','7d','Venues / pair spreads','Fixed scanner','Exclusions'].map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead>
-        <tbody>{rows.map(r=><tr key={r.id} className="border-t border-slate-700">
-          <td className="p-2">{r.symbol}<br/><span className="text-slate-400">{r.id}</span><br/><button className="underline disabled:opacity-40" disabled={!!analyzing||busy||!reviewable||r.stage==='EXCLUDED'} title={!reviewable?'Discovery snapshot is over four hours old: use Scan major exchanges first':stale?'Opens the chart from this snapshot; levels need a scan under 15 minutes old':undefined} onClick={()=>void analyze(r.id)}>{analyzing===r.id?'Analyzing…':`Chart & review ${r.symbol}`}</button></td><td>{r.stage}</td><td>{r.price?.toLocaleString(undefined,{maximumSignificantDigits:7}) ?? 'Unavailable'}</td>
-          <td>{pct(r.change1h)}</td><td>{pct(r.change24h)}</td><td>{pct(r.change7d)}</td>
-          <td>{r.venues.map(v=>`${v.exchange} ${v.pair} (${v.spreadPct.toFixed(3)}%)`).join(', ')}</td>
-          <td>{r.fixedScanCovered?'Covered':'Outside fixed list'}</td><td>{r.reasons.join(', ') || 'None at scan'}</td>
+    {data && <section aria-label="Discovered coins" className="space-y-3 rounded border border-slate-600 p-4">
+      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{[['Coin / ID','min-w-[200px]'],['Stage',''],['Price USD','text-right'],['1h','text-right'],['24h','text-right'],['7d','text-right'],['Venues / pair spreads','min-w-[260px]'],['Fixed scanner',''],['Exclusions','']].map(([h,cls])=><th key={h} className={`p-2 ${cls}`}>{h}</th>)}</tr></thead>
+        <tbody>{rows.map(r=><tr key={r.id} className="border-t border-slate-700 align-top">
+          <td className="p-2"><span className="font-medium">{r.symbol}</span> <span className="text-slate-400">{r.id}</span><br/><button className="mt-1 rounded border border-slate-600 px-2 py-0.5 text-xs disabled:opacity-40" disabled={!!analyzing||busy||!reviewable||r.stage==='EXCLUDED'} title={!reviewable?'Discovery snapshot is over four hours old: use Scan major exchanges first':stale?'Opens the chart from this snapshot; levels need a scan under 15 minutes old':undefined} onClick={()=>void analyze(r.id)}>{analyzing===r.id?'Opening…':'Chart'}</button></td><td className="p-2">{r.stage}</td><td className="p-2 text-right tabular-nums">{r.price?.toLocaleString(undefined,{maximumSignificantDigits:7}) ?? 'Unavailable'}</td>
+          <td className={`p-2 text-right tabular-nums ${r.change1h!=null&&r.change1h<0?'text-red-300':''}`}>{pct(r.change1h)}</td><td className={`p-2 text-right tabular-nums ${r.change24h!=null&&r.change24h<0?'text-red-300':''}`}>{pct(r.change24h)}</td><td className={`p-2 text-right tabular-nums ${r.change7d!=null&&r.change7d<0?'text-red-300':''}`}>{pct(r.change7d)}</td>
+          <td className="p-2 text-xs text-slate-300">{r.venues.map(v=>`${v.exchange} ${v.pair} (${v.spreadPct.toFixed(3)}%)`).join(', ')}</td>
+          <td className="p-2">{r.fixedScanCovered?'Covered':'Outside fixed list'}</td><td className="p-2 text-xs text-slate-400">{r.reasons.join(', ') || 'None at scan'}</td>
         </tr>)}</tbody></table></div>
-      <p>Showing {rows.length} matching coins (maximum 100). Search the complete saved snapshot by coin name or ID. Missing here can mean outside the capped pair window, failed venue checks or missing market data.</p>
-    </>}
+      <p className="text-xs text-slate-400">Showing {rows.length} matching coins (maximum 100). Search the complete saved snapshot by coin name or ID. Missing here can mean outside the capped pair window, failed venue checks or missing market data.</p>
+    </section>}
+    <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
     </>}
   </div>;
 }
