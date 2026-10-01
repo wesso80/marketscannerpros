@@ -1,0 +1,55 @@
+'use client';
+import {useEffect,useState} from 'react';
+import type {CalibrationField,CalibrationLedger,CalibrationSide} from '@/lib/admin/cryptoCalibration';
+const fmt=(n:number|null,unit:'R'|'%')=>n==null?'—':`${n>=0?'+':''}${n.toFixed(2)}${unit}`;
+const STATUS:Record<CalibrationSide['status'],string>={collecting:'text-slate-400',flat:'text-slate-300',directional:'text-sky-300',confirmed:'text-emerald-300',contradicted:'text-amber-300'};
+function FieldTable({field}:{field:CalibrationField}){
+ return <div className="overflow-auto">
+  <h4 className="mt-2 text-sm font-semibold">{field.label} <span className="font-normal text-slate-400">· {field.id} · {field.ruleVersion} · {field.observations} rows · {field.file}</span></h4>
+  <table className="w-full min-w-[820px] text-left text-sm"><thead><tr>{['Side','Rows','Mean','Lift','SE','Half A lift (n)','Half B lift (n)','Status'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
+   {field.sides.map(s=><tr key={s.side} className="border-t border-slate-700">
+    <td className="p-2">{s.side}{s.informational?<span className="text-slate-500"> · not graded</span>:null}</td>
+    <td className="p-2">{s.n}{s.n<30?<span className="text-amber-300"> · thin</span>:null}</td>
+    <td className="p-2">{fmt(s.mean,field.unit)}</td>
+    <td className={`p-2 ${s.lift==null||s.informational?'':s.lift>0?'text-emerald-300':'text-red-300'}`}>{fmt(s.lift,field.unit)}</td>
+    <td className="p-2">{s.se==null?'—':s.se.toFixed(2)}</td>
+    <td className="p-2">{fmt(s.halfA.lift,field.unit)} ({s.halfA.n})</td>
+    <td className="p-2">{fmt(s.halfB.lift,field.unit)} ({s.halfB.n})</td>
+    <td className={`p-2 ${STATUS[s.status]}`}>{s.informational?'—':s.status}</td>
+   </tr>)}
+  </tbody></table>
+ </div>;
+}
+export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:number}){
+ const [ledger,setLedger]=useState<CalibrationLedger|null>(null),[stale,setStale]=useState(false),[saved,setSaved]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState(false),[filed,setFiled]=useState<string[]|null>(null);
+ async function load(){
+  const r=await fetch('/api/admin/crypto-markets/calibration',{cache:'no-store'});const b=await r.json();
+  if(!r.ok)throw Error(b.error);setLedger(b.ledger);setStale(!!b.stale);setSaved(!!b.saved);setError('');
+ }
+ useEffect(()=>{load().catch(e=>setError(e.message||'Saved calibration unavailable'));},[refreshVersion]);
+ async function refresh(){
+  setBusy(true);setError('');setFiled(null);
+  try{const r=await fetch('/api/admin/crypto-markets/calibration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'refresh'})});const b=await r.json();
+   if(!r.ok){if(b.ledger)setLedger(b.ledger);throw Error(b.error);}
+   setLedger(b.ledger);setStale(false);setSaved(true);setFiled(b.filedNow??[]);
+  }catch(e){setError(e instanceof Error?e.message:'Calibration unavailable');}finally{setBusy(false);}
+ }
+ const paper=ledger?.fields.filter(f=>f.outcome==='paperR')??[],forward=ledger?.fields.filter(f=>f.outcome==='forward24h')??[];
+ const graded=(fields:CalibrationField[])=>fields.filter(f=>f.sides.some(s=>!s.informational));
+ return <section aria-label="Calibration ledger" className="space-y-3 rounded border border-slate-600 p-4">
+  <h2 className="text-xl">Calibration ledger · evidence only</h2>
+  <p className="text-sm text-slate-300">Every recorded evidence field against the outcome already stored beside it: R on closed paper trades, and the 24h mark on saved forward rows. Lift is the side's mean minus the overall mean on the same rows. A side is <span className="text-emerald-300">confirmed</span> only when both time halves agree on the sign of the lift with at least 15 rows each and the lift clears 0.25R or 1%. Confirmed sides file one text recommendation (at most three a week); a person decides what to do with it. Nothing here changes a rule, opens a trade, or calls Jev.</p>
+  <div className="flex flex-wrap items-center gap-3">
+   <button disabled={busy} onClick={()=>void refresh()} className="rounded bg-slate-700 px-3 py-2 disabled:opacity-50">{busy?'Recomputing…':'Recompute from saved rows'}</button>
+   {ledger&&<span className="text-xs text-slate-400">Computed {new Date(ledger.checkedAt).toLocaleString()} · sources: {ledger.source.closedTrades} closed trades ({ledger.source.withR} with R), {ledger.source.forwardRows} forward rows ({ledger.source.forwardFilled24h} with a 24h mark) · split at {ledger.source.splitAt.paper??'—'} / {ledger.source.splitAt.forward??'—'}{stale?<span className="text-amber-300"> · STALE (over 36h)</span>:null}</span>}
+  </div>
+  {error&&<p role="alert" className="text-amber-300">{error}</p>}
+  {filed&&<p className="text-xs text-slate-400">{filed.length?`Filed ${filed.length} recommendation${filed.length===1?'':'s'}: ${filed.join(', ')}. Review them in the Recommendations tab.`:'No new recommendation was due.'}</p>}
+  {!ledger&&!error&&<p>{saved?'Loading saved calibration…':'No saved calibration yet. The daily cron writes one, or recompute now.'}</p>}
+  {ledger&&<>
+   <p className="text-sm">{ledger.note}</p>
+   {!!graded(paper).length&&<div className="space-y-1 rounded border border-sky-800 p-3"><h3 className="text-sm font-semibold">Paper ledger · outcome R per closed trade</h3>{paper.map(f=><FieldTable key={f.id} field={f}/>)}</div>}
+   {!!graded(forward).length&&<div className="space-y-1 rounded border border-sky-800 p-3"><h3 className="text-sm font-semibold">Forward score · outcome 24h move after the signal</h3>{forward.map(f=><FieldTable key={f.id} field={f}/>)}</div>}
+  </>}
+ </section>;
+}

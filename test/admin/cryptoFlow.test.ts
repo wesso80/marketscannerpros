@@ -60,3 +60,16 @@ it('paper stats group trades by the recorded flow state; older trades are NOT_RE
  const s=summarizeCryptoPaper([row(2,'TAKER_SELL_HEAVY'),row(-1,'TAKER_SELL_HEAVY'),row(1)]);
  expect(s.byFlow.find(g=>g.label==='TAKER_SELL_HEAVY')).toMatchObject({trades:2,avgR:.5});expect(s.byFlow.find(g=>g.label==='NOT_RECORDED')?.trades).toBe(1);
 });
+it('paper stats group trades by the Jev answers recorded at entry; each trade sits in one side per question',()=>{
+ const jev=(chase:number|null,status:'scored'|'unavailable'='scored')=>({rule:'jev-shadow-v2',status,chase,flowAgrees:chase==null?null:.9,btcHeadwind:chase==null?null:.1,btcTrend:'UP',flowStamp:'aggressive buying',model:status==='scored'?'typesafe-ai/jev':null,checkedAt:'2026-09-28T00:00:00Z',...(status==='unavailable'?{reason:'http-429'}:{})});
+ const row=(r:number,j?:ReturnType<typeof jev>)=>({r_multiple:String(r),realised_pnl:String(r*500),outcome:r>0?'WIN':'LOSS',exit_reason:'TAKE_PROFIT',instrument_type:'coinbase:X-USD',entry_time:'2026-09-28T00:00:00Z',exit_time:'2026-09-28T06:00:00Z',created_reason:'k|'+JSON.stringify({signal:{kind:'BREAKOUT'},...(j?{jev:j}:{})})});
+ const s=summarizeCryptoPaper([row(2,jev(.8)),row(-1,jev(.6)),row(1,jev(.1)),row(1,jev(null,'unavailable')),row(1)]);
+ expect(s.byJev.find(g=>g.label==='chase ≥0.50')).toMatchObject({trades:2,avgR:.5});
+ expect(s.byJev.find(g=>g.label==='chase <0.50')).toMatchObject({trades:1,avgR:1});
+ expect(s.byJev.find(g=>g.label==='flow agrees ≥0.50')?.trades).toBe(3);
+ expect(s.byJev.find(g=>g.label==='btc headwind <0.50')?.trades).toBe(3);
+ expect(s.byJev.filter(g=>g.label==='Jev unavailable')).toHaveLength(1);
+ expect(s.byJev.find(g=>g.label==='Jev unavailable')?.trades).toBe(1);
+ expect(s.byJev.filter(g=>g.label==='NOT_RECORDED')).toHaveLength(1);
+ expect(s.byJev.find(g=>g.label==='NOT_RECORDED')?.trades).toBe(1);
+});

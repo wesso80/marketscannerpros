@@ -5,6 +5,7 @@ import {createMomentumScan,type MomentumScan} from '@/lib/admin/cryptoVolumeMome
 import {fetchEarlyMomentum} from './cryptoEarlyMomentum';
 import {persistForwardScores} from './cryptoForwardScore';
 import {attachJevShadow} from './cryptoJev';
+import {attachCatalystShadow} from './cryptoJevCatalyst';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 const KEY='admin:crypto-markets:early-momentum:v1',F=3600000;
 export async function runEarlyMomentumBatch(limit=5){
@@ -31,6 +32,8 @@ export async function runEarlyMomentumBatch(limit=5){
    scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   }
   await attachJevShadow(scan.rows,now);
+  await attachCatalystShadow(redis,scan.rows,now).catch(()=>undefined);
+  scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   await persistForwardScores(redis,now);
   return NextResponse.json({scan,requestAttempts:requests});
  }catch{return NextResponse.json({error:'Hourly watchlist storage unavailable; progress may be incomplete'},{status:503});}
