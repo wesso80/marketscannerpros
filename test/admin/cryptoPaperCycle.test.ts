@@ -49,6 +49,13 @@ beforeEach(()=>{
  vi.mocked(fetchPaperPath).mockResolvedValue({symbol:'bitcoin',market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]});
 });
 afterEach(()=>vi.restoreAllMocks());
+it('stores a scored Jev shadow as evidence and still opens the simulated entry',async()=>{
+ scan.rows[0]={...scan.rows[0],jev:{rule:'jev-shadow-v1',status:'scored',chase:.2,flowAgrees:.8,btcHeadwind:.15,btcTrend:'DOWN',flowStamp:'divergence',model:'typesafe-ai/jev',checkedAt:new Date(now).toISOString()}};
+ const report=await runCryptoPaperCycle('w');
+ expect(report).toMatchObject({opened:1,decisions:[{status:'OPENED'}]});
+ expect(report.decisions[0].reason).not.toMatch(/chase|flowAgrees|btcHeadwind|0\.2/);
+ expect(createSimulatedOrder).toHaveBeenCalledWith(expect.objectContaining({createdReason:expect.stringContaining('"jev":{"rule":"jev-shadow-v1","status":"scored","chase":0.2')}));
+});
 it('stores a divergence stamp as evidence and still opens the simulated entry',async()=>{
  scan.rows[0]={...scan.rows[0],flowStamp:{rule:'flow-stamp-v1',stamp:'divergence',takerBuyShare4h:.4,source:'okx:public',checkedAt:new Date(now).toISOString()}};
  const report=await runCryptoPaperCycle('w');

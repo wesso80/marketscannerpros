@@ -3,6 +3,7 @@ vi.mock('@/lib/redis',()=>({getRedis:vi.fn()}));
 vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:()=>true}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',()=>({createMomentumScan:vi.fn((rows,discoveryAt)=>({version:1,discoveryAt,rows:rows.map(r=>({...r,stage:'PENDING',pair:{exchange:'gdax',product:'TEST-USD',quote:'USD',volumeUnit:'TEST'}}))}))}));
 vi.mock('@/lib/admin/cryptoEarlyMomentum',()=>({fetchEarlyMomentum:vi.fn(async()=>({stage:'EARLY_WATCH'}))}));
+vi.mock('@/lib/admin/cryptoJev',()=>({attachJevShadow:vi.fn(async()=>{})}));
 import {getRedis} from '@/lib/redis';
 import {fetchEarlyMomentum} from '@/lib/admin/cryptoEarlyMomentum';
 import {runEarlyMomentumBatch} from '@/lib/admin/cryptoEarlyMomentumBatch';
