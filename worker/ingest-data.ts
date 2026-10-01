@@ -34,6 +34,7 @@ import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cry
 import { avRowVolume } from '../lib/scanner/avVolume';
 import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
 import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
+import { startScheduler } from './scheduler';
 import {
   avPayloadError,
   buildLiveDailyBar,
@@ -2021,6 +2022,12 @@ async function main(): Promise<void> {
   if (!runOnce) {
     void checkAccounts();
     setInterval(() => { void checkAccounts(); }, 60_000).unref();
+    // The job schedule that replaced the per-job Render crons. Runs only in the long-lived worker that holds the lane lock.
+    const schedulerOff = ['0', 'false', 'no', 'off'].includes((getEnv('WORKER_SCHEDULER_ENABLED') || '').toLowerCase());
+    const webUrl = (getEnv('WEB_URL') || '').replace(/\/$/, ''), cronSecret = getEnv('CRON_SECRET') || '';
+    if (schedulerOff) console.log('[scheduler] disabled by WORKER_SCHEDULER_ENABLED');
+    else if (!webUrl || !cronSecret) console.error('[scheduler] NOT STARTED: WEB_URL and CRON_SECRET must be set on the worker; scheduled jobs will not run');
+    else startScheduler({ webUrl, cronSecret, record: async (name, outcome) => { await getRedis()?.set(`worker:scheduler:last:${name}`, outcome, { ex: 7 * 86400 }); } });
   }
   const CYCLE_INTERVAL_MS = 60000; // Run full cycle every 60 seconds
 
