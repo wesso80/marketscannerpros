@@ -43,6 +43,17 @@ export function jevCoverage(stamps:Array<JevStamp|null|undefined>):JevCoverage{
  return c;
 }
 /** Catalyst cell: headline count plus any event class at or above 0.50. `no headlines` is a real answer, not a failure. */
+export const CATALYST_IDS=['listingNews','supplyEvent','exploitOrOutage','regulatoryNegative','narrativeOnly'] as const;
+export type CatalystQuestionKey=typeof CATALYST_IDS[number];
+export const CATALYST_LABELS:Record<CatalystQuestionKey,string>={listingNews:'listing news',supplyEvent:'supply event',exploitOrOutage:'exploit or outage',regulatoryNegative:'regulatory negative',narrativeOnly:'narrative only'};
+/** `no headlines` is a real side: the coin had no coin-tagged news in the window. Unavailable and unstamped are informational. */
+export function catalystSideLabel(qid:CatalystQuestionKey,c:CatalystStamp|null|undefined){
+ if(!c)return 'NOT_RECORDED';
+ if(c.status==='no-headlines')return 'no headlines';
+ const p=c[qid];
+ if(c.status!=='scored'||typeof p!=='number')return 'Catalyst unavailable';
+ return `${CATALYST_LABELS[qid]} ${p>=JEV_YES?'≥':'<'}${JEV_YES.toFixed(2)}`;
+}
 export function catalystText(c:CatalystStamp|null|undefined,named:boolean){
  if(!named||!c)return '—';
  if(c.status==='no-headlines')return `no headlines (${c.windowHours}h)`;

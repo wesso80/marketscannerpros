@@ -35,6 +35,17 @@ export default function CryptoLearning({refreshVersion=0}:{refreshVersion?:numbe
       <td className="p-2 text-slate-400">{i.where}</td>
      </tr>)}
     </tbody></table></div>
+    <div className="rounded border border-sky-800 p-3">
+     <h3 className="text-sm font-semibold">Composite shadow score · weights in force</h3>
+     {!status.shadowWeights&&<p className="text-xs text-slate-400">No weights derived yet. The daily calibration pass writes them.</p>}
+     {status.shadowWeights&&!status.shadowWeights.available&&<p className="text-xs text-slate-400">Not available: {status.shadowWeights.reason} Derived {new Date(status.shadowWeights.computedAt).toLocaleString()} from the ledger computed {status.shadowWeights.ledgerCheckedAt?new Date(status.shadowWeights.ledgerCheckedAt).toLocaleString():'—'}.</p>}
+     {status.shadowWeights?.available&&<>
+      <p className="text-xs text-slate-400">Version {status.shadowWeights.version} · derived {new Date(status.shadowWeights.computedAt).toLocaleString()}. A setup&apos;s score is the sum of the weights of the confirmed sides it sits on. Weight = lift ÷ confirmation floor (0.25R or 1%), clipped at ±2. Printed here so nothing is hidden; the ledger grades the sign of stamped scores out of sample.</p>
+      <div className="overflow-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr>{['Field','Side','Outcome','Rows','Lift','Weight'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
+       {status.shadowWeights.weights.map(w=><tr key={`${w.field}|${w.side}`} className="border-t border-slate-700"><td className="p-2">{w.label}<div className="text-xs text-slate-500">{w.field}</div></td><td className="p-2">{w.side}</td><td className="p-2">{w.outcome}</td><td className="p-2">{w.n}</td><td className={`p-2 ${w.lift>0?'text-emerald-300':'text-red-300'}`}>{w.lift>=0?'+':''}{w.lift.toFixed(2)}{w.unit}</td><td className={`p-2 ${w.weight>0?'text-emerald-300':'text-red-300'}`}>{w.weight>=0?'+':''}{w.weight.toFixed(2)}</td></tr>)}
+      </tbody></table></div>
+     </>}
+    </div>
    </>}
   </section>
   <CryptoCalibration refreshVersion={refreshVersion}/>

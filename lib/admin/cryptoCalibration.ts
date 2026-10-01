@@ -3,9 +3,11 @@ import {q} from '@/lib/db';
 import {FORWARD_BOOK_KEY,type ForwardBook,type ForwardRow} from './cryptoForwardScore';
 import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
-import {JEV_LABELS,JEV_QUESTION_IDS,JEV_YES,jevFromReason,jevSideLabel,type JevQuestionId} from './cryptoJevEvidence';
+import {JEV_LABELS,JEV_QUESTION_IDS,jevFromReason,jevSideLabel,CATALYST_IDS,CATALYST_LABELS,catalystSideLabel,type JevQuestionId} from './cryptoJevEvidence';
+import {persistShadowWeights,shadowSideLabel,SHADOW_WEIGHTS_KEY,type ShadowStamp} from './cryptoShadowScore';
+export {catalystSideLabel};
 import {createRecommendation,loadRecommendations,saveRecommendations,type Recommendation} from './cryptoRecommendations';
-import {CAL_CORE,calibrateField as coreCalibrateField,splitAt,type CalibrationFieldBase,type CalibrationSide,type CalibrationStatus,type FieldDef} from './calibrationCore';
+import {CAL_CORE,INFORMATIONAL_SIDES,calibrateField as coreCalibrateField,splitAt,type CalibrationFieldBase,type CalibrationSide,type CalibrationStatus,type FieldDef} from './calibrationCore';
 export type {CalibrationSide,CalibrationStatus};
 /**
  * Calibration ledger: every recorded evidence field against the outcome already stored beside it.
@@ -20,26 +22,23 @@ export const CAL={...CAL_CORE,weeklyCap:3,ttlSec:48*3600,cooldownMs:600000,sourc
 const PAPER_NAME='Crypto Markets Paper';
 export type CalibrationField=CalibrationFieldBase<'paperR'|'forward24h'>;
 export type CalibrationLedger={version:1;checkedAt:string;source:{closedTrades:number;withR:number;forwardRows:number;forwardFilled24h:number;splitAt:{paper:string|null;forward:string|null}};fields:CalibrationField[];note:string};
-export type PaperObs={at:number;r:number;reason:Record<string,unknown>|null;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined;venue:string;exit:string};
-export type ForwardObs={at:number;day:number;h4:number|null;bucket:string;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined};
+export type PaperObs={at:number;r:number;reason:Record<string,unknown>|null;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined;shadow:ShadowStamp|undefined;venue:string;exit:string};
+export type ForwardObs={at:number;day:number;h4:number|null;bucket:string;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined;shadow:ShadowStamp|undefined};
 const str=(v:unknown)=>typeof v==='string'&&v.trim()?v.trim():null;
 const path=(o:Record<string,unknown>|null,...keys:string[])=>{let cur:unknown=o;for(const k of keys){if(!cur||typeof cur!=='object')return null;cur=(cur as Record<string,unknown>)[k];}return str(cur);};
 const jevField=<O extends {jev:JevStamp|undefined}>(qid:JevQuestionId,file:string):FieldDef<O>=>({id:`jev.${qid}`,label:`Jev ${JEV_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-shadow-v2',side:o=>jevSideLabel(qid,o.jev)});
-const CATALYST_IDS=['listingNews','supplyEvent','exploitOrOutage','regulatoryNegative','narrativeOnly'] as const;
-const CATALYST_LABELS:Record<typeof CATALYST_IDS[number],string>={listingNews:'listing news',supplyEvent:'supply event',exploitOrOutage:'exploit or outage',regulatoryNegative:'regulatory negative',narrativeOnly:'narrative only'};
-/** `no headlines` is a real side: the coin had no coin-tagged news in the window. Unavailable and unstamped are informational. */
-export function catalystSideLabel(qid:typeof CATALYST_IDS[number],c:CatalystStamp|null|undefined){
- if(!c)return 'NOT_RECORDED';
- if(c.status==='no-headlines')return 'no headlines';
- const p=c[qid];
- if(c.status!=='scored'||typeof p!=='number')return 'Catalyst unavailable';
- return `${CATALYST_LABELS[qid]} ${p>=JEV_YES?'≥':'<'}${JEV_YES.toFixed(2)}`;
-}
 export function catalystFromReason(reason:string|null|undefined):CatalystStamp|undefined{
  const c=reasonJson(reason)?.catalyst as CatalystStamp|undefined;
  return c&&typeof c==='object'&&typeof c.rule==='string'&&['scored','no-headlines','unavailable'].includes(c.status)?c:undefined;
 }
+export function shadowFromReason(reason:string|null|undefined):ShadowStamp|undefined{
+ const s=reasonJson(reason)?.shadow as ShadowStamp|undefined;
+ return s&&typeof s==='object'&&typeof s.weightsVersion==='string'&&typeof s.score==='number'?s:undefined;
+}
 const catalystField=<O extends {catalyst:CatalystStamp|undefined}>(qid:typeof CATALYST_IDS[number],file:string):FieldDef<O>=>({id:`catalyst.${qid}`,label:`Catalyst ${CATALYST_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-catalyst-v2',side:o=>catalystSideLabel(qid,o.catalyst)});
+/** Graded only against the weights version current at calibration time; stamps from older weights are shown as informational. */
+const shadowField=<O extends {shadow:ShadowStamp|undefined}>(file:string,version:()=>string|null):FieldDef<O>=>({id:'shadow.sign',label:'Composite shadow score, sign',file,ruleVersion:'shadow-score-v1',side:o=>shadowSideLabel(o.shadow,version())});
+let currentShadowVersion:string|null=null;
 /** Paper-ledger fields, read from the createdReason JSON saved with each entry. Adding a field is one line. */
 export const PAPER_FIELDS:FieldDef<PaperObs>[]=[
  {id:'btcRegime.state',label:'BTC daily trend at entry',file:'lib/admin/cryptoPaperMarket.ts',ruleVersion:'btc-regime-v1',side:o=>path(o.reason,'btcRegime','state')??'NOT_RECORDED'},
@@ -53,12 +52,14 @@ export const PAPER_FIELDS:FieldDef<PaperObs>[]=[
  {id:'venue',label:'Venue',file:'lib/admin/cryptoPaperMarket.ts',ruleVersion:'venue-v1',side:o=>o.venue},
  ...JEV_QUESTION_IDS.map(qid=>jevField<PaperObs>(qid,'lib/admin/cryptoPaperMarket.ts')),
  ...CATALYST_IDS.map(qid=>catalystField<PaperObs>(qid,'lib/admin/cryptoPaperMarket.ts')),
+ shadowField<PaperObs>('lib/admin/cryptoShadowScore.ts',()=>currentShadowVersion),
 ];
 /** Forward-score fields, read from the saved forward book. 24h mark is the outcome; 4h is shown beside it. */
 export const FORWARD_FIELDS:FieldDef<ForwardObs>[]=[
  {id:'forward.bucket',label:'Forward bucket',file:'lib/admin/cryptoVolumeMomentum.ts',ruleVersion:'momentum-v1',side:o=>o.bucket},
  ...JEV_QUESTION_IDS.map(qid=>jevField<ForwardObs>(qid,'lib/admin/cryptoVolumeMomentum.ts')),
  ...CATALYST_IDS.map(qid=>catalystField<ForwardObs>(qid,'lib/admin/cryptoVolumeMomentum.ts')),
+ shadowField<ForwardObs>('lib/admin/cryptoShadowScore.ts',()=>currentShadowVersion),
 ];
 export function reasonJson(reason:string|null|undefined):Record<string,unknown>|null{
  const i=reason?.indexOf('{')??-1;if(!reason||i<0)return null;
@@ -70,7 +71,7 @@ export function paperObservations(rows:PaperSourceRow[]):PaperObs[]{
  for(const row of rows){
   const r=row.r_multiple==null?NaN:Number(row.r_multiple),at=new Date(row.entry_time).getTime();
   if(!Number.isFinite(r)||!Number.isFinite(at))continue;
-  out.push({at,r,reason:reasonJson(row.created_reason),jev:jevFromReason(row.created_reason),catalyst:catalystFromReason(row.created_reason),venue:row.instrument_type.startsWith('okx-usd-v1:')?'OKX USDT→USD':row.instrument_type.startsWith('coinbase:')?'Coinbase USD':'OTHER',exit:row.exit_reason});
+  out.push({at,r,reason:reasonJson(row.created_reason),jev:jevFromReason(row.created_reason),catalyst:catalystFromReason(row.created_reason),shadow:shadowFromReason(row.created_reason),venue:row.instrument_type.startsWith('okx-usd-v1:')?'OKX USDT→USD':row.instrument_type.startsWith('coinbase:')?'Coinbase USD':'OTHER',exit:row.exit_reason});
  }
  return out;
 }
@@ -79,15 +80,17 @@ export function forwardObservations(rows:ForwardRow[]):ForwardObs[]{
  for(const row of rows){
   const at=Date.parse(row.signalAt);
   if(row.day.status!=='filled'||!Number.isFinite(at))continue;
-  out.push({at,day:row.day.changePct,h4:row.next4h.status==='filled'?row.next4h.changePct:null,bucket:row.bucket,jev:row.jev,catalyst:row.catalyst});
+  out.push({at,day:row.day.changePct,h4:row.next4h.status==='filled'?row.next4h.changePct:null,bucket:row.bucket,jev:row.jev,catalyst:row.catalyst,shadow:row.shadow});
  }
  return out;
 }
 /** Crypto wrapper over the shared core; kept so existing callers and tests keep one import. */
 export function calibrateField<O extends {at:number}>(def:FieldDef<O>,obs:O[],value:(o:O)=>number,unit:'R'|'%',outcome:CalibrationField['outcome']):CalibrationField{
- return coreCalibrateField(def,obs,value,unit,outcome);
+ return coreCalibrateField(def,obs,value,unit,outcome,new Set([...INFORMATIONAL_SIDES,'Shadow older weights']));
 }
-export function buildCalibration(paper:PaperObs[],forward:ForwardObs[],meta:{closedTrades:number;forwardRows:number},now=Date.now()):CalibrationLedger{
+/** `shadowVersion` is the weights version in force when the rows were stamped; stamps from other versions are not graded. */
+export function buildCalibration(paper:PaperObs[],forward:ForwardObs[],meta:{closedTrades:number;forwardRows:number;shadowVersion?:string|null},now=Date.now()):CalibrationLedger{
+ currentShadowVersion=meta.shadowVersion??null;
  const fields=[
   ...PAPER_FIELDS.map(def=>calibrateField(def,paper,o=>o.r,'R','paperR')),
   ...FORWARD_FIELDS.map(def=>calibrateField(def,forward,o=>o.day,'%','forward24h')),
@@ -127,15 +130,17 @@ export async function loadCalibrationInputs(redis:Pick<Redis,'get'>){
  const book=await redis.get<ForwardBook>(FORWARD_BOOK_KEY);
  return {rows,forwardRows:book?.rows??[]};
 }
-/** Recomputes the ledger from saved rows, files any due proposals, and persists both. */
+/** Recomputes the ledger from saved rows, files any due proposals, derives shadow weights from confirmed sides, and persists all three. */
 export async function runCryptoCalibration(redis:Redis,now=Date.now()){
  const {rows,forwardRows}=await loadCalibrationInputs(redis);
- const ledger=buildCalibration(paperObservations(rows),forwardObservations(forwardRows),{closedTrades:rows.length,forwardRows:forwardRows.length},now);
+ const previous=await redis.get<{version:string}>(SHADOW_WEIGHTS_KEY).catch(()=>null);
+ const ledger=buildCalibration(paperObservations(rows),forwardObservations(forwardRows),{closedTrades:rows.length,forwardRows:forwardRows.length,shadowVersion:previous?.version??null},now);
  const [recs,filed]=await Promise.all([loadRecommendations(redis),redis.get<Record<string,string>>(CALIBRATION_FILED_KEY)]);
  const proposals=proposeFromLedger(ledger,recs,filed??{},now);
  if(proposals.filedNow.length){await saveRecommendations(redis,proposals.rows);await redis.set(CALIBRATION_FILED_KEY,proposals.filed);}
  await redis.set(CALIBRATION_KEY,ledger,{ex:CAL.ttlSec});
- return {ledger,filedNow:proposals.filedNow,skippedByCap:proposals.skippedByCap};
+ const shadow=await persistShadowWeights(redis,ledger,now);
+ return {ledger,filedNow:proposals.filedNow,skippedByCap:proposals.skippedByCap,shadow};
 }
 /** Once per UTC day from the cron; a second call the same day reads the saved ledger. */
 export async function runDailyCalibration(redis:Redis,now=Date.now()){

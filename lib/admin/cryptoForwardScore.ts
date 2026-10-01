@@ -1,6 +1,7 @@
 import type {Redis} from '@upstash/redis';
 import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
+import type {ShadowStamp} from './cryptoShadowScore';
 import {JEV_MIN_SIDE,JEV_QUESTION_IDS,jevCoverage,jevScored,jevSideLabel,type JevCoverage} from './cryptoJevEvidence';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 export const MOMENTUM_SCAN_KEY='admin:crypto-markets:momentum-volume:v1',EARLY_SCAN_KEY='admin:crypto-markets:early-momentum:v1';
@@ -10,7 +11,7 @@ const BOOK=FORWARD_BOOK_KEY;
 const F=4*3600000,DAY=24*3600000;
 export type ForwardBucket='VOLUME_WATCH'|'EXTENDED'|'EARLY_WATCH';
 export type ForwardMark={status:'waiting'}|{status:'missed'}|{status:'filled';price:number;at:string;changePct:number};
-export type ForwardRow={id:string;symbol:string;bucket:ForwardBucket;signalAt:string;signalPrice:number;next4h:ForwardMark;day:ForwardMark;jev?:JevStamp;catalyst?:CatalystStamp};
+export type ForwardRow={id:string;symbol:string;bucket:ForwardBucket;signalAt:string;signalPrice:number;next4h:ForwardMark;day:ForwardMark;jev?:JevStamp;catalyst?:CatalystStamp;shadow?:ShadowStamp};
 export type ForwardBook={version:1;updatedAt:string;rows:ForwardRow[]};
 type ScanLike=Pick<MomentumScan,'rows'>|null;
 const waiting=():ForwardMark=>({status:'waiting'});
@@ -43,7 +44,7 @@ export function applyForwardScores(rows:ForwardRow[],fourHour:ScanLike,early:Sca
    const key=`${row.stage}|${row.id}|${row.asOf}`;
    if(seen.has(key))continue;
    seen.add(key);
-   next.push({id:row.id,symbol:row.symbol||row.id,bucket:row.stage as ForwardBucket,signalAt:row.asOf,signalPrice:row.close,next4h:waiting(),day:waiting(),...(row.jev?{jev:row.jev}:{}),...(row.catalyst?{catalyst:row.catalyst}:{})});
+   next.push({id:row.id,symbol:row.symbol||row.id,bucket:row.stage as ForwardBucket,signalAt:row.asOf,signalPrice:row.close,next4h:waiting(),day:waiting(),...(row.jev?{jev:row.jev}:{}),...(row.catalyst?{catalyst:row.catalyst}:{}),...(row.shadow?{shadow:row.shadow}:{})});
   }
  };
  enroll(fourHour,['VOLUME_WATCH','EXTENDED']);
@@ -58,6 +59,9 @@ export function applyForwardScores(rows:ForwardRow[],fourHour:ScanLike,early:Sca
   if(jevNow&&(!row.jev||(row.jev.status==='unavailable'&&jevNow.rule!==row.jev.rule)))row.jev=jevNow;
   const catNow=same.find(r=>r.catalyst)?.catalyst;
   if(catNow&&(!row.catalyst||(row.catalyst.status==='unavailable'&&catNow.rule!==row.catalyst.rule)))row.catalyst=catNow;
+  // The shadow stamp is fixed at signal time; only a missing one is backfilled, never replaced.
+  const shadowNow=same.find(r=>r.shadow)?.shadow;
+  if(shadowNow&&!row.shadow)row.shadow=shadowNow;
   row.next4h=fill(row.next4h,row.signalPrice,due4h(signal),[q4.get(row.id)]);
   row.day=fill(row.day,row.signalPrice,signal+DAY,[q4.get(row.id),q1.get(row.id)]);
  }
