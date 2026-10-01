@@ -20,11 +20,16 @@ const cryptoScope = new Set([
   '/api/admin/crypto-markets/forward-score', '/api/admin/crypto-markets/recommendations',
   '/api/admin/crypto-markets/calibration', '/api/admin/crypto-markets/learning',
 ]);
+/** Owner-approved exceptions: the two Jev evidence pages (news verification, transcript audit) and only the routes they call. */
+const jevEquityScope = new Set([
+  '/admin/equity-research', '/api/admin/equity-research', '/api/admin/equity-news-jev',
+  '/admin/transcripts', '/api/admin/transcripts',
+]);
 export function discoveryOnlyAction(path: string): 'allow' | 'pause_api' | 'skip_job' | 'pause_page' {
   if (!adminDiscoveryOnly()) return 'allow';
   path = path.replace(/\/+$/, '') || '/';
   if (background.has(path)) return 'skip_job';
-  if (cryptoScope.has(path)) return 'allow';
+  if (cryptoScope.has(path) || jevEquityScope.has(path)) return 'allow';
   if (path === '/api/admin' || path.startsWith('/api/admin/') || path.startsWith('/api/operator/engine/')) return 'pause_api';
   if (path === '/admin/crypto-markets' || path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';
   if (path === '/admin' || path.startsWith('/admin/')) return 'pause_page';
