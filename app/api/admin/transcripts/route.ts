@@ -18,6 +18,7 @@ import {
   getLatestSummary,
   listQuartersForSymbol,
 } from '@/lib/earnings/transcripts';
+import { auditAggregate, auditLatestSummary, getAudit } from '@/lib/admin/transcriptJevAudit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,10 @@ export async function GET(req: NextRequest) {
   try {
     if (quarter) {
       const summary = await getLatestSummary(symbol, quarter);
-      return NextResponse.json({ ok: true, summary });
+      // Audit read is best-effort: a missing audit never hides the summary.
+      const audit = summary?.id ? await getAudit(summary.id).catch(() => null) : null;
+      const aggregate = await auditAggregate().catch(() => null);
+      return NextResponse.json({ ok: true, summary, audit, aggregate });
     }
     const quarters = await listQuartersForSymbol(symbol);
     return NextResponse.json({ ok: true, quarters });
@@ -59,6 +63,11 @@ export async function POST(req: NextRequest) {
     }
     if (action === 'summarise' || action === 'both') {
       out.summarise = await summariseTranscript(body.symbol, body.quarter);
+      // Jev reads the same transcript buffer and checks each claim. Evidence only; the summary is stored regardless.
+      if ((out.summarise as { ok: boolean }).ok) out.audit = await auditLatestSummary(body.symbol, body.quarter);
+    }
+    if (action === 'audit') {
+      out.audit = await auditLatestSummary(body.symbol, body.quarter);
     }
     return NextResponse.json({ ok: true, ...out });
   } catch (e: unknown) {

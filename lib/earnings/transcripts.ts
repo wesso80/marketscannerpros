@@ -91,6 +91,18 @@ Strict rules:
   explicitly references results vs expectations; otherwise 'unknown'.
 - Output STRICT JSON matching the supplied schema. No prose, no markdown.`;
 
+export const TRANSCRIPT_MAX_CHARS = 60_000;
+/** The exact text the summariser reads: whole segments in order until the cap. The audit uses the same buffer so both see the same transcript. */
+export function buildTranscriptBuffer(segments: TranscriptSegment[], maxChars = TRANSCRIPT_MAX_CHARS): string {
+  let buf = '';
+  for (const s of segments) {
+    const block = `[${s.speaker} — ${s.title}]\n${s.content}\n\n`;
+    if (buf.length + block.length > maxChars) break;
+    buf += block;
+  }
+  return buf;
+}
+
 export async function summariseTranscript(symbol: string, quarter: string): Promise<{
   ok: boolean;
   reason?: string;
@@ -106,15 +118,7 @@ export async function summariseTranscript(symbol: string, quarter: string): Prom
   );
   if (rows.length === 0) return { ok: false, reason: 'no-transcript' };
   const segments = rows[0].transcript;
-
-  // Build a compact text input (cap total chars to keep token use reasonable)
-  const MAX_CHARS = 60_000;
-  let buf = '';
-  for (const s of segments) {
-    const block = `[${s.speaker} — ${s.title}]\n${s.content}\n\n`;
-    if (buf.length + block.length > MAX_CHARS) break;
-    buf += block;
-  }
+  const buf = buildTranscriptBuffer(segments);
 
   const client = new OpenAI({ apiKey });
   const completion = await client.chat.completions.create({
@@ -158,6 +162,7 @@ export async function summariseTranscript(symbol: string, quarter: string): Prom
 }
 
 export interface StoredSummary {
+  id?: number;
   symbol: string;
   quarter: string;
   version: number;
@@ -173,12 +178,12 @@ export interface StoredSummary {
 
 export async function getLatestSummary(symbol: string, quarter: string): Promise<StoredSummary | null> {
   const rows = await q<{
-    symbol: string; quarter: string; version: number; model: string;
+    id: number; symbol: string; quarter: string; version: number; model: string;
     summary: TranscriptSummary; tone: string | null;
     surprise_direction: string | null; generated_at: Date;
     fetched_at: Date | null; word_count: number | null; speaker_count: number | null;
   }>(
-    `SELECT s.symbol, s.quarter, s.version, s.model, s.summary, s.tone,
+    `SELECT s.id, s.symbol, s.quarter, s.version, s.model, s.summary, s.tone,
             s.surprise_direction, s.generated_at,
             t.fetched_at, t.word_count, t.speaker_count
        FROM earnings_transcript_summaries s
@@ -191,6 +196,7 @@ export async function getLatestSummary(symbol: string, quarter: string): Promise
   if (rows.length === 0) return null;
   const r = rows[0];
   return {
+    id: Number(r.id),
     symbol: r.symbol,
     quarter: r.quarter,
     version: r.version,

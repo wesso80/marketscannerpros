@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { AuditAggregate, TranscriptAudit } from '@/lib/admin/transcriptJevAudit';
 
 interface Summary {
   oneLiner: string;
@@ -51,6 +52,8 @@ export default function TranscriptsPage() {
   const [symbol, setSymbol] = useState('AAPL');
   const [quarter, setQuarter] = useState('2025Q4');
   const [stored, setStored] = useState<StoredSummary | null>(null);
+  const [audit, setAudit] = useState<TranscriptAudit | null>(null);
+  const [aggregate, setAggregate] = useState<AuditAggregate | null>(null);
   const [quarters, setQuarters] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -65,6 +68,8 @@ export default function TranscriptsPage() {
       const j = await res.json();
       if (!res.ok || !j.ok) throw new Error(j?.error ?? `HTTP ${res.status}`);
       setStored(j.summary as StoredSummary | null);
+      setAudit((j.audit as TranscriptAudit | null) ?? null);
+      setAggregate((j.aggregate as AuditAggregate | null) ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -81,7 +86,7 @@ export default function TranscriptsPage() {
 
   useEffect(() => { fetchSummary(); fetchQuarters(); }, [fetchSummary, fetchQuarters]);
 
-  const run = async (action: 'ingest' | 'summarise' | 'both') => {
+  const run = async (action: 'ingest' | 'summarise' | 'both' | 'audit') => {
     setBusy(true); setError(null); setStatus(null);
     try {
       const res = await fetch('/api/admin/transcripts', {
@@ -94,6 +99,7 @@ export default function TranscriptsPage() {
       const parts: string[] = [];
       if (j.ingest) parts.push(`ingest: ${j.ingest.ok ? `${j.ingest.segments ?? 0} segments` : j.ingest.reason}`);
       if (j.summarise) parts.push(`summary: ${j.summarise.ok ? `v${j.summarise.version}` : j.summarise.reason}`);
+      if (j.audit) parts.push(`audit: ${j.audit.ok ? `${j.audit.audit?.claimsUnsupported ?? 0} of ${j.audit.audit?.claimsTotal ?? 0} claims unsupported` : j.audit.reason}`);
       setStatus(parts.join(' · '));
       await Promise.all([fetchSummary(), fetchQuarters()]);
     } catch (e: unknown) {
@@ -128,6 +134,10 @@ export default function TranscriptsPage() {
         <button onClick={() => run('summarise')} disabled={busy}
           style={{ background: '#1F2937', color: '#E5E7EB', border: '1px solid #374151', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}>
           Re-summarise
+        </button>
+        <button onClick={() => run('audit')} disabled={busy || !stored}
+          style={{ background: '#1F2937', color: '#E5E7EB', border: '1px solid #374151', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}>
+          Audit with Jev
         </button>
         <button onClick={fetchSummary} disabled={loading}
           style={{ background: '#1F2937', color: '#E5E7EB', border: '1px solid #374151', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}>
@@ -193,13 +203,58 @@ export default function TranscriptsPage() {
           <SummarySection title="Key themes" items={stored.summary.keyThemes} accent="#10B981" />
           <SummarySection title="Guidance changes" items={stored.summary.guidanceChanges} accent="#3B82F6" emptyHint="Not mentioned in transcript" />
           <SummarySection title="Red flags" items={stored.summary.redFlags} accent="#F87171" emptyHint="None flagged" />
+          <AuditBlock audit={audit} summaryVersion={stored.version} />
+        </div>
+      )}
+
+      {aggregate && aggregate.audits > 0 && (
+        <div style={{ marginTop: 16, background: '#0B1220', border: '1px solid #1F2937', borderRadius: 10, padding: 16, fontSize: 12, color: '#9CA3AF' }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Audit record across all summaries · counts, not verdicts</div>
+          {aggregate.scored} audited ({aggregate.unavailable} unavailable) · {aggregate.unsupportedClaims} of {aggregate.claims} claims under 0.50 support
+          {' · '}themes {aggregate.unsupportedByKind.theme.unsupported}/{aggregate.unsupportedByKind.theme.claims} · guidance {aggregate.unsupportedByKind.guidance.unsupported}/{aggregate.unsupportedByKind.guidance.claims} · red flags {aggregate.unsupportedByKind.redFlag.unsupported}/{aggregate.unsupportedByKind.redFlag.claims}
+          {' · '}guidance listed with none stated: {aggregate.guidanceInvented} · beat/miss with none stated: {aggregate.surpriseInvented} · tone mismatches: {aggregate.toneMismatch}
+          {aggregate.meanSupport !== null && ` · mean support ${aggregate.meanSupport.toFixed(2)}`}
         </div>
       )}
 
       <div style={{ marginTop: 24, fontSize: 11, color: '#6B7280', textAlign: 'center' }}>
-        Source: Alpha Vantage EARNINGS_CALL_TRANSCRIPT · summarised by gpt-4.1 ·{' '}
+        Source: Alpha Vantage EARNINGS_CALL_TRANSCRIPT · summarised by gpt-4.1 · audited by TypeSafe Jev against the same transcript text ·{' '}
         <Link href="/admin" style={{ color: 'var(--msp-bull)' }}>Back to admin</Link>
       </div>
+    </div>
+  );
+}
+
+function AuditBlock({ audit, summaryVersion }: { audit: TranscriptAudit | null; summaryVersion: number }) {
+  const p = (n: number | null) => (n === null ? '—' : n.toFixed(2));
+  const colour = (n: number | null) => (n === null ? '#6B7280' : n >= 0.8 ? 'var(--msp-bull)' : n >= 0.5 ? 'var(--msp-warn)' : 'var(--msp-bear)');
+  return (
+    <div style={{ marginTop: 20, borderTop: '1px solid #1F2937', paddingTop: 14 }}>
+      <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Jev audit · does the transcript support each line above?</div>
+      {!audit && <div style={{ fontSize: 13, color: '#6B7280', fontStyle: 'italic' }}>No audit for v{summaryVersion} yet. Re-summarise runs one automatically, or use Audit with Jev.</div>}
+      {audit && audit.version !== summaryVersion && <div style={{ fontSize: 12, color: 'var(--msp-warn)', marginBottom: 6 }}>Audit shown is for summary v{audit.version}; current summary is v{summaryVersion}.</div>}
+      {audit && audit.status !== 'scored' && <div style={{ fontSize: 13, color: 'var(--msp-warn)' }}>Audit unavailable: {audit.reason ?? 'reason not recorded'} · {new Date(audit.checkedAt).toLocaleString()}</div>}
+      {audit && audit.status === 'scored' && (
+        <>
+          <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>
+            {audit.claimsUnsupported} of {audit.claimsTotal} claims under 0.50 support · min {p(audit.minSupport)} · mean {p(audit.meanSupport)}
+            {' · '}guidance stated <span style={{ color: colour(audit.guidanceStated) }}>{p(audit.guidanceStated)}</span>{audit.guidanceInvented && <span style={{ color: 'var(--msp-bear)' }}> · guidance listed but not stated</span>}
+            {' · '}beat/miss stated <span style={{ color: colour(audit.surpriseStated) }}>{p(audit.surpriseStated)}</span>{audit.surpriseInvented && <span style={{ color: 'var(--msp-bear)' }}> · surprise given but not stated</span>}
+            {' · '}tone matches <span style={{ color: colour(audit.toneMatches) }}>{p(audit.toneMatches)}</span>
+            {' · '}{audit.model} · {audit.transcriptChars?.toLocaleString()} chars read · {new Date(audit.checkedAt).toLocaleString()}
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+            {audit.claims.map((c) => (
+              <li key={c.id} style={{ marginBottom: 4 }}>
+                <span style={{ color: colour(c.supported), fontVariantNumeric: 'tabular-nums', marginRight: 8 }}>{p(c.supported)}</span>
+                <span style={{ color: '#6B7280', marginRight: 6 }}>{c.kind}</span>
+                <span style={{ color: c.supported !== null && c.supported < 0.5 ? '#FCA5A5' : '#D1D5DB' }}>{c.text}</span>
+              </li>
+            ))}
+          </ul>
+          <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>Each number is Jev&apos;s probability that the transcript supports that line. Low support is shown, never auto-corrected.</div>
+        </>
+      )}
     </div>
   );
 }
