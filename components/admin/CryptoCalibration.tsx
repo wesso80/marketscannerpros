@@ -20,6 +20,40 @@ function FieldTable({field}:{field:CalibrationField}){
   </tbody></table>
  </div>;
 }
+const RANK:Record<CalibrationSide['status'],number>={confirmed:5,contradicted:4,directional:3,flat:2,collecting:1};
+/** One line per field: how much is graded and the side with the most rows. Click to open the full table. */
+function Overview({title,fields}:{title:string;fields:CalibrationField[]}){
+ const [open,setOpen]=useState<Record<string,boolean>>({});
+ const rows=fields.map(f=>{
+  const graded=f.sides.filter(s=>!s.informational);
+  const lead=[...graded].sort((a,b)=>b.n-a.n)[0]??null;
+  const status=graded.reduce<CalibrationSide['status']|null>((best,s)=>!best||RANK[s.status]>RANK[best]?s.status:best,null);
+  return {f,graded,lead,status,gradedRows:graded.reduce((s,x)=>s+x.n,0)};
+ });
+ const anyGraded=rows.some(r=>r.gradedRows>0);
+ return <div className="space-y-1 rounded border border-sky-800 p-3">
+  <h3 className="text-sm font-semibold">{title}</h3>
+  {!anyGraded&&<p className="text-xs text-slate-400">No graded rows yet for this outcome. Fields appear here as soon as one side has a recorded value.</p>}
+  {anyGraded&&<div className="overflow-auto"><table className="w-full min-w-[820px] text-left text-sm"><thead><tr>{['Field','Graded rows','Sides','Largest side','n','Lift','Status',''].map((h,i)=><th className="p-2" key={i}>{h}</th>)}</tr></thead><tbody>
+   {rows.map(({f,graded,lead,status,gradedRows})=><FragmentRow key={f.id} f={f} graded={graded} lead={lead} status={status} gradedRows={gradedRows} open={!!open[f.id]} toggle={()=>setOpen(o=>({...o,[f.id]:!o[f.id]}))}/>)}
+  </tbody></table></div>}
+ </div>;
+}
+function FragmentRow({f,graded,lead,status,gradedRows,open,toggle}:{f:CalibrationField;graded:CalibrationSide[];lead:CalibrationSide|null;status:CalibrationSide['status']|null;gradedRows:number;open:boolean;toggle:()=>void}){
+ return <>
+  <tr className="border-t border-slate-700">
+   <td className="p-2">{f.label}<div className="text-xs text-slate-500">{f.id} · {f.ruleVersion}</div></td>
+   <td className="p-2">{gradedRows}{gradedRows>0&&gradedRows<30?<span className="text-amber-300"> · thin</span>:null}</td>
+   <td className="p-2">{graded.length}</td>
+   <td className="p-2">{lead?.side??'—'}</td>
+   <td className="p-2">{lead?.n??'—'}</td>
+   <td className={`p-2 ${lead?.lift==null?'':lead.lift>0?'text-emerald-300':'text-red-300'}`}>{lead?fmt(lead.lift,f.unit):'—'}</td>
+   <td className={`p-2 ${status?STATUS[status]:''}`}>{status??'—'}</td>
+   <td className="p-2"><button type="button" aria-expanded={open} onClick={toggle} className="rounded border border-slate-600 px-2 py-0.5 text-xs">{open?'Hide':'Sides'}</button></td>
+  </tr>
+  {open&&<tr className="border-t border-slate-800 bg-slate-900/40"><td colSpan={8} className="p-2"><FieldTable field={f}/></td></tr>}
+ </>;
+}
 export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:number}){
  const [ledger,setLedger]=useState<CalibrationLedger|null>(null),[stale,setStale]=useState(false),[saved,setSaved]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState(false),[filed,setFiled]=useState<string[]|null>(null);
  async function load(){
@@ -35,7 +69,6 @@ export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:nu
   }catch(e){setError(e instanceof Error?e.message:'Calibration unavailable');}finally{setBusy(false);}
  }
  const paper=ledger?.fields.filter(f=>f.outcome==='paperR')??[],forward=ledger?.fields.filter(f=>f.outcome==='forward24h')??[];
- const graded=(fields:CalibrationField[])=>fields.filter(f=>f.sides.some(s=>!s.informational));
  return <section aria-label="Calibration ledger" className="space-y-3 rounded border border-slate-600 p-4">
   <h2 className="text-xl">Calibration ledger · evidence only</h2>
   <p className="text-sm text-slate-300">Every recorded evidence field against the outcome already stored beside it: R on closed paper trades, and the 24h mark on saved forward rows. Lift is the side's mean minus the overall mean on the same rows. A side is <span className="text-emerald-300">confirmed</span> only when both time halves agree on the sign of the lift with at least 15 rows each and the lift clears 0.25R or 1%. Confirmed sides file one text recommendation (at most three a week); a person decides what to do with it. Nothing here changes a rule, opens a trade, or calls Jev.</p>
@@ -48,8 +81,8 @@ export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:nu
   {!ledger&&!error&&<p>{saved?'Loading saved calibration…':'No saved calibration yet. The daily cron writes one, or recompute now.'}</p>}
   {ledger&&<>
    <p className="text-sm">{ledger.note}</p>
-   {!!graded(paper).length&&<div className="space-y-1 rounded border border-sky-800 p-3"><h3 className="text-sm font-semibold">Paper ledger · outcome R per closed trade</h3>{paper.map(f=><FieldTable key={f.id} field={f}/>)}</div>}
-   {!!graded(forward).length&&<div className="space-y-1 rounded border border-sky-800 p-3"><h3 className="text-sm font-semibold">Forward score · outcome 24h move after the signal</h3>{forward.map(f=><FieldTable key={f.id} field={f}/>)}</div>}
+   <Overview title="Paper ledger · outcome R per closed trade" fields={paper}/>
+   <Overview title="Forward score · outcome 24h move after the signal" fields={forward}/>
   </>}
  </section>;
 }

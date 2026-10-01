@@ -42,6 +42,18 @@ it('keeps the Jev probabilities on the forward row and backfills them onto an ea
  expect(filled[0].jev).toMatchObject({status:'scored',chase:.2});
  expect(forwardHeadline(filled)).toBe('1 saved. Resolved 0. No win rate.');
 });
+it('an unavailable stamp on a saved row is superseded when the same signal is re-stamped under a newer rule',()=>{
+ const oldCat={rule:'jev-catalyst-v1',status:'unavailable' as const,source:'alphavantage:NEWS_SENTIMENT',windowHours:48,headlines:0,newestAt:null,listingNews:null,supplyEvent:null,exploitOrOutage:null,regulatoryNegative:null,narrativeOnly:null,model:null,checkedAt:at,reason:'av-no-data'};
+ const newCat={...oldCat,rule:'jev-catalyst-v2',status:'no-headlines' as const,source:'coingecko:news',reason:undefined};
+ const seeded=applyForwardScores([],{rows:[{id:'ark',symbol:'ARK',stage:'VOLUME_WATCH',close:1,asOf:at,catalyst:oldCat as never}]},null);
+ expect(seeded[0].catalyst?.rule).toBe('jev-catalyst-v1');
+ const restamped=applyForwardScores(seeded,{rows:[{id:'ark',symbol:'ARK',stage:'VOLUME_WATCH',close:1,asOf:at,catalyst:newCat as never}]},null);
+ expect(restamped[0].catalyst).toMatchObject({rule:'jev-catalyst-v2',status:'no-headlines'});
+ // A scored stamp is never overwritten, even by a newer rule.
+ const scored={...newCat,status:'scored' as const,listingNews:.1};
+ const keep=applyForwardScores(restamped.map(r=>({...r,catalyst:scored as never})),{rows:[{id:'ark',symbol:'ARK',stage:'VOLUME_WATCH',close:1,asOf:at,catalyst:{...scored,rule:'jev-catalyst-v3'} as never}]},null);
+ expect(keep[0].catalyst?.rule).toBe('jev-catalyst-v2');
+});
 it('marks a checkpoint missed when the saved close has already passed it',()=>{
  const seeded=applyForwardScores([],{rows:[{id:'mew',symbol:'MEW',stage:'EXTENDED',close:1,asOf:'2026-09-30T20:00:00.000Z'}]},null);
  const missed=applyForwardScores(seeded,{rows:[{id:'mew',symbol:'MEW',stage:'NO_SIGNAL',close:1.1,asOf:'2026-10-01T04:00:00.000Z'}]},null);
