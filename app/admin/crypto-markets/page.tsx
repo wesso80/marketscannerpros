@@ -42,12 +42,14 @@ export default function CryptoMarketsPage() {
   const [base,setBase] = useState<BaseReview|null>(null);
   const [chart,setChart] = useState<MomentumChart|null>(null);
   const [analyzing,setAnalyzing] = useState('');
-  const [researchOpen,setResearchOpen] = useState(false);
+  const [reviewNotice,setReviewNotice]=useState('');
+  const [researchOpen,setResearchOpen]=useState(false);
   async function analyze(coinId:string) {
-    setTab('watchlists');setResearchOpen(false);setAnalyzing(coinId);setError('');setReview(null);setChart(null);setBase(null);
+    setTab('watchlists');setResearchOpen(false);setAnalyzing(coinId);setError('');setReviewNotice('');setReview(null);setChart(null);setBase(null);
     try {
       const res=await fetch('/api/admin/crypto-discovery/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coinId})});
-      const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setNow(Date.now());
+      const body=await res.json();if(!res.ok) throw new Error(body.error||'Analysis failed');setReview(body.review);setChart(body.chart??null);setBase(body.base??null);setReviewNotice(body.notice??'');setNow(Date.now());
+      requestAnimationFrame(()=>document.getElementById('crypto-review')?.scrollIntoView({behavior:'smooth',block:'start'}));
     } catch(e) {setError(e instanceof Error?e.message:'Analysis failed');}
     finally {setAnalyzing('');}
   }
@@ -104,6 +106,11 @@ export default function CryptoMarketsPage() {
     </>}
     {tab==='watchlists' && <>
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
+    <div id="crypto-review">
+    {analyzing && <p role="status" className="rounded border border-slate-700 p-3">Opening chart and review for {analyzing}… up to two CoinGecko candle requests.</p>}
+    {!analyzing && error && !review && <p role="alert" className="rounded border border-amber-700 p-3 text-amber-300">Chart did not open: {error} Use <strong>Scan major exchanges</strong> to refresh discovery, then click the coin again.</p>}
+    {reviewNotice && review && <p role="status" className="rounded border border-amber-700 p-3 text-amber-300">{reviewNotice}</p>}
+    </div>
     {review && <section aria-label="Momentum candle review" className="rounded border border-slate-600 p-4 space-y-2">
       <h2 className="text-xl">{review.symbol} · {(volumeLabel&&volumeLabel!=='confirmed'?reviewStatusLabel(review).replace('_CONFIRMED',''):reviewStatusLabel(review))} · Research only</h2>
       <p>{now-Date.parse(review.reviewedAt)>15*60000?'STALE REVIEW · ':''}Reviewed {new Date(review.reviewedAt).toLocaleString()} · {review.coinId}</p>
