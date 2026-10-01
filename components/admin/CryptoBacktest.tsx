@@ -3,12 +3,13 @@ import {useEffect,useRef,useState} from 'react';
 import type {CryptoPaperStats as Stats,CryptoStatsGroup,ExitPlanComparison} from '@/lib/admin/cryptoPaperStats';
 import CryptoPaperStats,{Table} from './CryptoPaperStats';
 type Counts={markedAtHorizon?:number;filledBars?:number;tradesWithFilledBars?:number;coins:number;done:number;failed:number;signals:number;noEntry:number;overlapping:number;trades:number;openAtHorizon:number;dataGaps:number;requests:number;droppedRows:number};
-type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{endDaysAgo?:number;regimes?:{byBtc200:CryptoStatsGroup[];byBreadth:CryptoStatsGroup[];byGate:CryptoStatsGroup[];byRsRule?:CryptoStatsGroup[];byRsTercile?:CryptoStatsGroup[];byCoinTrend?:CryptoStatsGroup[]};stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison[];counts:Counts}|null};
+type JevCoverage={trades:number;withInput:number;jevScored:number;chartScored:number;chartNoBars:number;unavailable:number;unstamped:number};
+type View={state:{status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:{id:string;product:string;status:string;error?:string}[]}|null;summary:{endDaysAgo?:number;regimes?:{byBtc200:CryptoStatsGroup[];byBreadth:CryptoStatsGroup[];byGate:CryptoStatsGroup[];byRsRule?:CryptoStatsGroup[];byRsTercile?:CryptoStatsGroup[];byCoinTrend?:CryptoStatsGroup[]};stats:Stats;halves:CryptoStatsGroup[];exitPlans:ExitPlanComparison[];counts:Counts}|null;jev?:JevCoverage|null;stamp?:{stamped:number;fromCache:number;remaining:number;skipped:string|null}};
 export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:number}){
  const [windowOffset,setWindowOffset]=useState(0);
- const [data,setData]=useState<View|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [data,setData]=useState<View|null>(null),[running,setRunning]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[stamping,setStamping]=useState(false),[stampNote,setStampNote]=useState('');
  const alive=useRef(true);
- async function call(action?:'start'|'next'){
+ async function call(action?:'start'|'next'|'stamp'){
   const r=await fetch('/api/admin/crypto-markets/backtest',{method:action?'POST':'GET',cache:'no-store',...(action?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action,endDaysAgo:windowOffset})}:{})}),b=await r.json();
   if(b.state!==undefined&&alive.current)setData(b);
   if(r.status===429)return b as View;
@@ -29,7 +30,20 @@ export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:numbe
   void step();return()=>{cancelled=true;if(timer)clearTimeout(timer);};
  },[running]);
  async function start(){setBusy(true);setError('');try{await call('start');setRunning(true);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- const s=data?.state,sum=data?.summary,c=sum?.counts;
+ // Stamps 40 trades per call (cache first) until none remain or the gateway key is missing; stays on this tab only.
+ useEffect(()=>{
+  if(!stamping)return;let cancelled=false,timer:ReturnType<typeof setTimeout>|undefined;
+  const step=async()=>{
+   if(cancelled)return;if(document.hidden){setStamping(false);return;}
+   setBusy(true);setError('');
+   try{const b=await call('stamp');const s=b.stamp;if(s)setStampNote(`${s.stamped} stamped this pass (${s.fromCache} from cache) · ${s.remaining} remaining${s.skipped?` · ${s.skipped}`:''}`);
+    if(!cancelled&&s&&s.remaining>0&&!s.skipped)timer=setTimeout(()=>void step(),500);else setStamping(false);}
+   catch(e){if(!cancelled){setError((e as Error).message);setStamping(false);}}
+   finally{if(alive.current)setBusy(false);}
+  };
+  void step();return()=>{cancelled=true;if(timer)clearTimeout(timer);};
+ },[stamping]);
+ const s=data?.state,sum=data?.summary,c=sum?.counts,jev=data?.jev;
  return <section aria-label="Crypto momentum backtest" className="space-y-3 rounded border border-amber-700 p-4">
   <h2 className="text-xl">Momentum backtest · SIMULATED · RESEARCH ONLY</h2>
   <p>Replays the live 4h momentum entry rules and both exit plans on the last 90 days of Coinbase USD candles, for up to 40 coins from the saved discovery universe. It uses the same entry, exit and shadow code as the paper account, and only candles completed at each decision. Rules are the live rules; nothing is tuned to this data.</p>
@@ -55,6 +69,15 @@ export default function CryptoBacktest({refreshVersion=0}:{refreshVersion?:numbe
     <li><b>Re-test before relying on it:</b> a different 90-day window, a universe that includes delisted coins, and live spreads.</li>
    </ul></details>
    <p><a href="/api/admin/crypto-markets/backtest?format=csv" className="underline">Download backtest trades (CSV)</a></p>
+   {jev&&<div className="space-y-2 rounded border border-sky-800 p-3">
+    <h3 className="font-semibold">Jev on this backtest · evidence only</h3>
+    <p className="text-xs text-slate-400">The same chart-confirmer (clean base, strong close, volume expansion, overhead supply) and shadow questions (chase, Bitcoin headwind) the live scan asks, put to each replayed signal from the numbers captured at that candle. Answers are cached per signal for 30 days. They never change a backtest result; the Learning tab grades them against each trade's R, real exits only, with the same two-half test. There is no historical taker-flow stamp, so the flow question is not graded here.</p>
+    <p className="text-sm">{jev.trades} trades · {jev.withInput} with Jev inputs{jev.withInput<jev.trades?' (older runs saved none; start a new backtest to capture them)':''} · {jev.jevScored} shadow scored · {jev.chartScored} chart scored · {jev.chartNoBars} no bars · {jev.unavailable} unavailable · {jev.unstamped} not yet stamped</p>
+    <div className="flex flex-wrap items-center gap-3">
+     <button disabled={busy||running||!jev.withInput||(!jev.unstamped&&!stamping)} onClick={()=>setStamping(v=>!v)} className="rounded border px-3 py-2 disabled:opacity-50">{stamping?'Pause stamping':jev.unstamped?`Stamp ${Math.min(40,jev.unstamped)} of ${jev.unstamped} with Jev`:'All trades stamped'}</button>
+     {stampNote&&<span className="text-xs text-slate-400">{stampNote}</span>}
+    </div>
+   </div>}
    {!!sum.halves.length&&<Table title="Stability: first vs second half of window" rows={sum.halves} />}
    {sum.regimes&&<div className="space-y-1 rounded border border-amber-800 p-3">
     <h3 className="font-semibold">Bull/bear regime test (definitions fixed before testing)</h3>

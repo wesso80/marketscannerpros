@@ -76,7 +76,7 @@ export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:nu
    setLedger(b.ledger);setStale(false);setSaved(true);setFiled(b.filedNow??[]);
   }catch(e){setError(e instanceof Error?e.message:'Calibration unavailable');}finally{setBusy(false);}
  }
- const paper=ledger?.fields.filter(f=>f.outcome==='paperR')??[],forward=ledger?.fields.filter(f=>f.outcome==='forward24h')??[],base=ledger?.fields.filter(f=>f.outcome==='baseR')??[];
+ const paper=ledger?.fields.filter(f=>f.outcome==='paperR')??[],forward=ledger?.fields.filter(f=>f.outcome==='forward24h')??[],base=ledger?.fields.filter(f=>f.outcome==='baseR')??[],backtest=ledger?.fields.filter(f=>f.outcome==='backtestR')??[];
  return <section aria-label="Calibration ledger" className="space-y-3 rounded border border-slate-600 p-4">
   <h2 className="text-xl">Calibration ledger · evidence only</h2>
   <p className="text-sm text-slate-300">Every recorded evidence field against the outcome already stored beside it: R on closed paper trades, and the 24h mark on saved forward rows. Lift is the side's mean minus the overall mean on the same rows. A side is <span className="text-emerald-300">confirmed</span> only when both time halves agree on the sign of the lift with at least 15 rows each and the lift clears 0.25R or 1%. Confirmed sides file one text recommendation (at most three a week); a person decides what to do with it. Nothing here changes a rule, opens a trade, or calls Jev.</p>
@@ -92,6 +92,7 @@ export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:nu
    <Overview title="Paper ledger · outcome R per closed trade" fields={paper}/>
    <Overview title="Forward score · outcome 24h move after the signal" fields={forward}/>
    {!!base.length&&<Overview title="Base-breakout sleeve · outcome R per closed trade (separate ledger)" fields={base}/>}
+   {!!backtest.length&&<Overview title={`Backtest · outcome R per replayed trade with a real exit${ledger.source.backtestWindow?` · window ${ledger.source.backtestWindow}`:''} · ${ledger.source.backtestGraded??0} graded of ${ledger.source.backtestTrades??0}`} fields={backtest}/>}
   </>}
  </section>;
 }
