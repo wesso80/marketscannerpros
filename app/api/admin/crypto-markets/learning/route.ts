@@ -1,0 +1,11 @@
+import {NextResponse} from 'next/server';
+import {requireAdmin} from '@/lib/adminAuth';
+import {getRedis} from '@/lib/redis';
+import {learningStatus} from '@/lib/admin/learningStatus';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+/** Read-only health of every Jev stamp and ledger. No provider or Jev call is made here. */
+export async function GET(req:Request){
+ if(!(await requireAdmin(req)).ok)return NextResponse.json({error:'Unauthorized'},{status:403});
+ try{return NextResponse.json(await learningStatus(getRedis()));}
+ catch{return NextResponse.json({error:'Learning status unavailable'},{status:503});}
+}

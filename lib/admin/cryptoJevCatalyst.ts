@@ -24,12 +24,12 @@ export const CATALYST_QUESTIONS={
 export type CatalystQuestionId=keyof typeof CATALYST_QUESTIONS;
 export const CATALYST_QUESTION_IDS=Object.keys(CATALYST_QUESTIONS) as CatalystQuestionId[];
 export type CatalystHeadline={title:string;summary:string;source:string;publishedAt:string;relevance:number|null};
-export type CatalystStamp={rule:typeof CATALYST_RULE;status:'scored'|'no-headlines'|'unavailable';source:typeof CATALYST_SOURCE;windowHours:number;headlines:number;newestAt:string|null;listingNews:number|null;supplyEvent:number|null;exploitOrOutage:number|null;regulatoryNegative:number|null;narrativeOnly:number|null;model:string|null;checkedAt:string;reason?:string;inputTokens?:number};
+export type CatalystStamp={rule:typeof CATALYST_RULE;status:'scored'|'no-headlines'|'unavailable';source:typeof CATALYST_SOURCE;windowHours:number;headlines:number;newestAt:string|null;listingNews:number|null;supplyEvent:number|null;exploitOrOutage:number|null;regulatoryNegative:number|null;narrativeOnly:number|null;model:string|null;checkedAt:string;reason?:string;detail?:string;inputTokens?:number};
 type CatalystRow={stage:string;asOf?:string|null;symbol:string;kind?:string|null;catalyst?:CatalystStamp};
 type AvFeed={feed?:Array<{title?:unknown;summary?:unknown;source?:unknown;time_published?:unknown;ticker_sentiment?:Array<{ticker?:unknown;relevance_score?:unknown}>}>;Note?:unknown;Information?:unknown};
 const nulls={listingNews:null,supplyEvent:null,exploitOrOutage:null,regulatoryNegative:null,narrativeOnly:null};
-export function unavailableCatalyst(now:number,reason:string,headlines=0,newestAt:string|null=null):CatalystStamp{
- return {rule:CATALYST_RULE,status:'unavailable',source:CATALYST_SOURCE,windowHours:CATALYST.windowHours,headlines,newestAt,...nulls,model:null,checkedAt:new Date(now).toISOString(),reason};
+export function unavailableCatalyst(now:number,reason:string,headlines=0,newestAt:string|null=null,detail?:string):CatalystStamp{
+ return {rule:CATALYST_RULE,status:'unavailable',source:CATALYST_SOURCE,windowHours:CATALYST.windowHours,headlines,newestAt,...nulls,model:null,checkedAt:new Date(now).toISOString(),reason,...(detail?{detail}:{})};
 }
 export function noHeadlinesCatalyst(now:number):CatalystStamp{
  return {rule:CATALYST_RULE,status:'no-headlines',source:CATALYST_SOURCE,windowHours:CATALYST.windowHours,headlines:0,newestAt:null,...nulls,model:null,checkedAt:new Date(now).toISOString()};
@@ -57,7 +57,17 @@ export function parseHeadlines(body:AvFeed|null,symbol:string,now:number):Cataly
  }
  return out.sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt)).slice(0,CATALYST.maxHeadlines);
 }
-type Cached={headlines:CatalystHeadline[];fetchedAt:string;reason?:string};
+type Cached={headlines:CatalystHeadline[];fetchedAt:string;reason?:string;detail?:string};
+/** The governor throws one Error for every provider problem; the message is the only way to tell quota from a bad ticker. */
+export function classifyAvFailure(e:unknown){
+ const m=e instanceof Error?e.message:String(e);
+ if(/circuit breaker/i.test(m))return 'av-circuit-open';
+ if(/timed out/i.test(m))return 'av-timeout';
+ if(/quota|rate limit|per minute|per day|premium|higher API call volume/i.test(m))return 'av-quota';
+ if(/invalid|not supported|no data/i.test(m))return 'av-no-data';
+ if(/HTTP (\d{3})/.test(m))return `av-http-${m.match(/HTTP (\d{3})/)![1]}`;
+ return 'av-error';
+}
 /** One governed provider call per symbol per cache window. Returns null when the budget for this batch is spent. */
 async function headlinesFor(redis:Redis,symbol:string,now:number,budget:{left:number}):Promise<Cached|null>{
  const key=`${CACHE}:${symbol.toUpperCase()}`;
@@ -68,10 +78,10 @@ async function headlinesFor(redis:Redis,symbol:string,now:number,budget:{left:nu
  if(budget.left<=0)return null;
  budget.left--;
  const url=`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(`CRYPTO:${symbol.toUpperCase()}`)}&time_from=${stamp(now-CATALYST.windowHours*3600000)}&sort=LATEST&limit=50&apikey=${apiKey}`;
- let body:AvFeed|null=null;
- try{body=await avFetch<AvFeed>(url,`NEWS_SENTIMENT CRYPTO:${symbol.toUpperCase()}`);}catch{body=null;}
- const quota=!!body&&!Array.isArray(body.feed)&&(body.Note!=null||body.Information!=null);
- const result:Cached=body&&Array.isArray(body.feed)?{headlines:parseHeadlines(body,symbol,now),fetchedAt:new Date(now).toISOString()}:{headlines:[],fetchedAt:new Date(now).toISOString(),reason:quota?'av-quota':'av-unavailable'};
+ let body:AvFeed|null=null,failure:string|null=null,detail:string|undefined;
+ try{body=await avFetch<AvFeed>(url,`NEWS_SENTIMENT CRYPTO:${symbol.toUpperCase()}`);if(!body)failure='av-no-data';}
+ catch(e){failure=classifyAvFailure(e);detail=(e instanceof Error?e.message:String(e)).slice(0,160);}
+ const result:Cached=body&&Array.isArray(body.feed)?{headlines:parseHeadlines(body,symbol,now),fetchedAt:new Date(now).toISOString()}:{headlines:[],fetchedAt:new Date(now).toISOString(),reason:failure??(body?.Note!=null||body?.Information!=null?'av-quota':'av-bad-shape'),...(detail?{detail}:{})};
  // A quota or outage answer is cached briefly so the next batch retries; good answers keep the full window.
  await redis.set(key,result,{ex:result.reason?600:CATALYST.cacheSec});
  return result;
@@ -93,7 +103,7 @@ export async function attachCatalystShadow<T extends CatalystRow>(redis:Redis,ro
    try{
     const cached=await headlinesFor(redis,row.symbol,now,budget);
     if(!cached){return;}
-    if(cached.reason){row.catalyst=unavailableCatalyst(now,cached.reason);return;}
+    if(cached.reason){row.catalyst=unavailableCatalyst(now,cached.reason,0,null,cached.detail);return;}
     if(!cached.headlines.length){row.catalyst=noHeadlinesCatalyst(now);return;}
     const newestAt=cached.headlines[0].publishedAt;
     if(!jevReady){row.catalyst=unavailableCatalyst(now,'no-key',cached.headlines.length,newestAt);return;}

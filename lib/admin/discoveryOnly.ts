@@ -9,11 +9,22 @@ const background = new Set([
   '/api/cron/evening-packet', '/api/jobs/email-morning-brief', '/api/jobs/email-daily-review',
   '/api/jobs/email-best-opportunities', '/api/operator/engine/auto-scan',
 ]);
+/** Crypto Markets surfaces that stay live while everything else is paused. Add a route here when it ships under /admin/crypto-markets. */
+const cryptoScope = new Set([
+  '/api/admin/crypto-markets/setup-email', '/api/admin/crypto-markets/backtest', '/api/admin/crypto-markets/rotation',
+  '/api/admin/crypto-markets/market-data', '/api/admin/crypto-markets/new-listings', '/api/admin/crypto-markets/history',
+  '/api/admin/crypto-markets/harness', '/api/cron/arca-cycle', '/api/admin/crypto-markets/paper',
+  '/api/admin/crypto-markets/early-momentum', '/api/admin/crypto-markets/momentum', '/api/admin/crypto-markets/bases',
+  '/api/admin/crypto-markets/volume', '/api/admin/crypto-markets/context', '/api/admin/verify',
+  '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze',
+  '/api/admin/crypto-markets/forward-score', '/api/admin/crypto-markets/recommendations',
+  '/api/admin/crypto-markets/calibration', '/api/admin/crypto-markets/learning',
+]);
 export function discoveryOnlyAction(path: string): 'allow' | 'pause_api' | 'skip_job' | 'pause_page' {
   if (!adminDiscoveryOnly()) return 'allow';
   path = path.replace(/\/+$/, '') || '/';
   if (background.has(path)) return 'skip_job';
-  if (path === '/api/admin/crypto-markets/setup-email' || path === '/api/admin/crypto-markets/backtest' || path === '/api/admin/crypto-markets/rotation' || path === '/api/admin/crypto-markets/market-data' || path === '/api/admin/crypto-markets/new-listings' || path === '/api/admin/crypto-markets/history' || path === '/api/admin/crypto-markets/harness' || path === '/api/cron/arca-cycle' || path === '/api/admin/crypto-markets/paper' || path === '/api/admin/crypto-markets/early-momentum' || path === '/api/admin/crypto-markets/momentum' || path === '/api/admin/crypto-markets/bases' || path === '/api/admin/crypto-markets/volume' || path === '/api/admin/crypto-markets/context' || path === '/api/admin/verify' || path === '/api/admin/crypto-discovery' || path === '/api/admin/crypto-discovery/analyze') return 'allow';
+  if (cryptoScope.has(path)) return 'allow';
   if (path === '/api/admin' || path.startsWith('/api/admin/') || path.startsWith('/api/operator/engine/')) return 'pause_api';
   if (path === '/admin/crypto-markets' || path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';
   if (path === '/admin' || path.startsWith('/admin/')) return 'pause_page';

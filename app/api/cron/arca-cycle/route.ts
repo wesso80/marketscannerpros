@@ -7,6 +7,7 @@ import {runNewListings} from '@/lib/admin/cryptoNewListingsJob';
 import {historyStep} from '@/lib/admin/cgHistoryJob';
 import {CG_HISTORY} from '@/lib/admin/cgHistory';
 import {runDailyCalibration} from '@/lib/admin/cryptoCalibration';
+import {runNewsJevDailyOnce} from '@/lib/admin/equityNewsJev';
 import {getRedis} from '@/lib/redis';
 /**
  * POST /api/cron/arca-cycle
@@ -68,16 +69,18 @@ export async function POST(req: NextRequest) {
     // Daily calibration reads saved rows only; it never affects this run's health status.
     const calibrationRedis=getRedis();
     const calibration=calibrationRedis?await runDailyCalibration(calibrationRedis).catch(()=>({ok:false,error:'Calibration failed'})):{ok:false,error:'Redis unavailable'};
+    // Equity news verification runs here because the evening cron is skipped in discovery-only mode. Once per UTC day.
+    const newsJev=calibrationRedis?await runNewsJevDailyOnce(calibrationRedis).catch(()=>({ok:false,error:'News verification failed'})):{ok:false,error:'Redis unavailable'};
     // Non-essential CoinGecko market context runs last and never affects this run's health status.
     const marketData=await runCryptoMarketData().catch(()=>({ok:false,error:'CoinGecko market data failed'}));
     const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
     // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
     const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,marketData,newListings,history},{status:ok?200:503});
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   const calibrationRedis=getRedis();
-  if(calibrationRedis)await runDailyCalibration(calibrationRedis).catch(()=>undefined);
+  if(calibrationRedis){await runDailyCalibration(calibrationRedis).catch(()=>undefined);await runNewsJevDailyOnce(calibrationRedis).catch(()=>undefined);}
   await runCryptoMarketData().catch(()=>undefined);
   await runNewListings().catch(()=>undefined);
   await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>undefined);
