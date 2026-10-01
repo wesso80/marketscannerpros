@@ -34,9 +34,9 @@ export function reviewCryptoMomentum(coin:DiscoveryRow, hourlyRaw:number[][],dai
     status:'BLOCKED',reasons:[],evidence:{hourlyAsOf:null,fourHourAsOf:null,dailyAsOf:null,quoteAsOf:coin.observedAt,hourlyBars:0,dailyBars:0,dailyTrend:false,fourHourTrend:false,volumeConfirmation:'UNAVAILABLE'},levels:null,
     exitRule:'Research proposal: hard stop at the structural level; model target at 2R; review after 48 hours without progress. Fees, slippage, fills and account limits remain untested here.'};
   const at=Date.parse(coin.observedAt??'');
-  if(coin.stage==='EXCLUDED' || !Number.isFinite(coin.price) || coin.price<=0 || !Number.isFinite(at) || at>now || now-at>15*60000) {
-    result.reasons.push('Discovery price or eligibility is unavailable/stale');return result;
-  }
+  // A stale or missing quote blocks fresh levels, but the completed-candle evidence below does not depend on it.
+  const quoteStale=coin.stage==='EXCLUDED' || !Number.isFinite(coin.price) || coin.price<=0 || !Number.isFinite(at) || at>now || now-at>15*60000;
+  if(quoteStale) result.reasons.push('Discovery price or eligibility is unavailable/stale');
   let hourly:Bar[],daily:Bar[];
   try {hourly=candles(hourlyRaw,HOUR,now);daily=candles(dailyRaw,DAY,now);} catch(e) {result.reasons.push((e as Error).message);return result;}
   const four=completedFourHourBars(hourly,now), last=hourly.at(-1), lastDay=daily.at(-1),lastFour=four.at(-1);
@@ -50,6 +50,7 @@ export function reviewCryptoMomentum(coin:DiscoveryRow, hourlyRaw:number[][],dai
   const f20=mean(four.slice(-20).map(b=>b.c)), fPrior=mean(four.slice(-23,-3).map(b=>b.c));
   result.evidence.dailyTrend=lastDay.c>d20 && d20>dPrior;
   result.evidence.fourHourTrend=lastFour.c>f20 && f20>fPrior;
+  if(quoteStale) return result;
   const ranges=hourly.slice(-14).map((b,i)=>Math.max(b.h-b.l,Math.abs(b.h-hourly[hourly.length-15+i].c),Math.abs(b.l-hourly[hourly.length-15+i].c)));
   const atr=mean(ranges);
   if(!(atr>0)) {result.reasons.push('Hourly ATR unavailable');return result;}
