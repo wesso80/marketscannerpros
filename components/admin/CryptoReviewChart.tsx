@@ -10,8 +10,8 @@ const fmt=(n?:number|null)=>typeof n==='number'&&Number.isFinite(n)?n.toPrecisio
 const DARK={layout:{background:{type:ColorType.Solid,color:'#0f172a'},textColor:'#cbd5e1'},grid:{vertLines:{color:'#1e293b'},horzLines:{color:'#1e293b'}},timeScale:{timeVisible:true,secondsVisible:false},handleScroll:{vertTouchDrag:false}} as const;
 const pricePrecision=(lows:number[])=>Math.min(12,Math.max(2,3-Math.floor(Math.log10(Math.max(1e-12,Math.min(...lows))))));
 /** Rule levels in one place so both charts label them identically. */
-function ruleLevels(row:RuleRow):Array<readonly [string,number|undefined,string]>{
- return [['Prior 20-bar high',row.trigger??undefined,'#38bdf8'],['20-bar average',row.sma20,'#a78bfa'],['Entry floor',row.entryFloor,'#34d399'],['Chase limit (max entry)',row.maxEntry,'#fbbf24'],['Stop',row.stop,'#f87171'],['2R target',row.target,'#10b981']] as const;
+function ruleLevels(row:RuleRow):Array<readonly [string,number|undefined,string,string]>{
+ return [['Prior 20-bar high',row.trigger??undefined,'#38bdf8','High'],['20-bar average',row.sma20,'#a78bfa','SMA'],['Entry floor',row.entryFloor,'#34d399','Floor'],['Chase limit',row.maxEntry,'#fbbf24','Chase'],['Stop',row.stop,'#f87171','Stop'],['2R target',row.target,'#10b981','2R']] as const;
 }
 function EvidenceBadge({row}:{row:RuleRow}){
  const j=row.jev;
@@ -54,7 +54,7 @@ export function VolumeRuleChart({row}:{row:RuleRow}){
       volume.priceScale().applyOptions({scaleMargins:{top:0.78,bottom:0}});
       volume.setData(bars.map(b=>({time:b.t/1000 as UTCTimestamp,value:b.v,color:b.c>=b.o?'#10b98188':'#f8717188'})));
     }
-    for(const [title,price,color] of ruleLevels(row))if(typeof price==='number'&&Number.isFinite(price))series.createPriceLine({price,color,lineWidth:2,axisLabelVisible:true,title});
+    for(const [,price,color,axis] of ruleLevels(row))if(typeof price==='number'&&Number.isFinite(price))series.createPriceLine({price,color,lineWidth:2,axisLabelVisible:true,title:axis});
     const last=bars[bars.length-1];
     createSeriesMarkers(series,[{time:last.t/1000 as UTCTimestamp,position:'belowBar',color:'#e2e8f0',shape:'arrowUp',text:`signal · ${row.relativeVolume?`${row.relativeVolume.toFixed(2)}× vol`:''}`}]);
     const onMove=(p:MouseEventParams<Time>)=>{
@@ -66,6 +66,8 @@ export function VolumeRuleChart({row}:{row:RuleRow}){
     };
     api.subscribeCrosshairMove(onMove);
     api.timeScale().fitContent();
+    api.timeScale().applyOptions({rightOffset:12});
+    api.priceScale('right').applyOptions({minimumWidth:72});
     return ()=>{api.unsubscribeCrosshairMove(onMove);api.remove();};
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[row]);
@@ -109,7 +111,7 @@ export default function CryptoReviewChart({chart,review,base,onLabel}:{chart:Mom
       ['Maximum entry',levels.maxEntry,'#fbbf24'],['Structural stop',levels.stop,'#f87171'],
       ['Model 2R target',levels.target,'#10b981'],
     ] as const) series.createPriceLine({price,color,lineWidth:1,axisLabelVisible:true,title});
-    if(rule&&timeframe==='fourHourly') for(const [title,price,color] of ruleLevels(rule)) if(typeof price==='number'&&Number.isFinite(price)) series.createPriceLine({price,color,lineWidth:2,lineStyle:2,axisLabelVisible:true,title:`4h rule · ${title}`});
+    if(rule&&timeframe==='fourHourly') for(const [,price,color,axis] of ruleLevels(rule)) if(typeof price==='number'&&Number.isFinite(price)) series.createPriceLine({price,color,lineWidth:2,lineStyle:2,axisLabelVisible:true,title:axis});
     if(base?.stage==='BASE'||base?.stage==='BREAKOUT_PRICE_ONLY'||base?.stage==='EXTENDED'||base?.stage==='FAILED_BREAKOUT') {
       if(base.high)series.createPriceLine({price:base.high,color:'#a78bfa',lineWidth:1,axisLabelVisible:true,title:'Base high'});
       if(base.low)series.createPriceLine({price:base.low,color:'#818cf8',lineWidth:1,axisLabelVisible:true,title:'Base low'});
@@ -123,6 +125,8 @@ export default function CryptoReviewChart({chart,review,base,onLabel}:{chart:Mom
     const onMove=(p:MouseEventParams<Time>)=>{const d=p.seriesData.get(series) as {open:number;high:number;low:number;close:number}|undefined;if(!p.time||!d){setReadout(null);return;}setReadout({time:new Date((p.time as number)*1000).toISOString(),o:d.open,h:d.high,l:d.low,c:d.close});};
     api.subscribeCrosshairMove(onMove);
     api.timeScale().fitContent();
+    api.timeScale().applyOptions({rightOffset:12});
+    api.priceScale('right').applyOptions({minimumWidth:72});
     return ()=>{api.unsubscribeCrosshairMove(onMove);api.remove();};
   },[bars,review,base,rule,timeframe]);
   const stale=Date.now()-Date.parse(review.reviewedAt)>15*60000;

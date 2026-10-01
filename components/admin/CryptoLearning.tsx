@@ -25,16 +25,17 @@ export default function CryptoLearning({refreshVersion=0}:{refreshVersion?:numbe
    {!status&&!error&&<p>Checking…</p>}
    {status&&<>
     <p className="text-xs text-slate-400">Checked {new Date(status.checkedAt).toLocaleString()} · Jev gateway key {status.mode.jevKey?'set':<span className="text-red-300">missing</span>} · market data: CoinGecko and exchange candles only · ADMIN_DISCOVERY_ONLY {status.mode.discoveryOnly?'on (crypto admin only)':'off'}</p>
-    <div className="overflow-auto"><table className="w-full min-w-[1000px] text-left text-sm"><thead><tr>{['Stamp','State','What is happening','Last written','Graded against','Where to look'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
-     {status.items.map(i=><tr key={i.id} className="border-t border-slate-700 align-top">
-      <td className="p-2 font-semibold">{i.label}</td>
-      <td className="p-2"><span className={`rounded px-2 py-0.5 text-xs ${STATE[i.state].cls}`}>{STATE[i.state].label}</span></td>
-      <td className="p-2">{i.summary}{i.next&&<div className="mt-1 text-amber-300">→ {i.next}</div>}</td>
-      <td className="p-2 whitespace-nowrap">{when(i.lastAt)}</td>
-      <td className="p-2">{i.gradedAgainst}</td>
-      <td className="p-2 text-slate-400">{i.where}</td>
-     </tr>)}
-    </tbody></table></div>
+    <ul className="space-y-3">
+     {status.items.map(i=><li key={i.id} className="rounded border border-slate-700 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+       <h3 className="text-sm font-semibold">{i.label}</h3>
+       <span className={`rounded px-2 py-0.5 text-xs ${STATE[i.state].cls}`}>{STATE[i.state].label}</span>
+      </div>
+      <p className="mt-2 text-sm">{i.summary}</p>
+      {i.next&&<p className="mt-1 text-sm text-amber-300">→ {i.next}</p>}
+      <p className="mt-2 text-xs text-slate-400">Last written {when(i.lastAt)} · Graded against {i.gradedAgainst} · {i.where}</p>
+     </li>)}
+    </ul>
     <div className="rounded border border-sky-800 p-3">
      <h3 className="text-sm font-semibold">Composite shadow score · weights in force</h3>
      {!status.shadowWeights&&<p className="text-xs text-slate-400">No weights derived yet. The daily calibration pass writes them.</p>}
