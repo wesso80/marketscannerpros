@@ -5,11 +5,13 @@ import {beforeEach,afterEach,expect,it,vi} from 'vitest';
 import {NextRequest} from 'next/server';
 vi.mock('@/lib/adminAuth',()=>({requireAdmin:vi.fn(async()=>({ok:false}))}));
 vi.mock('@/lib/admin/cryptoPaper',()=>({runCryptoPaperAll:vi.fn(async()=>({ok:true,accounts:0}))}));
+vi.mock('@/lib/admin/cryptoPaperBase',()=>({runCryptoBaseSleeveAll:vi.fn(async()=>({ok:true,accounts:0}))}));
 vi.mock('@/lib/db',()=>({q:vi.fn(async()=>[])}));
 vi.mock('@/lib/admin/portfolio-lab/simulateCycle',()=>({simulateArcaCycle:vi.fn()}));
 vi.mock('@/lib/admin/notifyAdmin',()=>({notifyAdmin:vi.fn()}));
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
+import {runCryptoBaseSleeveAll} from '@/lib/admin/cryptoPaperBase';
 import {q} from '@/lib/db';
 import {simulateArcaCycle} from '@/lib/admin/portfolio-lab/simulateCycle';
 import {POST} from '@/app/api/cron/arca-cycle/route';
@@ -21,6 +23,8 @@ it('rejects unauthenticated cron before any work',async()=>{
 it('runs only the crypto paper cycle while other admin jobs are paused',async()=>{
  expect((await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}))).status).toBe(200);
  expect(runCryptoPaperAll).toHaveBeenCalledTimes(2);expect(runCryptoPaperAll).toHaveBeenNthCalledWith(1,true);expect(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]);expect(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[1]);expect(q).not.toHaveBeenCalled();expect(simulateArcaCycle).not.toHaveBeenCalled();
+ // The base-breakout sleeve follows the same shape: exits before the scan, entries after it.
+ expect(runCryptoBaseSleeveAll).toHaveBeenCalledTimes(2);expect(runCryptoBaseSleeveAll).toHaveBeenNthCalledWith(1,true);expect(vi.mocked(runCryptoBaseSleeveAll).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]);expect(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoBaseSleeveAll).mock.invocationCallOrder[1]);
 });
 it('reports paper failure as a failed cron',async()=>{
  vi.mocked(runCryptoPaperAll).mockRejectedValueOnce(Error('db offline'));
@@ -30,7 +34,7 @@ it('reports paper failure as a failed cron',async()=>{
 it('a scan failure cannot prevent the initial exit pass or permit new entries',async()=>{
  vi.mocked(runCryptoAutomation).mockRejectedValueOnce(Error('scan offline'));
  const response=await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}));
- expect(response.status).toBe(503);expect(runCryptoPaperAll).toHaveBeenCalledTimes(1);expect(runCryptoPaperAll).toHaveBeenCalledWith(true);
+ expect(response.status).toBe(503);expect(runCryptoPaperAll).toHaveBeenCalledTimes(1);expect(runCryptoPaperAll).toHaveBeenCalledWith(true);expect(runCryptoBaseSleeveAll).toHaveBeenCalledTimes(1);expect(runCryptoBaseSleeveAll).toHaveBeenCalledWith(true);
 });
 
 it('keeps paper work successful even if email delivery fails',async()=>{vi.mocked(reportCryptoCycleHealth).mockRejectedValueOnce(Error('email down'));const r=await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}));expect(r.status).toBe(200);expect((await r.json()).operationalAlerts.ok).toBe(false);});

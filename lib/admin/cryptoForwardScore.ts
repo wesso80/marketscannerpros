@@ -1,6 +1,7 @@
 import type {Redis} from '@upstash/redis';
 import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
+import type {ChartStamp} from './cryptoJevChart';
 import type {ShadowStamp} from './cryptoShadowScore';
 import {JEV_MIN_SIDE,JEV_QUESTION_IDS,jevCoverage,jevScored,jevSideLabel,type JevCoverage} from './cryptoJevEvidence';
 import type {MomentumScan} from './cryptoVolumeMomentum';
@@ -11,7 +12,7 @@ const BOOK=FORWARD_BOOK_KEY;
 const F=4*3600000,DAY=24*3600000;
 export type ForwardBucket='VOLUME_WATCH'|'EXTENDED'|'EARLY_WATCH';
 export type ForwardMark={status:'waiting'}|{status:'missed'}|{status:'filled';price:number;at:string;changePct:number};
-export type ForwardRow={id:string;symbol:string;bucket:ForwardBucket;signalAt:string;signalPrice:number;next4h:ForwardMark;day:ForwardMark;jev?:JevStamp;catalyst?:CatalystStamp;shadow?:ShadowStamp};
+export type ForwardRow={id:string;symbol:string;bucket:ForwardBucket;signalAt:string;signalPrice:number;next4h:ForwardMark;day:ForwardMark;jev?:JevStamp;catalyst?:CatalystStamp;chart?:ChartStamp;shadow?:ShadowStamp};
 export type ForwardBook={version:1;updatedAt:string;rows:ForwardRow[]};
 type ScanLike=Pick<MomentumScan,'rows'>|null;
 const waiting=():ForwardMark=>({status:'waiting'});
@@ -44,7 +45,7 @@ export function applyForwardScores(rows:ForwardRow[],fourHour:ScanLike,early:Sca
    const key=`${row.stage}|${row.id}|${row.asOf}`;
    if(seen.has(key))continue;
    seen.add(key);
-   next.push({id:row.id,symbol:row.symbol||row.id,bucket:row.stage as ForwardBucket,signalAt:row.asOf,signalPrice:row.close,next4h:waiting(),day:waiting(),...(row.jev?{jev:row.jev}:{}),...(row.catalyst?{catalyst:row.catalyst}:{}),...(row.shadow?{shadow:row.shadow}:{})});
+   next.push({id:row.id,symbol:row.symbol||row.id,bucket:row.stage as ForwardBucket,signalAt:row.asOf,signalPrice:row.close,next4h:waiting(),day:waiting(),...(row.jev?{jev:row.jev}:{}),...(row.catalyst?{catalyst:row.catalyst}:{}),...(row.chart?{chart:row.chart}:{}),...(row.shadow?{shadow:row.shadow}:{})});
   }
  };
  enroll(fourHour,['VOLUME_WATCH','EXTENDED']);

@@ -24,7 +24,8 @@ const hash=(s:string)=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCo
 export function deriveShadowWeights(ledger:CalibrationLedger|null,now=Date.now()):ShadowWeights{
  const weights:ShadowWeight[]=[];
  for(const f of ledger?.fields??[])for(const s of f.sides){
-  if(s.informational||s.status!=='confirmed'||s.lift==null)continue;
+  // The shadow score is stamped on momentum rows; the base-breakout sleeve's lifts belong to a different ledger and stay out of it.
+  if(f.outcome==='baseR'||s.informational||s.status!=='confirmed'||s.lift==null)continue;
   const floor=f.unit==='R'?CAL_CORE.minLiftR:CAL_CORE.minLiftPct;
   const weight=Math.max(-SHADOW.clip,Math.min(SHADOW.clip,s.lift/floor));
   weights.push({field:f.id,label:f.label,side:s.side,unit:f.unit,lift:s.lift,weight:Math.round(weight*100)/100,n:s.n,outcome:f.outcome});

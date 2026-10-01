@@ -26,12 +26,13 @@ import {fetchDerivatives} from './cryptoDerivatives';
 import {fetchFlow} from './cryptoFlow';
 import {unavailableJev} from './cryptoJev';
 import {unavailableCatalyst} from './cryptoJevCatalyst';
+import {unavailableChart} from './cryptoJevChart';
 import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError,CRYPTO_TIME_STOP} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export const CRYPTO_PAPER_LIVE_NAME='Crypto Markets Paper Live';
-export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;sleeve?:'live'|'research';quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
+export type CryptoPaperDecision={coin:string;product:string|null;venue:string|null;signalAt:string|null;checkedAt:string;status:'OPENED'|'BLOCKED'|'DEFERRED';reason:string;sleeve?:'live'|'research'|'base';quoteAt?:string;bid?:number;ask?:number;quoteCurrency?:'USD';conversion?:ConvertedPaperQuote['conversion']};
 const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
 /** v2 playbook (entries from 2026-09-30): same signal, sizing and fixed stop/2R target, plus a 72h time stop when +1R was never reached. v1 positions keep fixed levels only. */
 export const PLAYBOOK_V2='crypto-momentum-v2';
@@ -138,6 +139,47 @@ export async function setCryptoPaperActive(workspaceId:string,active:boolean){
   return portfolio.id;
  });
 }
+/**
+ * Marks one open paper position against completed 15m candles and the latest quote, closing it when a stop, target, or
+ * rule exit is proven. `rules` is resolved per position so sleeves with different exit rules share this code.
+ * Returns ok:false after recording the reason; the caller treats that as unhealthy monitoring and blocks entries.
+ */
+export async function monitorPaperPosition(workspaceId:string,book:{id:string},position:Awaited<ReturnType<typeof listOpenPositions>>[number],rules:(pos:typeof position)=>Promise<PaperExitRules|null>|PaperExitRules|null,notes:string[]):Promise<{ok:boolean;closed:boolean}>{
+ try{
+  const converted=position.instrumentType.startsWith('okx-usd-v1:');
+  const product=converted?position.instrumentType.slice(11):position.instrumentType.startsWith('coinbase:')?position.instrumentType.slice(9):'';
+  if(position.assetClass!=='crypto'||position.side!=='LONG'||!(converted?/^[A-Z0-9]{1,30}-USDT$/.test(product):/^[A-Z0-9]{1,30}-USD$/.test(product)))throw Error('Unsupported position scope');
+  const [quoteResult,pathResult]=await Promise.allSettled([converted?fetchOkxUsdQuote(product):fetchPaperQuote(product),converted?fetchOkxUsdPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt):fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
+  if(pathResult.status!=='fulfilled')throw new PaperMarketError(pathResult.reason instanceof PaperMarketError?pathResult.reason.message:'Exit history request failed or timed out');
+  let path=pathResult.value;const quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
+  if(path.filledBars)notes.push(`${position.symbol}: ${path.filledBars} no-trade 15m candle(s) filled flat at the prior close`);
+  // A quiet coin with no trades since its last candle must not block the whole account while its market is live.
+  const trailing=fillTrailingNoTrade(path.candles,Math.floor(Date.now()/900000)*900000,!!quote&&Date.now()-Date.parse(quote.priceAt)<=60000,900000,undefined,(path as {trailingAnchor?:TrailingAnchor}).trailingAnchor);
+  if(trailing.filled){path={...path,candles:trailing.candles};notes.push(`${position.symbol}: ${trailing.filled} trailing no-trade 15m candle(s) filled flat at the last close (fresh quote confirms the market is live)`);}
+  let closed=false;
+  await atomicQueries(async()=>{
+   await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,book.id]);
+   const current=await getPortfolioById(workspaceId,book.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');
+   const pos=(await listOpenPositions(workspaceId,current.id)).find(p=>p.id===position.id);if(!pos)return;
+   const exitRules=await rules(pos);
+   const checked=evaluatePaperExitPath(pos,path,Date.now(),exitRules);
+   // Missing chronology blocks valuation/target awards and further entries. Never skip a missing prefix.
+   if(!['candle_path_checked','candle_path_exit','candle_path_no_closed_bars'].includes(checked.status))throw new PaperMarketError(`Exit chronology: ${checked.status}`);
+   const through=Date.parse(checked.checkedThrough??pos.exitCheckpoint?.through??pos.openedAt);
+   if(!checked.exit&&through<Math.floor(Date.now()/900000)*900000)throw new PaperMarketError('Exit history does not reach the last completed candle');
+   const freshQuote=quote&&Date.now()-Date.parse(quote.priceAt)<=60000;
+   if(!checked.exit&&!freshQuote)throw new PaperMarketError(quoteResult.status==='rejected'&&quoteResult.reason instanceof PaperMarketError?quoteResult.reason.message:'Exit quote unavailable or expired');
+   // A proven earlier stop/target can settle even if the ticker is down.
+   const best=(path as {bestCaseHigh?:number|null}).bestCaseHigh;
+   if(converted&&!checked.exit&&pos.takeProfit1!=null&&best!=null&&best>=pos.takeProfit1)notes.push(`${pos.symbol}: OKX high reached the target only at the best USDT/USD rate (${best.toPrecision(6)} vs ${pos.takeProfit1}); not filled under the conservative conversion rule`);
+   const result=await markAndMaybeExit({portfolio:paperCostPortfolio(current,pos.instrumentType),position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,exitRules,skipLearning:true});
+   const updated=await getPortfolioById(workspaceId,current.id);if(!updated)throw Error('Paper account unavailable');
+   await refreshPaperBalances(updated,updated.currentCash,updated.realisedPnl);
+   closed=!!result.exit;
+  });
+  return {ok:true,closed};
+ }catch(error){notes.push(`${position.symbol}: ${error instanceof PaperMarketError?error.message:'Exit accounting failed'}; entries blocked until monitoring recovers`);return {ok:false,closed:false};}
+}
 export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'cron'='manual',monitorOnly=false){
  const redis=getRedis();if(!redis)throw Error('Paper coordination cache unavailable');
  if(!isAdminCryptoEnabled())return {skipped:true,reason:'Admin crypto disabled'};
@@ -157,37 +199,8 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  if(positions.length>L.positions){monitorHealthy=false;notes.push('Unexpected position count; entries blocked');}
  await initShadows(workspaceId,book.id,positions,notes);
  for(const position of positions){
-  try{
-   const converted=position.instrumentType.startsWith('okx-usd-v1:');
-   const product=converted?position.instrumentType.slice(11):position.instrumentType.startsWith('coinbase:')?position.instrumentType.slice(9):'';
-   if(position.assetClass!=='crypto'||position.side!=='LONG'||!(converted?/^[A-Z0-9]{1,30}-USDT$/.test(product):/^[A-Z0-9]{1,30}-USD$/.test(product)))throw Error('Unsupported position scope');
-   const [quoteResult,pathResult]=await Promise.allSettled([converted?fetchOkxUsdQuote(product):fetchPaperQuote(product),converted?fetchOkxUsdPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt):fetchPaperPath(position.symbol,product,position.exitCheckpoint?.through??position.openedAt)]);
-   if(pathResult.status!=='fulfilled')throw new PaperMarketError(pathResult.reason instanceof PaperMarketError?pathResult.reason.message:'Exit history request failed or timed out');
-   let path=pathResult.value;const quote=quoteResult.status==='fulfilled'?quoteResult.value:null;
-   if(path.filledBars)notes.push(`${position.symbol}: ${path.filledBars} no-trade 15m candle(s) filled flat at the prior close`);
-   // A quiet coin with no trades since its last candle must not block the whole account while its market is live.
-   const trailing=fillTrailingNoTrade(path.candles,Math.floor(Date.now()/900000)*900000,!!quote&&Date.now()-Date.parse(quote.priceAt)<=60000,900000,undefined,(path as {trailingAnchor?:TrailingAnchor}).trailingAnchor);
-   if(trailing.filled){path={...path,candles:trailing.candles};notes.push(`${position.symbol}: ${trailing.filled} trailing no-trade 15m candle(s) filled flat at the last close (fresh quote confirms the market is live)`);}
-   await atomicQueries(async()=>{
-    await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,book.id]);
-    const current=await getPortfolioById(workspaceId,book.id);if(!current||current.mode!=='SIMULATED')throw Error('Paper account unavailable');
-    const pos=(await listOpenPositions(workspaceId,current.id)).find(p=>p.id===position.id);if(!pos)return;
-    const checked=evaluatePaperExitPath(pos,path,Date.now(),exitRulesFor(pos.playbookId));
-    // Missing chronology blocks valuation/target awards and further entries. Never skip a missing prefix.
-    if(!['candle_path_checked','candle_path_exit','candle_path_no_closed_bars'].includes(checked.status))throw new PaperMarketError(`Exit chronology: ${checked.status}`);
-    const through=Date.parse(checked.checkedThrough??pos.exitCheckpoint?.through??pos.openedAt);
-    if(!checked.exit&&through<Math.floor(Date.now()/900000)*900000)throw new PaperMarketError('Exit history does not reach the last completed candle');
-    const freshQuote=quote&&Date.now()-Date.parse(quote.priceAt)<=60000;
-    if(!checked.exit&&!freshQuote)throw new PaperMarketError(quoteResult.status==='rejected'&&quoteResult.reason instanceof PaperMarketError?quoteResult.reason.message:'Exit quote unavailable or expired');
-    // A proven earlier stop/target can settle even if the ticker is down.
-    const best=(path as {bestCaseHigh?:number|null}).bestCaseHigh;
-    if(converted&&!checked.exit&&pos.takeProfit1!=null&&best!=null&&best>=pos.takeProfit1)notes.push(`${pos.symbol}: OKX high reached the target only at the best USDT/USD rate (${best.toPrecision(6)} vs ${pos.takeProfit1}); not filled under the conservative conversion rule`);
-    const result=await markAndMaybeExit({portfolio:paperCostPortfolio(current,pos.instrumentType),position:pos,currentPrice:freshQuote?quote.bid:pos.averageEntry,candlePath:path,exitRules:exitRulesFor(pos.playbookId),skipLearning:true});
-    const updated=await getPortfolioById(workspaceId,current.id);if(!updated)throw Error('Paper account unavailable');
-    await refreshPaperBalances(updated,updated.currentCash,updated.realisedPnl);
-    marked++;if(result.exit)closed++;
-   });
-  }catch(error){monitorHealthy=false;notes.push(`${position.symbol}: ${error instanceof PaperMarketError?error.message:'Exit accounting failed'}; entries blocked until monitoring recovers`);}
+  const r=await monitorPaperPosition(workspaceId,book,position,async pos=>exitRulesFor(pos.playbookId),notes);
+  if(!r.ok)monitorHealthy=false;else{marked++;if(r.closed)closed++;}
  }
  await advanceShadows(workspaceId,book.id,notes);
  // Every cycle: correlation across ALL open positions. Over-cap clusters are logged; positions are never resized here.
@@ -302,7 +315,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
     if(refusal&&cluster.blocked)throw Error(`Correlated cluster risk cap: ${cluster.members.join(', ')} already risk USD ${cluster.clusterRiskUsd.toFixed(2)} of USD ${cluster.capUsd.toFixed(2)}`);
     const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,refusal?cluster.scale:1);if(!plan.ok)throw Error(plan.reason);
     if(opens.reduce((s,p)=>s+positionRiskUsd(p),0)+plan.risk>current.totalEquity*L.openRiskPct/100)throw Error(`${L.openRiskPct}% portfolio risk cap`);
-    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK_V2,createdReason:key+JSON.stringify({sleeve,version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',exitRules:CRYPTO_TIME_STOP,btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},flowStamp:candidate.flowStamp??{rule:'flow-stamp-v1',stamp:'unavailable',takerBuyShare4h:null,source:'okx:public',checkedAt:new Date().toISOString()},jev:candidate.jev??unavailableJev(Date.now()),catalyst:candidate.catalyst??unavailableCatalyst(Date.now(),'not-stamped'),shadow:candidate.shadow??null,relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true,exchangeOrder:false}),arcaConfidence:null});
+    const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK_V2,createdReason:key+JSON.stringify({sleeve,version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',exitRules:CRYPTO_TIME_STOP,btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},flowStamp:candidate.flowStamp??{rule:'flow-stamp-v1',stamp:'unavailable',takerBuyShare4h:null,source:'okx:public',checkedAt:new Date().toISOString()},jev:candidate.jev??unavailableJev(Date.now()),catalyst:candidate.catalyst??unavailableCatalyst(Date.now(),'not-stamped'),chart:candidate.chart??unavailableChart(Date.now(),'not-stamped',candidate.bars?.length??0),shadow:candidate.shadow??null,relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true,exchangeOrder:false}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
     decide(candidate,'OPENED',[refusal?`${refusal}. Research sleeve recorded the entry under beta limits`:'Live sleeve entry. SIMULATED',...(refusal&&corr.scale<1?[`risk scaled to ${Math.round(corr.scale*100)}% for ${corr.correlated.length+corr.unavailable.length} correlated or unverified open positions`]:[]),...(refusal&&cluster.capped?[`risk capped to ${Math.round(cluster.scale*100)}% by the ${CORRELATION.clusterRiskPct}% correlated-cluster cap`]:[]),...(plan.liquidityCapped?[`size capped at ${L.maxPairVolumePct}% of pair 24h volume`]:[]),...(btcRegime?.state==='DOWN'?['shadow filter: would skip (BTC daily trend DOWN); opened anyway for comparison']:[]),...(flow.state!=='NEUTRAL'&&flow.state!=='UNAVAILABLE'?[`flow shadow label: ${flow.state} (evidence only; not a filter)`]:[]),...(derivatives.flags.some(f=>/EXTREME_FUNDING|OI_SURGE|CROWDED_FUNDING|LEVERAGE_DRIVEN/.test(f))?[`derivatives flags: ${derivatives.flags.join(' ')} (evidence only; not a filter)`]:[])].join('; '),quote,sleeve);

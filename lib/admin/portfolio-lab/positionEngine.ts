@@ -107,7 +107,7 @@ export async function markAndMaybeExit(input: MarkInput): Promise<MarkResult> {
   // A historical touch precedes the latest quote, including a later reversal.
   if (path.exit) {
     exitReason = path.exit.reason;
-    exitStatus = exitReason === 'STOP_LOSS' ? 'STOPPED' : exitReason === 'TIME_EXIT' ? 'CLOSED_BY_RULE' : 'TARGET_HIT';
+    exitStatus = exitReason === 'STOP_LOSS' ? 'STOPPED' : exitReason === 'TIME_EXIT' || exitReason === 'RULE_EXIT' ? 'CLOSED_BY_RULE' : 'TARGET_HIT';
     exitPrice = path.exit.price;
   }
 

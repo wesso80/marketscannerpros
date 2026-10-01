@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {ForwardBook,ForwardMark,JevForwardSummary} from '@/lib/admin/cryptoForwardScore';
-import {catalystDetail,catalystText,jevDetail} from '@/lib/admin/cryptoJevEvidence';
+import {catalystDetail,catalystText,chartDetail,chartText,jevDetail} from '@/lib/admin/cryptoJevEvidence';
 function jevCell(jev:ForwardBook['rows'][number]['jev']){
  if(!jev)return '—';
  if(jev.status!=='scored'||jev.chase==null||jev.flowAgrees==null||jev.btcHeadwind==null)return `unavailable${jev.reason?` · ${jev.reason}`:''}`;
@@ -40,7 +40,7 @@ export default function CryptoForwardScore({refreshVersion=0}:{refreshVersion?:n
   {book&&<>
    <p>{headline}</p>
    {!book.rows.length&&<p role="status" className="text-slate-400">None saved yet.</p>}
-   {!!book.rows.length&&<div className="max-h-96 overflow-auto"><table className="w-full min-w-[1100px] text-left text-sm"><thead><tr>{['Coin','Bucket','Signal time','Signal price','Next 4h close','24 hours','Jev','Catalyst'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{book.rows.map(row=><tr className="border-t border-slate-700" key={`${row.bucket}|${row.id}|${row.signalAt}`}><td className="p-2">{row.symbol}<br/><span className="text-slate-400">{row.id}</span></td><td>{row.bucket}</td><td>{row.signalAt}</td><td>{row.signalPrice.toPrecision(6)}</td><td>{cell(row.next4h)}</td><td>{cell(row.day)}</td><td className="p-2" title={jevDetail(row.jev)}>{jevCell(row.jev)}</td><td className="p-2" title={catalystDetail(row.catalyst)}>{catalystText(row.catalyst,true)}</td></tr>)}</tbody></table></div>}
+   {!!book.rows.length&&<div className="max-h-96 overflow-auto"><table className="w-full min-w-[1300px] text-left text-sm"><thead><tr>{['Coin','Bucket','Signal time','Signal price','Next 4h close','24 hours','Jev','Chart','Catalyst'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{book.rows.map(row=><tr className="border-t border-slate-700" key={`${row.bucket}|${row.id}|${row.signalAt}`}><td className="p-2">{row.symbol}<br/><span className="text-slate-400">{row.id}</span></td><td>{row.bucket}</td><td>{row.signalAt}</td><td>{row.signalPrice.toPrecision(6)}</td><td>{cell(row.next4h)}</td><td>{cell(row.day)}</td><td className="p-2" title={jevDetail(row.jev)}>{jevCell(row.jev)}</td><td className="p-2 text-xs" title={chartDetail(row.chart)}>{chartText(row.chart,true)}</td><td className="p-2" title={catalystDetail(row.catalyst)}>{catalystText(row.catalyst,true)}</td></tr>)}</tbody></table></div>}
    {jev&&<JevSplit jev={jev}/>}
   </>}
  </section>;

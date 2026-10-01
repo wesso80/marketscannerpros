@@ -1,5 +1,6 @@
 import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
+import type {ChartStamp} from './cryptoJevChart';
 /**
  * Pure helpers that read a saved Jev stamp. No network, no redis, so stats and forward-score modules can import them
  * without touching the gateway. Evidence only: nothing here blocks, opens, or recommends.
@@ -69,5 +70,34 @@ export function catalystDetail(c:CatalystStamp|null|undefined){
  if(c.status==='scored')parts.push(`listing ${c.listingNews?.toFixed(2)} · supply ${c.supplyEvent?.toFixed(2)} · exploit ${c.exploitOrOutage?.toFixed(2)} · regulatory ${c.regulatoryNegative?.toFixed(2)} · narrative ${c.narrativeOnly?.toFixed(2)}`);
  if(c.model)parts.push(`model ${c.model}`);
  if(c.status==='unavailable')parts.push(`unavailable: ${c.reason??'reason not recorded'}${c.detail?` — ${c.detail}`:''}`);
+ return parts.join(' · ');
+}
+/** Chart confirmer cell: the four reads at or above 0.50, or why the row could not be read. `no-bars` means the scan stored only the signal candle. */
+export const CHART_IDS=['cleanBase','strongClose','volumeExpansion','overheadSupply'] as const;
+export type ChartQuestionKey=typeof CHART_IDS[number];
+export const CHART_LABELS:Record<ChartQuestionKey,string>={cleanBase:'clean base',strongClose:'strong close',volumeExpansion:'volume expansion',overheadSupply:'overhead supply'};
+export function chartScored(c:ChartStamp|null|undefined):c is ChartStamp&{cleanBase:number;strongClose:number;volumeExpansion:number;overheadSupply:number}{
+ return !!c&&c.status==='scored'&&CHART_IDS.every(k=>typeof c[k]==='number');
+}
+export function chartSideLabel(qid:ChartQuestionKey,c:ChartStamp|null|undefined){
+ if(!c)return 'NOT_RECORDED';
+ if(!chartScored(c))return 'Chart unavailable';
+ return `${CHART_LABELS[qid]} ${c[qid]>=JEV_YES?'≥':'<'}${JEV_YES.toFixed(2)}`;
+}
+export function chartFromReason(reason:string|null|undefined):ChartStamp|undefined{
+ const i=reason?.indexOf('{')??-1;if(!reason||i<0)return undefined;
+ try{const c=JSON.parse(reason.slice(i))?.chart;return c&&typeof c==='object'&&typeof c.rule==='string'&&(c.status==='scored'||c.status==='unavailable')?c as ChartStamp:undefined;}catch{return undefined;}
+}
+export function chartText(c:ChartStamp|null|undefined,named:boolean){
+ if(!named||!c)return '—';
+ if(!chartScored(c))return `unavailable${c.reason?` · ${c.reason}`:''}`;
+ return `base ${c.cleanBase.toFixed(2)} · close ${c.strongClose.toFixed(2)} · vol ${c.volumeExpansion.toFixed(2)} · overhead ${c.overheadSupply.toFixed(2)}`;
+}
+export function chartDetail(c:ChartStamp|null|undefined){
+ if(!c)return 'No chart confirmer stamp saved for this row.';
+ const parts=[`rule ${c.rule}`,`checked ${c.checkedAt}`,`${c.bars} stored candles`];
+ if(c.model)parts.push(`model ${c.model}`);
+ if(c.status==='scored')parts.push('each value is the probability that the read is true; overhead supply high is a caution, the other three high are confirmations');
+ else parts.push(`unavailable: ${c.reason??'reason not recorded'}${c.reason==='no-bars'?' (the scan stored only the signal candle; the next 4h window stores all 25)':''}`);
  return parts.join(' · ');
 }
