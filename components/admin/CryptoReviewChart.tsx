@@ -19,14 +19,31 @@ function EvidenceBadge({row}:{row:RuleRow}){
  return <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300" title={jevDetail(j)}>{jev} · Catalyst: {catalystText(row.catalyst,true)}{row.shadow?` · Shadow ${row.shadow.score>=0?'+':''}${row.shadow.score.toFixed(2)}`:''}</span>;
 }
 type Readout={time:string;o:number;h:number;l:number;c:number;v:number|null;atrFromFloor:number|null;atrFromHigh:number|null};
+/** One candle cannot be drawn as a chart; list the rule levels around the signal close instead. */
+function LevelsLadder({row}:{row:RuleRow}){
+ const close=typeof row.close==='number'&&Number.isFinite(row.close)?row.close:null;
+ const atr=row.atr&&row.atr>0?row.atr:null;
+ const rungs:Array<{title:string;price:number;color:string}>=ruleLevels(row).flatMap(([title,price,color])=>typeof price==='number'&&Number.isFinite(price)?[{title,price,color}]:[]);
+ if(close!=null)rungs.push({title:'Signal close',price:close,color:'#e2e8f0'});
+ rungs.sort((a,b)=>b.price-a.price);
+ return <ol className="divide-y divide-slate-800 rounded border border-slate-700 text-sm tabular-nums">
+  {rungs.map(r=><li key={r.title} className={`flex flex-wrap items-center gap-3 px-3 py-1.5 ${r.title==='Signal close'?'bg-slate-800/60 font-semibold':''}`}>
+   <span className="inline-block h-2 w-6 rounded" style={{background:r.color}} aria-hidden/>
+   <span className="w-44">{r.title}</span>
+   <span>{fmt(r.price)}</span>
+   {close!=null&&r.title!=='Signal close'&&<span className="text-xs text-slate-400">{((r.price-close)/close*100).toFixed(2)}% from close{atr?` · ${((r.price-close)/atr).toFixed(2)} ATR`:''}</span>}
+  </li>)}
+ </ol>;
+}
 export function VolumeRuleChart({row}:{row:RuleRow}){
   const container=useRef<HTMLDivElement>(null);
   const [readout,setReadout]=useState<Readout|null>(null);
   const label=setupDisplayLabel(row);
   const bars=row.bars?.length?row.bars:row.signal?[{...row.signal,v:NaN}]:row.close&&row.asOf?[{t:Date.parse(row.asOf),o:row.close,h:row.close,l:row.close,c:row.close,v:NaN}]:[];
   const hasVolume=bars.some(b=>Number.isFinite(b.v));
+  const drawable=bars.length>1;
   useEffect(()=>{
-    if(!container.current||!bars.length||!Number.isFinite(bars[0].t))return;
+    if(!container.current||!drawable||!Number.isFinite(bars[0].t))return;
     const api=createChart(container.current,{autoSize:true,height:hasVolume?360:280,...DARK});
     const precision=pricePrecision(bars.map(b=>b.l));
     const series=api.addSeries(CandlestickSeries,{upColor:'#10b981',downColor:'#f87171',borderVisible:false,wickUpColor:'#10b981',wickDownColor:'#f87171',priceFormat:{type:'price',precision,minMove:10**-precision}});
@@ -54,10 +71,14 @@ export function VolumeRuleChart({row}:{row:RuleRow}){
   },[row]);
   return <section aria-label={`${row.symbol??row.id} volume rule chart`} className="space-y-2">
     <div className="flex flex-wrap items-center gap-2"><h3 className="text-base">{row.symbol??row.id} · {label}</h3><EvidenceBadge row={row}/></div>
-    <div ref={container} role="img" aria-label={`${row.symbol??row.id} completed 4-hour candles with the volume rule levels`} className={`${hasVolume?'h-[360px]':'h-[280px]'} w-full`} />
-    <p className="text-xs text-slate-300 tabular-nums">{readout?`${readout.time} · O ${fmt(readout.o)} H ${fmt(readout.h)} L ${fmt(readout.l)} C ${fmt(readout.c)}${readout.v!=null?` · Vol ${readout.v.toLocaleString()}`:''}${readout.atrFromFloor!=null?` · ${readout.atrFromFloor>=0?'+':''}${readout.atrFromFloor.toFixed(2)} ATR from entry floor`:''}${readout.atrFromHigh!=null?` · ${readout.atrFromHigh>=0?'+':''}${readout.atrFromHigh.toFixed(2)} ATR from prior high`:''}`:'Hover a candle for OHLC, volume, and distance from the rule levels in ATR.'}</p>
-    <p className="text-xs text-slate-400">Signal candle {row.asOf??'—'} · Prior 20-bar high {fmt(row.trigger)} · 20-bar average {fmt(row.sma20)} · Entry floor {fmt(row.entryFloor)} · Chase limit {fmt(row.maxEntry)} · Stop {fmt(row.stop)} · 2R target {fmt(row.target)}{row.atr?` · ATR ${fmt(row.atr)}`:''}</p>
-    {!row.bars?.length&&<p className="text-xs text-slate-400">This saved scan carries only the signal candle; the next batch stores the 25 candles the rule read, with volume.</p>}
+    {drawable?<>
+      <div ref={container} role="img" aria-label={`${row.symbol??row.id} completed 4-hour candles with the volume rule levels`} className={`${hasVolume?'h-[360px]':'h-[280px]'} w-full`} />
+      <p className="text-xs text-slate-300 tabular-nums">{readout?`${readout.time} · O ${fmt(readout.o)} H ${fmt(readout.h)} L ${fmt(readout.l)} C ${fmt(readout.c)}${readout.v!=null?` · Vol ${readout.v.toLocaleString()}`:''}${readout.atrFromFloor!=null?` · ${readout.atrFromFloor>=0?'+':''}${readout.atrFromFloor.toFixed(2)} ATR from entry floor`:''}${readout.atrFromHigh!=null?` · ${readout.atrFromHigh>=0?'+':''}${readout.atrFromHigh.toFixed(2)} ATR from prior high`:''}`:'Hover a candle for OHLC, volume, and distance from the rule levels in ATR.'}</p>
+    </>:<>
+      <LevelsLadder row={row}/>
+      <p className="text-xs text-slate-400">Levels only: this saved scan carries just the signal candle. The next batch in a new 4h window stores the 25 candles the rule read, with volume, and the chart draws here.</p>
+    </>}
+    <p className="text-xs text-slate-400">Signal candle {row.asOf??'—'}{row.atr?` · ATR ${fmt(row.atr)}`:''}{drawable?` · Prior 20-bar high ${fmt(row.trigger)} · 20-bar average ${fmt(row.sma20)} · Entry floor ${fmt(row.entryFloor)} · Chase limit ${fmt(row.maxEntry)} · Stop ${fmt(row.stop)} · 2R target ${fmt(row.target)}`:''}</p>
     {!row.sma20&&<p className="text-xs text-slate-400">20-bar average was not stored on this saved scan. Prior high, stop and max entry are the saved rule levels.</p>}
   </section>;
 }

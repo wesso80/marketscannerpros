@@ -5,11 +5,11 @@ const fmt=(n:number|null,unit:'R'|'%')=>n==null?'—':`${n>=0?'+':''}${n.toFixed
 const STATUS:Record<CalibrationSide['status'],string>={collecting:'text-slate-400',flat:'text-slate-300',directional:'text-sky-300',confirmed:'text-emerald-300',contradicted:'text-amber-300'};
 function FieldTable({field}:{field:CalibrationField}){
  return <div className="overflow-auto">
-  <h4 className="mt-2 text-sm font-semibold">{field.label} <span className="font-normal text-slate-400">· {field.id} · {field.ruleVersion} · {field.observations} rows · {field.file}</span></h4>
+  <h4 className="mt-2 text-sm font-semibold">{field.label} <span className="font-normal text-slate-400">· {field.id} · {field.ruleVersion} · {field.observations} rows · {field.file}{field.sides.some(s=>!s.informational&&s.n<30)?' · sides under 30 rows in amber':''}</span></h4>
   <table className="w-full min-w-[820px] text-left text-sm"><thead><tr>{['Side','Rows','Mean','Lift','SE','Half A lift (n)','Half B lift (n)','Status'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
-   {field.sides.map(s=><tr key={s.side} className="border-t border-slate-700">
+   {field.sides.map(s=><tr key={s.side} className={`border-t border-slate-700 ${!s.informational&&s.n<30?'text-amber-200/80':''}`}>
     <td className="p-2">{s.side}{s.informational?<span className="text-slate-500"> · not graded</span>:null}</td>
-    <td className="p-2">{s.n}{s.n<30?<span className="text-amber-300"> · thin</span>:null}</td>
+    <td className="p-2">{s.n}</td>
     <td className="p-2">{fmt(s.mean,field.unit)}</td>
     <td className={`p-2 ${s.lift==null||s.informational?'':s.lift>0?'text-emerald-300':'text-red-300'}`}>{fmt(s.lift,field.unit)}</td>
     <td className="p-2">{s.se==null?'—':s.se.toFixed(2)}</td>
@@ -24,16 +24,24 @@ const RANK:Record<CalibrationSide['status'],number>={confirmed:5,contradicted:4,
 /** One line per field: how much is graded and the side with the most rows. Click to open the full table. */
 function Overview({title,fields}:{title:string;fields:CalibrationField[]}){
  const [open,setOpen]=useState<Record<string,boolean>>({});
- const rows=fields.map(f=>{
+ const [showEmpty,setShowEmpty]=useState(false);
+ const all=fields.map(f=>{
   const graded=f.sides.filter(s=>!s.informational);
   const lead=[...graded].sort((a,b)=>b.n-a.n)[0]??null;
   const status=graded.reduce<CalibrationSide['status']|null>((best,s)=>!best||RANK[s.status]>RANK[best]?s.status:best,null);
   return {f,graded,lead,status,gradedRows:graded.reduce((s,x)=>s+x.n,0)};
  });
- const anyGraded=rows.some(r=>r.gradedRows>0);
+ const anyGraded=all.some(r=>r.gradedRows>0);
+ const empty=all.filter(r=>r.gradedRows===0).length;
+ const rows=showEmpty?all:all.filter(r=>r.gradedRows>0);
+ const thin=rows.some(r=>r.gradedRows>0&&r.gradedRows<30);
  return <div className="space-y-1 rounded border border-sky-800 p-3">
-  <h3 className="text-sm font-semibold">{title}</h3>
+  <div className="flex flex-wrap items-center justify-between gap-2">
+   <h3 className="text-sm font-semibold">{title}</h3>
+   {anyGraded&&!!empty&&<button type="button" aria-pressed={showEmpty} onClick={()=>setShowEmpty(v=>!v)} className="rounded border border-slate-600 px-2 py-0.5 text-xs text-slate-300">{showEmpty?`Hide ${empty} field${empty===1?'':'s'} with no graded rows`:`Show ${empty} field${empty===1?'':'s'} with no graded rows`}</button>}
+  </div>
   {!anyGraded&&<p className="text-xs text-slate-400">No graded rows yet for this outcome. Fields appear here as soon as one side has a recorded value.</p>}
+  {anyGraded&&thin&&<p className="text-xs text-slate-400">Fields under 30 graded rows are shown in amber; differences there are noise.</p>}
   {anyGraded&&<div className="overflow-auto"><table className="w-full min-w-[820px] text-left text-sm"><thead><tr>{['Field','Graded rows','Sides','Largest side','n','Lift','Status',''].map((h,i)=><th className="p-2" key={i}>{h}</th>)}</tr></thead><tbody>
    {rows.map(({f,graded,lead,status,gradedRows})=><FragmentRow key={f.id} f={f} graded={graded} lead={lead} status={status} gradedRows={gradedRows} open={!!open[f.id]} toggle={()=>setOpen(o=>({...o,[f.id]:!o[f.id]}))}/>)}
   </tbody></table></div>}
@@ -41,9 +49,9 @@ function Overview({title,fields}:{title:string;fields:CalibrationField[]}){
 }
 function FragmentRow({f,graded,lead,status,gradedRows,open,toggle}:{f:CalibrationField;graded:CalibrationSide[];lead:CalibrationSide|null;status:CalibrationSide['status']|null;gradedRows:number;open:boolean;toggle:()=>void}){
  return <>
-  <tr className="border-t border-slate-700">
+  <tr className={`border-t border-slate-700 ${gradedRows>0&&gradedRows<30?'text-amber-200/80':''}`}>
    <td className="p-2">{f.label}<div className="text-xs text-slate-500">{f.id} · {f.ruleVersion}</div></td>
-   <td className="p-2">{gradedRows}{gradedRows>0&&gradedRows<30?<span className="text-amber-300"> · thin</span>:null}</td>
+   <td className="p-2">{gradedRows}</td>
    <td className="p-2">{graded.length}</td>
    <td className="p-2">{lead?.side??'—'}</td>
    <td className="p-2">{lead?.n??'—'}</td>

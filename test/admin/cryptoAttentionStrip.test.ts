@@ -16,13 +16,14 @@ it('lists saved closes inside the entry zone and leaves no-signal coins out',()=
  expect(d.stale).toBe(false);
  expect(d.inZone).toEqual([{symbol:'TOSH',kind:'CONTINUATION'}]);
  expect(d.blocked.map(b=>b.symbol)).toEqual(['AXS','MEW']);
- expect(d.blocked.find(b=>b.symbol==='AXS')?.reason).toBe('Outside the entry zone');
+ expect(d.blocked.find(b=>b.symbol==='AXS')).toMatchObject({reason:'Outside the entry zone',source:'setup'});
  expect(d.blocked.find(b=>b.symbol==='MEW')?.reason).toContain('chase');
+ expect(d.blocked.find(b=>b.symbol==='MEW')?.source).toBe('bucket');
 });
 it('uses one reason from the last cycle when a coin was blocked',()=>{
  const d=scanDecision(paper(true,{decisions:[{coin:'tosh',status:'BLOCKED',reason:'Correlated cluster risk cap',ask:1}]}),scan,now);
  expect(d.inZone.map(c=>c.symbol)).not.toContain('TOSH');
- expect(d.blocked.filter(b=>b.symbol==='tosh')).toEqual([{symbol:'tosh',reason:'Correlated cluster risk cap'}]);
+ expect(d.blocked.filter(b=>b.symbol==='tosh')).toEqual([{symbol:'tosh',reason:'Correlated cluster risk cap',source:'cycle'}]);
 });
 it('reads book health from the saved ledger and the last cycle',()=>{
  const healthy=scanDecision(paper(),scan,now);
