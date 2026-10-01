@@ -76,7 +76,6 @@ export default function CryptoMarketsPage() {
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
     <p>SIMULATED paper trading only; no real orders.</p>
     {error && tab!=='watchlists' && <p role="alert" className="text-red-300">{error}</p>}
-    <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
       <button disabled={busy} onClick={refreshSaved} className="rounded border px-4 py-2">Refresh saved dashboard</button>
@@ -102,6 +101,7 @@ export default function CryptoMarketsPage() {
     {tab==='recommendations' && <CryptoRecommendations refreshVersion={refreshVersion} />}
     {tab==='learning' && <CryptoLearning refreshVersion={refreshVersion} />}
     {tab==='setups' && <>
+    <CryptoAttentionStrip now={now} refreshVersion={refreshVersion} onOpen={setTab} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} />
     <CryptoMomentumScanner now={now} refreshVersion={refreshVersion} hourly />
     <CryptoForwardScore refreshVersion={refreshVersion} />
