@@ -52,8 +52,12 @@ export function applyForwardScores(rows:ForwardRow[],fourHour:ScanLike,early:Sca
  for(const row of next){
   const signal=Date.parse(row.signalAt);
   if(!Number.isFinite(signal))continue;
-  if(!row.jev){const found=[fourHour,early].flatMap(scan=>scan?.rows??[]).find(r=>r.id===row.id&&r.stage===row.bucket&&r.asOf===row.signalAt&&r.jev);if(found?.jev)row.jev=found.jev;}
-  if(!row.catalyst){const found=[fourHour,early].flatMap(scan=>scan?.rows??[]).find(r=>r.id===row.id&&r.stage===row.bucket&&r.asOf===row.signalAt&&r.catalyst);if(found?.catalyst)row.catalyst=found.catalyst;}
+  const same=[fourHour,early].flatMap(scan=>scan?.rows??[]).filter(r=>r.id===row.id&&r.stage===row.bucket&&r.asOf===row.signalAt);
+  // A missing stamp is backfilled; an unavailable stamp is superseded when the same signal was re-stamped under a newer rule.
+  const jevNow=same.find(r=>r.jev)?.jev;
+  if(jevNow&&(!row.jev||(row.jev.status==='unavailable'&&jevNow.rule!==row.jev.rule)))row.jev=jevNow;
+  const catNow=same.find(r=>r.catalyst)?.catalyst;
+  if(catNow&&(!row.catalyst||(row.catalyst.status==='unavailable'&&catNow.rule!==row.catalyst.rule)))row.catalyst=catNow;
   row.next4h=fill(row.next4h,row.signalPrice,due4h(signal),[q4.get(row.id)]);
   row.day=fill(row.day,row.signalPrice,signal+DAY,[q4.get(row.id),q1.get(row.id)]);
  }
