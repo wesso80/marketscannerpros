@@ -18,6 +18,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { buildEveningPacket } from '@/lib/eveningPacket/builder';
 import { pruneEdgePackets } from '@/lib/admin/edgePacketSnapshots';
+import { runNewsJevDaily } from '@/lib/admin/equityNewsJev';
 import { notifyAdmin } from '@/lib/admin/notifyAdmin';
 
 export const runtime = 'nodejs';
@@ -144,6 +145,8 @@ export async function POST(req: NextRequest) {
   // days. Best-effort; failure is logged inside pruneEdgePackets and
   // never blocks the evening packet response.
   const edgePacketsPruned = await pruneEdgePackets(30).catch(() => 0);
+  // Jev news verification: score new catalyst headlines, label older ones from saved bars. Evidence only; never blocks the packet.
+  const newsJev = await runNewsJevDaily().catch(() => null);
 
   // Notify operator with one consolidated email/Discord ping per cron run.
   const ok = summaries.filter((s) => s.ok).length;
@@ -157,6 +160,7 @@ export async function POST(req: NextRequest) {
     `Setups + invalidations reconciled: ${totalReconciled}`,
     `Warnings surfaced: ${warningCount}`,
     `Edge-packet snapshots pruned (>30d): ${edgePacketsPruned}`,
+    newsJev ? `News Jev stamps: scored ${newsJev.scoring.scored}, unavailable ${newsJev.scoring.unavailable}${newsJev.scoring.skipped ? ` (${newsJev.scoring.skipped})` : ""}; labelled ${newsJev.labelling.labelled}, waiting ${newsJev.labelling.waiting}` : "News Jev stamps: step failed",
     `Duration: ${Date.now() - started}ms`,
   ];
   if (failed.length > 0) {

@@ -1,0 +1,88 @@
+import {afterEach,beforeEach,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const q=vi.fn();
+const pgReadBars=vi.fn(),pgReadOverview=vi.fn();
+vi.mock('@/lib/db',()=>({q:(...a:unknown[])=>q(...a)}));
+vi.mock('@/lib/marketData/store',()=>({pgReadBars:(...a:unknown[])=>pgReadBars(...a),pgReadOverview:(...a:unknown[])=>pgReadOverview(...a)}));
+import {NEWS_JEV_DDL,NEWS_JEV_QUESTIONS,NEWS_JEV_RULE,buildNewsLedger,ddlStatements,eventDateET,labelNewsOutcomes,newsState,returnAroundEvent,scorePendingNews,type NewsObs,type PendingEvent} from '@/lib/admin/equityNewsJev';
+const now=Date.UTC(2026,9,1,21,0);
+const savedKey=process.env.AI_GATEWAY_API_KEY;
+const event=(id:string,ticker:string,headline:string,hoursAgo=5):PendingEvent=>({id,ticker,headline,source:'NEWS',event_timestamp_utc:new Date(now-hoursAgo*3600000).toISOString(),event_timestamp_et:null,raw_payload:{body:'Body text '.repeat(60)}});
+beforeEach(()=>{q.mockReset();pgReadBars.mockReset();pgReadOverview.mockReset();process.env.AI_GATEWAY_API_KEY='jev-key';});
+afterEach(()=>{vi.unstubAllGlobals();if(savedKey===undefined)delete process.env.AI_GATEWAY_API_KEY;else process.env.AI_GATEWAY_API_KEY=savedKey;});
+it('the table the job creates is exactly the checked-in migration',()=>{
+ const norm=(s:string)=>s.replace(/\r\n/g,'\n');
+ expect(norm(NEWS_JEV_DDL)).toBe(norm(readFileSync('migrations/109_news_jev_stamps.sql','utf8')));
+ expect(ddlStatements().length).toBe(3);
+});
+it('the state sent to Jev is headline text plus company identity only; the classifier\u2019s verdict never leaks in',()=>{
+ const s=newsState({...event('e1','AAPL','Apple beats on iPhone'),raw_payload:{body:'x'.repeat(1000)}},'Apple Inc.');
+ expect(s).toEqual({ticker:'AAPL',company:'Apple Inc.',headline:'Apple beats on iPhone',summary:'x'.repeat(400),source:'NEWS',publishedAt:new Date(now-5*3600000).toISOString()});
+ expect(JSON.stringify(s)).not.toMatch(/subtype|severity|confidence|classif/i);
+ expect(newsState(event('e2','X','h'),null).company).toBe('(name not on file)');
+ expect(Object.keys(NEWS_JEV_QUESTIONS)).toEqual(['aboutCompany','priceMaterial','direction','eventType']);
+});
+it('next-day return uses the last close before the ET event day and the first close after it',()=>{
+ const d=(day:string,close:number)=>({ts:Date.parse(`${day}T00:00:00Z`),close});
+ const bars=[d('2026-09-28',100),d('2026-09-29',102),d('2026-09-30',101),d('2026-10-01',105),d('2026-10-02',110)];
+ expect(returnAroundEvent(bars,'2026-09-30')).toEqual({priorClose:102,nextClose:105,returnPct:(105/102-1)*100});
+ expect(returnAroundEvent(bars,'2026-10-02')).toBeNull();
+ expect(returnAroundEvent(bars,'2026-09-28')).toBeNull();
+ expect(returnAroundEvent([d('2026-09-29',0),d('2026-10-01',105)],'2026-09-30')).toBeNull();
+ // 21:00 UTC on 1 Oct is still 1 Oct in New York; 03:00 UTC on 2 Oct is still 1 Oct in New York.
+ expect(eventDateET({event_at:'2026-10-01T21:00:00Z'})).toBe('2026-10-01');
+ expect(eventDateET({event_at:'2026-10-02T03:00:00Z'})).toBe('2026-10-01');
+});
+it('scores pending headlines once each, stores both choice and probability answers, and records failures with a reason',async()=>{
+ const rows=[event('e1','AAPL','Apple beats on iPhone'),event('e2','MSFT','Microsoft sued by regulator')];
+ q.mockImplementation(async(sql:string)=>sql.startsWith('SELECT e.id')?rows:[]);
+ pgReadOverview.mockImplementation(async(t:string)=>t==='AAPL'?{overview:{name:'Apple Inc.'},fetchedAt:''}:null);
+ let calls=0;
+ vi.stubGlobal('fetch',vi.fn(async()=>{calls++;if(calls===2)return {ok:false,status:500,json:async()=>({})};return {ok:true,json:async()=>({model:'jev-1.13.0',answers:{aboutCompany:{probability:.95},priceMaterial:{probability:.7},direction:{choice:'positive',probabilities:{positive:.8,negative:.1,neutral:.1},confidence:.7},eventType:{choice:'earnings',probabilities:{earnings:.9},confidence:.85}},usage:{input_tokens:410}})};}));
+ const out=await scorePendingNews(now);
+ expect(out).toEqual({scored:1,unavailable:1,skipped:null});
+ const inserts=q.mock.calls.filter(c=>String(c[0]).startsWith('INSERT INTO news_jev_stamps'));
+ expect(inserts).toHaveLength(2);
+ const scored=inserts.find(c=>String(c[0]).includes("'scored'"))!,failed=inserts.find(c=>String(c[0]).includes("'unavailable'"))!;
+ expect(scored[1]).toEqual(expect.arrayContaining(['e1','AAPL',NEWS_JEV_RULE,.95,.7,'positive','earnings',.85,'jev-1.13.0',410,'Apple Inc.']));
+ expect(failed[1]).toEqual(expect.arrayContaining(['e2','MSFT','http-500',null]));
+ expect(String(q.mock.calls[0][0])).toMatch(/CREATE TABLE IF NOT EXISTS news_jev_stamps/);
+});
+it('without a gateway key nothing is scored and nothing is written',async()=>{
+ delete process.env.AI_GATEWAY_API_KEY;
+ q.mockResolvedValue([]);
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
+ expect(await scorePendingNews(now)).toEqual({scored:0,unavailable:0,skipped:'no-key'});
+ expect(fetch).not.toHaveBeenCalled();
+ expect(q.mock.calls.some(c=>String(c[0]).startsWith('INSERT'))).toBe(false);
+});
+it('labels from saved daily bars only, waits when the next bar is missing, and gives up as no-bars after the window',async()=>{
+ const old=new Date(now-20*86400000).toISOString(),recent=new Date(now-3*86400000).toISOString();
+ q.mockImplementation(async(sql:string)=>sql.startsWith('SELECT event_id')?[{event_id:'a',ticker:'AAPL',event_at:recent},{event_id:'b',ticker:'NOPE',event_at:recent},{event_id:'c',ticker:'GONE',event_at:old}]:[]);
+ const d=(day:string,close:number)=>({ts:Date.parse(`${day}T00:00:00Z`),open:0,high:0,low:0,close,volume:0});
+ pgReadBars.mockImplementation(async(t:string)=>t==='AAPL'?{bars:[d('2026-09-26',100),d('2026-09-29',104),d('2026-09-30',103)],fetchedAt:''}:null);
+ const out=await labelNewsOutcomes(now);
+ expect(out).toEqual({labelled:1,waiting:1,noBars:1});
+ const updates=q.mock.calls.filter(c=>String(c[0]).startsWith('UPDATE news_jev_stamps'));
+ expect(updates).toHaveLength(2);
+ expect(updates[0][1][0]).toBe('a');expect(updates[0][1][1]).toBe(100);expect(updates[0][1][2]).toBe(104);
+ expect(String(updates[1][0])).toContain("'no-bars'");expect(updates[1][1][0]).toBe('c');
+ expect(pgReadBars).toHaveBeenCalledTimes(3);
+});
+it('the ledger grades Jev answers and the regex classifier side by side on the same next-day returns',()=>{
+ const obs:NewsObs[]=Array.from({length:80},(_,i)=>({at:now-(80-i)*3600000,ret:i%2?2:-2,aboutCompany:.9,priceMaterial:i%2?.8:.2,direction:i%2?'positive':'negative',eventType:i%2?'earnings':'analyst',subtype:i%2?'EARNINGS_BEAT':'ANALYST_NOTE',severity:'MED',classifierConfidence:.6}));
+ const ledger=buildNewsLedger(obs,{stamped:90,scored:85,unavailable:5,reasons:{'http-500':5},labelled:80,noBars:2,waiting:3},now);
+ const dir=ledger.fields.find(f=>f.id==='jev.direction')!;
+ expect(dir.sides.find(s=>s.side==='direction positive')).toMatchObject({n:40,status:'confirmed'});
+ expect(dir.sides.find(s=>s.side==='direction positive')!.lift).toBeCloseTo(2,6);
+ expect(ledger.fields.find(f=>f.id==='classifier.subtype')!.sides.find(s=>s.side==='ANALYST_NOTE')!.lift).toBeCloseTo(-2,6);
+ expect(ledger.fields.find(f=>f.id==='jev.materialAndAbout')!.sides.map(s=>s.side).sort()).toEqual(['both \u22650.50','not both']);
+ expect(ledger.source.reasons).toEqual({'http-500':5});
+ expect(JSON.stringify(ledger)).not.toMatch(/win ?rate/i);
+ expect(buildNewsLedger([],{stamped:0,scored:0,unavailable:0,reasons:{},labelled:0,noBars:0,waiting:0},now).note).toContain('No labelled headlines yet');
+});
+it('the stamp never feeds the public catalyst routes, the classifier, or the ingest pipeline',()=>{
+ for(const f of ['lib/catalyst/classifier.ts','lib/catalyst/newsProvider.ts','app/api/catalyst/events/route.ts','app/api/catalyst/study/route.ts','app/api/catalyst/ingest/route.ts','lib/equityNewsRelevance.ts'])expect(readFileSync(f,'utf8')).not.toMatch(/equityNewsJev|news_jev_stamps/);
+ const src=readFileSync('lib/admin/equityNewsJev.ts','utf8');
+ expect(src).not.toMatch(/avFetch|alphavantage\.co|UPDATE catalyst_events|INSERT INTO catalyst_events/);
+});

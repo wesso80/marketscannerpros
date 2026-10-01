@@ -5,6 +5,8 @@ import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
 import {JEV_LABELS,JEV_QUESTION_IDS,JEV_YES,jevFromReason,jevSideLabel,type JevQuestionId} from './cryptoJevEvidence';
 import {createRecommendation,loadRecommendations,saveRecommendations,type Recommendation} from './cryptoRecommendations';
+import {CAL_CORE,calibrateField as coreCalibrateField,splitAt,type CalibrationFieldBase,type CalibrationSide,type CalibrationStatus,type FieldDef} from './calibrationCore';
+export type {CalibrationSide,CalibrationStatus};
 /**
  * Calibration ledger: every recorded evidence field against the outcome already stored beside it.
  * Pure arithmetic over saved rows. Nothing here reads a provider, scores with Jev, opens a trade, or edits a rule.
@@ -14,16 +16,12 @@ import {createRecommendation,loadRecommendations,saveRecommendations,type Recomm
 export const CALIBRATION_KEY='admin:crypto-markets:calibration:v1';
 export const CALIBRATION_FILED_KEY='admin:crypto-markets:calibration:filed:v1';
 export const CALIBRATION_DAY_KEY='admin:crypto-markets:calibration:day';
-export const CAL={minSide:30,minHalf:15,minLiftR:0.25,minLiftPct:1,weeklyCap:3,ttlSec:48*3600,cooldownMs:600000,sources:{paper:'crypto paper ledger (closed trades with R)',forward:'saved forward score (24h mark)'}} as const;
+export const CAL={...CAL_CORE,weeklyCap:3,ttlSec:48*3600,cooldownMs:600000,sources:{paper:'crypto paper ledger (closed trades with R)',forward:'saved forward score (24h mark)'}} as const;
 const PAPER_NAME='Crypto Markets Paper';
-export type CalibrationStatus='collecting'|'flat'|'directional'|'confirmed'|'contradicted';
-export type CalibrationSide={side:string;n:number;mean:number|null;lift:number|null;se:number|null;halfA:{n:number;lift:number|null};halfB:{n:number;lift:number|null};status:CalibrationStatus;informational:boolean};
-export type CalibrationField={id:string;label:string;file:string;ruleVersion:string;outcome:'paperR'|'forward24h';unit:'R'|'%';observations:number;sides:CalibrationSide[]};
+export type CalibrationField=CalibrationFieldBase<'paperR'|'forward24h'>;
 export type CalibrationLedger={version:1;checkedAt:string;source:{closedTrades:number;withR:number;forwardRows:number;forwardFilled24h:number;splitAt:{paper:string|null;forward:string|null}};fields:CalibrationField[];note:string};
 export type PaperObs={at:number;r:number;reason:Record<string,unknown>|null;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined;venue:string;exit:string};
 export type ForwardObs={at:number;day:number;h4:number|null;bucket:string;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined};
-type FieldDef<O>={id:string;label:string;file:string;ruleVersion:string;side:(o:O)=>string|null};
-const INFO=new Set(['NOT_RECORDED','Jev unavailable','Catalyst unavailable']);
 const str=(v:unknown)=>typeof v==='string'&&v.trim()?v.trim():null;
 const path=(o:Record<string,unknown>|null,...keys:string[])=>{let cur:unknown=o;for(const k of keys){if(!cur||typeof cur!=='object')return null;cur=(cur as Record<string,unknown>)[k];}return str(cur);};
 const jevField=<O extends {jev:JevStamp|undefined}>(qid:JevQuestionId,file:string):FieldDef<O>=>({id:`jev.${qid}`,label:`Jev ${JEV_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-shadow-v2',side:o=>jevSideLabel(qid,o.jev)});
@@ -85,53 +83,15 @@ export function forwardObservations(rows:ForwardRow[]):ForwardObs[]{
  }
  return out;
 }
-const mean=(a:number[])=>a.length?a.reduce((s,n)=>s+n,0)/a.length:null;
-function se(a:number[]){
- if(a.length<2)return null;
- const m=mean(a) as number,v=a.reduce((s,n)=>s+(n-m)**2,0)/(a.length-1);
- return Math.sqrt(v/a.length);
-}
-const sign=(n:number|null)=>n==null?0:n>0?1:n<0?-1:0;
-/**
- * One field: observations split by side, lift = side mean − overall mean, and the same lift inside each time half.
- * Confirmed needs both halves to carry at least minHalf rows and to agree on the sign of the lift. Informational sides are shown but never graded.
- */
+/** Crypto wrapper over the shared core; kept so existing callers and tests keep one import. */
 export function calibrateField<O extends {at:number}>(def:FieldDef<O>,obs:O[],value:(o:O)=>number,unit:'R'|'%',outcome:CalibrationField['outcome']):CalibrationField{
- const tagged=obs.flatMap(o=>{const side=def.side(o);return side?[{o,side,y:value(o)}]:[];}).sort((a,b)=>a.o.at-b.o.at).map((t,i)=>({...t,i}));
- const all=tagged.map(t=>t.y),allMean=mean(all);
- const split=Math.floor(tagged.length/2);
- const halfA=tagged.slice(0,split),halfB=tagged.slice(split);
- const halfMean=(h:typeof tagged)=>mean(h.map(t=>t.y));
- const meanA=halfMean(halfA),meanB=halfMean(halfB);
- const minLift=unit==='R'?CAL.minLiftR:CAL.minLiftPct;
- const sides=new Map<string,typeof tagged>();
- for(const t of tagged)sides.set(t.side,[...(sides.get(t.side)??[]),t]);
- const rows:CalibrationSide[]=[...sides].map(([side,list])=>{
-  const ys=list.map(t=>t.y),m=mean(ys),s=se(ys);
-  const lift=m!=null&&allMean!=null?m-allMean:null;
-  const inA=list.filter(t=>t.i<split),inB=list.filter(t=>t.i>=split);
-  const liftA=meanA!=null&&inA.length?(mean(inA.map(t=>t.y)) as number)-meanA:null,liftB=meanB!=null&&inB.length?(mean(inB.map(t=>t.y)) as number)-meanB:null;
-  const informational=INFO.has(side);
-  let status:CalibrationStatus='collecting';
-  if(!informational&&list.length>=CAL.minSide&&lift!=null){
-   const halvesReady=inA.length>=CAL.minHalf&&inB.length>=CAL.minHalf;
-   const opposed=halvesReady&&liftA!=null&&liftB!=null&&sign(liftA)!==0&&sign(liftB)!==0&&sign(liftA)!==sign(liftB)&&Math.abs(liftA)>=minLift&&Math.abs(liftB)>=minLift;
-   if(opposed)status='contradicted';
-   else if(s!=null&&Math.abs(lift)<s)status='flat';
-   else if(!halvesReady)status='directional';
-   else if(sign(lift)!==0&&sign(liftA)===sign(lift)&&sign(liftB)===sign(lift)&&Math.abs(lift)>=minLift)status='confirmed';
-   else status='directional';
-  }
-  return {side,n:list.length,mean:m,lift,se:s,halfA:{n:inA.length,lift:liftA},halfB:{n:inB.length,lift:liftB},status,informational};
- }).sort((a,b)=>Number(a.informational)-Number(b.informational)||b.n-a.n||a.side.localeCompare(b.side));
- return {id:def.id,label:def.label,file:def.file,ruleVersion:def.ruleVersion,outcome,unit,observations:tagged.length,sides:rows};
+ return coreCalibrateField(def,obs,value,unit,outcome);
 }
 export function buildCalibration(paper:PaperObs[],forward:ForwardObs[],meta:{closedTrades:number;forwardRows:number},now=Date.now()):CalibrationLedger{
  const fields=[
   ...PAPER_FIELDS.map(def=>calibrateField(def,paper,o=>o.r,'R','paperR')),
   ...FORWARD_FIELDS.map(def=>calibrateField(def,forward,o=>o.day,'%','forward24h')),
  ];
- const splitAt=(obs:{at:number}[])=>{const sorted=[...obs].sort((a,b)=>a.at-b.at);const i=Math.floor(sorted.length/2);return sorted[i]?new Date(sorted[i].at).toISOString():null;};
  const confirmed=fields.flatMap(f=>f.sides.filter(s=>s.status==='confirmed').map(s=>`${f.id} ${s.side}`));
  const note=!paper.length&&!forward.length?'No closed paper trades with R and no filled 24h forward marks yet. Nothing to calibrate.':`Lift is the side's mean minus the overall mean on the same rows: R for the paper ledger, % for the 24h forward mark. A side under ${CAL.minSide} rows is collecting. Confirmed needs the same sign of lift in both time halves (${CAL.minHalf}+ rows each) and at least ${CAL.minLiftR}R or ${CAL.minLiftPct}%. ${confirmed.length?`Confirmed: ${confirmed.join('; ')}.`:'Nothing is confirmed yet.'} Evidence only; nothing here changes a rule.`;
  return {version:1,checkedAt:new Date(now).toISOString(),source:{closedTrades:meta.closedTrades,withR:paper.length,forwardRows:meta.forwardRows,forwardFilled24h:forward.length,splitAt:{paper:splitAt(paper),forward:splitAt(forward)}},fields,note};

@@ -9,6 +9,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import EquityNewsJev from "@/components/admin/EquityNewsJev";
 
 type ExposureFlag = "none" | "low" | "elevated" | "high";
 
@@ -237,6 +238,7 @@ export default function EquityResearchPage() {
       ) : null}
 
       {note ? <ResearchNoteView note={note} truth={resp!} /> : null}
+      <div style={{ marginTop: 24 }}><EquityNewsJev /></div>
     </main>
   );
 }
