@@ -44,3 +44,22 @@ export function rsEvidence(snap:RsSnapshot|null,coin:string,at:number):RsTag&{ru
  if(!snap.daily[coin])return {...base,excess:null,tercile:'UNAVAILABLE',above50:null,rule:'UNAVAILABLE',coins:Object.keys(snap.daily).length,reason:'Coin not in the Coinbase universe snapshot'};
  return {...base,...relativeStrengthAt(snap.daily,snap.btc,coin,at)};
 }
+export type RsBoardRow={id:string;symbol:string;excess:number|null;tercile:RsTag['tercile'];above50:boolean|null;rule:RsTag['rule']};
+export type RsBoard={saved:boolean;source:string;rule:string;checkedAt:string|null;asOf:string|null;stale:boolean;coins:number;leaders:RsBoardRow[];failed:string[]};
+/** Saved daily snapshot only. Does not fetch candles. */
+export async function savedRelativeStrengthBoard(now=Date.now()):Promise<RsBoard>{
+ const empty:RsBoard={saved:false,source:'coinbase 1d',rule:RS_RULE,checkedAt:null,asOf:null,stale:true,coins:0,leaders:[],failed:[]};
+ const redis=getRedis();
+ const snap=await redis?.get<RsSnapshot>(KEY).catch(()=>null);
+ if(!snap?.daily||!snap.btc)return empty;
+ const at=Date.parse(snap.day);
+ if(!Number.isFinite(at))return empty;
+ const names=await redis?.get<{rows?:{id:string;symbol:string}[]}>('admin:crypto-discovery:v1').catch(()=>null);
+ const symbol=new Map((names?.rows??[]).map(row=>[row.id,row.symbol]));
+ const leaders=Object.keys(snap.daily).map(id=>{
+  const tag=relativeStrengthAt(snap.daily,snap.btc,id,at);
+  return {id,symbol:symbol.get(id)??id,...tag};
+ }).filter(row=>row.rule==='LEADER').sort((a,b)=>(b.excess??0)-(a.excess??0));
+ const checked=Date.parse(snap.checkedAt);
+ return {saved:true,source:snap.source,rule:RS_RULE,checkedAt:snap.checkedAt,asOf:snap.day,stale:!Number.isFinite(checked)||now-checked>26*3600000,coins:Object.keys(snap.daily).length,leaders,failed:snap.failed??[]};
+}

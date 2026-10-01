@@ -36,7 +36,7 @@ async function askBoth(input:BacktestJevInput,now:number):Promise<BacktestJevSta
 const isDue=(t:StampRow)=>!!t.jevInput&&(t.jev?.rule!==JEV_RULE||t.chart?.rule!==CHART_RULE);
 /**
  * Stamps up to `limit` unstamped trades, cache first. Returns how many were stamped and how many remain.
- * Unavailable stamps caused by a transport failure are not cached so the next call retries them; no-key stamps are not cached either.
+ * Unavailable stamps caused by a transport failure or an unparseable answer are not cached, so the next call retries them; no-key stamps are not cached either.
  */
 export async function stampBacktestJev<T extends StampRow>(redis:Pick<Redis,'get'|'set'>,trades:T[],now=Date.now(),limit=BACKTEST_JEV_PER_CALL):Promise<{stamped:number;fromCache:number;remaining:number;skipped:string|null}>{
  const due=trades.filter(isDue);
@@ -54,8 +54,8 @@ export async function stampBacktestJev<T extends StampRow>(redis:Pick<Redis,'get
   await Promise.all(live.slice(i,i+4).map(async t=>{
    const s=await askBoth(t.jevInput!,now);
    t.jev=s.jev;t.chart=s.chart;stamped++;
-   const transport=(r?:string)=>!!r&&/^(http-|timeout|error)/.test(r);
-   if(!transport(s.jev?.reason)&&!transport(s.chart?.reason))await redis.set(cacheKey(t.id),s,{ex:BACKTEST_JEV_TTL_SEC}).catch(()=>undefined);
+   const uncached=(r?:string)=>!!r&&/^(http-|timeout|error|parse)/.test(r);
+   if(!uncached(s.jev?.reason)&&!uncached(s.chart?.reason))await redis.set(cacheKey(t.id),s,{ex:BACKTEST_JEV_TTL_SEC}).catch(()=>undefined);
   }));
  }
  return {stamped,fromCache,remaining:trades.filter(isDue).length,skipped:null};

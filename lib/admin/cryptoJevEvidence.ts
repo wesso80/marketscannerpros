@@ -101,3 +101,26 @@ export function chartDetail(c:ChartStamp|null|undefined){
  else parts.push(`unavailable: ${c.reason??'reason not recorded'}${c.reason==='no-bars'?' (the scan stored only the signal candle; the next 4h window stores all 25)':''}`);
  return parts.join(' · ');
 }
+export type SetupRead={opportunity:string;evidenceQuality:string;exposure:string;confidence:string;confirms:string;invalidates:string;mainRisk:string};
+/** Private setup read. Confidence steps down when a stamp is missing or the scan is stale. Nothing here is an order. `book` is the forward-score coverage: that panel has no single chart or catalyst stamp. */
+export function setupRead(input:{stale?:boolean;jev?:JevStamp|null;chart?:ChartStamp|null;catalyst?:CatalystStamp|null;shadow?:{score:number}|null;book?:{scored:number;unavailable:number;unscored:number}}):SetupRead{
+ const bookComplete=!!input.book&&input.book.scored>0&&input.book.unavailable===0&&input.book.unscored===0;
+ const jevOk=input.book?bookComplete:jevScored(input.jev);
+ const chartOk=input.book?bookComplete:chartScored(input.chart);
+ const cat=input.catalyst;
+ const catKnown=input.book?bookComplete:(cat?.status==='scored'||cat?.status==='no-headlines');
+ const degraded=!!input.stale||!jevOk||!chartOk||!catKnown;
+ const evidenceQuality=input.stale||!jevOk?'low · 15':!chartOk||!catKnown?'medium · 45':'high · 75';
+ return {
+  opportunity:input.book?'unavailable — this panel reads saved probabilities against marks already stored. It is not a forecast.':input.shadow&&typeof input.shadow.score==='number'?`shadow ${input.shadow.score.toFixed(2)} (sum of confirmed sides; not a forecast)`:'unavailable — the shadow score stays off until two confirmed fields exist',
+  evidenceQuality,
+  exposure:'Personal exposure: none on this scan. Research only. No order is sent.',
+  confidence:degraded?'Confidence is not established. An input is stale, missing, or unavailable, so this read stays uncertain and is not a trade.':'Confidence is limited to stored probabilities. It is not a win rate and it is not permission to trade.',
+  confirms:degraded?'Nothing is confirmed while an input is stale or missing.':'A later completed candle that stays inside the entry zone, with the catalyst still free of an exploit or regulatory flag.',
+  invalidates:'A close back through the entry floor, a Jev or chart stamp that becomes unavailable, or a catalyst exploit or regulatory flag.',
+  mainRisk:'Chase and volume expansion repeat the entry rule, so a high probability on either is not new evidence. The main risk is treating this read as a fill.',
+ };
+}
+export function setupReadText(read:SetupRead){
+ return [`Opportunity score: ${read.opportunity}`,`Evidence quality: ${read.evidenceQuality}`,read.exposure,read.confidence,`What confirms: ${read.confirms}`,`What invalidates: ${read.invalidates}`,`Main risk: ${read.mainRisk}`].join('\n');
+}

@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {ForwardBook,ForwardMark,JevForwardSummary} from '@/lib/admin/cryptoForwardScore';
-import {catalystDetail,catalystText,chartDetail,chartText,jevDetail} from '@/lib/admin/cryptoJevEvidence';
+import {catalystDetail,catalystText,chartDetail,chartText,jevDetail,setupRead,setupReadText} from '@/lib/admin/cryptoJevEvidence';
 function jevCell(jev:ForwardBook['rows'][number]['jev']){
  if(!jev)return '—';
  if(jev.status!=='scored'||jev.chase==null||jev.flowAgrees==null||jev.btcHeadwind==null)return `unavailable${jev.reason?` · ${jev.reason}`:''}`;
@@ -14,6 +14,7 @@ function JevSplit({jev}:{jev:JevForwardSummary}){
  return <div className="space-y-1 rounded border border-sky-800 p-3">
   <h3 className="text-sm font-semibold">Jev shadow against the saved marks · evidence only</h3>
   <p className="text-xs text-slate-400">Coverage: {c.scored} scored · {c.unavailable} unavailable{reasons?` (${reasons})`:''} · {c.unscored} without a stamp. Each answer is split at 0.50 and read against the 4h and 24h marks already on these rows. Average move and share of rows that closed up, per side. Not a win rate and not a filter; nothing here changes a setup or a trade.</p>
+  <div className="text-xs text-slate-300">{setupReadText(setupRead({stale:c.unavailable>0||c.unscored>0,book:{scored:c.scored,unavailable:c.unavailable,unscored:c.unscored}})).split('\n').map(line=><p key={line}>{line}</p>)}</div>
   <p className={jev.sides.some(s=>!s.thin)?'text-xs':'text-xs text-amber-300'}>{jev.note}{jev.sides.some(s=>s.thin)?' Sides under 30 filled marks are shown in amber.':''}</p>
   {!!jev.sides.length&&<div className="overflow-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr>{['Side','Rows','4h filled','Avg 4h','4h up','24h filled','Avg 24h','24h up'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
    {jev.sides.map(s=><tr key={s.label} className={`border-t border-slate-700 ${s.thin?'text-amber-200/80':''}`}><td className="p-2">{s.label}</td><td className="p-2">{s.rows}</td><td className="p-2">{s.filled4h}</td><td className="p-2">{pct(s.avg4hPct)}</td><td className="p-2">{shareText(s.up4hShare)}</td><td className="p-2">{s.filled24h}</td><td className="p-2">{pct(s.avg24hPct)}</td><td className="p-2">{shareText(s.up24hShare)}</td></tr>)}

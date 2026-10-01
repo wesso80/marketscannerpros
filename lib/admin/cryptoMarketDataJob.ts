@@ -1,6 +1,7 @@
 import {getRedis} from '@/lib/redis';
 import {q} from '@/lib/db';
 import {getDerivativesSnapshot,getGlobalData,getCoinCategories,getTopGainersLosers,getTrendingCoins,getApiUsage,type CoinCategory,type TrendingResponse} from '@/lib/coingecko';
+import {savedRelativeStrengthBoard} from './cryptoRelativeStrength';
 import {cgBudgetStatus,type CgBudget} from './cgCredits';
 import {CG_MARKET,aggregatePerpetuals,withOiChange,dayAgoSlot,rankCategories,compactMovers,trendingCrowding,globalPoint,globalRegime,type DerivSnapshot,type DerivRow,type GlobalPoint,type MoverRow} from './cryptoMarketData';
 const K='admin:crypto-markets:cg-market:v1',D=86400000,SLOT=CG_MARKET.snapshotMinutes*60000;
@@ -8,8 +9,9 @@ type SourceStatus={ok:boolean;at:string;skipped?:string;error?:string;calls:numb
 type Saved={status:Record<string,SourceStatus>;lastRunAt:string|null};
 const now0=()=>Date.now();
 async function status(){return (await getRedis()?.get<Saved>(`${K}:status`).catch(()=>null))??{status:{},lastRunAt:null};}
-export async function openPaperCoinIds():Promise<string[]>{
- const rows=await q<{symbol:string}>(`SELECT DISTINCT p.symbol FROM arca_positions p JOIN arca_portfolios f ON f.id=p.portfolio_id AND f.workspace_id=p.workspace_id WHERE f.name='Crypto Markets Paper' AND p.status NOT IN ('CLOSED','STOPPED','TARGET_HIT','EXPIRED','CLOSED_BY_RULE','INVALIDATED')`).catch(()=>[]);
+export async function openPaperCoinIds(workspaceId:string):Promise<string[]>{
+ if(!workspaceId)return [];
+ const rows=await q<{symbol:string}>(`SELECT DISTINCT p.symbol FROM arca_positions p JOIN arca_portfolios f ON f.id=p.portfolio_id AND f.workspace_id=p.workspace_id WHERE p.workspace_id=$1 AND f.workspace_id=$1 AND f.name='Crypto Markets Paper' AND p.status NOT IN ('CLOSED','STOPPED','TARGET_HIT','EXPIRED','CLOSED_BY_RULE','INVALIDATED')`,[workspaceId]).catch(()=>[]);
  return rows.map(r=>r.symbol);
 }
 async function watchCoinIds():Promise<string[]>{
@@ -88,9 +90,9 @@ export async function latestDerivatives(now=now0()):Promise<{snap:DerivSnapshot;
  return {snap,rows:withOiChange(snap,prev),dayAgoAt:prev?.at??null};
 }
 /** Saved-data view for the admin page: never calls CoinGecko except the cached /key check. */
-export async function cryptoMarketDataView(now=now0()){
+export async function cryptoMarketDataView(now=now0(),workspaceId=''){
  const r=getRedis();
- const [st,budget,deriv,glob,cats,hist,movers,trend,openIds,watchIds]=await Promise.all([status(),cgBudgetStatus(getApiUsage,now).catch(()=>null as CgBudget|null),latestDerivatives(now),r?.get<GlobalPoint[]>(`${K}:global`),r?.get<{at:string;rows:CoinCategory[]}>(`${K}:categories`),r?.get<Record<string,Record<string,number>>>(`${K}:categories:hist`),r?.get<{at:string;h1:{gainers:MoverRow[];losers:MoverRow[]}|null;h24:{gainers:MoverRow[];losers:MoverRow[]}|null}>(`${K}:movers`),r?.get<{at:string}&TrendingResponse>(`${K}:trending`),openPaperCoinIds(),watchCoinIds()].map(p=>Promise.resolve(p).catch(()=>null)));
+ const [st,budget,deriv,glob,cats,hist,movers,trend,openIds,watchIds,relativeStrength]=await Promise.all([status(),cgBudgetStatus(getApiUsage,now).catch(()=>null as CgBudget|null),latestDerivatives(now),r?.get<GlobalPoint[]>(`${K}:global`),r?.get<{at:string;rows:CoinCategory[]}>(`${K}:categories`),r?.get<Record<string,Record<string,number>>>(`${K}:categories:hist`),r?.get<{at:string;h1:{gainers:MoverRow[];losers:MoverRow[]}|null;h24:{gainers:MoverRow[];losers:MoverRow[]}|null}>(`${K}:movers`),r?.get<{at:string}&TrendingResponse>(`${K}:trending`),openPaperCoinIds(workspaceId),watchCoinIds(),savedRelativeStrengthBoard(now)].map(p=>Promise.resolve(p).catch(()=>null)));
  const d=deriv as Awaited<ReturnType<typeof latestDerivatives>>;
  return {simulated:true,config:CG_MARKET,status:st,budget,
   derivatives:d?{at:d.snap.at,source:d.snap.source,exchanges:d.snap.exchanges,tickers:d.snap.tickers,dayAgoAt:d.dayAgoAt,
@@ -100,7 +102,8 @@ export async function cryptoMarketDataView(now=now0()){
   global:Array.isArray(glob)?globalRegime(glob as GlobalPoint[]):null,
   categories:cats?{at:(cats as {at:string}).at,rows:rankCategories((cats as {rows:CoinCategory[]}).rows,(hist as Record<string,Record<string,number>>|null)??{},now),historyDays:Object.keys((hist as object|null)??{}).length}:null,
   movers,
-  trending:trend?{at:(trend as {at:string}).at,rows:trendingCrowding(trend as TrendingResponse,(openIds as string[]|null)??[],(watchIds as string[]|null)??[])}:null};
+  trending:trend?{at:(trend as {at:string}).at,rows:trendingCrowding(trend as TrendingResponse,(openIds as string[]|null)??[],(watchIds as string[]|null)??[])}:null,
+  relativeStrength};
 }
 /** Saved CoinGecko trending ids (hourly); null when never fetched or older than 3 hours. */
 export async function savedTrending(now=now0()){

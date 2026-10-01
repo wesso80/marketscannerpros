@@ -5,7 +5,7 @@ import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
 import type {ChartStamp} from './cryptoJevChart';
 import {JEV_LABELS,JEV_QUESTION_IDS,jevFromReason,jevSideLabel,CATALYST_IDS,CATALYST_LABELS,catalystSideLabel,CHART_IDS,CHART_LABELS,chartSideLabel,chartFromReason,type JevQuestionId} from './cryptoJevEvidence';
-import {persistShadowWeights,shadowSideLabel,SHADOW_WEIGHTS_KEY,type ShadowStamp} from './cryptoShadowScore';
+import {persistShadowWeights,shadowSideLabel,shadowWeightsKey,SHADOW_WEIGHTS_ACTIVE,type ShadowStamp} from './cryptoShadowScore';
 export {catalystSideLabel};
 import {createRecommendation,loadRecommendations,saveRecommendations,type Recommendation} from './cryptoRecommendations';
 import {CAL_CORE,INFORMATIONAL_SIDES,calibrateField as coreCalibrateField,splitAt,type CalibrationFieldBase,type CalibrationSide,type CalibrationStatus,type FieldDef} from './calibrationCore';
@@ -19,6 +19,9 @@ export type {CalibrationSide,CalibrationStatus};
 export const CALIBRATION_KEY='admin:crypto-markets:calibration:v1';
 export const CALIBRATION_FILED_KEY='admin:crypto-markets:calibration:filed:v1';
 export const CALIBRATION_DAY_KEY='admin:crypto-markets:calibration:day';
+/** Ledger and filing state are per workspace. The unscoped key is not read. */
+export const calibrationLedgerKey=(workspaceId:string)=>`${CALIBRATION_KEY}:${workspaceId}`;
+export const calibrationFiledKey=(workspaceId:string)=>`${CALIBRATION_FILED_KEY}:${workspaceId}`;
 /** Read only: the saved backtest state. Kept as a string so this module never imports the backtest engine. */
 const BACKTEST_KEY='admin:crypto-markets:backtest:v1';
 export const CAL={...CAL_CORE,weeklyCap:3,ttlSec:48*3600,cooldownMs:600000,sources:{paper:'crypto paper ledger (closed trades with R)',forward:'saved forward score (24h mark)',base:'base-breakout sleeve (closed trades with R)',backtest:'saved momentum backtest (replayed trades with a real stop/target/time exit)'}} as const;
@@ -31,7 +34,7 @@ export type ForwardObs={at:number;day:number;h4:number|null;bucket:string;jev:Je
 export type BacktestObs={at:number;r:number;kind:string;btcRegime:string;btc200:string;exit:string;jev:JevStamp|undefined;chart:ChartStamp|undefined};
 const str=(v:unknown)=>typeof v==='string'&&v.trim()?v.trim():null;
 const path=(o:Record<string,unknown>|null,...keys:string[])=>{let cur:unknown=o;for(const k of keys){if(!cur||typeof cur!=='object')return null;cur=(cur as Record<string,unknown>)[k];}return str(cur);};
-const jevField=<O extends {jev:JevStamp|undefined}>(qid:JevQuestionId,file:string):FieldDef<O>=>({id:`jev.${qid}`,label:`Jev ${JEV_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-shadow-v2',side:o=>jevSideLabel(qid,o.jev)});
+const jevField=<O extends {jev:JevStamp|undefined}>(qid:JevQuestionId,file:string):FieldDef<O>=>({id:`jev.${qid}`,label:qid==='chase'?'Jev chase at 0.50 · implied by the entry chase cap, not graded':`Jev ${JEV_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-shadow-v2',side:o=>jevSideLabel(qid,o.jev)});
 export function catalystFromReason(reason:string|null|undefined):CatalystStamp|undefined{
  const c=reasonJson(reason)?.catalyst as CatalystStamp|undefined;
  return c&&typeof c==='object'&&typeof c.rule==='string'&&['scored','no-headlines','unavailable'].includes(c.status)?c:undefined;
@@ -41,7 +44,7 @@ export function shadowFromReason(reason:string|null|undefined):ShadowStamp|undef
  return s&&typeof s==='object'&&typeof s.weightsVersion==='string'&&typeof s.score==='number'?s:undefined;
 }
 const catalystField=<O extends {catalyst:CatalystStamp|undefined}>(qid:typeof CATALYST_IDS[number],file:string):FieldDef<O>=>({id:`catalyst.${qid}`,label:`Catalyst ${CATALYST_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-catalyst-v2',side:o=>catalystSideLabel(qid,o.catalyst)});
-const chartField=<O extends {chart:ChartStamp|undefined}>(qid:typeof CHART_IDS[number],file:string):FieldDef<O>=>({id:`chart.${qid}`,label:`Chart ${CHART_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-chart-v1',side:o=>chartSideLabel(qid,o.chart)});
+const chartField=<O extends {chart:ChartStamp|undefined}>(qid:typeof CHART_IDS[number],file:string):FieldDef<O>=>({id:`chart.${qid}`,label:qid==='volumeExpansion'?'Chart volume expansion at 0.50 · implied by the 1.5× volume rule, not graded':`Chart ${CHART_LABELS[qid]} at 0.50`,file,ruleVersion:'jev-chart-v1',side:o=>chartSideLabel(qid,o.chart)});
 /** Graded only against the weights version current at calibration time; stamps from older weights are shown as informational. */
 const shadowField=<O extends {shadow:ShadowStamp|undefined}>(file:string,version:()=>string|null):FieldDef<O>=>({id:'shadow.sign',label:'Composite shadow score, sign',file,ruleVersion:'shadow-score-v1',side:o=>shadowSideLabel(o.shadow,version())});
 let currentShadowVersion:string|null=null;
@@ -120,9 +123,13 @@ export function forwardObservations(rows:ForwardRow[]):ForwardObs[]{
  }
  return out;
 }
+/** Fields the entry rule already requires. Shown, never confirmed, never weighted. */
+export const TAUTOLOGY_FIELDS=new Set(['jev.chase','chart.volumeExpansion']);
 /** Crypto wrapper over the shared core; kept so existing callers and tests keep one import. */
 export function calibrateField<O extends {at:number}>(def:FieldDef<O>,obs:O[],value:(o:O)=>number,unit:'R'|'%',outcome:CalibrationField['outcome']):CalibrationField{
- return coreCalibrateField(def,obs,value,unit,outcome,new Set([...INFORMATIONAL_SIDES,'Shadow older weights']));
+ const field=coreCalibrateField(def,obs,value,unit,outcome,new Set([...INFORMATIONAL_SIDES,'Shadow older weights']));
+ if(!TAUTOLOGY_FIELDS.has(field.id))return field;
+ return {...field,sides:field.sides.map(side=>({...side,informational:true,status:'collecting' as const}))};
 }
 /** `shadowVersion` is the weights version in force when the rows were stamped; stamps from other versions are not graded. */
 export function buildCalibration(paper:PaperObs[],forward:ForwardObs[],meta:{closedTrades:number;forwardRows:number;shadowVersion?:string|null;baseTrades?:number;backtestTrades?:number;backtestWindow?:string|null},now=Date.now(),base:PaperObs[]=[],backtest:BacktestObs[]=[]):CalibrationLedger{
@@ -163,29 +170,41 @@ export function proposeFromLedger(ledger:CalibrationLedger,rows:Recommendation[]
  }
  return {rows:next,filed:nextFiled,filedNow,skippedByCap};
 }
-export async function loadCalibrationInputs(redis:Pick<Redis,'get'>){
- const sql=`SELECT t.r_multiple,t.entry_time,t.exit_reason,t.instrument_type,o.created_reason FROM arca_trades t JOIN arca_portfolios pf ON pf.id=t.portfolio_id AND pf.workspace_id=t.workspace_id LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE pf.name=$1 AND pf.mode='SIMULATED'`;
- const [rows,baseRows]=await Promise.all([q<PaperSourceRow>(sql,[PAPER_NAME]),q<PaperSourceRow>(sql,[BASE_NAME]).catch(()=>[] as PaperSourceRow[])]);
+export async function loadCalibrationInputs(redis:Pick<Redis,'get'>,workspaceId:string){
+ const sql=`SELECT t.r_multiple,t.entry_time,t.exit_reason,t.instrument_type,o.created_reason FROM arca_trades t JOIN arca_portfolios pf ON pf.id=t.portfolio_id AND pf.workspace_id=t.workspace_id LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$2 AND pf.workspace_id=$2 AND pf.name=$1 AND pf.mode='SIMULATED'`;
+ const [rows,baseRows]=await Promise.all([q<PaperSourceRow>(sql,[PAPER_NAME,workspaceId]),q<PaperSourceRow>(sql,[BASE_NAME,workspaceId]).catch(()=>[] as PaperSourceRow[])]);
  const [book,backtest]=await Promise.all([redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<{from:string;to:string;trades:BacktestSourceTrade[]}>(BACKTEST_KEY).catch(()=>null)]);
  return {rows,forwardRows:book?.rows??[],baseRows,backtestTrades:backtest?.trades??[],backtestWindow:backtest?`${backtest.from.slice(0,10)} → ${backtest.to.slice(0,10)}`:null};
 }
-/** Recomputes the ledger from saved rows, files any due proposals, derives shadow weights from confirmed sides, and persists all three. */
-export async function runCryptoCalibration(redis:Redis,now=Date.now()){
- const {rows,forwardRows,baseRows,backtestTrades,backtestWindow}=await loadCalibrationInputs(redis);
- const previous=await redis.get<{version:string}>(SHADOW_WEIGHTS_KEY).catch(()=>null);
+/** Workspaces that own a simulated crypto paper book. The trade query then filters to one id. */
+export async function listCryptoPaperWorkspaces(){
+ const rows=await q<{workspace_id:string}>(`SELECT DISTINCT workspace_id FROM arca_portfolios WHERE name = ANY($1::text[]) AND mode='SIMULATED'`,[[PAPER_NAME,BASE_NAME]]);
+ return rows.map(row=>row.workspace_id);
+}
+/** Recomputes one workspace's ledger from saved rows, files any due proposals, derives shadow weights, and persists all three. */
+export async function runCryptoCalibration(redis:Redis,now=Date.now(),workspaceId:string){
+ const {rows,forwardRows,baseRows,backtestTrades,backtestWindow}=await loadCalibrationInputs(redis,workspaceId);
+ const previous=await redis.get<{version:string}>(shadowWeightsKey(workspaceId)).catch(()=>null);
  const ledger=buildCalibration(paperObservations(rows),forwardObservations(forwardRows),{closedTrades:rows.length,forwardRows:forwardRows.length,shadowVersion:previous?.version??null,baseTrades:baseRows.length,backtestTrades:backtestTrades.length,backtestWindow},now,paperObservations(baseRows),backtestObservations(backtestTrades));
- const [recs,filed]=await Promise.all([loadRecommendations(redis),redis.get<Record<string,string>>(CALIBRATION_FILED_KEY)]);
+ const [recs,filed]=await Promise.all([loadRecommendations(redis),redis.get<Record<string,string>>(calibrationFiledKey(workspaceId))]);
  const proposals=proposeFromLedger(ledger,recs,filed??{},now);
- if(proposals.filedNow.length){await saveRecommendations(redis,proposals.rows);await redis.set(CALIBRATION_FILED_KEY,proposals.filed);}
- await redis.set(CALIBRATION_KEY,ledger,{ex:CAL.ttlSec});
- const shadow=await persistShadowWeights(redis,ledger,now);
+ if(proposals.filedNow.length){await saveRecommendations(redis,proposals.rows);await redis.set(calibrationFiledKey(workspaceId),proposals.filed);}
+ await redis.set(calibrationLedgerKey(workspaceId),ledger,{ex:CAL.ttlSec});
+ const shadow=await persistShadowWeights(redis,ledger,workspaceId,now);
  return {ledger,filedNow:proposals.filedNow,skippedByCap:proposals.skippedByCap,shadow};
 }
-/** Once per UTC day from the cron; a second call the same day reads the saved ledger. */
+/** Once per UTC day per workspace from the cron. A shared scan stamp is published only when exactly one workspace exists. */
 export async function runDailyCalibration(redis:Redis,now=Date.now()){
  const day=new Date(now).toISOString().slice(0,10);
- const fresh=await redis.set(`${CALIBRATION_DAY_KEY}:${day}`,'done',{nx:true,ex:36*3600});
- if(!fresh)return {ok:true,skipped:true,reason:'Calibration already ran today'};
- try{const out=await runCryptoCalibration(redis,now);return {ok:true,skipped:false,filed:out.filedNow.length,skippedByCap:out.skippedByCap,fields:out.ledger.fields.length};}
- catch(error){console.error('[crypto-calibration] failed',error);return {ok:false,skipped:false,error:'Calibration pass failed; saved ledger unchanged'};}
+ const ids=await listCryptoPaperWorkspaces();
+ if(!ids.length){await redis.set(SHADOW_WEIGHTS_ACTIVE,'none',{ex:7*86400}).catch(()=>undefined);return {ok:true,skipped:true,reason:'No simulated crypto paper workspace'};}
+ let ran=0,filed=0,fields=0;
+ for(const workspaceId of ids){
+  const fresh=await redis.set(`${CALIBRATION_DAY_KEY}:${workspaceId}:${day}`,'done',{nx:true,ex:36*3600});
+  if(!fresh)continue;
+  try{const out=await runCryptoCalibration(redis,now,workspaceId);ran++;filed+=out.filedNow.length;fields+=out.ledger.fields.length;}
+  catch(error){console.error('[crypto-calibration] failed',workspaceId,error);}
+ }
+ await redis.set(SHADOW_WEIGHTS_ACTIVE,ids.length===1?ids[0]:'none',{ex:7*86400});
+ return ran?{ok:true,skipped:false,filed,fields,workspaces:ids.length}:{ok:true,skipped:true,reason:'Calibration already ran today',workspaces:ids.length};
 }

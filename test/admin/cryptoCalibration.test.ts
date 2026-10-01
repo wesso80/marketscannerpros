@@ -47,14 +47,17 @@ it('a side whose halves disagree is contradicted, and a side inside one standard
  expect(flat.sides.every(s=>s.status==='flat'||s.status==='directional')).toBe(true);
 });
 it('scores the forward book on the 24h mark and splits saved Jev answers at 0.50',()=>{
- const fwd=(i:number,chase:number,changePct:number):ForwardRow=>({id:`c${i}`,symbol:`C${i}`,bucket:'VOLUME_WATCH',signalAt:new Date(t0+i*3600000).toISOString(),signalPrice:1,next4h:{status:'filled',price:1,at:'',changePct:changePct/2},day:{status:'filled',price:1,at:'',changePct},jev:jev(chase) as ForwardRow['jev']});
+ const fwd=(i:number,chase:number,changePct:number):ForwardRow=>({id:`c${i}`,symbol:`C${i}`,bucket:'VOLUME_WATCH',signalAt:new Date(t0+i*3600000).toISOString(),signalPrice:1,next4h:{status:'filled',price:1,at:'',changePct:changePct/2},day:{status:'filled',price:1,at:'',changePct},jev:{...jev(chase),flowAgrees:chase} as ForwardRow['jev']});
  const rows=[...Array.from({length:40},(_,i)=>fwd(i,.9,-3)),...Array.from({length:40},(_,i)=>fwd(100+i,.1,3)),{...fwd(999,.5,0),day:{status:'waiting'}} as ForwardRow];
  const obs=forwardObservations(rows);
  expect(obs).toHaveLength(80);
  const ledger=buildCalibration([],obs,{closedTrades:0,forwardRows:81});
  const chase=ledger.fields.find(f=>f.id==='jev.chase'&&f.outcome==='forward24h')!;
- expect(chase.unit).toBe('%');
- const high=chase.sides.find(s=>s.side==='chase ≥0.50')!;
+ expect(chase.label).toMatch(/not graded/);
+ expect(chase.sides.every(s=>s.informational&&s.status==='collecting')).toBe(true);
+ const flow=ledger.fields.find(f=>f.id==='jev.flowAgrees'&&f.outcome==='forward24h')!;
+ expect(flow.unit).toBe('%');
+ const high=flow.sides.find(s=>s.side==='flow agrees ≥0.50')!;
  expect(high.n).toBe(40);
  expect(high.lift).toBeCloseTo(-3,6);
  expect(['confirmed','contradicted','directional']).toContain(high.status);
@@ -100,6 +103,8 @@ it('calibration never scores with Jev, never touches the planner or scheduler, a
  expect(imports.some(l=>/jevClient|cryptoPaperMarket|cryptoAutomation|cryptoPaper'|cryptoVolumeMomentum/.test(l))).toBe(false);
  expect(imports.filter(l=>l.includes("'./cryptoJev'"))).toEqual(["import type {JevStamp} from './cryptoJev';"]);
  expect(src).not.toMatch(/ai-gateway|askJev/);
+ expect(src).toMatch(/t\.workspace_id=\$2 AND pf\.workspace_id=\$2/);
+ expect(readFileSync('lib/admin/cryptoMarketDataJob.ts','utf8')).toMatch(/p\.workspace_id=\$1 AND f\.workspace_id=\$1/);
  expect(readFileSync('lib/admin/cryptoPaperMarket.ts','utf8')).not.toMatch(/cryptoCalibration/);
  expect(readFileSync('lib/admin/cryptoAutomation.ts','utf8')).not.toMatch(/cryptoCalibration/);
  expect(readFileSync('lib/admin/cryptoRecommendations.ts','utf8')).not.toMatch(/cryptoCalibration|cryptoJev|jevClient/);

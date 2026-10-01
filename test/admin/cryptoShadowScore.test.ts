@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
-import {SHADOW,attachShadowScore,deriveShadowWeights,rowSide,scoreRow,shadowSideLabel} from '@/lib/admin/cryptoShadowScore';
+import {SHADOW,SHADOW_WEIGHTS_ACTIVE,attachShadowScore,deriveShadowWeights,rowSide,scoreRow,shadowSideLabel,shadowWeightsKey} from '@/lib/admin/cryptoShadowScore';
 import {buildCalibration,type CalibrationLedger,type PaperObs} from '@/lib/admin/cryptoCalibration';
 const now=Date.UTC(2026,9,1,12);
 const side=(side:string,status:'confirmed'|'collecting'|'flat',lift:number,n=40,informational=false)=>({side,n,mean:lift,lift,se:.1,halfA:{n:20,lift},halfB:{n:20,lift},status,informational});
@@ -34,7 +34,7 @@ it('scores a live row as the sum of matched confirmed-side weights, and reports 
 });
 it('stamps named rows once per weights version and never touches a stage or an unnamed row',async()=>{
  const weights=deriveShadowWeights(ledgerWith([field('jev.chase','R',[side('chase ≥0.50','confirmed',-0.5)]),field('signal.kind','R',[side('BREAKOUT','confirmed',.5)])]),now);
- const redis={get:async()=>weights} as never;
+ const redis={get:async(k:string)=>k===SHADOW_WEIGHTS_ACTIVE?'ws':k===shadowWeightsKey('ws')?weights:null} as never;
  const rows=[{id:'a',stage:'VOLUME_WATCH',asOf:'x',kind:'BREAKOUT',jev:jev(.9)},{id:'b',stage:'NO_SIGNAL',asOf:'x',kind:'BREAKOUT',jev:jev(.9)},{id:'c',stage:'EXTENDED',asOf:'x',kind:'CONTINUATION',jev:jev(.2)}] as Array<{id:string;stage:string;asOf:string;kind:string;jev:ReturnType<typeof jev>;shadow?:{score:number;weightsVersion:string}}>;
  expect(await attachShadowScore(redis,rows,{},now)).toEqual({stamped:2,available:true});
  expect(rows[0].shadow?.score).toBe(0);

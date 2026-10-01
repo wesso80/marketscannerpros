@@ -63,16 +63,27 @@ it('respects the per-call limit, reports the remainder, does not cache transport
  // A trade with no saved inputs (older run) is never due.
  expect(await stampBacktestJev(redisMock(),[trade('e|2026-09-20T00:00:00.000Z',1,{jevInput:undefined})],now)).toEqual({stamped:0,fromCache:0,remaining:0,skipped:null});
 });
+it('does not cache an unparseable Jev answer',async()=>{
+ process.env.AI_GATEWAY_API_KEY='test-key';
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,status:200,json:async()=>({model:'typesafe-ai/jev',answers:{}})})));
+ const redis=redisMock();
+ const trades=[trade('parse|2026-09-20T00:00:00.000Z',1)];
+ await stampBacktestJev(redis,trades,now,1);
+ expect(trades[0].jev).toMatchObject({status:'unavailable',reason:'parse'});
+ expect(redis.set).not.toHaveBeenCalled();
+});
 it('the ledger grades backtest trades with real exits only, as its own outcome, and the CSV carries the stamps',()=>{
  const stamped=(id:string,r:number,marked?:true)=>({...trade(id,r),fixed:{status:'CLOSED' as const,r,exit:'TAKE_PROFIT',at:'x',...(marked?{marked:true as const}:{})},jev:{rule:'jev-shadow-v2' as const,status:'scored' as const,chase:.2,flowAgrees:.05,btcHeadwind:.1,btcTrend:'UP',flowStamp:'unavailable',model:'m',checkedAt:'x'},chart:{rule:'jev-chart-v1' as const,status:'scored' as const,cleanBase:.8,strongClose:.9,volumeExpansion:.85,overheadSupply:.1,bars:25,model:'m',checkedAt:'x'}});
- const trades=[stamped('a|2026-09-20T00:00:00.000Z',1.9),stamped('b|2026-09-21T00:00:00.000Z',-1,true),{...stamped('c|2026-09-22T00:00:00.000Z',0),fixed:{status:'OPEN_AT_HORIZON' as const,r:null,exit:null,at:null}}];
+ const trades=[stamped('a|2026-09-20T00:00:00.000Z',1.9),stamped('b|2026-09-21T00:00:00.000Z',-1,true),{...stamped('c|2026-09-22T00:00:00.000Z',0),fixed:{status:'OPEN_AT_HORIZON' as const,r:null,exit:null,at:null}},{...stamped('d|2026-09-23T00:00:00.000Z',0),fixed:{status:'DATA_GAP' as const,r:null,exit:null,at:null}}];
  const obs=backtestObservations(trades);
  expect(obs).toHaveLength(1);
  expect(obs[0]).toMatchObject({r:1.9,kind:'BREAKOUT',btcRegime:'UP',btc200:'BULL'});
- const ledger=buildCalibration([],[],{closedTrades:0,forwardRows:0,backtestTrades:3,backtestWindow:'2026-07-01 → 2026-09-29'},now,[],obs);
+ const ledger=buildCalibration([],[],{closedTrades:0,forwardRows:0,backtestTrades:4,backtestWindow:'2026-07-01 → 2026-09-29'},now,[],obs);
  const bt=ledger.fields.filter(f=>f.outcome==='backtestR');
- expect(bt.map(f=>f.id)).toEqual(['signal.kind','btcRegime.state','btcRegime.longTrend','jev.chase','jev.btcHeadwind','chart.cleanBase','chart.strongClose','chart.volumeExpansion','chart.overheadSupply']);
- expect(ledger.source).toMatchObject({backtestTrades:3,backtestGraded:1,backtestWindow:'2026-07-01 → 2026-09-29'});
+ expect(bt.find(f=>f.id==='jev.chase')!.sides.every(s=>s.informational)).toBe(true);
+ expect(bt.find(f=>f.id==='chart.volumeExpansion')!.sides.every(s=>s.informational)).toBe(true);
+ expect(bt.find(f=>f.id==='chart.volumeExpansion')!.label).toMatch(/not graded/);
+ expect(ledger.source).toMatchObject({backtestTrades:4,backtestGraded:1,backtestWindow:'2026-07-01 → 2026-09-29'});
  expect(ledger.note).toMatch(/hypothesis/);
  const csv=backtestTradeLog(trades);
  expect(BACKTEST_LOG_HEADERS.slice(-8)).toEqual(['jev_status','jev_chase','jev_btc_headwind','chart_status','chart_clean_base','chart_strong_close','chart_volume_expansion','chart_overhead_supply']);

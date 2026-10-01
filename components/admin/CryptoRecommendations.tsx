@@ -22,6 +22,15 @@ export default function CryptoRecommendations({refreshVersion=0}:{refreshVersion
  return <section aria-label="Recommendations" className="space-y-3 rounded border border-slate-600 p-4">
   <h2 className="text-xl">Recommendations</h2>
   <p className="text-sm text-slate-300">Text only. A row records the setup, the evidence count, the proposed rule change, and the file it would touch. Unread, read, and accepted do not edit code. No job applies a playbook change.</p>
+  <div className="rounded border border-slate-700 p-3 text-xs text-slate-300">
+   <p>Opportunity score: unavailable until a side is confirmed on the learning ledger. A text row is not a forecast.</p>
+   <p>Evidence quality: the evidence count on the row. Under 30 rows the quality is low.</p>
+   <p>Personal exposure: none. Accepting a row does not open a position.</p>
+   <p>Confidence is not established from a recommendation alone. It is not a win rate and it is not permission to trade.</p>
+   <p>What confirms: the same sign of lift in a later paper sample after you change the rule yourself.</p>
+   <p>What invalidates: the two time halves disagree, or the evidence count is still collecting.</p>
+   <p>Main risk: treating this text as a fill.</p>
+  </div>
   {error&&<p role="alert" className="text-amber-300">{error}</p>}
   {!rows&&!error&&<p>Loading recommendations…</p>}
   {rows&&!rows.length&&<p role="status" className="text-slate-400">No recommendations yet. The calibration ledger files one when a side is confirmed (at most three a week); you can also add one by hand below.</p>}
