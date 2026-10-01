@@ -2,6 +2,7 @@ import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 const m=vi.hoisted(()=>({auth:vi.fn(),get:vi.fn(),set:vi.fn(),enabled:vi.fn(),fetch:vi.fn()}));
 vi.mock('@/lib/adminAuth',()=>({requireAdmin:m.auth}));vi.mock('@/lib/redis',()=>({getRedis:()=>({get:m.get,set:m.set})}));vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:m.enabled}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',async()=>({...await vi.importActual('@/lib/admin/cryptoVolumeMomentum'),fetchVolumeMomentum:m.fetch}));
+vi.mock('@/lib/admin/cryptoJev',()=>({attachJevShadow:vi.fn(async()=>{})}));
 import {GET,POST} from '@/app/api/admin/crypto-markets/momentum/route';
 const req=()=>new Request('https://test',{method:'POST'});
 const snapshot=()=>({startedAt:new Date().toISOString(),rows:Array.from({length:8},(_,i)=>({id:`coin-${i}`,symbol:`C${i}`,name:`Coin ${i}`,stage:'WATCH',venues:[{exchange:'binance',pair:`C${i}/USDT`,volumeUsd:1e6,spreadPct:.1,observedAt:new Date().toISOString()}]}))});

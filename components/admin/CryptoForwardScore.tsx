@@ -1,6 +1,11 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {ForwardBook,ForwardMark} from '@/lib/admin/cryptoForwardScore';
+function jevCell(jev:ForwardBook['rows'][number]['jev']){
+ if(!jev)return '—';
+ if(jev.status!=='scored'||jev.chase==null||jev.flowAgrees==null||jev.btcHeadwind==null)return 'unavailable';
+ return `chase ${jev.chase.toFixed(2)} · flow ${jev.flowAgrees.toFixed(2)} · btc ${jev.btcHeadwind.toFixed(2)}`;
+}
 function cell(mark:ForwardMark){
  if(mark.status==='waiting')return 'Waiting';
  if(mark.status==='missed')return 'Unavailable';
@@ -15,13 +20,13 @@ export default function CryptoForwardScore({refreshVersion=0}:{refreshVersion?:n
  },[refreshVersion]);
  return <section aria-label="Forward score" className="space-y-3 rounded border border-slate-600 p-4">
   <h2 className="text-xl">Forward score</h2>
-  <p className="text-sm text-slate-300">Saved results for VOLUME_WATCH, EXTENDED, and 1-hour EARLY_WATCH. These buckets do not open paper trades. Each row keeps the signal time and price, then the next completed 4-hour close and the 24-hour mark from later saved scans.</p>
+  <p className="text-sm text-slate-300">Saved results for VOLUME_WATCH, EXTENDED, and 1-hour EARLY_WATCH. These buckets do not open paper trades. Each row keeps the signal time and price, then the next completed 4-hour close and the 24-hour mark from later saved scans. The Jev column is the three probabilities stored with that signal. It is not a win rate.</p>
   {error&&<p role="alert" className="text-amber-300">{error}</p>}
   {!book&&!error&&<p>Loading saved forward scores…</p>}
   {book&&<>
    <p>{headline}</p>
    {!book.rows.length&&<p role="status" className="text-slate-400">None saved yet.</p>}
-   {!!book.rows.length&&<div className="max-h-96 overflow-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr>{['Coin','Bucket','Signal time','Signal price','Next 4h close','24 hours'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{book.rows.map(row=><tr className="border-t border-slate-700" key={`${row.bucket}|${row.id}|${row.signalAt}`}><td className="p-2">{row.symbol}<br/><span className="text-slate-400">{row.id}</span></td><td>{row.bucket}</td><td>{row.signalAt}</td><td>{row.signalPrice.toPrecision(6)}</td><td>{cell(row.next4h)}</td><td>{cell(row.day)}</td></tr>)}</tbody></table></div>}
+   {!!book.rows.length&&<div className="max-h-96 overflow-auto"><table className="w-full min-w-[1100px] text-left text-sm"><thead><tr>{['Coin','Bucket','Signal time','Signal price','Next 4h close','24 hours','Jev'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{book.rows.map(row=><tr className="border-t border-slate-700" key={`${row.bucket}|${row.id}|${row.signalAt}`}><td className="p-2">{row.symbol}<br/><span className="text-slate-400">{row.id}</span></td><td>{row.bucket}</td><td>{row.signalAt}</td><td>{row.signalPrice.toPrecision(6)}</td><td>{cell(row.next4h)}</td><td>{cell(row.day)}</td><td className="p-2">{jevCell(row.jev)}</td></tr>)}</tbody></table></div>}
   </>}
  </section>;
 }

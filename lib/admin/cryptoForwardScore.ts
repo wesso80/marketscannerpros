@@ -1,10 +1,11 @@
 import type {Redis} from '@upstash/redis';
+import type {JevStamp} from './cryptoJev';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 const FOUR='admin:crypto-markets:momentum-volume:v1',EARLY='admin:crypto-markets:early-momentum:v1',BOOK='admin:crypto-markets:forward-score:v1';
 const F=4*3600000,DAY=24*3600000;
 export type ForwardBucket='VOLUME_WATCH'|'EXTENDED'|'EARLY_WATCH';
 export type ForwardMark={status:'waiting'}|{status:'missed'}|{status:'filled';price:number;at:string;changePct:number};
-export type ForwardRow={id:string;symbol:string;bucket:ForwardBucket;signalAt:string;signalPrice:number;next4h:ForwardMark;day:ForwardMark};
+export type ForwardRow={id:string;symbol:string;bucket:ForwardBucket;signalAt:string;signalPrice:number;next4h:ForwardMark;day:ForwardMark;jev?:JevStamp};
 export type ForwardBook={version:1;updatedAt:string;rows:ForwardRow[]};
 type ScanLike=Pick<MomentumScan,'rows'>|null;
 const waiting=():ForwardMark=>({status:'waiting'});
@@ -37,7 +38,7 @@ export function applyForwardScores(rows:ForwardRow[],fourHour:ScanLike,early:Sca
    const key=`${row.stage}|${row.id}|${row.asOf}`;
    if(seen.has(key))continue;
    seen.add(key);
-   next.push({id:row.id,symbol:row.symbol||row.id,bucket:row.stage as ForwardBucket,signalAt:row.asOf,signalPrice:row.close,next4h:waiting(),day:waiting()});
+   next.push({id:row.id,symbol:row.symbol||row.id,bucket:row.stage as ForwardBucket,signalAt:row.asOf,signalPrice:row.close,next4h:waiting(),day:waiting(),...(row.jev?{jev:row.jev}:{})});
   }
  };
  enroll(fourHour,['VOLUME_WATCH','EXTENDED']);
@@ -46,6 +47,7 @@ export function applyForwardScores(rows:ForwardRow[],fourHour:ScanLike,early:Sca
  for(const row of next){
   const signal=Date.parse(row.signalAt);
   if(!Number.isFinite(signal))continue;
+  if(!row.jev){const found=[fourHour,early].flatMap(scan=>scan?.rows??[]).find(r=>r.id===row.id&&r.stage===row.bucket&&r.asOf===row.signalAt&&r.jev);if(found?.jev)row.jev=found.jev;}
   row.next4h=fill(row.next4h,row.signalPrice,due4h(signal),[q4.get(row.id)]);
   row.day=fill(row.day,row.signalPrice,signal+DAY,[q4.get(row.id),q1.get(row.id)]);
  }

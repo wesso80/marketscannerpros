@@ -29,6 +29,17 @@ it('fills the next 4h close and the 24h mark from later saved closes, without a 
  expect(forwardHeadline(many)).toBe('30 saved. Resolved 30.');
  expect(forwardHeadline(many)).not.toMatch(/%|edge|win rate/i);
 });
+it('keeps the Jev probabilities on the forward row and backfills them onto an earlier enroll',()=>{
+ const jev={rule:'jev-shadow-v1' as const,status:'scored' as const,chase:.2,flowAgrees:.8,btcHeadwind:.15,btcTrend:'UP',flowStamp:'aggressive buying',model:'typesafe-ai/jev',checkedAt:at};
+ const seeded=applyForwardScores([],{rows:[{id:'axs',symbol:'AXS',stage:'VOLUME_WATCH',close:2,asOf:at,jev}]},null);
+ expect(seeded[0].jev).toMatchObject({chase:.2,flowAgrees:.8,btcHeadwind:.15});
+ expect(seeded.map(r=>r.symbol)).not.toContain('MOM');
+ const bare=applyForwardScores([],{rows:[{id:'ext',symbol:'EXT',stage:'EXTENDED',close:3,asOf:at}]},null);
+ expect(bare[0].jev).toBeUndefined();
+ const filled=applyForwardScores(bare,{rows:[{id:'ext',symbol:'EXT',stage:'EXTENDED',close:3,asOf:at,jev}]},null);
+ expect(filled[0].jev).toMatchObject({status:'scored',chase:.2});
+ expect(forwardHeadline(filled)).toBe('1 saved. Resolved 0. No win rate.');
+});
 it('marks a checkpoint missed when the saved close has already passed it',()=>{
  const seeded=applyForwardScores([],{rows:[{id:'mew',symbol:'MEW',stage:'EXTENDED',close:1,asOf:'2026-09-30T20:00:00.000Z'}]},null);
  const missed=applyForwardScores(seeded,{rows:[{id:'mew',symbol:'MEW',stage:'NO_SIGNAL',close:1.1,asOf:'2026-10-01T04:00:00.000Z'}]},null);

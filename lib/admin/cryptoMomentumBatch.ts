@@ -5,6 +5,7 @@ import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
 import {createMomentumScan,fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {persistForwardScores} from '@/lib/admin/cryptoForwardScore';
 import {stampMomentumVolume,unavailableFlowStamp} from '@/lib/admin/cryptoFlow';
+import {attachJevShadow} from '@/lib/admin/cryptoJev';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 const KEY='admin:crypto-markets:momentum-volume:v1',F=4*3600000;
 export async function runMomentumBatch(limit=5){
@@ -31,6 +32,7 @@ export async function runMomentumBatch(limit=5){
    scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   }
   try{await stampMomentumVolume(scan.rows,now);}catch{for(const row of scan.rows)if(row.stage==='MOMENTUM_VOLUME'&&!row.flowStamp)row.flowStamp=unavailableFlowStamp(now);}
+  await attachJevShadow(scan.rows,now);
   scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   const emailAlerts=await sendCryptoSetupEmails(scan);
   await persistForwardScores(redis,now);
