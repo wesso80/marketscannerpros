@@ -57,5 +57,5 @@ export async function POST(req:Request) {
     else {const saved={fetchedAt:Date.now(),hourly,daily};await redis.set(`${PREFIX}:history:${id}`,saved,{ex:900});await redis.set(`${PREFIX}:history-chart:${id}`,saved,{ex:86400});}
     await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
     return NextResponse.json({review,chart:momentumChart(hourly??[],daily??[]),base:reviewCryptoBase(hourly??[],daily??[],coin.price),cached:false,requestAttempts:2,...(notice?{notice}:{})});
-  } catch {return NextResponse.json({error:'Momentum analysis or evidence storage failed; no trade was created'},{status:503});}
+  } catch(e) {console.error('[crypto-analyze] failed',e);return NextResponse.json({error:'Momentum analysis or evidence storage failed; no trade was created',detail:(e instanceof Error?e.message:String(e)).slice(0,160)},{status:503});}
 }

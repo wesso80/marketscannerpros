@@ -7,7 +7,9 @@ import {parseDailyVenue,selectDailyPair,type DailyPair} from './cryptoDailyVenue
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {createBaseScan} from './cryptoBaseScan';
 const H=3600000,F=4*H;
-export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;sma20?:number;signal?:{t:number;o:number;h:number;l:number;c:number};kind:'BREAKOUT'|'CONTINUATION'|null};
+export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;sma20?:number;signal?:{t:number;o:number;h:number;l:number;c:number};kind:'BREAKOUT'|'CONTINUATION'|null;
+ /** The 25 validated exchange candles the rule read, newest last, kept on named rows only so the chart can show price and volume. */
+ bars?:{t:number;o:number;h:number;l:number;c:number;v:number}[]};
 export type MomentumScanRow=VolumeMomentum&{id:string;symbol:string;pair:DailyPair|null;flowStamp?:FlowStamp;jev?:JevStamp;catalyst?:CatalystStamp;shadow?:ShadowStamp};
 export type MomentumScan={version:1;startedAt:string;updatedAt:string;discoveryAt:string;rows:MomentumScanRow[]};
 export const blankMomentum=(reason='Waiting for completed 4h candles'):VolumeMomentum=>({stage:'PENDING',reason,asOf:null,relativeVolume:null,changePct:null,trigger:null,close:null,atr:null,kind:null});
@@ -48,6 +50,7 @@ export function assessVolumeMomentum(bars:ExchangeBar[],now:number,interval=F):V
   result.reason=stretched?'Price and volume advanced, but the completed move exceeds the ATR chase limits':'Completed '+label+' '+(breakout?'20-bar breakout':'trend continuation')+' with at least 1.5× prior 20-bar volume; no base required';
  }else if(expanded){result.stage='VOLUME_WATCH';result.reason=`Elevated ${label} volume without the required upward price confirmation; not a buy signal`;}
  else{result.stage='NO_SIGNAL';result.reason=`No qualifying price-and-volume momentum setup on the latest completed ${label} candle`;}
+ if(result.stage!=='NO_SIGNAL')result.bars=b.map(x=>({t:x.t,o:x.o,h:x.h,l:x.l,c:x.c,v:x.v}));
  return result;
 }
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
