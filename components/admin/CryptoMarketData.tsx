@@ -9,7 +9,8 @@ type View={error?:string;config:Record<string,number>;status:{status:Record<stri
  global:{latest:GlobalPoint;btcDomChange24h:number|null;btcDomChange7d:number|null;mcapChange24hPct:number|null;mcapChange7dPct:number|null;altsNote:string}|null;
  categories:{at:string;rows:CategoryRow[];historyDays:number}|null;
  movers:{at:string;h1:{gainers:MoverRow[];losers:MoverRow[]}|null;h24:{gainers:MoverRow[];losers:MoverRow[]}|null}|null;
- trending:{at:string;rows:TrendingRow[]}|null};
+ trending:{at:string;rows:TrendingRow[]}|null;
+ relativeStrength?:{saved:boolean;source:string;rule:string;checkedAt:string|null;asOf:string|null;stale:boolean;coins:number;leaders:{id:string;symbol:string;excess:number|null;tercile:string;rule:string}[];failed:string[]}|null};
 const usd=(n:number|null|undefined)=>n==null?'—':n>=1e12?`$${(n/1e12).toFixed(2)}T`:n>=1e9?`$${(n/1e9).toFixed(2)}B`:n>=1e6?`$${(n/1e6).toFixed(1)}M`:`$${n.toLocaleString(undefined,{maximumFractionDigits:4})}`;
 const pct=(n:number|null|undefined,d=1)=>n==null?'—':`${n>=0?'+':''}${n.toFixed(d)}%`;
 const tone=(n:number|null|undefined)=>n==null?'':n>0?'text-emerald-300':n<0?'text-red-300':'';
@@ -79,6 +80,12 @@ export default function CryptoMarketData({refreshVersion=0}:{refreshVersion?:num
    </Panel>
    <Panel title="Impulse scanner (top gainers and losers, top 1000 coins)" source="CoinGecko /coins/top_gainers_losers" at={data.movers?.at} cadence={15} now={now}>
     {!data.movers?<p>No data yet.</p>:<div className="grid gap-3 md:grid-cols-2"><Movers title="1h gainers" rows={data.movers.h1?.gainers} /><Movers title="1h losers" rows={data.movers.h1?.losers} /><Movers title="24h gainers" rows={data.movers.h24?.gainers} /><Movers title="24h losers" rows={data.movers.h24?.losers} /></div>}
+   </Panel>
+   <Panel title="Relative strength" source={data.relativeStrength?.source??'coinbase 1d'} at={data.relativeStrength?.checkedAt} cadence={13*60} now={now}>
+    {!data.relativeStrength?.saved?<p>No saved daily snapshot yet. The paper cycle writes one Coinbase daily snapshot per UTC day. Nothing is fetched by opening this page.</p>:<>
+     <p className="text-xs text-slate-400">Rule {data.relativeStrength.rule}. A leader is the top third of 30-day return versus BTC and above its own 50-day average, on candles completed by {data.relativeStrength.asOf?.slice(0,10)}. Evidence only. It does not block an entry. {data.relativeStrength.stale?'STALE: the snapshot is older than 26 hours.':`${data.relativeStrength.coins} coins stored.`} {data.relativeStrength.failed.length?`Failed coins: ${data.relativeStrength.failed.join(', ')}.`:'No failed coins on this snapshot.'}</p>
+     {!data.relativeStrength.leaders.length?<p>No leaders in the saved snapshot.</p>:<div className="overflow-auto"><table className="w-full min-w-[520px] text-left text-sm"><thead><tr>{['Coin','Rule','Tercile','30d excess vs BTC'].map(h=><th key={h} className="p-1">{h}</th>)}</tr></thead><tbody>{data.relativeStrength.leaders.map(row=><tr key={row.id} className="border-t border-slate-800"><td className="p-1">{row.symbol}<div className="text-xs text-slate-500">{row.id}</div></td><td className="p-1">{row.rule}</td><td className="p-1">{row.tercile}</td><td className="p-1">{row.excess==null?'—':`${(row.excess*100).toFixed(2)}%`}</td></tr>)}</tbody></table></div>}
+    </>}
    </Panel>
    <Panel title="Trending (crowding check)" source="CoinGecko /search/trending, matched by CoinGecko id" at={data.trending?.at} cadence={60} now={now}>
     {!data.trending?<p>No data yet.</p>:<ul className="text-sm">{data.trending.rows.map(t=><li key={t.id} className={t.openPosition||t.watchlist?'text-amber-300':''}>#{t.rank} {t.name} ({t.symbol}){t.marketCapRank?` · rank ${t.marketCapRank}`:''}{t.openPosition?' · OPEN PAPER POSITION: possible crowding':''}{t.watchlist?' · on momentum watchlist: possible crowding':''}</li>)}</ul>}

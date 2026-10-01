@@ -4,8 +4,8 @@ import {jevConfigured} from './jevClient';
 import {JEV_STAGES} from './cryptoJev';
 import {jevCoverage} from './cryptoJevEvidence';
 import {EARLY_SCAN_KEY,FORWARD_BOOK_KEY,MOMENTUM_SCAN_KEY,forwardResolved,type ForwardBook} from './cryptoForwardScore';
-import {CALIBRATION_FILED_KEY,CALIBRATION_KEY,type CalibrationLedger} from './cryptoCalibration';
-import {SHADOW,SHADOW_WEIGHTS_KEY,type ShadowWeights} from './cryptoShadowScore';
+import {calibrationFiledKey,calibrationLedgerKey,type CalibrationLedger} from './cryptoCalibration';
+import {SHADOW,shadowWeightsKey,type ShadowWeights} from './cryptoShadowScore';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 /**
  * One read-only health view of the crypto Jev learning loop: which stamps are being written, whether they are scoring,
@@ -32,10 +32,10 @@ function stampCoverage(rows:MomentumScan['rows']){
  }
  return {named:named.length,jev,cat,chart};
 }
-export async function learningStatus(redis:Redis|null,now=Date.now()):Promise<LearningStatus>{
+export async function learningStatus(redis:Redis|null,workspaceId:string,now=Date.now()):Promise<LearningStatus>{
  const items:LearningItem[]=[];
  const jevKey=jevConfigured(),discoveryOnly=adminDiscoveryOnly();
- const [four,early,book,ledger,filed,weights]=redis?await Promise.all([redis.get<MomentumScan>(MOMENTUM_SCAN_KEY),redis.get<MomentumScan>(EARLY_SCAN_KEY),redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<CalibrationLedger>(CALIBRATION_KEY),redis.get<Record<string,string>>(CALIBRATION_FILED_KEY),redis.get<ShadowWeights>(SHADOW_WEIGHTS_KEY)]):[null,null,null,null,null,null];
+ const [four,early,book,ledger,filed,weights]=redis&&workspaceId?await Promise.all([redis.get<MomentumScan>(MOMENTUM_SCAN_KEY),redis.get<MomentumScan>(EARLY_SCAN_KEY),redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<CalibrationLedger>(calibrationLedgerKey(workspaceId)),redis.get<Record<string,string>>(calibrationFiledKey(workspaceId)),redis.get<ShadowWeights>(shadowWeightsKey(workspaceId))]):[null,null,null,null,null,null];
  // 1. Jev shadow on crypto setups
  const c4=stampCoverage(four?.rows??[]),c1=stampCoverage(early?.rows??[]);
  const shadowScored=c4.jev.scored+c1.jev.scored,shadowUnavailable=c4.jev.unavailable+c1.jev.unavailable,shadowUnstamped=c4.jev.unscored+c1.jev.unscored,shadowNamed=c4.named+c1.named;

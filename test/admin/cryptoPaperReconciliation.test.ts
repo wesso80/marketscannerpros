@@ -13,6 +13,7 @@ it('flags cash drift and independently invalid closed trades',()=>{
  expect(reconcileCryptoPaper({...p,currentCash:900},[position],{net:0,fees:0,count:0,invalid:1}).status).toBe('MISMATCH');
  expect(reconcileCryptoPaper({...p,currentCash:999},[position],{net:0,fees:0,count:0,invalid:0}).status).toBe('MISMATCH');
 });
-it('does not invent a missing entry fee',()=>{
+it('does not invent a missing mark from the entry price',()=>{
+ expect(reconcileCryptoPaper(p,[{...position,currentPrice:undefined}],{net:0,fees:0,count:0,invalid:0})).toMatchObject({status:'UNAVAILABLE',reason:'Open position has no mark; entry price was not used as a substitute'});
  expect(reconcileCryptoPaper(p,[{...position,entryFee:undefined}],{net:0,fees:0,count:0,invalid:0}).status).toBe('UNAVAILABLE');
 });

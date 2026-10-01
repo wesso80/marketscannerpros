@@ -16,7 +16,7 @@ it('reports the four crypto stamps with a state, a plain summary, and the reason
   {id:'c',symbol:'C',stage:'EXTENDED',asOf:'x',jev:stamp('unavailable','http-429'),catalyst:cat('no-headlines')},
   {id:'d',symbol:'D',stage:'NO_SIGNAL',asOf:'x'},
  ];
- const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows},'admin:crypto-markets:early-momentum:v1':null,'admin:crypto-markets:forward-score:v1':{updatedAt:'2026-10-01T11:30:00Z',rows:[]},'admin:crypto-markets:calibration:v1':null}),now);
+ const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows},'admin:crypto-markets:early-momentum:v1':null,'admin:crypto-markets:forward-score:v1':{updatedAt:'2026-10-01T11:30:00Z',rows:[]}}),'owner',now);
  const byId=Object.fromEntries(s.items.map(i=>[i.id,i]));
  expect(s.items.map(i=>i.id)).toEqual(['shadow','catalyst','chart','forward','calibration','shadowScore']);
  expect(s.items.find(i=>i.id==='shadowScore')).toMatchObject({state:'collecting',counts:{weights:0,confirmedFields:0,stamped:0}});
@@ -35,19 +35,19 @@ it('reports the four crypto stamps with a state, a plain summary, and the reason
 it('says off when the gateway key is missing, and explains a credit pause as nothing to fix',async()=>{
  delete process.env.AI_GATEWAY_API_KEY;
  const rows=[{id:'a',symbol:'A',stage:'MOMENTUM_VOLUME',asOf:'x',catalyst:cat('unavailable','cg-paused')}];
- const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows}}),now);
+ const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows}}),'owner',now);
  const byId=Object.fromEntries(s.items.map(i=>[i.id,i]));
  expect(byId.shadow.state).toBe('off');
  expect(byId.catalyst.state).toBe('off');
  process.env.AI_GATEWAY_API_KEY='k';
- const again=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows}}),now);
+ const again=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows}}),'owner',now);
  expect(again.items.find(i=>i.id==='catalyst')?.next).toMatch(/Nothing to fix/);
 });
 it('a stale scan flips a working stamp to needs attention',async()=>{
  const rows=[{id:'a',symbol:'A',stage:'MOMENTUM_VOLUME',asOf:'x',jev:stamp('scored'),catalyst:cat('scored')}];
- const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-09-28T11:30:00Z',rows}}),now);
+ const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-09-28T11:30:00Z',rows}}),'owner',now);
  expect(s.items.find(i=>i.id==='shadow')?.state).toBe('attention');
- expect((await learningStatus(null,now)).items.every(i=>i.state==='collecting'||i.state==='off')).toBe(true);
+ expect((await learningStatus(null,'owner',now)).items.every(i=>i.state==='collecting'||i.state==='off')).toBe(true);
 });
 it('the learning routes are inside the crypto scope and the status module never calls Jev, a provider, or the database',()=>{
  for(const p of ['/api/admin/crypto-markets/learning','/api/admin/crypto-markets/calibration','/api/admin/crypto-markets/forward-score','/api/admin/crypto-markets/recommendations'])expect(discoveryOnlyAction(p)).toBe('allow');

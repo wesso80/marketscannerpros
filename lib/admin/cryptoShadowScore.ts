@@ -13,6 +13,8 @@ import type {CalibrationLedger} from './cryptoCalibration';
  */
 export const SHADOW_SCORE_RULE='shadow-score-v1' as const;
 export const SHADOW_WEIGHTS_KEY='admin:crypto-markets:shadow-weights:v1';
+export const SHADOW_WEIGHTS_ACTIVE=`${SHADOW_WEIGHTS_KEY}:active`;
+export const shadowWeightsKey=(workspaceId:string)=>`${SHADOW_WEIGHTS_KEY}:${workspaceId}`;
 export const SHADOW={minConfirmedFields:2,clip:2} as const;
 export type ShadowWeight={field:string;label:string;side:string;unit:'R'|'%';lift:number;weight:number;n:number;outcome:string};
 export type ShadowWeights={rule:typeof SHADOW_SCORE_RULE;version:string;computedAt:string;ledgerCheckedAt:string;available:boolean;reason:string;weights:ShadowWeight[];confirmedFields:number};
@@ -57,12 +59,17 @@ export function scoreRow(row:ScoreRow,weights:ShadowWeights,ctx:ShadowContext={}
  const score=Math.round(matched.reduce((s,m)=>s+m.weight,0)*100)/100;
  return {rule:SHADOW_SCORE_RULE,weightsVersion:weights.version,score,matched,evaluable,skipped:[...skipped].sort(),checkedAt:new Date(now).toISOString()};
 }
-export async function persistShadowWeights(redis:Pick<Redis,'set'>,ledger:CalibrationLedger,now=Date.now()){
+export async function persistShadowWeights(redis:Pick<Redis,'set'>,ledger:CalibrationLedger,workspaceId:string,now=Date.now()){
  const weights=deriveShadowWeights(ledger,now);
- await redis.set(SHADOW_WEIGHTS_KEY,weights,{ex:7*86400});
+ await redis.set(shadowWeightsKey(workspaceId),weights,{ex:7*86400});
  return weights;
 }
-export async function loadShadowWeights(redis:Pick<Redis,'get'>){return redis.get<ShadowWeights>(SHADOW_WEIGHTS_KEY);}
+/** Shared scans stamp only the single active workspace. 'none' or a missing pointer scores nothing. */
+export async function loadShadowWeights(redis:Pick<Redis,'get'>){
+ const active=await redis.get<string>(SHADOW_WEIGHTS_ACTIVE);
+ if(typeof active!=='string'||!active||active==='none')return null;
+ return redis.get<ShadowWeights>(shadowWeightsKey(active));
+}
 const NAMED=new Set(['MOMENTUM_VOLUME','VOLUME_WATCH','EXTENDED','EARLY_WATCH']);
 /** Stamps named rows that lack a stamp under the current weights version. Never throws, never changes a stage. */
 export async function attachShadowScore<T extends ScoreRow&{asOf?:string|null;shadow?:ShadowStamp}>(redis:Pick<Redis,'get'>,rows:T[],ctx:ShadowContext,now=Date.now()){

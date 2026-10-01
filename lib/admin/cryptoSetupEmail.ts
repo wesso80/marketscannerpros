@@ -1,5 +1,6 @@
 import {createHash} from 'crypto';
 import {getRedis} from '@/lib/redis';
+import {setupRead,setupReadText} from './cryptoJevEvidence';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 const KEY='admin:crypto-markets:setup-email:v1',F=4*3600000;
 const recipient=()=>process.env.CRYPTO_SETUP_ALERT_EMAIL?.trim()??'';
@@ -32,12 +33,14 @@ export async function sendCryptoSetupEmails(scan:MomentumScan,now=Date.now()){
   for(const row of scan.rows){
    if(row.stage!=='MOMENTUM_VOLUME'||!row.pair||!row.asOf||Date.parse(row.asOf)!==Math.floor(now/F)*F)continue;
    const subject=`Crypto setup: ${row.symbol} ${row.kind} · ${row.pair.product}`;
-   const text=[`Confirmed 4-hour ${row.kind} research setup: ${row.symbol} (${row.id})`,
+   const read=setupRead({jev:row.jev,chart:row.chart,catalyst:row.catalyst,shadow:row.shadow});
+   const text=[`4-hour ${row.kind} research setup: ${row.symbol} (${row.id})`,
     `Exchange: ${row.pair.exchange} · Pair: ${row.pair.product} · Prices in ${row.pair.quote}`,
     `Candle closed: ${row.asOf}`,`Volume: ${row.relativeVolume?.toFixed(2)}x the preceding 20 candles · Change: ${row.changePct?.toFixed(2)}%`,
     `Signal close: ${row.close} · Entry floor: ${row.entryFloor} · Maximum chase price: ${row.maxEntry}`,
     `Structural stop: ${row.stop} · Model target: ${row.target}`,row.reason,
-    'This is a confirmed candle setup, not live trade permission or a fill. Current price, spread, risk limits and existing positions can block paper entry. Paper entries support Coinbase USD and OKX USDT with validated USD conversion. Other venues remain research-only.',
+    setupReadText(read),
+    'This is a candle setup, not live trade permission or a fill. Current price, spread, risk limits and existing positions can block paper entry. Paper entries support Coinbase USD and OKX USDT with validated USD conversion. Other venues remain research-only.',
     'Review: https://marketscannerpros.app/admin/crypto-markets'].join('\n\n');
    if(await deliver(`${row.id}|${row.pair.exchange}|${row.pair.product}|${row.asOf}|${row.kind}`,subject,text))accepted++;
    if(accepted>=20)break;
@@ -51,5 +54,5 @@ export async function sendCryptoSetupEmails(scan:MomentumScan,now=Date.now()){
 }
 export async function testCryptoSetupEmail(){
  if(!recipient()||!process.env.RESEND_API_KEY)throw Error('Setup email recipient or RESEND_API_KEY not configured');
- return deliver(`test|${Math.floor(Date.now()/3600000)}`,'MarketScanner Pros · Crypto setup alerts test','Crypto setup email alerts are connected. You will receive confirmed 4h breakout and continuation setups with volume evidence and reference levels. This test is not a trading signal. Review: https://marketscannerpros.app/admin/crypto-markets');
+ return deliver(`test|${Math.floor(Date.now()/3600000)}`,'MarketScanner Pros · Crypto setup alerts test','Crypto setup email alerts are connected. You will receive 4h breakout and continuation research setups with volume evidence, reference levels, and a read that says when an input is missing. This test is not a trading signal. Review: https://marketscannerpros.app/admin/crypto-markets');
 }
