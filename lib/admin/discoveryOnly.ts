@@ -19,6 +19,7 @@ const cryptoScope = new Set([
   '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze',
   '/api/admin/crypto-markets/forward-score', '/api/admin/crypto-markets/recommendations',
   '/api/admin/crypto-markets/calibration', '/api/admin/crypto-markets/learning',
+  '/api/admin/crypto-markets/jev',
 ]);
 /** Owner-approved exceptions: the two Jev evidence pages (news verification, transcript audit) and only the routes they call. */
 const jevEquityScope = new Set([
