@@ -11,6 +11,9 @@ import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import type {ArcaPosition} from './portfolio-lab/types';
 import {fillNoTradeGaps,NO_TRADE_MAX_BARS} from './cryptoCandleGaps';
 import {btcLongTrend,breadthAt,breadthBucket,bullGate,relativeStrengthAt,type RsTag} from './cryptoMarketRegime';
+import {backtestJevInput,stampBacktestJev,type BacktestJevInput} from './cryptoBacktestJev';
+import type {JevStamp} from './cryptoJev';
+import type {ChartStamp} from './cryptoJevChart';
 const KEY='admin:crypto-markets:backtest:v1',H=3600000,F=4*H,D=24*H,M15=900000;
 /** Live entry/exit code replayed on Coinbase history. Parameters are the live rules (crypto-momentum-v2 incl. the 72h time stop); nothing is fitted to this data. */
 export const BACKTEST={windowOffsets:[0,90,180] as number[],days:90,maxCoins:40,coinsPerBatch:3,horizonDays:7,halfSpread:.0005,cost:.0005,riskUsd:500,exitRules:CRYPTO_TIME_STOP};
@@ -18,7 +21,9 @@ type ShadowResult={plan?:string;status:string;r:number|null;legs:{reason:ShadowL
 export type BacktestTrade={btc200?:string;filledBars?:number;id:string;coin:string;product:string;kind:string;signalAt:string;entryAt:string;fill:number;stop:number;target:number;btcRegime:string;half:'FIRST'|'SECOND';
  fixed:{status:'CLOSED'|'OPEN_AT_HORIZON'|'DATA_GAP';marked?:true;r:number|null;exit:string|null;at:string|null};shadow:ShadowResult;
  /** Every active shadow plan by plan id; `shadow` remains the v2 result for saved states written before this field existed. */
- shadows?:Record<string,ShadowResult>};
+ shadows?:Record<string,ShadowResult>;
+ /** Compact Jev inputs captured at signal time (no candles after the signal) and the stamps a later pass attaches. Evidence only. */
+ jevInput?:BacktestJevInput;jev?:JevStamp;chart?:ChartStamp};
 export type BacktestCoin={id:string;symbol:string;product:string;status:'PENDING'|'DONE'|'FAILED';signals?:number;noEntry?:number;overlapping?:number;error?:string};
 export type BacktestState={version:1;status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:BacktestCoin[];trades:BacktestTrade[];btcDaily:ExchangeBar[];coinDaily?:Record<string,[number,number][]>;endDaysAgo?:number;requests:number;droppedRows:number};
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -84,9 +89,10 @@ export async function backtestCoin(coin:{id:string;product:string},from:number,t
    shadows[plan]={plan:shadow.plan,status:shadow.status,r:shadow.r,legs:shadow.legs.map(l=>({reason:l.reason}))};
   }
   const day=Math.floor(four[i].t/D)*D;
+  const btcState=assessBtcRegime(btcDaily.filter(b=>b.t<=day),four[i].t).state;
   trades.push({filledBars:bars15.filter(b=>b.filled).length,id,coin:coin.id,product:coin.product,kind:sig.kind??'UNKNOWN',signalAt:sig.asOf!,entryAt:new Date(entry.at).toISOString(),fill,stop,target,
-   btcRegime:assessBtcRegime(btcDaily.filter(b=>b.t<=day),four[i].t).state,btc200:btcLongTrend(btcDaily,four[i].t),half:four[i].t<from+(to-from)/2?'FIRST':'SECOND',fixed,
-   shadow:shadows['partial-trail-v2'],shadows});
+   btcRegime:btcState,btc200:btcLongTrend(btcDaily,four[i].t),half:four[i].t<from+(to-from)/2?'FIRST':'SECOND',fixed,
+   shadow:shadows['partial-trail-v2'],shadows,jevInput:backtestJevInput(sig,btcState)});
   busyUntil=fixed.at?Date.parse(fixed.at):pathEnd;
  }
  return {trades,requests,dropped,signals,noEntry,overlapping,daily:daily.bars.map(b=>[b.t,b.c] as [number,number])};
@@ -116,8 +122,19 @@ export async function runBacktestBatch(){
    catch(e){Object.assign(coin,{status:'FAILED',error:e instanceof Error?e.message:'Backtest failed'});}
   }
   state.status=state.coins.some(c=>c.status==='PENDING')?'RUNNING':'COMPLETE';state.updatedAt=new Date().toISOString();
+  // Jev stamps for the trades just replayed; a failure here never fails the batch.
+  await stampBacktestJev(redis,state.trades).catch(()=>undefined);
   await redis.set(KEY,state,{ex:30*86400});return {busy:false as const,state};
  }finally{await redis.del(`${KEY}:lock`).catch(()=>undefined);}
+}
+/** Backfills Jev stamps on the saved backtest, cache first, up to the per-call limit. Returns coverage; nothing else in the state changes. */
+export async function stampSavedBacktest(now=Date.now()){
+ const redis=getRedis();if(!redis)throw Error('Backtest storage unavailable');
+ const state=await savedBacktest();if(!state)throw Error('Start a backtest first');
+ const r=await stampBacktestJev(redis,state.trades,now);
+ state.updatedAt=new Date(now).toISOString();
+ await redis.set(KEY,state,{ex:30*86400});
+ return {...r,state};
 }
 /** Maps backtest trades onto the paper stats model: 1R = $500 (0.25% of $200k), so P&L columns read in paper-account dollars. */
 export function summarizeBacktest(state:BacktestState){

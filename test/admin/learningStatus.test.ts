@@ -18,7 +18,7 @@ it('reports the four crypto stamps with a state, a plain summary, and the reason
  ];
  const s=await learningStatus(redis({'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows},'admin:crypto-markets:early-momentum:v1':null,'admin:crypto-markets:forward-score:v1':{updatedAt:'2026-10-01T11:30:00Z',rows:[]},'admin:crypto-markets:calibration:v1':null}),now);
  const byId=Object.fromEntries(s.items.map(i=>[i.id,i]));
- expect(s.items.map(i=>i.id)).toEqual(['shadow','catalyst','forward','calibration','shadowScore']);
+ expect(s.items.map(i=>i.id)).toEqual(['shadow','catalyst','chart','forward','calibration','shadowScore']);
  expect(s.items.find(i=>i.id==='shadowScore')).toMatchObject({state:'collecting',counts:{weights:0,confirmedFields:0,stamped:0}});
  expect(s.shadowWeights).toBeNull();
  expect(byId.shadow).toMatchObject({state:'ok',counts:{named:3,scored:2,unavailable:1,unstamped:0}});

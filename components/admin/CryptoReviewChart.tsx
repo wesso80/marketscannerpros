@@ -4,8 +4,8 @@ import {createChart,createSeriesMarkers,CandlestickSeries,HistogramSeries,ColorT
 import type {BaseReview} from '@/lib/admin/cryptoBase';
 import type {MomentumChart,MomentumReview} from '@/lib/admin/cryptoMomentum';
 import {setupDisplayLabel,type VolumeMomentum,type MomentumScanRow} from '@/lib/admin/cryptoVolumeMomentum';
-import {catalystText,jevDetail,jevScored} from '@/lib/admin/cryptoJevEvidence';
-type RuleRow=VolumeMomentum&{id?:string;symbol?:string;jev?:MomentumScanRow['jev'];catalyst?:MomentumScanRow['catalyst'];shadow?:MomentumScanRow['shadow']};
+import {catalystText,chartDetail,chartText,jevDetail,jevScored} from '@/lib/admin/cryptoJevEvidence';
+type RuleRow=VolumeMomentum&{id?:string;symbol?:string;jev?:MomentumScanRow['jev'];catalyst?:MomentumScanRow['catalyst'];chart?:MomentumScanRow['chart'];shadow?:MomentumScanRow['shadow']};
 const fmt=(n?:number|null)=>typeof n==='number'&&Number.isFinite(n)?n.toPrecision(6):'—';
 const DARK={layout:{background:{type:ColorType.Solid,color:'#0f172a'},textColor:'#cbd5e1'},grid:{vertLines:{color:'#1e293b'},horzLines:{color:'#1e293b'}},timeScale:{timeVisible:true,secondsVisible:false},handleScroll:{vertTouchDrag:false}} as const;
 const pricePrecision=(lows:number[])=>Math.min(12,Math.max(2,3-Math.floor(Math.log10(Math.max(1e-12,Math.min(...lows))))));
@@ -16,7 +16,7 @@ function ruleLevels(row:RuleRow):Array<readonly [string,number|undefined,string,
 function EvidenceBadge({row}:{row:RuleRow}){
  const j=row.jev;
  const jev=!j?'Jev —':jevScored(j)?`Jev chase ${j.chase.toFixed(2)} · flow ${j.flowAgrees.toFixed(2)} · btc ${j.btcHeadwind.toFixed(2)}`:`Jev unavailable${j.reason?` · ${j.reason}`:''}`;
- return <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300" title={jevDetail(j)}>{jev} · Catalyst: {catalystText(row.catalyst,true)}{row.shadow?` · Shadow ${row.shadow.score>=0?'+':''}${row.shadow.score.toFixed(2)}`:''}</span>;
+ return <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300"><span title={jevDetail(j)}>{jev}</span> · <span title={chartDetail(row.chart)}>Chart: {chartText(row.chart,true)}</span> · Catalyst: {catalystText(row.catalyst,true)}{row.shadow?` · Shadow ${row.shadow.score>=0?'+':''}${row.shadow.score.toFixed(2)}`:''}</span>;
 }
 type Readout={time:string;o:number;h:number;l:number;c:number;v:number|null;atrFromFloor:number|null;atrFromHigh:number|null};
 /** One candle cannot be drawn as a chart; list the rule levels around the signal close instead. */

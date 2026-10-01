@@ -21,12 +21,16 @@ function stampCoverage(rows:MomentumScan['rows']){
  const named=rows.filter(r=>JEV_STAGES.includes(r.stage as typeof JEV_STAGES[number]));
  const jev=jevCoverage(named.map(r=>r.jev));
  const cat={scored:0,noHeadlines:0,unavailable:0,unstamped:0,reasons:{} as Record<string,number>,detail:null as string|null};
+ const chart={scored:0,noBars:0,unavailable:0,unstamped:0,reasons:{} as Record<string,number>};
  for(const r of named){
   const c=r.catalyst;
-  if(!c){cat.unstamped++;continue;}
-  if(c.status==='scored')cat.scored++;else if(c.status==='no-headlines')cat.noHeadlines++;else{cat.unavailable++;const k=c.reason??'not recorded';cat.reasons[k]=(cat.reasons[k]??0)+1;if(!cat.detail&&c.detail)cat.detail=c.detail;}
+  if(!c)cat.unstamped++;
+  else if(c.status==='scored')cat.scored++;else if(c.status==='no-headlines')cat.noHeadlines++;else{cat.unavailable++;const k=c.reason??'not recorded';cat.reasons[k]=(cat.reasons[k]??0)+1;if(!cat.detail&&c.detail)cat.detail=c.detail;}
+  const ch=r.chart;
+  if(!ch)chart.unstamped++;
+  else if(ch.status==='scored')chart.scored++;else if(ch.reason==='no-bars')chart.noBars++;else{chart.unavailable++;const k=ch.reason??'not recorded';chart.reasons[k]=(chart.reasons[k]??0)+1;}
  }
- return {named:named.length,jev,cat};
+ return {named:named.length,jev,cat,chart};
 }
 export async function learningStatus(redis:Redis|null,now=Date.now()):Promise<LearningStatus>{
  const items:LearningItem[]=[];
@@ -51,6 +55,15 @@ export async function learningStatus(redis:Redis|null,now=Date.now()):Promise<Le
   lastAt:four?.updatedAt??early?.updatedAt??null,gradedAgainst:'paper R and forward 24h mark',where:'Setups tab → Catalyst column; Learning → ledger (catalyst.* fields)',
   next:catTop==='cg-paused'?'CoinGecko credits are below the pause threshold, so no headline call is made. Nothing to fix; it resumes when credits allow.':catTop==='cg-unavailable'||catTop==='cg-error'?'CoinGecko /news?coin_id is not answering. Check the plan includes the news endpoint (Analyst) and the Market data tab’s credit status.':catTop==='cg-bad-shape'?'CoinGecko /news returned an unexpected shape; the parser accepts flat and {data:[{attributes}]} forms, so the response needs a look.':null,
   counts:{scored:catScored,noHeadlines:catNone,unavailable:catUnavailable,unstamped:catUnstamped}});
+ // 2b. Chart confirmer: needs the 25 stored candles; a scan that kept only the signal candle is no-bars, not a failure.
+ const chScored=c4.chart.scored+c1.chart.scored,chNoBars=c4.chart.noBars+c1.chart.noBars,chUnavailable=c4.chart.unavailable+c1.chart.unavailable,chUnstamped=c4.chart.unstamped+c1.chart.unstamped;
+ const chReasons={...c4.chart.reasons};for(const [k,v] of Object.entries(c1.chart.reasons))chReasons[k]=(chReasons[k]??0)+v;
+ items.push({id:'chart',label:'Chart confirmer on crypto setups (jev-chart-v1, stored candles)',
+  state:!jevKey?'off':!shadowNamed?'collecting':chUnavailable>chScored?'attention':chScored?'ok':'collecting',
+  summary:!jevKey?'AI_GATEWAY_API_KEY is not set; no chart read is scored.':`${chScored} scored · ${chNoBars} no stored bars · ${chUnavailable} unavailable${Object.keys(chReasons).length?` (${reasons(chReasons)})`:''} · ${chUnstamped} not yet stamped. Four reads per setup: clean base, strong close, volume expansion, overhead supply.`,
+  lastAt:four?.updatedAt??early?.updatedAt??null,gradedAgainst:'paper R and forward 24h mark (chart.* fields)',where:'Setups tab → Evidence column and chart badge; Learning → ledger',
+  next:chNoBars&&!chScored?'Rows scored so far carried only the signal candle. The next 4h window stores all 25 candles and the read runs on them.':null,
+  counts:{scored:chScored,noBars:chNoBars,unavailable:chUnavailable,unstamped:chUnstamped}});
  // 3. Forward score
  const fRows=book?.rows.length??0,fResolved=book?forwardResolved(book.rows):0;
  items.push({id:'forward',label:'Forward score (VOLUME_WATCH / EXTENDED / EARLY_WATCH marks)',state:!fRows?'collecting':'ok',summary:`${fRows} saved rows · ${fResolved} resolved on both marks${fResolved<30?' · under 30, no rate is shown':''}.`,lastAt:book?.updatedAt??null,gradedAgainst:'next completed 4h close and 24h mark',where:'Setups tab → Forward score',next:null,counts:{rows:fRows,resolved:fResolved}});

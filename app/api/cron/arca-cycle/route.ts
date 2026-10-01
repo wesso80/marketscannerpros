@@ -3,6 +3,7 @@ import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {adminDiscoveryOnly,discoveryOnlyAction} from '@/lib/admin/discoveryOnly';
 import {runNewsJevDailyOnce} from '@/lib/admin/equityNewsJev';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
+import {runCryptoBaseSleeveAll} from '@/lib/admin/cryptoPaperBase';
 import {runCryptoMarketData} from '@/lib/admin/cryptoMarketDataJob';
 import {runNewListings} from '@/lib/admin/cryptoNewListingsJob';
 import {historyStep} from '@/lib/admin/cgHistoryJob';
@@ -60,10 +61,13 @@ export async function POST(req: NextRequest) {
   if(adminDiscoveryOnly()){
     // Exit-only work runs before any potentially slow/failed discovery request.
     const monitoring=await runCryptoPaperAll(true).catch(()=>({ok:false,error:'Crypto exit monitoring failed'}));
+    const baseMonitoring=await runCryptoBaseSleeveAll(true).catch(()=>({ok:false,error:'Base-breakout exit monitoring failed'}));
     const scanning=await runCryptoAutomation().catch(()=>({ok:false,error:'Crypto background scan failed'}));
     const scanFailed='ok' in scanning&&!scanning.ok;
     // Full cycle rechecks protection and then uses the newly saved scan immediately.
     const cryptoPaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper entry cycle failed'}));
+    // The base-breakout sleeve reads the same saved scans; its health is reported but, as a separate ledger, never blocks the momentum sleeves.
+    const basePaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoBaseSleeveAll().catch(()=>({ok:false,error:'Base-breakout paper entry cycle failed'}));
     const ok=monitoring.ok&&cryptoPaper.ok&&!scanFailed;
     const operationalAlerts=await reportCryptoCycleHealth({monitoring,scanning,paper:cryptoPaper}).catch(()=>({ok:false,error:'Operational alert failed'}));
     // Daily calibration reads saved rows only; it never affects this run's health status.
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
     const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
     // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
     const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history},{status:ok?200:503});
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history,baseSleeve:{monitoring:baseMonitoring,paper:basePaper}},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   const calibrationRedis=getRedis();

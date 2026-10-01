@@ -37,7 +37,7 @@ export interface PaperPathResult {
   entryCandleExcluded?: boolean;
   checkedThrough?: string;
   checkpoint?: PaperExitCheckpoint;
-  exit?: { reason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TIME_EXIT'; price: number; at: string; ambiguous: boolean };
+  exit?: { reason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TIME_EXIT' | 'RULE_EXIT'; price: number; at: string; ambiguous: boolean };
 }
 
 /**
@@ -62,6 +62,8 @@ export function evaluatePaperExitPath(position: ArcaPosition, path: PaperExitPat
   const target = nearestPaperTarget(position);
   const rule = rules ?? null;
   if (rule && !(Number.isFinite(rule.timeStopHours) && rule.timeStopHours > 0 && Number.isFinite(rule.timeStopMinR) && rule.timeStopMinR > 0)) return reject('candle_path_rules_invalid');
+  const trail = rule?.trail ?? null;
+  if (trail && !(Number.isFinite(trail.atr) && trail.atr > 0 && Number.isFinite(trail.atrMultiple) && trail.atrMultiple > 0)) return reject('candle_path_rules_invalid');
   let firstOpen = entryOpen;
   let best: number | null = null;
   const checkpoint = position.exitCheckpoint;
@@ -85,15 +87,18 @@ export function evaluatePaperExitPath(position: ArcaPosition, path: PaperExitPat
     if (![b.openAt, b.closeAt, b.open, b.high, b.low, b.close].every(Number.isFinite) ||
         b.openAt !== expected || b.closeAt - b.openAt !== STEP || b.low <= 0 ||
         b.low > Math.min(b.open, b.close) || b.high < Math.max(b.open, b.close)) return reject('candle_path_gap_or_invalid_bar');
-    const stopHit = long ? b.low <= position.stopLoss! : b.high >= position.stopLoss!;
     const partialEntry=conservativeEntry && b.openAt<entry;
+    // The trail is ratcheted from candles already completed; this bar only tests it. Long-only: a short never gains a trail here.
+    const trailStop = trail && long && best != null ? Math.max(position.stopLoss!, best - trail.atrMultiple * trail.atr) : position.stopLoss!;
+    const trailed = trailStop > position.stopLoss!;
+    const stopHit = long ? b.low <= trailStop : b.high >= position.stopLoss!;
     const targetHit = !partialEntry && target != null && (long ? b.high >= target : b.low <= target);
     if (stopHit || targetHit) {
-      const gapStop = long ? b.open <= position.stopLoss! : b.open >= position.stopLoss!;
+      const gapStop = long ? b.open <= trailStop : b.open >= position.stopLoss!;
       // Stop first on unresolved OHLC ordering; gap losses fill at the adverse open.
       return { status: 'candle_path_exit', entryCandleExcluded, exit: {
-        reason: stopHit ? 'STOP_LOSS' : 'TAKE_PROFIT',
-        price: stopHit ? (gapStop && !partialEntry ? b.open : position.stopLoss!) : target!,
+        reason: stopHit ? (trailed ? 'RULE_EXIT' : 'STOP_LOSS') : 'TAKE_PROFIT',
+        price: stopHit ? (gapStop && !partialEntry ? b.open : trailStop) : target!,
         at: new Date(b.closeAt).toISOString(), ambiguous: (stopHit && targetHit) || (partialEntry && stopHit),
       } };
     }

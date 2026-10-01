@@ -5,6 +5,7 @@ import {createMomentumScan,type MomentumScan} from '@/lib/admin/cryptoVolumeMome
 import {fetchEarlyMomentum} from './cryptoEarlyMomentum';
 import {persistForwardScores} from './cryptoForwardScore';
 import {attachJevShadow} from './cryptoJev';
+import {attachChartConfirmer} from './cryptoJevChart';
 import {attachCatalystShadow} from './cryptoJevCatalyst';
 import {attachShadowScoreWithContext} from './cryptoShadowScore';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
@@ -33,6 +34,7 @@ export async function runEarlyMomentumBatch(limit=5){
    scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});
   }
   await attachJevShadow(scan.rows,now);
+  await attachChartConfirmer(scan.rows,now);
   await attachCatalystShadow(redis,scan.rows,now).catch(()=>undefined);
   await attachShadowScoreWithContext(redis,scan.rows,now);
   scan.updatedAt=new Date().toISOString();await redis.set(KEY,scan,{ex:86400});

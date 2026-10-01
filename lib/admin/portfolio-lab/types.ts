@@ -144,6 +144,8 @@ export interface PaperExitRules {
   /** Close at the first completed candle at/after entry + hours if the best excursion never reached minR. */
   timeStopHours: number;
   timeStopMinR: number;
+  /** Optional trailing stop: effective stop = max(initial stop, best − atrMultiple × atr), using only candles completed before the bar being checked. */
+  trail?: { atr: number; atrMultiple: number } | null;
 }
 
 export interface PaperExitCheckpoint {

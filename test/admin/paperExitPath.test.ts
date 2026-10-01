@@ -147,6 +147,38 @@ describe('rule exits: 72h time stop when +1R was never reached', () => {
   });
 });
 
+describe('rule exits: ATR trailing stop (base-breakout sleeve)', () => {
+  // ATR 2, 2x trail: the effective stop is max(95, best − 4), ratcheted only from completed candles.
+  const rules = { timeStopHours: 168, timeStopMinR: 1, trail: { atr: 2, atrMultiple: 2 } };
+  const noTarget = { ...position, takeProfit1: null } as ArcaPosition;
+  const withTrail = (p: PaperExitPath, pos = noTarget) => evaluatePaperExitPath(pos, p, t + 40 * step, rules);
+  it('does not trail on the first candle: the initial stop is the only stop until a candle has completed', () => {
+    expect(withTrail(path(candle(0, { high: 120, low: 96 }))).exit).toBeUndefined();
+  });
+  it('closes as RULE_EXIT at the trailed stop once price falls back through it, and never through a resting target', () => {
+    const bars = [candle(0, { high: 110, low: 99, close: 109 }), candle(1, { open: 108, high: 108, low: 105.5, close: 106 })];
+    expect(withTrail(path(...bars)).exit).toEqual({ reason: 'RULE_EXIT', price: 106, at: new Date(t + 2 * step).toISOString(), ambiguous: false });
+  });
+  it('ratchets up and never down: a lower later high does not loosen the stop', () => {
+    const bars = [candle(0, { high: 120, low: 99, close: 118 }), candle(1, { open: 118, high: 118, low: 117, close: 117.5 }), candle(2, { open: 117, high: 117, low: 115.9, close: 116 })];
+    expect(withTrail(path(...bars)).exit).toEqual({ reason: 'RULE_EXIT', price: 116, at: new Date(t + 3 * step).toISOString(), ambiguous: false });
+  });
+  it('a gap through the trailed stop fills at the adverse open', () => {
+    const bars = [candle(0, { high: 120, low: 99, close: 118 }), candle(1, { open: 110, high: 111, low: 109, close: 110 })];
+    expect(withTrail(path(...bars)).exit).toMatchObject({ reason: 'RULE_EXIT', price: 110 });
+  });
+  it('the fixed stop still reads STOP_LOSS when the trail has not lifted above it', () => {
+    const bars = [candle(0, { open: 98, high: 98.5, low: 97, close: 98 }), candle(1, { open: 98, high: 98, low: 94, close: 94.5 })];
+    expect(withTrail(path(...bars)).exit).toMatchObject({ reason: 'STOP_LOSS', price: 95 });
+  });
+  it('a trailed open position resumes from its checkpoint best and rejects an invalid trail', () => {
+    const first = withTrail(path(candle(0, { high: 120, low: 99, close: 118 })));
+    expect(first.checkpoint).toMatchObject({ best: 120, rules });
+    expect(withTrail(path(candle(1, { open: 117, high: 117, low: 115, close: 115.5 })), { ...noTarget, exitCheckpoint: first.checkpoint }).exit).toMatchObject({ reason: 'RULE_EXIT', price: 116 });
+    expect(evaluatePaperExitPath(noTarget, path(candle()), t + step, { ...rules, trail: { atr: 0, atrMultiple: 2 } }).status).toBe('candle_path_rules_invalid');
+  });
+});
+
 describe('crypto exchange partial entry candle',()=>{
  const p={...position,openedAt:new Date(t+60000).toISOString()};
  it('does not credit the partial entry high as a target',()=>{
