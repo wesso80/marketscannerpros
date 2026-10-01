@@ -28,16 +28,18 @@ export async function POST(req:Request) {
     const snapshot=await redis.get<{startedAt:string;rows:DiscoveryRow[]}>('admin:crypto-discovery:v1');
     const started=Date.parse(snapshot?.startedAt??'');
     const coin=snapshot?.rows.find(r=>r.id===id);
-    if(!coin || coin.stage==='EXCLUDED' || !Number.isFinite(started) || started>Date.now() || Date.now()-started>15*60000)
-      return savedFallback(redis,id,coin?.price??null,'Run discovery first: a fresh review needs an exchange snapshot under 15 minutes old.',409);
+    // Same reuse window as hourly research: a discovery universe up to four hours old can still be charted.
+    if(!coin || coin.stage==='EXCLUDED' || !Number.isFinite(started) || started>Date.now() || Date.now()-started>4*3600000)
+      return savedFallback(redis,id,coin?.price??null,'Run discovery first: this coin is not in an exchange snapshot from the last four hours.',409);
     const quoteAt=Date.parse(coin.observedAt??'');
-    if(!Number.isFinite(quoteAt) || quoteAt>Date.now() || Date.now()-quoteAt>15*60000 || !Number.isFinite(coin.price) || coin.price<=0)
-      return savedFallback(redis,id,coin.price??null,'Discovery quote is stale or unavailable. Refresh discovery before analyzing; no candle calls spent.',409);
+    const quoteAgeMin=Number.isFinite(quoteAt)?Math.round((Date.now()-quoteAt)/60000):null;
+    // The review itself refuses fresh levels on a quote over 15 minutes old; the chart and candle evidence do not depend on the quote.
+    const notice=quoteAgeMin==null||quoteAgeMin>15||!Number.isFinite(coin.price)||coin.price<=0?`Discovery quote is ${quoteAgeMin==null?'unavailable':`${quoteAgeMin} min old`}: the chart and candle evidence are current, but no fresh entry levels are computed. Scan major exchanges and reopen for levels.`:undefined;
     const history=await redis.get<History>(`${PREFIX}:history:${id}`);
     if(history && Number.isFinite(history.fetchedAt) && Date.now()>=history.fetchedAt && Date.now()-history.fetchedAt<15*60000) {
       const review=reviewCryptoMomentum(coin,history.hourly,history.daily,Date.now());
       await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
-      return NextResponse.json({review,chart:momentumChart(history.hourly,history.daily),base:reviewCryptoBase(history.hourly,history.daily,coin.price),cachedHistory:true,requestAttempts:0});
+      return NextResponse.json({review,chart:momentumChart(history.hourly,history.daily),base:reviewCryptoBase(history.hourly,history.daily,coin.price),cachedHistory:true,requestAttempts:0,...(notice?{notice}:{})});
     }
     if(!await redis.set(`${PREFIX}:coin:${id}`,'reserved',{nx:true,ex:900}))
       return savedFallback(redis,id,coin.price,'This coin is being reviewed or is cooling down after an attempt.',429);
@@ -54,6 +56,6 @@ export async function POST(req:Request) {
     if(!hourly || !daily) review.reasons.unshift('Provider history request failed; no substitute history used');
     else {const saved={fetchedAt:Date.now(),hourly,daily};await redis.set(`${PREFIX}:history:${id}`,saved,{ex:900});await redis.set(`${PREFIX}:history-chart:${id}`,saved,{ex:86400});}
     await redis.set(`${PREFIX}:result:${id}`,review,{ex:86400});
-    return NextResponse.json({review,chart:momentumChart(hourly??[],daily??[]),base:reviewCryptoBase(hourly??[],daily??[],coin.price),cached:false,requestAttempts:2});
+    return NextResponse.json({review,chart:momentumChart(hourly??[],daily??[]),base:reviewCryptoBase(hourly??[],daily??[],coin.price),cached:false,requestAttempts:2,...(notice?{notice}:{})});
   } catch {return NextResponse.json({error:'Momentum analysis or evidence storage failed; no trade was created'},{status:503});}
 }
