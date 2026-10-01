@@ -6,15 +6,15 @@ import {fetchFlowStamp} from './cryptoFlow';
  * A failed call is stored as unavailable and is not retried. No gateway key leaves the row unscored.
  * The same scored row is not sent again.
  */
-export const JEV_RULE='jev-shadow-v1' as const;
+export const JEV_RULE='jev-shadow-v2' as const;
 export const JEV_STAGES=['MOMENTUM_VOLUME','VOLUME_WATCH','EXTENDED','EARLY_WATCH'] as const;
 const GATEWAY='https://ai-gateway.vercel.sh/v1/evaluate';
 const MODEL='typesafe-ai/jev';
 /** Fixed questions. Review these words here. Changing them starts a new sample. */
 export const JEV_QUESTIONS={
- chase:{type:'noul' as const,instructions:'Is `distancePastLevelAtr` large enough that a new long would be chasing a completed move?',criteria:{true:'The completed move is already stretched past the level',false:'Price is still near the level'}},
- flowAgrees:{type:'noul' as const,instructions:'Does `flowStamp` show buyers supporting a long?',criteria:{true:'The stamp is aggressive buying',false:'The stamp is divergence, unavailable, or does not show buyers'}},
- btcHeadwind:{type:'noul' as const,instructions:'Does `btcTrend` argue against a new long?',criteria:{true:'The Bitcoin trend is a headwind for a new long',false:'The Bitcoin trend does not argue against a new long'}},
+ chase:{type:'boolean' as const,instructions:'Is `distancePastLevelAtr` large enough that a new long would be chasing a completed move?',criteria:{true:'The completed move is already stretched past the level',false:'Price is still near the level'}},
+ flowAgrees:{type:'boolean' as const,instructions:'Does `flowStamp` show buyers supporting a long?',criteria:{true:'The stamp is aggressive buying',false:'The stamp is divergence, unavailable, or does not show buyers'}},
+ btcHeadwind:{type:'boolean' as const,instructions:'Does `btcTrend` argue against a new long?',criteria:{true:'The Bitcoin trend is a headwind for a new long',false:'The Bitcoin trend does not argue against a new long'}},
 };
 export type JevStamp={rule:typeof JEV_RULE;status:'scored'|'unavailable';chase:number|null;flowAgrees:number|null;btcHeadwind:number|null;btcTrend:string;flowStamp:string;model:string|null;checkedAt:string};
 type JevRow={stage:string;asOf?:string|null;kind?:string|null;relativeVolume?:number|null;changePct?:number|null;trigger?:number|null;close?:number|null;atr?:number|null;pair?:{product:string}|null;flowStamp?:{stamp:string};jev?:JevStamp};
@@ -50,7 +50,7 @@ async function ask(state:ReturnType<typeof jevState>):Promise<{chase:number;flow
 /** Scores named setups that do not already have a stamp. Never throws and never changes a stage. */
 export async function scoreJevRows<T extends JevRow>(rows:T[],btcTrend:string,now=Date.now()){
  if(!process.env.AI_GATEWAY_API_KEY?.trim())return;
- const due=rows.filter(r=>JEV_STAGES.includes(r.stage as typeof JEV_STAGES[number])&&!r.jev&&r.asOf);
+ const due=rows.filter(r=>JEV_STAGES.includes(r.stage as typeof JEV_STAGES[number])&&r.asOf&&r.jev?.rule!==JEV_RULE);
  for(let i=0;i<due.length;i+=4){
   await Promise.all(due.slice(i,i+4).map(async row=>{
    const stage=row.stage;
