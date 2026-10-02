@@ -22,6 +22,7 @@ import {createSimulatedOrder,fillOrderAndOpenPosition} from '@/lib/admin/portfol
 import {markAndMaybeExit} from '@/lib/admin/portfolio-lab/positionEngine';
 import {writeJournal} from '@/lib/admin/portfolio-lab/journalEngine';
 import {fourHourBars} from '@/lib/admin/cryptoCorrelation';
+import {currentBtcRegime} from '@/lib/admin/cryptoBtcRegime';
 import {fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {fetchPaperQuote,fetchPaperPath} from '@/lib/admin/cryptoPaperMarket';
 import {CRYPTO_PAPER_LIVE_NAME,CRYPTO_PAPER_NAME,runCryptoPaperCycle,runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
@@ -155,7 +156,7 @@ it('beta limits allow entries beyond the former five-position cap and still enfo
  positions=Array.from({length:20},(_,i)=>({...position(),id:`pos${i}`,symbol:`coin${i}`}));
  expect(await runCryptoPaperCycle('w')).toMatchObject({opened:0,decisions:[{status:'BLOCKED',reason:'20-position cap'}]});
 });
-it('records the BTC daily trend on each entry without using it as a filter',async()=>{
+it('records the BTC daily trend on each entry; a single-book account is never filtered by it',async()=>{
  const report=await runCryptoPaperCycle('w');
  expect(report).toMatchObject({opened:1,btcRegime:{state:'DOWN'}});
  const reason=vi.mocked(createSimulatedOrder).mock.calls[0][0].createdReason;
@@ -218,7 +219,25 @@ it('does not report a cron skip after a recent manual cycle as unhealthy, but st
  holder='cron';
  expect(await runCryptoPaperAll()).toMatchObject({ok:false,results:[{skipped:true,reason:'Crypto paper cycle already running or cooling down'}]});
 });
+it('live sleeve skips a BTC-DOWN entry and the research sleeve records it; UP enters live',async()=>{
+ const research={...portfolio,id:'research',name:CRYPTO_PAPER_NAME};
+ const live={...portfolio,id:'live',name:CRYPTO_PAPER_LIVE_NAME};
+ vi.mocked(fetchPaperPath).mockImplementation(async(symbol:string)=>({symbol,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:[{openAt:now-step,closeAt:now,open:100,high:101,low:98,close:100}]}));
+ vi.mocked(store.getDefaultPortfolio).mockImplementation(async(_w,name)=>name===CRYPTO_PAPER_LIVE_NAME?live:research);
+ vi.mocked(store.getPortfolioById).mockImplementation(async(_w,id)=>id==='live'?live:research);
+ vi.mocked(store.listOpenPositions).mockResolvedValue([]);
+ vi.mocked(fourHourBars).mockResolvedValue(trend);
+ const down=await runCryptoPaperCycle('w');
+ expect(down).toMatchObject({opened:1,decisions:[{status:'OPENED',sleeve:'research',reason:expect.stringMatching(/Live sleeve skips entries while the BTC daily trend is DOWN.*Research sleeve recorded/)}]});
+ expect(createSimulatedOrder).toHaveBeenLastCalledWith(expect.objectContaining({portfolio:expect.objectContaining({id:'research'})}));
+ vi.mocked(createSimulatedOrder).mockClear();
+ vi.mocked(currentBtcRegime).mockResolvedValueOnce({state:'UP',asOf:'2026-09-28T00:00:00.000Z'} as never);
+ const up=await runCryptoPaperCycle('w');
+ expect(up).toMatchObject({opened:1,decisions:[{status:'OPENED',sleeve:'live'}]});
+ expect(createSimulatedOrder).toHaveBeenLastCalledWith(expect.objectContaining({portfolio:expect.objectContaining({id:'live'})}));
+});
 it('refuses the next correlated add on the live sleeve and records it on the research sleeve',async()=>{
+ vi.mocked(currentBtcRegime).mockResolvedValueOnce({state:'UP',asOf:'2026-09-28T00:00:00.000Z'} as never);
  const research={...portfolio,id:'research',name:CRYPTO_PAPER_NAME};
  const live={...portfolio,id:'live',name:CRYPTO_PAPER_LIVE_NAME};
  const held={...position(),id:'live-eth',symbol:'eth',instrumentType:'coinbase:ETH-USD',quantity:10};
@@ -235,6 +254,7 @@ it('refuses the next correlated add on the live sleeve and records it on the res
  expect(held.quantity).toBe(10);
 });
 it('refuses a live entry when that cluster is over the cap and still records it on the research sleeve',async()=>{
+ vi.mocked(currentBtcRegime).mockResolvedValueOnce({state:'UP',asOf:'2026-09-28T00:00:00.000Z'} as never);
  const research={...portfolio,id:'research',name:CRYPTO_PAPER_NAME};
  const live={...portfolio,id:'live',name:CRYPTO_PAPER_LIVE_NAME};
  const held={...position(),id:'live-eth',symbol:'eth',instrumentType:'coinbase:ETH-USD',quantity:4000};

@@ -1,7 +1,7 @@
 import {supportsPaperPair,fetchOkxUsdQuote,fetchOkxUsdPath,usdSignal,paperCostPortfolio,type ConvertedPaperQuote} from './cryptoPaperOkx';
 import {reconcileCryptoPaper,type CryptoReconciliation} from './cryptoPaperReconciliation';
 import {summarizeCryptoPaper,type CryptoPaperStats,type CryptoStatsRow} from './cryptoPaperStats';
-import {BTC_DOWN_FILTER,btcDownFilter} from './cryptoMarketRegime';
+import {BTC_DOWN_FILTER,btcDownFilter,liveBtcDownRefusal} from './cryptoMarketRegime';
 import {mergeDerivativesEvidence} from './cryptoMarketData';
 import {latestDerivatives,savedTrending} from './cryptoMarketDataJob';
 import {currentRsSnapshot,rsEvidence,type RsSnapshot} from './cryptoRelativeStrength';
@@ -283,7 +283,7 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    const liveCorr=correlationScale(candidateBars,liveBars);
    const liveEquity=(separateLive?liveBook!:portfolio).totalEquity;
    const liveCluster=clusterAllowance(liveCorr,liveOpens.map(p=>({coin:p.symbol,riskUsd:positionRiskUsd(p)})),liveBars.map(o=>o.coin),liveEquity,liveEquity*L.riskPerTradePct/100);
-   const refusal=liveSleeveRefusal([...liveCorr.correlated.map(c=>c.coin),...liveCorr.unavailable,...liveOpens.map(p=>p.symbol).filter(c=>!liveBars.some(o=>o.coin===c))],liveCluster.clusterRiskUsd,liveCluster.capUsd);
+   const refusal=liveBtcDownRefusal(btcRegime?.state)??liveSleeveRefusal([...liveCorr.correlated.map(c=>c.coin),...liveCorr.unavailable,...liveOpens.map(p=>p.symbol).filter(c=>!liveBars.some(o=>o.coin===c))],liveCluster.clusterRiskUsd,liveCluster.capUsd);
    const sleeve: 'live'|'research'=refusal?'research':'live';
    const target=sleeve==='research'||!separateLive?portfolio:liveBook!;
    const openBars=sleeve==='research'&&separateLive?await barsFor(researchOpens):liveBars;

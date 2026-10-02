@@ -26,6 +26,17 @@ it('shadow BTC-down filter labels only from the recorded trend and never guesses
  const {btcDownFilter}=await import('@/lib/admin/cryptoMarketRegime');
  expect(['UP','MIXED','DOWN','UNAVAILABLE',null].map(btcDownFilter)).toEqual(['PASS','PASS','WOULD_SKIP','UNAVAILABLE','NOT_RECORDED']);
 });
+it('live BTC-down filter refuses only DOWN, and the kill switch turns it off',async()=>{
+ const {liveBtcDownRefusal,liveBtcDownFilterEnabled}=await import('@/lib/admin/cryptoMarketRegime');
+ expect(['UP','MIXED','UNAVAILABLE',null,undefined].map(s=>liveBtcDownRefusal(s,true))).toEqual([null,null,null,null,null]);
+ expect(liveBtcDownRefusal('DOWN',true)).toMatch(/Live sleeve skips .* DOWN/);
+ expect(liveBtcDownRefusal('DOWN',false)).toBeNull();
+ const prev=process.env.CRYPTO_LIVE_BTC_DOWN_FILTER;
+ try{
+  delete process.env.CRYPTO_LIVE_BTC_DOWN_FILTER;expect(liveBtcDownFilterEnabled()).toBe(true);
+  process.env.CRYPTO_LIVE_BTC_DOWN_FILTER='off';expect(liveBtcDownFilterEnabled()).toBe(false);
+ }finally{if(prev===undefined)delete process.env.CRYPTO_LIVE_BTC_DOWN_FILTER;else process.env.CRYPTO_LIVE_BTC_DOWN_FILTER=prev;}
+});
 it('groups live paper trades by the recorded 200-day regime and never infers it for older trades',()=>{
  const r=(x:number,long?:string)=>({...row(x,'CONTINUATION','UP'),created_reason:'crypto-v1|x|'+JSON.stringify({signal:{kind:'CONTINUATION'},btcRegime:{state:'UP',...(long?{longTrend:long}:{})}})});
  const s=summarizeCryptoPaper([r(2,'BULL'),r(-1,'BULL'),r(-1)]);
