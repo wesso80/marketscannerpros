@@ -9,6 +9,9 @@ import { useAIPageContext } from "@/lib/ai/pageContext";
 import { fireAutoLog } from "@/lib/autoLog";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { PageHero } from "@/components/ui";
+import { equityMoversBasisLabel, formatEasternAsOf } from "@/lib/alphaVantageEntitlement";
+
+const MOVERS_STUDY_SUBTITLE = "Nasdaq BX equity movers during the US session, and CoinGecko crypto movers. A study list, not a trade list.";
 
 interface MarketMover {
   ticker: string;
@@ -67,7 +70,9 @@ export default function GainersLosersPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [marketDate, setMarketDate] = useState<string | null>(null);
+  const [equityFeed, setEquityFeed] = useState<string | null>(null);
+  const [equityAsOf, setEquityAsOf] = useState<string | null>(null);
+  const [equityNote, setEquityNote] = useState<string | null>(null);
   const [gainers, setGainers] = useState<MarketMover[]>([]);
   const [losers, setLosers] = useState<MarketMover[]>([]);
   const [active, setActive] = useState<MarketMover[]>([]);
@@ -93,7 +98,9 @@ export default function GainersLosersPage() {
         setLosers(data.topLosers?.slice(0, 20) || []);
         setActive(data.mostActive?.slice(0, 20) || []);
         setLastUpdated(new Date());
-        setMarketDate(data.lastUpdated || null);
+        setEquityFeed(typeof data.equityFeed === "string" ? data.equityFeed : null);
+        setEquityAsOf(typeof data.equityAsOf === "string" ? data.equityAsOf : null);
+        setEquityNote(typeof data.equityNote === "string" ? data.equityNote : null);
       }
     } catch (error) {
       console.error("Failed to fetch market movers:", error);
@@ -373,7 +380,7 @@ export default function GainersLosersPage() {
         <ToolsPageHeader
           badge="MARKET MOVERS"
           title="Top Gainers & Losers"
-          subtitle="Real-time mover analysis with institutional-grade filtering."
+          subtitle={MOVERS_STUDY_SUBTITLE}
           icon="MOV"
           backHref="/dashboard"
         />
@@ -401,7 +408,7 @@ export default function GainersLosersPage() {
             { label: 'Filters' },
           ]}
           title="Top Gainers & Losers"
-          subtitle="Real-time mover analysis with institutional-grade filtering."
+          subtitle={MOVERS_STUDY_SUBTITLE}
           actions={[
             { label: refreshing ? 'Refreshing…' : 'Refresh', variant: 'primary', onClick: () => fetchData(true), disabled: refreshing },
             { label: 'Open Markets', variant: 'secondary', href: '/tools/markets' },
@@ -411,14 +418,14 @@ export default function GainersLosersPage() {
             { label: 'Active tab', value: activeTab === 'gainers' ? 'Gainers' : activeTab === 'losers' ? 'Losers' : 'Active', tone: 'bull', detail: 'Current focus' },
             { label: 'Setup mode', value: setupMode, tone: 'info', detail: 'Filter preset' },
             { label: 'Mode', value: environment.deploymentMode, tone: environment.deploymentMode === 'YES' ? 'bull' : environment.deploymentMode === 'CONDITIONAL' ? 'warn' : 'bear', detail: 'Deployment gate' },
-            { label: 'Updated', value: lastUpdated ? lastUpdated.toLocaleTimeString() : '—', tone: 'warn', detail: 'Last refresh' },
+            { label: 'US equities', value: equityMoversBasisLabel(equityFeed), tone: 'info', detail: formatEasternAsOf(equityAsOf) ?? 'As-of time unavailable' },
           ]}
         />
       </div>
       <ToolsPageHeader
         badge="MARKET MOVERS"
         title="Top Gainers & Losers"
-        subtitle="Real-time mover analysis with institutional-grade filtering."
+        subtitle={MOVERS_STUDY_SUBTITLE}
         icon="MOV"
         backHref="/dashboard"
       />
@@ -427,7 +434,8 @@ export default function GainersLosersPage() {
           <ComplianceDisclaimer compact />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              {marketDate && <div>Market data: {marketDate}</div>}
+              <div>US equities: {equityMoversBasisLabel(equityFeed)}{formatEasternAsOf(equityAsOf) ? ` · ${formatEasternAsOf(equityAsOf)}` : ''}</div>
+              {equityNote && <div style={{ marginTop: 2 }}>{equityNote}</div>}
               {lastUpdated && <div style={{ marginTop: 2 }}>Fetched: {lastUpdated.toLocaleTimeString()}</div>}
             </div>
             <button

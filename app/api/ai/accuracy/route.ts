@@ -189,7 +189,7 @@ export async function GET(req: NextRequest) {
         scannerType: scannerType || 'all',
         minSamples,
         schemaNote,
-        note: `Win rates only shown for signal types with >= ${minSamples} labeled samples. Unknown outcomes excluded from accuracy calculations.`
+        note: `Past-threshold shares are shown for signal types with >= ${minSamples} labeled samples. A label means the price moved past the horizon threshold. Unknown outcomes are excluded. This is not a closed trade.`
       }
     });
     

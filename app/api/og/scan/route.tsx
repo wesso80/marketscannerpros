@@ -78,7 +78,7 @@ function ScanOgCard({ m }: { m: ScanOgModel }) {
           MARKETSCANNER PROS
         </div>
         <div style={{ display: 'flex', padding: '10px 18px', border: `2px solid ${accent}`, color: accent, borderRadius: 999, fontSize: 22, letterSpacing: '0.12em' }}>
-          {m.side}
+          {m.side === 'LONG' ? 'Bullish' : m.side === 'SHORT' ? 'Bearish' : 'Watch'}
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40 }}>

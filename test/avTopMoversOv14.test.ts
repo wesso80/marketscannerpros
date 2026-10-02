@@ -61,8 +61,8 @@ describe('fetchAvTopMovers', () => {
     const friOpen = Date.parse('2026-09-25T15:00:00Z'); // Fri 11:00 ET
     const satAest = Date.parse('2026-09-26T13:00:00Z'); // Sat 09:00 ET
     const friAfterClose = Date.parse('2026-09-25T20:15:00Z'); // Fri 16:15 ET
-    expect(equityMoversBasisLabel('realtime', friOpen)).toBe('Realtime');
-    expect(equityMoversBasisLabel(undefined, friOpen)).toBe('Realtime');
+    expect(equityMoversBasisLabel('realtime', friOpen)).toBe('Nasdaq BX realtime');
+    expect(equityMoversBasisLabel(undefined, friOpen)).toBe('Nasdaq BX realtime');
     expect(equityMoversBasisLabel('realtime', satAest)).toBe('Market closed');
     expect(equityMoversBasisLabel('realtime', friAfterClose)).toBe('Market closed');
     expect(equityMoversBasisLabel('end_of_day', friOpen)).toBe('End of day');

@@ -1268,7 +1268,7 @@ describe('layout and flow audit regressions', () => {
     expect(referralsPage).not.toContain('🏅 This Month&apos;s Top Referrers');
     expect(gainersLosersPage).toContain('icon="MOV"');
     expect(gainersLosersPage).toContain('<ComplianceDisclaimer compact />');
-    expect(gainersLosersPage).toContain('Market data: {marketDate}');
+    expect(gainersLosersPage).toContain('US equities: {equityMoversBasisLabel(equityFeed)}');
     expect(gainersLosersPage).toContain('Fetched: {lastUpdated.toLocaleTimeString()}');
     expect(gainersLosersPage).toContain('Top Gainers</button>');
     expect(gainersLosersPage).toContain('Top Losers</button>');

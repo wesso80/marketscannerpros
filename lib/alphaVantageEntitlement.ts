@@ -24,14 +24,14 @@ export function avEquityEntitlementParam(): string {
 export function equityMoversBasisLabel(feed: string | null | undefined, nowMs: number = Date.now()): string {
   if (feed === 'end_of_day') return 'End of day';
   if (feed === 'unavailable') return 'Unavailable';
-  return isUsRegularSessionOpen(nowMs) ? 'Realtime' : 'Market closed';
+  return isUsRegularSessionOpen(nowMs) ? 'Nasdaq BX realtime' : 'Market closed';
 }
 
 /** Movers "Data" chip: crypto is live (CoinGecko); equities follow the Alpha Vantage feed actually received (OV-21). */
 export function moversDataChipLabel(feed: string | null | undefined, nowMs: number = Date.now()): string {
   const equities = feed === 'end_of_day' ? 'equities end of day'
     : feed === 'unavailable' ? 'equities unavailable'
-    : isUsRegularSessionOpen(nowMs) ? 'equities realtime' : 'equities market closed';
+    : isUsRegularSessionOpen(nowMs) ? 'equities Nasdaq BX realtime' : 'equities market closed';
   return `Crypto live · ${equities}`;
 }
 
