@@ -601,6 +601,11 @@ interface AdaptiveProfile {
 }
 
 type InstitutionalLensMode = 'OBSERVE' | 'WATCH' | 'ARMED' | 'EXECUTE';
+function studyLensLabel(mode: InstitutionalLensMode) {
+  if (mode === 'OBSERVE') return 'Observe';
+  if (mode === 'WATCH') return 'Watch';
+  return 'In focus';
+}
 type MRIRegime = 'TREND_EXPANSION' | 'ROTATIONAL_RANGE' | 'VOLATILITY_EXPANSION' | 'CHAOTIC_NEWS';
 type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 type OperatorViewMode = 'guided' | 'advanced';
@@ -1927,12 +1932,6 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
               ? (flowAligned && riskGovernorAllows ? 'ARMED' : 'WATCH')
               : (flowAligned && riskGovernorAllows ? 'EXECUTE' : ((result.compositeScore?.confidence ?? 0) >= watchThreshold ? 'WATCH' : 'OBSERVE'));
 
-  const lensDisplayMode = institutionalLensMode === 'EXECUTE' && !hasActiveTradeForSymbol
-    ? 'ACTIVE_FOCUS'
-    : institutionalLensMode === 'EXECUTE'
-      ? 'ACTIVE'
-      : institutionalLensMode;
-
   const modeAccentClass = institutionalLensMode === 'ARMED'
     ? 'text-emerald-500'
     : institutionalLensMode === 'EXECUTE'
@@ -2946,15 +2945,15 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
             {trapDoors.evidence && (
             <div className={`rounded-[14px] border border-[var(--msp-border-strong)] border-l-[3px] bg-[var(--msp-panel)] p-[0.8rem_0.95rem] shadow-[var(--msp-shadow)] ${modeAccentBorderClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
-                <div className="text-[0.72rem] font-bold uppercase text-slate-400">Institutional Lens State</div>
-                <div className={`text-[0.92rem] font-black tracking-[0.4px] ${modeAccentClass}`}>{lensDisplayMode}</div>
+                <div className="text-[0.72rem] font-bold uppercase text-slate-400">Study focus</div>
+                <div className={`text-[0.92rem] font-black tracking-[0.4px] ${modeAccentClass}`}>{studyLensLabel(institutionalLensMode)}</div>
               </div>
               <div className="mt-[0.4rem] text-[0.78rem] text-slate-300">
-                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && 'CAUTION ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and monitor for stability.'}
-                {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Analysis prioritized over action.'}
-                {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
-                {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Primary analysis panel prioritized; non-essential analysis collapsed.'}
-                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Active monitoring mode. Focus on risk, flow shifts, and analysis.' : 'High confluence focus mode active. Primary analysis data prioritized.')}
+                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && 'The regime reading is chaotic. Treat this study as unstable. No order is sent.'}
+                {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Study the structure, flow, and regime. This is a reading, not a trade.'}
+                {institutionalLensMode === 'WATCH' && 'The pattern is on the screen. This page does not size a position or send an order.'}
+                {institutionalLensMode === 'ARMED' && 'Several readings line up. Study the primary panel. This is not a trade instruction.'}
+                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'A journal note exists for this symbol. Keep the study on the readings. No order is sent.' : 'Several readings line up. Study the primary panel. This is not a trade instruction.')}
               </div>
               <div className="mt-2 grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(165px,100%),1fr))]">
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">

@@ -97,7 +97,7 @@ export default async function DailyPickPage() {
           <div style={rowHeaderStyle}>
             <div style={{ ...cellStyle, width: 60 }}>#</div>
             <div style={{ ...cellStyle, flex: 1 }}>Symbol</div>
-            <div style={{ ...cellStyle, width: 90 }}>Side</div>
+            <div style={{ ...cellStyle, width: 150 }}>Evidence</div>
             <div style={{ ...cellStyle, width: 150 }}>Verdict</div>
             <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const }}>Score</div>
             <div style={{ ...cellStyle, width: 110, textAlign: 'right' as const }}>Price</div>
@@ -107,8 +107,8 @@ export default async function DailyPickPage() {
           </div>
           {data.picks.map((p) => {
             // Neutral is not labelled WATCH: WATCH is a canonical permission, shown in the Verdict column.
-            const side = p.direction === 'bullish' ? 'LONG' : p.direction === 'bearish' ? 'SHORT' : 'NEUTRAL';
-            const sideColor = side === 'LONG' ? 'var(--msp-bull)' : side === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-warn)';
+            const side = p.direction === 'bullish' ? 'Bullish evidence' : p.direction === 'bearish' ? 'Bearish evidence' : 'Neutral';
+            const sideColor = p.direction === 'bullish' ? 'var(--msp-bull)' : p.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)';
             return (
               <Link
                 key={`${p.asset_class}-${p.symbol}`}
@@ -120,8 +120,8 @@ export default async function DailyPickPage() {
                   <span style={{ fontWeight: 700, fontSize: 17 }}>{p.symbol}</span>
                   {p.sector && <span style={{ color: 'var(--msp-text-muted)', marginLeft: 8, fontSize: 12 }}>{p.sector}</span>}
                 </div>
-                <div style={{ ...cellStyle, width: 90 }}>
-                  <span style={{ color: sideColor, fontWeight: 700, fontSize: 12, letterSpacing: '0.1em' }}>{side}</span>
+                <div style={{ ...cellStyle, width: 150 }}>
+                  <span style={{ color: sideColor, fontWeight: 700, fontSize: 12 }}>{side}</span>
                 </div>
                 <div style={{ ...cellStyle, width: 150, fontSize: 12, fontWeight: 700, color: p.canonical?.permission === 'PASS' ? 'var(--msp-bull)' : p.canonical?.permission === 'BLOCK' ? 'var(--msp-bear)' : 'var(--msp-warn)' }}>
                   {canonicalLabel(p.canonical) ?? '—'}

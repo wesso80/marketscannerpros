@@ -8,8 +8,8 @@ describe('moversDataChipLabel', () => {
     const friOpen = Date.parse('2026-09-25T15:00:00Z'); // Fri 11:00 ET
     const sat = Date.parse('2026-09-26T13:00:00Z');
     const holiday = Date.parse('2026-11-26T16:00:00Z'); // Thanksgiving 11:00 ET
-    expect(moversDataChipLabel('realtime', friOpen)).toBe('Crypto live · equities realtime');
-    expect(moversDataChipLabel(undefined, friOpen)).toBe('Crypto live · equities realtime');
+    expect(moversDataChipLabel('realtime', friOpen)).toBe('Crypto live · equities Nasdaq BX realtime');
+    expect(moversDataChipLabel(undefined, friOpen)).toBe('Crypto live · equities Nasdaq BX realtime');
     expect(moversDataChipLabel('realtime', sat)).toBe('Crypto live · equities market closed');
     expect(moversDataChipLabel('realtime', holiday)).toBe('Crypto live · equities market closed');
     expect(moversDataChipLabel('end_of_day', friOpen)).toBe('Crypto live · equities end of day');

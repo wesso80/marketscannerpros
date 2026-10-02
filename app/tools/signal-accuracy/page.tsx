@@ -207,8 +207,9 @@ export default function SignalAccuracyPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
               <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={`${overall.total > 0 ? ((overall.labeled / overall.total) * 100).toFixed(0) : 0}% resolved`} />
-              <SummaryCard label="Win Rate" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : '—'}
-                color={overall.win_rate != null && overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate != null && overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400'} />
+              <SummaryCard label="Past threshold" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : '—'}
+                color={overall.win_rate != null && overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate != null && overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400'}
+                sub={`Lookback ${lookback === 'all' ? 'all' : `${lookback}d`}. Not a closed trade.`} />
               <SummaryCard label="Correct" value={overall.correct.toLocaleString()} color="text-emerald-400" />
               <SummaryCard label="Wrong" value={overall.wrong.toLocaleString()} color="text-red-400" />
             </div>
@@ -217,7 +218,8 @@ export default function SignalAccuracyPage() {
           {/* Outcome Thresholds Reference */}
           {thresholds.length > 0 && (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
-              <h3 className="text-xs font-semibold text-slate-300 mb-2">Outcome Thresholds</h3>
+              <h3 className="text-xs font-semibold text-slate-300 mb-2">Price-move thresholds</h3>
+              <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Sample minimum is {minSamples}. This is not a closed trade, a stop, or a fee.</p>
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
                   <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[11px]">
@@ -248,11 +250,11 @@ export default function SignalAccuracyPage() {
                           <th className="text-left px-4 py-2">Context</th>
                           <th className="text-left px-3 py-2">Horizon</th>
                           <th className="text-right px-3 py-2">Observations</th>
-                          <th className="text-right px-3 py-2">Win Rate</th>
-                          <th className="text-right px-3 py-2">Avg Win</th>
-                          <th className="text-right px-3 py-2">Avg Loss</th>
+                          <th className="text-right px-3 py-2">Past threshold</th>
+                          <th className="text-right px-3 py-2">Avg up move</th>
+                          <th className="text-right px-3 py-2">Avg down move</th>
                           <th className="text-right px-3 py-2">R:R</th>
-                          <th className="text-right px-3 py-2">Expectancy</th>
+                          <th className="text-right px-3 py-2">Move expectancy</th>
                           <th className="text-right px-3 py-2">Quality</th>
                         </tr>
                       </thead>

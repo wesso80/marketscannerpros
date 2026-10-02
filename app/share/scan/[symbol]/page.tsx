@@ -19,19 +19,19 @@ export async function generateMetadata(
   // Image text is derived server-side from the same stored data (no free text in the URL).
   const og = scanOgImageUrl(data.symbol);
   return {
-    title: `${data.symbol} — ${data.side} signal`,
+    title: `${data.symbol} — study snapshot`,
     description: data.headline,
     alternates: { canonical: url },
     openGraph: {
       type: 'article',
       url,
-      title: `${data.symbol} — ${data.side}`,
+      title: `${data.symbol} — ${evidenceWord(data.side)}`,
       description: data.headline,
-      images: [{ url: og, width: 1200, height: 630, alt: `${data.symbol} ${data.side}` }],
+      images: [{ url: og, width: 1200, height: 630, alt: `${data.symbol} ${evidenceWord(data.side)}` }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${data.symbol} — ${data.side}`,
+      title: `${data.symbol} — ${evidenceWord(data.side)}`,
       description: data.headline,
       images: [og],
     },
@@ -52,11 +52,11 @@ export default async function ShareScanPage(
     <main style={{ minHeight: '100vh', background: 'var(--msp-bg)', color: '#F8FAFC', padding: '48px 20px' }}>
       <div style={{ maxWidth: 880, margin: '0 auto' }}>
         <div style={{ fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--msp-flat)' }}>
-          MarketScanner Pros · shared snapshot
+          MarketScanner Pros · shared study snapshot
         </div>
         <h1 style={{ fontSize: 64, margin: '8px 0 4px', fontWeight: 800 }}>{data.symbol}</h1>
         <div style={{ display: 'inline-block', padding: '6px 14px', border: `2px solid ${sideColor}`, color: sideColor, borderRadius: 999, fontWeight: 700, letterSpacing: '0.12em' }}>
-          {data.side}
+          {evidenceWord(data.side)}
         </div>
         <p style={{ fontSize: 22, color: 'var(--msp-text)', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
         {data.basisNote && <p style={{ fontSize: 13, color: 'var(--msp-text-muted)', marginTop: 6 }}>{data.basisNote}</p>}
@@ -69,15 +69,6 @@ export default async function ShareScanPage(
           {data.float && <Stat label="Float" value={data.float} />}
           {data.shortPct != null && <Stat label="Short %" value={`${data.shortPct.toFixed(1)}%`} />}
           {data.sector && <Stat label="Sector" value={data.sector} />}
-        </div>
-
-        <div style={{ marginTop: 36, padding: '18px 22px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 14 }}>
-          <div style={{ fontSize: 14, color: 'var(--msp-flat)', marginBottom: 8 }}>What confirms · What invalidates</div>
-          <div style={{ fontSize: 16, color: 'var(--msp-text)' }}>
-            Rising RVOL with price holding above prior swing confirms. A float revision up (offering / unlock) or
-            short-interest contraction invalidates. Low-float names cut both ways — same tightness that fuels
-            squeezes fuels gaps down.
-          </div>
         </div>
 
         <div style={{ marginTop: 36, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -97,6 +88,12 @@ export default async function ShareScanPage(
       </div>
     </main>
   );
+}
+
+function evidenceWord(side: 'LONG' | 'SHORT' | 'WATCH') {
+  if (side === 'LONG') return 'Bullish evidence';
+  if (side === 'SHORT') return 'Bearish evidence';
+  return 'Watch';
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
