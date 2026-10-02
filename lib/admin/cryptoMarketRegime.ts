@@ -33,12 +33,23 @@ export function bullGate(trend:LongTrend,breadth:{fraction:number}|null):'ON'|'O
 }
 /**
  * Shadow entry filter, chosen from two backtest windows (Apr–Jul and Jul–Sep 2026) where entries with BTC's daily
- * trend DOWN lost money. Evidence only: it labels paper trades and never blocks them.
+ * trend DOWN lost money. It labels every paper trade; since 2026-10-02 it also gates the live sleeve (liveBtcDownRefusal).
  */
 export const BTC_DOWN_FILTER='skip-btc-daily-down-v1';
 export type ShadowFilterDecision='PASS'|'WOULD_SKIP'|'UNAVAILABLE'|'NOT_RECORDED';
 export function btcDownFilter(state:string|null|undefined):ShadowFilterDecision{
  return state==null?'NOT_RECORDED':state==='DOWN'?'WOULD_SKIP':state==='UP'||state==='MIXED'?'PASS':'UNAVAILABLE';
+}
+/** Owner-approved 2026-10-02 (backtest Jul–Oct: 43 DOWN-trend entries averaged -0.36R). On by default; CRYPTO_LIVE_BTC_DOWN_FILTER=off restores shadow-only. */
+export function liveBtcDownFilterEnabled():boolean{
+ return !['0','false','off','no'].includes((process.env.CRYPTO_LIVE_BTC_DOWN_FILTER??'').trim().toLowerCase());
+}
+/**
+ * Live sleeve only: a BTC daily trend of DOWN refuses the live entry, so the research sleeve records it and both
+ * sides of the filter keep being measured. Only DOWN refuses; UP, MIXED and an unavailable check do not.
+ */
+export function liveBtcDownRefusal(state:string|null|undefined,enabled=liveBtcDownFilterEnabled()):string|null{
+ return enabled&&btcDownFilter(state)==='WOULD_SKIP'?`Live sleeve skips entries while the BTC daily trend is DOWN (${BTC_DOWN_FILTER})`:null;
 }
 /**
  * Relative-strength leader rule, fixed BEFORE testing (not fitted): a coin's 30-day return minus BTC's, ranked across
