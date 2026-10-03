@@ -1,6 +1,8 @@
 'use client';
 
+import {symbolHref} from '@/lib/market/links';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
@@ -100,9 +102,10 @@ export default function WatchlistWidget() {
       return;
     }
     const encodedSymbol = encodeURIComponent(symbol);
+    const asset=items.find(item=>item.symbol===symbol)?.asset_type??'equity';
     const routes = {
       scan: `/tools/scanner?symbol=${encodedSymbol}`,
-      deep: `/tools/golden-egg?symbol=${encodedSymbol}`,
+      deep: symbolHref(symbol,asset),
       flow: `/tools/terminal?tab=options-confluence&symbol=${encodedSymbol}`,
       alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`,
       research: `/tools/research?tab=earnings&symbol=${encodedSymbol}`,
@@ -623,7 +626,7 @@ export default function WatchlistWidget() {
                     <div key={item.id} className="flex h-full flex-col rounded-lg border border-slate-700 bg-slate-900/55 p-3">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-lg font-black text-white">{item.symbol}</div>
+                          <Link href={symbolHref(item.symbol.split(' ')[0],item.asset_type)} className="text-lg font-black text-white">{item.symbol}</Link>
                           <div className="text-[11px] uppercase tracking-[0.06em] text-slate-500">{item.asset_type}</div>
                         </div>
                       </div>

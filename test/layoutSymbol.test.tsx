@@ -20,3 +20,16 @@ describe('L-6 Symbol snapshot',()=>{
   expect(findSymbolPick({},'AAPL','equity')).toBeNull();
  });
 });
+
+describe('L-6 shared options and links',()=>{
+ it('uses the identical chain hook for the Symbol and Options metrics',async()=>{
+  const {readFileSync}=await import('node:fs');
+  for(const file of ['components/market/SymbolMarketContext.tsx','components/options-terminal/OptionsTerminalView.tsx']){
+   const source=readFileSync(file,'utf8');expect(source).toContain('useOptionsChain()');expect(source).toContain('chain.ivMetrics');
+  }
+ });
+ it('uses the shared Symbol link on all named entry surfaces',async()=>{
+  const {readFileSync}=await import('node:fs');
+  for(const file of ['app/tools/market-movers/page.tsx','app/tools/gainers-losers/page.tsx','app/tools/backtest/page.tsx','app/tools/explorer/page.tsx','components/explorer/ExplorerActionGrid.tsx','components/WatchlistWidget.tsx'])expect(readFileSync(file,'utf8')).toContain('symbolHref(');
+ });
+});

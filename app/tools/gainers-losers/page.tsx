@@ -1,5 +1,6 @@
 "use client";
 
+import {symbolHref} from '@/lib/market/links';
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
@@ -578,7 +579,7 @@ export default function GainersLosersPage() {
                     ) : (
                       currentData.map((item, index) => (
                         <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)", opacity: item.deployment === "Blocked" ? 0.55 : 1 }} title={item.blockReason || ""}>
-                          <td style={{ padding: "1rem", color: "#fff", fontWeight: 600 }}>{item.ticker}</td>
+                          <td style={{ padding: "1rem", color: "#fff", fontWeight: 600 }}><Link href={symbolHref(item.ticker,item.asset_class??'equity')}>{item.ticker}</Link></td>
                           <td style={{ padding: "1rem", textAlign: "center" }}>
                             <span style={{
                               padding: "2px 8px",

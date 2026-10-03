@@ -19,14 +19,13 @@ export const TOOL_CATALOG: ToolPage[] = [
   // ─── Scanning ───
   { key: 'scanner',            href: '/tools/scanner',            label: 'Scanner',              description: 'Multi-timeframe technical scanner',                icon: 'SC', category: 'Scanning' },
   { key: 'confluence-scanner', href: '/tools/terminal?tab=time-confluence', label: 'Confluence Scanner', description: 'Multi-indicator confluence detection',     icon: 'CF', category: 'Scanning' },
-  { key: 'golden-egg',         href: '/tools/golden-egg',         label: 'Golden Egg',           description: 'Deep single-symbol technical analysis',            icon: 'GE', category: 'Scanning' },
+  { key: 'golden-egg',         href: '/tools/golden-egg',         label: 'Symbol',           description: 'Deep single-symbol technical analysis',            icon: 'GE', category: 'Scanning' },
   { key: 'time-scanner',       href: '/tools/terminal?tab=time-scanner', label: 'Time Scanner',  description: 'Time-based pattern detection',                     icon: 'TM', category: 'Scanning' },
   { key: 'signal-accuracy',    href: '/tools/signal-accuracy',    label: 'Signal Accuracy',      description: 'Historical signal performance tracking',           icon: 'AC', category: 'Scanning' },
 
   // ─── Crypto ───
   { key: 'crypto',             href: '/tools/explorer?tab=crypto-command', label: 'Crypto Overview', description: 'Cryptocurrency market overview',               icon: 'CR', category: 'Crypto' },
   { key: 'crypto-dashboard',   href: '/tools/dashboard?tab=crypto', label: 'Crypto Derivatives', description: 'Funding rates, open interest, liquidations',       icon: 'DV', category: 'Crypto', tier: 'pro' },
-  { key: 'crypto-explorer',    href: '/tools/explorer?tab=crypto', label: 'Crypto Explorer',     description: 'Explore individual crypto assets',                 icon: 'CE', category: 'Crypto' },
   { key: 'crypto-heatmap',     href: '/tools/crypto-heatmap',     label: 'Crypto Heatmap',       description: 'Visual crypto sector heatmap',                     icon: 'CH', category: 'Crypto' },
   { key: 'crypto-terminal',    href: '/tools/terminal?tab=crypto', label: 'Crypto Terminal',     description: 'Full crypto trading terminal',                     icon: 'CT', category: 'Crypto', tier: 'pro' },
   { key: 'crypto-time-confluence', href: '/tools/terminal?tab=time-confluence', label: 'Crypto Time Confluence', description: 'Crypto time-based patterns', icon: 'TC', category: 'Crypto' },
@@ -40,7 +39,6 @@ export const TOOL_CATALOG: ToolPage[] = [
   // ─── Research ───
   { key: 'ai-analyst',         href: '/tools/scanner',            label: 'ARCA AI Panel',         description: 'AI research support from live scanner context',     icon: 'AI', category: 'Research' },
   { key: 'research',           href: '/tools/research',           label: 'Research',             description: 'In-depth research and economic calendar',          icon: 'RS', category: 'Research' },
-  { key: 'deep-analysis',      href: '/tools/golden-egg',         label: 'Deep Analysis',        description: 'Detailed technical + fundamental analysis',        icon: 'DA', category: 'Research' },
   { key: 'terminal',           href: '/tools/terminal',           label: 'Terminal',             description: 'Advanced data terminal interface',                 icon: 'TR', category: 'Research' },
   { key: 'explorer',           href: '/tools/explorer',           label: 'Explorer',             description: 'Market structure explorer',                        icon: 'EX', category: 'Research' },
 
