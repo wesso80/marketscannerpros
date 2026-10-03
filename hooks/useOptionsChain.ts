@@ -20,6 +20,7 @@ export interface UseOptionsChainState {
   contracts: OptionsContract[];
   expirations: ExpirationMeta[];
   underlyingPrice: number;
+  spotObservation: OptionsChainResponse['spotObservation'];
   provider: string;
   /** realtime | previous_session | marks_only (see /api/options-chain). */
   quoteBasis: string;
@@ -146,6 +147,7 @@ export function useOptionsChain(): UseOptionsChainState {
   const [contracts, setContracts] = useState<OptionsContract[]>([]);
   const [expirations, setExpirations] = useState<ExpirationMeta[]>([]);
   const [underlyingPrice, setUnderlyingPrice] = useState(0);
+  const [spotObservation, setSpotObservation] = useState<OptionsChainResponse['spotObservation']>(null);
   const [provider, setProvider] = useState('');
   const [quoteBasis, setQuoteBasis] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
@@ -167,6 +169,7 @@ export function useOptionsChain(): UseOptionsChainState {
     setLoading(true);
     setContracts([]);
     setUnderlyingPrice(0);
+    setSpotObservation(null);
     setExpirations([]);
     setProvider('');
     setQuoteBasis('');
@@ -190,6 +193,7 @@ export function useOptionsChain(): UseOptionsChainState {
         setContracts(json.contracts.filter(c => c.expiration === chosen));
         setExpirations(json.expirations);
         setUnderlyingPrice(json.underlyingPrice);
+        setSpotObservation(json.spotObservation ?? null);
         setProvider(json.provider);
         setQuoteBasis(json.quoteBasis ?? '');
         setAsOfDate(json.asOfDate ?? '');
@@ -221,6 +225,7 @@ export function useOptionsChain(): UseOptionsChainState {
     contracts,
     expirations,
     underlyingPrice,
+    spotObservation,
     provider,
     quoteBasis,
     asOfDate,

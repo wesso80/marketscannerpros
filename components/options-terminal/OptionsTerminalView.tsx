@@ -337,11 +337,11 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     {spot > 0 ? `$${spot.toFixed(2)}` : '—'}
                   </div>
                   {spot > 0 && (
-                    <div className="text-xs text-slate-400">Price change unavailable in this feed</div>
+                    <div className="text-xs text-slate-400">{chain.spotObservation?.change != null ? `$${chain.spotObservation.change.toFixed(2)} (${chain.spotObservation.changePercent?.toFixed(2) ?? '—'}%)` : 'Price change unavailable'}</div>
                   )}
                 </div>
               </div>
-              <div className="hidden md:block text-xs text-zinc-400">{updatedLabel}</div>
+              <div className="text-xs text-zinc-400">Spot: {chain.spotObservation?.asOf || 'date unavailable'} ({chain.spotObservation?.basis || 'inferred from options, not a stock quote'}) · Quotes: {updatedLabel}</div>
               <Badge tone="neutral">
                 {chain.quoteBasis === 'realtime'
                   ? `LIVE BID/ASK · ${chain.provider}`
