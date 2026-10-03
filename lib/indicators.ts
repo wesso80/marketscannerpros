@@ -464,14 +464,14 @@ export function calculateAllIndicators(bars: OHLCVBar[]): IndicatorResult {
   
   // RSI
   const rsiValue = rsi(closes, 14);
-  if (rsiValue !== null) result.rsi14 = Math.round(rsiValue * 100) / 100;
+  if (rsiValue !== null) result.rsi14 = rsiValue;
   
   // MACD
   const macdResult = macd(closes, 12, 26, 9);
   if (macdResult) {
-    result.macdLine = Math.round(macdResult.line * 10000) / 10000;
-    result.macdSignal = Math.round(macdResult.signal * 10000) / 10000;
-    result.macdHist = Math.round(macdResult.histogram * 10000) / 10000;
+    result.macdLine = macdResult.line;
+    result.macdSignal = macdResult.signal;
+    result.macdHist = macdResult.histogram;
   }
   
   // EMAs
@@ -479,52 +479,52 @@ export function calculateAllIndicators(bars: OHLCVBar[]): IndicatorResult {
   const ema20Value = ema(closes, 20);
   const ema50Value = ema(closes, 50);
   const ema200Value = ema(closes, 200);
-  if (ema9Value !== null) result.ema9 = Math.round(ema9Value * 100) / 100;
-  if (ema20Value !== null) result.ema20 = Math.round(ema20Value * 100) / 100;
-  if (ema50Value !== null) result.ema50 = Math.round(ema50Value * 100) / 100;
-  if (ema200Value !== null) result.ema200 = Math.round(ema200Value * 100) / 100;
+  if (ema9Value !== null) result.ema9 = ema9Value;
+  if (ema20Value !== null) result.ema20 = ema20Value;
+  if (ema50Value !== null) result.ema50 = ema50Value;
+  if (ema200Value !== null) result.ema200 = ema200Value;
   
   // SMAs
   const sma20Value = sma(closes, 20);
   const sma50Value = sma(closes, 50);
   const sma200Value = sma(closes, 200);
-  if (sma20Value !== null) result.sma20 = Math.round(sma20Value * 100) / 100;
-  if (sma50Value !== null) result.sma50 = Math.round(sma50Value * 100) / 100;
-  if (sma200Value !== null) result.sma200 = Math.round(sma200Value * 100) / 100;
+  if (sma20Value !== null) result.sma20 = sma20Value;
+  if (sma50Value !== null) result.sma50 = sma50Value;
+  if (sma200Value !== null) result.sma200 = sma200Value;
   
   // ATR
   const atrValue = atr(bars, 14);
-  if (atrValue !== null) result.atr14 = Math.round(atrValue * 100) / 100;
+  if (atrValue !== null) result.atr14 = atrValue;
   
   // ADX
   const adxResult = adx(bars, 14);
   if (adxResult) {
-    result.adx14 = Math.round(adxResult.adx * 100) / 100;
-    result.plusDI = Math.round(adxResult.plusDI * 100) / 100;
-    result.minusDI = Math.round(adxResult.minusDI * 100) / 100;
+    result.adx14 = adxResult.adx;
+    result.plusDI = adxResult.plusDI;
+    result.minusDI = adxResult.minusDI;
   }
   
   // Stochastic
   const stochResult = stochastic(bars, 14, 3);
   if (stochResult) {
-    result.stochK = Math.round(stochResult.k * 100) / 100;
-    result.stochD = Math.round(stochResult.d * 100) / 100;
+    result.stochK = stochResult.k;
+    result.stochD = stochResult.d;
   }
   
   // CCI
   const cciValue = cci(bars, 20);
-  if (cciValue !== null) result.cci20 = Math.round(cciValue * 100) / 100;
+  if (cciValue !== null) result.cci20 = cciValue;
   
   // Bollinger Bands
   const bbResult = bollingerBands(closes, 20, 2);
   if (bbResult) {
-    result.bbUpper = Math.round(bbResult.upper * 100) / 100;
-    result.bbMiddle = Math.round(bbResult.middle * 100) / 100;
-    result.bbLower = Math.round(bbResult.lower * 100) / 100;
+    result.bbUpper = bbResult.upper;
+    result.bbMiddle = bbResult.middle;
+    result.bbLower = bbResult.lower;
   }
 
   const bbWidthPercentValue = bbWidthPercent(closes, 20, 2);
-  if (bbWidthPercentValue !== null) result.bbWidthPercent20 = Math.round(bbWidthPercentValue * 100) / 100;
+  if (bbWidthPercentValue !== null) result.bbWidthPercent20 = bbWidthPercentValue;
   
   // MFI (Money Flow Index)
   const mfiPeriod = 14;
@@ -552,11 +552,11 @@ export function calculateAllIndicators(bars: OHLCVBar[]): IndicatorResult {
   
   // Williams %R
   const willrValue = williamsR(bars, 14);
-  if (willrValue !== null) result.willr14 = Math.round(willrValue * 100) / 100;
+  if (willrValue !== null) result.willr14 = willrValue;
 
   // NATR (Normalized ATR)
   const natrValue = natr(bars, 14);
-  if (natrValue !== null) result.natr14 = Math.round(natrValue * 100) / 100;
+  if (natrValue !== null) result.natr14 = natrValue;
 
   // Chaikin A/D Line
   const adValue = chaikinAD(bars);
@@ -564,21 +564,21 @@ export function calculateAllIndicators(bars: OHLCVBar[]): IndicatorResult {
 
   // Rate of Change
   const rocValue = roc(closes, 12);
-  if (rocValue !== null) result.roc12 = Math.round(rocValue * 100) / 100;
+  if (rocValue !== null) result.roc12 = rocValue;
 
   // Balance of Power
   const bopValue = balanceOfPower(bars);
-  if (bopValue !== null) result.bop = Math.round(bopValue * 1000) / 1000;
+  if (bopValue !== null) result.bop = bopValue;
   
   // VWAP
   const vwapValue = rollingVwap(bars);
-  if (vwapValue !== null) result.vwap = Math.round(vwapValue * 100) / 100;
+  if (vwapValue !== null) result.vwap = vwapValue;
 
   const vwapIntradayValue = vwapIntraday(bars);
-  if (vwapIntradayValue !== null) result.vwapIntraday = Math.round(vwapIntradayValue * 100) / 100;
+  if (vwapIntradayValue !== null) result.vwapIntraday = vwapIntradayValue;
 
   const atrPercentValue = atrPercent(bars, 14);
-  if (atrPercentValue !== null) result.atrPercent14 = Math.round(atrPercentValue * 100) / 100;
+  if (atrPercentValue !== null) result.atrPercent14 = atrPercentValue;
   
   return result;
 }
