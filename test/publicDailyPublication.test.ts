@@ -8,8 +8,8 @@ describe('daily publication clock', () => {
  it('keeps Friday equity data dated Friday, with the DST-aware cash close', () => {
   expect(dailyPublication('equity', {lastBarAt:'2026-10-02'}, Date.parse('2026-10-04T12:00:00Z'))).toEqual({scanDate:'2026-10-02',dataAsOf:'2026-10-02T20:00:00.000Z'});
  });
- it('has a post-midnight crypto/forex run without re-scanning equities', () => {
-  expect(dueJobs(new Date('2026-10-04T00:40:00Z')).some(j=>j.kind==='http' && j.path==='/api/jobs/scan-daily?assets=crypto,forex')).toBe(true);
+ it('has a post-midnight crypto run without re-scanning equities', () => {
+  expect(dueJobs(new Date('2026-10-04T00:40:00Z')).some(j=>j.kind==='http' && j.path==='/api/jobs/scan-daily?assets=crypto')).toBe(true);
   expect(SCHEDULE.find(j=>j.name==='daily-scan')).toMatchObject({path:'/api/jobs/scan-daily?assets=equity'});
  });
 });

@@ -3,11 +3,11 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Market Scanner',
   description:
-    'Scan equities, crypto, and forex with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
+    'Scan equities and crypto with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
   openGraph: {
     title: 'Market Scanner | MarketScanner Pros',
     description:
-      'Scan equities, crypto, and forex with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
+      'Scan equities and crypto with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
     url: 'https://marketscannerpros.app/tools/scanner',
     siteName: 'MarketScanner Pros',
     images: [

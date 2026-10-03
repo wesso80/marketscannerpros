@@ -1,5 +1,6 @@
 'use client';
 
+import { assetDisplayLabel } from '@/lib/market/assets';
 import { Fragment, useState } from 'react';
 import TradeRowExpanded from '@/components/journal/layer2/TradeRowExpanded';
 import { SortModel, TradeRowModel } from '@/types/journal';
@@ -54,7 +55,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
           <details key={row.id} className="rounded-xl border border-white/5 bg-slate-900/40">
             <summary className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-semibold text-slate-100 text-sm">{row.symbol}</span>
+                <span className="font-semibold text-slate-100 text-sm">{row.symbol}{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}</span>
                 {optionContractLabel(row) && <span className="truncate text-[10px] text-slate-400">{optionContractLabel(row)}</span>}
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${row.side === 'long' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
                   {row.side.toUpperCase()}
@@ -148,7 +149,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
             <Fragment key={row.id}>
               <tr className="border-b border-white/5 hover:bg-white/5">
                 <td className="px-3 py-2 font-semibold text-slate-100">
-                  {row.symbol}
+                  {row.symbol}{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}
                   {optionContractLabel(row) && <div className="text-[11px] font-normal text-slate-400">{optionContractLabel(row)}</div>}
                 </td>
                 <td className="px-3 py-2 text-slate-300">{row.status}</td>

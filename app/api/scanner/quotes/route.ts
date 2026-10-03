@@ -185,17 +185,7 @@ async function fetchTypedQuotes(rawItems: unknown[]): Promise<TypedQuote[]> {
     }
     try {
       if (item.assetType === 'forex') {
-        const pair = splitFxPair(item.symbol);
-        if (!pair) {
-          results.set(item.symbol, missing(item.symbol, 'forex', 'Unrecognised currency pair'));
-          return;
-        }
-        await avTakeToken();
-        const res = await fetch(
-          `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${pair.from}&to_currency=${pair.to}&apikey=${apiKey}`
-        );
-        const parsed = parseAvExchangeRate(await res.json());
-        results.set(item.symbol, parsed ? { symbol: item.symbol, assetType: 'forex', ...parsed } : missing(item.symbol, 'forex', 'No data'));
+        results.set(item.symbol, missing(item.symbol, 'forex', 'Forex (retired)'));
         return;
       }
       // Commodities are priced via /api/commodities by the watchlist; anything else is a stock/ETF.

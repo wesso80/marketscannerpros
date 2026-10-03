@@ -1,5 +1,7 @@
 'use client';
 
+import { scannerAssetType } from '@/lib/market/assets';
+import { useSearchParams } from 'next/navigation';
 import { compareScannerScores } from '@/lib/scanner/scoreContract';
 
 /* ---------------------------------------------------------------------------
@@ -8,7 +10,7 @@ import { compareScannerScores } from '@/lib/scanner/scoreContract';
    Click any symbol for inline analysis with Backtest / Alert / Watchlist.
    --------------------------------------------------------------------------- */
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
 import { RANKED_VERDICT_CLASS, rankedVerdictBadge } from '@/lib/scanner/rankedVerdict';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
@@ -995,7 +997,10 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
 /*  MAIN PAGE                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function ScannerPage() {
+export default function ScannerPage() { return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
+
+function ScannerContent() {
+  const searchParams=useSearchParams();
   const { navigateTo, selectSymbol } = useV2();
   const { tier } = useUserTier();
   const regime = useRegime();
@@ -1012,7 +1017,8 @@ export default function ScannerPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   /* ─── Pro Scan state ─── */
-  const [proAsset, setProAsset] = useState<AssetClass>('crypto');
+  const [proAsset, setProAsset] = useState<AssetClass>(()=>scannerAssetType(searchParams.get('type')));
+  useEffect(()=>setProAsset(scannerAssetType(searchParams.get('type'))),[searchParams]);
   const [proTimeframe, setProTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
   // Fast (light) crypto scan retired — Pro Scanner always runs Deep (the server enforces this too).
   const proUniverseSize = PRO_SCAN_UNIVERSE_SIZE;
@@ -1220,7 +1226,7 @@ export default function ScannerPage() {
   const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string, context?: { queueRank?: SymbolDetail['queueRank']; lifecycle?: string }) => {
     const requestId = ++detailRequestRef.current;
     setSelectedSymbol(symbol);
-    setSelectedAssetClass(asset === 'crypto' ? 'crypto' : asset === 'forex' ? 'forex' : 'equity');
+    setSelectedAssetClass(asset === 'crypto' ? 'crypto' : 'equity');
     setDetailLoading(true);
     setSymbolDetail(null);
     try {
@@ -1816,7 +1822,7 @@ export default function ScannerPage() {
                 <div className="mb-3">
                   <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Asset Class</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {(['crypto', 'equity', 'forex'] as const).map(ac => (
+                    {(['crypto', 'equity'] as const).map(ac => (
                       <button key={ac} type="button" aria-pressed={proAsset === ac} onClick={() => setProAsset(ac)}
                         className={`whitespace-nowrap break-normal rounded-md border px-2.5 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 sm:px-3 ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
                         {ac}

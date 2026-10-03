@@ -4,7 +4,7 @@ import HomePreviewStrip from './HomePreviewStrip';
 import SocialProof from './SocialProof';
 
 const valueStack = [
-  { label: 'Scan faster', detail: 'Rank equities, crypto, forex, and options context with one research workflow.' },
+  { label: 'Scan faster', detail: 'Rank equities, crypto, and options context with one research workflow.' },
   { label: 'Verify context', detail: 'Combine regime, volatility, flow, news, and data-quality warnings before review.' },
   { label: 'Test safely', detail: 'Use backtests, paper simulation, journal analytics, and scenario notes before real-world decisions.' },
   { label: 'Track your edge', detail: 'Sync watchlists, alerts, journal, and portfolio research across devices.' },
@@ -20,7 +20,7 @@ const guidedPaths = [
 ];
 
 const workflowSteps = [
-  { step: '01', href: '/tools/scanner', title: 'Scanner', detail: 'Find ranked market scenarios across equities, crypto, forex, and options context.' },
+  { step: '01', href: '/tools/scanner', title: 'Scanner', detail: 'Find ranked market scenarios across equities, crypto, and options context.' },
   { step: '02', href: '/tools/golden-egg', title: 'Golden Egg', detail: 'Validate one symbol with evidence, data quality, reference zones, and invalidation context.' },
   { step: '03', href: '/tools/terminal', title: 'Terminal', detail: 'Check timing, options, flow, crypto derivatives, and close-calendar pressure.' },
   { step: '04', href: '/tools/workspace?tab=backtest', title: 'Backtest', detail: 'Run historical paper simulations with assumptions, sample quality, and limitations visible.' },
@@ -147,7 +147,6 @@ export default function CommandHub() {
             <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Equities</span>
             <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Crypto</span>
             <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Options</span>
-            <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Forex</span>
             <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Commodities</span>
           </div>
 

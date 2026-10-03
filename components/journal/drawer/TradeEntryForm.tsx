@@ -196,7 +196,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             <select id="trade-asset-class" className={SELECT} value={assetClass} onChange={(e) => setAssetClass(e.target.value as any)}>
               <option value="equity">Equity</option>
               <option value="crypto">Crypto</option>
-              <option value="forex">Forex</option>
+              {iv?.assetClass === 'forex' && <option value="forex" disabled>Forex (retired)</option>}
               <option value="commodity">Commodity</option>
             </select>
           </div>

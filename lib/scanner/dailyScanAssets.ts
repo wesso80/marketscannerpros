@@ -4,7 +4,7 @@
  * re-scanning (or deleting) equities and forex.
  */
 export type DailyScanAsset = 'equity' | 'crypto' | 'forex';
-export const DAILY_SCAN_ASSETS: readonly DailyScanAsset[] = ['equity', 'crypto', 'forex'];
+export const DAILY_SCAN_ASSETS: readonly DailyScanAsset[] = ['equity', 'crypto'];
 
 /** null = no filter (all assets); an empty array = the parameter was given but named nothing valid. */
 export function parseDailyScanAssets(param: string | null | undefined): DailyScanAsset[] | null {
