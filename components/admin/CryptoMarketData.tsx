@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import type {DerivRow,CategoryRow,MoverRow,TrendingRow,GlobalPoint} from '@/lib/admin/cryptoMarketData';
 import type {CgBudget} from '@/lib/admin/cgCredits';
+import {COMPRESSION_STRONG_SCORE,sortCompressionRows,type CompressionRow,type CompressionWindow} from '@/lib/admin/cryptoCompression';
 import CryptoNewListings from './CryptoNewListings';
 type Status={ok:boolean;at:string;skipped?:string;error?:string;calls:number};
 type View={error?:string;config:Record<string,number>;status:{status:Record<string,Status>;lastRunAt:string|null};budget:CgBudget|null;
@@ -10,7 +11,8 @@ type View={error?:string;config:Record<string,number>;status:{status:Record<stri
  categories:{at:string;rows:CategoryRow[];historyDays:number}|null;
  movers:{at:string;h1:{gainers:MoverRow[];losers:MoverRow[]}|null;h24:{gainers:MoverRow[];losers:MoverRow[]}|null}|null;
  trending:{at:string;rows:TrendingRow[]}|null;
- relativeStrength?:{saved:boolean;source:string;rule:string;checkedAt:string|null;asOf:string|null;stale:boolean;coins:number;leaders:{id:string;symbol:string;excess:number|null;tercile:string;rule:string}[];failed:string[]}|null};
+ relativeStrength?:{saved:boolean;source:string;rule:string;checkedAt:string|null;asOf:string|null;stale:boolean;coins:number;leaders:{id:string;symbol:string;excess:number|null;tercile:string;rule:string}[];failed:string[]}|null;
+ compression?:{updatedAt:string|null;rows:CompressionRow[];rule:string;note:string}|null};
 const usd=(n:number|null|undefined)=>n==null?'—':n>=1e12?`$${(n/1e12).toFixed(2)}T`:n>=1e9?`$${(n/1e9).toFixed(2)}B`:n>=1e6?`$${(n/1e6).toFixed(1)}M`:`$${n.toLocaleString(undefined,{maximumFractionDigits:4})}`;
 const pct=(n:number|null|undefined,d=1)=>n==null?'—':`${n>=0?'+':''}${n.toFixed(d)}%`;
 const tone=(n:number|null|undefined)=>n==null?'':n>0?'text-emerald-300':n<0?'text-red-300':'';
@@ -27,6 +29,28 @@ function Panel({title,source,at,cadence,now,children}:{title:string;source:strin
 function Movers({title,rows}:{title:string;rows:MoverRow[]|undefined}){
  return <div className="overflow-auto"><h4 className="text-sm font-semibold">{title}</h4>{!rows?.length?<p className="text-sm">Unavailable.</p>:<table className="w-full min-w-[420px] text-left text-sm"><thead><tr>{['Coin','Change','Price','24h volume','Rank'].map(h=><th key={h} className="p-1">{h}</th>)}</tr></thead>
   <tbody>{rows.slice(0,12).map(r=><tr key={r.id} className="border-t border-slate-800"><td className="p-1" title={r.id}>{r.symbol}</td><td className={`p-1 ${tone(r.changePct)}`}>{pct(r.changePct)}</td><td className="p-1">{usd(r.priceUsd)}</td><td className="p-1">{usd(r.volume24hUsd)}</td><td className="p-1">{r.marketCapRank??'—'}</td></tr>)}</tbody></table>}</div>;
+}
+function CompCell({w}:{w:CompressionWindow}){
+ if(w.status==='not enough data'||w.score==null)return <span className="text-slate-500">not enough data</span>;
+ return <span className={w.status==='quiet'?'text-emerald-300':''}>{w.status==='quiet'?'quiet':'not quiet'} · {w.score.toFixed(1)}</span>;
+}
+function CompressionFlags({board,now}:{board:NonNullable<View['compression']>|null|undefined;now:number}){
+ const [desc,setDesc]=useState(true);
+ const rows=sortCompressionRows(board?.rows??[],desc);
+ const quiet=rows.filter(r=>r.status==='quiet').length,strong=rows.filter(r=>r.strong).length,missing=rows.filter(r=>r.status==='not enough data').length;
+ const factor=(n:number|null|undefined,d=2)=>n==null?'not enough data':n.toFixed(d);
+ return <Panel title="Compression flags" source="exchange daily candles, saved with the daily base batch" at={board?.updatedAt} cadence={13*60} now={now}>
+  <p className="text-xs text-slate-400">{board?.rule}</p>
+  <p className="text-xs text-slate-400">{board?.note}</p>
+  {!rows.length?<p>No saved daily candle batch yet. Not enough data.</p>:<>
+   <p className="text-sm">{quiet} quiet · {strong} highlighted (quiet and score ≥ {COMPRESSION_STRONG_SCORE}) · {missing} not enough data · {rows.length} coins. Ranked by compression score. Research only. Nothing here places an order or filters an entry.</p>
+   <div className="max-h-96 overflow-auto"><table className="w-full min-w-[920px] text-left text-sm"><thead><tr>
+    <th className="p-1">Coin</th>
+    <th className="p-1"><button type="button" onClick={()=>setDesc(v=>!v)} className="underline" aria-label="Sort by compression score">Compression {desc?'↓':'↑'}</button></th>
+    {['21d','45d','90d','Width','Range vs prior','ATR vs prior','Volume'].map(h=><th key={h} className="p-1">{h}</th>)}
+   </tr></thead><tbody>{rows.map(row=>{const cell=(days:21|45|90)=>row.windows.find(w=>w.days===days)??{days,status:'not enough data' as const,score:null,widthPct:null,rangeRatio:null,atrRatio:null,volumeRatio:null};const chosen=row.window==null?null:cell(row.window);return <tr key={row.id} className={`border-t border-slate-800 ${row.strong?'bg-emerald-900/50':''}`}><td className="p-1">{row.symbol}<div className="text-xs text-slate-500">{row.id}{row.product?` · ${row.exchange??''} ${row.product}`:''}</div></td><td className="p-1" title={row.reason}>{row.status==='not enough data'||row.score==null?<span className="text-slate-500">not enough data</span>:<span className={row.strong?'font-semibold text-emerald-200':row.status==='quiet'?'text-emerald-300':''}>{row.status==='quiet'?`QUIET ${row.window}d · ${row.score.toFixed(1)}`:`not quiet · ${row.score.toFixed(1)}`}</span>}</td><td className="p-1"><CompCell w={cell(21)} /></td><td className="p-1"><CompCell w={cell(45)} /></td><td className="p-1"><CompCell w={cell(90)} /></td><td className="p-1">{chosen?.widthPct==null?'not enough data':`${factor(chosen.widthPct)}%`}</td><td className="p-1">{factor(chosen?.rangeRatio)}</td><td className="p-1">{factor(chosen?.atrRatio)}</td><td className="p-1">{factor(chosen?.volumeRatio)}</td></tr>;})}</tbody></table></div>
+  </>}
+ </Panel>;
 }
 function DerivTable({rows}:{rows:DerivRow[]}){
  return <div className="overflow-auto"><table className="w-full min-w-[640px] text-left text-sm"><thead><tr>{['Coin','Funding /8h','State','Open interest','OI 24h','Basis','Venues','Flags'].map(h=><th key={h} className="p-1">{h}</th>)}</tr></thead>
@@ -87,6 +111,7 @@ export default function CryptoMarketData({refreshVersion=0}:{refreshVersion?:num
      {!data.relativeStrength.leaders.length?<p>No leaders in the saved snapshot.</p>:<div className="overflow-auto"><table className="w-full min-w-[520px] text-left text-sm"><thead><tr>{['Coin','Rule','Tercile','30d excess vs BTC'].map(h=><th key={h} className="p-1">{h}</th>)}</tr></thead><tbody>{data.relativeStrength.leaders.map(row=><tr key={row.id} className="border-t border-slate-800"><td className="p-1">{row.symbol}<div className="text-xs text-slate-500">{row.id}</div></td><td className="p-1">{row.rule}</td><td className="p-1">{row.tercile}</td><td className="p-1">{row.excess==null?'—':`${(row.excess*100).toFixed(2)}%`}</td></tr>)}</tbody></table></div>}
     </>}
    </Panel>
+   <CompressionFlags board={data.compression} now={now} />
    <Panel title="Trending (crowding check)" source="CoinGecko /search/trending, matched by CoinGecko id" at={data.trending?.at} cadence={60} now={now}>
     {!data.trending?<p>No data yet.</p>:<ul className="text-sm">{data.trending.rows.map(t=><li key={t.id} className={t.openPosition||t.watchlist?'text-amber-300':''}>#{t.rank} {t.name} ({t.symbol}){t.marketCapRank?` · rank ${t.marketCapRank}`:''}{t.openPosition?' · OPEN PAPER POSITION: possible crowding':''}{t.watchlist?' · on momentum watchlist: possible crowding':''}</li>)}</ul>}
    </Panel>
