@@ -1,4 +1,4 @@
-import { optionEntryBlocker } from '@/lib/options/decisionGate';
+import { optionEntryBlocker, datedResearchCandidates } from '@/lib/options/decisionGate';
 /**
  * Options Confluence Analyzer
  * 
@@ -434,6 +434,7 @@ export interface OptionsSetup {
   optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F';  // Derived from optionsQualityScore
   
   // Recommended strikes
+  researchCandidates?: { strikes: StrikeRecommendation[]; expiry: ExpirationRecommendation; asOf: string; entryTiming: string } | null;
   primaryStrike: StrikeRecommendation | null;
   alternativeStrikes: StrikeRecommendation[];
   
@@ -4289,6 +4290,10 @@ export class OptionsConfluenceAnalyzer {
       capGrade('C', 'Weak OI quality: options grade capped at C');
     }
 
+    const researchCandidates = datedResearchCandidates(allStrikes, primaryExpiration, {
+      freshness: dataQuality.freshness, asOf: dataQuality.lastUpdated,
+      quotedStrikes: quoteStrikes.length, hasCurrentIV: !!ivAnalysis,
+    });
     const contractBlocker = optionEntryBlocker({ quotedStrikes: quoteStrikes.length,
       freshness: dataQuality.freshness, hasExpiry: !!primaryExpiration, hasCurrentIV: !!ivAnalysis });
     if (contractBlocker) capGrade('C', contractBlocker);
@@ -4446,6 +4451,7 @@ export class OptionsConfluenceAnalyzer {
       signalStrength,
       tradeQuality: grade,
       qualityReasons,
+      researchCandidates,
       primaryStrike,
       alternativeStrikes,
       primaryExpiration,

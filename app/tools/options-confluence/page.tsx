@@ -389,6 +389,7 @@ interface OptionsSetup {
   // Options quality (separate from confluence grade)
   optionsQualityScore?: number;
   optionsGrade?: 'A+' | 'A' | 'B' | 'C' | 'F';
+  researchCandidates?: {strikes: StrikeRecommendation[]; expiry: ExpirationRecommendation; asOf: string; entryTiming: string} | null;
   primaryStrike: StrikeRecommendation | null;
   alternativeStrikes: StrikeRecommendation[];
   primaryExpiration: ExpirationRecommendation | null;
@@ -2487,6 +2488,11 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           <section aria-label="Options evidence blocked" className="grid gap-4 rounded-xl border border-amber-500/40 bg-slate-900 p-5">
             <h2 className="text-xl font-bold text-amber-300">{result.symbol} · WAIT — options evidence incomplete</h2>
             <p>{result.entryTiming.reason || 'A usable contract, expiry and verified quote time are required.'}</p>
+            {result.researchCandidates && <div className="rounded border border-slate-600 p-3">
+              <h3 className="font-semibold">Research candidates · as of {result.researchCandidates.asOf} · expiry {result.researchCandidates.expiry.expirationDate}</h3>
+              <p>{result.researchCandidates.entryTiming}. Dated research only; no entry permission.</p>
+              <ul>{result.researchCandidates.strikes.map((c,i)=><li key={i}>{c.strike} {c.type.toUpperCase()} — {c.reason}</li>)}</ul>
+            </div>}
             <dl className="grid gap-3 sm:grid-cols-2">
               <div><dt>Underlying reference</dt><dd>${result.currentPrice.toFixed(2)}</dd></div>
               <div><dt>Data state</dt><dd>{dataHealth}</dd></div>
