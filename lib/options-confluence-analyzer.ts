@@ -1,3 +1,5 @@
+import { atmStrike } from '@/lib/options/atmStrike';
+import { atmImpliedVol } from '@/lib/goldenEgg/optionsChain';
 import { selectOptionsExpiry } from '@/lib/options/expiry';
 import { optionEntryBlocker, datedResearchCandidates } from '@/lib/options/decisionGate';
 /**
@@ -959,34 +961,19 @@ function getThisWeekFridayYMD(now: Date = new Date()): string {
  * Falls back to Math.round if no chain strikes available.
  */
 function findNearestChainStrike(targetPrice: number, availableStrikes: number[]): number {
-  if (!availableStrikes || availableStrikes.length === 0) {
-    // Fallback: round to nearest dollar
-    return Math.round(targetPrice);
-  }
-  
-  // Find the strike closest to target price
-  let nearest = availableStrikes[0];
-  let minDiff = Math.abs(targetPrice - nearest);
-  
-  for (const strike of availableStrikes) {
-    const diff = Math.abs(targetPrice - strike);
-    if (diff < minDiff) {
-      minDiff = diff;
-      nearest = strike;
-    }
-  }
-  
+  const nearest = atmStrike(availableStrikes,targetPrice);
+  if (nearest == null) throw new Error('No listed strikes available');
   return nearest;
 }
 
 function getMoneyness(
   strike: number,
   price: number,
-  type: 'call' | 'put'
+  type: 'call' | 'put',
+  availableStrikes: number[]
 ): 'ITM' | 'ATM' | 'OTM' {
   if (!price || price <= 0) return 'ATM';
-  const distance = Math.abs(strike - price) / price;
-  if (distance < 0.01) return 'ATM';
+  if (strike === atmStrike(availableStrikes,price)) return 'ATM';
   const isITM = type === 'call' ? strike < price : strike > price;
   return isITM ? 'ITM' : 'OTM';
 }
@@ -1473,28 +1460,9 @@ function analyzeIV(
   puts: AVOptionContract[],
   currentPrice: number
 ): IVAnalysis | null {
-  // Find ATM options (within 2% of current price) for accurate IV reading
-  const atmRange = currentPrice * 0.02;
-  const atmOptions = [...calls, ...puts].filter(opt => {
-    const strike = parseFloat(opt.strike || '0');
-    return Math.abs(strike - currentPrice) <= atmRange;
-  });
-  
-  // Calculate average IV from ATM options using normalized IV
-  let totalIV = 0;
-  let ivCount = 0;
-  for (const opt of atmOptions) {
-    // Use normalized IV (handles both 0.25 and 25 formats)
-    const iv = normalizeIV(opt.implied_volatility, 0);
-    if (iv > 0 && iv < 5) {  // Sanity check: IV between 0 and 500% (in decimal)
-      totalIV += iv;
-      ivCount++;
-    }
-  }
-  
-  if (ivCount === 0) return null;
-  const currentIV = totalIV / ivCount;
-  
+  const currentIV = atmImpliedVol([...calls,...puts].map(c=>({...c,implied_volatility:normalizeIV(c.implied_volatility,0)})),currentPrice);
+  if (currentIV == null) return null;
+
   // A current chain cannot establish a 52-week IV rank or percentile.
   return { currentIV, ivRank: null, ivRankHeuristic: null, ivPercentile: null,
     ivSignal: 'neutral', ivReason: 'Historical IV rank and percentile unavailable: no comparable IV history. Current ATM IV is descriptive only.' };
@@ -3495,7 +3463,7 @@ function selectStrikesFromConfluence(
         type: isCallDirection ? 'call' : 'put',
         reason: `Strike at 50% cluster (${clusters[0].tfs.join('/')} converging)`,
         distanceFromPrice: distPct,
-        moneyness: getMoneyness(clusterStrike, currentPrice, isCallDirection ? 'call' : 'put'),
+        moneyness: getMoneyness(clusterStrike, currentPrice, isCallDirection ? 'call' : 'put', availableStrikes),
         estimatedDelta: clusterGreeks.delta,
         confidenceScore: Math.min(100, prediction.confidence + clusters[0].tfs.length * 5),
         targetLevel: clusterLevel,
@@ -3517,7 +3485,7 @@ function selectStrikesFromConfluence(
         type: isCallDirection ? 'call' : 'put',
         reason: `Target: ${primaryDecomp.tf} 50% level (actively decompressing)`,
         distanceFromPrice: distPct,
-        moneyness: getMoneyness(decompStrike, currentPrice, isCallDirection ? 'call' : 'put'),
+        moneyness: getMoneyness(decompStrike, currentPrice, isCallDirection ? 'call' : 'put', availableStrikes),
         estimatedDelta: decompGreeks.delta,
         confidenceScore: prediction.confidence,
         targetLevel: primaryDecomp.level,

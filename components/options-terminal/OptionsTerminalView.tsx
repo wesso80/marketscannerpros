@@ -7,13 +7,14 @@
  * the useOptionsChain hook → /api/options-chain → AV REALTIME_OPTIONS (else HISTORICAL_OPTIONS, previous session).
  */
 
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { selectOptionsExpiry, withOptionsExpiry } from '@/lib/options/expiry';
+import { atmStrike } from '@/lib/options/atmStrike';
 import { contractCosts } from '@/lib/options/contractCosts';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
@@ -52,6 +53,12 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
   /* ── Live data ─────────────────────────────────────────────── */
   const chain = useOptionsChain();
+  const tableContainer = useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(chain.loading)return;
+    const container=tableContainer.current, row=container?.querySelector<HTMLTableRowElement>('[data-atm="true"]');
+    if(container && row) container.scrollTop=Math.max(0,row.offsetTop-container.offsetTop-container.clientHeight/2);
+  },[chain.loading,chain.contracts]);
 
   /* ── UI state ──────────────────────────────────────────────── */
   const [ticker, setTicker] = useState(initialSymbol);
@@ -496,7 +503,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
               {/* Chain Table */}
               <div className="mt-4 rounded-2xl border border-zinc-800 overflow-hidden">
-                <div className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-auto">
+                <div ref={tableContainer} className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-auto">
                   <table className="w-full border-collapse">
                     <thead className="sticky top-0 z-10 bg-zinc-900">
                       <tr className="text-left">
@@ -524,6 +531,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
                         return (
                           <tr
+                            data-atm={g.isAtm}
                             key={g.strike}
                             className={`border-t border-zinc-900 ${g.isAtm ? 'bg-zinc-900/40' : ''}`}
                           >
@@ -959,7 +967,7 @@ function OIHeatmapInline({ heatmap, spot, expectedMove }: { heatmap: OIHeatmapRo
         const callPct = (row.callOI / maxOI) * 100;
         const putPct = (row.putOI / maxOI) * 100;
         const isWall = row.totalOI >= maxOI * 0.7;
-        const isAtm = spot > 0 && Math.abs(row.strike - spot) / spot < 0.015;
+        const isAtm = row.strike === atmStrike(topRows.map(r=>r.strike),spot);
 
         return (
           <div key={row.strike}>

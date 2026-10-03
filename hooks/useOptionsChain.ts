@@ -1,5 +1,6 @@
 'use client';
 
+import { atmStrike } from '@/lib/options/atmStrike';
 import { selectOptionsExpiry } from '@/lib/options/expiry';
 import { atmImpliedVol, quoteDaysToExpiry } from '@/lib/goldenEgg/optionsChain';
 import { hasTwoSidedQuote } from '@/lib/options/quoteQuality';
@@ -45,7 +46,7 @@ export interface UseOptionsChainState {
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
-function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGroup[] {
+export function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGroup[] {
   const map = new Map<number, { call?: OptionsContract; put?: OptionsContract }>();
   for (const c of contracts) {
     const entry = map.get(c.strike) || {};
@@ -62,7 +63,7 @@ function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGr
         strike,
         distFromSpot,
         distFromSpotAbs,
-        isAtm: Math.abs(distFromSpot) < 1.5,
+        isAtm: strike === atmStrike(contracts.map(c=>c.strike), spot),
         call,
         put,
       };
@@ -70,19 +71,20 @@ function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGr
     .sort((a, b) => a.strike - b.strike);
 }
 
-function buildBestStrikes(contracts: OptionsContract[], spot: number): BestStrike[] {
-  contracts = contracts.filter(c => Number.isFinite(c.bid) && Number.isFinite(c.ask) && c.bid > 0 && c.ask >= c.bid);
+export function buildBestStrikes(contracts: OptionsContract[], spot: number, expectedMove = 0): BestStrike[] {
+  const nearest = atmStrike(contracts.map(c=>c.strike),spot);
+  contracts = oiContextContracts(contracts,spot,expectedMove);
   const calls = contracts.filter((c) => c.type === 'call');
   const puts = contracts.filter((c) => c.type === 'put');
 
   const best: BestStrike[] = [];
 
   // ATM call — closest to 0.50 delta
-  const atmCall = [...calls].sort((a, b) => Math.abs(a.delta - 0.5) - Math.abs(b.delta - 0.5))[0];
+  const atmCall = calls.find(c=>c.strike===nearest);
   if (atmCall) best.push({ label: 'ATM Call', strike: atmCall.strike, type: 'call', reason: `Δ ${atmCall.delta.toFixed(2)}`, contract: atmCall });
 
   // ATM put — closest to -0.50 delta
-  const atmPut = [...puts].sort((a, b) => Math.abs(Math.abs(a.delta) - 0.5) - Math.abs(Math.abs(b.delta) - 0.5))[0];
+  const atmPut = puts.find(c=>c.strike===nearest);
   if (atmPut) best.push({ label: 'ATM Put', strike: atmPut.strike, type: 'put', reason: `Δ ${atmPut.delta.toFixed(2)}`, contract: atmPut });
 
   // 25Δ call
@@ -116,7 +118,7 @@ export function buildIVMetrics(contracts: OptionsContract[], spot: number, expir
   const avgIV = atmImpliedVol(contracts.map(c => ({strike:c.strike, implied_volatility:c.iv})), spot) ?? 0;
   const days = quoteDaysToExpiry(expiry, asOfDate);
   const expectedMoveAbs = days != null ? spot * avgIV * Math.sqrt(days / 365) : 0;
-  const nearest = [...contracts].sort((a,b)=>Math.abs(a.strike-spot)-Math.abs(b.strike-spot) || a.strike-b.strike)[0]?.strike;
+  const nearest = atmStrike(contracts.map(c=>c.strike),spot);
   const call = contracts.find(c=>c.strike===nearest && c.type==='call' && hasTwoSidedQuote(c));
   const put = contracts.find(c=>c.strike===nearest && c.type==='put' && hasTwoSidedQuote(c));
   const atmStraddleMid = call && put ? (call.bid+call.ask+put.bid+put.ask)/2 : null;
@@ -223,7 +225,7 @@ export function useOptionsChain(): UseOptionsChainState {
 
   const ivMetrics = buildIVMetrics(contracts, underlyingPrice, contracts[0]?.expiration ?? '', asOfDate);
   const oiContracts = oiContextContracts(contracts, underlyingPrice, ivMetrics.expectedMoveAbs);
-  const bestStrikes = buildBestStrikes(oiContracts, underlyingPrice);
+  const bestStrikes = buildBestStrikes(contracts, underlyingPrice, ivMetrics.expectedMoveAbs);
   const oiHeatmap = buildOIHeatmap(buildStrikeGroups(oiContracts, underlyingPrice));
 
   return {
