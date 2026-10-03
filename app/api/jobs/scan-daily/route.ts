@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 /**
  * Daily Scanner Cron Job
  * 
@@ -391,12 +392,14 @@ async function runDailyScan(req: NextRequest) {
     // the 21:30 UTC run (7:30 AM AEST) is dated with the session that just closed, and weekend/holiday re-runs keep
     // that session's date instead of inventing a Saturday. (It used to be the server's UTC calendar day.)
     const today = latestUsSessionDate(Date.now());
+    const runId = randomUUID();
     
     // Insert new results. score/direction columns carry the canonical verdict (0 = BLOCK); the legacy signal-count
     // values are kept in indicators.legacy (see lib/scoring/canonical/dailyPick).
     for (const r of results.map(withCanonicalColumns)) {
       const publication = dailyPublication(r.asset_class, r.indicators);
       r.indicators.data_as_of = publication.dataAsOf;
+      r.indicators.run_id = runId;
       await q(`
         INSERT INTO daily_picks (
           asset_class, symbol, score, direction,

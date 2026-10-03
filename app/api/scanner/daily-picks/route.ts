@@ -20,7 +20,15 @@ export async function GET(req: NextRequest) {
   try {
     // Get query params
     const { searchParams } = new URL(req.url);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 20);
+    const rawLimit = Number(searchParams.get('limit') ?? 10);
+    const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(Math.floor(rawLimit),20)) : 10;
+    const date = searchParams.get('date');
+    if (date && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0,10) !== date)) {
+      return NextResponse.json({error:'date must be a valid YYYY-MM-DD'}, {status:400});
+    }
+    // Fixed SQL fragments only; user dates are bound parameters.
+    const source = date ? `SELECT (jsonb_populate_record(NULL::daily_picks, pick)).* FROM daily_picks_history WHERE scan_date = $2::date` : `SELECT * FROM daily_picks`;
+
     const rankType = searchParams.get('type') || 'all'; // 'top', 'bottom', or 'all'
     
     // Build the query based on rank type
@@ -33,8 +41,8 @@ export async function GET(req: NextRequest) {
     
     // Get research observations (or most recent if today not available)
     const picks = await q(`
-      WITH latest_date AS (
-        SELECT asset_class, MAX(scan_date) as scan_date FROM daily_picks GROUP BY asset_class
+      WITH source_picks AS (${source}), latest_date AS (
+        SELECT asset_class, MAX(scan_date) as scan_date FROM source_picks GROUP BY asset_class
       ),
       ranked_picks AS (
         SELECT 
@@ -45,7 +53,7 @@ export async function GET(req: NextRequest) {
               -- canonical score columns rank both sides high-is-better; legacy bottom rows rank low-is-better
               CASE WHEN COALESCE(dp.rank_type, 'top') = 'top' OR dp.indicators->>'scoreColumn' = 'canonical' THEN dp.score ELSE -dp.score END DESC
           ) as rank
-        FROM daily_picks dp
+        FROM source_picks dp
         JOIN latest_date ld ON dp.asset_class = ld.asset_class
         WHERE dp.scan_date = ld.scan_date ${rankFilter}
       )
@@ -67,7 +75,7 @@ export async function GET(req: NextRequest) {
       WHERE rank <= $1
       ORDER BY asset_class, rank_type, 
         CASE WHEN COALESCE(rank_type, 'top') = 'top' OR indicators->>'scoreColumn' = 'canonical' THEN score ELSE -score END DESC
-    `, [limit]);
+    `, date ? [limit, date] : [limit]);
 
     // The scan date is the US market session the data belongs to, returned as a plain YYYY-MM-DD (a DATE serialised as
     // an ISO midnight timestamp would read as the previous day in US time zones).
@@ -126,6 +134,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      history: date ? {requestedDate:date, basis:"first publication; legacy rows archived at migration time"} : null,
       compliance: scannerComplianceMetadata(),
       scanDate,
       scanDateLabel: scanDate ? `Latest per-market daily snapshots` : null,
