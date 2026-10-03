@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   computeGlobalM2, GLOBAL_M2_CONFIG, GLOBAL_M2_EXCLUDED_BLOCS,
 } from '@/lib/intelligence/engines/globalM2';
 import { buildWave3Bundle, type Wave3Deps } from '@/lib/intelligence/data/globalM2Pipeline';
 import { excludedBlocsLabel, excludedBlocsSuffix } from '@/lib/intelligence/globalM2Exclusions';
 import type { ProviderM2Raw, ProviderFxRaw } from '@/lib/intelligence/data/providers/globalM2ProviderTypes';
+
+// Freeze the fixture's observation date: freshness is now part of coverage.
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-07-01T12:00:00Z')); });
+afterEach(() => vi.useRealTimers());
 
 /* ── Fixtures (deterministic, no network, no DB) ───────────────────────────── */
 const MON = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];

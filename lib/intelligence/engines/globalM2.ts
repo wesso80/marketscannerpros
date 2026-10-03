@@ -332,8 +332,10 @@ export function computeGlobalM2(
     .filter(([id]) => !excluded.has(id))
     .reduce((s, [, w]) => s + w, 0) || 1;
   const nomShare = (id: string) => (excluded.has(id) ? 0 : (100 * (config.nominalWeights[id] ?? 0)) / totalNominal);
+  const live = valid.filter((b) => b.input.stale !== true);
   const validIds = new Set(valid.map((b) => b.input.id));
-  const validIncludedCount = coverageUniverse.filter((m) => validIds.has(m.id)).length;
+  const liveIds = new Set(live.map((b) => b.input.id));
+  const validIncludedCount = coverageUniverse.filter((m) => liveIds.has(m.id)).length;
 
   const exactBlocCount = valid.filter((b) => b.input.classification === 'EXACT').length;
   const alternativeBlocCount = valid.filter((b) => b.input.classification === 'ALTERNATIVE').length;
@@ -361,9 +363,9 @@ export function computeGlobalM2(
     : null;
 
   const hasReferenceWeights = Object.entries(config.nominalWeights ?? {}).some(([id, w]) => w > 0 && !excluded.has(id));
-  const coveragePct = (100 * valid.length) / GLOBAL_M2_BLOCS.length;
+  const coveragePct = (100 * live.length) / GLOBAL_M2_BLOCS.length;
   const estimatedWeightedCoveragePercent = hasReferenceWeights
-    ? exactWeightedShare + alternativeWeightedShare + proxyWeightedShare
+    ? live.reduce((sum, b) => sum + nomShare(b.input.id), 0)
     : coverageUniverse.length > 0 ? (100 * validIncludedCount) / coverageUniverse.length : 0;
   // Complete = every bloc in the coverage universe (all 11 when nothing is excluded) is present.
   const weightedCoverageBasis: GlobalM2Quality['weightedCoverageBasis'] =

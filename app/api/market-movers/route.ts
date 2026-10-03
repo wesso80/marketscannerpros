@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { q } from '@/lib/db';
+import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
 import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 
@@ -53,27 +54,7 @@ export async function GET(request: NextRequest) {
       fetchEquityMovers(),
     ]);
 
-    const normalizeCryptoMover = (coin: any) => ({
-      ticker: String(coin.symbol || '').toUpperCase(),
-      price: String(coin.usd ?? coin.current_price ?? 0),
-      change_amount: String(coin.usd_24h_change ?? coin.price_change_24h ?? 0),
-      change_percentage: `${Number(coin.usd_24h_change ?? coin.price_change_percentage_24h ?? 0).toFixed(2)}%`,
-      volume: String(coin.usd_24h_vol ?? coin.total_volume ?? 0),
-      market_cap: String(coin.usd_market_cap ?? coin.market_cap ?? 0),
-      market_cap_rank: String(coin.market_cap_rank ?? 0),
-      asset_class: 'crypto' as const,
-    });
-
-    const normalizeMostActive = (coin: any) => ({
-      ticker: String(coin.symbol || '').toUpperCase(),
-      price: String(coin.current_price ?? 0),
-      change_amount: String(coin.price_change_24h ?? 0),
-      change_percentage: `${Number(coin.price_change_percentage_24h ?? 0).toFixed(2)}%`,
-      volume: String(coin.total_volume ?? 0),
-      market_cap: String(coin.market_cap ?? 0),
-      market_cap_rank: String(coin.market_cap_rank ?? 0),
-      asset_class: 'crypto' as const,
-    });
+    const normalizeMostActive = (coin:any) => normalizeCryptoMover(coin);
 
     // Merge equity + crypto gainers/losers, equity first
     // Filter out garbage tickers (non-ASCII, special chars like ^, warrants like +)
@@ -82,8 +63,8 @@ export async function GET(request: NextRequest) {
     const eqGainers = equityMovers.gainers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
     const eqLosers = equityMovers.losers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
     const eqActive = equityMovers.active.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const cryptoGainers = (topMovers?.top_gainers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const cryptoLosers = (topMovers?.top_losers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const cryptoGainers = (topMovers?.top_gainers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const cryptoLosers = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
 
     // If both sources failed, try returning cached data
     if (eqGainers.length === 0 && cryptoGainers.length === 0) {
@@ -210,6 +191,8 @@ export async function GET(request: NextRequest) {
     // Attach enrichment fields to each mover
     const enrich = (mover: any) => ({
       ...mover,
+      dataFrequency: mover.asset_class === 'equity' ? equityMovers.feed : mover.change_basis,
+      dataAsOf: mover.asset_class === 'equity' ? equityMovers.asOf ?? null : null,
       ...(enrichmentMap[mover.ticker] || {}),
     });
 
