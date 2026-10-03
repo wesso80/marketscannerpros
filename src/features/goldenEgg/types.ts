@@ -50,7 +50,7 @@ export interface GoldenEggCanonical {
   crossMarket: { alignment: 'supportive' | 'neutral' | 'headwind' | 'unknown'; summary: string; items: Array<{ symbol: string; label: string; price: number | null; changePct: number | null; trend: string; detail: string; relation: string }> };
   levels: {
     reference: { price: number | null; basis: 'structural' | 'mechanical'; label: string };
-    invalidation: { price: number; basis: 'structural' | 'mechanical'; label: string; distanceAtr: number | null };
+    invalidation: { price: number | null; basis: 'structural' | 'mechanical'; label: string; distanceAtr: number | null };
     zones: Array<{ price: number; basis: 'structural' | 'mechanical'; label: string; rMultiple: number | null }>;
     illustrativeR: number | null;
   };
@@ -185,7 +185,7 @@ export interface GoldenEggPayload {
     scenario: {
       referenceTrigger: string;
       referenceLevel: { type: 'reference' | 'confirmation'; price?: number };
-      invalidationLevel: { price: number; logic: string };
+      invalidationLevel: { price: number | null; logic: string };
       reactionZones: Array<{ price: number; rMultiple?: number; note?: string }>;
       hypotheticalRr: { expectedR: number; minR: number };
       hypotheticalRisk?: { riskPct: number; riskUsd?: number; sizeUnits?: number };

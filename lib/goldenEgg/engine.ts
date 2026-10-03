@@ -50,7 +50,7 @@ const CACHE_TTL = 3 * 60 * 1000;
 type InternalPermission = 'TRADE' | 'NO_TRADE' | 'WATCH';
 
 export function isLocalGoldenEggDemoAllowed(): boolean {
-  return isLocalDemoMarketDataAllowed({
+  return process.env.NODE_ENV !== 'production' && isLocalDemoMarketDataAllowed({
     nodeEnv: process.env.NODE_ENV,
     localDemoMarketData: process.env.LOCAL_DEMO_MARKET_DATA,
   }).allowed;
@@ -235,7 +235,7 @@ function barsPerDayFor(tfLabel: string, assetClass: 'equity' | 'crypto' | 'forex
 function fmtLevel(v: number): string { return `$${fmtPriceStr(v)}`; }
 
 // ── Build GoldenEggPayload from live data ───────────────────────────────
-function buildPayload(
+export function buildPayload(
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',
   price: PriceData,
@@ -256,7 +256,8 @@ function buildPayload(
     extras = { ...extras, fundamentals: { ...f, pe: v.pe, marketCap: v.marketCap,
       currentPrice: p, valuationBasis: v.basis, multiple: describeMultiple(v.pe, f.forwardPe, f.peg) } };
   }
-  const atr = ind?.atr ?? (price.high - price.low);
+  const atr = ind?.atr != null && Number.isFinite(ind.atr) && ind.atr > 0 ? ind.atr : 0;
+  const hasAtr = atr > 0;
   const atrPct = p > 0 ? (atr / p) * 100 : 0;
   const closes = price.historicalCloses ?? [];
   const barsPerDay = barsPerDayFor(tfLabel, assetClass);
@@ -442,6 +443,7 @@ function buildPayload(
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
   else if (macroOpposes) primaryBlocker = macroRegime!.riskState === 'risk_off' ? `Macro regime RISK_OFF (${macroRegime!.concerns.join(', ')})` : 'Macro regime RISK_ON opposes the short scenario';
 
+  if (!hasAtr) { primaryBlocker = 'Measured ATR unavailable; price levels and sizing are withheld.'; permission = 'NO_TRADE'; }
   if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
   // HARD BLOCK (same rule as the scanner, lib/scanner/hardBlocks): earnings inside the holding window → NO_TRADE.
   const earningsWindowDays = holdingWindowDays(timeframeKey);
@@ -499,7 +501,7 @@ function buildPayload(
   const mechanicalZones = buildMechanicalZones(zoneStart, stopPrice, p, isLong);
   const zones: Array<{ price: number; basis: 'structural' | 'mechanical'; label: string }> = [];
   const pushZone = (z: { price: number; basis: 'structural' | 'mechanical'; label: string }) => {
-    if (zones.length >= 3) return;
+    if (!hasAtr || zones.length >= 3) return;
     if (zones.some((e) => Math.abs(e.price - z.price) < atr * 0.25)) return; // collapse near-duplicate levels
     zones.push(z);
   };
@@ -526,7 +528,7 @@ function buildPayload(
   const trendLTF = price.changePct > 0.5 ? 'Bullish' : price.changePct < -0.5 ? 'Bearish' : 'Consolidating';
 
   let volRegime: 'compression' | 'neutral' | 'transition' | 'expansion' | 'climax' =
-    bbWidthPct != null ? (bbWidthPct < 8 ? 'compression' : 'expansion') : atrPct < 2 ? 'compression' : atrPct > 5 ? 'expansion' : 'neutral';
+    bbWidthPct != null ? (bbWidthPct < 8 ? 'compression' : 'expansion') : !hasAtr ? 'neutral' : atrPct < 2 ? 'compression' : atrPct > 5 ? 'expansion' : 'neutral';
   if (dveReading) volRegime = dveReading.volatility.regime;
 
   let optionsEvidence: GoldenEggPayload['layer3']['options'];
@@ -659,7 +661,7 @@ function buildPayload(
   if (setup.setupType === 'squeeze') confirmation.push('Bollinger width expanding with a directional close — direction is not assumed before the expansion bar.');
   if (setup.setupType === 'mean_reversion') confirmation.push(`RSI turning back ${direction === 'LONG' ? 'up from oversold' : 'down from overbought'} and a reclaim of the 20-bar mean.`);
   if (timing.relation === 'conflict') confirmation.push('Time confluence flipping to agree, or the conflict falling below gate thresholds.');
-  invalidationTexts.push(`Close ${oppWord} ${fmtLevel(stopPrice)}${stopAnchor ? ` (beyond ${stopAnchor})` : ' (1.5× ATR model stop)'} with volume confirmation.`);
+  if (hasAtr) invalidationTexts.push(`Close ${oppWord} ${fmtLevel(stopPrice)}${stopAnchor ? ` (beyond ${stopAnchor})` : ' (1.5× ATR model stop)'} with volume confirmation.`);
   if (ind?.ema200 != null && setup.setupType === 'trend') invalidationTexts.push(`Decisive close ${oppWord} EMA200 ${fmtLevel(ind.ema200)} or ADX rolling below 20.`);
   if (setup.extended) invalidationTexts.push('Climax bar followed by a close through its midpoint — the extended move is failing.');
   if (trust.level !== 'GOOD') invalidationTexts.push('Trust remaining below GOOD — the packet cannot be relied upon while inputs are contaminated or stale.');
@@ -712,7 +714,7 @@ function buildPayload(
     crossMarket: extras.crossMarket ?? { alignment: 'unknown', summary: 'Cross-market reference data unavailable right now.', items: [] },
     levels: {
       reference: { price: referencePrice != null ? roundPrice(referencePrice) : null, basis: referenceBasis, label: referenceTrigger },
-      invalidation: { price: roundPrice(stopPrice), basis: stopAnchor ? 'structural' : 'mechanical', label: stopAnchor ? `Beyond ${stopAnchor} (structure-anchored, ${(stopDistance / atr).toFixed(2)}× ATR buffer)` : '1.5× ATR model stop — no structural level within 1–2 ATR', distanceAtr: stopDistanceAtr != null ? Math.round(stopDistanceAtr * 100) / 100 : null },
+      invalidation: { price: hasAtr ? roundPrice(stopPrice) : null, basis: stopAnchor ? 'structural' : 'mechanical', label: !hasAtr ? 'Unavailable — measured ATR missing' : stopAnchor ? `Beyond ${stopAnchor} (structure-anchored, ${(stopDistance / atr).toFixed(2)}× ATR buffer)` : '1.5× ATR model stop — no structural level within 1–2 ATR', distanceAtr: stopDistanceAtr != null ? Math.round(stopDistanceAtr * 100) / 100 : null },
       zones: zones.map((z) => ({ price: roundPrice(z.price), basis: z.basis, label: z.label, rMultiple: zoneR(z.price) })),
       illustrativeR,
     },
@@ -751,12 +753,12 @@ function buildPayload(
         thesis: buildThesis(direction, setup, ind, opts, mpe, symbol, tcRaw, timing, dveReading),
         timeframeAlignment: { score: tfScore, max: 4, details: tfDetails },
         keyLevels,
-        invalidation: `Scenario weakens if price ${isLong ? 'closes below' : 'closes above'} ${fmtLevel(stopPrice)} with volume confirmation.`,
+        invalidation: !hasAtr ? 'Unavailable — measured ATR missing' : `Scenario weakens if price ${isLong ? 'closes below' : 'closes above'} ${fmtLevel(stopPrice)} with volume confirmation.`,
       },
       scenario: {
         referenceTrigger,
         referenceLevel: { type: permission === 'TRADE' ? 'reference' : 'confirmation', price: referencePrice != null ? roundPrice(referencePrice) : undefined },
-        invalidationLevel: { price: roundPrice(stopPrice), logic: stopAnchor ? `Beyond ${stopAnchor} (structure-anchored, ${(stopDistance / atr).toFixed(2)}x ATR buffer)` : `1.5x ATR model stop — no structural level within 1–2 ATR` },
+        invalidationLevel: { price: hasAtr ? roundPrice(stopPrice) : null, logic: !hasAtr ? 'Unavailable — measured ATR missing' : stopAnchor ? `Beyond ${stopAnchor} (structure-anchored, ${(stopDistance / atr).toFixed(2)}x ATR buffer)` : `1.5x ATR model stop — no structural level within 1–2 ATR` },
         reactionZones: zones.map((z, i) => ({ price: roundPrice(z.price), rMultiple: zoneR(z.price) ?? undefined, note: `${z.basis === 'structural' ? z.label : `Model zone (${z.label})`}${i === 1 && decompAligned ? ' · decompression-aligned' : ''}` })),
         hypotheticalRr: { expectedR: illustrativeR ?? 0, minR: 1.5 },
         hypotheticalRisk: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },

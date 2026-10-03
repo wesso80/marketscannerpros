@@ -84,6 +84,8 @@ describe('widget and API wiring', () => {
     expect(widget).toMatch(/method: 'PUT'[\s\S]*\/api\/watchlists|\/api\/watchlists'[\s\S]{0,40}method: 'PUT'/);
   });
   it('re-adding a symbol keeps its existing notes', () => {
-    expect(itemsRoute).toContain('notes = COALESCE(EXCLUDED.notes, watchlist_items.notes)');
+    expect(itemsRoute).toContain('ON CONFLICT (watchlist_id, symbol) DO NOTHING');
+    expect(itemsRoute).not.toContain('DO UPDATE SET');
+    expect(itemsRoute).toContain('alreadyExists:true');
   });
 });

@@ -1,3 +1,5 @@
+import { atmStrike } from '@/lib/options/atmStrike';
+import { selectOptionsExpiry, marketDateKey } from '@/lib/options/expiry';
 /**
  * ONE options snapshot per symbol. Every number carries its expiry and snapshot time; strikes from different expiries
  * are never mixed; chain quality and split contamination are surfaced instead of being presented as flow evidence.
@@ -66,24 +68,15 @@ const numOrNull = (v: unknown): number | null => { const n = typeof v === 'numbe
  * Falls back to the nearest expiry with ≥ 7 DTE, then to the highest-OI expiry overall.
  */
 export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now()): { expiry: string | null; reason: string; available: string[] } {
-  const byExpiry = new Map<string, number>();
-  for (const c of contracts) {
-    const e = String(c.expiration ?? '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(e) || e < new Date(nowMs).toISOString().slice(0, 10)) continue;
-    byExpiry.set(e, (byExpiry.get(e) ?? 0) + num(c.open_interest));
-  }
-  const available = [...byExpiry.keys()].sort();
-  if (available.length === 0) return { expiry: null, reason: 'no expiries in chain', available };
-  const dte = (e: string) => Math.round((Date.parse(`${e}T20:00:00Z`) - nowMs) / 86_400_000);
-  const window = available.filter((e) => dte(e) >= 7 && dte(e) <= 60);
-  if (window.length) {
-    const best = window.sort((a, b) => (byExpiry.get(b) ?? 0) - (byExpiry.get(a) ?? 0))[0];
-    return { expiry: best, reason: `highest open interest among ${window.length} expiries within 7–60 DTE`, available };
-  }
-  const later = available.filter((e) => dte(e) >= 7);
-  if (later.length) return { expiry: later[0], reason: 'nearest expiry with ≥ 7 DTE (no liquid expiry inside 7–60 DTE)', available };
-  const best = available.sort((a, b) => (byExpiry.get(b) ?? 0) - (byExpiry.get(a) ?? 0))[0];
-  return { expiry: best, reason: 'highest open interest overall (only near-dated expiries available)', available };
+  const available=[...new Set(contracts.map(c=>String(c.expiration??'')))].filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>=marketDateKey(nowMs)).sort();
+  return {expiry:selectOptionsExpiry(available,undefined,nowMs),available,reason:'shared default: next listed expiry after the New York market date'};
+}
+
+/** Calendar-day horizon from the market observation, never from cache retrieval. */
+export function quoteDaysToExpiry(expiry: string, asOfDate: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate) || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) return null;
+  const days = (Date.parse(expiry) - Date.parse(asOfDate)) / 86_400_000;
+  return Number.isFinite(days) && days >= 0 ? days : null;
 }
 
 /** ATM implied volatility: mean IV of contracts within 2% of spot; if none, of the strike nearest spot. */
@@ -95,8 +88,8 @@ export function atmImpliedVol(chain: RawContract[], spot: number): number | null
   if (!withIv.length) return null;
   let atm = withIv.filter((c) => Math.abs(c.strike - spot) / spot <= 0.02);
   if (!atm.length) {
-    const nearest = Math.min(...withIv.map((c) => Math.abs(c.strike - spot)));
-    atm = withIv.filter((c) => Math.abs(c.strike - spot) === nearest);
+    const nearest = atmStrike(withIv.map(c=>c.strike),spot);
+    atm = withIv.filter(c=>c.strike===nearest);
   }
   return atm.reduce((sum, c) => sum + c.iv, 0) / atm.length;
 }
@@ -127,7 +120,8 @@ export function summarizeChain(
   const daysToExpiry = Math.max(0, Math.round((Date.parse(`${sel.expiry}T20:00:00Z`) - nowMs) / 86_400_000));
   const atmIv = atmImpliedVol(chain, spot);
   // ATM IV, not the all-strike average: far OTM wings carry higher IV (the smile) and overstate the move.
-  const expectedMove = atmIv != null && spot > 0 ? spot * atmIv * Math.sqrt(Math.max(1, daysToExpiry) / 365) : null;
+  const marketDays = quoteDaysToExpiry(sel.expiry, observedDates.length === 1 ? observedDates[0] : observedAt.slice(0, 10));
+  const expectedMove = atmIv != null && spot > 0 && marketDays != null ? spot * atmIv * Math.sqrt(marketDays / 365) : null;
 
   const strikes = [...new Set(chain.map((c) => num(c.strike)).filter((k) => k > 0))].sort((a, b) => a - b);
   let maxPain: number | null = null;

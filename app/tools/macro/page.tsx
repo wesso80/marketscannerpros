@@ -275,7 +275,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/options-chain?symbol=SPY');
+        const res = await fetch('/api/options-chain?symbol=SPY&expiries=all');
         if (!res.ok) { setSpyPCRError(`Options feed unavailable (${res.status})`); return; }
         const json = await res.json();
         const contracts = json.contracts || [];

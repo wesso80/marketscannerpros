@@ -10,6 +10,7 @@ import { fireAutoLog } from "@/lib/autoLog";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { PageHero } from "@/components/ui";
 import { equityMoversBasisLabel, formatEasternAsOf } from "@/lib/alphaVantageEntitlement";
+import { moverResearchLink } from "@/lib/options/journey";
 
 const MOVERS_STUDY_SUBTITLE = "Nasdaq BX equity movers during the US session, and CoinGecko crypto movers. A study list, not a trade list.";
 
@@ -19,6 +20,7 @@ interface MarketMover {
   change_amount: string;
   change_percentage: string;
   volume: string;
+  asset_class?: 'equity' | 'crypto';
 }
 
 type SetupMode = "breakout" | "reversal" | "momentum";
@@ -47,6 +49,16 @@ type SortDirection = "asc" | "desc";
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function gainerResearchLink(item: { asset_class?: 'equity' | 'crypto'; ticker: string; setupClass: string; deployment: string; confluenceScore: number }, deploymentMode: string) {
+  return moverResearchLink({
+    asset_class: item.asset_class === 'crypto' ? 'crypto' : 'equity',
+    ticker: item.ticker,
+    setupClass: item.setupClass,
+    deployment: item.deployment.toLowerCase(),
+    confluenceScore: item.confluenceScore,
+  }, deploymentMode);
 }
 
 function percentile50(values: number[]) {
@@ -588,10 +600,10 @@ export default function GainersLosersPage() {
                               <span title={item.blockReason || "Blocked by governance"} style={{ fontSize: 11, color: "#64748B", border: "1px solid #334155", borderRadius: 999, padding: "3px 10px" }}>Blocked</span>
                             ) : (
                               <Link
-                                href={`/tools/terminal?tab=options-confluence&symbol=${item.ticker}&setupClass=${encodeURIComponent(item.setupClass)}&eligibility=${item.deployment.toLowerCase()}&confluence=${item.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                                href={gainerResearchLink(item, environment.deploymentMode).href}
                                 style={{ fontSize: 11, color: "#10B981", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 999, padding: "3px 10px" }}
                               >
-                                Open Confluence Panel
+                                {gainerResearchLink(item, environment.deploymentMode).label}
                               </Link>
                             )}
                           </td>

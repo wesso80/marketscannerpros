@@ -182,17 +182,17 @@ describe('news relevance & catalysts (Parts E, M)', () => {
 describe('options chain canonicalisation (Part F)', () => {
   const now = Date.UTC(2026, 8, 20);
   const mk = (expiration: string, type: 'call' | 'put', strike: number, oi: number, iv = 0.3, gamma = 0.01) => ({ expiration, type, strike, open_interest: oi, volume: Math.round(oi / 20), implied_volatility: iv, gamma, delta: type === 'call' ? 0.4 : -0.4, theta: -0.05, vega: 0.2, date: '2026-09-18' });
-  it('selects one liquid expiry (7–60 DTE, most OI) and never mixes strikes across expiries', () => {
+  it('selects the shared next listed expiry and never mixes strikes across expiries', () => {
     const chain = [
       ...[600, 650, 700, 750].flatMap((k) => [mk('2026-09-25', 'call', k, 500), mk('2026-09-25', 'put', k, 500)]),
       ...[600, 640, 660, 680, 700, 720].flatMap((k) => [mk('2026-10-16', 'call', k, 4000), mk('2026-10-16', 'put', k, 3000)]),
       ...[500, 700].flatMap((k) => [mk('2026-12-18', 'call', k, 9000), mk('2026-12-18', 'put', k, 9000)]),
     ];
     const sel = selectCanonicalExpiry(chain, now);
-    expect(sel.expiry).toBe('2026-10-16');
+    expect(sel.expiry).toBe('2026-09-25');
     const snap = summarizeChain(chain, 665, { nowMs: now })!;
-    expect(snap.expiry).toBe('2026-10-16');
-    expect(snap.putCallOi).toBeCloseTo(0.75, 2);
+    expect(snap.expiry).toBe('2026-09-25');
+    expect(snap.putCallOi).toBeCloseTo(1, 2);
     expect(snap.ivRank).toBeNull();
     expect(snap.expectedMovePct).toBeGreaterThan(0);
     expect(snap.snapshotTs).toBeTruthy();

@@ -1,3 +1,4 @@
+import { optionWatchlistKey } from '@/lib/options/watchlistIdentity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
@@ -47,8 +48,8 @@ export async function GET(req: NextRequest) {
         ql.fetched_at AS quote_fetched_at,
         ql.latest_trading_day AS quote_trading_day
       FROM watchlist_items wi
-      LEFT JOIN indicators_latest il ON il.symbol = wi.symbol AND il.timeframe = 'daily'
-      LEFT JOIN quotes_latest ql ON ql.symbol = wi.symbol
+      LEFT JOIN indicators_latest il ON il.symbol = wi.symbol AND il.timeframe = 'daily' AND wi.asset_type NOT IN ('option','options')
+      LEFT JOIN quotes_latest ql ON ql.symbol = wi.symbol AND wi.asset_type NOT IN ('option','options')
       WHERE wi.watchlist_id = $1 AND wi.workspace_id = $2
       ORDER BY wi.sort_order ASC, wi.created_at ASC
     `, [watchlistId, session.workspaceId]);
@@ -96,6 +97,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Watchlist ID and symbol required' }, { status: 400 });
     }
 
+    const itemSymbol = assetType === 'option' ? optionWatchlistKey(String(symbol), body.option || {}) : String(symbol).toUpperCase().trim();
+    if (!itemSymbol || itemSymbol.length > 96) return NextResponse.json({error:'Valid symbol and option identity required'}, {status:400});
+
     // Verify watchlist belongs to user
     const watchlist = await q(
       'SELECT id FROM watchlists WHERE id = $1 AND workspace_id = $2',
@@ -105,6 +109,9 @@ export async function POST(req: NextRequest) {
     if (watchlist.length === 0) {
       return NextResponse.json({ error: 'Watchlist not found' }, { status: 404 });
     }
+
+    const existing = await q('SELECT * FROM watchlist_items WHERE watchlist_id=$1 AND workspace_id=$2 AND symbol=$3', [watchlistId, session.workspaceId, itemSymbol]);
+    if (existing.length) return NextResponse.json({item:existing[0],alreadyExists:true});
 
     // Check item limit per watchlist (free: 10, pro: 500)
     const countResult = await q(
@@ -132,21 +139,23 @@ export async function POST(req: NextRequest) {
     const result = await q(`
       INSERT INTO watchlist_items (watchlist_id, workspace_id, symbol, asset_type, notes, added_price, sort_order)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (watchlist_id, symbol) DO UPDATE SET
-        notes = COALESCE(EXCLUDED.notes, watchlist_items.notes),
-        added_price = COALESCE(EXCLUDED.added_price, watchlist_items.added_price)
+      ON CONFLICT (watchlist_id, symbol) DO NOTHING
       RETURNING *
     `, [
       watchlistId,
       session.workspaceId,
-      symbol.toUpperCase().trim(),
+      itemSymbol,
       assetType || 'equity',
       notes?.trim() || null,
       addedPrice || null,
       nextOrder
     ]);
 
-    return NextResponse.json({ item: result[0] }, { status: 201 });
+    if (!result.length) {
+      const duplicate = await q('SELECT * FROM watchlist_items WHERE watchlist_id=$1 AND workspace_id=$2 AND symbol=$3', [watchlistId, session.workspaceId, itemSymbol]);
+      return NextResponse.json({item:duplicate[0],alreadyExists:true});
+    }
+    return NextResponse.json({ item: result[0], alreadyExists:false }, { status: 201 });
   } catch (error) {
     console.error('Error adding watchlist item:', error);
     return NextResponse.json({ error: 'Failed to add item' }, { status: 500 });

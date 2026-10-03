@@ -1,5 +1,9 @@
 'use client';
 
+import { atmStrike } from '@/lib/options/atmStrike';
+import { selectOptionsExpiry } from '@/lib/options/expiry';
+import { atmImpliedVol, quoteDaysToExpiry } from '@/lib/goldenEgg/optionsChain';
+import { hasTwoSidedQuote } from '@/lib/options/quoteQuality';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   OptionsContract,
@@ -17,12 +21,14 @@ export interface UseOptionsChainState {
   contracts: OptionsContract[];
   expirations: ExpirationMeta[];
   underlyingPrice: number;
+  spotObservation: OptionsChainResponse['spotObservation'];
   provider: string;
   /** realtime | previous_session | marks_only (see /api/options-chain). */
   quoteBasis: string;
   /** Session date the quotes belong to (YYYY-MM-DD) or ''. */
   asOfDate: string;
   sourceLabel: string;
+  providerIssues: string[];
 
   /* derived */
   strikeGroups: StrikeGroup[];
@@ -40,7 +46,7 @@ export interface UseOptionsChainState {
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
-function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGroup[] {
+export function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGroup[] {
   const map = new Map<number, { call?: OptionsContract; put?: OptionsContract }>();
   for (const c of contracts) {
     const entry = map.get(c.strike) || {};
@@ -57,7 +63,7 @@ function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGr
         strike,
         distFromSpot,
         distFromSpotAbs,
-        isAtm: Math.abs(distFromSpot) < 1.5,
+        isAtm: strike === atmStrike(contracts.map(c=>c.strike), spot),
         call,
         put,
       };
@@ -65,19 +71,20 @@ function buildStrikeGroups(contracts: OptionsContract[], spot: number): StrikeGr
     .sort((a, b) => a.strike - b.strike);
 }
 
-function buildBestStrikes(contracts: OptionsContract[], spot: number): BestStrike[] {
-  contracts = contracts.filter(c => Number.isFinite(c.bid) && Number.isFinite(c.ask) && c.bid > 0 && c.ask >= c.bid);
+export function buildBestStrikes(contracts: OptionsContract[], spot: number, expectedMove = 0): BestStrike[] {
+  const nearest = atmStrike(contracts.map(c=>c.strike),spot);
+  contracts = oiContextContracts(contracts,spot,expectedMove);
   const calls = contracts.filter((c) => c.type === 'call');
   const puts = contracts.filter((c) => c.type === 'put');
 
   const best: BestStrike[] = [];
 
   // ATM call — closest to 0.50 delta
-  const atmCall = [...calls].sort((a, b) => Math.abs(a.delta - 0.5) - Math.abs(b.delta - 0.5))[0];
+  const atmCall = calls.find(c=>c.strike===nearest);
   if (atmCall) best.push({ label: 'ATM Call', strike: atmCall.strike, type: 'call', reason: `Δ ${atmCall.delta.toFixed(2)}`, contract: atmCall });
 
   // ATM put — closest to -0.50 delta
-  const atmPut = [...puts].sort((a, b) => Math.abs(Math.abs(a.delta) - 0.5) - Math.abs(Math.abs(b.delta) - 0.5))[0];
+  const atmPut = puts.find(c=>c.strike===nearest);
   if (atmPut) best.push({ label: 'ATM Put', strike: atmPut.strike, type: 'put', reason: `Δ ${atmPut.delta.toFixed(2)}`, contract: atmPut });
 
   // 25Δ call
@@ -107,28 +114,20 @@ function buildBestStrikes(contracts: OptionsContract[], spot: number): BestStrik
   return best;
 }
 
-function buildIVMetrics(contracts: OptionsContract[], spot: number, dte: number): IVMetrics {
-  const atmContracts = contracts.filter((c) => {
-    const dist = Math.abs(c.strike - spot) / (spot || 1);
-    return dist < 0.05 && c.iv > 0;
-  });
-
-  const avgIV = atmContracts.length
-    ? atmContracts.reduce((s, c) => s + c.iv, 0) / atmContracts.length
-    : contracts.filter((c) => c.iv > 0).reduce((s, c) => s + c.iv, 0) / (contracts.filter((c) => c.iv > 0).length || 1);
-
-  const ivLevel: IVMetrics['ivLevel'] =
-    avgIV > 0.8 ? 'extreme' : avgIV > 0.5 ? 'high' : avgIV > 0.2 ? 'normal' : 'low';
-
-  const t = Math.max(dte, 1) / 365;
-  const expectedMoveAbs = spot * avgIV * Math.sqrt(t);
-  const expectedMovePct = avgIV * Math.sqrt(t) * 100;
-
-  return { avgIV, ivLevel, expectedMoveAbs, expectedMovePct };
+export function buildIVMetrics(contracts: OptionsContract[], spot: number, expiry: string, asOfDate: string): IVMetrics {
+  const avgIV = atmImpliedVol(contracts.map(c => ({strike:c.strike, implied_volatility:c.iv})), spot) ?? 0;
+  const days = quoteDaysToExpiry(expiry, asOfDate);
+  const expectedMoveAbs = days != null ? spot * avgIV * Math.sqrt(days / 365) : 0;
+  const nearest = atmStrike(contracts.map(c=>c.strike),spot);
+  const call = contracts.find(c=>c.strike===nearest && c.type==='call' && hasTwoSidedQuote(c));
+  const put = contracts.find(c=>c.strike===nearest && c.type==='put' && hasTwoSidedQuote(c));
+  const atmStraddleMid = call && put ? (call.bid+call.ask+put.bid+put.ask)/2 : null;
+  return {avgIV,ivLevel:'unavailable',expectedMoveAbs,expectedMovePct:spot>0?expectedMoveAbs/spot*100:0,atmStraddleMid};
 }
 
-function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
+export function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
   return groups
+    .map(g => ({...g, call:g.call && hasTwoSidedQuote(g.call)?g.call:undefined, put:g.put && hasTwoSidedQuote(g.put)?g.put:undefined}))
     .map((g) => ({
       strike: g.strike,
       callOI: g.call?.openInterest ?? 0,
@@ -140,14 +139,34 @@ function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
     .filter((r) => r.totalOI > 0);
 }
 
+/** A 422 still carries the expiry list, so a past or unlisted ?expiry= is not a dead end. */
+export function expirationsKeptOnError<T extends { date: string }>(status: number, json: { expirations?: T[] | null }): T[] {
+  if (status !== 422 || !Array.isArray(json?.expirations)) return [];
+  return json.expirations.filter((entry) => typeof entry?.date === 'string' && entry.date.length > 0);
+}
+
+/** When the requested expiry is missing from that list, pick the shared default again. */
+export function expiryAfterUnavailable(requested: string, dates: string[], nowMs = Date.now()): string | null {
+  if (!dates.length || (requested && dates.includes(requested))) return null;
+  return selectOptionsExpiry(dates, undefined, nowMs);
+}
+
+/** Shared OI/notable universe. No expected move available => explicitly labelled 10% spot band. */
+export function oiContextContracts(contracts:OptionsContract[],spot:number,expectedMove:number) {
+  const width=expectedMove>0?3*expectedMove:spot*.1;
+  return contracts.filter(c=>hasTwoSidedQuote(c)&&spot>0&&Math.abs(c.strike-spot)<=width);
+}
+
 /* ── Hook ─────────────────────────────────────────────────────────── */
 export function useOptionsChain(): UseOptionsChainState {
   const [contracts, setContracts] = useState<OptionsContract[]>([]);
   const [expirations, setExpirations] = useState<ExpirationMeta[]>([]);
   const [underlyingPrice, setUnderlyingPrice] = useState(0);
+  const [spotObservation, setSpotObservation] = useState<OptionsChainResponse['spotObservation']>(null);
   const [provider, setProvider] = useState('');
   const [quoteBasis, setQuoteBasis] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
+  const [providerIssues, setProviderIssues] = useState<string[]>([]);
   const [sourceLabel, setSourceLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,11 +185,13 @@ export function useOptionsChain(): UseOptionsChainState {
     setLoading(true);
     setContracts([]);
     setUnderlyingPrice(0);
+    setSpotObservation(null);
     setExpirations([]);
     setProvider('');
     setQuoteBasis('');
     setAsOfDate('');
     setSourceLabel('');
+    setProviderIssues([]);
     setLastFetchedAt(0);
     setError(null);
 
@@ -180,15 +201,20 @@ export function useOptionsChain(): UseOptionsChainState {
     fetch(`/api/options-chain?${params.toString()}`, { signal: ctrl.signal })
       .then(async (res) => {
         const json: OptionsChainResponse = await res.json();
+        if (ctrl.signal.aborted) return;
+        setProviderIssues(json.providerIssues ?? []);
         if (!res.ok || !json.success) {
+          const kept = expirationsKeptOnError(res.status, json);
+          if (kept.length) setExpirations(kept);
           throw new Error(json.error || `HTTP ${res.status}`);
         }
         if (ctrl.signal.aborted) return;
         const dates = [...new Set(json.contracts.map(c => c.expiration))].sort();
-        const chosen = expiration || dates.find(d => d >= new Date().toISOString().slice(0, 10));
+        const chosen = selectOptionsExpiry(dates, expiration);
         setContracts(json.contracts.filter(c => c.expiration === chosen));
         setExpirations(json.expirations);
         setUnderlyingPrice(json.underlyingPrice);
+        setSpotObservation(json.spotObservation ?? null);
         setProvider(json.provider);
         setQuoteBasis(json.quoteBasis ?? '');
         setAsOfDate(json.asOfDate ?? '');
@@ -197,7 +223,7 @@ export function useOptionsChain(): UseOptionsChainState {
         setError(null);
       })
       .catch((err) => {
-        if (err?.name === 'AbortError') return;
+        if (ctrl.signal.aborted || err?.name === 'AbortError') return;
         setError(err?.message || 'Failed to load options chain');
       })
       .finally(() => {
@@ -210,21 +236,22 @@ export function useOptionsChain(): UseOptionsChainState {
 
   // derived data
   const strikeGroups = buildStrikeGroups(contracts, underlyingPrice);
-  const bestStrikes = buildBestStrikes(contracts, underlyingPrice);
-  const nearestDte = expirations.find((e) =>
-    contracts.some((c) => c.expiration === e.date)
-  )?.dte ?? 30;
-  const ivMetrics = buildIVMetrics(contracts, underlyingPrice, nearestDte);
-  const oiHeatmap = buildOIHeatmap(strikeGroups);
+
+  const ivMetrics = buildIVMetrics(contracts, underlyingPrice, contracts[0]?.expiration ?? '', asOfDate);
+  const oiContracts = oiContextContracts(contracts, underlyingPrice, ivMetrics.expectedMoveAbs);
+  const bestStrikes = buildBestStrikes(contracts, underlyingPrice, ivMetrics.expectedMoveAbs);
+  const oiHeatmap = buildOIHeatmap(buildStrikeGroups(oiContracts, underlyingPrice));
 
   return {
     contracts,
     expirations,
     underlyingPrice,
+    spotObservation,
     provider,
     quoteBasis,
     asOfDate,
     sourceLabel,
+    providerIssues,
     strikeGroups,
     bestStrikes,
     ivMetrics,

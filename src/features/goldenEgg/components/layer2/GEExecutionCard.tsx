@@ -25,7 +25,7 @@ export default function GEExecutionCard({ scenario, assessment }: GEExecutionCar
               label="Reference Level"
               value={`${scenario.referenceLevel.type.toUpperCase()} ${scenario.referenceLevel.price?.toFixed(2) || ''}`}
             />
-            <GEKeyValueRow label="Invalidation Level" value={`${(scenario.invalidationLevel.price ?? 0).toFixed(2)} · ${scenario.invalidationLevel.logic}`} />
+            <GEKeyValueRow label="Invalidation Level" value={`${scenario.invalidationLevel.price?.toFixed(2) ?? 'Unavailable'} · ${scenario.invalidationLevel.logic}`} />
             <div>
               <GESectionHeader title="Key Levels" />
               <div className="mt-2">

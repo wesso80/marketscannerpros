@@ -138,7 +138,7 @@ export default function GoldenEggPage() {
       primaryBlocker: payload.layer1.primaryBlocker,
       referenceTrigger: payload.layer2.scenario.referenceTrigger,
       referenceLevelPrice: payload.layer2.scenario.referenceLevel.price,
-      invalidationPrice: payload.layer2.scenario.invalidationLevel.price,
+      invalidationPrice: payload.layer2.scenario.invalidationLevel.price ?? undefined,
       invalidationLogic: payload.layer2.scenario.invalidationLevel.logic,
       keyLevels: payload.layer2.setup.keyLevels,
       reactionZones: payload.layer2.scenario.reactionZones,

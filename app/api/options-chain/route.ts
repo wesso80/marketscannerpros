@@ -1,3 +1,6 @@
+import { selectOptionsExpiry } from '@/lib/options/expiry';
+import { optionSpotObservation, type OptionSpotObservation } from '@/lib/options/spotObservation';
+import { quoteSpreadPct } from '@/lib/options/contractCosts';
 /**
  * Options Chain API — /api/options-chain
  *
@@ -6,7 +9,8 @@
  *
  * Query params:
  *   symbol      — required ticker (e.g. AAPL)
- *   expiration  — optional ISO date filter (e.g. 2026-03-20)
+ *   expiration  — optional ISO date filter (e.g. 2026-03-20); `expiry` is accepted as an alias
+ *   expiries    — `all` returns every current or future expiry (Macro put/call). Omitted means the selected expiry only.
  *
  * Data source: shared chain (lib/options/chainCache) — Alpha Vantage REALTIME_OPTIONS (live bid/ask + greeks),
  * falling back to HISTORICAL_OPTIONS (previous session close) when the live chain has too few two-sided quotes.
@@ -70,13 +74,14 @@ export interface OptionsContract {
   rho: number;
   itm: boolean;
   spread: number;
-  spreadPct: number;
+  spreadPct: number | null;
 }
 
 export interface OptionsChainResponse {
   success: boolean;
   symbol: string;
   underlyingPrice: number;
+  spotObservation?: OptionSpotObservation | null;
   expirations: ExpirationMeta[];
   contracts: OptionsContract[];
   provider: string;
@@ -141,7 +146,7 @@ function normalise(raw: AVRaw): OptionsContract | null {
     rho: num(raw.rho),
     itm: raw.in_the_money?.toUpperCase() === 'TRUE',
     spread,
-    spreadPct: mid > 0 ? (spread / mid) * 100 : 0,
+    spreadPct: quoteSpreadPct({bid, ask}),
   };
 }
 
@@ -189,17 +194,23 @@ function computeExpirations(contracts: OptionsContract[]): ExpirationMeta[] {
  * Fetch the real underlying price via Alpha Vantage GLOBAL_QUOTE.
  * Falls back to inferring from the options chain if the quote fails.
  */
-async function fetchSpot(symbol: string): Promise<number> {
+async function fetchSpot(symbol: string): Promise<OptionSpotObservation | null> {
   try {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${AV_KEY}`;
     const data = await avFetch<Record<string, any>>(url, `GLOBAL_QUOTE ${symbol}`);
-    const gq = data?.['Global Quote'] ?? data?.['Global Quote - DATA DELAYED BY 15 MINUTES'];
-    const price = parseFloat(gq?.['05. price']);
-    if (price > 0) return price;
+    return optionSpotObservation(data);
   } catch (e) {
     console.warn('[options-chain] GLOBAL_QUOTE failed for', symbol, e);
   }
-  return 0;
+  return null;
+}
+
+/** `expiries=all` keeps every current/future contract. Every other caller stays on one expiry. */
+function responseContracts(eligible: OptionsContract[], expirationFilter: string | undefined, allExpiries: boolean): OptionsContract[] | null {
+  if (allExpiries) return eligible;
+  const selectedExpiry = selectOptionsExpiry(eligible.map((c) => c.expiration), expirationFilter);
+  if (!selectedExpiry) return null;
+  return eligible.filter((c) => c.expiration === selectedExpiry);
 }
 
 function inferSpot(contracts: OptionsContract[]): number {
@@ -228,7 +239,8 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const rawSymbol = searchParams.get('symbol');
-  const expirationFilter = searchParams.get('expiration') || undefined;
+  const expirationFilter = searchParams.get('expiration') || searchParams.get('expiry') || undefined;
+  const allExpiries = searchParams.get('expiries') === 'all';
 
   if (!rawSymbol) {
     return NextResponse.json({ success: false, error: 'Symbol is required' } as Partial<OptionsChainResponse>, { status: 400 });
@@ -243,23 +255,24 @@ export async function GET(request: NextRequest) {
   try {
     /* ── 1. Check cache ──────────────────────────────────────────── */
     // v2: entries written before the quote-source fix (FMV marks, no bid/ask) are ignored.
-    const cacheKey = `${CACHE_KEYS.optionsChain(symbol)}:v2`;
-    type CachedChain = { contracts: OptionsContract[]; provider: string; spot: number; ts: number; source: SourceMeta };
+    const cacheKey = `${CACHE_KEYS.optionsChain(symbol)}:v4`;
+    type CachedChain = { contracts: OptionsContract[]; provider: string; spot: number; spotObservation: OptionSpotObservation | null; ts: number; source: SourceMeta };
     const cached = await getCached<CachedChain>(cacheKey);
 
     if (cached && cached.contracts?.length) {
       const eligibleCachedContracts = cached.contracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
-      const contracts = expirationFilter
-        ? eligibleCachedContracts.filter((c) => c.expiration === expirationFilter)
-        : eligibleCachedContracts;
+      const contracts = responseContracts(eligibleCachedContracts, expirationFilter, allExpiries);
+      if (contracts === null) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(cached.contracts),providerIssues:[]},{status:422});
       if (contracts.length) {
         return NextResponse.json({
           success: true,
           symbol,
           underlyingPrice: cached.spot,
+          spotObservation: cached.spotObservation,
           expirations: computeExpirations(cached.contracts), // always full list
           contracts,
           provider: cached.provider,
+          providerIssues: [],
           ...cached.source,
           cachedAt: cached.ts,
         } satisfies OptionsChainResponse);
@@ -268,6 +281,7 @@ export async function GET(request: NextRequest) {
 
     /* ── 2. Fetch (shared raw-chain cache → Alpha Vantage) ───────── */
     const providerIssues: string[] = [];
+    const spotPromise = fetchSpot(symbol);
     const shared = await fetchSharedOptionsChain<AVRaw>(symbol, {
       apiKey: AV_KEY,
       fetchPayload: (fn, url) => avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`),
@@ -299,10 +313,11 @@ export async function GET(request: NextRequest) {
     }
 
     /* ── 3. Compute spot & cache ─────────────────────────────────── */
-    const spot = (await fetchSpot(symbol)) || inferSpot(allContracts);
+    const spotObservation = await spotPromise;
+    const spot = spotObservation?.price || inferSpot(allContracts);
     const ts = Date.now();
 
-    await setCached(cacheKey, { contracts: allContracts, provider: usedProvider, spot, ts, source } satisfies CachedChain, CACHE_TTL.optionsChain).catch(() => {});
+    await setCached(cacheKey, { contracts: allContracts, provider: usedProvider, spot, spotObservation, ts, source } satisfies CachedChain, CACHE_TTL.optionsChain).catch(() => {});
 
     /* ── 4. Filter + respond ─────────────────────────────────────── */
     const eligibleContracts = allContracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
@@ -311,6 +326,7 @@ export async function GET(request: NextRequest) {
         success: false,
         symbol,
         underlyingPrice: spot,
+      spotObservation,
         expirations: [],
         contracts: [],
         provider: usedProvider,
@@ -319,19 +335,19 @@ export async function GET(request: NextRequest) {
         error: 'Options provider returned no current or future expirations',
       } satisfies OptionsChainResponse, { status: 422 });
     }
-    const contracts = expirationFilter
-      ? eligibleContracts.filter((c) => c.expiration === expirationFilter)
-      : eligibleContracts;
+    const contracts = responseContracts(eligibleContracts, expirationFilter, allExpiries);
+    if (contracts === null) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(eligibleContracts),providerIssues},{status:422});
 
     return NextResponse.json({
       success: true,
       symbol,
       underlyingPrice: spot,
+      spotObservation,
       expirations: computeExpirations(eligibleContracts),
       contracts,
       provider: usedProvider,
       ...source,
-      ...(providerIssues.length ? { providerIssues } : {}),
+      providerIssues,
       cachedAt: ts,
     } satisfies OptionsChainResponse);
 

@@ -1,3 +1,4 @@
+import type { OptionSpotObservation } from '@/lib/options/spotObservation';
 /* ─── Options Terminal types ─────────────────────────────────────────── */
 
 export interface OptionsContract {
@@ -19,7 +20,7 @@ export interface OptionsContract {
   rho: number;
   itm: boolean;
   spread: number;
-  spreadPct: number;
+  spreadPct: number | null;
 }
 
 export interface ExpirationMeta {
@@ -35,6 +36,7 @@ export interface OptionsChainResponse {
   success: boolean;
   symbol: string;
   underlyingPrice: number;
+  spotObservation?: OptionSpotObservation | null;
   expirations: ExpirationMeta[];
   contracts: OptionsContract[];
   provider: string;
@@ -76,7 +78,8 @@ export interface BestStrike {
 
 export interface IVMetrics {
   avgIV: number;
-  ivLevel: 'low' | 'normal' | 'high' | 'extreme';
+  ivLevel: 'low' | 'normal' | 'high' | 'extreme' | 'unavailable';
+  atmStraddleMid?: number | null;
   expectedMoveAbs: number;
   expectedMovePct: number;
 }

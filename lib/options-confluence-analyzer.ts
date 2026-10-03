@@ -1,4 +1,8 @@
-import { optionEntryBlocker } from '@/lib/options/decisionGate';
+import { atr as measuredAtr } from '@/lib/indicators';
+import { atmStrike } from '@/lib/options/atmStrike';
+import { atmImpliedVol } from '@/lib/goldenEgg/optionsChain';
+import { selectOptionsExpiry } from '@/lib/options/expiry';
+import { optionEntryBlocker, datedResearchCandidates } from '@/lib/options/decisionGate';
 /**
  * Options Confluence Analyzer
  * 
@@ -434,6 +438,7 @@ export interface OptionsSetup {
   optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F';  // Derived from optionsQualityScore
   
   // Recommended strikes
+  researchCandidates?: { strikes: StrikeRecommendation[]; expiry: ExpirationRecommendation; asOf: string; entryTiming: string } | null;
   primaryStrike: StrikeRecommendation | null;
   alternativeStrikes: StrikeRecommendation[];
   
@@ -957,34 +962,19 @@ function getThisWeekFridayYMD(now: Date = new Date()): string {
  * Falls back to Math.round if no chain strikes available.
  */
 function findNearestChainStrike(targetPrice: number, availableStrikes: number[]): number {
-  if (!availableStrikes || availableStrikes.length === 0) {
-    // Fallback: round to nearest dollar
-    return Math.round(targetPrice);
-  }
-  
-  // Find the strike closest to target price
-  let nearest = availableStrikes[0];
-  let minDiff = Math.abs(targetPrice - nearest);
-  
-  for (const strike of availableStrikes) {
-    const diff = Math.abs(targetPrice - strike);
-    if (diff < minDiff) {
-      minDiff = diff;
-      nearest = strike;
-    }
-  }
-  
+  const nearest = atmStrike(availableStrikes,targetPrice);
+  if (nearest == null) throw new Error('No listed strikes available');
   return nearest;
 }
 
 function getMoneyness(
   strike: number,
   price: number,
-  type: 'call' | 'put'
+  type: 'call' | 'put',
+  availableStrikes: number[]
 ): 'ITM' | 'ATM' | 'OTM' {
   if (!price || price <= 0) return 'ATM';
-  const distance = Math.abs(strike - price) / price;
-  if (distance < 0.01) return 'ATM';
+  if (strike === atmStrike(availableStrikes,price)) return 'ATM';
   const isITM = type === 'call' ? strike < price : strike > price;
   return isITM ? 'ITM' : 'OTM';
 }
@@ -1110,33 +1100,12 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
       }
     }
     
-    // Use user-specified expiration if provided and valid, otherwise auto-select
-    let bestExpiry: string;
-    
-    if (targetExpiration && expiryMap[targetExpiration]) {
-      // User specified a valid expiration date
-      bestExpiry = targetExpiration;
-      console.log(`📅 Using user-specified expiration: ${bestExpiry} (${expiryMap[bestExpiry]} contracts)`);
-    } else {
-      // Auto-select: Find expiration closest to this Friday with the most contracts
-      const targetDateStr = getThisWeekFridayYMD();
-      
-      bestExpiry = Object.keys(expiryMap)[0];
-      let minDiff = Infinity;
-      
-      for (const expiry of Object.keys(expiryMap)) {
-        const diff = Math.abs(dateDiffDaysYMD(targetDateStr, expiry));
-        // Prefer closer dates, but also consider contract count
-        if (diff < minDiff || (diff === minDiff && expiryMap[expiry] > expiryMap[bestExpiry])) {
-          minDiff = diff;
-          bestExpiry = expiry;
-        }
-      }
-      
-      console.log(`📅 Available expirations: ${Object.keys(expiryMap).slice(0, 5).join(', ')}...`);
-      console.log(`📅 Target Friday: ${targetDateStr}, Auto-selected expiry: ${bestExpiry}`);
+    const bestExpiry = selectOptionsExpiry(Object.keys(expiryMap), targetExpiration);
+    if (!bestExpiry) {
+      console.warn(`Requested expiry ${targetExpiration || '(default)'} unavailable for ${symbol}; no substitute selected.`);
+      return null;
     }
-    
+
     // Filter to only this expiration
     const calls: AVOptionContract[] = [];
     const puts: AVOptionContract[] = [];
@@ -1492,28 +1461,9 @@ function analyzeIV(
   puts: AVOptionContract[],
   currentPrice: number
 ): IVAnalysis | null {
-  // Find ATM options (within 2% of current price) for accurate IV reading
-  const atmRange = currentPrice * 0.02;
-  const atmOptions = [...calls, ...puts].filter(opt => {
-    const strike = parseFloat(opt.strike || '0');
-    return Math.abs(strike - currentPrice) <= atmRange;
-  });
-  
-  // Calculate average IV from ATM options using normalized IV
-  let totalIV = 0;
-  let ivCount = 0;
-  for (const opt of atmOptions) {
-    // Use normalized IV (handles both 0.25 and 25 formats)
-    const iv = normalizeIV(opt.implied_volatility, 0);
-    if (iv > 0 && iv < 5) {  // Sanity check: IV between 0 and 500% (in decimal)
-      totalIV += iv;
-      ivCount++;
-    }
-  }
-  
-  if (ivCount === 0) return null;
-  const currentIV = totalIV / ivCount;
-  
+  const currentIV = atmImpliedVol([...calls,...puts].map(c=>({...c,implied_volatility:normalizeIV(c.implied_volatility,0)})),currentPrice);
+  if (currentIV == null) return null;
+
   // A current chain cannot establish a 52-week IV rank or percentile.
   return { currentIV, ivRank: null, ivRankHeuristic: null, ivPercentile: null,
     ivSignal: 'neutral', ivReason: 'Historical IV rank and percentile unavailable: no comparable IV history. Current ATM IV is descriptive only.' };
@@ -1609,18 +1559,9 @@ export function detectUnusualActivity(
     // Calculate premium from mark price when available, fallback to rough estimate
     const key = `${strike.strike}-${strike.type}`;
     const markPrice = markPriceMap.get(key);
-    let estimatedPremium: number;
-    
-    if (markPrice && markPrice > 0) {
-      // Use mark price: premium = mark * volume * 100 (contract multiplier)
-      estimatedPremium = markPrice * strike.volume * 100;
-    } else {
-      // Fallback: rough estimate (less reliable)
-      const distanceFromPrice = Math.abs(strike.strike - currentPrice);
-      const roughPremium = Math.max(0.50, currentPrice * 0.02 - distanceFromPrice * 0.1);
-      estimatedPremium = roughPremium * strike.volume * 100;
-    }
-    
+    if (!markPrice || markPrice <= 0) continue;
+    const estimatedPremium = markPrice * strike.volume * 100;
+
     if (strike.type === 'call') {
       bullishWeight += weight;
       callPremiumTotal += estimatedPremium;
@@ -1712,18 +1653,25 @@ function calculateExpectedMove(
 // PRO TRADER: SPECIFIC ENTRY/EXIT LEVELS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function calculateTradeLevels(
+export function calculateTradeLevels(
   confluenceResult: HierarchicalScanResult,
   direction: 'bullish' | 'bearish' | 'neutral',
   maxPainStrike: number | null
 ): TradeLevels | null {
   if (direction === 'neutral') return null;
   
+  const primary = confluenceResult.primaryTF.toUpperCase();
+  const key = primary === 'DAILY' || primary === 'D' ? '1D' : primary;
+  const candles = [...(confluenceResult.candlesByTf?.[key] ?? [])].sort((a,b)=>a.ts-b.ts);
+  if (candles.some(c=>![c.high,c.low,c.close].every(Number.isFinite)||c.high<c.low)) return null;
+  const atr = measuredAtr(candles.map(c=>({...c,volume:c.volume ?? 0,timestamp:new Date(c.ts)})));
+  if (atr == null || atr <= 0) return null;
+
   const { currentPrice, mid50Levels, clusters, decompression } = confluenceResult;
   const isLong = direction === 'bullish';
   
   // Entry Zone: Current price with small buffer based on volatility
-  const entryBuffer = currentPrice * 0.005;  // 0.5% buffer
+  const entryBuffer = atr * 0.25;  // Measured primary-timeframe ATR14
   const entryZone = {
     low: isLong ? currentPrice - entryBuffer : currentPrice,
     high: isLong ? currentPrice : currentPrice + entryBuffer,
@@ -1740,10 +1688,10 @@ function calculateTradeLevels(
   // Find a 50% level as stop reference
   const stopReference = opposingLevels.length > 0 
     ? opposingLevels[0].level 
-    : currentPrice * (isLong ? 0.98 : 1.02);
+    : currentPrice + (isLong ? -1.5 : 1.5) * atr;
   
   // Add buffer beyond the level
-  const stopBuffer = currentPrice * 0.003;  // 0.3% beyond level
+  const stopBuffer = atr * 0.15;
   const stopLoss = isLong 
     ? stopReference - stopBuffer 
     : stopReference + stopBuffer;
@@ -1752,7 +1700,7 @@ function calculateTradeLevels(
   // Targets: Based on 50% levels and clusters in direction of trade
   // Require targets to be at least 0.5% away from current price to avoid
   // near-zero R:R ratios (e.g. SPY target 1 cent from entry)
-  const minTargetDistance = currentPrice * 0.005;
+  const minTargetDistance = atr * 0.25;
   const targetLevels = mid50Levels
     .filter(l => {
       const dist = Math.abs(l.level - currentPrice);
@@ -1766,10 +1714,10 @@ function calculateTradeLevels(
   
   // Target 1: Nearest 50% level or cluster (must be meaningful distance away)
   const t1Level = targetLevels.length > 0 ? targetLevels[0] : null;
-  const t1Price = t1Level?.level || currentPrice * (isLong ? 1.02 : 0.98);
+  const t1Price = t1Level?.level || currentPrice + (isLong ? 2 : -2) * atr;
   const target1 = {
     price: t1Price,
-    reason: t1Level ? `${t1Level.tf} 50% level` : 'Default 2% target',
+    reason: t1Level ? `${t1Level.tf} 50% level` : 'Model target: 2 × measured ATR14',
     takeProfit: 50,  // Take 50% off at first target
   };
   
@@ -3514,7 +3462,7 @@ function selectStrikesFromConfluence(
         type: isCallDirection ? 'call' : 'put',
         reason: `Strike at 50% cluster (${clusters[0].tfs.join('/')} converging)`,
         distanceFromPrice: distPct,
-        moneyness: getMoneyness(clusterStrike, currentPrice, isCallDirection ? 'call' : 'put'),
+        moneyness: getMoneyness(clusterStrike, currentPrice, isCallDirection ? 'call' : 'put', availableStrikes),
         estimatedDelta: clusterGreeks.delta,
         confidenceScore: Math.min(100, prediction.confidence + clusters[0].tfs.length * 5),
         targetLevel: clusterLevel,
@@ -3536,7 +3484,7 @@ function selectStrikesFromConfluence(
         type: isCallDirection ? 'call' : 'put',
         reason: `Target: ${primaryDecomp.tf} 50% level (actively decompressing)`,
         distanceFromPrice: distPct,
-        moneyness: getMoneyness(decompStrike, currentPrice, isCallDirection ? 'call' : 'put'),
+        moneyness: getMoneyness(decompStrike, currentPrice, isCallDirection ? 'call' : 'put', availableStrikes),
         estimatedDelta: decompGreeks.delta,
         confidenceScore: prediction.confidence,
         targetLevel: primaryDecomp.level,
@@ -4289,6 +4237,10 @@ export class OptionsConfluenceAnalyzer {
       capGrade('C', 'Weak OI quality: options grade capped at C');
     }
 
+    const researchCandidates = datedResearchCandidates(allStrikes, primaryExpiration, {
+      freshness: dataQuality.freshness, asOf: dataQuality.lastUpdated,
+      quotedStrikes: quoteStrikes.length, hasCurrentIV: !!ivAnalysis,
+    });
     const contractBlocker = optionEntryBlocker({ quotedStrikes: quoteStrikes.length,
       freshness: dataQuality.freshness, hasExpiry: !!primaryExpiration, hasCurrentIV: !!ivAnalysis });
     if (contractBlocker) capGrade('C', contractBlocker);
@@ -4446,6 +4398,7 @@ export class OptionsConfluenceAnalyzer {
       signalStrength,
       tradeQuality: grade,
       qualityReasons,
+      researchCandidates,
       primaryStrike,
       alternativeStrikes,
       primaryExpiration,

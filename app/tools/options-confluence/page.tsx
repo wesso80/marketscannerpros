@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { withOptionsExpiry } from '@/lib/options/expiry';
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useUserTier, canAccessOptionsConfluence } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -389,6 +391,7 @@ interface OptionsSetup {
   // Options quality (separate from confluence grade)
   optionsQualityScore?: number;
   optionsGrade?: 'A+' | 'A' | 'B' | 'C' | 'F';
+  researchCandidates?: {strikes: StrikeRecommendation[]; expiry: ExpirationRecommendation; asOf: string; entryTiming: string} | null;
   primaryStrike: StrikeRecommendation | null;
   alternativeStrikes: StrikeRecommendation[];
   primaryExpiration: ExpirationRecommendation | null;
@@ -619,7 +622,9 @@ function scanModeFromOuterTimeframe(timeframe?: string): ScanModeType {
   return 'swing_1d';
 }
 
-export default function OptionsConfluenceScanner({ embeddedInTerminal = false, symbol: propSymbol, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; timeframe?: string } = {}) {
+export default function OptionsConfluenceScanner({ embeddedInTerminal = false, symbol: propSymbol, timeframe, expiry }: { embeddedInTerminal?: boolean; symbol?: string; timeframe?: string; expiry?:string } = {}) {
+  const params = useSearchParams(), router = useRouter(), pathname = usePathname();
+  const activeExpiry = expiry ?? params.get('expiry') ?? '';
   const { tier, isLoading: isTierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || "");
@@ -632,7 +637,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
   
   // Expiration date selection
   const [expirations, setExpirations] = useState<ExpirationOption[]>([]);
-  const [selectedExpiry, setSelectedExpiry] = useState<string>(''); // Empty = auto-select
+  const [selectedExpiry, setSelectedExpiry] = useState<string>(activeExpiry); // Empty = shared default
+  useEffect(()=>{setSelectedExpiry(activeExpiry);},[activeExpiry]);
   const [loadingExpirations, setLoadingExpirations] = useState(false);
   const [expirationsError, setExpirationsError] = useState<string | null>(null);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
@@ -1077,7 +1083,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     setLoadingExpirations(true);
     setExpirationsError(null);
     setExpirations([]);
-    setSelectedExpiry(''); // Reset to auto-select
+    setSelectedExpiry(activeExpiry); // Reset to auto-select
     
     try {
       const response = await fetch(`/api/options/expirations?symbol=${encodeURIComponent(sym.trim())}`);
@@ -1106,7 +1112,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     const normalized = symbol.trim().toUpperCase();
     if (!normalized) {
       setExpirations([]);
-      setSelectedExpiry('');
+      setSelectedExpiry(activeExpiry);
       setExpirationsError(null);
       setLastSymbolFetched('');
       return;
@@ -2424,7 +2430,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           {/* Expiration Date Selector */}
           <select
             value={selectedExpiry}
-            onChange={(e) => setSelectedExpiry(e.target.value)}
+            onChange={(e) => {setSelectedExpiry(e.target.value);router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(params.toString()),e.target.value)}`,{scroll:false});}}
             disabled={loadingExpirations || expirations.length === 0}
             aria-label="Expiration date"
             className={`rounded-xl border bg-[var(--msp-panel)] px-4 py-3 text-[0.9rem] font-semibold ${expirations.length > 0 ? 'cursor-pointer border-[var(--msp-border-strong)] text-[var(--msp-text)]' : 'cursor-not-allowed border-[var(--msp-border)] text-[var(--msp-text-faint)]'}`}
@@ -2487,6 +2493,11 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           <section aria-label="Options evidence blocked" className="grid gap-4 rounded-xl border border-amber-500/40 bg-slate-900 p-5">
             <h2 className="text-xl font-bold text-amber-300">{result.symbol} · WAIT — options evidence incomplete</h2>
             <p>{result.entryTiming.reason || 'A usable contract, expiry and verified quote time are required.'}</p>
+            {result.researchCandidates && <div className="rounded border border-slate-600 p-3">
+              <h3 className="font-semibold">Research candidates · as of {result.researchCandidates.asOf} · expiry {result.researchCandidates.expiry.expirationDate}</h3>
+              <p>{result.researchCandidates.entryTiming}. Dated research only; no entry permission.</p>
+              <ul>{result.researchCandidates.strikes.map((c,i)=><li key={i}>{c.strike} {c.type.toUpperCase()} — {c.reason}</li>)}</ul>
+            </div>}
             <dl className="grid gap-3 sm:grid-cols-2">
               <div><dt>Underlying reference</dt><dd>${result.currentPrice.toFixed(2)}</dd></div>
               <div><dt>Data state</dt><dd>{dataHealth}</dd></div>

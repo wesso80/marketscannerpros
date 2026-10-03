@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import React, { useState, useCallback } from 'react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
@@ -156,7 +157,9 @@ function skewLabel(signal: string): { label: string; color: string } {
 
 /* ── Page ── */
 
-export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: propSymbol }: { embeddedInTerminal?: boolean; symbol?: string } = {}) {
+export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: propSymbol, expiry }: { embeddedInTerminal?: boolean; symbol?: string; expiry?:string } = {}) {
+  const params = useSearchParams();
+  const activeExpiry = expiry ?? params.get('expiry') ?? '';
   const { tier } = useUserTier();
   const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || 'SPY');
 
@@ -174,7 +177,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
     setError(null);
     setData(null);
     try {
-      const res = await fetch(`/api/options-flow?symbol=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`/api/options-flow?symbol=${encodeURIComponent(trimmed)}${activeExpiry ? `&expiry=${encodeURIComponent(activeExpiry)}` : ''}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Request failed (${res.status})`);
@@ -187,7 +190,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
     } finally {
       setLoading(false);
     }
-  }, [symbol]);
+  }, [symbol, activeExpiry]);
 
   if (!canAccessOptionsTerminal(tier)) {
     return <UpgradeGate requiredTier="pro" feature="Options Flow Intelligence" />;
