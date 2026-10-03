@@ -1,5 +1,6 @@
 import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
+import {cryptoMarketsExitsPaused,cryptoMarketsPaused,pausedCryptoMarketsBody} from '@/lib/admin/cryptoMarketsPause';
 import {adminDiscoveryOnly,discoveryOnlyAction} from '@/lib/admin/discoveryOnly';
 import {runNewsJevDailyOnce} from '@/lib/admin/equityNewsJev';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
@@ -60,6 +61,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
   if(adminDiscoveryOnly()){
+    if(cryptoMarketsPaused()){
+      // Spend paths return 200 so the Render cron does not retry. Exit checks stay, unless the second flag is on.
+      const exitsPaused=cryptoMarketsExitsPaused();
+      const monitoring=exitsPaused?{ok:true,paused:true,skipped:true,reason:'crypto_markets_pause_exits'}:await runCryptoPaperAll(true).catch(()=>({ok:false,error:'Crypto exit monitoring failed'}));
+      const baseMonitoring=exitsPaused?{ok:true,paused:true,skipped:true,reason:'crypto_markets_pause_exits'}:await runCryptoBaseSleeveAll(true).catch(()=>({ok:false,error:'Base-breakout exit monitoring failed'}));
+      const skipped=pausedCryptoMarketsBody();
+      const calibrationRedis=getRedis();
+      // Equity news verification piggybacks on this cron while the evening job is discovery-skipped. It is not a Crypto Markets scan.
+      const newsJev=calibrationRedis&&discoveryOnlyAction('/api/cron/evening-packet')==='skip_job'?await runNewsJevDailyOnce(calibrationRedis).catch(()=>({ok:false,error:'News verification failed'})):{ok:true,skipped:true,reason:'Evening cron handles it'};
+      return NextResponse.json({...skipped,exitsPaused,monitoring,scanning:skipped,paper:skipped,operationalAlerts:{ok:true,paused:true,skipped:true,reason:'crypto_markets_paused'},calibration:skipped,newsJev,marketData:skipped,newListings:skipped,history:{...skipped,note:'Scheduled history batch was not called. Stored history rows are unchanged.'},breakoutVerdicts:skipped,baseSleeve:{monitoring:baseMonitoring,paper:skipped}},{status:200});
+    }
     // Exit-only work runs before any potentially slow/failed discovery request.
     const monitoring=await runCryptoPaperAll(true).catch(()=>({ok:false,error:'Crypto exit monitoring failed'}));
     const baseMonitoring=await runCryptoBaseSleeveAll(true).catch(()=>({ok:false,error:'Base-breakout exit monitoring failed'}));
@@ -85,12 +97,19 @@ export async function POST(req: NextRequest) {
     const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
     return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history,breakoutVerdicts,baseSleeve:{monitoring:baseMonitoring,paper:basePaper}},{status:ok?200:503});
   }
-  const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
-  const calibrationRedis=getRedis();
-  if(calibrationRedis)await runDailyCalibration(calibrationRedis).catch(()=>undefined);
-  await runCryptoMarketData().catch(()=>undefined);
-  await runNewListings().catch(()=>undefined);
-  await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>undefined);
+  if(cryptoMarketsPaused()){
+    if(!cryptoMarketsExitsPaused()){
+      await runCryptoPaperAll(true).catch(()=>undefined);
+      await runCryptoBaseSleeveAll(true).catch(()=>undefined);
+    }
+  }else{
+    await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
+    const calibrationRedis=getRedis();
+    if(calibrationRedis)await runDailyCalibration(calibrationRedis).catch(()=>undefined);
+    await runCryptoMarketData().catch(()=>undefined);
+    await runNewListings().catch(()=>undefined);
+    await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>undefined);
+  }
   const started = Date.now();
   try {
     let rows: Array<{ workspace_id: string }> = [];

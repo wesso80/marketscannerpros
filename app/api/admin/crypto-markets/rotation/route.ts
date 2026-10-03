@@ -1,6 +1,7 @@
 import {NextResponse} from 'next/server';
 import {requireAdmin} from '@/lib/adminAuth';
 import {savedRotation,savedRotationResult,startRotation,runRotationBatch,computeRotation,type RotationState,type RotationResult} from '@/lib/admin/cryptoRotationData';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 import {toCsv} from '@/lib/admin/cryptoTradeLog';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=180;
 /** Admin-only research view; trades are sent only as CSV to keep the page payload small. */
@@ -22,6 +23,7 @@ export async function GET(req:Request){
 export async function POST(req:Request){
  if(!(await requireAdmin(req)).ok)return NextResponse.json({error:'Unauthorized'},{status:403});
  const body=await req.json().catch(()=>null);if(!['start','next','compute'].includes(body?.action))return NextResponse.json({error:'Valid rotation action required'},{status:400});
+ if(cryptoMarketsPaused()&&body.action!=='compute')return pausedCryptoMarketsResponse();
  try{
   if(body.action==='start')return NextResponse.json(view(await startRotation(),null));
   if(body.action==='compute'){const r=await computeRotation();return NextResponse.json(view(await savedRotation(),r));}

@@ -1,4 +1,5 @@
 import {cryptoAutomationState,setCryptoAutomation} from '@/lib/admin/cryptoAutomation';
+import {cryptoMarketsPaused,pausedCryptoMarketsBody} from '@/lib/admin/cryptoMarketsPause';
 import {NextResponse} from 'next/server';
 import {requireAdmin} from '@/lib/adminAuth';
 import {cryptoPaperState,setCryptoPaperActive,runCryptoPaperCycle,cryptoPaperTradeLog} from '@/lib/admin/cryptoPaper';
@@ -23,7 +24,11 @@ export async function POST(req:Request){
  try{
   if(body.action.startsWith('auto_')){
    await setCryptoAutomation(body.action==='auto_enable');
-   return NextResponse.json({simulated:true,automation:await cryptoAutomationState(),...await fullState(auth.workspaceId)});
+   return NextResponse.json({simulated:true,automation:await cryptoAutomationState(),...await fullState(auth.workspaceId),...(cryptoMarketsPaused()?pausedCryptoMarketsBody():{})});
+  }
+  if(cryptoMarketsPaused()&&(body.action==='cycle'||body.action==='enable')){
+   if(body.action==='enable'){await setCryptoPaperActive(auth.workspaceId,true);try{await ensureBaseSleeve(auth.workspaceId,true);}catch{}}
+   return NextResponse.json({simulated:true,...pausedCryptoMarketsBody(),cycle:{paused:true,skipped:true},baseCycle:{paused:true,skipped:true},automation:await cryptoAutomationState(),...await fullState(auth.workspaceId)});
   }
   if(body.action!=='cycle'){await setCryptoPaperActive(auth.workspaceId,body.action==='enable');try{await ensureBaseSleeve(auth.workspaceId,body.action==='enable');}catch{}}
   const cycle=body.action==='pause'?null:await runCryptoPaperCycle(auth.workspaceId);

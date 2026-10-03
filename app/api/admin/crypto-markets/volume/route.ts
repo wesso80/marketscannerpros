@@ -2,6 +2,7 @@ import {NextResponse} from 'next/server';
 import {requireAdmin} from '@/lib/adminAuth';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 import {selectCoinbasePair,fetchExchangeVolume,type ExchangeVolume} from '@/lib/admin/cryptoExchangeVolume';
 export const runtime='nodejs';
@@ -9,6 +10,7 @@ export const dynamic='force-dynamic';
 const KEY='admin:crypto-markets:volume:v1';
 export async function POST(req:Request){
   if(!(await requireAdmin(req)).ok)return NextResponse.json({error:'Unauthorized'},{status:403});
+  if(cryptoMarketsPaused())return pausedCryptoMarketsResponse();
   let id:string;try{id=(await req.json()).coinId;if(typeof id!=='string'||!/^[a-z0-9-]{1,120}$/.test(id))throw Error();}catch{return NextResponse.json({error:'Valid discovered coin ID required'},{status:400});}
   if(!isAdminCryptoEnabled())return NextResponse.json({error:'Admin crypto requests are paused'},{status:409});
   try{

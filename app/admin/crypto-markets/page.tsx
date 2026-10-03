@@ -31,6 +31,7 @@ type Snapshot = { startedAt:string; finishedAt:string; requests:number; partial:
 const pct = (n:number|null) => n === null ? 'Unavailable' : `${n.toFixed(2)}%`;
 export default function CryptoMarketsPage() {
   const [data,setData] = useState<Snapshot|null>(null), [error,setError] = useState('');
+  const [pauseMessage,setPauseMessage] = useState<string|null>(null);
   const [busy,setBusy] = useState(false), [query,setQuery] = useState('');
   const [now,setNow] = useState(Date.now());
   const [refreshVersion,setRefreshVersion] = useState(0);
@@ -60,6 +61,9 @@ export default function CryptoMarketsPage() {
     try {
       const res = await fetch('/api/admin/crypto-discovery',{method,cache:'no-store'});
       const body = await res.json();
+      if (typeof body.pauseMessage === 'string') setPauseMessage(body.pauseMessage);
+      else if (body.paused && typeof body.message === 'string') setPauseMessage(body.message);
+      if (body.paused && method === 'POST') return;
       if (!res.ok) throw new Error(body.error || 'Discovery request failed');
       setData(body.snapshot); setResearchOpen(false);setReview(null);setChart(null);setBase(null); setNow(Date.now());
     } catch(e) {setError(e instanceof Error ? e.message : 'Discovery unavailable');}
@@ -77,6 +81,7 @@ export default function CryptoMarketsPage() {
   return <div className="space-y-5 p-6 text-slate-100">
     <h1 className="text-2xl font-bold">Crypto Markets</h1>
     <p>SIMULATED paper trading only; no real orders.</p>
+    {pauseMessage && <p role="status" className="rounded border border-amber-500 bg-amber-950/40 px-3 py-2 text-amber-100">Paused. {pauseMessage}</p>}
     {error && tab!=='watchlists' && <p role="alert" className="text-red-300">{error}</p>}
     <div className="flex flex-wrap gap-3">
       <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>

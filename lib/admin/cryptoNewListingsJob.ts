@@ -1,6 +1,7 @@
 import {getRedis} from '@/lib/redis';
 import {getNewListings,getCoinTickers,getCoinDetail,getOnchainNetworksPage,getTopTokenHolders,getApiUsage,type OnchainNetwork} from '@/lib/coingecko';
 import {cgBudgetStatus} from './cgCredits';
+import {cryptoMarketsPaused} from './cryptoMarketsPause';
 import {NEW_LISTINGS,assessTickers,networkMap,pickHolderContract,assessHolders,type TickerCheck,type HolderCheck} from './cryptoNewListings';
 const K='admin:crypto-markets:new-listings:v1',D=86400000;
 export type Listing={id:string;symbol:string;name:string;activatedAt:string|null;firstSeenAt:string;source:'coins/list/new'|'webhook cg.coin.listed';
@@ -31,6 +32,7 @@ async function enrich(l:Listing,map:()=>Promise<Record<string,string>>,at:string
  * tickers are re-checked once after 24h, at most 10 per run.
  */
 export async function runNewListings(now=Date.now(),force=false){
+ if(cryptoMarketsPaused())return {ok:true,paused:true,skipped:true,reason:'crypto_markets_paused'};
  const redis=getRedis();if(!redis)return {ok:false,error:'Storage unavailable'};
  const s=await load(),at=new Date(now).toISOString();
  if(!force&&s.lastRunAt&&now-Date.parse(s.lastRunAt)<(NEW_LISTINGS.everyMinutes-2)*60000)return {ok:true,skipped:'Not due'};
