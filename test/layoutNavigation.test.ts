@@ -9,6 +9,9 @@ it('has the five layout destinations in order',()=>expect(primaryNavTools.map(({
 it('lands both login paths and checkout on Overview',()=>{
  expect(read('app/auth/page.tsx').match(/router\.(?:push|replace)\(['"]\/tools\/command-center['"]\)/g)).toHaveLength(2);
  expect(read('app/after-checkout/page.tsx')).toContain('router.replace("/tools/command-center")');
+ const verify=read('app/auth/verify/page.tsx');
+ expect(verify).toContain('router.push("/tools/command-center")');
+ expect(verify).not.toMatch(/\/tools\/(?:scanner|explorer)/);
 });
 it('keeps internal admin routes out of all public navigation and catalogues',()=>{
  for(const p of ['components/Header.tsx','components/ToolsNavBar.tsx','components/MobileNav.tsx','components/Footer.tsx','lib/toolCatalog.ts','lib/toolWorkflows.ts','app/sitemap.ts'])expect(prohibited(read(p)),p).toBe(false);
