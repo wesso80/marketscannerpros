@@ -10,6 +10,7 @@ interface Props {
 }
 
 const LEVEL_COLORS: Record<IVMetrics['ivLevel'], string> = {
+  unavailable: 'var(--msp-text-muted)',
   low: 'var(--msp-bull)',
   normal: 'var(--msp-accent)',
   high: 'var(--msp-warn)',
@@ -17,6 +18,7 @@ const LEVEL_COLORS: Record<IVMetrics['ivLevel'], string> = {
 };
 
 const LEVEL_LABELS: Record<IVMetrics['ivLevel'], string> = {
+  unavailable: 'History unavailable',
   low: 'LOW',
   normal: 'NORMAL',
   high: 'HIGH',

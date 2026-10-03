@@ -1,5 +1,7 @@
 'use client';
 
+import { atmImpliedVol, quoteDaysToExpiry } from '@/lib/goldenEgg/optionsChain';
+import { hasTwoSidedQuote } from '@/lib/options/quoteQuality';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   OptionsContract,
@@ -107,24 +109,15 @@ function buildBestStrikes(contracts: OptionsContract[], spot: number): BestStrik
   return best;
 }
 
-function buildIVMetrics(contracts: OptionsContract[], spot: number, dte: number): IVMetrics {
-  const atmContracts = contracts.filter((c) => {
-    const dist = Math.abs(c.strike - spot) / (spot || 1);
-    return dist < 0.05 && c.iv > 0;
-  });
-
-  const avgIV = atmContracts.length
-    ? atmContracts.reduce((s, c) => s + c.iv, 0) / atmContracts.length
-    : contracts.filter((c) => c.iv > 0).reduce((s, c) => s + c.iv, 0) / (contracts.filter((c) => c.iv > 0).length || 1);
-
-  const ivLevel: IVMetrics['ivLevel'] =
-    avgIV > 0.8 ? 'extreme' : avgIV > 0.5 ? 'high' : avgIV > 0.2 ? 'normal' : 'low';
-
-  const t = Math.max(dte, 1) / 365;
-  const expectedMoveAbs = spot * avgIV * Math.sqrt(t);
-  const expectedMovePct = avgIV * Math.sqrt(t) * 100;
-
-  return { avgIV, ivLevel, expectedMoveAbs, expectedMovePct };
+export function buildIVMetrics(contracts: OptionsContract[], spot: number, expiry: string, asOfDate: string): IVMetrics {
+  const avgIV = atmImpliedVol(contracts.map(c => ({strike:c.strike, implied_volatility:c.iv})), spot) ?? 0;
+  const days = quoteDaysToExpiry(expiry, asOfDate);
+  const expectedMoveAbs = days != null ? spot * avgIV * Math.sqrt(days / 365) : 0;
+  const nearest = [...contracts].sort((a,b)=>Math.abs(a.strike-spot)-Math.abs(b.strike-spot) || a.strike-b.strike)[0]?.strike;
+  const call = contracts.find(c=>c.strike===nearest && c.type==='call' && hasTwoSidedQuote(c));
+  const put = contracts.find(c=>c.strike===nearest && c.type==='put' && hasTwoSidedQuote(c));
+  const atmStraddleMid = call && put ? (call.bid+call.ask+put.bid+put.ask)/2 : null;
+  return {avgIV,ivLevel:'unavailable',expectedMoveAbs,expectedMovePct:spot>0?expectedMoveAbs/spot*100:0,atmStraddleMid};
 }
 
 function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
@@ -211,10 +204,8 @@ export function useOptionsChain(): UseOptionsChainState {
   // derived data
   const strikeGroups = buildStrikeGroups(contracts, underlyingPrice);
   const bestStrikes = buildBestStrikes(contracts, underlyingPrice);
-  const nearestDte = expirations.find((e) =>
-    contracts.some((c) => c.expiration === e.date)
-  )?.dte ?? 30;
-  const ivMetrics = buildIVMetrics(contracts, underlyingPrice, nearestDte);
+
+  const ivMetrics = buildIVMetrics(contracts, underlyingPrice, contracts[0]?.expiration ?? '', asOfDate);
   const oiHeatmap = buildOIHeatmap(strikeGroups);
 
   return {

@@ -228,7 +228,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     },
     {
       label: 'IV Context',
-      value: chain.ivMetrics.ivLevel.toUpperCase(),
+      value: 'IV history unavailable',
       status: chain.ivMetrics.avgIV > 0 ? 'neutral' as const : 'missing' as const,
       detail: chain.ivMetrics.avgIV > 0 ? `ATM IV ${(chain.ivMetrics.avgIV * 100).toFixed(1)}%, expected move ${chain.ivMetrics.expectedMovePct.toFixed(1)}%.` : 'IV metrics unavailable until contracts load.',
     },
@@ -746,20 +746,17 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
           <div className="col-span-12 xl:col-span-4">
             <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'nearest listed expiry'}</span>}>
               <div className="grid grid-cols-2 gap-4">
-                <MiniStat label="ATM IV" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : '—'} />
-                <MiniStat label="Expected Move" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : '—'} />
-                <MiniStat label="IV Level" value={chain.ivMetrics.ivLevel.toUpperCase()} />
+                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : '—'} />
+                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : '—'} />
+                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Unavailable'} />
                 <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : '—'} />
               </div>
 
               <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <div className="text-xs text-zinc-400">Desk Read</div>
                 <div className="mt-1 text-sm font-semibold">
-                  {chain.ivMetrics.ivLevel === 'high' || chain.ivMetrics.ivLevel === 'extreme'
-                    ? 'Elevated IV: defined-risk structures may deserve closer review than naked long premium exposure.'
-                    : chain.ivMetrics.ivLevel === 'low'
-                      ? 'Low IV: debit structures cost less relative to history, but still need a validated directional thesis.'
-                      : 'Normal IV: balanced environment. Compare debit spreads and defined-risk structures against liquidity.'}
+                  IV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: {chain.asOfDate || 'unavailable'}.
+
                 </div>
               </div>
             </Card>
