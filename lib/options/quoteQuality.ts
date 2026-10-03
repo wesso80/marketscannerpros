@@ -8,7 +8,9 @@ export function quoteDateLabel(basis: string, date: string): string {
   const day = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '');
   return basis === 'realtime' ? `realtime quotes (${day})` : basis === 'previous_session' ? `last session (${day})` : `marks only (${day})`;
 }
-/** Coverage denominator is the +/-10% spot band, including unquoted contracts in that band. */
+/** Coverage denominator is the +/-10% spot band, including unquoted contracts in that band.
+ *  AAPL near-the-money coverage on the reviewed chain is about 83% in this 10% band (43 of 52).
+ *  The 96% figure was a tighter 5% band, which this chip does not use. */
 export function chainQuality<T extends {strike:number;bid:number;ask:number}>(contracts:T[],spot:number,basis:string,date:string,nowMs=Date.now()) {
   const near=contracts.filter(c=>spot>0 && Math.abs(c.strike-spot)/spot<=.1);
   const quoted=near.filter(hasTwoSidedQuote);
