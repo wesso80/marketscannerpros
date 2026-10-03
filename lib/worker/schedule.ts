@@ -21,6 +21,7 @@ export const SCHEDULE:ScheduledJob[]=[
  {name:'alerts-signal-check',schedule:'3-59/10 * * * *',kind:'http',path:'/api/alerts/signal-check',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  {name:'alerts-smart-check',schedule:'1-59/5 * * * *',kind:'http',path:'/api/alerts/smart-check',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  {name:'alerts-strategy-check',schedule:'4,19,34,49 * * * *',kind:'http',path:'/api/alerts/strategy-check',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
+ {name:'public-oi-hourly',schedule:'17 * * * *',kind:'http',path:'/api/jobs/snapshot-open-interest',timeoutMs:120_000,retries:1,retryDelayMs:15_000},
  // Daily jobs
  {name:'daily-market-focus',schedule:'0 21 * * *',kind:'http',path:'/api/jobs/generate-market-focus',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  {name:'daily-scan',schedule:'30 21 * * *',kind:'http',path:'/api/jobs/scan-daily?assets=equity',timeoutMs:290_000,retries:3,retryDelayMs:15_000},

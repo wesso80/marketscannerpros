@@ -15,9 +15,9 @@ interface OIData {
   total: {
     openInterest: number;
     formatted: string;
-    btcDominance: string;
-    ethDominance: string;
-    altDominance: string;
+    btcOiShare: string;
+    ethOiShare: string;
+    altOiShare: string;
     change24h?: number | null;
   };
   btc: {
@@ -243,7 +243,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           </div>
           <div className="text-right text-xs">
             <div className="flex items-center justify-end gap-1">
-              <span className="text-amber-400">BTC: {data.total.btcDominance}%</span>
+              <span className="text-amber-400">BTC: {data.total.btcOiShare}%</span>
               {data.btc?.change24h != null && (
                 <span className={`${getChangeColor(data.btc.change24h)}`}>
                   ({formatChange(data.btc.change24h)})
@@ -251,7 +251,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
               )}
             </div>
             <div className="flex items-center justify-end gap-1">
-              <span className="text-blue-400">ETH: {data.total.ethDominance}%</span>
+              <span className="text-blue-400">ETH: {data.total.ethOiShare}%</span>
               {data.eth?.change24h != null && (
                 <span className={`${getChangeColor(data.eth.change24h)}`}>
                   ({formatChange(data.eth.change24h)})
@@ -350,32 +350,32 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
         <div className="h-3 bg-slate-700 rounded-full overflow-hidden flex">
           <div
             className="bg-amber-500 transition-all"
-            style={{ width: `${data.total.btcDominance}%` }}
-            title={`BTC: ${data.total.btcDominance}%`}
+            style={{ width: `${data.total.btcOiShare}%` }}
+            title={`BTC: ${data.total.btcOiShare}%`}
           />
           <div
             className="bg-blue-500 transition-all"
-            style={{ width: `${data.total.ethDominance}%` }}
-            title={`ETH: ${data.total.ethDominance}%`}
+            style={{ width: `${data.total.ethOiShare}%` }}
+            title={`ETH: ${data.total.ethOiShare}%`}
           />
           <div
             className="bg-purple-500 transition-all"
-            style={{ width: `${data.total.altDominance}%` }}
-            title={`Alts: ${data.total.altDominance}%`}
+            style={{ width: `${data.total.altOiShare}%` }}
+            title={`Alts: ${data.total.altOiShare}%`}
           />
         </div>
         <div className="flex justify-center gap-4 text-xs mt-2">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span className="text-amber-400">BTC {data.total.btcDominance}%</span>
+            <span className="text-amber-400">BTC {data.total.btcOiShare}%</span>
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span className="text-blue-400">ETH {data.total.ethDominance}%</span>
+            <span className="text-blue-400">ETH {data.total.ethOiShare}%</span>
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-            <span className="text-purple-400">Alts {data.total.altDominance}%</span>
+            <span className="text-purple-400">Alts {data.total.altOiShare}%</span>
           </span>
         </div>
       </div>
