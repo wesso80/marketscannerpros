@@ -19,3 +19,14 @@ it('pause does not request market data',async()=>{
  await POST(request('pause'));expect(setCryptoPaperActive).toHaveBeenCalledWith('owner',false);expect(runCryptoPaperCycle).not.toHaveBeenCalled();expect(ensureBaseSleeve).toHaveBeenCalledWith('owner',false);expect(runCryptoBaseSleeveCycle).not.toHaveBeenCalled();
 });
 it('rejects unknown actions',async()=>{expect((await POST(request('reset'))).status).toBe(400);expect(setCryptoPaperActive).not.toHaveBeenCalled();});
+it('kill switch enables the ledger without running an entry or exit cycle',async()=>{
+ vi.stubEnv('CRYPTO_MARKETS_PAUSED','true');
+ const res=await POST(request('enable'));
+ expect(res.status).toBe(200);
+ expect(await res.json()).toMatchObject({paused:true,skipped:true});
+ expect(setCryptoPaperActive).toHaveBeenCalledWith('owner',true);
+ expect(ensureBaseSleeve).toHaveBeenCalledWith('owner',true);
+ expect(runCryptoPaperCycle).not.toHaveBeenCalled();
+ expect(runCryptoBaseSleeveCycle).not.toHaveBeenCalled();
+ vi.unstubAllEnvs();
+});

@@ -20,6 +20,9 @@ services:
       # Read-only bot key for GET /api/admin/crypto-markets/summary. Set the value on Render; never commit it.
       - key: CRYPTO_SUMMARY_KEY
         sync: false
+      # Crypto Markets kill switch. Leave unset (or false). Set true on this web service only to skip
+      # scans, CoinGecko refresh, Jev stamps, setup emails, and paper entries. Paper exit checks keep
+      # running. Set CRYPTO_MARKETS_PAUSE_EXITS=true as well to freeze those checks. Do not commit true.
 
   # ==========================================================================
   # Background Worker: Data Ingestion (Alpha Vantage) + job scheduler

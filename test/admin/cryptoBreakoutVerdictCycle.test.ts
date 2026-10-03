@@ -45,6 +45,36 @@ it('does not stamp before auth, and a scan failure still attempts the advisory s
  expect(runCryptoBaseSleeveAll).toHaveBeenCalledTimes(1);
  expect(saveBreakoutVerdicts).toHaveBeenCalledTimes(1);
 });
+it('pauses scans and CoinGecko work with HTTP 200 while exit checks still run',async()=>{
+ vi.stubEnv('CRYPTO_MARKETS_PAUSED','true');
+ const res=await call();
+ expect(res.status).toBe(200);
+ expect(await res.json()).toMatchObject({ok:true,paused:true,skipped:true,reason:'crypto_markets_paused',exitsPaused:false});
+ expect(runCryptoAutomation).not.toHaveBeenCalled();
+ expect(saveBreakoutVerdicts).not.toHaveBeenCalled();
+ expect(runCryptoPaperAll).toHaveBeenCalledTimes(1);
+ expect(runCryptoPaperAll).toHaveBeenCalledWith(true);
+ expect(runCryptoBaseSleeveAll).toHaveBeenCalledTimes(1);
+ expect(runCryptoBaseSleeveAll).toHaveBeenCalledWith(true);
+});
+it('CRYPTO_MARKETS_PAUSE_EXITS does nothing unless the main switch is on',async()=>{
+ vi.stubEnv('CRYPTO_MARKETS_PAUSE_EXITS','true');
+ const alone=await call();
+ expect(alone.status).toBe(200);
+ expect(runCryptoAutomation).toHaveBeenCalledTimes(1);
+ expect(runCryptoPaperAll).toHaveBeenCalled();
+});
+it('both flags skip paper exit checks as well as scans',async()=>{
+ vi.stubEnv('CRYPTO_MARKETS_PAUSED','true');
+ vi.stubEnv('CRYPTO_MARKETS_PAUSE_EXITS','true');
+ const both=await call();
+ expect(both.status).toBe(200);
+ expect((await both.json()).exitsPaused).toBe(true);
+ expect(runCryptoPaperAll).not.toHaveBeenCalled();
+ expect(runCryptoBaseSleeveAll).not.toHaveBeenCalled();
+ expect(runCryptoAutomation).not.toHaveBeenCalled();
+ expect(saveBreakoutVerdicts).not.toHaveBeenCalled();
+});
 it('keeps the hook inside the existing cron and out of execution modules',()=>{
  const route=readFileSync('app/api/cron/arca-cycle/route.ts','utf8');
  expect(route).toMatch(/saveBreakoutVerdicts\(\)/);

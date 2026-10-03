@@ -4,6 +4,7 @@ import {requireAdmin} from '@/lib/adminAuth';
 import {getRedis} from '@/lib/redis';
 import {getOHLCRange} from '@/lib/coingecko';
 import {isAdminCryptoEnabled,isCoinGeckoEnabled} from '@/lib/admin/adminCrypto';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 import type {DiscoveryRow} from '@/lib/admin/cryptoDiscovery';
 import {reviewCryptoMomentum,momentumChart} from '@/lib/admin/cryptoMomentum';
 export const runtime='nodejs';
@@ -19,6 +20,7 @@ async function savedFallback(redis:NonNullable<ReturnType<typeof getRedis>>,id:s
 }
 export async function POST(req:Request) {
   if(!(await requireAdmin(req)).ok) return NextResponse.json({error:'Unauthorized'},{status:403});
+  if(cryptoMarketsPaused())return pausedCryptoMarketsResponse();
   let id:string;
   try {const body=await req.json();id=body.coinId;if(typeof id!=='string'||!/^[a-z0-9-]{1,120}$/.test(id)) throw Error();}
   catch {return NextResponse.json({error:'A valid discovered CoinGecko ID is required'},{status:400});}

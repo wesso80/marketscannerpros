@@ -22,6 +22,12 @@ beforeEach(()=>{
  vi.mocked(runBaseBatch).mockImplementation(async()=>Response.json({requestAttempts:20,scan:{rows:[]}}));
 });
 afterEach(()=>{vi.useRealTimers();vi.restoreAllMocks();});
+it('CRYPTO_MARKETS_PAUSED returns before discovery, momentum, hourly, or base batches',async()=>{
+ vi.stubEnv('CRYPTO_MARKETS_PAUSED','true');
+ expect(await runCryptoAutomation()).toMatchObject({ok:true,paused:true,skipped:true,reason:'crypto_markets_paused'});
+ expect(runDiscoveryBatch).not.toHaveBeenCalled();expect(runMomentumBatch).not.toHaveBeenCalled();expect(runBaseBatch).not.toHaveBeenCalled();expect(runEarlyMomentumBatch).not.toHaveBeenCalled();
+ vi.unstubAllEnvs();
+});
 it('defaults off and never calls providers until enabled',async()=>{
  saved={};expect(await runCryptoAutomation()).toMatchObject({enabled:false});expect(runDiscoveryBatch).not.toHaveBeenCalled();expect(runMomentumBatch).not.toHaveBeenCalled();
 });

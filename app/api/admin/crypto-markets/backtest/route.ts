@@ -3,6 +3,7 @@ import {requireAdmin} from '@/lib/adminAuth';
 import {savedBacktest,startBacktest,runBacktestBatch,stampSavedBacktest,summarizeBacktest,regimeTags,type BacktestState} from '@/lib/admin/cryptoBacktest';
 import {backtestJevCoverage} from '@/lib/admin/cryptoBacktestJev';
 import {backtestTradeLog} from '@/lib/admin/cryptoTradeLog';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=180;
 const view=(state:BacktestState|null)=>state?{state:{...state,btcDaily:undefined,coinDaily:undefined,trades:state.trades.slice(-200)},summary:summarizeBacktest(state),jev:backtestJevCoverage(state.trades)}:{state:null,summary:null,jev:null};
 export async function GET(req:Request){
@@ -17,6 +18,7 @@ export async function GET(req:Request){
 export async function POST(req:Request){
  if(!(await requireAdmin(req)).ok)return NextResponse.json({error:'Unauthorized'},{status:403});
  const body=await req.json().catch(()=>null);if(!['start','next','stamp'].includes(body?.action))return NextResponse.json({error:'Valid backtest action required'},{status:400});
+ if(cryptoMarketsPaused())return pausedCryptoMarketsResponse();
  try{
   if(body.action==='start')return NextResponse.json({simulated:true,...view(await startBacktest(Date.now(),Number(body.endDaysAgo??0)))});
   if(body.action==='stamp'){const r=await stampSavedBacktest();return NextResponse.json({simulated:true,...view(r.state),stamp:{stamped:r.stamped,fromCache:r.fromCache,remaining:r.remaining,skipped:r.skipped}});}

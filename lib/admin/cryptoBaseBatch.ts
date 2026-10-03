@@ -1,10 +1,12 @@
 import {NextResponse} from 'next/server';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 import {createBaseScan,fetchDailyBase,type BaseScan} from '@/lib/admin/cryptoBaseScan';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 const KEY='admin:crypto-markets:bases:v1';
 export async function runBaseBatch(limit=5){
+  if(cryptoMarketsPaused())return pausedCryptoMarketsResponse();
   if(!isAdminCryptoEnabled())return NextResponse.json({error:'Admin crypto paused'},{status:409});
   try{
     const redis=getRedis();if(!redis)throw Error();

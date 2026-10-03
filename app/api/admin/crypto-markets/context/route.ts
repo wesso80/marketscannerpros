@@ -3,6 +3,7 @@ import {requireAdmin} from '@/lib/adminAuth';
 import {getRedis} from '@/lib/redis';
 import {getCryptoMarketsContextPart} from '@/lib/coingecko';
 import {isAdminCryptoEnabled,isCoinGeckoEnabled} from '@/lib/admin/adminCrypto';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 import {normalizeMarketContext} from '@/lib/admin/cryptoMarketContext';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -14,6 +15,7 @@ export async function GET(req:Request){
 }
 export async function POST(req:Request){
   if(!(await requireAdmin(req)).ok)return NextResponse.json({error:'Unauthorized'},{status:403});
+  if(cryptoMarketsPaused())return pausedCryptoMarketsResponse();
   if(!isAdminCryptoEnabled()||!isCoinGeckoEnabled())return NextResponse.json({error:'Crypto requests are paused'},{status:409});
   try{
     const redis=getRedis();if(!redis)throw Error();

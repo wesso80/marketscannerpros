@@ -1,6 +1,7 @@
 import {createHash} from 'crypto';
 import {getRedis} from '@/lib/redis';
 import {setupRead,setupReadText} from './cryptoJevEvidence';
+import {cryptoMarketsPaused} from './cryptoMarketsPause';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 const KEY='admin:crypto-markets:setup-email:v1',F=4*3600000;
 const recipient=()=>process.env.CRYPTO_SETUP_ALERT_EMAIL?.trim()??'';
@@ -24,6 +25,7 @@ async function deliver(identity:string,subject:string,text:string){
  return true;
 }
 export async function sendCryptoSetupEmails(scan:MomentumScan,now=Date.now()){
+ if(cryptoMarketsPaused())return {enabled:false,accepted:0,paused:true,skipped:true,reason:'crypto_markets_paused'};
  const redis=getRedis();
  if(!recipient()||!process.env.RESEND_API_KEY)return {enabled:false,accepted:0,error:'Setup email recipient or RESEND_API_KEY not configured'};
  let accepted=0;

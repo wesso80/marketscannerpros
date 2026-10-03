@@ -6,6 +6,7 @@ import {compressionBoard,compressionNote,COMPRESSION_RULE,type CompressionFlag,t
 import {dailyCandleCap} from './cryptoDailyVenues';
 import type {BaseScan,BaseScanRow} from './cryptoBaseScan';
 import {cgBudgetStatus,type CgBudget} from './cgCredits';
+import {cryptoMarketsPaused} from './cryptoMarketsPause';
 import {CG_MARKET,aggregatePerpetuals,withOiChange,dayAgoSlot,rankCategories,compactMovers,trendingCrowding,globalPoint,globalRegime,type DerivSnapshot,type DerivRow,type GlobalPoint,type MoverRow} from './cryptoMarketData';
 const K='admin:crypto-markets:cg-market:v1',D=86400000,SLOT=CG_MARKET.snapshotMinutes*60000;
 type SourceStatus={ok:boolean;at:string;skipped?:string;error?:string;calls:number};
@@ -34,6 +35,7 @@ async function watchCoinIds():Promise<string[]>{
  * credits are below the pause threshold. Each source succeeds or fails on its own; failures are recorded, never filled.
  */
 export async function runCryptoMarketData(now=now0()){
+ if(cryptoMarketsPaused())return {ok:true,paused:true,skipped:true,reason:'crypto_markets_paused'};
  const redis=getRedis();if(!redis)return {ok:false,error:'Storage unavailable'};
  const budget=await cgBudgetStatus(getApiUsage,now);
  const saved=await status(),at=new Date(now).toISOString();

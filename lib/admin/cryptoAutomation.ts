@@ -1,6 +1,7 @@
 import {randomUUID} from 'crypto';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from './adminCrypto';
+import {cryptoMarketsPaused} from './cryptoMarketsPause';
 import {runDiscoveryBatch} from './cryptoDiscoveryBatch';
 import {runMomentumBatch} from './cryptoMomentumBatch';
 import {runEarlyMomentumBatch} from './cryptoEarlyMomentumBatch';
@@ -16,6 +17,7 @@ export async function setCryptoAutomation(enabled:boolean){
 }
 /** Only called by the authenticated cron. No browser required; provider budgets are shared with manual scans. */
 export async function runCryptoAutomation(){
+ if(cryptoMarketsPaused())return {enabled:false,ok:true,paused:true,skipped:true,reason:'crypto_markets_paused'};
  const redis=getRedis();if(!redis)throw Error('Automation cache unavailable');
  if(!isAdminCryptoEnabled()||await redis.get(KEY)!==true)return {enabled:false,skipped:true};
  const lockToken=randomUUID();

@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { getRedis } from '@/lib/redis';
 import { getMarketData, getDiscoveryExchangeTickers, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { isAdminCryptoEnabled, isCoinGeckoEnabled } from '@/lib/admin/adminCrypto';
+import { cryptoMarketsPaused, pausedCryptoMarketsResponse } from '@/lib/admin/cryptoMarketsPause';
 import { sharedScanUniverse } from '@/lib/admin/sharedScanLogic';
 import { collectDiscoveryMarkets, screenCryptoMarkets, DISCOVERY_POLICY } from '@/lib/admin/cryptoDiscovery';
 
 const KEY = 'admin:crypto-discovery:v1';
 export async function runDiscoveryBatch() {
+  if (cryptoMarketsPaused()) return pausedCryptoMarketsResponse();
   if (!isAdminCryptoEnabled() || !isCoinGeckoEnabled()) return NextResponse.json({error:'Admin crypto or CoinGecko requests are paused'}, {status:409});
   try {
     const redis = getRedis();

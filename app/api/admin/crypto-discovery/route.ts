@@ -1,4 +1,5 @@
 import {runDiscoveryBatch} from '@/lib/admin/cryptoDiscoveryBatch';
+import {cryptoMarketsPauseBanner} from '@/lib/admin/cryptoMarketsPause';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getRedis } from '@/lib/redis';
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
   try {
     const redis = getRedis();
     if (!redis) throw new Error('Discovery cache unavailable');
-    return NextResponse.json({ snapshot: await redis.get(KEY) }, {headers:{'Cache-Control':'no-store'}});
+    return NextResponse.json({ snapshot: await redis.get(KEY), ...cryptoMarketsPauseBanner() }, {headers:{'Cache-Control':'no-store'}});
   } catch { return NextResponse.json({error:'Discovery cache unavailable'}, {status:503}); }
 }
 export async function POST(req:Request){

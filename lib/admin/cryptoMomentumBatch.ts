@@ -2,6 +2,7 @@ import {sendCryptoSetupEmails} from './cryptoSetupEmail';
 import {NextResponse} from 'next/server';
 import {getRedis} from '@/lib/redis';
 import {isAdminCryptoEnabled} from '@/lib/admin/adminCrypto';
+import {cryptoMarketsPaused,pausedCryptoMarketsResponse} from '@/lib/admin/cryptoMarketsPause';
 import {createMomentumScan,fetchVolumeMomentum,type MomentumScan} from '@/lib/admin/cryptoVolumeMomentum';
 import {persistForwardScores} from '@/lib/admin/cryptoForwardScore';
 import {stampMomentumVolume,unavailableFlowStamp} from '@/lib/admin/cryptoFlow';
@@ -12,6 +13,7 @@ import {attachShadowScoreWithContext} from '@/lib/admin/cryptoShadowScore';
 import type {DiscoveryRow,VenueEvidence} from '@/lib/admin/cryptoDiscovery';
 const KEY='admin:crypto-markets:momentum-volume:v1',F=4*3600000;
 export async function runMomentumBatch(limit=5){
+ if(cryptoMarketsPaused())return pausedCryptoMarketsResponse();
  if(!isAdminCryptoEnabled())return NextResponse.json({error:'Admin crypto paused'},{status:409});
  try{
   const redis=getRedis();if(!redis)throw Error();
