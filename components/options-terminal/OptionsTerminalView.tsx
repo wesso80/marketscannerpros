@@ -18,7 +18,7 @@ import { atmStrike } from '@/lib/options/atmStrike';
 import { contractCosts } from '@/lib/options/contractCosts';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
-import { useOptionsChain } from '@/hooks/useOptionsChain';
+import { expiryAfterUnavailable, useOptionsChain } from '@/hooks/useOptionsChain';
 import type {
   OptionsContract,
   StrikeGroup,
@@ -101,10 +101,16 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
   /* ── Auto-select the shared expiry once loaded ─────────── */
   useEffect(() => {
-    if (chain.expirations.length && !selectedExpiry) {
-      setSelectedExpiry(selectOptionsExpiry(chain.expirations.map(e=>e.date)) || '');
+    if (!chain.expirations.length) return;
+    const dates = chain.expirations.map(e => e.date);
+    if (!selectedExpiry) {
+      setSelectedExpiry(selectOptionsExpiry(dates) || '');
+      return;
     }
-  }, [chain.expirations, selectedExpiry]);
+    if (!chain.error) return;
+    const next = expiryAfterUnavailable(selectedExpiry, dates);
+    if (next && next !== selectedExpiry) setSelectedExpiry(next);
+  }, [chain.expirations, chain.error, selectedExpiry]);
 
   /* ── Build table rows from live strike groups ──────────────── */
   const rows = useMemo(() => {

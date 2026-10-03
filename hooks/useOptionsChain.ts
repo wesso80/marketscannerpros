@@ -139,6 +139,18 @@ export function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
     .filter((r) => r.totalOI > 0);
 }
 
+/** A 422 still carries the expiry list, so a past or unlisted ?expiry= is not a dead end. */
+export function expirationsKeptOnError<T extends { date: string }>(status: number, json: { expirations?: T[] | null }): T[] {
+  if (status !== 422 || !Array.isArray(json?.expirations)) return [];
+  return json.expirations.filter((entry) => typeof entry?.date === 'string' && entry.date.length > 0);
+}
+
+/** When the requested expiry is missing from that list, pick the shared default again. */
+export function expiryAfterUnavailable(requested: string, dates: string[], nowMs = Date.now()): string | null {
+  if (!dates.length || (requested && dates.includes(requested))) return null;
+  return selectOptionsExpiry(dates, undefined, nowMs);
+}
+
 /** Shared OI/notable universe. No expected move available => explicitly labelled 10% spot band. */
 export function oiContextContracts(contracts:OptionsContract[],spot:number,expectedMove:number) {
   const width=expectedMove>0?3*expectedMove:spot*.1;
@@ -192,6 +204,8 @@ export function useOptionsChain(): UseOptionsChainState {
         if (ctrl.signal.aborted) return;
         setProviderIssues(json.providerIssues ?? []);
         if (!res.ok || !json.success) {
+          const kept = expirationsKeptOnError(res.status, json);
+          if (kept.length) setExpirations(kept);
           throw new Error(json.error || `HTTP ${res.status}`);
         }
         if (ctrl.signal.aborted) return;
