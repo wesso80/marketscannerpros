@@ -72,7 +72,7 @@ function ScannerPreview() {
         ))}
       </div>
       <div className="mt-auto pt-3 text-[11px] text-slate-500">
-        Filter equities, crypto, and forex by structured technical conditions.
+        Filter equities and crypto by structured technical conditions.
       </div>
     </div>
   );

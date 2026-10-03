@@ -1,5 +1,6 @@
 'use client';
 
+import {symbolHref} from '@/lib/market/links';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
 
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
@@ -1270,7 +1271,7 @@ function BacktestContent() {
                   Testing Options Scanner Setup
                 </div>
                 <div style={{ color: 'var(--msp-flat)', fontSize: '13px' }}>
-                  Symbol: <span style={{ color: 'var(--msp-text)', fontWeight: '500' }}>{symbol}</span>
+                  Symbol: <Link href={symbolHref(symbol,assetType||'equity',timeframe)} style={{ color: 'var(--msp-text)', fontWeight: '500' }}>{symbol}</Link>
                   {urlDirection && (
                     <>
                       {' • '}Direction: <span style={{ 

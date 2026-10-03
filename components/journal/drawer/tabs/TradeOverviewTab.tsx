@@ -1,5 +1,7 @@
 'use client';
 
+import PriceStamp from '@/components/market/PriceStamp';
+import {journalMarkStamp} from '@/lib/market/trackStamp';
 import { useState, type FormEvent } from 'react';
 import { TradeModel } from '@/types/journal';
 import { markTimeLabel, optionContractLabel } from '@/lib/journal/display';
@@ -93,7 +95,7 @@ export default function TradeOverviewTab({ trade, onUpdateLevels }: { trade?: Tr
       <div className="rounded-xl border border-white/10 bg-white/5 p-3">
         <div className="text-slate-400">Forensics</div>
         <div>P&L: {trade.pnlUsd == null || !Number.isFinite(trade.pnlUsd) ? 'Unavailable (no usable quote)' : `${trade.pnlUsd.toFixed(2)} (${Number(trade.pnlPct || 0).toFixed(2)}%)`}</div>
-        {trade.mark && <div>Mark: {trade.mark.price.toFixed(2)} · <span className="text-slate-400">{markTimeLabel(trade.mark)}</span></div>}
+        {trade.mark && <div>Mark: <PriceStamp compact {...journalMarkStamp(trade)}/> · <span className="text-slate-400">{markTimeLabel(trade.mark)}</span></div>}
         <div>R Multiple: {trade.rMultiple != null ? trade.rMultiple.toFixed(2) : 'N/A'}</div>
       </div>
     </div>

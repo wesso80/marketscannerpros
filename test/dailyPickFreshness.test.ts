@@ -68,7 +68,7 @@ describe('scan-daily ?assets= filter', () => {
     expect(parseDailyScanAssets(null)).toBeNull();
     expect(parseDailyScanAssets('')).toBeNull();
     expect(parseDailyScanAssets('crypto')).toEqual(['crypto']);
-    expect(parseDailyScanAssets(' Forex,crypto ,bogus')).toEqual(['crypto', 'forex']);
+    expect(parseDailyScanAssets(' Forex,crypto ,bogus')).toEqual(['crypto']);
     expect(parseDailyScanAssets('bogus')).toEqual([]);
   });
   it('only replaces asset classes the run produced rows for (an outage keeps the stored picks)', () => {

@@ -138,10 +138,8 @@ const nextConfig = {
       // Command Center (Stage 2) — legacy command-hub key resolves here
       { source: '/tools/command-hub', destination: '/tools/command-center', permanent: true },
       // Terminal surface
-      { source: '/tools/options-terminal', destination: '/tools/terminal?tab=options-terminal', permanent: true },
+      { source: '/tools/options-terminal', destination: '/tools/options', permanent: true },
       { source: '/tools/crypto-terminal', destination: '/tools/terminal?tab=crypto-terminal', permanent: true },
-      { source: '/tools/options-flow', destination: '/tools/terminal?tab=options-flow', permanent: true },
-      { source: '/tools/options', destination: '/tools/terminal?tab=options-terminal', permanent: true },
 
       // Explorer surface
       { source: '/tools/equity-explorer', destination: '/tools/explorer?tab=equity', permanent: true },
@@ -159,7 +157,6 @@ const nextConfig = {
       { source: '/tools/earnings-calendar', destination: '/tools/research?tab=earnings', permanent: true },
 
       // Dashboard surface
-      { source: '/tools/crypto-dashboard', destination: '/tools/dashboard?tab=crypto', permanent: true },
       { source: '/tools/crypto', destination: '/tools/explorer?tab=crypto-command', permanent: true },
       // Diamond Hunter was removed (26 Sep 2026). Temporary (307) so the path can be reused if it ever comes back.
       { source: '/tools/diamond-hunter', destination: '/tools/explorer?tab=crypto-command', permanent: false },
@@ -168,7 +165,6 @@ const nextConfig = {
       // Scanner surface
       { source: '/tools/ai-analyst', destination: '/tools/scanner', permanent: true },
       { source: '/tools/confluence-scanner', destination: '/tools/terminal?tab=time-confluence', permanent: true },
-      { source: '/tools/options-confluence', destination: '/tools/terminal?tab=options-confluence', permanent: true },
       { source: '/tools/crypto-time-confluence', destination: '/tools/terminal?tab=time-confluence', permanent: true },
       { source: '/tools/time-scanner', destination: '/tools/terminal?tab=time-scanner', permanent: true },
       { source: '/tools/deep-analysis', destination: '/tools/golden-egg', permanent: true },

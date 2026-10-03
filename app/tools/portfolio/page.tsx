@@ -1,5 +1,7 @@
 'use client';
 
+import PriceStamp from '@/components/market/PriceStamp';
+import {symbolHref} from '@/lib/market/links';
 import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
@@ -2478,8 +2480,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
                   <div className="text-xs text-slate-400 leading-relaxed">
                     <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
-                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
-                    <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -2735,13 +2736,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
-                          <td className="px-2 py-2 font-semibold text-slate-100">{position.symbol}</td>
+                          <td className="px-2 py-2 font-semibold text-slate-100"><Link href={symbolHref(position.symbol,position.assetClass??'equity')}>{position.symbol}</Link></td>
                           <td className="px-2 py-2">{position.side}</td>
                           <td className="px-2 py-2 text-right tabular-nums">{position.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
                           <td className="px-2 py-2 text-right tabular-nums text-slate-100">${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
-                          <td className="px-2 py-2 text-right">{formatPriceRaw(position.currentPrice)}</td>
+                          <td className="px-2 py-2 text-right"><PriceStamp compact price={position.currentPrice} assetType={position.tradeType==='Options'?'option':position.assetClass} priceBasis="unknown" source="recorded position mark"/></td>
                           <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">—</span>}</td>
                           <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No target set">—</span>}</td>
                           {rMultipleOpen == null

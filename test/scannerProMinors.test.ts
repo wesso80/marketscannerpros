@@ -17,7 +17,7 @@ describe('SC-8: Pro crypto rows read as coins', () => {
     expect(read('components/scanner/ScreenerTable.tsx')).toContain('r.displaySymbol ?? r.symbol');
     const page = read('app/tools/scanner/page.tsx');
     expect(page).toContain('displaySymbol: proDisplaySymbol(pick.symbol');
-    expect(page).toMatch(/loadSymbolDetail\(row\.symbol, tf, proAsset/);
+    expect(page).toContain('router.push(symbolHref(row.symbol,proAsset,proTimeframe))');
   });
 });
 

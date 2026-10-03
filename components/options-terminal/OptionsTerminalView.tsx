@@ -9,13 +9,16 @@
 
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import PriceStamp from '@/components/market/PriceStamp';
+import {trustBadgeState} from '@/components/market/TrustBadge';
 import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { selectOptionsExpiry, withOptionsExpiry } from '@/lib/options/expiry';
 import { atmStrike } from '@/lib/options/atmStrike';
-import { contractCosts } from '@/lib/options/contractCosts';
+import PerContractCosts from './PerContractCosts';
+import OptionsResearchSections from './OptionsResearchSections';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
 import { expiryAfterUnavailable, useOptionsChain } from '@/hooks/useOptionsChain';
@@ -45,7 +48,7 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 /* ─────────────────────────────────────────────────────────────────
    Main Component
    ───────────────────────────────────────────────────────────────── */
-export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: string } = {}) {
+export default function OptionsTerminalView({ symbol: propSymbol, expiry: propExpiry }: { symbol?: string; expiry?:string } = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -64,7 +67,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
   /* ── UI state ──────────────────────────────────────────────── */
   const [ticker, setTicker] = useState(initialSymbol);
   const [tickerInput, setTickerInput] = useState(initialSymbol);
-  const selectedExpiry = searchParams.get('expiry') || '';
+  const selectedExpiry = searchParams.get('expiry') || propExpiry || '';
   const setSelectedExpiry = useCallback((expiry:string) => {
     router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(searchParams.toString()),expiry)}`,{scroll:false});
   },[pathname,searchParams,router]);
@@ -199,6 +202,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
   const optionsMarketStatusItems = [
     {
       label: 'Chain',
+      statusLabel: trustBadgeState({providerStatus}).label,
+      notes: [quoteDateLabel(chain.quoteBasis,chain.asOfDate)],
       status: providerStatus,
       source: chain.provider || 'unknown',
       coverageScore: chainCoverage,
@@ -355,16 +360,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 w-full lg:w-auto">
               <div className="space-y-0.5">
                 <div className="text-[11px] uppercase tracking-wide text-zinc-400">Underlying</div>
-                <div className="flex items-baseline gap-3">
-                  <div className="text-lg font-semibold">
-                    {spot > 0 ? `$${spot.toFixed(2)}` : '—'}
-                  </div>
-                  {spot > 0 && (
-                    <div className="text-xs text-slate-400">{chain.spotObservation?.change != null ? `$${chain.spotObservation.change.toFixed(2)} (${chain.spotObservation.changePercent?.toFixed(2) ?? '—'}%)` : 'Price change unavailable'}</div>
-                  )}
-                </div>
+                <PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf?'last_close':'unknown'} source={chain.provider}/>
               </div>
-              <div className="text-xs text-zinc-400">Spot: {chain.spotObservation?.asOf || 'date unavailable'} ({chain.spotObservation?.basis || 'inferred from options, not a stock quote'}) · Quotes: {updatedLabel}</div>
+              <div className="text-xs text-zinc-400"><PriceStamp symbol={selectedContract?`${selectedContract.strike}${selectedContract.type==='call'?'C':'P'} ask`:'Chain · select a contract'} assetType="option" price={selectedContract?.ask} priceBasis={chain.quoteBasis} latestDay={chain.asOfDate} source={chain.provider}/></div>
               <Badge tone="neutral">
                 {chain.quoteBasis === 'realtime'
                   ? `LIVE BID/ASK · ${chain.provider}`
@@ -385,7 +383,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                   onChange={(e) => setSelectedExpiry(e.target.value)}
                   className="bg-transparent text-sm font-semibold outline-none"
                 >
-                  <option value="" className="bg-zinc-900">All</option>
+                  <option value="" className="bg-zinc-900">Default expiry</option>
                   {chain.expirations.map((exp) => (
                     <option key={exp.date} value={exp.date} className="bg-zinc-900">
                       {exp.label}
@@ -420,6 +418,26 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
       {/* ── Page shell ────────────────────────────────────── */}
       <div className="w-full px-4 py-4 space-y-4">
+          {/* ── IV & Expected Move ─────────────────────── */}
+          <div className="w-full">
+            <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'nearest listed expiry'}</span>}>
+              <div className="grid grid-cols-2 gap-4">
+                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : '—'} />
+                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : '—'} />
+                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Unavailable'} />
+                <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : '—'} />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+                <div className="text-xs text-zinc-400">Desk Read</div>
+                <div className="mt-1 text-sm font-semibold">
+                  IV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: {chain.asOfDate || 'unavailable'}.
+
+                </div>
+              </div>
+            </Card>
+          </div>
+
         {/* === DESK GRID === */}
         <div className="grid grid-cols-12 gap-4">
           {/* ── Left: Chain Navigator ─────────────────────── */}
@@ -464,7 +482,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                       <BestStrikeCard
                         key={`${bs.label}-${i}`}
                         label={bs.label}
-                        value={`$${bs.strike.toFixed(0)}`}
+                        value={`$${bs.strike.toFixed(2)}`}
                         sub={bs.reason}
                         tone={bs.type === 'call' ? 'ok' : 'bad'}
                         onClick={() => {
@@ -647,7 +665,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     </div>
                   </div>
 
-                  <PerContractCosts contract={selectedContract} spot={spot} />
+                  <PerContractCosts contract={selectedContract} spot={spot} quoteBasis={chain.quoteBasis} asOfDate={chain.asOfDate} />
                   {/* Greeks */}
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                     <div className="text-xs font-semibold">Greeks</div>
@@ -772,26 +790,6 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
         {/* === ANALYTICS ROW === */}
         <div className="grid grid-cols-12 gap-4">
-          {/* ── IV & Expected Move ─────────────────────── */}
-          <div className="col-span-12 xl:col-span-4">
-            <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'nearest listed expiry'}</span>}>
-              <div className="grid grid-cols-2 gap-4">
-                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : '—'} />
-                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : '—'} />
-                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Unavailable'} />
-                <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : '—'} />
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <div className="text-xs text-zinc-400">Desk Read</div>
-                <div className="mt-1 text-sm font-semibold">
-                  IV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: {chain.asOfDate || 'unavailable'}.
-
-                </div>
-              </div>
-            </Card>
-          </div>
-
           {/* OI Map */}
           <div className="col-span-12 xl:col-span-4">
             <Card title="Open Interest Map" right={<span className="text-xs text-zinc-400">OI as of {chain.asOfDate || 'unavailable'}</span>}>
@@ -812,6 +810,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
             </Card>
           </div>
         </div>
+        <OptionsResearchSections symbol={ticker} expiry={chain.contracts[0]?.expiration??selectedExpiry}/>
       </div>
     </div>
   );
@@ -1053,17 +1052,4 @@ function fmtInt(n?: number) {
 function fmtPct(n?: number) {
   if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '—';
   return `${(n * 100).toFixed(1)}%`;
-}
-
-function PerContractCosts({contract,spot}:{contract:OptionsContract;spot:number}) {
-  const c=contractCosts(contract,spot);
-  const money=(n:number|null)=>n==null?'Unavailable':`$${n.toFixed(2)}`;
-  const pct=(n:number|null)=>n==null?'Unavailable':`${n.toFixed(2)}%`;
-  return <div className="rounded-2xl border border-zinc-800 p-4"><h3 className="text-sm font-semibold">Per contract · long option · 100 shares</h3>
-    <div className="mt-3 grid grid-cols-2 gap-3">
-      <MiniStat label="Cost at ask" value={money(c.askCost)}/><MiniStat label="Cost at mid" value={money(c.midCost)}/>
-      <MiniStat label="Max premium loss" value={money(c.maxLoss)}/><MiniStat label="Expiry breakeven" value={money(c.breakeven)}/>
-      <MiniStat label="Breakeven from spot" value={pct(c.breakevenPct)}/><MiniStat label="Theta / day" value={money(c.thetaDollars)}/>
-      <MiniStat label="Theta / ask / day" value={pct(c.thetaPct)}/><MiniStat label="Spread cost" value={money(c.spreadCost)}/>
-    </div><p className="mt-2 text-xs text-zinc-400">Excludes fees. Mid is indicative; theta is a model estimate. Expiry breakeven assumes exercise/settlement.</p></div>;
 }

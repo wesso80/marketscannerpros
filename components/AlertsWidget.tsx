@@ -511,7 +511,7 @@ export default function AlertsWidget({
           <div className="space-y-1">
             {activeAlerts.slice(0, 3).map(alert => (
               <div key={alert.id} className="flex items-center justify-between text-xs">
-                <span className="font-mono text-emerald-400">{alert.symbol}</span>
+                <span className="font-mono text-emerald-400">{alert.symbol}{alert.asset_type === 'forex' && <span className="ml-1 text-xs text-amber-300">Forex (retired)</span>}</span>
                 <span className="text-slate-400">
                   {alertConditionLabel(alert.condition_type, alert.condition_value)}
                 </span>
@@ -671,7 +671,7 @@ export default function AlertsWidget({
               <option value="" disabled>Market…</option>
               <option value="crypto">Crypto</option>
               <option value="equity">Stock</option>
-              <option value="forex">Forex (price only)</option>
+
             </select>
           </div>
           
@@ -733,7 +733,7 @@ export default function AlertsWidget({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-lg font-bold text-emerald-400">
-                        {alert.symbol}
+                        {alert.symbol}{alert.asset_type === 'forex' && <span className="ml-1 text-xs text-amber-300">Forex (retired)</span>}
                       </span>
                       <span className="text-sm text-slate-400">
                         {alertConditionLabel(alert.condition_type, alert.condition_value)}
@@ -744,7 +744,7 @@ export default function AlertsWidget({
                         </span>
                       )}
                     </div>
-                    
+      
                     <div className="flex items-center gap-2">
                       {alert.triggered_at && (
                         <span className="text-xs text-amber-400">
@@ -771,7 +771,7 @@ export default function AlertsWidget({
                       </button>
                     </div>
                   </div>
-                  
+    
                   {alert.notes && (
                     <p className="text-xs text-slate-500 mt-2">{alert.notes}</p>
                   )}
@@ -839,7 +839,7 @@ export default function AlertsWidget({
                         </optgroup>
                       </select>
                     </div>
-                    
+      
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="text-xs text-slate-400 block mb-1">Alert Type</label>
@@ -889,7 +889,7 @@ export default function AlertsWidget({
                           </optgroup>
                         </select>
                       </div>
-                      
+        
                       <div>
                         <label className="text-xs text-slate-400 block mb-1">Threshold</label>
                         <input
@@ -936,7 +936,7 @@ export default function AlertsWidget({
                     {newSmartAlert.conditionType?.startsWith('strategy_') && (
                       <div className="mb-3 p-3 bg-slate-800/50 rounded-lg border border-emerald-500/20">
                         <p className="text-xs text-emerald-400 mb-2">📊 Configure your strategy alert:</p>
-                        
+          
                         <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-3">
                           <div>
                             <label className="text-xs text-white block mb-1">🎯 Ticker *</label>
@@ -1013,7 +1013,7 @@ export default function AlertsWidget({
                             </select>
                           </div>
                         </div>
-                        
+          
                         <p className="text-xs text-slate-500">
                           💡 Data from CoinGecko & Alpha Vantage • Check every 15 min
                         </p>
@@ -1092,11 +1092,11 @@ export default function AlertsWidget({
                           </span>
                           {alert.symbol && alert.symbol !== 'MARKET' && (
                             <span className="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300">
-                              {alert.symbol}
+                              {alert.symbol}{alert.asset_type === 'forex' && <span className="ml-1 text-xs text-amber-300">Forex (retired)</span>}
                             </span>
                           )}
                         </div>
-                        
+          
                         <div className="flex items-center gap-2">
                           {alert.triggered_at && (
                             <span className="text-xs text-amber-400">
@@ -1160,7 +1160,7 @@ export default function AlertsWidget({
                         </span>
                         {alert.symbol && (
                           <span className="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300">
-                            {alert.symbol}
+                            {alert.symbol}{alert.asset_type === 'forex' && <span className="ml-1 text-xs text-amber-300">Forex (retired)</span>}
                           </span>
                         )}
                       </div>
@@ -1214,7 +1214,7 @@ export default function AlertsWidget({
                         <div className="flex items-center gap-3">
                           <span className="text-lg">🔗</span>
                           <span className="font-mono text-lg font-bold text-purple-400">
-                            {alert.symbol}
+                            {alert.symbol}{alert.asset_type === 'forex' && <span className="ml-1 text-xs text-amber-300">Forex (retired)</span>}
                           </span>
                           <span className={`text-xs px-2 py-0.5 rounded ${
                             alert.condition_logic === 'AND' 

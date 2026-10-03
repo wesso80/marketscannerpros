@@ -461,7 +461,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
         {/* Operator summary line */}
         {data && !loading && (
           <div className="mt-2 text-[11px] text-zinc-500">
-            {data.type === 'crypto' ? 'Crypto majors' : data.type === 'forex' ? 'Forex pairs' : 'Equity peers'}
+            {data.type === 'crypto' ? 'Crypto majors' : 'Equity peers'}
             {customSymbols.length > 0 ? ` + ${customSymbols.length} custom` : ''}
             {' • '}
             Refreshed {new Date(data.cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

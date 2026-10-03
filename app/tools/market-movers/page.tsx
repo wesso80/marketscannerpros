@@ -1,5 +1,6 @@
 'use client';
 
+import {symbolHref} from '@/lib/market/links';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePolling } from '@/hooks/usePolling';
@@ -754,7 +755,7 @@ export default function MarketMoversPage() {
                     <details key={`m-${mover.ticker}-${idx}`} className={`group rounded-md border border-slate-700 bg-slate-950/60 ${mover.deployment === 'blocked' ? 'opacity-55' : ''}`}>
                       <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white text-[13px]">{mover.ticker}</span>
+                          <Link href={symbolHref(mover.ticker,mover.asset_class)} className="font-semibold text-white text-[13px]">{mover.ticker}</Link>
                           <span className={`text-[12px] font-semibold ${(mover.changePercent || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                             {(mover.changePercent || 0) >= 0 ? '+' : ''}{(mover.changePercent || 0).toFixed(2)}%
                           </span>
@@ -826,7 +827,7 @@ export default function MarketMoversPage() {
                         <tr key={`${mover.ticker}-${idx}`} className={`hover:bg-slate-800/50 ${mover.deployment === 'blocked' ? 'opacity-70' : ''}`} title={mover.blockReason || ''}>
                           <td className="px-2.5 py-2 font-semibold text-white">
                             <div className="flex items-center gap-1">
-                              {mover.ticker}
+                              <Link href={symbolHref(mover.ticker,mover.asset_class)}>{mover.ticker}</Link>
                               <span className={`text-[11px] ${mover.asset_class === 'equity' ? 'text-blue-400' : 'text-amber-400'}`}>
                                 {mover.asset_class === 'equity' ? 'EQ' : '₿'}
                               </span>

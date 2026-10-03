@@ -43,7 +43,7 @@ function AfterCheckoutContent() {
           setStatus("success");
           // Wait briefly so the cookie is fully set before navigating
           await new Promise(r => setTimeout(r, 500));
-          router.replace("/tools/explorer");
+          router.replace("/tools/command-center");
           return;
         }
       }

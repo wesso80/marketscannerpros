@@ -730,7 +730,7 @@ async function getSymbolsToFetch(
   options?: { includeForex?: boolean }
 ): Promise<Array<{ symbol: string; tier: number; asset_type: string; last_fetched_at?: Date | string | null }>> {
   const db = getPool();
-  const includeForex = options?.includeForex === true;
+  const includeForex = false; // Retired: never request new FX quotes, even via a legacy override.
 
   let query = 'SELECT symbol, tier, asset_type, last_fetched_at FROM symbol_universe WHERE enabled = TRUE';
   const params: Array<string | number> = [];
@@ -1928,7 +1928,7 @@ async function main(): Promise<void> {
   const envCryptoOnly = ['1', 'true', 'yes'].includes((getEnv('WORKER_CRYPTO_ONLY') || '').toLowerCase());
   const envEquitiesOnly = ['1', 'true', 'yes'].includes((getEnv('WORKER_EQUITIES_ONLY') || '').toLowerCase());
   const runOnce = cliOnce || envOnce;
-  const includeForex = cliIncludeForex || envIncludeForex;
+  const includeForex = false; // Legacy flags no longer enable a retired universe.
   const cryptoOnly = cliCryptoOnly || envCryptoOnly;
   const equitiesOnly = cliEquitiesOnly || envEquitiesOnly;
   const failOnErrors = ['1', 'true', 'yes'].includes((getEnv('WORKER_FAIL_ON_ERRORS') || '').toLowerCase());

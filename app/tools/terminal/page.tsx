@@ -21,8 +21,8 @@ import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
-const OptionsConfluence = dynamic(() => import('@/app/tools/options-confluence/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
-const OptionsFlow = dynamic(() => import('@/app/tools/options-flow/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
+const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
+const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
 const TimeConfluenceWidget = dynamic(() => import('@/components/TimeConfluenceWidget').then(m => ({ default: m.default })), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fib Confluence…</div> });
@@ -782,9 +782,7 @@ export default function TerminalPage() {
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Terminal">
           <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
-              <CryptoTerminalView key={sym} symbol={sym} onSymbolChange={(next) => { setSymInput(next); selectSymbol(next, { assetType: 'crypto' }); }} onDataStateChange={setCryptoTerminalState} />
-            </Suspense>
+            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(sym)}`}>Open Crypto derivatives detail for {sym}</a>
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}

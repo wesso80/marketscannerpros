@@ -1,7 +1,11 @@
 'use client';
 
+import PriceStamp from '@/components/market/PriceStamp';
+import {watchlistStamp} from '@/lib/market/trackStamp';
+import {symbolHref,optionsHref} from '@/lib/market/links';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -60,6 +64,7 @@ const ICONS: Record<string, string> = {
 export default function WatchlistWidget() {
   const { tier } = useUserTier();
   const router = useRouter();
+  const searchParams=useSearchParams();
   const { isLocked: riskLocked } = useRiskPermission();
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [selectedWatchlist, setSelectedWatchlist] = useState<Watchlist | null>(null);
@@ -82,6 +87,10 @@ export default function WatchlistWidget() {
   const [showAddSymbol, setShowAddSymbol] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
   const [newAssetType, setNewAssetType] = useState('equity');
+  useEffect(()=>{
+    const draft=searchParams.get('addSymbol');
+    if(draft){setNewSymbol(draft.toUpperCase());setNewAssetType(searchParams.get('type')==='crypto'?'crypto':'equity');setShowAddSymbol(true);}
+  },[searchParams]);
   const [watchlistMode, setWatchlistMode] = useState<WatchlistMode>('PRE-STAGING');
   // Default shows every symbol, priced or not, in the list's saved order.
   const [moveFilter, setMoveFilter] = useState<MoveFilter>('all');
@@ -91,14 +100,15 @@ export default function WatchlistWidget() {
   const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert' | 'research', symbol: string) => {
     const option = /^([A-Z0-9.\-]+) (\d{4}-\d{2}-\d{2}) [\d.]+[CP]$/.exec(symbol);
     if (option) {
-      router.push(`/tools/terminal?tab=options-terminal&type=equity&symbol=${encodeURIComponent(option[1])}&expiry=${option[2]}`);
+      router.push(optionsHref(option[1],option[2]));
       return;
     }
     const encodedSymbol = encodeURIComponent(symbol);
+    const asset=items.find(item=>item.symbol===symbol)?.asset_type??'equity';
     const routes = {
       scan: `/tools/scanner?symbol=${encodedSymbol}`,
-      deep: `/tools/golden-egg?symbol=${encodedSymbol}`,
-      flow: `/tools/terminal?tab=options-confluence&symbol=${encodedSymbol}`,
+      deep: symbolHref(symbol,asset),
+      flow: asset==='crypto'?symbolHref(symbol,asset):optionsHref(symbol),
       alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`,
       research: `/tools/research?tab=earnings&symbol=${encodedSymbol}`,
     };
@@ -618,18 +628,17 @@ export default function WatchlistWidget() {
                     <div key={item.id} className="flex h-full flex-col rounded-lg border border-slate-700 bg-slate-900/55 p-3">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-lg font-black text-white">{item.symbol}</div>
+                          <Link href={symbolHref(item.symbol.split(' ')[0],item.asset_type)} className="text-lg font-black text-white">{item.symbol}</Link>
                           <div className="text-[11px] uppercase tracking-[0.06em] text-slate-500">{item.asset_type}</div>
                         </div>
                       </div>
 
                       <div className="grid gap-1 text-[12px] text-slate-300">
                         <div>
-                          Price: <span className="font-mono font-bold text-slate-100">{formatPrice(quote?.price)}</span>
+                          <PriceStamp compact {...watchlistStamp(item.asset_type,quote)}/>
                           {quote?.source === 'cached' && <span className="ml-1 rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-300" title="No live quote right now; showing the last stored price">cached</span>}
                           {quote?.note && <span className="ml-1 text-[10px] text-slate-400">({quote.note})</span>}
                         </div>
-                        <div className="text-[11px] text-slate-500">Updated: {formatQuoteAsOf(quote) ?? '—'}</div>
                         <div>Today: <span className={`font-mono font-bold ${row.direction === 'up' ? 'text-emerald-400' : row.direction === 'down' ? 'text-red-400' : 'text-slate-300'}`}>{formatTodayMove(row)}</span></div>
                       </div>
 
@@ -792,7 +801,7 @@ export default function WatchlistWidget() {
                   type="text"
                   value={newSymbol}
                   onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                  placeholder="AAPL, BTC, EURUSD"
+                  placeholder="AAPL, BTC"
                   maxLength={20}
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg 
                     text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 
@@ -810,7 +819,6 @@ export default function WatchlistWidget() {
                 >
                   <option value="equity">Stock</option>
                   <option value="crypto">Crypto</option>
-                  <option value="forex">Forex</option>
                   <option value="commodity">Commodity</option>
                 </select>
               </div>

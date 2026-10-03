@@ -1019,7 +1019,7 @@ export default function DeepAnalysisPage({
             >
               <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-xs font-black text-slate-300">
-                  {result.assetType === 'crypto' ? 'CR' : result.assetType === 'forex' ? 'FX' : result.assetType === 'commodity' ? 'CM' : 'EQ'}
+                  {result.assetType === 'crypto' ? 'CR' : result.assetType === 'commodity' ? 'CM' : 'EQ'}
                 </span>
                 <div>
                   <h2 className="m-0 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-white">
@@ -2242,7 +2242,7 @@ export default function DeepAnalysisPage({
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm font-black text-amber-300">GE</div>
             <h3 style={{ color: "#fff", marginBottom: "0.5rem", fontSize: "1.5rem" }}>Enter any ticker to begin</h3>
             <p style={{ color: "#64748B", maxWidth: "500px", margin: "0 auto" }}>
-              Supports stocks (AAPL, TSLA), crypto (BTC, ETH), forex (EURUSD), and commodities (GOLD).
+              Supports stocks (AAPL, TSLA), crypto (BTC, ETH), and commodities (GOLD).
               Get complete technical analysis, AI insights, news sentiment, and technical readings in one view.
             </p>
           </div>

@@ -101,7 +101,7 @@ describe('/api/scanner/quotes typed form', () => {
     process.env.ALPHA_VANTAGE_API_KEY = 'test-key';
   });
 
-  it('prices crypto via CoinGecko, forex via exchange rate, stocks via GLOBAL_QUOTE, with provider times', async () => {
+  it('prices active assets with provider times and retains retired forex as unavailable', async () => {
     mocks.ids.mockImplementation(async (s: string) => (s === 'PEPE' ? 'pepe' : null));
     mocks.prices.mockResolvedValue({ pepe: { usd: 0.00001, usd_24h_change: -4.2, last_updated_at: 1790000000 } });
     const urls: string[] = [];
@@ -127,12 +127,12 @@ describe('/api/scanner/quotes typed form', () => {
 
     expect(quotes.map((q: any) => q.symbol)).toEqual(['PEPE', 'EURUSD', 'AAPL', 'NOPE']);
     expect(quotes[0]).toMatchObject({ assetType: 'crypto', price: 0.00001, changePercent: -4.2, asOf: new Date(1790000000 * 1000).toISOString(), asOfKind: 'timestamp' });
-    expect(quotes[1]).toMatchObject({ assetType: 'forex', price: 1.17, asOf: '2026-09-25T17:00:00.000Z' });
+    expect(quotes[1]).toMatchObject({ assetType: 'forex', price: null, error: 'Forex (retired)' });
     expect(quotes[2]).toMatchObject({ assetType: 'equity', price: 230.1, asOf: '2026-09-25', asOfKind: 'trading_day' });
     expect(quotes[3]).toMatchObject({ price: null, error: 'Unknown coin' });
     // Crypto never hits the stock lookup (no same-ticker stock prices for coins).
     expect(urls.some((u) => u.includes('GLOBAL_QUOTE') && u.includes('symbol=PEPE'))).toBe(false);
-    expect(urls.some((u) => u.includes('from_currency=EUR&to_currency=USD'))).toBe(true);
+    expect(urls.some((u) => u.includes('from_currency=EUR&to_currency=USD'))).toBe(false);
   });
 
   it('keeps the 20-per-request cap', async () => {

@@ -698,7 +698,7 @@ function ScannerBacktestContent() {
                   or max holding period expires.
                 </p>
                 <p>
-                  Data: <strong className="text-slate-200">Alpha Vantage</strong> for equities/forex,
+                  Data: <strong className="text-slate-200">Alpha Vantage</strong> for equities,
                   {' '}<strong className="text-slate-200">CoinGecko</strong> for crypto.
                   The first 200 bars are used as indicator warmup (EMA200).
                 </p>

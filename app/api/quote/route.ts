@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
         };
       }
     } else if (type === "fx") {
-      price = await getFxPrice(symbol, market, { strict });
+      return NextResponse.json({ok:false,error:'Forex (retired)',retired:true},{status:410});
     }
 
     if (price === null || isNaN(price)) {

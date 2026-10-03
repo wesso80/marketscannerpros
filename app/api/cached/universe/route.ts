@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const assetType = searchParams.get('asset_type'); // equity, crypto, forex
+  const assetType = searchParams.get('asset_type') === 'forex' ? 'equity' : searchParams.get('asset_type'); // equity, crypto, forex
   const tier = searchParams.get('tier'); // 1, 2, 3
   const enabled = searchParams.get('enabled'); // true, false
 
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    let query = 'SELECT * FROM symbol_universe WHERE 1=1';
+    let query = "SELECT * FROM symbol_universe WHERE COALESCE(asset_type, 'equity') <> 'forex'";
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
     for (const item of symbols) {
       const symbol = typeof item === 'string' ? item : item.symbol;
       const assetType = typeof item === 'object' ? item.asset_type || 'equity' : 'equity';
+      if (assetType === 'forex') { errors.push('Forex is retired; existing records are preserved'); continue; }
       const name = typeof item === 'object' ? item.name || null : null;
       const tier = typeof item === 'object' ? item.tier || 2 : 2;
 

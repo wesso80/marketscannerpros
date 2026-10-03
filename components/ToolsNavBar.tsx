@@ -43,6 +43,7 @@ export default function ToolsNavBar() {
         ))}
       </div>
 
+      <Link href="/tools" className="px-2 text-xs whitespace-nowrap">All tools</Link>
       {/* Auth controls */}
       <div className="ml-2 flex items-center gap-2 flex-shrink-0 text-[11px]">
         <Link href="/pricing" className="text-teal-300/70 hover:text-teal-300 whitespace-nowrap hidden md:inline">Pricing</Link>

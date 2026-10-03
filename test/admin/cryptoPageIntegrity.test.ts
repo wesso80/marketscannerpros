@@ -201,10 +201,10 @@ describe("price display helpers", () => {
     expect(formatHitPrice(null)).toBe("—");
     expect(formatHitPrice(0)).toBe("—");
   });
-  it("BTC leverage card gets a USD price", () => {
+  it("Overview quote tiles use the shared USD stamp", () => {
     expect(formatUsdPrice(65432.1)).toBe("$65,432.10");
     expect(formatUsdPrice(undefined)).toBeNull();
-    expect(src("app/tools/command-center/page.tsx")).toContain('symbol="BTC" price={derivatives.data?.coin.price}');
+    expect(src("app/tools/command-center/page.tsx")).toContain('<PriceStamp {...quoteStamp(symbol,asset,quotes.data?.quotes[symbol])}/>');
   });
 });
 

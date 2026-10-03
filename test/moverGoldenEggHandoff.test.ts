@@ -20,7 +20,8 @@ describe('crypto movers open the coin in Golden Egg', () => {
       const src = readFileSync(file, 'utf8');
       expect(src).not.toMatch(/openGoldenEgg\(m\.ticker\)/);
       expect(src).toMatch(/openGoldenEgg\(m\.ticker, m\.asset_class\)/);
-      expect(src).toMatch(/navigateTo\('golden-egg', symbol, selection\)/);
+      if(file.includes('/explorer/'))expect(src).toContain("router.push(symbolHref(symbol,assetType??'equity'))");
+      else expect(src).toMatch(/navigateTo\('golden-egg', symbol, selection\)/);
       expect(src).toMatch(/selectSymbol\(symbol, selection\)/);
     });
   }

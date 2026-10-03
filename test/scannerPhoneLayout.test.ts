@@ -29,8 +29,8 @@ describe('SC-7: Scanner phone layout', () => {
   });
 
   it('controls wrap between words, not inside them, at 320px', () => {
-    expect(page).toMatch(/<div className="flex flex-wrap gap-1\.5">\s*\{\(\['crypto', 'equity', 'forex'\] as const\)/);
-    expect(page).toContain('whitespace-nowrap break-normal rounded-md border px-2.5 py-1.5 text-xs font-bold uppercase');
+    expect(page).toContain('aria-label="Markets" className="flex flex-wrap gap-2"');
+    expect(page).toContain('whitespace-nowrap break-normal rounded-lg border px-4 py-2');
     expect(page).toContain('mt-4 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:tracking-[0.1em]');
     expect(page).toContain('truncate break-normal text-[10px] font-black uppercase tracking-[0.06em] text-slate-500 sm:tracking-[0.14em]');
   });

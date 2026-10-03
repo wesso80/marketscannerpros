@@ -8,7 +8,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import {symbolHref} from '@/lib/market/links';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMovers, useCommodities, useRegime, type SectorData, type Mover, type CommodityData, type CryptoCategory } from '@/app/v2/_lib/api';
 import { CROSS_MARKET, REGIME_COLORS } from '@/app/v2/_lib/constants';
@@ -89,6 +90,7 @@ export default function ExplorerPage() {
   const { tier } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
   const searchParams = useSearchParams();
+  const router=useRouter();
   const requestedInitialTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Overview';
   const [tab, setTab] = useState<ExplorerTab>(requestedInitialTab);
 
@@ -104,7 +106,7 @@ export default function ExplorerPage() {
   const openGoldenEgg = (symbol: string, assetType?: ResearchAsset) => {
     const selection = assetType ? { assetType } : {};
     selectSymbol(symbol, selection);
-    navigateTo('golden-egg', symbol, selection);
+    router.push(symbolHref(symbol,assetType??'equity'));
   };
 
   const sectors = useSectorsHeatmap();

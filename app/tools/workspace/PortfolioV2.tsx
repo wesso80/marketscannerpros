@@ -607,8 +607,7 @@ export default function PortfolioV2() {
             <div className="text-[11px] uppercase tracking-wider text-cyan-400 font-semibold mb-1">Symbol Tips</div>
             <p className="text-xs text-slate-300">
               <span className="text-emerald-400 font-medium">Crypto:</span> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
-              <span className="text-blue-400 font-medium">Stocks:</span> AAPL, TSLA, NVDA &nbsp;·&nbsp;
-              <span className="text-amber-400 font-medium">Forex:</span> EURUSD, GBPUSD
+              <span className="text-blue-400 font-medium">Stocks:</span> AAPL, TSLA, NVDA
             </p>
           </div>
 

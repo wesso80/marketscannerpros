@@ -23,7 +23,7 @@ export const metadata = {
     default: "MarketScanner Pros - Educational Market Analysis",
     template: "%s | MarketScanner Pros",
   },
-  description: "Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks, crypto, and forex.",
+  description: "Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks and crypto.",
   metadataBase: new URL('https://marketscannerpros.app'),
   openGraph: {
     type: 'website',
@@ -31,7 +31,7 @@ export const metadata = {
     url: 'https://marketscannerpros.app',
     siteName: 'MarketScanner Pros',
     title: 'MarketScanner Pros - Educational Market Analysis',
-    description: 'Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks, crypto, and forex.',
+    description: 'Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks and crypto.',
     images: [
       {
         url: '/og-image.png',
@@ -44,7 +44,7 @@ export const metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'MarketScanner Pros',
-    description: 'AI-supported educational market analysis for stocks, crypto, and forex.',
+    description: 'AI-supported educational market analysis for stocks and crypto.',
   },
   robots: {
     index: true,

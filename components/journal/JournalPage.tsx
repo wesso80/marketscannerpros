@@ -1,5 +1,6 @@
 'use client';
 
+import {journalLinkAsset} from '@/lib/market/symbolSnapshot';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { computeKpis } from '@/lib/journal/computeKpis';
@@ -71,10 +72,12 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
     const validSides = ['LONG', 'SHORT'] as const;
     const validTradeTypes = ['Spot', 'Options', 'Futures', 'Margin'] as const;
     const sideParam = searchParams.get('side')?.toUpperCase();
-    const ttParam = searchParams.get('tradeType');
+    const linkAsset=journalLinkAsset(searchParams.get('tradeType'),searchParams.get('assetClass'));
+    const ttParam = linkAsset.tradeType;
 
     const iv: TradeEntryInitialValues = {
       symbol: searchParams.get('symbol') || undefined,
+      assetClass: linkAsset.assetClass,
       side: validSides.includes(sideParam as typeof validSides[number]) ? (sideParam as 'LONG' | 'SHORT') : undefined,
       tradeType: validTradeTypes.includes(ttParam as typeof validTradeTypes[number]) ? (ttParam as TradeEntryInitialValues['tradeType']) : undefined,
       entryPrice: searchParams.get('entryPrice') || undefined,

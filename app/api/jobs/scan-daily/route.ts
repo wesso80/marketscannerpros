@@ -347,7 +347,7 @@ async function runDailyScan(req: NextRequest) {
     // run, so a crypto-only run shortly after 00:00 UTC keeps crypto rows on the latest completed candle.
     const requested = parseDailyScanAssets(new URL(req.url).searchParams.get('assets'));
     if (requested && requested.length === 0) {
-      return NextResponse.json({ success: false, error: "assets must list equity, crypto and/or forex" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "assets must list equity and/or crypto" }, { status: 400 });
     }
     const wants = (assetClass: DailyScanAsset) => !requested || requested.includes(assetClass);
 
@@ -376,16 +376,6 @@ async function runDailyScan(req: NextRequest) {
       const result = await scanCrypto(symbol, apiKey, overlay);
       if (result) results.push(result);
       else errors.push(`crypto:${symbol}`);
-    }
-
-    // Scan forex (top 5)
-    console.log("Starting forex scan...");
-    const forexToScan = wants('forex') ? FOREX_UNIVERSE.slice(0, 5) : [];
-    for (const symbol of forexToScan) {
-      if (!hasTime()) { console.log(`Time budget exhausted at forex:${symbol}`); break; }
-      const result = await scanForex(symbol, apiKey, overlay);
-      if (result) results.push(result);
-      else errors.push(`forex:${symbol}`);
     }
 
     // Store results in database. scan_date = the US market session the data belongs to (America/New_York calendar):
@@ -431,7 +421,7 @@ async function runDailyScan(req: NextRequest) {
       scanned: results.length,
       errors: errors.length,
       errorSymbols: errors,
-      topPicks: Object.fromEntries((['equity', 'crypto', 'forex'] as const).filter((ac) => wants(ac)).map((ac) => {
+      topPicks: Object.fromEntries((['equity', 'crypto'] as const).filter((ac) => wants(ac)).map((ac) => {
         const rows = results.filter(r => r.asset_class === ac).map((r) => ({ ...r, canonical: r.indicators?.canonical ?? null }));
         return [ac, selectDailyPicks(rows, 1).top[0] ?? null];
       })),

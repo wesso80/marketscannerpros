@@ -48,13 +48,13 @@ export default function ExplorerActionGrid({ assetType, symbol, blocked, blockRe
 
   return (
     <div className="mt-2 grid grid-cols-2 gap-1.5">
-      <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/workspace?tab=watchlists&symbol=${upper}`} label="Add to Watchlist" />
+      <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/workspace?tab=watchlists&addSymbol=${encodeURIComponent(upper)}&type=${assetType}`} label="Add to Watchlist" />
       <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/workspace?tab=alerts&symbol=${upper}`} label="Create Alert" />
       <ActionItem
         blocked={blocked}
         blockReason={blockReason}
-        href={assetType === 'crypto' ? `/tools/scanner?asset=crypto&symbol=${upper}` : `/tools/terminal?tab=time-confluence&symbol=${upper}`}
-        label="Run Confluence Scan"
+        href={symbolHref(upper,assetType)}
+        label="Open Symbol"
       />
       <ActionItem
         blocked={blocked}
@@ -65,3 +65,4 @@ export default function ExplorerActionGrid({ assetType, symbol, blocked, blockRe
     </div>
   );
 }
+import {symbolHref} from '@/lib/market/links';
