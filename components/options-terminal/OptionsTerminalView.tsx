@@ -768,9 +768,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
           {/* OI Map */}
           <div className="col-span-12 xl:col-span-4">
-            <Card title="Open Interest Map" right={<span className="text-xs text-zinc-400">walls</span>}>
+            <Card title="Open Interest Map" right={<span className="text-xs text-zinc-400">OI as of {chain.asOfDate || 'unavailable'}</span>}>
               {chain.oiHeatmap.length > 0 ? (
-                <OIHeatmapInline heatmap={chain.oiHeatmap} spot={spot} />
+                <OIHeatmapInline heatmap={chain.oiHeatmap} spot={spot} expectedMove={chain.ivMetrics.expectedMoveAbs} />
               ) : (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-sm text-zinc-400 text-center">
                   Load a chain to see OI heatmap
@@ -935,31 +935,35 @@ function LiquidityLine({ label, value, tone }: { label: string; value: string; t
 }
 
 /* ─── Inline OI Heatmap ──────────────────────────────────────── */
-function OIHeatmapInline({ heatmap, spot }: { heatmap: OIHeatmapRow[]; spot: number }) {
+function OIHeatmapInline({ heatmap, spot, expectedMove }: { heatmap: OIHeatmapRow[]; spot: number; expectedMove:number }) {
   const topRows = useMemo(() => {
-    return [...heatmap].sort((a, b) => b.totalOI - a.totalOI).slice(0, 15).sort((a, b) => a.strike - b.strike);
+    return [...heatmap].sort((a, b) => a.strike - b.strike);
   }, [heatmap]);
   const maxOI = Math.max(...topRows.map((r) => r.totalOI), 1);
 
   return (
     <div className="space-y-1">
-      {topRows.map((row) => {
+      <p className="text-xs text-zinc-400">Spot ${spot.toFixed(2)} · {expectedMove > 0 ? `window ±3 moves; shaded 1-sigma band $${(spot-expectedMove).toFixed(2)}–$${(spot+expectedMove).toFixed(2)}` : '10% spot window; expected move unavailable'}</p>
+      {topRows.map((row, index) => {
         const callPct = (row.callOI / maxOI) * 100;
         const putPct = (row.putOI / maxOI) * 100;
         const isWall = row.totalOI >= maxOI * 0.7;
         const isAtm = spot > 0 && Math.abs(row.strike - spot) / spot < 0.015;
 
         return (
-          <div key={row.strike} className="flex items-center gap-1 py-0.5">
+          <div key={row.strike}>
+          {row.strike >= spot && (index===0 || topRows[index-1].strike<spot) && <div className="border-t border-emerald-400 text-[10px] text-emerald-300">Spot ${spot.toFixed(2)}</div>}
+          <div className={`flex items-center gap-1 py-0.5 ${expectedMove>0 && Math.abs(row.strike-spot)<=expectedMove ? 'bg-sky-900/30' : ''}`}>
             <div className="flex-1 h-3 flex justify-end">
               <div className="h-full rounded-l-sm" style={{ width: `${callPct}%`, background: isWall ? 'var(--msp-bull)' : 'rgba(47,179,110,0.3)' }} />
             </div>
             <div className={`text-[9px] font-mono font-bold text-center w-12 shrink-0 ${isAtm ? 'text-emerald-300' : isWall ? 'text-yellow-300' : 'text-zinc-400'}`}>
-              {row.strike.toFixed(0)}
+              {row.strike.toString()}
             </div>
             <div className="flex-1 h-3 flex justify-start">
               <div className="h-full rounded-r-sm" style={{ width: `${putPct}%`, background: isWall ? 'var(--msp-bear)' : 'rgba(228,103,103,0.3)' }} />
             </div>
+          </div>
           </div>
         );
       })}
