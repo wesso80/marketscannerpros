@@ -3401,13 +3401,18 @@ function recommendStrategy(
 // STRIKE SELECTION BASED ON 50% LEVELS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function selectStrikesFromConfluence(
+export function selectStrikesFromConfluence(
   confluenceResult: HierarchicalScanResult,
   isCallDirection: boolean,
   availableStrikes: number[] = [],
   impliedVolatility: number = 0.25
 ): StrikeRecommendation[] {
-  const { currentPrice, mid50Levels, clusters, decompression, prediction } = confluenceResult;
+  const { currentPrice, decompression, prediction } = confluenceResult;
+  // The agent emits level 0 for timeframes it could not resample (5m-30m on 30m equity bars, or too little history).
+  // That is "unmeasured", not a price: never map it to a strike.
+  const measuredLevel = (n: number) => Number.isFinite(n) && n > 0;
+  const mid50Levels = confluenceResult.mid50Levels.filter(l => measuredLevel(l.level));
+  const clusters = confluenceResult.clusters.filter(c => measuredLevel(c.avgLevel));
   const recommendations: StrikeRecommendation[] = [];
   
   // Get sorted 50% levels in direction of trade
