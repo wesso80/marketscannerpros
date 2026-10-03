@@ -120,8 +120,9 @@ export function buildIVMetrics(contracts: OptionsContract[], spot: number, expir
   return {avgIV,ivLevel:'unavailable',expectedMoveAbs,expectedMovePct:spot>0?expectedMoveAbs/spot*100:0,atmStraddleMid};
 }
 
-function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
+export function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
   return groups
+    .map(g => ({...g, call:g.call && hasTwoSidedQuote(g.call)?g.call:undefined, put:g.put && hasTwoSidedQuote(g.put)?g.put:undefined}))
     .map((g) => ({
       strike: g.strike,
       callOI: g.call?.openInterest ?? 0,
@@ -131,6 +132,12 @@ function buildOIHeatmap(groups: StrikeGroup[]): OIHeatmapRow[] {
       putVol: g.put?.volume ?? 0,
     }))
     .filter((r) => r.totalOI > 0);
+}
+
+/** Shared OI/notable universe. No expected move available => explicitly labelled 10% spot band. */
+export function oiContextContracts(contracts:OptionsContract[],spot:number,expectedMove:number) {
+  const width=expectedMove>0?3*expectedMove:spot*.1;
+  return contracts.filter(c=>hasTwoSidedQuote(c)&&spot>0&&Math.abs(c.strike-spot)<=width);
 }
 
 /* ── Hook ─────────────────────────────────────────────────────────── */
@@ -203,10 +210,11 @@ export function useOptionsChain(): UseOptionsChainState {
 
   // derived data
   const strikeGroups = buildStrikeGroups(contracts, underlyingPrice);
-  const bestStrikes = buildBestStrikes(contracts, underlyingPrice);
 
   const ivMetrics = buildIVMetrics(contracts, underlyingPrice, contracts[0]?.expiration ?? '', asOfDate);
-  const oiHeatmap = buildOIHeatmap(strikeGroups);
+  const oiContracts = oiContextContracts(contracts, underlyingPrice, ivMetrics.expectedMoveAbs);
+  const bestStrikes = buildBestStrikes(oiContracts, underlyingPrice);
+  const oiHeatmap = buildOIHeatmap(buildStrikeGroups(oiContracts, underlyingPrice));
 
   return {
     contracts,
