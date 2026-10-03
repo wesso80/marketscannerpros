@@ -33,7 +33,7 @@ function HeaderContent() {
   const activeArea = workflowArea(pathname, searchParams.get('tab') || '');
   const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
   const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
-  const surfaces = SURFACES.map(s => ({ ...s, href: searchParams.get('symbol') && (s.id === 'research' || s.id === 'backtest')
+  const surfaces = SURFACES.map(s => ({ ...s, href: searchParams.get('symbol') && (s.id === 'research' || (s.id === 'options' && searchParams.get('type') !== 'crypto'))
     ? researchHref(s.href, searchParams.get('symbol')!, { assetType: parseResearchAsset(searchParams.get('type')), timeframe: parseResearchTimeframe(searchParams.get('timeframe')) }) : s.href }));
 
   useEffect(() => {

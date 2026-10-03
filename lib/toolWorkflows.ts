@@ -1,36 +1,21 @@
 export type ToolTier = 'free' | 'pro'; // two access levels only
 export type WorkflowTool = { href: string; label: string; description: string; tier: ToolTier; role: 'primary' | 'advanced' | 'specialist' };
-export type WorkflowArea = 'overview' | 'scanner' | 'research' | 'backtest' | 'track';
+export type WorkflowArea = 'overview' | 'scanner' | 'research' | 'options' | 'backtest' | 'track';
 export type ToolWorkflow = { id: 'find' | 'validate' | 'mechanics' | 'test' | 'track' | 'advanced'; title: string; subtitle: string; outcome: string; tools: WorkflowTool[] };
 
 export const primaryNavTools = [
   { id: 'overview', href: '/tools/command-center', label: 'Overview' },
   { id: 'scanner', href: '/tools/scanner', label: 'Scanner' },
-  { id: 'research', href: '/tools/golden-egg', label: 'Research' },
-  { id: 'backtest', href: '/tools/workspace?tab=backtest', label: 'Backtest' },
+  { id: 'research', href: '/tools/golden-egg', label: 'Symbol' },
+  { id: 'options', href: '/tools/options', label: 'Options' },
   { id: 'track', href: '/tools/workspace?tab=journal', label: 'Track' },
 ] as const;
 
 export const areaLinks: Record<WorkflowArea, Array<{ href: string; label: string }>> = {
-  overview: [
-    { href: '/tools/command-center', label: 'Session overview' },
-    { href: '/tools/msp-radar', label: 'Daily Radar' },
-    { href: '/tools/dashboard', label: 'Market dashboard' },
-    { href: '/tools/explorer', label: 'Markets & sectors' },
-    { href: '/intelligence', label: 'Macro intelligence' },
-  ],
-  scanner: [
-    { href: '/tools/scanner', label: 'Ranked & custom scans' },
-    { href: '/tools/liquidity-sweep', label: 'Liquidity sweeps' },
-    { href: '/tools/scalper', label: 'Intraday scanner' },
-  ],
-  research: [
-    { href: '/tools/golden-egg', label: 'Symbol analysis' },
-    { href: '/tools/terminal', label: 'Charts & mechanics' },
-    { href: '/tools/research', label: 'News & calendar' },
-    { href: '/tools/crypto-intel', label: 'Crypto intelligence' },
-    { href: '/tools/volatility-engine', label: 'Volatility' },
-  ],
+  overview: [{ href: '/tools/command-center', label: 'Overview' }],
+  scanner: [{ href: '/tools/scanner', label: 'Crypto / Stocks' }],
+  research: [{ href: '/tools/golden-egg', label: 'Symbol' }],
+  options: [{ href: '/tools/options', label: 'Options' }],
   backtest: [
     { href: '/tools/workspace?tab=backtest', label: 'Strategy & scanner tests' },
     { href: '/tools/signal-accuracy', label: 'Recorded outcomes' },
@@ -40,12 +25,14 @@ export const areaLinks: Record<WorkflowArea, Array<{ href: string; label: string
     { href: '/tools/workspace?tab=portfolio', label: 'Portfolio' },
     { href: '/tools/workspace?tab=watchlists', label: 'Watchlists' },
     { href: '/tools/workspace?tab=alerts', label: 'Alerts' },
+    { href: '/tools/workspace?tab=backtest', label: 'Backtest' },
     { href: '/tools/workspace?tab=learning', label: 'Learning' },
   ],
 };
 
 export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
-  if (pathname.includes('backtest') || pathname.includes('signal-accuracy') || (pathname === '/tools/workspace' && tab === 'backtest')) return 'backtest';
+  if (/\/options(?:-|\/|$)/.test(pathname) || (pathname === '/tools/terminal' && tab.startsWith('options'))) return 'options';
+  if (pathname.includes('backtest') || pathname.includes('signal-accuracy') || (pathname === '/tools/workspace' && tab === 'backtest')) return 'track';
   if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlist|alerts|learning)(\/|$)/.test(pathname)) return 'track';
   if (/\/(scanner|liquidity-sweep|scalper)(\/|$)/.test(pathname)) return 'scanner';
   if (pathname.startsWith('/intelligence') || /\/(command-center|dashboard|msp-radar|explorer|markets)(\/|$)/.test(pathname)) return 'overview';

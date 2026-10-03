@@ -32,7 +32,7 @@ function AdminLoginSection() {
         return;
       }
       setAdminStatus({ tone: "success", text: "Admin access granted. Redirecting..." });
-      setTimeout(() => router.push("/tools/explorer"), 600);
+      setTimeout(() => router.push("/tools/command-center"), 600);
     } catch {
       setAdminStatus({ tone: "error", text: "Network error." });
     } finally {
@@ -101,7 +101,7 @@ function AuthContent() {
       .then(r => r.json())
       .then(d => {
         if (d?.authenticated) {
-          router.replace('/tools');
+          router.replace('/tools/command-center');
         } else {
           setCheckingSession(false);
         }

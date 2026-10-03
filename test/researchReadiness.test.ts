@@ -24,8 +24,8 @@ describe('research identity and navigation', () => {
     expect(parseResearchAsset('invalid')).toBeUndefined();
   });
   it('has five top-level areas and distinguishes shared workspace tabs', () => {
-    expect(primaryNavTools.map(t => t.label)).toEqual(['Overview', 'Scanner', 'Research', 'Backtest', 'Track']);
-    expect(workflowArea('/tools/workspace', 'backtest')).toBe('backtest');
+    expect(primaryNavTools.map(t => t.label)).toEqual(['Overview', 'Scanner', 'Symbol', 'Options', 'Track']);
+    expect(workflowArea('/tools/workspace', 'backtest')).toBe('track');
     expect(workflowArea('/tools/workspace', 'journal')).toBe('track');
   });
 });

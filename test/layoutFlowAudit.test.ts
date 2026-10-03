@@ -106,7 +106,7 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).not.toContain('Core Scanners');
     expect(commandHub).not.toContain('v2 Platform Surfaces');
     expect(commandHub).not.toContain('FeaturedTile');
-    expect(primaryNavTools.map(t => t.label)).toEqual(['Overview', 'Scanner', 'Research', 'Backtest', 'Track']);
+    expect(primaryNavTools.map(t => t.label)).toEqual(['Overview', 'Scanner', 'Symbol', 'Options', 'Track']);
     expect(parkedDashboard).toContain('const FALLBACK_CANDIDATES: Candidate[] = [];');
     expect(parkedDashboard).toContain('Research Alignment Matrix');
     expect(parkedDashboard).toContain('Alignment-Filtered Observations');
@@ -314,8 +314,8 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).toContain("href: '/tools/dashboard?tab=crypto'");
     expect(toolsNavBar).toContain('primaryNavTools');
     expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
-    expect(areaLinks.overview.map(t => t.href)).toContain('/tools/explorer');
-    expect(areaLinks.research.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/terminal', '/tools/crypto-intel']));
+    expect(areaLinks.overview.map(t => t.href)).toEqual(['/tools/command-center']);
+    expect(areaLinks.research.map(t => t.href)).toEqual(['/tools/golden-egg']);
     expect(toolsNavBar).toContain("tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'");
     expect(toolsNavBar).not.toContain('⭐ Pro Trader');
     expect(toolsNavBar).not.toContain('✨ Pro');
