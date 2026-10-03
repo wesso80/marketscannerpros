@@ -1,3 +1,4 @@
+import { atmStrike } from '@/lib/options/atmStrike';
 import { selectOptionsExpiry, marketDateKey } from '@/lib/options/expiry';
 /**
  * ONE options snapshot per symbol. Every number carries its expiry and snapshot time; strikes from different expiries
@@ -87,8 +88,8 @@ export function atmImpliedVol(chain: RawContract[], spot: number): number | null
   if (!withIv.length) return null;
   let atm = withIv.filter((c) => Math.abs(c.strike - spot) / spot <= 0.02);
   if (!atm.length) {
-    const nearest = Math.min(...withIv.map((c) => Math.abs(c.strike - spot)));
-    atm = withIv.filter((c) => Math.abs(c.strike - spot) === nearest);
+    const nearest = atmStrike(withIv.map(c=>c.strike),spot);
+    atm = withIv.filter(c=>c.strike===nearest);
   }
   return atm.reduce((sum, c) => sum + c.iv, 0) / atm.length;
 }
