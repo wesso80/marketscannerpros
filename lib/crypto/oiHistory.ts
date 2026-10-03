@@ -50,6 +50,23 @@ export async function getOiEvidence() {
       cacheUp = false;
     }
   }
+  // A null feed is a provider failure, not an empty market. Do not age contracts out or rewrite the pin.
+  if (tickers == null) {
+    const held = saved ?? pinned ?? [];
+    if (held.length) {
+      const coverage = 'CoinGecko derivatives are unavailable. The last pinned basket is unchanged. Not the whole market.';
+      return {
+        coins: held.map(c => ({ ...c, change24h: null, comparisonAt: null, previousValue: null, comparedValue: null })),
+        method: OI_METHOD, carriedContracts: held.reduce((n, c) => n + (c.carriedContracts ?? 0), 0), droppedContracts: 0,
+        expectedContracts: held.reduce((n, c) => n + (c.expectedContracts ?? 0), 0),
+        basketEstablished: Boolean((pinned ?? saved)?.length),
+        observedAt: new Date(Math.min(...held.map(c => c.observedAt))).toISOString(),
+        totalOpenInterest: held.reduce((sum, c) => sum + c.value, 0), change24h: null,
+        comparisonReason: coverage, coverage, status: 'degraded' as const,
+        persistence: redis && cacheUp ? 'ok' as const : 'unavailable' as const,
+      };
+    }
+  }
   const build = (previous:StableOiObservation[]) => {
     const universe = previous.length ? previous.map(c=>c.symbol) : SYMBOLS;
     let droppedContracts = 0;
