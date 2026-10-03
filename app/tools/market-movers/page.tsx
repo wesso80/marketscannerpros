@@ -10,6 +10,7 @@ import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { equityMoversBasisLabel, formatEasternAsOf, moversDataChipLabel } from '@/lib/alphaVantageEntitlement';
+import { moverResearchLink } from '@/lib/options/journey';
 
 interface Mover {
   ticker: string;
@@ -789,10 +790,10 @@ export default function MarketMoversPage() {
                             <span className="text-[11px] text-slate-500">{mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}</span>
                           ) : (
                             <Link
-                              href={`/tools/terminal?tab=options-terminal&type=equity&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                              href={moverResearchLink(mover, environment.deploymentMode).href}
                               className="inline-block rounded border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-200"
                             >
-                              Open Confluence Panel
+                              {moverResearchLink(mover, environment.deploymentMode).label}
                             </Link>
                           )}
                         </div>
@@ -903,10 +904,10 @@ export default function MarketMoversPage() {
                               </button>
                             ) : (
                               <Link
-                                href={`/tools/terminal?tab=options-terminal&type=equity&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                                href={moverResearchLink(mover, environment.deploymentMode).href}
                                 className="rounded border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/25"
                               >
-                                Open Confluence →
+                                {moverResearchLink(mover, environment.deploymentMode).tableLabel}
                               </Link>
                             )}
                           </td>

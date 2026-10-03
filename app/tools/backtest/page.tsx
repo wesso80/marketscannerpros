@@ -34,6 +34,7 @@ import { buildInverseComparisonSnapshot } from '@/lib/backtest/inverseComparison
 import { backtestAction, formatProfitFactorValue, hasNoLosses, hasSufficientSample, isBlockedBySampleSize, MIN_TRADES_FOR_EXECUTE, scoreProfitFactor } from '@/lib/backtest/profitFactorScore';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft } from '@/lib/workflow/types';
+import { backtestOptionsTerminalLink } from '@/lib/options/journey';
 
 interface BacktestResult {
   initialCapital?: number;
@@ -1207,6 +1208,7 @@ function BacktestContent() {
       setAiLoading(false);
     }
   };
+  const optionsReturn = backtestOptionsTerminalLink(symbol, assetType || dateAnchorInfo?.assetType || '');
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -1288,8 +1290,9 @@ function BacktestContent() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
+              {optionsReturn && (
               <Link
-                href={`/tools/terminal?tab=options-terminal&type=equity&symbol=${symbol}`}
+                href={optionsReturn.href}
                 style={{
                   padding: '8px 14px',
                   background: 'var(--msp-panel)',
@@ -1301,8 +1304,9 @@ function BacktestContent() {
                   fontWeight: '500',
                 }}
               >
-                ← Back to Scanner
+                {optionsReturn.label}
               </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setShowOptionsBanner(false)}
