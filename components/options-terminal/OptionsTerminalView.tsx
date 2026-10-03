@@ -13,6 +13,7 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
 import { useOptionsChain } from '@/hooks/useOptionsChain';
 import type {
@@ -147,38 +148,26 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
   }, []);
 
   const spot = chain.underlyingPrice;
-  const [updatedLabel, setUpdatedLabel] = useState('');
-  useEffect(() => {
-    if (chain.loading) { setUpdatedLabel('Loading…'); return; }
-    if (!chain.lastFetchedAt) { setUpdatedLabel(''); return; }
-    const tick = () => setUpdatedLabel(`Updated ${Math.round((Date.now() - chain.lastFetchedAt) / 1000)}s ago`);
-    tick();
-    const id = window.setInterval(tick, 5_000);
-    return () => window.clearInterval(id);
-  }, [chain.loading, chain.lastFetchedAt]);
-
-  const chainAgeSeconds = chain.lastFetchedAt ? Math.round((Date.now() - chain.lastFetchedAt) / 1000) : null;
-  const chainIsStale = chainAgeSeconds != null && chainAgeSeconds > 15 * 60;
-  const liquidContracts = chain.contracts.filter(c => c.bid > 0 && c.ask >= c.bid && Number.isFinite(c.spreadPct));
-  const chainCoverage = chain.contracts.length ? Math.round(liquidContracts.length / chain.contracts.length * 100) : 0;
-  const avgSpreadPct = liquidContracts.length
-    ? liquidContracts.reduce((sum, contract) => sum + contract.spreadPct, 0) / liquidContracts.length
-    : 0;
-  const tightSpreadPct = liquidContracts.length
-    ? Math.round((liquidContracts.filter((contract) => contract.spreadPct <= 8).length / liquidContracts.length) * 100)
-    : 0;
+  const updatedLabel = chain.loading ? 'Loading…' : quoteDateLabel(chain.quoteBasis, chain.asOfDate);
+  const quality = chainQuality(chain.contracts, spot, chain.quoteBasis, chain.asOfDate);
+  const chainIsStale = quality.stale;
+  const liquidContracts = quality.quoted;
+  const chainCoverage = quality.coverage;
+  const avgSpreadPct = quality.averageSpread;
+  const tightSpreadPct = quality.tightShare;
   const providerStatus = buildMarketDataProviderStatus({
     source: 'options-terminal',
     provider: chain.provider || 'options chain',
     stale: chainIsStale,
-    degraded: true, // Quote observation time is not provided by this endpoint.
+    degraded: quality.degraded,
     warnings: [
-      'Provider quote observation time unavailable. Retrieval age does not establish live quotes.',
+      !chain.asOfDate ? 'Provider quote date unavailable.' : null,
+      chainCoverage < 80 ? `${chainCoverage}% two-sided quote coverage within 10% of spot.` : null,
       chain.error ? `Options chain error: ${chain.error}` : null,
       chain.contracts.length === 0 && ticker ? 'No option contracts loaded.' : null,
-      chain.quoteBasis === 'previous_session' ? `Live option quotes unavailable; showing previous session close${chain.asOfDate ? ` (as of ${chain.asOfDate})` : ''}.` : null,
+      chain.quoteBasis === 'previous_session' ? `Live option quotes unavailable; ${updatedLabel}.` : null,
       chain.quoteBasis === 'marks_only' ? 'Provider returned marks only (no usable bid/ask).' : null,
-      chainIsStale ? 'Options chain data is older than 15 minutes.' : null,
+      chainIsStale ? 'Options quote date is older than the current/last trading session.' : null,
       avgSpreadPct > 12 ? `Average contract spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
     ].filter(Boolean) as string[],
   });
@@ -188,7 +177,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       status: providerStatus,
       source: chain.provider || 'unknown',
       coverageScore: chainCoverage,
-      computedAt: chain.lastFetchedAt ? new Date(chain.lastFetchedAt) : null,
+      computedAt: null, // Retrieval time must not masquerade as quote time.
     },
     {
       label: 'Liquidity',
@@ -208,9 +197,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       status: buildMarketDataProviderStatus({
         source: 'options-iv',
         provider: 'implied volatility model',
-        degraded: true,
+        degraded: quality.degraded || chain.ivMetrics.avgIV <= 0,
         warnings: [
-          'IV model observation time unavailable; this is not verified live IV.',
+          quality.degraded ? `IV uses ${updatedLabel}; near-money quote coverage ${chainCoverage}%.` : null,
           chain.ivMetrics.avgIV <= 0 ? 'Average IV unavailable.' : null,
           chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV requires event and spread checks.' : null,
         ].filter(Boolean) as string[],
@@ -235,7 +224,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       label: 'Liquidity',
       value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Unavailable',
       status: liquidContracts.length === 0 ? 'missing' as const : tightSpreadPct >= 60 ? 'supportive' as const : 'conflicting' as const,
-      detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across priced contracts.` : 'No usable bid/ask pairs; spread and liquidity quality are unavailable.',
+      detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across quoted contracts within 10% of spot.` : 'No usable bid/ask pairs; spread and liquidity quality are unavailable.',
     },
     {
       label: 'IV Context',
