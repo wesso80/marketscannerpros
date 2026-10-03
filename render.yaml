@@ -17,6 +17,9 @@ services:
         value: "--max-old-space-size=1536"
       - key: AI_GATEWAY_API_KEY
         sync: false
+      # Read-only bot key for GET /api/admin/crypto-markets/summary. Set the value on Render; never commit it.
+      - key: CRYPTO_SUMMARY_KEY
+        sync: false
 
   # ==========================================================================
   # Background Worker: Data Ingestion (Alpha Vantage) + job scheduler
