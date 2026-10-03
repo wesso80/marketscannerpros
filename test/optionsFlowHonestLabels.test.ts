@@ -58,8 +58,8 @@ const quote = { 'Global Quote': { '05. price': '250.00', '10. change percent': '
 /** Every string VALUE in the payload (keys like whaleCount are allowed; their values are null). */
 const stringValues = (v: unknown): string =>
   typeof v === 'string' ? v : Array.isArray(v) ? v.map(stringValues).join(' ') : v && typeof v === 'object' ? Object.values(v).map(stringValues).join(' ') : '';
-const get = async () => {
-  const res = await flowGET(new NextRequest('http://localhost/api/options-flow?symbol=AAPL'));
+const get = async (expiry?:string) => {
+  const res = await flowGET(new NextRequest(`http://localhost/api/options-flow?symbol=AAPL${expiry ? '&expiry='+expiry : ''}`));
   return { status: res.status, body: await res.json() };
 };
 
@@ -149,9 +149,9 @@ describe('GET /api/options-flow on the previous-session fallback', () => {
     expect(body.expiryNote).toBeNull();
   });
 
-  it('live chain: 0DTE is still allowed, and inference is still withheld (snapshots are never trade prints)', async () => {
+  it('live chain: explicit 0DTE is still allowed, and inference is still withheld (snapshots are never trade prints)', async () => {
     m.av = { REALTIME_OPTIONS: chainFor([TODAY, NEXT], TODAY), GLOBAL_QUOTE: quote };
-    const { status, body } = await get();
+    const { status, body } = await get(TODAY);
     expect(status).toBe(200);
     expect(body).toMatchObject({ quoteBasis: 'realtime', expiration: TODAY, expiryNote: null, inferenceAvailable: false, factsLabel: 'Snapshot estimate' });
     expect(body.aggregate.conviction).toBeNull();

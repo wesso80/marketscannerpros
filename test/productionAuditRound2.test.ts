@@ -30,7 +30,7 @@ describe('post-remediation audit round 2 regressions', () => {
     expect(chain).toContain('if (!isCurrentOrFutureExpiry(c.expiration)) continue');
     expect(flow).toContain(".filter((expiration) => /^\\d{4}-\\d{2}-\\d{2}$/.test(expiration) && expiration >= todayKey)");
     expect(flow).toContain("code: 'INSUFFICIENT_QUOTE_COVERAGE'");
-    expect(terminal).toContain('chain.expirations.find((e) => e.dte > 0');
+    expect(terminal).toContain('selectOptionsExpiry(chain.expirations.map(e=>e.date))');
   });
 
   it('treats missing derivatives as unavailable rather than zero-valued evidence', () => {

@@ -1,5 +1,6 @@
 'use client';
 
+import { selectOptionsExpiry } from '@/lib/options/expiry';
 import { atmImpliedVol, quoteDaysToExpiry } from '@/lib/goldenEgg/optionsChain';
 import { hasTwoSidedQuote } from '@/lib/options/quoteQuality';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -185,7 +186,7 @@ export function useOptionsChain(): UseOptionsChainState {
         }
         if (ctrl.signal.aborted) return;
         const dates = [...new Set(json.contracts.map(c => c.expiration))].sort();
-        const chosen = expiration || dates.find(d => d >= new Date().toISOString().slice(0, 10));
+        const chosen = selectOptionsExpiry(dates, expiration);
         setContracts(json.contracts.filter(c => c.expiration === chosen));
         setExpirations(json.expirations);
         setUnderlyingPrice(json.underlyingPrice);

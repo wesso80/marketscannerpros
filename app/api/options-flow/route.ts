@@ -1,3 +1,4 @@
+import { selectOptionsExpiry } from '@/lib/options/expiry';
 /**
  * Options Flow API — /api/options-flow
  *
@@ -150,20 +151,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No expirations found' }, { status: 404 });
     }
 
-    // Previous-session data describes yesterday's trading; an expiry that settles today (0DTE, US time) is about
-    // to vanish, so prefer the next expiry with dte >= 1 when one exists.
-    const skippedZeroDte = shared.quoteBasis === 'previous_session' && expirations[0] === todayKey && expirations.length > 1;
-    const candidateExpirations = skippedZeroDte ? expirations.filter((expiration) => expiration > todayKey) : expirations;
-
-    // Select nearest expiration with decent contract count
-    let selectedExpiry = candidateExpirations[0];
-    for (const exp of candidateExpirations) {
-      const group = byExpiry.get(exp) || [];
-      if (group.length >= 20) {
-        selectedExpiry = exp;
-        break;
-      }
-    }
+    const requestedExpiry = req.nextUrl.searchParams.get('expiry') || undefined;
+    const selectedExpiry = selectOptionsExpiry(expirations, requestedExpiry);
+    if (!selectedExpiry) return NextResponse.json({error:`Requested expiry ${requestedExpiry} is unavailable; no substitute selected.`, availableExpirations:expirations}, {status:422});
+    const skippedZeroDte = !requestedExpiry && selectedExpiry !== expirations[0];
 
     const expiryContracts = byExpiry.get(selectedExpiry) || [];
     const quotedContracts = expiryContracts.filter((contract) => {
@@ -206,7 +197,7 @@ export async function GET(req: NextRequest) {
       availableExpirations: expirations,
       contractCount: expiryContracts.length,
       expiryNote: skippedZeroDte
-        ? `Skipped ${todayKey} (expires today) because this is previous-session data; showing the next expiry.`
+        ? `Skipped ${todayKey} (expires today) under the shared next-listed-expiry default; select 0DTE explicitly if intended.`
         : null,
       ...source,
       factsLabel: onPreviousSession ? 'Previous session estimate' : 'Snapshot estimate',
