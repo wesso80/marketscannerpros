@@ -159,7 +159,7 @@ describe('GET /api/options-flow on the previous-session fallback', () => {
 });
 
 describe('Options Flow page', () => {
-  const page = readFileSync(join(__dirname, '..', 'app', 'tools', 'options-flow', 'page.tsx'), 'utf8');
+  const page = readFileSync(join(__dirname, '..', 'components', 'options-terminal', 'OptionsFlowView.tsx'), 'utf8');
   it('gates conviction, large-flow, pattern and tier widgets on the API flag', () => {
     expect(page).toContain('const inferred = data.inferenceAvailable === true;');
     expect(page).toContain("const DIRECTION_NOT_INFERRED = 'Direction not inferred (snapshot data)';");

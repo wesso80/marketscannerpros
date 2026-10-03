@@ -32,9 +32,9 @@ export const TOOL_CATALOG: ToolPage[] = [
   { key: 'crypto-intel',       href: '/tools/explorer?tab=crypto-intel', label: 'Crypto Intelligence',  description: 'GT Score, whale tracker, treasury & crypto news (in Markets)', icon: 'CI', category: 'Crypto' },
 
   // ─── Options (all canonical via /tools/terminal tabs) ───
-  { key: 'options-terminal',   href: '/tools/terminal?tab=options-terminal',  label: 'Options Terminal',  description: 'Chain, strikes, spreads, IV, and chain data truth',   icon: 'OT', category: 'Options', tier: 'pro' },
-  { key: 'options-confluence', href: '/tools/terminal?tab=options-confluence', label: 'Options Confluence', description: 'Strike and expiry alignment against research scenario', icon: 'OC', category: 'Options', tier: 'pro' },
-  { key: 'options-flow',       href: '/tools/terminal?tab=options-flow',       label: 'Options Flow',       description: 'Premium flow classification, skew, and large-flow estimates', icon: 'OF', category: 'Options', tier: 'pro' },
+  { key: 'options-terminal',   href: '/tools/options',  label: 'Options Terminal',  description: 'Chain, strikes, spreads, IV, and chain data truth',   icon: 'OT', category: 'Options', tier: 'pro' },
+  { key: 'options-confluence', href: '/tools/options', label: 'Options Confluence', description: 'Strike and expiry alignment against research scenario', icon: 'OC', category: 'Options', tier: 'pro' },
+  { key: 'options-flow',       href: '/tools/options',       label: 'Options Flow',       description: 'Premium flow classification, skew, and large-flow estimates', icon: 'OF', category: 'Options', tier: 'pro' },
 
   // ─── Research ───
   { key: 'ai-analyst',         href: '/tools/scanner',            label: 'ARCA AI Panel',         description: 'AI research support from live scanner context',     icon: 'AI', category: 'Research' },

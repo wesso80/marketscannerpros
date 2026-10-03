@@ -1,6 +1,7 @@
 'use client';
 import {useEffect} from 'react';
 import Link from 'next/link';
+import {optionsHref} from '@/lib/market/links';
 import {useOptionsChain} from '@/hooks/useOptionsChain';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
 import {formatMarketTime} from '@/lib/market/priceStamp';
@@ -38,6 +39,6 @@ export function SymbolOptionsContext({symbol,expiry}:{symbol:string;expiry?:stri
    <PriceStamp symbol={`${symbol} underlying`} assetType="equity" price={chain.spotObservation?.price??chain.underlyingPrice} latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf?'last_close':'unknown'} source={chain.provider}/>
    <p className="text-xs">Chain: {quoteDateLabel(chain.quoteBasis,chain.asOfDate)} · {chain.provider||'source unknown'}</p>
   </>}
-  <Link className="text-emerald-300" href={`/tools/options?${new URLSearchParams({symbol,...(selected?{expiry:selected}:{})})}`}>Open options</Link>
+  <Link className="text-emerald-300" href={optionsHref(symbol,selected)}>Open options</Link>
  </section>;
 }

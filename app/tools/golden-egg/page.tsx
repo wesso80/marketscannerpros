@@ -31,6 +31,7 @@ import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
+import {optionsHref} from '@/lib/market/links';
 import { lookupAssetType } from '@/lib/lookupAssetType';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
 import {SymbolCryptoContext,SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
@@ -1547,7 +1548,7 @@ export default function GoldenEggPage() {
                       href={canonicalTerminalHref}
                       className="mt-2 inline-block text-[11px] text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded"
                     >
-                      Open Options Terminal
+                      Open Options
                     </a>
                   )}
                 </div>

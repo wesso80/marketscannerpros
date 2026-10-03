@@ -260,9 +260,9 @@ describe('layout and flow audit regressions', () => {
     expect(toolCatalog).toContain("href: '/tools/workspace?tab=journal'");
     expect(toolCatalog).toContain("href: '/tools/workspace?tab=backtest'");
     expect(toolCatalog).toContain("href: '/tools/workspace?tab=alerts'");
-    expect(toolCatalog).toContain("href: '/tools/terminal?tab=options-confluence'");
-    expect(toolCatalog).toContain("href: '/tools/terminal?tab=options-flow'");
-    expect(toolCatalog).toContain("href: '/tools/terminal?tab=options-terminal'");
+    expect(toolCatalog).toContain("href: '/tools/options'");
+    expect(toolCatalog).toContain("href: '/tools/options'");
+    expect(toolCatalog).toContain("href: '/tools/options'");
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=movers'");
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=heatmap'");
     expect(toolCatalog).not.toContain("key: 'crypto-explorer'");
@@ -425,8 +425,8 @@ describe('layout and flow audit regressions', () => {
     const terminalLayout = read('app/tools/terminal/layout.tsx');
     const toolsLayoutClient = read('app/tools/ToolsLayoutClient.tsx');
     const terminalShell = read('components/terminal/TerminalShell.tsx');
-    const optionsConfluencePage = read('app/tools/options-confluence/page.tsx');
-    const optionsFlowPage = read('app/tools/options-flow/page.tsx');
+    const optionsConfluencePage = read('components/options-terminal/OptionsConfluenceScanner.tsx');
+    const optionsFlowPage = read('components/options-terminal/OptionsFlowView.tsx');
     const confluenceScannerPage = read('app/tools/confluence-scanner/page.tsx');
     const timeScannerPage = read('components/time/TimeScannerPage.tsx');
 

@@ -1,6 +1,6 @@
 'use client';
 
-import {symbolHref} from '@/lib/market/links';
+import {symbolHref,optionsHref} from '@/lib/market/links';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -98,7 +98,7 @@ export default function WatchlistWidget() {
   const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert' | 'research', symbol: string) => {
     const option = /^([A-Z0-9.\-]+) (\d{4}-\d{2}-\d{2}) [\d.]+[CP]$/.exec(symbol);
     if (option) {
-      router.push(`/tools/terminal?tab=options-terminal&type=equity&symbol=${encodeURIComponent(option[1])}&expiry=${option[2]}`);
+      router.push(optionsHref(option[1],option[2]));
       return;
     }
     const encodedSymbol = encodeURIComponent(symbol);
@@ -106,7 +106,7 @@ export default function WatchlistWidget() {
     const routes = {
       scan: `/tools/scanner?symbol=${encodedSymbol}`,
       deep: symbolHref(symbol,asset),
-      flow: `/tools/terminal?tab=options-confluence&symbol=${encodedSymbol}`,
+      flow: asset==='crypto'?symbolHref(symbol,asset):optionsHref(symbol),
       alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`,
       research: `/tools/research?tab=earnings&symbol=${encodedSymbol}`,
     };

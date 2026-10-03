@@ -18,6 +18,7 @@ import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { selectOptionsExpiry, withOptionsExpiry } from '@/lib/options/expiry';
 import { atmStrike } from '@/lib/options/atmStrike';
 import PerContractCosts from './PerContractCosts';
+import OptionsResearchSections from './OptionsResearchSections';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
 import { expiryAfterUnavailable, useOptionsChain } from '@/hooks/useOptionsChain';
@@ -809,6 +810,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
             </Card>
           </div>
         </div>
+        <OptionsResearchSections symbol={ticker} expiry={chain.contracts[0]?.expiration??selectedExpiry}/>
       </div>
     </div>
   );
