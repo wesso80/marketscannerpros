@@ -33,7 +33,7 @@ import {
 import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cryptoBars';
 import { avRowVolume } from '../lib/scanner/avVolume';
 import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
-import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
+import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, WORKER_DAILY_WINDOWS, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
 import { startScheduler } from './scheduler';
 import {
   avPayloadError,
@@ -615,9 +615,9 @@ function getCryptoDailyHistory(): CryptoDailyHistoryCache {
   });
   cryptoDailyHistory = new CryptoDailyHistoryCache({
     fetchFull: async (symbol, coinId, nowMs) => {
-      // Shared scanner adapter: two <=180-day daily windows + daily USD volume.
+      // Worker warm-up: six <=180-day daily windows + daily USD volume. User-facing fetches stay at 2 windows.
       // Do not manufacture OHLC from close samples or relabel 4-day candles as daily.
-      const series = await fetchCryptoSeries(symbol, 'daily', nowMs, { coinId, requestOptions: requestOptions() });
+      const series = await fetchCryptoSeries(symbol, 'daily', nowMs, { coinId, dailyWindows: WORKER_DAILY_WINDOWS, requestOptions: requestOptions() });
       return { bars: series.bars, warnings: series.warnings };
     },
     fetchIncrement: (coinId, sinceOpenMs, nowMs) => fetchCryptoDailyIncrement(coinId, sinceOpenMs, nowMs, requestOptions()),

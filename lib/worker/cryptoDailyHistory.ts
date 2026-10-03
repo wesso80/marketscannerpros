@@ -14,11 +14,13 @@
  */
 import type { Bar } from '@/lib/scanner/barAggregation';
 import { attachDailyVolumes } from '@/lib/scanner/barAggregation';
-import { cryptoRequestAnchors, DEFAULT_DAILY_WINDOWS } from '@/lib/scanner/cryptoBars';
+import { cryptoRequestAnchors } from '@/lib/scanner/cryptoBars';
 
 export const DAY_MS = 86_400_000;
-/** Bars a default full daily fetch holds: 6 × 180-day windows → opens from (today − 1080 d) to yesterday. */
-export const DAILY_HISTORY_DAYS = DEFAULT_DAILY_WINDOWS * 180;
+/** Worker/ingest warm-up only. User-facing `fetchCryptoSeries` stays at 2 × 180-day windows. */
+export const WORKER_DAILY_WINDOWS = 6;
+/** Bars a worker full daily fetch holds: 6 × 180-day windows → opens from (today − 1080 d) to yesterday. */
+export const DAILY_HISTORY_DAYS = WORKER_DAILY_WINDOWS * 180;
 
 export interface DailyHistoryEntry {
   coinId: string;
@@ -113,14 +115,14 @@ export interface DailyHistoryDeps {
 export interface DailyHistoryResult {
   bars: Bar[];
   plan: DailyHistoryPlan;
-  /** CoinGecko HTTP calls this read made (full = 3, incremental = 2, none = 0). */
+  /** CoinGecko HTTP calls this read made (full = 7, incremental = 2, none = 0). */
   calls: number;
   /** True when the held bars changed (new candle or re-sync). */
   changed: boolean;
   warnings: string[];
 }
 
-const FULL_CALLS = DEFAULT_DAILY_WINDOWS + 1;
+const FULL_CALLS = WORKER_DAILY_WINDOWS + 1;
 const INCREMENT_CALLS = 2;
 
 export class CryptoDailyHistoryCache {

@@ -2,8 +2,8 @@
  * Genuine-timeframe crypto bars for the scanner (CoinGecko Pro).
  *
  * Sources (verified live 2026-09-20 against pro-api.coingecko.com):
- *  - /coins/{id}/ohlc/range?interval=daily  → true DAILY OHLC, ≤180 days per call (we take 6 calls → ~1080 bars;
- *                                              callers can explicitly request fewer 180-day windows).
+ *  - /coins/{id}/ohlc/range?interval=daily  → true DAILY OHLC, ≤180 days per call (we take 2 calls → ~360 bars;
+ *                                              callers that need a converged EMA200 ask for more 180-day windows).
  *  - /coins/{id}/ohlc/range?interval=hourly → true HOURLY OHLC, ≤31 days per call (~745 bars).
  *  - /coins/{id}/market_chart/range          → daily `total_volumes` (24h volume ending at each 00:00 UTC point) for
  *                                              >90-day ranges; 5-minute price points for ≤1-day ranges.
@@ -38,8 +38,8 @@ export interface CryptoSeries {
 const DAY_S = 86_400;
 const HOURLY_MAX_DAYS = 31;
 const DAILY_MAX_DAYS = 180;
-/** Default daily indicator history: 6 × 180-day windows (~1,080 bars). */
-export const DEFAULT_DAILY_WINDOWS = 6;
+/** Default daily history: 2 × 180-day windows (~360 bars). User-facing callers keep this cost. */
+export const DEFAULT_DAILY_WINDOWS = 2;
 /** Upper bound on 180-day windows per request (8 → ~1,440 bars). */
 const MAX_DAILY_WINDOWS = 8;
 
@@ -164,7 +164,7 @@ export async function fetchCryptoSeries(
   opts: {
     /** Already-resolved CoinGecko id; skips ticker resolution (never treat an id like 'bitcoin' as a ticker). */ coinId?: string;
     requestOptions?: RequestOptions;
-    /** Daily/weekly only: number of 180-day OHLC windows to fetch (default 6 ≈ 1,080 bars, max 8). More history lets a
+    /** Daily/weekly only: number of 180-day OHLC windows to fetch (default 2 ≈ 360 bars, max 8). More history lets a
      *  200-period EMA converge (an SMA-seeded EMA200 on 360 bars still carries ~20% of its seed). */
     dailyWindows?: number;
   } = {},

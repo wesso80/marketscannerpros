@@ -117,13 +117,13 @@ describe('crypto series timeframe → source mapping', () => {
     expect(getOHLCRange.mock.calls.every((c) => c[0] === 'bitcoin')).toBe(true);
   });
 
-  it('daily = six daily windows with close timestamps normalised to bar opens and aligned volume', async () => {
+  it('daily = two daily windows with close timestamps normalised to bar opens and aligned volume', async () => {
     const all = dailyBars(360, now + DAY);
     getOHLCRange.mockImplementation(async (_id, from, to) => all.filter((b) => (Date.parse(b.t) + DAY) / 1000 >= from && (Date.parse(b.t) + DAY) / 1000 <= to).map((b) => [Date.parse(b.t) + DAY, b.open, b.high, b.low, b.close]));
     getMarketChartRange.mockResolvedValue({ prices: [], market_caps: [], total_volumes: all.map((b) => [Date.parse(b.t) + DAY, 9_000]) } as any);
     const s = await fetchCryptoSeries('BTC-USD', 'daily', now);
     expect(s.barInterval).toBe('1d');
-    expect(getOHLCRange).toHaveBeenCalledTimes(6);
+    expect(getOHLCRange).toHaveBeenCalledTimes(2);
     expect(getOHLCRange.mock.calls.every((c) => c[4] === undefined || c[4] === 'daily')).toBe(true);
     expect(s.bars.length).toBeGreaterThanOrEqual(300);
     expect(s.partialBar).toBeNull(); // provider returns only closed daily candles
