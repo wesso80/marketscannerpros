@@ -9,7 +9,8 @@ import { quoteSpreadPct } from '@/lib/options/contractCosts';
  *
  * Query params:
  *   symbol      — required ticker (e.g. AAPL)
- *   expiration  — optional ISO date filter (e.g. 2026-03-20)
+ *   expiration  — optional ISO date filter (e.g. 2026-03-20); `expiry` is accepted as an alias
+ *   expiries    — `all` returns every current or future expiry (Macro put/call). Omitted means the selected expiry only.
  *
  * Data source: shared chain (lib/options/chainCache) — Alpha Vantage REALTIME_OPTIONS (live bid/ask + greeks),
  * falling back to HISTORICAL_OPTIONS (previous session close) when the live chain has too few two-sided quotes.
@@ -204,6 +205,14 @@ async function fetchSpot(symbol: string): Promise<OptionSpotObservation | null> 
   return null;
 }
 
+/** `expiries=all` keeps every current/future contract. Every other caller stays on one expiry. */
+function responseContracts(eligible: OptionsContract[], expirationFilter: string | undefined, allExpiries: boolean): OptionsContract[] | null {
+  if (allExpiries) return eligible;
+  const selectedExpiry = selectOptionsExpiry(eligible.map((c) => c.expiration), expirationFilter);
+  if (!selectedExpiry) return null;
+  return eligible.filter((c) => c.expiration === selectedExpiry);
+}
+
 function inferSpot(contracts: OptionsContract[]): number {
   // Find the ATM strike where call delta ≈ 0.50
   const nearAtm = contracts
@@ -231,6 +240,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const rawSymbol = searchParams.get('symbol');
   const expirationFilter = searchParams.get('expiration') || searchParams.get('expiry') || undefined;
+  const allExpiries = searchParams.get('expiries') === 'all';
 
   if (!rawSymbol) {
     return NextResponse.json({ success: false, error: 'Symbol is required' } as Partial<OptionsChainResponse>, { status: 400 });
@@ -251,9 +261,8 @@ export async function GET(request: NextRequest) {
 
     if (cached && cached.contracts?.length) {
       const eligibleCachedContracts = cached.contracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
-      const selectedExpiry = selectOptionsExpiry(eligibleCachedContracts.map(c=>c.expiration), expirationFilter);
-      if (!selectedExpiry) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(cached.contracts),providerIssues:[]},{status:422});
-      const contracts = eligibleCachedContracts.filter(c=>c.expiration===selectedExpiry);
+      const contracts = responseContracts(eligibleCachedContracts, expirationFilter, allExpiries);
+      if (contracts === null) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(cached.contracts),providerIssues:[]},{status:422});
       if (contracts.length) {
         return NextResponse.json({
           success: true,
@@ -326,9 +335,8 @@ export async function GET(request: NextRequest) {
         error: 'Options provider returned no current or future expirations',
       } satisfies OptionsChainResponse, { status: 422 });
     }
-    const selectedExpiry = selectOptionsExpiry(eligibleContracts.map(c=>c.expiration), expirationFilter);
-    if (!selectedExpiry) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(eligibleContracts),providerIssues},{status:422});
-    const contracts = eligibleContracts.filter(c=>c.expiration===selectedExpiry);
+    const contracts = responseContracts(eligibleContracts, expirationFilter, allExpiries);
+    if (contracts === null) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(eligibleContracts),providerIssues},{status:422});
 
     return NextResponse.json({
       success: true,
