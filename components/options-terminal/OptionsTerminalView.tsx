@@ -57,7 +57,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
   useEffect(()=>{
     if(chain.loading)return;
     const container=tableContainer.current, row=container?.querySelector<HTMLTableRowElement>('[data-atm="true"]');
-    if(container && row) container.scrollTop=Math.max(0,row.offsetTop-container.offsetTop-container.clientHeight/2);
+    // Row offsetTop is measured from the table, not the page, so do not subtract container.offsetTop.
+    if(container && row) container.scrollTop=Math.max(0,row.offsetTop-container.clientHeight/2);
   },[chain.loading,chain.contracts]);
 
   /* ── UI state ──────────────────────────────────────────────── */
