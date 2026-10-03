@@ -97,24 +97,30 @@ export interface StableOiObservation extends OiObservation {
   contractObservedAt: Record<string, number>;
   carriedContracts: number;
   expectedContracts: number;
+  /** Pinned contracts past the carry window. They are left out of the sum. */
+  droppedContracts: number;
 }
-/** Fixed constituent set. A missing quote is carried at its ORIGINAL time for at most one hour. */
+/** Fixed constituent set. A missing quote is carried at its ORIGINAL time for at most one hour, then dropped. */
 export function stableOiObservation(symbol: string, rows: OiRow[], previous: StableOiObservation | null, now = Date.now()): StableOiObservation | null {
   const fresh = buildOiObservation(symbol, rows, now);
   const keys = previous ? Object.keys(previous.contracts) : Object.keys(fresh?.contracts ?? {});
   if (!keys.length) return null;
   const contracts: Record<string,number> = {}, contractObservedAt: Record<string,number> = {};
-  let carriedContracts = 0;
+  let carriedContracts = 0, droppedContracts = 0;
   for (const key of keys) {
     const row = rows.find(r=>JSON.stringify([r.market,r.symbol]) === key && Number.isFinite(r.openInterest) && r.openInterest >= 0 && Number.isFinite(r.lastTradedAt) && now-r.lastTradedAt*1000 >= 0 && now-r.lastTradedAt*1000 <= 900_000);
     if (row) { contracts[key]=row.openInterest; contractObservedAt[key]=row.lastTradedAt*1000; }
     else {
       const at=previous?.contractObservedAt[key];
-      if (at == null || now-at > HOUR_MS || now < at || !Number.isFinite(previous?.contracts[key])) return null;
-      contracts[key]=previous!.contracts[key]; contractObservedAt[key]=at; carriedContracts++;
+      const value=previous?.contracts[key];
+      if (at != null && now-at <= HOUR_MS && now >= at && Number.isFinite(value)) {
+        contracts[key]=value!; contractObservedAt[key]=at; carriedContracts++;
+      } else droppedContracts++;
     }
   }
+  const kept = Object.keys(contracts);
+  if (!kept.length) return null;
   return {symbol,method:OI_METHOD,value:Object.values(contracts).reduce((a,b)=>a+b,0),observedAt:now,
-    coverage:JSON.stringify(keys.sort()),exchanges:new Set(keys.map(k=>JSON.parse(k)[0])).size,
-    contracts,contractObservedAt,carriedContracts,expectedContracts:keys.length};
+    coverage:JSON.stringify(kept.sort()),exchanges:new Set(kept.map(k=>JSON.parse(k)[0])).size,
+    contracts,contractObservedAt,carriedContracts,expectedContracts:keys.length,droppedContracts};
 }

@@ -31,6 +31,7 @@ export async function GET(_req: NextRequest) {
       btc: btc ? { ...btc, formatted: formatUSD(btc.openInterest) } : null,
       eth: eth ? { ...eth, formatted: formatUSD(eth.openInterest) } : null,
       carriedContracts: evidence.carriedContracts, expectedContracts: evidence.expectedContracts,
+      droppedContracts: evidence.droppedContracts ?? 0,
       coins, comparisonReason: evidence.comparisonReason, coverage: evidence.coverage,
       method: evidence.method, timestamp: meta.lastUpdated, source: meta.provider,
       freshnessStatus: evidence.carriedContracts > 0 ? "degraded" : meta.freshnessStatus, meta,

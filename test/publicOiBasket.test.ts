@@ -8,7 +8,9 @@ it('pins contracts and carries a missed update without a fictitious OI collapse'
  expect(next.value).toBe(301);expect(next.coverage).toBe(first.coverage);expect(next.carriedContracts).toBe(1);
  expect(next.contractObservedAt[JSON.stringify(['B','BTCUSDT'])]).toBe(now);
 });
-it('fails closed when a constituent expires instead of silently rebasing the basket',()=>{
+it('drops a constituent after the carry window instead of failing the basket',()=>{
  const first=stableOiObservation('BTC',rows,null,now)!;
- expect(stableOiObservation('BTC',[{...rows[0],lastTradedAt:(now+2*3600000)/1000}],first,now+2*3600000)).toBeNull();
+ const next=stableOiObservation('BTC',[{...rows[0],openInterest:100,lastTradedAt:(now+2*3600000)/1000}],first,now+2*3600000)!;
+ expect(next.value).toBe(100);expect(next.droppedContracts).toBe(1);
+ expect(next.contracts[JSON.stringify(['B','BTCUSDT'])]).toBeUndefined();
 });
