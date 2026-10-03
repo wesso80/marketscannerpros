@@ -21,14 +21,15 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({
       total: {
         openInterest: total, formatted: formatUSD(total), change24h: evidence.change24h,
-        btcDominance: dominance(btc?.openInterest ?? 0), ethDominance: dominance(eth?.openInterest ?? 0),
-        altDominance: dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0)),
+        btcOiShare: dominance(btc?.openInterest ?? 0), ethOiShare: dominance(eth?.openInterest ?? 0),
+        altOiShare: dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0)),
       },
       btc: btc ? { ...btc, formatted: formatUSD(btc.openInterest) } : null,
       eth: eth ? { ...eth, formatted: formatUSD(eth.openInterest) } : null,
+      carriedContracts: evidence.carriedContracts, expectedContracts: evidence.expectedContracts,
       coins, comparisonReason: evidence.comparisonReason, coverage: evidence.coverage,
       method: evidence.method, timestamp: meta.lastUpdated, source: meta.provider,
-      freshnessStatus: meta.freshnessStatus, meta,
+      freshnessStatus: evidence.carriedContracts > 0 ? "degraded" : meta.freshnessStatus, meta,
     });
   } catch {
     return NextResponse.json({ error: 'Fresh open-interest observations unavailable' }, { status: 503 });

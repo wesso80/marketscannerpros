@@ -78,7 +78,7 @@ export default function MarketPulseHero() {
         if (oiRes?.total) {
           setOpenInterest({
             total: oiRes.total.formatted,
-            btcDominance: oiRes.total.btcDominance,
+            btcDominance: oiRes.total.btcOiShare,
             ethDominance: oiRes.total.ethDominance,
             change24h: Number.isFinite(oiRes.total.change24h) ? oiRes.total.change24h : null,
           });

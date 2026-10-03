@@ -38,7 +38,8 @@ describe('OV-18 comparable open-interest change', () => {
 
   it('open-interest feed says what is missing instead of the old identical-coverage wording', () => {
     const src = read('lib/crypto/oiHistory.ts');
-    expect(src).toContain('oi:observed-usd:v3:');
+    expect(src).toContain('oi:observed-usd:');
+    expect(src).toContain('fixed-v1');
     expect(src).toContain('covers at least 90% of the current open interest');
   });
 });
