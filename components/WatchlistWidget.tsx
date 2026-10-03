@@ -89,6 +89,11 @@ export default function WatchlistWidget() {
   const [compactView, setCompactView] = useState(false);
 
   const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert' | 'research', symbol: string) => {
+    const option = /^([A-Z0-9.\-]+) (\d{4}-\d{2}-\d{2}) [\d.]+[CP]$/.exec(symbol);
+    if (option) {
+      router.push(`/tools/terminal?tab=options-terminal&type=equity&symbol=${encodeURIComponent(option[1])}&expiry=${option[2]}`);
+      return;
+    }
     const encodedSymbol = encodeURIComponent(symbol);
     const routes = {
       scan: `/tools/scanner?symbol=${encodedSymbol}`,
@@ -647,7 +652,7 @@ export default function WatchlistWidget() {
                         <button type="button" aria-label={`Set alert for ${item.symbol}`} onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-amber-300">Alert</button>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <button type="button" aria-label={`Open scanner cockpit for ${item.symbol}`} onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
+                        <button type="button" aria-label={`Open scanner cockpit for ${item.symbol}`} onClick={() => launchTool('scan', item.symbol)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
                         <button type="button" aria-label={`Research ${item.symbol}`} onClick={() => launchTool('research', item.symbol)} className="rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-cyan-300">Research</button>
                         <button type="button" aria-label={`Remove ${item.symbol} from watchlist`} onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
                       </div>

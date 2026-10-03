@@ -696,12 +696,14 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                               watchlistId: wlId,
                               symbol: ticker,
                               assetType: 'option',
+                              option: {expiration:selectedContract!.expiration,strike:selectedContract!.strike,type:selectedContract!.type},
                               notes: contractSymbol,
                               addedPrice: selectedContract!.mark,
                             }),
                           });
                           if (!addRes.ok) throw new Error('Failed to add to watchlist');
-                          setWatchlistMsg('✓ Added to watchlist');
+                          const saved = await addRes.json();
+                          setWatchlistMsg(saved.alreadyExists ? 'Already in watchlist' : '✓ Added to watchlist');
                           setTimeout(() => setWatchlistMsg(''), 3000);
                         } catch (e: any) {
                           setWatchlistMsg(e.message);
