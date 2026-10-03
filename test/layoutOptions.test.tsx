@@ -25,3 +25,8 @@ it('default/options redirects preserve symbol and expiry and share both section 
  for(const name of ['options-confluence','options-flow'])expect(readFileSync(`app/tools/${name}/page.tsx`,'utf8')).toContain('redirect(optionsHref(');
  const source=readFileSync('components/options-terminal/OptionsResearchSections.tsx','utf8');expect(source.match(/symbol=\{symbol\} expiry=\{expiry\}/g)).toHaveLength(2);expect(source).toContain('key={`${symbol}:${expiry}`}');
 });
+
+it('active pages cannot be intercepted by the retired hub redirects',()=>{
+ const config=readFileSync('next.config.mjs','utf8');
+ for(const path of ['/tools/options','/tools/options-confluence','/tools/options-flow','/tools/crypto-dashboard'])expect(config).not.toContain(`source: '${path}'`);
+});

@@ -40,7 +40,7 @@ export function formatPriceStamp(input: PriceStampInput, options: PriceStampOpti
   let timeLabel: string | null=null;
   let basisLabel=input.priceBasisLabel ?? (bar?'daily bar close':close?'last close':basis==='realtime'?'live':basis==='spot'?'spot':'basis unknown');
   if(option && close)basisLabel='quotes: last session';
-  if(day && !crypto)timeLabel=`${dayLabel(day)}${option?' close':' (New York)'}`;
+  if(day && !crypto)timeLabel=`${dayLabel(day)}${option&&close?' close':' (New York)'}`;
   else if(d && close && !crypto){
     const ny=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
     timeLabel=`${dayLabel(ny)} (New York)`;

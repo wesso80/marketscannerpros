@@ -1,5 +1,7 @@
 'use client';
 
+import PriceStamp from '@/components/market/PriceStamp';
+import {watchlistStamp} from '@/lib/market/trackStamp';
 import {symbolHref,optionsHref} from '@/lib/market/links';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -633,11 +635,10 @@ export default function WatchlistWidget() {
 
                       <div className="grid gap-1 text-[12px] text-slate-300">
                         <div>
-                          Price: <span className="font-mono font-bold text-slate-100">{formatPrice(quote?.price)}</span>
+                          <PriceStamp compact {...watchlistStamp(item.asset_type,quote)}/>
                           {quote?.source === 'cached' && <span className="ml-1 rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-300" title="No live quote right now; showing the last stored price">cached</span>}
                           {quote?.note && <span className="ml-1 text-[10px] text-slate-400">({quote.note})</span>}
                         </div>
-                        <div className="text-[11px] text-slate-500">Updated: {formatQuoteAsOf(quote) ?? '—'}</div>
                         <div>Today: <span className={`font-mono font-bold ${row.direction === 'up' ? 'text-emerald-400' : row.direction === 'down' ? 'text-red-400' : 'text-slate-300'}`}>{formatTodayMove(row)}</span></div>
                       </div>
 

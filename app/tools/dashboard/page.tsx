@@ -701,7 +701,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
       {dashTab === 'My Pages' && <FavoritesPanel embeddedInDashboard />}
 
       {/* ─── Crypto Derivatives Tab ─── */}
-      {dashTab === 'Crypto Derivatives' && <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Derivatives"><CryptoDashboard embeddedInDashboard /></UpgradeGate>}
+      {dashTab === 'Crypto Derivatives' && <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Derivatives"><a href="/tools/crypto-dashboard" className="block rounded border border-emerald-400/30 p-4 text-emerald-300">Open Crypto derivatives detail</a></UpgradeGate>}
 
       {/* ─── Macro Tab ─── */}
       {dashTab === 'Macro' && (!isPro ? (

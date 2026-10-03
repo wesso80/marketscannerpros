@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  alternates: { canonical: 'https://marketscannerpros.app/tools/terminal?tab=options-confluence' },
+  alternates: { canonical: 'https://marketscannerpros.app/tools/options' },
   title: 'Options Confluence Scanner',
   description:
     'Educational strike and expiry context powered by options confluence and multi-timeframe alignment scoring.',

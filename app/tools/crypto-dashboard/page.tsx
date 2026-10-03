@@ -15,6 +15,10 @@ import DerivativesContextSection from '@/components/derivatives/DerivativesConte
 import type { DashboardData, DerivativesTradeIdea } from '@/components/derivatives/types';
 import { PageHero } from '@/components/ui';
 import CoinGeckoCredit from '@/components/CoinGeckoCredit';
+import MarketStatusStrip,{type MarketStatusItem} from '@/components/market/MarketStatusStrip';
+import {trustBadgeState} from '@/components/market/TrustBadge';
+import {buildMarketDataProviderStatus} from '@/lib/scanner/providerStatus';
+import {formatMarketTime} from '@/lib/market/priceStamp';
 
 export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { tier } = useUserTier();
@@ -29,6 +33,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [fetchErrors, setFetchErrors] = useState<string[]>([]);
+  const [feedTruth,setFeedTruth]=useState<MarketStatusItem[]>([]);
 
   const fetchData = useCallback(async () => {
     const get = async (url: string) => {
@@ -46,6 +51,14 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         get('/api/crypto/liquidations').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
         get('/api/crypto/heatmap').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
       ]);
+
+      setFeedTruth([
+        ['Funding','OKX',fundingRes],['Long/short accounts','OKX',lsRes],['Open interest',oiRes?.meta?.provider??'venue sample',oiRes],['Liquidations',liqRes?.meta?.provider??'venue sample',liqRes],['Prices','CoinGecko',heatmapRes],
+      ].map(([label,provider,feed])=>{
+        const status=buildMarketDataProviderStatus({source:String(label),provider:String(provider),stale:feed?.stale===true||feed?.meta?.freshnessStatus==='stale',degraded:!feed||feed.available===false,warnings:!feed?['Feed unavailable']:[]});
+        const trust=trustBadgeState({providerStatus:status,status:feed?.meta?.freshnessStatus==='fresh'?'Live':'Unknown'});
+        return {label:String(label),status:trust.normalized,statusLabel:trust.label,source:String(provider),notes:[label==='Prices'?'Per-coin observation times are not supplied by this heatmap feed':`As of ${formatMarketTime(feed?.observedAt??feed?.meta?.lastUpdated??feed?.timestamp)??'time unknown'}`]};
+      }));
 
       // Extract BTC, ETH, SOL prices from heatmap (uses CoinGecko)
       const prices: { [key: string]: { price: number; change24h: number } } = {};
@@ -442,6 +455,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         drivers={decisionDrivers}
       />
 
+      <MarketStatusStrip items={feedTruth} className="mb-4"/>
+      <p className="mb-2 text-xs text-slate-400">Funding source: OKX USDT perpetual swaps · rates are 8h equivalents, not spot returns.</p>
       <DerivativesMarketStrip items={marketStripItems} />
 
       <DerivativesCoreGrid

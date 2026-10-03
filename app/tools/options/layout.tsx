@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description:
     'Scan options flow and unusual activity with real-time data and professional-level analytics.',
   robots: { index: false, follow: true },
-  alternates: { canonical: 'https://marketscannerpros.app/tools/terminal?tab=options-terminal' },
+  alternates: { canonical: 'https://marketscannerpros.app/tools/options' },
 };
 
 export default function OptionsLayout({ children }: { children: React.ReactNode }) {

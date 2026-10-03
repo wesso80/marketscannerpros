@@ -1,5 +1,9 @@
 'use client';
 
+import Link from 'next/link';
+import PriceStamp from '@/components/market/PriceStamp';
+import {journalMarkStamp} from '@/lib/market/trackStamp';
+import {symbolHref} from '@/lib/market/links';
 import { assetDisplayLabel } from '@/lib/market/assets';
 import { Fragment, useState } from 'react';
 import TradeRowExpanded from '@/components/journal/layer2/TradeRowExpanded';
@@ -55,7 +59,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
           <details key={row.id} className="rounded-xl border border-white/5 bg-slate-900/40">
             <summary className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-semibold text-slate-100 text-sm">{row.symbol}{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}</span>
+                <span className="font-semibold text-slate-100 text-sm"><Link href={symbolHref(row.symbol,row.assetClass??'equity')}>{row.symbol}</Link>{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}</span>
                 {optionContractLabel(row) && <span className="truncate text-[10px] text-slate-400">{optionContractLabel(row)}</span>}
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${row.side === 'long' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
                   {row.side.toUpperCase()}
@@ -77,7 +81,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
               <div><span className="text-slate-500">Date</span> <span className="text-slate-200">{new Date(row.entry.ts).toLocaleDateString()}</span></div>
               <div><span className="text-slate-500">Stop</span> <span className="text-slate-200 font-mono">{row.stop != null ? fmtPrice(row.stop) : '—'}</span></div>
               <div><span className="text-slate-500">Target</span> <span className="text-slate-200 font-mono">{targetOf(row) != null ? fmtPrice(targetOf(row)!) : '—'}</span></div>
-              <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono" title={row.mark ? markTimeLabel(row.mark) : undefined}>{row.mark ? `Est. ${fmtPrice(row.mark.price)}${row.mark.basis === 'EOD' ? ' (EOD)' : ''}` : row.exit?.price != null ? fmtPrice(row.exit.price) : 'Unmarked'}</span></div>
+              <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono" title={row.mark ? markTimeLabel(row.mark) : undefined}>{row.mark ? <PriceStamp compact {...journalMarkStamp(row)}/> : row.exit?.price != null ? fmtPrice(row.exit.price) : 'Unmarked'}</span></div>
               {row.mark && <div className="col-span-2 text-[11px] text-slate-500">{markTimeLabel(row.mark)}</div>}
               <div><span className="text-slate-500">P&L %</span> <span className={`font-mono ${Number(row.pnlPct || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{formatSignedPct(row.pnlPct)}</span></div>
               <div><span className="text-slate-500">R</span> <span className="text-slate-200 font-mono">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</span></div>
@@ -149,7 +153,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
             <Fragment key={row.id}>
               <tr className="border-b border-white/5 hover:bg-white/5">
                 <td className="px-3 py-2 font-semibold text-slate-100">
-                  {row.symbol}{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}
+                  <Link href={symbolHref(row.symbol,row.assetClass??'equity')}>{row.symbol}</Link>{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}
                   {optionContractLabel(row) && <div className="text-[11px] font-normal text-slate-400">{optionContractLabel(row)}</div>}
                 </td>
                 <td className="px-3 py-2 text-slate-300">{row.status}</td>
@@ -161,7 +165,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                   {row.status === 'open' && row.mark ? (
                     <span className="flex items-center gap-1">
                       <span className="text-[10px] text-slate-400" title={markTimeLabel(row.mark)}>{row.mark?.basis === 'EOD' ? 'EOD' : 'Est.'}</span>
-                      <span className="font-mono">{fmtPrice(row.mark?.price ?? 0)}</span>
+                      <PriceStamp compact {...journalMarkStamp(row)}/>
                     </span>
                   ) : row.exit?.price != null && row.status === 'closed' ? (
                     fmtPrice(row.exit.price)

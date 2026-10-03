@@ -53,6 +53,7 @@ export interface DerivativesTradeIdea {
 export interface MarketStripItem {
   symbol: string;
   price?: number;
+  observedAt?: string | null;
   change24h?: number;
   oiDelta: number | null;
   fundingSkew: number | null;

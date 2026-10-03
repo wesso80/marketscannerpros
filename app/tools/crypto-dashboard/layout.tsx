@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description:
     'Monitor crypto market structure, derivatives context, and momentum signals in one actionable dashboard.',
   robots: { index: false, follow: false },
-  alternates: { canonical: 'https://marketscannerpros.app/tools/dashboard?tab=crypto' },
+  alternates: { canonical: 'https://marketscannerpros.app/tools/crypto-dashboard' },
 };
 
 export default function CryptoDashboardLayout({ children }: { children: React.ReactNode }) {

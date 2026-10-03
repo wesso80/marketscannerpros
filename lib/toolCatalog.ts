@@ -25,7 +25,7 @@ export const TOOL_CATALOG: ToolPage[] = [
 
   // ─── Crypto ───
   { key: 'crypto',             href: '/tools/explorer?tab=crypto-command', label: 'Crypto Overview', description: 'Cryptocurrency market overview',               icon: 'CR', category: 'Crypto' },
-  { key: 'crypto-dashboard',   href: '/tools/dashboard?tab=crypto', label: 'Crypto Derivatives', description: 'Funding rates, open interest, liquidations',       icon: 'DV', category: 'Crypto', tier: 'pro' },
+  { key: 'crypto-dashboard',   href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', description: 'Funding rates, open interest, liquidations',       icon: 'DV', category: 'Crypto', tier: 'pro' },
   { key: 'crypto-heatmap',     href: '/tools/crypto-heatmap',     label: 'Crypto Heatmap',       description: 'Visual crypto sector heatmap',                     icon: 'CH', category: 'Crypto' },
   { key: 'crypto-terminal',    href: '/tools/terminal?tab=crypto', label: 'Crypto Terminal',     description: 'Full crypto trading terminal',                     icon: 'CT', category: 'Crypto', tier: 'pro' },
   { key: 'crypto-time-confluence', href: '/tools/terminal?tab=time-confluence', label: 'Crypto Time Confluence', description: 'Crypto time-based patterns', icon: 'TC', category: 'Crypto' },

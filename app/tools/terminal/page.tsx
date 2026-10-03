@@ -782,9 +782,7 @@ export default function TerminalPage() {
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Terminal">
           <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
-              <CryptoTerminalView key={sym} symbol={sym} onSymbolChange={(next) => { setSymInput(next); selectSymbol(next, { assetType: 'crypto' }); }} onDataStateChange={setCryptoTerminalState} />
-            </Suspense>
+            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(sym)}`}>Open Crypto derivatives detail for {sym}</a>
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}

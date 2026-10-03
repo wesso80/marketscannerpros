@@ -1,3 +1,6 @@
+import PriceStamp from '@/components/market/PriceStamp';
+import Link from 'next/link';
+import {symbolHref} from '@/lib/market/links';
 import { MarketStripItem } from './types';
 
 interface DerivativesMarketStripProps {
@@ -14,18 +17,7 @@ export default function DerivativesMarketStrip({ items }: DerivativesMarketStrip
             <div key={item.symbol} className="rounded-xl border border-white/10 bg-black/10 p-3 text-left">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-white">{item.symbol}</span>
-                {item.price !== undefined ? (
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-white">
-                      ${item.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                    </div>
-                    <div className={`text-xs ${changeClass}`}>
-                      {item.change24h == null || !Number.isFinite(item.change24h) ? 'Unavailable' : `${item.change24h >= 0 ? '+' : ''}${item.change24h.toFixed(2)}%`}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-amber-400/70 text-xs">No data</div>
-                )}
+                <Link href={symbolHref(item.symbol,'crypto')}><PriceStamp compact price={item.price} assetType="crypto" priceBasis="spot" observedAt={item.observedAt} changePct={item.change24h} changeBasis="rolling_24h" source="CoinGecko"/></Link>
               </div>
 
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -34,7 +26,7 @@ export default function DerivativesMarketStrip({ items }: DerivativesMarketStrip
                   <div className="text-xs font-semibold text-white/80">{item.oiDelta == null ? 'Unavailable' : (item.oiDelta >= 0 ? '+' : '') + item.oiDelta.toFixed(2) + '%'}</div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
-                  <div className="text-[11px] text-white/50">Funding</div>
+                  <div className="text-[11px] text-white/50">Funding · OKX · 8h</div>
                   <div className="text-xs font-semibold text-white/80">{item.fundingSkew == null ? 'Unavailable' : (item.fundingSkew >= 0 ? '+' : '') + item.fundingSkew.toFixed(3) + '%'}</div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">

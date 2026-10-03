@@ -1,7 +1,7 @@
 import React from 'react';
 import {describe,it,expect} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {symbolJournalHref,findSymbolPick,symbolQuoteStamp} from '@/lib/market/symbolSnapshot';
+import {symbolJournalHref,findSymbolPick,symbolQuoteStamp,journalLinkAsset} from '@/lib/market/symbolSnapshot';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
 describe('L-6 Symbol snapshot',()=>{
  it.each(['crypto','equity'] as const)('prefills a %s long journal draft without option fields',asset=>{
@@ -32,4 +32,10 @@ describe('L-6 shared options and links',()=>{
   const {readFileSync}=await import('node:fs');
   for(const file of ['app/tools/market-movers/page.tsx','app/tools/gainers-losers/page.tsx','app/tools/backtest/page.tsx','app/tools/explorer/page.tsx','components/explorer/ExplorerActionGrid.tsx','components/WatchlistWidget.tsx'])expect(readFileSync(file,'utf8')).toContain('symbolHref(');
  });
+});
+
+it('the Crypto journal URL becomes a crypto spot draft without changing storage types',()=>{
+ const params=new URL(symbolJournalHref('BTC','crypto'),'http://local').searchParams;
+ expect(journalLinkAsset(params.get('tradeType'),params.get('assetClass'))).toEqual({tradeType:'Spot',assetClass:'crypto'});
+ expect(journalLinkAsset('Options','equity')).toEqual({tradeType:'Options',assetClass:'equity'});
 });
