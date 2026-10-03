@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
     // Fallback when worker cache tables are temporarily empty: use latest daily scanner picks.
     if (rows.length === 0) {
       rows = await q<Record<string, unknown>>(`
-        WITH latest AS (SELECT MAX(scan_date) AS d FROM daily_picks)
+        WITH latest AS (SELECT asset_class, MAX(scan_date) AS d FROM daily_picks GROUP BY asset_class)
         SELECT
           dp.symbol,
           dp.price,
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
           (dp.indicators->>'macd_line')::numeric AS macd_line,
           (dp.indicators->>'macd_signal')::numeric AS macd_signal
         FROM daily_picks dp
-        JOIN latest l ON dp.scan_date = l.d
+        JOIN latest l ON dp.scan_date = l.d AND dp.asset_class = l.asset_class
         WHERE dp.asset_class IN ('equity', 'crypto')
           AND dp.price IS NOT NULL
           AND dp.price > 0
@@ -158,15 +158,17 @@ export async function GET(req: NextRequest) {
       type: string;
     } & ReturnType<typeof canonicalPickFields>> = [];
 
-    // Canonical verdicts from the latest daily scan (bars-based). The worker cache only has an indicator snapshot
+    // Canonical verdicts from the latest daily scan per asset class (bars-based). A global MAX(scan_date)
+    // drops equities from Sun 00:40 UTC until Mon 21:30 UTC, when crypto's candle date is newer.
+    // The worker cache only has an indicator snapshot
     // (no EMA20/50, no history), which the canonical engine cannot score, so rows without a daily-scan verdict carry
     // canonical = null and the list stays ordered by the legacy quick score (`scoreBasis`).
     const canonicalBySymbol = new Map<string, CanonicalResult>();
     try {
       const stored = await q<{ symbol: string; canonical: unknown }>(`
         SELECT symbol, indicators->'canonical' AS canonical
-        FROM daily_picks
-        WHERE scan_date = (SELECT MAX(scan_date) FROM daily_picks)
+        FROM daily_picks dp
+        WHERE scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class)
           AND indicators->'canonical' IS NOT NULL
       `);
       for (const r of stored) {
