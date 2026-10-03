@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
 import { dailyPublication, isCompletedDailyBar } from '@/lib/scanner/dailyPublication';
 /**
@@ -473,6 +474,7 @@ export async function POST(req: NextRequest) {
   try {
     // Same session-date rule as scan-daily (lib/time/usSession), so both writers agree on which day a row belongs to.
     const scanDate = latestUsSessionDate(Date.now());
+    const runId = randomUUID();
     
     // Preserve the first publication for each symbol / candle.
     
@@ -482,6 +484,7 @@ export async function POST(req: NextRequest) {
       const pick = withCanonicalColumns(rawPick);
       const publication = dailyPublication(assetClass, pick.indicators);
       pick.indicators.data_as_of = publication.dataAsOf;
+      pick.indicators.run_id = runId;
       await q(`
         INSERT INTO daily_picks (
           scan_date, asset_class, symbol, score, direction, 
