@@ -198,6 +198,18 @@ describe('compression candle fetch',()=>{
     const bad=await fetchDailyBase(row,now);
     expect(bad.stage).toBe('BASE');
     expect(bad.compression.status).toBe('not enough data');
+    const malformed=binance(180,baseShape(180));
+    malformed[80]=[malformed[80][0],'nope'];
+    fetch.mockResolvedValueOnce({ok:true,json:async()=>malformed});
+    const skipped=await fetchDailyBase(row,now);
+    expect(skipped.stage).toBe('BASE');
+    expect(skipped.compression.availableDays).toBe(99);
+    expect(w(skipped.compression,21).status).not.toBe('not enough data');
+    const recent=binance(180,baseShape(180));
+    recent[170]=[recent[170][0],'nope'];
+    fetch.mockResolvedValueOnce({ok:true,json:async()=>recent});
+    const inside=await fetchDailyBase(row,now);
+    expect(inside.stage).toBe('UNAVAILABLE');
     fetch.mockResolvedValueOnce({ok:true,json:async()=>binance(180,baseShape(180),new Set([170]))});
     const recentGap=await fetchDailyBase(row,now);
     expect(recentGap.stage).toBe('UNAVAILABLE');

@@ -26,9 +26,46 @@ const number=(v:unknown):number=>{
   if((typeof v!=='number'&&typeof v!=='string')||(typeof v==='string'&&!v.trim()))throw Error('Missing numeric candle value');
   const n=Number(v);if(!Number.isFinite(n))throw Error('Invalid numeric candle value');return n;
 };
+function numericLike(v:unknown):boolean{
+  if(typeof v==='number')return Number.isFinite(v);
+  if(typeof v==='string'&&v.trim())return Number.isFinite(Number(v));
+  return false;
+}
+/** Open time in milliseconds when the row's first field parses. Null when the row does not say when it started. */
+function peekOpenMs(exchange:DailyVenue,row:unknown):number|null{
+  if(!Array.isArray(row)||row.length<1)return null;
+  const raw=row[0];
+  if((typeof raw!=='number'&&typeof raw!=='string')||(typeof raw==='string'&&!raw.trim()))return null;
+  const n=Number(raw);
+  if(!Number.isFinite(n))return null;
+  return exchange==='kucoin'||exchange==='gdax'?n*1000:n;
+}
+/** Short or non-numeric only. A full numeric row with bad geometry is not this, so the strict window still rejects it. */
+function isShortOrNonNumeric(exchange:DailyVenue,row:unknown):boolean{
+  if(!Array.isArray(row))return true;
+  if(exchange==='gdax')return row.length<6||!row.slice(0,6).every(v=>typeof v==='number'&&Number.isFinite(v));
+  if(exchange==='binance')return row.length<7||[1,2,3,4,5,6].some(i=>!numericLike(row[i]));
+  if(exchange==='kucoin')return row.length<7||[1,2,3,4,5].some(i=>!numericLike(row[i]));
+  return row.length<9||[1,2,3,4,5].some(i=>!numericLike(row[i]));
+}
+/**
+ * A short or non-numeric row whose open time sits outside the requested window, or before
+ * `lenientBefore` (the 30-day base window, when the caller is building a longer compression history).
+ * Rows that do not say when they started are left for the strict parser.
+ */
+function skipMalformedOlder(exchange:DailyVenue,row:unknown,start:number,end:number,interval:number,lenientBefore?:number):boolean{
+  if(!isShortOrNonNumeric(exchange,row))return false;
+  const open=peekOpenMs(exchange,row);
+  if(open==null)return false;
+  if(open<start||open+interval>end)return true;
+  return lenientBefore!=null&&open<lenientBefore;
+}
 /** Normalize base-asset volume and bucket starts into the shared Coinbase-shaped validator. */
-export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end:number,interval=D,allowGaps=false):ExchangeBar[]{
-  if(exchange==='gdax')return parseExchangeCandles(raw,interval,start,end,allowGaps);
+export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end:number,interval=D,allowGaps=false,lenientBefore?:number):ExchangeBar[]{
+  if(exchange==='gdax'){
+    const rows=Array.isArray(raw)?raw.filter(row=>!skipMalformedOlder('gdax',row,start,end,interval,lenientBefore)):raw;
+    return parseExchangeCandles(rows,interval,start,end,allowGaps);
+  }
   let rows:unknown=raw;
   if(exchange==='kucoin'||exchange==='okex'){
     if(!raw||typeof raw!=='object'||!('code' in raw)||!('data' in raw)||raw.code!==(exchange==='kucoin'?'200000':'0'))throw Error('Provider rejected candles');
@@ -37,6 +74,7 @@ export function parseDailyVenue(exchange:DailyVenue,raw:unknown,start:number,end
   if(!Array.isArray(rows))throw Error('No candle array');
   const normalized:number[][]=[];
   for(const row of rows){
+    if(skipMalformedOlder(exchange,row,start,end,interval,lenientBefore))continue;
     if(!Array.isArray(row))throw Error('Invalid candle row');
     if(exchange==='binance'){
       if(row.length<7)throw Error('Incomplete Binance candle');

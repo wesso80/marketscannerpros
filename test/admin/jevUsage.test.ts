@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {jevUnitPrice,parseUsdPerMillion,readRecordedJevUsage,recordJevUsage,rollupJevUsage,rollupStoredStamps,usageCost,type UsageRedis} from '@/lib/admin/jevUsage';
+import {JEV_USAGE_READ_CAP,JEV_USAGE_TTL_SEC,jevUnitPrice,parseUsdPerMillion,readRecordedJevUsage,recordJevUsage,rollupJevUsage,rollupStoredStamps,usageCost,type UsageRedis} from '@/lib/admin/jevUsage';
 it('rolls calls up by module and UTC day and keeps scan stamps separate from the forward book',()=>{
  const recorded=rollupJevUsage([
   {module:'jev-shadow',at:'2026-10-01T01:00:00.000Z',inputTokens:100,outputTokens:10},
@@ -43,11 +43,12 @@ it('leaves cost empty unless a unit price is configured, and never invents one',
 it('records calls with atomic counters and reads them back by day and module',async()=>{
  const store=new Map<string,number>();
  const index=new Set<string>();
+ const expired:Array<[string,number]>=[];
  const redis:UsageRedis={
   incr:async key=>{store.set(key,(store.get(key)??0)+1);return store.get(key);},
   incrby:async(key,by)=>{store.set(key,(store.get(key)??0)+by);return store.get(key);},
   sadd:async(_key,member)=>{index.add(member);return 1;},
-  expire:async()=>1,
+  expire:async(key,seconds)=>{expired.push([key,seconds]);return 1;},
   smembers:async()=>[...index],
   get:async key=>store.get(key)??null,
  };
@@ -60,4 +61,23 @@ it('records calls with atomic counters and reads them back by day and module',as
   {scope:'recorded',module:'jev-shadow',day:'2026-10-01',calls:2,inputTokens:15,outputTokens:2},
  ]);
  expect(await readRecordedJevUsage({get:async()=>null})).toEqual([]);
+ for(const part of ['calls','input','output'] as const){
+  expect(expired).toContainEqual([`admin:crypto-markets:jev-usage:v1:2026-10-01:jev-shadow:${part}`,JEV_USAGE_TTL_SEC]);
+  expect(expired).toContainEqual([`admin:crypto-markets:jev-usage:v1:2026-10-02:jev-chart:${part}`,JEV_USAGE_TTL_SEC]);
+ }
+});
+it('reads only the newest usage members when the index is larger than the cap',async()=>{
+ const members=Array.from({length:JEV_USAGE_READ_CAP+1},(_,i)=>`2026-01-${String(i).padStart(2,'0')}|mod`);
+ const newest=`2026-10-03|jev-shadow`;
+ members.push(newest);
+ const seen:string[]=[];
+ const redis:UsageRedis={
+  smembers:async()=>members,
+  get:async key=>{seen.push(key);return 1;},
+ };
+ const rows=await readRecordedJevUsage(redis);
+ expect(rows).toHaveLength(JEV_USAGE_READ_CAP);
+ expect(rows[0]).toMatchObject({day:'2026-10-03',module:'jev-shadow',calls:1});
+ expect(seen.some(key=>key.includes('2026-01-00'))).toBe(false);
+ expect(seen.length).toBe(JEV_USAGE_READ_CAP*3);
 });

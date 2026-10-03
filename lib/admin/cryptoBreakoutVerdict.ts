@@ -1,14 +1,17 @@
 import {getRedis} from '@/lib/redis';
+import {q} from '@/lib/db';
 import {chartState} from './cryptoJevChart';
 import {DAILY_BASE_LIMITS} from './cryptoBaseScan';
 import type {BaseScanRow} from './cryptoBaseScan';
 import {MOMENTUM_LIMITS} from './cryptoVolumeMomentum';
 import type {MomentumScanRow} from './cryptoVolumeMomentum';
-import {BASE_BREAKOUT_MAX_EXTENSION,BASE_LIMITS,BASE_SCAN_KEY,MOMENTUM_KEY,baseBreakoutCandidates} from './cryptoPaperBase';
+import {BASE_BREAKOUT_MAX_EXTENSION,BASE_LIMITS,BASE_SCAN_KEY,CRYPTO_PAPER_BASE_NAME,MOMENTUM_KEY,baseBreakoutCandidates} from './cryptoPaperBase';
 import type {BaseScan} from './cryptoBaseScan';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 import {planCryptoPaper,type CryptoPaperQuote} from './cryptoPaperMarket';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
+import {positionRiskUsd} from './cryptoCorrelation';
+import {getDefaultPortfolio,listOpenPositions} from './portfolio-lab/portfolioStore';
 /**
  * Advisory only. Verdict for each base-breakout candidate from plain math on stored candles and saved Redis scans.
  * No provider calls, no model calls, no orders. PASS / WARN / REJECT never blocks, sizes, ranks, or
@@ -50,7 +53,11 @@ export const CLOSE_STRENGTH={positionPass:0.7,positionWarn:0.5,bodyPass:0.5,body
  * Closes-above-SMA20: a base should straddle its average. A flat slope can still pass the warn band.
  */
 export const PRIOR_BASE={rangeAtrPass:4,rangeAtrWarn:8,slopeWarnMultiple:2,volumeTrendWarn:1,closesPass:[6,14],closesWarn:[3,17]} as const;
-/** Same reference the base-sleeve journal uses when no live balance is on the saved scan. The risk cap is a percent of equity, so the ratio does not depend on this figure. */
+/**
+ * Fallback only when a caller scores a candidate without a ledger.
+ * The cron path does not use this: it reads the simulated base-sleeve book.
+ * The risk cap is a percent of equity, so the ratio does not depend on this figure.
+ */
 export const VERDICT_NOMINAL_EQUITY=200_000;
 export type VerdictLevel='PASS'|'WARN'|'REJECT';
 export type VerdictCheckId='baseCleanliness'|'closeStrength'|'volumeExpansion'|'overheadSupply'|'stopTargetSanity'|'stopExists'|'plannedSize'|'extension'|'liquidity'|'openRisk';
@@ -58,7 +65,9 @@ export type VerdictCheck={id:VerdictCheckId;status:VerdictLevel;reason:string;fe
 export type BreakoutVerdictRow={id:string;symbol:string;verdict:VerdictLevel;checks:VerdictCheck[];signalAt:string|null};
 export type BreakoutVerdictSnapshot={version:1;advisory:true;simulated:true;asOf:string;stale:boolean;momentumAsOf:string|null;baseAsOf:string|null;note:string|null;rows:BreakoutVerdictRow[]};
 export type PublicVerdict={advisory:true;level:VerdictLevel;reasons:string[];asOf:string;stale:boolean};
-export type VerdictAccount={equity:number|null;cash:number|null;openRiskUsd:number|null;volumeUsd:number|null;volumeObservedAt:string|null};
+export type VerdictAccount={equity:number|null;cash:number|null;openRiskUsd:number|null;volumeUsd:number|null;volumeObservedAt:string|null;ledgerNote?:string|null};
+/** One simulated base-sleeve book. Open risk is the sum of positionRiskUsd on its open positions. */
+export type BaseSleeveBook={workspaceId:string;equity:number;cash:number;openRiskUsd:number};
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 const worst=(levels:VerdictLevel[]):VerdictLevel=>levels.includes('REJECT')?'REJECT':levels.includes('WARN')?'WARN':'PASS';
 const check=(id:VerdictCheckId,status:VerdictLevel,reason:string,feed:string):VerdictCheck=>({id,status,reason,feed});
@@ -204,7 +213,8 @@ function extension(row:MomentumScanRow,base:BaseScanRow):VerdictCheck{
  return check('extension','PASS',`Close is inside the 0–${BASE_BREAKOUT_MAX_EXTENSION*100}% base window and the signal chase limit`,'Entry is inside the extension limit');
 }
 type PlanResult=ReturnType<typeof planAt>;
-function plannedSize(row:MomentumScanRow,plan:PlanResult,equity:number|null):VerdictCheck{
+function plannedSize(row:MomentumScanRow,plan:PlanResult,equity:number|null,ledgerNote?:string|null):VerdictCheck{
+ if(ledgerNote)return check('plannedSize','WARN',ledgerNote,'Planned size could not be checked');
  const usingNominal=equity==null;
  if(!plan.ok){
   if(plan.reason.startsWith('Insufficient size'))return check('plannedSize','REJECT','Planner could not produce a size inside the risk and notional caps','Planned risk does not fit the per-trade cap');
@@ -229,7 +239,8 @@ function liquidity(volumeUsd:number|null,observedAt:string|null,now:number,cappe
  if(cap>0)return check('liquidity','WARN','Pair volume is fresh but size was not planned, so the cap was not applied','Liquidity cap could not be applied');
  return check('liquidity','REJECT','Liquidity cap does not hold','Liquidity cap does not hold');
 }
-function openRisk(equity:number|null,openRiskUsd:number|null,plan:PlanResult):VerdictCheck{
+function openRisk(equity:number|null,openRiskUsd:number|null,plan:PlanResult,ledgerNote?:string|null):VerdictCheck{
+ if(ledgerNote)return check('openRisk','WARN',ledgerNote,'Open risk could not be read');
  if(!finite(equity)||equity<=0||!finite(openRiskUsd)||openRiskUsd<0)return check('openRisk','WARN','Open risk was not on the saved scan','Open risk was not on the saved scan');
  if(!plan.ok)return check('openRisk','WARN','Open risk was not checked because no size was planned','Open risk could not be checked');
  const cap=equity*BASE_LIMITS.openRiskPct/100;
@@ -250,10 +261,10 @@ export function scoreBreakoutCandidate(row:MomentumScanRow,base:BaseScanRow,now:
   overheadSupply(row),
   stopTargetSanity(row,now,book,cash),
   stopExists(row),
-  plannedSize(row,openPlan,equity),
+  plannedSize(row,openPlan,equity,account.ledgerNote),
   extension(row,base),
   liquidity(account.volumeUsd,account.volumeObservedAt,now,cappedPlan,openPlan),
-  openRisk(equity,account.openRiskUsd,openPlan),
+  openRisk(equity,account.openRiskUsd,openPlan,account.ledgerNote),
  ];
  return {id:row.id,symbol:row.symbol,verdict:worst(checks.map(c=>c.status)),checks,signalAt:typeof row.asOf==='string'?row.asOf:null};
 }
@@ -264,25 +275,65 @@ export function pairVolume(discovery:DiscoverySnap,row:MomentumScanRow):{volumeU
  const venue=discovery?.rows?.find(r=>r.id===row.id)?.venues?.find(v=>v.exchange===pair.exchange&&v.pair===pair.product.replace('-','/'));
  return venue?{volumeUsd:venue.volumeUsd,volumeObservedAt:venue.observedAt}:{volumeUsd:null,volumeObservedAt:null};
 }
+/** Least room under the existing 4% open-risk cap. Equal room keeps the lowest workspace id. */
+export function pickTightestBaseBook(books:BaseSleeveBook[]):BaseSleeveBook|null{
+ const ranked=books.filter(b=>finite(b.equity)&&b.equity>0&&finite(b.cash)&&finite(b.openRiskUsd)&&b.openRiskUsd>=0);
+ if(!ranked.length)return null;
+ const room=(b:BaseSleeveBook)=>b.equity*BASE_LIMITS.openRiskPct/100-b.openRiskUsd;
+ ranked.sort((a,b)=>room(a)-room(b)||a.workspaceId.localeCompare(b.workspaceId));
+ return ranked[0];
+}
+const LEDGER_UNREAD='Crypto paper base ledger could not be read';
+const LEDGER_MISSING='No simulated base-sleeve ledger was found';
+const LEDGER_UNBOUNDED='An open base-sleeve position has no bounded stop, so open risk could not be measured';
+/**
+ * Read-only. Every simulated base-sleeve book (active or paused). Several books: the one with the
+ * least remaining room under BASE_LIMITS.openRiskPct. Does not insert, update, or lock a row.
+ */
+export async function loadBaseSleeveVerdictAccount():Promise<Pick<VerdictAccount,'equity'|'cash'|'openRiskUsd'|'ledgerNote'>>{
+ const blank=(ledgerNote:string)=>({equity:null,cash:null,openRiskUsd:null,ledgerNote});
+ try{
+  const workspaces=await q<{workspace_id:string}>(`SELECT workspace_id FROM arca_portfolios WHERE name=$1 AND mode='SIMULATED' AND status IN ('ACTIVE','PAUSED') ORDER BY workspace_id`,[CRYPTO_PAPER_BASE_NAME]);
+  const books:BaseSleeveBook[]=[];
+  for(const row of workspaces){
+   const portfolio=await getDefaultPortfolio(row.workspace_id,CRYPTO_PAPER_BASE_NAME);
+   if(!portfolio||portfolio.mode!=='SIMULATED')continue;
+   const positions=await listOpenPositions(row.workspace_id,portfolio.id);
+   let openRiskUsd=0;
+   for(const position of positions){
+    const risk=positionRiskUsd(position);
+    if(!Number.isFinite(risk))return blank(LEDGER_UNBOUNDED);
+    openRiskUsd+=risk;
+   }
+   books.push({workspaceId:row.workspace_id,equity:portfolio.totalEquity,cash:portfolio.currentCash,openRiskUsd});
+  }
+  const chosen=pickTightestBaseBook(books);
+  if(!chosen)return blank(books.length?'Crypto paper base ledger had no usable equity':LEDGER_MISSING);
+  return {equity:chosen.equity,cash:chosen.cash,openRiskUsd:chosen.openRiskUsd,ledgerNote:null};
+ }catch{
+  return blank(LEDGER_UNREAD);
+ }
+}
 export function scoreSavedBreakouts(momentum:MomentumScan|null,bases:BaseScan|null,discovery:DiscoverySnap,now:number,account?:Partial<VerdictAccount>):BreakoutVerdictSnapshot{
  const found=baseBreakoutCandidates(momentum,bases,now);
- const shared={equity:account?.equity??null,cash:account?.cash??null,openRiskUsd:account?.openRiskUsd??null};
+ const shared={equity:account?.equity??null,cash:account?.cash??null,openRiskUsd:account?.openRiskUsd??null,ledgerNote:account?.ledgerNote??null};
  const rows=found.candidates.map(c=>scoreBreakoutCandidate(c.row,c.base,now,{...shared,...pairVolume(discovery,c.row)}));
  const momentumAsOf=typeof momentum?.startedAt==='string'?momentum.startedAt:null;
  const baseAsOf=typeof bases?.startedAt==='string'?bases.startedAt:null;
  return {version:1,advisory:true,simulated:true,asOf:new Date(now).toISOString(),stale:snapshotIsStale(new Date(now).toISOString(),now,momentumAsOf,baseAsOf),momentumAsOf,baseAsOf,note:found.note,rows};
 }
-/** Reads saved scans only. Never throws. Does not place, size, or block a paper trade. */
+/** Reads saved scans and the simulated base-sleeve ledger. Never throws. Does not place, size, or block a paper trade. */
 export async function saveBreakoutVerdicts(now=Date.now()){
  try{
   const redis=getRedis();
   if(!redis)return {ok:false as const,error:'Redis unavailable',saved:0};
-  const [momentum,bases,discovery]=await Promise.all([
+  const [momentum,bases,discovery,ledger]=await Promise.all([
    redis.get<MomentumScan>(MOMENTUM_KEY),
    redis.get<BaseScan>(BASE_SCAN_KEY),
    redis.get<DiscoverySnap>(DISCOVERY_KEY).catch(()=>null),
+   loadBaseSleeveVerdictAccount(),
   ]);
-  const snapshot=scoreSavedBreakouts(momentum,bases,discovery,now);
+  const snapshot=scoreSavedBreakouts(momentum,bases,discovery,now,ledger);
   await redis.set(BREAKOUT_VERDICT_KEY,snapshot,{ex:BREAKOUT_VERDICT_TTL_SEC});
   return {ok:true as const,saved:snapshot.rows.length,asOf:snapshot.asOf,stale:snapshot.stale};
  }catch{

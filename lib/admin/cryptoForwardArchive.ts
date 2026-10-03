@@ -7,6 +7,20 @@ import {q} from '@/lib/db';
  */
 type ArchiveRow={id:string;symbol:string;bucket:string;signalAt:string;signalPrice:number;next4h?:{status?:string};day?:{status?:string}};
 const TABLE='crypto_forward_outcome_archive';
+/**
+ * Calibration reads this many UTC days of archived signals. The Redis book only keeps 21 days;
+ * the two-window screen and the holdout third need the longer sample this table exists to hold.
+ * Rows older than the window plus the margin are pruned. The margin stays unread so a late run
+ * does not delete a day the next load still asks for.
+ */
+export const FORWARD_ARCHIVE_WINDOW_DAYS=180;
+export const FORWARD_ARCHIVE_MARGIN_DAYS=30;
+/** One bounded delete per call. A large backlog drains over later runs instead of one long statement. */
+export const FORWARD_ARCHIVE_PRUNE_BATCH=500;
+const DAY_MS=86400000;
+export function forwardArchiveCutoff(now:number,days:number){
+ return new Date(now-days*DAY_MS).toISOString().slice(0,10);
+}
 export const forwardRowKey=(row:Pick<ArchiveRow,'bucket'|'id'|'signalAt'>)=>`${row.bucket}|${row.id}|${row.signalAt}`;
 function asArchiveRow(v:unknown):ArchiveRow|null{
  if(!v||typeof v!=='object')return null;
@@ -62,11 +76,22 @@ export async function archiveForwardRows(rows:ArchiveRow[]):Promise<void>{
    params.push(key,row.symbol||row.id,row.id,row.bucket,at,at.slice(0,10),JSON.stringify(row));
    return `($${b+1},$${b+2},$${b+3},$${b+4},$${b+5}::timestamptz,$${b+6}::date,$${b+7}::jsonb)`;
   });
-  await q(`INSERT INTO ${TABLE} (row_key, symbol, coin_id, bucket, signal_at, signal_day, payload) VALUES ${tuples.join(',')} ON CONFLICT (row_key) DO UPDATE SET payload=EXCLUDED.payload, symbol=EXCLUDED.symbol, archived_at=NOW()`,params);
+  await q(`INSERT INTO ${TABLE} (row_key, symbol, coin_id, bucket, signal_at, signal_day, payload) VALUES ${tuples.join(',')} ON CONFLICT (row_key) DO UPDATE SET payload=EXCLUDED.payload, symbol=EXCLUDED.symbol, archived_at=NOW() WHERE ${TABLE}.payload IS DISTINCT FROM EXCLUDED.payload OR ${TABLE}.symbol IS DISTINCT FROM EXCLUDED.symbol`,params);
  }
+ await pruneForwardArchive(Date.now());
 }
-export async function loadArchivedForwardRows():Promise<ArchiveRow[]>{
+/** Best-effort. A missing table or a failed delete must not fail the book write or calibration. */
+export async function pruneForwardArchive(now=Date.now()):Promise<void>{
+ if(!process.env.DATABASE_URL)return;
+ try{
+  const cutoff=forwardArchiveCutoff(now,FORWARD_ARCHIVE_WINDOW_DAYS+FORWARD_ARCHIVE_MARGIN_DAYS);
+  await q(`DELETE FROM ${TABLE} WHERE row_key IN (SELECT row_key FROM ${TABLE} WHERE signal_day < $1::date ORDER BY signal_day ASC LIMIT $2)`,[cutoff,FORWARD_ARCHIVE_PRUNE_BATCH]);
+ }catch{/* retention is not required for this run */}
+}
+export async function loadArchivedForwardRows(now=Date.now()):Promise<ArchiveRow[]>{
  if(!process.env.DATABASE_URL)return [];
- const rows=await q<{payload:unknown}>(`SELECT payload FROM ${TABLE}`);
+ await pruneForwardArchive(now);
+ const cutoff=forwardArchiveCutoff(now,FORWARD_ARCHIVE_WINDOW_DAYS);
+ const rows=await q<{payload:unknown}>(`SELECT payload FROM ${TABLE} WHERE signal_day >= $1::date`,[cutoff]);
  return rows.flatMap(r=>{const row=asArchiveRow(r.payload);return row?[row]:[];});
 }
