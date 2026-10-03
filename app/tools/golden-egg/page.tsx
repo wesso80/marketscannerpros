@@ -33,7 +33,7 @@ import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
 import { lookupAssetType } from '@/lib/lookupAssetType';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
-import PriceStamp from '@/components/market/PriceStamp';
+import {SymbolCryptoContext,SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
 import {findSymbolPick,symbolQuoteStamp} from '@/lib/market/symbolSnapshot';
 import type {PicksResponse} from '@/lib/market/overview';
@@ -766,6 +766,7 @@ export default function GoldenEggPage() {
       )}
 
       {/* ─── Tab Bar ─── */}
+      {!isAuthBlocked && (quoteType==='crypto'?<SymbolCryptoContext symbol={sym}/>:<SymbolOptionsContext symbol={sym} expiry={searchParams.get('expiry')??undefined}/>)}
       {!isAuthBlocked && <GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
