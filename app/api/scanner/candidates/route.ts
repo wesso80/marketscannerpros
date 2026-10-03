@@ -1,3 +1,4 @@
+import { evaluateDailyPickTrust, summarizeDailyPickTrust } from '@/lib/scanner/dailyPickTrust';
 /**
  * GET /api/scanner/candidates
  *
@@ -22,6 +23,8 @@ interface DailyPick {
   price: number;
   change_percent: number;
   indicators: Record<string, any>;
+  scan_date?: string;
+  created_at?: string;
 }
 
 interface LiveCandidate {
@@ -88,18 +91,18 @@ function deriveStrategy(pick: DailyPick): StrategyTag {
 function computeStop(price: number, atr: number, direction: Direction): number {
   const offset = atr * 1.5;
   return direction === 'LONG'
-    ? Math.round((price - offset) * 100) / 100
-    : Math.round((price + offset) * 100) / 100;
+    ? price - offset
+    : price + offset;
 }
 
 export async function GET() {
   try {
     const rows = await q<DailyPick>(`
-      WITH latest AS (SELECT MAX(scan_date) AS d FROM daily_picks)
+      WITH latest AS (SELECT asset_class, MAX(scan_date) AS d FROM daily_picks GROUP BY asset_class)
       SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
-             dp.price, dp.change_percent, dp.indicators
+             dp.price, dp.change_percent, dp.indicators, dp.scan_date, dp.created_at
       FROM daily_picks dp
-      JOIN latest l ON dp.scan_date = l.d
+      JOIN latest l ON dp.scan_date = l.d AND dp.asset_class = l.asset_class
       WHERE dp.asset_class IN ('equity', 'crypto')
       ORDER BY dp.score DESC
       LIMIT 40
@@ -124,15 +127,16 @@ export async function GET() {
 
     const candidates: LiveCandidate[] = ranked
       .filter(r => Number.isFinite(Number(r.price)) && Number(r.price) > 0)
-      .map((pick) => {
+      .flatMap((pick) => {
         const c = pick.canonical;
         const ind = pick.indicators || {};
-        const atr = Number(ind.atr);
         const price = Number(pick.price);
+        const pct = ind.atrPct ?? c?.raw?.atrPct;
+        const safeAtr = typeof pct === 'number' && Number.isFinite(pct) && pct > 0 ? price * pct / 100 : null;
+        // Missing volatility cannot supply a stop or risk estimate. Never manufacture an ATR.
+        if (safeAtr == null) return [];
+        const trust = evaluateDailyPickTrust(pick);
         const direction: Direction = c ? (c.direction === 'short' ? 'SHORT' : 'LONG') : pick.direction === 'bearish' ? 'SHORT' : 'LONG';
-        const safeAtr = Number.isFinite(atr) && atr > 0
-          ? atr
-          : price * 0.02; // fallback: 2% of price
         const strategy_tag = deriveStrategy(pick);
         // Canonical structural invalidation when available; ATR stop for pre-canonical rows.
         const stopPrice = c?.levels?.invalidation ?? computeStop(price, safeAtr, direction);
@@ -160,13 +164,19 @@ export async function GET() {
           invalidation_price: stopPrice,
           entry_price: c?.levels?.entry ?? price,
           stop_price: stopPrice,
-          atr: Math.round(safeAtr * 100) / 100,
+          atr: safeAtr,
+          trust,
+          data_as_of: trust.dataAsOf,
+          entryBasis: "bar close",
           event_severity: 'none' as const,
           verdict: canonicalLabel(c),
         };
       })
       .slice(0, 8); // Cap at 8 candidates
 
+    const trusts = ranked.map(p => evaluateDailyPickTrust(p));
+    const summary = summarizeDailyPickTrust(trusts);
+    const published = trusts.map(t=>t.scannedAt).filter((s): s is string=>!!s).sort();
     return NextResponse.json({
       candidates,
       source: 'daily_picks',
@@ -174,9 +184,10 @@ export async function GET() {
       compliance: scannerComplianceMetadata(),
       dataQuality: scannerDataQualityMetadata({
         source: 'daily_picks_database',
-        computedAt: new Date(),
-        stale: false,
-        coverageScore: rows.length ? Math.round((candidates.length / Math.max(1, rows.length)) * 100) : 0,
+        computedAt: published[0] ?? null,
+        stale: summary.stale || trusts.some(t=>t.freshness === "unknown"),
+        coverageScore: summary.coverageScore,
+        warnings: [...new Set(trusts.flatMap(t=>t.reasons)), ...(candidates.length < ranked.length ? ["Rows without a valid stored ATR are omitted."] : [])],
       }),
     });
   } catch (err: any) {
