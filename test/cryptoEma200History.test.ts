@@ -57,11 +57,11 @@ beforeEach(() => {
 });
 
 describe('crypto daily history windows', () => {
-  it('default stays at 2 × 180-day windows (~360 bars) — scanner / DVE cost unchanged', async () => {
+  it('default shares the 6-window converged indicator history', async () => {
     const s = await fetchCryptoSeries('BTC', 'daily', NOW, { coinId: 'bitcoin' });
-    expect(ohlcCalls()).toBe(2);
-    expect(s.bars.length).toBeGreaterThanOrEqual(355);
-    expect(s.bars.length).toBeLessThanOrEqual(361);
+    expect(ohlcCalls()).toBe(6);
+    expect(s.bars.length).toBeGreaterThanOrEqual(1075);
+    expect(s.bars.length).toBeLessThanOrEqual(1081);
   });
   it('dailyWindows 6 fetches ~1,080 contiguous, sorted, de-duplicated daily bars', async () => {
     const s = await fetchCryptoSeries('BTC', 'daily', NOW, { coinId: 'bitcoin', dailyWindows: 6 });
@@ -112,6 +112,6 @@ describe('Golden Egg crypto EMA200 uses the long indicator history', () => {
   }
   it('intraday / weekly crypto requests do not fetch the extra windows', async () => {
     await fetchPrice('BTC', 'crypto', { requireHistoricals: true, avInterval: 'weekly', cryptoIndicatorHistory: true });
-    expect(ohlcCalls()).toBe(2);
+    expect(ohlcCalls()).toBe(6);
   });
 });

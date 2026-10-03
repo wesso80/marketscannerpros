@@ -12,7 +12,7 @@ import {
   calculateEMA, calculateRSI, calculateMACD, calculateADX,
   calculateStochastic, calculateAroon, calculateCCI, type OHLCV,
 } from '@/lib/scanner-indicators';
-import { fetchCryptoSeries, type CryptoSeries } from '@/lib/scanner/cryptoBars';
+import { fetchCryptoSeries, DEFAULT_DAILY_WINDOWS, type CryptoSeries } from '@/lib/scanner/cryptoBars';
 import type { Bar } from '@/lib/scanner/barAggregation';
 
 /** Drop a crypto result when price and EMA200 are more than this many times apart. */
@@ -96,7 +96,7 @@ export function ema200SanityFailure(
 /** scan-daily crypto history: 6 × 180-day CoinGecko windows (~1,080 bars, 4 more OHLC calls per coin than the
  *  default 2) so the stored EMA200 and the canonical verdict's EMA200 converge (RS-4). The job runs once a day over
  *  ~50 coins, so this adds ~200 CoinGecko calls per run. */
-export const DAILY_SCAN_CRYPTO_WINDOWS = 6;
+export const DAILY_SCAN_CRYPTO_WINDOWS = DEFAULT_DAILY_WINDOWS;
 
 export type CryptoDailyScanOutcome =
   | { ok: true; price: number; indicators: CryptoDailyIndicators; barCount: number; source: string; /** Completed daily bars used (oldest first), for the canonical engine. */ bars: Bar[] }
