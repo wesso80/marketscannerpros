@@ -8,6 +8,14 @@ const K='admin:crypto-markets:cg-market:v1',D=86400000,SLOT=CG_MARKET.snapshotMi
 type SourceStatus={ok:boolean;at:string;skipped?:string;error?:string;calls:number};
 type Saved={status:Record<string,SourceStatus>;lastRunAt:string|null};
 const now0=()=>Date.now();
+/** First successful /global value of the current UTC day. ON CONFLICT DO NOTHING keeps that first write. A missing table is logged and ignored. */
+export async function persistBtcDominanceDay(value:number,now:number){
+ try{
+  if(!Number.isFinite(value))return;
+  const day=new Date(now).toISOString().slice(0,10);
+  await q(`INSERT INTO crypto_btc_dominance_daily (day, value, source) VALUES ($1::date,$2,$3) ON CONFLICT (day) DO NOTHING`,[day,value,'coingecko:/global']);
+ }catch(e){console.error('[crypto-market-data] BTC dominance daily upsert failed',e instanceof Error?e.message:'db error');}
+}
 async function status(){return (await getRedis()?.get<Saved>(`${K}:status`).catch(()=>null))??{status:{},lastRunAt:null};}
 export async function openPaperCoinIds(workspaceId:string):Promise<string[]>{
  if(!workspaceId)return [];
@@ -51,6 +59,7 @@ export async function runCryptoMarketData(now=now0()){
    // Hourly history for the regime panel; the latest point always replaces a same-hour point.
    const next=hist.length&&hist.at(-1)!.t>p.t-55*60000?[...hist.slice(0,-1),p]:[...hist,p];
    await redis.set(`${K}:global`,next,{ex:100*D/1000});rec('global',{ok:true,calls:1});
+   await persistBtcDominanceDay(p.btcDom,now);
   })());
   tasks.push((async()=>{
    const cats=await getCoinCategories();
