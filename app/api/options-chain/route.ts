@@ -1,3 +1,4 @@
+import { selectOptionsExpiry } from '@/lib/options/expiry';
 import { optionSpotObservation, type OptionSpotObservation } from '@/lib/options/spotObservation';
 import { quoteSpreadPct } from '@/lib/options/contractCosts';
 /**
@@ -229,7 +230,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const rawSymbol = searchParams.get('symbol');
-  const expirationFilter = searchParams.get('expiration') || undefined;
+  const expirationFilter = searchParams.get('expiration') || searchParams.get('expiry') || undefined;
 
   if (!rawSymbol) {
     return NextResponse.json({ success: false, error: 'Symbol is required' } as Partial<OptionsChainResponse>, { status: 400 });
@@ -250,9 +251,9 @@ export async function GET(request: NextRequest) {
 
     if (cached && cached.contracts?.length) {
       const eligibleCachedContracts = cached.contracts.filter((c) => isCurrentOrFutureExpiry(c.expiration));
-      const contracts = expirationFilter
-        ? eligibleCachedContracts.filter((c) => c.expiration === expirationFilter)
-        : eligibleCachedContracts;
+      const selectedExpiry = selectOptionsExpiry(eligibleCachedContracts.map(c=>c.expiration), expirationFilter);
+      if (!selectedExpiry) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(cached.contracts),providerIssues:[]},{status:422});
+      const contracts = eligibleCachedContracts.filter(c=>c.expiration===selectedExpiry);
       if (contracts.length) {
         return NextResponse.json({
           success: true,
@@ -262,6 +263,7 @@ export async function GET(request: NextRequest) {
           expirations: computeExpirations(cached.contracts), // always full list
           contracts,
           provider: cached.provider,
+          providerIssues: [],
           ...cached.source,
           cachedAt: cached.ts,
         } satisfies OptionsChainResponse);
@@ -270,6 +272,7 @@ export async function GET(request: NextRequest) {
 
     /* ── 2. Fetch (shared raw-chain cache → Alpha Vantage) ───────── */
     const providerIssues: string[] = [];
+    const spotPromise = fetchSpot(symbol);
     const shared = await fetchSharedOptionsChain<AVRaw>(symbol, {
       apiKey: AV_KEY,
       fetchPayload: (fn, url) => avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`),
@@ -301,7 +304,7 @@ export async function GET(request: NextRequest) {
     }
 
     /* ── 3. Compute spot & cache ─────────────────────────────────── */
-    const spotObservation = await fetchSpot(symbol);
+    const spotObservation = await spotPromise;
     const spot = spotObservation?.price || inferSpot(allContracts);
     const ts = Date.now();
 
@@ -323,9 +326,9 @@ export async function GET(request: NextRequest) {
         error: 'Options provider returned no current or future expirations',
       } satisfies OptionsChainResponse, { status: 422 });
     }
-    const contracts = expirationFilter
-      ? eligibleContracts.filter((c) => c.expiration === expirationFilter)
-      : eligibleContracts;
+    const selectedExpiry = selectOptionsExpiry(eligibleContracts.map(c=>c.expiration), expirationFilter);
+    if (!selectedExpiry) return NextResponse.json({success:false,error:'Requested expiry unavailable; no substitute selected.',expirations:computeExpirations(eligibleContracts),providerIssues},{status:422});
+    const contracts = eligibleContracts.filter(c=>c.expiration===selectedExpiry);
 
     return NextResponse.json({
       success: true,
@@ -336,7 +339,7 @@ export async function GET(request: NextRequest) {
       contracts,
       provider: usedProvider,
       ...source,
-      ...(providerIssues.length ? { providerIssues } : {}),
+      providerIssues,
       cachedAt: ts,
     } satisfies OptionsChainResponse);
 

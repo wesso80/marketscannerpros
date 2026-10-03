@@ -27,6 +27,7 @@ export interface UseOptionsChainState {
   /** Session date the quotes belong to (YYYY-MM-DD) or ''. */
   asOfDate: string;
   sourceLabel: string;
+  providerIssues: string[];
 
   /* derived */
   strikeGroups: StrikeGroup[];
@@ -151,6 +152,7 @@ export function useOptionsChain(): UseOptionsChainState {
   const [provider, setProvider] = useState('');
   const [quoteBasis, setQuoteBasis] = useState('');
   const [asOfDate, setAsOfDate] = useState('');
+  const [providerIssues, setProviderIssues] = useState<string[]>([]);
   const [sourceLabel, setSourceLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +177,7 @@ export function useOptionsChain(): UseOptionsChainState {
     setQuoteBasis('');
     setAsOfDate('');
     setSourceLabel('');
+    setProviderIssues([]);
     setLastFetchedAt(0);
     setError(null);
 
@@ -184,6 +187,8 @@ export function useOptionsChain(): UseOptionsChainState {
     fetch(`/api/options-chain?${params.toString()}`, { signal: ctrl.signal })
       .then(async (res) => {
         const json: OptionsChainResponse = await res.json();
+        if (ctrl.signal.aborted) return;
+        setProviderIssues(json.providerIssues ?? []);
         if (!res.ok || !json.success) {
           throw new Error(json.error || `HTTP ${res.status}`);
         }
@@ -202,7 +207,7 @@ export function useOptionsChain(): UseOptionsChainState {
         setError(null);
       })
       .catch((err) => {
-        if (err?.name === 'AbortError') return;
+        if (ctrl.signal.aborted || err?.name === 'AbortError') return;
         setError(err?.message || 'Failed to load options chain');
       })
       .finally(() => {
@@ -230,6 +235,7 @@ export function useOptionsChain(): UseOptionsChainState {
     quoteBasis,
     asOfDate,
     sourceLabel,
+    providerIssues,
     strikeGroups,
     bestStrikes,
     ivMetrics,
