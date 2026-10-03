@@ -25,10 +25,10 @@ export function backtestJevInput(sig:VolumeMomentum,btcTrend:string):BacktestJev
 const cacheKey=(id:string)=>`${BACKTEST_JEV_CACHE}:${id}`;
 async function askBoth(input:BacktestJevInput,now:number):Promise<BacktestJevStamps>{
  const at=new Date(now).toISOString();
- const jevCall=askJev(input.jev,JEV_QUESTIONS).then(r=>({rule:JEV_RULE,status:'scored' as const,chase:r.answers.chase.probability,flowAgrees:r.answers.flowAgrees.probability,btcHeadwind:r.answers.btcHeadwind.probability,btcTrend:input.jev.btcTrend,flowStamp:'unavailable',model:r.model,checkedAt:at,...(r.inputTokens!=null?{inputTokens:r.inputTokens}:{})}) as JevStamp)
+ const jevCall=askJev(input.jev,JEV_QUESTIONS,{module:'jev-backtest'}).then(r=>({rule:JEV_RULE,status:'scored' as const,chase:r.answers.chase.probability,flowAgrees:r.answers.flowAgrees.probability,btcHeadwind:r.answers.btcHeadwind.probability,btcTrend:input.jev.btcTrend,flowStamp:'unavailable',model:r.model,checkedAt:at,...(r.inputTokens!=null?{inputTokens:r.inputTokens}:{})}) as JevStamp)
   .catch(e=>unavailableJev(now,input.jev.btcTrend,'unavailable',e instanceof JevFailure?e.reason:'error'));
  const chartCall=!input.chart?Promise.resolve(unavailableChart(now,'no-bars',0))
-  :askJev(input.chart,CHART_QUESTIONS).then(r=>({rule:CHART_RULE,status:'scored' as const,cleanBase:r.answers.cleanBase.probability,strongClose:r.answers.strongClose.probability,volumeExpansion:r.answers.volumeExpansion.probability,overheadSupply:r.answers.overheadSupply.probability,bars:input.chart!.bars,model:r.model,checkedAt:at,...(r.inputTokens!=null?{inputTokens:r.inputTokens}:{})}) as ChartStamp)
+  :askJev(input.chart,CHART_QUESTIONS,{module:'jev-backtest'}).then(r=>({rule:CHART_RULE,status:'scored' as const,cleanBase:r.answers.cleanBase.probability,strongClose:r.answers.strongClose.probability,volumeExpansion:r.answers.volumeExpansion.probability,overheadSupply:r.answers.overheadSupply.probability,bars:input.chart!.bars,model:r.model,checkedAt:at,...(r.inputTokens!=null?{inputTokens:r.inputTokens}:{})}) as ChartStamp)
    .catch(e=>unavailableChart(now,e instanceof JevFailure?e.reason:'error',input.chart?.bars??0));
  const [jev,chart]=await Promise.all([jevCall,chartCall]);
  return {jev,chart};

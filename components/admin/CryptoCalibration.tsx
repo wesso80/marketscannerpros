@@ -15,7 +15,7 @@ function FieldTable({field}:{field:CalibrationField}){
     <td className="p-2">{s.se==null?'—':s.se.toFixed(2)}</td>
     <td className="p-2">{fmt(s.halfA.lift,field.unit)} ({s.halfA.n})</td>
     <td className="p-2">{fmt(s.halfB.lift,field.unit)} ({s.halfB.n})</td>
-    <td className={`p-2 ${STATUS[s.status]}`}>{s.informational?'—':s.status}</td>
+    <td className={`p-2 ${STATUS[s.status]}`}>{s.informational?'—':s.status}{s.guard&&!s.informational?<span className="block text-xs text-slate-500">{s.guard.rule} · {s.guard.reason}{s.window?` · holdout ${s.window.holdoutN}`:''}</span>:null}</td>
    </tr>)}
   </tbody></table>
  </div>;
@@ -79,10 +79,10 @@ export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:nu
  const paper=ledger?.fields.filter(f=>f.outcome==='paperR')??[],forward=ledger?.fields.filter(f=>f.outcome==='forward24h')??[],base=ledger?.fields.filter(f=>f.outcome==='baseR')??[],backtest=ledger?.fields.filter(f=>f.outcome==='backtestR')??[];
  return <section aria-label="Calibration ledger" className="space-y-3 rounded border border-slate-600 p-4">
   <h2 className="text-xl">Calibration ledger · evidence only</h2>
-  <p className="text-sm text-slate-300">Every recorded evidence field against the outcome already stored beside it: R on closed paper trades, and the 24h mark on saved forward rows. Lift is the side's mean minus the overall mean on the same rows. A side is <span className="text-emerald-300">confirmed</span> only when both time halves agree on the sign of the lift with at least 15 rows each and the lift clears 0.25R or 1%. Confirmed sides file one text recommendation (at most three a week); a person decides what to do with it. Nothing here changes a rule, opens a trade, or calls Jev.</p>
+  <p className="text-sm text-slate-300">Every recorded evidence field against the outcome already stored beside it: R on closed paper trades, and the 24h mark on saved forward rows. Lift is the side's mean minus the overall mean on the same rows. A side is <span className="text-emerald-300">confirmed</span> only when both time halves agree, the same sign holds on the earliest two thirds and on the latest third, and the lift clears a Bonferroni threshold for the number of sides tested. Forward rows count once per coin per UTC day. Confirmed sides file one text recommendation (at most three a week); a person decides what to do with it. Nothing here changes a rule, opens a trade, or calls Jev.</p>
   <div className="flex flex-wrap items-center gap-3">
    <button disabled={busy} onClick={()=>void refresh()} className="rounded bg-slate-700 px-3 py-2 disabled:opacity-50">{busy?'Recomputing…':'Recompute from saved rows'}</button>
-   {ledger&&<span className="text-xs text-slate-400">Computed {new Date(ledger.checkedAt).toLocaleString()} · sources: {ledger.source.closedTrades} closed trades ({ledger.source.withR} with R), {ledger.source.forwardRows} forward rows ({ledger.source.forwardFilled24h} with a 24h mark){ledger.source.baseTrades!=null?`, ${ledger.source.baseTrades} base-sleeve trades (${ledger.source.baseWithR??0} with R)`:''} · split at {ledger.source.splitAt.paper??'—'} / {ledger.source.splitAt.forward??'—'}{stale?<span className="text-amber-300"> · STALE (over 36h)</span>:null}</span>}
+   {ledger&&<span className="text-xs text-slate-400">Computed {new Date(ledger.checkedAt).toLocaleString()} · confirmation {ledger.confirmationRule??'screen only'} · {ledger.testedSides??'—'} tested sides · sources: {ledger.source.closedTrades} closed trades ({ledger.source.withR} with R), {ledger.source.forwardRows} forward rows ({ledger.source.forwardFilled24h} with a 24h mark{ledger.source.forwardFilledBeforeDedupe!=null&&ledger.source.forwardFilledBeforeDedupe!==ledger.source.forwardFilled24h?`, ${ledger.source.forwardFilledBeforeDedupe} before coin-day dedupe`:''}{ledger.source.forwardArchiveRows?`, ${ledger.source.forwardArchiveRows} archived`:''}){ledger.source.baseTrades!=null?`, ${ledger.source.baseTrades} base-sleeve trades (${ledger.source.baseWithR??0} with R)`:''} · split at {ledger.source.splitAt.paper??'—'} / {ledger.source.splitAt.forward??'—'}{stale?<span className="text-amber-300"> · STALE (over 36h)</span>:null}</span>}
   </div>
   {error&&<p role="alert" className="text-amber-300">{error}</p>}
   {filed&&<p className="text-xs text-slate-400">{filed.length?`Filed ${filed.length} recommendation${filed.length===1?'':'s'}: ${filed.join(', ')}. Review them in the Recommendations tab.`:'No new recommendation was due.'}</p>}
@@ -93,6 +93,15 @@ export default function CryptoCalibration({refreshVersion=0}:{refreshVersion?:nu
    <Overview title="Forward score · outcome 24h move after the signal" fields={forward}/>
    {!!base.length&&<Overview title="Base-breakout sleeve · outcome R per closed trade (separate ledger)" fields={base}/>}
    {!!backtest.length&&<Overview title={`Backtest · outcome R per replayed trade with a real exit${ledger.source.backtestWindow?` · window ${ledger.source.backtestWindow}`:''} · ${ledger.source.backtestGraded??0} graded of ${ledger.source.backtestTrades??0}`} fields={backtest}/>}
+   <div className="space-y-2 rounded border border-slate-700 p-3">
+    <h3 className="text-sm font-semibold">Probability scores · Brier, log loss, and buckets</h3>
+    <p className="text-xs text-slate-400">{ledger.probability?.definition??'Recompute to score the stored probabilities. y is 1 when the graded outcome is strictly positive.'}</p>
+    {!ledger.probability?.questions.length&&<p className="text-xs text-slate-400">No stored probabilities on graded rows yet.</p>}
+    {!!ledger.probability?.questions.length&&<div className="overflow-auto"><table className="w-full min-w-[980px] text-left text-sm"><thead><tr>{['Question','Outcome','n','Base rate','Brier','Brier of base rate','Log loss','0-0.2','0.2-0.4','0.4-0.6','0.6-0.8','0.8-1.0'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
+     {ledger.probability.questions.map(q=><tr key={`${q.outcome}|${q.id}`} className="border-t border-slate-700"><td className="p-2">{q.label}<div className="text-xs text-slate-500">{q.id}</div></td><td className="p-2">{q.outcome}</td><td className="p-2">{q.n}</td><td className="p-2">{q.baseRate==null?'—':`${(q.baseRate*100).toFixed(0)}%`}</td><td className="p-2">{q.brier==null?'—':q.brier.toFixed(3)}</td><td className="p-2">{q.brierBaseRate==null?'—':q.brierBaseRate.toFixed(3)}</td><td className="p-2">{q.logLoss==null?'—':q.logLoss.toFixed(3)}</td>{q.buckets.map(b=><td className="p-2" key={b.bucket}>{b.n?`${b.n} · ${b.favorable==null?'—':`${(b.favorable*100).toFixed(0)}%`} · ${b.meanOutcome==null?'—':b.meanOutcome.toFixed(2)}`:'—'}</td>)}</tr>)}
+    </tbody></table></div>}
+    {!!ledger.probability?.questions.length&&<p className="text-xs text-slate-500">Each bucket cell is rows · share with a positive outcome · mean outcome. A question that points the other way shows up here as a high probability with a low positive share.</p>}
+   </div>
   </>}
  </section>;
 }

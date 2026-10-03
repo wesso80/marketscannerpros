@@ -14,7 +14,12 @@ import type {CalibrationLedger} from './cryptoCalibration';
 export const SHADOW_SCORE_RULE='shadow-score-v1' as const;
 export const SHADOW_WEIGHTS_KEY='admin:crypto-markets:shadow-weights:v1';
 export const SHADOW_WEIGHTS_ACTIVE=`${SHADOW_WEIGHTS_KEY}:active`;
+export const SHADOW_WORKSPACE_COUNT_KEY=`${SHADOW_WEIGHTS_KEY}:workspaces`;
+export const SHADOW_STAMP_ATTEMPT_KEY='admin:crypto-markets:shadow-score:last-attempt:v1';
 export const shadowWeightsKey=(workspaceId:string)=>`${SHADOW_WEIGHTS_KEY}:${workspaceId}`;
+export type ShadowStampOutcome='stamped'|'already-current'|'pointer-missing'|'pointer-none'|'weights-missing'|'weights-unavailable'|'no-named-rows';
+export type ShadowStampAttempt={at:string;stamped:number;available:boolean;pointer:string|null;weightsVersion:string|null;named:number;outcome:ShadowStampOutcome};
+export type ShadowWorkspaceCount={count:number;at:string;pointer:string};
 export const SHADOW={minConfirmedFields:2,clip:2} as const;
 export type ShadowWeight={field:string;label:string;side:string;unit:'R'|'%';lift:number;weight:number;n:number;outcome:string};
 export type ShadowWeights={rule:typeof SHADOW_SCORE_RULE;version:string;computedAt:string;ledgerCheckedAt:string;available:boolean;reason:string;weights:ShadowWeight[];confirmedFields:number};
@@ -64,26 +69,53 @@ export async function persistShadowWeights(redis:Pick<Redis,'set'>,ledger:Calibr
  await redis.set(shadowWeightsKey(workspaceId),weights,{ex:7*86400});
  return weights;
 }
-/** Shared scans stamp only the single active workspace. 'none' or a missing pointer scores nothing. */
+/**
+ * Shared scans stamp only when the active pointer is exactly one workspace id.
+ * `none` (written when the crypto paper workspace count is not exactly 1) or a missing pointer scores nothing.
+ * That is deliberate: the scan is shared, and stamping one workspace's weights onto it while several ledgers exist would mix evidence.
+ * It is also why a workspace can show available weights and still have zero current stamps. The learning status line prints the pointer.
+ */
 export async function loadShadowWeights(redis:Pick<Redis,'get'>){
  const active=await redis.get<string>(SHADOW_WEIGHTS_ACTIVE);
  if(typeof active!=='string'||!active||active==='none')return null;
  return redis.get<ShadowWeights>(shadowWeightsKey(active));
 }
+/** Writes the pointer and the workspace count together. Count other than 1 stores the pointer `none` and stamps nothing. */
+export async function publishShadowPointer(redis:Pick<Redis,'set'>,workspaceIds:string[],now=Date.now()){
+ const pointer=workspaceIds.length===1?workspaceIds[0]:'none';
+ const at=new Date(now).toISOString();
+ await redis.set(SHADOW_WEIGHTS_ACTIVE,pointer,{ex:7*86400});
+ await redis.set(SHADOW_WORKSPACE_COUNT_KEY,{count:workspaceIds.length,at,pointer} satisfies ShadowWorkspaceCount,{ex:7*86400});
+ return pointer;
+}
 const NAMED=new Set(['MOMENTUM_VOLUME','VOLUME_WATCH','EXTENDED','EARLY_WATCH']);
-/** Stamps named rows that lack a stamp under the current weights version. Never throws, never changes a stage. */
+async function rememberStampAttempt(redis:Pick<Redis,'get'>,attempt:ShadowStampAttempt){
+ const writer=redis as Pick<Redis,'get'>&{set?:(key:string,value:ShadowStampAttempt,opts?:{ex:number})=>Promise<unknown>};
+ if(typeof writer.set!=='function')return;
+ try{await writer.set(SHADOW_STAMP_ATTEMPT_KEY,attempt,{ex:14*86400});}catch{/* measurement only */}
+}
+/** Stamps named rows that lack a stamp under the current weights version. Never throws, never changes a stage. Records the attempt when the client can set a key. */
 export async function attachShadowScore<T extends ScoreRow&{asOf?:string|null;shadow?:ShadowStamp}>(redis:Pick<Redis,'get'>,rows:T[],ctx:ShadowContext,now=Date.now()){
+ let pointer:string|null=null;
  let weights:ShadowWeights|null=null;
- try{weights=await loadShadowWeights(redis);}catch{weights=null;}
- if(!weights?.available)return {stamped:0,available:false};
+ try{
+  const active=await redis.get<string>(SHADOW_WEIGHTS_ACTIVE);
+  pointer=typeof active==='string'&&active?active:null;
+  if(pointer&&pointer!=='none')weights=await redis.get<ShadowWeights>(shadowWeightsKey(pointer));
+ }catch{pointer=null;weights=null;}
+ const named=rows.filter(r=>NAMED.has(r.stage)&&r.asOf).length;
  let stamped=0;
- for(const row of rows){
-  if(!NAMED.has(row.stage)||!row.asOf||row.shadow?.weightsVersion===weights.version)continue;
-  const stage=row.stage;
-  try{const s=scoreRow(row,weights,ctx,now);if(s){row.shadow=s;stamped++;}}catch{/* evidence only */}
-  row.stage=stage;
+ if(weights?.available){
+  for(const row of rows){
+   if(!NAMED.has(row.stage)||!row.asOf||row.shadow?.weightsVersion===weights.version)continue;
+   const stage=row.stage;
+   try{const s=scoreRow(row,weights,ctx,now);if(s){row.shadow=s;stamped++;}}catch{/* evidence only */}
+   row.stage=stage;
+  }
  }
- return {stamped,available:true};
+ const outcome:ShadowStampOutcome=!pointer?'pointer-missing':pointer==='none'?'pointer-none':!weights?'weights-missing':!weights.available?'weights-unavailable':!named?'no-named-rows':stamped>0?'stamped':'already-current';
+ await rememberStampAttempt(redis,{at:new Date(now).toISOString(),stamped,available:!!weights?.available,pointer,weightsVersion:weights?.version??null,named,outcome});
+ return {stamped,available:!!weights?.available};
 }
 /** Batch helper: reads the saved BTC regime for context, then stamps. Never throws. */
 export async function attachShadowScoreWithContext<T extends ScoreRow&{asOf?:string|null;shadow?:ShadowStamp}>(redis:Pick<Redis,'get'>,rows:T[],now=Date.now()){

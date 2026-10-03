@@ -27,7 +27,7 @@ export function jevState(row:JevRow,btcTrend:string,flowStamp:string){
  return {stage:row.stage,kind:row.kind??null,relativeVolume:round2(row.relativeVolume),changePct:round2(row.changePct),distancePastLevelAtr:distance,flowStamp,btcTrend};
 }
 async function ask(state:ReturnType<typeof jevState>):Promise<{chase:number;flowAgrees:number;btcHeadwind:number;model:string;inputTokens?:number}>{
- const {model,answers,inputTokens}=await askJev(state,JEV_QUESTIONS);
+ const {model,answers,inputTokens}=await askJev(state,JEV_QUESTIONS,{module:'jev-shadow'});
  return {chase:answers.chase.probability,flowAgrees:answers.flowAgrees.probability,btcHeadwind:answers.btcHeadwind.probability,model,...(inputTokens!=null?{inputTokens}:{})};
 }
 /** Scores named setups that do not already have a stamp. Never throws and never changes a stage. */

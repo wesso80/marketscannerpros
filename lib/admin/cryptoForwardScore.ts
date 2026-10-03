@@ -98,7 +98,10 @@ export function jevForwardSummary(rows:ForwardRow[]):JevForwardSummary{
 }
 export async function persistForwardScores(redis:Redis,now=Date.now()){
  const [saved,fourHour,early]=await Promise.all([redis.get<ForwardBook>(BOOK),redis.get<MomentumScan>(FOUR),redis.get<MomentumScan>(EARLY)]);
- const book:ForwardBook={version:1,updatedAt:new Date(now).toISOString(),rows:applyForwardScores(saved?.rows??[],fourHour,early)};
+ const previous=saved?.rows??[];
+ const book:ForwardBook={version:1,updatedAt:new Date(now).toISOString(),rows:applyForwardScores(previous,fourHour,early)};
  await redis.set(BOOK,book,{ex:21*86400});
+ // Rows the 1000-cap just dropped are in `previous`. Archive both so a filled mark outlives the Redis TTL. A missing table must not fail the book write.
+ await import('./cryptoForwardArchive').then(m=>m.archiveForwardRows([...previous,...book.rows])).catch(()=>undefined);
  return {book,headline:forwardHeadline(book.rows),resolved:forwardResolved(book.rows),jev:jevForwardSummary(book.rows)};
 }

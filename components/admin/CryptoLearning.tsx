@@ -2,9 +2,23 @@
 import {useEffect,useState} from 'react';
 import dynamic from 'next/dynamic';
 import type {LearningItem,LearningStatus} from '@/lib/admin/learningStatus';
+import type {JevUsageBucket} from '@/lib/admin/jevUsage';
 const CryptoCalibration=dynamic(()=>import('@/components/admin/CryptoCalibration'),{ssr:false});
 const STATE:Record<LearningItem['state'],{label:string;cls:string}>={ok:{label:'working',cls:'bg-emerald-900 text-emerald-200'},collecting:{label:'collecting',cls:'bg-slate-700 text-slate-200'},attention:{label:'needs attention',cls:'bg-amber-900 text-amber-200'},paused:{label:'paused',cls:'bg-slate-800 text-slate-400'},off:{label:'off',cls:'bg-red-900 text-red-200'}};
 const when=(iso:string|null)=>{if(!iso)return 'never';const m=Math.round((Date.now()-Date.parse(iso))/60000);return m<60?`${m} min ago`:m<2880?`${Math.round(m/60)} h ago`:`${Math.round(m/1440)} d ago`;};
+const tokens=(n:number)=>n.toLocaleString('en-US');
+function costText(row:JevUsageBucket,price:LearningStatus['jevUsage']['price']){
+ const input=price.inputUsdPerMillion==null?null:row.inputTokens/1e6*price.inputUsdPerMillion;
+ const output=price.outputUsdPerMillion==null?null:row.outputTokens/1e6*price.outputUsdPerMillion;
+ if(input==null&&output==null)return '—';
+ return `$${((input??0)+(output??0)).toFixed(4)}${input==null||output==null?' (partial)':''}`;
+}
+function UsageTable({rows,price}:{rows:JevUsageBucket[];price:LearningStatus['jevUsage']['price']}){
+ if(!rows.length)return <p className="text-xs text-slate-400">None recorded.</p>;
+ return <div className="overflow-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead><tr>{['Scope','Day','Module','Calls','Input tokens','Output tokens','Cost'].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>
+  {rows.map(r=><tr key={`${r.scope}|${r.day}|${r.module}`} className="border-t border-slate-700"><td className="p-2">{r.scope}</td><td className="p-2">{r.day}</td><td className="p-2">{r.module}</td><td className="p-2">{r.calls}</td><td className="p-2">{tokens(r.inputTokens)}</td><td className="p-2">{tokens(r.outputTokens)}</td><td className="p-2">{costText(r,price)}</td></tr>)}
+ </tbody></table></div>;
+}
 export default function CryptoLearning({refreshVersion=0}:{refreshVersion?:number}){
  const [status,setStatus]=useState<LearningStatus|null>(null),[error,setError]=useState('');
  useEffect(()=>{const c=new AbortController();
@@ -47,6 +61,27 @@ export default function CryptoLearning({refreshVersion=0}:{refreshVersion?:numbe
       </tbody></table></div>
      </>}
     </div>
+    {status.shadowPointer&&<div className="rounded border border-slate-700 p-3 text-sm">
+     <h3 className="text-sm font-semibold">Shadow-score pointer</h3>
+     <p className="mt-1 text-xs text-slate-400">Shared scans stamp a row only when this pointer is a workspace id. <span className="text-slate-200">none</span> or a missing key stamps nothing, including when weights for this workspace are already available.</p>
+     <dl className="mt-2 grid gap-1 text-xs text-slate-300 sm:grid-cols-2">
+      <div><dt className="text-slate-500">Key</dt><dd>{status.shadowPointer.key}</dd></div>
+      <div><dt className="text-slate-500">Value</dt><dd>{status.shadowPointer.value??'missing'}</dd></div>
+      <div><dt className="text-slate-500">Crypto paper workspaces</dt><dd>{status.shadowPointer.workspaces??'not recorded'}{status.shadowPointer.workspacesSource?` (${status.shadowPointer.workspacesSource})`:''}</dd></div>
+      <div><dt className="text-slate-500">This workspace version</dt><dd>{status.shadowPointer.weightsVersion??'none'}{status.shadowPointer.weightsComputedAt?` · ${new Date(status.shadowPointer.weightsComputedAt).toLocaleString()}`:''}</dd></div>
+      <div><dt className="text-slate-500">Pointer target version</dt><dd>{status.shadowPointer.activeVersion??'none'}{status.shadowPointer.activeComputedAt?` · ${new Date(status.shadowPointer.activeComputedAt).toLocaleString()}`:''}</dd></div>
+      <div><dt className="text-slate-500">Last stamp attempt</dt><dd>{status.shadowPointer.lastStamp?`${status.shadowPointer.lastStamp.outcome} · ${status.shadowPointer.lastStamp.stamped} stamped · ${new Date(status.shadowPointer.lastStamp.at).toLocaleString()}`:'not recorded yet'}</dd></div>
+     </dl>
+    </div>}
+    {status.jevUsage&&<div className="rounded border border-slate-700 p-3">
+     <h3 className="text-sm font-semibold">Jev gateway usage</h3>
+     <p className="mt-1 text-xs text-slate-400">{status.jevUsage.note}</p>
+     <p className="mt-1 text-xs text-slate-300">{status.jevUsage.price.label}{status.jevUsage.price.inputUsdPerMillion!=null?` Input $${status.jevUsage.price.inputUsdPerMillion} / million.` :''}{status.jevUsage.price.outputUsdPerMillion!=null?` Output $${status.jevUsage.price.outputUsdPerMillion} / million.`:''}</p>
+     <h4 className="mt-3 text-xs font-semibold text-slate-300">Recorded calls</h4>
+     <UsageTable rows={status.jevUsage.recorded} price={status.jevUsage.price}/>
+     <h4 className="mt-3 text-xs font-semibold text-slate-300">Tokens on saved stamps</h4>
+     <UsageTable rows={status.jevUsage.stamps} price={status.jevUsage.price}/>
+    </div>}
    </>}
   </section>
   <CryptoCalibration refreshVersion={refreshVersion}/>
