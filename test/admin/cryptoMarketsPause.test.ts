@@ -38,3 +38,9 @@ it('does not change paper entry, exit, or sizing modules',()=>{
  const history=readFileSync('lib/admin/cgHistoryJob.ts','utf8')+readFileSync('lib/admin/cgHistory.ts','utf8');
  expect(history).not.toMatch(/CRYPTO_MARKETS_PAUSED/);
 });
+
+it('does not gate public ingestion, the worker scheduler, user alerts, or the public quote API',()=>{
+ for(const file of ['worker/ingest-data.ts','worker/scheduler.ts','lib/worker/schedule.ts','app/api/alerts/check/route.ts','app/api/quote/route.ts','middleware.ts']){
+  expect(readFileSync(file,'utf8')).not.toMatch(/CRYPTO_MARKETS_PAUSED|cryptoMarketsPaused/);
+ }
+});

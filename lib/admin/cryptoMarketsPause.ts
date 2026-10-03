@@ -1,6 +1,8 @@
 import {NextResponse} from 'next/server';
 /**
  * Reversible kill switch for admin Crypto Markets scheduled and click-to-spend work.
+ * It is checked only at those entry points. It does not touch the worker scheduler, public ingestion,
+ * user-facing pages or APIs, equity or public crons, or emails to users.
  *
  * CRYPTO_MARKETS_PAUSED defaults off. Unset, empty, false, 0, no, and off leave every job as it is.
  * true, 1, yes, or on skips scans, CoinGecko refreshes, Jev/AI Gateway stamps, setup and ops emails,
