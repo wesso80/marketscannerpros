@@ -1,3 +1,4 @@
+import { selectOptionsExpiry, marketDateKey } from '@/lib/options/expiry';
 /**
  * ONE options snapshot per symbol. Every number carries its expiry and snapshot time; strikes from different expiries
  * are never mixed; chain quality and split contamination are surfaced instead of being presented as flow evidence.
@@ -66,24 +67,8 @@ const numOrNull = (v: unknown): number | null => { const n = typeof v === 'numbe
  * Falls back to the nearest expiry with ≥ 7 DTE, then to the highest-OI expiry overall.
  */
 export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now()): { expiry: string | null; reason: string; available: string[] } {
-  const byExpiry = new Map<string, number>();
-  for (const c of contracts) {
-    const e = String(c.expiration ?? '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(e) || e < new Date(nowMs).toISOString().slice(0, 10)) continue;
-    byExpiry.set(e, (byExpiry.get(e) ?? 0) + num(c.open_interest));
-  }
-  const available = [...byExpiry.keys()].sort();
-  if (available.length === 0) return { expiry: null, reason: 'no expiries in chain', available };
-  const dte = (e: string) => Math.round((Date.parse(`${e}T20:00:00Z`) - nowMs) / 86_400_000);
-  const window = available.filter((e) => dte(e) >= 7 && dte(e) <= 60);
-  if (window.length) {
-    const best = window.sort((a, b) => (byExpiry.get(b) ?? 0) - (byExpiry.get(a) ?? 0))[0];
-    return { expiry: best, reason: `highest open interest among ${window.length} expiries within 7–60 DTE`, available };
-  }
-  const later = available.filter((e) => dte(e) >= 7);
-  if (later.length) return { expiry: later[0], reason: 'nearest expiry with ≥ 7 DTE (no liquid expiry inside 7–60 DTE)', available };
-  const best = available.sort((a, b) => (byExpiry.get(b) ?? 0) - (byExpiry.get(a) ?? 0))[0];
-  return { expiry: best, reason: 'highest open interest overall (only near-dated expiries available)', available };
+  const available=[...new Set(contracts.map(c=>String(c.expiration??'')))].filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>=marketDateKey(nowMs)).sort();
+  return {expiry:selectOptionsExpiry(available,undefined,nowMs),available,reason:'shared default: next listed expiry after the New York market date'};
 }
 
 /** Calendar-day horizon from the market observation, never from cache retrieval. */

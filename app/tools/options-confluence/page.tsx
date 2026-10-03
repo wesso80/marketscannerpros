@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { withOptionsExpiry } from '@/lib/options/expiry';
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useUserTier, canAccessOptionsConfluence } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -620,7 +622,9 @@ function scanModeFromOuterTimeframe(timeframe?: string): ScanModeType {
   return 'swing_1d';
 }
 
-export default function OptionsConfluenceScanner({ embeddedInTerminal = false, symbol: propSymbol, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; timeframe?: string } = {}) {
+export default function OptionsConfluenceScanner({ embeddedInTerminal = false, symbol: propSymbol, timeframe, expiry }: { embeddedInTerminal?: boolean; symbol?: string; timeframe?: string; expiry?:string } = {}) {
+  const params = useSearchParams(), router = useRouter(), pathname = usePathname();
+  const activeExpiry = expiry ?? params.get('expiry') ?? '';
   const { tier, isLoading: isTierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || "");
@@ -633,7 +637,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
   
   // Expiration date selection
   const [expirations, setExpirations] = useState<ExpirationOption[]>([]);
-  const [selectedExpiry, setSelectedExpiry] = useState<string>(''); // Empty = auto-select
+  const [selectedExpiry, setSelectedExpiry] = useState<string>(activeExpiry); // Empty = shared default
+  useEffect(()=>{setSelectedExpiry(activeExpiry);},[activeExpiry]);
   const [loadingExpirations, setLoadingExpirations] = useState(false);
   const [expirationsError, setExpirationsError] = useState<string | null>(null);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
@@ -1078,7 +1083,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     setLoadingExpirations(true);
     setExpirationsError(null);
     setExpirations([]);
-    setSelectedExpiry(''); // Reset to auto-select
+    setSelectedExpiry(activeExpiry); // Reset to auto-select
     
     try {
       const response = await fetch(`/api/options/expirations?symbol=${encodeURIComponent(sym.trim())}`);
@@ -1107,7 +1112,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     const normalized = symbol.trim().toUpperCase();
     if (!normalized) {
       setExpirations([]);
-      setSelectedExpiry('');
+      setSelectedExpiry(activeExpiry);
       setExpirationsError(null);
       setLastSymbolFetched('');
       return;
@@ -2425,7 +2430,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
           {/* Expiration Date Selector */}
           <select
             value={selectedExpiry}
-            onChange={(e) => setSelectedExpiry(e.target.value)}
+            onChange={(e) => {setSelectedExpiry(e.target.value);router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(params.toString()),e.target.value)}`,{scroll:false});}}
             disabled={loadingExpirations || expirations.length === 0}
             aria-label="Expiration date"
             className={`rounded-xl border bg-[var(--msp-panel)] px-4 py-3 text-[0.9rem] font-semibold ${expirations.length > 0 ? 'cursor-pointer border-[var(--msp-border-strong)] text-[var(--msp-text)]' : 'cursor-not-allowed border-[var(--msp-border)] text-[var(--msp-text-faint)]'}`}

@@ -8,11 +8,12 @@
  */
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { selectOptionsExpiry, withOptionsExpiry } from '@/lib/options/expiry';
 import { contractCosts } from '@/lib/options/contractCosts';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
@@ -46,6 +47,7 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: string } = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const initialSymbol = propSymbol?.toUpperCase() || searchParams.get('symbol')?.toUpperCase() || '';
 
   /* ── Live data ─────────────────────────────────────────────── */
@@ -53,7 +55,10 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
   /* ── UI state ──────────────────────────────────────────────── */
   const [ticker, setTicker] = useState(initialSymbol);
-  const [selectedExpiry, setSelectedExpiry] = useState('');
+  const selectedExpiry = searchParams.get('expiry') || '';
+  const setSelectedExpiry = useCallback((expiry:string) => {
+    router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(searchParams.toString()),expiry)}`,{scroll:false});
+  },[pathname,searchParams,router]);
   const [mode, setMode] = useState<Mode>('retail');
   const [cp, setCp] = useState<CPFilter>('BOTH');
   const [rangePct, setRangePct] = useState(20);
@@ -69,7 +74,6 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     const next = propSymbol.toUpperCase();
     if (next !== ticker) {
       setTicker(next);
-      setSelectedExpiry('');
       setSelected(null);
     }
   }, [propSymbol, ticker]);
@@ -83,12 +87,10 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker, selectedExpiry]);
 
-  /* ── Auto-select nearest weekly expiry once loaded ─────────── */
+  /* ── Auto-select the shared expiry once loaded ─────────── */
   useEffect(() => {
     if (chain.expirations.length && !selectedExpiry) {
-      const weekly = chain.expirations.find((e) => e.dte > 0 && e.dte <= 10);
-      const first = chain.expirations.find((e) => e.dte > 0);
-      setSelectedExpiry((weekly || first)?.date || '');
+      setSelectedExpiry(selectOptionsExpiry(chain.expirations.map(e=>e.date)) || '');
     }
   }, [chain.expirations, selectedExpiry]);
 
@@ -144,7 +146,6 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
   const handleTickerChange = useCallback((s: string) => {
     setTicker(s.toUpperCase());
-    setSelectedExpiry('');
     setSelected(null);
   }, []);
 

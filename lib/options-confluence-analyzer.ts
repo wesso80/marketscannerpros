@@ -1,3 +1,4 @@
+import { selectOptionsExpiry } from '@/lib/options/expiry';
 import { optionEntryBlocker, datedResearchCandidates } from '@/lib/options/decisionGate';
 /**
  * Options Confluence Analyzer
@@ -1111,33 +1112,12 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
       }
     }
     
-    // Use user-specified expiration if provided and valid, otherwise auto-select
-    let bestExpiry: string;
-    
-    if (targetExpiration && expiryMap[targetExpiration]) {
-      // User specified a valid expiration date
-      bestExpiry = targetExpiration;
-      console.log(`📅 Using user-specified expiration: ${bestExpiry} (${expiryMap[bestExpiry]} contracts)`);
-    } else {
-      // Auto-select: Find expiration closest to this Friday with the most contracts
-      const targetDateStr = getThisWeekFridayYMD();
-      
-      bestExpiry = Object.keys(expiryMap)[0];
-      let minDiff = Infinity;
-      
-      for (const expiry of Object.keys(expiryMap)) {
-        const diff = Math.abs(dateDiffDaysYMD(targetDateStr, expiry));
-        // Prefer closer dates, but also consider contract count
-        if (diff < minDiff || (diff === minDiff && expiryMap[expiry] > expiryMap[bestExpiry])) {
-          minDiff = diff;
-          bestExpiry = expiry;
-        }
-      }
-      
-      console.log(`📅 Available expirations: ${Object.keys(expiryMap).slice(0, 5).join(', ')}...`);
-      console.log(`📅 Target Friday: ${targetDateStr}, Auto-selected expiry: ${bestExpiry}`);
+    const bestExpiry = selectOptionsExpiry(Object.keys(expiryMap), targetExpiration);
+    if (!bestExpiry) {
+      console.warn(`Requested expiry ${targetExpiration || '(default)'} unavailable for ${symbol}; no substitute selected.`);
+      return null;
     }
-    
+
     // Filter to only this expiration
     const calls: AVOptionContract[] = [];
     const puts: AVOptionContract[] = [];
