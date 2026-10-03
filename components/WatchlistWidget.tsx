@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -60,6 +60,7 @@ const ICONS: Record<string, string> = {
 export default function WatchlistWidget() {
   const { tier } = useUserTier();
   const router = useRouter();
+  const searchParams=useSearchParams();
   const { isLocked: riskLocked } = useRiskPermission();
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [selectedWatchlist, setSelectedWatchlist] = useState<Watchlist | null>(null);
@@ -82,6 +83,10 @@ export default function WatchlistWidget() {
   const [showAddSymbol, setShowAddSymbol] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
   const [newAssetType, setNewAssetType] = useState('equity');
+  useEffect(()=>{
+    const draft=searchParams.get('addSymbol');
+    if(draft){setNewSymbol(draft.toUpperCase());setNewAssetType(searchParams.get('type')==='crypto'?'crypto':'equity');setShowAddSymbol(true);}
+  },[searchParams]);
   const [watchlistMode, setWatchlistMode] = useState<WatchlistMode>('PRE-STAGING');
   // Default shows every symbol, priced or not, in the list's saved order.
   const [moveFilter, setMoveFilter] = useState<MoveFilter>('all');

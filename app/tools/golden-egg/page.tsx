@@ -32,6 +32,11 @@ import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
 import { lookupAssetType } from '@/lib/lookupAssetType';
+import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
+import PriceStamp from '@/components/market/PriceStamp';
+import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
+import {findSymbolPick,symbolQuoteStamp} from '@/lib/market/symbolSnapshot';
+import type {PicksResponse} from '@/lib/market/overview';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -410,6 +415,8 @@ export default function GoldenEggPage() {
   const dve = useDVE(sym, timeframe, resolvedType);
   const quote = useQuote(sym, quoteType);
   const regime = useRegime();
+  const dailyPicks=usePublicMarketFeed<PicksResponse>('/api/scanner/daily-picks?limit=20');
+  const snapshotAsset=quoteType==='crypto'?'crypto':'equity';
 
   const ge = goldenEgg.data?.data;
   const geLocalDemo = Boolean((goldenEgg.data as any)?.localDemo);
@@ -638,6 +645,7 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-3">
+      <SymbolSnapshotHeader symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error}/>
       <PageHero
         ariaLabel="Golden Egg command header"
         eyebrow="Golden Egg validation workbench"
@@ -1206,6 +1214,7 @@ export default function GoldenEggPage() {
             {/* -- STRUCTURE ------------------------------------------ */}
             <Card>
               <h3 className="text-xs font-semibold text-emerald-400 mb-3">Structure</h3>
+              <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {geCanonical?.lastCompletedBarAt??'time unknown'}</p>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 uppercase">Structure Verdict:</span>
@@ -1552,6 +1561,7 @@ export default function GoldenEggPage() {
           {/* -- SCENARIO MAP --------------------------------- */}
           <Card>
             <h3 className="text-xs font-semibold text-emerald-400 mb-3">Scenario Map</h3>
+              <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {geCanonical?.lastCompletedBarAt??'time unknown'}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <div className="text-[11px] text-slate-500 uppercase">Reference Level</div>
