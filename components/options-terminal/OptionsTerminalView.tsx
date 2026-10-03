@@ -997,6 +997,7 @@ function OIHeatmapInline({ heatmap, spot, expectedMove }: { heatmap: OIHeatmapRo
 /* ─── Inline Strategy Scenarios ─────────────────────────────────── */
 function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
   const frameworks = useMemo(() => {
+    if (ivLevel === 'unavailable') return [{title:'Compare structures',desc:'Historical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.'}];
     if (ivLevel === 'high' || ivLevel === 'extreme') {
       return [
         { title: 'Directional + Elevated IV', desc: 'Elevated IV can make defined-risk credit structures worth reviewing, but spread width and event risk still control quality.' },

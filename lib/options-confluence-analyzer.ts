@@ -1,3 +1,4 @@
+import { atr as measuredAtr } from '@/lib/indicators';
 import { atmStrike } from '@/lib/options/atmStrike';
 import { atmImpliedVol } from '@/lib/goldenEgg/optionsChain';
 import { selectOptionsExpiry } from '@/lib/options/expiry';
@@ -1558,18 +1559,9 @@ export function detectUnusualActivity(
     // Calculate premium from mark price when available, fallback to rough estimate
     const key = `${strike.strike}-${strike.type}`;
     const markPrice = markPriceMap.get(key);
-    let estimatedPremium: number;
-    
-    if (markPrice && markPrice > 0) {
-      // Use mark price: premium = mark * volume * 100 (contract multiplier)
-      estimatedPremium = markPrice * strike.volume * 100;
-    } else {
-      // Fallback: rough estimate (less reliable)
-      const distanceFromPrice = Math.abs(strike.strike - currentPrice);
-      const roughPremium = Math.max(0.50, currentPrice * 0.02 - distanceFromPrice * 0.1);
-      estimatedPremium = roughPremium * strike.volume * 100;
-    }
-    
+    if (!markPrice || markPrice <= 0) continue;
+    const estimatedPremium = markPrice * strike.volume * 100;
+
     if (strike.type === 'call') {
       bullishWeight += weight;
       callPremiumTotal += estimatedPremium;
@@ -1661,18 +1653,25 @@ function calculateExpectedMove(
 // PRO TRADER: SPECIFIC ENTRY/EXIT LEVELS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function calculateTradeLevels(
+export function calculateTradeLevels(
   confluenceResult: HierarchicalScanResult,
   direction: 'bullish' | 'bearish' | 'neutral',
   maxPainStrike: number | null
 ): TradeLevels | null {
   if (direction === 'neutral') return null;
   
+  const primary = confluenceResult.primaryTF.toUpperCase();
+  const key = primary === 'DAILY' || primary === 'D' ? '1D' : primary;
+  const candles = [...(confluenceResult.candlesByTf?.[key] ?? [])].sort((a,b)=>a.ts-b.ts);
+  if (candles.some(c=>![c.high,c.low,c.close].every(Number.isFinite)||c.high<c.low)) return null;
+  const atr = measuredAtr(candles.map(c=>({...c,volume:c.volume ?? 0,timestamp:new Date(c.ts)})));
+  if (atr == null || atr <= 0) return null;
+
   const { currentPrice, mid50Levels, clusters, decompression } = confluenceResult;
   const isLong = direction === 'bullish';
   
   // Entry Zone: Current price with small buffer based on volatility
-  const entryBuffer = currentPrice * 0.005;  // 0.5% buffer
+  const entryBuffer = atr * 0.25;  // Measured primary-timeframe ATR14
   const entryZone = {
     low: isLong ? currentPrice - entryBuffer : currentPrice,
     high: isLong ? currentPrice : currentPrice + entryBuffer,
@@ -1689,10 +1688,10 @@ function calculateTradeLevels(
   // Find a 50% level as stop reference
   const stopReference = opposingLevels.length > 0 
     ? opposingLevels[0].level 
-    : currentPrice * (isLong ? 0.98 : 1.02);
+    : currentPrice + (isLong ? -1.5 : 1.5) * atr;
   
   // Add buffer beyond the level
-  const stopBuffer = currentPrice * 0.003;  // 0.3% beyond level
+  const stopBuffer = atr * 0.15;
   const stopLoss = isLong 
     ? stopReference - stopBuffer 
     : stopReference + stopBuffer;
@@ -1701,7 +1700,7 @@ function calculateTradeLevels(
   // Targets: Based on 50% levels and clusters in direction of trade
   // Require targets to be at least 0.5% away from current price to avoid
   // near-zero R:R ratios (e.g. SPY target 1 cent from entry)
-  const minTargetDistance = currentPrice * 0.005;
+  const minTargetDistance = atr * 0.25;
   const targetLevels = mid50Levels
     .filter(l => {
       const dist = Math.abs(l.level - currentPrice);
@@ -1715,10 +1714,10 @@ function calculateTradeLevels(
   
   // Target 1: Nearest 50% level or cluster (must be meaningful distance away)
   const t1Level = targetLevels.length > 0 ? targetLevels[0] : null;
-  const t1Price = t1Level?.level || currentPrice * (isLong ? 1.02 : 0.98);
+  const t1Price = t1Level?.level || currentPrice + (isLong ? 2 : -2) * atr;
   const target1 = {
     price: t1Price,
-    reason: t1Level ? `${t1Level.tf} 50% level` : 'Default 2% target',
+    reason: t1Level ? `${t1Level.tf} 50% level` : 'Model target: 2 × measured ATR14',
     takeProfit: 50,  // Take 50% off at first target
   };
   

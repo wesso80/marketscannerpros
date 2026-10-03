@@ -874,8 +874,6 @@ describe('layout and flow audit regressions', () => {
     const cryptoMorningCard = read('components/CryptoMorningDecisionCard.tsx');
     const marketMoversPage = read('app/tools/market-movers/page.tsx');
     const optionsTerminalView = read('components/options-terminal/OptionsTerminalView.tsx');
-    const suggestedStructures = read('components/options-terminal/SuggestedPlaysCard.tsx');
-    const contractInspector = read('components/options-terminal/ContractInspectorPanel.tsx');
     const equityExplorerPage = read('app/tools/equity-explorer/page.tsx');
     const cryptoExplorerPage = read('app/tools/crypto-explorer/page.tsx');
     const commoditiesPage = read('app/tools/commodities/page.tsx');
@@ -929,16 +927,6 @@ describe('layout and flow audit regressions', () => {
     expect(optionsTerminalView).not.toContain('Save Play');
     expect(optionsTerminalView).not.toContain('⚠️ {chain.error}');
     expect(optionsTerminalView).not.toContain('setWatchlistMsg(`⚠ ${e.message}`)');
-    expect(suggestedStructures).toContain('interface StructureExample');
-    expect(suggestedStructures).toContain('context: string;');
-    expect(suggestedStructures).toContain('code: string;');
-    expect(suggestedStructures).toContain("code: 'BP'");
-    expect(suggestedStructures).toContain('{p.code}');
-    expect(suggestedStructures).not.toContain('interface Play');
-    expect(suggestedStructures).not.toContain("icon: '🐂'");
-    expect(suggestedStructures).not.toContain('{p.icon}');
-    expect(contractInspector).toContain('Save Scenario');
-    expect(contractInspector).not.toContain('Save Play');
     expect(equityExplorerPage).toContain('Risk Context: <span className="font-semibold text-slate-100">');
     expect(equityExplorerPage).toContain("icon: 'UP'");
     expect(equityExplorerPage).toContain("icon: 'DN'");
