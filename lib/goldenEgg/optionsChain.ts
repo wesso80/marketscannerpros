@@ -86,6 +86,13 @@ export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now
   return { expiry: best, reason: 'highest open interest overall (only near-dated expiries available)', available };
 }
 
+/** Calendar-day horizon from the market observation, never from cache retrieval. */
+export function quoteDaysToExpiry(expiry: string, asOfDate: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate) || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) return null;
+  const days = (Date.parse(expiry) - Date.parse(asOfDate)) / 86_400_000;
+  return Number.isFinite(days) && days >= 0 ? days : null;
+}
+
 /** ATM implied volatility: mean IV of contracts within 2% of spot; if none, of the strike nearest spot. */
 export function atmImpliedVol(chain: RawContract[], spot: number): number | null {
   if (!(spot > 0)) return null;
@@ -127,7 +134,8 @@ export function summarizeChain(
   const daysToExpiry = Math.max(0, Math.round((Date.parse(`${sel.expiry}T20:00:00Z`) - nowMs) / 86_400_000));
   const atmIv = atmImpliedVol(chain, spot);
   // ATM IV, not the all-strike average: far OTM wings carry higher IV (the smile) and overstate the move.
-  const expectedMove = atmIv != null && spot > 0 ? spot * atmIv * Math.sqrt(Math.max(1, daysToExpiry) / 365) : null;
+  const marketDays = quoteDaysToExpiry(sel.expiry, observedDates.length === 1 ? observedDates[0] : observedAt.slice(0, 10));
+  const expectedMove = atmIv != null && spot > 0 && marketDays != null ? spot * atmIv * Math.sqrt(marketDays / 365) : null;
 
   const strikes = [...new Set(chain.map((c) => num(c.strike)).filter((k) => k > 0))].sort((a, b) => a - b);
   let maxPain: number | null = null;

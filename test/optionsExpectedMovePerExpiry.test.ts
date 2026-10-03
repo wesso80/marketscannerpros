@@ -26,13 +26,13 @@ describe('8. Golden Egg expected move uses ATM IV', () => {
     expect(atmImpliedVol(chain as any, 0)).toBeNull();
   });
 
-  it('expected move = spot × ATM IV × √(DTE/365), smaller than the all-strike average would give', () => {
+  it('expected move uses the 31-day quote-date horizon, not the 30-day viewing horizon, smaller than the all-strike average would give', () => {
     const snap = summarizeChain(chain as any, 100, { nowMs })!;
     const atm = (0.24 + 0.2 + 0.24) / 3;
     expect(snap.daysToExpiry).toBe(30);
     expect(snap.ivBasis).toBe('atm');
-    expect(snap.expectedMovePct).toBeCloseTo(Math.round(atm * Math.sqrt(30 / 365) * 1000) / 10, 5);
-    expect(snap.expectedMovePct!).toBeLessThan(snap.avgIv! * Math.sqrt(30 / 365) * 100);
+    expect(snap.expectedMovePct).toBeCloseTo(Math.round(atm * Math.sqrt(31 / 365) * 1000) / 10, 5);
+    expect(snap.expectedMovePct!).toBeLessThan(snap.avgIv! * Math.sqrt(31 / 365) * 100);
   });
 });
 

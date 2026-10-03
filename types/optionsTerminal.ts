@@ -76,7 +76,8 @@ export interface BestStrike {
 
 export interface IVMetrics {
   avgIV: number;
-  ivLevel: 'low' | 'normal' | 'high' | 'extreme';
+  ivLevel: 'low' | 'normal' | 'high' | 'extreme' | 'unavailable';
+  atmStraddleMid?: number | null;
   expectedMoveAbs: number;
   expectedMovePct: number;
 }
