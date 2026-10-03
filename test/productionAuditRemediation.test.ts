@@ -72,7 +72,7 @@ describe('2026-09-21 production audit remediations', () => {
   it('preserves options deep links instead of resetting them under the default crypto symbol', () => {
     const terminal = read('app/tools/terminal/page.tsx');
 
-    expect(terminal).toContain("const optionsTab = tab === 'Options Terminal' || tab === 'Options Confluence' || tab === 'Options Flow'");
+    expect(terminal).toContain("const entrySymbol = optionsEntrySymbol(");
     expect(terminal).not.toContain("setSymInput('AAPL')");
     expect(terminal).not.toContain("selectSymbol('AAPL')");
   });

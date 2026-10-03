@@ -789,7 +789,7 @@ export default function MarketMoversPage() {
                             <span className="text-[11px] text-slate-500">{mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}</span>
                           ) : (
                             <Link
-                              href={`/tools/terminal?tab=options-confluence&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                              href={`/tools/terminal?tab=options-terminal&type=equity&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
                               className="inline-block rounded border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-200"
                             >
                               Open Confluence Panel
@@ -903,7 +903,7 @@ export default function MarketMoversPage() {
                               </button>
                             ) : (
                               <Link
-                                href={`/tools/terminal?tab=options-confluence&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                                href={`/tools/terminal?tab=options-terminal&type=equity&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
                                 className="rounded border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/25"
                               >
                                 Open Confluence →
