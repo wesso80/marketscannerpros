@@ -1,11 +1,8 @@
-import { redirect } from 'next/navigation';
-
-export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const params = await searchParams;
-  const query = new URLSearchParams({ tab: 'options-terminal' });
-  for (const key of ['symbol', 'type', 'timeframe', 'expiration']) {
-    const value = params[key];
-    if (typeof value === 'string') query.set(key, value);
-  }
-  redirect(`/tools/terminal?${query.toString()}`);
+import {Suspense} from 'react';
+import OptionsPageClient from '@/components/options-terminal/OptionsPageClient';
+export default async function Page({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){
+ const params=await searchParams;
+ const symbol=typeof params.symbol==='string'&&params.symbol.trim()?params.symbol.trim().toUpperCase():'SPY';
+ const expiry=typeof params.expiry==='string'?params.expiry:typeof params.expiration==='string'?params.expiration:undefined;
+ return <Suspense fallback={<p>Loading Options…</p>}><OptionsPageClient symbol={symbol} expiry={expiry}/></Suspense>;
 }
