@@ -81,7 +81,7 @@ export default async function DailyPickPage() {
         <div style={{ color: 'var(--msp-flat)', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           MarketScanner Pros · Daily Picks
         </div>
-        <h1 style={h1Style}>Top {data.picks.length} picks · US session {formatSessionDate(data.scan_date)}</h1>
+        <h1 style={h1Style}>Top {data.picks.length} picks · latest market snapshots</h1>
         <p style={{ color: 'var(--msp-flat)', fontSize: 14, marginTop: 4 }}>
           Dated by the US market session the data comes from (the last completed session when the scan ran, New York
           time). Crypto rows use the latest completed daily candle (UTC) at scan time.
@@ -131,7 +131,7 @@ export default async function DailyPickPage() {
                   {p.canonical && <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--msp-text-muted)' }}>legacy {p.legacyScore}</span>}
                 </div>
                 <div style={{ ...cellStyle, width: 110, textAlign: 'right' as const }}>
-                  {p.price != null ? `$${p.price.toFixed(2)}` : '—'}
+                  <span>{p.price != null ? `$${Number(p.price.toPrecision(6))}` : '—'}<small style={{display:'block'}}>{p.priceLabel}</small><small style={{display:'block'}}>Data as of {p.dataAsOf ?? 'unknown'}{p.stale ? ' · STALE / CHECK AGE' : ''}</small></span>
                 </div>
                 <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const, color: p.change_percent != null && p.change_percent >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>
                   {p.change_percent != null ? `${p.change_percent >= 0 ? '+' : ''}${p.change_percent.toFixed(2)}%` : '—'}

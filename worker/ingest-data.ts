@@ -33,7 +33,7 @@ import {
 import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cryptoBars';
 import { avRowVolume } from '../lib/scanner/avVolume';
 import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
-import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
+import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, WORKER_DAILY_WINDOWS, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
 import { startScheduler } from './scheduler';
 import {
   avPayloadError,
@@ -80,7 +80,7 @@ function getEnv(key: string): string {
 // - Crypto tier refreshes recompute indicators / TGM / signals from the worker's held daily history and cost 0
 //   CoinGecko calls: the history is fetched once, then only the missing candle once per UTC day
 //   (lib/worker/cryptoDailyHistory.ts), and spot quotes come from ONE /coins/markets call per ~60 s for every coin
-//   (refreshCryptoQuoteSnapshot). Before this, each refresh cost ~4 calls (3 × 360-day history + 1 simple/price)
+//   (refreshCryptoQuoteSnapshot). Before this, each refresh cost ~4 calls (3 × 1080-day history + 1 simple/price)
 //   ≈ 12.7k calls/day for 100 coins (~386k/month of the 500k plan); now ≈ 1.7k/day.
 // - For live price updates, use quotes_latest table (populated by worker each cycle)
 const CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
@@ -586,11 +586,11 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, WorkerE
 }
 
 /**
- * Crypto daily history from CoinGecko. The first read of a coin fetches the same ~360 genuine daily candles as before
- * (2 × 180-day ohlc/range windows + market_chart volumes = 3 calls); after that only the candle(s) missing since the
+ * Crypto daily history from CoinGecko. The first read of a coin fetches the same ~1080 genuine daily candles as before
+ * (6 × 180-day ohlc/range windows + market_chart volumes = 7 calls); after that only the candle(s) missing since the
  * newest held bar are fetched, once per UTC day after CoinGecko publishes it (~00:35 UTC; 2 calls), with a full
  * re-sync every WORKER_CG_FULL_RESYNC_DAYS (default 7). The held history is persisted to Redis (full precision) so a
- * restart or deploy does not refetch 360 days for every coin. Readers get the same completed bars as before.
+ * restart or deploy does not refetch 1080 days for every coin. Readers get the same completed bars as before.
  */
 function resolveWorkerCoinIdSync(symbol: string): string | null {
   const normalized = symbol.toUpperCase();
@@ -603,7 +603,7 @@ async function resolveWorkerCoinId(symbol: string): Promise<string | null> {
   return getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false) ? await resolveSymbolToId(symbol.toUpperCase()) : null;
 }
 
-const CG_DAILY_HISTORY_REDIS_PREFIX = 'worker:cg-daily:v1:';
+const CG_DAILY_HISTORY_REDIS_PREFIX = 'worker:cg-daily:v2:';
 const CG_DAILY_HISTORY_REDIS_TTL_S = 8 * 24 * 60 * 60;
 
 let cryptoDailyHistory: CryptoDailyHistoryCache | null = null;
@@ -615,9 +615,9 @@ function getCryptoDailyHistory(): CryptoDailyHistoryCache {
   });
   cryptoDailyHistory = new CryptoDailyHistoryCache({
     fetchFull: async (symbol, coinId, nowMs) => {
-      // Shared scanner adapter: two <=180-day daily windows + daily USD volume.
+      // Worker warm-up: six <=180-day daily windows + daily USD volume. User-facing fetches stay at 2 windows.
       // Do not manufacture OHLC from close samples or relabel 4-day candles as daily.
-      const series = await fetchCryptoSeries(symbol, 'daily', nowMs, { coinId, requestOptions: requestOptions() });
+      const series = await fetchCryptoSeries(symbol, 'daily', nowMs, { coinId, dailyWindows: WORKER_DAILY_WINDOWS, requestOptions: requestOptions() });
       return { bars: series.bars, warnings: series.warnings };
     },
     fetchIncrement: (coinId, sinceOpenMs, nowMs) => fetchCryptoDailyIncrement(coinId, sinceOpenMs, nowMs, requestOptions()),
@@ -897,7 +897,7 @@ async function upsertBars(symbol: string, timeframe: string, bars: AVBar[]): Pro
   if (bars.length === 0) return;
 
   const dedupedByTs = new Map<string, AVBar>();
-  for (const bar of bars.slice(-500)) {
+  for (const bar of bars.slice(-1100)) {
     const normalizedTs = normalizeBarTimestamp(bar.timestamp);
     dedupedByTs.set(normalizedTs, { ...bar, timestamp: normalizedTs });
   }
@@ -1378,14 +1378,14 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
     let quote: WorkerEquityQuote | null = ctx.bulkQuote;
     if (quote) {
       if (!ctx.bulkQuotePersisted) await upsertQuote(symbol, quote);
-      await cacheQuote(symbol, quote);
+      await cacheQuote(symbol, { ...quote, assetClass: 'equity' });
     } else if (ctx.quotesAllowed) {
       quote = await fetchAVGlobalQuote(symbol);
       out.apiCalls++;
       out.avGlobalQuoteCalls++;
       if (quote) {
         await upsertQuote(symbol, quote);
-        await cacheQuote(symbol, quote);
+        await cacheQuote(symbol, { ...quote, assetClass: 'equity' });
       }
     }
 
@@ -1396,7 +1396,7 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
       out.avDailyCalls++;
       let fresh: AVBar[];
       try {
-        fresh = await fetchAVTimeSeries(symbol, 'daily', 'compact');
+        fresh = await fetchAVTimeSeries(symbol, 'daily', 'full');
       } catch (err) {
         hold.daily = { bars: hold.daily?.bars ?? [], state: { fetchedAtMs: nowMs, complete: false } };
         throw err;

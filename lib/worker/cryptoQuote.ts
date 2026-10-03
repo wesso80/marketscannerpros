@@ -11,6 +11,7 @@ export function buildObservedCryptoQuote(point: CoinGeckoPrice | undefined, nowM
   const prevClose = changePct === null ? null : point.usd / (1 + changePct / 100);
   const updatedAt = new Date(point.last_updated_at * 1000).toISOString();
   return {
+    assetClass: 'crypto' as const, changeBasis: 'rolling_24h' as const, price24hAgo: prevClose,
     price: point.usd, open: null, high: null, low: null, prevClose,
     volume: typeof point.usd_24h_vol === 'number' && Number.isFinite(point.usd_24h_vol) && point.usd_24h_vol >= 0 ? point.usd_24h_vol : null,
     changeAmt: prevClose === null ? null : point.usd - prevClose, changePct,

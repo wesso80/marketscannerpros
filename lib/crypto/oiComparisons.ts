@@ -59,10 +59,10 @@ function matchedOi(current: OiObservation, previous: OiObservation): { current: 
 /** Only the same venue contracts are compared, so a coverage change is never read as a position change. */
 export function compareOi24h(current: OiObservation, history: OiObservation[], now = Date.now()) {
   const empty = { change24h: null, comparisonAt: null, previousValue: null, comparedValue: null } as const;
-  if (current.method !== OI_METHOD || !Number.isFinite(current.value) || current.value < 0 ||
+  if (("carriedContracts" in current && Number(current.carriedContracts) > 0) || current.method !== OI_METHOD || !Number.isFinite(current.value) || current.value < 0 ||
       !Number.isFinite(current.observedAt) || now - current.observedAt < 0 || now - current.observedAt > 900_000) return empty;
   const candidates = history.flatMap(previous => {
-    if (previous?.method !== OI_METHOD || previous.symbol !== current.symbol || !Number.isFinite(previous.value) || !(previous.value > 0) ||
+    if (!previous || ("carriedContracts" in previous && Number(previous.carriedContracts) > 0) || previous?.method !== OI_METHOD || previous.symbol !== current.symbol || !Number.isFinite(previous.value) || !(previous.value > 0) ||
         current.observedAt - previous.observedAt < 23 * HOUR_MS || current.observedAt - previous.observedAt > 25 * HOUR_MS) return [];
     const matched = matchedOi(current, previous);
     return matched ? [{ previous, matched }] : [];
@@ -91,4 +91,36 @@ export function totalOiChange(coins: Array<{ value: number; previousValue: numbe
   if (coveredShare < OI_MIN_MATCHED_SHARE) return null;
   const previous = compared.reduce((sum, c) => sum + c.previousValue!, 0);
   return (comparedNow / previous - 1) * 100;
+}
+
+export interface StableOiObservation extends OiObservation {
+  contractObservedAt: Record<string, number>;
+  carriedContracts: number;
+  expectedContracts: number;
+  /** Pinned contracts past the carry window. They are left out of the sum. */
+  droppedContracts: number;
+}
+/** Fixed constituent set. A missing quote is carried at its ORIGINAL time for at most one hour, then dropped. */
+export function stableOiObservation(symbol: string, rows: OiRow[], previous: StableOiObservation | null, now = Date.now()): StableOiObservation | null {
+  const fresh = buildOiObservation(symbol, rows, now);
+  const keys = previous ? Object.keys(previous.contracts) : Object.keys(fresh?.contracts ?? {});
+  if (!keys.length) return null;
+  const contracts: Record<string,number> = {}, contractObservedAt: Record<string,number> = {};
+  let carriedContracts = 0, droppedContracts = 0;
+  for (const key of keys) {
+    const row = rows.find(r=>JSON.stringify([r.market,r.symbol]) === key && Number.isFinite(r.openInterest) && r.openInterest >= 0 && Number.isFinite(r.lastTradedAt) && now-r.lastTradedAt*1000 >= 0 && now-r.lastTradedAt*1000 <= 900_000);
+    if (row) { contracts[key]=row.openInterest; contractObservedAt[key]=row.lastTradedAt*1000; }
+    else {
+      const at=previous?.contractObservedAt[key];
+      const value=previous?.contracts[key];
+      if (at != null && now-at <= HOUR_MS && now >= at && Number.isFinite(value)) {
+        contracts[key]=value!; contractObservedAt[key]=at; carriedContracts++;
+      } else droppedContracts++;
+    }
+  }
+  const kept = Object.keys(contracts);
+  if (!kept.length) return null;
+  return {symbol,method:OI_METHOD,value:Object.values(contracts).reduce((a,b)=>a+b,0),observedAt:now,
+    coverage:JSON.stringify(kept.sort()),exchanges:new Set(kept.map(k=>JSON.parse(k)[0])).size,
+    contracts,contractObservedAt,carriedContracts,expectedContracts:keys.length,droppedContracts};
 }

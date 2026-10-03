@@ -95,13 +95,13 @@ describe('ema200SanityFailure', () => {
 });
 
 describe('scanCryptoDailyIndicators', () => {
-  it('uses the spot price for display and scores on real coin history', async () => {
+  it('uses the completed bar close even when spot has moved', async () => {
     const bars = fixtureBars(360, 2000);
     const out = await scanCryptoDailyIndicators('ETH', 2700, async (s) => { expect(s).toBe('ETH'); return series(bars); });
     expect(out.ok).toBe(true);
     if (!out.ok) return;
-    expect(out.price).toBe(2700);
-    expect(out.indicators.price).toBe(2700);
+    expect(out.price).toBe(bars.at(-1)!.close);
+    expect(out.indicators.price).toBe(bars.at(-1)!.close);
     expect(out.barCount).toBe(360);
     expect(ema200SanityFailure(out.price, out.indicators.ema200)).toBeNull();
   });

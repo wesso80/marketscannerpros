@@ -104,8 +104,8 @@ export type CryptoDailyScanOutcome =
 
 /**
  * Fetch real daily coin history and build the scan-daily indicator set.
- * `spotPrice` (e.g. Alpha Vantage CURRENCY_EXCHANGE_RATE) is used as the
- * displayed price when available; otherwise the latest CoinGecko price.
+ * The display price is the same completed bar close used for the indicators.
+ * spotPrice is accepted for caller compatibility, but never mixed into bar-close levels.
  */
 export async function scanCryptoDailyIndicators(
   symbol: string,
@@ -125,12 +125,12 @@ export async function scanCryptoDailyIndicators(
     return { ok: false, reason: `insufficient daily history (${series.bars.length} bars)` };
   }
 
-  const price = spotPrice != null && Number.isFinite(spotPrice) && spotPrice > 0 ? spotPrice : series.currentPrice;
+  const price = series.bars.at(-1)?.close ?? null;
   if (price == null || !Number.isFinite(price) || price <= 0) {
     return { ok: false, reason: 'no current price' };
   }
 
-  const sanity = ema200SanityFailure(price, indicators.ema200);
+  const sanity = ema200SanityFailure(spotPrice ?? price, indicators.ema200);
   if (sanity) return { ok: false, reason: `EMA200 sanity check failed: ${sanity}` };
 
   return {

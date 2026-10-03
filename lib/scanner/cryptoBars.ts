@@ -38,8 +38,8 @@ export interface CryptoSeries {
 const DAY_S = 86_400;
 const HOURLY_MAX_DAYS = 31;
 const DAILY_MAX_DAYS = 180;
-/** Default daily history: 2 × 180-day windows (~360 bars). */
-const DEFAULT_DAILY_WINDOWS = 2;
+/** Default daily history: 2 × 180-day windows (~360 bars). User-facing callers keep this cost. */
+export const DEFAULT_DAILY_WINDOWS = 2;
 /** Upper bound on 180-day windows per request (8 → ~1,440 bars). */
 const MAX_DAILY_WINDOWS = 8;
 
@@ -93,7 +93,7 @@ async function fetchDailyBars(coinId: string, nowMs: number, requestOptions?: Re
   );
   // Extra 180-day windows further back (index 2..windows-1) are warm-up history only (e.g. EMA200 convergence);
   // volume stays on the most recent ~360 days.
-  const extraWindows = Array.from({ length: Math.max(0, windows - DEFAULT_DAILY_WINDOWS) }, (_, i) => i + DEFAULT_DAILY_WINDOWS);
+  const extraWindows = Array.from({ length: Math.max(0, windows - 2) }, (_, i) => i + 2);
   const [recent, older, chart, ...extra] = await Promise.all([
     getOHLCRange(coinId, liveEndS - DAILY_MAX_DAYS * DAY_S, liveEndS, requestOptions),
     completedWindow(1),
@@ -180,9 +180,10 @@ export async function fetchCryptoSeries(
   let source: string;
 
   if (timeframe === 'daily' || timeframe === 'weekly') {
-    const windows = Math.min(MAX_DAILY_WINDOWS, Math.max(DEFAULT_DAILY_WINDOWS, Math.floor(opts.dailyWindows ?? DEFAULT_DAILY_WINDOWS)));
+    const windows = Math.min(MAX_DAILY_WINDOWS, Math.max(2, Math.floor(opts.dailyWindows ?? DEFAULT_DAILY_WINDOWS)));
     const d = await fetchDailyBars(coinId, nowMs, opts.requestOptions, windows);
     warnings.push(...d.warnings);
+    warnings.push('Daily OHLC uses CoinGecko aggregate prices, not a single exchange. /ohlc/range does not document a precision parameter; ATR can differ from venue candles.');
     const daily = attachDailyVolumes(d.bars, d.volumes);
     if (d.volumes.length) volumeBasis = 'coingecko_daily_total_volume';
     source = 'coingecko ohlc/range interval=daily + market_chart/range total_volumes';

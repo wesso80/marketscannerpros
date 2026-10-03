@@ -1,5 +1,6 @@
+import { getOkxFundingRates } from '@/lib/crypto/okxDerivatives';
 import { NextRequest, NextResponse } from 'next/server';
-import { getDerivativesTickers, getGlobalData, getMarketData } from '@/lib/coingecko';
+import { getGlobalData, getMarketData } from '@/lib/coingecko';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,37 +53,14 @@ async function fetchBTCDerivatives(): Promise<Partial<MarketData>> {
   const result: Partial<MarketData> = {};
   
   try {
-    // Fetch from CoinGecko (funding rate, OI, price change)
-    const [derivativesTickers, marketData] = await Promise.all([
-      getDerivativesTickers(),
+    // Use the same BTC perpetual observation and 8h-percent basis as /api/funding-rates.
+    const [funding, marketData] = await Promise.all([
+      getOkxFundingRates(['BTC']).catch(() => []),
       getMarketData({ ids: ['bitcoin'], per_page: 1 }),
     ]);
-    
-    // Extract BTC data from CoinGecko derivatives
-    if (derivativesTickers) {
-      const btcDerivatives = derivativesTickers.filter(t => 
-        t.symbol?.toUpperCase().includes('BTC') && t.index_id?.toUpperCase() === 'BTC'
-      );
-      
-      if (btcDerivatives.length > 0) {
-        // Get average funding rate across exchanges
-        const fundingRates = btcDerivatives
-          .map(t => t.funding_rate)
-          .filter((r): r is number => r !== undefined && r !== null);
-        if (fundingRates.length > 0) {
-          result.btcFundingRate = (fundingRates.reduce((a, b) => a + b, 0) / fundingRates.length) * 100;
-        }
-        
-        // Get total OI across exchanges
-        const oiValues = btcDerivatives
-          .map(t => t.open_interest)
-          .filter((oi): oi is number => oi !== undefined && oi !== null);
-        if (oiValues.length > 0) {
-          result.btcOI = oiValues.reduce((a, b) => a + b, 0);
-        }
-      }
-    }
-    
+    const btc = funding.find(row => row.symbol === 'BTC');
+    if (btc && Number.isFinite(btc.ratePercent8h)) result.btcFundingRate = btc.ratePercent8h;
+
     // Get price change from market data
     if (marketData && marketData.length > 0) {
       result.btcPriceChange24h = marketData[0].price_change_percentage_24h;
@@ -149,7 +127,7 @@ function calculateCustomCryptoFG(data: MarketData): FGResult {
   let totalWeight = 0;
   let weightedSum = 0;
   
-  // 1. Alternative.me F&G (35% weight) - core sentiment
+  // 1. CoinGecko market-cap change / stablecoin-dominance proxy (base weight 35)
   if (data.cryptoFG !== undefined) {
     const weight = 35;
     components.push({
@@ -183,25 +161,6 @@ function calculateCustomCryptoFG(data: MarketData): FGResult {
     totalWeight += weight;
   }
   
-  // 3. Long/Short Ratio (20% weight) - positioning sentiment
-  // High L/S = more longs = greedy, Low L/S = more shorts = fearful
-  if (data.btcLongShortRatio !== undefined) {
-    const weight = 20;
-    // Map L/S ratio: 0.5 = 0, 1.0 = 50, 2.0 = 100
-    let fgValue = ((data.btcLongShortRatio - 0.5) / 1.5) * 100;
-    fgValue = Math.max(0, Math.min(100, fgValue));
-    
-    components.push({
-      name: 'Long/Short Ratio',
-      value: fgValue,
-      weight,
-      contribution: fgValue * (weight / 100),
-      interpretation: data.btcLongShortRatio > 1.5 ? 'Heavily long' : data.btcLongShortRatio < 0.8 ? 'Heavily short' : 'Balanced'
-    });
-    weightedSum += fgValue * weight;
-    totalWeight += weight;
-  }
-  
   // 4. Price Momentum (25% weight) - recent performance
   if (data.btcPriceChange24h !== undefined) {
     const weight = 25;
@@ -227,7 +186,7 @@ function calculateCustomCryptoFG(data: MarketData): FGResult {
     : finalValue < 80 ? 'Greed'
     : 'Extreme Greed';
   
-  return { value: finalValue, classification, components };
+  return { value: finalValue, classification, components: components.map(c => ({...c, weight: c.weight / totalWeight * 100, contribution: c.value * c.weight / totalWeight})) };
 }
 
 function calculateCustomStockFG(data: MarketData): FGResult {
@@ -278,7 +237,7 @@ function calculateCustomStockFG(data: MarketData): FGResult {
     : finalValue < 80 ? 'Greed'
     : 'Extreme Greed';
   
-  return { value: finalValue, classification, components };
+  return { value: finalValue, classification, components: components.map(c => ({...c, weight: c.weight / totalWeight * 100, contribution: c.value * c.weight / totalWeight})) };
 }
 
 // =============================================================================
@@ -320,7 +279,7 @@ export async function GET(req: NextRequest) {
           btcPriceChange24h: marketData.btcPriceChange24h
         },
         source: 'MSP Proprietary Index',
-        methodology: 'Composite of market sentiment (35%), funding rates (20%), positioning (20%), and momentum (25%)',
+        methodology: 'CoinGecko market-cap change and stablecoin-dominance proxy (base weight 35), OKX BTC perpetual funding (8h-equivalent percent; base weight 20), BTC 24h momentum (base weight 25). Available weights are normalised to 100%; missing components are omitted.',
         cachedAt: new Date().toISOString()
       };
       

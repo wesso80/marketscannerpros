@@ -69,7 +69,7 @@ describe('daily history windows', () => {
     it(`returns exactly the completed bars the old windows returned (${at})`, async () => {
       const now = Date.parse(at);
       makeSeries(Math.floor(now / DAY) * DAY);
-      const s = await fetchCryptoSeries('BTC', 'daily', now, { coinId: 'bitcoin' });
+      const s = await fetchCryptoSeries('BTC', 'daily', now, { coinId: 'bitcoin', dailyWindows: 2 });
       expect(s.bars.map((b) => b.t)).toEqual(legacyDailyOpens(now).filter((t) => Date.parse(t) + DAY <= now));
       expect(s.bars.length).toBeGreaterThanOrEqual(359);
       expect(s.partialBar).not.toBeNull(); // the open candle (current price) is still returned
@@ -100,7 +100,7 @@ describe('daily history windows', () => {
 
   it('hourly and 15m requests also end on a minute boundary', async () => {
     makeSeries(Date.parse('2026-09-27T00:00:00Z'));
-    await fetchCryptoSeries('BTC', '1h', Date.parse('2026-09-27T06:00:17Z'), { coinId: 'bitcoin' });
+    await fetchCryptoSeries('BTC', '1h', Date.parse('2026-09-27T06:00:17Z'), { coinId: 'bitcoin', dailyWindows: 2 });
     await fetchCryptoSeries('BTC', '15m', Date.parse('2026-09-27T06:00:17Z'), { coinId: 'bitcoin' }).catch(() => null);
     expect(ohlc()[0][2] % 60).toBe(0);
     expect(chart()[0][2] % 60).toBe(0);

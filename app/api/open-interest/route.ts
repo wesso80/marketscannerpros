@@ -16,26 +16,34 @@ export async function GET(_req: NextRequest) {
     const btc = coins.find(c => c.symbol === 'BTC') ?? null;
     const eth = coins.find(c => c.symbol === 'ETH') ?? null;
     const total = evidence.totalOpenInterest;
-    const dominance = (value: number) => total > 0 ? Number((value / total * 100).toFixed(1)) : null;
+    const dominance = (value: number) => total != null && total > 0 ? Number((value / total * 100).toFixed(1)) : null;
+    const btcOiShare = dominance(btc?.openInterest ?? 0);
+    const ethOiShare = dominance(eth?.openInterest ?? 0);
+    const altOiShare = total == null ? null : dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0));
     const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'DERIVATIVES', lastUpdated: evidence.observedAt, maxAgeMs: 900_000 });
     return NextResponse.json({
       total: {
         openInterest: total, formatted: formatUSD(total), change24h: evidence.change24h,
-        btcDominance: dominance(btc?.openInterest ?? 0), ethDominance: dominance(eth?.openInterest ?? 0),
-        altDominance: dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0)),
+        btcOiShare, ethOiShare, altOiShare,
+        // Previous names. Readers written before the share rename keep working.
+        btcDominance: btcOiShare, ethDominance: ethOiShare, altDominance: altOiShare,
       },
       btc: btc ? { ...btc, formatted: formatUSD(btc.openInterest) } : null,
       eth: eth ? { ...eth, formatted: formatUSD(eth.openInterest) } : null,
+      carriedContracts: evidence.carriedContracts, expectedContracts: evidence.expectedContracts,
+      droppedContracts: evidence.droppedContracts ?? 0,
       coins, comparisonReason: evidence.comparisonReason, coverage: evidence.coverage,
       method: evidence.method, timestamp: meta.lastUpdated, source: meta.provider,
-      freshnessStatus: meta.freshnessStatus, meta,
+      status: evidence.status ?? 'ok', persistence: evidence.persistence ?? 'ok',
+      freshnessStatus: evidence.status === 'degraded' || evidence.carriedContracts > 0 ? "degraded" : meta.freshnessStatus, meta,
     });
   } catch {
     return NextResponse.json({ error: 'Fresh open-interest observations unavailable' }, { status: 503 });
   }
 }
 
-function formatUSD(value: number): string {
+function formatUSD(value: number | null): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
   return `$${value.toFixed(0)}`;

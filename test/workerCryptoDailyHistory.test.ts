@@ -60,22 +60,22 @@ describe('planDailyHistoryFetch', () => {
 });
 
 describe('trimDailyWindow / mergeDailyHistory', () => {
-  it('keeps the same 360-bar window a fresh full fetch returns', () => {
+  it('keeps the same 1080-bar window a fresh full fetch returns', () => {
     const now = D + 5 * 3_600_000;
-    const bars = trimDailyWindow(series(D - 400 * DAY_MS, D - DAY_MS), now);
-    expect(bars.length).toBe(360);
-    expect(bars[0].t).toBe(iso(D - 360 * DAY_MS));
+    const bars = trimDailyWindow(series(D - 1200 * DAY_MS, D - DAY_MS), now);
+    expect(bars.length).toBe(1080);
+    expect(bars[0].t).toBe(iso(D - 1080 * DAY_MS));
     expect(bars.at(-1)!.t).toBe(iso(D - DAY_MS));
   });
   it('adds the new candle, lets re-read overlap bars win, re-attaches volumes and drops the oldest day', () => {
     const now = D + DAY_MS + 3_600_000;
-    const held = series(D - 360 * DAY_MS, D - DAY_MS);
+    const held = series(D - 1080 * DAY_MS, D - DAY_MS);
     const revised = { ...bar(D - DAY_MS, 555), volume: null };
     const fresh = bar(D, 777, null);
     const volumes: Array<[number, number]> = [[D + DAY_MS, 42]]; // 24h volume ending at the new bar's close
     const merged = mergeDailyHistory(held, [revised, fresh], volumes, now);
-    expect(merged.length).toBe(360);
-    expect(merged[0].t).toBe(iso(D - 359 * DAY_MS));
+    expect(merged.length).toBe(1080);
+    expect(merged[0].t).toBe(iso(D - 1079 * DAY_MS));
     expect(merged.at(-2)!.close).toBe(555);
     expect(merged.at(-1)).toMatchObject({ t: iso(D), close: 777, volume: 42 });
   });
@@ -86,7 +86,7 @@ describe('CryptoDailyHistoryCache', () => {
     let now = start;
     const persisted = new Map<string, unknown>();
     const fetchFull = vi.fn(async (_s: string, _id: string, nowMs: number) => ({
-      bars: series(Math.floor(nowMs / DAY_MS) * DAY_MS - 360 * DAY_MS, expectedLatestDailyOpenMs(nowMs, 0)), warnings: [],
+      bars: series(Math.floor(nowMs / DAY_MS) * DAY_MS - 1080 * DAY_MS, expectedLatestDailyOpenMs(nowMs, 0)), warnings: [],
     }));
     let publishedThrough = expectedLatestDailyOpenMs(start, 0);
     const fetchIncrement = vi.fn(async (_id: string, since: number) => ({
@@ -107,8 +107,8 @@ describe('CryptoDailyHistoryCache', () => {
     let calls = 0;
     const first = await h.cache.getBars('BTC', 'bitcoin');
     calls += first.calls;
-    expect(first).toMatchObject({ plan: 'full', calls: 3, changed: true });
-    expect(first.bars.length).toBe(360);
+    expect(first).toMatchObject({ plan: 'full', calls: 7, changed: true });
+    expect(first.bars.length).toBe(1080);
     // Tier-1 cadence (every 10 min) for the rest of the UTC day: no calls.
     for (let t = D + 3_600_000 + 600_000; t < D + DAY_MS; t += 600_000) {
       h.at(t);
@@ -132,10 +132,10 @@ describe('CryptoDailyHistoryCache', () => {
     const got = await h.cache.getBars('BTC', 'bitcoin');
     calls += got.calls;
     expect(got).toMatchObject({ plan: 'incremental', calls: 2, changed: true });
-    expect(got.bars.length).toBe(360);
+    expect(got.bars.length).toBe(1080);
     expect(got.bars.at(-1)!.t).toBe(iso(D));
     expect(h.fetchFull).toHaveBeenCalledTimes(1);
-    expect(calls).toBe(3 + 2 + 2); // was ~4 calls × 144 tier-1 refreshes a day
+    expect(calls).toBe(7 + 2 + 2); // was ~4 calls × 144 tier-1 refreshes a day
   });
 
   it('bars match a fresh full fetch after the increment (same window, same data)', async () => {
@@ -148,7 +148,7 @@ describe('CryptoDailyHistoryCache', () => {
     expect(inc.bars.map((b) => b.t)).toEqual(full.bars.map((b) => b.t));
   });
 
-  it('restores the held history from persistence after a restart instead of refetching 360 days', async () => {
+  it('restores the held history from persistence after a restart instead of refetching 1080 days', async () => {
     const h = harness(D + 3_600_000);
     await h.cache.getBars('BTC', 'bitcoin');
     const restarted = new CryptoDailyHistoryCache({
@@ -157,7 +157,7 @@ describe('CryptoDailyHistoryCache', () => {
     });
     const r = await restarted.getBars('BTC', 'bitcoin');
     expect(r).toMatchObject({ plan: 'none', calls: 0 });
-    expect(r.bars.length).toBe(360);
+    expect(r.bars.length).toBe(1080);
     expect(h.fetchFull).toHaveBeenCalledTimes(1);
     expect(isDailyHistoryEntry(h.persisted.get('bitcoin'))).toBe(true);
     expect(isDailyHistoryEntry({ coinId: 'x', bars: [{ t: 'a', open: Number.NaN }], fullAt: 1, checkedAt: 1 })).toBe(false);
@@ -169,7 +169,7 @@ describe('CryptoDailyHistoryCache', () => {
     h.fetchIncrement.mockRejectedValueOnce(new Error('CoinGecko 500'));
     h.at(D + DAY_MS + 3_600_000);
     const failed = await h.cache.getBars('BTC', 'bitcoin');
-    expect(failed.bars.length).toBe(359); // one candle behind: window moved on, the new candle is not in yet
+    expect(failed.bars.length).toBe(1079); // one candle behind: window moved on, the new candle is not in yet
     expect(failed.bars.at(-1)!.t).toBe(iso(D - DAY_MS));
     expect(failed.changed).toBe(false);
     h.at(D + DAY_MS + 3_600_000 + 5 * 60_000);

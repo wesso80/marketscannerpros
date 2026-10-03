@@ -1,3 +1,5 @@
+import { evaluateDailyPickTrust } from '@/lib/scanner/dailyPickTrust';
+import { dailyPickPriceBasis } from '@/lib/scanner/dailyPickPriceBasis';
 /**
  * Latest daily-picks snapshot (top 10, canonical-first), shared by the /daily-pick page and the /api/og/scan DAILY
  * card so the card always shows the same symbols as the page. Moved verbatim from app/daily-pick/page.tsx.
@@ -9,6 +11,9 @@ import { toYmd } from '@/lib/time/usSession';
 
 export interface DailyPickRow {
   rank: number;
+  dataAsOf?: string | null;
+  stale?: boolean;
+  priceLabel?: string;
   asset_class: string;
   symbol: string;
   score: number;
@@ -62,17 +67,20 @@ export async function loadLatestDailyPicks(): Promise<DayData | null> {
     sector: string | null;
     shares_float: string | null;
     short_pct_float: string | null;
+    indicators?: Record<string, any>;
+    scan_date?: string;
+    created_at?: string;
     canonical?: unknown;
     legacy_score?: string | null;
   }>;
   try {
     rows = await q(
       `SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
-              dp.price, dp.change_percent, dp.indicators->'canonical' AS canonical, dp.indicators->'legacy'->>'score' AS legacy_score,
+              dp.price, dp.change_percent, dp.indicators, dp.scan_date, dp.created_at, dp.indicators->'canonical' AS canonical, dp.indicators->'legacy'->>'score' AS legacy_score,
               co.sector, co.shares_float, co.short_pct_float
          FROM daily_picks dp
          LEFT JOIN company_overview co ON co.symbol = dp.symbol
-        WHERE dp.scan_date = $1
+        WHERE dp.scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class) AND $1::date IS NOT NULL
         ORDER BY dp.score DESC
         LIMIT 60`,
       [scan_date],
@@ -86,12 +94,15 @@ export async function loadLatestDailyPicks(): Promise<DayData | null> {
       direction: string;
       price: string | null;
       change_percent: string | null;
-      canonical?: unknown;
+      indicators?: Record<string, any>;
+    scan_date?: string;
+    created_at?: string;
+    canonical?: unknown;
       legacy_score?: string | null;
     }>(
-      `SELECT asset_class, symbol, score, direction, price, change_percent, indicators->'canonical' AS canonical, indicators->'legacy'->>'score' AS legacy_score
-         FROM daily_picks
-        WHERE scan_date = $1
+      `SELECT asset_class, symbol, score, direction, price, change_percent, indicators, scan_date, created_at, indicators->'canonical' AS canonical, indicators->'legacy'->>'score' AS legacy_score
+         FROM daily_picks dp
+        WHERE scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class) AND $1::date IS NOT NULL
         ORDER BY score DESC
         LIMIT 60`,
       [scan_date],
@@ -110,6 +121,9 @@ export async function loadLatestDailyPicks(): Promise<DayData | null> {
     scan_date,
     picks: ranked.map((r, i) => ({
       rank: i + 1,
+      dataAsOf: evaluateDailyPickTrust(r).dataAsOf,
+      stale: evaluateDailyPickTrust(r).freshness !== 'fresh',
+      priceLabel: dailyPickPriceBasis(r.price, r.canonical, r.asset_class).priceBasisLabel,
       asset_class: r.asset_class,
       symbol: r.symbol,
       score: r.canonical ? r.canonical.score : r.score,

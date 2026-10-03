@@ -69,7 +69,12 @@ export async function GET(req: NextRequest) {
           fromUtc: feed.dateRange.fromUtc,
           toUtc: feed.dateRange.toUtc,
         },
-        meta: feed.meta,
+        meta: {
+          ...feed.meta,
+          mode: feed.meta.provider === 'curated' ? 'schedule_only' : 'provider_backed',
+          actualsAvailable: feed.events.some(event => event.actual != null),
+          notice: feed.meta.provider === 'curated' ? 'Schedule only: no live releases or consensus feed configured.' : null,
+        },
         lastUpdated: feed.meta.generatedAt,
       },
       { headers: { 'Cache-Control': 'private, max-age=60' } },

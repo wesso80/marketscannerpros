@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCachedMulti, getRedis } from '@/lib/redis';
 import { getGlobalData, getGlobalMarketCapChart } from '@/lib/coingecko';
 
 const CACHE_DURATION = 3600;
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
     });
 
     const mcapSeries = chart?.market_cap_chart?.market_cap || [];
-    const history = mcapSeries.slice(-30).map(([ts, value], idx, arr) => {
+    const modelledHistory = mcapSeries.slice(-30).map(([ts, value], idx, arr) => {
       const prev = idx > 0 ? arr[idx - 1][1] : value;
       const change = prev > 0 ? ((value - prev) / prev) * 100 : 0;
       const score = computeScore({ mcapChange24h: change, stableDominance });
@@ -53,17 +54,36 @@ export async function GET(req: NextRequest) {
         value: score,
         classification: classify(score),
         date: new Date(ts).toISOString(),
+        basis: 'modelled_current_stablecoin_dominance' as string,
       };
     });
+
+    // First successfully stored observation for each UTC date is immutable; missing days stay explicitly modelled.
+    const observedAt = global.updated_at ? new Date(global.updated_at * 1000).toISOString() : new Date().toISOString();
+    const observation = { value:currentValue, classification:classify(currentValue), date:observedAt, basis:'observed_inputs' };
+    const dayKey = (date:string) => `sentiment:observed:v1:${date.slice(0,10)}`;
+    let observationSaved = false;
+    let history = modelledHistory;
+    try {
+      const redis = getRedis();
+      if (redis) {
+        await redis.set(dayKey(observedAt), observation, { nx:true, ex:90*86400 });
+        const stored = await getCachedMulti<typeof observation>(modelledHistory.map(h=>dayKey(h.date)));
+        history = modelledHistory.map((h,i)=>stored[i] ?? h);
+        observationSaved = true;
+      }
+    } catch { /* Unavailable persistence does not make the reconstructed history observed. */ }
 
     const result = {
       current: {
         value: currentValue,
         classification: classify(currentValue),
-        timestamp: new Date().toISOString(),
+        timestamp: observedAt,
         timeUntilUpdate: 3600,
       },
       history,
+      observationSaved,
+      historyMethodology: 'Observed daily inputs where retained; other dates are modelled with today’s stablecoin dominance, not historical observed sentiment.',
       source: 'coingecko',
       market: 'crypto',
       methodology: 'Derived from CoinGecko global market-cap momentum and stablecoin dominance',

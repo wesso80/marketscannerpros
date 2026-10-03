@@ -711,6 +711,7 @@ export async function getOHLC(
     const params = new URLSearchParams({
       vs_currency: 'usd',
       days: String(days),
+      precision: 'full',
       ...(requestOptions?.interval ? { interval: requestOptions.interval } : {}),
     });
 

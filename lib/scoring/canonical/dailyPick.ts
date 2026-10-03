@@ -76,6 +76,8 @@ export function canonicalPickFields(c: CanonicalResult | null) {
     setupType: c?.setupType ?? null,
     canonicalDirection: c?.direction ?? null,
     canonicalScore: c?.score ?? null,
+    scorePercentile: c?.scoreBasis === 'calibrated_expectancy_percentile' ? c.calibration?.percentile ?? null : null,
+    scoreBasis: c?.scoreBasis ?? null,
   };
 }
 
