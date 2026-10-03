@@ -877,7 +877,7 @@ export default function DeepAnalysisPage({
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-              placeholder="Enter symbol: AAPL, BTC, EURUSD..."
+              placeholder="Enter symbol: AAPL, BTC, ETH..."
               aria-label="Stock or crypto symbol"
               className="flex-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-5 py-3.5 text-base text-[var(--msp-text)] outline-none focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
             />
@@ -895,7 +895,7 @@ export default function DeepAnalysisPage({
             </button>
           </div>
           <div className="mt-4 flex flex-wrap gap-4">
-            {['AAPL', 'BTC', 'TSLA', 'ETH', 'NVDA', 'EURUSD', 'GOLD'].map(s => (
+            {['AAPL', 'BTC', 'TSLA', 'ETH', 'NVDA', 'GOLD'].map(s => (
               <button
                 type="button"
                 key={s}
