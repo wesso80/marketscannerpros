@@ -40,6 +40,8 @@
     "worker:upe:global:dry": "npx tsx worker/upe-global-regime.ts --type=open --dry-run",
     "worker:upe:crcs:hourly": "npx tsx worker/upe-crcs-hourly.ts",
     "admin:audit": "npx tsx scripts/admin-audit.ts",
+    "research:export": "npx tsx scripts/research-team/export-scan.ts",
+    "research:team": "npx tsx scripts/research-team/run-team.ts",
     "audit:admin:mock": "npx tsx scripts/audit/detect-mock-data.ts",
     "audit:admin:freshness": "npx tsx scripts/audit/verify-data-freshness.ts",
     "audit:admin": "npx tsx scripts/audit/detect-mock-data.ts && npx tsx scripts/audit/verify-data-freshness.ts && npx tsx scripts/audit/admin-truth-envelope.ts",

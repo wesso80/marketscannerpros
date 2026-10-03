@@ -36,3 +36,6 @@ reports/jarvis-*
 
 # TypeScript build info
 tsconfig.tsbuildinfo
+
+# Private research team (local exports + reports, never commit)
+msp-research/
