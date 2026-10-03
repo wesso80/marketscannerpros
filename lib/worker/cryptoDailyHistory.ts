@@ -1,30 +1,30 @@
 /**
- * Worker-side daily crypto history: fetch the ~360-bar CoinGecko daily history ONCE, then only the missing bars once
- * per UTC day (after the new candle is published), instead of re-reading 360 days on every tier refresh.
+ * Worker-side daily crypto history: fetch the ~1080-bar CoinGecko daily history ONCE, then only the missing bars once
+ * per UTC day (after the new candle is published), instead of re-reading 1080 days on every tier refresh.
  *
  * The worker only uses COMPLETED daily bars (the open bar is dropped by fetchCryptoSeries), so between two UTC day
  * closes the history it gets from CoinGecko is the same every time; re-fetching it every 10–120 minutes spent ~3
  * CoinGecko calls per coin per refresh (≈12.7k calls/day for 100 coins) for identical data.
  *
  * Readers see the same data shape: the bars are exactly what a full `fetchCryptoSeries(…, 'daily')` returns (the same
- * ~360-day window, trimmed as days pass). A full re-sync runs every `fullResyncMs` (default 7 days) to pick up any
+ * ~1080-day window, trimmed as days pass). A full re-sync runs every `fullResyncMs` (default 7 days) to pick up any
  * candle CoinGecko revised further back than the 2-day overlap of the incremental read.
  *
  * Pure logic + injected fetchers/persistence so it is unit-testable without CoinGecko, Redis or Postgres.
  */
 import type { Bar } from '@/lib/scanner/barAggregation';
 import { attachDailyVolumes } from '@/lib/scanner/barAggregation';
-import { cryptoRequestAnchors } from '@/lib/scanner/cryptoBars';
+import { cryptoRequestAnchors, DEFAULT_DAILY_WINDOWS } from '@/lib/scanner/cryptoBars';
 
 export const DAY_MS = 86_400_000;
-/** Bars a default full daily fetch holds: 2 × 180-day windows → opens from (today − 360 d) to yesterday. */
-export const DAILY_HISTORY_DAYS = 360;
+/** Bars a default full daily fetch holds: 6 × 180-day windows → opens from (today − 1080 d) to yesterday. */
+export const DAILY_HISTORY_DAYS = DEFAULT_DAILY_WINDOWS * 180;
 
 export interface DailyHistoryEntry {
   coinId: string;
   /** Completed daily bars, ascending by open time (`t`). */
   bars: Bar[];
-  /** Last full (360-day) fetch, epoch ms. */
+  /** Last full (1080-day) fetch, epoch ms. */
   fullAt: number;
   /** Last fetch attempt of any kind, epoch ms (spaces retries while CoinGecko has not published the new candle). */
   checkedAt: number;
@@ -35,7 +35,7 @@ export interface DailyHistoryConfig {
   settleMs: number;
   /** Minimum spacing between incremental attempts when the expected candle is still missing. */
   retryMs: number;
-  /** Full 360-day re-sync interval. */
+  /** Full 1080-day re-sync interval. */
   fullResyncMs: number;
 }
 
@@ -72,7 +72,7 @@ export function planDailyHistoryFetch(entry: DailyHistoryEntry | null | undefine
 }
 
 /**
- * Keep the same window a fresh full fetch returns: bars opening on or after (00:00 UTC today − 360 d), i.e. daily
+ * Keep the same window a fresh full fetch returns: bars opening on or after (00:00 UTC today − 1080 d), i.e. daily
  * closes from 359 days ago up to the last completed close. The window is anchored on the trailing request time
  * (now − 60 s, floored to the minute) exactly as fetchCryptoSeries anchors its requests.
  */
@@ -120,7 +120,7 @@ export interface DailyHistoryResult {
   warnings: string[];
 }
 
-const FULL_CALLS = 3;
+const FULL_CALLS = DEFAULT_DAILY_WINDOWS + 1;
 const INCREMENT_CALLS = 2;
 
 export class CryptoDailyHistoryCache {
