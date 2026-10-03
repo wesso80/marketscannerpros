@@ -265,7 +265,7 @@ describe('layout and flow audit regressions', () => {
     expect(toolCatalog).toContain("href: '/tools/terminal?tab=options-terminal'");
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=movers'");
     expect(toolCatalog).toContain("href: '/tools/explorer?tab=heatmap'");
-    expect(toolCatalog).toContain("href: '/tools/explorer?tab=crypto'");
+    expect(toolCatalog).not.toContain("key: 'crypto-explorer'");
     expect(toolCatalog).toContain("href: '/tools/dashboard?tab=macro'");
     expect(toolCatalog).toContain("href: '/tools/dashboard?tab=crypto'");
     expect(toolCatalog).toContain("href: '/tools/research?tab=calendar'");
@@ -301,8 +301,6 @@ describe('layout and flow audit regressions', () => {
     expect(mobileNav).toContain('href="/tools/workspace?tab=journal" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Journal</a>');
     expect(mobileNav).toContain('href="/tools/golden-egg" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Golden Egg</a>');
     expect(mobileNav).toContain('href="/tools/terminal?tab=options-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Options Confluence Scanner</a>');
-    expect(mobileNav).toContain('href="/tools/explorer?tab=crypto" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Explorer</a>');
-    expect(mobileNav).toContain('href="/tools/explorer?tab=equity" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Equity Explorer</a>');
     expect(mobileNav).toContain('href="/tools/research?tab=calendar" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Economic Calendar</a>');
     expect(mobileNav).not.toContain('href="/tools/deep-analysis"');
     expect(mobileNav).not.toContain('href="/tools/options-confluence"');
