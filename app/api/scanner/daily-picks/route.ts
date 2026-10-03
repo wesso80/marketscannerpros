@@ -12,6 +12,7 @@ import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/sca
 import { dailyPickPriceBasis } from "@/lib/scanner/dailyPickPriceBasis";
 import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } from "@/lib/scanner/dailyPickTrust";
 import { canonicalPickFields, rankDailyPicks, readStoredCanonical, storedLegacyScore } from "@/lib/scoring/canonical/dailyPick";
+import { omitForexPicks } from "@/lib/scanner/omitForexPicks";
 import { formatSessionDate, toYmd } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
@@ -77,9 +78,12 @@ export async function GET(req: NextRequest) {
         CASE WHEN COALESCE(rank_type, 'top') = 'top' OR indicators->>'scoreColumn' = 'canonical' THEN score ELSE -score END DESC
     `, date ? [limit, date] : [limit]);
 
+    // Forex rows are leftover stored scans. They stay in the table; this response does not serve them.
+    const visiblePicks = omitForexPicks(picks);
+
     // The scan date is the US market session the data belongs to, returned as a plain YYYY-MM-DD (a DATE serialised as
     // an ISO midnight timestamp would read as the previous day in US time zones).
-    const scanDate = picks.length > 0 ? toYmd(picks[0].scan_date) : null;
+    const scanDate = visiblePicks.length > 0 ? toYmd(visiblePicks[0].scan_date) : null;
 
     // Group by asset class and rank type
     const topPicks: Record<string, typeof picks> = {
@@ -97,7 +101,7 @@ export async function GET(req: NextRequest) {
     // Per-ticker trust from what was actually stored (indicator coverage + data age), not a blanket "fresh, 100%".
     const nowMs = Date.now();
     const trusts: DailyPickTrust[] = [];
-    for (const pick of picks) {
+    for (const pick of visiblePicks) {
       const target = pick.rank_type === 'bottom' ? bottomPicks : topPicks;
       if (target[pick.asset_class]) {
         const trust = evaluateDailyPickTrust(pick, nowMs);
@@ -159,7 +163,7 @@ export async function GET(req: NextRequest) {
             computedAt: scanDate,
             stale: summary.stale,
             coverageScore: summary.coverageScore,
-            warnings: picks.length ? [
+            warnings: visiblePicks.length ? [
               ...(summary.staleCount ? [`${summary.staleCount} observation(s) are based on stale data.`] : []),
               ...(summary.insufficientCount ? [`${summary.insufficientCount} observation(s) have insufficient indicator coverage.`] : []),
             ] : ['No daily research observations are available yet.'],
