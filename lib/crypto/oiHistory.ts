@@ -93,7 +93,7 @@ export async function getOiEvidence() {
       const coverage = `${droppedContracts} pinned contract(s) stopped trading and were removed. The basket rebuilds from the next live snapshot. Not the whole market.`;
       return {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
-        basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: 0, change24h: null,
+        basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: null, change24h: null,
         comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: cacheUp ? 'ok' as const : 'unavailable' as const,
       };
     }
@@ -101,7 +101,7 @@ export async function getOiEvidence() {
       const coverage = 'No live open-interest quotes, and the fixed basket is unavailable because the cache is down. Not the whole market.';
       return {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
-        basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: 0, change24h: null,
+        basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: null, change24h: null,
         comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: 'unavailable' as const,
       };
     }

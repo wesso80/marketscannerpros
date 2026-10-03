@@ -76,7 +76,7 @@ it('clears a basket whose last contract stopped trading and rebuilds from the li
   state.deadOnly = true;
   const { getOiEvidence } = await import('@/lib/crypto/oiHistory');
   const cleared = await getOiEvidence();
-  expect(cleared.totalOpenInterest).toBe(0);
+  expect(cleared.totalOpenInterest).toBeNull();
   expect(cleared.droppedContracts).toBeGreaterThanOrEqual(1);
   expect(state.store.has('oi:fixed-constituents:v1')).toBe(false);
   expect(state.store.has('oi:fixed-basket:v1')).toBe(false);

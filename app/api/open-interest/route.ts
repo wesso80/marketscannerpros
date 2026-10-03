@@ -16,10 +16,10 @@ export async function GET(_req: NextRequest) {
     const btc = coins.find(c => c.symbol === 'BTC') ?? null;
     const eth = coins.find(c => c.symbol === 'ETH') ?? null;
     const total = evidence.totalOpenInterest;
-    const dominance = (value: number) => total > 0 ? Number((value / total * 100).toFixed(1)) : null;
+    const dominance = (value: number) => total != null && total > 0 ? Number((value / total * 100).toFixed(1)) : null;
     const btcOiShare = dominance(btc?.openInterest ?? 0);
     const ethOiShare = dominance(eth?.openInterest ?? 0);
-    const altOiShare = dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0));
+    const altOiShare = total == null ? null : dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0));
     const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'DERIVATIVES', lastUpdated: evidence.observedAt, maxAgeMs: 900_000 });
     return NextResponse.json({
       total: {
@@ -42,7 +42,8 @@ export async function GET(_req: NextRequest) {
   }
 }
 
-function formatUSD(value: number): string {
+function formatUSD(value: number | null): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
   return `$${value.toFixed(0)}`;
