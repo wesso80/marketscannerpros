@@ -2,6 +2,9 @@ import {getRedis} from '@/lib/redis';
 import {q} from '@/lib/db';
 import {getDerivativesSnapshot,getGlobalData,getCoinCategories,getTopGainersLosers,getTrendingCoins,getApiUsage,type CoinCategory,type TrendingResponse} from '@/lib/coingecko';
 import {savedRelativeStrengthBoard} from './cryptoRelativeStrength';
+import {compressionBoard,compressionNote,COMPRESSION_RULE,type CompressionFlag,type CompressionSourceRow} from './cryptoCompression';
+import {dailyCandleCap} from './cryptoDailyVenues';
+import type {BaseScan,BaseScanRow} from './cryptoBaseScan';
 import {cgBudgetStatus,type CgBudget} from './cgCredits';
 import {CG_MARKET,aggregatePerpetuals,withOiChange,dayAgoSlot,rankCategories,compactMovers,trendingCrowding,globalPoint,globalRegime,type DerivSnapshot,type DerivRow,type GlobalPoint,type MoverRow} from './cryptoMarketData';
 const K='admin:crypto-markets:cg-market:v1',D=86400000,SLOT=CG_MARKET.snapshotMinutes*60000;
@@ -101,7 +104,7 @@ export async function latestDerivatives(now=now0()):Promise<{snap:DerivSnapshot;
 /** Saved-data view for the admin page: never calls CoinGecko except the cached /key check. */
 export async function cryptoMarketDataView(now=now0(),workspaceId=''){
  const r=getRedis();
- const [st,budget,deriv,glob,cats,hist,movers,trend,openIds,watchIds,relativeStrength]=await Promise.all([status(),cgBudgetStatus(getApiUsage,now).catch(()=>null as CgBudget|null),latestDerivatives(now),r?.get<GlobalPoint[]>(`${K}:global`),r?.get<{at:string;rows:CoinCategory[]}>(`${K}:categories`),r?.get<Record<string,Record<string,number>>>(`${K}:categories:hist`),r?.get<{at:string;h1:{gainers:MoverRow[];losers:MoverRow[]}|null;h24:{gainers:MoverRow[];losers:MoverRow[]}|null}>(`${K}:movers`),r?.get<{at:string}&TrendingResponse>(`${K}:trending`),openPaperCoinIds(workspaceId),watchCoinIds(),savedRelativeStrengthBoard(now)].map(p=>Promise.resolve(p).catch(()=>null)));
+ const [st,budget,deriv,glob,cats,hist,movers,trend,openIds,watchIds,relativeStrength,bases]=await Promise.all([status(),cgBudgetStatus(getApiUsage,now).catch(()=>null as CgBudget|null),latestDerivatives(now),r?.get<GlobalPoint[]>(`${K}:global`),r?.get<{at:string;rows:CoinCategory[]}>(`${K}:categories`),r?.get<Record<string,Record<string,number>>>(`${K}:categories:hist`),r?.get<{at:string;h1:{gainers:MoverRow[];losers:MoverRow[]}|null;h24:{gainers:MoverRow[];losers:MoverRow[]}|null}>(`${K}:movers`),r?.get<{at:string}&TrendingResponse>(`${K}:trending`),openPaperCoinIds(workspaceId),watchCoinIds(),savedRelativeStrengthBoard(now),r?.get<BaseScan&{rows:(BaseScanRow&{compression?:CompressionFlag})[]}>('admin:crypto-markets:bases:v1')].map(p=>Promise.resolve(p).catch(()=>null)));
  const d=deriv as Awaited<ReturnType<typeof latestDerivatives>>;
  return {simulated:true,config:CG_MARKET,status:st,budget,
   derivatives:d?{at:d.snap.at,source:d.snap.source,exchanges:d.snap.exchanges,tickers:d.snap.tickers,dayAgoAt:d.dayAgoAt,
@@ -112,7 +115,8 @@ export async function cryptoMarketDataView(now=now0(),workspaceId=''){
   categories:cats?{at:(cats as {at:string}).at,rows:rankCategories((cats as {rows:CoinCategory[]}).rows,(hist as Record<string,Record<string,number>>|null)??{},now),historyDays:Object.keys((hist as object|null)??{}).length}:null,
   movers,
   trending:trend?{at:(trend as {at:string}).at,rows:trendingCrowding(trend as TrendingResponse,(openIds as string[]|null)??[],(watchIds as string[]|null)??[])}:null,
-  relativeStrength};
+  relativeStrength,
+  compression:(()=>{const scan=bases as (BaseScan&{rows:(BaseScanRow&{compression?:CompressionFlag})[]})|null;const caps={gdax:dailyCandleCap('gdax'),binance:dailyCandleCap('binance'),kucoin:dailyCandleCap('kucoin'),okex:dailyCandleCap('okex')};const rows=(scan?.rows??[]) as CompressionSourceRow[];return {updatedAt:scan?.updatedAt??null,rows:compressionBoard(rows),rule:COMPRESSION_RULE,note:compressionNote(caps)};})()};
 }
 /** Saved CoinGecko trending ids (hourly); null when never fetched or older than 3 hours. */
 export async function savedTrending(now=now0()){
