@@ -13,6 +13,7 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { contractCosts } from '@/lib/options/contractCosts';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
 import { useOptionsChain } from '@/hooks/useOptionsChain';
@@ -105,7 +106,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     // liquidity filters
     if (minOI > 0) groups = groups.filter((g) => (g.call?.openInterest ?? 0) >= minOI || (g.put?.openInterest ?? 0) >= minOI);
     if (minVol > 0) groups = groups.filter((g) => (g.call?.volume ?? 0) >= minVol || (g.put?.volume ?? 0) >= minVol);
-    if (maxSpreadPct < 100) groups = groups.filter((g) => [g.call, g.put].some((contract) => contract && contract.bid > 0 && contract.ask >= contract.bid && Number.isFinite(contract.spreadPct) && contract.spreadPct <= maxSpreadPct));
+    if (maxSpreadPct < 100) groups = groups.filter((g) => [g.call, g.put].some((contract) => contract && contract.bid > 0 && contract.ask >= contract.bid && contract.spreadPct != null && Number.isFinite(contract.spreadPct) && contract.spreadPct <= maxSpreadPct));
 
     return groups;
   }, [chain.strikeGroups, chain.underlyingPrice, rangePct, minOI, minVol, maxSpreadPct]);
@@ -606,7 +607,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                         </div>
                         <div className="text-xs text-zinc-400">
                           Mark: <span className="font-semibold text-zinc-200">${selectedContract.mark.toFixed(2)}</span>
-                          {' · '}Spread: <span className="font-semibold text-zinc-200">${selectedContract.spread.toFixed(2)} ({selectedContract.spreadPct.toFixed(1)}%)</span>
+                          {' · '}Spread: <span className="font-semibold text-zinc-200">{selectedContract.spreadPct == null ? 'No valid two-sided quote' : `$${selectedContract.spread.toFixed(2)} (${selectedContract.spreadPct.toFixed(1)}%)`}</span>
                         </div>
                       </div>
                       <Badge tone={selected.side === 'CALL' ? 'ok' : 'bad'}>{selected.side}</Badge>
@@ -620,6 +621,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     </div>
                   </div>
 
+                  <PerContractCosts contract={selectedContract} spot={spot} />
                   {/* Greeks */}
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                     <div className="text-xs font-semibold">Greeks</div>
@@ -647,8 +649,8 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     <div className="mt-3 space-y-2">
                       <LiquidityLine
                         label="Spread %"
-                        value={`${selectedContract.spreadPct.toFixed(1)}%`}
-                        tone={selectedContract.spreadPct < 3 ? 'ok' : selectedContract.spreadPct < 8 ? 'warn' : 'bad'}
+                        value={selectedContract.spreadPct == null ? 'No valid bid / two-sided quote' : `${selectedContract.spreadPct.toFixed(1)}%`}
+                        tone={selectedContract.spreadPct == null ? 'warn' : selectedContract.spreadPct < 3 ? 'ok' : selectedContract.spreadPct < 8 ? 'warn' : 'bad'}
                       />
                       <LiquidityLine
                         label="OI Depth"
@@ -1018,4 +1020,17 @@ function fmtInt(n?: number) {
 function fmtPct(n?: number) {
   if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '—';
   return `${(n * 100).toFixed(1)}%`;
+}
+
+function PerContractCosts({contract,spot}:{contract:OptionsContract;spot:number}) {
+  const c=contractCosts(contract,spot);
+  const money=(n:number|null)=>n==null?'Unavailable':`$${n.toFixed(2)}`;
+  const pct=(n:number|null)=>n==null?'Unavailable':`${n.toFixed(2)}%`;
+  return <div className="rounded-2xl border border-zinc-800 p-4"><h3 className="text-sm font-semibold">Per contract · long option · 100 shares</h3>
+    <div className="mt-3 grid grid-cols-2 gap-3">
+      <MiniStat label="Cost at ask" value={money(c.askCost)}/><MiniStat label="Cost at mid" value={money(c.midCost)}/>
+      <MiniStat label="Max premium loss" value={money(c.maxLoss)}/><MiniStat label="Expiry breakeven" value={money(c.breakeven)}/>
+      <MiniStat label="Breakeven from spot" value={pct(c.breakevenPct)}/><MiniStat label="Theta / day" value={money(c.thetaDollars)}/>
+      <MiniStat label="Theta / ask / day" value={pct(c.thetaPct)}/><MiniStat label="Spread cost" value={money(c.spreadCost)}/>
+    </div><p className="mt-2 text-xs text-zinc-400">Excludes fees. Mid is indicative; theta is a model estimate. Expiry breakeven assumes exercise/settlement.</p></div>;
 }

@@ -20,9 +20,9 @@ function liquidityScore(c: OptionsContract): { label: string; color: string; sco
   else if (c.openInterest > 1000) s += 20;
   else if (c.openInterest > 100) s += 10;
 
-  if (c.spreadPct < 2) s += 30;
-  else if (c.spreadPct < 5) s += 20;
-  else if (c.spreadPct < 10) s += 10;
+  if ((c.spreadPct ?? Infinity) < 2) s += 30;
+  else if ((c.spreadPct ?? Infinity) < 5) s += 20;
+  else if ((c.spreadPct ?? Infinity) < 10) s += 10;
 
   s += c.bid > 0 ? 10 : 0;
 
@@ -94,7 +94,7 @@ export default function ContractInspectorPanel({ contract, spot, mode }: Props) 
           <Row label="Mark" value={`$${c.mark.toFixed(2)}`} />
           <Row label="Bid" value={`$${c.bid.toFixed(2)}`} />
           <Row label="Ask" value={`$${c.ask.toFixed(2)}`} />
-          <Row label="Spread" value={`$${c.spread.toFixed(2)} (${c.spreadPct.toFixed(1)}%)`} />
+          <Row label="Spread" value={`$${c.spread.toFixed(2)} (${c.spreadPct?.toFixed(1) ?? 'Unavailable'}%)`} />
           <Row label="Volume" value={c.volume.toLocaleString()} />
           <Row label="Open Interest" value={c.openInterest.toLocaleString()} />
           <Row label="IV" value={`${(c.iv * 100).toFixed(1)}%`} />
@@ -138,8 +138,8 @@ export default function ContractInspectorPanel({ contract, spot, mode }: Props) 
           <div className="grid grid-cols-3 gap-2 mt-2 text-[10px] text-center">
             <div>
               <div style={{ color: 'var(--msp-text-faint)' }}>Spread%</div>
-              <div className="font-mono font-bold" style={{ color: c.spreadPct < 3 ? 'var(--msp-bull)' : c.spreadPct < 8 ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>
-                {c.spreadPct.toFixed(1)}%
+              <div className="font-mono font-bold" style={{ color: (c.spreadPct ?? Infinity) < 3 ? 'var(--msp-bull)' : (c.spreadPct ?? Infinity) < 8 ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>
+                {c.spreadPct?.toFixed(1) ?? 'Unavailable'}%
               </div>
             </div>
             <div>

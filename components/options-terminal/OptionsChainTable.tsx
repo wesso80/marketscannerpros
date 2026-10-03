@@ -175,7 +175,7 @@ export default function OptionsChainTable({
     return max > 0 && total >= max * 0.7;
   }, [strikeGroups]);
 
-  const wideSpread = (c?: OptionsContract) => c && c.spreadPct > 5;
+  const wideSpread = (c?: OptionsContract) => c && (c.spreadPct ?? Infinity) > 5;
 
   /* ── Render side cols ──────────────────────────────────────── */
   const renderSide = (c: OptionsContract | undefined, side: 'call' | 'put') => (
