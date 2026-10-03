@@ -10,6 +10,7 @@ import {historyStep} from '@/lib/admin/cgHistoryJob';
 import {CG_HISTORY} from '@/lib/admin/cgHistory';
 import {runDailyCalibration} from '@/lib/admin/cryptoCalibration';
 import {getRedis} from '@/lib/redis';
+import {saveBreakoutVerdicts} from '@/lib/admin/cryptoBreakoutVerdict';
 /**
  * POST /api/cron/arca-cycle
  *
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
     const cryptoPaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper entry cycle failed'}));
     // The base-breakout sleeve reads the same saved scans; its health is reported but, as a separate ledger, never blocks the momentum sleeves.
     const basePaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoBaseSleeveAll().catch(()=>({ok:false,error:'Base-breakout paper entry cycle failed'}));
+    // Advisory only. Saved scans in, a Redis stamp out. Failure here does not change entries, exits, or ok.
+    const breakoutVerdicts=await saveBreakoutVerdicts().catch(()=>({ok:false as const,error:'Breakout verdicts failed',saved:0}));
     const ok=monitoring.ok&&cryptoPaper.ok&&!scanFailed;
     const operationalAlerts=await reportCryptoCycleHealth({monitoring,scanning,paper:cryptoPaper}).catch(()=>({ok:false,error:'Operational alert failed'}));
     // Daily calibration reads saved rows only; it never affects this run's health status.
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
     const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
     // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
     const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history,baseSleeve:{monitoring:baseMonitoring,paper:basePaper}},{status:ok?200:503});
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history,breakoutVerdicts,baseSleeve:{monitoring:baseMonitoring,paper:basePaper}},{status:ok?200:503});
   }
   const cryptoPaper=await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
   const calibrationRedis=getRedis();

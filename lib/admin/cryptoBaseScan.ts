@@ -4,6 +4,8 @@ import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 export type BaseScanRow={id:string;symbol:string;product:string|null;exchange:DailyVenue|null;quote:string|null;volumeUnit:string|null;stage:'PENDING'|'BASE'|'NOT_BASE'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;high:number|null;low:number|null;widthPct:number|null;gapPct:number|null;slopePct:number|null;contraction:number|null};
 export type BaseScan={version:2;discoveryAt:string;startedAt:string;updatedAt:string;rows:BaseScanRow[]};
 const D=86400000;
+/** Tight-base gates in assessDailyBase. Width, SMA5/20 gap and SMA20 slope are percents; contraction is recent/older volume. */
+export const DAILY_BASE_LIMITS={widthPct:15,gapPct:3,slopePct:3,contraction:0.7} as const;
 export function createBaseScan(rows:(DiscoveryRow&{venues:VenueEvidence[]})[],discoveryAt:string,now:number):BaseScan{
   return {version:2,discoveryAt,startedAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),rows:rows.map((r):BaseScanRow=>{
     const pair=selectDailyPair(r.venues,now),product=pair?.product??null;
@@ -31,8 +33,9 @@ export function assessDailyBase(row:BaseScanRow,bars:ExchangeBar[],now:number):B
   const contraction=older>0?recent/older:null;
   const result={...row,asOf:new Date(last.t).toISOString(),high,low,widthPct,gapPct,slopePct,contraction};
   if(contraction===null||recent===0)return {...result,stage:'UNAVAILABLE',reason:'Zero volume baseline or recent volume; cannot validate contraction'};
-  const passes=widthPct<=15&&gapPct<=3&&slopePct<=3&&contraction<=0.7;
-  return {...result,stage:passes?'BASE':'NOT_BASE',reason:passes?'Tight flat 21-day range with contracting daily volume; watchlist only':'Failed: '+[widthPct>15?'range width >15%':null,gapPct>3?'MA gap >3%':null,slopePct>3?'MA slope >3%':null,contraction>0.7?'volume ratio >0.70':null].filter(Boolean).join(', ')};
+  const L=DAILY_BASE_LIMITS;
+  const passes=widthPct<=L.widthPct&&gapPct<=L.gapPct&&slopePct<=L.slopePct&&contraction<=L.contraction;
+  return {...result,stage:passes?'BASE':'NOT_BASE',reason:passes?'Tight flat 21-day range with contracting daily volume; watchlist only':'Failed: '+[widthPct>L.widthPct?`range width >${L.widthPct}%`:null,gapPct>L.gapPct?`MA gap >${L.gapPct}%`:null,slopePct>L.slopePct?`MA slope >${L.slopePct}%`:null,contraction>L.contraction?`volume ratio >${L.contraction.toFixed(2)}`:null].filter(Boolean).join(', ')};
 }
 export async function fetchDailyBase(row:BaseScanRow,now:number):Promise<BaseScanRow>{
   if(!row.product||!row.exchange||!row.quote||!row.volumeUnit)throw Error('Unsupported pair');
