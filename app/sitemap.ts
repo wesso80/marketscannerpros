@@ -24,7 +24,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const toolsPages = [
     '/tools',
+    '/tools/command-center',
     '/tools/scanner',
+    '/tools/options',
     '/tools/golden-egg',
     '/tools/terminal',
     '/tools/research',
