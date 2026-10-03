@@ -23,7 +23,7 @@ If a user asks about a feature that maps to a tool below, direct them to it with
 SCANNERS (Signal Generation)
 -----------------------------
 1. /tools/scanner — Multi-Market Scanner
-   The flagship scanner. Scans equities, crypto, and forex across 14 technical indicators simultaneously.
+   The flagship scanner. Scans equities and crypto across 14 technical indicators simultaneously.
    Computes confluence score (0-100) with regime-adaptive weighting. Detects liquidity levels (PDH/PDL/ONH/ONL).
    Has Research Case modal for validated setups. ARCA AI "Explain" button sends scan data to you for analysis.
 

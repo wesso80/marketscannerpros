@@ -34,6 +34,7 @@ import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cry
 import { avRowVolume } from '../lib/scanner/avVolume';
 import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
 import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, WORKER_DAILY_WINDOWS, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
+import { sequentialBatches } from '../lib/worker/seriesBatch';
 import { startScheduler } from './scheduler';
 import {
   avPayloadError,
@@ -47,6 +48,7 @@ import {
   liveDailyBarSession,
   mergeLiveDailyBar,
   parseWorkerBulkQuotes,
+  retainEquityDailyBars,
   workerAvRpm,
   type BarFetchState,
   type EquityBarSchedule,
@@ -1402,7 +1404,10 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
         throw err;
       }
       if (fresh.length > 0) {
-        hold.daily = { bars: fresh, state: { fetchedAtMs: nowMs, complete: dailyHistoryComplete(fresh, nowMs) } };
+        // Completeness and the EOD mark use the full download. The hold keeps the warmup tail: the next
+        // mergeLiveDailyBar still yields the same compact series indicators already run on.
+        const complete = dailyHistoryComplete(fresh, nowMs);
+        hold.daily = { bars: retainEquityDailyBars(fresh), state: { fetchedAtMs: nowMs, complete } };
         fetchedDaily = true;
         // Preserve a provider's completed close while the equity market is shut.
         // This does not change the live quote or replace a newer intraday observation.
@@ -1704,6 +1709,9 @@ async function processCryptoSymbol(symbol: string): Promise<{
       coingeckoFailed: 1,
       coingeckoCalls,
     };
+  } finally {
+    // Indicator math already ran on the full window. Drop it so the next coin does not sit on top of this one.
+    cryptoDailyHistory?.releaseBarPayloads();
   }
 }
 
@@ -1846,71 +1854,76 @@ async function runIngestionCycle(
     }
   }
 
-  for (const { symbol, tier, asset_type, last_fetched_at } of symbols) {
-    try {
-      const isEquity = asset_type !== 'crypto';
-      // Daily / 60min bars are refetched after bar close even outside the quote window (e.g. 16:20 ET, 09:00 ET).
-      const equityBarsRefreshDue = isEquity && equityBarsDue(symbol);
-      if (isEquity && !equityQuotesAllowed && !equityBarsRefreshDue) {
-        stats.skippedEquityOffhours++;
-        continue;
-      }
+  // One batch at a time. Crypto bar arrays are released after each coin (see processCryptoSymbol); this
+  // boundary also drops anything still resident before the next batch's fetches allocate.
+  for (const batch of sequentialBatches(symbols)) {
+    for (const { symbol, tier, asset_type, last_fetched_at } of batch) {
+      try {
+        const isEquity = asset_type !== 'crypto';
+        // Daily / 60min bars are refetched after bar close even outside the quote window (e.g. 16:20 ET, 09:00 ET).
+        const equityBarsRefreshDue = isEquity && equityBarsDue(symbol);
+        if (isEquity && !equityQuotesAllowed && !equityBarsRefreshDue) {
+          stats.skippedEquityOffhours++;
+          continue;
+        }
 
-      const intervalSeconds = getTierRefreshIntervalSeconds(asset_type, tier, sessionState.mode);
-      const bypassDueCheck = isEquity && equitySessionState.mode !== 'market' && runEquityOffhoursScan;
-      if (!bypassDueCheck && !equityBarsRefreshDue && !isDueForFetch(last_fetched_at, intervalSeconds)) {
-        stats.skippedNotDue++;
-        continue;
-      }
+        const intervalSeconds = getTierRefreshIntervalSeconds(asset_type, tier, sessionState.mode);
+        const bypassDueCheck = isEquity && equitySessionState.mode !== 'market' && runEquityOffhoursScan;
+        if (!bypassDueCheck && !equityBarsRefreshDue && !isDueForFetch(last_fetched_at, intervalSeconds)) {
+          stats.skippedNotDue++;
+          continue;
+        }
 
-      stats.symbolsDue++;
+        stats.symbolsDue++;
 
-      let result: {
-        apiCalls: number;
-        success: boolean;
-        coingeckoAttempted?: number;
-        coingeckoSucceeded?: number;
-        coingeckoNoData?: number;
-        coingeckoFailed?: number;
-        coingeckoCalls?: number;
-      };
+        let result: {
+          apiCalls: number;
+          success: boolean;
+          coingeckoAttempted?: number;
+          coingeckoSucceeded?: number;
+          coingeckoNoData?: number;
+          coingeckoFailed?: number;
+          coingeckoCalls?: number;
+        };
 
-      if (asset_type === 'crypto') {
-        result = await processCryptoSymbol(symbol);
-      } else {
-        if (!equityQuotesAllowed) stats.equityBarsOnlyRefreshes++;
-        const equityResult = await processEquitySymbol(symbol, {
-          bulkQuote: bulkQuotes.get(symbol.toUpperCase()) ?? null,
-          bulkQuotePersisted: bulkQuotesPersisted,
-          quotesAllowed: equityQuotesAllowed,
-        });
-        stats.avGlobalQuoteCalls += equityResult.avGlobalQuoteCalls;
-        stats.avDailyCalls += equityResult.avDailyCalls;
-        stats.avHourlyCalls += equityResult.avHourlyCalls;
-        result = equityResult;
-      }
+        if (asset_type === 'crypto') {
+          result = await processCryptoSymbol(symbol);
+        } else {
+          if (!equityQuotesAllowed) stats.equityBarsOnlyRefreshes++;
+          const equityResult = await processEquitySymbol(symbol, {
+            bulkQuote: bulkQuotes.get(symbol.toUpperCase()) ?? null,
+            bulkQuotePersisted: bulkQuotesPersisted,
+            quotesAllowed: equityQuotesAllowed,
+          });
+          stats.avGlobalQuoteCalls += equityResult.avGlobalQuoteCalls;
+          stats.avDailyCalls += equityResult.avDailyCalls;
+          stats.avHourlyCalls += equityResult.avHourlyCalls;
+          result = equityResult;
+        }
 
-      stats.apiCalls += result.apiCalls;
-      stats.coingeckoAttempted += result.coingeckoAttempted || 0;
-      stats.coingeckoSucceeded += result.coingeckoSucceeded || 0;
-      stats.coingeckoNoData += result.coingeckoNoData || 0;
-      stats.coingeckoFailed += result.coingeckoFailed || 0;
-      stats.coingeckoCalls += result.coingeckoCalls || 0;
-      stats.symbolsProcessed++;
+        stats.apiCalls += result.apiCalls;
+        stats.coingeckoAttempted += result.coingeckoAttempted || 0;
+        stats.coingeckoSucceeded += result.coingeckoSucceeded || 0;
+        stats.coingeckoNoData += result.coingeckoNoData || 0;
+        stats.coingeckoFailed += result.coingeckoFailed || 0;
+        stats.coingeckoCalls += result.coingeckoCalls || 0;
+        stats.symbolsProcessed++;
       
-      if (!result.success) {
+        if (!result.success) {
+          stats.errors++;
+        }
+
+        console.log(`[worker] Processed ${symbol} (${asset_type}, tier ${tier}) - ${result.success ? 'OK' : 'FAIL'}`);
+
+        // Small delay between symbols to be nice to the API
+        await sleep(100);
+
+      } catch (err: any) {
+        console.error(`[worker] Fatal error for ${symbol}:`, err?.message || err);
         stats.errors++;
       }
-
-      console.log(`[worker] Processed ${symbol} (${asset_type}, tier ${tier}) - ${result.success ? 'OK' : 'FAIL'}`);
-
-      // Small delay between symbols to be nice to the API
-      await sleep(100);
-
-    } catch (err: any) {
-      console.error(`[worker] Fatal error for ${symbol}:`, err?.message || err);
-      stats.errors++;
     }
+    cryptoDailyHistory?.releaseBarPayloads();
   }
 
   return stats;

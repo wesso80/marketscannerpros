@@ -22,6 +22,20 @@ export const WORKER_AV_MAX_RPM = 200;
 export const AV_BULK_QUOTE_BATCH = 100;
 /** TIME_SERIES_DAILY_ADJUSTED outputsize=compact returns 100 bars; the merged history keeps the same length. */
 export const AV_DAILY_COMPACT_BARS = 100;
+/**
+ * Bars the worker keeps in `equityBarHolds` after a full AV daily download. EMA200/SMA200 warm-up is ~250 bars.
+ * Indicator inputs are still whatever `mergeLiveDailyBar` returns (the compact tail); retaining this tail instead of
+ * the multi-year `outputsize=full` payload does not change that series. Postgres still receives the bars
+ * `upsertBars` is given.
+ */
+export const EQUITY_RESIDENT_DAILY_BARS = 250;
+
+/** Oldest-first tail. Shorter series are copied as-is so a compact history is not padded or dropped. */
+export function retainEquityDailyBars<T>(bars: readonly T[], keep = EQUITY_RESIDENT_DAILY_BARS): T[] {
+  if (!Number.isFinite(keep) || keep <= 0) return [];
+  if (bars.length <= keep) return bars.slice();
+  return bars.slice(bars.length - keep);
+}
 
 /** Worker AV rpm from ALPHA_VANTAGE_RPM: default 200, clamped to 1..200. */
 export function workerAvRpm(raw: string | undefined | null): number {

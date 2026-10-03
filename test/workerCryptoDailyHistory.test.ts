@@ -195,4 +195,23 @@ describe('CryptoDailyHistoryCache', () => {
     });
     await expect(cache.getBars('BTC', 'bitcoin')).rejects.toThrow('down');
   });
+
+  it('holds one full series in memory and reloads the other from persistence without a second full fetch', async () => {
+    const h = harness(D + 3_600_000);
+    const btc = await h.cache.getBars('BTC', 'bitcoin');
+    const eth = await h.cache.getBars('ETH', 'ethereum');
+    expect(btc.bars.length).toBe(1080);
+    expect(eth.bars.length).toBe(1080);
+    expect(h.cache.residentSeriesCount()).toBe(1);
+    expect(h.cache.holdsBars('bitcoin')).toBe(false);
+    expect(h.cache.holdsBars('ethereum')).toBe(true);
+    h.cache.releaseBarPayloads();
+    expect(h.cache.residentSeriesCount()).toBe(0);
+    h.at(D + 2 * 3_600_000);
+    const again = await h.cache.getBars('BTC', 'bitcoin');
+    expect(again).toMatchObject({ plan: 'none', calls: 0 });
+    expect(again.bars.length).toBe(1080);
+    expect(again.bars[0].t).toBe(btc.bars[0].t);
+    expect(h.fetchFull).toHaveBeenCalledTimes(2);
+  });
 });
