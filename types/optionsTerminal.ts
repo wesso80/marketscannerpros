@@ -1,3 +1,4 @@
+import type { OptionSpotObservation } from '@/lib/options/spotObservation';
 /* ─── Options Terminal types ─────────────────────────────────────────── */
 
 export interface OptionsContract {
@@ -35,6 +36,7 @@ export interface OptionsChainResponse {
   success: boolean;
   symbol: string;
   underlyingPrice: number;
+  spotObservation?: OptionSpotObservation | null;
   expirations: ExpirationMeta[];
   contracts: OptionsContract[];
   provider: string;
