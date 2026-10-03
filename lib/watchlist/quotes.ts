@@ -193,7 +193,7 @@ export async function fetchWatchlistQuotes(
 ): Promise<Record<string, WatchlistQuote>> {
   const quotes: Record<string, WatchlistQuote> = {};
   const seen = new Set<string>();
-  const unique = items.filter((i) => i?.symbol && !seen.has(i.symbol) && seen.add(i.symbol));
+  const unique = items.filter((i) => i.asset_type !== 'option' && i.asset_type !== 'options' && i?.symbol && !seen.has(i.symbol) && seen.add(i.symbol));
 
   const commodity = unique.filter((i) => normalizeAssetType(i.asset_type) === 'commodity' && KNOWN_COMMODITIES.has(i.symbol.toUpperCase()));
   const viaScanner = unique.filter((i) => normalizeAssetType(i.asset_type) !== 'commodity');

@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             watchlist_id UUID NOT NULL REFERENCES watchlists(id) ON DELETE CASCADE,
             workspace_id UUID NOT NULL,
-            symbol VARCHAR(20) NOT NULL,
+            symbol VARCHAR(96) NOT NULL,
             asset_type VARCHAR(20) NOT NULL DEFAULT 'equity',
             notes VARCHAR(200),
             added_price DECIMAL(20, 8),
