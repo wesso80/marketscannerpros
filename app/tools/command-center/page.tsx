@@ -23,9 +23,17 @@ import {
 import { Card, Badge } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
 import BuildingInterestPanel from '@/components/analysis/BuildingInterestPanel';
-import LeverageStatePanel from '@/components/analysis/LeverageStatePanel';
 import CrossAssetPanel from '@/components/analysis/CrossAssetPanel';
-import { useCryptoDerivatives } from '@/hooks/useCryptoDerivatives';
+import Link from 'next/link';
+import PriceStamp from '@/components/market/PriceStamp';
+import MarketStatusStrip from '@/components/market/MarketStatusStrip';
+import {OverviewPicks} from '@/components/market/OverviewPicks';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
+import {diffPicks,previousScanDate,topPicks,type PicksResponse} from '@/lib/market/overview';
+import {quoteStamp,type DisplayQuote} from '@/lib/market/quotePresentation';
+import {formatMarketTime} from '@/lib/market/priceStamp';
+import {symbolHref} from '@/lib/market/links';
 import { applyFeedHealth, assessSessionFreshness, degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import { CRYPTO_MAX_AGE_MINUTES, equityLayerTiming } from '@/lib/analysis/providerAsOf';
 import {
@@ -39,7 +47,6 @@ import {
   rankBuilding,
   crossSectionalRelativeVolume,
   filterMoversByFloor,
-  classifyLeverageState,
   describeCrossAsset,
   parsePct,
   buildSessionSnapshot,
@@ -112,7 +119,14 @@ export default function CommandCenterPage() {
   const crypto = useCryptoOverview();
   const movers = useMarketMovers();
   const calendar = useEconomicCalendar();
-  const derivatives = useCryptoDerivatives('BTC');
+  const [asset,setAsset]=useState<'crypto'|'equity'>('crypto');
+  const quotes=usePublicMarketFeed<{quotes:Record<string,DisplayQuote>}>('/api/cached/bulk-quotes?symbols=BTC,ETH,SOL,SPY,QQQ,IWM,DIA');
+  const funding=usePublicMarketFeed<{coins:Array<{symbol:string;fundingRatePercent:number}>;timestamp?:string;freshnessStatus?:string;source?:string}>('/api/funding-rates');
+  const picks=usePublicMarketFeed<PicksResponse>('/api/scanner/daily-picks?limit=5&type=top');
+  const rows=topPicks(picks.data,asset);
+  const previousDate=previousScanDate(rows[0]?.scan_date,asset);
+  const previous=usePublicMarketFeed<PicksResponse>(previousDate?`/api/scanner/daily-picks?limit=5&type=top&date=${previousDate}`:null);
+  const changes=diffPicks(rows,topPicks(previous.data,asset));
 
   // Snapshot the market environment on each visit so we can show the user what
   // materially changed since they were last here (regime, risk tone, breadth,
@@ -151,16 +165,6 @@ export default function CommandCenterPage() {
       freshness: 'delayed',
     }),
   ];
-
-  // BTC leverage/participation state from derivatives (price + funding available;
-  // open-interest change and liquidations refine it in the Crypto tools).
-  const btcLeverage = derivatives.data
-    ? classifyLeverageState({
-        priceChangePct: derivatives.data.coin.change24h ?? undefined,
-        fundingRate: derivatives.data.aggregatedFunding.fundingRatePct,
-        freshness: 'delayed',
-      })
-    : null;
 
   // Building / Early engine — classify developing activity from the movers
   // cohort. Only price + cohort-relative volume are available here (no per-symbol
@@ -273,7 +277,7 @@ export default function CommandCenterPage() {
   return (
     <div className="space-y-3">
       <PageHero
-        ariaLabel="Command Center header"
+        ariaLabel="Overview header"
         eyebrow="Market intelligence"
         badges={[
           { label: regime.loading && !regime.data ? 'Regime loading' : reg.available ? `Regime ${reg.regimeLabel}` : 'Regime unavailable' },
@@ -281,34 +285,26 @@ export default function CommandCenterPage() {
           ...(reg.changed ? [{ label: 'Regime changed' }] : []),
           ...(anyLoading ? [{ label: 'Updating…' }] : []),
         ]}
-        title="Command Center."
+        title="Overview"
         subtitle="Understand the market environment in ~30 seconds: regime, risk tone, where strength and weakness sit, crypto participation, and the events ahead. Educational market intelligence — not personalised financial advice."
         actions={[
           { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
-          { label: 'Open Golden Egg', variant: 'secondary', href: '/tools/golden-egg' },
+          { label: 'Open Symbol', variant: 'secondary', href: '/tools/golden-egg' },
           { label: 'Research Dashboard', variant: 'ghost', href: '/tools/dashboard' },
         ]}
       />
 
-      {/* WHAT CHANGED SINCE LAST SESSION */}
-      {sessionDelta ? (
-        <Card className="p-4" style={{ borderColor: 'var(--msp-accent, #10B981)', borderWidth: 1 }}>
-          <SectionTitle n="00" title="Since your last session" hint={sessionDelta.elapsedLabel} />
-          {sessionDelta.quiet ? (
-            <p className="text-sm text-slate-400">No material change in the market environment since you were last here.</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {sessionDelta.items.map((item, i) => (
-                <li key={`${item.kind}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-                  <Badge label={item.label} small color={deltaColor(item.kind)} />
-                  <span className="text-slate-300">{item.detail}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-2 text-[11px] italic text-slate-500">Descriptive changes in the observed environment since your previous visit — not trade instructions or predictions.</p>
-        </Card>
-      ) : null}
+      <p className="text-xs text-slate-500">{new Intl.DateTimeFormat('en-AU',{dateStyle:'full',timeZone:'UTC'}).format(sessionNow)} (UTC)</p>
+      <MarketStatusStrip items={[
+        {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??'time unknown'],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
+        {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'time unknown']},
+        {label:'Crypto overview',statusLabel:crypto.error?'Degraded':'Unknown',source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'time unknown']},
+        {label:'Quotes',statusLabel:quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Unknown',source:'stored quotes',notes:['Per-symbol observation times below']},
+        {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':'Unknown',source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'time unknown']},
+        {label:'Daily picks',statusLabel:picks.error?'Degraded':'Unknown',source:'stored daily scan',notes:['Per-row trust and dates below']},
+        {label:'Movers',statusLabel:movers.error?'Degraded':'Unknown',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'time unknown']},
+        {label:'Event clock',statusLabel:calendarWarning?'Degraded':'Unknown',source:'economic calendar',notes:['schedule only'],warnings:calendarWarning?[calendarWarning]:[]},
+      ]}/>
 
       {/* LAYER 1 — MARKET REGIME (dominant) */}
       <Card className="p-4" style={{ borderColor: stanceColor(reg.stance), borderWidth: 1 }}>
@@ -329,6 +325,41 @@ export default function CommandCenterPage() {
         <p className="mt-2 text-sm leading-6 text-slate-300">{reg.summary}</p>
       </Card>
 
+      {/* MARKET DRIVERS — cross-asset relationships (association, not causation) */}
+      <Card className="p-4">
+        <SectionTitle n="02b" title="Market Drivers" hint="association, not causation" />
+        <CrossAssetPanel readings={crossReadings} />
+      </Card>
+
+      {/* LAYER 6 — RISK / EVENT CLOCK */}
+      <Card className="p-4">
+        <SectionTitle n="06" title="Risk / Event Clock" hint="schedule only — outcomes not predicted" />
+        {eventClock.length ? (
+          <ul className="divide-y divide-white/5">
+            {eventClock.map((e, i) => (
+              <li key={`${e.event}-${i}`} className="flex items-center justify-between gap-3 py-1.5 text-sm">
+                <span className="min-w-0 truncate text-slate-200">{e.event}</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400">
+                  <span>{e.market}</span>
+                  <span title={e.whenTitle}>{e.when}</span>
+                  <Badge label={e.importance.toUpperCase()} small color={e.importance === 'high' ? 'var(--msp-bear)' : e.importance === 'medium' ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-sm text-slate-500">No scheduled events available.</p>}
+      </Card>
+
+      <section className="space-y-3 rounded-lg border border-white/10 p-4">
+        <h2 className="text-lg font-bold">Market pulse</h2>
+        <div role="tablist" aria-label="Market pulse" className="flex gap-2">{(['crypto','equity'] as const).map(type=><button key={type} role="tab" aria-selected={asset===type} onClick={()=>setAsset(type)} className={`rounded border px-4 py-2 ${asset===type?'text-emerald-300 border-emerald-400':'border-slate-700'}`}>{type==='crypto'?'Crypto':'Stocks'}</button>)}</div>
+        {quotes.error&&<p className="text-amber-300">{quotes.error}</p>}
+        <div className="grid gap-3 md:grid-cols-2">{(asset==='crypto'?['BTC','ETH','SOL']:['SPY','QQQ','IWM','DIA']).map(symbol=><Link key={symbol} href={symbolHref(symbol,asset)} className="rounded border border-white/10 p-3"><PriceStamp {...quoteStamp(symbol,asset,quotes.data?.quotes[symbol])}/></Link>)}</div>
+        {asset==='crypto'?<>
+          <p>BTC dominance {cryptoData?.btcDominance??'—'}% · Market cap {cryptoData?.totalMarketCapFormatted??'unavailable'} · CoinGecko as of {formatMarketTime(crypto.data?.asOf)??'time unknown'}</p>
+          <div>Funding (OKX, 8h equivalent) · {formatMarketTime(funding.data?.timestamp)??'time unknown'}
+            {funding.error?<p className="text-amber-300">{funding.error}</p>:['BTC','ETH','SOL'].map(symbol=><p key={symbol}>{symbol}: {funding.data?.coins.find(c=>c.symbol===symbol)?.fundingRatePercent??'unavailable'}%</p>)}
+          </div>
       <div className="grid gap-3 md:grid-cols-2">
         {/* LAYER 2 — RISK TONE / DRIVERS */}
         <Card className="p-4">
@@ -349,22 +380,47 @@ export default function CommandCenterPage() {
           <SectionTitle n="03" title="Crypto Participation" />
           <div className="text-lg font-black" style={{ color: stanceColor(flow.stance) }}>{flow.label}</div>
           <p className="mt-1 text-sm text-slate-300">{flow.note}</p>
-          {btcLeverage ? (
-            <div className="mt-3">
-              <LeverageStatePanel assessment={btcLeverage} symbol="BTC" price={derivatives.data?.coin.price} />
-            </div>
-          ) : (
-            <p className="mt-2 text-[11px] italic text-slate-500">A deeper leverage/positioning read (funding, open interest, liquidations) is available in the Crypto Command Center.</p>
-          )}
+          <Link className="text-emerald-300" href="/tools/crypto-dashboard?symbol=BTC">Derivatives detail</Link>
         </Card>
       </div>
 
-      {/* MARKET DRIVERS — cross-asset relationships (association, not causation) */}
+        </>:<ul className="grid gap-2 md:grid-cols-2">{sectorData.map(sector=><li key={sector.symbol}>{sector.name}: {sector.changePercent?.toFixed(2)??'—'}% vs prior close · {sectors.data?.asOfTradingDay??'time unknown'}</li>)}</ul>}
+      </section>
       <Card className="p-4">
-        <SectionTitle n="02b" title="Market Drivers" hint="association, not causation" />
-        <CrossAssetPanel readings={crossReadings} />
+        <h2 className="text-lg font-bold">Today's top picks · {asset==='crypto'?'Crypto':'Stocks'}</h2>
+        {picks.loading?<p>Loading stored picks…</p>:picks.error?<p className="text-amber-300">{picks.error}</p>:rows.length?<OverviewPicks rows={rows} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
+        <Link className="text-emerald-300" href={`/tools/scanner?type=${asset}`}>See all in Scanner</Link>
       </Card>
+      <section className="space-y-2 rounded border border-white/10 p-4">
+        <h2 className="text-lg font-bold">What changed since the previous scan</h2>
+        {previous.loading?<p>Loading earlier scan…</p>:previous.error?<p className="text-amber-300">Earlier scan unavailable: {previous.error}</p>:!changes.hasPrevious?<p>No earlier scan stored{previousDate?` for ${previousDate}`:''}.</p>:<>
+          <p>vs {previousDate} scan · {asset==='crypto'?'UTC':'New York market date'}</p>
+          <p>New: {changes.added.map(p=>p.symbol).join(', ')||'none'} · Dropped: {changes.dropped.map(p=>p.symbol).join(', ')||'none'}</p>
+          <p>Grade changes: {changes.gradeChanges.map(p=>`${p.symbol} ${p.from} → ${p.to}`).join(', ')||'none'}</p>
+        </>}
+        <p>{reg.changed?`Regime changed from ${reg.previousLabel} to ${reg.regimeLabel} since your last visit.`:'No regime change observed since your last visit.'}</p>
+      {/* WHAT CHANGED SINCE LAST SESSION */}
+      {sessionDelta ? (
+        <Card className="p-4" style={{ borderColor: 'var(--msp-accent, #10B981)', borderWidth: 1 }}>
+          <SectionTitle n="00" title="Since your last session" hint={sessionDelta.elapsedLabel} />
+          {sessionDelta.quiet ? (
+            <p className="text-sm text-slate-400">No material change in the market environment since you were last here.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {sessionDelta.items.map((item, i) => (
+                <li key={`${item.kind}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                  <Badge label={item.label} small color={deltaColor(item.kind)} />
+                  <span className="text-slate-300">{item.detail}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[11px] italic text-slate-500">Descriptive changes in the observed environment since your previous visit — not trade instructions or predictions.</p>
+        </Card>
+      ) : null}
 
+      </section>
+      <details className="rounded border border-white/10 p-4"><summary className="cursor-pointer font-bold">More</summary><div className="mt-3 space-y-3">
       {/* LAYER 3 — STRENGTH / WEAKNESS */}
       <div className="grid gap-3 md:grid-cols-2">
         <Card className="p-4">
@@ -395,25 +451,6 @@ export default function CommandCenterPage() {
         </Card>
       </div>
 
-      {/* LAYER 6 — RISK / EVENT CLOCK */}
-      <Card className="p-4">
-        <SectionTitle n="06" title="Risk / Event Clock" hint="scheduled events — outcomes not predicted" />
-        {eventClock.length ? (
-          <ul className="divide-y divide-white/5">
-            {eventClock.map((e, i) => (
-              <li key={`${e.event}-${i}`} className="flex items-center justify-between gap-3 py-1.5 text-sm">
-                <span className="min-w-0 truncate text-slate-200">{e.event}</span>
-                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400">
-                  <span>{e.market}</span>
-                  <span title={e.whenTitle}>{e.when}</span>
-                  <Badge label={e.importance.toUpperCase()} small color={e.importance === 'high' ? 'var(--msp-bear)' : e.importance === 'medium' ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="text-sm text-slate-500">No scheduled events available.</p>}
-      </Card>
-
       {/* LAYER 7 — AREAS DESERVING RESEARCH (Building / Early engine) */}
       <Card className="p-4">
         <SectionTitle n="07" title="Areas Deserving Further Research" hint="developing activity — not trade instructions" />
@@ -427,9 +464,10 @@ export default function CommandCenterPage() {
             <BuildingInterestPanel items={buildingCrypto} emptyText="No developing crypto activity in the current mover sample." />
           </div>
         </div>
-        <p className="mt-2 text-[11px] italic text-slate-500">Volume is measured relative to today&rsquo;s mover cohort (a transparent proxy when a per-symbol historical baseline is unavailable). Per-symbol volatility and open-interest inputs, where available, further refine these states in the dedicated tools.</p>
+        <p className="mt-2 text-[11px] italic text-slate-500">Volume is measured relative to today&rsquo;s mover cohort (a transparent proxy when a per-symbol historical baseline is unavailable). Per-symbol volatility and positioning inputs, where available, further refine these states in the dedicated tools.</p>
       </Card>
 
+      </div></details>
       {/* EVIDENCE QUALITY FOOTER */}
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -444,6 +482,7 @@ export default function CommandCenterPage() {
       </Card>
 
       <p className="px-1 text-[11px] text-slate-600">{EDUCATIONAL_DISCLOSURE}</p>
+      <ComplianceDisclaimer/>
     </div>
   );
 }
