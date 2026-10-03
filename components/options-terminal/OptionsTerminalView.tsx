@@ -104,7 +104,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     if (!chain.expirations.length) return;
     const dates = chain.expirations.map(e => e.date);
     if (!selectedExpiry) {
-      setSelectedExpiry(selectOptionsExpiry(dates) || '');
+      setSelectedExpiry(selectOptionsExpiry(chain.expirations.map(e=>e.date)) || '');
       return;
     }
     if (!chain.error) return;
