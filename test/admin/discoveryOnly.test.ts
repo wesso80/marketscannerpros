@@ -8,8 +8,14 @@ it('defaults to the owner-requested discovery-only scope and can be explicitly r
   expect(discoveryOnlyAction('/api/cron/arca-cycle')).toBe('allow');
   expect(discoveryOnlyAction('/api/admin/live-scanner')).toBe('allow');
 });
-it.each(['/api/admin/crypto-markets/backtest', '/api/admin/crypto-markets/rotation', '/api/admin/crypto-markets/market-data', '/api/admin/crypto-markets/new-listings', '/api/admin/crypto-markets/history', '/api/admin/crypto-markets/harness', '/api/admin/crypto-markets/early-momentum', '/api/admin/crypto-markets/setup-email', '/api/cron/arca-cycle', '/api/admin/crypto-markets/paper', '/api/admin/crypto-markets/bases', '/api/admin/crypto-markets/momentum', '/api/admin/crypto-markets/volume', '/api/admin/crypto-markets/context', '/api/admin/verify', '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze', '/api/admin/crypto-markets/forward-score', '/api/admin/crypto-markets/recommendations', '/api/admin/crypto-markets/calibration', '/api/admin/crypto-markets/learning', '/api/admin/crypto-markets/jev', '/admin/crypto-markets', '/admin/crypto-discovery', '/admin/paused', '/admin/equity-research', '/api/admin/equity-research', '/api/admin/equity-news-jev', '/admin/transcripts', '/api/admin/transcripts'])('allows auth and discovery: %s', path => {
+it.each(['/api/admin/crypto-markets/backtest', '/api/admin/crypto-markets/rotation', '/api/admin/crypto-markets/market-data', '/api/admin/crypto-markets/new-listings', '/api/admin/crypto-markets/history', '/api/admin/crypto-markets/harness', '/api/admin/crypto-markets/early-momentum', '/api/admin/crypto-markets/setup-email', '/api/cron/arca-cycle', '/api/admin/crypto-markets/paper', '/api/admin/crypto-markets/bases', '/api/admin/crypto-markets/momentum', '/api/admin/crypto-markets/volume', '/api/admin/crypto-markets/context', '/api/admin/verify', '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze', '/api/admin/crypto-markets/forward-score', '/api/admin/crypto-markets/recommendations', '/api/admin/crypto-markets/calibration', '/api/admin/crypto-markets/learning', '/api/admin/crypto-markets/jev', '/api/admin/crypto-markets/summary', '/admin/crypto-markets', '/admin/crypto-discovery', '/admin/paused', '/admin/equity-research', '/api/admin/equity-research', '/api/admin/equity-news-jev', '/admin/transcripts', '/api/admin/transcripts'])('allows auth and discovery: %s', path => {
   expect(discoveryOnlyAction(path)).toBe('allow');
+});
+it('allows the crypto summary bot route and still pauses unlisted admin APIs', () => {
+  expect(discoveryOnlyAction('/api/admin/crypto-markets/summary')).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/crypto-markets/summary/')).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/live-scanner')).toBe('pause_api');
+  expect(discoveryOnlyAction('/api/admin/portfolio-lab/cycle')).toBe('pause_api');
 });
 it.each(['/api/admin/live-scanner', '/api/admin/portfolio-lab/cycle', '/api/admin/macro-pulse', '/api/admin/crypto-discovery/other', '/api/operator/engine/scan'])('blocks other admin APIs before handler work: %s', path => {
   expect(discoveryOnlyAction(path)).toBe('pause_api');
