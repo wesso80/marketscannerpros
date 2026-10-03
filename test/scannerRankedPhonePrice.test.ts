@@ -15,10 +15,10 @@ function componentSource(name: string): string {
 describe('SC-14: Ranked phone cards show price', () => {
   it.each(['RankedMobileCards', 'RankedFallbackList'])('%s renders the row price under the symbol', (name) => {
     const src = componentSource(name);
-    expect(src).toContain('data-testid="ranked-card-price">{isUsableNumber(row.price) ? formatPrice(row.price) : \'Price unavailable\'}</div>');
+    expect(src).toContain('data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div>');
   });
 
   it('uses the same formatter as the desktop Ranked table Price column', () => {
-    expect(page).toContain('<td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>');
+    expect(page).toContain('<td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap"><ScannerRowStamp row={r} /></td>');
   });
 });

@@ -1,7 +1,11 @@
 'use client';
 
 import { scannerAssetType } from '@/lib/market/assets';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import PriceStamp from '@/components/market/PriceStamp';
+import { formatMarketTime } from '@/lib/market/priceStamp';
+import { trustBadgeState } from '@/components/market/TrustBadge';
+import { symbolHref } from '@/lib/market/links';
 import { compareScannerScores } from '@/lib/scanner/scoreContract';
 
 /* ---------------------------------------------------------------------------
@@ -229,7 +233,7 @@ function lifecycleLabel(lifecycle: LifecycleState): string {
   return lifecycle.replace('_', ' ');
 }
 
-const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score ≥70', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
+const TABS = ['All', 'Bullish', 'Bearish', 'High Score ≥70', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
 const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
 const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
@@ -309,6 +313,12 @@ function ScannerFlowRail({
       })}
     </div>
   );
+}
+
+function ScannerRowStamp({row}:{row:ScanResult}) {
+  const record=row as ScanResult & { _assetClass?:string;data_as_of?:string;priceBasis?:string;priceBasisLabel?:string };
+  const asOf=record.data_as_of ?? row.dataBasis?.lastCompletedBarAt ?? row.lastCandleTime ?? null;
+  return <PriceStamp compact price={row.price} assetType={record._assetClass ?? 'equity'} priceBasis={record.priceBasis ?? 'bar_observation'} priceBasisLabel={record.priceBasisLabel ?? 'scan bar · bar timestamp'} data_as_of={asOf} stale={row.dataTrust?.level==='STALE'} source={row.dataBasis?.source ?? 'scanner'} />;
 }
 
 function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {
@@ -394,7 +404,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
                 <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol}</div>
                 {/* SC-14: same price as the desktop Ranked table's Price column. */}
-                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price">{isUsableNumber(row.price) ? formatPrice(row.price) : 'Price unavailable'}</div>
+                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div>
                 <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
               <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
@@ -456,7 +466,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
                 <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol || 'Unknown'}</div>
                 {/* SC-14: same price as the desktop Ranked table's Price column. */}
-                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price">{isUsableNumber(row.price) ? formatPrice(row.price) : 'Price unavailable'}</div>
+                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div>
                 <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
               <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
@@ -531,7 +541,7 @@ function RankedDesktopFallbackTable({ rows, activeRegime, onRowClick }: { rows: 
             const mspColor = msp >= 70 ? 'var(--msp-bull)' : msp >= 50 ? 'var(--msp-warn)' : msp >= 30 ? 'var(--msp-flat)' : 'var(--msp-bear)';
             return (
               <tr key={`fallback-${row.symbol}`} className="border-b border-slate-800/40 hover:bg-slate-800/30">
-                <td className="py-2.5 px-2 font-bold text-white whitespace-nowrap">{row.symbol}</td>
+                <td className="py-2.5 px-2 font-bold text-white whitespace-nowrap">{row.symbol}<div><ScannerRowStamp row={row} /></div></td>
                 <td className="py-2.5 px-2 font-black whitespace-nowrap" style={{ color: mspColor }}>{msp}</td>
                 <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(row.direction)} color={dirColor(row.direction)} small /></td>
                 <td className="py-2.5 px-2 text-slate-300 whitespace-nowrap">{row.confidence != null ? `${row.confidence}%` : '—'}</td>
@@ -1001,6 +1011,9 @@ export default function ScannerPage() { return <Suspense fallback={<div>Loading 
 
 function ScannerContent() {
   const searchParams=useSearchParams();
+  const router=useRouter();
+  const marketAsset=scannerAssetType(searchParams.get('type'));
+  const selectMarket=(asset:'crypto'|'equity')=>{ const params=new URLSearchParams(searchParams.toString()); params.set('type',asset); router.replace(`/tools/scanner?${params}`,{scroll:false}); };
   const { navigateTo, selectSymbol } = useV2();
   const { tier } = useUserTier();
   const regime = useRegime();
@@ -1081,8 +1094,8 @@ function ScannerContent() {
   const allResults: ScanResult[] = useMemo(() => {
     const eq = (equity.data?.results || []).map(r => ({ ...r, _assetClass: 'equity' as const }));
     const cr = (crypto.data?.results || []).map(r => ({ ...r, _assetClass: 'crypto' as const }));
-    return [...eq, ...cr];
-  }, [equity.data, crypto.data]);
+    return marketAsset==='crypto'?cr:eq;
+  }, [equity.data, crypto.data,marketAsset]);
 
   const rankedLocalDemo = Boolean(equity.data?.metadata?.localDemo || crypto.data?.metadata?.localDemo);
   const rankedProviderStatuses = useMemo(() => ([
@@ -1093,8 +1106,6 @@ function ScannerContent() {
   const filtered = useMemo(() => {
     let items = [...allResults];
     switch (activeTab) {
-      case 'Equities': items = items.filter(r => (r as any)._assetClass === 'equity'); break;
-      case 'Crypto': items = items.filter(r => (r as any)._assetClass === 'crypto'); break;
       case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish'); break;
       case 'Bearish': items = items.filter(r => rankedClaimedDirection(r) === 'bearish'); break;
       case 'High Score ≥70': items = items.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE); break;
@@ -1251,16 +1262,9 @@ function ScannerContent() {
 
   /* ─── V2 row click ─── */
   const handleV2RowClick = useCallback((r: ScanResult) => {
-    const asset = (r as any)._assetClass === 'crypto' ? 'crypto' : 'equity';
-    // Re-scan on the SAME timeframe the queue is showing (weekly stays weekly).
-    const tfMap: Record<string, string> = { daily: 'daily', weekly: 'weekly', '1h': '1h', '15m': '15m' };
-    const idx = rankedRows.findIndex((row) => row.symbol === r.symbol);
-    const tfLabel = v2Timeframe === 'daily' ? 'Daily' : v2Timeframe === 'weekly' ? 'Weekly' : v2Timeframe.toUpperCase();
-    loadSymbolDetail(r.symbol, tfMap[v2Timeframe] || 'daily', asset, {
-      queueRank: idx >= 0 ? { rank: idx + 1, total: rankedRows.length, label: `${activeTab} · ${tfLabel}` } : null,
-      lifecycle: deriveLifecycleState(r, currentRegime),
-    });
-  }, [v2Timeframe, loadSymbolDetail, rankedRows, activeTab, currentRegime]);
+    const asset=(r as any)._assetClass==='crypto'?'crypto':'equity';
+    router.push(symbolHref(r.symbol,asset,v2Timeframe));
+  },[router,v2Timeframe]);
 
   /* ─── Pro Scan: run bulk scan ─── */
   const runProScan = useCallback(async () => {
@@ -1400,14 +1404,9 @@ function ScannerContent() {
   }, [proScanResults, currentRegime, proAsset]);
 
   /* ─── Pro scan row click ─── */
-  const handleProRowClick = useCallback((row: ScreenerRow) => {
-    // Real analysis (same /api/scanner/run evidence + shared trust) instead of a synthetic detail built from the row.
-    const tf = proTimeframe === '1d' ? 'daily' : proTimeframe;
-    const idx = proScreenerRows.findIndex((r) => r.symbol === row.symbol);
-    loadSymbolDetail(row.symbol, tf, proAsset, {
-      queueRank: idx >= 0 ? { rank: idx + 1, total: proScreenerRows.length, label: `Pro · ${proAsset} · ${proTimeframe}` } : null,
-    });
-  }, [proTimeframe, proAsset, proScreenerRows, loadSymbolDetail]);
+  const handleProRowClick = useCallback((row:ScreenerRow)=>{
+    router.push(symbolHref(row.symbol,proAsset,proTimeframe));
+  },[router,proAsset,proTimeframe]);
 
 
   /* ─── Detail section (shared between both modes) ─── */
@@ -1582,6 +1581,22 @@ function ScannerContent() {
       </section>
 
       <ComplianceDisclaimer compact />
+      <div role="tablist" aria-label="Markets" className="flex flex-wrap gap-2">
+        {(['crypto','equity'] as const).map(asset=><button key={asset} role="tab" aria-selected={marketAsset===asset} onClick={()=>selectMarket(asset)} className={`whitespace-nowrap break-normal rounded-lg border px-4 py-2 ${marketAsset===asset?'border-emerald-400 text-emerald-300':'border-slate-700 text-slate-400'}`}>{asset==='crypto'?'Crypto':'Stocks'}</button>)}
+      </div>
+          <MarketStatusStrip
+            className="grid-cols-1"
+            items={rankedProviderStatuses.map(({ label, status, quality }) => ({
+              label,
+              status,
+              statusLabel: trustBadgeState({providerStatus:status}).label,
+              source: quality?.source,
+              coverageScore: quality?.coverageScore,
+              computedAt: null,
+              // Reasons come from the reconciled status (which already includes the feed's own warnings).
+              notes: [...quality?.notes ?? [], `As of: ${formatMarketTime(quality?.computedAt) ?? 'time unknown'}`],
+            }))}
+          />
 
       <ScannerFlowRail
         activeStage={activeScannerStage}
@@ -1653,18 +1668,7 @@ function ScannerContent() {
             </div>
           )}
 
-          <MarketStatusStrip
-            className="grid-cols-1"
-            items={rankedProviderStatuses.map(({ label, status, quality }) => ({
-              label,
-              status,
-              source: quality?.source,
-              coverageScore: quality?.coverageScore,
-              computedAt: quality?.computedAt,
-              // Reasons come from the reconciled status (which already includes the feed's own warnings).
-              notes: quality?.notes,
-            }))}
-          />
+
 
           {/* Results */}
           <Card>
@@ -1738,7 +1742,7 @@ function ScannerContent() {
                               </div>
                             </details> : null}
                           </td>
-                          <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
+                          <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap"><ScannerRowStamp row={r} /></td>
                           <td className="py-2.5 px-2 whitespace-nowrap" title={rankedBiasTitle(r)}><Badge label={isNoSetupRow(r) ? '—' : compactBiasLabel(r.direction)} color={dirColor(rankedClaimedDirection(r))} small /></td>
                           <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.canonical ? `${Math.round(r.canonical.coverage * 100)}% · ${r.canonical.mode}` : r.compositeV2?.coverage != null ? `${Math.round(r.compositeV2.coverage * 100)}% · ${r.compositeV2.evidenceQuality}` : 'Unavailable'}</td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
@@ -1822,12 +1826,7 @@ function ScannerContent() {
                 <div className="mb-3">
                   <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Asset Class</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {(['crypto', 'equity'] as const).map(ac => (
-                      <button key={ac} type="button" aria-pressed={proAsset === ac} onClick={() => setProAsset(ac)}
-                        className={`whitespace-nowrap break-normal rounded-md border px-2.5 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 sm:px-3 ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
-                        {ac}
-                      </button>
-                    ))}
+                    <span>{proAsset==='crypto'?'Crypto':'Stocks'} · selected above</span>
                   </div>
                 </div>
                 <div>
