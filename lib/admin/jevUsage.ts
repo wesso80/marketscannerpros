@@ -4,6 +4,8 @@
  */
 export const JEV_USAGE_INDEX='admin:crypto-markets:jev-usage:v1:index';
 export const JEV_USAGE_TTL_SEC=90*86400;
+/** Newest index members only. Six modules across the 90-day TTL fit; a runaway index cannot fan out without a bound. */
+export const JEV_USAGE_READ_CAP=600;
 const USAGE_MODULES=['jev-shadow','jev-chart','jev-catalyst','jev-backtest','equity-news','transcript-audit'] as const;
 export type JevUsageModule=typeof USAGE_MODULES[number]|string;
 export type JevUsageEvent={module:string;at:string;inputTokens:number|null;outputTokens:number|null};
@@ -79,6 +81,8 @@ export async function recordJevUsage(event:JevUsageEvent,redis?:UsageRedis|null)
   if(typeof client.sadd==='function')await client.sadd(JEV_USAGE_INDEX,`${day}|${module}`);
   if(typeof client.expire==='function'){
    await client.expire(usageKey(day,module,'calls'),JEV_USAGE_TTL_SEC);
+   await client.expire(usageKey(day,module,'input'),JEV_USAGE_TTL_SEC);
+   await client.expire(usageKey(day,module,'output'),JEV_USAGE_TTL_SEC);
    await client.expire(JEV_USAGE_INDEX,JEV_USAGE_TTL_SEC);
   }
  }catch{/* measurement only */}
@@ -86,9 +90,9 @@ export async function recordJevUsage(event:JevUsageEvent,redis?:UsageRedis|null)
 export async function readRecordedJevUsage(redis:UsageRedis|null):Promise<JevUsageBucket[]>{
  if(!redis||typeof redis.smembers!=='function'||typeof redis.get!=='function')return [];
  try{
-  const members=await redis.smembers(JEV_USAGE_INDEX);
+  const members=[...(await redis.smembers(JEV_USAGE_INDEX)??[])].filter((member):member is string=>typeof member==='string').sort((a,b)=>b.localeCompare(a)).slice(0,JEV_USAGE_READ_CAP);
   const out:JevUsageBucket[]=[];
-  for(const member of members??[]){
+  for(const member of members){
    const bar=member.indexOf('|');
    if(bar<=0)continue;
    const day=member.slice(0,bar),module=member.slice(bar+1);

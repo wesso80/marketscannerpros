@@ -7,7 +7,8 @@ vi.mock('@/lib/admin/learningStatus',()=>({learningStatus:vi.fn(async()=>null)})
 vi.mock('@/lib/admin/cryptoBtcRegime',()=>({savedBtcRegime:vi.fn(async()=>null),currentBtcRegime:vi.fn(),assessBtcRegime:vi.fn()}));
 vi.mock('@/lib/admin/cryptoAutomation',()=>({cryptoAutomationState:vi.fn(async()=>({enabled:false,last:null}))}));
 vi.mock('@/lib/adminAuth',()=>({requireAdmin:vi.fn(async()=>({ok:true}))}));
-import {CLOSE_STRENGTH,MIN_REWARD_RISK,PRIOR_BASE,VERDICT_SCAN_STALE_MS,VERDICT_STALE_AFTER_MS,BREAKOUT_VERDICT_KEY,BREAKOUT_VERDICT_TTL_SEC,scoreBreakoutCandidate,scoreSavedBreakouts,saveBreakoutVerdicts,sanitizeFeed,type VerdictAccount,type VerdictCheckId} from '@/lib/admin/cryptoBreakoutVerdict';
+import {CLOSE_STRENGTH,MIN_REWARD_RISK,PRIOR_BASE,VERDICT_SCAN_STALE_MS,VERDICT_STALE_AFTER_MS,BREAKOUT_VERDICT_KEY,BREAKOUT_VERDICT_TTL_SEC,pickTightestBaseBook,scoreBreakoutCandidate,scoreSavedBreakouts,saveBreakoutVerdicts,sanitizeFeed,type VerdictAccount,type VerdictCheckId} from '@/lib/admin/cryptoBreakoutVerdict';
+import {q} from '@/lib/db';
 import {DAILY_BASE_LIMITS} from '@/lib/admin/cryptoBaseScan';
 import {MOMENTUM_LIMITS} from '@/lib/admin/cryptoVolumeMomentum';
 import {BASE_BREAKOUT_MAX_EXTENSION,BASE_LIMITS} from '@/lib/admin/cryptoPaperBase';
@@ -208,11 +209,76 @@ it('leaves the summary feed additive when the cycle has not stamped yet',async()
  expect(started).toBe(new Date(now).toISOString());
  expect(bannedKeys(withStamp)).toEqual([]);
 });
+it('picks the base-sleeve book with the least room under the 4% cap, and breaks ties by workspace id',()=>{
+ expect(pickTightestBaseBook([
+  {workspaceId:'b',equity:200_000,cash:200_000,openRiskUsd:1_000},
+  {workspaceId:'a',equity:200_000,cash:200_000,openRiskUsd:1_000},
+ ])?.workspaceId).toBe('a');
+ expect(pickTightestBaseBook([
+  {workspaceId:'a',equity:200_000,cash:200_000,openRiskUsd:0},
+  {workspaceId:'b',equity:100_000,cash:100_000,openRiskUsd:3_000},
+ ])?.workspaceId).toBe('b');
+ expect(pickTightestBaseBook([])).toBeNull();
+});
+it('reads the tightest simulated base-sleeve book and does not write the ledger',async()=>{
+ vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(now);
+ const book=(id:string,ws:string,equity:number)=>({id,workspace_id:ws,name:'Crypto Markets Paper Base',status:'ACTIVE',starting_balance:equity,current_cash:equity,realised_pnl:0,unrealised_pnl:0,total_equity:equity,base_currency:'USD',settings_json:{},created_at:'2026-10-01T00:00:00.000Z',updated_at:'2026-10-01T00:00:00.000Z'});
+ const position=(ws:string,portfolioId:string,quantity:number)=>({id:`p-${ws}`,workspace_id:ws,portfolio_id:portfolioId,symbol:'bitcoin',asset_class:'crypto',instrument_type:'coinbase:BTC-USD',side:'LONG',quantity,average_entry:100,current_price:100,stop_loss:90,realised_pnl:0,unrealised_pnl:0,open_risk:1,status:'OPEN',opened_at:'2026-10-01T00:00:00.000Z'});
+ vi.mocked(q).mockImplementation(async(sql:string,params:unknown[]=[])=>{
+  const text=String(sql);
+  if(/INSERT|UPDATE|DELETE|FOR UPDATE|FOR SHARE/i.test(text))throw Error('ledger write');
+  if(text.includes('workspace_id FROM arca_portfolios'))return [{workspace_id:'ws-b'},{workspace_id:'ws-a'}];
+  if(text.includes('SELECT * FROM arca_portfolios'))return [book(String(params[0]),String(params[0]),String(params[0])==='ws-b'?100_000:200_000)];
+  if(text.includes('FROM arca_positions'))return String(params[0])==='ws-b'?[position('ws-b','ws-b',100_000)]:[];
+  return [];
+ });
+ const {momentum,bases,discovery}=scans();
+ store.rows.set('admin:crypto-markets:momentum-volume:v1',{v:momentum});
+ store.rows.set('admin:crypto-markets:bases:v1',{v:bases});
+ store.rows.set('admin:crypto-discovery:v1',{v:discovery});
+ const saved=await saveBreakoutVerdicts(now);
+ expect(saved.ok).toBe(true);
+ const written=store.rows.get(BREAKOUT_VERDICT_KEY)?.v as {rows:{verdict:string;checks:{id:string;status:string;feed:string;reason:string}[]}[]};
+ const open=written.rows[0].checks.find(c=>c.id==='openRisk')!;
+ const sized=written.rows[0].checks.find(c=>c.id==='plannedSize')!;
+ expect(open.status).toBe('REJECT');
+ expect(sized.status).toBe('PASS');
+ expect(written.rows[0].verdict).toBe('REJECT');
+ expect(written.rows[0].checks.every(c=>!/\d/.test(c.feed))).toBe(true);
+ expect(JSON.stringify(written)).not.toContain('100000');
+ expect(JSON.stringify(written)).not.toContain('ws-b');
+ vi.mocked(q).mockImplementation(async(sql:string,params:unknown[]=[])=>{
+  const text=String(sql);
+  if(/INSERT|UPDATE|DELETE|FOR UPDATE|FOR SHARE/i.test(text))throw Error('ledger write');
+  if(text.includes('workspace_id FROM arca_portfolios'))return [{workspace_id:'ws-a'}];
+  if(text.includes('SELECT * FROM arca_portfolios'))return [book('ws-a','ws-a',200_000)];
+  if(text.includes('FROM arca_positions'))return [];
+  return [];
+ });
+ store.rows.delete(BREAKOUT_VERDICT_KEY);
+ const clean=await saveBreakoutVerdicts(now);
+ expect(clean.ok).toBe(true);
+ const passed=store.rows.get(BREAKOUT_VERDICT_KEY)?.v as {rows:{verdict:string;checks:{id:string;status:string;feed:string}[]}[]};
+ expect(passed.rows[0].verdict).toBe('PASS');
+ expect(passed.rows[0].checks.find(c=>c.id==='openRisk')?.status).toBe('PASS');
+ expect(passed.rows[0].checks.every(c=>!/\d/.test(c.feed))).toBe(true);
+ vi.mocked(q).mockRejectedValueOnce(Error('db down'));
+ store.rows.delete(BREAKOUT_VERDICT_KEY);
+ const unread=await saveBreakoutVerdicts(now);
+ expect(unread.ok).toBe(true);
+ const warned=store.rows.get(BREAKOUT_VERDICT_KEY)?.v as {rows:{verdict:string;checks:{id:string;status:string;reason:string;feed:string}[]}[]};
+ expect(warned.rows[0].checks.find(c=>c.id==='openRisk')).toMatchObject({status:'WARN',reason:'Crypto paper base ledger could not be read'});
+ expect(warned.rows[0].checks.find(c=>c.id==='plannedSize')?.status).toBe('WARN');
+ expect(warned.rows[0].verdict).toBe('WARN');
+ expect(warned.rows[0].checks.every(c=>!/\d/.test(c.feed))).toBe(true);
+});
 it('is not imported by paper execution or the Jev modules',()=>{
  for(const file of ['lib/admin/cryptoPaper.ts','lib/admin/cryptoPaperBase.ts','lib/admin/cryptoJev.ts','lib/admin/cryptoJevChart.ts','lib/admin/cryptoJevEvidence.ts','lib/admin/learningStatus.ts','lib/admin/cryptoCalibration.ts']){
   expect(readFileSync(file,'utf8')).not.toMatch(/cryptoBreakoutVerdict/);
  }
  const src=readFileSync('lib/admin/cryptoBreakoutVerdict.ts','utf8');
  expect(src).not.toMatch(/askJev|AI_GATEWAY|openai|console\.(log|info|debug|error|warn)|fetch\(/);
+ expect(src).not.toMatch(/INSERT |UPDATE |DELETE |FOR UPDATE|FOR SHARE|insertPortfolio|createSimulatedOrder/);
  expect(src).toMatch(/advisory only/i);
+ expect(src).toMatch(/loadBaseSleeveVerdictAccount/);
 });

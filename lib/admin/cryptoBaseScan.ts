@@ -44,10 +44,12 @@ export async function fetchDailyBase(row:BaseScanRow,now:number):Promise<BaseSca
   const pair={exchange:row.exchange,product:row.product,quote:row.quote,volumeUnit:row.volumeUnit};
   const days=compressionFetchDays(pair.exchange);
   const {raw,end}=await loadDailyVenue(pair,now,days);
+  const baseStart=end-30*D;
   let history:ExchangeBar[]=[];
-  try{history=parseDailyVenue(pair.exchange,raw,end-days*D,end,D,true);}catch{history=[];}
+  // Compression history may include days older than the 30-day base. A short or non-numeric row out there is skipped; the strict base parse below does not use that lenient bound.
+  try{history=parseDailyVenue(pair.exchange,raw,end-days*D,end,D,true,baseStart);}catch{history=[];}
   let assessed:BaseScanRow;
-  try{assessed=assessDailyBase(row,parseDailyVenue(pair.exchange,raw,end-30*D,end),now);}
+  try{assessed=assessDailyBase(row,parseDailyVenue(pair.exchange,raw,baseStart,end),now);}
   catch{assessed={...row,stage:'UNAVAILABLE',reason:'Provider or candle validation failed; no substitute data',asOf:null,high:null,low:null,widthPct:null,gapPct:null,slopePct:null,contraction:null};}
   return {...assessed,compression:scoreCompression(history,now,{fetchedDays:days,base21:assessed})};
 }

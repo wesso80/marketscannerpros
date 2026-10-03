@@ -16,6 +16,16 @@ describe('daily venue normalization',()=>{
   expect(parseDailyVenue('okex',{code:'0',data:[okx.data[0].map((v,i)=>i===8?'0':v)]},t,end)).toEqual([]);
   expect(()=>parseDailyVenue('okex',{code:'0',data:[okx.data[0].slice(0,8)]},t,end)).toThrow();
  });
+ it('skips a short or non-numeric row outside the window and still rejects one inside it',()=>{
+  const older=end-40*D;
+  const short=[older,'x'];
+  const nonNumeric=[older+D,'10','12','9','11','nope',older+2*D-1];
+  expect(parseDailyVenue('binance',[short,nonNumeric,...binance],t,end)).toEqual([{t:end,o:10,h:12,l:9,c:11,v:100}]);
+  expect(()=>parseDailyVenue('binance',[[t,'x'],...binance],t,end)).toThrow();
+  const goodSec=(end-D)/1000,oldSec=(end-40*D)/1000;
+  expect(parseDailyVenue('gdax',[[oldSec,'bad'],[goodSec,9,12,10,11,100]],end-D,end)).toEqual([{t:end,o:10,h:12,l:9,c:11,v:100}]);
+  expect(()=>parseDailyVenue('gdax',[[goodSec,'bad'],[goodSec,9,12,10,11,100]],end-D,end)).toThrow();
+ });
  it('rejects provider errors, missing values and unexpected close timestamps',()=>{
   expect(()=>parseDailyVenue('kucoin',{code:'400',data:[]},t,end)).toThrow();
   expect(()=>parseDailyVenue('binance',[[t,'10','12','9','11',null,end-1]],t,end)).toThrow();
