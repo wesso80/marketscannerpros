@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
 import { dailyPublication, isCompletedDailyBar } from '@/lib/scanner/dailyPublication';
 /**
  * Universe Scanner - Bulk Opportunity Discovery
  * 
  * @route POST /api/jobs/scan-universe
- * @description Scans stocks via Yahoo Finance and crypto via the shared CoinGecko daily series
+ * @description Scans entire stock/crypto universe using Yahoo Finance
  *              to find top 10 opportunities in each asset class
  * 
  * Scoring Formula (7 Technical Indicators):
@@ -274,11 +273,47 @@ async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
   }
 }
 
-// Use the same completed CoinGecko daily series as the daily scan and worker warmup.
+// Yahoo Finance - Get market data for crypto (same method as equities)
 async function fetchCryptoData(symbol: string): Promise<OHLCV[] | null> {
-  const series = await fetchCryptoSeries(symbol, 'daily');
-  const bars = series.bars.map(b => ({date:b.t,open:b.open,high:b.high,low:b.low,close:b.close,volume:b.volume ?? 0}));
-  return bars.length >= 200 ? bars : null;
+  try {
+    // Yahoo Finance chart API - 3 years of daily data (EMA200 needs ~3-4x200 bars to converge)
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3y`;
+    
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    const result = data.chart?.result?.[0];
+    
+    if (!result?.timestamp || !result?.indicators?.quote?.[0]) return null;
+    
+    const timestamps = result.timestamp;
+    const quote = result.indicators.quote[0];
+    
+    const ohlcv: OHLCV[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (quote.close[i] != null) {
+        ohlcv.push({
+          date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+          open: quote.open[i] || quote.close[i],
+          high: quote.high[i] || quote.close[i],
+          low: quote.low[i] || quote.close[i],
+          close: quote.close[i],
+          volume: quote.volume[i] || 0
+        });
+      }
+    }
+    
+    return ohlcv.length > 50 ? ohlcv : null;
+  } catch (e) {
+    console.error(`[Yahoo Crypto] Error fetching ${symbol}:`, e);
+    return null;
+  }
 }
 
 // Analyze a single asset and return scored result
@@ -407,11 +442,11 @@ export async function POST(req: NextRequest) {
   }
   
   // ==========================================================================
-  // SCAN CRYPTO (CoinGecko daily series)
+  // SCAN CRYPTO (Yahoo Finance)
   // ==========================================================================
   console.log(`[scan-universe] Scanning ${CRYPTO_UNIVERSE.length} cryptocurrencies...`);
   
-  // Provider requests use the shared CoinGecko cache and rate coordinator
+  // Yahoo Finance can handle more requests per minute
   const CRYPTO_BATCH_SIZE = 10;
   const CRYPTO_DELAY = 150; // ms between batches (reduced to avoid timeout)
   
