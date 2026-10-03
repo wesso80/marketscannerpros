@@ -17,12 +17,16 @@ export async function GET(_req: NextRequest) {
     const eth = coins.find(c => c.symbol === 'ETH') ?? null;
     const total = evidence.totalOpenInterest;
     const dominance = (value: number) => total > 0 ? Number((value / total * 100).toFixed(1)) : null;
+    const btcOiShare = dominance(btc?.openInterest ?? 0);
+    const ethOiShare = dominance(eth?.openInterest ?? 0);
+    const altOiShare = dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0));
     const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'DERIVATIVES', lastUpdated: evidence.observedAt, maxAgeMs: 900_000 });
     return NextResponse.json({
       total: {
         openInterest: total, formatted: formatUSD(total), change24h: evidence.change24h,
-        btcOiShare: dominance(btc?.openInterest ?? 0), ethOiShare: dominance(eth?.openInterest ?? 0),
-        altOiShare: dominance(total - (btc?.openInterest ?? 0) - (eth?.openInterest ?? 0)),
+        btcOiShare, ethOiShare, altOiShare,
+        // Previous names. Readers written before the share rename keep working.
+        btcDominance: btcOiShare, ethDominance: ethOiShare, altDominance: altOiShare,
       },
       btc: btc ? { ...btc, formatted: formatUSD(btc.openInterest) } : null,
       eth: eth ? { ...eth, formatted: formatUSD(eth.openInterest) } : null,
