@@ -9,6 +9,7 @@ import {BASE_SCAN_KEY,CRYPTO_PAPER_BASE_NAME,MOMENTUM_KEY,baseBreakoutCandidates
 import {EARLY_SCAN_KEY} from './cryptoForwardScore';
 import type {MomentumScan,MomentumScanRow} from './cryptoVolumeMomentum';
 import type {BaseScan,BaseScanRow} from './cryptoBaseScan';
+import {BREAKOUT_VERDICT_KEY,parseVerdictSnapshot,publicBreakoutVerdict,snapshotIsStale,type PublicVerdict} from './cryptoBreakoutVerdict';
 /**
  * Read-only simulated crypto summary. Saved Redis snapshots and Postgres rows only: no provider calls, no orders.
  * Output is allow-listed. Stops, targets, quotes, bids/asks, size, quantity, notional and exit rules are never copied.
@@ -17,6 +18,9 @@ import type {BaseScan,BaseScanRow} from './cryptoBaseScan';
  * - momentum / earlyWatch: top 25. Stage MOMENTUM_VOLUME, then EARLY_WATCH, then VOLUME_WATCH; then relative volume desc; then symbol; then id.
  * - base: top 25 BASE rows, tightest widthPct, then tighter contraction, then symbol, then id.
  * - baseBreakout: top 25 from baseBreakoutCandidates (least extended first). Empty outside the current 4h window or when the daily base is over 48h; the rule's note says why.
+ *   Each row may carry `verdict` from the advisory breakout stamp (PASS / WARN / REJECT). That stamp is not a gate.
+ *   Verdict reasons are short sentences with no prices, sizes, or other levels. Missing stamp → verdict null.
+ *   verdictStale is true when the stamp is missing, older than two 15-minute cycles, or the momentum/base scans are stale.
  * - paper closed: latest 100 by exit time. winRate / avgR / totalR use every closed trade (summarizeCryptoPaper). winRate is a 0–1 fraction.
  * - dominance history: last 180 UTC days.
  *
@@ -62,10 +66,11 @@ export type SummaryCandidate={
  id:string;symbol:string;stage:string;kind:'BREAKOUT'|'CONTINUATION'|null;
  venue:string|null;pair:string|null;relativeVolume:number|null;asOf:string|null;
  extensionPct?:number;high?:number|null;low?:number|null;widthPct?:number|null;gapPct?:number|null;slopePct?:number|null;contraction?:number|null;
+ verdict?:PublicVerdict|null;
 };
 export type CandidatesSection=Section&{
  momentum:CappedList<SummaryCandidate>;base:CappedList<SummaryCandidate>;earlyWatch:CappedList<SummaryCandidate>;
- baseBreakout:CappedList<SummaryCandidate>&{note:string|null};
+ baseBreakout:CappedList<SummaryCandidate>&{note:string|null;verdictAsOf:string|null;verdictStale:boolean};
 };
 export type PaperOpen={symbol:string;entryPrice:number|null;currentR:number|null;openedAt:string|null};
 export type PaperClosed={symbol:string;outcome:string;exitReason:string;realisedR:number|null;openedAt:string|null;closedAt:string|null};
@@ -163,21 +168,25 @@ function baseList(value:unknown,error:string|null,now:number):CappedList<Summary
  const rows=scan.rows.filter((r):r is BaseScanRow=>!!r&&typeof r==='object'&&r.stage==='BASE'&&typeof r.id==='string').sort(byBase).map(baseCandidate);
  return cap(rows,f.asOf,f.stale);
 }
-function breakoutList(momentum:unknown,bases:unknown,momentumError:string|null,baseError:string|null,now:number):CandidatesSection['baseBreakout']{
- if(momentumError||baseError)return {...emptyList(momentumError||baseError),note:'Saved scans unavailable'};
+function breakoutList(momentum:unknown,bases:unknown,momentumError:string|null,baseError:string|null,verdicts:unknown,now:number):CandidatesSection['baseBreakout']{
+ const snap=parseVerdictSnapshot(verdicts);
+ const blank=(list:CappedList<SummaryCandidate>,note:string|null):CandidatesSection['baseBreakout']=>({...list,note,verdictAsOf:null,verdictStale:true});
+ if(momentumError||baseError)return blank(emptyList(momentumError||baseError),'Saved scans unavailable');
  const m=momentum==null?null:asMomentum(momentum),b=bases==null?null:asBase(bases);
- if(momentum!=null&&!m||bases!=null&&!b)return {...emptyList('Saved scan unavailable'),note:'Saved scans unavailable'};
- if(!m||!b)return {...emptyList(null),note:'Saved scans unavailable'};
+ if(momentum!=null&&!m||bases!=null&&!b)return blank(emptyList('Saved scan unavailable'),'Saved scans unavailable');
+ if(!m||!b)return blank(emptyList(null),'Saved scans unavailable');
  const mf=freshness(m.startedAt,STALE_AFTER_MS.momentum,now),bf=freshness(b.startedAt,STALE_AFTER_MS.base,now);
  const found=baseBreakoutCandidates(m,b,now);
- const rows=found.candidates.map(c=>({...candidate(c.row),extensionPct:c.extensionPct})).sort((a,c)=>a.extensionPct!-c.extensionPct!||a.symbol.localeCompare(c.symbol)||a.id.localeCompare(c.id));
- return {...cap(rows,mf.asOf,mf.stale||bf.stale),note:found.note};
+ const verdictStale=!snap||snapshotIsStale(snap.asOf,now,m.startedAt,b.startedAt);
+ const verdictAsOf=snap&&Number.isFinite(Date.parse(snap.asOf))?new Date(Date.parse(snap.asOf)).toISOString():null;
+ const rows=found.candidates.map(c=>({...candidate(c.row),extensionPct:c.extensionPct,verdict:snap?publicBreakoutVerdict(snap,c.row.id,now,m.startedAt,b.startedAt):null})).sort((a,c)=>a.extensionPct!-c.extensionPct!||a.symbol.localeCompare(c.symbol)||a.id.localeCompare(c.id));
+ return {...cap(rows,mf.asOf,mf.stale||bf.stale),note:found.note,verdictAsOf,verdictStale};
 }
-export function shapeCandidates(input:{momentum:unknown;momentumError:string|null;bases:unknown;baseError:string|null;early:unknown;earlyError:string|null},now:number):CandidatesSection{
+export function shapeCandidates(input:{momentum:unknown;momentumError:string|null;bases:unknown;baseError:string|null;early:unknown;earlyError:string|null;verdicts?:unknown},now:number):CandidatesSection{
  const momentum=namedList(input.momentum,input.momentumError,STALE_AFTER_MS.momentum,now);
  const base=baseList(input.bases,input.baseError,now);
  const earlyWatch=namedList(input.early,input.earlyError,STALE_AFTER_MS.early,now);
- const baseBreakout=breakoutList(input.momentum,input.bases,input.momentumError,input.baseError,now);
+ const baseBreakout=breakoutList(input.momentum,input.bases,input.momentumError,input.baseError,input.verdicts??null,now);
  const lists=[momentum,base,earlyWatch];
  const unavailable=lists.every(l=>l.unavailable);
  return {asOf:oldest(lists.map(l=>l.asOf)),stale:lists.some(l=>l.stale),unavailable,error:unavailable?(lists.find(l=>l.error)?.error??null):null,momentum,base,earlyWatch,baseBreakout};
@@ -289,12 +298,12 @@ function emptyCandidates(now:number):CandidatesSection{
  return shapeCandidates({momentum:null,momentumError:'Saved scan unavailable',bases:null,baseError:'Saved scan unavailable',early:null,earlyError:'Saved scan unavailable'},now);
 }
 export async function buildCryptoSummary(now=Date.now()):Promise<CryptoSummary>{
- const [mom,base,early,global,momentumSleeve,baseSleeve,table]=await Promise.all([
-  readKey(MOMENTUM_KEY),readKey(BASE_SCAN_KEY),readKey(EARLY_SCAN_KEY),readKey(GLOBAL_KEY),
+ const [mom,base,early,global,verdicts,momentumSleeve,baseSleeve,table]=await Promise.all([
+  readKey(MOMENTUM_KEY),readKey(BASE_SCAN_KEY),readKey(EARLY_SCAN_KEY),readKey(GLOBAL_KEY),readKey(BREAKOUT_VERDICT_KEY),
   readSleeve(CRYPTO_PAPER_NAME,now),readSleeve(CRYPTO_PAPER_BASE_NAME,now),readDominanceTable(),
  ]);
  let candidates:CandidatesSection;
- try{candidates=shapeCandidates({momentum:mom.value,momentumError:mom.error,bases:base.value,baseError:base.error,early:early.value,earlyError:early.error},now);}
+ try{candidates=shapeCandidates({momentum:mom.value,momentumError:mom.error,bases:base.value,baseError:base.error,early:early.value,earlyError:early.error,verdicts:verdicts.error?null:verdicts.value},now);}
  catch{candidates=emptyCandidates(now);}
  const paper:PaperSection=(()=>{const unavailable=momentumSleeve.sleeve.unavailable&&baseSleeve.sleeve.unavailable;return {asOf:oldest([momentumSleeve.sleeve.asOf,baseSleeve.sleeve.asOf]),stale:momentumSleeve.sleeve.stale||baseSleeve.sleeve.stale,unavailable,error:unavailable?(momentumSleeve.sleeve.error||baseSleeve.sleeve.error):null,momentum:momentumSleeve.sleeve,base:baseSleeve.sleeve};})();
  const workspaceId=momentumSleeve.workspaceId??baseSleeve.workspaceId;

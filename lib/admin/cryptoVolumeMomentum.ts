@@ -8,6 +8,8 @@ import {parseDailyVenue,selectDailyPair,type DailyPair} from './cryptoDailyVenue
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import {createBaseScan} from './cryptoBaseScan';
 const H=3600000,F=4*H;
+/** Chase and volume gates inside assessVolumeMomentum. ATR multiples are versus the pre-signal ATR. */
+export const MOMENTUM_LIMITS={volumeExpansion:1.5,aboveSmaAtr:2.5,pastTriggerAtr:1,signalRangeAtr:3} as const;
 export type VolumeMomentum={stage:'PENDING'|'EARLY_WATCH'|'MOMENTUM_VOLUME'|'VOLUME_WATCH'|'EXTENDED'|'NO_SIGNAL'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;relativeVolume:number|null;changePct:number|null;trigger:number|null;close:number|null;atr:number|null;stop?:number;target?:number;maxEntry?:number;entryFloor?:number;sma20?:number;signal?:{t:number;o:number;h:number;l:number;c:number};kind:'BREAKOUT'|'CONTINUATION'|null;
  /** The 25 validated exchange candles the rule read, newest last, kept on named rows only so the chart can show price and volume. */
  bars?:{t:number;o:number;h:number;l:number;c:number;v:number}[]};
@@ -40,15 +42,15 @@ export function assessVolumeMomentum(bars:ExchangeBar[],now:number,interval=F):V
  const atr=mean(tr.slice(-14));if(atr<=0)return fail('No usable range baseline');
   Object.assign(result,{asOf:new Date(last.t).toISOString(),relativeVolume:rv,changePct:change,trigger,close:last.c,atr,sma20:sma,signal:{t:last.t,o:last.o,h:last.h,l:last.l,c:last.c}});
  const rising=last.c>sma&&sma>oldSma,breakout=last.c>trigger,continuation=change>=1&&last.c>prev.h;
- const expanded=rv>=1.5;
+ const M=MOMENTUM_LIMITS,expanded=rv>=M.volumeExpansion;
  if(expanded&&rising&&(breakout||continuation)){
   result.kind=breakout?'BREAKOUT':'CONTINUATION';
   const stop=Math.min(...b.slice(-6).map(x=>x.l))-0.25*atr,risk=last.c-stop;
   if(stop<=0||risk<=0)return fail('Invalid structural stop');
   Object.assign(result,{stop,target:last.c+2*risk,maxEntry:Math.min(last.c+0.5*atr,(last.c+2*risk+1.5*stop)/2.5),entryFloor:breakout?trigger:prev.h});
-  const stretched=last.c-sma>2.5*atr||last.c-trigger>atr||Math.max(last.h-last.l,Math.abs(last.h-prev.c),Math.abs(last.l-prev.c))>3*atr;
+  const stretched=last.c-sma>M.aboveSmaAtr*atr||last.c-trigger>M.pastTriggerAtr*atr||Math.max(last.h-last.l,Math.abs(last.h-prev.c),Math.abs(last.l-prev.c))>M.signalRangeAtr*atr;
   result.stage=stretched?'EXTENDED':'MOMENTUM_VOLUME';
-  result.reason=stretched?'Price and volume advanced, but the completed move exceeds the ATR chase limits':'Completed '+label+' '+(breakout?'20-bar breakout':'trend continuation')+' with at least 1.5× prior 20-bar volume; no base required';
+  result.reason=stretched?'Price and volume advanced, but the completed move exceeds the ATR chase limits':'Completed '+label+' '+(breakout?'20-bar breakout':'trend continuation')+` with at least ${M.volumeExpansion}× prior 20-bar volume; no base required`;
  }else if(expanded){result.stage='VOLUME_WATCH';result.reason=`Elevated ${label} volume without the required upward price confirmation; not a buy signal`;}
  else{result.stage='NO_SIGNAL';result.reason=`No qualifying price-and-volume momentum setup on the latest completed ${label} candle`;}
  if(result.stage!=='NO_SIGNAL')result.bars=b.map(x=>({t:x.t,o:x.o,h:x.h,l:x.l,c:x.c,v:x.v}));
