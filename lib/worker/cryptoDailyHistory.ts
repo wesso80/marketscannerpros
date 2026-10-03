@@ -125,25 +125,121 @@ export interface DailyHistoryResult {
 const FULL_CALLS = WORKER_DAILY_WINDOWS + 1;
 const INCREMENT_CALLS = 2;
 
+/**
+ * Full daily series kept in THIS process at once. Planning metadata (last open, fullAt, checkedAt) stays for every
+ * coin; the bar arrays are reloaded from `load` (Redis) when the next indicator pass needs them. One series is about
+ * 1,080 bars — holding the whole universe was the worker's steady heap. The persisted entry is still the full window.
+ */
+export const MAX_RESIDENT_DAILY_SERIES = 1;
+
+interface DailyHistoryMeta {
+  coinId: string;
+  fullAt: number;
+  checkedAt: number;
+  /** Open time of the newest bar, so a plan can be made after the array has been released. */
+  lastOpenMs: number;
+  barCount: number;
+}
+
 export class CryptoDailyHistoryCache {
-  private readonly entries = new Map<string, DailyHistoryEntry>();
+  /** Clock + last-open for every coin. Small. */
+  private readonly meta = new Map<string, DailyHistoryMeta>();
+  /** Full bar arrays currently on the heap. Capped by `maxResidentSeries`. */
+  private readonly bars = new Map<string, Bar[]>();
+  private readonly residentOrder: string[] = [];
   private readonly loaded = new Set<string>();
+  /** Coin whose bars must survive eviction for the in-flight read. */
+  private pin: string | null = null;
 
-  constructor(private readonly deps: DailyHistoryDeps, private readonly cfg: DailyHistoryConfig = DEFAULT_DAILY_HISTORY_CONFIG) {}
+  constructor(
+    private readonly deps: DailyHistoryDeps,
+    private readonly cfg: DailyHistoryConfig = DEFAULT_DAILY_HISTORY_CONFIG,
+    private readonly maxResidentSeries = MAX_RESIDENT_DAILY_SERIES,
+  ) {}
 
-  peek(coinId: string): DailyHistoryEntry | undefined {
-    return this.entries.get(coinId);
+  /** Resident full series, for tests and a memory gauge. Metadata-only coins are not counted. */
+  residentSeriesCount(): number {
+    return this.bars.size;
   }
 
-  private async hydrate(coinId: string): Promise<void> {
-    if (this.loaded.has(coinId) || this.entries.has(coinId) || !this.deps.load) { this.loaded.add(coinId); return; }
-    this.loaded.add(coinId);
+  holdsBars(coinId: string): boolean {
+    return this.bars.has(coinId);
+  }
+
+  /** Drop every in-process bar array. Metadata stays, so the next read reloads persistence instead of refetching. */
+  releaseBarPayloads(): void {
+    this.bars.clear();
+    this.residentOrder.length = 0;
+  }
+
+  peek(coinId: string): DailyHistoryEntry | undefined {
+    const meta = this.meta.get(coinId);
+    const bars = this.bars.get(coinId);
+    if (!meta || !bars) return undefined;
+    return { coinId: meta.coinId, bars, fullAt: meta.fullAt, checkedAt: meta.checkedAt };
+  }
+
+  private remember(entry: DailyHistoryEntry, keepBars: boolean): void {
+    const lastOpenMs = entry.bars.length ? Date.parse(entry.bars[entry.bars.length - 1].t) : Number.NaN;
+    this.meta.set(entry.coinId, {
+      coinId: entry.coinId,
+      fullAt: entry.fullAt,
+      checkedAt: entry.checkedAt,
+      lastOpenMs,
+      barCount: entry.bars.length,
+    });
+    if (keepBars && entry.bars.length) this.retain(entry.coinId, entry.bars);
+  }
+
+  private retain(coinId: string, bars: Bar[]): void {
+    this.bars.set(coinId, bars);
+    const at = this.residentOrder.indexOf(coinId);
+    if (at >= 0) this.residentOrder.splice(at, 1);
+    this.residentOrder.push(coinId);
+    const cap = Math.max(1, Math.floor(this.maxResidentSeries) || 1);
+    while (this.bars.size > cap) {
+      const victim = this.residentOrder.find((id) => id !== this.pin && this.bars.has(id));
+      if (!victim) break;
+      this.bars.delete(victim);
+      const i = this.residentOrder.indexOf(victim);
+      if (i >= 0) this.residentOrder.splice(i, 1);
+    }
+  }
+
+  private entryFrom(coinId: string, bars: Bar[]): DailyHistoryEntry | null {
+    const meta = this.meta.get(coinId);
+    if (!meta) return null;
+    return { coinId, bars, fullAt: meta.fullAt, checkedAt: meta.checkedAt };
+  }
+
+  private async readStored(coinId: string): Promise<DailyHistoryEntry | null> {
+    if (!this.deps.load) return null;
     try {
       const stored = await this.deps.load(coinId);
-      if (isDailyHistoryEntry(stored) && stored.coinId === coinId && stored.bars.length) this.entries.set(coinId, stored);
+      if (isDailyHistoryEntry(stored) && stored.coinId === coinId && stored.bars.length) return stored;
     } catch (err) {
       this.deps.log?.(`daily history load failed for ${coinId}: ${err instanceof Error ? err.message : String(err)}`);
     }
+    return null;
+  }
+
+  private async hydrate(coinId: string): Promise<void> {
+    if (this.loaded.has(coinId)) return;
+    this.loaded.add(coinId);
+    if (this.meta.has(coinId) || !this.deps.load) return;
+    const stored = await this.readStored(coinId);
+    if (stored) this.remember(stored, true);
+  }
+
+  /** Bars for a compute. Resident copy if we still have it, otherwise the persisted full window. */
+  private async ensureBars(coinId: string): Promise<Bar[] | null> {
+    const resident = this.bars.get(coinId);
+    if (resident?.length) return resident;
+    const stored = await this.readStored(coinId);
+    if (!stored) return null;
+    if (!this.meta.has(coinId)) this.remember(stored, false);
+    this.retain(coinId, stored.bars);
+    return stored.bars;
   }
 
   private async persist(entry: DailyHistoryEntry): Promise<void> {
@@ -155,58 +251,87 @@ export class CryptoDailyHistoryCache {
 
   async getBars(symbol: string, coinId: string): Promise<DailyHistoryResult> {
     const now = (this.deps.now ?? Date.now)();
-    await this.hydrate(coinId);
-    const entry = this.entries.get(coinId);
-    let plan = planDailyHistoryFetch(entry, now, this.cfg);
-
-    if (plan === 'none') {
-      const bars = trimDailyWindow(entry!.bars, now);
-      if (bars.length !== entry!.bars.length) this.entries.set(coinId, { ...entry!, bars });
-      return { bars, plan, calls: 0, changed: false, warnings: [] };
-    }
-
-    if (plan === 'incremental') {
-      const lastOpen = Date.parse(entry!.bars[entry!.bars.length - 1].t);
-      try {
-        const inc = await this.deps.fetchIncrement(coinId, lastOpen, now);
-        if (inc) {
-          const bars = mergeDailyHistory(entry!.bars, inc.bars, inc.volumes, now);
-          const newLast = bars.length ? Date.parse(bars[bars.length - 1].t) : lastOpen;
-          const next: DailyHistoryEntry = { ...entry!, bars, checkedAt: now };
-          this.entries.set(coinId, next);
-          const changed = newLast > lastOpen || bars.length !== entry!.bars.length || inc.bars.length > 0;
-          if (newLast > lastOpen) await this.persist(next);
-          return { bars, plan, calls: INCREMENT_CALLS, changed, warnings: inc.warnings };
-        }
-        plan = 'full'; // gap too long for one window
-      } catch (err) {
-        // Keep serving the held history (at most one candle behind) and retry after retryMs.
-        this.entries.set(coinId, { ...entry!, checkedAt: now });
-        this.deps.log?.(`daily increment failed for ${symbol} (${coinId}): ${err instanceof Error ? err.message : String(err)}`);
-        return { bars: trimDailyWindow(entry!.bars, now), plan, calls: INCREMENT_CALLS, changed: false, warnings: ['incremental daily fetch failed; serving held history'] };
-      }
-    }
-
-    // Full fetch.
+    this.pin = coinId;
     try {
-      const full = await this.deps.fetchFull(symbol, coinId, now);
-      if (!full.bars.length) {
-        if (entry) {
-          this.entries.set(coinId, { ...entry, checkedAt: now });
-          return { bars: trimDailyWindow(entry.bars, now), plan: 'full', calls: FULL_CALLS, changed: false, warnings: full.warnings };
+      await this.hydrate(coinId);
+      const meta = this.meta.get(coinId);
+      const planEntry = meta && meta.barCount > 0 && Number.isFinite(meta.lastOpenMs)
+        ? {
+            coinId,
+            bars: [{ t: new Date(meta.lastOpenMs).toISOString(), open: 0, high: 0, low: 0, close: 0, volume: null }],
+            fullAt: meta.fullAt,
+            checkedAt: meta.checkedAt,
+          }
+        : undefined;
+      let plan = planDailyHistoryFetch(planEntry, now, this.cfg);
+
+      if (plan === 'none') {
+        const held = await this.ensureBars(coinId);
+        const entry = held ? this.entryFrom(coinId, held) : null;
+        if (!entry) {
+          plan = 'full';
+        } else {
+          const bars = trimDailyWindow(entry.bars, now);
+          if (bars.length !== entry.bars.length) this.remember({ ...entry, bars }, true);
+          return { bars, plan, calls: 0, changed: false, warnings: [] };
         }
-        return { bars: [], plan: 'full', calls: FULL_CALLS, changed: false, warnings: full.warnings };
       }
-      const next: DailyHistoryEntry = { coinId, bars: full.bars, fullAt: now, checkedAt: now };
-      this.entries.set(coinId, next);
-      await this.persist(next);
-      return { bars: full.bars, plan: 'full', calls: FULL_CALLS, changed: true, warnings: full.warnings };
-    } catch (err) {
-      if (entry) {
-        this.entries.set(coinId, { ...entry, checkedAt: now });
-        return { bars: trimDailyWindow(entry.bars, now), plan: 'full', calls: FULL_CALLS, changed: false, warnings: ['full daily fetch failed; serving held history'] };
+
+      if (plan === 'incremental') {
+        const held = await this.ensureBars(coinId);
+        const entry = held ? this.entryFrom(coinId, held) : null;
+        if (!entry) {
+          plan = 'full';
+        } else {
+          const lastOpen = Date.parse(entry.bars[entry.bars.length - 1].t);
+          try {
+            const inc = await this.deps.fetchIncrement(coinId, lastOpen, now);
+            if (inc) {
+              const bars = mergeDailyHistory(entry.bars, inc.bars, inc.volumes, now);
+              const newLast = bars.length ? Date.parse(bars[bars.length - 1].t) : lastOpen;
+              const next: DailyHistoryEntry = { ...entry, bars, checkedAt: now };
+              this.remember(next, true);
+              const changed = newLast > lastOpen || bars.length !== entry.bars.length || inc.bars.length > 0;
+              if (newLast > lastOpen) await this.persist(next);
+              return { bars, plan, calls: INCREMENT_CALLS, changed, warnings: inc.warnings };
+            }
+            plan = 'full'; // gap too long for one window
+          } catch (err) {
+            // Keep serving the held history (at most one candle behind) and retry after retryMs.
+            this.remember({ ...entry, checkedAt: now }, true);
+            this.deps.log?.(`daily increment failed for ${symbol} (${coinId}): ${err instanceof Error ? err.message : String(err)}`);
+            return { bars: trimDailyWindow(entry.bars, now), plan, calls: INCREMENT_CALLS, changed: false, warnings: ['incremental daily fetch failed; serving held history'] };
+          }
+        }
       }
-      throw err;
+
+      // Full fetch. Indicators still see this whole window; only other coins' arrays are dropped.
+      try {
+        const full = await this.deps.fetchFull(symbol, coinId, now);
+        const prior = this.meta.get(coinId);
+        if (!full.bars.length) {
+          if (prior && prior.barCount > 0) {
+            this.meta.set(coinId, { ...prior, checkedAt: now });
+            const held = await this.ensureBars(coinId);
+            return { bars: held ? trimDailyWindow(held, now) : [], plan: 'full', calls: FULL_CALLS, changed: false, warnings: full.warnings };
+          }
+          return { bars: [], plan: 'full', calls: FULL_CALLS, changed: false, warnings: full.warnings };
+        }
+        const next: DailyHistoryEntry = { coinId, bars: full.bars, fullAt: now, checkedAt: now };
+        this.remember(next, true);
+        await this.persist(next);
+        return { bars: full.bars, plan: 'full', calls: FULL_CALLS, changed: true, warnings: full.warnings };
+      } catch (err) {
+        const prior = this.meta.get(coinId);
+        if (prior && prior.barCount > 0) {
+          this.meta.set(coinId, { ...prior, checkedAt: now });
+          const held = await this.ensureBars(coinId);
+          if (held) return { bars: trimDailyWindow(held, now), plan: 'full', calls: FULL_CALLS, changed: false, warnings: ['full daily fetch failed; serving held history'] };
+        }
+        throw err;
+      }
+    } finally {
+      if (this.pin === coinId) this.pin = null;
     }
   }
 }
