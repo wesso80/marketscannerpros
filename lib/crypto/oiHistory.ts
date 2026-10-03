@@ -38,9 +38,18 @@ export async function getOiEvidence() {
   const now = Date.now();
   const basketKey = 'oi:fixed-basket:v1';
   const identityKey = 'oi:fixed-constituents:v1';
-  const [saved, pinned] = redis ? await Promise.all([
-    redis.get<StableOiObservation[]>(basketKey), redis.get<StableOiObservation[]>(identityKey),
-  ]) : [null, null];
+  let saved: StableOiObservation[] | null = null;
+  let pinned: StableOiObservation[] | null = null;
+  let cacheUp = Boolean(redis);
+  if (redis) {
+    try {
+      [saved, pinned] = await Promise.all([
+        redis.get<StableOiObservation[]>(basketKey), redis.get<StableOiObservation[]>(identityKey),
+      ]);
+    } catch {
+      cacheUp = false;
+    }
+  }
   const build = (previous:StableOiObservation[]) => {
     const universe = previous.length ? previous.map(c=>c.symbol) : SYMBOLS;
     let droppedContracts = 0;
@@ -61,17 +70,17 @@ export async function getOiEvidence() {
   const hadPin = Boolean((saved ?? pinned)?.length);
   let { observations, droppedContracts } = build(saved ?? pinned ?? []);
   if (!observations.length) {
-    if (hadPin && redis) {
+    if (hadPin && redis && cacheUp) {
       // The saved contracts have all stopped trading. Forget them so the next read can pin what is live.
-      try { await redis.del(identityKey, basketKey); } catch { /* the response still must not depend on a manual delete */ }
+      try { await redis.del(identityKey, basketKey); } catch { cacheUp = false; }
       const coverage = `${droppedContracts} pinned contract(s) stopped trading and were removed. The basket rebuilds from the next live snapshot. Not the whole market.`;
       return {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
         basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: 0, change24h: null,
-        comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: 'ok' as const,
+        comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: cacheUp ? 'ok' as const : 'unavailable' as const,
       };
     }
-    if (!redis) {
+    if (!redis || !cacheUp) {
       const coverage = 'No live open-interest quotes, and the fixed basket is unavailable because the cache is down. Not the whole market.';
       return {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
@@ -81,23 +90,27 @@ export async function getOiEvidence() {
     }
     throw new Error('No fresh open-interest observations');
   }
-  if (redis) {
-    if (!pinned?.length) {
-      // Persist the identity once, without expiry. Concurrent bootstraps must adopt the same winning basket.
-      await redis.set(identityKey, observations, { nx:true });
-      const winner = await redis.get<StableOiObservation[]>(identityKey);
-      if (winner?.length) ({ observations, droppedContracts } = build(winner));
-    } else if (droppedContracts > 0) {
-      // Keep the reduced set. A delisted contract must not stay pinned until someone deletes the key.
-      await redis.set(identityKey, observations);
+  if (redis && cacheUp) {
+    try {
+      if (!pinned?.length) {
+        // Persist the identity once, without expiry. Concurrent bootstraps must adopt the same winning basket.
+        await redis.set(identityKey, observations, { nx:true });
+        const winner = await redis.get<StableOiObservation[]>(identityKey);
+        if (winner?.length) ({ observations, droppedContracts } = build(winner));
+      } else if (droppedContracts > 0) {
+        // Keep the reduced set. A delisted contract must not stay pinned until someone deletes the key.
+        await redis.set(identityKey, observations);
+      }
+      if (observations.length) await redis.set(basketKey, observations, { ex:30*24*3600 });
+    } catch {
+      cacheUp = false;
     }
-    if (observations.length) await redis.set(basketKey, observations, { ex:30*24*3600 });
   }
   if (!observations.length) throw new Error('No fresh open-interest observations');
   const { compared: coins, persisted } = await compareAndStore(observations, now);
   const carriedContracts = observations.reduce((n,c)=>n+c.carriedContracts,0);
-  const persistence = redis && persisted ? 'ok' as const : 'unavailable' as const;
-  const coverage = !redis
+  const persistence = redis && cacheUp && persisted ? 'ok' as const : 'unavailable' as const;
+  const coverage = !redis || !cacheUp
     ? 'Live CoinGecko perpetual snapshot only. The fixed basket and hourly comparisons are unavailable because the cache is down. Not the whole market.'
     : !persisted
       ? 'Live open interest is available, but the hourly snapshot could not be stored because the cache write failed. Not the whole market.'
