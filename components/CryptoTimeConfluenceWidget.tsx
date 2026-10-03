@@ -149,7 +149,7 @@ export default function CryptoTimeConfluenceWidget({
       {/* Footer */}
       <div className="mt-6 pt-4 border-t border-gray-800">
         <div className="text-xs text-gray-500 text-center">
-          🌏 Sydney Time: Daily close at 11:00 AM (UTC+11)
+          Daily close: 00:00 UTC (10:00 AEST / 11:00 AEDT)
         </div>
       </div>
     </div>

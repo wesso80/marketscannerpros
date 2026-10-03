@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { parseBcbSgs, fetchBrazilM2 } from '@/lib/intelligence/data/providers/bcbM2';
 import { parseStatCanVector, fetchCanadaM2 } from '@/lib/intelligence/data/providers/statcanM2';
 import { parseRbaD3, fetchAustraliaM2 } from '@/lib/intelligence/data/providers/rbaM2';
@@ -207,3 +207,7 @@ describe('Wave-3 integration', () => {
     expect(b.eligibility.calculationStatus).toBe('PARTIAL');
   });
 });
+
+// Hold time next to fixture releases so the coverage tests are independent of the wall clock.
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-07-01T12:00:00Z')); });
+afterEach(() => vi.useRealTimers());

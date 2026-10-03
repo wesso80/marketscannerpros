@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   fetchChinaM2History, fetchChinaM2Latest, pbocMoneyBankingUrl, PBOC_MONEY_SUPPLY_ARCHIVE,
 } from '@/lib/intelligence/data/providers/pbocM2';
@@ -132,3 +132,7 @@ describe('Interpretation eligibility', () => {
     expect(b.eligibility.weightedCoverageThreshold).toBe(40);
   });
 });
+
+// Hold time next to fixture releases so the coverage tests are independent of the wall clock.
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-01T12:00:00Z')); });
+afterEach(() => vi.useRealTimers());

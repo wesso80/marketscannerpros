@@ -4,6 +4,8 @@ import { avTakeToken } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
 import { oldestTradingDay, parseAlphaVantageEasternTime, parseTradingDay } from '@/lib/analysis/providerAsOf';
 
+import { lastCompletedUsSessionDate, isUsRegularSessionOpen } from '@/lib/time/usSession';
+
 // Sector ETF mappings
 const SECTOR_ETFS = [
   { symbol: 'XLK', name: 'Technology', color: 'var(--msp-info)' },
@@ -51,6 +53,7 @@ interface SectorData {
   yearly?: number | null;
   /** Quote's trading day from GLOBAL_QUOTE ("07. latest trading day"). */
   tradingDay?: string | null;
+  dataStatus?: 'fresh' | 'stale' | 'delayed' | 'unavailable';
   // Technical overlay
   rsi14?: number | null;
   adx14?: number | null;
@@ -232,7 +235,10 @@ export async function GET(req: NextRequest) {
           };
         });
         
-        const enriched = await enrichSectors(sectorData);
+        const asOf = parseAlphaVantageEasternTime(data['Meta Data']?.['Last Refreshed']);
+        const enriched = await enrichSectors(sectorData.map(s => ({ ...s,
+          dataStatus: s.changePercent == null || !asOf ? 'unavailable' as const : Date.now()-Date.parse(asOf)>30*60000 ? 'stale' as const : 'fresh' as const,
+        })));
         const fetchedAt = new Date().toISOString();
         return NextResponse.json({
           sectors: enriched,
@@ -290,9 +296,14 @@ export async function GET(req: NextRequest) {
     });
     
     const results = await Promise.all(sectorPromises);
-    const validSectors = results.filter(Boolean) as SectorData[];
+    const validSectors: SectorData[] = SECTOR_ETFS.map((etf,i) => {
+      const row = results[i];
+      if (!row) return { ...etf, weight:SECTOR_WEIGHTS[etf.symbol] || 5, changePercent:null, dataStatus:'unavailable' };
+      const stale = !row.tradingDay || row.tradingDay < lastCompletedUsSessionDate(Date.now());
+      return { ...row, dataStatus:stale ? 'stale' : isUsRegularSessionOpen() ? 'delayed' : 'fresh' };
+    });
     
-    if (validSectors.length > 0) {
+    if (validSectors.some(s => s.dataStatus !== 'unavailable')) {
       const enriched = await enrichSectors(validSectors);
       const fetchedAt = new Date().toISOString();
       return NextResponse.json({

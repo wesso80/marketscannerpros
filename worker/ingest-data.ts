@@ -1378,14 +1378,14 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
     let quote: WorkerEquityQuote | null = ctx.bulkQuote;
     if (quote) {
       if (!ctx.bulkQuotePersisted) await upsertQuote(symbol, quote);
-      await cacheQuote(symbol, quote);
+      await cacheQuote(symbol, { ...quote, assetClass: 'equity' });
     } else if (ctx.quotesAllowed) {
       quote = await fetchAVGlobalQuote(symbol);
       out.apiCalls++;
       out.avGlobalQuoteCalls++;
       if (quote) {
         await upsertQuote(symbol, quote);
-        await cacheQuote(symbol, quote);
+        await cacheQuote(symbol, { ...quote, assetClass: 'equity' });
       }
     }
 

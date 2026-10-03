@@ -480,7 +480,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
             <section className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/60">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span>
-                  Source: <span className="text-white/85">{data?.meta?.provider === 'curated' || !data?.meta ? 'Curated official-schedule seed (no live provider configured)' : `Live provider (${data.meta.provider}) + curated seed`}</span>
+                  Source: <span className="text-white/85">{data?.meta?.provider === 'curated' || !data?.meta ? 'Schedule only — curated dates; no live releases or consensus feed configured' : `Live provider (${data.meta.provider}) + curated seed`}</span>
                 </span>
                 {data?.meta ? (
                   <span>

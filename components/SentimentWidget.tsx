@@ -235,7 +235,7 @@ export default function SentimentWidget({
             {/* Source & timestamp */}
             <div className="text-xs text-slate-500 flex justify-between items-center">
               <span>
-                {activeTab === 'crypto' ? 'Source: Alternative.me' : 'Source: MSP Proprietary'}
+                {activeTab === 'crypto' ? 'Source: CoinGecko-derived MSP proxy' : 'Source: MSP Proprietary'}
               </span>
               <span>
                 {activeData.stale && (

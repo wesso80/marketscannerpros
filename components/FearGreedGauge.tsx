@@ -13,6 +13,7 @@ interface FearGreedData {
     value: number;
     classification: string;
     date: string;
+    basis?: string;
   }>;
   market: string;
   source: string;
@@ -217,7 +218,7 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
       {showHistory && data.history.length > 0 && (
         <>
           <div className="mt-4 flex items-end gap-1 h-12">
-            {data.history.slice(0, 14).reverse().map((h, i) => (
+            {data.history.slice(-14).map((h, i) => (
               <div
                 key={i}
                 className="flex-1 rounded-t transition-all hover:opacity-100 cursor-pointer"
@@ -226,7 +227,7 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
                   backgroundColor: getColor(h.value),
                   opacity: 0.5 + (i / 14) * 0.5,
                 }}
-                title={`${new Date(h.date).toLocaleDateString()}: ${h.value} (${h.classification})`}
+                title={`${new Date(h.date).toLocaleDateString()}: ${h.value} (${h.classification}); ${h.basis === 'observed_inputs' ? 'observed inputs' : 'modelled using current stablecoin dominance'}`}
               />
             ))}
           </div>
@@ -239,7 +240,7 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
 
       {/* Source attribution */}
       <div className="mt-3 text-xs text-slate-500 text-right">
-        Source: Alternative.me
+        Source: CoinGecko-derived MSP proxy. History mixes retained observations with explicitly modelled values.
       </div>
     </div>
   );

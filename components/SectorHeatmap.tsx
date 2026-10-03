@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 interface SectorData {
   symbol: string;
+  dataStatus?: 'fresh' | 'stale' | 'delayed' | 'unavailable';
   name: string;
   price?: number;
   change?: number;
@@ -326,6 +327,9 @@ export default function SectorHeatmap() {
                 <span className="text-white/70 text-xs drop-shadow">
                   {item.sector.symbol}
                 </span>
+                {item.sector.dataStatus && item.sector.dataStatus !== 'fresh' && (
+                  <span className="text-xs text-amber-200">{item.sector.dataStatus.toUpperCase()}</span>
+                )}
               </div>
               
               {/* Hover tooltip - positioned to float above */}

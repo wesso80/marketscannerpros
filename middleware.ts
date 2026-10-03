@@ -1,3 +1,4 @@
+import { consumeApiQuota, GLOBAL_API_WINDOW_MS } from '@/lib/apiQuota';
 import { discoveryOnlyAction, ADMIN_DISCOVERY_ONLY_MESSAGE } from './lib/admin/discoveryOnly';
 import { pausedAdminRequest, ADMIN_EQUITIES_PAUSED_MESSAGE } from './lib/admin/adminEquities';
 import { NextResponse } from 'next/server';
@@ -99,8 +100,6 @@ function sessionMatchesAdminList(
 }
 
 // ─── Global API rate limiter (Edge-compatible, in-memory) ───
-const GLOBAL_API_WINDOW_MS = 60_000;
-const GLOBAL_API_MAX = 300;
 
 const apiHits = new Map<string, { count: number; windowStart: number }>();
 
@@ -113,17 +112,6 @@ function getClientIP(req: NextRequest): string {
     req.headers.get('x-real-ip') ||
     '0.0.0.0'
   );
-}
-
-function isApiRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = apiHits.get(ip);
-  if (!entry || now - entry.windowStart > GLOBAL_API_WINDOW_MS) {
-    apiHits.set(ip, { count: 1, windowStart: now });
-    return false;
-  }
-  entry.count++;
-  return entry.count > GLOBAL_API_MAX;
 }
 
 // Prune stale entries every 5 minutes
@@ -159,10 +147,11 @@ export async function middleware(req: NextRequest) {
   }
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/internal/') && !pathname.startsWith('/api/scanner/') && !pathname.startsWith('/api/jobs/') && !pathname.startsWith('/api/catalyst/') && !pathname.startsWith('/api/alerts/')) {
     const ip = getClientIP(req);
-    if (isApiRateLimited(ip)) {
+    const quota = consumeApiQuota(apiHits, ip);
+    if (quota.limited) {
       return NextResponse.json(
         { error: 'Rate limit exceeded — try again shortly' },
-        { status: 429, headers: { 'Retry-After': '60' } },
+        { status: 429, headers: { 'Retry-After': String(quota.retryAfter) } },
       );
     }
   }

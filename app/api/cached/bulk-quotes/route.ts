@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCachedMulti, CACHE_KEYS, CACHE_TTL, setCachedMulti } from '@/lib/redis';
 import { q } from '@/lib/db';
+import { serializePublicQuote } from '@/lib/market-data/publicQuote';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   for (let i = 0; i < symbols.length; i++) {
     if (cachedValues[i]) {
-      results[symbols[i]] = { ...cachedValues[i], source: 'cache' };
+      results[symbols[i]] = { ...serializePublicQuote(cachedValues[i]), source: 'cache' };
     } else {
       missingSymbols.push(symbols[i]);
     }
@@ -46,27 +47,15 @@ export async function GET(req: NextRequest) {
     try {
       const placeholders = missingSymbols.map((_, i) => `$${i + 1}`).join(',');
       const rows = await q<any>(`
-        SELECT symbol, price, open, high, low, prev_close, volume, 
-               change_amount, change_percent, latest_trading_day, fetched_at
-        FROM quotes_latest 
-        WHERE symbol IN (${placeholders})
+        SELECT q.*, u.asset_type AS asset_class
+        FROM quotes_latest q LEFT JOIN symbol_universe u ON u.symbol = q.symbol
+        WHERE q.symbol IN (${placeholders})
       `, missingSymbols);
 
       const toCache: { key: string; value: any; ttl: number }[] = [];
 
       for (const row of rows) {
-        const quote = {
-          price: parseFloat(String(row.price)),
-          open: parseFloat(String(row.open)),
-          high: parseFloat(String(row.high)),
-          low: parseFloat(String(row.low)),
-          prevClose: parseFloat(String(row.prev_close)),
-          volume: row.volume,
-          changeAmt: parseFloat(String(row.change_amount)),
-          changePct: parseFloat(String(row.change_percent)),
-          latestDay: row.latest_trading_day,
-          fetchedAt: row.fetched_at,
-        };
+        const quote = serializePublicQuote(row);
 
         results[row.symbol] = { ...quote, source: 'database' };
         toCache.push({
@@ -92,5 +81,6 @@ export async function GET(req: NextRequest) {
     requested: symbols.length,
     found: Object.keys(results).length,
     missing: symbols.filter(s => !results[s]),
+    status: Object.fromEntries(symbols.map(s => [s, !results[s] ? "unavailable" : results[s].stale ? "stale" : "fresh"])),
   });
 }
