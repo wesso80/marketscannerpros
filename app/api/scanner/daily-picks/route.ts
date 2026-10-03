@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     // Get research observations (or most recent if today not available)
     const picks = await q(`
       WITH latest_date AS (
-        SELECT MAX(scan_date) as scan_date FROM daily_picks
+        SELECT asset_class, MAX(scan_date) as scan_date FROM daily_picks GROUP BY asset_class
       ),
       ranked_picks AS (
         SELECT 
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
               CASE WHEN COALESCE(dp.rank_type, 'top') = 'top' OR dp.indicators->>'scoreColumn' = 'canonical' THEN dp.score ELSE -dp.score END DESC
           ) as rank
         FROM daily_picks dp
-        CROSS JOIN latest_date ld
+        JOIN latest_date ld ON dp.asset_class = ld.asset_class
         WHERE dp.scan_date = ld.scan_date ${rankFilter}
       )
       SELECT 
@@ -107,6 +107,8 @@ export async function GET(req: NextRequest) {
           legacyScore: storedLegacyScore(pick.indicators, Number(pick.score)),
           trust,
           dataTimestamp: trust.dataTimestamp,
+          data_as_of: trust.dataAsOf,
+          entryBasis: "bar close",
           signals: {
             bullish: pick.signals_bullish,
             bearish: pick.signals_bearish,
@@ -126,7 +128,7 @@ export async function GET(req: NextRequest) {
       success: true,
       compliance: scannerComplianceMetadata(),
       scanDate,
-      scanDateLabel: scanDate ? `US session ${formatSessionDate(scanDate)}` : null,
+      scanDateLabel: scanDate ? `Latest per-market daily snapshots` : null,
       scanDateBasis: 'US equity market session (America/New_York) the scan belongs to. Crypto rows use the latest completed UTC daily candle at scan time; each row carries its own dataTimestamp.',
       // Highest bullish-alignment observations
       topPicks: {

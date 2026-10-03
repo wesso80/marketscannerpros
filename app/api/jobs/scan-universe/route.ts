@@ -1,3 +1,4 @@
+import { dailyPublication, isCompletedDailyBar } from '@/lib/scanner/dailyPublication';
 /**
  * Universe Scanner - Bulk Opportunity Discovery
  * 
@@ -323,7 +324,8 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[], canonicalOpts?: { assetCla
   indicators: Indicators;
   change24h: number;
 } | null {
-  if (!ohlcv || ohlcv.length < 50) return null;
+  ohlcv = (ohlcv ?? []).filter(b => isCompletedDailyBar(canonicalOpts?.assetClass ?? 'equity', b.date));
+  if (ohlcv.length < 50) return null;
   
   const closes = ohlcv.map(d => d.close);
   const price = closes[closes.length - 1];
@@ -507,13 +509,14 @@ export async function POST(req: NextRequest) {
     // Same session-date rule as scan-daily (lib/time/usSession), so both writers agree on which day a row belongs to.
     const scanDate = latestUsSessionDate(Date.now());
     
-    // Clear old picks for this session
-    await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [scanDate]);
+    // Preserve the first publication for each symbol / candle.
     
     // Helper to insert a pick
     const insertPick = async (rawPick: any, assetClass: string, rankType: string) => {
       // score/direction columns carry the canonical verdict; legacy values go to indicators.legacy.
       const pick = withCanonicalColumns(rawPick);
+      const publication = dailyPublication(assetClass, pick.indicators);
+      pick.indicators.data_as_of = publication.dataAsOf;
       await q(`
         INSERT INTO daily_picks (
           scan_date, asset_class, symbol, score, direction, 
@@ -521,18 +524,9 @@ export async function POST(req: NextRequest) {
           price, change_percent, indicators, rank_type
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        ON CONFLICT (asset_class, symbol, scan_date) DO UPDATE SET
-          score = EXCLUDED.score,
-          direction = EXCLUDED.direction,
-          signals_bullish = EXCLUDED.signals_bullish,
-          signals_bearish = EXCLUDED.signals_bearish,
-          signals_neutral = EXCLUDED.signals_neutral,
-          price = EXCLUDED.price,
-          change_percent = EXCLUDED.change_percent,
-          indicators = EXCLUDED.indicators,
-          rank_type = EXCLUDED.rank_type
+        ON CONFLICT (asset_class, symbol, scan_date) DO NOTHING
       `, [
-        scanDate,
+        publication.scanDate,
         assetClass,
         pick.symbol,
         pick.score,

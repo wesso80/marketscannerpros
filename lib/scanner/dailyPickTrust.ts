@@ -1,3 +1,4 @@
+import { dailyPublication } from './dailyPublication';
 /**
  * Per-ticker data trust for stored daily research observations (`daily_picks`).
  *
@@ -40,6 +41,7 @@ export interface DailyPickTrust {
   freshness: 'fresh' | 'delayed' | 'stale' | 'unknown';
   /** ISO date/time of the data the row describes. */
   dataTimestamp: string | null;
+  dataAsOf: string | null;
   /** 'bar' = the stored last-bar date; 'scan_date' = only the scan date is known (an upper bound on bar age). */
   timestampBasis: 'bar' | 'scan_date' | 'unknown';
   /** When the row was written. */
@@ -99,7 +101,12 @@ export function evaluateDailyPickTrust(row: DailyPickRow, nowMs: number = Date.n
     reasons.push('EMA200 is an EMA50 proxy on this row');
   }
   if (timestampBasis === 'scan_date') reasons.push('bar date not stored; age judged from the scan date');
-  return { level, coverage, missing, reasons, freshness: base.freshness, dataTimestamp, timestampBasis, scannedAt: iso(row.created_at) };
+  const dataAsOf = iso(ind.data_as_of) ?? (barAt ? dailyPublication(row.asset_class, ind, nowMs).dataAsOf : null);
+  // The shared bar-open clock remains backward compatible; publication freshness is explicitly close-based.
+  const freshness = assetClass === 'crypto' && dataAsOf && nowMs - Date.parse(dataAsOf) > 86_400_000
+    ? 'stale' : base.freshness;
+  if (freshness === 'stale') level = 'STALE';
+  return { level, coverage, missing, reasons, freshness, dataTimestamp, dataAsOf, timestampBasis, scannedAt: iso(row.created_at) };
 }
 
 /** Response-level summary derived from the per-row verdicts (replaces the hard-coded stale:false / coverage 100). */

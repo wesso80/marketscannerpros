@@ -19,7 +19,7 @@ describe('daily picks freshness: crypto (24/7, candle closes 00:00 UTC)', () => 
   });
   it('is genuinely one bar behind once the 25 Sep candle has closed (00:00 UTC = 10:00 AEST), with a specific reason', () => {
     const t = evaluateDailyPickTrust(row('crypto', '2026-09-24T00:00:00.000Z'), at('2026-09-26T00:05:00Z'));
-    expect(t.level).toBe('DEGRADED');
+    expect(t.level).toBe('STALE');
     expect(t.reasons.join(' ')).toMatch(/one daily bar behind: last bar 2026-09-24 .*arrives with the next daily scan/);
   });
   it('is fresh when the row carries the latest completed candle (e.g. after a crypto refresh past 00:00 UTC)', () => {

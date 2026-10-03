@@ -17,7 +17,8 @@ import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators 
 import { canonicalForDailyPick, compactCanonical, selectDailyPicks, withCanonicalColumns, type RegimeOverlayInputs } from "@/lib/scoring/canonical";
 import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayData";
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
-import { assetsToReplace, DAILY_SCAN_ASSETS, parseDailyScanAssets, type DailyScanAsset } from "@/lib/scanner/dailyScanAssets";
+import { DAILY_SCAN_ASSETS, parseDailyScanAssets, type DailyScanAsset } from "@/lib/scanner/dailyScanAssets";
+import { dailyPublication, isCompletedDailyBar } from '@/lib/scanner/dailyPublication';
 import { latestUsSessionDate } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
@@ -203,7 +204,7 @@ async function scanEquity(symbol: string, apiKey: string, overlay: RegimeOverlay
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
 
-    const bars = parseAlphaVantageDailyBars(priceData);
+    const bars = parseAlphaVantageDailyBars(priceData).filter(b => isCompletedDailyBar('equity', b.t));
     if (bars.length < 2) return null;
 
     const price = bars[bars.length - 1].close;
@@ -242,23 +243,10 @@ async function scanEquity(symbol: string, apiKey: string, overlay: RegimeOverlay
 
 async function scanCrypto(symbol: string, apiKey: string, overlay: RegimeOverlayInputs | null = null): Promise<any | null> {
   try {
-    const baseUrl = "https://www.alphavantage.co/query";
-
-    // Indicators are computed locally from the real coin's daily OHLC history
-    // (CoinGecko daily candles, same source as the main scanner). Do NOT call
-    // Alpha Vantage indicator endpoints (RSI/MACD/EMA/...) with a bare crypto
-    // symbol: AV resolves e.g. symbol=ETH as a US equity (Grayscale Ethereum
-    // Mini Trust ETF), so the indicators would describe an ETF, not the coin.
-
-    // Spot price from the crypto exchange-rate endpoint (the real coin) for display
-    const priceUrl = `${baseUrl}?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=USD&apikey=${apiKey}`;
-    const priceData = await fetchWithRetry(priceUrl);
-    await sleep(RATE_LIMIT_DELAY);
-    const exchangeRate = priceData?.["Realtime Currency Exchange Rate"];
-    const spotPrice = exchangeRate ? parseFloat(exchangeRate["5. Exchange Rate"]) : null;
-    const changePercent = null;
-
-    const outcome = await scanCryptoDailyIndicators(symbol, spotPrice);
+    // Both the displayed price and canonical levels use the same completed daily candle.
+    const outcome = await scanCryptoDailyIndicators(symbol, null);
+    const changePercent = outcome.ok && outcome.bars.length > 1
+      ? (outcome.price / outcome.bars[outcome.bars.length - 2].close - 1) * 100 : null;
     if (!outcome.ok) {
       // Includes the EMA200 sanity guard (price vs EMA200 more than 5x apart)
       console.error(`Dropping crypto ${symbol}: ${outcome.reason}`);
@@ -300,7 +288,7 @@ async function scanForex(symbol: string, apiKey: string, overlay: RegimeOverlayI
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
 
-    const bars = parseAlphaVantageDailyBars(priceData);
+    const bars = parseAlphaVantageDailyBars(priceData).filter(b => isCompletedDailyBar('forex', b.t));
     if (bars.length < 2) return null;
 
     const price = bars[bars.length - 1].close;
@@ -404,25 +392,18 @@ async function runDailyScan(req: NextRequest) {
     // that session's date instead of inventing a Saturday. (It used to be the server's UTC calendar day.)
     const today = latestUsSessionDate(Date.now());
     
-    // Delete old entries for this session (in case of re-run). A partial (?assets=) run only replaces its own asset
-    // classes, and only when it produced rows, so a provider outage can't wipe the stored picks.
-    if (!requested) {
-      await q(`DELETE FROM daily_picks WHERE scan_date = $1`, [today]);
-    } else {
-      const refreshed: string[] = assetsToReplace(requested, results);
-      if (refreshed.length) await q(`DELETE FROM daily_picks WHERE scan_date = $1 AND asset_class = ANY($2::text[])`, [today, refreshed]);
-      for (const r of results) if (!refreshed.includes(r.asset_class)) r.__skip = true;
-    }
-
     // Insert new results. score/direction columns carry the canonical verdict (0 = BLOCK); the legacy signal-count
     // values are kept in indicators.legacy (see lib/scoring/canonical/dailyPick).
-    for (const r of results.filter((row) => !row.__skip).map(withCanonicalColumns)) {
+    for (const r of results.map(withCanonicalColumns)) {
+      const publication = dailyPublication(r.asset_class, r.indicators);
+      r.indicators.data_as_of = publication.dataAsOf;
       await q(`
         INSERT INTO daily_picks (
           asset_class, symbol, score, direction,
           signals_bullish, signals_bearish, signals_neutral,
           price, change_percent, indicators, scan_date
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (asset_class, symbol, scan_date) DO NOTHING
       `, [
         r.asset_class,
         r.symbol,
@@ -434,12 +415,11 @@ async function runDailyScan(req: NextRequest) {
         r.price,
         r.change_percent,
         JSON.stringify(r.indicators),
-        today
+        publication.scanDate
       ]);
     }
 
-    // Clean up old data (keep 30 days)
-    await q(`DELETE FROM daily_picks WHERE scan_date < CURRENT_DATE - INTERVAL '30 days'`);
+    // Published picks are retained; reruns never rewrite created_at or delete prior rows.
 
     return NextResponse.json({
       success: true,

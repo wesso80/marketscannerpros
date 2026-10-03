@@ -23,7 +23,8 @@ export const SCHEDULE:ScheduledJob[]=[
  {name:'alerts-strategy-check',schedule:'4,19,34,49 * * * *',kind:'http',path:'/api/alerts/strategy-check',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  // Daily jobs
  {name:'daily-market-focus',schedule:'0 21 * * *',kind:'http',path:'/api/jobs/generate-market-focus',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
- {name:'daily-scan',schedule:'30 21 * * *',kind:'http',path:'/api/jobs/scan-daily',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
+ {name:'daily-scan',schedule:'30 21 * * *',kind:'http',path:'/api/jobs/scan-daily?assets=equity',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
+ {name:'daily-scan-crypto-forex',schedule:'40 0 * * *',kind:'http',path:'/api/jobs/scan-daily?assets=crypto,forex',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
  {name:'prewake-universe-scan',schedule:'35 19 * * *',kind:'http',path:'/api/jobs/scan-universe',timeoutMs:290_000,retries:2,retryDelayMs:15_000},
  {name:'opportunity-scan',schedule:'7,37 * * * *',kind:'http',path:'/api/jobs/opportunity-scan',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  // Admin radar, US session only (M–F 13–20 UTC), offsets spread Alpha Vantage calls
