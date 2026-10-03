@@ -21,3 +21,11 @@ it('renders legacy journal rows without changing the stored asset',()=>{
  expect(html).toContain('Forex (retired)');expect(row.assetClass).toBe('forex');
 });
 it('does not offer forex for new alert entries',()=>expect(read('components/AlertsWidget.tsx')).not.toContain('<option value="forex">'));
+it('does not mention forex in watchlist add options or site metadata',()=>{
+ const watchlist=read('components/WatchlistWidget.tsx');
+ const form=watchlist.slice(watchlist.indexOf('id="add-symbol-title"'),watchlist.indexOf('onClick={addSymbol}'));
+ expect(form.toLowerCase()).not.toContain('forex');
+ const layout=read('app/layout.tsx');
+ const metadata=layout.slice(layout.indexOf('export const metadata'),layout.indexOf('export const viewport'));
+ expect(metadata.toLowerCase()).not.toContain('forex');
+});

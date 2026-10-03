@@ -801,7 +801,7 @@ export default function WatchlistWidget() {
                   type="text"
                   value={newSymbol}
                   onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                  placeholder="AAPL, BTC, EURUSD"
+                  placeholder="AAPL, BTC"
                   maxLength={20}
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg 
                     text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 
@@ -819,7 +819,6 @@ export default function WatchlistWidget() {
                 >
                   <option value="equity">Stock</option>
                   <option value="crypto">Crypto</option>
-                  <option value="forex">Forex</option>
                   <option value="commodity">Commodity</option>
                 </select>
               </div>

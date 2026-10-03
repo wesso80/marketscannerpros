@@ -2480,8 +2480,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
                   <div className="text-xs text-slate-400 leading-relaxed">
                     <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
-                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
-                    <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA
                   </div>
                 </div>
                 <div className="space-y-3">
