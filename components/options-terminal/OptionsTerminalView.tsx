@@ -244,7 +244,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
       detail: chain.ivMetrics.avgIV > 0 ? `ATM IV ${(chain.ivMetrics.avgIV * 100).toFixed(1)}%, expected move ${chain.ivMetrics.expectedMovePct.toFixed(1)}%.` : 'IV metrics unavailable until contracts load.',
     },
   ];
-  const optionsRiskFlags = [
+  const optionsRiskFlags = (chain.loading ? [] : [
     chain.contracts.some((contract) => !(contract.bid > 0 && contract.ask >= contract.bid)) ? `${chain.contracts.filter((contract) => !(contract.bid > 0 && contract.ask >= contract.bid)).length}/${chain.contracts.length} contracts lack valid two-sided quotes. Spread and liquidity assessment are incomplete.` : null,
     chain.error ? `Options chain error: ${chain.error}` : null,
     chain.contracts.length === 0 && ticker ? 'No contracts loaded for selected ticker.' : null,
@@ -254,7 +254,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     avgSpreadPct > 12 ? `Average spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
     chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV environment.' : null,
     rows.length === 0 && chain.contracts.length > 0 ? 'No quoted strikes pass the current liquidity filters.' : null,
-  ].filter(Boolean).map((label) => ({
+  ]).filter(Boolean).map((label) => ({
     label: label as string,
     severity: riskSeverity(label as string),
     detail: 'Limits educational options scenario quality until checked.',
@@ -397,10 +397,11 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
       <div className="w-full px-4 pt-4">
         <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          <EvidenceStack title="Options Terminal Evidence Stack" items={optionsEvidenceItems} />
-          <RiskFlagPanel title="Options Terminal Risk Flags" flags={optionsRiskFlags} emptyText="No active chain, liquidity, IV, or provider flags." />
+          {chain.loading ? <p role="status">Loading options provider…</p> : <EvidenceStack title="Options Terminal Evidence Stack" items={optionsEvidenceItems} />}
+          {!chain.loading && <RiskFlagPanel title="Options Terminal Risk Flags" flags={optionsRiskFlags} emptyText="No active chain, liquidity, IV, or provider flags." />}
         </div>
-        <MarketStatusStrip items={optionsMarketStatusItems} className="mt-4 md:grid-cols-3" />
+        {!chain.loading && <MarketStatusStrip items={optionsMarketStatusItems} className="mt-4 md:grid-cols-3" />}
+        {chain.providerIssues.length > 0 && <ul className="text-sm text-amber-300">{chain.providerIssues.map((issue,i)=><li key={i}>{issue}</li>)}</ul>}
       </div>
 
       {/* ── Page shell ────────────────────────────────────── */}
