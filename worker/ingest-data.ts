@@ -1726,7 +1726,7 @@ async function refreshAndCaptureAccounts() {
     for (const batch of chunkSymbols(equities)) await upsertEquityQuotesBatch(await fetchAVBulkQuotes(batch));
   } else {
     for (const symbol of equities) {
-      const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'full'), Date.now(), getEquityBarSchedule().dailySettleMin);
+      const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'compact'), Date.now(), getEquityBarSchedule().dailySettleMin);
       if (mark) await getPool().query(`
         INSERT INTO quotes_latest (symbol, price, observed_price, observed_at)
         VALUES ($1, $2, $2, $3::timestamptz)
