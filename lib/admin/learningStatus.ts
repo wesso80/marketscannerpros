@@ -5,7 +5,8 @@ import {JEV_STAGES} from './cryptoJev';
 import {jevCoverage} from './cryptoJevEvidence';
 import {EARLY_SCAN_KEY,FORWARD_BOOK_KEY,MOMENTUM_SCAN_KEY,forwardResolved,type ForwardBook} from './cryptoForwardScore';
 import {calibrationFiledKey,calibrationLedgerKey,type CalibrationLedger} from './cryptoCalibration';
-import {SHADOW,shadowWeightsKey,type ShadowWeights} from './cryptoShadowScore';
+import {SHADOW,SHADOW_STAMP_ATTEMPT_KEY,SHADOW_WEIGHTS_ACTIVE,SHADOW_WORKSPACE_COUNT_KEY,shadowWeightsKey,type ShadowStampAttempt,type ShadowWeights,type ShadowWorkspaceCount} from './cryptoShadowScore';
+import {jevUnitPrice,readRecordedJevUsage,rollupStoredStamps,type JevUnitPrice,type JevUsageBucket,type StoredStamp} from './jevUsage';
 import type {MomentumScan} from './cryptoVolumeMomentum';
 /**
  * One read-only health view of the crypto Jev learning loop: which stamps are being written, whether they are scoring,
@@ -14,7 +15,9 @@ import type {MomentumScan} from './cryptoVolumeMomentum';
  */
 export type LearningState='ok'|'collecting'|'attention'|'paused'|'off';
 export type LearningItem={id:string;label:string;state:LearningState;summary:string;lastAt:string|null;gradedAgainst:string;where:string;next:string|null;counts:Record<string,number>};
-export type LearningStatus={checkedAt:string;mode:{discoveryOnly:boolean;jevKey:boolean};items:LearningItem[];shadowWeights:ShadowWeights|null};
+export type ShadowPointerStatus={key:typeof SHADOW_WEIGHTS_ACTIVE;value:string|null;workspaces:number|null;workspacesSource:'live'|'recorded'|null;weightsVersion:string|null;weightsComputedAt:string|null;activeVersion:string|null;activeComputedAt:string|null;lastStamp:ShadowStampAttempt|null};
+export type JevUsageStatus={price:JevUnitPrice;recorded:JevUsageBucket[];stamps:JevUsageBucket[];note:string};
+export type LearningStatus={checkedAt:string;mode:{discoveryOnly:boolean;jevKey:boolean};items:LearningItem[];shadowWeights:ShadowWeights|null;shadowPointer:ShadowPointerStatus;jevUsage:JevUsageStatus};
 const ago=(iso:string|null|undefined,now:number)=>iso&&Number.isFinite(Date.parse(iso))?Math.round((now-Date.parse(iso))/60000):null;
 const reasons=(r:Record<string,number>)=>Object.entries(r).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ${v}`).join(', ');
 function stampCoverage(rows:MomentumScan['rows']){
@@ -32,10 +35,18 @@ function stampCoverage(rows:MomentumScan['rows']){
  }
  return {named:named.length,jev,cat,chart};
 }
-export async function learningStatus(redis:Redis|null,workspaceId:string,now=Date.now()):Promise<LearningStatus>{
+function stampTokens(scope:string,module:string,stamp:{status?:string;checkedAt?:string;inputTokens?:number}|null|undefined):StoredStamp[]{
+ return stamp?[{scope,module,status:stamp.status,checkedAt:stamp.checkedAt,inputTokens:stamp.inputTokens}]:[];
+}
+export async function learningStatus(redis:Redis|null,workspaceId:string,now=Date.now(),workspaceCount?:number|null):Promise<LearningStatus>{
  const items:LearningItem[]=[];
  const jevKey=jevConfigured(),discoveryOnly=adminDiscoveryOnly();
- const [four,early,book,ledger,filed,weights]=redis&&workspaceId?await Promise.all([redis.get<MomentumScan>(MOMENTUM_SCAN_KEY),redis.get<MomentumScan>(EARLY_SCAN_KEY),redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<CalibrationLedger>(calibrationLedgerKey(workspaceId)),redis.get<Record<string,string>>(calibrationFiledKey(workspaceId)),redis.get<ShadowWeights>(shadowWeightsKey(workspaceId))]):[null,null,null,null,null,null];
+ const [four,early,book,ledger,filed,weights,pointerRaw,attempt,recordedCount]=redis&&workspaceId?await Promise.all([redis.get<MomentumScan>(MOMENTUM_SCAN_KEY),redis.get<MomentumScan>(EARLY_SCAN_KEY),redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<CalibrationLedger>(calibrationLedgerKey(workspaceId)),redis.get<Record<string,string>>(calibrationFiledKey(workspaceId)),redis.get<ShadowWeights>(shadowWeightsKey(workspaceId)),redis.get<string>(SHADOW_WEIGHTS_ACTIVE),redis.get<ShadowStampAttempt>(SHADOW_STAMP_ATTEMPT_KEY),redis.get<ShadowWorkspaceCount>(SHADOW_WORKSPACE_COUNT_KEY)]):[null,null,null,null,null,null,null,null,null];
+ const pointer=typeof pointerRaw==='string'&&pointerRaw?pointerRaw:null;
+ let activeWeights:ShadowWeights|null=null;
+ if(redis&&pointer&&pointer!=='none'){try{activeWeights=await redis.get<ShadowWeights>(shadowWeightsKey(pointer));}catch{activeWeights=null;}}
+ const workspaces=typeof workspaceCount==='number'?workspaceCount:typeof recordedCount?.count==='number'?recordedCount.count:null;
+ const shadowPointer:ShadowPointerStatus={key:SHADOW_WEIGHTS_ACTIVE,value:pointer,workspaces,workspacesSource:typeof workspaceCount==='number'?'live':typeof recordedCount?.count==='number'?'recorded':null,weightsVersion:weights?.version??null,weightsComputedAt:weights?.computedAt??null,activeVersion:activeWeights?.version??null,activeComputedAt:activeWeights?.computedAt??null,lastStamp:attempt&&typeof attempt==='object'&&typeof attempt.outcome==='string'?attempt:null};
  // 1. Jev shadow on crypto setups
  const c4=stampCoverage(four?.rows??[]),c1=stampCoverage(early?.rows??[]);
  const shadowScored=c4.jev.scored+c1.jev.scored,shadowUnavailable=c4.jev.unavailable+c1.jev.unavailable,shadowUnstamped=c4.jev.unscored+c1.jev.unscored,shadowNamed=c4.named+c1.named;
@@ -73,14 +84,22 @@ export async function learningStatus(redis:Redis|null,workspaceId:string,now=Dat
  items.push({id:'calibration',label:'Calibration ledger and proposals',state:!ledger?'collecting':stale?'attention':'ok',
   summary:!ledger?'No ledger saved yet. The daily pass writes one after the first paper cycle of the day; Recompute runs it now.':`${ledger.source.withR} closed trades with R · ${ledger.source.forwardFilled24h} forward rows with a 24h mark · ${graded} graded sides · ${confirmed} confirmed · ${Object.keys(filed??{}).length} proposals filed so far${stale?' · STALE (over 36h)':''}.`,
   lastAt:ledger?.checkedAt??null,gradedAgainst:'two-window lift on paper R and forward 24h',where:'Learning tab (this page); proposals appear in Recommendations',next:ledger&&ledger.source.withR<30&&ledger.source.forwardFilled24h<30?'Collecting. Nothing can confirm until a side has 30 rows; the forward book fills faster than the paper ledger.':null,counts:{withR:ledger?.source.withR??0,forward24h:ledger?.source.forwardFilled24h??0,confirmed,filed:Object.keys(filed??{}).length}});
- // 5. Composite shadow score: gated on confirmed sides; stamped on named rows only when available.
+ // 5. Composite shadow score: gated on confirmed sides; stamped on named rows only when the active pointer names exactly one workspace.
  const shadowStamped=[...(four?.rows??[]),...(early?.rows??[])].filter(r=>r.shadow&&r.shadow.weightsVersion===weights?.version).length;
+ const versionMismatch=!!weights?.version&&!!activeWeights?.version&&weights.version!==activeWeights.version;
+ const pointerText=pointer==null?'missing':pointer;
+ const stampText=shadowPointer.lastStamp?`last stamp attempt ${shadowPointer.lastStamp.at} outcome ${shadowPointer.lastStamp.outcome} (${shadowPointer.lastStamp.stamped} stamped, pointer ${shadowPointer.lastStamp.pointer??'missing'}, weights ${shadowPointer.lastStamp.weightsVersion??'none'})`:'last stamp attempt not recorded yet';
+ const whyNoStamp=weights?.available&&shadowStamped===0&&shadowNamed>0?(pointer==='none'?`The active pointer is none, so shared scans are not stamped. The daily pass writes none unless exactly one crypto paper workspace exists (recorded ${workspaces??'unknown'}).`:pointer==null?'The active pointer is missing, so shared scans are not stamped. The daily pass writes it; a missing key also means the 7-day TTL lapsed and the cron has not refreshed it.':versionMismatch?`Stamps use the pointer target version ${activeWeights?.version}, not this workspace's version ${weights.version}.`:'Weights are available and the pointer is set, but no named row carries this version yet.'):null;
  items.push({id:'shadowScore',label:'Composite shadow score (shadow-score-v1)',
-  state:!weights?'collecting':weights.available?'ok':'collecting',
-  summary:!weights?'No weights derived yet; the daily calibration pass derives them from confirmed ledger sides.':weights.available?`Available: ${weights.weights.length} weights from ${weights.confirmedFields} confirmed fields (version ${weights.version}). ${shadowStamped} named rows carry a current stamp. Weights are each confirmed side’s lift in multiples of the confirmation floor, clipped at ±${SHADOW.clip}; nothing is fitted.`:`Not available: ${weights.reason} No row is scored until then.`,
+  state:!weights?'collecting':!weights.available?'collecting':whyNoStamp?'attention':'ok',
+  summary:!weights?`No weights derived yet; the daily calibration pass derives them from confirmed ledger sides. Active pointer ${SHADOW_WEIGHTS_ACTIVE}=${pointerText}. Crypto paper workspaces: ${workspaces??'not recorded'}. ${stampText}.`:weights.available?`Available: ${weights.weights.length} weights from ${weights.confirmedFields} confirmed fields (version ${weights.version}, computed ${weights.computedAt}). ${shadowStamped} named rows carry a stamp of this version. Active pointer ${SHADOW_WEIGHTS_ACTIVE}=${pointerText}. Crypto paper workspaces: ${workspaces??'not recorded'}.${versionMismatch?` Pointer target version ${activeWeights?.version} computed ${activeWeights?.computedAt}.`:''} ${stampText}. Weights are each confirmed side’s lift in multiples of the confirmation floor, clipped at ±${SHADOW.clip}; nothing is fitted.`:`Not available: ${weights.reason} No row is scored until then. Version ${weights.version}, computed ${weights.computedAt}. Active pointer ${SHADOW_WEIGHTS_ACTIVE}=${pointerText}. Crypto paper workspaces: ${workspaces??'not recorded'}. ${stampText}.`,
   lastAt:weights?.computedAt??null,gradedAgainst:'sign of the stamped score against paper R and forward 24h (shadow.sign field), out of sample by construction',where:'Learning tab → weights table below; ledger field shadow.sign',
-  next:weights&&!weights.available?`Waiting for the ledger: needs confirmed sides on at least ${SHADOW.minConfirmedFields} different fields.`:null,counts:{weights:weights?.weights.length??0,confirmedFields:weights?.confirmedFields??0,stamped:shadowStamped}});
+  next:whyNoStamp??(weights&&!weights.available?`Waiting for the ledger: needs confirmed sides on at least ${SHADOW.minConfirmedFields} different fields.`:null),counts:{weights:weights?.weights.length??0,confirmedFields:weights?.confirmedFields??0,stamped:shadowStamped,...(workspaces!=null?{workspaces}:{})}});
  // 6. Equity surfaces are out of scope here: this desk is crypto-only and every market-data call goes to CoinGecko or the exchanges.
  for(const i of items)if(i.lastAt){const m=ago(i.lastAt,now);if(m!=null&&m>36*60&&i.state==='ok')i.state='attention';}
- return {checkedAt:new Date(now).toISOString(),mode:{discoveryOnly,jevKey},items,shadowWeights:weights??null};
+ const stored:StoredStamp[]=[];
+ for(const row of [...(four?.rows??[]),...(early?.rows??[])]){stored.push(...stampTokens('scans','jev-shadow',row.jev),...stampTokens('scans','jev-chart',row.chart),...stampTokens('scans','jev-catalyst',row.catalyst));}
+ for(const row of book?.rows??[])stored.push(...stampTokens('forward-book','jev-shadow',row.jev),...stampTokens('forward-book','jev-chart',row.chart),...stampTokens('forward-book','jev-catalyst',row.catalyst));
+ const jevUsage:JevUsageStatus={price:jevUnitPrice(),recorded:await readRecordedJevUsage(redis),stamps:rollupStoredStamps(stored),note:'Recorded calls are gateway responses since this counter was added, one row per module per UTC day. Tokens on saved stamps are whatever is still stored on the current scans and the forward book; a row copied into the book is listed under both scopes and is not a second call. No unit price is assumed.'};
+ return {checkedAt:new Date(now).toISOString(),mode:{discoveryOnly,jevKey},items,shadowWeights:weights??null,shadowPointer,jevUsage};
 }

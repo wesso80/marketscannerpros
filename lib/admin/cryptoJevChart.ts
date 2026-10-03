@@ -58,7 +58,7 @@ export function chartState(row:ChartRow){
  };
 }
 async function ask(state:NonNullable<ReturnType<typeof chartState>>){
- const {model,answers,inputTokens}=await askJev(state,CHART_QUESTIONS);
+ const {model,answers,inputTokens}=await askJev(state,CHART_QUESTIONS,{module:'jev-chart'});
  return {cleanBase:answers.cleanBase.probability,strongClose:answers.strongClose.probability,volumeExpansion:answers.volumeExpansion.probability,overheadSupply:answers.overheadSupply.probability,model,...(inputTokens!=null?{inputTokens}:{})};
 }
 /** Scores named setups with stored bars that do not already carry this rule's stamp. Never throws and never changes a stage. */

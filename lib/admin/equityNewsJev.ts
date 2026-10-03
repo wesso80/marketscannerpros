@@ -77,7 +77,7 @@ export async function scorePendingNews(now=Date.now(),limit=NEWS_JEV.perRun){
    if(!names.has(t))names.set(t,companyName(t));
    const name=await names.get(t)!;
    try{
-    const {model,answers,inputTokens}=await askJev(newsState(e,name),NEWS_JEV_QUESTIONS);
+    const {model,answers,inputTokens}=await askJev(newsState(e,name),NEWS_JEV_QUESTIONS,{module:'equity-news'});
     await q(`INSERT INTO news_jev_stamps (event_id,ticker,rule,status,about_company,price_material,direction,direction_probs,direction_conf,event_type,event_type_conf,model,input_tokens,company_name,event_at,checked_at) VALUES ($1,$2,$3,'scored',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT (event_id) DO NOTHING`,
      [e.id,t,NEWS_JEV_RULE,answers.aboutCompany.probability,answers.priceMaterial.probability,answers.direction.choice,JSON.stringify(answers.direction.probabilities??null),answers.direction.confidence,answers.eventType.choice,answers.eventType.confidence,model,inputTokens??null,name,new Date(e.event_timestamp_utc).toISOString(),new Date(now).toISOString()]);
     scored++;

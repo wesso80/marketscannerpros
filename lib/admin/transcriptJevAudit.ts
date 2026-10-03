@@ -96,7 +96,7 @@ export async function auditLatestSummary(symbol:string,quarter:string,now=Date.n
   const base={summaryId:Number(row.id),symbol:row.symbol,quarter:row.quarter,version:row.version,rule:TRANSCRIPT_AUDIT_RULE,transcriptChars:buffer.length,checkedAt:new Date(now).toISOString()};
   let audit:TranscriptAudit;
   try{
-   const {model,answers,inputTokens}=await askJev(auditState(row.symbol,row.quarter,buffer),auditQuestions(claims,row.summary),{timeoutMs:45000});
+   const {model,answers,inputTokens}=await askJev(auditState(row.symbol,row.quarter,buffer),auditQuestions(claims,row.summary),{timeoutMs:45000,module:'transcript-audit'});
    const scored:AuditClaim[]=claims.map(c=>({...c,supported:answers[c.id]?.probability??null}));
    const g=answers.guidanceStated.probability,s=answers.surpriseStated.probability,tone=answers.toneMatches.probability;
    audit={...base,status:'scored',claims:scored,claimsTotal:scored.length,...deriveAudit(scored,row.summary,g,s),guidanceStated:g,surpriseStated:s,toneMatches:tone,model,inputTokens:inputTokens??null,reason:null};

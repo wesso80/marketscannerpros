@@ -5,10 +5,12 @@ import type {JevStamp} from './cryptoJev';
 import type {CatalystStamp} from './cryptoJevCatalyst';
 import type {ChartStamp} from './cryptoJevChart';
 import {JEV_LABELS,JEV_QUESTION_IDS,jevFromReason,jevSideLabel,CATALYST_IDS,CATALYST_LABELS,catalystSideLabel,CHART_IDS,CHART_LABELS,chartSideLabel,chartFromReason,type JevQuestionId} from './cryptoJevEvidence';
-import {persistShadowWeights,shadowSideLabel,shadowWeightsKey,SHADOW_WEIGHTS_ACTIVE,type ShadowStamp} from './cryptoShadowScore';
+import {persistShadowWeights,publishShadowPointer,shadowSideLabel,shadowWeightsKey,type ShadowStamp} from './cryptoShadowScore';
 export {catalystSideLabel};
 import {createRecommendation,loadRecommendations,saveRecommendations,type Recommendation} from './cryptoRecommendations';
-import {CAL_CORE,INFORMATIONAL_SIDES,calibrateField as coreCalibrateField,splitAt,type CalibrationFieldBase,type CalibrationSide,type CalibrationStatus,type FieldDef} from './calibrationCore';
+import {CAL_CORE,INFORMATIONAL_SIDES,MC_GUARD,applyMcGuard,calibrateField as coreCalibrateField,splitAt,testedSideCount,type CalibrationFieldBase,type CalibrationSide,type CalibrationStatus,type FieldDef} from './calibrationCore';
+import {dedupeForwardByCoinDay,loadArchivedForwardRows,mergeForwardRows} from './cryptoForwardArchive';
+import {scoreJevQuestions,type ProbabilityReport,type StampBag} from './jevProbability';
 export type {CalibrationSide,CalibrationStatus};
 /**
  * Calibration ledger: every recorded evidence field against the outcome already stored beside it.
@@ -27,7 +29,7 @@ const BACKTEST_KEY='admin:crypto-markets:backtest:v1';
 export const CAL={...CAL_CORE,weeklyCap:3,ttlSec:48*3600,cooldownMs:600000,sources:{paper:'crypto paper ledger (closed trades with R)',forward:'saved forward score (24h mark)',base:'base-breakout sleeve (closed trades with R)',backtest:'saved momentum backtest (replayed trades with a real stop/target/time exit)'}} as const;
 const PAPER_NAME='Crypto Markets Paper',BASE_NAME='Crypto Markets Paper Base';
 export type CalibrationField=CalibrationFieldBase<'paperR'|'forward24h'|'baseR'|'backtestR'>;
-export type CalibrationLedger={version:1;checkedAt:string;source:{closedTrades:number;withR:number;forwardRows:number;forwardFilled24h:number;baseTrades?:number;baseWithR?:number;backtestTrades?:number;backtestGraded?:number;backtestWindow?:string|null;splitAt:{paper:string|null;forward:string|null;base?:string|null;backtest?:string|null}};fields:CalibrationField[];note:string};
+export type CalibrationLedger={version:1;checkedAt:string;confirmationRule?:typeof MC_GUARD.version;testedSides?:number;source:{closedTrades:number;withR:number;forwardRows:number;forwardFilled24h:number;forwardFilledBeforeDedupe?:number;forwardArchiveRows?:number;baseTrades?:number;baseWithR?:number;backtestTrades?:number;backtestGraded?:number;backtestWindow?:string|null;splitAt:{paper:string|null;forward:string|null;base?:string|null;backtest?:string|null}};fields:CalibrationField[];probability?:ProbabilityReport;note:string};
 export type PaperObs={at:number;r:number;reason:Record<string,unknown>|null;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined;chart:ChartStamp|undefined;shadow:ShadowStamp|undefined;venue:string;exit:string};
 export type ForwardObs={at:number;day:number;h4:number|null;bucket:string;jev:JevStamp|undefined;catalyst:CatalystStamp|undefined;chart:ChartStamp|undefined;shadow:ShadowStamp|undefined};
 /** One replayed backtest trade with a real exit. Marked-at-horizon rows are not outcomes and are left out. */
@@ -131,21 +133,31 @@ export function calibrateField<O extends {at:number}>(def:FieldDef<O>,obs:O[],va
  if(!TAUTOLOGY_FIELDS.has(field.id))return field;
  return {...field,sides:field.sides.map(side=>({...side,informational:true,status:'collecting' as const}))};
 }
-/** `shadowVersion` is the weights version in force when the rows were stamped; stamps from other versions are not graded. */
-export function buildCalibration(paper:PaperObs[],forward:ForwardObs[],meta:{closedTrades:number;forwardRows:number;shadowVersion?:string|null;baseTrades?:number;backtestTrades?:number;backtestWindow?:string|null},now=Date.now(),base:PaperObs[]=[],backtest:BacktestObs[]=[]):CalibrationLedger{
+const stampBag=(outcome:StampBag['outcome'],value:number,jev:unknown,chart:unknown,catalyst?:unknown):StampBag=>({outcome,value,jev:jev as StampBag['jev'],chart:chart as StampBag['chart'],catalyst:catalyst as StampBag['catalyst']});
+/** `shadowVersion` is the weights version in force when the rows were stamped; stamps from other versions are not graded. Forward observations passed here are already one per coin per day. */
+export function buildCalibration(paper:PaperObs[],forward:ForwardObs[],meta:{closedTrades:number;forwardRows:number;shadowVersion?:string|null;baseTrades?:number;backtestTrades?:number;backtestWindow?:string|null;forwardFilledBeforeDedupe?:number;forwardArchiveRows?:number},now=Date.now(),base:PaperObs[]=[],backtest:BacktestObs[]=[]):CalibrationLedger{
  currentShadowVersion=meta.shadowVersion??null;
- const fields=[
+ const screened=[
   ...PAPER_FIELDS.map(def=>calibrateField(def,paper,o=>o.r,'R','paperR')),
   ...FORWARD_FIELDS.map(def=>calibrateField(def,forward,o=>o.day,'%','forward24h')),
   ...BASE_FIELDS.map(def=>calibrateField(def,base,o=>o.r,'R','baseR')),
   ...BACKTEST_FIELDS.map(def=>calibrateField(def,backtest,o=>o.r,'R','backtestR')),
  ];
+ const testedSides=testedSideCount(screened);
+ const fields=applyMcGuard(screened,testedSides);
+ const probability=scoreJevQuestions([
+  ...paper.map(o=>stampBag('paperR',o.r,o.jev,o.chart,o.catalyst)),
+  ...forward.map(o=>stampBag('forward24h',o.day,o.jev,o.chart,o.catalyst)),
+  ...base.map(o=>stampBag('baseR',o.r,o.jev,o.chart,o.catalyst)),
+  ...backtest.map(o=>stampBag('backtestR',o.r,o.jev,o.chart)),
+ ]);
  const confirmed=fields.flatMap(f=>f.sides.filter(s=>s.status==='confirmed').map(s=>`${f.id} ${s.side}`));
- const note=!paper.length&&!forward.length&&!base.length&&!backtest.length?'No closed paper trades with R and no filled 24h forward marks yet. Nothing to calibrate.':`Lift is the side's mean minus the overall mean on the same rows: R for the paper ledgers and the backtest, % for the 24h forward mark. A side under ${CAL.minSide} rows is collecting. Confirmed needs the same sign of lift in both time halves (${CAL.minHalf}+ rows each) and at least ${CAL.minLiftR}R or ${CAL.minLiftPct}%. ${confirmed.length?`Confirmed: ${confirmed.join('; ')}.`:'Nothing is confirmed yet.'} Backtest sides are graded on one replayed window; a side confirmed there is a hypothesis for the paper ledger, not a live result. Evidence only; nothing here changes a rule.`;
- return {version:1,checkedAt:new Date(now).toISOString(),source:{closedTrades:meta.closedTrades,withR:paper.length,forwardRows:meta.forwardRows,forwardFilled24h:forward.length,baseTrades:meta.baseTrades??0,baseWithR:base.length,backtestTrades:meta.backtestTrades??0,backtestGraded:backtest.length,backtestWindow:meta.backtestWindow??null,splitAt:{paper:splitAt(paper),forward:splitAt(forward),base:splitAt(base),backtest:splitAt(backtest)}},fields,note};
+ const dedupeNote=meta.forwardFilledBeforeDedupe!=null&&meta.forwardFilledBeforeDedupe!==forward.length?` Forward 24h rows are one per coin per UTC day (${forward.length} after dedupe, ${meta.forwardFilledBeforeDedupe} before), so repeated candles do not inflate n.`:'';
+ const note=!paper.length&&!forward.length&&!base.length&&!backtest.length?'No closed paper trades with R and no filled 24h forward marks yet. Nothing to calibrate.':`Lift is the side's mean minus the overall mean on the same rows: R for the paper ledgers and the backtest, % for the 24h forward mark. A side under ${CAL.minSide} rows is collecting. The two-window screen needs the same sign of lift in both time halves (${CAL.minHalf}+ rows each) and at least ${CAL.minLiftR}R or ${CAL.minLiftPct}%. Confirmation rule ${MC_GUARD.version} then requires that screen on the earliest two thirds, the same sign on the latest third (${MC_GUARD.holdoutMin}+ rows), and |lift| at least the Bonferroni z for ${testedSides} tested sides (alpha ${MC_GUARD.alpha}). ${confirmed.length?`Confirmed: ${confirmed.join('; ')}.`:'Nothing is confirmed yet.'} Backtest sides are graded on one replayed window; a side confirmed there is a hypothesis for the paper ledger, not a live result.${dedupeNote} Evidence only; nothing here changes a rule.`;
+ return {version:1,checkedAt:new Date(now).toISOString(),confirmationRule:MC_GUARD.version,testedSides,source:{closedTrades:meta.closedTrades,withR:paper.length,forwardRows:meta.forwardRows,forwardFilled24h:forward.length,forwardFilledBeforeDedupe:meta.forwardFilledBeforeDedupe,forwardArchiveRows:meta.forwardArchiveRows,baseTrades:meta.baseTrades??0,baseWithR:base.length,backtestTrades:meta.backtestTrades??0,backtestGraded:backtest.length,backtestWindow:meta.backtestWindow??null,splitAt:{paper:splitAt(paper),forward:splitAt(forward),base:splitAt(base),backtest:splitAt(backtest)}},fields,probability,note};
 }
 const fmt=(n:number|null,unit:'R'|'%')=>n==null?'n/a':`${n>=0?'+':''}${n.toFixed(2)}${unit}`;
-export const filedKey=(field:CalibrationField,side:CalibrationSide)=>`${field.id}|${side.side}|${field.ruleVersion}|${side.status}`;
+export const filedKey=(field:CalibrationField,side:CalibrationSide)=>`${field.id}|${side.side}|${field.ruleVersion}|${MC_GUARD.version}|${side.status}`;
 /**
  * Files one text Recommendation per newly confirmed (or newly contradicted after a filing) side, at most weeklyCap per rolling week.
  * Returns the new recommendation list and the keys that were filed. Nothing is applied.
@@ -157,14 +169,14 @@ export function proposeFromLedger(ledger:CalibrationLedger,rows:Recommendation[]
  for(const field of ledger.fields)for(const side of field.sides){
   if(side.informational)continue;
   const key=filedKey(field,side);
-  const wasConfirmed=!!nextFiled[`${field.id}|${side.side}|${field.ruleVersion}|confirmed`];
+  const wasConfirmed=!!nextFiled[`${field.id}|${side.side}|${field.ruleVersion}|${MC_GUARD.version}|confirmed`];
   const due=(side.status==='confirmed'&&!nextFiled[key])||(side.status==='contradicted'&&wasConfirmed&&!nextFiled[key]);
   if(!due)continue;
   if(budget<=0){skippedByCap++;continue;}
   const sourceLabel=field.outcome==='paperR'?CAL.sources.paper:field.outcome==='baseR'?CAL.sources.base:field.outcome==='backtestR'?CAL.sources.backtest:CAL.sources.forward;
   const text=side.status==='confirmed'
-   ?`Over ${side.n} rows, ${field.label} = ${side.side} ran ${fmt(side.lift,field.unit)} against the overall mean (halves ${fmt(side.halfA.lift,field.unit)} on ${side.halfA.n} / ${fmt(side.halfB.lift,field.unit)} on ${side.halfB.n}; mean ${fmt(side.mean,field.unit)}, se ${side.se==null?'n/a':side.se.toFixed(2)}). Source: ${sourceLabel}, rule ${field.ruleVersion}, computed ${ledger.checkedAt}. Consider ${side.lift!=null&&side.lift<0?'skipping or halving size':'keeping or favouring'} entries on this side. The split is the fixed read, not a fitted threshold. Evidence from paper research; it is not a live result and nothing has been changed.`
-   :`Retraction: ${field.label} = ${side.side} was filed as confirmed but its two time halves now disagree (${fmt(side.halfA.lift,field.unit)} / ${fmt(side.halfB.lift,field.unit)} over ${side.n} rows). Treat the earlier proposal as unproven. Source: ${sourceLabel}, rule ${field.ruleVersion}, computed ${ledger.checkedAt}.`;
+   ?`Over ${side.n} rows, ${field.label} = ${side.side} ran ${fmt(side.lift,field.unit)} against the overall mean (halves ${fmt(side.halfA.lift,field.unit)} on ${side.halfA.n} / ${fmt(side.halfB.lift,field.unit)} on ${side.halfB.n}; mean ${fmt(side.mean,field.unit)}, se ${side.se==null?'n/a':side.se.toFixed(2)}). Source: ${sourceLabel}, question rule ${field.ruleVersion}, confirmation ${ledger.confirmationRule??MC_GUARD.version} over ${ledger.testedSides??'the'} tested sides, computed ${ledger.checkedAt}. Consider ${side.lift!=null&&side.lift<0?'skipping or halving size':'keeping or favouring'} entries on this side. The split is the fixed read, not a fitted threshold. Evidence from paper research; it is not a live result and nothing has been changed.`
+   :`Retraction: ${field.label} = ${side.side} was filed as confirmed but its two time halves now disagree (${fmt(side.halfA.lift,field.unit)} / ${fmt(side.halfB.lift,field.unit)} over ${side.n} rows). Treat the earlier proposal as unproven. Source: ${sourceLabel}, question rule ${field.ruleVersion}, confirmation ${ledger.confirmationRule??MC_GUARD.version}, computed ${ledger.checkedAt}.`;
   next=createRecommendation(next,{setup:`calibration · ${field.id} · ${side.side}`,evidenceCount:String(side.n),proposedRuleChange:text.slice(0,1000),file:field.file},now);
   nextFiled[key]=new Date(now).toISOString();filedNow.push(key);budget--;
  }
@@ -173,8 +185,10 @@ export function proposeFromLedger(ledger:CalibrationLedger,rows:Recommendation[]
 export async function loadCalibrationInputs(redis:Pick<Redis,'get'>,workspaceId:string){
  const sql=`SELECT t.r_multiple,t.entry_time,t.exit_reason,t.instrument_type,o.created_reason FROM arca_trades t JOIN arca_portfolios pf ON pf.id=t.portfolio_id AND pf.workspace_id=t.workspace_id LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id WHERE t.workspace_id=$2 AND pf.workspace_id=$2 AND pf.name=$1 AND pf.mode='SIMULATED'`;
  const [rows,baseRows]=await Promise.all([q<PaperSourceRow>(sql,[PAPER_NAME,workspaceId]),q<PaperSourceRow>(sql,[BASE_NAME,workspaceId]).catch(()=>[] as PaperSourceRow[])]);
- const [book,backtest]=await Promise.all([redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<{from:string;to:string;trades:BacktestSourceTrade[]}>(BACKTEST_KEY).catch(()=>null)]);
- return {rows,forwardRows:book?.rows??[],baseRows,backtestTrades:backtest?.trades??[],backtestWindow:backtest?`${backtest.from.slice(0,10)} → ${backtest.to.slice(0,10)}`:null};
+ const [book,backtest,archivedRaw]=await Promise.all([redis.get<ForwardBook>(FORWARD_BOOK_KEY),redis.get<{from:string;to:string;trades:BacktestSourceTrade[]}>(BACKTEST_KEY).catch(()=>null),loadArchivedForwardRows().catch(()=>[] as ForwardRow[])]);
+ const archived=archivedRaw as ForwardRow[];
+ const forwardRows=mergeForwardRows(archived,book?.rows??[]);
+ return {rows,forwardRows,forwardArchiveRows:archived.length,baseRows,backtestTrades:backtest?.trades??[],backtestWindow:backtest?`${backtest.from.slice(0,10)} → ${backtest.to.slice(0,10)}`:null};
 }
 /** Workspaces that own a simulated crypto paper book. The trade query then filters to one id. */
 export async function listCryptoPaperWorkspaces(){
@@ -183,9 +197,11 @@ export async function listCryptoPaperWorkspaces(){
 }
 /** Recomputes one workspace's ledger from saved rows, files any due proposals, derives shadow weights, and persists all three. */
 export async function runCryptoCalibration(redis:Redis,now=Date.now(),workspaceId:string){
- const {rows,forwardRows,baseRows,backtestTrades,backtestWindow}=await loadCalibrationInputs(redis,workspaceId);
+ const {rows,forwardRows,forwardArchiveRows,baseRows,backtestTrades,backtestWindow}=await loadCalibrationInputs(redis,workspaceId);
+ const deduped=dedupeForwardByCoinDay(forwardRows);
+ const forwardObs=forwardObservations(deduped);
  const previous=await redis.get<{version:string}>(shadowWeightsKey(workspaceId)).catch(()=>null);
- const ledger=buildCalibration(paperObservations(rows),forwardObservations(forwardRows),{closedTrades:rows.length,forwardRows:forwardRows.length,shadowVersion:previous?.version??null,baseTrades:baseRows.length,backtestTrades:backtestTrades.length,backtestWindow},now,paperObservations(baseRows),backtestObservations(backtestTrades));
+ const ledger=buildCalibration(paperObservations(rows),forwardObs,{closedTrades:rows.length,forwardRows:forwardRows.length,shadowVersion:previous?.version??null,baseTrades:baseRows.length,backtestTrades:backtestTrades.length,backtestWindow,forwardFilledBeforeDedupe:forwardObservations(forwardRows).length,forwardArchiveRows},now,paperObservations(baseRows),backtestObservations(backtestTrades));
  const [recs,filed]=await Promise.all([loadRecommendations(redis),redis.get<Record<string,string>>(calibrationFiledKey(workspaceId))]);
  const proposals=proposeFromLedger(ledger,recs,filed??{},now);
  if(proposals.filedNow.length){await saveRecommendations(redis,proposals.rows);await redis.set(calibrationFiledKey(workspaceId),proposals.filed);}
@@ -197,7 +213,7 @@ export async function runCryptoCalibration(redis:Redis,now=Date.now(),workspaceI
 export async function runDailyCalibration(redis:Redis,now=Date.now()){
  const day=new Date(now).toISOString().slice(0,10);
  const ids=await listCryptoPaperWorkspaces();
- if(!ids.length){await redis.set(SHADOW_WEIGHTS_ACTIVE,'none',{ex:7*86400}).catch(()=>undefined);return {ok:true,skipped:true,reason:'No simulated crypto paper workspace'};}
+ if(!ids.length){await publishShadowPointer(redis,[],now).catch(()=>undefined);return {ok:true,skipped:true,reason:'No simulated crypto paper workspace'};}
  let ran=0,filed=0,fields=0;
  for(const workspaceId of ids){
   const fresh=await redis.set(`${CALIBRATION_DAY_KEY}:${workspaceId}:${day}`,'done',{nx:true,ex:36*3600});
@@ -205,6 +221,6 @@ export async function runDailyCalibration(redis:Redis,now=Date.now()){
   try{const out=await runCryptoCalibration(redis,now,workspaceId);ran++;filed+=out.filedNow.length;fields+=out.ledger.fields.length;}
   catch(error){console.error('[crypto-calibration] failed',workspaceId,error);}
  }
- await redis.set(SHADOW_WEIGHTS_ACTIVE,ids.length===1?ids[0]:'none',{ex:7*86400});
+ await publishShadowPointer(redis,ids,now);
  return ran?{ok:true,skipped:false,filed,fields,workspaces:ids.length}:{ok:true,skipped:true,reason:'Calibration already ran today',workspaces:ids.length};
 }

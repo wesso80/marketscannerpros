@@ -49,6 +49,36 @@ it('a stale scan flips a working stamp to needs attention',async()=>{
  expect(s.items.find(i=>i.id==='shadow')?.state).toBe('attention');
  expect((await learningStatus(null,'owner',now)).items.every(i=>i.state==='collecting'||i.state==='off')).toBe(true);
 });
+it('shows the shadow-weights pointer, workspace count, version, and the last stamp attempt on the composite line',async()=>{
+ const rows=[{id:'a',symbol:'A',stage:'MOMENTUM_VOLUME',asOf:'x',jev:stamp('scored'),catalyst:cat('scored'),chart:{rule:'jev-chart-v1',status:'scored',cleanBase:.5,strongClose:.5,volumeExpansion:.5,overheadSupply:.2,bars:25,model:'m',checkedAt:'2026-10-01T11:00:00Z',inputTokens:40}}];
+ const weights={rule:'shadow-score-v1',version:'wg1l4k',computedAt:'2026-10-01T00:09:00.000Z',ledgerCheckedAt:'2026-10-01T00:09:00.000Z',available:true,reason:'2 confirmed sides across 2 fields.',weights:[{field:'a',label:'A',side:'yes',unit:'R',lift:.5,weight:2,n:40,outcome:'paperR'}],confirmedFields:2};
+ const attempt={at:'2026-10-01T03:34:00.000Z',stamped:0,available:false,pointer:'none',weightsVersion:null,named:1,outcome:'pointer-none' as const};
+ const data:Record<string,unknown>={
+  'admin:crypto-markets:momentum-volume:v1':{updatedAt:'2026-10-01T11:30:00Z',rows},
+  'admin:crypto-markets:shadow-weights:v1:owner':weights,
+  'admin:crypto-markets:shadow-weights:v1:active':'none',
+  'admin:crypto-markets:shadow-weights:v1:workspaces':{count:2,at:'2026-10-01T00:09:00.000Z',pointer:'none'},
+  'admin:crypto-markets:shadow-score:last-attempt:v1':attempt,
+ };
+ const s=await learningStatus(redis(data),'owner',now);
+ const line=s.items.find(i=>i.id==='shadowScore')!;
+ expect(line.state).toBe('attention');
+ expect(line.summary).toContain('wg1l4k');
+ expect(line.summary).toContain('2026-10-01T00:09:00.000Z');
+ expect(line.summary).toContain('admin:crypto-markets:shadow-weights:v1:active=none');
+ expect(line.summary).toContain('Crypto paper workspaces: 2');
+ expect(line.summary).toContain('pointer-none');
+ expect(line.summary).toContain('0 named rows carry a stamp of this version');
+ expect(s.shadowPointer).toMatchObject({key:'admin:crypto-markets:shadow-weights:v1:active',value:'none',workspaces:2,workspacesSource:'recorded',weightsVersion:'wg1l4k',weightsComputedAt:'2026-10-01T00:09:00.000Z',lastStamp:attempt});
+ expect(line.next).toMatch(/exactly one crypto paper workspace/);
+ const live=await learningStatus(redis(data),'owner',now,1);
+ expect(live.shadowPointer.workspaces).toBe(1);
+ expect(live.shadowPointer.workspacesSource).toBe('live');
+ expect(s.jevUsage.price.inputUsdPerMillion).toBeNull();
+ expect(s.jevUsage.price.label).toMatch(/No price is assumed/);
+ expect(s.jevUsage.stamps.find(r=>r.scope==='scans'&&r.module==='jev-chart')).toMatchObject({calls:1,inputTokens:40,day:'2026-10-01'});
+ expect(JSON.stringify(s)).not.toMatch(/AI_GATEWAY_API_KEY|UPSTASH|Bearer /);
+});
 it('the learning routes are inside the crypto scope and the status module never calls Jev, a provider, or the database',()=>{
  for(const p of ['/api/admin/crypto-markets/learning','/api/admin/crypto-markets/calibration','/api/admin/crypto-markets/forward-score','/api/admin/crypto-markets/recommendations'])expect(discoveryOnlyAction(p)).toBe('allow');
  const src=readFileSync('lib/admin/learningStatus.ts','utf8');

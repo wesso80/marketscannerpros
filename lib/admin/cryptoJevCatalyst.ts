@@ -100,7 +100,7 @@ export async function attachCatalystShadow<T extends CatalystRow>(redis:Redis,ro
     if(!cached.headlines.length){row.catalyst=noHeadlinesCatalyst(now);return;}
     const newestAt=cached.headlines[0].publishedAt;
     if(!jevReady){row.catalyst=unavailableCatalyst(now,'no-key',cached.headlines.length,newestAt);return;}
-    const {model,answers,inputTokens}=await askJev(catalystState(row,cached.headlines),CATALYST_QUESTIONS);
+    const {model,answers,inputTokens}=await askJev(catalystState(row,cached.headlines),CATALYST_QUESTIONS,{module:'jev-catalyst'});
     row.catalyst={rule:CATALYST_RULE,status:'scored',source:CATALYST_SOURCE,windowHours:CATALYST.windowHours,headlines:cached.headlines.length,newestAt,listingNews:answers.listingNews.probability,supplyEvent:answers.supplyEvent.probability,exploitOrOutage:answers.exploitOrOutage.probability,regulatoryNegative:answers.regulatoryNegative.probability,narrativeOnly:answers.narrativeOnly.probability,model,checkedAt:new Date(now).toISOString(),...(inputTokens!=null?{inputTokens}:{})};
    }catch(e){row.catalyst=unavailableCatalyst(now,e instanceof JevFailure?e.reason:'error');}
    finally{row.stage=stage;}
