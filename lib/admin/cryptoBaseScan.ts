@@ -1,6 +1,7 @@
 import type {ExchangeBar} from './cryptoExchangeVolume';
-import {selectDailyPair,fetchDailyVenue,type DailyVenue} from './cryptoDailyVenues';
+import {selectDailyPair,loadDailyVenue,parseDailyVenue,compressionFetchDays,type DailyVenue} from './cryptoDailyVenues';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
+import {scoreCompression,type CompressionFlag} from './cryptoCompression';
 export type BaseScanRow={id:string;symbol:string;product:string|null;exchange:DailyVenue|null;quote:string|null;volumeUnit:string|null;stage:'PENDING'|'BASE'|'NOT_BASE'|'UNAVAILABLE'|'EXCLUDED';reason:string;asOf:string|null;high:number|null;low:number|null;widthPct:number|null;gapPct:number|null;slopePct:number|null;contraction:number|null};
 export type BaseScan={version:2;discoveryAt:string;startedAt:string;updatedAt:string;rows:BaseScanRow[]};
 const D=86400000;
@@ -34,7 +35,16 @@ export function assessDailyBase(row:BaseScanRow,bars:ExchangeBar[],now:number):B
   const passes=widthPct<=15&&gapPct<=3&&slopePct<=3&&contraction<=0.7;
   return {...result,stage:passes?'BASE':'NOT_BASE',reason:passes?'Tight flat 21-day range with contracting daily volume; watchlist only':'Failed: '+[widthPct>15?'range width >15%':null,gapPct>3?'MA gap >3%':null,slopePct>3?'MA slope >3%':null,contraction>0.7?'volume ratio >0.70':null].filter(Boolean).join(', ')};
 }
-export async function fetchDailyBase(row:BaseScanRow,now:number):Promise<BaseScanRow>{
+/** Display-only compression rides along on the same candle response. It is not read by entries, paper ranking, or gates. The legacy 30-day window is still what assessDailyBase sees. */
+export async function fetchDailyBase(row:BaseScanRow,now:number):Promise<BaseScanRow&{compression:CompressionFlag}>{
   if(!row.product||!row.exchange||!row.quote||!row.volumeUnit)throw Error('Unsupported pair');
-  return assessDailyBase(row,await fetchDailyVenue({exchange:row.exchange,product:row.product,quote:row.quote,volumeUnit:row.volumeUnit},now),now);
+  const pair={exchange:row.exchange,product:row.product,quote:row.quote,volumeUnit:row.volumeUnit};
+  const days=compressionFetchDays(pair.exchange);
+  const {raw,end}=await loadDailyVenue(pair,now,days);
+  let history:ExchangeBar[]=[];
+  try{history=parseDailyVenue(pair.exchange,raw,end-days*D,end,D,true);}catch{history=[];}
+  let assessed:BaseScanRow;
+  try{assessed=assessDailyBase(row,parseDailyVenue(pair.exchange,raw,end-30*D,end),now);}
+  catch{assessed={...row,stage:'UNAVAILABLE',reason:'Provider or candle validation failed; no substitute data',asOf:null,high:null,low:null,widthPct:null,gapPct:null,slopePct:null,contraction:null};}
+  return {...assessed,compression:scoreCompression(history,now,{fetchedDays:days,base21:assessed})};
 }
