@@ -671,7 +671,7 @@ export default function AlertsWidget({
               <option value="" disabled>Market…</option>
               <option value="crypto">Crypto</option>
               <option value="equity">Stock</option>
-              
+
             </select>
           </div>
           
@@ -744,7 +744,7 @@ export default function AlertsWidget({
                         </span>
                       )}
                     </div>
-                    
+      
                     <div className="flex items-center gap-2">
                       {alert.triggered_at && (
                         <span className="text-xs text-amber-400">
@@ -771,7 +771,7 @@ export default function AlertsWidget({
                       </button>
                     </div>
                   </div>
-                  
+    
                   {alert.notes && (
                     <p className="text-xs text-slate-500 mt-2">{alert.notes}</p>
                   )}
@@ -839,7 +839,7 @@ export default function AlertsWidget({
                         </optgroup>
                       </select>
                     </div>
-                    
+      
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="text-xs text-slate-400 block mb-1">Alert Type</label>
@@ -889,7 +889,7 @@ export default function AlertsWidget({
                           </optgroup>
                         </select>
                       </div>
-                      
+        
                       <div>
                         <label className="text-xs text-slate-400 block mb-1">Threshold</label>
                         <input
@@ -936,7 +936,7 @@ export default function AlertsWidget({
                     {newSmartAlert.conditionType?.startsWith('strategy_') && (
                       <div className="mb-3 p-3 bg-slate-800/50 rounded-lg border border-emerald-500/20">
                         <p className="text-xs text-emerald-400 mb-2">📊 Configure your strategy alert:</p>
-                        
+          
                         <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-3">
                           <div>
                             <label className="text-xs text-white block mb-1">🎯 Ticker *</label>
@@ -1013,7 +1013,7 @@ export default function AlertsWidget({
                             </select>
                           </div>
                         </div>
-                        
+          
                         <p className="text-xs text-slate-500">
                           💡 Data from CoinGecko & Alpha Vantage • Check every 15 min
                         </p>
@@ -1096,7 +1096,7 @@ export default function AlertsWidget({
                             </span>
                           )}
                         </div>
-                        
+          
                         <div className="flex items-center gap-2">
                           {alert.triggered_at && (
                             <span className="text-xs text-amber-400">

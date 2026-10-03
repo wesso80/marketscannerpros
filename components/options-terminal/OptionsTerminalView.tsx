@@ -1053,4 +1053,3 @@ function fmtPct(n?: number) {
   if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '—';
   return `${(n * 100).toFixed(1)}%`;
 }
-
