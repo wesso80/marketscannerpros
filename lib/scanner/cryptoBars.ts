@@ -183,6 +183,7 @@ export async function fetchCryptoSeries(
     const windows = Math.min(MAX_DAILY_WINDOWS, Math.max(2, Math.floor(opts.dailyWindows ?? DEFAULT_DAILY_WINDOWS)));
     const d = await fetchDailyBars(coinId, nowMs, opts.requestOptions, windows);
     warnings.push(...d.warnings);
+    warnings.push('Daily OHLC uses CoinGecko aggregate prices, not a single exchange. /ohlc/range does not document a precision parameter; ATR can differ from venue candles.');
     const daily = attachDailyVolumes(d.bars, d.volumes);
     if (d.volumes.length) volumeBasis = 'coingecko_daily_total_volume';
     source = 'coingecko ohlc/range interval=daily + market_chart/range total_volumes';
