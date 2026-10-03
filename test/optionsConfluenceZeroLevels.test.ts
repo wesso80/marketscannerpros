@@ -1,5 +1,5 @@
-import {expect,it} from 'vitest';
-import {selectStrikesFromConfluence} from '@/lib/options-confluence-analyzer';
+import {expect,it,vi} from 'vitest';
+import {selectStrikesFromConfluence,selectStrikesForScan} from '@/lib/options-confluence-analyzer';
 
 // Equity scans use 30m base bars, so the 5m/10m/15m/30m timeframes cannot be resampled: the agent emits
 // level 0 (an "unmeasured" sentinel) and, on a closed market, marks them decompressing + clusters them.
@@ -31,4 +31,14 @@ it('still returns the ATM strike when only unmeasured levels exist',()=>{
 
 it('still reports a genuinely empty chain',()=>{
   expect(()=>selectStrikesFromConfluence(base(),true,[],0.25)).toThrow('No listed strikes available');
+});
+
+it('degrades a strike-selection failure instead of throwing it out of the scan',()=>{
+  const logged=vi.spyOn(console,'error').mockImplementation(()=>{});
+  const picked=selectStrikesForScan(base(),true,[],0.25);
+  expect(picked.recommendations).toEqual([]);
+  expect(picked.degraded).toBe(true);
+  expect(picked.warning).toContain('No listed strikes available');
+  expect(logged).toHaveBeenCalled();
+  logged.mockRestore();
 });

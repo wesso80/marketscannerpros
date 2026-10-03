@@ -502,6 +502,10 @@ export interface OptionsSetup {
   
   // DISCLAIMER FLAGS (Risk events)
   disclaimerFlags: string[];
+
+  // Set when strike selection threw. The rest of the scan is still returned.
+  strikeSelectionDegraded: boolean;
+  strikeSelectionWarning: string | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3500,6 +3504,27 @@ export function selectStrikesFromConfluence(
   return recommendations;
 }
 
+/** Strike pick used by analyzeForOptions. A picker throw degrades this symbol instead of failing the scan. */
+export function selectStrikesForScan(
+  confluenceResult: HierarchicalScanResult,
+  isCallDirection: boolean,
+  availableStrikes: number[] = [],
+  impliedVolatility: number = 0.25,
+): { recommendations: StrikeRecommendation[]; degraded: boolean; warning: string | null } {
+  try {
+    const recommendations = selectStrikesFromConfluence(confluenceResult, isCallDirection, availableStrikes, impliedVolatility);
+    return { recommendations, degraded: false, warning: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Strike selection failed';
+    console.error('[options-analyzer] strike selection failed:', error);
+    return {
+      recommendations: [],
+      degraded: true,
+      warning: `Strike selection failed: ${message}. No strike recommendations.`,
+    };
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPIRATION SELECTION BASED ON CONFLUENCE TIMING
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4165,16 +4190,27 @@ export class OptionsConfluenceAnalyzer {
 
     const isCallDirection = finalDirection === 'bullish';
 
-    // Select strikes after final direction is resolved
+    // Select strikes after final direction is resolved. A picker error drops recommendations for this
+    // symbol and is reported on the result; it must not fail the whole scan (options-scan and flow).
     const quoteStrikes = isCallDirection ? quotedCalls : quotedPuts;
-    const allStrikes = finalDirection !== 'neutral' && quoteStrikes.length > 0 && ivAnalysis != null
-      ? selectStrikesFromConfluence(
-          confluenceResult,
-          isCallDirection,
-          quoteStrikes,
-          ivAnalysis?.currentIV ?? 0.25
-        ).filter(candidate => quoteStrikes.includes(candidate.strike))
-      : [];
+    let strikeSelectionDegraded = false;
+    let strikeSelectionWarning: string | null = null;
+    let allStrikes: StrikeRecommendation[] = [];
+    if (finalDirection !== 'neutral' && quoteStrikes.length > 0 && ivAnalysis != null) {
+      const picked = selectStrikesForScan(
+        confluenceResult,
+        isCallDirection,
+        quoteStrikes,
+        ivAnalysis.currentIV ?? 0.25,
+      );
+      allStrikes = picked.recommendations.filter(candidate => quoteStrikes.includes(candidate.strike));
+      strikeSelectionDegraded = picked.degraded;
+      strikeSelectionWarning = picked.warning;
+      if (strikeSelectionWarning) {
+        executionNotes.push(strikeSelectionWarning);
+        disclaimerFlags.push(strikeSelectionWarning);
+      }
+    }
     let primaryStrike = allStrikes.length > 0 ? allStrikes[0] : null;
     let alternativeStrikes = allStrikes.slice(1);
 
@@ -4436,6 +4472,8 @@ export class OptionsConfluenceAnalyzer {
       executionNotes,
       dataConfidenceCaps,
       disclaimerFlags,
+      strikeSelectionDegraded,
+      strikeSelectionWarning,
     };
   }
   
