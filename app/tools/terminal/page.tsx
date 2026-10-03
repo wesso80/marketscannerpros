@@ -8,6 +8,7 @@
 import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { optionsEntrySymbol } from '@/lib/options/journey';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
@@ -363,11 +364,12 @@ export default function TerminalPage() {
   const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
     || (requestedType === 'crypto' ? 'Crypto' : 'Close Calendar');
   const [tab, setTab] = useState<TerminalTab>(requestedInitialTab);
-  const [symInput, setSymInput] = useState(requestedSymbol || selectedSymbol || 'BTCUSD');
+  const entrySymbol = optionsEntrySymbol((searchParams.get('tab') || '').toLowerCase(),requestedSymbol,requestedType || '',selectedSymbol || '');
+  const [symInput, setSymInput] = useState(entrySymbol);
   const [cryptoTerminalState, setCryptoTerminalState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
   /* Symbol management */
-  const sym = requestedSymbol || selectedSymbol || symInput || 'BTCUSD';
+  const sym = requestedSymbol || (['Options Terminal','Options Confluence','Options Flow'].includes(requestedInitialTab) && !requestedType ? entrySymbol : selectedSymbol || symInput || 'BTCUSD');
   const marketPath: MarketPath = requestedType === 'crypto'
     ? 'crypto'
     : requestedType === 'equity'
@@ -399,7 +401,6 @@ export default function TerminalPage() {
   /* Keep current tab aligned with active market path.
      Deep links to options tabs must not be silently reset by a stale crypto symbol. */
   useEffect(() => {
-    const optionsTab = tab === 'Options Terminal' || tab === 'Options Confluence' || tab === 'Options Flow';
     // A tab can change; an explicitly selected instrument must never be replaced.
     if (!visibleTabs.includes(tab)) {
       setTab(visibleTabs[0]);

@@ -55,6 +55,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
 
   /* ── UI state ──────────────────────────────────────────────── */
   const [ticker, setTicker] = useState(initialSymbol);
+  const [tickerInput, setTickerInput] = useState(initialSymbol);
   const selectedExpiry = searchParams.get('expiry') || '';
   const setSelectedExpiry = useCallback((expiry:string) => {
     router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(searchParams.toString()),expiry)}`,{scroll:false});
@@ -74,9 +75,12 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
     const next = propSymbol.toUpperCase();
     if (next !== ticker) {
       setTicker(next);
+      setTickerInput(next);
       setSelected(null);
     }
-  }, [propSymbol, ticker]);
+  // Sync only when the outer symbol changes; local typing must remain editable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propSymbol]);
 
   /* ── Auto-fetch on ticker/expiry change ────────────────────── */
   useEffect(() => {
@@ -145,9 +149,14 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
   }, [activeFilter]);
 
   const handleTickerChange = useCallback((s: string) => {
-    setTicker(s.toUpperCase());
+    const next = s.toUpperCase().trim();
+    setTicker(next);
+    setTickerInput(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('symbol',next); params.set('type','equity'); params.delete('expiry');
+    router.replace(`${pathname}?${params}`,{scroll:false});
     setSelected(null);
-  }, []);
+  }, [searchParams, router, pathname]);
 
   const spot = chain.underlyingPrice;
   const updatedLabel = chain.loading ? 'Loading…' : quoteDateLabel(chain.quoteBasis, chain.asOfDate);
@@ -315,9 +324,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2">
                 <div className="text-[11px] uppercase tracking-wide text-zinc-400">Ticker</div>
                 <input
-                  value={ticker}
-                  onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleTickerChange(ticker); }}
+                  value={tickerInput}
+                  onChange={(e) => setTickerInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleTickerChange(tickerInput); }}
                   className="w-28 bg-transparent text-sm font-semibold outline-none"
                   placeholder="AAPL"
                 />

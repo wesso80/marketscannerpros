@@ -1289,7 +1289,7 @@ function BacktestContent() {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Link
-                href={`/tools/terminal?tab=options-confluence&symbol=${symbol}`}
+                href={`/tools/terminal?tab=options-terminal&type=equity&symbol=${symbol}`}
                 style={{
                   padding: '8px 14px',
                   background: 'var(--msp-panel)',
