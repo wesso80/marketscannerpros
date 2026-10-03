@@ -1,3 +1,4 @@
+import { quoteSpreadPct } from '@/lib/options/contractCosts';
 /**
  * Options Chain API — /api/options-chain
  *
@@ -70,7 +71,7 @@ export interface OptionsContract {
   rho: number;
   itm: boolean;
   spread: number;
-  spreadPct: number;
+  spreadPct: number | null;
 }
 
 export interface OptionsChainResponse {
@@ -141,7 +142,7 @@ function normalise(raw: AVRaw): OptionsContract | null {
     rho: num(raw.rho),
     itm: raw.in_the_money?.toUpperCase() === 'TRUE',
     spread,
-    spreadPct: mid > 0 ? (spread / mid) * 100 : 0,
+    spreadPct: quoteSpreadPct({bid, ask}),
   };
 }
 
@@ -243,7 +244,7 @@ export async function GET(request: NextRequest) {
   try {
     /* ── 1. Check cache ──────────────────────────────────────────── */
     // v2: entries written before the quote-source fix (FMV marks, no bid/ask) are ignored.
-    const cacheKey = `${CACHE_KEYS.optionsChain(symbol)}:v2`;
+    const cacheKey = `${CACHE_KEYS.optionsChain(symbol)}:v3`;
     type CachedChain = { contracts: OptionsContract[]; provider: string; spot: number; ts: number; source: SourceMeta };
     const cached = await getCached<CachedChain>(cacheKey);
 

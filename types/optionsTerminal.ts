@@ -19,7 +19,7 @@ export interface OptionsContract {
   rho: number;
   itm: boolean;
   spread: number;
-  spreadPct: number;
+  spreadPct: number | null;
 }
 
 export interface ExpirationMeta {
