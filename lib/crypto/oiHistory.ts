@@ -5,10 +5,9 @@ import { compareOi24h, HOUR_MS, OI_METHOD, totalOiChange, type OiObservation, st
 const SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX', 'DOT', 'LINK', 'NEAR', 'LTC', 'UNI', 'ATOM', 'ARB', 'OP', 'APT', 'TON', 'SHIB', 'TRX'];
 const key = (hour: number, fixed = false) => `oi:observed-usd:${fixed ? "fixed-v1" : "v3"}:${hour}`;
 type Comparison = OiObservation & ReturnType<typeof compareOi24h>;
-let memo: { signature: string; until: number; promise: Promise<Comparison[]> } | null = null;
+let memo: { signature: string; until: number; promise: Promise<{ compared: Comparison[]; persisted: boolean }> } | null = null;
 
-/** Three bounded hourly reads survive deploys and never use the legacy unversioned anchor or v2 snapshots (no per-contract data). */
-export async function trackOiHistory(current: OiObservation[], now = Date.now()): Promise<Comparison[]> {
+async function compareAndStore(current: OiObservation[], now = Date.now()) {
   const signature = JSON.stringify(current);
   if (memo?.signature === signature && now < memo.until) return memo.promise;
   const promise = (async () => {
@@ -17,26 +16,31 @@ export async function trackOiHistory(current: OiObservation[], now = Date.now())
     const stored = await Promise.all([23, 24, 25].map(age => getCached<OiObservation[]>(key(hour - age, fixed)).catch(() => null)));
     const history = stored.flatMap(rows => Array.isArray(rows) ? rows : []);
     const compared = current.map(coin => ({ ...coin, ...compareOi24h(coin, history, now) }));
+    let persisted = true;
     if (current.length) {
       const written = await setCached(key(hour, fixed), current, 48 * 3600);
-      if (fixed && written === false) throw new Error('OI hourly snapshot persistence unavailable');
+      persisted = written !== false;
     }
-    return compared;
+    return { compared, persisted };
   })();
   memo = { signature, until: now + 300_000, promise };
   return promise;
 }
 
+/** Three bounded hourly reads survive deploys and never use the legacy unversioned anchor or v2 snapshots (no per-contract data). */
+export async function trackOiHistory(current: OiObservation[], now = Date.now()): Promise<Comparison[]> {
+  return (await compareAndStore(current, now)).compared;
+}
+
 export async function getOiEvidence() {
   const redis = getRedis();
-  if (!redis) throw new Error('Fixed OI basket persistence unavailable');
   const tickers = await getDerivativesTickers();
   const now = Date.now();
   const basketKey = 'oi:fixed-basket:v1';
   const identityKey = 'oi:fixed-constituents:v1';
-  const [saved, pinned] = await Promise.all([
+  const [saved, pinned] = redis ? await Promise.all([
     redis.get<StableOiObservation[]>(basketKey), redis.get<StableOiObservation[]>(identityKey),
-  ]);
+  ]) : [null, null];
   const build = (previous:StableOiObservation[]) => {
     const universe = previous.length ? previous.map(c=>c.symbol) : SYMBOLS;
     let droppedContracts = 0;
@@ -57,34 +61,50 @@ export async function getOiEvidence() {
   const hadPin = Boolean((saved ?? pinned)?.length);
   let { observations, droppedContracts } = build(saved ?? pinned ?? []);
   if (!observations.length) {
-    if (hadPin) {
+    if (hadPin && redis) {
       // The saved contracts have all stopped trading. Forget them so the next read can pin what is live.
       try { await redis.del(identityKey, basketKey); } catch { /* the response still must not depend on a manual delete */ }
       const coverage = `${droppedContracts} pinned contract(s) stopped trading and were removed. The basket rebuilds from the next live snapshot. Not the whole market.`;
       return {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
         basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: 0, change24h: null,
-        comparisonReason: coverage, coverage,
+        comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: 'ok' as const,
+      };
+    }
+    if (!redis) {
+      const coverage = 'No live open-interest quotes, and the fixed basket is unavailable because the cache is down. Not the whole market.';
+      return {
+        coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
+        basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: 0, change24h: null,
+        comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: 'unavailable' as const,
       };
     }
     throw new Error('No fresh open-interest observations');
   }
-  if (!pinned?.length) {
-    // Persist the identity once, without expiry. Concurrent bootstraps must adopt the same winning basket.
-    await redis.set(identityKey, observations, { nx:true });
-    const winner = await redis.get<StableOiObservation[]>(identityKey);
-    if (!winner?.length) throw new Error('Unable to establish fixed OI constituents');
-    ({ observations, droppedContracts } = build(winner));
-  } else if (droppedContracts > 0) {
-    // Keep the reduced set. A delisted contract must not stay pinned until someone deletes the key.
-    await redis.set(identityKey, observations);
+  if (redis) {
+    if (!pinned?.length) {
+      // Persist the identity once, without expiry. Concurrent bootstraps must adopt the same winning basket.
+      await redis.set(identityKey, observations, { nx:true });
+      const winner = await redis.get<StableOiObservation[]>(identityKey);
+      if (winner?.length) ({ observations, droppedContracts } = build(winner));
+    } else if (droppedContracts > 0) {
+      // Keep the reduced set. A delisted contract must not stay pinned until someone deletes the key.
+      await redis.set(identityKey, observations);
+    }
+    if (observations.length) await redis.set(basketKey, observations, { ex:30*24*3600 });
   }
-  await redis.set(basketKey, observations, { ex:30*24*3600 });
-  const coins = await trackOiHistory(observations, now);
+  if (!observations.length) throw new Error('No fresh open-interest observations');
+  const { compared: coins, persisted } = await compareAndStore(observations, now);
   const carriedContracts = observations.reduce((n,c)=>n+c.carriedContracts,0);
-  const coverage = droppedContracts > 0
-    ? `${droppedContracts} pinned contract(s) were carried for at most 1 hour, then removed after they stopped trading. ${carriedContracts} contract(s) are still carried. Totals use the contracts that remain. Not the whole market.`
-    : 'Fixed contracts selected from the initial CoinGecko perpetual snapshot; missing updates carried for at most 1 hour, then removed from the basket. Not the whole market.';
+  const persistence = redis && persisted ? 'ok' as const : 'unavailable' as const;
+  const coverage = !redis
+    ? 'Live CoinGecko perpetual snapshot only. The fixed basket and hourly comparisons are unavailable because the cache is down. Not the whole market.'
+    : !persisted
+      ? 'Live open interest is available, but the hourly snapshot could not be stored because the cache write failed. Not the whole market.'
+      : droppedContracts > 0
+        ? `${droppedContracts} pinned contract(s) were carried for at most 1 hour, then removed after they stopped trading. ${carriedContracts} contract(s) are still carried. Totals use the contracts that remain. Not the whole market.`
+        : 'Fixed contracts selected from the initial CoinGecko perpetual snapshot; missing updates carried for at most 1 hour, then removed from the basket. Not the whole market.';
+  const status = persistence === 'ok' && carriedContracts === 0 && droppedContracts === 0 ? 'ok' as const : 'degraded' as const;
   return {
     coins, method: OI_METHOD, carriedContracts, droppedContracts,
     expectedContracts: observations.reduce((n,c)=>n+c.expectedContracts,0),
@@ -95,6 +115,6 @@ export async function getOiEvidence() {
     comparisonReason: totalOiChange(coins) == null
       ? 'No hourly snapshot from 23–25 hours ago covers at least 90% of the current open interest on the same venue contracts yet. Snapshots are stored hourly by the scheduled public OI job and when this feed is read.'
       : null,
-    coverage,
+    coverage, status, persistence,
   };
 }

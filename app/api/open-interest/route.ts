@@ -34,7 +34,8 @@ export async function GET(_req: NextRequest) {
       droppedContracts: evidence.droppedContracts ?? 0,
       coins, comparisonReason: evidence.comparisonReason, coverage: evidence.coverage,
       method: evidence.method, timestamp: meta.lastUpdated, source: meta.provider,
-      freshnessStatus: evidence.carriedContracts > 0 ? "degraded" : meta.freshnessStatus, meta,
+      status: evidence.status ?? 'ok', persistence: evidence.persistence ?? 'ok',
+      freshnessStatus: evidence.status === 'degraded' || evidence.carriedContracts > 0 ? "degraded" : meta.freshnessStatus, meta,
     });
   } catch {
     return NextResponse.json({ error: 'Fresh open-interest observations unavailable' }, { status: 503 });

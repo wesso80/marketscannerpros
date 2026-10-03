@@ -5,10 +5,13 @@ vi.mock('@/lib/redis',()=>({
  getRedis:()=>state.available ? {get:async(k:string)=>state.store.get(k)??null,set:async(k:string,v:any,opts:any)=>{if(!opts?.nx||!state.store.has(k))state.store.set(k,v);return 'OK';}} : null,
  getCached:async()=>null,setCached:async()=>true,
 }));
-it('pins identity durably and refuses to pretend persistence works when absent',async()=>{
+it('pins identity durably and still returns the live snapshot when the cache is down',async()=>{
  const {getOiEvidence}=await import('@/lib/crypto/oiHistory');
  expect((await getOiEvidence()).totalOpenInterest).toBe(100);
  expect(state.store.get('oi:fixed-constituents:v1')).toHaveLength(1);
  state.available=false;
- await expect(getOiEvidence()).rejects.toThrow('persistence unavailable');
+ const degraded=await getOiEvidence();
+ expect(degraded.totalOpenInterest).toBe(100);
+ expect(degraded.persistence).toBe('unavailable');
+ expect(degraded.status).toBe('degraded');
 });
