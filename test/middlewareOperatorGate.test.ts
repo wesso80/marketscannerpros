@@ -48,4 +48,28 @@ describe('middleware operator route gate', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow, noarchive, nosnippet');
   });
+
+  it('lets a crypto-summary key past the admin cookie wall and does not unlock other admin APIs', async () => {
+    process.env.ADMIN_DISCOVERY_ONLY = 'true';
+    const { middleware } = await import('../middleware');
+    const bare = await middleware(new NextRequest('http://localhost/api/admin/crypto-markets/summary'));
+    const summary = await middleware(new NextRequest('http://localhost/api/admin/crypto-markets/summary', {
+      headers: { 'x-crypto-summary-key': 'present' },
+    }));
+    const bearer = await middleware(new NextRequest('http://localhost/api/admin/crypto-markets/summary/', {
+      headers: { authorization: 'Bearer present' },
+    }));
+    const paper = await middleware(new NextRequest('http://localhost/api/admin/crypto-markets/paper', {
+      headers: { 'x-crypto-summary-key': 'present', authorization: 'Bearer present' },
+    }));
+    const paused = await middleware(new NextRequest('http://localhost/api/admin/live-scanner', {
+      headers: { 'x-crypto-summary-key': 'present', authorization: 'Bearer present' },
+    }));
+    expect(bare.status).toBe(401);
+    expect(summary.status).toBe(200);
+    expect(bearer.status).toBe(200);
+    expect(paper.status).toBe(401);
+    expect(paused.status).toBe(503);
+    expect(await paused.json()).toMatchObject({ reason: 'admin_discovery_only' });
+  });
 });

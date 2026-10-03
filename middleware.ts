@@ -180,7 +180,12 @@ export async function middleware(req: NextRequest) {
   // but this middleware layer enforces the auth check at the edge BEFORE the handler runs.
   // This prevents timing attacks and information leakage from handler-level errors
   // when the request is clearly unauthenticated.
-  if (pathname.startsWith('/api/admin/')) {
+  // This one bot route authenticates with CRYPTO_SUMMARY_KEY in the handler (header or Bearer).
+  // Presenting that credential skips the session cookie here; the handler still rejects a bad key.
+  // Every other /api/admin route keeps the session check, even if the same header is sent.
+  const summaryBot = pathname.replace(/\/+$/, '') === '/api/admin/crypto-markets/summary'
+    && (Boolean(req.headers.get('x-crypto-summary-key')?.trim()) || /^Bearer\s+\S/i.test(req.headers.get('authorization') ?? ''));
+  if (pathname.startsWith('/api/admin/') && !summaryBot) {
     const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
     let appIsAdmin = false;
 
