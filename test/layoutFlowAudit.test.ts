@@ -920,7 +920,7 @@ describe('layout and flow audit regressions', () => {
     expect(marketMoversPage).toContain('Risk Context: {environment.deploymentMode');
     expect(marketMoversPage).not.toContain('Today&apos;s Plays / Movers Queue');
     expect(marketMoversPage).not.toContain('Capital Mode: {environment.deploymentMode');
-    expect(optionsTerminalView).toContain('Options scenario: ${label}');
+    expect(optionsTerminalView).toContain("optionJournalParams(ticker, selectedContract!, 'scenario')");
     expect(optionsTerminalView).toContain('Save Scenario');
     expect(optionsTerminalView).toContain('These are educational frameworks only');
     expect(optionsTerminalView).toContain('{chain.error}');

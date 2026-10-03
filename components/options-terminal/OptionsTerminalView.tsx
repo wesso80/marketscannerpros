@@ -13,6 +13,7 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { optionJournalParams } from '@/lib/options/journalHandoff';
 import { useOptionsChain } from '@/hooks/useOptionsChain';
 import type {
   OptionsContract,
@@ -673,6 +674,7 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     </div>
                   </div>
 
+                  <p className="text-xs text-zinc-400">Journal buy entry: {selectedContract.ask > 0 ? `$${selectedContract.ask} per share (ask)` : 'Unavailable — no valid ask'}. Calls and puts default to LONG; review before saving.</p>
                   {/* Actions */}
                   <div className="grid grid-cols-1 gap-3">
                     <button
@@ -721,18 +723,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     </button>
                     <button
                       type="button"
+                      disabled={!Number.isFinite(selectedContract.ask) || selectedContract.ask <= 0}
                       onClick={() => {
-                        const c = selectedContract!;
-                        const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
-                        const notes = `Options scenario: ${label}\nMark: $${c.mark.toFixed(2)}\nIV: ${(c.iv * 100).toFixed(1)}%\nDelta: ${c.delta.toFixed(3)}\nOI: ${c.openInterest.toLocaleString()}\nSpread: $${c.spread.toFixed(2)} (${c.spreadPct.toFixed(1)}%)`;
-                        const params = new URLSearchParams({
-                          symbol: ticker,
-                          side: selected!.side === 'CALL' ? 'LONG' : 'SHORT',
-                          entryPrice: c.mark.toFixed(2),
-                          notes,
-                          strategy: 'Options',
-                          setup: label,
-                        });
+                        const params = optionJournalParams(ticker, selectedContract!, 'scenario');
                         router.push(`/tools/workspace?tab=journal&prefill=true&${params.toString()}`);
                       }}
                       className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
@@ -741,23 +734,9 @@ export default function OptionsTerminalView({ symbol: propSymbol }: { symbol?: s
                     </button>
                     <button
                       type="button"
+                      disabled={!Number.isFinite(selectedContract.ask) || selectedContract.ask <= 0}
                       onClick={() => {
-                        const c = selectedContract!;
-                        const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
-                        const params = new URLSearchParams({
-                          symbol: ticker,
-                          side: selected!.side === 'CALL' ? 'LONG' : 'SHORT',
-                          entryPrice: c.mark.toFixed(2),
-                          quantity: '1',
-                          notes: `Analysis notes: ${label}\nIV: ${(c.iv * 100).toFixed(1)}% | Δ ${c.delta.toFixed(3)} | OI ${c.openInterest.toLocaleString()}`,
-                          strategy: 'Options',
-                          setup: label,
-                          tradeType: 'Options',
-                          optionType: selected!.side,
-                          strikePrice: c.strike.toString(),
-                          expirationDate: c.expiration,
-                          premium: c.mark.toFixed(2),
-                        });
+                        const params = optionJournalParams(ticker, selectedContract!, 'analysis');
                         router.push(`/tools/workspace?tab=journal&prefill=true&${params.toString()}`);
                       }}
                       className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
