@@ -3348,20 +3348,12 @@ export class ConfluenceLearningAgent {
         }
         // If decomp direction agrees, boost confidence
         else if (direction !== 'neutral' && direction === calDir) {
-          confidence = Math.min(95, confidence + 8);
           reasoningParts.push(`Calendar confirms ${calDir.toUpperCase()} (${calRows.length} TFs)`);
         }
       }
     }
 
-    // Boost confidence if high candle close confluence
-    if (candleCloseConfluence.confluenceRating === 'extreme') {
-      confidence = Math.min(95, confidence + 15);
-    } else if (candleCloseConfluence.confluenceRating === 'high') {
-      confidence = Math.min(90, confidence + 10);
-    } else if (candleCloseConfluence.confluenceRating === 'moderate') {
-      confidence = Math.min(85, confidence + 5);
-    }
+    // Close-calendar ratings are display only; no confidence bonus.
 
     // Timing clusters alone should not imply high directional confidence.
     // Keep the direction visible, but cap confidence when directional pull is weak.

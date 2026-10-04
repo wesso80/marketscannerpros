@@ -2016,7 +2016,7 @@ export function calculateCompositeScore(
     direction: confluenceDirection,
     weight: confluenceWeight,
     score: 0,
-    reason: `Timing activation ${timingActivation.toFixed(0)} (candle close ${candleConfluenceScore.toFixed(0)}, clustered TFs ${clusteredCount})`
+    reason: `Close calendar (clock only, display): ${candleConfluenceScore.toFixed(0)}`
   });
 
   // 4. MAX PAIN POSITION (dynamic micro-structure modifier by DTE)
@@ -2246,7 +2246,7 @@ export function calculateCompositeScore(
   const timeEdge = clamp(timingActivation, 0, 100);
   // High volume vs OI is info only (no buy/sell side) and contributes 0 to the flow edge.
   const flowEdge = clamp(Math.abs(oiScore) / 2, 0, 100);
-  const edgeBlendConfidence = (timeEdge * 0.40) + (structureEdge * 0.35) + (flowEdge * 0.25);
+  const edgeBlendConfidence = (structureEdge * 0.35 + flowEdge * 0.25) / 0.60;
   confidence = clamp(confidence * 0.60 + edgeBlendConfidence * 0.40, 0, 100);
   
   // If neutral direction, confidence is low by definition
@@ -2428,7 +2428,7 @@ function computeInstitutionalIntent(args: {
   const unusualRejectionBoost = unusualActivity?.alertLevel === 'high' ? 20 : unusualActivity?.alertLevel === 'moderate' ? 12 : 4;
   const srs = clampIntentScore(srsBase + unusualRejectionBoost + (clusteredCount >= 2 ? 10 : 0));
 
-  const ces = clampIntentScore(confluenceScore * 0.75 + Math.min(25, clusteredCount * 6));
+  const ces = clampIntentScore(Math.min(25, clusteredCount * 6)); // Clock contribution removed.
 
   const ivRank = measuredIvRank(ivAnalysis);
   const pcr = openInterestAnalysis?.pcRatio ?? 1;
@@ -2729,8 +2729,7 @@ function calculateAIMarketState(
     volEdgeScore >= 30 ? 'WEAK' : 'NONE';
   
   // Time Edge (from confluence)
-  const timeEdgeScore = Math.min(100, compositeScore.confidence * 0.8 + 
-    (confluenceResult.candleCloseConfluence?.confluenceScore || 0) * 0.2);
+  const timeEdgeScore = Math.min(100, confluenceResult.candleCloseConfluence?.confluenceScore || 0); // Display only.
   const timeEdgeStrength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE' = 
     timeEdgeScore >= 65 ? 'STRONG' :
     timeEdgeScore >= 45 ? 'MODERATE' :
@@ -2756,7 +2755,7 @@ function calculateAIMarketState(
   const keyFactors: string[] = [];
   
   // Determine primary edge based on strongest signal
-  if (volEdgeScore > dirEdgeScore && volEdgeScore > timeEdgeScore) {
+  if (volEdgeScore > dirEdgeScore) {
     primaryEdge = volEdgeSignal === 'SELL_VOL' ? 'Volatility Decay (Theta)' : 'Volatility Expansion (Vega)';
     thesis = volEdgeSignal === 'SELL_VOL'
       ? 'IV is elevated relative to historical levels. The primary edge comes from selling overpriced premium and collecting theta decay.'
@@ -2764,17 +2763,16 @@ function calculateAIMarketState(
     notEdge = 'This setup is NOT primarily about directional movement. Direction is secondary to volatility.';
     keyFactors.push(`Historical IV rank unavailable`);
     keyFactors.push(volEdgeSignal === 'SELL_VOL' ? 'Premium elevated vs realized vol' : 'Premium cheap vs realized vol');
-  } else if (dirEdgeScore > volEdgeScore && dirEdgeScore > timeEdgeScore) {
+  } else if (dirEdgeScore > volEdgeScore) {
     primaryEdge = compositeScore.finalDirection === 'bullish' ? 'Bullish Momentum' : 'Bearish Momentum';
     thesis = `Multiple factors align for ${compositeScore.finalDirection} direction. The primary edge comes from directional movement probability.`;
     notEdge = 'This setup is NOT primarily about volatility. Focus on directional targets.';
     keyFactors.push(`Direction score: ${compositeScore.directionScore > 0 ? '+' : ''}${compositeScore.directionScore.toFixed(0)}`);
     keyFactors.push(`${compositeScore.alignedCount}/${compositeScore.totalSignals} signals aligned`);
   } else {
-    primaryEdge = 'Time Confluence';
-    thesis = 'Multiple timeframes are aligning for a potential move. The edge comes from temporal confluence rather than a single dominant factor.';
-    notEdge = 'This setup relies on timing alignment. No single signal dominates.';
-    keyFactors.push(`Time edge score: ${timeEdgeScore.toFixed(0)}%`);
+    primaryEdge = 'No dominant edge';
+    thesis = 'No dominant direction or volatility read.';
+    notEdge = 'Close calendar is display only.';
   }
   
   // Add strategy-specific factors
@@ -2854,7 +2852,7 @@ function calculateAIMarketState(
   
   let tradeQualityGate: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT' = 'MODERATE';
   
-  const bestEdge = Math.max(dirEdgeScore, volEdgeScore, timeEdgeScore);
+  const bestEdge = Math.max(dirEdgeScore, volEdgeScore);
   
   if (bestEdge >= 70 && strategyMatchScore >= 80 && compositeScore.conflicts.length === 0) {
     tradeQualityGate = 'HIGH';
@@ -2987,7 +2985,6 @@ function buildProfessionalTradeStack(
   const overallEdgeScore = Math.round(clamp(
     structureScore * 0.35 +
     liquidityScore * 0.20 +
-    timeScore * 0.20 +
     optionsScore * 0.20 +
     executionScore * 0.05
   ));
@@ -3161,13 +3158,8 @@ function buildTradeSnapshot(args: {
     why.push(`PATTERN: ${topPattern.name} (${topPattern.bias}, ${topPattern.confidence}%) — ${topPattern.reason}`);
   }
 
-  const decompCount = confluence.decompression.clusteredCount ?? confluence.decompression.activeCount;
-  if (decompCount >= 2) {
-    why.push(`TIME EDGE: ${decompCount} TFs clustered (timing advantage)`);
-  } else {
-    why.push(`TIME: weak clustering (${decompCount} TF)`);
-  }
-
+  const closeCount = confluence.candleCloseConfluence?.closingNow.count ?? 0;
+  why.push(`Close calendar: ${closeCount} TFs close together (clock only, not a signal)`);
 
   const oiComp = composite.components.find(component => component.name === 'O/I Sentiment' && component.direction !== 'neutral');
   if (oiComp) why.push(`POSITIONING: ${oiComp.reason}`);
@@ -3206,7 +3198,7 @@ function buildTradeSnapshot(args: {
   const oneLine =
     verdict === 'WAIT'
       ? 'No clean edge — signals conflicted'
-      : `${finalDirection.toUpperCase()} edge near ${nearestZone ? `${nearestZone.type} zone` : 'key level'} with time activation`;
+      : `${finalDirection.toUpperCase()} edge near ${nearestZone ? `${nearestZone.type} zone` : 'key level'}`;
 
   return {
     verdict,
