@@ -1,10 +1,13 @@
+import { COPY } from '@/components/visual/copy';
+
 export type ToolTier = 'free' | 'pro'; // two access levels only
 export type WorkflowTool = { href: string; label: string; description: string; tier: ToolTier; role: 'primary' | 'advanced' | 'specialist' };
-export type WorkflowArea = 'overview' | 'scanner' | 'research' | 'options' | 'backtest' | 'track';
+export type WorkflowArea = 'overview' | 'radar' | 'scanner' | 'research' | 'options' | 'backtest' | 'track';
 export type ToolWorkflow = { id: 'find' | 'validate' | 'mechanics' | 'test' | 'track' | 'advanced'; title: string; subtitle: string; outcome: string; tools: WorkflowTool[] };
 
 export const primaryNavTools = [
   { id: 'overview', href: '/tools/command-center', label: 'Overview' },
+  { id: 'radar', href: '/tools/msp-radar', label: COPY.nav.radar },
   { id: 'scanner', href: '/tools/scanner', label: 'Scanner' },
   { id: 'research', href: '/tools/golden-egg', label: 'Symbol' },
   { id: 'options', href: '/tools/options', label: 'Options' },
@@ -13,6 +16,7 @@ export const primaryNavTools = [
 
 export const areaLinks: Record<WorkflowArea, Array<{ href: string; label: string }>> = {
   overview: [{ href: '/tools/command-center', label: 'Overview' }],
+  radar: [{ href: '/tools/msp-radar', label: COPY.nav.radar }],
   scanner: [{ href: '/tools/scanner', label: 'Crypto / Stocks' }],
   research: [{ href: '/tools/golden-egg', label: 'Symbol' }],
   options: [{ href: '/tools/options', label: 'Options' }],
@@ -35,7 +39,8 @@ export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
   if (pathname.includes('backtest') || pathname.includes('signal-accuracy') || (pathname === '/tools/workspace' && tab === 'backtest')) return 'track';
   if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlist|alerts|learning)(\/|$)/.test(pathname)) return 'track';
   if (/\/(scanner|liquidity-sweep|scalper)(\/|$)/.test(pathname)) return 'scanner';
-  if (pathname.startsWith('/intelligence') || /\/(command-center|dashboard|msp-radar|explorer|markets)(\/|$)/.test(pathname)) return 'overview';
+  if (/\/msp-radar(\/|$)/.test(pathname)) return 'radar';
+  if (pathname.startsWith('/intelligence') || /\/(command-center|dashboard|explorer|markets)(\/|$)/.test(pathname)) return 'overview';
   if (pathname.startsWith('/tools/') && !/\/(referrals|settings|account)$/.test(pathname)) return 'research';
   return null;
 }

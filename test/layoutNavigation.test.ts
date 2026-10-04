@@ -3,8 +3,8 @@ import {expect,it} from 'vitest';
 import {primaryNavTools} from '@/lib/toolWorkflows';
 const read=(p:string)=>readFileSync(p,'utf8');
 const prohibited=(source:string)=>/(?:href|path)\s*[:=]\s*(?:\{\s*)?['"`]\/(?:admin|operator)(?:[/?'"`])/.test(source);
-it('has the five layout destinations in order',()=>expect(primaryNavTools.map(({label,href})=>[label,href])).toEqual([
- ['Overview','/tools/command-center'],['Scanner','/tools/scanner'],['Symbol','/tools/golden-egg'],['Options','/tools/options'],['Track','/tools/workspace?tab=journal']
+it('has the six layout destinations in order',()=>expect(primaryNavTools.map(({label,href})=>[label,href])).toEqual([
+ ['Overview','/tools/command-center'],['Daily Radar','/tools/msp-radar'],['Scanner','/tools/scanner'],['Symbol','/tools/golden-egg'],['Options','/tools/options'],['Track','/tools/workspace?tab=journal']
 ]));
 it('lands both login paths and checkout on Overview',()=>{
  expect(read('app/auth/page.tsx').match(/router\.(?:push|replace)\(['"]\/tools\/command-center['"]\)/g)).toHaveLength(2);

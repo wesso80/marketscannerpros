@@ -8,7 +8,7 @@ export default function WorkflowNavigation() {
   const pathname = usePathname();
   const params = useSearchParams();
   const area = workflowArea(pathname, params.get('tab') || '');
-  if (!area) return null;
+  if (!area || areaLinks[area].length <= 1) return null;
   const symbol = params.get('symbol');
   return <nav aria-label={`${primaryNavTools.find((item) => item.id === area)?.label} tools`} className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-slate-950/80 px-3 py-2 text-xs">
     <span className="mr-1 font-semibold text-slate-400">{primaryNavTools.find((item) => item.id === area)?.label}</span>
