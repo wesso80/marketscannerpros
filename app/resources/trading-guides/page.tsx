@@ -1,2 +1,2 @@
 import {redirect} from 'next/navigation';
-export default function ResourceRedirect(){redirect('/guide#research-guides');}
+export default function ResourceRedirect(){redirect('/guide?section=research-guides#research-guides');}

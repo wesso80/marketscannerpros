@@ -12,6 +12,7 @@ import {
   parseResearchTimeframe,
   researchHref,
 } from "@/lib/researchContext";
+import { useUserTier } from "@/lib/useUserTier";
 
 export default function NavigationGroups({
   mode,
@@ -26,6 +27,7 @@ export default function NavigationGroups({
   activeArea: WorkflowArea | null;
   onNavigate?: () => void;
 }) {
+  const { isLoggedIn, tier } = useUserTier();
   const [open, setOpen] = useState<WorkflowArea | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const triggers = useRef<
@@ -145,6 +147,17 @@ export default function NavigationGroups({
                       ),
                     })
                   : item.href;
+                if (group.id === "account" && item.href === "/auth" && isLoggedIn) {
+                  const plan = tier === "pro" || tier === "pro_trader" ? "Pro" : "Free";
+                  return (
+                    <span
+                      key={item.href}
+                      className="flex min-h-10 items-center rounded px-3 text-sm text-[var(--msp-text-muted)]"
+                    >
+                      Signed in · {plan}
+                    </span>
+                  );
+                }
                 return (
                   <Link
                     key={item.href}

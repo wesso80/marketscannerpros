@@ -7,6 +7,8 @@ export interface ToolPage {
   icon: string;
   category: string;
   tier?: "free" | "pro";
+  /** Retired names matched by All tools search. Not shown in the catalog. */
+  aliases?: string[];
 }
 // Catalog copy/access labels do not grant access; the existing page/API gates remain authoritative.
 const metadata: Record<string, Partial<ToolPage>> = {
@@ -270,6 +272,10 @@ const metadata: Record<string, Partial<ToolPage>> = {
     description: "Workspace preferences",
   },
 };
+const legacySearchNames: Record<string, string[]> = {
+  "/tools/golden-egg": ["Golden Egg"],
+  "/tools/command-center": ["Command Center"],
+};
 export const TOOL_CATEGORIES = primaryNavTools.map((group) => group.label);
 export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
   areaLinks[group.id]
@@ -287,6 +293,7 @@ export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
         icon: data?.icon ?? "MSP",
         category: group.label,
         tier: data?.tier ?? "free",
+        aliases: legacySearchNames[item.href],
       };
     }),
 );
@@ -294,6 +301,7 @@ const legacyKeys: Record<string, string> = {
   "gainers-losers": "markets",
   news: "research",
   "crypto-time-confluence": "confluence-scanner",
+  "time-scanner": "confluence-scanner",
   "options-confluence": "options-terminal",
   "options-flow": "options-terminal",
   options: "options-terminal",

@@ -1,12 +1,18 @@
-'use client';
-
 import Link from 'next/link';
 import PlatformGuide from '@/components/guide/PlatformGuide';
+import GuideSectionTarget from '@/components/guide/GuideSectionTarget';
 import TradingGuides from '@/components/guide/TradingGuides';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import { TOOL_GUIDES } from '@/lib/guides/toolGuides';
 
-export default function UserGuidePage() {
+export default async function UserGuidePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const requested = Array.isArray(params.section) ? params.section[0] : params.section;
+  const section = requested === 'platform-guide' || requested === 'research-guides' ? requested : '';
   return (
     <div className="min-h-screen bg-msp-bg text-msp-text">
       <div className="mx-auto max-w-6xl px-4 py-10">
@@ -17,8 +23,9 @@ export default function UserGuidePage() {
           </p>
         </div>
 
-        <div id="platform-guide" className="mb-3 scroll-mt-20"><CollapsibleSection title="Platform walkthrough"><PlatformGuide /></CollapsibleSection></div>
-        <div id="research-guides" className="mb-3 scroll-mt-20"><CollapsibleSection title="Research guides"><TradingGuides /></CollapsibleSection></div>
+        <GuideSectionTarget />
+        <div id="platform-guide" className="mb-3 scroll-mt-20"><CollapsibleSection title="Platform walkthrough" open={section === 'platform-guide'}><PlatformGuide /></CollapsibleSection></div>
+        <div id="research-guides" className="mb-3 scroll-mt-20"><CollapsibleSection title="Research guides" open={section === 'research-guides'}><TradingGuides /></CollapsibleSection></div>
         <CollapsibleSection title="Tool reference" summary={`${TOOL_GUIDES.length} guides`}>
         <div className="grid gap-4 md:grid-cols-2">
           {TOOL_GUIDES.map((guide) => (

@@ -48,6 +48,13 @@ it('drawer traps focus among currently visible items and closes with Escape',()=
 it('logged-out visitors can reach Compliance and Sign In',()=>{
  state.loggedIn=false;render(<Header/>);expect(container.querySelector('a[href="/compliance-hub"]')).not.toBeNull();expect(container.querySelector('a[href="/auth"]')).not.toBeNull();
 });
+it('shows the signed-in plan in the Account menu instead of Sign In',()=>{
+ state.loggedIn=true;render(<Header/>);
+ const menu=container.querySelector('#msp-desktop-account')!;
+ expect(menu.textContent).toContain('Signed in · Pro');
+ expect(menu.textContent).not.toContain('Sign In');
+ expect(menu.querySelector('a[href="/auth"]')).toBeNull();
+});
 it.each(['/tools/command-center','/tools/msp-radar','/tools/scanner','/tools/golden-egg','/tools/options'])('does not repeat the Header as a second bar at %s',pathname=>{state.pathname=pathname;render(<WorkflowNavigation/>);expect(container.innerHTML).toBe('');});
 it('Track includes Signal Accuracy and Settings and selects the current tab only',()=>{
  state.pathname='/tools/workspace';state.params=new URLSearchParams('tab=Settings');render(<WorkflowNavigation/>);

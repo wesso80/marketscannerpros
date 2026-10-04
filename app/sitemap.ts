@@ -37,7 +37,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools/research',
     '/tools/explorer',
     '/tools/dashboard',
-    '/tools/crypto-intel',
   ];
 
   const blogPages = blogPosts.map((post) => `/blog/${post.slug}`);

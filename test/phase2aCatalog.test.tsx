@@ -90,6 +90,12 @@ it("search reveals matching destinations, handles no matches and clears", () => 
   set("Global M2");
   expect(el.querySelectorAll("li a")).toHaveLength(1);
   expect(el.querySelector("details")?.open).toBe(true);
+  set("Golden Egg");
+  expect(el.querySelector('a[href="/tools/golden-egg"]')).not.toBeNull();
+  expect(el.textContent).not.toContain("Golden Egg");
+  set("Command Center");
+  expect(el.querySelector('a[href="/tools/command-center"]')).not.toBeNull();
+  expect(el.textContent).not.toContain("Command Center");
   set("xxxxxxxxx");
   expect(el.querySelectorAll("li a")).toHaveLength(0);
   act(() => el.querySelector("button")!.click());
@@ -118,6 +124,8 @@ it("deduplicates catalog and saved legacy keys without losing their destination"
   expect(getToolByKey("crypto-heatmap")?.href).toBe(
     "/tools/explorer?tab=crypto-command&section=heatmap",
   );
+  expect(areaLinks.scan.filter((item) => /time/i.test(item.label)).map((item) => item.label)).toEqual(["Time Confluence"]);
+  expect(getToolByKey("time-scanner")?.href).toBe("/tools/terminal?tab=time-confluence");
   expect(getToolByKey("liquidity-sweep")?.tier).toBe(
     canAccessScanner("free") ? "free" : "pro",
   );

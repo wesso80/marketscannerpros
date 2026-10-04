@@ -338,6 +338,7 @@ describe('layout and flow audit regressions', () => {
     expect(sitemap).not.toContain("'/tools/heatmap'");
     expect(sitemap).not.toContain("'/tools/crypto-dashboard'");
     expect(sitemap).not.toContain("'/tools/equity-explorer'");
+    expect(sitemap).not.toContain("'/tools/crypto-intel'");
     expect(staticToolsPreview).toContain('<meta name="robots" content="noindex, follow" />');
     expect(staticToolsPreview).toContain('<meta http-equiv="refresh" content="0; url=/tools" />');
     expect(staticToolsPreview).toContain('Tools Preview Moved');
