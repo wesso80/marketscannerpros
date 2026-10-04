@@ -53,3 +53,17 @@ it('handles zero and nonfinite sectors without painting missing data as positive
   expect(sectorCells([{ symbol: 'XLU', name: 'Utilities', changePercent: NaN }])[0].valueLabel).toBe('n/a');
   expect(sectorCells([{ symbol: 'XLU', name: 'Utilities', changePercent: 0 }])[0].valueLabel).toBe('0.00%');
 });
+it('keeps the phone layout shrinkable and the drawer/account tap targets at least 40px', () => {
+  for (const folder of ['components/visual', 'components/overview']) {
+    for (const file of readdirSync(folder).filter(f => /\.tsx?$/.test(f))) {
+      const source = readFileSync(`${folder}/${file}`, 'utf8');
+      expect(source).not.toContain('minWidth');
+      for (const match of source.matchAll(/min-w-\[(\d+)px\]/g)) expect(Number(match[1])).toBeLessThanOrEqual(360);
+    }
+  }
+  const header = readFileSync('components/Header.tsx', 'utf8');
+  expect(header).toContain('min-h-10');
+  expect(header).toContain('absolute right-0');
+  expect(readFileSync('components/visual/HeatStrip.tsx', 'utf8')).toContain('sm:block');
+  expect(readFileSync('components/overview/TodayStrip.tsx', 'utf8')).toContain('grid-cols-2 gap-3 md:grid-cols-4');
+});

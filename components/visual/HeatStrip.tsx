@@ -9,7 +9,7 @@ export default function HeatStrip({ cells, stamp }: { cells: ReturnType<typeof s
         className="relative min-w-0 flex-1 overflow-hidden border border-[var(--msp-panel)] py-4 text-center" style={{ color: cell.tone.color }}>
         <span aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: cell.tone.color, opacity: cell.tone.opacity }} />
         <span aria-hidden="true" className="relative block text-[10px] font-bold">{cell.symbol}</span>
-        <span aria-hidden="true" className="relative block text-[9px]">{cell.valueLabel}</span>
+        <span aria-hidden="true" className={`relative text-[9px] ${cell.changePercent === null ? 'block' : 'hidden sm:block'}`}>{cell.valueLabel}</span>
       </div>)}
     </div> : <p>{COPY.today.noSectors}</p>}
     <figcaption><p className="text-xs text-[var(--msp-text-muted)]">{COPY.today.sectors}</p><StampLine {...stamp} /></figcaption>

@@ -139,7 +139,7 @@ function HeaderContent() {
               aria-current={activeArea === s.id ? 'page' : undefined}
               className={`px-2 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
                 activeArea === s.id
-                  ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
+                  ? 'bg-[var(--msp-panel-2)] text-[var(--msp-accent)] border border-[var(--msp-accent)]'
                   : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'
               }`}
             >
@@ -158,14 +158,14 @@ function HeaderContent() {
               }}>
                 <button ref={accountButtonRef} type="button" aria-haspopup="menu" aria-expanded={accountOpen}
                   aria-controls="msp-account-menu" onClick={() => setAccountOpen(open => !open)}
-                  className="px-2 py-1 text-xs text-slate-400 hover:text-[var(--msp-accent)] focus-visible:outline-[var(--msp-accent)]">
+                  className="min-h-10 px-2 py-1 text-xs text-slate-400 hover:text-[var(--msp-accent)] focus-visible:outline-[var(--msp-accent)]">
                   {COPY.nav.account}
                 </button>
                 {accountOpen && <div id="msp-account-menu" role="menu" aria-label={COPY.nav.account}
                   className="absolute right-0 z-10 w-48 border border-slate-700 bg-[var(--msp-panel)] p-4 shadow-xl"
                   style={{ borderRadius: 'var(--msp-radius-card)' }}>
                   {ACCOUNT_LINKS.map(link => <Link key={link.href} href={link.href} role="menuitem"
-                    onClick={() => setAccountOpen(false)} className="flex items-center py-3 text-xs text-slate-200 hover:text-[var(--msp-accent)]">
+                    onClick={() => setAccountOpen(false)} className="flex min-h-10 items-center py-3 text-xs text-slate-200 hover:text-[var(--msp-accent)]">
                     {link.label}
                   </Link>)}
                 </div>}
@@ -202,7 +202,7 @@ function HeaderContent() {
           <button
             ref={menuButtonRef}
             onClick={() => setDrawerOpen(true)}
-            className="flex flex-col gap-1.5 p-2"
+            className="flex min-h-10 min-w-10 flex-col justify-center gap-1.5 p-2"
             aria-label="Open menu"
             aria-expanded={drawerOpen}
             aria-controls="msp-mobile-menu"
@@ -234,7 +234,7 @@ function HeaderContent() {
           {/* Drawer header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-700/90">
             <span className="text-lg font-semibold text-teal-300">Menu</span>
-            <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
+            <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="min-h-10 min-w-10 text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
           </div>
 
           {/* Drawer body — same surfaces always shown */}
@@ -248,7 +248,7 @@ function HeaderContent() {
                   aria-current={activeArea === s.id ? 'page' : undefined}
                   className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                     activeArea === s.id
-                      ? 'bg-teal-500/15 text-teal-300'
+                      ? 'bg-[var(--msp-panel-2)] text-[var(--msp-accent)]'
                       : 'text-white hover:bg-teal-500/10 hover:text-teal-300'
                   }`}
                 >

@@ -31,6 +31,7 @@ import {freshness} from '@/lib/crypto/breakdown/freshness';
 import {trustBadgeState} from '@/components/market/TrustBadge';
 import DataStatusRow from '@/components/overview/DataStatusRow';
 import TodayStrip from '@/components/overview/TodayStrip';
+import ViewerDate from '@/components/visual/ViewerDate';
 import { COPY } from '@/components/visual/copy';
 import {OverviewPicks} from '@/components/market/OverviewPicks';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -304,7 +305,7 @@ export default function CommandCenterPage() {
         <RadarReportCard />
       </div>
 
-      <p className="text-xs text-slate-500">{formatMarketTime(sessionNow.toISOString(), Intl.DateTimeFormat().resolvedOptions().timeZone)}</p>
+      <ViewerDate />
       <DataStatusRow items={[
         {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??'time unknown'],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
         {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'time unknown']},

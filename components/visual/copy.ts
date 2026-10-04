@@ -9,7 +9,7 @@ export const COPY = {
     loading: 'Loading', current: 'Current', stale: 'Stale inputs', unavailable: 'Unavailable',
     regime: 'regime', snapshot: 'snapshot', sectors: 'Sectors, % change vs prior close', sectorSource: 'Alpha Vantage',
     lastClose: 'last close', sessionDay: 'New York session', timeUnknown: 'time unknown', sourceUnknown: 'source unknown',
-    noQuote: 'no quote', na: 'n/a', sectorsUp: 'Sectors up', sampled: 'timed sector sample', noSectors: 'Sector data unavailable',
+    noQuote: 'no quote', na: 'n/a', sectorsUp: 'Sectors up', sampled: 'sectors with change data', noSectors: 'Sector data unavailable',
     dataStatus: 'Data status', degraded: 'degraded', staleCount: 'stale', notTimed: 'not timed', show: 'Show',
     btc: 'BTC', eth: 'ETH', spy: 'SPY',
   },
