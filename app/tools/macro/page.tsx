@@ -5,6 +5,8 @@ import { usePolling } from '@/hooks/usePolling';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import { FREE_COPY } from '@/components/free/copy';
+import Stamp from '@/components/free/Stamp';
 import { useUserTier } from '@/lib/useUserTier';
 
 type Permission = 'yes' | 'conditional' | 'no';
@@ -216,7 +218,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const [spyPCRError, setSpyPCRError] = useState<string | null>(null);
   const [spyPCRFetched, setSpyPCRFetched] = useState<string | null>(null);
 
-  const { isAdmin } = useUserTier();
+  const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
 
   const fetchData = useCallback(async () => {
@@ -328,6 +330,17 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
       },
     });
   }, [data, gate, setPageData]);
+
+  if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main className="space-y-4 p-4">
+    <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
+    {tierLoading || loading ? <p>{FREE_COPY.loading}</p> : !data ? <p>{FREE_COPY.unavailable}</p> : <div className="grid gap-4 sm:grid-cols-2">
+      {[[FREE_COPY.treasury, data.rates.treasury10y], [FREE_COPY.inflation, data.inflation.inflationRate]].map(([label, observation]) => {
+        const item = observation as IndicatorValue;
+        return typeof item.value === 'number' ? <section key={String(label)} className="rounded-xl border border-white/10 p-4"><h2>{String(label)}</h2><p className="text-4xl">{toPct(item.value)}</p><Stamp source={FREE_COPY.macroSource} at={item.date || null} basis={FREE_COPY.observation} /></section> : null;
+      })}
+    </div>}
+    <a className="inline-flex min-h-10 items-center underline" href="/intelligence/global-m2">{FREE_COPY.deepMacro}</a><p className="text-xs">{FREE_COPY.research}</p>
+  </main>;
 
   return (
     <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
