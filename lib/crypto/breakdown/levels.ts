@@ -15,5 +15,6 @@ export function levels(bars:DailyBar[]){
  const midpoint=high!=null&&low!=null?(high+low)/2:null,atr=realAtr(bars);
  const stop=last!=null&&midpoint!=null?Math.max(midpoint,.85*last):null;
  const named={baseHigh:high,baseMidpoint:midpoint,baseLow:low,high90:highestClose(bars,90),high365:highestClose(bars,365),ruleStop:stop};
- return {atr,atrPct:atr!=null&&last?atr/last*100:null,baseAtr:realAtr(base),...named,distances:Object.entries(named).map(([name,value])=>({name,value,dollars:value!=null&&last!=null?last-value:null,pct:value&&last!=null?(last/value-1)*100:null,atr:value!=null&&last!=null&&atr? (last-value)/atr:null}))};
+ const label:Record<string,string>={baseHigh:'Base high',baseMidpoint:'Base midpoint',baseLow:'Base low',high90:'90-day high',high365:'365-day high',ruleStop:'Rule stop'};
+ return {atr,atrPct:atr!=null&&last?atr/last*100:null,baseAtr:realAtr(base),...named,distances:Object.entries(named).map(([name,value])=>({name:label[name]??name,value,dollars:value!=null&&last!=null?last-value:null,pct:value&&last!=null?(last/value-1)*100:null,atr:value!=null&&last!=null&&atr? (last-value)/atr:null}))};
 }

@@ -27,6 +27,7 @@ describe('locked crypto breakdown core',()=>{
   a[0].volume=0;expect(baseBreakoutV1(a).volumeRatio).toBeNull();
   expect(realAtr(a.map(b=>({...b,high:null,low:null})))).toBeNull();
   expect(realAtr(bars(20))).toBe(4);expect(levels(a).atr).toBe(4);
+  expect(levels(bars()).distances.map(d=>d.name)).toEqual(['Base high','Base midpoint','Base low','90-day high','365-day high','Rule stop']);
  });
  it('records LINK reference as historical fixture, close-only versus lower lows',()=>{
   const a=bars();a.slice(0,60).forEach(b=>{b.close=15.440;b.low=8.143;b.high=16;});a[60].close=13.793;
