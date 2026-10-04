@@ -650,11 +650,12 @@ export default function GoldenEggPage() {
     <div className="space-y-3">
       <SymbolSnapshotHeader symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error}/>
       <PageHero
+        titleAs="h2"
         ariaLabel="Golden Egg command header"
         eyebrow="Golden Egg validation workbench"
         badges={[
           ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
-          ...(ge && geEngine ? [{ label: geNoQualifyingSetup ? 'Canonical: no qualifying setup' : `Canonical ${geEngine.permission} · grade ${geEngine.grade}` }, { label: `Indicator composite ${geConfluenceScore}/100` }] : ge ? [{ label: `Indicator composite ${geConfluenceScore}/100` }] : []),
+          ...(ge && geEngine ? [{ label: geNoQualifyingSetup ? 'Canonical: no qualifying setup' : `Canonical ${geEngine.permission} · grade ${geEngine.grade}` }] : []),
           { label: `Data ${geDataQuality}` },
           ...GOLDEN_EGG_WORKFLOW_CHECKS.map((c) => ({ label: c })),
         ]}
@@ -668,7 +669,6 @@ export default function GoldenEggPage() {
         metrics={[
           { label: 'Symbol', value: sym, tone: 'warn', detail: 'Single-symbol validation' },
           { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geNoQualifyingSetup ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : geNoSetup ? `Canonical: ${geNoSetup.headline}${geNoSetup.detail ? ` — ${geNoSetup.detail}` : ''}` : geEngine ? `Canonical ${geSetupLabel} · score ${geEngine.score} · grade ${geEngine.grade}` : 'Verdict packet' },
-          { label: INDICATOR_COMPOSITE_LABEL, value: ge ? `${geConfluenceScore}/100` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geEngine ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : geEngine ? 'Secondary — v2 evidence alignment, not the verdict' : 'Evidence alignment' },
           { label: 'Data trust', value: geDataQuality, tone: geDataQuality === 'GOOD' ? 'bull' : geDataQuality === 'DEGRADED' ? 'warn' : 'bear', detail: geDataQualityTitle, title: geDataQualityTitle },
         ]}
       />
