@@ -562,14 +562,15 @@ describe('computePhasePersistence', () => {
 });
 
 describe('computeDVE data-quality and exhaustion boundaries', () => {
-  test('downgrades data quality when core indicators, options, time, and liquidity are missing', () => {
+  test('downgrades data quality when core indicators, options, and liquidity are missing', () => {
     const closes = Array.from({ length: 20 }, (_, index) => 100 + index * 0.1);
     const reading = computeDVE({
       price: { closes, currentPrice: closes[closes.length - 1], changePct: 0.2 },
     }, 'THIN');
 
     expect(reading.dataQuality.score).toBeLessThan(60);
-    expect(reading.dataQuality.missing).toEqual(expect.arrayContaining(['indicators', 'options', 'time', 'liquidity']));
+    expect(reading.dataQuality.missing).toEqual(expect.arrayContaining(['indicators', 'options', 'liquidity']));
+    expect(reading.dataQuality.missing).not.toContain('time');
     expect(reading.dataQuality.warnings.some((warning) => warning.includes('need 50+'))).toBe(true);
     expect(reading.dataQuality.warnings.some((warning) => warning.includes('need 100+'))).toBe(true);
   });
@@ -1157,6 +1158,14 @@ describe('computeDVE', () => {
     expect(reading.phasePersistence).toBeDefined();
     expect(reading.phasePersistence.contraction).toBeDefined();
     expect(reading.phasePersistence.expansion).toBeDefined();
+  });
+
+  test('does not dock data quality when time is omitted', () => {
+    const without = computeDVE(makeInput(), 'BTC');
+    const withTime = computeDVE(makeInput({ time: { activeTFCount: 4, hotZoneActive: true, confluenceScore: 90 } }), 'BTC');
+    expect(without.dataQuality.missing).not.toContain('time');
+    expect(withTime.dataQuality.missing).not.toContain('time');
+    expect(without.dataQuality.score).toBe(withTime.dataQuality.score);
   });
 
   test('handles missing optional inputs gracefully', () => {

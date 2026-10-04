@@ -1316,7 +1316,7 @@ function assessDataQuality(input: DVEInput): DVEDataQuality {
   }
 
   if (!input.options) { score -= 5; missing.push('options'); }
-  if (!input.time) { score -= 5; missing.push('time'); }
+  // Time is display-only and is not supplied by /api/dve. Do not dock quality for it.
   if (!input.liquidity) { score -= 3; missing.push('liquidity'); }
 
   return { score: clamp(score, 0, 100), missing, warnings };
