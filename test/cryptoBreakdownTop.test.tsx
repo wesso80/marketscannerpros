@@ -43,3 +43,14 @@ it('funding and OI remain neutral and preserve interval and observation time',()
  const {container}=render(<StatCards top={t} zone="UTC"/>);expect(container.textContent).toContain('-0.0038%');expect(container.textContent).toContain('interval 4h');expect(container.textContent).toContain('+2.2%');
  expect(container.querySelector('[data-stat-card] [data-top-source]')?.className).toContain('text-amber');expect(container.innerHTML).not.toMatch(/--msp-(bull|bear)/);
 });
+
+import CryptoBreakdown from '@/components/crypto/CryptoBreakdown';
+import {fireEvent,waitFor} from '@testing-library/react';
+it('retains all eleven sections with only Rule check expanded and one breakdown request',async()=>{
+ const data=fixture(),fetcher=vi.fn(async()=>({ok:true,json:async()=>data}));vi.stubGlobal('fetch',fetcher);
+ const {container}=render(<CryptoBreakdown symbol="LINK" timeframe="daily"/>);await screen.findByText('Chainlink · LINK');
+ expect(container.querySelectorAll('[data-crypto-section]')).toHaveLength(11);
+ const headers=container.querySelectorAll('[data-crypto-section] button[aria-expanded]');expect(headers).toHaveLength(11);
+ expect(Array.from(headers).filter(e=>e.getAttribute('aria-expanded')==='true').map(e=>e.closest('[data-crypto-section]')?.getAttribute('data-crypto-section'))).toEqual(['ruleCheck']);
+ fireEvent.click(screen.getByRole('button',{name:/Sources check/}));expect(screen.getByText(/Single source means fewer/)).toBeTruthy();expect(fetcher).toHaveBeenCalledTimes(1);
+});

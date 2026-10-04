@@ -27,7 +27,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId}:{symbol:stri
   <div className="flex items-center justify-between gap-3"><p className="text-sm text-slate-300">{COPY.intro}</p><button type="button" onClick={()=>setRefresh(v=>v+1)} disabled={loading} className="rounded border border-white/20 px-3 py-2 disabled:opacity-50">{COPY.refresh}</button></div>
   <p className="text-xs text-slate-400">{COPY.daily}</p>
   {loading&&<p role="status">{COPY.loading}</p>}{error&&<p role="alert" className="text-amber-300">{error}</p>}
-  {data&&<><CryptoTop data={data}/><PriceSection data={data}/><RuleCheckSection data={data.sections.ruleCheck}/><EarlyContextSection data={data.sections.earlyContext}/><MarketContextSection data={data.sections.marketContext}/><DerivativesSection data={data.sections.derivatives}/><LiquiditySection data={data.sections.liquidity}/><SupplySection data={data.sections.supply}/><LevelsSection data={data.sections.levels}/><RisksSection data={data.sections.risks}/><SourcesBadge data={data.sections.sourcesCheck}/><HandoffSection data={data}/></>}
+  {data&&<><CryptoTop data={data}/><p className="text-sm text-slate-400">{COPY.top.detailRows}</p><PriceSection data={data}/><RuleCheckSection data={data.sections.ruleCheck}/><EarlyContextSection data={data.sections.earlyContext}/><MarketContextSection data={data.sections.marketContext}/><DerivativesSection data={data.sections.derivatives}/><LiquiditySection data={data.sections.liquidity}/><SupplySection data={data.sections.supply}/><LevelsSection data={data.sections.levels}/><RisksSection data={data.sections.risks}/><SourcesBadge data={data.sections.sourcesCheck}/><HandoffSection data={data}/></>}
   <p className="text-xs text-slate-400">{COPY.footer}</p>
  </div>;
 }

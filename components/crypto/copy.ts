@@ -2,6 +2,7 @@ export const COPY={
  top:{title:'Crypto at a glance',sourceUnavailable:'Source unavailable',priceUnavailable:'Price unavailable',unavailable:'—',change24h:'Change vs 24h ago',
   price:(v:number)=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:v<1?0:2,maximumFractionDigits:v<1?8:2}),
   signedPercent:(v:number)=>`${v>0?'+':''}${v.toFixed(1)}%`,
+  detailRows:'Full detail below. Tap a row to open it.',singleSource:'Single source means fewer than 2 prices were fresh (15 minutes or less), so no agree or differ claim is made.',
   fundingTitle:'Funding · 8h equivalent',oiTitle:'Open interest',volumeTitle:'Volume vs median',rankTitle:'Market-cap rank',
   noPerpetual:'No OKX perpetual listed',valueUnavailable:'Unavailable',missingReason:'Observation not reported or unavailable.',
   fundingPercent:(v:number)=>`${v.toFixed(4)}%`,fundingInterval:(v:number)=>`Original interval ${v}h`,
