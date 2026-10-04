@@ -11,6 +11,14 @@ import { useUserTier } from '@/lib/useUserTier';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
+import { openMacroAnchor } from '@/lib/overview/macroAnchor';
+
+function followMacroAnchor(event: { preventDefault(): void; currentTarget: { getAttribute(name: string): string | null } }) {
+  event.preventDefault();
+  const href = event.currentTarget.getAttribute('href') || '';
+  if (href.startsWith('#')) window.history.pushState(null, '', href);
+  openMacroAnchor(href);
+}
 
 type Permission = 'yes' | 'conditional' | 'no';
 type RiskState = 'risk_on' | 'neutral' | 'risk_off';
@@ -307,6 +315,13 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const gate = useMemo(() => computeMacroGate(data), [data]);
 
   useEffect(() => {
+    openMacroAnchor(window.location.hash);
+    const onHash = () => openMacroAnchor(window.location.hash);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [data, gate, loading]);
+
+  useEffect(() => {
     if (!data || !gate) return;
 
     setPageData({
@@ -334,7 +349,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     });
   }, [data, gate, setPageData]);
 
-  if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main className="space-y-4 p-4">
+  if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main id="macro-summary" className="space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
     {tierLoading || loading ? <p>{FREE_COPY.loading}</p> : !data ? <p>{FREE_COPY.unavailable}</p> : <div className="grid gap-4 sm:grid-cols-2">
       {[[FREE_COPY.treasury, data.rates.treasury10y], [FREE_COPY.inflation, data.inflation.inflationRate]].map(([label, observation]) => {
@@ -347,7 +362,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
 
   return (
     <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
-      {embeddedInDashboard ? (
+      {!embeddedInDashboard && (<>
         <section
           className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
           aria-label="Macro command header"
@@ -373,9 +388,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Global regime gate for liquidity, rates, growth, and cross-asset context.</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Macro evidence compressed into a single permission gate. Educational only; not a trade signal.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a href="#decision" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Decision</a>
-                <a href="#commodities" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Commodities</a>
-                <a href="#sentiment" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Sentiment</a>
+                <a href="#decision" onClick={followMacroAnchor} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Decision</a>
+                <a href="#commodities" onClick={followMacroAnchor} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Commodities</a>
+                <a href="#sentiment" onClick={followMacroAnchor} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Sentiment</a>
               </div>
               {lastRefresh && (
                 <p className="mt-2 text-[11px] text-slate-500">US ET · Last refresh {lastRefresh}</p>
@@ -406,14 +421,13 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             </div>
           </div>
         </section>
-      ) : (
         <ToolsPageHeader
           title="Macro Dashboard"
           subtitle="Global regime layer for analysis, sizing, and cross-asset assessment"
           badge="Economic Data"
           icon="MAC"
         />
-      )}
+      </>)}
 
       <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInDashboard ? 'px-0 pb-6 pt-3' : 'px-4 pb-24 pt-6 md:px-6'}`}>
         <div className={`${embeddedInDashboard ? 'rounded-lg' : 'sticky top-2 z-20 rounded-xl'} border border-white/10 bg-slate-950/95 p-3 backdrop-blur`}>
@@ -430,7 +444,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 </label>
               )}
               {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
-                <a key={tab} href={`#${tab}`} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
+                <a key={tab} href={`#${tab}`} onClick={followMacroAnchor} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </a>
               ))}
@@ -463,7 +477,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 <div data-macro-tile><StatTile label="Growth" value={typeof data.growth.realGDP.value === 'number' ? `$${(safeNumber(data.growth.realGDP.value) / 1000).toFixed(1)}T` : null} /></div>
               </div>
               <div data-macro-charts className="grid gap-3 md:grid-cols-2">
-                <p className="text-sm text-white/60">Yield curve chart is the next row. Commodities with a measured change:</p>
+                <p className="text-sm text-white/60">Commodities with a measured change:</p>
                 <ul className="space-y-2">
                   {(commodities ?? []).filter((c) => typeof c.changePercent === 'number' && Number.isFinite(c.changePercent)).slice(0, 4).map((c) => (
                     <li key={c.symbol || c.name} className="text-sm">
