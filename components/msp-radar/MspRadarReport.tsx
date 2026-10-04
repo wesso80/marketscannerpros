@@ -13,6 +13,8 @@ import SectionTitle from "@/components/admin/shared/SectionTitle";
 import StatusPill from "@/components/admin/shared/StatusPill";
 import { humanizeEnum, humanizeText } from "@/lib/presentation/labels";
 import { classifyCaveat } from "@/lib/jarvis/report/types";
+import CollapsibleSection from "@/components/visual/CollapsibleSection";
+import StatTile from "@/components/visual/StatTile";
 import type { CandidateRow, DailyReport, EmailStatus, HealthStatus, LifecycleTransition, MoverLine, NextMoveRow, ThemeRow } from "@/lib/jarvis/report/types";
 
 /** Next research step for a Radar symbol: Golden Egg validation, with asset class carried so quotes/derivatives resolve correctly. */
@@ -31,8 +33,8 @@ type ArchiveItem = { sessionDate: string; headline: string; healthStatus: Health
 
 const API = "/api/msp-radar";
 const fmtDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const pct = (n: number | null | undefined) => (n === null || n === undefined ? "n/a" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
-const lvl = (v: number | null) => (v === null ? "n/a" : v >= 1 ? v.toFixed(2) : v.toPrecision(4));
+const pct = (n: number | null | undefined) => (n === null || n === undefined || !Number.isFinite(n) ? "No reading" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
+const lvl = (v: number | null) => (v === null || !Number.isFinite(v) ? "No reading" : v >= 1 ? v.toFixed(2) : v.toPrecision(4));
 const healthTone = (h: HealthStatus) => (h === "NORMAL" ? "green" : h === "DEGRADED" ? "yellow" : "red");
 const emailTone = (e: EmailStatus) => (e === "SENT" ? "green" : e === "FAILED" ? "red" : e === "SUPPRESSED_HEALTH" || e === "NO_RECIPIENT" ? "yellow" : "neutral");
 const extTone = (x: string) => (x === "EARLY" ? "green" : x === "MID" ? "blue" : x === "EXTENDED" ? "yellow" : "neutral");
@@ -83,8 +85,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
     <div style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
         <div>
-          <div style={{ fontSize: "0.68rem", fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#10B981" }}>MSP Radar</div>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.15rem 0 0", letterSpacing: 0.3 }}>Daily Market Intelligence</h1>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.15rem 0 0", letterSpacing: 0.3 }}>Daily Radar</h1>
           <p style={{ ...muted, margin: "0.25rem 0 0" }}>Built once per US session from the persisted overnight scan · educational research only, not financial advice.</p>
         </div>
         <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
@@ -112,7 +113,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
             <p style={{ margin: "0.6rem 0 0", fontSize: "0.95rem", fontWeight: 600 }}>{humanizeText(r.headline)}</p>
             {r.health.status !== "NORMAL" && (
               <div style={{ marginTop: "0.6rem", padding: "0.6rem 0.8rem", borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.35)", color: "#FCD34D", fontSize: "0.8rem" }}>
-                <b>DATA HEALTH WARNING:</b> {r.health.summary} · Stage 2 coverage {r.health.stage2CoveragePct ?? "unknown"}% · shortlist may be incomplete: {r.health.shortlistMayBeIncomplete ? "YES" : "no"}
+                <b>DATA HEALTH WARNING:</b> {r.health.summary} · Stage 2 coverage {r.health.stage2CoveragePct ?? "not available right now"}% · shortlist may be incomplete: {r.health.shortlistMayBeIncomplete ? "YES" : "no"}
                 <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.1rem" }}>{r.health.checks.filter((c) => !c.ok).map((c) => <li key={c.name}>{c.name}: {c.detail}</li>)}</ul>
               </div>
             )}
@@ -120,6 +121,27 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
 
           {!failed && (
             <>
+              <section data-radar-visual className="mb-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {r.marketIn30Seconds.filter((line) => line.value && !/n\/a|unknown|unavailable/i.test(line.value)).slice(0, 4).map((line) => (
+                    <StatTile key={line.label} label={line.label} value={line.value} />
+                  ))}
+                </div>
+                <UpDownChart rows={r.candidates} />
+                <CandidateCards rows={r.candidates} />
+                <p className="text-xs text-[var(--msp-text-muted)]">Legend: Early, Mid, Extended. Shown once for every candidate card.</p>
+                <div>
+                  <h2 className="text-sm font-semibold">Lifecycle changes</h2>
+                  <LifecycleList rows={r.lifecycle.transitions.slice(0, 5)} />
+                  {r.lifecycle.transitions.length > 5 && (
+                    <details className="mt-2">
+                      <summary className="min-h-10 cursor-pointer text-sm">Show {r.lifecycle.transitions.length - 5} more</summary>
+                      <LifecycleList rows={r.lifecycle.transitions.slice(5)} />
+                    </details>
+                  )}
+                </div>
+              </section>
+              <CollapsibleSection title="More detail" summary="Themes, moves, noise, and the full tables">
               <Section title="Market in 30 Seconds" subtitle="Regime, leadership, breadth, crypto, macro">
                 <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "minmax(110px, 160px) 1fr", gap: "0.35rem 0.75rem", fontSize: "0.85rem" }}>
                   {r.marketIn30Seconds.map((l) => <Fragment2 key={l.label} label={l.label} value={l.value} />)}
@@ -150,7 +172,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
 
               <Section title="Themes & Rotation" subtitle="Genuine group moves vs single-name noise" count={r.themes.equity.groups.length + r.themes.crypto.groups.length}>
                 <div style={{ fontSize: "0.85rem", lineHeight: 1.6 }}>
-                  <div><b>Leading:</b> {r.themes.equity.leading.join(", ") || "n/a"}</div>
+                  <div><b>Leading:</b> {r.themes.equity.leading.join(", ") || "No reading"}</div>
                   <div><b>Improving:</b> <span style={{ color: "#6EE7B7" }}>{r.themes.equity.improving.join(", ") || "none"}</span></div>
                   <div><b>Deteriorating:</b> <span style={{ color: "#FCA5A5" }}>{r.themes.equity.deteriorating.join(", ") || "none"}</span></div>
                   <div style={{ marginTop: "0.4rem" }}><b>Crypto:</b> {r.themes.crypto.context}</div>
@@ -186,12 +208,13 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
                 <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem", color: "#CBD5E1", lineHeight: 1.5 }}>{r.probablyNoise.map((x, i) => <li key={i}>{x}</li>)}</ul>
                 {!r.probablyNoise.length && <div style={muted}>None.</div>}
               </Section>
+              </CollapsibleSection>
             </>
           )}
 
           <AdminCard title="Data quality" actions={<button style={btn} onClick={() => setShowHealth((s) => !s)}>{showHealth ? "Collapse" : "Details"}</button>} className="mb-4">
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-              <StatusPill label={`Universe coverage ${r.dataHealth.coveragePct ?? "n/a"}%`} tone={(r.dataHealth.coveragePct ?? 0) >= 95 ? "green" : "yellow"} />
+              <StatusPill label={r.dataHealth.coveragePct == null ? "Universe coverage not available right now" : `Universe coverage ${r.dataHealth.coveragePct}%`} tone={(r.dataHealth.coveragePct ?? 0) >= 95 ? "green" : "yellow"} />
               <StatusPill label={`${r.dataHealth.universe.toLocaleString()} assets scanned`} />
               <StatusPill label={`${r.dataHealth.deepDives} deep dives`} />
               <StatusPill label={`data errors ${r.dataHealth.providerErrors}`} tone={r.dataHealth.providerErrors ? "yellow" : "green"} />
@@ -199,7 +222,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
             </div>
             {showHealth && (
               <div style={{ marginTop: "0.75rem", fontSize: "0.8rem", lineHeight: 1.6 }}>
-                <div>Universe {r.dataHealth.universe} = {r.dataHealth.equities} equities · {r.dataHealth.etfs} ETFs · {r.dataHealth.crypto} crypto · Stage 1 {r.dataHealth.stage1Listed} listed → {r.dataHealth.stage1Quoted} quoted → {r.dataHealth.liquid} liquid · Stage 2 selected {r.dataHealth.stage2Selected ?? "n/a"} / live {r.dataHealth.stage2Live ?? "n/a"} / fallback {r.dataHealth.stage2Fallback ?? "n/a"} / missing {r.dataHealth.stage2Missing ?? "n/a"} · deep dives {r.dataHealth.deepDives}</div>
+                <div>Universe {r.dataHealth.universe} = {r.dataHealth.equities} equities · {r.dataHealth.etfs} ETFs · {r.dataHealth.crypto} crypto · Stage 1 {r.dataHealth.stage1Listed} listed → {r.dataHealth.stage1Quoted} quoted → {r.dataHealth.liquid} liquid · Stage 2 selected {r.dataHealth.stage2Selected ?? "not available right now"} / live {r.dataHealth.stage2Live ?? "not available right now"} / fallback {r.dataHealth.stage2Fallback ?? "not available right now"} / missing {r.dataHealth.stage2Missing ?? "not available right now"} · deep dives {r.dataHealth.deepDives}</div>
                 {r.dataHealth.sectorCacheCoverage && <div>Sector coverage: {r.dataHealth.sectorCacheCoverage}</div>}
                 <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "0.5rem" }}>
                   <thead><tr><th style={th}>Data feed</th><th style={th}>Status</th><th style={th}>Detail</th></tr></thead>
@@ -215,7 +238,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr><th style={th}>Session</th><th style={th}>Headline</th><th style={th}>Run</th><th style={th}>Health</th>{ops && <th style={th}>Email</th>}</tr></thead>
               <tbody>{archive.map((a) => <tr key={a.sessionDate} style={{ cursor: "pointer", background: a.sessionDate === data.sessionDate ? "rgba(16,185,129,0.08)" : undefined }} onClick={() => load(a.sessionDate)}>
-                <td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{a.sessionDate}</td><td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(a.headline)}</td><td style={td}><StatusPill label={a.status} tone={healthTone(a.healthStatus)} /></td><td style={td}><StatusPill label={a.healthStatus} tone={healthTone(a.healthStatus)} /></td>{ops && <td style={td}>{a.emailStatus ? <StatusPill label={a.emailStatus} tone={emailTone(a.emailStatus)} /> : "—"}</td>}</tr>)}</tbody>
+                <td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{a.sessionDate}</td><td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(a.headline)}</td><td style={td}><StatusPill label={a.status} tone={healthTone(a.healthStatus)} /></td><td style={td}><StatusPill label={a.healthStatus} tone={healthTone(a.healthStatus)} /></td>{ops && <td style={td}>{a.emailStatus ? <StatusPill label={a.emailStatus} tone={emailTone(a.emailStatus)} /> : "No reading"}</td>}</tr>)}</tbody>
             </table>
             {!archive.length && <div style={muted}>No persisted reports yet.</div>}
           </AdminCard>
@@ -224,6 +247,49 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
         </>
       )}
     </div>
+  );
+}
+
+function UpDownChart({ rows }: { rows: CandidateRow[] }) {
+  const measured = rows.filter((row) => Number.isFinite(row.ret1));
+  if (!measured.length) return <p className="text-xs text-[var(--msp-text-muted)]">No session change recorded.</p>;
+  const max = Math.max(...measured.map((row) => Math.abs(row.ret1)), 0.01);
+  return (
+    <div data-radar-chart>
+      <h2 className="mb-2 text-sm font-semibold">Session change</h2>
+      <ul className="space-y-1">
+        {measured.slice(0, 8).map((row) => (
+          <li key={row.symbol} className="grid grid-cols-[4.5rem_1fr_4.5rem] items-center gap-2 text-xs">
+            <span>{row.symbol}</span>
+            <span className="h-2 rounded bg-white/10" aria-hidden="true"><span className="block h-2 rounded" style={{ width: `${Math.min(100, (Math.abs(row.ret1) / max) * 100)}%`, background: row.ret1 >= 0 ? "var(--msp-bull)" : "var(--msp-bear)" }} /></span>
+            <span>{pct(row.ret1)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CandidateCards({ rows }: { rows: CandidateRow[] }) {
+  if (!rows.length) return <p className="text-xs text-[var(--msp-text-muted)]">No qualified candidates this session.</p>;
+  return (
+    <ul data-radar-candidates className="grid gap-3 md:grid-cols-2">
+      {rows.map((row) => {
+        const reason = humanizeText(row.whySurfaced || "");
+        const short = reason.length > 140 ? `${reason.slice(0, 140)}…` : reason;
+        const stage = row.extension === "EARLY" ? "Early" : row.extension === "MID" ? "Mid" : row.extension === "EXTENDED" ? "Extended" : humanizeEnum(row.extension);
+        return (
+          <li key={row.symbol} className="rounded-lg border border-white/10 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <SymbolLink symbol={row.symbol} assetClass={row.assetClass} from="candidates" />
+              <StatusPill label={stage} tone={row.extension === "EARLY" ? "green" : row.extension === "EXTENDED" ? "yellow" : "neutral"} />
+            </div>
+            <p className="mt-2 text-sm">{short}</p>
+            {reason.length > 140 && <details className="mt-1"><summary className="min-h-10 cursor-pointer text-xs">More</summary><p className="text-xs text-[var(--msp-text-muted)]">{reason}</p></details>}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -293,7 +359,7 @@ function LifecycleList({ rows }: { rows: LifecycleTransition[] }) {
   if (!rows.length) return <div style={muted}>No lifecycle transitions recorded for this session.</div>;
   return (
     <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem", lineHeight: 1.55 }}>
-      {rows.map((t, i) => <li key={`${t.symbol}-${i}`}><b><SymbolLink symbol={t.symbol} assetClass={t.assetClass} from="lifecycle" /></b> <span style={muted}>({t.assetClass})</span>: {humanizeEnum(t.from ?? "NEW")} → <b style={{ color: t.to === "CONFIRMED_MOVE" ? "#6EE7B7" : t.to === "FAILED" || t.to === "DETERIORATING" ? "#FCA5A5" : "#E5E7EB" }}>{humanizeEnum(t.to)}</b> <span style={{ color: "#CBD5E1" }}>— {humanizeText(t.note)}</span></li>)}
+      {rows.map((t, i) => <li key={`${t.symbol}-${i}`}><b><SymbolLink symbol={t.symbol} assetClass={t.assetClass} from="lifecycle" /></b> <span style={muted}>({t.assetClass})</span>: {humanizeEnum(t.from ?? "NEW")} → <b style={{ color: t.to === "CONFIRMED_MOVE" ? "#6EE7B7" : t.to === "FAILED" || t.to === "DETERIORATING" ? "#FCA5A5" : "#E5E7EB" }}>{humanizeEnum(t.to)}</b> <span style={{ color: "#CBD5E1" }}>: {humanizeText(t.note)}</span></li>)}
     </ul>);
 }
 
@@ -304,7 +370,7 @@ function ThemesTable({ title, rows }: { title: string; rows: ThemeRow[] }) {
       <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.3rem" }}>{title}</div>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
         <thead><tr><th style={th}>Theme</th><th style={th}>Members up</th><th style={th}>Median 1d move</th><th style={th}>Verdict</th><th style={th}>Early</th><th style={th}>Extended</th></tr></thead>
-        <tbody>{rows.map((g) => <tr key={g.name}><td style={{ ...td, fontWeight: 600 }}>{g.name}</td><td style={td}>{g.up}/{g.members} ({Math.round(g.pctUp)}%)</td><td style={td}>{g.medianMove}</td><td style={td}><StatusPill label={humanizeEnum(g.verdict)} tone={g.verdict === "GENUINE_GROUP_MOVE" ? "green" : g.verdict === "MIXED" ? "yellow" : "neutral"} /><div style={muted}>{humanizeText(g.confirmation)}</div></td><td style={{ ...td, color: "#6EE7B7" }}>{g.early.join(", ") || "—"}</td><td style={{ ...td, color: "#FCD34D" }}>{g.extended.join(", ") || "—"}</td></tr>)}</tbody>
+        <tbody>{rows.map((g) => <tr key={g.name}><td style={{ ...td, fontWeight: 600 }}>{g.name}</td><td style={td}>{g.up}/{g.members} ({Math.round(g.pctUp)}%)</td><td style={td}>{g.medianMove}</td><td style={td}><StatusPill label={humanizeEnum(g.verdict)} tone={g.verdict === "GENUINE_GROUP_MOVE" ? "green" : g.verdict === "MIXED" ? "yellow" : "neutral"} /><div style={muted}>{humanizeText(g.confirmation)}</div></td><td style={{ ...td, color: "#6EE7B7" }}>{g.early.join(", ") || "No reading"}</td><td style={{ ...td, color: "#FCD34D" }}>{g.extended.join(", ") || "No reading"}</td></tr>)}</tbody>
       </table>
     </div>);
 }
