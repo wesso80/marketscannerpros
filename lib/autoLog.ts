@@ -1,5 +1,6 @@
 'use client';
 
+import { isResearchAutoLogEnabled } from '@/lib/researchAutoLogSetting';
 import { readOperatorState } from '@/lib/operatorState';
 
 /**
@@ -22,7 +23,9 @@ export interface AutoLogPayload {
   sectorStrength?: string;
 }
 
-export async function fireAutoLog(payload: AutoLogPayload): Promise<{ ok: boolean; entryId?: number; error?: string }> {
+export async function fireAutoLog(payload: AutoLogPayload): Promise<{ ok: boolean; entryId?: number; error?: string; skipped?: boolean }> {
+  // Explicit opt-in only. Reading a market page must never create journal records.
+  if (!isResearchAutoLogEnabled()) return { ok: true, skipped: true };
   try {
     const op = readOperatorState();
     const res = await fetch('/api/journal/auto-log', {
