@@ -824,24 +824,26 @@ export default function TerminalPage() {
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Bias</div>
-                    <div className={`text-lg font-bold capitalize ${biasColor}`}>{fd.bias || '—'}</div>
+                    <div className={`text-lg font-bold capitalize ${biasColor}`}>{fd.bias || 'Not available right now'}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Mode</div>
-                    <div className={`text-lg font-bold capitalize ${modeColor}`}>{fd.market_mode || '—'}</div>
+                    <div className={`text-lg font-bold capitalize ${modeColor}`}>{fd.market_mode || 'Not available right now'}</div>
                   </div>
+                  {fd.gamma_state && !/unavailable/i.test(fd.gamma_state) ? (
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-[11px] text-slate-500 uppercase">Gamma</div>
-                    <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state || '—'}</div>
-                    <div className="mt-1 text-[10px] leading-snug text-slate-500" title={fd.gamma_input?.convention ?? undefined}>{describeGammaInput(fd.gamma_input)}</div>
+                    <div className="text-xs text-slate-500 uppercase">Gamma</div>
+                    <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state}</div>
+                    <div className="mt-1 text-xs leading-snug text-slate-500" title={fd.gamma_input?.convention ?? undefined}>{describeGammaInput(fd.gamma_input)}</div>
                   </div>
+                  ) : null}
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Directional score</div>
-                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? '—'}/100</div>
+                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? 'Not available right now'}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[11px] text-slate-500 uppercase">Spot</div>
-                    <div className="text-lg font-bold text-white">${fd.spot?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}</div>
+                    <div className="text-lg font-bold text-white">{fd.spot != null ? `$${fd.spot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Not available right now'}</div>
                   </div>
                 </div>
               </Card>
@@ -868,7 +870,15 @@ export default function TerminalPage() {
                       <div className={`text-base font-bold ${pm.regime === 'TRENDING' ? 'text-emerald-400' : pm.regime === 'NO_TREND' || pm.regime === 'MIXED' ? 'text-slate-300' : 'text-amber-400'}`} title="Largest scenario weight; TRENDING only when daily ADX (or gamma) measured a trend">{pm.regime.replace(/_/g, ' ')}</div>
                     </div>
                   </div>
-                  {perm && !perm.blocked && pm.decision && <div className="text-xs text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
+                  <div data-capital-chart className="space-y-1" aria-label="Scenario weight chart">
+                    {([['Continuation', pm.continuation], ['Pin', pm.pinReversion], ['Expansion', pm.expansion]] as const).map(([label, value]) => (
+                      <div key={label} className="grid grid-cols-[7rem_1fr] items-center gap-2 text-sm">
+                        <span>{label}</span>
+                        <span className="block h-2 rounded bg-white/10" aria-hidden="true"><span className="block h-2 rounded" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: 'var(--msp-bull)' }} /></span>
+                      </div>
+                    ))}
+                  </div>
+                  {perm && !perm.blocked && pm.decision && <div className="text-sm text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
                 </Card>
               )}
 
@@ -1018,7 +1028,7 @@ export default function TerminalPage() {
                 <Card>
                   <h3 className="text-sm font-semibold text-white mb-3">Liquidity Levels</h3>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
+                    <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-[var(--msp-border)]">
                           <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Level</th>

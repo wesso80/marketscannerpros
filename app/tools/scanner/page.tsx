@@ -40,14 +40,20 @@ import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
 import { compareCanonicalRows } from '@/lib/scoring/canonical/scannerAdapter';
 import { gradeBasis } from '@/lib/scoring/canonical/display';
 import { isNoSetupRow, noSetupRankedReason, rankedBiasTitle, rankedClaimedDirection, rankedScoreLabel } from '@/lib/scanner/rankedDisplay';
-import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
+import { type ScanTemplate } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { saveResearchCase } from '@/lib/clientResearchCases';
 import DataFreshnessBadge from '@/components/market/DataFreshnessBadge';
-import FreeScanner from '@/components/free/FreeScanner';
 import FreeLoading from '@/components/free/Loading';
+import FreeScannerModes from '@/components/scanner/FreeScannerModes';
+import PresetCards from '@/components/scanner/PresetCards';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
+import ChipRow from '@/components/visual/ChipRow';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import StatTile from '@/components/visual/StatTile';
+import TabBar from '@/components/visual/TabBar';
 import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 
 /* ─── Helpers ─── */
@@ -228,11 +234,22 @@ function compactBiasLabel(direction?: string | null): string {
   return 'Neutral';
 }
 
+function ScoreBar({ score }: { score: number | null }) {
+  if (score == null) return <div className="mt-3 h-1.5 rounded-full bg-[var(--msp-border)]" data-testid="score-bar" />;
+  return (
+    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--msp-border)]" data-testid="score-bar">
+      <div className="h-full rounded-full" style={{ width: `${Math.max(4, Math.min(100, score))}%`, background: 'var(--msp-green)' }} />
+    </div>
+  );
+}
+
 function lifecycleLabel(lifecycle: LifecycleState): string {
   if (lifecycle === 'READY') return 'Multi-confirmed pattern';
-  if (lifecycle === 'SETTING_UP') return 'Developing';
+  if (lifecycle === 'SETTING_UP') return 'Pattern still forming';
   if (lifecycle === 'INVALIDATED') return 'Needs review';
-  return lifecycle.replace('_', ' ');
+  const plain = lifecycle.replaceAll('_', ' ');
+  if (/unknown/i.test(plain)) return 'Research stage';
+  return plain;
 }
 
 const TABS = ['All', 'Bullish', 'Bearish', 'High Score ≥70', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
@@ -409,7 +426,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
                 <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol}</div>
                 {/* SC-14: same price as the desktop Ranked table's Price column. */}
-                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div>
+                <div className="sr-only"><div data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div></div>
                 <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
               <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
@@ -428,10 +445,12 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factor coverage</div>
-                <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Unavailable'}</div>
+                <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Not supplied'}</div>
               </div>
             </div>
 
+            <ScoreBar score={isNoSetupRow(row) ? null : msp} />
+            <p className="mt-2 text-xs text-[var(--msp-text-muted)]">90-day line not supplied with this row</p>
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
             {row.canonical ? <CanonicalVerdict c={row.canonical} compact legacyScore={row.compositeV2?.composite ?? null} /> : row.compositeV2 ? <CompositeBreakdown v2={row.compositeV2} compact /> : null}
             {row.insight ? <ScannerInsightStrip insight={row.insight} compact /> : null}
@@ -439,7 +458,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                 {lifecycleLabel(lifecycle)}
               </span>
-              <span className="text-xs font-bold text-emerald-300">Why This Rank / Review</span>
+              <span className="inline-flex min-h-10 items-center text-xs font-bold text-emerald-300">Why This Rank / Review</span>
             </div>
           </button>
         );
@@ -471,7 +490,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
                 <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol || 'Unknown'}</div>
                 {/* SC-14: same price as the desktop Ranked table's Price column. */}
-                <div className="text-xs font-bold text-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div>
+                <div className="sr-only"><div data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div></div>
                 <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
               <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
@@ -489,9 +508,11 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Factor coverage</div>
-                <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Unavailable'}</div>
+                <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Not supplied'}</div>
               </div>
             </div>
+            <ScoreBar score={isNoSetupRow(row) ? null : msp} />
+            <p className="mt-2 text-xs text-[var(--msp-text-muted)]">90-day line not supplied with this row</p>
             {/* Algorithm truth labels */}
             <div className="mt-2 flex flex-wrap gap-1.5">
               <ScoreTypeBadge
@@ -516,7 +537,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                 {lifecycleLabel(lifecycle)}
               </span>
-              <span className="text-xs font-bold text-emerald-300">Why This Rank / Review</span>
+              <span className="inline-flex min-h-10 items-center text-xs font-bold text-emerald-300">Why This Rank / Review</span>
             </div>
           </button>
         );
@@ -1012,7 +1033,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
 /*  MAIN PAGE                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function ScannerPage() { const { tier, isAdmin, isLoading } = useUserTier(); if (isLoading) return <FreeLoading />; if (!isAdmin && !canAccessUnlimitedScanning(tier)) return <FreeScanner />; return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
+export default function ScannerPage() { const { tier, isAdmin, isLoading } = useUserTier(); if (isLoading) return <FreeLoading />; if (!isAdmin && !canAccessUnlimitedScanning(tier)) return <FreeScannerModes />; return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
 
 function ScannerContent() {
   const searchParams=useSearchParams();
@@ -1535,7 +1556,55 @@ function ScannerContent() {
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-scanner-page>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4" data-scanner-tiles>
+        <StatTile label="Queue" value={queueValue} />
+        <StatTile label="Data" value={dataHealthValue} warning={dataIssues.length > 0} />
+        <StatTile label="Top symbol" value={headerTopSymbol || 'Example'} />
+        <StatTile label="Matches" value={String(mode === 'ranked' ? filtered.length : proScreenerRows.length)} />
+      </div>
+      <PresetCards activeId={activeTemplateId} onSelect={(template) => { selectScannerMode('pro'); if (activeTemplateId === template.id) clearTemplate(); else applyTemplate(template); }} />
+      <button
+        type="button"
+        data-testid="run-educational-scan"
+        onClick={() => { selectScannerMode('pro'); void runProScan(); }}
+        disabled={proScanLoading}
+        aria-disabled={proScanLoading}
+        className={`mt-4 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+          proScanLoading
+            ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
+            : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
+        }`}
+      >
+        {proScanLoading ? 'Analyzing…' : 'Run Educational Scan'}
+      </button>
+      <TabBar
+        label="Scanner mode"
+        activeId={mode === 'pro' ? 'pro' : 'quick'}
+        onChange={(id) => selectScannerMode(id === 'pro' ? 'pro' : 'ranked')}
+        items={[{ id: 'quick', label: 'Quick scan' }, { id: 'pro', label: 'Pro scanner' }]}
+      />
+      <ChipRow
+        items={[{
+          id: 'status',
+          label: dataIssues.length ? 'Data needs a look' : 'Data status',
+          warning: dataIssues.length > 0,
+          detail: (
+            <MarketStatusStrip
+              className="grid-cols-1"
+              items={rankedProviderStatuses.map(({ label, status, quality }) => ({
+                label,
+                status,
+                statusLabel: trustBadgeState({ providerStatus: status }).label,
+                source: quality?.source,
+                coverageScore: quality?.coverageScore,
+                computedAt: null,
+                notes: [...quality?.notes ?? [], `As of: ${formatMarketTime(quality?.computedAt) ?? 'time not supplied'}`],
+              }))}
+            />
+          ),
+        }]}
+      />
       <section
         className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
         aria-label="Scanner command header"
@@ -1587,21 +1656,8 @@ function ScannerContent() {
 
       <ComplianceDisclaimer compact />
       <div role="tablist" aria-label="Markets" className="flex flex-wrap gap-2">
-        {(['crypto','equity'] as const).map(asset=><button key={asset} role="tab" aria-selected={marketAsset===asset} onClick={()=>selectMarket(asset)} className={`whitespace-nowrap break-normal rounded-lg border px-4 py-2 ${marketAsset===asset?'border-emerald-400 text-emerald-300':'border-slate-700 text-slate-400'}`}>{asset==='crypto'?'Crypto':'Stocks'}</button>)}
+        {(['crypto','equity'] as const).map(asset=><button key={asset} role="tab" aria-selected={marketAsset===asset} onClick={()=>selectMarket(asset)} className={`min-h-10 whitespace-nowrap break-normal rounded-lg border px-4 py-2 ${marketAsset===asset?'border-emerald-400 text-emerald-300':'border-slate-700 text-slate-400'}`}>{asset==='crypto'?'Crypto':'Stocks'}</button>)}
       </div>
-          <MarketStatusStrip
-            className="grid-cols-1"
-            items={rankedProviderStatuses.map(({ label, status, quality }) => ({
-              label,
-              status,
-              statusLabel: trustBadgeState({providerStatus:status}).label,
-              source: quality?.source,
-              coverageScore: quality?.coverageScore,
-              computedAt: null,
-              // Reasons come from the reconciled status (which already includes the feed's own warnings).
-              notes: [...quality?.notes ?? [], `As of: ${formatMarketTime(quality?.computedAt) ?? 'time unknown'}`],
-            }))}
-          />
 
       <ScannerFlowRail
         activeStage={activeScannerStage}
@@ -1684,7 +1740,13 @@ function ScannerContent() {
             {v2Loading ? (
               <div className="space-y-3 py-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />)}</div>
             ) : rankedRows.length === 0 ? (
-              <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
+              <div data-scanner-example className="rounded-lg border border-[var(--msp-border)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--msp-warn)]">Example</p>
+                <p className="mt-2 text-sm">No live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.</p>
+                <ScoreBar score={72} />
+                <p className="mt-2 text-xs text-[var(--msp-text-muted)]">90-day line not supplied with this example</p>
+                <span className="mt-3 inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase">Pattern still forming</span>
+              </div>
             ) : v2PartialLoading ? (
               <>
                 <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
@@ -1822,6 +1884,7 @@ function ScannerContent() {
       {mode === 'pro' && !selectedSymbol && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Pro Scanner">
         <>
+          <CollapsibleSection title="Advanced filters" summary="Universe, structure, bias and sort. Closed until you open them.">
           {/* Scan Configuration Form */}
           <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-4">
             <div className="grid gap-4 md:grid-cols-12">
@@ -1904,25 +1967,7 @@ function ScannerContent() {
                 ))}
               </div>
             </div>
-
-            {/* Scan Button */}
-            <button
-              type="button"
-              onClick={runProScan}
-              disabled={proScanLoading}
-              aria-disabled={proScanLoading}
-              className={`mt-4 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
-                proScanLoading
-                  ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
-                  : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
-              }`}
-            >
-              {proScanLoading ? 'Analyzing…' : 'Run Educational Scan'}
-            </button>
           </div>
-
-          {/* Strategy Templates */}
-          <ScanTemplatesBar onSelect={applyTemplate} onClear={clearTemplate} activeId={activeTemplateId} />
 
           {/* Filters apply to the next manual scan, before the result limit. */}
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
@@ -1952,7 +1997,8 @@ function ScannerContent() {
                 <button type="button" onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
               </div>
             </div>
-          <p className="text-xs text-slate-400">Run Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as unavailable.</p>
+          </CollapsibleSection>
+          <p className="text-xs text-slate-400">Run Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.</p>
 
           {/* Pro Scan Error */}
           {proScanError && (
@@ -2054,6 +2100,7 @@ function ScannerContent() {
           {crypto.error && <div>Crypto scan: {crypto.error}</div>}
         </div>
       )}
+      <SourceLine source={rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo' ? 'Example' : 'Scanner queue'} basis="Last completed bar" />
     </div>
   );
 }

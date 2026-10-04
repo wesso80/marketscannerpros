@@ -324,7 +324,7 @@ export default function CommandCenterPage() {
       ]}/>
 
       <section data-regime-box className="space-y-4 rounded-lg border p-4" style={{ borderColor: stanceColor(reg.stance) }}>
-        <SectionTitle n="01" title="Market Regime" hint={reg.available && reg.stale ? 'contains stale inputs' : undefined} />
+        <SectionTitle n="01" title="Drivers and risk clock" hint={reg.available && reg.stale ? 'contains stale inputs' : undefined} />
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-2xl font-black" style={{ color: stanceColor(reg.stance) }}>{plainLabel(reg.regimeLabel)}</div>
           <Badge label={plainLabel(reg.riskLabel)} color="var(--msp-text-muted)" small />
@@ -410,7 +410,7 @@ export default function CommandCenterPage() {
       </section>
       <Card className="p-3">
         <h2 className="text-sm font-bold">Daily Picks · {asset==='crypto'?'Crypto':'Stocks'}</h2>
-        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">{picks.error}</p>:rows.length?<OverviewPicks rows={rows.slice(0,3)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
+        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">{picks.error}</p>:rows.length?<OverviewPicks rows={rows.slice(0,5)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
         <div className="mt-2 flex flex-wrap gap-3 text-sm">
           <Link className="inline-flex min-h-10 items-center text-emerald-300" href="/daily-pick">Open Daily Picks</Link>
           <Link className="inline-flex min-h-10 items-center text-emerald-300" href={`/tools/scanner?type=${asset}`}>See all in Scanner</Link>

@@ -212,6 +212,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
             </>
           )}
 
+          <CollapsibleSection title="Data quality and archive" summary="Coverage, feeds, and earlier reports">
           <AdminCard title="Data quality" actions={<button style={btn} onClick={() => setShowHealth((s) => !s)}>{showHealth ? "Collapse" : "Details"}</button>} className="mb-4">
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
               <StatusPill label={r.dataHealth.coveragePct == null ? "Universe coverage not available right now" : `Universe coverage ${r.dataHealth.coveragePct}%`} tone={(r.dataHealth.coveragePct ?? 0) >= 95 ? "green" : "yellow"} />
@@ -242,6 +243,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
             </table>
             {!archive.length && <div style={muted}>No persisted reports yet.</div>}
           </AdminCard>
+          </CollapsibleSection>
 
           <p style={{ ...muted, marginTop: "1rem", textAlign: "center" }}>{r.disclaimer}</p>
         </>

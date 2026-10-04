@@ -283,15 +283,6 @@ export default function ScalperPage() {
             className="bg-[#1E293B] border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 w-52 focus:outline-none focus:border-emerald-500/50"
           />
 
-          {/* Scan button */}
-          <button
-            onClick={runScan}
-            disabled={loading}
-            className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Scanning…' : '🔍 Scan Now'}
-          </button>
-
           {/* Auto-refresh */}
           <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
             <input
@@ -321,9 +312,9 @@ export default function ScalperPage() {
 
         {/* ─── Empty state ─── */}
         {results.length === 0 && !loading && (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-4">⚡</div>
-            <h2 className="text-xl font-bold text-white mb-2">Intraday Scalping Scanner</h2>
+          <div className="rounded-lg border border-slate-700 p-4" data-scalper-example>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Example</p>
+            <h2 className="mt-2 text-xl font-bold text-white">Intraday Scalping Scanner</h2>
             <p className="text-slate-400 text-sm mb-1">Scan {assetClass === 'crypto' ? 'crypto' : 'equity'} markets on {timeframe} timeframe</p>
             <p className="text-slate-500 text-xs mb-6">
               Default watchlist: {(assetClass === 'crypto' ? CRYPTO_DEFAULTS : EQUITY_DEFAULTS).join(', ')}

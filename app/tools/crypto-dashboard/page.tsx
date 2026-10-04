@@ -23,6 +23,7 @@ import MarketStatusStrip,{type MarketStatusItem} from '@/components/market/Marke
 import {trustBadgeState} from '@/components/market/TrustBadge';
 import {buildMarketDataProviderStatus} from '@/lib/scanner/providerStatus';
 import {formatMarketTime} from '@/lib/market/priceStamp';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
 
 export default function CryptoDashboard(props: { embeddedInDashboard?: boolean } = {}) {
   return <PaidPreviewGate tool="Crypto Derivatives"><CryptoDashboardPaid {...props} /></PaidPreviewGate>;
@@ -442,6 +443,10 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         <ComplianceDisclaimer compact={embeddedInDashboard} variant="cryptoDerivatives" />
       </div>
 
+      {(fetchErrors.length > 0 || volRegime === 'Unavailable' || liquidityState === 'Unavailable' || biasLabel === 'Unavailable') && (
+        <p className="mb-4 text-sm text-[var(--msp-warn)]">Some feeds are not available right now.</p>
+      )}
+
       {fetchErrors.length > 0 && (
         <div role="alert" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
           <span className="font-semibold">Some data feeds unavailable:</span>{' '}
@@ -449,11 +454,12 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         </div>
       )}
 
-      {/* Zone 0: keep state anchor */}
+      <CollapsibleSection title="More detail" summary="Decision row, venue sample, and context">
       <div className="mb-4">
         <CryptoMorningDecisionCard />
       </div>
 
+      {volRegime !== 'Unavailable' || liquidityState !== 'Unavailable' || biasLabel !== 'Unavailable' ? (
       <DerivativesDecisionRow
         permission={permission}
         biasLabel={biasLabel}
@@ -463,20 +469,24 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         playbook={playbook}
         drivers={decisionDrivers}
       />
+      ) : null}
 
-      <MarketStatusStrip items={feedTruth} className="mb-4"/>
+      <MarketStatusStrip items={feedTruth.filter((item) => !/unavailable/i.test(String(item.statusLabel || item.label || '')))} className="mb-4"/>
       <p className="mb-2 text-xs text-slate-400">Funding source: OKX USDT perpetual swaps · rates are 8h equivalents, not spot returns.</p>
-      <DerivativesMarketStrip items={marketStripItems} />
+      <DerivativesMarketStrip items={marketStripItems.filter((item) => item.price != null || item.change24h != null)} />
 
+      {Object.keys(data.prices).length > 0 && (
       <DerivativesCoreGrid
         data={data}
         volRegime={volRegime}
         liquidityState={liquidityState}
       />
+      )}
 
-      <TradeIdeasSection ideas={derivativeDataComplete ? tradeIdeas : []} />
+      {derivativeDataComplete && tradeIdeas.length > 0 ? <TradeIdeasSection ideas={tradeIdeas} /> : null}
 
       <DerivativesContextSection />
+      </CollapsibleSection>
       <CoinGeckoCredit className="text-center" detail="Funding rates from OKX" />
     </div>
   );

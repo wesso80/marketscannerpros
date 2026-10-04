@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
-import { useUserTier, canAccessScanner } from '@/lib/useUserTier';
+import { useUserTier, canAccessScanner, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import { PageHero } from '@/components/ui';
 
@@ -69,8 +69,11 @@ function dirColor(dir: string): string {
 
 /* ── Page ── */
 
+const SWEEP_AUTO_KEY = 'msp.liquiditySweep.autoScan';
+const SWEEP_CACHE_KEY = 'msp.liquiditySweep.lastResult';
+
 export default function LiquiditySweepPage() {
-  const { tier } = useUserTier();
+  const { tier, isLoading } = useUserTier();
   const [scanType, setScanType] = useState<'equity' | 'crypto'>('equity');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ScanResponse | null>(null);
@@ -91,12 +94,40 @@ export default function LiquiditySweepPage() {
       const json: ScanResponse = await res.json();
       if (!json.success) throw new Error('Scan returned unsuccessful');
       setData(json);
+      try { sessionStorage.setItem(SWEEP_CACHE_KEY, JSON.stringify(json)); } catch { /* keep the on-screen result */ }
     } catch (err: any) {
       setError(err?.message || 'Scan failed');
     } finally {
       setLoading(false);
     }
   }, [scanType]);
+
+  useEffect(() => {
+    if (isLoading || !canAccessUnlimitedScanning(tier)) return;
+    let cached: ScanResponse | null = null;
+    try {
+      const raw = sessionStorage.getItem(SWEEP_CACHE_KEY);
+      cached = raw ? JSON.parse(raw) as ScanResponse : null;
+    } catch {
+      cached = null;
+    }
+    const matches = Boolean(cached?.success && cached.type === scanType && Array.isArray(cached.results));
+    let already = false;
+    try {
+      already = sessionStorage.getItem(SWEEP_AUTO_KEY) === '1';
+      if (!already) sessionStorage.setItem(SWEEP_AUTO_KEY, '1');
+    } catch {
+      if (matches && cached) { setData(cached); setError(null); }
+      return;
+    }
+    if (matches && cached) {
+      setData(cached);
+      setError(null);
+      return;
+    }
+    if (already) return;
+    void runScan();
+  }, [isLoading, tier, runScan, scanType]);
 
   if (!canAccessScanner(tier)) {
     return <UpgradeGate requiredTier="pro" feature="Liquidity Sweep Scanner" />;
@@ -108,7 +139,7 @@ export default function LiquiditySweepPage() {
     return true;
   }) ?? [];
 
-  const lastUpdated = data ? new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const lastUpdated = data ? new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : 'Example';
 
   return (
     <ToolPageLayout
@@ -129,7 +160,7 @@ export default function LiquiditySweepPage() {
           ]}
           metrics={[
             { label: 'Mode', value: scanType === 'crypto' ? 'Crypto' : 'Equity', tone: scanType === 'crypto' ? 'warn' : 'info', detail: 'Sweep detection' },
-            { label: 'Sweeps', value: data ? String(data.sweepCount) : '—', tone: 'bull', detail: 'Latest completed candle observations' },
+            { label: 'Sweeps', value: data ? String(data.sweepCount) : 'Example', tone: 'bull', detail: 'Latest completed candle observations' },
             { label: 'Filter', value: filter === 'sweep' ? 'Sweeps only' : filter === 'near' ? 'Near level' : 'All', tone: 'info', detail: 'Result filter applied' },
             { label: 'Updated', value: lastUpdated, tone: 'info', detail: 'Local time' },
           ]}
@@ -199,6 +230,13 @@ export default function LiquiditySweepPage() {
               borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: 'var(--msp-bear)',
             }}>
               {error}
+            </div>
+          )}
+
+          {!loading && !data && !error && (
+            <div data-liquidity-example style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '32px', color: 'var(--msp-text-muted)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-warn)' }}>Example</div>
+              <div style={{ marginTop: '8px', fontSize: '14px' }}>This labelled sample stays visible until a completed sweep result is shown.</div>
             </div>
           )}
 
