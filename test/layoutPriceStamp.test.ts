@@ -35,3 +35,7 @@ describe('layout price evidence', () => {
   for(const flag of ['degraded','stale'] as const){const r=trustBadgeState({status:'Live',providerStatus:buildMarketDataProviderStatus({source:'fixture',[flag]:true})});expect(r.label).toBe(flag==='stale'?'Stale':'Degraded');expect(r.color).not.toBe('var(--msp-bull)');}
  });
 });
+
+describe('C-5 no fabricated zero quotes',()=>{
+ it('zero, negative and missing values are no quote',()=>{for(const price of [0,-1,null])expect(formatPriceStamp({price}).text).toContain('no quote');expect(formatPriceStamp({price:333.69}).text).toContain('$333.69');});
+});

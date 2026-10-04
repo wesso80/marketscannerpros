@@ -1,3 +1,4 @@
+import {freshness} from '@/lib/crypto/breakdown/freshness';
 import Link from 'next/link';
 import PriceStamp from './PriceStamp';
 import TrustBadge from './TrustBadge';
@@ -6,9 +7,13 @@ import {formatMarketTime} from '@/lib/market/priceStamp';
 import {pickTrust,type MarketPick} from '@/lib/market/overview';
 import {symbolJournalHref} from '@/lib/market/symbolSnapshot';
 export function SymbolSnapshotHeader({symbol,asset,timeframe,stamp,pick,rankLoading=false,rankError}:{symbol:string;asset:'crypto'|'equity';timeframe:string;stamp:PriceStampInput;pick:MarketPick|null;rankLoading?:boolean;rankError?:string|null}){
+ const ambiguousCrypto=asset==='crypto'&&/^[A-Z0-9]+USD$/i.test(symbol);
+ const safeStamp=ambiguousCrypto?{...stamp,price:null,observedAt:null,latestDay:null}:stamp;
+ const observation=typeof safeStamp.observedAt==='string'?safeStamp.observedAt:null;
+ const trust=asset==='crypto'?freshness('spot',observation):{status:safeStamp.latestDay?'Last close' as const:'Unknown' as const,reason:'Quote observation shown above'};
  return <section aria-label="Symbol snapshot" className="space-y-3 rounded-lg border border-white/10 p-4">
-  <div className="flex flex-wrap justify-between gap-3"><h1 className="text-xl font-bold">{symbol} · {asset==='crypto'?'Crypto':'Stock'}</h1><PriceStamp {...stamp}/></div>
-  <TrustBadge status={stamp.stale?'Stale':stamp.latestDay?'Last close':'Unknown'} reason="Quote observation time and source shown above; retrieval time is not observation time."/>
+  <div className="flex flex-wrap justify-between gap-3"><h1 className="text-xl font-bold">{symbol} · {asset==='crypto'?'Crypto':'Stock'}</h1><PriceStamp {...safeStamp}/></div>
+  <TrustBadge status={stamp.stale?'Stale':trust.status} reason={ambiguousCrypto?'Legacy quote identity unverified for a bare USD suffix; use the breakdown below.':trust.reason}/>
   <div className="flex flex-wrap gap-4 text-emerald-300">
    <Link href={symbolJournalHref(symbol,asset)}>Log to journal</Link>
    <Link href={`/tools/workspace?${new URLSearchParams({tab:'watchlists',addSymbol:symbol,type:asset})}`}>Add to watchlist</Link>
