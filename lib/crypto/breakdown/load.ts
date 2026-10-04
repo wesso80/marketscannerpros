@@ -1,3 +1,4 @@
+import {buildTop} from './top';
 import {COINGECKO_ID_MAP,resolveSymbolToId,searchCoins,getSimplePrices,getCoinDetail,getCoinTickers,getMarketChartHistory,getGlobalMarketCapChart,type CoinTicker} from '@/lib/coingecko';
 import {fetchCryptoSeries} from '@/lib/scanner/cryptoBars';
 import {getQuote} from '@/lib/yahoo-finance';
@@ -125,5 +126,5 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
  if((identity.matches??0)>1)risks.push(sm('Coin identity',`${identity.matches} coins share this symbol.`));
  if(history?.market_caps?.some(p=>p[1]===0))risks.push(hm('History','Market-cap history includes zero values; they are excluded from calculations.'));
  sections.risks=section(risks,['Price-discontinuity flag is unavailable in this endpoint; the existing Verdict data-trust panel remains separate.','No early-signal rule has a proven edge. See Rule status.']);
- return {symbol,coinId,name:detail?.name??identity.name,rank:detail?.market_cap_rank??identity.rank,identityMatches:identity.matches,generatedAt,sections,budget:await budgetStatus()};
+ return {top:buildTop({name:detail?.name??identity.name,symbol,rank:detail?.market_cap_rank??identity.rank,rule,levels:l,bars,sections}),symbol,coinId,name:detail?.name??identity.name,rank:detail?.market_cap_rank??identity.rank,identityMatches:identity.matches,generatedAt,sections,budget:await budgetStatus()};
 }

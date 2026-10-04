@@ -1,4 +1,8 @@
 export const COPY={
+ top:{title:'Crypto at a glance',sourceUnavailable:'Source unavailable',priceUnavailable:'Price unavailable',unavailable:'—',change24h:'Change vs 24h ago',
+  price:(v:number)=>'$'+v.toLocaleString('en-US',{maximumFractionDigits:v<1?8:2}),
+  signedPercent:(v:number)=>`${v>0?'+':''}${v.toFixed(1)}%`,
+ },
  intro:'Facts and rule status only. Not a trade instruction.',footer:'Research snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.',
  titles:{price:'Price',ruleCheck:'Rule check',earlyContext:'Early context',marketContext:'Market context',derivatives:'Derivatives',liquidity:'Liquidity',supply:'Supply',levels:'Levels',risks:'Risks and warnings',sourcesCheck:'Sources check',notes:'Notes'},
  daily:'Daily rule. The existing charts and tabs below retain their selected timeframe.',
