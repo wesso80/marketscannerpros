@@ -99,11 +99,11 @@ function AuthContent() {
   // If already logged in, redirect to tools
   const [checkingSession, setCheckingSession] = useState(true);
   useEffect(() => {
-    fetch('/api/auth/session', { credentials: 'include' })
+    fetch('/api/me', { credentials: 'include' })
       .then(r => r.json())
       .then(d => {
         if (d?.authenticated) {
-          router.replace(next ?? '/tools/command-center');
+          router.replace(next ?? (d.isAdmin || ['pro', 'pro_trader'].includes(d.tier) ? '/tools/command-center' : '/tools/start'));
         } else {
           setCheckingSession(false);
         }

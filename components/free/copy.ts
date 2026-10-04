@@ -4,6 +4,8 @@ export const FREE_COPY = {
   details: 'Details', savedList: 'Latest saved list', scanner: 'Scanner', macro: 'Macro summary',
   research: 'Research and education only. Not a trade instruction.',
   source: 'Daily picks database', basis: 'Saved daily snapshot', stampUnavailable: 'Time not supplied',
+  today: 'Today', overview: 'Open full Overview', radar: 'Daily Radar', session: 'US market session', reportReady: 'Report ready',
+  unlockReport: 'Unlock today’s full report', fromReport: (date: string) => `From ${date} report`,
   demoTitle: 'Explore one symbol', scanAapl: 'Scan AAPL', of: 'of', scansLeft: 'scans left today', resets: 'resets',
   scanLimit: (n: number) => `Today’s ${n} scans are used. Pro includes unlimited scans.`,
   price: 'Price', rsi: 'RSI', coverage: 'Coverage', scanSource: 'Scanner', lastBar: 'Last completed bar', fullAnalysis: 'Open full analysis',

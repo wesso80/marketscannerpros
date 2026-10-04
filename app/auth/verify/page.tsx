@@ -53,10 +53,12 @@ function VerifyMagicLinkContent() {
           return;
         }
 
+        const me = await fetch('/api/me', { credentials: 'include', cache: 'no-store' }).then(response => response.ok ? response.json() : null).catch(() => null);
+        const landing = me?.isAdmin || ['pro','pro_trader'].includes(me?.tier || loginData.tier) ? '/tools/command-center' : '/tools/start';
         setState("success");
         setMessage(FREE_COPY.signedIn);
         setTimeout(() => {
-          window.location.assign(next ?? "/tools/command-center");
+          window.location.assign(next ?? landing);
         }, 900);
       } catch {
         setState("error");
