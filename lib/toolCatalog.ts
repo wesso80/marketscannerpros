@@ -272,6 +272,10 @@ const metadata: Record<string, Partial<ToolPage>> = {
     description: "Workspace preferences",
   },
 };
+const legacySearchNames: Record<string, string[]> = {
+  "/tools/golden-egg": ["Golden Egg"],
+  "/tools/command-center": ["Command Center"],
+};
 export const TOOL_CATEGORIES = primaryNavTools.map((group) => group.label);
 export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
   areaLinks[group.id]
@@ -293,10 +297,6 @@ export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
       };
     }),
 );
-const legacySearchNames: Record<string, string[]> = {
-  "/tools/golden-egg": ["Golden Egg"],
-  "/tools/command-center": ["Command Center"],
-};
 const legacyKeys: Record<string, string> = {
   "gainers-losers": "markets",
   news: "research",
