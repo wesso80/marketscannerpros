@@ -647,6 +647,16 @@ a:hover {
 .badge-bull { background: var(--msp-bull-tint); color: var(--msp-bull); border: 1px solid rgba(34,197,94,0.25); }
 /* Scanner results and filters must have exactly one visible presentation.
    Explicit rules also protect against utility ordering across route CSS chunks. */
+.msp-pick-desktop { display: none; }
+@media (min-width: 768px) {
+  .msp-pick-desktop { display: block; }
+}
+.msp-options-side-toggle { display: none; }
+@media (max-width: 639px) {
+  .msp-options-side-toggle { display: flex; }
+  .msp-options-side-desktop { display: none !important; }
+}
+.sticky-strike { position: sticky; left: 50%; z-index: 1; }
 .msp-scanner-mobile { display: block !important; }
 .msp-scanner-mobile-cards { display: grid !important; }
 .msp-scanner-desktop, .msp-scanner-desktop-tabs { display: none !important; }

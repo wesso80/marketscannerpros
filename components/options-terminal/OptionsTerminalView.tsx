@@ -21,6 +21,10 @@ import { selectOptionsExpiry, withOptionsExpiry } from '@/lib/options/expiry';
 import { atmStrike } from '@/lib/options/atmStrike';
 import PerContractCosts from './PerContractCosts';
 import OptionsResearchSections from './OptionsResearchSections';
+import OptionsPicture from './OptionsPicture';
+import ChipRow from '@/components/visual/ChipRow';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
 import { chainQuality, quoteDateLabel } from '@/lib/options/quoteQuality';
 import { optionJournalParams } from '@/lib/options/journalHandoff';
 import { expiryAfterUnavailable, useOptionsChain } from '@/hooks/useOptionsChain';
@@ -54,7 +58,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const initialSymbol = propSymbol?.toUpperCase() || searchParams.get('symbol')?.toUpperCase() || '';
+  const initialSymbol = propSymbol?.toUpperCase() || searchParams.get('symbol')?.toUpperCase() || 'SPY';
 
   /* ── Live data ─────────────────────────────────────────────── */
   const chain = useOptionsChain();
@@ -132,6 +136,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
     if (minOI > 0) groups = groups.filter((g) => (g.call?.openInterest ?? 0) >= minOI || (g.put?.openInterest ?? 0) >= minOI);
     if (minVol > 0) groups = groups.filter((g) => (g.call?.volume ?? 0) >= minVol || (g.put?.volume ?? 0) >= minVol);
     if (maxSpreadPct < 100) groups = groups.filter((g) => [g.call, g.put].some((contract) => contract && contract.bid > 0 && contract.ask >= contract.bid && contract.spreadPct != null && Number.isFinite(contract.spreadPct) && contract.spreadPct <= maxSpreadPct));
+    groups = groups.filter((g) => [g.call, g.put].some((contract) => contract && ((contract.bid > 0) || (contract.ask > 0) || (contract.volume > 0) || (contract.openInterest > 0) || (contract.last > 0))));
 
     return groups;
   }, [chain.strikeGroups, chain.underlyingPrice, rangePct, minOI, minVol, maxSpreadPct]);
@@ -244,19 +249,19 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
   const optionsEvidenceItems = [
     {
       label: 'Chain Coverage',
-      value: chain.contracts.length > 0 ? `${chain.contracts.length} contracts` : 'Unavailable',
+      value: chain.contracts.length > 0 ? `${chain.contracts.length} contracts` : 'Not available right now',
       status: evidenceStatus(chain.contracts.length > 0),
       detail: `${chain.expirations.length} expirations loaded; ${rows.length} strikes visible after filters.`,
     },
     {
       label: 'Provider',
-      value: chain.provider || 'Unknown',
+      value: chain.provider && chain.provider !== 'HISTORICAL_OPTIONS' ? chain.provider : 'Previous session close',
       status: chain.quoteBasis === 'realtime' ? 'supportive' as const : chain.quoteBasis === 'marks_only' ? 'conflicting' as const : chain.provider ? 'neutral' as const : 'missing' as const,
-      detail: [chain.sourceLabel, updatedLabel].filter(Boolean).join(' · ') || 'No fetch timestamp available.',
+      detail: [chain.provider === 'HISTORICAL_OPTIONS' ? 'Previous session close' : chain.sourceLabel, updatedLabel].filter((part) => part && !/unknown|HISTORICAL_OPTIONS/i.test(part)).join(' · ') || 'No fetch timestamp available.',
     },
     {
       label: 'Liquidity',
-      value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Unavailable',
+      value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Not available right now',
       status: liquidContracts.length === 0 ? 'missing' as const : tightSpreadPct >= 60 ? 'supportive' as const : 'conflicting' as const,
       detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across quoted contracts within 10% of spot.` : 'No usable bid/ask pairs; spread and liquidity quality are unavailable.',
     },
@@ -364,17 +369,17 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 w-full lg:w-auto">
               <div className="space-y-0.5">
                 <div className="text-[11px] uppercase tracking-wide text-zinc-400">Underlying</div>
-                {(chain.spotObservation?.price??spot)>0?<PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf?'last_close':'unknown'} source={chain.provider}/>:<span className="text-amber-300">{ticker} · {noQuoteLabel(marketOpen)}</span>}
+                {(chain.spotObservation?.price??spot)>0?<PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis="last_close" source="Options chain"/>:<span className="text-amber-300">{ticker} · {noQuoteLabel(marketOpen)}</span>}
               </div>
-              <div className="text-xs text-zinc-400"><PriceStamp symbol={selectedContract?`${selectedContract.strike}${selectedContract.type==='call'?'C':'P'} ask`:'Chain · select a contract'} assetType="option" price={selectedContract?.ask} priceBasis={chain.quoteBasis} latestDay={chain.asOfDate} source={chain.provider}/></div>
+              <div className="text-xs text-zinc-400">{selectedContract ? `${selectedContract.strike}${selectedContract.type === 'call' ? 'C' : 'P'} ask` : 'Chain · select a contract'}</div>
               <Badge tone="neutral">
                 {chain.quoteBasis === 'realtime'
-                  ? `LIVE BID/ASK · ${chain.provider}`
+                  ? 'Live bid and ask'
                   : chain.quoteBasis === 'previous_session'
-                    ? `PREVIOUS SESSION CLOSE${chain.asOfDate ? ` · AS OF ${chain.asOfDate}` : ''}`
+                    ? `Previous session close${chain.asOfDate ? ` · as of ${chain.asOfDate}` : ''}`
                     : chain.quoteBasis === 'marks_only'
-                      ? `MARKS ONLY · NO BID/ASK · ${chain.provider}`
-                      : chain.provider || '—'}
+                      ? 'Marks only, no bid and ask'
+                      : 'Previous session close'}
               </Badge>
             </div>
 
@@ -411,12 +416,27 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
         </div>
       )}
 
-      <div className="w-full px-4 pt-4">
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          {chain.loading ? <p role="status">Loading options provider…</p> : <EvidenceStack title="Options Terminal Evidence Stack" items={optionsEvidenceItems} />}
-          {!chain.loading && <RiskFlagPanel title="Options Terminal Risk Flags" flags={optionsRiskFlags} emptyText="No active chain, liquidity, IV, or provider flags." />}
-        </div>
-        {!chain.loading && <MarketStatusStrip items={optionsMarketStatusItems} className="mt-4 md:grid-cols-3" />}
+      <div className="w-full space-y-4 px-4 pt-4">
+        <OptionsPicture
+          spot={spot}
+          expectedMove={chain.ivMetrics.expectedMoveAbs}
+          callOi={chain.oiHeatmap.reduce((sum, row) => sum + (row.callOI || 0), 0)}
+          putOi={chain.oiHeatmap.reduce((sum, row) => sum + (row.putOI || 0), 0)}
+          walls={chain.oiHeatmap.map((row) => ({ strike: row.strike, callOI: row.callOI, putOI: row.putOI }))}
+        />
+        <ChipRow
+          items={[{
+            id: 'evidence',
+            label: 'Chain evidence',
+            detail: chain.loading ? <p role="status">Loading options provider…</p> : (
+              <div className="space-y-3">
+                <EvidenceStack title="Options Terminal Evidence Stack" items={optionsEvidenceItems} />
+                <RiskFlagPanel title="Options Terminal Risk Flags" flags={optionsRiskFlags} emptyText="No active chain, liquidity, IV, or provider flags." />
+                <MarketStatusStrip items={optionsMarketStatusItems} className="md:grid-cols-3" />
+              </div>
+            ),
+          }]}
+        />
         {chain.providerIssues.length > 0 && <ul className="text-sm text-amber-300">{chain.providerIssues.map((issue,i)=><li key={i}>{issue}</li>)}</ul>}
       </div>
 
@@ -426,10 +446,10 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
           <div className="w-full">
             <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'nearest listed expiry'}</span>}>
               <div className="grid grid-cols-2 gap-4">
-                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : '—'} />
-                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : '—'} />
-                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Unavailable'} />
-                <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : '—'} />
+                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : 'Not available right now'} />
+                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : 'Not available right now'} />
+                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Not available right now'} />
+                <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : 'Not available right now'} />
               </div>
 
               <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
@@ -505,6 +525,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
 
           {/* ── Center: Options Chain Grid ─────────────────── */}
           <div className="col-span-12 xl:col-span-6 space-y-6">
+            <CollapsibleSection title="Open chain" summary={`${rows.length} strikes · swipe sideways on a narrow screen`}>
             <Card
               title="Options Chain"
               right={
@@ -516,11 +537,17 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
             >
               {/* Toolbar */}
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="msp-options-side-toggle gap-2" data-testid="calls-puts-toggle">
+                  <button type="button" className="min-h-10 rounded-lg border px-3" aria-pressed={cp === 'CALLS'} onClick={() => setCp('CALLS')}>Calls</button>
+                  <button type="button" className="min-h-10 rounded-lg border px-3" aria-pressed={cp === 'PUTS'} onClick={() => setCp('PUTS')}>Puts</button>
+                </div>
+                <div className="msp-options-side-desktop">
                 <Segmented value={cp} onChange={setCp} options={[
                   { label: 'Both', value: 'BOTH' },
                   { label: 'Calls', value: 'CALLS' },
                   { label: 'Puts', value: 'PUTS' },
                 ]} />
+                </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
                   <NumberField label="Range %" value={rangePct} setValue={setRangePct} min={5} max={100} />
@@ -530,6 +557,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                 </div>
               </div>
 
+              <p className="mt-3 text-xs text-zinc-400" data-testid="chain-scroll-hint">Swipe sideways to read calls, the centre strike, and puts.</p>
               {/* Chain Table */}
               <div className="mt-4 rounded-2xl border border-zinc-800 overflow-hidden">
                 <div ref={tableContainer} className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-auto">
@@ -538,15 +566,15 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                       <tr className="text-left">
                         {cp !== 'PUTS' && (
                           <>
-                            <Th>Bid</Th><Th>Ask</Th><Th>Last</Th><Th>Vol</Th><Th>OI</Th><Th>IV</Th><Th>Δ</Th>
+                            <Th>Bid</Th><Th>Ask</Th><Th>Vol</Th><Th>OI</Th><Th>IV</Th><Th>Delta</Th>
                             {mode === 'institutional' && <><Th>Γ</Th><Th>Θ</Th><Th>Vega</Th></>}
                           </>
                         )}
-                        <Th className="text-center">Strike</Th>
+                        <Th className="sticky-strike text-center">Strike</Th>
                         {cp !== 'CALLS' && (
                           <>
                             {mode === 'institutional' && <><Th>Vega</Th><Th>Θ</Th><Th>Γ</Th></>}
-                            <Th>Δ</Th><Th>IV</Th><Th>OI</Th><Th>Vol</Th><Th>Last</Th><Th>Bid</Th><Th>Ask</Th>
+                            <Th>Delta</Th><Th>IV</Th><Th>OI</Th><Th>Vol</Th><Th>Bid</Th><Th>Ask</Th>
                           </>
                         )}
                       </tr>
@@ -568,12 +596,11 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                             {cp !== 'PUTS' && (
                               <>
                                 <Td clickable selected={isSelCall} onClick={() => setSelected({ side: 'CALL', strike: g.strike })}>
-                                  {fmt(c?.bid)}
+                                  {quoteCell(c, 'bid')}
                                 </Td>
                                 <Td clickable selected={isSelCall} onClick={() => setSelected({ side: 'CALL', strike: g.strike })}>
-                                  {fmt(c?.ask)}
+                                  {quoteCell(c, 'ask')}
                                 </Td>
-                                <Td>{fmt(c?.last)}</Td>
                                 <Td>{fmtInt(c?.volume)}</Td>
                                 <Td>{fmtInt(c?.openInterest)}</Td>
                                 <Td>{fmtPct(c?.iv)}</Td>
@@ -605,12 +632,11 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                                 <Td>{fmtPct(p?.iv)}</Td>
                                 <Td>{fmtInt(p?.openInterest)}</Td>
                                 <Td>{fmtInt(p?.volume)}</Td>
-                                <Td>{fmt(p?.last)}</Td>
                                 <Td clickable selected={isSelPut} onClick={() => setSelected({ side: 'PUT', strike: g.strike })}>
-                                  {fmt(p?.bid)}
+                                  {quoteCell(p, 'bid')}
                                 </Td>
                                 <Td clickable selected={isSelPut} onClick={() => setSelected({ side: 'PUT', strike: g.strike })}>
-                                  {fmt(p?.ask)}
+                                  {quoteCell(p, 'ask')}
                                 </Td>
                               </>
                             )}
@@ -631,9 +657,10 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
               </div>
 
               <div className="mt-3 text-xs text-zinc-400">
-                Click Bid/Ask on a strike to load the Contract Inspector →
+                Click Bid/Ask on a strike to load the Contract Inspector.
               </div>
             </Card>
+            </CollapsibleSection>
           </div>
 
           {/* ── Right: Contract Inspector ──────────────────── */}
@@ -707,13 +734,13 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                       />
                       <LiquidityLine
                         label="Vol/OI"
-                        value={selectedContract.openInterest > 0 ? (selectedContract.volume / selectedContract.openInterest).toFixed(2) : '—'}
+                        value={selectedContract.openInterest > 0 ? (selectedContract.volume / selectedContract.openInterest).toFixed(2) : 'Not available right now'}
                         tone={selectedContract.openInterest > 0 && selectedContract.volume / selectedContract.openInterest > 0.5 ? 'ok' : 'warn'}
                       />
                     </div>
                   </div>
 
-                  <p className="text-xs text-zinc-400">Journal buy entry: {selectedContract.ask > 0 ? `$${selectedContract.ask} per share (ask)` : 'Unavailable — no valid ask'}. Calls and puts default to LONG; review before saving.</p>
+                  <p className="text-xs text-zinc-400">Journal premium: {selectedContract.ask > 0 ? `$${selectedContract.ask} per share (ask)` : 'No valid ask'}. Calls and puts default to LONG; review before saving.</p>
                   {/* Actions */}
                   <div className="grid grid-cols-1 gap-3">
                     <button
@@ -792,11 +819,12 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
           </div>
         </div>
 
+        <CollapsibleSection title="More detail" summary="Open interest map and educational scenarios">
         {/* === ANALYTICS ROW === */}
         <div className="grid grid-cols-12 gap-4">
           {/* OI Map */}
           <div className="col-span-12 xl:col-span-4">
-            <Card title="Open Interest Map" right={<span className="text-xs text-zinc-400">OI as of {chain.asOfDate || 'unavailable'}</span>}>
+            <Card title="Open Interest Map" right={<span className="text-xs text-zinc-400">OI as of {chain.asOfDate || 'not supplied'}</span>}>
               {chain.oiHeatmap.length > 0 ? (
                 <OIHeatmapInline heatmap={chain.oiHeatmap} spot={spot} expectedMove={chain.ivMetrics.expectedMoveAbs} />
               ) : (
@@ -815,6 +843,8 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
           </div>
         </div>
         <OptionsResearchSections symbol={ticker} expiry={chain.contracts[0]?.expiration??selectedExpiry}/>
+        </CollapsibleSection>
+        <SourceLine source={chain.quoteBasis === 'previous_session' ? 'Previous session close' : 'Options chain'} asOf={chain.asOfDate} basis="Bid and ask" />
       </div>
     </div>
   );
@@ -940,7 +970,7 @@ function TdStrike({ strike, underlying, isATM }: { strike: number; underlying: n
   const dist = strike - underlying;
   const distPct = underlying > 0 ? (dist / underlying) * 100 : 0;
   return (
-    <td className="px-3 py-3 text-center">
+    <td className="sticky-strike sticky left-1/2 z-10 bg-zinc-950 px-3 py-3 text-center">
       <div className="inline-flex flex-col items-center">
         <div className="text-sm font-semibold text-zinc-100">
           {strike.toFixed(2)} {isATM && <span className="ml-1 text-[11px] text-emerald-300">ATM</span>}
@@ -1038,7 +1068,7 @@ function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
         </div>
       ))}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 text-xs text-zinc-400">
-        These are educational frameworks only — not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.
+        These are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.
       </div>
     </div>
   );
@@ -1046,14 +1076,22 @@ function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
 
 /* ─── Formatting helpers ─────────────────────────────────────── */
 function fmt(n?: number, decimals: number = 2) {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '—';
+  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '';
   return n.toFixed(decimals);
 }
 function fmtInt(n?: number) {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '—';
+  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '';
   return Math.round(n).toLocaleString();
 }
 function fmtPct(n?: number) {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '—';
+  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '';
   return `${(n * 100).toFixed(1)}%`;
+}
+function twoSided(contract?: OptionsContract) {
+  return !!contract && contract.bid > 0 && contract.ask >= contract.bid;
+}
+function quoteCell(contract: OptionsContract | undefined, side: 'bid' | 'ask') {
+  if (!contract) return '';
+  if (!twoSided(contract)) return side === 'bid' ? 'No two-sided quote' : '';
+  return fmt(side === 'bid' ? contract.bid : contract.ask);
 }
