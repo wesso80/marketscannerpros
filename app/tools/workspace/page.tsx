@@ -144,7 +144,7 @@ function WorkspaceContent() {
         actions={[
           { label: 'Open watchlists', variant: 'primary', onClick: () => selectWorkspaceTab('Watchlists') },
           { label: `Open ${nextTab}`, variant: 'secondary', onClick: () => selectWorkspaceTab(nextTab) },
-          { label: 'Open workflow', variant: 'ghost', href: '/tools/workflow' },
+          { label: 'All tools', variant: 'ghost', href: '/tools' },
         ]}
         metrics={[
           { label: 'Active tab', value: tab, tone: 'bull', detail: activeMeta.eyebrow },

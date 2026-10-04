@@ -452,12 +452,12 @@ export default function MSPCopilot({
   if (pathname?.startsWith('/tools/scanner') || pathname?.startsWith('/tools/golden-egg') || pathname?.startsWith('/tools/terminal')) return null;
 
   if (!isOpen) {
-    // Minimized state: tiny chip icon only
+    // Minimized launcher stays in its own document-flow slot.
     if (isMinimized) {
       return (
         <button
           onClick={() => setIsMinimized(false)}
-          className="fixed bottom-4 right-4 z-50 flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110"
+          data-copilot-launcher className="relative my-3 ml-auto mr-3 flex min-h-10 min-w-10 items-center justify-center rounded-full shadow-lg"
           style={{
             width: '2.5rem',
             height: '2.5rem',
@@ -472,15 +472,15 @@ export default function MSPCopilot({
       );
     }
 
-    // Normal floating button with hide option
+    // In-flow launcher row: page content never sits underneath the collapsed controls.
     return (
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-1.5">
+      <div data-copilot-launcher className="relative flex min-h-14 items-center justify-end gap-2 px-3 py-2">
         <button
           onClick={() => setIsMinimized(true)}
           className="flex items-center justify-center rounded-full transition-all hover:scale-110"
           style={{
-            width: '1.75rem',
-            height: '1.75rem',
+            width: '2.5rem',
+            height: '2.5rem',
             background: 'rgba(30, 41, 59, 0.8)',
             border: '1px solid rgba(100, 116, 139, 0.4)',
             color: 'var(--msp-flat)',

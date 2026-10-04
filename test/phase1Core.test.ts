@@ -63,7 +63,8 @@ it('keeps the phone layout shrinkable and the drawer/account tap targets at leas
   }
   const header = readFileSync('components/Header.tsx', 'utf8');
   expect(header).toContain('min-h-10');
-  expect(header).toContain('absolute right-0');
+  // Desktop menu containment and keyboard behavior are rendered in phase1Nav.test.tsx.
+  expect(header).toContain('fixed right-0');
   expect(readFileSync('components/visual/HeatStrip.tsx', 'utf8')).toContain('sm:block');
   expect(readFileSync('components/overview/TodayStrip.tsx', 'utf8')).toContain('grid-cols-2 gap-3 md:grid-cols-4');
 });

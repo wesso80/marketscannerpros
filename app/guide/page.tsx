@@ -1,6 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import PlatformGuide from '@/components/guide/PlatformGuide';
+import TradingGuides from '@/components/guide/TradingGuides';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import { TOOL_GUIDES } from '@/lib/guides/toolGuides';
 
 export default function UserGuidePage() {
@@ -8,15 +11,15 @@ export default function UserGuidePage() {
     <div className="min-h-screen bg-msp-bg text-msp-text">
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-8 rounded-panel border border-msp-border bg-msp-card p-6 shadow-msp">
-          <div className="mb-2 inline-flex rounded-full border border-msp-borderStrong bg-msp-panel px-3 py-1 text-xs font-semibold text-msp-accent">
-            MarketScannerPros User Guide
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Complete Platform Guide</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Guide</h1>
           <p className="mt-2 text-sm text-msp-text-muted">
             One standardized guide system for every major tool. Each tool page now includes a built-in “How It Works” tab, and this hub provides the full reference.
           </p>
         </div>
 
+        <div id="platform-guide" className="mb-3 scroll-mt-20"><CollapsibleSection title="Platform walkthrough"><PlatformGuide /></CollapsibleSection></div>
+        <div id="research-guides" className="mb-3 scroll-mt-20"><CollapsibleSection title="Research guides"><TradingGuides /></CollapsibleSection></div>
+        <CollapsibleSection title="Tool reference" summary={`${TOOL_GUIDES.length} guides`}>
         <div className="grid gap-4 md:grid-cols-2">
           {TOOL_GUIDES.map((guide) => (
             <article key={`${guide.route}-${guide.title}`} className="rounded-panel border border-msp-border bg-msp-card p-5 shadow-msp">
@@ -45,7 +48,7 @@ export default function UserGuidePage() {
               </div>
 
               <div className="mt-4">
-                <Link href={guide.route} className="text-sm font-semibold text-msp-accent no-underline">
+                <Link href={guide.route} className="inline-flex min-h-10 items-center text-sm font-semibold text-msp-accent no-underline">
                   Open Tool →
                 </Link>
               </div>
@@ -53,11 +56,12 @@ export default function UserGuidePage() {
           ))}
         </div>
 
+        </CollapsibleSection>
         <div className="mt-8 rounded-panel border border-msp-border bg-msp-card p-5 shadow-msp">
           <h3 className="text-base font-bold">Deep Dive Guides</h3>
           <p className="mt-1 text-sm text-msp-text-muted">Advanced walkthroughs for specific topics.</p>
           <div className="mt-3">
-            <Link href="/guide/open-interest" className="text-sm font-semibold text-msp-accent no-underline">
+            <Link href="/guide/open-interest" className="inline-flex min-h-10 items-center text-sm font-semibold text-msp-accent no-underline">
               How to Read Open Interest →
             </Link>
           </div>

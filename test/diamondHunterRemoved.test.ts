@@ -16,7 +16,7 @@ describe('Diamond Hunter is removed', () => {
   it('is gone from the tool directory and nav', () => {
     expect(JSON.stringify(toolWorkflows)).not.toMatch(/diamond/i);
     expect(readFileSync(resolve(root, 'lib/toolWorkflows.ts'), 'utf8')).not.toMatch(/diamond/i);
-    expect(workflowArea('/tools/scanner')).toBe('scanner');
+    expect(workflowArea('/tools/scanner')).toBe('scan');
   });
 
   it('old links redirect to the crypto tools page instead of 404ing', () => {

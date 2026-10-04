@@ -1,69 +1,321 @@
+import { areaLinks, primaryNavTools } from "./toolWorkflows";
 export interface ToolPage {
-  key: string;          // unique identifier, used in DB
-  href: string;         // route path
-  label: string;        // display name
-  description: string;  // short description
-  icon: string;         // short visual code for quick scanning
-  category: string;     // grouping
-  tier?: 'free' | 'pro';  // minimum tier required (undefined = free); two access levels only
+  key: string; // Stable saved-page identifier.
+  href: string;
+  label: string;
+  description: string;
+  icon: string;
+  category: string;
+  tier?: "free" | "pro";
 }
-
-export const TOOL_CATALOG: ToolPage[] = [
-  // ─── Markets ───
-  { key: 'dashboard',          href: '/tools/dashboard',          label: 'Dashboard',            description: 'Command center with live market overview',         icon: 'DB', category: 'Markets' },
-  { key: 'markets',            href: '/tools/explorer?tab=movers', label: 'Market Movers',       description: 'Top gainers, losers and active symbols',           icon: 'MV', category: 'Markets' },
-  { key: 'heatmap',            href: '/tools/explorer?tab=heatmap', label: 'Heatmap',            description: 'Visual sector and market heatmap',                 icon: 'HM', category: 'Markets' },
-  { key: 'gainers-losers',     href: '/tools/explorer?tab=movers', label: 'Gainers & Losers',    description: 'Ranked movers by percentage change',               icon: 'GL', category: 'Markets' },
-  { key: 'news',               href: '/tools/research',           label: 'News Feed',            description: 'Real-time market news with sentiment',             icon: 'NW', category: 'Markets' },
-
-  // ─── Scanning ───
-  { key: 'scanner',            href: '/tools/scanner',            label: 'Scanner',              description: 'Multi-timeframe technical scanner',                icon: 'SC', category: 'Scanning' },
-  { key: 'confluence-scanner', href: '/tools/terminal?tab=time-confluence', label: 'Confluence Scanner', description: 'Multi-indicator confluence detection',     icon: 'CF', category: 'Scanning' },
-  { key: 'golden-egg',         href: '/tools/golden-egg',         label: 'Symbol',           description: 'Deep single-symbol technical analysis',            icon: 'GE', category: 'Scanning' },
-  { key: 'time-scanner',       href: '/tools/terminal?tab=time-scanner', label: 'Time Scanner',  description: 'Time-based pattern detection',                     icon: 'TM', category: 'Scanning' },
-  { key: 'signal-accuracy',    href: '/tools/signal-accuracy',    label: 'Signal Accuracy',      description: 'Historical signal performance tracking',           icon: 'AC', category: 'Scanning' },
-
-  // ─── Crypto ───
-  { key: 'crypto',             href: '/tools/explorer?tab=crypto-command', label: 'Crypto Overview', description: 'Cryptocurrency market overview',               icon: 'CR', category: 'Crypto' },
-  { key: 'crypto-dashboard',   href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', description: 'Funding rates, open interest, liquidations',       icon: 'DV', category: 'Crypto', tier: 'pro' },
-  { key: 'crypto-heatmap',     href: '/tools/crypto-heatmap',     label: 'Crypto Heatmap',       description: 'Visual crypto sector heatmap',                     icon: 'CH', category: 'Crypto' },
-  { key: 'crypto-terminal',    href: '/tools/terminal?tab=crypto', label: 'Crypto Terminal',     description: 'Full crypto trading terminal',                     icon: 'CT', category: 'Crypto', tier: 'pro' },
-  { key: 'crypto-time-confluence', href: '/tools/terminal?tab=time-confluence', label: 'Crypto Time Confluence', description: 'Crypto time-based patterns', icon: 'TC', category: 'Crypto' },
-  { key: 'crypto-intel',       href: '/tools/explorer?tab=crypto-intel', label: 'Crypto Intelligence',  description: 'GT Score, whale tracker, treasury & crypto news (in Markets)', icon: 'CI', category: 'Crypto' },
-
-  // ─── Options (all canonical via /tools/terminal tabs) ───
-  { key: 'options-terminal',   href: '/tools/options',  label: 'Options Terminal',  description: 'Chain, strikes, spreads, IV, and chain data truth',   icon: 'OT', category: 'Options', tier: 'pro' },
-  { key: 'options-confluence', href: '/tools/options', label: 'Options Confluence', description: 'Strike and expiry alignment against research scenario', icon: 'OC', category: 'Options', tier: 'pro' },
-  { key: 'options-flow',       href: '/tools/options',       label: 'Options Flow',       description: 'Premium flow classification, skew, and large-flow estimates', icon: 'OF', category: 'Options', tier: 'pro' },
-
-  // ─── Research ───
-  { key: 'ai-analyst',         href: '/tools/scanner',            label: 'ARCA AI Panel',         description: 'AI research support from live scanner context',     icon: 'AI', category: 'Research' },
-  { key: 'research',           href: '/tools/research',           label: 'Research',             description: 'In-depth research and economic calendar',          icon: 'RS', category: 'Research' },
-  { key: 'terminal',           href: '/tools/terminal',           label: 'Terminal',             description: 'Advanced data terminal interface',                 icon: 'TR', category: 'Research' },
-  { key: 'explorer',           href: '/tools/explorer',           label: 'Explorer',             description: 'Market structure explorer',                        icon: 'EX', category: 'Research' },
-
-  // ─── Macro & Earnings ───
-  { key: 'macro',              href: '/tools/dashboard?tab=macro', label: 'Macro Dashboard',      description: 'Economic indicators and macro trends',             icon: 'MA', category: 'Macro' },
-  { key: 'commodities',        href: '/tools/explorer?tab=commodities', label: 'Commodities',    description: 'Commodity prices and trends',                      icon: 'CM', category: 'Macro' },
-  { key: 'earnings',           href: '/tools/research?tab=earnings', label: 'Earnings',          description: 'Company earnings catalysts in Research',           icon: 'ER', category: 'Macro' },
-  { key: 'earnings-calendar',  href: '/tools/research?tab=earnings', label: 'Earnings Calendar', description: 'Upcoming earnings schedule in Research',           icon: 'EC', category: 'Macro' },
-  { key: 'economic-calendar',  href: '/tools/research?tab=calendar', label: 'Economic Calendar', description: 'Economic events and indicators calendar',          icon: 'MC', category: 'Macro' },
-
-  // ─── Advanced ───
-  { key: 'volatility-engine',  href: '/tools/volatility-engine',  label: 'Volatility Engine',    description: 'Volatility analysis and VIX tracking',             icon: 'VE', category: 'Advanced', tier: 'pro' },
-  { key: 'liquidity-sweep',    href: '/tools/liquidity-sweep',    label: 'Liquidity Sweep',      description: 'Detect liquidity grabs and sweeps',                icon: 'LS', category: 'Advanced', tier: 'pro' },
-  { key: 'command-hub',        href: '/tools/command-center',     label: 'Command Center',       description: '30-second market intelligence: regime, risk tone, strength/weakness, events', icon: 'CC', category: 'Advanced' },
-
-  // ─── Portfolio & Journal ───
-  { key: 'portfolio',          href: '/tools/workspace?tab=portfolio', label: 'Portfolio',       description: 'Review positions and exposure in Workspace',       icon: 'PF', category: 'Portfolio' },
-  { key: 'journal',            href: '/tools/workspace?tab=journal', label: 'Trade Journal',     description: 'Log and review trades in Workspace',               icon: 'JR', category: 'Portfolio' },
-  { key: 'backtest',           href: '/tools/workspace?tab=backtest', label: 'Backtester',       description: 'Test strategies inside Workspace',                 icon: 'BT', category: 'Portfolio', tier: 'pro' },
-  { key: 'alerts',             href: '/tools/workspace?tab=alerts', label: 'Alerts',             description: 'Manage condition alerts in Workspace',             icon: 'AL', category: 'Portfolio' },
-  { key: 'watchlists',         href: '/tools/workspace?tab=watchlists', label: 'Watchlists',      description: 'Organise symbol lists in Workspace',              icon: 'WL', category: 'Portfolio' },
-];
-
-export const TOOL_CATEGORIES = [...new Set(TOOL_CATALOG.map(t => t.category))];
-
+// Catalog copy/access labels do not grant access; the existing page/API gates remain authoritative.
+const metadata: Record<string, Partial<ToolPage>> = {
+  "/auth": { description: "Access your account" },
+  "/tools/explorer?tab=movers": {
+    key: "markets",
+    description: "Gainers, losers and activity",
+    icon: "MV",
+    tier: "free",
+  },
+  "/tools/explorer?tab=heatmap": {
+    key: "heatmap",
+    description: "Visual sector and market heatmap",
+    icon: "HM",
+  },
+  "/tools/scanner": {
+    key: "scanner",
+    description: "Multi-timeframe technical scanner",
+    icon: "SC",
+  },
+  "/tools/terminal?tab=time-confluence": {
+    key: "confluence-scanner",
+    description: "Timeframe alignment",
+    icon: "CF",
+    tier: "pro",
+  },
+  "/tools/golden-egg": {
+    key: "golden-egg",
+    description: "Single-symbol research",
+    icon: "GE",
+    tier: "pro",
+  },
+  "/tools/terminal?tab=time-scanner": {
+    key: "time-scanner",
+    description: "Time-based research",
+    icon: "TM",
+    tier: "pro",
+  },
+  "/tools/signal-accuracy": {
+    key: "signal-accuracy",
+    description: "Recorded research outcomes",
+    icon: "AC",
+    tier: "pro",
+  },
+  "/tools/explorer?tab=crypto-command": {
+    key: "crypto",
+    description: "Cryptocurrency market overview",
+    icon: "CR",
+    tier: "pro",
+  },
+  "/tools/crypto-dashboard": {
+    key: "crypto-dashboard",
+    description: "Funding rates, open interest, liquidations",
+    icon: "DV",
+    tier: "pro",
+  },
+  "/tools/explorer?tab=crypto-intel": {
+    key: "crypto-intel",
+    description: "GT Score, whale tracker, treasury & crypto news (in Markets)",
+    icon: "CI",
+    tier: "pro",
+  },
+  "/tools/options": {
+    key: "options-terminal",
+    description: "Options chains and context",
+    icon: "OT",
+    tier: "pro",
+  },
+  "/tools/research": {
+    key: "research",
+    description: "News and event research",
+    icon: "RS",
+    tier: "pro",
+  },
+  "/tools/terminal": {
+    key: "terminal",
+    description: "Charts and specialist tabs",
+    icon: "TR",
+    tier: "free",
+  },
+  "/tools/explorer": {
+    key: "explorer",
+    description: "Market summaries and deep views",
+    icon: "EX",
+    tier: "free",
+  },
+  "/tools/dashboard?tab=macro": {
+    key: "macro",
+    description: "Global regime summary",
+    icon: "MA",
+    tier: "free",
+  },
+  "/tools/explorer?tab=commodities": {
+    key: "commodities",
+    description: "Commodity prices and trends",
+    icon: "CM",
+  },
+  "/tools/research?tab=earnings": {
+    key: "earnings",
+    description: "Company earnings catalysts in Research",
+    icon: "ER",
+    tier: "pro",
+  },
+  "/tools/research?tab=calendar": {
+    key: "economic-calendar",
+    description: "Economic events and indicators calendar",
+    icon: "MC",
+    tier: "pro",
+  },
+  "/tools/volatility-engine": {
+    key: "volatility-engine",
+    description: "Volatility research",
+    icon: "VE",
+    tier: "pro",
+  },
+  "/tools/liquidity-sweep": {
+    key: "liquidity-sweep",
+    description: "Sweep and reclaim research",
+    icon: "LS",
+    tier: "free",
+  },
+  "/tools/command-center": {
+    key: "command-hub",
+    description: "Session overview",
+    icon: "CC",
+    tier: "free",
+  },
+  "/tools/workspace?tab=portfolio": {
+    key: "portfolio",
+    description: "Positions and exposure",
+    icon: "PF",
+    tier: "free",
+  },
+  "/tools/workspace?tab=journal": {
+    key: "journal",
+    description: "Your own trade records",
+    icon: "JR",
+    tier: "free",
+  },
+  "/tools/workspace?tab=backtest": {
+    key: "backtest",
+    description: "Test strategies inside Workspace",
+    icon: "BT",
+    tier: "pro",
+  },
+  "/tools/workspace?tab=alerts": {
+    key: "alerts",
+    description: "Manage condition alerts in Workspace",
+    icon: "AL",
+  },
+  "/tools/workspace?tab=watchlists": {
+    key: "watchlists",
+    description: "Organise symbol lists in Workspace",
+    icon: "WL",
+  },
+  "/tools/dashboard?tab=pages": {
+    key: "dashboard",
+    description: "Your saved pages",
+    icon: "DB",
+  },
+  "/tools/explorer?tab=crypto-command&section=heatmap": {
+    key: "crypto-heatmap",
+    description: "Crypto sector heatmap",
+    icon: "CH",
+    tier: "pro",
+  },
+  "/tools/terminal?tab=crypto-terminal": {
+    key: "crypto-terminal",
+    description: "Crypto derivatives research",
+    icon: "CT",
+    tier: "pro",
+  },
+  "/tools/msp-radar": {
+    description: "Dated research reports",
+    tier: "pro",
+  },
+  "/tools/scalper": {
+    description: "Intraday research",
+    tier: "pro",
+  },
+  "/tools/workspace?tab=learning": {
+    description: "Review research process",
+    tier: "pro",
+  },
+  "/tools/start": {
+    description: "Saved market summary",
+    tier: "free",
+  },
+  "/daily-pick": {
+    description: "Dated daily research",
+    tier: "free",
+  },
+  "/intelligence": {
+    description: "Macro research modules",
+    tier: "pro",
+  },
+  "/intelligence/global-m2": {
+    description: "Global money supply",
+    tier: "pro",
+  },
+  "/intelligence/fragility": {
+    description: "Market fragility research",
+    tier: "pro",
+  },
+  "/intelligence/liquidity": {
+    description: "Liquidity transmission",
+    tier: "pro",
+  },
+  "/guide": {
+    description: "Tool walkthroughs",
+  },
+  "/guide/open-interest": {
+    description: "Positioning research guide",
+  },
+  "/methodology": {
+    description: "How research is calculated",
+  },
+  "/blog": {
+    description: "Articles and updates",
+  },
+  "/about": {
+    description: "About the platform",
+  },
+  "/contact": {
+    description: "Get in touch",
+  },
+  "/partners": {
+    description: "Partner information",
+  },
+  "/": {
+    description: "Platform introduction",
+  },
+  "/account": {
+    description: "Plan and account details",
+  },
+  "/pricing": {
+    description: "Plans and limits",
+  },
+  "/tools/referrals": {
+    description: "Referral details",
+  },
+  "/compliance-hub": {
+    description: "Research safeguards",
+  },
+  "/privacy": {
+    description: "Privacy policy",
+  },
+  "/terms": {
+    description: "Terms of use",
+  },
+  "/cookie-policy": {
+    description: "Cookie policy",
+  },
+  "/refund-policy": {
+    description: "Refund policy",
+  },
+  "/disclaimer": {
+    description: "Research disclaimer",
+  },
+  "/tools/workspace?tab=settings": {
+    description: "Workspace preferences",
+  },
+};
+export const TOOL_CATEGORIES = primaryNavTools.map((group) => group.label);
+export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
+  areaLinks[group.id]
+    .filter((item) => item.href !== "/tools")
+    .map((item) => {
+      const data = metadata[item.href];
+      return {
+        key: data?.key ?? item.href,
+        href: item.href,
+        label:
+          group.id === "intelligence" && item.href === "/intelligence"
+            ? "Intelligence"
+            : item.label,
+        description: data?.description ?? "Research tools and reference",
+        icon: data?.icon ?? "MSP",
+        category: group.label,
+        tier: data?.tier ?? "free",
+      };
+    }),
+);
+const legacyKeys: Record<string, string> = {
+  "gainers-losers": "markets",
+  news: "research",
+  "crypto-time-confluence": "confluence-scanner",
+  "options-confluence": "options-terminal",
+  "options-flow": "options-terminal",
+  options: "options-terminal",
+  "ai-analyst": "scanner",
+  "earnings-calendar": "earnings",
+  "command-center": "command-hub",
+};
 export function getToolByKey(key: string): ToolPage | undefined {
-  return TOOL_CATALOG.find(t => t.key === key);
+  return TOOL_CATALOG.find(
+    (tool) =>
+      tool.key === (legacyKeys[key] ?? key) ||
+      tool.href === key ||
+      tool.href === `/tools/${key}`,
+  );
+}
+export function resolveFavoriteTools(keys: string[]): ToolPage[] {
+  return Array.from(
+    new Map(
+      keys
+        .map(getToolByKey)
+        .filter((tool): tool is ToolPage => !!tool)
+        .map((tool) => [tool.href, tool]),
+    ).values(),
+  );
 }

@@ -352,7 +352,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           actions={[
             { label: 'New alert', variant: 'primary', onClick: () => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Quick alert', variant: 'secondary', onClick: () => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
-            { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
+            { label: 'All tools', variant: 'ghost', href: '/tools' },
           ]}
           metrics={[
             { label: 'Active', value: `${activeAlerts.length}`, tone: 'bull', detail: 'Open notifications' },

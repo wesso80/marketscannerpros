@@ -1,302 +1,90 @@
-import Link from 'next/link';
-import { TOOL_CATALOG, TOOL_CATEGORIES, type ToolPage } from '@/lib/toolCatalog';
-import { toolWorkflows, type ToolWorkflow, type WorkflowTool } from '@/lib/toolWorkflows';
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { TOOL_CATALOG, TOOL_CATEGORIES } from "@/lib/toolCatalog";
+import StatTile from "@/components/visual/StatTile";
 
-const tierLabel = {
-  free: 'Free',
-  pro: 'Pro',
-};
-
-const roleTone = {
-  primary: 'border-emerald-400/35 bg-emerald-400/10 text-emerald-200',
-  advanced: 'border-sky-400/30 bg-sky-400/10 text-sky-200',
-  specialist: 'border-violet-400/30 bg-violet-400/10 text-violet-200',
-};
-
-const tierTone = {
-  free: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200',
-  pro: 'border-sky-400/25 bg-sky-400/10 text-sky-200',
-};
-
-const nextStepByWorkflow: Record<ToolWorkflow['id'], string> = {
-  find: 'Next: build a shortlist in Scanner.',
-  validate: 'Next: open a candidate in Research.',
-  mechanics: 'Next: test the research idea in Backtest.',
-  test: 'Next: record the process in Journal.',
-  track: 'Next: save the research loop in Workspace.',
-  advanced: 'Next: return to the core workflow with clearer evidence.',
-};
-
-const coreWorkflows = toolWorkflows.filter((workflow) => workflow.id !== 'advanced');
-const advancedWorkflow = toolWorkflows.find((workflow) => workflow.id === 'advanced');
-
-const workflowJumpCards = coreWorkflows.map((workflow) => ({
-  id: workflow.id,
-  label: cleanWorkflowTitle(workflow.title),
-  desc: workflow.subtitle,
-  startTool: getPrimaryTool(workflow),
-}));
-
-const featuredDirectoryKeys = new Set(['dashboard', 'scanner', 'golden-egg', 'terminal', 'backtest', 'journal', 'portfolio', 'crypto-dashboard', 'macro', 'options-flow', 'liquidity-sweep', 'alerts']);
-const directoryTools = TOOL_CATALOG.filter((tool) => featuredDirectoryKeys.has(tool.key));
-const toolsByCategory = TOOL_CATEGORIES.map((category) => ({
-  category,
-  tools: TOOL_CATALOG.filter((tool) => tool.category === category),
-}));
-
-function cleanWorkflowTitle(title: string) {
-  return title.replace(/^\d+\.\s*/, '');
-}
-
-function WorkflowMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
-  return (
-    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
-    </div>
+export default function AllToolsPage() {
+  const [query, setQuery] = useState("");
+  const search = query.trim().toLocaleLowerCase();
+  const matches = TOOL_CATALOG.filter((tool) =>
+    `${tool.label} ${tool.description} ${tool.category}`
+      .toLocaleLowerCase()
+      .includes(search),
   );
-}
-
-function getWorkflowNumber(title: string) {
-  return title.match(/^\d+/)?.[0] ?? '';
-}
-
-function getPrimaryTool(workflow: ToolWorkflow) {
-  return workflow.tools.find((tool) => tool.role === 'primary') ?? workflow.tools[0];
-}
-
-function ToolCard({ tool, workflow, primary = false }: { tool: WorkflowTool; workflow: ToolWorkflow; primary?: boolean }) {
   return (
-    <Link
-      href={tool.href}
-      className={`group flex min-h-full flex-col rounded-lg border p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/40 hover:bg-emerald-400/[0.06] ${
-        primary
-          ? 'border-emerald-400/35 bg-emerald-400/[0.07] shadow-lg shadow-emerald-950/20'
-          : 'border-white/10 bg-white/[0.035]'
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            {primary ? (
-              <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-200">
-                Start here
-              </span>
-            ) : null}
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${tierTone[tool.tier]}`}>
-              {tierLabel[tool.tier]}
-            </span>
-          </div>
-          <h3 className="mt-3 text-base font-black text-white group-hover:text-emerald-200">{tool.label}</h3>
-        </div>
-        <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${roleTone[tool.role]}`}>
-          {tool.role}
-        </span>
+    <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 text-[var(--msp-text)]">
+      <h1 className="text-2xl font-semibold">All tools</h1>
+      <label className="block text-sm">
+        Find a tool
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search tools and guides"
+          className="mt-2 block min-h-10 w-full rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3"
+        />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile label="Pages and tools" value={TOOL_CATALOG.length} />
+        <StatTile label="Groups" value={TOOL_CATEGORIES.length} />
       </div>
-
-      <p className="mt-3 text-sm leading-6 text-slate-300">{tool.description}</p>
-
-      <div className="mt-4 grid gap-2 text-xs leading-5 text-slate-400">
-        <div>
-          <span className="font-bold text-slate-200">Output: </span>
-          {workflow.outcome}
-        </div>
-        <div>
-          <span className="font-bold text-slate-200">Recommended next: </span>
-          {nextStepByWorkflow[workflow.id]}
-        </div>
-      </div>
-
-      <div className="mt-auto pt-4 text-xs font-bold text-emerald-300/80 transition group-hover:text-emerald-200">
-        Open {tool.label} -&gt;
-      </div>
-    </Link>
-  );
-}
-
-function DirectoryToolCard({ tool, compact = false }: { tool: ToolPage; compact?: boolean }) {
-  return (
-    <Link
-      href={tool.href}
-      className={`group rounded-lg border border-white/10 bg-white/[0.035] transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06] ${compact ? 'p-3' : 'p-4'}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-300" aria-hidden="true">{tool.icon}</span>
-          <div className="min-w-0">
-            <div className="font-bold text-white group-hover:text-emerald-200">{tool.label}</div>
-            <p className="mt-1 text-xs leading-5 text-slate-400">{tool.description}</p>
-          </div>
-        </div>
-        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] ${tierTone[tool.tier ?? 'free']}`}>
-          {tierLabel[tool.tier ?? 'free']}
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-function WorkflowSection({ workflow }: { workflow: ToolWorkflow }) {
-  const primaryTool = getPrimaryTool(workflow);
-  const supportingTools = workflow.tools.filter((tool) => tool.href !== primaryTool?.href);
-
-  return (
-    <section id={workflow.id} aria-labelledby={`wf-title-${workflow.id}`} className="scroll-mt-24 border-t border-white/10 py-8 first:border-t-0">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] lg:items-start">
-        <div className="lg:sticky lg:top-16">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 text-sm font-black text-emerald-200">
-            {getWorkflowNumber(workflow.title)}
-          </div>
-          <h2 id={`wf-title-${workflow.id}`} className="mt-3 text-2xl font-black text-white">{cleanWorkflowTitle(workflow.title)}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{workflow.subtitle}</p>
-          <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs leading-5 text-emerald-100">
-            <div><span className="font-bold text-emerald-300">Outcome:</span> {workflow.outcome}</div>
-            <div className="mt-2 font-semibold text-emerald-200">{nextStepByWorkflow[workflow.id]}</div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {primaryTool ? <div className="md:col-span-2 xl:col-span-1"><ToolCard tool={primaryTool} workflow={workflow} primary /></div> : null}
-          {supportingTools.map((tool) => (
-            <ToolCard key={tool.href} tool={tool} workflow={workflow} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default function ToolsPage() {
-  const totalWorkflowTools = new Set(toolWorkflows.flatMap((wf) => wf.tools.map((t) => t.href))).size;
-  const startTool = workflowJumpCards[0]?.startTool;
-
-  return (
-    <main className="min-h-screen bg-[#0F172A] text-white">
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <section
-          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-          aria-label="Workflow command header"
-        >
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-                <span className="text-emerald-300">Workflow map</span>
-                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{coreWorkflows.length} steps</span>
-                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{TOOL_CATALOG.length} tools</span>
-                <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-emerald-200">Start each session: Overview</span>
-              </div>
-              <h1 className="mt-1 text-3xl font-black tracking-normal text-white md:text-4xl">Your MSP research workflow.</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                Start with the guided path when you want structure, then open specialist tools only when a research question needs more evidence.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link href="/tools/command-center" className="rounded-md border border-emerald-400/45 bg-emerald-400/15 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-100 no-underline transition-colors hover:bg-emerald-400/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Overview</Link>
-                <a href="#workflow" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Start Workflow</a>
-                <Link href="/tools/scanner" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Open Market Scanner</Link>
-                <a href="#all-tools" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Tool Directory</a>
-              </div>
-            </div>
-
-            <div className="grid self-start gap-1.5 sm:grid-cols-2">
-              <WorkflowMetric label="Start here" value="Overview" tone="#10B981" detail="30-second regime, risk tone & what changed since last session" />
-              <WorkflowMetric label="Tools" value={`${totalWorkflowTools} mapped`} tone="#A5B4FC" detail={`${TOOL_CATALOG.length} total in catalog`} />
-              <WorkflowMetric label="Categories" value={`${TOOL_CATEGORIES.length} groups`} tone="#F59E0B" detail="Markets, Scanning, Crypto, Options, Research, Macro, Advanced, Portfolio" />
-              <WorkflowMetric label="Next Check" value={startTool ? `Open ${startTool.label}` : 'Open Scanner'} tone="#FBBF24" detail="Build a short research queue first" />
-            </div>
-          </div>
-        </section>
-
-        <nav id="workflow" aria-label="Workflow steps" className="mt-8 grid gap-3 md:grid-cols-5 scroll-mt-24">
-          {workflowJumpCards.map((step, index) => (
-            <a
-              key={step.id}
-              href={`#${step.id}`}
-              aria-label={`Jump to ${step.label}`}
-              className="group rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+      <p className="text-sm text-[var(--msp-text-muted)]">
+        Free labels include limited summaries where available. Pro features keep
+        their access gates.
+      </p>
+      <p role="status" className="text-sm">
+        {search ? `${matches.length} matches` : "Choose a group to explore."}
+      </p>
+      <div className="grid items-start gap-3 md:grid-cols-2">
+        {TOOL_CATEGORIES.map((category) => {
+          const items = matches.filter((tool) => tool.category === category);
+          if (!items.length) return null;
+          return (
+            <details
+              key={`${category}-${search ? "search" : "browse"}`}
+              open={search ? true : category === "Today" ? true : undefined}
+              className="min-w-0 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)]"
             >
-              <div className="mb-3 flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/15 text-xs font-black text-emerald-300">
-                  {index + 1}
+              <summary className="min-h-10 cursor-pointer px-3 py-3 font-medium">
+                {category}{" "}
+                <span className="text-xs text-[var(--msp-text-muted)]">
+                  ({items.length})
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Step {index + 1}</span>
-              </div>
-              <div className="text-sm font-bold text-white group-hover:text-emerald-200">{step.label}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-400">{step.desc}</div>
-              <div className="mt-3 text-[11px] font-semibold text-emerald-300/80 group-hover:text-emerald-200">
-                Start with {step.startTool.label}
-              </div>
-            </a>
-          ))}
-        </nav>
-
-        <div className="mt-10">
-          {coreWorkflows.map((workflow) => (
-            <WorkflowSection key={workflow.id} workflow={workflow} />
-          ))}
-        </div>
-
-        {advancedWorkflow ? (
-          <details id="advanced" className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-5">
-            <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50 rounded-lg" aria-label="Toggle specialist tools section">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="text-xs font-black uppercase tracking-[0.14em] text-violet-300">Advanced research</div>
-                  <h2 className="mt-1 text-2xl font-black text-white">Specialist tools after the core workflow is clear.</h2>
-                  <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">Open these when Scanner, Golden Egg, Terminal, Backtest, or Journal points to a specific question.</p>
-                </div>
-                <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-200">Expand tools</span>
-              </div>
-            </summary>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {advancedWorkflow.tools.map((tool) => (
-                <ToolCard key={tool.href} tool={tool} workflow={advancedWorkflow} />
-              ))}
-            </div>
-          </details>
-        ) : null}
-
-        <section id="all-tools" className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] p-5 scroll-mt-24">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.14em] text-sky-300">Tool directory</div>
-              <h2 className="mt-1 text-2xl font-black text-white">Tool directory for direct access.</h2>
-            </div>
-            <p className="max-w-xl text-sm leading-6 text-slate-400">Use this after the core path is clear. Access does not depend on My Pages.</p>
-          </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {directoryTools.map((tool) => (
-              <DirectoryToolCard key={tool.key} tool={tool} />
-            ))}
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {toolsByCategory.map(({ category, tools }) => (
-              <section key={category} aria-labelledby={`cat-${category.toLowerCase().replace(/\s+/g, '-')}`} className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-                <h3 id={`cat-${category.toLowerCase().replace(/\s+/g, '-')}`} className="text-xs font-black uppercase tracking-[0.12em] text-slate-300">{category}</h3>
-                <div className="mt-3 grid gap-2">
-                  {tools.map((tool) => (
-                    <Link key={tool.key} href={tool.href} className="group flex items-center justify-between gap-2 rounded-md border border-white/5 bg-white/[0.025] px-3 py-2 no-underline hover:border-emerald-400/25 hover:bg-emerald-400/[0.05]">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-700 bg-slate-950/50 text-[9px] font-black uppercase text-slate-400" aria-hidden="true">{tool.icon}</span>
-                        <span className="truncate text-xs font-semibold text-slate-200 group-hover:text-emerald-200">{tool.label}</span>
+              </summary>
+              <ul className="divide-y divide-[var(--msp-border)] px-3 pb-2">
+                {items.map((tool) => (
+                  <li key={tool.href}>
+                    <Link
+                      href={tool.href}
+                      className="flex min-h-10 items-center gap-2 py-2 text-sm hover:text-[var(--msp-accent)]"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium">{tool.label}</span>
+                        <span className="ml-2 text-xs text-[var(--msp-text-muted)]">
+                          {tool.description}
+                        </span>
                       </span>
-                      <span className="text-[10px] font-bold uppercase text-slate-500">{tierLabel[tool.tier ?? 'free']}</span>
+                      <span className="shrink-0 rounded-full border border-[var(--msp-border)] px-2 py-1 text-xs">
+                        {tool.tier === "pro" ? "Pro" : "Free"}
+                      </span>
                     </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </section>
-
-        <div className="mt-8 rounded-lg border border-amber-400/20 bg-amber-400/10 p-5 text-sm leading-6 text-amber-100">
-          <strong className="text-amber-200">Educational use only:</strong> These tools provide research, scenario analysis,
-          historical simulation, and process tracking. They do not provide personal financial advice, trade instructions, or broker execution.
-        </div>
-      </section>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          );
+        })}
+      </div>
+      {search && matches.length === 0 && (
+        <button
+          type="button"
+          className="min-h-10 underline"
+          onClick={() => setQuery("")}
+        >
+          Clear search
+        </button>
+      )}
     </main>
   );
 }

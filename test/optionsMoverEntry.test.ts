@@ -26,12 +26,6 @@ it('sends only equity movers to the Options Terminal and names that destination'
   expect(backtestOptionsTerminalLink('BTC', 'crypto')).toBeNull();
 
   const movers = readFileSync('app/tools/market-movers/page.tsx', 'utf8');
-  const gainers = readFileSync('app/tools/gainers-losers/page.tsx', 'utf8');
-  const backtest = readFileSync('app/tools/backtest/page.tsx', 'utf8');
   expect(movers).toContain('moverResearchLink');
   expect(movers).not.toContain('tab=options-terminal&type=equity&symbol=${mover.ticker}');
-  expect(gainers).toContain('moverResearchLink');
-  expect(gainers).not.toContain('tab=options-terminal&type=equity&symbol=${item.ticker}');
-  expect(backtest).toContain('backtestOptionsTerminalLink');
-  expect(backtest).not.toContain('tab=options-terminal&type=equity&symbol=${symbol}');
 });

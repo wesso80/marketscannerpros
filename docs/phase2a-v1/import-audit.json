@@ -1,0 +1,246 @@
+{
+  "routes": [
+    {
+      "route": "/v2/scanner",
+      "destination": "/tools/scanner",
+      "file": "app/v2/scanner/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/v2",
+      "destination": "/tools/dashboard",
+      "file": "app/v2/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/options-terminal",
+      "destination": "/tools/options",
+      "file": "app/tools/options-terminal/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/crypto-terminal",
+      "destination": "/tools/terminal?tab=crypto-terminal",
+      "file": "app/tools/crypto-terminal/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/equity-explorer",
+      "destination": "/tools/explorer?tab=equity",
+      "file": "app/tools/equity-explorer/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/crypto-explorer",
+      "destination": "/tools/explorer?tab=crypto",
+      "file": "app/tools/crypto-explorer/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/commodities",
+      "destination": "/tools/explorer?tab=commodities",
+      "file": "app/tools/commodities/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/market-movers",
+      "destination": "/tools/explorer?tab=movers",
+      "file": "app/tools/market-movers/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/gainers-losers",
+      "destination": "/tools/explorer?tab=movers",
+      "file": "app/tools/gainers-losers/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/heatmap",
+      "destination": "/tools/explorer?tab=heatmap",
+      "file": "app/tools/heatmap/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/markets",
+      "destination": "/tools/explorer",
+      "file": "app/tools/markets/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/news",
+      "destination": "/tools/research",
+      "file": "app/tools/news/page.tsx",
+      "importers": [
+        "app/tools/research/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/economic-calendar",
+      "destination": "/tools/research",
+      "file": "app/tools/economic-calendar/page.tsx",
+      "importers": [
+        "app/tools/research/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/earnings",
+      "destination": "/tools/research?tab=earnings",
+      "file": "app/tools/earnings/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/earnings-calendar",
+      "destination": "/tools/research?tab=earnings",
+      "file": "app/tools/earnings-calendar/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/crypto",
+      "destination": "/tools/explorer?tab=crypto-command",
+      "file": "app/tools/crypto/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/macro",
+      "destination": "/tools/dashboard?tab=macro",
+      "file": "app/tools/macro/page.tsx",
+      "importers": [
+        "app/tools/dashboard/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/ai-analyst",
+      "destination": "/tools/scanner",
+      "file": "app/tools/ai-analyst/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/confluence-scanner",
+      "destination": "/tools/terminal?tab=time-confluence",
+      "file": "app/tools/confluence-scanner/page.tsx",
+      "importers": [
+        "app/tools/terminal/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/crypto-time-confluence",
+      "destination": "/tools/terminal?tab=time-confluence",
+      "file": "app/tools/crypto-time-confluence/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/time-scanner",
+      "destination": "/tools/terminal?tab=time-scanner",
+      "file": "app/tools/time-scanner/page.tsx",
+      "importers": [
+        "app/tools/terminal/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/deep-analysis",
+      "destination": "/tools/golden-egg",
+      "file": "app/tools/deep-analysis/page.tsx",
+      "importers": [
+        "app/tools/golden-egg/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/intraday-charts",
+      "destination": "/tools/golden-egg",
+      "file": "app/tools/intraday-charts/page.tsx",
+      "importers": [
+        "app/tools/golden-egg/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/watchlists",
+      "destination": "/tools/workspace?tab=Watchlists",
+      "file": "app/tools/watchlists/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/journal",
+      "destination": "/tools/workspace?tab=Journal",
+      "file": "app/tools/journal/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/portfolio",
+      "destination": "/tools/workspace?tab=Portfolio",
+      "file": "app/tools/portfolio/page.tsx",
+      "importers": [
+        "app/tools/workspace/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/alerts",
+      "destination": "/tools/workspace?tab=Alerts",
+      "file": "app/tools/alerts/page.tsx",
+      "importers": [
+        "app/tools/workspace/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/backtest",
+      "destination": "/tools/workspace?tab=Backtest",
+      "file": "app/tools/backtest/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/settings",
+      "destination": "/tools/workspace?tab=Settings",
+      "file": "app/tools/settings/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/company-overview",
+      "destination": "/tools/golden-egg",
+      "file": "app/tools/company-overview/page.tsx",
+      "importers": [
+        "app/tools/golden-egg/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/scanner/backtest",
+      "destination": "/tools/workspace?tab=Backtest",
+      "file": "app/tools/scanner/backtest/page.tsx",
+      "importers": []
+    }
+  ],
+  "components": [
+    {
+      "file": "components/MobileNav.tsx",
+      "importers": []
+    },
+    {
+      "file": "components/UrgencyHero.tsx",
+      "importers": []
+    },
+    {
+      "file": "components/WorkflowHero.tsx",
+      "importers": []
+    },
+    {
+      "file": "components/MidCTA.tsx",
+      "importers": []
+    },
+    {
+      "file": "components/HomePricingCTAs.tsx",
+      "importers": []
+    },
+    {
+      "file": "app/components/Hero.tsx",
+      "importers": []
+    }
+  ]
+}

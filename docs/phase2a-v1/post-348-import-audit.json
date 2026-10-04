@@ -1,0 +1,137 @@
+{
+  "routes": [
+    {
+      "route": "/tools/crypto-terminal",
+      "destination": "/tools/terminal?tab=crypto-terminal",
+      "file": "app/tools/crypto-terminal/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/equity-explorer",
+      "destination": "/tools/explorer?tab=equity",
+      "file": "app/tools/equity-explorer/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/crypto-explorer",
+      "destination": "/tools/explorer?tab=crypto",
+      "file": "app/tools/crypto-explorer/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/commodities",
+      "destination": "/tools/explorer?tab=commodities",
+      "file": "app/tools/commodities/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/market-movers",
+      "destination": "/tools/explorer?tab=movers",
+      "file": "app/tools/market-movers/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/news",
+      "destination": "/tools/research",
+      "file": "app/tools/news/page.tsx",
+      "importers": [
+        "app/tools/research/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/economic-calendar",
+      "destination": "/tools/research",
+      "file": "app/tools/economic-calendar/page.tsx",
+      "importers": [
+        "app/tools/research/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/crypto",
+      "destination": "/tools/explorer?tab=crypto-command",
+      "file": "app/tools/crypto/page.tsx",
+      "importers": [
+        "app/tools/explorer/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/macro",
+      "destination": "/tools/dashboard?tab=macro",
+      "file": "app/tools/macro/page.tsx",
+      "importers": [
+        "app/tools/dashboard/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/confluence-scanner",
+      "destination": "/tools/terminal?tab=time-confluence",
+      "file": "app/tools/confluence-scanner/page.tsx",
+      "importers": [
+        "app/tools/terminal/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/time-scanner",
+      "destination": "/tools/terminal?tab=time-scanner",
+      "file": "app/tools/time-scanner/page.tsx",
+      "importers": [
+        "app/tools/terminal/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/deep-analysis",
+      "destination": "/tools/golden-egg",
+      "file": "app/tools/deep-analysis/page.tsx",
+      "importers": [
+        "app/tools/golden-egg/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/intraday-charts",
+      "destination": "/tools/golden-egg",
+      "file": "app/tools/intraday-charts/page.tsx",
+      "importers": [
+        "app/tools/golden-egg/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/journal",
+      "destination": "/tools/workspace?tab=Journal",
+      "file": "app/tools/journal/page.tsx",
+      "importers": []
+    },
+    {
+      "route": "/tools/portfolio",
+      "destination": "/tools/workspace?tab=Portfolio",
+      "file": "app/tools/portfolio/page.tsx",
+      "importers": [
+        "app/tools/workspace/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/alerts",
+      "destination": "/tools/workspace?tab=Alerts",
+      "file": "app/tools/alerts/page.tsx",
+      "importers": [
+        "app/tools/workspace/page.tsx"
+      ]
+    },
+    {
+      "route": "/tools/company-overview",
+      "destination": "/tools/golden-egg",
+      "file": "app/tools/company-overview/page.tsx",
+      "importers": [
+        "app/tools/golden-egg/page.tsx"
+      ]
+    }
+  ],
+  "components": []
+}

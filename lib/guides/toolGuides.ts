@@ -230,7 +230,7 @@ export const TOOL_GUIDES: ToolGuide[] = [
     tips: ['Price reaction matters more than headline tone.', 'Avoid new entries right before binary events.'],
   },
   {
-    route: '/tools/explorer?tab=macro',
+    route: '/tools/dashboard?tab=macro',
     badge: 'Macro',
     title: 'Macro Dashboard',
     summary: 'Track macro drivers that shift risk appetite and trend persistence.',

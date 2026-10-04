@@ -70,13 +70,13 @@ describe('backtest execution assumptions payload', () => {
 
   it('wires execution assumptions into the API response and backtest page', () => {
     const route = read('app/api/backtest/route.ts');
-    const page = read('app/tools/backtest/page.tsx');
+    const page = read('components/backtest/BacktestHub.tsx');
     const api = read('app/v2/_lib/api.ts');
 
     expect(route).toContain('buildBacktestAssumptionsMetadata');
     expect(route).toContain('executionAssumptions');
-    expect(page).toContain('Execution Assumptions');
-    expect(page).toContain('results.executionAssumptions.costs.slippageBps');
+    expect(page).toContain('Execution assumptions and sample limits');
+    expect(page).toContain('result.executionAssumptions.warnings.map');
     expect(api).toContain('executionAssumptions?:');
   });
 });

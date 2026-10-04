@@ -14,6 +14,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/guide/open-interest',
     '/methodology',
     '/daily-pick',
+    '/compliance-hub',
+    '/intelligence',
+    '/intelligence/global-m2',
+    '/intelligence/fragility',
+    '/intelligence/liquidity',
     '/blog',
     '/terms',
     '/privacy',
@@ -31,10 +36,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools/terminal',
     '/tools/research',
     '/tools/explorer',
-    '/tools/macro',
-    '/tools/company-overview',
+    '/tools/dashboard',
     '/tools/crypto-intel',
-    '/tools/crypto-heatmap',
   ];
 
   const blogPages = blogPosts.map((post) => `/blog/${post.slug}`);

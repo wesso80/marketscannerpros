@@ -1,48 +1,54 @@
-import { COPY } from '@/components/visual/copy';
-
-export type ToolTier = 'free' | 'pro'; // two access levels only
+export type ToolTier = 'free' | 'pro';
 export type WorkflowTool = { href: string; label: string; description: string; tier: ToolTier; role: 'primary' | 'advanced' | 'specialist' };
-export type WorkflowArea = 'overview' | 'radar' | 'scanner' | 'research' | 'options' | 'backtest' | 'track';
+export type WorkflowArea = 'today' | 'scan' | 'markets' | 'intelligence' | 'track' | 'learn' | 'account';
 export type ToolWorkflow = { id: 'find' | 'validate' | 'mechanics' | 'test' | 'track' | 'advanced'; title: string; subtitle: string; outcome: string; tools: WorkflowTool[] };
-
-export const primaryNavTools = [
-  { id: 'overview', href: '/tools/command-center', label: 'Overview' },
-  { id: 'radar', href: '/tools/msp-radar', label: COPY.nav.radar },
-  { id: 'scanner', href: '/tools/scanner', label: 'Scanner' },
-  { id: 'research', href: '/tools/golden-egg', label: 'Symbol' },
-  { id: 'options', href: '/tools/options', label: 'Options' },
-  { id: 'track', href: '/tools/workspace?tab=journal', label: 'Track' },
-] as const;
-
-export const areaLinks: Record<WorkflowArea, Array<{ href: string; label: string }>> = {
-  overview: [{ href: '/tools/command-center', label: 'Overview' }],
-  radar: [{ href: '/tools/msp-radar', label: COPY.nav.radar }],
-  scanner: [{ href: '/tools/scanner', label: 'Crypto / Stocks' }],
-  research: [{ href: '/tools/golden-egg', label: 'Symbol' }],
-  options: [{ href: '/tools/options', label: 'Options' }],
-  backtest: [
-    { href: '/tools/workspace?tab=backtest', label: 'Strategy & scanner tests' },
-    { href: '/tools/signal-accuracy', label: 'Recorded outcomes' },
-  ],
-  track: [
-    { href: '/tools/workspace?tab=journal', label: 'Journal' },
-    { href: '/tools/workspace?tab=portfolio', label: 'Portfolio' },
-    { href: '/tools/workspace?tab=watchlists', label: 'Watchlists' },
-    { href: '/tools/workspace?tab=alerts', label: 'Alerts' },
-    { href: '/tools/workspace?tab=backtest', label: 'Backtest' },
-    { href: '/tools/workspace?tab=learning', label: 'Learning' },
-  ],
+export type NavigationLink = { href: string; label: string };
+const link = (href: string, label: string): NavigationLink => ({href, label});
+/** One destination map for desktop, phone and the workflow sub-bar. Entitlements stay at the page/API. */
+export const areaLinks: Record<WorkflowArea, NavigationLink[]> = {
+  today: [link('/tools/command-center','Overview'), link('/tools/msp-radar','Daily Radar'), link('/daily-pick','Daily Picks'), link('/tools','All tools'), link('/tools/start','Free Today')],
+  scan: [link('/tools/scanner','Scanner'),link('/tools/golden-egg','Symbol'),link('/tools/options','Options'),link('/tools/terminal','Terminal'),link('/tools/liquidity-sweep','Liquidity Sweep'),link('/tools/scalper','Scalper'),link('/tools/volatility-engine','Volatility'),link('/tools/terminal?tab=time-confluence','Time Confluence'),link('/tools/terminal?tab=time-scanner','Time Scanner'),link('/tools/terminal?tab=crypto-terminal','Crypto Terminal')],
+  markets: [link('/tools/explorer','Explorer'),link('/tools/research','Research'),link('/tools/dashboard?tab=macro','Macro'),link('/tools/crypto-dashboard','Crypto Derivatives'),link('/tools/explorer?tab=movers','Market Movers'),link('/tools/explorer?tab=heatmap','Heatmap'),link('/tools/explorer?tab=commodities','Commodities'),link('/tools/explorer?tab=crypto-command','Crypto Overview'),link('/tools/explorer?tab=crypto-command&section=heatmap','Crypto Heatmap'),link('/tools/explorer?tab=crypto-intel','Crypto Intelligence'),link('/tools/research?tab=earnings','Earnings'),link('/tools/research?tab=calendar','Economic Calendar')],
+  intelligence: [link('/intelligence','Overview'),link('/intelligence/global-m2','Global M2'),link('/intelligence/fragility','Fragility'),link('/intelligence/liquidity','Liquidity')],
+  track: [link('/tools/workspace?tab=journal','Journal'),link('/tools/workspace?tab=portfolio','Portfolio'),link('/tools/workspace?tab=watchlists','Watchlists'),link('/tools/workspace?tab=alerts','Alerts'),link('/tools/workspace?tab=backtest','Backtest'),link('/tools/workspace?tab=learning','Learning'),link('/tools/workspace?tab=settings','Settings'),link('/tools/signal-accuracy','Signal Accuracy'),link('/tools/dashboard?tab=pages','My Pages')],
+  learn: [link('/guide','Guide'),link('/methodology','Methodology'),link('/blog','Blog'),link('/about','About'),link('/contact','Contact'),link('/partners','Partners'),link('/guide/open-interest','Open Interest Guide'),link('/','Home')],
+  account: [link('/account','Account'),link('/auth','Sign In'),link('/pricing','Pricing'),link('/tools/referrals','Referrals'),link('/compliance-hub','Compliance Hub'),link('/privacy','Privacy'),link('/terms','Terms'),link('/cookie-policy','Cookies'),link('/refund-policy','Refund policy'),link('/disclaimer','Disclaimer')],
 };
-
+export const primaryNavTools = [
+  {id:'today',href:'/tools/command-center',label:'Today'},
+  {id:'scan',href:'/tools/scanner',label:'Scan & Analyse'},
+  {id:'markets',href:'/tools/explorer',label:'Markets'},
+  {id:'intelligence',href:'/intelligence',label:'Intelligence'},
+  {id:'track',href:'/tools/workspace?tab=journal',label:'Track'},
+  {id:'learn',href:'/guide',label:'Learn'},
+  {id:'account',href:'/account',label:'Account'},
+] as const;
 export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
-  if (/\/options(?:-|\/|$)/.test(pathname) || (pathname === '/tools/terminal' && tab.startsWith('options'))) return 'options';
-  if (pathname.includes('backtest') || pathname.includes('signal-accuracy') || (pathname === '/tools/workspace' && tab === 'backtest')) return 'track';
-  if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlist|alerts|learning)(\/|$)/.test(pathname)) return 'track';
-  if (/\/(scanner|liquidity-sweep|scalper)(\/|$)/.test(pathname)) return 'scanner';
-  if (/\/msp-radar(\/|$)/.test(pathname)) return 'radar';
-  if (pathname.startsWith('/intelligence') || /\/(command-center|dashboard|explorer|markets)(\/|$)/.test(pathname)) return 'overview';
-  if (pathname.startsWith('/tools/') && !/\/(referrals|settings|account)$/.test(pathname)) return 'research';
+  const selected = tab.toLowerCase();
+  if (pathname.startsWith('/admin') || pathname.startsWith('/operator')) return null;
+  if (pathname.startsWith('/intelligence')) return 'intelligence';
+  if (pathname === '/tools/dashboard') return selected === 'macro' ? 'markets' : selected === 'command' ? 'today' : 'track';
+  if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlists|alerts|backtest|learning|settings|signal-accuracy)(\/|$)/.test(pathname)) return 'track';
+  if (/^\/(guide|methodology|blog|about|contact|partners|resources)(\/|$)/.test(pathname)) return 'learn';
+  if (/^\/(account|pricing|auth|compliance-hub|privacy|terms|cookie-policy|refund-policy|disclaimer|legal)(\/|$)/.test(pathname) || pathname === '/tools/referrals') return 'account';
+  if (pathname === '/tools' || /\/(command-center|msp-radar|daily-pick|start)(\/|$)/.test(pathname)) return 'today';
+  if (/\/(explorer|research|macro|crypto-dashboard|crypto-intel|markets|market-movers|gainers-losers|heatmap|commodities)(\/|$)/.test(pathname)) return 'markets';
+  if (/\/(scanner|golden-egg|options|terminal|liquidity-sweep|scalper|volatility-engine)(\/|$)/.test(pathname)) return 'scan';
   return null;
+}
+export function isNavigationLinkActive(href: string, pathname: string, tab = '', section = '') {
+  const [path, query = ''] = href.split('?');
+  if (path !== pathname) return false;
+  const params = new URLSearchParams(query);
+  const expectedTab = params.get('tab');
+  const actual = tab.toLowerCase() || (pathname === '/tools/workspace' ? 'journal' : pathname === '/tools/dashboard' ? 'command' : '');
+  if (expectedTab) return expectedTab === actual && (params.get('section') ?? '') === section;
+  // The parent page is current only when no named tab destination matches.
+  return !Object.values(areaLinks).flat().some(item => {
+    const [candidate, search = ''] = item.href.split('?');
+    const named = new URLSearchParams(search);
+    return candidate === pathname && named.has('tab') && named.get('tab') === actual;
+  });
 }
 
 const tool = (href: string, label: string, description: string, tier: ToolTier = 'pro', role: WorkflowTool['role'] = 'advanced'): WorkflowTool => ({ href, label, description, tier, role });
