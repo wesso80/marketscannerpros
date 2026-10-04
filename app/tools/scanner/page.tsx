@@ -321,7 +321,7 @@ function ScannerRowStamp({row}:{row:ScanResult}) {
   const daily=['1d','daily'].includes(String(row.dataBasis?.barInterval??row.barInterval??row.timeframe).toLowerCase());
   const crypto=record._assetClass==='crypto';
   const barAge=daily&&crypto&&asOf&&Number.isFinite(Date.parse(asOf))?Math.max(0,Math.floor(Date.now()/86400000)-1-Math.floor(Date.parse(asOf)/86400000)):null;
-  return <PriceStamp compact barAge={barAge} price={row.price} assetType={record._assetClass ?? 'equity'} priceBasis={record.priceBasis ?? 'bar_observation'} priceBasisLabel={daily?'daily bar close (UTC day)':record.priceBasisLabel ?? 'scan bar · bar timestamp'} data_as_of={asOf} stale={row.dataTrust?.level==='STALE'} source={row.dataBasis?.source ?? 'scanner'} />;
+  return <PriceStamp compact barAge={barAge} price={row.price} assetType={record._assetClass ?? 'equity'} priceBasis={record.priceBasis ?? 'bar_observation'} priceBasisLabel={daily&&crypto?'daily bar close (UTC day)':record.priceBasisLabel ?? 'scan bar · bar timestamp'} data_as_of={asOf} stale={row.dataTrust?.level==='STALE'} source={row.dataBasis?.source ?? 'scanner'} />;
 }
 
 function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {

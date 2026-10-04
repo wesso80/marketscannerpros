@@ -11,4 +11,4 @@ it('crypto header trusts the observation time, not latestDay',()=>{
  vi.useRealTimers();
 });
 it('missing weekend quotes say closed, regular session says no quote',()=>{expect(noQuoteLabel(false)).toBe('market closed, no quote');expect(noQuoteLabel(true)).toBe('no quote');expect(noQuoteLabel(null)).toBe('no quote');});
-it('scanner daily label uses bar interval and completed timestamp, without a spot fetch',()=>{const s=readFileSync('app/tools/scanner/page.tsx','utf8');const f=s.slice(s.indexOf('function ScannerRowStamp'),s.indexOf('function ProScannerCards'));expect(f).toContain('daily bar close');expect(f).toContain('lastCompletedBarAt');expect(f).not.toContain('fetch(');});
+it('scanner daily label uses bar interval and completed timestamp, without a spot fetch',()=>{const s=readFileSync('app/tools/scanner/page.tsx','utf8');const f=s.slice(s.indexOf('function ScannerRowStamp'),s.indexOf('function ProScannerCards'));expect(f).toContain("daily&&crypto?'daily bar close (UTC day)'");expect(f).toContain('lastCompletedBarAt');expect(f).not.toContain('fetch(');});
