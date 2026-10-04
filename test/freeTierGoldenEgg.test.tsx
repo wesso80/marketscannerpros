@@ -61,6 +61,7 @@ it.each(['AAPL', 'LINK-USD'])('403 on %s shows the example unlock card and real 
   expect(await screen.findByText(/\$189\.25/)).toBeTruthy();
   expect(snapshot?.textContent).toContain('$189.25');
   expect(snapshot?.textContent).not.toContain('Example');
+  expect(document.body.textContent).not.toMatch(/Awaiting data|\bDEGRADED\b|\bUnknown\b|\bMISSING\b/);
 });
 
 it.each(['AAPL', 'LINK-USD'])('401 on %s shows Sign in back to that symbol', async symbol => {
@@ -72,4 +73,5 @@ it.each(['AAPL', 'LINK-USD'])('401 on %s shows Sign in back to that symbol', asy
   expect(screen.getByText('Sign in required')).toBeTruthy();
   expect(screen.queryByRole('link', { name: 'Unlock with Pro' })).toBeNull();
   expect(screen.queryByText('Example')).toBeNull();
+  expect(document.body.textContent).not.toMatch(/Awaiting data|\bDEGRADED\b|\bUnknown\b|\bMISSING\b/);
 });

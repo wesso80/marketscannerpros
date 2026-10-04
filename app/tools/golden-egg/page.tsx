@@ -650,8 +650,8 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-3">
-      <SymbolSnapshotHeader symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error}/>
-      <PageHero
+      <SymbolSnapshotHeader symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error} quiet={isAuthBlocked}/>
+      {!isAuthBlocked && <PageHero
         titleAs="h2"
         ariaLabel="Golden Egg command header"
         eyebrow="Golden Egg validation workbench"
@@ -673,8 +673,8 @@ export default function GoldenEggPage() {
           { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geNoQualifyingSetup ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : geNoSetup ? `Canonical: ${geNoSetup.headline}${geNoSetup.detail ? ` — ${geNoSetup.detail}` : ''}` : geEngine ? `Canonical ${geSetupLabel} · score ${geEngine.score} · grade ${geEngine.grade}` : 'Verdict packet' },
           { label: 'Data trust', value: geDataQuality, tone: geDataQuality === 'GOOD' ? 'bull' : geDataQuality === 'DEGRADED' ? 'warn' : 'bear', detail: geDataQualityTitle, title: geDataQualityTitle },
         ]}
-      />
-      <section
+      />}
+      {!isAuthBlocked && <section
         className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3"
         aria-label="Golden Egg symbol input"
       >
@@ -745,7 +745,7 @@ export default function GoldenEggPage() {
             </div>
           </div>
         )}
-      </section>
+      </section>}
       <ComplianceDisclaimer compact />
 
       {isAuthBlocked && goldenEgg.isUpgradeRequired && (
