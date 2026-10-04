@@ -23,7 +23,7 @@ The Macro route conflict remains documented below and is for P2B. All tools is n
 
 ## Updated verification
 
-Final `env -u CRYPTO_SUMMARY_KEY npx vitest run`: **4,869 passed / 5 failed / 13 skipped**, 552 files. All five failures match the fresh main baseline. P2A + free-tier cases: **88 passing tests in 14 files** within that run. `npx tsc --noEmit`: clean. Merged-main baseline: **4,826 passed / 5 failed / 13 skipped**, 547 files. Failures: commanderCommandState, operatorMarketDataAccuracy, workerEquityBulkWiring, intelligence/globalM2Reliability and bulkSelectionRoute timeout. cryptoScanAliasRows remains a previously documented flaky timeout. TypeScript is clean; focused P2A/free-tier tests pass. Protected-file and whitespace checks passed.
+Final `env -u CRYPTO_SUMMARY_KEY npx vitest run`: **4,869 passed / 5 failed / 13 skipped**, 552 files. Four failures match the fresh main baseline; the fifth is the previously documented `cryptoScanAliasRows` timeout. `bulkSelectionRoute` timed out on baseline but passed in the final run. P2A + free-tier cases: **88 passing tests in 14 files** within that run. `npx tsc --noEmit`: clean. Merged-main baseline: **4,826 passed / 5 failed / 13 skipped**, 547 files. Failures: commanderCommandState, operatorMarketDataAccuracy, workerEquityBulkWiring, intelligence/globalM2Reliability and bulkSelectionRoute timeout. cryptoScanAliasRows remains a previously documented flaky timeout. TypeScript is clean; focused P2A/free-tier tests pass. Protected-file and whitespace checks passed.
 
 ---
 
