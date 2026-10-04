@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUserTier } from '@/lib/useUserTier';
 import { radarCardModel } from '@/lib/overview/radarCard';
-import { formatMarketTime } from '@/lib/market/priceStamp';
+import StampLine from '@/components/visual/StampLine';
 import { COPY } from '@/components/visual/copy';
 
 const c = COPY.radarCard;
@@ -12,8 +12,6 @@ export default function RadarReportCard() {
   const { tier, isAdmin, isLoading, isLoggedIn } = useUserTier();
   const allowed = tier === 'pro' || tier === 'pro_trader' || isAdmin;
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [zone, setZone] = useState('UTC');
-  useEffect(() => { setZone(Intl.DateTimeFormat().resolvedOptions().timeZone); }, []);
   useEffect(() => {
     if (isLoading || !allowed) return;
     const controller = new AbortController();
@@ -49,7 +47,7 @@ export default function RadarReportCard() {
         {state.model.older && <span className="text-xs text-[var(--msp-warn)]">{c.older}</span>}
       </div>
       {state.model.count !== null && <p className="text-xl font-semibold">{state.model.count} <span className="text-sm font-normal">{c.candidates}</span></p>}
-      <p data-stamp-line className="text-xs" style={{ color: state.model.generatedAt ? 'var(--msp-text-muted)' : 'var(--msp-warn)' }}>{c.source} · {c.generated} {formatMarketTime(state.model.generatedAt, zone) ?? c.timeUnknown} · {c.session}</p>
+      <StampLine source={c.source} asOf={state.model.generatedAt} basis={c.session} />
       <Link className="inline-flex text-sm text-[var(--msp-accent)]" href="/tools/msp-radar">{c.open}</Link>
     </> : state.kind === 'empty' ? <p>{c.empty}</p> : state.kind === 'error' ? <div role="status"><p>{c.unavailable}</p><p className="text-xs text-[var(--msp-warn)]">{state.error}</p></div> : null}
   </section>;

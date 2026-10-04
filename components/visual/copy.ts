@@ -4,6 +4,15 @@ export const COPY = {
     overview: 'Overview', radar: 'Daily Radar', scanner: 'Scanner', symbol: 'Symbol', options: 'Options', track: 'Track',
     account: 'Account', settings: 'Account settings', referrals: 'Referrals', compliance: 'Compliance Hub', more: 'More',
   },
+  today: {
+    overview: 'Overview', subtitle: "Today's market at a glance. Research only.",
+    loading: 'Loading', current: 'Current', stale: 'Stale inputs', unavailable: 'Unavailable',
+    regime: 'regime', snapshot: 'snapshot', sectors: 'Sectors, % change vs prior close', sectorSource: 'Alpha Vantage',
+    lastClose: 'last close', sessionDay: 'New York session', timeUnknown: 'time unknown', sourceUnknown: 'source unknown',
+    noQuote: 'no quote', na: 'n/a', sectorsUp: 'Sectors up', sampled: 'timed sector sample', noSectors: 'Sector data unavailable',
+    dataStatus: 'Data status', degraded: 'degraded', staleCount: 'stale', notTimed: 'not timed', show: 'Show',
+    btc: 'BTC', eth: 'ETH', spy: 'SPY',
+  },
   radarCard: {
     title: "Today's report", source: 'Daily Radar', session: 'US session', candidates: 'candidates',
     older: 'Older report', open: 'Open Daily Radar', empty: 'No report stored yet.', unavailable: 'Report unavailable',

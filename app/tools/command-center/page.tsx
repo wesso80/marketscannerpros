@@ -29,7 +29,9 @@ import RadarReportCard from '@/components/overview/RadarReportCard';
 import PriceStamp from '@/components/market/PriceStamp';
 import {freshness} from '@/lib/crypto/breakdown/freshness';
 import {trustBadgeState} from '@/components/market/TrustBadge';
-import MarketStatusStrip from '@/components/market/MarketStatusStrip';
+import DataStatusRow from '@/components/overview/DataStatusRow';
+import TodayStrip from '@/components/overview/TodayStrip';
+import { COPY } from '@/components/visual/copy';
 import {OverviewPicks} from '@/components/market/OverviewPicks';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
@@ -289,7 +291,7 @@ export default function CommandCenterPage() {
           ...(anyLoading ? [{ label: 'Updating…' }] : []),
         ]}
         title="Overview"
-        subtitle="Understand the market environment in ~30 seconds: regime, risk tone, where strength and weakness sit, crypto participation, and the events ahead. Educational market intelligence — not personalised financial advice."
+        subtitle={COPY.today.subtitle}
         actions={[
           { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
           { label: 'Open Symbol', variant: 'secondary', href: '/tools/golden-egg' },
@@ -297,10 +299,13 @@ export default function CommandCenterPage() {
         ]}
       />
 
-      <div className="grid gap-3 lg:grid-cols-3"><div className="lg:col-start-3"><RadarReportCard /></div></div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="min-w-0 lg:col-span-2"><TodayStrip regime={reg} loading={regime.loading} hasRegimeData={Boolean(regime.data)} regimeColor={stanceColor(reg.stance)} sectors={sectorData} sectorTime={sectors.data?.asOf} sectorDay={sectors.data?.asOfTradingDay} strength={strength} quotes={quotes.data?.quotes} /></div>
+        <RadarReportCard />
+      </div>
 
-      <p className="text-xs text-slate-500">{new Intl.DateTimeFormat('en-AU',{dateStyle:'full',timeZone:'UTC'}).format(sessionNow)} (UTC)</p>
-      <MarketStatusStrip items={[
+      <p className="text-xs text-slate-500">{formatMarketTime(sessionNow.toISOString(), Intl.DateTimeFormat().resolvedOptions().timeZone)}</p>
+      <DataStatusRow items={[
         {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??'time unknown'],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
         {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'time unknown']},
         {label:'Crypto overview',statusLabel:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status,status:trustBadgeState({status:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status}).normalized,source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'time unknown']},

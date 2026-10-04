@@ -15,3 +15,15 @@ describe('Radar card model', () => {
     expect(radarCardModel({ ...report, sessionDate: '2026-02-31' }, now)).toBeNull();
   });
 });
+
+import { sectorCells, sectorTone, dataStatusSummary } from '@/lib/overview/today';
+it('sorts known sector moves first and preserves a missing change', () => {
+  const cells = sectorCells([{ symbol: 'XLK', name: 'Tech', changePercent: null }, { symbol: 'XLU', name: 'Utilities', changePercent: -1 }, { symbol: 'XLF', name: 'Financials', changePercent: 2 }]);
+  expect(cells.map(c => c.symbol)).toEqual(['XLF', 'XLU', 'XLK']);
+  expect(cells[2].valueLabel).toBe('n/a');
+  expect(sectorTone(null)).not.toEqual(sectorTone(2));
+  expect(sectorTone(0.1)).not.toEqual(sectorTone(2));
+});
+it('counts statuses independently and does not equate unknown health with missing time', () => {
+  expect(dataStatusSummary([{ label: 'Known time', statusLabel: 'Unknown', notes: ['12:00 UTC Fri 2 Oct'] }, { label: 'Untimed', statusLabel: 'Stale', notes: ['time unknown'] }, { label: 'Failure', statusLabel: 'Degraded' }])).toEqual({ degraded: 1, stale: 1, notTimed: 2 });
+});
