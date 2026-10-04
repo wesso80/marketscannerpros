@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import { PageHero } from '@/components/ui';
 import CoinGeckoCredit from '@/components/CoinGeckoCredit';
@@ -421,7 +422,7 @@ function CryptoCommandCenterContent() {
   if (tierLoading) return <FreeLoading />;
 
   if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
-    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" />;
+    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" preview={<LockedPreview tool="Crypto Command Center" />} />;
   }
 
   const currentSection = sectionItems.find((s) => s.id === activeSection);

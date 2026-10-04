@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -148,7 +149,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   if (!canAccessCryptoCommandCenter(tier)) {
     return (
       <div className={`${embeddedInDashboard ? 'min-h-[16rem]' : 'min-h-screen'} bg-[var(--msp-bg)] text-white flex items-center justify-center`}>
-        <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" />
+        <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" preview={<LockedPreview tool="Crypto Derivatives Dashboard" />} />
       </div>
     );
   }

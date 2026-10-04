@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
 import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
+import LockedPreview from '@/components/free/LockedPreview';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { deleteSavedResearchCase, listSavedResearchCases, updateSavedResearchCaseOutcome, type SavedResearchCaseOutcome, type SavedResearchCaseSummary } from '@/lib/clientResearchCases';
@@ -308,9 +309,7 @@ export default function ResearchPage() {
       </div>
 
       {(tier === 'free' || tier === 'anonymous') && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Research Intelligence">
-          <div />
-        </UpgradeGate>
+        <LockedPreview tool="Market Research Intelligence" />
       )}
       {(tier !== 'free' && tier !== 'anonymous') && <div>
 

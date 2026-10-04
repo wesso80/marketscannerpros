@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard, { type CryptoDecisionGate } from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
@@ -453,7 +454,7 @@ function CryptoDetailPageContent() {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <div className="container mx-auto px-4 py-16">
-          <UpgradeGate requiredTier="pro" feature="Crypto Asset Explorer" />
+          <UpgradeGate requiredTier="pro" feature="Crypto Asset Explorer" preview={<LockedPreview tool="Crypto Asset Explorer" />} />
         </div>
       </div>
     );
