@@ -2,6 +2,7 @@
 
 import CryptoTimeConfluenceWidget from '@/components/CryptoTimeConfluenceWidget';
 import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
+import LockedPreview from '@/components/free/LockedPreview';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 
 export default function CryptoTimeConfluenceInner() {
@@ -18,7 +19,7 @@ export default function CryptoTimeConfluenceInner() {
   if (!canAccessTimeScanner(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Time Confluence"><div /></UpgradeGate>
+        <LockedPreview tool="Crypto Time Confluence" />
       </div>
     );
   }

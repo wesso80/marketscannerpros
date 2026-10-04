@@ -45,6 +45,8 @@ import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { saveResearchCase } from '@/lib/clientResearchCases';
 import DataFreshnessBadge from '@/components/market/DataFreshnessBadge';
+import FreeScanner from '@/components/free/FreeScanner';
+import FreeLoading from '@/components/free/Loading';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 
@@ -1010,7 +1012,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
 /*  MAIN PAGE                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function ScannerPage() { return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
+export default function ScannerPage() { const { tier, isAdmin, isLoading } = useUserTier(); if (isLoading) return <FreeLoading />; if (!isAdmin && !canAccessUnlimitedScanning(tier)) return <FreeScanner />; return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
 
 function ScannerContent() {
   const searchParams=useSearchParams();

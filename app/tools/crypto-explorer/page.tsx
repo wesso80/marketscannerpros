@@ -1,10 +1,14 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard, { type CryptoDecisionGate } from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
@@ -284,7 +288,7 @@ function computeDecisionState(coinData: CoinData | null, btc7d: number | null) {
 }
 
 function CryptoDetailPageContent() {
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [marketGate, setMarketGate] = useState<CryptoDecisionGate | null>(null);
   const initialCoinId = searchParams.get('coin') || searchParams.get('symbol');
@@ -398,11 +402,11 @@ function CryptoDetailPageContent() {
   }, []);
 
   useEffect(() => {
-    if (initialCoinId && loadedInitial.current !== initialCoinId && tier && tier !== 'free') {
+    if (initialCoinId && loadedInitial.current !== initialCoinId && !tierLoading && (tier === 'pro' || tier === 'pro_trader')) {
       loadedInitial.current = initialCoinId;
       loadCoinBySymbolOrId(initialCoinId);
     }
-  }, [initialCoinId, loadCoinBySymbolOrId, tier]);
+  }, [initialCoinId, loadCoinBySymbolOrId, tier, tierLoading]);
 
   const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
 
@@ -446,11 +450,13 @@ function CryptoDetailPageContent() {
     });
   }, [coinData, decision, upeSignal, marketGate, setPageData]);
 
-  if (!tier || tier === 'free') {
+  if (tierLoading) return <FreeLoading />;
+
+  if (tier !== 'pro' && tier !== 'pro_trader') {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <div className="container mx-auto px-4 py-16">
-          <UpgradeGate requiredTier="pro" feature="Crypto Asset Explorer" />
+          <UpgradeGate requiredTier="pro" feature="Crypto Asset Explorer" preview={<LockedPreview tool="Crypto Asset Explorer" />} />
         </div>
       </div>
     );
@@ -819,7 +825,9 @@ function PageLoadingSkeleton() {
   );
 }
 
-export default function CryptoDetailPage() {
+export default function CryptoDetailPage() { return <PaidPreviewGate tool="Crypto Explorer"><CryptoDetailPagePaid /></PaidPreviewGate>; }
+
+function CryptoDetailPagePaid() {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <CryptoDetailPageContent />

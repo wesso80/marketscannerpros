@@ -6,11 +6,13 @@ const prohibited=(source:string)=>/(?:href|path)\s*[:=]\s*(?:\{\s*)?['"`]\/(?:ad
 it('has the seven navigation groups in order',()=>expect(primaryNavTools.map(({label,href})=>[label,href])).toEqual([
  ['Today','/tools/command-center'],['Scan & Analyse','/tools/scanner'],['Markets','/tools/explorer'],['Intelligence','/intelligence'],['Track','/tools/workspace?tab=journal'],['Learn','/guide'],['Account','/account']
 ]));
-it('lands both login paths and checkout on Overview',()=>{
- expect(read('app/auth/page.tsx').match(/router\.(?:push|replace)\(['"]\/tools\/command-center['"]\)/g)).toHaveLength(2);
+it('lands free logins on Today and paid logins on Overview',()=>{
+ const auth=read('app/auth/page.tsx');
+ expect(auth).toContain('router.push("/tools/command-center")');
+ expect(auth).toContain("'/tools/command-center' : '/tools/start'");
  expect(read('app/after-checkout/page.tsx')).toContain('router.replace("/tools/command-center")');
  const verify=read('app/auth/verify/page.tsx');
- expect(verify).toContain('router.push("/tools/command-center")');
+ expect(verify).toContain("'/tools/command-center' : '/tools/start'");
  expect(verify).not.toMatch(/\/tools\/(?:scanner|explorer)/);
 });
 it('keeps internal admin routes out of all public navigation and catalogues',()=>{

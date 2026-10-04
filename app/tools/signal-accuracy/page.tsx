@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { FREE_COPY } from '@/components/free/copy';
 import { useUserTier } from '@/lib/useUserTier';
 import { isPaidTier } from '@/lib/tiers';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -109,6 +110,7 @@ export default function SignalAccuracyPage() {
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Pro Feature</h2>
           <p className="text-slate-400 text-sm">Historical observation analytics require a Pro subscription to review AI research outcomes over time.</p>
+          <a className="inline-flex min-h-10 items-center underline" href="/pricing">{FREE_COPY.upgrade}</a>
         </div>
       </div>
     );
@@ -121,6 +123,7 @@ export default function SignalAccuracyPage() {
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Login Required</h2>
           <p className="text-slate-400 text-sm">Please log in to view historical observation analytics.</p>
+          <a className="inline-flex min-h-10 items-center underline" href="/auth?next=/tools/signal-accuracy">{FREE_COPY.signIn}</a>
         </div>
       </div>
     );

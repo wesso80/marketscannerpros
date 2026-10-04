@@ -43,7 +43,7 @@ export const TOOL_CATALOG: ToolPage[] = [
   { key: 'explorer',           href: '/tools/explorer',           label: 'Explorer',             description: 'Market structure explorer',                        icon: 'EX', category: 'Research' },
 
   // ─── Macro & Earnings ───
-  { key: 'macro',              href: '/tools/dashboard?tab=macro', label: 'Macro Dashboard',      description: 'Economic indicators and macro trends',             icon: 'MA', category: 'Macro', tier: 'pro' },
+  { key: 'macro',              href: '/tools/dashboard?tab=macro', label: 'Macro Dashboard',      description: 'Economic indicators and macro trends',             icon: 'MA', category: 'Macro' },
   { key: 'commodities',        href: '/tools/explorer?tab=commodities', label: 'Commodities',    description: 'Commodity prices and trends',                      icon: 'CM', category: 'Macro' },
   { key: 'earnings',           href: '/tools/research?tab=earnings', label: 'Earnings',          description: 'Company earnings catalysts in Research',           icon: 'ER', category: 'Macro' },
   { key: 'earnings-calendar',  href: '/tools/research?tab=earnings', label: 'Earnings Calendar', description: 'Upcoming earnings schedule in Research',           icon: 'EC', category: 'Macro' },
@@ -56,7 +56,7 @@ export const TOOL_CATALOG: ToolPage[] = [
 
   // ─── Portfolio & Journal ───
   { key: 'portfolio',          href: '/tools/workspace?tab=portfolio', label: 'Portfolio',       description: 'Review positions and exposure in Workspace',       icon: 'PF', category: 'Portfolio' },
-  { key: 'journal',            href: '/tools/workspace?tab=journal', label: 'Trade Journal',     description: 'Log and review trades in Workspace',               icon: 'JR', category: 'Portfolio', tier: 'pro' },
+  { key: 'journal',            href: '/tools/workspace?tab=journal', label: 'Trade Journal',     description: 'Log and review trades in Workspace',               icon: 'JR', category: 'Portfolio' },
   { key: 'backtest',           href: '/tools/workspace?tab=backtest', label: 'Backtester',       description: 'Test strategies inside Workspace',                 icon: 'BT', category: 'Portfolio', tier: 'pro' },
   { key: 'alerts',             href: '/tools/workspace?tab=alerts', label: 'Alerts',             description: 'Manage condition alerts in Workspace',             icon: 'AL', category: 'Portfolio' },
   { key: 'watchlists',         href: '/tools/workspace?tab=watchlists', label: 'Watchlists',      description: 'Organise symbol lists in Workspace',              icon: 'WL', category: 'Portfolio' },

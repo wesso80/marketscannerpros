@@ -1,3 +1,5 @@
+import { useUserTier } from '@/lib/useUserTier';
+import { isPaidTier } from '@/lib/tiers';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
@@ -25,6 +27,10 @@ export class AuthError extends Error {
   }
 }
 
+export class UpgradeRequiredError extends AuthError {
+  constructor(url: string) { super(url); this.name = 'UpgradeRequiredError'; this.message = 'Upgrade required'; }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Generic fetcher                                                    */
 /* ------------------------------------------------------------------ */
@@ -35,7 +41,8 @@ async function apiFetch<T>(url: string, options?: RequestInit, timeoutMs?: numbe
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   }, timeoutMs);
-  if (res.status === 401 || res.status === 403) throw new AuthError(url);
+  if (res.status === 401) throw new AuthError(url);
+  if (res.status === 403) throw new UpgradeRequiredError(url);
   if (!res.ok) {
     const detail = body?.error || body?.message || '';
     throw new Error(detail ? `${detail}` : `API ${res.status}: ${url}`);
@@ -921,6 +928,8 @@ export interface UseApiResult<T> {
   error: string | null;
   loading: boolean;
   isAuthError: boolean;
+  /** 403. Still an AuthError, so existing sign-in checks keep working. */
+  isUpgradeRequired: boolean;
   refetch: () => void;
 }
 
@@ -930,6 +939,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
+  const [isUpgradeRequired, setIsUpgradeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
   const [trigger, setTrigger] = useState(0);
 
@@ -942,12 +952,15 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
     setSettledKey(null);
     setError(null);
     setIsAuthError(false);
+    setIsUpgradeRequired(false);
     fetcher()
       .then(res => { if (!cancelled) { setData(res); setSettledKey(requestKey); setLoading(false); } })
       .catch(err => {
         if (cancelled) return;
+        const upgrade = err instanceof UpgradeRequiredError;
         const isAuth = err instanceof AuthError;
         setIsAuthError(isAuth);
+        setIsUpgradeRequired(upgrade);
         setError(isAuth ? null : err.message);   // don't show auth as "error"
         setSettledKey(requestKey);
         setLoading(false);
@@ -957,7 +970,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   }, [trigger, ...deps]);
 
   const matchesRequest = settledKey === requestKey;
-  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, refetch };
+  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
 }
 
 // --- Typed hooks ---
@@ -967,7 +980,19 @@ export function useRegime() {
 }
 
 export function useScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily') {
-  return useApi(() => fetchScannerResults(type, timeframe), [type, timeframe]);
+  const { tier, isLoading, isAdmin } = useUserTier();
+  const live = isAdmin || isPaidTier(tier);
+  return useApi(() => isLoading ? Promise.resolve(null as unknown as ScannerResponse)
+    : live ? fetchScannerResults(type, timeframe) : fetchSavedScannerResults(type), [type, timeframe, live, isLoading]);
+}
+
+/** Public database snapshot, deliberately no POST and no fabricated live/composite score. */
+export async function fetchSavedScannerResults(type: 'crypto' | 'equity'): Promise<ScannerResponse> {
+  const data = await apiFetch<{ topPicks: Record<string, Array<ScanResult & { indicators?: Record<string, unknown> }>>; dataQuality: ScannerResponse['metadata']['dataQuality'] }>('/api/scanner/daily-picks?limit=20');
+  const results = (data.topPicks?.[type] ?? []).map(row => ({ ...row, type, timeframe: 'daily',
+    score: Number(row.score), price: row.price == null ? undefined : Number(row.price),
+  }));
+  return { success: true, results, metadata: { count: results.length, timestamp: data.dataQuality?.computedAt ?? '', dataQuality: data.dataQuality } };
 }
 
 export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string) {

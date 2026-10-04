@@ -1,5 +1,8 @@
 "use client";
 
+import { FREE_COPY } from '@/components/free/copy';
+import { getPortfolioLimit, getAILimit } from '@/lib/useUserTier';
+
 // 2026 pricing simplification: exactly two customer-facing plans, Free and Pro.
 // Legacy Pro Trader has been retired from the pricing page. Existing subscribers
 // on any legacy paid plan retain their access — the entitlement layer treats
@@ -118,19 +121,19 @@ export default function PricingPage() {
       benefits: [
         {
           group: "Scan",
-          lines: ["Core Market Scanner (limited daily runs)"],
+          lines: [FREE_COPY.pricing.scans, FREE_COPY.pricing.picks, FREE_COPY.pricing.alerts],
         },
         {
           group: "Research",
           lines: [
-            "Watchlists, markets and macro dashboards",
-            "Selected delayed / basic intelligence views",
+            FREE_COPY.pricing.watchlists,
+            FREE_COPY.pricing.macro,
             "Educational content and platform guides",
           ],
         },
         {
           group: "Track",
-          lines: ["Portfolio tracker (limited positions)", "Trade journal (basic)"],
+          lines: [FREE_COPY.portfolioCount(getPortfolioLimit("free")), FREE_COPY.pricing.journal, FREE_COPY.aiCount(getAILimit("free"))],
         },
       ],
     },
@@ -190,7 +193,7 @@ export default function PricingPage() {
   const faqs: FAQ[] = [
     {
       q: "What does Free include?",
-      a: "Free gives you the core scanner (limited daily runs), watchlists, macro/markets dashboards, selected delayed/basic intelligence views, portfolio tracker and journal in their basic forms, plus the educational content and platform guides. It is enough to genuinely experience the product before deciding to upgrade.",
+      a: Object.values(FREE_COPY.pricing).join(" · "),
     },
     {
       q: "What does Pro include?",

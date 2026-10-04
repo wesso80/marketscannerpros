@@ -35,6 +35,8 @@ import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noS
 import {optionsHref} from '@/lib/market/links';
 import { lookupAssetType } from '@/lib/lookupAssetType';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
+import LockedPreview from '@/components/free/LockedPreview';
+import { FREE_COPY } from '@/components/free/copy';
 import CryptoBreakdown from '@/components/crypto/CryptoBreakdown';
 import {SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
@@ -746,7 +748,10 @@ export default function GoldenEggPage() {
       </section>
       <ComplianceDisclaimer compact />
 
-      {isAuthBlocked && (
+      {isAuthBlocked && goldenEgg.isUpgradeRequired && (
+        <LockedPreview tool="Golden Egg" description={FREE_COPY.goldenEgg} />
+      )}
+      {isAuthBlocked && !goldenEgg.isUpgradeRequired && (
         <Card>
           <div className="mx-auto max-w-xl py-8 text-center">
             <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
@@ -761,7 +766,7 @@ export default function GoldenEggPage() {
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, flow, and timing context</div>
             </div>
             <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
-              <a href="/auth" className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Sign In</a>
+              <a href={`/auth?next=${encodeURIComponent(`/tools/golden-egg?symbol=${encodeURIComponent(sym)}`)}`} className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">{FREE_COPY.signIn}</a>
               <a href="/pricing" className="inline-flex rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">See Pricing</a>
             </div>
           </div>

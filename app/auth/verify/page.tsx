@@ -4,9 +4,13 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { safeNext } from '@/lib/free/safeNext';
+import { FREE_COPY } from '@/components/free/copy';
+
 function VerifyMagicLinkContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get('next'));
   const token = searchParams.get("token") || "";
 
   const [state, setState] = useState<"loading" | "success" | "error">("loading");
@@ -49,10 +53,12 @@ function VerifyMagicLinkContent() {
           return;
         }
 
+        const me = await fetch('/api/me', { credentials: 'include', cache: 'no-store' }).then(response => response.ok ? response.json() : null).catch(() => null);
+        const landing = me?.isAdmin || ['pro','pro_trader'].includes(me?.tier || loginData.tier) ? '/tools/command-center' : '/tools/start';
         setState("success");
-        setMessage("Signed in successfully. Redirecting to command center...");
+        setMessage(FREE_COPY.signedIn);
         setTimeout(() => {
-          router.push("/tools/command-center");
+          window.location.assign(next ?? landing);
         }, 900);
       } catch {
         setState("error");
@@ -61,7 +67,7 @@ function VerifyMagicLinkContent() {
     };
 
     void run();
-  }, [router, token]);
+  }, [router, token, next]);
 
   const toneClass =
     state === "error"

@@ -1,5 +1,8 @@
 'use client';
 
+import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
+import { FREE_JOURNAL_LIMIT } from '@/lib/free/limits';
+import { FREE_COPY } from '@/components/free/copy';
 import {journalLinkAsset} from '@/lib/market/symbolSnapshot';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -21,6 +24,7 @@ import { JournalDockKey, TradeModel } from '@/types/journal';
 import type { UserTier } from '@/lib/useUserTier';
 
 export default function JournalPage({ tier, embeddedInWorkspace = false }: { tier: UserTier; embeddedInWorkspace?: boolean }) {
+  const upgrade = useUpgradeMoment();
   const { query, sort, onQueryChange, onSort, onResetFilters } = useJournalState();
   const { payload, pageRows, total, loading, error, refresh } = useJournalData(query, sort);
 
@@ -159,6 +163,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
   const headerActions = useMemo(
     () => ({
       onNewTrade: () => {
+        if (tier === 'free' && allTrades.filter(trade => trade.status === 'open').length >= FREE_JOURNAL_LIMIT) { upgrade.show('journal'); return; }
         setSelectedTradeId(undefined);
         setDrawerOpen(true);
       },
@@ -167,7 +172,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
       // onImport intentionally removed — no CSV import backend yet
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [actions.onExport, refresh],
+    [actions.onExport, refresh, tier, allTrades],
   );
 
   const onCloseTradeSubmit = async (req: {
@@ -198,6 +203,8 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
   return (
     <div className={`${embeddedInWorkspace ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-slate-100`}>
       <main className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-4 md:px-6'}`}>
+        {tier === "free" && <p>{FREE_COPY.journalCount(allTrades.filter(trade => trade.status !== "closed").length)}</p>}
+        {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
         <JournalLayout
           embeddedInWorkspace={embeddedInWorkspace}
           header={payload?.header}
@@ -215,7 +222,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
           onSort={onSort}
           loading={loading}
           error={error}
-          equityCurve={payload?.equityCurve}
+          equityCurve={isProTrader ? payload?.equityCurve : undefined}
           dockSummary={isProTrader ? payload?.dockSummary : undefined}
           dockModules={isProTrader ? payload?.dockModules : undefined}
           dockOpen={dockOpen}
