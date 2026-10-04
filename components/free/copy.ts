@@ -18,6 +18,7 @@ export const FREE_COPY = {
   exampleSymbol: 'AAPL · example research', exampleEvidence: 'Price history · volume · market context',
   exampleBasis: 'Illustrative layout · no live market values', lockedDescription: 'Explore the complete research view and its supporting evidence.',
   optionsDescription: 'Options chain, flow and confluence for each researched symbol.', journalDescription: 'Unlimited journal entries with AI review.',
+  goldenEgg: 'Regime, indicators, volatility and scenario context for one symbol.',
   today: 'Today', overview: 'Open full Overview', radar: 'Daily Radar', session: 'US market session', reportReady: 'Report ready',
   unlockReport: 'Unlock today’s full report', fromReport: (date: string) => `From ${date} report`,
   demoTitle: 'Explore one symbol', scanAapl: 'Scan AAPL', of: 'of', scansLeft: 'scans left today', resets: 'resets',

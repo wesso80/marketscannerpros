@@ -928,6 +928,8 @@ export interface UseApiResult<T> {
   error: string | null;
   loading: boolean;
   isAuthError: boolean;
+  /** 403. Still an AuthError, so existing sign-in checks keep working. */
+  isUpgradeRequired: boolean;
   refetch: () => void;
 }
 
@@ -937,6 +939,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
+  const [isUpgradeRequired, setIsUpgradeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
   const [trigger, setTrigger] = useState(0);
 
@@ -949,12 +952,15 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
     setSettledKey(null);
     setError(null);
     setIsAuthError(false);
+    setIsUpgradeRequired(false);
     fetcher()
       .then(res => { if (!cancelled) { setData(res); setSettledKey(requestKey); setLoading(false); } })
       .catch(err => {
         if (cancelled) return;
+        const upgrade = err instanceof UpgradeRequiredError;
         const isAuth = err instanceof AuthError;
         setIsAuthError(isAuth);
+        setIsUpgradeRequired(upgrade);
         setError(isAuth ? null : err.message);   // don't show auth as "error"
         setSettledKey(requestKey);
         setLoading(false);
@@ -964,7 +970,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   }, [trigger, ...deps]);
 
   const matchesRequest = settledKey === requestKey;
-  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, refetch };
+  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
 }
 
 // --- Typed hooks ---
