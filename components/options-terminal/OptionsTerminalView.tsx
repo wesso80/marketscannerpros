@@ -120,9 +120,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
   /* ── Build table rows from live strike groups ──────────────── */
   const rows = useMemo(() => {
     let groups = chain.strikeGroups;
-    const [marketOpen,setMarketOpen]=useState<boolean|null>(null);
-  useEffect(()=>{setMarketOpen(isMarketOpenForSession(new Date(),'regular'));},[]);
-  const spot = chain.underlyingPrice;
+    const spot = chain.underlyingPrice;
 
     // strike range filter
     if (spot > 0 && rangePct < 100) {
