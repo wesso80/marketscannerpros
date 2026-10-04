@@ -30,6 +30,6 @@ export default function SectionShell({id,title,data,children,collapsible=true,op
   {children}
  </div>;
  return <section id={`crypto-${id}`} data-crypto-section={id} className="rounded-xl border border-white/10 bg-slate-950/40 p-4">
-  {collapsible?<><div className="flex items-center justify-between gap-3"><button type="button" aria-expanded={expanded} aria-controls={`crypto-${id}-body`} onClick={()=>setExpanded(v=>!v)} className="text-left text-lg font-semibold">{title} <span aria-hidden="true">{expanded?'−':'+'}</span></button><TrustBadge status={data.status} reason={data.reason}/></div><div id={`crypto-${id}-body`} hidden={!expanded}>{body}</div></>:<><div className="flex flex-wrap items-center justify-between gap-3">{header}</div>{body}</>}
+  {collapsible?<><div className="flex items-center justify-between gap-3"><button type="button" aria-expanded={expanded} aria-controls={`crypto-${id}-body`} onClick={()=>setExpanded(v=>!v)} className="min-h-10 min-w-0 flex-1 break-words text-left text-lg font-semibold">{title} <span aria-hidden="true">{expanded?'−':'+'}</span></button><TrustBadge status={data.status} reason={data.reason}/></div><div id={`crypto-${id}-body`} hidden={!expanded}>{body}</div></>:<><div className="flex flex-wrap items-center justify-between gap-3">{header}</div>{body}</>}
  </section>;
 }

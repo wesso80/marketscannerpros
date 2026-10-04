@@ -28,3 +28,12 @@ it('describes WATCH distance and price and uses dashes instead of failures for m
  const rule={...input().rule,distancePct:-2,requiredClose:10.2};expect(verdictLine(rule)).toContain('2.0% below');expect(verdictLine(rule)).toContain('$10.20');
  const empty=baseBreakoutV1([]);expect(ruleChips(empty).every(c=>c.pass===null&&c.value==='—')).toBe(true);expect(verdictLine(empty)).toContain(`needs ${V1.baseDays+1}`);
 });
+
+import fs from 'node:fs';
+import path from 'node:path';
+it('keeps top components fluid and section header tap targets at least forty pixels',()=>{
+ const dir=path.join(process.cwd(),'components/crypto/top');for(const name of fs.readdirSync(dir)){
+  const source=fs.readFileSync(path.join(dir,name),'utf8');expect(source).not.toMatch(/minWidth\s*:/);for(const match of source.matchAll(/min-w-\[(\d+)px\]/g))expect(Number(match[1])).toBeLessThanOrEqual(360);
+ }
+ expect(fs.readFileSync('components/crypto/SectionShell.tsx','utf8')).toContain('min-h-10');
+});
