@@ -16,7 +16,7 @@ export function radarCardModel(payload: unknown, now = new Date()) {
   if (row.status !== 'COMPLETE' && row.status !== 'DEGRADED' && row.status !== 'FAILED') return null;
   const status: ReportStatus = row.status;
   const candidates = record(row.report).candidates;
-  if (status !== 'FAILED' && !Array.isArray(candidates)) return null;
+  if (status !== 'FAILED' && !Array.isArray(candidates) && typeof row.candidateCount !== 'number') return null;
   const todayNY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
   const prior = previousScanDate(todayNY, 'equity');
   return {
@@ -25,7 +25,14 @@ export function radarCardModel(payload: unknown, now = new Date()) {
     status,
     color: radarStatusTone[status],
     health: row.healthStatus === 'DEGRADED' || row.healthStatus === 'FAILED' ? row.healthStatus : row.healthStatus === 'NORMAL' ? null : COPY.radarCard.healthUnknown,
-    count: status === 'FAILED' ? null : (candidates as unknown[]).length,
+    count: status === 'FAILED' ? null : typeof row.candidateCount === 'number' ? row.candidateCount : (candidates as unknown[]).length,
+    chips: status === 'FAILED' || !Array.isArray(candidates) ? [] : (candidates as unknown[]).slice(0, 3).flatMap((item) => {
+      const candidate = record(item);
+      const symbol = typeof candidate.symbol === 'string' ? candidate.symbol : '';
+      if (!symbol) return [];
+      const setup = typeof candidate.setupType === 'string' ? candidate.setupType : '';
+      return [{ symbol, label: setup }];
+    }),
     generatedAt: typeof row.generatedAt === 'string' && Number.isFinite(Date.parse(row.generatedAt)) ? row.generatedAt : null,
     older: prior !== null && sessionDate < prior,
   };
