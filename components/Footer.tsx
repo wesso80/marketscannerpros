@@ -3,6 +3,9 @@
 import Link from 'next/link';
 
 const footerLinks = [
+  { href: '/refund-policy', label: 'Refund policy' },
+  { href: '/compliance-hub', label: 'Compliance Hub' },
+  { href: '/partners', label: 'Partners' },
   { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/guide', label: 'Guide' },
@@ -72,7 +75,7 @@ export default function Footer() {
         >
           Cookie Settings
         </button>
-        <a href="mailto:support@marketscannerpros.app" className="rounded-md px-1 py-0.5 no-underline transition-colors hover:text-[var(--msp-accent)]">Contact</a>
+        <Link href="/contact" className="rounded-md px-1 py-0.5 no-underline transition-colors hover:text-[var(--msp-accent)]">Contact</Link>
         <span className="hidden h-4 w-px bg-white/10 sm:inline-block" aria-hidden="true" />
         <div className="flex items-center gap-2">
           {socialLinks.map((link) => (

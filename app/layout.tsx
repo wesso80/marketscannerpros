@@ -34,7 +34,7 @@ export const metadata = {
     description: 'Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks and crypto.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/opengraph-image',
         width: 1200,
         height: 630,
         alt: 'MarketScanner Pros — market scanner for stocks, crypto and options',

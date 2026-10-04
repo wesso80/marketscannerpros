@@ -494,7 +494,7 @@ export default function TerminalPage() {
         actions={[
           { label: 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
-          { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
+          { label: 'All tools', variant: 'ghost', href: '/tools' },
         ]}
         metrics={[
           { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
