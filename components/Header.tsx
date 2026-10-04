@@ -1,295 +1,195 @@
-'use client';
-
-import Link from 'next/link';
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { COPY } from '@/components/visual/copy';
-import NotificationBell from './NotificationBell';
-import { useUserTier } from '@/lib/useUserTier';
-import { researchHref, parseResearchAsset, parseResearchTimeframe } from '@/lib/researchContext';
-import { primaryNavTools, workflowArea } from '@/lib/toolWorkflows';
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   MSP v2 Header — Matches Full Site Map
-   Always shows: 6 menu areas + All tools / Pricing / Account
-   Right side changes: Sign In (logged out) vs Tier badge + Sign Out (logged in)
-   Mobile: Hamburger → flat drawer with same links
-   ════════════════════════════════════════════════════════════════════════════════════ */
-
-// Daily Radar is a paid page. It is listed for everyone; the page and /api/msp-radar/* check access.
-const SURFACES = primaryNavTools;
-
-const ACCOUNT_LINKS = [
-  { href: '/account', label: COPY.nav.settings },
-  { href: '/tools/referrals', label: COPY.nav.referrals },
-  { href: '/compliance-hub', label: COPY.nav.compliance },
-];
+"use client";
+import Link from "next/link";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useUserTier } from "@/lib/useUserTier";
+import { workflowArea } from "@/lib/toolWorkflows";
+import NotificationBell from "./NotificationBell";
+import NavigationGroups from "./NavigationGroups";
 
 export default function Header() {
-  return <Suspense fallback={<header className="h-14 border-b border-slate-700 bg-slate-950" aria-label="Loading navigation" />}><HeaderContent /></Suspense>;
+  return (
+    <Suspense
+      fallback={
+        <header
+          className="h-14 border-b border-[var(--msp-border)]"
+          aria-label="Loading navigation"
+        />
+      }
+    >
+      <HeaderContent />
+    </Suspense>
+  );
 }
-
 function HeaderContent() {
-  const [accountOpen, setAccountOpen] = useState(false);
-  const accountRef = useRef<HTMLDivElement | null>(null);
-  const accountButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const activeArea = workflowArea(pathname, searchParams.get('tab') || '');
-  const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
-  const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
-  const surfaces = SURFACES.map(s => ({ ...s, href: searchParams.get('symbol') && (s.id === 'research' || (s.id === 'options' && searchParams.get('type') !== 'crypto'))
-    ? researchHref(s.href, searchParams.get('symbol')!, { assetType: parseResearchAsset(searchParams.get('type')), timeframe: parseResearchTimeframe(searchParams.get('timeframe')) }) : s.href }));
-
-  useEffect(() => {
-    document.body.style.overflow = drawerOpen ? 'hidden' : '';
-    const desktop = window.matchMedia('(min-width: 1440px)');
-    const closeOnDesktop = () => { if (desktop.matches) setDrawerOpen(false); };
-    desktop.addEventListener('change', closeOnDesktop);
-    closeOnDesktop();
-    return () => {
-      document.body.style.overflow = '';
-      desktop.removeEventListener('change', closeOnDesktop);
-    };
-  }, [drawerOpen]);
-
+  const search = useSearchParams();
+  const params = new URLSearchParams(search.toString());
+  const activeArea = workflowArea(pathname, params.get("tab") || "");
+  const { isLoggedIn, isLoading, tier } = useUserTier();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawer = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  function closeDrawer() {
+    setDrawerOpen(false);
+    opener.current?.focus();
+  }
+  useEffect(() => setDrawerOpen(false), [pathname, search.toString()]);
   useEffect(() => {
     if (!drawerOpen) return;
-
-    const drawer = drawerRef.current;
-    const focusable = drawer?.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    focusable?.[0]?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setDrawerOpen(false);
-        menuButtonRef.current?.focus();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const desktop = window.matchMedia("(min-width: 1440px)");
+    const resize = () => {
+      if (desktop.matches) setDrawerOpen(false);
+    };
+    desktop.addEventListener("change", resize);
+    resize();
+    drawer.current?.querySelector<HTMLElement>("button")?.focus();
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (drawer.current?.querySelector('[aria-expanded="true"]')) return;
+        event.preventDefault();
+        closeDrawer();
         return;
       }
-
-      if (event.key !== 'Tab' || !focusable || focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      if (event.key !== "Tab") return;
+      const nodes = Array.from(
+        drawer.current?.querySelectorAll<HTMLElement>(
+          "a[href],button:not([disabled])",
+        ) ?? [],
+      ).filter((el) => !el.closest("[hidden]"));
+      if (!nodes.length) return;
+      if (event.shiftKey && document.activeElement === nodes[0]) {
         event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+        nodes.at(-1)?.focus();
+      } else if (!event.shiftKey && document.activeElement === nodes.at(-1)) {
         event.preventDefault();
-        first.focus();
+        nodes[0].focus();
       }
     };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", keyboard);
+    return () => {
+      document.body.style.overflow = previous;
+      desktop.removeEventListener("change", resize);
+      document.removeEventListener("keydown", keyboard);
+    };
   }, [drawerOpen]);
-
-  useEffect(() => {
-    if (!accountOpen) return;
-    const menu = accountRef.current;
-    menu?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-    const close = (event: PointerEvent) => {
-      if (!menu?.contains(event.target as Node)) setAccountOpen(false);
-    };
-    const keyboard = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setAccountOpen(false);
-        accountButtonRef.current?.focus();
-      }
-      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-        const links = Array.from(menu?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
-        if (!links.length) return;
-        event.preventDefault();
-        const current = links.indexOf(document.activeElement as HTMLElement);
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? links.length - 1
-          : (current + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
-        links[next]?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', close);
-    document.addEventListener('keydown', keyboard);
-    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', keyboard); };
-  }, [accountOpen]);
-
-
+  const signInOut = isLoggedIn ? (
+    <button
+      type="button"
+      onClick={async () => {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+        window.location.replace("/");
+      }}
+      className="min-h-10 rounded-lg border border-[var(--msp-border)] px-3 text-sm text-[var(--msp-text-muted)] hover:text-[var(--msp-accent)]"
+    >
+      Sign Out
+    </button>
+  ) : (
+    <Link
+      className="inline-flex min-h-10 items-center rounded-lg border border-[var(--msp-border)] px-3 text-sm hover:text-[var(--msp-accent)]"
+      href="/auth"
+    >
+      Sign In
+    </Link>
+  );
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-slate-700/80 bg-slate-950/85 backdrop-blur">
-      <div className={`mx-auto flex max-w-none items-center justify-between ${isAppRoute ? 'h-12 px-3' : 'h-14 px-4'}`}>
-
-        {/* Logo */}
-        <Link href={isLoggedIn ? '/tools/command-center' : '/'} className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-4">
-          <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
+    <header className="sticky top-0 z-[100] w-full border-b border-[var(--msp-border)] bg-[var(--msp-bg)]">
+      <div className="flex h-14 items-center gap-3 px-3">
+        <Link
+          href={isLoggedIn ? "/tools/command-center" : "/"}
+          className="mr-2 flex shrink-0 items-center gap-2 font-semibold text-[var(--msp-text)] hover:text-[var(--msp-accent)]"
+        >
+          <img src="/logos/msp-logo.png" alt="" className="h-8 w-8" />
           <span className="msp-full-name">MarketScannerPros</span>
           <span className="msp-short-name">MSP</span>
         </Link>
-
-        {/* ── Desktop Nav (md+) ── */}
-        <nav className="msp-desktop-nav items-center gap-0.5 flex-1 text-sm">
-          {/* Surface buttons — always visible */}
-          {surfaces.map(s => (
+        <nav
+          aria-label="Main navigation"
+          className="msp-desktop-nav flex-1 items-center justify-between gap-2"
+        >
+          <NavigationGroups
+            mode="desktop"
+            pathname={pathname}
+            params={params}
+            activeArea={activeArea}
+          />
+          <div className="flex shrink-0 items-center gap-2">
             <Link
-              key={s.href}
-              href={s.href}
-              aria-current={activeArea === s.id ? 'page' : undefined}
-              className={`px-2 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
-                activeArea === s.id
-                  ? 'bg-[var(--msp-panel-2)] text-[var(--msp-accent)] border border-[var(--msp-accent)]'
-                  : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'
-              }`}
+              href="/pricing"
+              className="inline-flex min-h-10 items-center px-2 text-sm hover:text-[var(--msp-accent)]"
             >
-              {s.label}
+              Pricing
             </Link>
-          ))}
-
-          {/* Right side */}
-          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
-            <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
-            <NotificationBell compact={isAppRoute} />
-            {isLoggedIn && (
-              <div ref={accountRef} className="relative" onBlur={event => {
-                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setAccountOpen(false);
-              }}>
-                <button ref={accountButtonRef} type="button" aria-haspopup="menu" aria-expanded={accountOpen}
-                  aria-controls="msp-account-menu" onClick={() => setAccountOpen(open => !open)}
-                  className="min-h-10 px-2 py-1 text-xs text-slate-400 hover:text-[var(--msp-accent)] focus-visible:outline-[var(--msp-accent)]">
-                  {COPY.nav.account}
-                </button>
-                {accountOpen && <div id="msp-account-menu" role="menu" aria-label={COPY.nav.account}
-                  className="absolute right-0 z-10 w-48 border border-slate-700 bg-[var(--msp-panel)] p-4 shadow-xl"
-                  style={{ borderRadius: 'var(--msp-radius-card)' }}>
-                  {ACCOUNT_LINKS.map(link => <Link key={link.href} href={link.href} role="menuitem"
-                    onClick={() => setAccountOpen(false)} className="flex min-h-10 items-center py-3 text-xs text-slate-200 hover:text-[var(--msp-accent)]">
-                    {link.label}
-                  </Link>)}
-                </div>}
-              </div>
-            )}
-            {!tierLoading && isLoggedIn && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
-                {tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}
+            <NotificationBell compact />
+            {isLoggedIn && !isLoading && (
+              <span className="text-xs text-[var(--msp-text-muted)]">
+                {tier === "pro" || tier === "pro_trader" ? "Pro" : "Free"}
               </span>
             )}
-            {isLoggedIn ? (
-              <button
-                onClick={async () => {
-                  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-                  window.location.replace('/');
-                }}
-                className="ml-1 px-2 py-1 text-xs border border-slate-700 rounded-lg text-red-300/80 hover:text-red-300 hover:bg-red-500/10 whitespace-nowrap transition-all"
-              >
-                Sign Out
-              </button>
-            ) : (
-              <Link href="/auth" className="ml-1 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium px-4 py-1.5 text-xs whitespace-nowrap transition-all">Sign In</Link>
-            )}
+            {signInOut}
           </div>
         </nav>
-
-        {/* ── Drawer navigation (below the shared 1440px breakpoint) ── */}
-        <div className="msp-mobile-nav items-center gap-2 ml-auto">
-          {isLoggedIn && !tierLoading && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
-              {tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}
-            </span>
-          )}
+        <div className="msp-mobile-nav ml-auto items-center gap-2">
           <button
-            ref={menuButtonRef}
+            ref={opener}
             onClick={() => setDrawerOpen(true)}
-            className="flex min-h-10 min-w-10 flex-col justify-center gap-1.5 p-2"
             aria-label="Open menu"
             aria-expanded={drawerOpen}
             aria-controls="msp-mobile-menu"
+            className="min-h-10 min-w-10 px-2 text-sm hover:text-[var(--msp-accent)]"
           >
-            <span className="block h-0.5 w-6 bg-teal-300 rounded" />
-            <span className="block h-0.5 w-6 bg-teal-300 rounded" />
-            <span className="block h-0.5 w-6 bg-teal-300 rounded" />
+            Menu
           </button>
         </div>
       </div>
-
-      {/* ── Mobile Overlay ── */}
       {drawerOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[200] min-[1440px]:hidden backdrop-blur-sm" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+        <div
+          aria-hidden="true"
+          onClick={closeDrawer}
+          className="fixed inset-0 z-[200] bg-black/60 min-[1440px]:hidden"
+        />
       )}
-
-      {/* ── Mobile Drawer ── */}
       <div
+        ref={drawer}
         id="msp-mobile-menu"
-        ref={drawerRef}
         role="dialog"
         aria-modal="true"
+        aria-label="Site navigation"
         aria-hidden={!drawerOpen}
         inert={!drawerOpen}
-        aria-label="Site navigation"
-        className={`fixed top-0 right-0 h-[100dvh] w-[min(300px,85vw)] bg-[#111C2D] z-[201] transform transition-transform duration-300 ease-in-out min-[1440px]:hidden border-l border-slate-700/90 shadow-2xl ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 z-[201] h-[100dvh] w-[min(340px,90vw)] overflow-y-auto border-l border-[var(--msp-border)] bg-[var(--msp-panel)] p-4 min-[1440px]:hidden ${drawerOpen ? "" : "hidden"}`}
       >
-        <div className="flex flex-col h-full">
-          {/* Drawer header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-700/90">
-            <span className="text-lg font-semibold text-teal-300">Menu</span>
-            <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="min-h-10 min-w-10 text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
-          </div>
-
-          {/* Drawer body — same surfaces always shown */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex flex-col gap-0.5">
-              {surfaces.map(s => (
-                <Link
-                  key={s.href}
-                  href={s.href}
-                  onClick={() => setDrawerOpen(false)}
-                  aria-current={activeArea === s.id ? 'page' : undefined}
-                  className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                    activeArea === s.id
-                      ? 'bg-[var(--msp-panel-2)] text-[var(--msp-accent)]'
-                      : 'text-white hover:bg-teal-500/10 hover:text-teal-300'
-                  }`}
-                >
-                  {s.label}
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-slate-700 flex flex-col gap-0.5">
-              <div className="px-4 pb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                {isLoggedIn ? COPY.nav.account : COPY.nav.more}
-              </div>
-              {(isLoggedIn ? ACCOUNT_LINKS : ACCOUNT_LINKS.filter(link => link.href === '/compliance-hub')).map(link => (
-                <Link key={link.href} href={link.href} onClick={() => setDrawerOpen(false)}
-                  className="flex items-center px-4 py-3 text-sm text-white hover:text-[var(--msp-accent)] rounded-lg">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-            <div className="mt-4 pt-4 border-t border-slate-700 flex flex-col gap-0.5">
-              <Link href="/tools" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:text-[var(--msp-accent)]">All tools</Link>
-              <Link href="/pricing" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:text-[var(--msp-accent)]">Pricing</Link>
-            </div>
-
-            {/* Sign In / Sign Out */}
-            <div className="mt-4 pt-4 border-t border-slate-700/90">
-              {isLoggedIn ? (
-                <button
-                  onClick={async () => {
-                    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-                    window.location.replace('/');
-                  }}
-                  className="flex items-center justify-center w-full px-4 py-3 border border-red-400/30 rounded-lg text-red-300 font-medium hover:bg-red-500/10 transition-all"
-                >
-                  Sign Out
-                </button>
-              ) : (
-                <Link href="/auth" onClick={() => setDrawerOpen(false)} className="flex items-center justify-center px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all">Sign In</Link>
-              )}
-            </div>
-          </div>
+        <div className="mb-3 flex items-center justify-between">
+          <span>Menu</span>
+          <button
+            onClick={closeDrawer}
+            aria-label="Close menu"
+            className="min-h-10 min-w-10"
+          >
+            ×
+          </button>
+        </div>
+        <NavigationGroups
+          mode="mobile"
+          pathname={pathname}
+          params={params}
+          activeArea={activeArea}
+          onNavigate={() => setDrawerOpen(false)}
+        />
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[var(--msp-border)] pt-3">
+          <Link
+            href="/pricing"
+            onClick={() => setDrawerOpen(false)}
+            className="inline-flex min-h-10 items-center px-2"
+          >
+            Pricing
+          </Link>
+          {signInOut}
         </div>
       </div>
     </header>
