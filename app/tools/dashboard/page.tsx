@@ -713,7 +713,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
           <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2 mb-3">
             <a className="inline-flex min-h-10 items-center underline" href="/tools/macro">{FREE_COPY.freeMacro}</a>
           </div>
-          <div className="pointer-events-none select-none"><MacroDashboard embeddedInDashboard /></div>
+          <MacroDashboard embeddedInDashboard />
         </div>
       ) : <MacroDashboard embeddedInDashboard />)}
 

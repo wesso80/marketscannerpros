@@ -299,7 +299,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   }, []);
 
   // Auto-refresh hourly (pauses when tab hidden)
-  usePolling(fetchData, autoRefresh ? 60 * 60 * 1000 : null, { immediate: true });
+  usePolling(fetchData, autoRefresh && (isAdmin || tier === 'pro' || tier === 'pro_trader') ? 60 * 60 * 1000 : null, { immediate: true });
 
   const gate = useMemo(() => computeMacroGate(data), [data]);
 

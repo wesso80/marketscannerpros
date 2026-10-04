@@ -114,7 +114,7 @@ export default function AccountSection() {
         .then(async r => { if (r.ok) { const d = await r.json(); return d?.aiUsedToday ?? 0; } return 0; })
         .catch(() => 0),
       fetch('/api/alerts', { credentials: 'include' })
-        .then(async r => { if (r.ok) { const d = await r.json(); return Array.isArray(d?.alerts) ? d.alerts.length : 0; } return 0; })
+        .then(async r => { if (r.ok) { const d = await r.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : 0; } return 0; })
         .catch(() => 0),
       fetch('/api/watchlists', { credentials: 'include' })
         .then(async r => {
@@ -250,7 +250,7 @@ export default function AccountSection() {
 
   const planFeatures = useMemo(() => {
     if (isPaid) return ['Unlimited scanning + Golden Egg', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
-    return ['Core scanner (limited daily runs)', 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, 'Basic portfolio tracker and journal', 'Educational content and platform guides'];
+    return [FREE_COPY.pricing.scans, 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, FREE_COPY.pricing.journal, 'Educational content and platform guides'];
   }, [isPaid]);
 
   // ─── Loading / Auth guard ────────────────────────────────────────────────

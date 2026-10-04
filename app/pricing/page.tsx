@@ -133,7 +133,7 @@ export default function PricingPage() {
         },
         {
           group: "Track",
-          lines: [`Portfolio tracker (${getPortfolioLimit("free")} positions)`, FREE_COPY.pricing.journal, `${getAILimit("free")} AI questions a day`],
+          lines: [FREE_COPY.portfolioCount(getPortfolioLimit("free")), FREE_COPY.pricing.journal, FREE_COPY.aiCount(getAILimit("free"))],
         },
       ],
     },

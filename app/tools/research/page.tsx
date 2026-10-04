@@ -1,5 +1,7 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 /* ---------------------------------------------------------------------------
    SURFACE 6: RESEARCH — Information Layer
    Real API data: /api/news-sentiment + /api/economic-calendar + /api/earnings
@@ -112,7 +114,9 @@ const OUTCOME_ACTIONS: Array<{ label: string; status: SavedResearchCaseOutcome }
   { label: 'Review', status: 'reviewed' },
 ];
 
-export default function ResearchPage() {
+export default function ResearchPage() { return <PaidPreviewGate tool="Research"><ResearchPagePaid /></PaidPreviewGate>; }
+
+function ResearchPagePaid() {
   const { tier, isLoading: tierLoading } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
   const searchParams = useSearchParams();

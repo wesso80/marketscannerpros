@@ -1,5 +1,7 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
@@ -22,7 +24,10 @@ import {trustBadgeState} from '@/components/market/TrustBadge';
 import {buildMarketDataProviderStatus} from '@/lib/scanner/providerStatus';
 import {formatMarketTime} from '@/lib/market/priceStamp';
 
-export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
+export default function CryptoDashboard(props: { embeddedInDashboard?: boolean } = {}) {
+  return <PaidPreviewGate tool="Crypto Derivatives"><CryptoDashboardPaid {...props} /></PaidPreviewGate>;
+}
+function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<DashboardData>({
     fundingRates: null,

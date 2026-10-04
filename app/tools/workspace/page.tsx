@@ -161,9 +161,7 @@ function WorkspaceContent() {
 
       {/* -- JOURNAL -------------------------------------------------- */}
       {tab === 'Journal' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Trade Journal">
-          <JournalPageV1 tier={tier} embeddedInWorkspace />
-        </UpgradeGate>
+        <JournalPageV1 tier={tier} embeddedInWorkspace />
       )}
 
       {/* -- PORTFOLIO ------------------------------------------------ */}

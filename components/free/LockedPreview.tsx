@@ -8,7 +8,7 @@ export default function LockedPreview({ tool, description }: { tool: string; des
   return <section className="mx-auto w-full min-w-0 max-w-xl space-y-4 rounded-xl border border-white/10 p-4 sm:p-6">
     <h2 className="text-xl font-semibold">{tool}</h2>
     <div className="rounded-lg bg-white/5 p-4"><p className="text-xs">{FREE_COPY.example}</p>
-      <div aria-hidden="true" className="select-none space-y-3 py-4 blur-sm"><div className="h-5 w-4/5 rounded bg-slate-500/40" /><div className="h-5 w-3/5 rounded bg-slate-500/30" /><div className="h-5 w-2/5 rounded bg-slate-500/20" /></div>
+      <div aria-hidden="true" className="select-none space-y-3 py-4 blur-sm"><p>{FREE_COPY.exampleSymbol}</p><p className="text-4xl">74</p><p>{FREE_COPY.exampleEvidence}</p></div>
       <p className="text-xs">{FREE_COPY.exampleBasis}</p>
     </div>
     <p>{description || FREE_COPY.lockedDescription}</p>

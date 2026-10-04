@@ -1,5 +1,7 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
 import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
@@ -130,7 +132,9 @@ function reviewLabel(verdict: ReviewVerdict): string {
   return 'Not aligned';
 }
 
-export default function CryptoCommandCenter() {
+export default function CryptoCommandCenter() { return <PaidPreviewGate tool="Crypto"><CryptoCommandCenterPaid /></PaidPreviewGate>; }
+
+function CryptoCommandCenterPaid() {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <CryptoCommandCenterContent />

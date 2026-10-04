@@ -350,8 +350,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           title="Alert radar console"
           subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
           actions={[
-            { label: 'New alert', variant: 'primary', onClick: () => { if (tier === 'free' && activeAlerts.length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
-            { label: 'Quick alert', variant: 'secondary', onClick: () => { if (tier === 'free' && activeAlerts.length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'New alert', variant: 'primary', onClick: () => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'Quick alert', variant: 'secondary', onClick: () => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
           ]}
           metrics={[

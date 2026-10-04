@@ -63,7 +63,7 @@ export default function AccountPage() {
         return 0;
       })(),
       fetch("/api/alerts", { credentials: "include" }).then(async (res) => {
-        if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.length : 0; }
+        if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : 0; }
         return 0;
       }).catch(() => 0),
       fetch("/api/watchlists", { credentials: "include" }).then(async (res) => {
@@ -205,10 +205,10 @@ export default function AccountPage() {
       ];
     }
     return [
-      "Core scanner (limited daily runs)",
+      FREE_COPY.pricing.scans,
       "Watchlists, markets and macro dashboards",
       FREE_COPY.pricing.macro,
-      "Basic portfolio tracker and journal",
+      FREE_COPY.pricing.journal,
       "Educational content and platform guides",
     ];
   }, [isPaid]);

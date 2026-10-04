@@ -10,7 +10,7 @@ export async function radarPreview(store: ReportStore) {
   return {
     sessionDate: latest.sessionDate,
     status: latest.status,
-    candidateCount: row?.reportJson?.candidates?.length ?? 0,
+    candidateCount: row?.reportJson?.candidates?.length ?? null,
     previous: previous && previous.sessionDate < latest.sessionDate ? {
       sessionDate: previous.sessionDate,
       symbols: (previous.reportJson?.candidates ?? []).slice(0, 3).map(candidate => candidate.symbol),

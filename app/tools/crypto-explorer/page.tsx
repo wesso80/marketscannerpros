@@ -1,5 +1,7 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -404,7 +406,7 @@ function CryptoDetailPageContent() {
       loadedInitial.current = initialCoinId;
       loadCoinBySymbolOrId(initialCoinId);
     }
-  }, [initialCoinId, loadCoinBySymbolOrId, tier]);
+  }, [initialCoinId, loadCoinBySymbolOrId, tier, tierLoading]);
 
   const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
 
@@ -823,7 +825,9 @@ function PageLoadingSkeleton() {
   );
 }
 
-export default function CryptoDetailPage() {
+export default function CryptoDetailPage() { return <PaidPreviewGate tool="Crypto Explorer"><CryptoDetailPagePaid /></PaidPreviewGate>; }
+
+function CryptoDetailPagePaid() {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <CryptoDetailPageContent />

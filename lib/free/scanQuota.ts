@@ -14,7 +14,7 @@ export function quotaKey(req: NextRequest, workspaceId?: string | null): string 
 export function prepareVisitor(req: NextRequest, workspaceId?: string | null) {
   const id = !workspaceId && !req.cookies.get(VISITOR_COOKIE)?.value ? randomUUID() : null;
   return {
-    key: id ? `anon:${id}` : quotaKey(req, workspaceId),
+    key: quotaKey(req, workspaceId),
     attach(response: NextResponse) {
       if (id) response.cookies.set(VISITOR_COOKIE, id, { httpOnly: true, secure: req.nextUrl.protocol === 'https:', sameSite: 'lax', path: '/', maxAge: 31536000 });
       return response;

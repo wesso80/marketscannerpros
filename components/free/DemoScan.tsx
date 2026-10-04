@@ -27,19 +27,26 @@ export default function DemoScan() {
   async function scan(symbol: string) {
     if (active.current) return;
     active.current = true; setBusy(true); setError(false); setRow(null);
+    let scanned = false;
+    const before = usage;
     try {
       if (!usage) await refreshUsage();
       const response = await fetch('/api/scanner/run', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: symbol === 'BTC' ? 'crypto' : 'equity', symbols: [symbol], timeframe: 'daily', minScore: 0 }) });
       const data = await response.json();
       if (response.status === 429 && data.limitReached) { trackFreeEvent('scan_limit_hit', 'demo', usage?.resetsAt); setLimitHit(true); upgrade.show('scan'); return; }
       if (!response.ok) throw new Error();
-      const result = data.results?.find((item: ScanResult) => item.symbol?.replace(/USD[T]?$/, '') === symbol);
+      const result = data.results?.find((item: ScanResult) => item.symbol?.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase() === symbol);
       if (!result || !Number.isFinite(result.score)) throw new Error();
       setRow(result);
-      const after = await refreshUsage();
-      if (usage?.used === 0 && after.used === 1) trackFreeEvent('first_scan', 'demo', after.resetsAt);
+      scanned = true;
     } catch { setError(true); }
-    finally { await refreshUsage().catch(() => setError(true)); active.current = false; setBusy(false); }
+    finally {
+      try {
+        const after = await refreshUsage();
+        if (scanned && before?.used === 0 && after.used === 1) trackFreeEvent('first_scan', 'demo', after.resetsAt);
+      } catch { setError(true); }
+      active.current = false; setBusy(false);
+    }
   }
   const remaining = usage ? Math.max(0, usage.limit - usage.used) : null;
   const score = row?.canonical?.score ?? row?.score;
