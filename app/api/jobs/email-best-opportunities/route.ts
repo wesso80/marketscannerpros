@@ -315,7 +315,6 @@ function optionsSetupToReasoning(s: any, symbol: string): PickReasoning {
 
   const why: string[] = [];
   if (s?.qualityReasons?.length) why.push(...s.qualityReasons.slice(0, 5));
-  if (s?.confluenceStack) why.push(`Confluence stack: ${s.confluenceStack}`);
   if (s?.signalStrength) why.push(`Signal strength: ${s.signalStrength}`);
   if (s?.primaryStrike?.strike) why.push(`Primary strike candidate: ${s.primaryStrike.strike}`);
   if (s?.primaryExpiration?.date) why.push(`Primary expiration candidate: ${s.primaryExpiration.date}`);

@@ -3,7 +3,7 @@ import CardHeader from '@/components/msp/core/CardHeader';
 
 type Props = { payload: any };
 
-const rows = ['Trend', 'Momentum', 'Flow', 'Structure', 'TF Sync'];
+const rows = ['Trend', 'Momentum', 'Flow', 'Structure', 'Multi-TF (not measured)'];
 
 export default function StructureAlignmentCard({ payload }: Props) {
   const strength = payload?.scores?.tfConfluenceScore ?? 0;

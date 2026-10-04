@@ -1978,8 +1978,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     const momentumScore = clampScore(
       (result.signalStrength === 'strong' ? 84 :
        result.signalStrength === 'moderate' ? 66 :
-       result.signalStrength === 'weak' ? 48 : 30) +
-      Math.min(14, Math.max(0, result.confluenceStack * 2))
+       result.signalStrength === 'weak' ? 48 : 30)
     );
 
     const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
@@ -2107,7 +2106,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       const conflictCount = result.compositeScore?.conflicts?.length ?? 0;
 
       const highVol = movePct >= 4.8 || (ivRank != null && ivRank >= 72) || flowBurst || hasEventFlag;
-      const trendStrong = result.direction !== 'neutral' && directionScoreAbs >= 35 && confidence >= 62 && result.confluenceStack >= 3;
+      const trendStrong = result.direction !== 'neutral' && directionScoreAbs >= 35 && confidence >= 62;
       const chop = result.direction === 'neutral' || directionScoreAbs < 22 || conflictCount >= 2 || result.signalStrength === 'no_signal';
 
       if (highVol) return 'HIGH_VOL_EVENT_MODE';
@@ -4140,7 +4139,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
               <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 text-violet-400">
                 <span>Confluence Analysis</span>
                 <span className="ml-auto text-[0.7rem] text-slate-500">
-                  {result.confluenceStack} TFs closing together • click to expand
+                  {result.confluenceStack} TFs closing together • close calendar, display only • click to expand
                 </span>
               </summary>
               <div className="confluence-info-row">
@@ -4715,7 +4714,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   </div>
                   
                   <div className="mb-2">
-                    <span className="text-slate-500" title="Options trade quality (legacy options read). The canonical daily verdict is shown in the cockpit.">Options quality (legacy):</span>
+                    <span className="text-slate-500" title="Setup grade (IV, levels, chain quality; timeframes not used)">Setup grade:</span>
                     <span className={`ml-2 font-bold ${gradeClass(result.tradeQuality)}`}>
                       {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
                     </span>

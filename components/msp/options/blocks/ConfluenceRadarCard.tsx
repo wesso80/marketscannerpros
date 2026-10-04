@@ -9,7 +9,7 @@ export default function ConfluenceRadarCard({ payload }: Props) {
     { label: 'Directional', value: features.directionalAgreement ?? 0 },
     { label: 'EM Fit', value: features.emBufferFit ?? 0 },
     { label: 'IV Fit', value: payload?.features?.context?.volFit ?? 0 },
-    { label: 'Multi-TF', value: features.tfConfluenceScore ?? 0 },
+    { label: 'Multi-TF (not measured)', value: features.tfConfluenceScore ?? 0 },
     { label: 'Flow', value: features.pWinProxy ?? 0 },
   ];
 

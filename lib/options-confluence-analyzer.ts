@@ -684,6 +684,7 @@ export interface InstitutionalIntentOutput {
 }
 
 export interface ProfessionalStackLayer {
+  weight?: number; // Explicit zero for display-only layers.
   label: string;
   state: string;
   score: number;
@@ -2426,7 +2427,7 @@ function computeInstitutionalIntent(args: {
   const conflictCount = compositeScore.conflicts?.length ?? 0;
   const srsBase = conflictCount * 20 + (finalDirection === 'neutral' ? 15 : 0);
   const unusualRejectionBoost = unusualActivity?.alertLevel === 'high' ? 20 : unusualActivity?.alertLevel === 'moderate' ? 12 : 4;
-  const srs = clampIntentScore(srsBase + unusualRejectionBoost + (clusteredCount >= 2 ? 10 : 0));
+  const srs = clampIntentScore(srsBase + unusualRejectionBoost);
 
   const ces = clampIntentScore(Math.min(25, clusteredCount * 6)); // Clock contribution removed.
 
@@ -2925,19 +2926,8 @@ function buildProfessionalTradeStack(
   const structureComponent = compositeScore.components.find(c => c.name === 'Structure Score');
   const patternComponent = compositeScore.components.find(c => c.name === 'Pattern State');
 
-  const structureScore = clamp(
-    (Math.abs(structureComponent?.score ?? compositeScore.directionScore) * 0.7) +
-    (Math.abs(patternComponent?.score ?? 0) * 0.3)
-  );
-
-  let structureState = 'Compression / Balance';
-  if (confluenceResult.signalStrength === 'strong' && compositeScore.finalDirection !== 'neutral') {
-    structureState = compositeScore.finalDirection === 'bullish' ? 'Trend Expansion (Bullish)' : 'Trend Expansion (Bearish)';
-  } else if (confluenceResult.signalStrength === 'moderate' && compositeScore.finalDirection !== 'neutral') {
-    structureState = compositeScore.finalDirection === 'bullish' ? 'Pullback in Trend (Bullish)' : 'Pullback in Trend (Bearish)';
-  } else if (compositeScore.conflicts.length >= 2) {
-    structureState = 'Reversal Attempt';
-  }
+  const structureScore = 0;
+  const structureState = 'Not scored by timeframes';
 
   const targetLevel = confluenceResult?.prediction?.targetLevel ?? currentPrice;
   const distanceToTargetPct = targetLevel > 0 ? Math.abs((currentPrice - targetLevel) / targetLevel) * 100 : 0;
@@ -2983,10 +2973,7 @@ function buildProfessionalTradeStack(
     : 'Wait for cleaner trigger / invalidation';
 
   const overallEdgeScore = Math.round(clamp(
-    structureScore * 0.35 +
-    liquidityScore * 0.20 +
-    optionsScore * 0.20 +
-    executionScore * 0.05
+    (liquidityScore * 0.20 + optionsScore * 0.20 + executionScore * 0.05) / 0.45
   ));
 
   const overallState: 'A+' | 'A' | 'B' | 'C' | 'WAIT' =
@@ -3002,7 +2989,8 @@ function buildProfessionalTradeStack(
 
   return {
     structureState: {
-      label: 'Structure',
+      label: 'Structure (display only)',
+      weight: 0,
       state: structureState,
       score: Math.round(structureScore),
       status: toStatus(structureScore),
@@ -3016,7 +3004,8 @@ function buildProfessionalTradeStack(
       reason: `Dist to target zone ${distanceToTargetPct.toFixed(2)}%, max pain dist ${maxPainDistPct.toFixed(2)}%`,
     },
     timeEdge: {
-      label: 'Time Edge',
+      label: 'Close calendar (display only)',
+      weight: 0,
       state: timeState,
       score: Math.round(timeScore),
       status: toStatus(timeScore),
@@ -3144,7 +3133,7 @@ function buildTradeSnapshot(args: {
     finalDirection === 'neutral' ? 'WAIT' : finalDirection === 'bullish' ? 'BULLISH_EDGE' : 'BEARISH_EDGE';
 
   const gradeRank: Record<'A+' | 'A' | 'B' | 'C' | 'F', number> = { 'A+': 5, A: 4, B: 3, C: 2, F: 1 };
-  const setupGrade: TradeSnapshot['setupGrade'] = gradeRank[tradeQuality] <= gradeRank[optionsGrade] ? tradeQuality : optionsGrade;
+  const setupGrade: TradeSnapshot['setupGrade'] = optionsGrade;
 
   const why: string[] = [];
 
@@ -3525,15 +3514,12 @@ export function selectExpirationFromConfluence(
   confluenceResult: HierarchicalScanResult,
   scanMode: ScanMode,
   assetType: AssetType,
-  listedExpiries: string[] = []
+  listedExpiries: string[] = [],
+  compositeConfidence = 0
 ): ExpirationRecommendation[] {
   const expirationConfig = EXPIRATION_MAP[scanMode] || EXPIRATION_MAP.intraday_1h;
   const recommendations: ExpirationRecommendation[] = [];
   const today = new Date();
-  
-  // Use clusteredCount (TFs closing together) for urgency, not just active count
-  const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
-  const hasHighConfluence = decompCount >= 3;
   
   for (const dateStr of [...new Set(listedExpiries)].sort()) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || dateStr < formatNYDate(today)) continue;
@@ -3553,11 +3539,7 @@ export function selectExpirationFromConfluence(
     else if (marketDTE <= 30) timeframe = 'swing';
     else timeframe = 'position';
     
-    // Adjust confidence based on decompression timing
-    let confidence = confluenceResult.prediction.confidence;
-    if (hasHighConfluence && dte <= 5) {
-      confidence = Math.min(100, confidence + 10);
-    }
+    const confidence = compositeConfidence; // No timeframe-count bonus.
     
     const reason = dte === expirationConfig.dte[0]
       ? `Primary: ${expirationConfig.reason}`
@@ -3581,116 +3563,18 @@ export function selectExpirationFromConfluence(
 // TRADE QUALITY GRADING (with O/I integration)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function gradeTradeQuality(
-  confluenceResult: HierarchicalScanResult,
-  oiData: OpenInterestData | null = null
-): { grade: 'A+' | 'A' | 'B' | 'C' | 'F'; reasons: string[] } {
-  const reasons: string[] = [];
-  let score = 0;
-  
-  // Use clusteredCount (TFs closing together) for real confluence score
-  // Fall back to activeCount for backwards compatibility
-  const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
-  const clusterRatio = confluenceResult.decompression.clusteringRatio ?? 100;
-  
-  // Confluence stack (0-25 points) - based on CLUSTERED count now
-  if (decompCount >= 5) {
-    score += 25;
-    reasons.push(`✅ Mega confluence: ${decompCount} TFs closing together`);
-  } else if (decompCount >= 3) {
-    score += 18;
-    reasons.push(`✅ Strong confluence: ${decompCount} TFs closing together`);
-  } else if (decompCount >= 2) {
-    score += 10;
-    reasons.push(`⚡ Moderate confluence: ${decompCount} TFs aligned`);
-  } else if (decompCount === 1) {
-    score += 3;
-    reasons.push(`⚠️ Low confluence: 1 TF active (no clustering)`);
-  } else {
-    reasons.push(`❌ No active confluence - wait for TF alignment`);
-  }
-  
-  // Direction clarity (0-25 points)
-  const pullBias = Math.abs(confluenceResult.decompression.pullBias);
-  if (pullBias >= 80) {
-    score += 25;
-    reasons.push(`✅ Very clear direction: ${pullBias.toFixed(0)}% bias`);
-  } else if (pullBias >= 60) {
-    score += 18;
-    reasons.push(`✅ Clear direction: ${pullBias.toFixed(0)}% bias`);
-  } else if (pullBias >= 40) {
-    score += 10;
-    reasons.push(`⚡ Moderate bias: ${pullBias.toFixed(0)}%`);
-  } else {
-    reasons.push(`⚠️ Weak/conflicting bias: ${pullBias.toFixed(0)}%`);
-  }
-  
-  // Cluster magnets (0-15 points)
-  if (confluenceResult.clusters.length >= 2) {
-    score += 15;
-    reasons.push(`✅ Multiple price clusters (${confluenceResult.clusters.length})`);
-  } else if (confluenceResult.clusters.length === 1) {
-    score += 10;
-    reasons.push(`✅ Price cluster detected`);
-  } else {
-    reasons.push(`📍 No strong price clusters`);
-  }
-  
-  // Prediction confidence (0-20 points)
-  const confidence = confluenceResult.prediction.confidence;
-  if (confidence >= 85) {
-    score += 20;
-    reasons.push(`✅ High confidence prediction: ${confidence}%`);
-  } else if (confidence >= 70) {
-    score += 15;
-    reasons.push(`✅ Good confidence: ${confidence}%`);
-  } else if (confidence >= 50) {
-    score += 8;
-    reasons.push(`⚡ Moderate confidence: ${confidence}%`);
-  } else {
-    reasons.push(`⚠️ Low confidence: ${confidence}%`);
-  }
-  
-  // O/I Sentiment Alignment (0-15 points) - NEW
-  if (oiData) {
-    const direction = confluenceResult.decompression.netPullDirection;
-    const oiAligned = (direction === 'bullish' && oiData.sentiment === 'bullish') ||
-                      (direction === 'bearish' && oiData.sentiment === 'bearish');
-    const oiConflict = (direction === 'bullish' && oiData.sentiment === 'bearish') ||
-                       (direction === 'bearish' && oiData.sentiment === 'bullish');
-    
-    if (oiAligned) {
-      score += 15;
-      reasons.push(`✅ O/I confirms direction: P/C ratio ${oiData.pcRatio.toFixed(2)}`);
-    } else if (oiConflict) {
-      score -= 5;  // Penalty for conflict
-      reasons.push(`⚠️ O/I conflicts: P/C ratio ${oiData.pcRatio.toFixed(2)} suggests ${oiData.sentiment}`);
-    } else {
-      score += 5;
-      reasons.push(`📊 O/I neutral: P/C ratio ${oiData.pcRatio.toFixed(2)}`);
-    }
-    
-    // Max pain proximity bonus (0-5 points)
-    if (oiData.maxPainStrike) {
-      const maxPainDist = Math.abs((oiData.maxPainStrike - confluenceResult.currentPrice) / confluenceResult.currentPrice) * 100;
-      if (maxPainDist <= 2) {
-        score += 5;
-        reasons.push(`✅ Near max pain: $${oiData.maxPainStrike.toFixed(0)}`);
-      }
-    }
-  } else {
-    reasons.push(`📊 O/I data unavailable`);
-  }
-  
-  // Grade assignment
-  let grade: 'A+' | 'A' | 'B' | 'C' | 'F';
-  if (score >= 90) grade = 'A+';
-  else if (score >= 75) grade = 'A';
-  else if (score >= 55) grade = 'B';
-  else if (score >= 35) grade = 'C';
-  else grade = 'F';
-  
-  return { grade, reasons };
+export function gradeOptionsSetup(input: {
+  optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F'; ivRank: number | null;
+  hasMeaningfulOI: boolean; quotedStrikes: number; freshness: string;
+  rr: number | null; agreement: number; caps: string[];
+}): {grade: 'A+' | 'A' | 'B' | 'C' | 'F'; reasons: string[]} {
+  return {grade: input.optionsGrade, reasons: [
+    input.ivRank == null ? 'IV rank n/a' : `IV rank ${input.ivRank.toFixed(0)}`,
+    input.rr == null ? 'Levels unavailable' : `Shown levels risk:reward ${input.rr.toFixed(2)}:1`,
+    `O/I and max-pain agreement ${input.agreement.toFixed(0)}%; O/I ${input.hasMeaningfulOI ? 'available' : 'insufficient'}`,
+    `Chain freshness: ${input.freshness}; ${input.quotedStrikes} quoted strikes`,
+    ...input.caps,
+  ]};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4056,8 +3940,7 @@ export class OptionsConfluenceAnalyzer {
     // Determine baseline confluence direction
     const direction = decompression.netPullDirection;
     
-    // Grade trade quality (now includes O/I sentiment alignment)
-    const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult, openInterestAnalysis);
+    // Setup quality is assigned after chain-quality caps below.
     
     // Select expirations based on confluence timing
     let allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode, assetType, dataQuality.chainExpiryUsed ? [dataQuality.chainExpiryUsed] : []);
@@ -4089,12 +3972,6 @@ export class OptionsConfluenceAnalyzer {
       (direction === 'bullish' && openInterestAnalysis.sentiment === 'bullish') ||
       (direction === 'bearish' && openInterestAnalysis.sentiment === 'bearish')
     );
-    
-    if (grade === 'A+') maxRiskPercent = oiAligned ? 3.5 : 3;
-    else if (grade === 'A') maxRiskPercent = oiAligned ? 3 : 2.5;
-    else if (grade === 'B') maxRiskPercent = 2;
-    else if (grade === 'C') maxRiskPercent = 1;
-    else maxRiskPercent = 0.5;
     
     const stopLossStrategy = signalStrength === 'strong'
       ? 'Common risk threshold: 50% of premium loss or price crossing against the 50% level'
@@ -4168,6 +4045,11 @@ export class OptionsConfluenceAnalyzer {
       dataConfidenceCaps.push('Greeks are Black-Scholes estimates; short-DTE accuracy reduced');
       compositeScore.confidence = Math.min(compositeScore.confidence, 65);
     }
+
+    // Expiry confidence follows the capped composite, never scan confidence.
+    allExpirations = allExpirations.map(exp => ({...exp, confidenceScore: compositeScore.confidence}));
+    primaryExpiration = allExpirations[0] ?? null;
+    alternativeExpirations = allExpirations.slice(1);
     
     // Use composite direction - if composite says neutral, respect it (don't force a direction)
     // Only fall back to confluence direction if composite has very low confidence
@@ -4277,11 +4159,22 @@ export class OptionsConfluenceAnalyzer {
     const contractBlocker = optionEntryBlocker({ quotedStrikes: quoteStrikes.length,
       freshness: dataQuality.freshness, hasExpiry: !!primaryExpiration, hasCurrentIV: !!ivAnalysis });
     if (contractBlocker) capGrade('C', contractBlocker);
+    if (optionsGrade === 'A+') maxRiskPercent = oiAligned ? 3.5 : 3;
+    else if (optionsGrade === 'A') maxRiskPercent = oiAligned ? 3 : 2.5;
+    else if (optionsGrade === 'B') maxRiskPercent = 2;
+    else if (optionsGrade === 'C') maxRiskPercent = 1;
+    else maxRiskPercent = 0.5;
+
+    const {reasons: qualityReasons} = gradeOptionsSetup({
+      optionsGrade, ivRank: measuredIvRank(ivAnalysis), hasMeaningfulOI: dataQuality.hasMeaningfulOI,
+      quotedStrikes: quoteStrikes.length, freshness: dataQuality.freshness,
+      rr: tradeLevels?.riskRewardRatio ?? null, agreement: compositeScore.alignedWeightPct,
+      caps: dataConfidenceCaps.filter(reason => /grade capped/i.test(reason)).concat(contractBlocker ? [contractBlocker] : []),
+    });
     const shouldGateWait =
       !!contractBlocker ||
       finalDirection === 'neutral' ||
       aiMarketState.tradeQualityGate === 'WAIT' ||
-      grade === 'C' || grade === 'F' ||
       optionsGrade === 'C' || optionsGrade === 'F';
 
     if (shouldGateWait) {
@@ -4386,7 +4279,7 @@ export class OptionsConfluenceAnalyzer {
       symbol,
       confluence: confluenceResult,
       finalDirection,
-      tradeQuality: grade,
+      tradeQuality: optionsGrade,
       optionsGrade,
       composite: effectiveCompositeScore,
       entryTiming,
@@ -4429,7 +4322,7 @@ export class OptionsConfluenceAnalyzer {
         : decompression.decompressions.filter(d => d.isDecompressing).map(d => d.tf),
       pullBias: decompression.pullBias,
       signalStrength,
-      tradeQuality: grade,
+      tradeQuality: optionsGrade,
       qualityReasons,
       researchCandidates,
       primaryStrike,
