@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 import PlatformGuide from '@/components/guide/PlatformGuide';
 import TradingGuides from '@/components/guide/TradingGuides';
