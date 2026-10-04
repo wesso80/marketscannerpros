@@ -16,3 +16,15 @@ it('projects existing observations without calls or modified input and retains o
  expect(t.stage).toBe(i.rule.stage);expect(t.chart.bars).toEqual(bars.slice(-90).map(({t,close,high,low})=>({t,close,high,low})));
  expect(t.spot).toEqual(i.sections.price.value!.metrics[0]);expect(t.rank?.value).toBe(13);expect(JSON.stringify(i)).toBe(before);expect(network).not.toHaveBeenCalled();vi.unstubAllGlobals();
 });
+
+import {verdictLine,ruleChips} from '@/lib/crypto/breakdown/top';
+import {V1} from '@/lib/crypto/breakdown/baseBreakoutV1';
+it('uses the locked rule results, constants and common rounding for the LINK-like verdict and chips',()=>{
+ const rule={...input().rule,stage:'NO BASE' as const,rangePct:91.5633,volumeRatio:.5759,closeRatio:.91386,extension:-1.6225,passes:[false,false,false,true]};
+ expect(verdictLine(rule)).toContain(`No base: range 91.6% vs the ${V1.maxRangePct}% limit. Volume 0.58x`);
+ expect(ruleChips(rule).map(c=>c.pass)).toEqual(rule.passes);expect(ruleChips(rule).map(c=>c.value)).toEqual(['91.6%','0.58x','0.914','-1.62 ATR']);
+});
+it('describes WATCH distance and price and uses dashes instead of failures for missing values',()=>{
+ const rule={...input().rule,distancePct:-2,requiredClose:10.2};expect(verdictLine(rule)).toContain('2.0% below');expect(verdictLine(rule)).toContain('$10.20');
+ const empty=baseBreakoutV1([]);expect(ruleChips(empty).every(c=>c.pass===null&&c.value==='—')).toBe(true);expect(verdictLine(empty)).toContain(`needs ${V1.baseDays+1}`);
+});

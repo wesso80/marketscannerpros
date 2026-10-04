@@ -5,6 +5,8 @@ import {trustBadgeState} from '@/components/market/TrustBadge';
 import type {Breakdown} from '@/lib/crypto/breakdown/types';
 import {COPY} from '../copy';
 import StageBadge from './StageBadge';
+import RuleChips from './RuleChips';
+import {verdictLine} from '@/lib/crypto/breakdown/top';
 import SourceLine from './SourceLine';
 export default function CryptoTop({data}:{data:Breakdown}){
  const [zone,setZone]=useState('UTC');useEffect(()=>{setZone(Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC');},[]);
@@ -20,5 +22,6 @@ export default function CryptoTop({data}:{data:Breakdown}){
   <div data-top-number><p className="text-sm text-slate-300">{COPY.top.change24h}: {typeof change?.value==='number'?COPY.top.signedPercent(change.value):COPY.top.unavailable}</p><SourceLine stamp={change??null} zone={zone}/></div>
   {data.identityMatches!=null&&data.identityMatches>1?<div data-top-number className="text-amber-300"><p>{data.identityMatches} {COPY.matches}</p><SourceLine stamp={null} zone={zone}/></div>:data.identityMatches==null?<p className="text-xs text-slate-400">{COPY.identityUnchecked}</p>:null}
   {data.budget.capped&&<p role="status" className="text-amber-300">{data.budget.reason?COPY.budgetUnavailable:COPY.capped}</p>}
+  {t&&<><div data-top-number><p className="text-sm leading-relaxed">{verdictLine(t.rule)}</p><SourceLine stamp={t.daily} zone={zone}/></div><RuleChips top={t} zone={zone}/></>}
  </section>;
 }
