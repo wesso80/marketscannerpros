@@ -1,3 +1,5 @@
+import { useUserTier } from '@/lib/useUserTier';
+import { isPaidTier } from '@/lib/tiers';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
@@ -967,7 +969,19 @@ export function useRegime() {
 }
 
 export function useScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily') {
-  return useApi(() => fetchScannerResults(type, timeframe), [type, timeframe]);
+  const { tier, isLoading, isAdmin } = useUserTier();
+  const live = isAdmin || isPaidTier(tier);
+  return useApi(() => isLoading ? Promise.resolve(null as unknown as ScannerResponse)
+    : live ? fetchScannerResults(type, timeframe) : fetchSavedScannerResults(type), [type, timeframe, live, isLoading]);
+}
+
+/** Public database snapshot, deliberately no POST and no fabricated live/composite score. */
+export async function fetchSavedScannerResults(type: 'crypto' | 'equity'): Promise<ScannerResponse> {
+  const data = await apiFetch<{ topPicks: Record<string, Array<ScanResult & { indicators?: Record<string, unknown> }>>; dataQuality: ScannerResponse['metadata']['dataQuality'] }>('/api/scanner/daily-picks?limit=20');
+  const results = (data.topPicks?.[type] ?? []).map(row => ({ ...row, type, timeframe: 'daily',
+    score: Number(row.score), price: row.price == null ? undefined : Number(row.price),
+  }));
+  return { success: true, results, metadata: { count: results.length, timestamp: data.dataQuality?.computedAt ?? '', dataQuality: data.dataQuality } };
 }
 
 export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string) {
