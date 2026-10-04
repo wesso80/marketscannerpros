@@ -1,5 +1,7 @@
 'use client';
 
+import { Suspense } from 'react';
+import SignedOutBanner from '@/components/free/SignedOutBanner';
 import MSPCopilot from '@/components/MSPCopilot';
 import RegimeBar from '@/app/v2/_components/RegimeBar';
 import { V2Provider } from '@/app/v2/_lib/V2Context';
@@ -76,6 +78,7 @@ export default function ToolsLayoutClient({
 
   return (
     <DisclosureGate>
+    <Suspense fallback={null}><SignedOutBanner /></Suspense>
     <RegimeProvider>
     <RiskPermissionProvider>
     <V2Provider>

@@ -4,6 +4,7 @@ export const FREE_COPY = {
   details: 'Details', savedList: 'Latest saved list', scanner: 'Scanner', macro: 'Macro summary',
   research: 'Research and education only. Not a trade instruction.',
   source: 'Daily picks database', basis: 'Saved daily snapshot', stampUnavailable: 'Time not supplied',
+  disclosure: 'Research and education only. Not financial advice.', readDisclosure: 'Read the disclosure',
   exampleBasis: 'Illustrative layout · no live market values', lockedDescription: 'Explore the complete research view and its supporting evidence.',
   optionsDescription: 'Options chain, flow and confluence for each researched symbol.', journalDescription: 'Unlimited journal entries with AI review.',
   today: 'Today', overview: 'Open full Overview', radar: 'Daily Radar', session: 'US market session', reportReady: 'Report ready',

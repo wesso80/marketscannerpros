@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { FREE_COPY } from '@/components/free/copy';
 import { DISCLOSURE_VERSION } from '@/lib/disclosure';
 
 // Anonymous visitors have no server identity, so their acknowledgement lives
@@ -59,15 +60,6 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
         return;
       }
 
-      // Acknowledged moments ago while signed out in this same tab: record it against the workspace now.
-      if (readAnonAcceptance()) {
-        const saved = await postAcceptance().catch(() => false);
-        if (saved) {
-          clearAnonAcceptance();
-          setAccepted(true);
-          return;
-        }
-      }
       setAccepted(false);
     } catch {
       setError('We could not check your disclosure acknowledgement. Please retry.');
@@ -110,6 +102,9 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
       </>}
     </div>
   );
+
+  // Signed-out readers see the disclosure link. A signed-in workspace still needs explicit acceptance.
+  if (!authenticated) return <><aside className="border-b border-white/10 px-4 py-3 text-xs">{FREE_COPY.disclosure} <a href="/disclaimer" className="inline-flex min-h-10 items-center underline">{FREE_COPY.readDisclosure}</a></aside>{children}</>;
 
   // Already accepted
   if (accepted) return <>{children}</>;
