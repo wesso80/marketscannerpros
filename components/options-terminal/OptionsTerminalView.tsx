@@ -1085,19 +1085,16 @@ function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
 }
 
 /* ─── Formatting helpers ─────────────────────────────────────── */
-function missingNumber(n?: number) {
-  return n === null || n === undefined || Number.isNaN(n);
-}
-function fmt(n?: number, decimals: number = 2) {
-  if (missingNumber(n)) return '-';
+function fmt(n?: number | null, decimals: number = 2) {
+  if (n == null || Number.isNaN(n)) return '-';
   return n.toFixed(decimals);
 }
-function fmtInt(n?: number) {
-  if (missingNumber(n)) return '-';
+function fmtInt(n?: number | null) {
+  if (n == null || Number.isNaN(n)) return '-';
   return Math.round(n).toLocaleString();
 }
-function fmtPct(n?: number) {
-  if (missingNumber(n)) return '-';
+function fmtPct(n?: number | null) {
+  if (n == null || Number.isNaN(n)) return '-';
   return `${(n * 100).toFixed(1)}%`;
 }
 function twoSided(contract?: OptionsContract) {
