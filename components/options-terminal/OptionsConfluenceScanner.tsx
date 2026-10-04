@@ -25,6 +25,7 @@ import Pill from "@/components/terminal/Pill";
 import DepthCard from "@/components/DepthCard";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { writeOperatorState } from "@/lib/operatorState";
+import { optionsPageCommand } from "@/lib/options/pageCommand";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence, qualityTierFromConfidence } from "@/lib/workflow/scoring";
@@ -258,6 +259,7 @@ interface DataQuality {
 
 // AI Market State from backend
 interface AIMarketState {
+  tradeQualityGate?: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT';
   regime: {
     type: 'trending' | 'ranging' | 'breakout' | 'reversal' | 'uncertain';
     confidence: number;
@@ -378,6 +380,9 @@ interface TradeSnapshot {
 }
 
 interface OptionsSetup {
+  directionStatus?: 'determined' | 'unknown';
+  directionReason?: string;
+  unmeasuredTFs?: string[];
   symbol: string;
   currentPrice: number;
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -815,11 +820,13 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       ? 'BEARISH'
       : 'NEUTRAL';
 
-    const action: 'WAIT' | 'PREP' | 'EXECUTE' = result.entryTiming.urgency === 'no_trade'
-      ? 'WAIT'
-      : result.tradeLevels && edge >= 60
-      ? 'PREP'
-      : 'PREP';
+    const pageCommand = optionsPageCommand({
+      verdict: result.tradeSnapshot?.verdict,
+      tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+      hasExecutionLevels: !!result.tradeLevels,
+      confidence: result.compositeScore?.confidence,
+    });
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = pageCommand.action;
 
     const expectedMoveRisk = result.expectedMove?.selectedExpiryPercent ?? 0;
     const risk: 'LOW' | 'MODERATE' | 'HIGH' = result.institutionalFilter?.noTrade
@@ -830,8 +837,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       ? 'MODERATE'
       : 'LOW';
 
-    const next = result.entryTiming.urgency === 'no_trade'
-      ? (result.entryTiming.reason || 'Wait for cleaner options structure')
+    const next = pageCommand.noTrade
+      ? (result.tradeSnapshot?.oneLine || result.entryTiming.reason || 'Wait for cleaner options structure')
       : (result.tradeSnapshot?.action?.entryTrigger || result.entryTiming.reason || 'Analyze with defined levels');
 
     writeOperatorState({
@@ -1292,7 +1299,12 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
     const hasExecutionLevels = !!result.tradeLevels;
     const hasEntryZone = !!result.tradeLevels?.entryZone;
-    const isNoTrade = result.entryTiming.urgency === 'no_trade';
+    const isNoTrade = optionsPageCommand({
+      verdict: result.tradeSnapshot?.verdict,
+      tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+      hasExecutionLevels,
+      confidence: result.compositeScore?.confidence,
+    }).noTrade;
     const executionZone: LadderState = (isNoTrade || !hasExecutionLevels)
       ? 'fail'
       : (hasEntryZone ? 'valid' : 'partial');
@@ -1346,13 +1358,16 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         ? 'MODERATE'
         : 'LOW';
 
-  const executionState = !result
+  const pageCommand = result ? optionsPageCommand({
+    verdict: result.tradeSnapshot?.verdict,
+    tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+    hasExecutionLevels: !!result.tradeLevels,
+    confidence: result.compositeScore?.confidence,
+  }) : null;
+
+  const executionState = !pageCommand
     ? 'WAIT'
-    : result.entryTiming.urgency === 'no_trade'
-      ? 'NO TRADE'
-      : result.tradeLevels
-        ? 'READY'
-        : 'WAIT';
+    : pageCommand.executionState;
 
   const heatSignalStrip = result ? [
     {
@@ -1382,13 +1397,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     },
   ] : [];
 
-  const commandStatus: 'ACTIVE' | 'WAIT' | 'NO TRADE' = !result
-    ? 'WAIT'
-    : result.entryTiming.urgency === 'no_trade'
-      ? 'NO TRADE'
-      : (result.tradeLevels && (result.compositeScore?.confidence ?? 0) >= 60)
-        ? 'ACTIVE'
-        : 'WAIT';
+  const commandStatus: 'ACTIVE' | 'WAIT' | 'NO TRADE' = pageCommand?.commandStatus ?? 'WAIT';
 
   const institutionalFlowState = !result
     ? 'UNKNOWN'
@@ -1565,7 +1574,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         tradePermission === 'BLOCKED' ? 'Institutional filter is blocking this scenario.' : null,
         commandStatus !== 'ACTIVE' ? 'Scenario is still waiting for confirmation.' : null,
         !result.tradeLevels ? 'No clean reference zone is available yet.' : null,
-        result.entryTiming.urgency === 'no_trade' ? (result.entryTiming.reason || 'Timing model says wait.') : null,
+        pageCommand?.noTrade ? (result.tradeSnapshot?.oneLine || 'Verdict is WAIT.') : null,
         (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'Expected move is elevated; option premium may be less forgiving.' : null,
         dataHealth === 'DELAYED' || dataHealth === 'EOD' || dataHealth === 'STALE' ? 'Data freshness is capped, so size the conclusion down.' : null,
       ].filter(Boolean).slice(0, 3)
@@ -1978,8 +1987,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     const momentumScore = clampScore(
       (result.signalStrength === 'strong' ? 84 :
        result.signalStrength === 'moderate' ? 66 :
-       result.signalStrength === 'weak' ? 48 : 30) +
-      Math.min(14, Math.max(0, result.confluenceStack * 2))
+       result.signalStrength === 'weak' ? 48 : 30)
     );
 
     const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
@@ -2107,7 +2115,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       const conflictCount = result.compositeScore?.conflicts?.length ?? 0;
 
       const highVol = movePct >= 4.8 || (ivRank != null && ivRank >= 72) || flowBurst || hasEventFlag;
-      const trendStrong = result.direction !== 'neutral' && directionScoreAbs >= 35 && confidence >= 62 && result.confluenceStack >= 3;
+      const trendStrong = result.direction !== 'neutral' && directionScoreAbs >= 35 && confidence >= 62;
       const chop = result.direction === 'neutral' || directionScoreAbs < 22 || conflictCount >= 2 || result.signalStrength === 'no_signal';
 
       if (highVol) return 'HIGH_VOL_EVENT_MODE';
@@ -2317,11 +2325,17 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
         {result && !optionsAnalysisBlocked && (
           <DecisionCockpit
-            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.directionStatus === 'unknown' ? 'Direction: unknown' : thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
             center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'SCENARIO ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WATCH'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted" title="Canonical engine verdict for the underlying on daily bars (primary setup grade)">Canonical (daily): {result.canonicalVerdict ? <span className="font-bold text-[var(--msp-text)]">{result.canonicalVerdict.permission} · {result.canonicalVerdict.grade} · {result.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()}{result.canonicalVerdict.direction !== 'neutral' ? ` ${result.canonicalVerdict.direction}` : ''}</span> : 'unavailable'}</div><div className="msp-muted">Options confluence (secondary): {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
+
+        {result && <div className="text-sm text-slate-400">
+          <p>{result.directionStatus === 'unknown' ? 'Direction: unknown' : `Direction: ${result.direction}`} — {result.directionReason}</p>
+          {!!result.unmeasuredTFs?.length && <p>Not measured on this data: {result.unmeasuredTFs.join(', ')}</p>}
+          <p>Timeframe pull (display only, no tested edge)</p>
+        </div>}
 
         {result && !optionsAnalysisBlocked && (
           <SignalRail
@@ -2541,7 +2555,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     <div className="min-w-0">
                       <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Scenario</div>
                       <div className="mt-[0.2rem] text-[1rem] font-black text-slate-100">
-                        {result.symbol} • {thesisDirection.toUpperCase()} • {researchStateLabel}
+                        {result.symbol} • {result.directionStatus === 'unknown' ? 'Direction: unknown' : thesisDirection.toUpperCase()} • {researchStateLabel}
                       </div>
                       <div className="mt-[0.25rem] text-[0.76rem] text-slate-400">
                         {result.tradeSnapshot?.oneLine || `${setupLabel || 'Options setup'} with ${unifiedConfidence}% confluence.`}
@@ -4140,7 +4154,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
               <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 text-violet-400">
                 <span>Confluence Analysis</span>
                 <span className="ml-auto text-[0.7rem] text-slate-500">
-                  {result.confluenceStack} TFs closing together • click to expand
+                  {result.confluenceStack} TFs closing together • close calendar, display only • click to expand
                 </span>
               </summary>
               <div className="confluence-info-row">
@@ -4715,7 +4729,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   </div>
                   
                   <div className="mb-2">
-                    <span className="text-slate-500" title="Options trade quality (legacy options read). The canonical daily verdict is shown in the cockpit.">Options quality (legacy):</span>
+                    <span className="text-slate-500" title="Setup grade (IV, levels, chain quality; timeframes not used)">Setup grade:</span>
                     <span className={`ml-2 font-bold ${gradeClass(result.tradeQuality)}`}>
                       {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
                     </span>
@@ -4749,6 +4763,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
             <div className="card-grid-mobile gap-6">
               <div>
                 <div className="mb-2 font-bold text-violet-500">Time Confluence</div>
+                <p className="mb-2 text-xs text-slate-400">Clock and prior-candle midpoints. Display only; not used in the grade, direction or WAIT decision.</p>
                 <div className="text-[0.85rem] text-slate-400">
                   Scans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.
                 </div>

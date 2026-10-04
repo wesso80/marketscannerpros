@@ -1037,7 +1037,8 @@ export function computeBreakoutReadiness(
     else if (adx > 30) { adxScore = 3; details.push(`ADX ${adx.toFixed(0)} already trending (3/10)`); }
   }
 
-  const total = volComp + timeAlign + gamma + adxScore;
+  details.push(`Time alignment ${timeAlign}/30 (display only; not included in score)`);
+  const total = Math.round((volComp + gamma + adxScore) * 100 / 70);
   let label = 'LOW';
   if (total >= 80) label = 'EXTREME';
   else if (total >= 60) label = 'HIGH';
@@ -1115,7 +1116,8 @@ export function detectVolatilityTrap(
   }
   timeScore = Math.min(TRAP.TIME_CLUSTER_WEIGHT, timeScore);
 
-  const total = compScore + gammaScore + timeScore;
+  components.push(`Time cluster ${timeScore}/30 (display only; not included in score)`);
+  const total = Math.round((compScore + gammaScore) * 100 / 70);
 
   return {
     detected: total >= TRAP.MIN_SCORE,
@@ -1314,7 +1316,7 @@ function assessDataQuality(input: DVEInput): DVEDataQuality {
   }
 
   if (!input.options) { score -= 5; missing.push('options'); }
-  if (!input.time) { score -= 5; missing.push('time'); }
+  // Time is display-only and is not supplied by /api/dve. Do not dock quality for it.
   if (!input.liquidity) { score -= 3; missing.push('liquidity'); }
 
   return { score: clamp(score, 0, 100), missing, warnings };

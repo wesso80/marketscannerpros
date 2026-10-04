@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
   const scoringRegime = mapToScoringRegime(regimeRaw);
   // SQ is the scanner score itself (gating it is circular); components without a real input are unavailable, not defaults.
   const { components, unavailable: unavailableComponents } = estimateComponentsWithAvailability({
-    scannerScore: ctx.pageData?.score ?? ctx.pageData?.confluenceScore ?? undefined,
+    scannerScore: ctx.pageData?.score ?? undefined,
     regime: regimeRaw,
     rsi: ctx.pageData?.rsi,
     cci: ctx.pageData?.cci,

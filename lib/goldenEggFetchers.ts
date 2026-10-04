@@ -1,3 +1,4 @@
+import { isMeasuredLevel } from '@/lib/confluenceMeasured';
 /**
  * Shared data fetchers extracted from golden-egg route.
  * Used by: app/api/golden-egg/route.ts, app/api/dve/route.ts
@@ -501,7 +502,7 @@ export async function fetchMPE(symbol: string, assetClass: string, tcData?: Time
       timePressure.confluenceScore = tcData.confidence ?? 0;
       timePressure.activeTFCount = tcData.scoreBreakdown?.activeTFs ?? 0;
       timePressure.decompressionActiveCount = tcData.decompression?.activeCount ?? 0;
-      timePressure.midpointDebtCount = tcData.mid50Levels?.length ?? 0;
+      timePressure.midpointDebtCount = tcData.mid50Levels?.filter(l => isMeasuredLevel(l.level)).length ?? 0;
       timePressure.hotZoneActive = (timePressure.activeTFCount ?? 0) >= 3;
     } else {
       try {
@@ -510,7 +511,7 @@ export async function fetchMPE(symbol: string, assetClass: string, tcData?: Time
           timePressure.confluenceScore = scan.prediction?.confidence ?? 0;
           timePressure.activeTFCount = scan.scoreBreakdown?.activeTFs ?? 0;
           timePressure.decompressionActiveCount = scan.decompression?.activeCount ?? 0;
-          timePressure.midpointDebtCount = Array.isArray(scan.mid50Levels) ? scan.mid50Levels.length : 0;
+          timePressure.midpointDebtCount = Array.isArray(scan.mid50Levels) ? scan.mid50Levels.filter(l => isMeasuredLevel(l.level)).length : 0;
           timePressure.hotZoneActive = (timePressure.activeTFCount ?? 0) >= 3;
         }
       } catch {}
@@ -595,6 +596,7 @@ export interface TimeConfluenceData {
     hasHigherTF: boolean;
   };
   decompression: {
+    unmeasuredTFs?: string[];
     activeCount: number;
     clusteredCount: number;
     clusteringRatio: number;
@@ -718,6 +720,7 @@ export async function fetchTimeConfluence(symbol: string): Promise<TimeConfluenc
         hasHigherTF: scan.scoreBreakdown.hasHigherTF,
       },
       decompression: {
+        unmeasuredTFs: scan.decompression.unmeasuredTFs ?? [],
         activeCount: scan.decompression.activeCount,
         clusteredCount: scan.decompression.clusteredCount,
         clusteringRatio: scan.decompression.clusteringRatio,

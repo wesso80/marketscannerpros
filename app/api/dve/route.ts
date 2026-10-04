@@ -21,7 +21,6 @@ import {
   fetchOptionsSnapshot,
   fetchMPE,
 } from '@/lib/goldenEggFetchers';
-import { confluenceLearningAgent } from '@/lib/confluence-learning-agent';
 import { getAggregatedFundingRates, getAggregatedOpenInterest } from '@/lib/coingecko';
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput } from '@/lib/directionalVolatilityEngine.types';
@@ -110,21 +109,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 8. Fetch time data
-    let timeData: DVEInput['time'] = undefined;
-    try {
-      const scan = await confluenceLearningAgent.scanHierarchical(
-        symbol, 'intraday_1h', 'extended',
-      );
-      if (scan) {
-        timeData = {
-          activeTFCount: scan.scoreBreakdown?.activeTFs ?? 0,
-          hotZoneActive: (scan.scoreBreakdown?.activeTFs ?? 0) >= 3,
-          confluenceScore: scan.prediction?.confidence ?? 0,
-        };
-      }
-    } catch { /* time data is optional */ }
-
     // 9. Fetch liquidity (crypto only)
     let liqData: DVEInput['liquidity'] = undefined;
     if (assetClass === 'crypto') {
@@ -188,7 +172,6 @@ export async function GET(request: NextRequest) {
         unusualActivity: optsData.unusualActivity,
         sentiment: optsData.sentiment,
       } : undefined,
-      time: timeData,
       liquidity: liqData,
       mpeComposite: mpeData?.composite,
     };

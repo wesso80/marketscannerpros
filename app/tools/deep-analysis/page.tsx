@@ -83,7 +83,7 @@ interface GoldenEggSummary {
   verdict: { assessment: 'ALIGNED' | 'NOT_ALIGNED' | 'WATCH'; direction: 'LONG' | 'SHORT' | 'NEUTRAL'; confluence: number; grade: string; primaryDriver: string; primaryBlocker: string | null; setupType: string; setupNote: string };
   dataTrust: { level: string; label: string; reasons: string[]; freshness: string };
   scores: { structure: number; flow: number; momentum: number; riskQuality: number; notes: { structure: string[]; risk: string[]; flow: string[]; momentum: string[] } };
-  timing: { relation: string; valid: boolean; eligibleForHardGate: boolean; direction: string; signalStrength: string; confidence: number | null; sessionState: string; reasons: string[] };
+  timing: { relation: string; valid: boolean; eligibleForHardGate: boolean; warning?: string | null; direction: string; signalStrength: string; confidence: number | null; sessionState: string; reasons: string[] };
   levels: { reference: { price: number | null; basis: string; label: string }; invalidation: { price: number; basis: string; label: string; distanceAtr: number | null }; zones: Array<{ price: number; basis: string; label: string; rMultiple: number | null }>; illustrativeR: number | null };
   confirmation: string[];
   invalidation: string[];
@@ -95,7 +95,7 @@ interface GoldenEggSummary {
   timeframe: string;
   /** Canonical engine verdict (primary). Absent on packets built before the canonical engine. */
   canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; coverage: number; blockReasons?: Array<{ code: string; message: string }>; watchReasons?: Array<{ code: string; message: string }> } | null;
-  /** Legacy confluence read (secondary). */
+  /** Indicator composite read (secondary). */
   legacyConfluence?: { assessment: string; direction: string; grade: string; confluenceScore: number } | null;
 }
 
@@ -949,9 +949,9 @@ export default function DeepAnalysisPage({
                         : ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}${cautionTags(ge.canonicalVerdict).map((t) => ` · ${t}`).join('')}`, geColor] as [string, string, string],
                       ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', calibrationSummary(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
                       ...(gradeRelativeNote(ge.canonicalVerdict) ? [['How to read the grade', gradeRelativeNote(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
-                      ['Legacy confluence (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
+                      ['Indicator composite (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
                     ]
-                  : [['Confluence (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
+                  : [['Indicator composite (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
                 ['Bias & setup', `${ge.verdict.direction === 'LONG' ? 'Bullish' : ge.verdict.direction === 'SHORT' ? 'Bearish' : 'Neutral'} · ${ge.verdict.setupType.replace('_', ' ')}`, geDirColor],
                 noQualifyingSetup
                   ? ['Primary blocker', 'None — no setup to block (see Canonical setup)', 'var(--msp-text-muted)']
@@ -1368,7 +1368,7 @@ export default function DeepAnalysisPage({
                         </div>
                       ))}
                       <div style={{ padding: '0.75rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, fontSize: '0.8rem', color: '#FCD34D' }}>
-                        Time confluence: <strong>{ge.timing.relation}</strong> ({ge.timing.direction}, {ge.timing.signalStrength}{ge.timing.confidence != null ? `, ${ge.timing.confidence}%` : ''}; session {ge.timing.sessionState}; {ge.timing.eligibleForHardGate ? 'gates the verdict' : 'not gating'}). {ge.timing.reasons.join(' · ')}
+                        Time confluence: <strong>{ge.timing.relation}</strong> ({ge.timing.direction}, {ge.timing.signalStrength}{ge.timing.confidence != null ? `, ${ge.timing.confidence}%` : ''}; session {ge.timing.sessionState}; display only; never gates the verdict). {ge.timing.reasons.join(' · ')}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Extension: {ge.extension.label}{ge.extension.dveExhaustion != null ? ` · DVE exhaustion ${Math.round(ge.extension.dveExhaustion)}/100` : ''} · Cross-market: {ge.crossMarket.alignment} — {ge.crossMarket.summary}</div>
                     </div>

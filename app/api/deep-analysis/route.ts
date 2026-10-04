@@ -92,7 +92,7 @@ function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, 
   else if (c.scores.flow < 50) against.push(`Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning not supportive'}`);
   if (c.indicators.ema200 != null) (c.price > c.indicators.ema200 === (dir !== 'SHORT') ? supports : against).push(`Price ${c.price > c.indicators.ema200 ? 'above' : 'below'} EMA200 ${fmtPx(c.indicators.ema200)}`);
   if (c.extension.label !== 'normal') against.push(`Extension ${c.extension.label} — RSI ${fmtNum(c.indicators.rsi, 1)}, stochastic ${fmtNum(c.indicators.stochK, 0)}${c.extension.dveExhaustion != null && c.extension.dveExhaustion >= 60 ? `, DVE exhaustion ${Math.round(c.extension.dveExhaustion)}/100` : ''}`);
-  if (c.timing.relation === 'conflict') against.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read${c.timing.eligibleForHardGate ? ' and gates the verdict' : ' — below hard-gate thresholds'}`);
+  if (c.timing.relation === 'conflict') against.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read — display only, never gates the verdict`);
   if (c.timing.relation === 'supportive') supports.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) agrees`);
   if (c.crossMarket.alignment === 'supportive') supports.push(`Cross-market supportive — ${c.crossMarket.summary}`);
   if (c.crossMarket.alignment === 'headwind') against.push(`Cross-market headwind — ${c.crossMarket.summary}`);
@@ -110,13 +110,13 @@ function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, 
   if (fundamentals?.nextEarningsDate) catalysts.push(`[EVENT_RISK] Next earnings ${fundamentals.nextEarningsDate}${fundamentals.daysToEarnings != null ? ` (${fundamentals.daysToEarnings} days)` : ''}`);
   const changesView = [
     ...c.invalidation.map((t) => `Weakens: ${t}`),
-    ...(c.timing.relation === 'conflict' ? ['Strengthens: time confluence flipping to agree or falling below gate thresholds'] : []),
+    ...(c.timing.relation === 'conflict' ? ['Timing note only: midpoint pull does not change the verdict'] : []),
     ...(c.scores.flow < 60 ? ['Strengthens: positioning turning supportive (P/C or funding moving with the direction)'] : []),
     ...(c.dataTrust.level !== 'GOOD' ? ['Strengthens: data trust returning to GOOD'] : []),
   ];
   const assess = c.verdict.assessment === 'ALIGNED' ? 'aligned' : c.verdict.assessment === 'NOT_ALIGNED' ? 'not aligned' : 'in watch mode';
   return {
-    thesis: `${c.symbol} (${c.assetClass}, ${c.timeframe}) is ${assess} with a ${dirWord} bias: ${c.verdict.setupType.replace('_', ' ')} setup — ${c.verdict.setupNote}. Confluence ${c.verdict.confluence}/100 (evidence alignment, not a probability).`,
+    thesis: `${c.symbol} (${c.assetClass}, ${c.timeframe}) is ${assess} with a ${dirWord} bias: ${c.verdict.setupType.replace('_', ' ')} setup — ${c.verdict.setupNote}. Indicator composite ${c.verdict.confluence}/100 (evidence alignment, not a probability).`,
     supports: supports.length ? supports : ['No component clears the supportive threshold.'],
     against: against.length ? against : ['No material evidence against the read at current inputs.'],
     primaryBlocker: c.verdict.primaryBlocker ?? 'None flagged by the Golden Egg engine.',
@@ -140,9 +140,9 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
       // No setup: score 0 / grade F are engine placeholders — don't hand them to the model as a score and a grade.
       L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): NO QUALIFYING SETUP on this bar (no setup score or grade applies; not a data problem)${none.detail ? ` · ${none.detail}` : ''}.`);
     } else L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): ${cv.permission} · ${cv.setupType} · direction ${cv.direction} · ${none ? 'no setup' : `setup score ${cv.score}/100 · grade ${cv.grade}`}${why ? ` · reasons: ${why}` : ''}${cv.levels ? ` · levels entry ${fmtPx(cv.levels.entry)} / invalidation ${fmtPx(cv.levels.invalidation)} / target ${fmtPx(cv.levels.target)} [${targetBasisLabel(cv.levels)}] (R:R ${cv.levels.riskReward})` : ''}.`);
-    L.push(`Legacy confluence (secondary, do not present as the verdict): ${ge.legacyConfluence?.assessment ?? 'n/a'} ${ge.legacyConfluence?.direction ?? ''} · ${c.verdict.confluence}/100 evidence alignment (NOT a probability) · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}.`);
+    L.push(`Indicator composite (secondary, do not present as the verdict): ${ge.legacyConfluence?.assessment ?? 'n/a'} ${ge.legacyConfluence?.direction ?? ''} · ${c.verdict.confluence}/100 evidence alignment (NOT a probability) · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}.`);
   } else {
-    L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · confluence ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
+    L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · indicator composite ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
   }
   L.push(`Setup: ${c.verdict.setupType} — ${c.verdict.setupNote}`);
   L.push(`Primary driver: ${c.verdict.primaryDriver}`);
@@ -156,7 +156,7 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
   L.push(`Extension: ${c.extension.label}; RSI extended ${c.extension.rsiExtended}; stochastic extended ${c.extension.stochExtended}; DVE exhaustion ${c.extension.dveExhaustion ?? 'n/a'}/100; DVE signal ${c.extension.dveSignal ?? 'none'}${c.extension.dveSignalStrength ? ` (strength ${c.extension.dveSignalStrength})` : ''}.`);
   L.push(`Data trust: ${c.dataTrust.label}${c.dataTrust.reasons.length ? ` — ${c.dataTrust.reasons.join('; ')}` : ''}; freshness ${c.dataTrust.freshness}.`);
   L.push(`Liquidity: avg dollar volume ${c.liquidity.advUsd != null ? formatUsdShort(c.liquidity.advUsd) : 'n/a'} (${c.liquidity.volumeBasis ?? 'n/a'}).`);
-  L.push(`Time confluence: relation ${c.timing.relation}, valid ${c.timing.valid}, hard-gate eligible ${c.timing.eligibleForHardGate}, direction ${c.timing.direction}, strength ${c.timing.signalStrength}, session ${c.timing.sessionState}. ${c.timing.reasons.join('; ')}`);
+  L.push(`Time confluence: relation ${c.timing.relation}, valid ${c.timing.valid}, display only (never gates the verdict), direction ${c.timing.direction}, strength ${c.timing.signalStrength}, session ${c.timing.sessionState}. ${c.timing.reasons.join('; ')}`);
   L.push(`Cross-market (${c.crossMarket.alignment}): ${c.crossMarket.summary}`);
   for (const i of c.crossMarket.items) L.push(`  ${i.symbol} ${i.label}: ${i.trend} — ${i.detail} → ${i.relation}`);
   if (c.derivatives) L.push(`Derivatives: funding, annualisation and crowding unavailable (funding periods not supplied). Sampled OI ${formatUsdShort(c.derivatives.openInterestUsd)}, perp volume ${formatUsdShort(c.derivatives.perpVolume24hUsd)}, ${c.derivatives.exchanges} venues. ${c.derivatives.note}`);
@@ -188,7 +188,7 @@ HARD RULES
 - Use ONLY the numbers and statements in the packet. Do not invent catalysts, earnings facts, institutional activity, support/resistance, analyst views, probabilities or news. If something is not in the packet, say it is not available.
 - The Golden Egg verdict, direction, blocker and levels are canonical. You may add nuance, but if you disagree you must say exactly which packet fact drives the disagreement.
 - ADX measures trend STRENGTH, never direction. RSI/stochastic extremes mean strong momentum AND extension risk at the same time.
-- Confluence is evidence alignment, not a probability. Never use "high probability", "likely to rally", "should break out", "expected to rise", "strong chance" or any win-rate language.
+- Indicator composite is evidence alignment, not a probability. Never use "high probability", "likely to rally", "should break out", "expected to rise", "strong chance" or any win-rate language.
 - No trade instructions, no BUY/SELL/HOLD, no "traders should". Conditional research language only ("if X prints, the read strengthens").
 - Analyst targets and consensus are context, not signals. Catalysts keep the class given in the packet (POSITIVE / NEGATIVE / MIXED / NEUTRAL / EVENT_RISK); a capital raise is not bullish because it is news.
 - When the packet says data trust is not GOOD, say so in the thesis and keep every conclusion tentative.

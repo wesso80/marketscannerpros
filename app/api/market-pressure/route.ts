@@ -1,3 +1,4 @@
+import { isMeasuredLevel } from '@/lib/confluenceMeasured';
 /**
  * Market Pressure Engine API
  *
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
         timePressure.activeTFCount = scanResult.scoreBreakdown?.activeTFs ?? 0;
         timePressure.decompressionActiveCount = scanResult.decompression?.activeCount ?? 0;
         timePressure.midpointDebtCount = Array.isArray(scanResult.mid50Levels)
-          ? scanResult.mid50Levels.length
+          ? scanResult.mid50Levels.filter(l => isMeasuredLevel(l.level)).length
           : 0;
         timePressure.hotZoneActive = (timePressure.activeTFCount ?? 0) >= 3;
       }
@@ -193,6 +194,7 @@ export async function GET(request: NextRequest) {
     };
 
     const reading = computeMarketPressure(mpeInput);
+    reading.summary += ' • Time pressure is shown for reference and is not part of the composite.';
 
     const result = {
       success: true,

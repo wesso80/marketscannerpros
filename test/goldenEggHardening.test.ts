@@ -5,7 +5,7 @@ vi.mock('@/lib/coingecko', () => ({
   getAggregatedFundingRates: vi.fn(), getAggregatedOpenInterest: vi.fn(), getGlobalData: vi.fn(),
 }));
 
-import { assessTimingEvidence, sanitizeTimeConfluence, timingVerdict, describeLevelRelation, TIMING_HARD_GATE } from '../lib/goldenEgg/timing';
+import { assessTimingEvidence, sanitizeTimeConfluence, timingVerdict, describeLevelRelation, TIMING_WARNING } from '../lib/goldenEgg/timing';
 import { fetchCryptoDerivatives, type TimeConfluenceData } from '../lib/goldenEggFetchers';
 import { getAggregatedOpenInterest } from '../lib/coingecko';
 import { adxStrength, rsiRead, dveStrengthLabel, classifySetup, computeRiskQuality, computeStructureQuality } from '../lib/goldenEgg/semantics';
@@ -67,7 +67,8 @@ describe('time confluence policy (Part A)', () => {
   it('LONG mapping: bearish timing = conflict, bullish timing = supportive', () => {
     const conflict = assessTimingEvidence({ tc: strong(), setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true });
     expect(conflict.relation).toBe('conflict');
-    expect(conflict.eligibleForHardGate).toBe(true);
+    expect(conflict.eligibleForHardGate).toBe(false);
+    expect(conflict.warning).toMatch(/no tested edge/);
     expect(timingVerdict(conflict)).toBe('disagree');
     const bull = assessTimingEvidence({ tc: { ...strong(), direction: 'bullish', scoreBreakdown: { ...strong().scoreBreakdown, directionScore: 70 } }, setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true });
     expect(bull.relation).toBe('supportive');
@@ -88,14 +89,17 @@ describe('time confluence policy (Part A)', () => {
     expect(timingVerdict(a)).toBe('neutral');
   });
 
-  it('hard-gate eligibility requires moderate/strong, current, confident, multi-TF conflict', () => {
+  it('timing warning requires moderate/strong, current, confident, multi-TF conflict', () => {
     const weak = assessTimingEvidence({ tc: { ...strong(), signalStrength: 'weak' }, setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true });
     expect(weak.relation).toBe('conflict');
     expect(weak.eligibleForHardGate).toBe(false);
-    const stale = assessTimingEvidence({ tc: strong(), setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true, scanAgeMs: TIMING_HARD_GATE.maxAgeMs + 1 });
+    expect(weak.warning).toBeNull();
+    const stale = assessTimingEvidence({ tc: strong(), setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true, scanAgeMs: TIMING_WARNING.maxAgeMs + 1 });
     expect(stale.eligibleForHardGate).toBe(false);
+    expect(stale.warning).toBeNull();
     const fewTfs = assessTimingEvidence({ tc: { ...strong(), scoreBreakdown: { ...strong().scoreBreakdown, activeTFs: 2 } }, setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true });
     expect(fewTfs.eligibleForHardGate).toBe(false);
+    expect(fewTfs.warning).toBeNull();
     const s = sanitizeTimeConfluence({ ...strong(), signalStrength: 'weak' }, { assetClass: 'crypto', sessionOpen: true });
     expect(s.banners).toEqual([]);
   });

@@ -271,8 +271,7 @@ export async function POST(request: NextRequest) {
     const staleSeconds = Number.isFinite(lastUpdated)
       ? Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))
       : 9999;
-    const tfConfluenceScoreRaw = Number(analysis.compositeScore?.alignedWeightPct ?? analysis.compositeScore?.confidence ?? 50);
-    const tfConfluenceScore = Number.isFinite(tfConfluenceScoreRaw) ? Math.max(0, Math.min(100, tfConfluenceScoreRaw)) : 50;
+    const tfConfluenceScore = 50; // Neutral: multi-TF is not measured for grading.
     const regimeAlignment = analysis.aiMarketState?.tradeQualityGate === 'HIGH'
       ? 0.9
       : analysis.aiMarketState?.tradeQualityGate === 'MODERATE'

@@ -5,6 +5,7 @@
    Real API data: /api/golden-egg + /api/dve + /api/quote
    --------------------------------------------------------------------------- */
 
+import { CANONICAL_SETUP_TOOLTIP, INDICATOR_COMPOSITE_LABEL, INDICATOR_COMPOSITE_TOOLTIP, TIMEFRAME_PULL_LABEL, CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { parseResearchTimeframe } from '@/lib/researchContext';
@@ -300,7 +301,7 @@ function geMissingInputs(input: { price?: number | null; confluence?: number | n
 }
 
 function geDataQualityDetail(label: string, missing: string[]): string {
-  if (label === 'GOOD') return 'Price, assessment, confluence, reference level, and invalidation level are available.';
+  if (label === 'GOOD') return 'Price, assessment, indicator composite, reference level, and invalidation level are available.';
   if (missing.length === 0) return `${label} Golden Egg inputs.`;
   return `Missing or weak: ${missing.join(', ')}.`;
 }
@@ -311,8 +312,8 @@ function summarizeGENextCheck(args: { dataQuality: string; hasScenarioLevels: bo
   if (args.primaryBlocker) return `Review blocker: ${args.primaryBlocker}.`;
   if (args.crossMarket === 'headwind') return 'Check whether cross-market headwinds ease before treating the setup as clean.';
   if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Wait for assessment to move from watch/mixed into aligned.';
-  if (args.confluence < 70) return 'Watch for confluence to improve above the high-conviction threshold.';
-  return 'Monitor whether price respects the reference level and confluence holds.';
+  if (args.confluence < 70) return 'Indicator composite is below 70/100.';
+  return 'Monitor whether price respects the reference level and indicator composite holds.';
 }
 
 function assessmentDisplayLabel(assessment?: string | null): string {
@@ -329,8 +330,8 @@ function summarizeGEReason(args: { direction?: string | null; setupType?: string
   const direction = args.direction ? `${args.direction.toLowerCase()} ` : '';
   const setup = args.setupType ? args.setupType.replace(/_/g, ' ') : 'setup';
   if (args.crossMarket === 'headwind') return `${direction}${setup} is present, but cross-market conditions are a headwind.`;
-  if (args.confluence >= 70) return `${direction}${setup} has high confluence with no primary blocker flagged.`;
-  return `${direction}${setup} is forming, but confluence is still below high-conviction threshold.`;
+  if (args.confluence >= 70) return `${direction}${setup} has an indicator composite of at least 70/100 with no primary blocker flagged.`;
+  return `${direction}${setup} is forming, but indicator composite is still below 70/100.`;
 }
 
 function summarizeGEResearchCaution(args: { dataQuality: string; hasScenarioLevels: boolean; assessment?: string | null; confluence: number; primaryBlocker?: string | null }) {
@@ -338,7 +339,7 @@ function summarizeGEResearchCaution(args: { dataQuality: string; hasScenarioLeve
   if (!args.hasScenarioLevels) return 'Research caution: reference and invalidation levels are not both available.';
   if (args.primaryBlocker) return `Research caution: blocker still present — ${args.primaryBlocker}.`;
   if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Research caution: Golden Egg assessment is not scenario aligned.';
-  if (args.confluence < 70) return 'Research caution: confluence remains below the high-conviction threshold.';
+  if (args.confluence < 70) return 'Research caution: indicator composite remains below 70/100.';
   return 'Research caution: verify whether price interaction confirms or rejects the scenario.';
 }
 
@@ -346,11 +347,11 @@ function buildGEInvalidationConditions(args: { confluence: number; dataQuality: 
   return [
     'Reference or invalidation level becomes unavailable.',
     args.dataQuality !== 'GOOD' ? 'Data trust remains degraded or missing.' : null,
-    args.confluence < 60 ? 'Confluence remains below 60/100.' : 'Confluence drops below 60/100.',
+    args.confluence < 60 ? 'Indicator composite remains below 60/100.' : 'Indicator composite drops below 60/100.',
     args.primaryBlocker ? `Primary blocker persists: ${args.primaryBlocker}.` : null,
     args.crossMarket === 'headwind' ? 'Cross-market conditions remain a headwind.' : 'Cross-market conditions flip to headwind.',
     args.dveRegime === 'climax' ? 'DVE remains in climax risk.' : 'DVE flips into climax risk.',
-    args.timeVerdict === 'disagree' ? 'Time confluence remains opposed.' : 'Time confluence flips to disagreement.',
+    args.timeVerdict === 'disagree' ? 'Timing note only: midpoint pull remains opposed; does not change the verdict.' : 'Timing note only: midpoint pull may disagree; does not change the verdict.',
   ].filter(Boolean) as string[];
 }
 
@@ -425,7 +426,7 @@ export default function GoldenEggPage() {
   const geWarnings = ((goldenEgg.data as any)?.warnings || []) as string[];
   const geAssessment = ge?.layer1?.assessment;
   const geConfluenceScore = ge?.layer1?.confluenceScore ?? ge?.layer1?.confidence ?? 0;
-  // Canonical engine verdict (primary). The confluence score above is the secondary "legacy confluence" when present.
+  // Canonical engine verdict (primary). The confluence score above is the secondary "indicator composite" when present.
   const geEngine = ge?.canonicalVerdict ?? null;
   const geSetupLabel = geEngine ? geEngine.setupType.replace(/_/g, ' ').toLowerCase() : null;
   // No canonical setup on this bar: the engine's score 0 / grade F are placeholders, so show "No qualifying setup" and
@@ -582,7 +583,7 @@ export default function GoldenEggPage() {
   const geAiSummary = useMemo(() => {
     if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
     if (!ge) return `Golden Egg: Loading ${sym}...`;
-    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Confluence: ${geConfluenceScore}/100`;
+    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Indicator composite: ${geConfluenceScore}/100`;
   }, [sym, ge, geAssessment, geConfluenceScore, goldenEgg.error]);
 
   useRegisterPageData('deep_analysis', geAiData, [sym], geAiSummary);
@@ -609,7 +610,7 @@ export default function GoldenEggPage() {
           truthLayer: {
             whatWeKnow: [
               `Golden Egg assessment is ${geAssessment ?? 'unknown'}.`,
-              `Confluence score is ${geConfluenceScore}/100.`,
+              `Indicator composite score is ${geConfluenceScore}/100.`,
               ge.layer1?.primaryDriver ? `Primary driver: ${ge.layer1.primaryDriver}.` : null,
             ].filter(Boolean),
             whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice }),
@@ -653,7 +654,7 @@ export default function GoldenEggPage() {
         eyebrow="Golden Egg validation workbench"
         badges={[
           ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : []),
-          ...(ge && geEngine ? [{ label: geNoQualifyingSetup ? 'Canonical: no qualifying setup' : `Canonical ${geEngine.permission} · grade ${geEngine.grade}` }, { label: `Legacy confluence ${geConfluenceScore}/100` }] : ge ? [{ label: `Confluence ${geConfluenceScore}/100` }] : []),
+          ...(ge && geEngine ? [{ label: geNoQualifyingSetup ? 'Canonical: no qualifying setup' : `Canonical ${geEngine.permission} · grade ${geEngine.grade}` }, { label: `Indicator composite ${geConfluenceScore}/100` }] : ge ? [{ label: `Indicator composite ${geConfluenceScore}/100` }] : []),
           { label: `Data ${geDataQuality}` },
           ...GOLDEN_EGG_WORKFLOW_CHECKS.map((c) => ({ label: c })),
         ]}
@@ -667,7 +668,7 @@ export default function GoldenEggPage() {
         metrics={[
           { label: 'Symbol', value: sym, tone: 'warn', detail: 'Single-symbol validation' },
           { label: 'Assessment', value: ge ? geAssessmentLabel : goldenEgg.error ? 'Unavailable' : loading ? 'Loading' : 'Awaiting data', tone: geNoQualifyingSetup ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'Provider request failed' : geNoSetup ? `Canonical: ${geNoSetup.headline}${geNoSetup.detail ? ` — ${geNoSetup.detail}` : ''}` : geEngine ? `Canonical ${geSetupLabel} · score ${geEngine.score} · grade ${geEngine.grade}` : 'Verdict packet' },
-          { label: geEngine ? 'Legacy confluence' : 'Confluence', value: ge ? `${geConfluenceScore}/100` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geEngine ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : geEngine ? 'Secondary — v2 evidence alignment, not the verdict' : 'Evidence alignment' },
+          { label: INDICATOR_COMPOSITE_LABEL, value: ge ? `${geConfluenceScore}/100` : goldenEgg.error ? 'Unavailable' : 'Pending', tone: geEngine ? 'warn' : geAssessment === 'ALIGNED' ? 'bull' : geAssessment === 'NOT_ALIGNED' || goldenEgg.error ? 'bear' : 'warn', detail: goldenEgg.error ? 'No validated confluence packet' : geEngine ? 'Secondary — v2 evidence alignment, not the verdict' : 'Evidence alignment' },
           { label: 'Data trust', value: geDataQuality, tone: geDataQuality === 'GOOD' ? 'bull' : geDataQuality === 'DEGRADED' ? 'warn' : 'bear', detail: geDataQualityTitle, title: geDataQualityTitle },
         ]}
       />
@@ -749,13 +750,13 @@ export default function GoldenEggPage() {
         <Card>
           <div className="mx-auto max-w-xl py-8 text-center">
             <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
-            <h2 className="text-xl font-bold text-white">Unlock Golden Egg confluence analysis</h2>
+            <h2 className="text-xl font-bold text-white">Unlock Golden Egg indicator analysis</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-              Golden Egg is a Pro workflow for reviewing one symbol across regime, confluence, volatility, and educational scenario context.
+              Golden Egg is a Pro workflow for reviewing one symbol across regime, indicators, volatility, and educational scenario context.
             </p>
             <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Regime and bias context</div>
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Confluence and data-quality checks</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Indicator composite and data-quality checks</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Scenario reference and invalidation levels</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, flow, and timing context</div>
             </div>
@@ -929,7 +930,7 @@ export default function GoldenEggPage() {
                     <div className="text-[11px] text-slate-500 uppercase">Assessment</div>
                   </div>
                   {geEngine ? (
-                    <div className="text-center max-w-xs" title="Canonical setup: calibrated percentile of expected R (daily equity/crypto) or uncalibrated factor alignment; legacy confluence is shown underneath as a secondary read">
+                    <div className="text-center max-w-xs" title={CANONICAL_SETUP_TOOLTIP}>
                       {geNoSetup ? (
                         <>
                           <div className="text-xl font-bold" style={{ color: geNoQualifyingSetup ? 'var(--msp-text-muted)' : verdictColor(geAssessment || 'WATCH') }} data-testid="ge-no-setup">{geNoSetup.headline}</div>
@@ -945,12 +946,12 @@ export default function GoldenEggPage() {
                       {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{NO_EDGE_BANNER}</div> : null}
                       {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{calibrationSummary(geEngine)}</div> : null}
                       {gradeRelativeNote(geEngine) ? <div className="text-[10px] text-slate-400" data-testid="ge-grade-relative">{gradeRelativeNote(geEngine)}</div> : null}
-                      <div className="text-[10px] text-slate-500">Legacy confluence {geConfluenceScore}/100</div>
+                      <div className="text-[10px] text-slate-500" title={INDICATOR_COMPOSITE_TOOLTIP}>{INDICATOR_COMPOSITE_LABEL} {geConfluenceScore}/100</div>
                     </div>
                   ) : (
                     <div className="text-center">
                       <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{geConfluenceScore}/100</div>
-                      <div className="text-[11px] text-slate-500 uppercase">Confluence</div>
+                      <div className="text-[11px] text-slate-500 uppercase" title={INDICATOR_COMPOSITE_TOOLTIP}>{INDICATOR_COMPOSITE_LABEL}</div>
                     </div>
                   )}
                   <ScoreTypeBadge
@@ -1177,7 +1178,7 @@ export default function GoldenEggPage() {
               ))}
             </div>
             <div className="mt-3 pt-2 border-t border-slate-800/50 text-[11px] text-slate-500">
-              Reference-market reads describe context for the symbol's direction; they are not folded into the confluence number.
+              Reference-market reads describe context for the symbol's direction; they are not folded into the indicator composite number.
             </div>
               </div>
             </details>
@@ -1258,7 +1259,7 @@ export default function GoldenEggPage() {
 
             {/* -- TIMING -------------------------------- */}
             <Card>
-              <h3 className="text-xs font-semibold text-emerald-400 mb-3">Timing</h3>
+              <h3 className="text-xs font-semibold text-emerald-400 mb-3" title={TIMING_TOOLTIP}>Timeframe pull and close calendar (display only)</h3>
               {ge.layer3.timeConfluence?.enabled ? (() => {
                 const tc = ge.layer3.timeConfluence;
                 const fmtPrice = (v: number) => `$${fmtP(v)}`;
@@ -1323,10 +1324,11 @@ export default function GoldenEggPage() {
                       </div>
                     )}
 
-                    {/* Confluence + Score Breakdown */}
+                    {tc.decompression.unmeasuredTFs?.length ? <p className="text-xs text-slate-500">Not measured on this data: {tc.decompression.unmeasuredTFs.join(', ')}. Excluded from counts and levels.</p> : null}
+                    {/* Timeframe pull + Score Breakdown */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                        <div className="text-[11px] text-slate-500">Confluence</div>
+                        <div className="text-[11px] text-slate-500" title={TIMING_TOOLTIP}>{TIMEFRAME_PULL_LABEL}</div>
                         <div className="text-sm font-bold text-white">{tc.confidence}/100</div>
                         <ScoreBar value={tc.confidence} color="#10B981" />
                       </div>
@@ -1399,7 +1401,7 @@ export default function GoldenEggPage() {
 
                     {/* Candle Close Confluence */}
                     <div>
-                      <div className="text-[11px] text-slate-500 uppercase mb-1">Candle Close Confluence</div>
+                      <div className="text-[11px] text-slate-500 uppercase mb-1" title={TIMING_TOOLTIP}>{CLOSE_CALENDAR_LABEL}</div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-white">{tc.candleCloseConfluence.confluenceScore}/100</span>
                         <Badge label={tc.candleCloseConfluence.confluenceRating} color={
@@ -1411,8 +1413,8 @@ export default function GoldenEggPage() {
                           <span className="text-[11px] text-yellow-400">Now: {tc.candleCloseConfluence.closingNowCount} TFs closing</span>
                         )}
                       </div>
-                      {tc.candleCloseConfluence.isMonthEnd && <div className="text-[11px] text-yellow-400 mt-0.5">Month-end confluence</div>}
-                      {tc.candleCloseConfluence.isWeekEnd && <div className="text-[11px] text-blue-400 mt-0.5">Week-end confluence</div>}
+                      {tc.candleCloseConfluence.isMonthEnd && <div className="text-[11px] text-yellow-400 mt-0.5">Month-end calendar</div>}
+                      {tc.candleCloseConfluence.isWeekEnd && <div className="text-[11px] text-blue-400 mt-0.5">Week-end calendar</div>}
                     </div>
 
                     {/* Scenario */}
@@ -1434,7 +1436,7 @@ export default function GoldenEggPage() {
                   </div>
                 );
               })() : (
-                <div className="text-xs text-slate-500 py-4 text-center">Time confluence data not available</div>
+                <div className="text-xs text-slate-500 py-4 text-center">Timeframe pull and close calendar unavailable</div>
               )}
             </Card>
 

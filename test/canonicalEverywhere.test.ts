@@ -183,7 +183,7 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     expect(out.canonical!.levels.zones[0]).toMatchObject({ price: 108, rMultiple: 2 });
     expect(out.canonical!.confirmation[0]).toMatch(/long setup holds while price stays above 96/);
     expect(out.legacyConfluence!.levels!.invalidation.price).toBe(104);
-    expect(out.layer3.narrative.summary).toBe('TEST: a long pullback setup qualifies (grade A). The older confluence model scores it 41/100 with a bearish lean (secondary context only).');
+    expect(out.layer3.narrative.summary).toBe('TEST: a long pullback setup qualifies (grade A). The indicator composite scores it 41/100 with a bearish lean (secondary context only).');
   });
 
   it('BLOCK: reasons become the primary blocker / flip conditions; grade F; lifecycle maps to NOT_ALIGNED', () => {
@@ -193,9 +193,9 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     expect(out.layer1.flipConditions.map((f) => f.text)).toEqual(['NO_SETUP: No eligible setup']);
     expect(out.canonical!.verdict.setupType).toBe('trend'); // NONE keeps the legacy setup label
     expect(out.canonical!.confirmation[0]).toMatch(/No canonical setup is eligible/);
-    expect(out.canonical!.levels.reference.label).toMatch(/^Legacy confluence: /);
+    expect(out.canonical!.levels.reference.label).toMatch(/^Indicator composite: /);
     // RS-3: a plain sentence, no raw engine labels.
-    expect(out.layer3.narrative.summary).toBe('TEST: there is no qualifying setup right now. The older confluence model scores it 41/100 with a bearish lean (secondary context only).');
+    expect(out.layer3.narrative.summary).toBe('TEST: there is no qualifying setup right now. The indicator composite scores it 41/100 with a bearish lean (secondary context only).');
     expect(out.layer3.narrative.summary).not.toMatch(/canonical verdict|BLOCK|grade F|NO_SETUP|·/);
     // No canonical setup: the scenario is left to the legacy engine.
     expect(out.layer2.scenario.referenceTrigger).toBe('Close above BB Upper 107');
@@ -237,7 +237,7 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     // Setup panel invalidation text
     expect(out.layer2.setup.invalidation).toBe('The canonical short setup is invalidated by a close above 104.5.');
     // RS-13 follow-up: the Setup thesis leads with the canonical short, legacy text kept only as secondary context.
-    expect(out.layer2.setup.thesis).toBe('TEST: the canonical engine reads a short exhaustion fade setup (score 95/100, qualifies). Older confluence model (secondary context only): legacy thesis');
+    expect(out.layer2.setup.thesis).toBe('TEST: the canonical engine reads a short exhaustion fade setup (score 95/100, qualifies). Indicator composite (secondary context only): legacy thesis');
     // Deep Analysis packet
     const pk = out.canonical!;
     expect(pk.levels.invalidation.price).toBeGreaterThan(price);
@@ -258,7 +258,7 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
       p.layer1.direction = legacyDir;
       p.layer2.setup.thesis = legacyThesis;
       const t = applyCanonicalToGoldenEgg(p, short).layer2.setup.thesis;
-      expect(t).toBe('TEST: the canonical engine reads a short exhaustion fade setup (score 88/100, qualifies). ADX 17 weak trend. Options positioning is bullish (P/C 0.62 on 2026-10-02). Market pressure is 64/100. Time confluence is bullish with strong signal strength, against the canonical short. The older confluence model read a bullish range-bound setup (no trend strength (ADX 17)) (secondary context only).');
+      expect(t).toBe('TEST: the canonical engine reads a short exhaustion fade setup (score 88/100, qualifies). ADX 17 weak trend. Options positioning is bullish (P/C 0.62 on 2026-10-02). Market pressure is 64/100. Time confluence is bullish with strong signal strength, against the canonical short. The indicator composite read a bullish range-bound setup (no trend strength (ADX 17)) (secondary context only).');
       expect(t).not.toMatch(/supports the thesis|TEST shows a bullish/);
     }
     // Same direction: the legacy thesis is left alone.
@@ -273,7 +273,7 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     const tn = applyCanonicalToGoldenEgg(q, none).layer2.setup.thesis;
     expect(tn).toMatch(/^TEST: no canonical setup qualifies right now, so there is no directional thesis\. /);
     expect(tn).toContain('Time confluence is bullish with strong signal strength.');
-    expect(tn).toMatch(/The older confluence model read a bullish range-bound setup .* \(secondary context only\)\.$/);
+    expect(tn).toMatch(/The indicator composite read a bullish range-bound setup .* \(secondary context only\)\.$/);
   });
 
   it('RS-13: a canonical long puts the stop below price and the target above it', () => {
@@ -299,14 +299,14 @@ describe('Golden Egg: canonical verdict is primary, confluence is secondary', ()
     const blocked = result({ permission: 'BLOCK', grade: 'F', direction: 'short', setupType: 'SQUEEZE', score: 60, watchReasons: [], levels: null,
       blockReasons: [{ code: 'EARNINGS_IN_WINDOW', message: 'Earnings 2026-10-01 (in 3d) inside the 10-day holding window' }] });
     const s1 = canonicalNarrativeSummary('AAPL', blocked, { confluenceScore: 62, direction: 'LONG' });
-    expect(s1).toBe('AAPL: a short squeeze setup was found but is blocked — Earnings 2026-10-01 (in 3d) inside the 10-day holding window. The older confluence model scores it 62/100 with a bullish lean (secondary context only).');
+    expect(s1).toBe('AAPL: a short squeeze setup was found but is blocked — Earnings 2026-10-01 (in 3d) inside the 10-day holding window. The indicator composite scores it 62/100 with a bullish lean (secondary context only).');
     const hard = result({ permission: 'BLOCK', grade: 'F', direction: 'neutral', setupType: 'NONE', score: 0, watchReasons: [], levels: null,
       blockReasons: [{ code: 'STALE_DATA', message: 'Golden Egg data trust is STALE' }, { code: 'NO_SETUP', message: 'No eligible setup (closest: pullback long, score 48)' }] });
     const s2 = canonicalNarrativeSummary('AAPL', hard, { confluenceScore: 50, direction: 'NEUTRAL' });
-    expect(s2).toBe('AAPL: no trade setup is allowed right now — Golden Egg data trust is STALE. The older confluence model scores it 50/100 with no clear lean (secondary context only).');
+    expect(s2).toBe('AAPL: no trade setup is allowed right now — Golden Egg data trust is STALE. The indicator composite scores it 50/100 with no clear lean (secondary context only).');
     const none = result({ permission: 'BLOCK', grade: 'F', direction: 'neutral', setupType: 'NONE', score: 0, watchReasons: [], levels: null,
       blockReasons: [{ code: 'NO_SETUP', message: 'No eligible setup (closest: pullback long, score 48)' }] });
-    expect(canonicalNarrativeSummary('AAPL', none, { confluenceScore: 50, direction: 'LONG' })).toBe('AAPL: there is no qualifying setup right now. The closest candidate was pullback long, score 48. The older confluence model scores it 50/100 with a bullish lean (secondary context only).');
+    expect(canonicalNarrativeSummary('AAPL', none, { confluenceScore: 50, direction: 'LONG' })).toBe('AAPL: there is no qualifying setup right now. The closest candidate was pullback long, score 48. The indicator composite scores it 50/100 with a bullish lean (secondary context only).');
     for (const s of [s1, s2]) expect(s).not.toMatch(/canonical verdict|· grade|STALE_DATA|EARNINGS_IN_WINDOW/);
   });
 });
