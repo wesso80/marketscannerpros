@@ -95,7 +95,7 @@ interface GoldenEggSummary {
   timeframe: string;
   /** Canonical engine verdict (primary). Absent on packets built before the canonical engine. */
   canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; coverage: number; blockReasons?: Array<{ code: string; message: string }>; watchReasons?: Array<{ code: string; message: string }> } | null;
-  /** Legacy confluence read (secondary). */
+  /** Indicator composite read (secondary). */
   legacyConfluence?: { assessment: string; direction: string; grade: string; confluenceScore: number } | null;
 }
 
@@ -949,9 +949,9 @@ export default function DeepAnalysisPage({
                         : ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}${cautionTags(ge.canonicalVerdict).map((t) => ` · ${t}`).join('')}`, geColor] as [string, string, string],
                       ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', calibrationSummary(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
                       ...(gradeRelativeNote(ge.canonicalVerdict) ? [['How to read the grade', gradeRelativeNote(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
-                      ['Legacy confluence (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
+                      ['Indicator composite (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
                     ]
-                  : [['Confluence (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
+                  : [['Indicator composite (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
                 ['Bias & setup', `${ge.verdict.direction === 'LONG' ? 'Bullish' : ge.verdict.direction === 'SHORT' ? 'Bearish' : 'Neutral'} · ${ge.verdict.setupType.replace('_', ' ')}`, geDirColor],
                 noQualifyingSetup
                   ? ['Primary blocker', 'None — no setup to block (see Canonical setup)', 'var(--msp-text-muted)']

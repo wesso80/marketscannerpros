@@ -1050,7 +1050,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   let payload = crossMarket ? buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, crossMarket, timeframeKey: timeframe }) : provisional;
 
   // Canonical engine verdict is PRIMARY (permission/grade/setup/direction); the confluence read above is kept as the
-  // secondary "legacy confluence" (payload.legacyConfluence). Same hard-block rules as the scanner.
+  // secondary "indicator composite" (payload.legacyConfluence). Same hard-block rules as the scanner.
   try {
     const earningsWindow = holdingWindowDays(timeframe);
     const dte = fundamentals?.daysToEarnings;

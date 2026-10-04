@@ -49,7 +49,7 @@ export function buildScannerRankExplanation(input: ScannerRankExplanationInput):
 
   const scoreGapToLeader = Math.max(0, Math.round((input.topScore - input.score) * 10) / 10);
   const gapText = input.rank === 1
-    ? 'ranked first by current confluence score'
+    ? 'ranked first by current scanner score'
     : `${scoreGapToLeader} points behind the current leader`;
   const summary = `${input.symbol} is ${gapText} with ${directionLabel(input.direction)}; rank is reduced when evidence is missing, stale, or liquidity is thin.`;
 

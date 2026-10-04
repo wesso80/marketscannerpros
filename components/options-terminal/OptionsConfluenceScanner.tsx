@@ -4757,6 +4757,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
             <div className="card-grid-mobile gap-6">
               <div>
                 <div className="mb-2 font-bold text-violet-500">Time Confluence</div>
+                <p className="mb-2 text-xs text-slate-400">Clock and prior-candle midpoints. Display only; not used in the grade, direction or WAIT decision.</p>
                 <div className="text-[0.85rem] text-slate-400">
                   Scans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.
                 </div>

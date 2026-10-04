@@ -335,7 +335,7 @@ export function buildGoldenEggEmbed(egg: {
   const fields: DiscordEmbedField[] = [
     { name: 'Verdict', value: `${verdictLabel[egg.verdict] || 'NEUTRAL'} **${egg.verdict}**`, inline: true },
     { name: 'Bias', value: egg.bias, inline: true },
-    { name: 'Confluence', value: `${egg.confluenceScore}/100`, inline: true },
+    { name: 'Indicator composite', value: `${egg.confluenceScore}/100`, inline: true },
   ];
 
   if (egg.referenceLevel != null) fields.push({ name: 'Reference Level', value: `$${egg.referenceLevel}`, inline: true });

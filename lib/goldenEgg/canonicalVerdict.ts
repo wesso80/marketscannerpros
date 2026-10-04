@@ -2,7 +2,7 @@
  * Golden Egg ← canonical engine (lib/scoring/canonical). Pure.
  *
  * The canonical verdict (permission / grade / setup / direction / levels) is the PRIMARY Golden Egg verdict. The
- * v2 confluence score and its grade/assessment are kept as secondary, labelled "legacy confluence", under
+ * v2 confluence score and its grade/assessment are kept as secondary, labelled "indicator composite", under
  * `payload.legacyConfluence`. The result is attached as `payload.canonicalVerdict` — NOT `payload.canonical`, which
  * is the Golden Egg data packet (data trust, indicators, levels, timing) that Deep Analysis already consumes.
  */
@@ -154,7 +154,7 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
       // the opposite trade.
       packet.confirmation = ['No canonical setup is eligible — wait for a trend-continuation, pullback, squeeze or exhaustion setup to form'];
       packet.invalidation = [];
-      packet.levels = { ...packet.levels, reference: { ...packet.levels.reference, label: `Legacy confluence: ${packet.levels.reference.label}` } };
+      packet.levels = { ...packet.levels, reference: { ...packet.levels.reference, label: `Indicator composite: ${packet.levels.reference.label}` } };
     }
     out.canonical = packet;
   }
@@ -222,8 +222,8 @@ export function canonicalSetupThesis(symbol: string, c: CanonicalResult, legacyT
       return `Time confluence is ${dir} with ${strength} signal strength${rel}.`;
     });
   const secondary = legacyLead
-    ? ` The older confluence model read ${legacyLead} (secondary context only).`
-    : ` Older confluence model (secondary context only): ${legacyThesis.trim()}`;
+    ? ` The indicator composite read ${legacyLead} (secondary context only).`
+    : ` Indicator composite (secondary context only): ${legacyThesis.trim()}`;
   return `${lead}${rest ? ` ${rest}` : ''}${secondary}`;
 }
 
@@ -233,7 +233,7 @@ const trimStop = (s: string) => s.trim().replace(/[.\s]+$/, '');
 /** Plain-sentence Golden Egg narrative summary for the canonical verdict (no raw engine labels such as
  *  "canonical verdict BLOCK · grade F"). */
 export function canonicalNarrativeSummary(symbol: string, c: CanonicalResult, l1: Pick<GoldenEggPayload['layer1'], 'confluenceScore' | 'direction'>): string {
-  const legacy = ` The older confluence model scores it ${l1.confluenceScore}/100 with ${LEGACY_LEAN[l1.direction] ?? 'no clear lean'} (secondary context only).`;
+  const legacy = ` The indicator composite scores it ${l1.confluenceScore}/100 with ${LEGACY_LEAN[l1.direction] ?? 'no clear lean'} (secondary context only).`;
   const none = noSetupDisplay(c);
   if (none) {
     if (none.kind === 'blocked') return `${symbol}: no trade setup is allowed right now — ${trimStop(none.detail ?? 'blocked')}.${legacy}`;

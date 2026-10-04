@@ -116,7 +116,7 @@ function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, 
   ];
   const assess = c.verdict.assessment === 'ALIGNED' ? 'aligned' : c.verdict.assessment === 'NOT_ALIGNED' ? 'not aligned' : 'in watch mode';
   return {
-    thesis: `${c.symbol} (${c.assetClass}, ${c.timeframe}) is ${assess} with a ${dirWord} bias: ${c.verdict.setupType.replace('_', ' ')} setup — ${c.verdict.setupNote}. Confluence ${c.verdict.confluence}/100 (evidence alignment, not a probability).`,
+    thesis: `${c.symbol} (${c.assetClass}, ${c.timeframe}) is ${assess} with a ${dirWord} bias: ${c.verdict.setupType.replace('_', ' ')} setup — ${c.verdict.setupNote}. Indicator composite ${c.verdict.confluence}/100 (evidence alignment, not a probability).`,
     supports: supports.length ? supports : ['No component clears the supportive threshold.'],
     against: against.length ? against : ['No material evidence against the read at current inputs.'],
     primaryBlocker: c.verdict.primaryBlocker ?? 'None flagged by the Golden Egg engine.',
@@ -140,9 +140,9 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
       // No setup: score 0 / grade F are engine placeholders — don't hand them to the model as a score and a grade.
       L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): NO QUALIFYING SETUP on this bar (no setup score or grade applies; not a data problem)${none.detail ? ` · ${none.detail}` : ''}.`);
     } else L.push(`VERDICT (canonical engine ${cv.version} — the PRIMARY verdict): ${cv.permission} · ${cv.setupType} · direction ${cv.direction} · ${none ? 'no setup' : `setup score ${cv.score}/100 · grade ${cv.grade}`}${why ? ` · reasons: ${why}` : ''}${cv.levels ? ` · levels entry ${fmtPx(cv.levels.entry)} / invalidation ${fmtPx(cv.levels.invalidation)} / target ${fmtPx(cv.levels.target)} [${targetBasisLabel(cv.levels)}] (R:R ${cv.levels.riskReward})` : ''}.`);
-    L.push(`Legacy confluence (secondary, do not present as the verdict): ${ge.legacyConfluence?.assessment ?? 'n/a'} ${ge.legacyConfluence?.direction ?? ''} · ${c.verdict.confluence}/100 evidence alignment (NOT a probability) · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}.`);
+    L.push(`Indicator composite (secondary, do not present as the verdict): ${ge.legacyConfluence?.assessment ?? 'n/a'} ${ge.legacyConfluence?.direction ?? ''} · ${c.verdict.confluence}/100 evidence alignment (NOT a probability) · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}.`);
   } else {
-    L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · confluence ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
+    L.push(`VERDICT: ${c.verdict.assessment} · direction ${c.verdict.direction} · indicator composite ${c.verdict.confluence}/100 (evidence alignment, NOT a probability) · grade ${c.verdict.grade}`);
   }
   L.push(`Setup: ${c.verdict.setupType} — ${c.verdict.setupNote}`);
   L.push(`Primary driver: ${c.verdict.primaryDriver}`);
@@ -188,7 +188,7 @@ HARD RULES
 - Use ONLY the numbers and statements in the packet. Do not invent catalysts, earnings facts, institutional activity, support/resistance, analyst views, probabilities or news. If something is not in the packet, say it is not available.
 - The Golden Egg verdict, direction, blocker and levels are canonical. You may add nuance, but if you disagree you must say exactly which packet fact drives the disagreement.
 - ADX measures trend STRENGTH, never direction. RSI/stochastic extremes mean strong momentum AND extension risk at the same time.
-- Confluence is evidence alignment, not a probability. Never use "high probability", "likely to rally", "should break out", "expected to rise", "strong chance" or any win-rate language.
+- Indicator composite is evidence alignment, not a probability. Never use "high probability", "likely to rally", "should break out", "expected to rise", "strong chance" or any win-rate language.
 - No trade instructions, no BUY/SELL/HOLD, no "traders should". Conditional research language only ("if X prints, the read strengthens").
 - Analyst targets and consensus are context, not signals. Catalysts keep the class given in the packet (POSITIVE / NEGATIVE / MIXED / NEUTRAL / EVENT_RISK); a capital raise is not bullish because it is news.
 - When the packet says data trust is not GOOD, say so in the thesis and keep every conclusion tentative.
