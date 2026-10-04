@@ -7,6 +7,8 @@ export interface ToolPage {
   icon: string;
   category: string;
   tier?: "free" | "pro";
+  /** Retired names matched by All tools search. Not shown in the catalog. */
+  aliases?: string[];
 }
 // Catalog copy/access labels do not grant access; the existing page/API gates remain authoritative.
 const metadata: Record<string, Partial<ToolPage>> = {
@@ -287,9 +289,14 @@ export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
         icon: data?.icon ?? "MSP",
         category: group.label,
         tier: data?.tier ?? "free",
+        aliases: legacySearchNames[item.href],
       };
     }),
 );
+const legacySearchNames: Record<string, string[]> = {
+  "/tools/golden-egg": ["Golden Egg"],
+  "/tools/command-center": ["Command Center"],
+};
 const legacyKeys: Record<string, string> = {
   "gainers-losers": "markets",
   news: "research",

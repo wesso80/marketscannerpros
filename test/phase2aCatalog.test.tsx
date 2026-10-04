@@ -90,6 +90,12 @@ it("search reveals matching destinations, handles no matches and clears", () => 
   set("Global M2");
   expect(el.querySelectorAll("li a")).toHaveLength(1);
   expect(el.querySelector("details")?.open).toBe(true);
+  set("Golden Egg");
+  expect(el.querySelector('a[href="/tools/golden-egg"]')).not.toBeNull();
+  expect(el.textContent).not.toContain("Golden Egg");
+  set("Command Center");
+  expect(el.querySelector('a[href="/tools/command-center"]')).not.toBeNull();
+  expect(el.textContent).not.toContain("Command Center");
   set("xxxxxxxxx");
   expect(el.querySelectorAll("li a")).toHaveLength(0);
   act(() => el.querySelector("button")!.click());

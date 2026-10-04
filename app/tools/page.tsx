@@ -8,7 +8,7 @@ export default function AllToolsPage() {
   const [query, setQuery] = useState("");
   const search = query.trim().toLocaleLowerCase();
   const matches = TOOL_CATALOG.filter((tool) =>
-    `${tool.label} ${tool.description} ${tool.category}`
+    `${tool.label} ${tool.description} ${tool.category} ${(tool.aliases ?? []).join(" ")}`
       .toLocaleLowerCase()
       .includes(search),
   );
