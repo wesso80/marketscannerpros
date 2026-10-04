@@ -72,11 +72,11 @@ const pageRedirects = [
   [() => import("../app/resources/page"), "/guide"],
   [
     () => import("../app/resources/platform-guide/page"),
-    "/guide#platform-guide",
+    "/guide?section=platform-guide#platform-guide",
   ],
   [
     () => import("../app/resources/trading-guides/page"),
-    "/guide#research-guides",
+    "/guide?section=research-guides#research-guides",
   ],
   [() => import("../app/tools/desktop-app/page"), "/tools"],
   [() => import("../app/legal/privacy/page"), "/privacy"],

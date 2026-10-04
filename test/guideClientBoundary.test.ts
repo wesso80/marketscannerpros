@@ -62,7 +62,10 @@ it('keeps the guide page on the server so session reads stay out of the client b
   const page = readFileSync('app/guide/page.tsx', 'utf8');
   expect(isClientModule(page)).toBe(false);
   expect(page).toContain('PlatformGuide');
+  expect(page).toContain("section === 'platform-guide'");
+  expect(page).toContain("section === 'research-guides'");
   expect(readFileSync('components/guide/PlatformGuide.tsx', 'utf8')).toContain('getSessionFromCookie');
+  expect(isClientModule(readFileSync('components/guide/GuideSectionTarget.tsx', 'utf8'))).toBe(true);
 });
 
 it('no client module reaches next/headers or lib/auth', () => {
