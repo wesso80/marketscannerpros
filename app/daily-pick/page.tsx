@@ -93,6 +93,41 @@ export default async function DailyPickPage() {
           shareable card.
         </p>
 
+        <div data-pick-cards style={{ marginTop: 28, display: 'grid', gap: 12 }}>
+          {data.picks.slice(0, 3).map((p) => {
+            const side = p.direction === 'bullish' ? 'Up-side evidence' : p.direction === 'bearish' ? 'Down-side evidence' : 'Mixed evidence';
+            const sideColor = p.direction === 'bullish' ? 'var(--msp-bull)' : p.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)';
+            const twins = data.picks.filter((other) => other.score === p.score);
+            const distinction = [
+              p.change_percent != null ? `session ${p.change_percent >= 0 ? '+' : ''}${p.change_percent.toFixed(2)}%` : null,
+              p.sector,
+              formatFloat(p.shares_float) ? `float ${formatFloat(p.shares_float)}` : null,
+            ].filter(Boolean).join(', ');
+            const width = p.change_percent != null && Number.isFinite(p.change_percent) ? Math.min(100, Math.abs(p.change_percent)) : null;
+            return (
+              <Link key={`card-${p.asset_class}-${p.symbol}`} href={`/share/scan/${p.symbol}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <strong style={{ fontSize: 22 }}>{p.symbol}</strong>
+                  <span style={{ color: sideColor, fontWeight: 700, fontSize: 12 }}>{side}</span>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800 }}>{p.score}</div>
+                <div style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>{canonicalLabel(p.canonical) ?? 'Verdict not available right now'}</div>
+                {width != null ? (
+                  <div aria-label={`Session change ${p.change_percent}%`} style={{ marginTop: 12 }}>
+                    <div style={{ height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.08)' }}>
+                      <div style={{ height: 8, borderRadius: 99, width: `${width}%`, background: (p.change_percent ?? 0) >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }} />
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 12 }}>{p.change_percent! >= 0 ? '+' : ''}{p.change_percent!.toFixed(2)}% session change</div>
+                  </div>
+                ) : <p style={{ marginTop: 12, fontSize: 12, color: 'var(--msp-text-muted)' }}>No session change recorded.</p>}
+                {twins.length > 1 && distinction ? <p style={{ marginTop: 8, fontSize: 12, color: 'var(--msp-text-muted)' }}>Same score as {twins.length - 1} other {twins.length > 2 ? 'picks' : 'pick'}. Separated by {distinction}.</p> : null}
+              </Link>
+            );
+          })}
+        </div>
+        {data.picks.length > 3 && (
+          <details style={{ marginTop: 16 }}>
+            <summary style={{ minHeight: 40, cursor: 'pointer' }}>Show more</summary>
         <div style={{ marginTop: 28, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
           <div style={rowHeaderStyle}>
             <div style={{ ...cellStyle, width: 60 }}>#</div>
@@ -105,9 +140,9 @@ export default async function DailyPickPage() {
             <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const }}>Float</div>
             <div style={{ ...cellStyle, width: 90, textAlign: 'right' as const }}>Short %</div>
           </div>
-          {data.picks.map((p) => {
+          {data.picks.slice(3).map((p) => {
             // Neutral is not labelled WATCH: WATCH is a canonical permission, shown in the Verdict column.
-            const side = p.direction === 'bullish' ? 'Bullish evidence' : p.direction === 'bearish' ? 'Bearish evidence' : 'Neutral';
+            const side = p.direction === 'bullish' ? 'Up-side evidence' : p.direction === 'bearish' ? 'Down-side evidence' : 'Mixed evidence';
             const sideColor = p.direction === 'bullish' ? 'var(--msp-bull)' : p.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)';
             return (
               <Link
@@ -146,6 +181,8 @@ export default async function DailyPickPage() {
             );
           })}
         </div>
+          </details>
+        )}
 
         <div style={{ marginTop: 32, padding: '20px 22px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 14 }}>
           <h2 style={{ margin: 0, fontSize: 22, color: '#F8FAFC' }}>Want the full scanner?</h2>
