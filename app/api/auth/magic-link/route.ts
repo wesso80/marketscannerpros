@@ -1,3 +1,4 @@
+import { safeNext } from '@/lib/free/safeNext';
 import { NextRequest, NextResponse } from "next/server";
 import { signSessionToken } from "@/lib/auth";
 import { sendAlertEmail } from "@/lib/email";
@@ -37,7 +38,8 @@ export async function POST(req: NextRequest) {
 
     // Use APP_URL constant – req.nextUrl.origin resolves to 0.0.0.0:10000 on Render
     const origin = APP_URL || req.nextUrl.origin;
-    const verifyUrl = `${origin}/auth/verify?token=${encodeURIComponent(token)}`;
+    const next = safeNext(body.next);
+    const verifyUrl = `${origin}/auth/verify?token=${encodeURIComponent(token)}${next ? `&next=${encodeURIComponent(next)}` : ''}`;
 
     const subject = "Your secure MarketScannerPros sign-in link";
     const html = `

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -284,7 +285,7 @@ function computeDecisionState(coinData: CoinData | null, btc7d: number | null) {
 }
 
 function CryptoDetailPageContent() {
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [marketGate, setMarketGate] = useState<CryptoDecisionGate | null>(null);
   const initialCoinId = searchParams.get('coin') || searchParams.get('symbol');
@@ -398,7 +399,7 @@ function CryptoDetailPageContent() {
   }, []);
 
   useEffect(() => {
-    if (initialCoinId && loadedInitial.current !== initialCoinId && tier && tier !== 'free') {
+    if (initialCoinId && loadedInitial.current !== initialCoinId && !tierLoading && (tier === 'pro' || tier === 'pro_trader')) {
       loadedInitial.current = initialCoinId;
       loadCoinBySymbolOrId(initialCoinId);
     }
@@ -446,7 +447,9 @@ function CryptoDetailPageContent() {
     });
   }, [coinData, decision, upeSignal, marketGate, setPageData]);
 
-  if (!tier || tier === 'free') {
+  if (tierLoading) return <FreeLoading />;
+
+  if (tier !== 'pro' && tier !== 'pro_trader') {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <div className="container mx-auto px-4 py-16">

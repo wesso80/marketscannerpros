@@ -17,6 +17,7 @@ import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, t
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
 import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { useRankedQueue } from '@/hooks/useRankedQueue';
 import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
@@ -208,7 +209,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const requestedInitialTab = DASH_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Command Center';
   const [dashTab, setDashTab] = useState<DashTab>(requestedInitialTab);
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const isPro = tier === 'pro' || tier === 'pro_trader';
 
   useEffect(() => {
@@ -352,6 +353,8 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
       openGoldenEgg(symbol, assetType);
     }
   }
+
+  if (tierLoading) return <FreeLoading />;
 
   return (
     <div className="space-y-4">

@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -137,7 +138,7 @@ export default function CryptoCommandCenter() {
 }
 
 function CryptoCommandCenterContent() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier, isAdmin, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const [logTab, setLogTab] = useState<LogTab>('alerts');
@@ -416,6 +417,8 @@ function CryptoCommandCenterContent() {
       ],
     } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
   }, [marketData]);
+
+  if (tierLoading) return <FreeLoading />;
 
   if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
     return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" />;

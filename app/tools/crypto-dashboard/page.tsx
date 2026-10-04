@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -21,7 +22,7 @@ import {buildMarketDataProviderStatus} from '@/lib/scanner/providerStatus';
 import {formatMarketTime} from '@/lib/market/priceStamp';
 
 export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<DashboardData>({
     fundingRates: null,
     longShort: null,
@@ -142,6 +143,8 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
 
   // Gate for Pro+ users
   // Must be after ALL hooks to comply with React rules
+  if (tierLoading) return <FreeLoading />;
+
   if (!canAccessCryptoCommandCenter(tier)) {
     return (
       <div className={`${embeddedInDashboard ? 'min-h-[16rem]' : 'min-h-screen'} bg-[var(--msp-bg)] text-white flex items-center justify-center`}>

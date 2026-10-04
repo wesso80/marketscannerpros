@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
 import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { deleteSavedResearchCase, listSavedResearchCases, updateSavedResearchCaseOutcome, type SavedResearchCaseOutcome, type SavedResearchCaseSummary } from '@/lib/clientResearchCases';
 import { quickAddToWatchlist } from '@/lib/clientWatchlistQuickAdd';
@@ -111,7 +112,7 @@ const OUTCOME_ACTIONS: Array<{ label: string; status: SavedResearchCaseOutcome }
 ];
 
 export default function ResearchPage() {
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
   const searchParams = useSearchParams();
   const initialTab = TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'News';
@@ -250,6 +251,8 @@ export default function ResearchPage() {
       setUpdatingOutcomeId(null);
     }
   }, []);
+
+  if (tierLoading) return <FreeLoading />;
 
   return (
     <div className="space-y-3">

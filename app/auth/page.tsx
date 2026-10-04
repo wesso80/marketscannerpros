@@ -1,7 +1,9 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+
+import { safeNext } from '@/lib/free/safeNext';
 
 type StatusState = { tone: "idle" | "loading" | "success" | "error"; text: string };
 
@@ -92,22 +94,22 @@ function AuthContent() {
   const [success] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
-  void searchParams; // keep for Suspense boundary
+  const next = safeNext(searchParams.get('next'));
 
   // If already logged in, redirect to tools
   const [checkingSession, setCheckingSession] = useState(true);
-  useState(() => {
+  useEffect(() => {
     fetch('/api/auth/session', { credentials: 'include' })
       .then(r => r.json())
       .then(d => {
         if (d?.authenticated) {
-          router.replace('/tools/command-center');
+          router.replace(next ?? '/tools/command-center');
         } else {
           setCheckingSession(false);
         }
       })
       .catch(() => setCheckingSession(false));
-  });
+  }, [next, router]);
 
   const clearStatus = () => setStatus({ tone: "idle", text: "" });
 
@@ -125,7 +127,7 @@ function AuthContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, next }),
       });
 
       const data = await res.json().catch(() => ({}));

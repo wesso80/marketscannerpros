@@ -17,6 +17,7 @@ import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
 import { PageHero } from '@/components/ui';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { filterMoversByFloor } from '@/lib/analysis';
 import { humanizeEnum } from '@/lib/presentation/labels';
@@ -87,7 +88,7 @@ function pctColor(v: number | null | undefined) {
 }
 
 export default function ExplorerPage() {
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
   const searchParams = useSearchParams();
   const router=useRouter();
@@ -128,6 +129,8 @@ export default function ExplorerPage() {
   const cryptoLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 10);
   const commodList = commodities.data?.commodities || [];
   const cryptoSectors = cryptoCats.data?.highlighted || [];
+
+  if (tierLoading) return <FreeLoading />;
 
   return (
     <div className="space-y-3">
