@@ -1564,6 +1564,20 @@ function ScannerContent() {
         <StatTile label="Matches" value={String(mode === 'ranked' ? filtered.length : proScreenerRows.length)} />
       </div>
       <PresetCards activeId={activeTemplateId} onSelect={(template) => { selectScannerMode('pro'); if (activeTemplateId === template.id) clearTemplate(); else applyTemplate(template); }} />
+      <button
+        type="button"
+        data-testid="run-educational-scan"
+        onClick={() => { selectScannerMode('pro'); void runProScan(); }}
+        disabled={proScanLoading}
+        aria-disabled={proScanLoading}
+        className={`min-h-10 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:w-auto sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+          proScanLoading
+            ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
+            : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
+        }`}
+      >
+        {proScanLoading ? 'Analyzing…' : 'Run Educational Scan'}
+      </button>
       <TabBar
         label="Scanner mode"
         activeId={mode === 'pro' ? 'pro' : 'quick'}
@@ -1953,21 +1967,6 @@ function ScannerContent() {
                 ))}
               </div>
             </div>
-
-            {/* Scan Button */}
-            <button
-              type="button"
-              onClick={runProScan}
-              disabled={proScanLoading}
-              aria-disabled={proScanLoading}
-              className={`mt-4 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
-                proScanLoading
-                  ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
-                  : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
-              }`}
-            >
-              {proScanLoading ? 'Analyzing…' : 'Run Educational Scan'}
-            </button>
           </div>
 
           {/* Filters apply to the next manual scan, before the result limit. */}
