@@ -53,13 +53,14 @@ describe('GET /api/regime (OV-1)', () => {
   });
   const call = async () => {
     const res = await GET(new NextRequest('http://localhost/api/regime'));
-    return { status: res.status, body: await res.json() };
+    return { status: res.status, body: await res.json(), cache: res.headers.get('Cache-Control') };
   };
 
   it('returns an explicit unavailable state instead of RANGE_NEUTRAL / low / full', async () => {
-    const { status, body } = await call();
+    const { status, body, cache } = await call();
     vi.useRealTimers();
     expect(status).toBe(200);
+    expect(cache).toBe('private, no-store');
     expect(body).toMatchObject({ available: false, regime: null, riskLevel: null, permission: null, signals: [], asOf: null });
     expect(body.reason).toContain('Market data unavailable');
     expect(body).not.toHaveProperty('sizing');
@@ -84,9 +85,10 @@ describe('GET /api/regime (OV-1)', () => {
     mocks.session.mockResolvedValue(null);
     mocks.overlay.mockResolvedValue(inputs());
     mocks.q.mockClear();
-    const { status, body } = await call();
+    const { status, body, cache } = await call();
     vi.useRealTimers();
     expect(status).toBe(200);
+    expect(cache).toBe('private, no-store');
     expect(body).toMatchObject({ available: true, basis: 'market', regime: 'TREND_UP' });
     expect(body.signals).toEqual([expect.objectContaining({ kind: 'market', counted: true })]);
     expect(mocks.q).not.toHaveBeenCalled();

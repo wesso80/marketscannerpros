@@ -235,7 +235,7 @@ describe('layout and flow audit regressions', () => {
     expect(earningsCalendarLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
     expect(commandHub).toContain("href: '/tools/workspace?tab=backtest'");
     expect(commandHub).toContain("href: '/tools/terminal?tab=options-flow'");
-    expect(commandHub).toContain("href: '/tools/dashboard?tab=crypto'");
+    expect(commandHub).toContain("href: '/tools/crypto-dashboard'");
     expect(toolsNavBar).toContain('primaryNavTools');
     expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
     expect(areaLinks.today.map(t => t.href)).toContain('/tools/msp-radar');
@@ -317,7 +317,7 @@ describe('layout and flow audit regressions', () => {
     expect(platformKnowledge).toContain('/tools/workspace?tab=journal — Trade Journal');
     expect(platformKnowledge).toContain('/tools/workspace?tab=alerts — Alerts');
     expect(platformKnowledge).toContain('/tools/terminal?tab=options-confluence — Options Confluence Scanner');
-    expect(platformKnowledge).toContain('/tools/dashboard?tab=crypto — Crypto Derivatives Dashboard');
+    expect(platformKnowledge).toContain('/tools/crypto-dashboard — Crypto Derivatives');
     expect(platformKnowledge).toContain('/tools/explorer?tab=equity — Equity Explorer');
     expect(platformKnowledge).toContain('/tools/research?tab=calendar — Economic Calendar');
     expect(nextConfig).toContain("{ source: '/tools/earnings', destination: '/tools/research?tab=earnings', permanent: true }");

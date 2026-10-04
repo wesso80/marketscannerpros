@@ -121,6 +121,6 @@ describe('Today data presentation', () => {
     expect(container.querySelector('summary')?.textContent).toContain('1 needs a check · 2 stale · 5 not timed');
     expect(container.querySelector('summary')?.textContent).toContain('Show');
     expect(container.textContent).toContain('Feed 0 · Some data is older');
-    expect(container.textContent).toContain('Feed 3 · Not available right now');
+    expect(container.textContent).toContain('Feed 3 · Unknown');
   });
 });

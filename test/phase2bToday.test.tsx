@@ -87,7 +87,7 @@ beforeEach(() => {
   });
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
 });
-afterEach(() => { act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
+afterEach(() => { window.history.replaceState(null, '', '/'); act(() => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 const render = async (element: React.ReactNode) => { await act(async () => { root.render(element); }); await act(async () => { await Promise.resolve(); }); };
 
 describe('Phase 2B today pages', () => {
@@ -114,6 +114,13 @@ describe('Phase 2B today pages', () => {
     expect(nav.replace).toHaveBeenCalledWith('/tools/command-center');
   });
 
+  it('redirects ?tab=crypto to Crypto Derivatives', async () => {
+    nav.tab = 'crypto';
+    await render(<DashboardPage />);
+    expect(container.textContent).toContain('Opening Crypto Derivatives');
+    expect(nav.replace).toHaveBeenCalledWith('/tools/crypto-dashboard');
+  });
+
   it('Macro render starts with Global regime', async () => {
     await render(<MacroDashboardPage embeddedInDashboard />);
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -123,6 +130,33 @@ describe('Phase 2B today pages', () => {
     expect(lead?.querySelectorAll('[data-macro-tile]')).toHaveLength(4);
     expect(container.innerHTML.indexOf('data-global-regime')).toBeLessThan(container.innerHTML.indexOf('Decision detail'));
     expect(container.querySelector('[data-global-regime] details')).toBeNull();
+    expect(container.querySelector('[aria-label="Macro command header"]')).toBeNull();
+    expect(container.textContent).not.toContain('Yield curve chart is the next row');
+    const decision = container.querySelector('#decision')?.closest('details') as HTMLDetailsElement | null;
+    expect(decision?.open).toBe(false);
+    const link = container.querySelector('a[href="#decision"]') as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    await act(async () => { link!.click(); });
+    expect(decision?.open).toBe(true);
+  });
+
+  it('opens a Macro fold when the page loads with its hash', async () => {
+    window.history.replaceState(null, '', '#rates');
+    await render(<MacroDashboardPage embeddedInDashboard />);
+    await vi.waitFor(() => expect(container.querySelector('#rates')).not.toBeNull());
+    expect(window.location.hash).toBe('#rates');
+    expect((container.querySelector('#rates')?.closest('details') as HTMLDetailsElement).open).toBe(true);
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('Macro inside Dashboard starts at Global regime', async () => {
+    nav.tab = 'macro';
+    await render(<DashboardPage />);
+    await vi.waitFor(() => expect(container.querySelector('[data-global-regime] h2')?.textContent).toBe('Global regime'));
+    expect(container.querySelector('h1')).toBeNull();
+    expect(container.querySelector('[aria-label="Dashboard lens"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Macro command header"]')).toBeNull();
+    expect(container.textContent).not.toContain('Yield curve chart is the next row');
   });
 
   it('Radar and Movers empty fixtures avoid raw status words', async () => {
