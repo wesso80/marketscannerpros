@@ -49,7 +49,7 @@ export const DIRECTION_WEIGHTS = {
 
 export const BREAKOUT_WEIGHTS = {
   volCompression: 40,
-  timeAlignment: 30,
+  timeAlignment: 30, // Display maximum only; excluded from the breakout total.
   gammaWall: 20,
   adxRising: 10,
 } as const;
@@ -59,7 +59,7 @@ export const TRAP = {
   MIN_SCORE: 70,
   COMPRESSION_WEIGHT: 40,
   GAMMA_LOCK_WEIGHT: 30,
-  TIME_CLUSTER_WEIGHT: 30,
+  TIME_CLUSTER_WEIGHT: 30, // Display maximum only; excluded from the trap total.
   GAMMA_PROXIMITY_PCT: 1.5,
 } as const;
 

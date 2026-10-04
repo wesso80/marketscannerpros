@@ -3,7 +3,6 @@ import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => ({ workspaceId: 'w1', tier: 'pro' })) }));
 vi.mock('@/lib/proTraderAccess', () => ({ hasPaidSessionAccess: () => true }));
-vi.mock('@/lib/confluence-learning-agent', () => ({ confluenceLearningAgent: { scanHierarchical: vi.fn(async () => null) } }));
 vi.mock('@/lib/coingecko', () => ({ getAggregatedFundingRates: vi.fn(async () => []), getAggregatedOpenInterest: vi.fn(async () => []) }));
 vi.mock('@/lib/goldenEggFetchers', () => ({
   detectAssetClass: (s: string) => (s.startsWith('BTC') ? 'crypto' : 'equity'),

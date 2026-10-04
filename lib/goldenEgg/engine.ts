@@ -413,14 +413,12 @@ export function buildPayload(
   const sessionOpen = assetClass === 'equity' ? isEquitySessionOpen(nowMs) : true;
   const timing: TimingAssessment = assessTimingEvidence({ tc: tcRaw, setupDirection: direction, assetClass, sessionOpen });
   const tcData = tcRaw ? sanitizeTimeConfluence(tcRaw, { assetClass, sessionOpen }) : null;
-  const timeConfluenceHardConflict = timing.eligibleForHardGate;
 
   // ── Permission ──────────────────────────────────────────────────────────────────────────────────────
   let permission: InternalPermission = 'WATCH';
   if (confidence >= 70 && direction !== 'NEUTRAL' && (trust.level === 'GOOD' || trust.level === 'DEGRADED')) permission = 'TRADE';
   // INSUFFICIENT_DATA (missing inputs / short history) stays WATCH; only stale or unusable data is NO_TRADE.
   else if (confidence < 40 || trust.level === 'STALE' || trust.eligibilityBlockers.length > 0) permission = 'NO_TRADE';
-  if (permission === 'TRADE' && timeConfluenceHardConflict) permission = 'WATCH';
   // Macro regime rule is mirror-symmetric: it only demotes a setup that fights the macro tape (RISK_OFF long or
   // RISK_ON short). Previously only longs were ever demoted, so RISK_OFF silently favoured shorts.
   const macroOpposes = (macroRegime?.riskState === 'risk_off' && direction === 'LONG') || (macroRegime?.riskState === 'risk_on' && direction === 'SHORT');
@@ -437,7 +435,6 @@ export function buildPayload(
   const weakest = drivers[drivers.length - 1];
   let primaryBlocker: string | undefined;
   if (trust.level === 'INSUFFICIENT_DATA' || trust.level === 'STALE') primaryBlocker = `Data trust ${trust.level.toLowerCase().replace('_', ' ')}: ${trust.reasons[0] ?? 'inputs unreliable'}`;
-  else if (timeConfluenceHardConflict) primaryBlocker = `Time confluence ${timing.effectiveDirection} (${tcRaw!.signalStrength}, ${tcRaw!.confidence}% conf, ${tcRaw!.scoreBreakdown.activeTFs} TFs) opposes the ${direction.toLowerCase()} scenario`;
   else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100 — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   else if (riskScore < 50) primaryBlocker = `Risk conditions ${riskScore}/100 — ${riskQ.reasons[0]}`;
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
@@ -455,7 +452,6 @@ export function buildPayload(
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
   if (permission !== 'TRADE') {
     if (trust.level !== 'GOOD') flipConditions.push({ id: 'f8', text: `Data trust is ${trust.level.toLowerCase().replace('_', ' ')} (${trust.reasons.join('; ')}) — inputs need to be clean before the packet can be relied on`, severity: 'must' });
-    if (timeConfluenceHardConflict) flipConditions.push({ id: 'f6', text: `Time confluence is ${timing.effectiveDirection} while the setup is ${direction.toLowerCase()} — wait for timing to agree or for the conflict to clear`, severity: 'must' });
     if (macroOpposes) flipConditions.push({ id: 'f5', text: macroRegime!.riskState === 'risk_off' ? `Macro regime is RISK_OFF (${macroRegime!.concerns.join(', ')}) — wait for macro environment to improve` : 'Macro regime is RISK_ON — a short needs the macro tape to turn before it can align', severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options positioning needs to confirm direction (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry})`, severity: 'should' });
@@ -466,6 +462,8 @@ export function buildPayload(
     if (earningsInWindow) flipConditions.push({ id: 'earnings', text: `Earnings ${extras.fundamentals?.nextEarningsDate} (in ${earningsDte}d) fall inside the ${earningsWindowDays}-day holding window — wait until after the report`, severity: 'must' });
     if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall score below threshold — waiting for improved confluence', severity: 'must' });
   }
+
+  if (timing.warning) flipConditions.push({ id: 'f6', text: timing.warning, severity: 'nice' });
 
   const cta: GoldenEggPayload['layer1']['cta'] = permission === 'TRADE'
     ? { primary: 'OPEN_SCANNER', secondary: opts ? 'OPEN_OPTIONS' : 'OPEN_TIME' }
@@ -622,7 +620,7 @@ export function buildPayload(
   if (opts && opts.canonical.quality.level === 'DEGRADED') narrativeRisks.push(`Options chain degraded: ${opts.canonical.quality.reasons[0]}.`);
   if (mpe && mpe.composite < 40) narrativeRisks.push('Low market pressure — range-bound conditions likely.');
   if (weakest.val < 40) narrativeRisks.push(`${weakest.key} score is weak — significant blocker to thesis.`);
-  if (timing.relation === 'conflict') narrativeRisks.push(`Time confluence ${timing.effectiveDirection} opposes the ${direction.toLowerCase()} thesis${timeConfluenceHardConflict ? ' (hard gate applied)' : ' (below hard-gate thresholds — noted, not gating)'}.`);
+  if (timing.warning) narrativeRisks.push(timing.warning);
   if (tcRaw?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
   if (extras.fundamentals?.daysToEarnings != null && extras.fundamentals.daysToEarnings >= 0 && extras.fundamentals.daysToEarnings <= 14) narrativeRisks.push(`Earnings scheduled ${extras.fundamentals.nextEarningsDate} (${extras.fundamentals.daysToEarnings} days) — event risk.`);
   else if (assetClass === 'equity' && (!extras.fundamentals || extras.fundamentals.nextEarningsStatus === 'UNKNOWN')) narrativeRisks.push('Earnings date UNKNOWN — calendar unavailable; not verified clear of the holding window.');
@@ -678,7 +676,7 @@ export function buildPayload(
     dataTrust: { level: trust.level, label: trust.level.replace('_', ' '), reasons: trust.reasons, freshness: trust.freshness, priceDiscontinuity: discontinuity ? { date: discontinuity.date, ratio: discontinuity.ratio } : null },
     scores: { structure: Math.round(structureScore), flow: Math.round(flowScore), momentum: Math.round(momentumScore), riskQuality: Math.round(riskScore), notes: { structure: structureQ.notes, risk: riskQ.reasons, flow: flow.notes, momentum: momentum.notes } },
     timing: {
-      relation: timing.relation, valid: timing.valid, eligibleForHardGate: timing.eligibleForHardGate, direction: timing.effectiveDirection,
+      relation: timing.relation, valid: timing.valid, eligibleForHardGate: timing.eligibleForHardGate, warning: timing.warning, direction: timing.effectiveDirection,
       signalStrength: tcRaw?.signalStrength ?? 'unavailable', confidence: tcRaw?.confidence ?? null, sessionState: tcData?.sessionState ?? 'unknown', reasons: timing.reasons,
     },
     extension: {
@@ -818,7 +816,7 @@ export function buildPayload(
         decompressionTarget: tcData.decompressionTarget,
         sessionState: tcData.sessionState,
         displayNote: tcData.displayNote,
-        gating: { relation: timing.relation, valid: timing.valid, eligibleForHardGate: timing.eligibleForHardGate, reasons: timing.reasons },
+        gating: { relation: timing.relation, valid: timing.valid, eligibleForHardGate: timing.eligibleForHardGate, warning: timing.warning, reasons: timing.reasons },
       } : undefined,
     },
     doctrine: doctrineResult,

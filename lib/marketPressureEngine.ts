@@ -57,6 +57,7 @@ export interface OptionsPressureInput {
 }
 
 export interface PressureComponent {
+  label?: string;
   score: number;        // 0-100
   weight: number;       // 0-1
   components: string[]; // Human-readable breakdown
@@ -95,8 +96,8 @@ export interface MarketPressureInput {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const WEIGHTS = {
-  crypto: { time: 0.25, volatility: 0.25, liquidity: 0.30, options: 0.20 },
-  equity: { time: 0.20, volatility: 0.25, liquidity: 0.20, options: 0.35 },
+  crypto: { time: 0, volatility: 1 / 3, liquidity: 0.4, options: 4 / 15 },
+  equity: { time: 0, volatility: 0.3125, liquidity: 0.25, options: 0.4375 },
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -315,7 +316,7 @@ function resolveDirection(
 }
 
 function computeAlignment(pressures: MarketPressureReading['pressures']): number {
-  const dirs = Object.values(pressures).map(p => p.direction);
+  const dirs = Object.values(pressures).filter(p => p.weight > 0).map(p => p.direction);
   const nonNeutral = dirs.filter(d => d !== 'neutral');
   if (nonNeutral.length === 0) return 0;
   const bullCount = nonNeutral.filter(d => d === 'bullish').length;
@@ -359,6 +360,8 @@ export function computeMarketPressure(input: MarketPressureInput): MarketPressur
 
   const time = scoreTimePressure(input.time ?? {});
   time.weight = w.time;
+  time.label = 'Time pressure (display only)';
+  time.components.push(time.label);
 
   const volatility = scoreVolatilityPressure(input.volatility ?? {});
   volatility.weight = w.volatility;

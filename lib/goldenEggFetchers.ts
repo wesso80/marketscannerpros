@@ -596,6 +596,7 @@ export interface TimeConfluenceData {
     hasHigherTF: boolean;
   };
   decompression: {
+    unmeasuredTFs?: string[];
     activeCount: number;
     clusteredCount: number;
     clusteringRatio: number;
@@ -719,6 +720,7 @@ export async function fetchTimeConfluence(symbol: string): Promise<TimeConfluenc
         hasHigherTF: scan.scoreBreakdown.hasHigherTF,
       },
       decompression: {
+        unmeasuredTFs: scan.decompression.unmeasuredTFs ?? [],
         activeCount: scan.decompression.activeCount,
         clusteredCount: scan.decompression.clusteredCount,
         clusteringRatio: scan.decompression.clusteringRatio,

@@ -3,7 +3,7 @@
  *
  * The confluence agent's "direction" is the weighted pull of price toward multi-timeframe mid-50 levels. In a strong
  * trend every mid-50 sits behind price, so the raw read is "bearish" for every rising symbol and "bullish" for every
- * falling one. That is a mean-reversion pressure, not a timing verdict — so it may only gate a setup when the agent
+ * falling one. That is a mean-reversion pressure, not a timing verdict — so it is a display-only note when the agent
  * itself reports a valid signal, the session is live for the asset, and the read is current.
  */
 import type { TimeConfluenceData } from '@/lib/goldenEggFetchers';
@@ -14,15 +14,16 @@ export type SetupDirection = 'LONG' | 'SHORT' | 'NEUTRAL';
 export interface TimingAssessment {
   /** True when the read is usable as directional evidence at all. */
   valid: boolean;
-  /** True when the read is strong/current enough to downgrade an otherwise aligned setup. */
+  /** Compatibility field: timing never gates a setup. */
   eligibleForHardGate: boolean;
+  warning: string | null;
   /** Direction after validity rules (no_signal / closed session → neutral). */
   effectiveDirection: 'bullish' | 'bearish' | 'neutral';
   relation: TimingRelation;
   reasons: string[];
 }
 
-export const TIMING_HARD_GATE = {
+export const TIMING_WARNING = {
   minConfidence: 55,
   minDirectionScore: 35,
   minActiveTFs: 3,
@@ -43,7 +44,7 @@ export interface TimingInput {
 export function assessTimingEvidence(input: TimingInput): TimingAssessment {
   const { tc, setupDirection, assetClass, sessionOpen, scanAgeMs } = input;
   const reasons: string[] = [];
-  if (!tc) return { valid: false, eligibleForHardGate: false, effectiveDirection: 'neutral', relation: 'unavailable', reasons: ['time confluence unavailable'] };
+  if (!tc) return { warning: null, valid: false, eligibleForHardGate: false, effectiveDirection: 'neutral', relation: 'unavailable', reasons: ['time confluence unavailable'] };
 
   let valid = true;
   if (assetClass === 'equity' && !sessionOpen) {
@@ -54,7 +55,7 @@ export function assessTimingEvidence(input: TimingInput): TimingAssessment {
     valid = false;
     reasons.push('no timing signal (agent gates not met)');
   }
-  if (scanAgeMs != null && scanAgeMs > TIMING_HARD_GATE.maxAgeMs) {
+  if (scanAgeMs != null && scanAgeMs > TIMING_WARNING.maxAgeMs) {
     reasons.push(`scan is ${Math.round(scanAgeMs / 60_000)}m old`);
   }
 
@@ -66,21 +67,23 @@ export function assessTimingEvidence(input: TimingInput): TimingAssessment {
     relation = supportive ? 'supportive' : 'conflict';
   }
 
-  const strong = (TIMING_HARD_GATE.strengths as readonly string[]).includes(tc.signalStrength);
-  const current = scanAgeMs == null || scanAgeMs <= TIMING_HARD_GATE.maxAgeMs;
-  const eligibleForHardGate =
+  const strong = (TIMING_WARNING.strengths as readonly string[]).includes(tc.signalStrength);
+  const current = scanAgeMs == null || scanAgeMs <= TIMING_WARNING.maxAgeMs;
+  const warningEligible =
     valid &&
     relation === 'conflict' &&
     strong &&
     current &&
-    tc.confidence >= TIMING_HARD_GATE.minConfidence &&
-    Math.abs(tc.scoreBreakdown.directionScore) >= TIMING_HARD_GATE.minDirectionScore &&
-    tc.scoreBreakdown.activeTFs >= TIMING_HARD_GATE.minActiveTFs;
+    tc.confidence >= TIMING_WARNING.minConfidence &&
+    Math.abs(tc.scoreBreakdown.directionScore) >= TIMING_WARNING.minDirectionScore &&
+    tc.scoreBreakdown.activeTFs >= TIMING_WARNING.minActiveTFs;
 
-  if (relation === 'conflict' && !eligibleForHardGate) reasons.push('conflict noted but below hard-gate thresholds');
+  const warning = warningEligible ? `Timing note: the close-schedule read leans ${effectiveDirection} while the setup is ${setupDirection.toLowerCase()}. This read is mean-reversion toward prior candle midpoints and has no tested edge.` : null;
+  if (warning) reasons.push(warning);
+  else if (relation === 'conflict') reasons.push('Timing conflict below warning thresholds; display only.');
   if (valid && relation === 'neutral' && setupDirection === 'NEUTRAL') reasons.push('setup direction neutral — timing cannot agree or disagree');
 
-  return { valid, eligibleForHardGate, effectiveDirection, relation, reasons };
+  return { valid, eligibleForHardGate: false, warning, effectiveDirection, relation, reasons };
 }
 
 /** Verdict vocabulary used by the Golden Egg evidence stack. */

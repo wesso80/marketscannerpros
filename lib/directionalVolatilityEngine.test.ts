@@ -912,17 +912,16 @@ describe('detectVolatilityTrap', () => {
     expect(trap.score).toBeLessThan(TRAP.MIN_SCORE);
   });
 
-  test('detected when compression + time cluster', () => {
+  test('compression and time alone do not detect a trap', () => {
     const volState: VolatilityState = {
       bbwp: 8, bbwpSma5: 10, regime: 'compression', regimeConfidence: 80,
       rateOfChange: -0.5, rateSmoothed: -0.3, acceleration: 0, rateDirection: 'flat',
       inSqueeze: true, squeezeStrength: 0.9,
     };
     const trap = detectVolatilityTrap(volState, undefined, { activeTFCount: 4 });
-    // Compression: 40 + 10 (squeeze) = 40 (capped). Time: 30.
-    // Gamma: 0. Total could be around 70
-    expect(trap.score).toBeGreaterThanOrEqual(TRAP.MIN_SCORE);
-    expect(trap.detected).toBe(true);
+    // Compression: 40/70, rescaled; the time cluster is display only.
+    expect(trap.score).toBe(57);
+    expect(trap.detected).toBe(false);
   });
 
   test('uses actual current price for gamma wall proximity', () => {
@@ -960,9 +959,9 @@ describe('detectVolatilityTrap', () => {
 
     expect(trap.gammaLockDetected).toBe(false);
     expect(trap.components.some(component => component.includes('gamma wall'))).toBe(false);
-    expect(trap.score).toBe(60);
+    expect(trap.score).toBe(43);
     expect(trap.detected).toBe(false);
-    expect(trap.candidate).toBe(true);
+    expect(trap.candidate).toBe(false);
   });
 
   test('partial detection stays below threshold', () => {

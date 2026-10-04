@@ -26,7 +26,7 @@ export interface GoldenEggCanonical {
   liquidity: { volume: number | null; avgVolume: number | null; advUsd: number | null; volumeBasis: string | null };
   dataTrust: { level: 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA'; label: string; reasons: string[]; freshness: string; priceDiscontinuity: { date: string | null; ratio: number } | null };
   scores: { structure: number; flow: number; momentum: number; riskQuality: number; notes: { structure: string[]; risk: string[]; flow: string[]; momentum: string[] } };
-  timing: { relation: 'supportive' | 'conflict' | 'neutral' | 'unavailable'; valid: boolean; eligibleForHardGate: boolean; direction: 'bullish' | 'bearish' | 'neutral'; signalStrength: string; confidence: number | null; sessionState: 'open' | 'closed' | 'always_open' | 'unknown'; reasons: string[] };
+  timing: { relation: 'supportive' | 'conflict' | 'neutral' | 'unavailable'; valid: boolean; eligibleForHardGate: boolean; warning?: string | null; direction: 'bullish' | 'bearish' | 'neutral'; signalStrength: string; confidence: number | null; sessionState: 'open' | 'closed' | 'always_open' | 'unknown'; reasons: string[] };
   extension: { rsiExtended: boolean; stochExtended: boolean; dveExhaustion: number | null; dveSignal: string | null; dveSignalStrength: string | null; label: string };
   derivatives: { fundingRatePercent: number | null; fundingInterval: string; annualizedPct: number | null; openInterestUsd: number; perpVolume24hUsd: number; exchanges: number; crowding: 'unavailable' | 'neutral' | 'long_crowded' | 'short_crowded'; note: string } | null;
   options: {
@@ -259,6 +259,7 @@ export interface GoldenEggPayload {
         hasHigherTF: boolean;
       };
       decompression: {
+        unmeasuredTFs?: string[];
         activeCount: number;
         clusteredCount: number;
         clusteringRatio: number;
@@ -305,7 +306,7 @@ export interface GoldenEggPayload {
       sessionState?: 'open' | 'closed' | 'always_open';
       displayNote?: string;
       /** Whether this read was allowed to gate the verdict, and why. */
-      gating?: { relation: string; valid: boolean; eligibleForHardGate: boolean; reasons: string[] };
+      gating?: { relation: string; valid: boolean; eligibleForHardGate: boolean; warning?: string | null; reasons: string[] };
     };
   };
   /** Canonical facts (Part C). Present on every live packet. */

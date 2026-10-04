@@ -92,7 +92,7 @@ function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, 
   else if (c.scores.flow < 50) against.push(`Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning not supportive'}`);
   if (c.indicators.ema200 != null) (c.price > c.indicators.ema200 === (dir !== 'SHORT') ? supports : against).push(`Price ${c.price > c.indicators.ema200 ? 'above' : 'below'} EMA200 ${fmtPx(c.indicators.ema200)}`);
   if (c.extension.label !== 'normal') against.push(`Extension ${c.extension.label} — RSI ${fmtNum(c.indicators.rsi, 1)}, stochastic ${fmtNum(c.indicators.stochK, 0)}${c.extension.dveExhaustion != null && c.extension.dveExhaustion >= 60 ? `, DVE exhaustion ${Math.round(c.extension.dveExhaustion)}/100` : ''}`);
-  if (c.timing.relation === 'conflict') against.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read${c.timing.eligibleForHardGate ? ' and gates the verdict' : ' — below hard-gate thresholds'}`);
+  if (c.timing.relation === 'conflict') against.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read — display only, never gates the verdict`);
   if (c.timing.relation === 'supportive') supports.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) agrees`);
   if (c.crossMarket.alignment === 'supportive') supports.push(`Cross-market supportive — ${c.crossMarket.summary}`);
   if (c.crossMarket.alignment === 'headwind') against.push(`Cross-market headwind — ${c.crossMarket.summary}`);
@@ -110,7 +110,7 @@ function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, 
   if (fundamentals?.nextEarningsDate) catalysts.push(`[EVENT_RISK] Next earnings ${fundamentals.nextEarningsDate}${fundamentals.daysToEarnings != null ? ` (${fundamentals.daysToEarnings} days)` : ''}`);
   const changesView = [
     ...c.invalidation.map((t) => `Weakens: ${t}`),
-    ...(c.timing.relation === 'conflict' ? ['Strengthens: time confluence flipping to agree or falling below gate thresholds'] : []),
+    ...(c.timing.relation === 'conflict' ? ['Timing note only: midpoint pull does not change the verdict'] : []),
     ...(c.scores.flow < 60 ? ['Strengthens: positioning turning supportive (P/C or funding moving with the direction)'] : []),
     ...(c.dataTrust.level !== 'GOOD' ? ['Strengthens: data trust returning to GOOD'] : []),
   ];
@@ -156,7 +156,7 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
   L.push(`Extension: ${c.extension.label}; RSI extended ${c.extension.rsiExtended}; stochastic extended ${c.extension.stochExtended}; DVE exhaustion ${c.extension.dveExhaustion ?? 'n/a'}/100; DVE signal ${c.extension.dveSignal ?? 'none'}${c.extension.dveSignalStrength ? ` (strength ${c.extension.dveSignalStrength})` : ''}.`);
   L.push(`Data trust: ${c.dataTrust.label}${c.dataTrust.reasons.length ? ` — ${c.dataTrust.reasons.join('; ')}` : ''}; freshness ${c.dataTrust.freshness}.`);
   L.push(`Liquidity: avg dollar volume ${c.liquidity.advUsd != null ? formatUsdShort(c.liquidity.advUsd) : 'n/a'} (${c.liquidity.volumeBasis ?? 'n/a'}).`);
-  L.push(`Time confluence: relation ${c.timing.relation}, valid ${c.timing.valid}, hard-gate eligible ${c.timing.eligibleForHardGate}, direction ${c.timing.direction}, strength ${c.timing.signalStrength}, session ${c.timing.sessionState}. ${c.timing.reasons.join('; ')}`);
+  L.push(`Time confluence: relation ${c.timing.relation}, valid ${c.timing.valid}, display only (never gates the verdict), direction ${c.timing.direction}, strength ${c.timing.signalStrength}, session ${c.timing.sessionState}. ${c.timing.reasons.join('; ')}`);
   L.push(`Cross-market (${c.crossMarket.alignment}): ${c.crossMarket.summary}`);
   for (const i of c.crossMarket.items) L.push(`  ${i.symbol} ${i.label}: ${i.trend} — ${i.detail} → ${i.relation}`);
   if (c.derivatives) L.push(`Derivatives: funding, annualisation and crowding unavailable (funding periods not supplied). Sampled OI ${formatUsdShort(c.derivatives.openInterestUsd)}, perp volume ${formatUsdShort(c.derivatives.perpVolume24hUsd)}, ${c.derivatives.exchanges} venues. ${c.derivatives.note}`);

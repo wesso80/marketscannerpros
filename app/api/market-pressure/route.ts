@@ -194,6 +194,7 @@ export async function GET(request: NextRequest) {
     };
 
     const reading = computeMarketPressure(mpeInput);
+    reading.summary += ' • Time pressure is shown for reference and is not part of the composite.';
 
     const result = {
       success: true,
