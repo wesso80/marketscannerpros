@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { COPY } from '@/components/visual/copy';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
 import { researchHref, parseResearchAsset, parseResearchTimeframe } from '@/lib/researchContext';
@@ -10,21 +11,28 @@ import { primaryNavTools, workflowArea } from '@/lib/toolWorkflows';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MSP v2 Header — Matches Full Site Map
-   Always shows: 5 workflow areas + All tools / Pricing / Account
+   Always shows: 6 menu areas + All tools / Pricing / Account
    Right side changes: Sign In (logged out) vs Tier badge + Sign Out (logged in)
    Mobile: Hamburger → flat drawer with same links
    ════════════════════════════════════════════════════════════════════════════════════ */
 
-// MSP Radar is a paid surface at /tools/msp-radar; like Golden Egg it is listed for everyone and gates inside the page.
+// Daily Radar is a paid page. It is listed for everyone; the page and /api/msp-radar/* check access.
 const SURFACES = primaryNavTools;
 
-const MORE_TOOLS = [{ href: '/tools', label: 'All tools' }, { href: '/compliance-hub', label: 'Compliance Hub' }];
+const ACCOUNT_LINKS = [
+  { href: '/account', label: COPY.nav.settings },
+  { href: '/tools/referrals', label: COPY.nav.referrals },
+  { href: '/compliance-hub', label: COPY.nav.compliance },
+];
 
 export default function Header() {
   return <Suspense fallback={<header className="h-14 border-b border-slate-700 bg-slate-950" aria-label="Loading navigation" />}><HeaderContent /></Suspense>;
 }
 
 function HeaderContent() {
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement | null>(null);
+  const accountButtonRef = useRef<HTMLButtonElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -81,7 +89,34 @@ function HeaderContent() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [drawerOpen]);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  useEffect(() => {
+    if (!accountOpen) return;
+    const menu = accountRef.current;
+    menu?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    const close = (event: PointerEvent) => {
+      if (!menu?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setAccountOpen(false);
+        accountButtonRef.current?.focus();
+      }
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        const links = Array.from(menu?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+        if (!links.length) return;
+        event.preventDefault();
+        const current = links.indexOf(document.activeElement as HTMLElement);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? links.length - 1
+          : (current + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+        links[next]?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', keyboard);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', keyboard); };
+  }, [accountOpen]);
+
 
   return (
     <header className="sticky top-0 z-[100] w-full border-b border-slate-700/80 bg-slate-950/85 backdrop-blur">
@@ -104,7 +139,7 @@ function HeaderContent() {
               aria-current={activeArea === s.id ? 'page' : undefined}
               className={`px-2 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
                 activeArea === s.id
-                  ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
+                  ? 'bg-[var(--msp-panel-2)] text-[var(--msp-accent)] border border-[var(--msp-accent)]'
                   : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'
               }`}
             >
@@ -116,12 +151,25 @@ function HeaderContent() {
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <Link href="/tools" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">All tools</Link>
             <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
-            {isLoggedIn && (
-              <Link href="/tools/referrals" className="msp-nav-secondary text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
-            )}
             <NotificationBell compact={isAppRoute} />
             {isLoggedIn && (
-              <Link href="/account" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Account</Link>
+              <div ref={accountRef} className="relative" onBlur={event => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setAccountOpen(false);
+              }}>
+                <button ref={accountButtonRef} type="button" aria-haspopup="menu" aria-expanded={accountOpen}
+                  aria-controls="msp-account-menu" onClick={() => setAccountOpen(open => !open)}
+                  className="min-h-10 px-2 py-1 text-xs text-slate-400 hover:text-[var(--msp-accent)] focus-visible:outline-[var(--msp-accent)]">
+                  {COPY.nav.account}
+                </button>
+                {accountOpen && <div id="msp-account-menu" role="menu" aria-label={COPY.nav.account}
+                  className="absolute right-0 z-10 w-48 border border-slate-700 bg-[var(--msp-panel)] p-4 shadow-xl"
+                  style={{ borderRadius: 'var(--msp-radius-card)' }}>
+                  {ACCOUNT_LINKS.map(link => <Link key={link.href} href={link.href} role="menuitem"
+                    onClick={() => setAccountOpen(false)} className="flex min-h-10 items-center py-3 text-xs text-slate-200 hover:text-[var(--msp-accent)]">
+                    {link.label}
+                  </Link>)}
+                </div>}
+              </div>
             )}
             {!tierLoading && isLoggedIn && (
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
@@ -154,7 +202,7 @@ function HeaderContent() {
           <button
             ref={menuButtonRef}
             onClick={() => setDrawerOpen(true)}
-            className="flex flex-col gap-1.5 p-2"
+            className="flex min-h-10 min-w-10 flex-col justify-center gap-1.5 p-2"
             aria-label="Open menu"
             aria-expanded={drawerOpen}
             aria-controls="msp-mobile-menu"
@@ -186,7 +234,7 @@ function HeaderContent() {
           {/* Drawer header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-700/90">
             <span className="text-lg font-semibold text-teal-300">Menu</span>
-            <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
+            <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="min-h-10 min-w-10 text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
           </div>
 
           {/* Drawer body — same surfaces always shown */}
@@ -197,9 +245,10 @@ function HeaderContent() {
                   key={s.href}
                   href={s.href}
                   onClick={() => setDrawerOpen(false)}
+                  aria-current={activeArea === s.id ? 'page' : undefined}
                   className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                     activeArea === s.id
-                      ? 'bg-teal-500/15 text-teal-300'
+                      ? 'bg-[var(--msp-panel-2)] text-[var(--msp-accent)]'
                       : 'text-white hover:bg-teal-500/10 hover:text-teal-300'
                   }`}
                 >
@@ -208,25 +257,20 @@ function HeaderContent() {
               ))}
             </div>
 
-            {/* Supporting links */}
             <div className="mt-4 pt-4 border-t border-slate-700 flex flex-col gap-0.5">
-              <div className="px-4 pb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">More tools</div>
-              {MORE_TOOLS.map(s => (
-                <Link key={s.href} href={s.href} onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">
-                  {s.label}
+              <div className="px-4 pb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                {isLoggedIn ? COPY.nav.account : COPY.nav.more}
+              </div>
+              {(isLoggedIn ? ACCOUNT_LINKS : ACCOUNT_LINKS.filter(link => link.href === '/compliance-hub')).map(link => (
+                <Link key={link.href} href={link.href} onClick={() => setDrawerOpen(false)}
+                  className="flex items-center px-4 py-3 text-sm text-white hover:text-[var(--msp-accent)] rounded-lg">
+                  {link.label}
                 </Link>
               ))}
             </div>
-
-            {/* Supporting links */}
             <div className="mt-4 pt-4 border-t border-slate-700 flex flex-col gap-0.5">
-              <Link href="/pricing" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">Pricing</Link>
-              {isLoggedIn && (
-                <>
-                  <Link href="/tools/referrals" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">Referrals</Link>
-                  <Link href="/account" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">Account</Link>
-                </>
-              )}
+              <Link href="/tools" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:text-[var(--msp-accent)]">All tools</Link>
+              <Link href="/pricing" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:text-[var(--msp-accent)]">Pricing</Link>
             </div>
 
             {/* Sign In / Sign Out */}
