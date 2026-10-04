@@ -80,6 +80,27 @@ describe('GET /api/regime (OV-1)', () => {
     expect(body).not.toHaveProperty('sizing');
   });
 
+  it('returns the stored market regime to signed-out viewers and skips account signals', async () => {
+    mocks.session.mockResolvedValue(null);
+    mocks.overlay.mockResolvedValue(inputs());
+    mocks.q.mockClear();
+    const { status, body } = await call();
+    vi.useRealTimers();
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ available: true, basis: 'market', regime: 'TREND_UP' });
+    expect(body.signals).toEqual([expect.objectContaining({ kind: 'market', counted: true })]);
+    expect(mocks.q).not.toHaveBeenCalled();
+  });
+
+  it('signed-out with no stored market data is a plain unavailable response', async () => {
+    mocks.session.mockResolvedValue(null);
+    const { status, body } = await call();
+    vi.useRealTimers();
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ available: false, regime: null });
+    expect(body.reason).toContain('Market data unavailable');
+  });
+
   it('falls back to account signals only when market data is unavailable', async () => {
     mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM risk_governor_snapshots')
       ? [{ risk_mode: 'trend_down', updated_at: new Date(NOW - 60_000).toISOString() }]
