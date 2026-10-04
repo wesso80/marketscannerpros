@@ -31,3 +31,15 @@ it('renders no invented chart, splits missing days, and omits a missing-low base
  t.chart.bars=[daily[0],daily[1],daily[4],daily[5]];t.chart.baseLow=null;rerender(<BaseChart top={t} zone="UTC"/>);
  expect(container.querySelectorAll('polyline')).toHaveLength(2);expect(container.querySelector('[data-base-box]')).toBeNull();expect(screen.getByText('Base low unavailable')).toBeTruthy();expect(screen.getByRole('img').getAttribute('aria-label')).toContain('UTC');
 });
+
+import StatCards from '@/components/crypto/top/StatCards';
+it('keeps KAS-like unlisted derivatives explicit while the chart and remaining cards render',()=>{
+ const d=fixture();d.top!.perpetualListed={label:'Perpetual listed',value:false,source:'OKX instrument directory',asOf:d.generatedAt,basis:'Directory checked at',status:'Live'};
+ const {container}=render(<CryptoTop data={d}/>);expect(screen.getAllByText('No OKX perpetual listed')).toHaveLength(2);expect(container.querySelectorAll('[data-stat-card]')).toHaveLength(4);expect(screen.getByRole('img')).toBeTruthy();
+});
+it('funding and OI remain neutral and preserve interval and observation time',()=>{
+ const t=fixture().top!;const metric={label:'Funding',value:-.0038,source:'OKX LINK-USDT-SWAP only (one venue)',asOf:null,basis:'Current-period estimate',status:'Degraded' as const};
+ t.funding=metric;t.fundingInterval={...metric,value:4};t.openInterest={...metric,value:30000000};t.oiChange24h={...metric,value:2.2};
+ const {container}=render(<StatCards top={t} zone="UTC"/>);expect(container.textContent).toContain('-0.0038%');expect(container.textContent).toContain('interval 4h');expect(container.textContent).toContain('+2.2%');
+ expect(container.querySelector('[data-stat-card] [data-top-source]')?.className).toContain('text-amber');expect(container.innerHTML).not.toMatch(/--msp-(bull|bear)/);
+});
