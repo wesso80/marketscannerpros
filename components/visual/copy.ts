@@ -6,11 +6,11 @@ export const COPY = {
   },
   today: {
     overview: 'Overview', subtitle: "Today's market at a glance. Research only.",
-    loading: 'Loading', current: 'Current', stale: 'Stale inputs', unavailable: 'Unavailable',
+    loading: 'Loading…', current: 'Current', stale: 'Stale inputs', unavailable: 'Not available right now',
     regime: 'regime', snapshot: 'snapshot', sectors: 'Sectors, % change vs prior close', sectorSource: 'Alpha Vantage',
-    lastClose: 'last close', sessionDay: 'New York session', timeUnknown: 'time unknown', sourceUnknown: 'source unknown',
-    noQuote: 'no quote', na: 'n/a', sectorsUp: 'Sectors up', sampled: 'sectors with change data', noSectors: 'Sector data unavailable',
-    dataStatus: 'Data status', degraded: 'degraded', staleCount: 'stale', notTimed: 'not timed', show: 'Show',
+    lastClose: 'last close', sessionDay: 'New York session', timeUnknown: 'Not available right now', sourceUnknown: 'Not available right now',
+    noQuote: 'no quote', na: 'No reading', sectorsUp: 'Sectors up', sampled: 'sectors with change data', noSectors: 'Sector data is not in this snapshot',
+    dataStatus: 'Data status', degraded: 'needs a check', staleCount: 'stale', notTimed: 'not timed', show: 'Show', hide: 'Hide',
     btc: 'BTC', eth: 'ETH', spy: 'SPY',
   },
   radarCard: {

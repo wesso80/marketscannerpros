@@ -7,11 +7,11 @@ import { sectorCells, type SectorInput } from '@/lib/overview/today';
 import { quoteStamp, type DisplayQuote } from '@/lib/market/quotePresentation';
 import { priceText } from '@/lib/market/priceStamp';
 import type { StrengthRanking } from '@/lib/analysis/commandCenter';
-export default function TodayStrip({ regime, loading, hasRegimeData, regimeColor, sectors, sectorTime, sectorDay, strength, quotes }: {
+export default function TodayStrip({ regime, loading, hasRegimeData, regimeColor, sectors, sectorTime, sectorDay, strength, quotes, quotesLoading = false }: {
   regime: { regimeLabel: string; available: boolean; stale: boolean; asOf: string | null };
   loading: boolean; hasRegimeData: boolean; regimeColor: string;
   sectors: SectorInput[]; sectorTime?: string | null; sectorDay?: string | null;
-  strength: StrengthRanking; quotes?: Record<string, DisplayQuote>;
+  strength: StrengthRanking; quotes?: Record<string, DisplayQuote>; quotesLoading?: boolean;
 }) {
   const c = COPY.today;
   const freshness = loading && !hasRegimeData ? c.loading : !regime.available ? c.unavailable : regime.stale ? c.stale : c.current;
@@ -21,8 +21,11 @@ export default function TodayStrip({ regime, loading, hasRegimeData, regimeColor
     <HeatStrip cells={sectorCells(sectors)} stamp={sectorStamp} />
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {([c.btc, c.eth, c.spy] as const).map(symbol => {
-        const quote = quoteStamp(symbol, symbol === c.spy ? 'equity' : 'crypto', quotes?.[symbol]);
-        return <StatCard key={symbol} label={symbol} value={priceText(quote.price)} stamp={{ quote }} />;
+        const raw = quotes?.[symbol];
+        const quote = quoteStamp(symbol, symbol === c.spy ? 'equity' : 'crypto', raw);
+        const measured = typeof raw?.price === 'number' && Number.isFinite(raw.price) && raw.price !== 0;
+        const waiting = quotesLoading && !raw;
+        return <StatCard key={symbol} label={symbol} value={waiting ? c.loading : measured || raw ? priceText(quote.price) : c.unavailable} stamp={waiting ? undefined : measured || raw ? { quote } : { source: 'stored quote', basis: symbol === c.spy ? c.lastClose : 'spot' }} />;
       })}
       <StatCard label={c.sectorsUp} value={strength.total ? `${Math.round(strength.greenRatio * strength.total)} / ${strength.total}` : c.na} stamp={sectorStamp} />
     </div>
