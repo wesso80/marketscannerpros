@@ -1,5 +1,7 @@
 "use client";
 
+import { useUserTier } from '@/lib/useUserTier';
+import FreeLoading from '@/components/free/Loading';
 import Link from "next/link";
 import { PLAN_PRICES } from '@/lib/planPrices';
 
@@ -8,9 +10,13 @@ interface UpgradeGateProps {
   requiredTier: "pro";
   feature: string;
   children?: React.ReactNode;
+  preview?: React.ReactNode;
 }
 
-export default function UpgradeGate({ requiredTier: _requiredTier, feature, children }: UpgradeGateProps) {
+export default function UpgradeGate({ requiredTier: _requiredTier, feature, children, preview }: UpgradeGateProps) {
+  const { isLoading } = useUserTier();
+  if (isLoading) return <FreeLoading />;
+  if (preview) return <>{preview}</>;
   void _requiredTier;
   const tierName = "Pro";
   const price = PLAN_PRICES.pro.monthly;

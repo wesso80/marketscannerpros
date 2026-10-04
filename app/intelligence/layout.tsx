@@ -1,3 +1,4 @@
+import IntelligenceGate from '@/components/free/IntelligenceGate';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import IntelligenceNav from '@/components/intelligence/IntelligenceNav';
@@ -20,7 +21,7 @@ export default function IntelligenceLayout({ children }: { children: ReactNode }
       }}
     >
       <IntelligenceNav />
-      {children}
+      <IntelligenceGate>{children}</IntelligenceGate>
       <p
         style={{
           marginTop: 32,

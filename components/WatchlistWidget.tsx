@@ -1,5 +1,7 @@
 'use client';
 
+import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
+import { FREE_COPY } from '@/components/free/copy';
 import PriceStamp from '@/components/market/PriceStamp';
 import {watchlistStamp} from '@/lib/market/trackStamp';
 import {symbolHref,optionsHref} from '@/lib/market/links';
@@ -62,6 +64,7 @@ const ICONS: Record<string, string> = {
 };
 
 export default function WatchlistWidget() {
+  const upgrade = useUpgradeMoment();
   const { tier } = useUserTier();
   const router = useRouter();
   const searchParams=useSearchParams();
@@ -426,6 +429,8 @@ export default function WatchlistWidget() {
   return (
     <div className="rounded-xl border border-slate-700/60 bg-slate-800/50">
       <div className="p-4">
+        {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
+        {(items.length >= currentLimits.items || watchlists.length >= currentLimits.watchlists) && <p className="text-xs">{FREE_COPY.moments.watchlists}</p>}
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
             {error}
@@ -446,7 +451,7 @@ export default function WatchlistWidget() {
             <p className="mb-4 text-sm text-slate-500">Initialize your first idea pipeline</p>
             <button
               type="button"
-              onClick={() => setShowCreate(true)}
+              onClick={() => watchlists.length >= currentLimits.watchlists ? upgrade.show('watchlists') : setShowCreate(true)}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-white transition-colors hover:bg-emerald-500"
             >
               Create Watchlist
@@ -543,16 +548,16 @@ export default function WatchlistWidget() {
                   <div className="flex w-full flex-wrap gap-2 md:justify-end">
                     <button
                       type="button"
-                      onClick={() => setShowAddSymbol(true)}
-                      disabled={items.length >= currentLimits.items}
+                      onClick={() => items.length >= currentLimits.items ? upgrade.show('watchlists') : setShowAddSymbol(true)}
+                      aria-disabled={items.length >= currentLimits.items}
                       className="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                     >
                       + Add Symbol
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowCreate(true)}
-                      disabled={watchlists.length >= currentLimits.watchlists}
+                      onClick={() => watchlists.length >= currentLimits.watchlists ? upgrade.show('watchlists') : setShowCreate(true)}
+                      aria-disabled={watchlists.length >= currentLimits.watchlists}
                       className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-50"
                     >
                       + Create List
@@ -608,7 +613,7 @@ export default function WatchlistWidget() {
             ) : items.length === 0 ? (
               <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 py-10 text-center text-slate-400">
                 <p>This watchlist is empty</p>
-                <button type="button" onClick={() => setShowAddSymbol(true)} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
+                <button type="button" onClick={() => items.length >= currentLimits.items ? upgrade.show('watchlists') : setShowAddSymbol(true)} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
                   + Add a symbol
                 </button>
               </div>

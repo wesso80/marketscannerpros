@@ -9,6 +9,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import MspRadarReport from "@/components/msp-radar/MspRadarReport";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
+import RadarPreview from '@/components/free/RadarPreview';
 import { useUserTier } from "@/lib/useUserTier";
 
 const isPaidTier = (tier: string) => tier === "pro" || tier === "pro_trader";
@@ -51,7 +52,7 @@ export default function MspRadarPage() {
   if (loggedOut) {
     return (
       <>
-        <GateCard eyebrow="Sign in required" title="Sign in to open MSP Radar" body="MSP Radar is part of the paid MarketScannerPros workspace. Sign in to view today's report and the archive." primary={{ href: "/auth?next=/tools/msp-radar", label: "Sign In" }} secondary={{ href: "/pricing", label: "View Plans" }} />
+        <RadarPreview />
         <ComplianceDisclaimer compact />
       </>
     );
@@ -61,7 +62,7 @@ export default function MspRadarPage() {
   if (locked) {
     return (
       <>
-        <GateCard eyebrow="Paid plan required" title="MSP Radar is available with a paid MarketScannerPros plan." body="Upgrade to unlock the daily report, the 30-day archive, and one-click hand-off from every candidate into Golden Egg." primary={{ href: "/pricing", label: "View Plans" }} secondary={{ href: "/tools", label: "Back to tools" }} />
+        <RadarPreview />
         <ComplianceDisclaimer compact />
       </>
     );

@@ -1,5 +1,9 @@
 'use client';
 
+import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { WATCHLIST_LIMITS } from '@/lib/tiers';
+import { FREE_COPY } from '@/components/free/copy';
+
 /* ═══════════════════════════════════════════════════════════════════════════
    V2 Account Section — Embedded in Workspace Settings tab
    Combines: Subscription, Usage, Notifications, Billing, Referrals, Data Mgmt
@@ -110,14 +114,14 @@ export default function AccountSection() {
         .then(async r => { if (r.ok) { const d = await r.json(); return d?.aiUsedToday ?? 0; } return 0; })
         .catch(() => 0),
       fetch('/api/alerts', { credentials: 'include' })
-        .then(async r => { if (r.ok) { const d = await r.json(); return Array.isArray(d?.alerts) ? d.alerts.length : 0; } return 0; })
+        .then(async r => { if (r.ok) { const d = await r.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : 0; } return 0; })
         .catch(() => 0),
       fetch('/api/watchlists', { credentials: 'include' })
         .then(async r => {
           if (r.ok) {
             const d = await r.json();
             const lists = Array.isArray(d?.watchlists) ? d.watchlists : [];
-            return lists.reduce((sum: number, w: { items?: unknown[] }) => sum + (Array.isArray(w?.items) ? w.items.length : 0), 0);
+            return lists.length;
           }
           return 0;
         })
@@ -240,13 +244,13 @@ export default function AccountSection() {
 
   const usage = [
     { label: 'MSP AI Analyst', used: aiUsed, limit: aiLimit },
-    { label: 'Saved Alerts', used: realUsage?.alertCount ?? 0, limit: isPaid ? 25 : 10 },
-    { label: 'Watchlist Symbols', used: realUsage?.watchlistCount ?? 0, limit: isPaid ? 100 : 20 },
+    { label: 'Saved Alerts', used: realUsage?.alertCount ?? 0, limit: isPaid ? ALERT_LIMITS.pro : ALERT_LIMITS.free },
+    { label: 'Watchlists', used: realUsage?.watchlistCount ?? 0, limit: isPaid ? WATCHLIST_LIMITS.pro.watchlists : WATCHLIST_LIMITS.free.watchlists },
   ];
 
   const planFeatures = useMemo(() => {
     if (isPaid) return ['Unlimited scanning + Golden Egg', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
-    return ['Core scanner (limited daily runs)', 'Watchlists, markets and macro dashboards', 'Selected delayed / basic intelligence views', 'Basic portfolio tracker and journal', 'Educational content and platform guides'];
+    return [FREE_COPY.pricing.scans, 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, FREE_COPY.pricing.journal, 'Educational content and platform guides'];
   }, [isPaid]);
 
   // ─── Loading / Auth guard ────────────────────────────────────────────────
@@ -354,6 +358,7 @@ export default function AccountSection() {
           <Card>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Usage</h3>
             <div className="space-y-3">
+              <p className="mb-3 text-xs">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
               {usage.map(m => (
                 <div key={m.label}>
                   <div className="flex justify-between text-xs mb-1">

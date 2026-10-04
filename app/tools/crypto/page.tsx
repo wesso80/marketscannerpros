@@ -1,5 +1,7 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
 import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
@@ -8,8 +10,10 @@ import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import { PageHero } from '@/components/ui';
 import CoinGeckoCredit from '@/components/CoinGeckoCredit';
@@ -128,7 +132,9 @@ function reviewLabel(verdict: ReviewVerdict): string {
   return 'Not aligned';
 }
 
-export default function CryptoCommandCenter() {
+export default function CryptoCommandCenter() { return <PaidPreviewGate tool="Crypto"><CryptoCommandCenterPaid /></PaidPreviewGate>; }
+
+function CryptoCommandCenterPaid() {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <CryptoCommandCenterContent />
@@ -137,7 +143,7 @@ export default function CryptoCommandCenter() {
 }
 
 function CryptoCommandCenterContent() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier, isAdmin, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const [logTab, setLogTab] = useState<LogTab>('alerts');
@@ -417,8 +423,10 @@ function CryptoCommandCenterContent() {
     } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
   }, [marketData]);
 
+  if (tierLoading) return <FreeLoading />;
+
   if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
-    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" />;
+    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" preview={<LockedPreview tool="Crypto Command Center" />} />;
   }
 
   const currentSection = sectionItems.find((s) => s.id === activeSection);

@@ -1,8 +1,12 @@
 'use client';
 
+import PaidPreviewGate from '@/components/free/PaidPreviewGate';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
+import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -20,8 +24,11 @@ import {trustBadgeState} from '@/components/market/TrustBadge';
 import {buildMarketDataProviderStatus} from '@/lib/scanner/providerStatus';
 import {formatMarketTime} from '@/lib/market/priceStamp';
 
-export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
-  const { tier } = useUserTier();
+export default function CryptoDashboard(props: { embeddedInDashboard?: boolean } = {}) {
+  return <PaidPreviewGate tool="Crypto Derivatives"><CryptoDashboardPaid {...props} /></PaidPreviewGate>;
+}
+function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
+  const { tier, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<DashboardData>({
     fundingRates: null,
     longShort: null,
@@ -142,10 +149,12 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
 
   // Gate for Pro+ users
   // Must be after ALL hooks to comply with React rules
+  if (tierLoading) return <FreeLoading />;
+
   if (!canAccessCryptoCommandCenter(tier)) {
     return (
       <div className={`${embeddedInDashboard ? 'min-h-[16rem]' : 'min-h-screen'} bg-[var(--msp-bg)] text-white flex items-center justify-center`}>
-        <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" />
+        <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" preview={<LockedPreview tool="Crypto Derivatives Dashboard" />} />
       </div>
     );
   }

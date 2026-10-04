@@ -2,6 +2,7 @@
 
 import React, { Suspense } from 'react';
 import { useUserTier, canAccessOptionsTerminal } from '@/lib/useUserTier';
+import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import CryptoTerminalView from '@/components/crypto-terminal/CryptoTerminalView';
 
@@ -13,7 +14,7 @@ function CryptoTerminalInner() {
   }
 
   if (!canAccessOptionsTerminal(tier)) {
-    return <UpgradeGate requiredTier="pro" feature="Crypto Derivatives Terminal" />;
+    return <UpgradeGate requiredTier="pro" feature="Crypto Derivatives Terminal" preview={<LockedPreview tool="Crypto Derivatives Terminal" />} />;
   }
 
   return <CryptoTerminalView />;

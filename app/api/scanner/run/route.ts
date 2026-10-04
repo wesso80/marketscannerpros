@@ -1,3 +1,5 @@
+import { quotaKey, reserveScan } from '@/lib/free/scanQuota';
+import { FREE_DAILY_SCAN_LIMIT } from '@/lib/free/limits';
 import { computeTechnicalProxy, type TechnicalProxyResult } from '@/lib/scanner/technicalProxy';
 import { buildScannerScore, compareScannerScores, dollarVolume, scoreFreshness, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
 import type { ScannerScorePayload, ScorePermission, ScoreReason } from '@/lib/scanner/scoreContract';
@@ -576,34 +578,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ─── Daily scan limit enforcement ───
-    // Free: 5/day, Anonymous: 3/day, Pro (incl. legacy pro_trader): unlimited
-    const SCAN_DAILY_LIMITS: Record<string, number | null> = {
-      anonymous: 3,
-      free: 5,
-      pro: null,       // unlimited
-      pro_trader: null, // unlimited
-    };
-    const scanDailyLimit = session.tier in SCAN_DAILY_LIMITS ? SCAN_DAILY_LIMITS[session.tier] : 5;
+    // Reserve one request atomically, before any provider work. Paid/cron behavior is unchanged.
+    const scanDailyLimit = session.tier === 'pro' || session.tier === 'pro_trader' ? null : FREE_DAILY_SCAN_LIMIT;
     if (scanDailyLimit !== null && !isCronBypass) {
       try {
-        const today = new Date().toISOString().split('T')[0];
-        const usage = await dbQuery<{ scan_count: number }>(
-          `SELECT scan_count FROM scan_usage WHERE workspace_id = $1 AND scan_date = $2`,
-          [session.workspaceId, today]
-        );
-        const currentCount = usage[0]?.scan_count ?? 0;
-        if (currentCount >= scanDailyLimit) {
-          const upgradeMsg = session.workspaceId === 'anonymous'
-            ? 'Sign up for a free account for 5 scans/day, or upgrade to Pro for unlimited.'
-            : 'Upgrade to Pro for unlimited scanning.';
-          return NextResponse.json(
-            { error: `Daily scan limit reached (${scanDailyLimit}/day). ${upgradeMsg}`, limitReached: true, dailyLimit: scanDailyLimit, usageCount: currentCount },
-            { status: 429 }
-          );
-        }
-      } catch (limErr) {
-        console.warn('[scanner] Scan usage check failed, continuing:', limErr);
+        const used = await reserveScan(quotaKey(req, session.workspaceId));
+        if (used === null) return NextResponse.json({
+          error: `Daily scan limit reached (${scanDailyLimit}/day). Upgrade to Pro for unlimited scanning.`,
+          limitReached: true, dailyLimit: scanDailyLimit, usageCount: scanDailyLimit,
+        }, { status: 429 });
+      } catch {
+        return NextResponse.json({ error: 'Scan allowance is unavailable. Please try again.' }, { status: 503 });
       }
     }
 
@@ -2951,22 +2936,6 @@ export async function POST(req: NextRequest) {
       },
       topResultScore
     );
-
-    // ─── Increment daily scan count ───
-    if (scanDailyLimit !== null && !isCronBypass) {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        await dbQuery(
-          `INSERT INTO scan_usage (workspace_id, scan_date, scan_count)
-           VALUES ($1, $2, 1)
-           ON CONFLICT (workspace_id, scan_date)
-           DO UPDATE SET scan_count = scan_usage.scan_count + 1`,
-          [session.workspaceId, today]
-        );
-      } catch (incErr) {
-        console.warn('[scanner] Scan usage increment failed:', incErr);
-      }
-    }
 
     // Return results with cache-prevention headers
     const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';

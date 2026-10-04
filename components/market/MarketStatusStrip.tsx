@@ -1,3 +1,5 @@
+import { friendlyStatus } from '@/lib/free/friendlyStatus';
+import { FREE_COPY } from '@/components/free/copy';
 import type { MarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import DataFreshnessBadge, { providerStatusColor } from './DataFreshnessBadge';
 
@@ -22,10 +24,16 @@ function formatTime(value?: string | Date | null): string | null {
 
 type MarketStatusStripProps = {
   items: MarketStatusItem[];
+  friendly?: boolean;
   className?: string;
 };
 
-export default function MarketStatusStrip({ items, className = '' }: MarketStatusStripProps) {
+export default function MarketStatusStrip({ items, className = '', friendly = false }: MarketStatusStripProps) {
+  if (friendly) return <div className={className}>{items.map(item => <details key={item.label} className="rounded-xl border border-white/10 p-3">
+    <summary>{item.label} · {friendlyStatus(item.statusLabel || (item.status?.stale || item.status?.degraded ? 'stale' : item.computedAt ? FREE_COPY.available : null))}</summary>
+    <p>{FREE_COPY.details}: {item.source || item.status?.provider || FREE_COPY.unavailable}</p>
+    {(item.warnings ?? []).map((warning, index) => <p key={index}>{friendlyStatus(warning)}</p>)}
+  </details>)}</div>;
   return (
     <div className={`grid gap-2 md:grid-cols-2 ${className}`}>
       {items.map((item) => {
