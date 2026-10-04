@@ -8,6 +8,7 @@ export const FREE_COPY = {
   details: 'Details', savedList: 'Latest saved list', scanner: 'Scanner', macro: 'Macro summary',
   research: 'Research and education only. Not a trade instruction.',
   source: 'Daily picks database', basis: 'Saved daily snapshot', stampUnavailable: 'Time not supplied',
+  deepDescription: 'Macro deep modules: Global M2, Liquidity, Fragility and more.', freeMacro: 'Open the free Macro summary',
   journalLimit: (n: number) => `Free keeps ${n} open journal entries. Close an entry or unlock Pro.`,
   journalCount: (n: number) => `${n} of ${FREE_JOURNAL_LIMIT} open entries`,
   pricing: { scans: `${FREE_DAILY_SCAN_LIMIT} scans a day`, picks: 'Today’s top picks', alerts: `${ALERT_LIMITS.free} price alerts`, watchlists: `${WATCHLIST_LIMITS.free.watchlists} watchlists of ${WATCHLIST_LIMITS.free.items} symbols`, journal: `Journal (${FREE_JOURNAL_LIMIT} open entries)`, macro: 'Macro summary' },

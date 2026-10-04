@@ -17,6 +17,7 @@ import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, t
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
 import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
+import { FREE_COPY } from '@/components/free/copy';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { useRankedQueue } from '@/hooks/useRankedQueue';
@@ -710,7 +711,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
       {dashTab === 'Macro' && (!isPro ? (
         <div>
           <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2 mb-3">
-            <span className="text-emerald-400 font-semibold">Pro required:</span> upgrade to interact with the Macro Dashboard
+            <a className="inline-flex min-h-10 items-center underline" href="/tools/macro">{FREE_COPY.freeMacro}</a>
           </div>
           <div className="pointer-events-none select-none"><MacroDashboard embeddedInDashboard /></div>
         </div>
