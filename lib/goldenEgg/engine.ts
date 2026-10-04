@@ -658,7 +658,7 @@ export function buildPayload(
   if (setup.setupType === 'breakout') confirmation.push('Follow-through bar holding the break with above-average participation.');
   if (setup.setupType === 'squeeze') confirmation.push('Bollinger width expanding with a directional close — direction is not assumed before the expansion bar.');
   if (setup.setupType === 'mean_reversion') confirmation.push(`RSI turning back ${direction === 'LONG' ? 'up from oversold' : 'down from overbought'} and a reclaim of the 20-bar mean.`);
-  if (timing.relation === 'conflict') confirmation.push('Time confluence flipping to agree, or the conflict falling below gate thresholds.');
+  if (timing.relation === 'conflict') confirmation.push('Timing note only: does not change the verdict.');
   if (hasAtr) invalidationTexts.push(`Close ${oppWord} ${fmtLevel(stopPrice)}${stopAnchor ? ` (beyond ${stopAnchor})` : ' (1.5× ATR model stop)'} with volume confirmation.`);
   if (ind?.ema200 != null && setup.setupType === 'trend') invalidationTexts.push(`Decisive close ${oppWord} EMA200 ${fmtLevel(ind.ema200)} or ADX rolling below 20.`);
   if (setup.extended) invalidationTexts.push('Climax bar followed by a close through its midpoint — the extended move is failing.');

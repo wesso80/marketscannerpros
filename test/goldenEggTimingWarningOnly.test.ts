@@ -11,4 +11,6 @@ it('strong opposing timing is a nice-to-know warning, never a verdict gate', () 
   expect(conflict.canonical?.timing.eligibleForHardGate).toBe(false);
   expect(conflict.canonical?.timing.warning).toMatch(/no tested edge/);
   expect(conflict.layer1.flipConditions.find(f => f.id === 'f6')?.severity).toBe('nice');
+  expect(conflict.canonical?.confirmation.join(' ')).toContain('Timing note only: does not change the verdict.');
+  expect(conflict.canonical?.confirmation.join(' ')).not.toMatch(/gate thresholds/);
 });
