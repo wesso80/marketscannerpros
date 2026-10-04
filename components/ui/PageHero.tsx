@@ -20,6 +20,8 @@ export interface PageHeroProps {
   badges?: PageHeroBadge[];
   /** Main h1 title \u2014 sentence case. */
   title: React.ReactNode;
+  /** Heading hierarchy override; existing pages retain h1. */
+  titleAs?: 'h1' | 'h2';
   /** Optional short subtitle below the title. */
   subtitle?: React.ReactNode;
   /** Up to ~3 actions \u2014 first is primary, then secondary, then ghost. */
@@ -59,6 +61,7 @@ export default function PageHero({
   eyebrow,
   badges,
   title,
+  titleAs: Title = 'h1',
   subtitle,
   actions,
   trailing,
@@ -91,7 +94,7 @@ export default function PageHero({
               <span key={i} style={badgeStyle(b.tone)}>{b.label}</span>
             ))}
           </div>
-          <h1
+          <Title
             className="mt-1"
             style={{
               fontSize: "var(--msp-text-h1)",
@@ -101,7 +104,7 @@ export default function PageHero({
             }}
           >
             {title}
-          </h1>
+          </Title>
           {subtitle ? (
             <p
               className="mt-1 max-w-3xl"
