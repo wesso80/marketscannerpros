@@ -1,3 +1,4 @@
+import {measuredFixture} from './fixtures/confluenceDemotion';
 import {afterEach, expect, it, vi} from 'vitest';
 import {confluenceLearningAgent as agent} from '@/lib/confluence-learning-agent';
 import {calculateTradeLevels, selectStrikesFromConfluence} from '@/lib/options-confluence-analyzer';
@@ -26,9 +27,9 @@ it.each(['crypto','equity'] as const)('short %s history cannot create active lev
  const sibling=agent.analyzeDecompressionPull(bars(90),101,Date.now(),type);
  expect((sibling as any).unmeasuredTFs).toContain('1D');
 });
-export const measuredFixture=()=>({currentPrice:100,primaryTF:'1H',candlesByTf:{'1H':Array.from({length:20},(_,i)=>({ts:i*3600000,open:100,high:102,low:98,close:100}))},mid50Levels:[{tf:'1H',level:98},{tf:'2H',level:104},{tf:'4H',level:110}],clusters:[],decompression:{},prediction:{confidence:60}} as any);
+
 it('keeps existing measured strike and trade levels unchanged',()=>{
- const r=calculateTradeLevels(measuredFixture(),'bullish',null);console.log('MEASURED_BASELINE',JSON.stringify(r));
+ const r=calculateTradeLevels(measuredFixture(),'bullish',null);
  expect(r?.stopLoss).toBeCloseTo(97.4);expect(selectStrikesFromConfluence(measuredFixture(),true,[95,100,105,110],.25)[0].strike).toBe(100);
 });
 it('uses measured ATR fallback when an opposing midpoint is zero',()=>{
