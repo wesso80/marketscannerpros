@@ -294,6 +294,7 @@ const legacyKeys: Record<string, string> = {
   "gainers-losers": "markets",
   news: "research",
   "crypto-time-confluence": "confluence-scanner",
+  "time-scanner": "confluence-scanner",
   "options-confluence": "options-terminal",
   "options-flow": "options-terminal",
   options: "options-terminal",

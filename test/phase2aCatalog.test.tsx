@@ -118,6 +118,8 @@ it("deduplicates catalog and saved legacy keys without losing their destination"
   expect(getToolByKey("crypto-heatmap")?.href).toBe(
     "/tools/explorer?tab=crypto-command&section=heatmap",
   );
+  expect(areaLinks.scan.filter((item) => /time/i.test(item.label)).map((item) => item.label)).toEqual(["Time Confluence"]);
+  expect(getToolByKey("time-scanner")?.href).toBe("/tools/terminal?tab=time-confluence");
   expect(getToolByKey("liquidity-sweep")?.tier).toBe(
     canAccessScanner("free") ? "free" : "pro",
   );
