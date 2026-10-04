@@ -17,6 +17,8 @@ it('gate/risk/grade consumers do not read the removed scan grade',()=>{
 it('v21 and display labels no longer imply measured timeframe quality',()=>{
  expect(read('app/api/options-scan/route.ts')).toContain('const tfConfluenceScore = 50');
  expect(read('app/api/jobs/email-best-opportunities/route.ts')).not.toContain('Confluence stack:');
+ expect(read('app/api/jobs/email-best-opportunities/route.ts')).not.toContain('Signal strength:');
+ expect(read('app/api/jobs/email-best-opportunities/route.ts')).not.toMatch(/signal strength remains/);
  for(const name of ['StructureAlignmentCard','ConfluenceRadarCard'])expect(read(`components/msp/options/blocks/${name}.tsx`)).toContain('Multi-TF (not measured)');
  expect(read('components/options-terminal/OptionsConfluenceScanner.tsx')).toContain('Setup grade');
 });

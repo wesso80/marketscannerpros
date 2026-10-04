@@ -315,7 +315,6 @@ function optionsSetupToReasoning(s: any, symbol: string): PickReasoning {
 
   const why: string[] = [];
   if (s?.qualityReasons?.length) why.push(...s.qualityReasons.slice(0, 5));
-  if (s?.signalStrength) why.push(`Signal strength: ${s.signalStrength}`);
   if (s?.primaryStrike?.strike) why.push(`Primary strike candidate: ${s.primaryStrike.strike}`);
   if (s?.primaryExpiration?.date) why.push(`Primary expiration candidate: ${s.primaryExpiration.date}`);
   if (!why.length) why.push('No qualifying signal — observation only');
@@ -323,10 +322,10 @@ function optionsSetupToReasoning(s: any, symbol: string): PickReasoning {
   const tradeLevels = s?.tradeLevels ?? null;
   const whatConfirms = tradeLevels?.confirmationLevel
     ? `Underlying holds above/below ${tradeLevels.confirmationLevel} on ${s.direction} side`
-    : `${s?.direction ?? 'directional'} confluence holds and signal strength remains ≥ ${s?.signalStrength ?? 'moderate'}`;
+    : `Underlying holds the ${s?.direction ?? 'stated'} side and the listed levels stay valid`;
   const whatInvalidates = tradeLevels?.invalidationLevel
     ? `Underlying breaches ${tradeLevels.invalidationLevel}`
-    : 'Loss of confluence stack or signal strength downgrade';
+    : 'Price breaches the listed invalidation level, or the chain evidence no longer agrees';
 
   const mainRisk = !chainAvailable
     ? 'Options chain data unavailable — no qualifying options play; evidence quality capped'
