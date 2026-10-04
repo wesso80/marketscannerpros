@@ -382,7 +382,7 @@ export default function CommandCenterPage() {
           <SectionTitle n="03" title="Crypto Participation" />
           <div className="text-lg font-black" style={{ color: stanceColor(flow.stance) }}>{flow.label}</div>
           <p className="mt-1 text-sm text-slate-300">{flow.note}</p>
-          <Link className="text-emerald-300" href="/tools/crypto-dashboard?symbol=BTC">Derivatives detail</Link>
+          <Link className="text-emerald-300" href="/tools/crypto-dashboard">Market-wide derivatives</Link>
         </Card>
       </div>
 

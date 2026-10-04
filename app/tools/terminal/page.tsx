@@ -782,7 +782,7 @@ export default function TerminalPage() {
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Terminal">
           <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(sym)}`}>Open Crypto derivatives detail for {sym}</a>
+            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href="/tools/crypto-dashboard">Open market-wide crypto derivatives</a>
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
