@@ -40,6 +40,15 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
   }
 
   if (error) {
+    if (error.startsWith('Sign in')) {
+      return (
+        <section className="rounded-xl border border-white/10 bg-slate-950/40 px-4 py-8 text-center" aria-label="My Pages">
+          <h2 className="text-lg font-semibold text-white">My Pages</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">Sign in to see the pages you save. This dashboard stays open without an account.</p>
+          <a href="/auth?next=/tools/dashboard" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-300">Sign in</a>
+        </section>
+      );
+    }
     return (
       <div className="rounded-xl border border-amber-700/30 bg-amber-900/10 px-4 py-5 text-center">
         <p className="text-sm font-semibold text-amber-300">{error}</p>
