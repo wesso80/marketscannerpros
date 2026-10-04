@@ -6,6 +6,7 @@ import type {Breakdown} from '@/lib/crypto/breakdown/types';
 import {COPY} from '../copy';
 import StageBadge from './StageBadge';
 import RuleChips from './RuleChips';
+import BaseChart from './BaseChart';
 import {verdictLine} from '@/lib/crypto/breakdown/top';
 import SourceLine from './SourceLine';
 export default function CryptoTop({data}:{data:Breakdown}){
@@ -23,5 +24,6 @@ export default function CryptoTop({data}:{data:Breakdown}){
   {data.identityMatches!=null&&data.identityMatches>1?<div data-top-number className="text-amber-300"><p>{data.identityMatches} {COPY.matches}</p><SourceLine stamp={null} zone={zone}/></div>:data.identityMatches==null?<p className="text-xs text-slate-400">{COPY.identityUnchecked}</p>:null}
   {data.budget.capped&&<p role="status" className="text-amber-300">{data.budget.reason?COPY.budgetUnavailable:COPY.capped}</p>}
   {t&&<><div data-top-number><p className="text-sm leading-relaxed">{verdictLine(t.rule)}</p><SourceLine stamp={t.daily} zone={zone}/></div><RuleChips top={t} zone={zone}/></>}
+  <BaseChart top={t} zone={zone}/>
  </section>;
 }

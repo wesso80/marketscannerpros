@@ -23,3 +23,11 @@ it('shows exactly one rule stage, honest missing times, and no network calls',()
 it('supports old responses and retains capped and identity warnings',()=>{const data=fixture();delete data.top;data.budget.capped=true;data.identityMatches=2;
  const {container}=render(<CryptoTop data={data}/>);expect(screen.getByText('Price unavailable')).toBeTruthy();expect(container.querySelector('[data-stage-badge]')).toBeNull();expect(container.textContent).toContain('daily limit reached');expect(container.textContent).toContain('2 coins share');
 });
+
+import BaseChart from '@/components/crypto/top/BaseChart';
+it('renders no invented chart, splits missing days, and omits a missing-low base box',()=>{
+ const data=fixture();const {container,rerender}=render(<BaseChart zone="UTC"/>);expect(screen.getByText('Chart unavailable: daily bars missing.')).toBeTruthy();
+ const t=data.top!;t.chart.bars=[daily[0]];rerender(<BaseChart top={t} zone="UTC"/>);expect(container.querySelector('svg')).toBeNull();
+ t.chart.bars=[daily[0],daily[1],daily[4],daily[5]];t.chart.baseLow=null;rerender(<BaseChart top={t} zone="UTC"/>);
+ expect(container.querySelectorAll('polyline')).toHaveLength(2);expect(container.querySelector('[data-base-box]')).toBeNull();expect(screen.getByText('Base low unavailable')).toBeTruthy();expect(screen.getByRole('img').getAttribute('aria-label')).toContain('UTC');
+});
