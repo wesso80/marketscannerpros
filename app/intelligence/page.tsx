@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import { LastUpdatedBadge, SectionHeader } from '@/components/intelligence/primitives';
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import type { GlobalM2Dto } from '@/app/api/intelligence/global-m2/route';
@@ -88,6 +89,7 @@ export default function IntelligenceHome() {
   const lastUpdated = [m2.updatedAt, fragility.updatedAt, liquidity.updatedAt].filter((t): t is string => !!t).sort().pop();
   return (
     <div data-intelligence-overview>
+      <Link href="/tools/command-center" className="inline-flex min-h-10 items-center text-sm hover:text-[var(--msp-accent)]">Open Overview</Link>
       <header style={{ marginBottom: 4 }}>
         <h1
           style={{
@@ -113,11 +115,9 @@ export default function IntelligenceHome() {
       />
       <ModuleGrid modules={liveModules} />
 
-      <SectionHeader
-        title="Coming Soon"
-        subtitle="Under construction — no live output shown while native validation is in progress."
-      />
-      <ModuleGrid modules={COMING_SOON} />
+      <CollapsibleSection title="Coming soon" summary="Modules in development">
+        <ul className="space-y-2 text-sm">{COMING_SOON.map(module => <li key={module.href}>{module.title}</li>)}</ul>
+      </CollapsibleSection>
     </div>
   );
 }

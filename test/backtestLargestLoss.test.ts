@@ -34,12 +34,7 @@ describe('every Largest Loss / Gain display uses the helpers', () => {
     expect(hub).toContain('const g = largestGainTrade(result.bestTrade)');
     expect(hub).not.toContain('label="Largest Loss" value={fmtPct(n(result.worstTrade.returnPercent))}');
   });
-  it('Scanner backtest Largest Gain / Loss cards', () => {
-    const page = readFileSync('app/tools/scanner/backtest/page.tsx', 'utf8');
-    expect(page).toContain('const l = largestLossTrade(result.worstTrade)');
-    expect(page).toContain(': NO_LOSING_TRADES}');
-    expect(page).toContain(': NO_WINNING_TRADES}');
-  });
+  // The retired Scanner backtest URL now resolves to the hub checked above.
   it('Best/Worst trade cards colour by the trade sign', () => {
     const pm = readFileSync('components/backtest/PerformanceMetrics.tsx', 'utf8');
     expect(pm).toContain("worstTrade.returnPercent < 0 ? 'text-red-500' : 'text-emerald-500'");

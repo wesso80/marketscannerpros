@@ -70,7 +70,7 @@ describe('movers surfaces show the feed basis', () => {
     expect(moversPage).toContain("['US equities', `${equityMoversBasisLabel(data?.equityFeed)}");
   });
   it('no US-equity surface still says "15-minute delayed"', () => {
-    for (const file of ['app/tools/dashboard/page.tsx', 'app/tools/market-movers/page.tsx', 'components/markets/tabs/OverviewTab.tsx', 'app/tools/settings/page.tsx', 'app/disclaimer/page.tsx', 'lib/alphaVantageEntitlement.ts']) {
+    for (const file of ['app/tools/dashboard/page.tsx', 'app/tools/market-movers/page.tsx', 'components/markets/tabs/OverviewTab.tsx', 'app/disclaimer/page.tsx', 'lib/alphaVantageEntitlement.ts']) {
       const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
       expect(src, file).not.toMatch(/15[- ]?min(ute)?s?[- ]delayed|delayed 15|delayed by 15/i);
     }

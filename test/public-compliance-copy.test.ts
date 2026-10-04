@@ -16,7 +16,6 @@ const PUBLIC_SURFACES = [
   'app/api/workflow/events/route.ts',
   'app/tools/golden-egg/page.tsx',
   'app/tools/scanner/page.tsx',
-  'app/tools/scanner/backtest/page.tsx',
   'app/tools/market-movers/page.tsx',
   'app/tools/portfolio/layout.tsx',
   'components/options/layer2/Layer2ExecutionPlan.tsx',

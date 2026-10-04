@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   backtestAction,
@@ -76,12 +74,5 @@ describe('BT-6: profit factor with winners and no losers', () => {
     expect(formatProfitFactorValue(spy)).toBe('∞ (no losses)');
   });
 
-  it('the backtest page uses the shared scoring everywhere (no null → 0 local helper)', () => {
-    const src = readFileSync(path.join(__dirname, '../app/tools/backtest/page.tsx'), 'utf8');
-    expect(src).not.toMatch(/function scoreProfitFactor/);
-    expect(src).not.toMatch(/scoreProfitFactor\([a-zA-Z.]*\.profitFactor\)/);
-    expect(src).toMatch(/from '@\/lib\/backtest\/profitFactorScore'/);
-    expect(src).toMatch(/const action = backtestAction\(results\)/);
-    expect(src).toMatch(/INSUFFICIENT SAMPLE/);
-  });
+  // Removed source guard for the retired legacy page; scoring behavior is covered above.
 });

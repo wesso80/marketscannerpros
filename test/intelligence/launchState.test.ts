@@ -119,40 +119,7 @@ describe('intelligence overview page', () => {
   });
 });
 
-/* ── §5 — Navigation retains valid links + attaches UNDER CONSTRUCTION badges ── */
-
-describe('IntelligenceNav', () => {
-  const src = read('components/intelligence/IntelligenceNav.tsx');
-
-  it('keeps a link for every module (no dead links)', () => {
-    for (const href of [
-      '/intelligence',
-      '/intelligence/global-m2',
-      '/intelligence/fragility',
-      '/intelligence/liquidity',
-      '/intelligence/lead-lag',
-      '/intelligence/nq-pressure',
-      '/intelligence/auction',
-      '/intelligence/master',
-      '/intelligence/history',
-    ]) {
-      expect(src).toContain(`href: '${href}'`);
-    }
-  });
-
-  it('marks Lead/Lag / NQ Pressure / Auction / Master as underConstruction', () => {
-    const tabs = src.slice(src.indexOf('const TABS'), src.indexOf('export default'));
-    for (const label of ['Lead/Lag', 'NQ Pressure', 'Auction', 'Master']) {
-      const idx = tabs.indexOf(`label: '${label}'`);
-      expect(idx).toBeGreaterThan(-1);
-      // The underConstruction flag must be present on that same tab entry.
-      const rowStart = tabs.lastIndexOf('{', idx);
-      const rowEnd = tabs.indexOf('}', idx);
-      const row = tabs.slice(rowStart, rowEnd);
-      expect(row).toContain('underConstruction: true');
-    }
-  });
-});
+// Phase 2A hides Soon/History navigation; live tab rendering is checked in phase2aPublicNavigation.test.tsx.
 
 /* ── §10/§11 — /api/intelligence/status returns launch shape (not mock scores) ── */
 

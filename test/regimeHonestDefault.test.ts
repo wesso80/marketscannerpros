@@ -126,7 +126,7 @@ describe('regime consumers (OV-1)', () => {
     expect(explorer).not.toContain('Live Market Regime Signals');
     const bar = readFileSync('app/v2/_components/RegimeBar.tsx', 'utf8');
     expect(bar).not.toContain("|| 'neutral'");
-    for (const file of ['components/RegimeBanner.tsx', 'components/operator/RiskManagerMode.tsx', 'components/operator/SessionStartBriefing.tsx', 'app/tools/settings/page.tsx']) {
+    for (const file of ['components/RegimeBanner.tsx', 'components/operator/RiskManagerMode.tsx', 'components/operator/SessionStartBriefing.tsx']) {
       expect(readFileSync(file, 'utf8')).not.toMatch(/\.sizing\b/);
     }
   });

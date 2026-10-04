@@ -3,29 +3,24 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-type Tab = { href: string; label: string; underConstruction?: boolean };
+type Tab = { href: string; label: string };
 
 const TABS: Tab[] = [
   { href: '/intelligence', label: 'Overview' },
   { href: '/intelligence/global-m2', label: 'Global M2' },
   { href: '/intelligence/fragility', label: 'Fragility' },
   { href: '/intelligence/liquidity', label: 'Liquidity' },
-  { href: '/intelligence/lead-lag', label: 'Lead/Lag', underConstruction: true },
-  { href: '/intelligence/nq-pressure', label: 'NQ Pressure', underConstruction: true },
-  { href: '/intelligence/auction', label: 'Auction', underConstruction: true },
-  { href: '/intelligence/master', label: 'Master', underConstruction: true },
-  { href: '/intelligence/history', label: 'History' },
 ];
 
 export default function IntelligenceNav() {
   const pathname = usePathname() || '';
 
   return (
-    <nav
+    <nav aria-label="Intelligence modules"
       style={{
         display: 'flex',
         gap: 4,
-        overflowX: 'auto',
+        flexWrap: 'wrap',
         borderBottom: '1px solid var(--msp-border)',
         padding: '0 0 8px',
         marginBottom: 16,
@@ -40,9 +35,11 @@ export default function IntelligenceNav() {
             key={tab.href}
             href={tab.href}
             data-nav-tab={tab.href}
-            data-nav-status={tab.underConstruction ? 'UNDER_CONSTRUCTION' : 'LIVE'}
+            data-nav-status="LIVE"
+            aria-current={active ? 'page' : undefined}
             style={{
-              padding: '6px 12px',
+              padding: '8px 12px',
+              minHeight: 40,
               borderRadius: 8,
               fontSize: '0.8rem',
               fontWeight: 600,
@@ -57,24 +54,7 @@ export default function IntelligenceNav() {
             }}
           >
             {tab.label}
-            {tab.underConstruction && (
-              <span
-                title="Under construction — native engine in progress"
-                style={{
-                  padding: '1px 6px',
-                  borderRadius: 5,
-                  fontSize: '0.6rem',
-                  letterSpacing: '0.04em',
-                  fontWeight: 700,
-                  color: '#F5B14C',
-                  background: 'rgba(245,177,76,0.15)',
-                  border: '1px solid rgba(245,177,76,0.32)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                Soon
-              </span>
-            )}
+
           </Link>
         );
       })}

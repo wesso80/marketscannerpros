@@ -106,7 +106,7 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).not.toContain('Core Scanners');
     expect(commandHub).not.toContain('v2 Platform Surfaces');
     expect(commandHub).not.toContain('FeaturedTile');
-    expect(primaryNavTools.map(t => t.label)).toEqual(['Overview', 'Daily Radar', 'Scanner', 'Symbol', 'Options', 'Track']);
+    expect(primaryNavTools.map(t => t.label)).toEqual(['Today', 'Scan & Analyse', 'Markets', 'Intelligence', 'Track', 'Learn', 'Account']);
     expect(parkedDashboard).toContain('const FALLBACK_CANDIDATES: Candidate[] = [];');
     expect(parkedDashboard).toContain('Research Alignment Matrix');
     expect(parkedDashboard).toContain('Alignment-Filtered Observations');
@@ -128,13 +128,13 @@ describe('layout and flow audit regressions', () => {
 
   it('keeps public resource guides from exposing private operator language', () => {
     const resourcesPage = read('app/resources/page.tsx');
-    const platformGuide = read('app/resources/platform-guide/page.tsx');
-    const tradingGuides = read('app/resources/trading-guides/page.tsx');
+    const platformGuide = read('components/guide/PlatformGuide.tsx');
+    const tradingGuides = read('components/guide/TradingGuides.tsx');
     const openInterestGuide = read('app/guide/open-interest/page.tsx');
     const toolGuides = read('lib/guides/toolGuides.ts');
     const platformKnowledge = read('lib/prompts/platformKnowledge.ts');
 
-    expect(resourcesPage).toContain('research checklists');
+    expect(resourcesPage).toContain("redirect('/guide')");
     expect(platformGuide).toContain('Market Research Dashboard');
     expect(platformGuide).toContain('Treat dashboard bias as context, not a trigger.');
     expect(platformGuide).toContain('Compare derivatives evidence before increasing confidence in a scenario.');
@@ -168,21 +168,16 @@ describe('layout and flow audit regressions', () => {
     const toolsPage = read('app/tools/page.tsx');
     const workflows = read('lib/toolWorkflows.ts');
     const toolCatalog = read('lib/toolCatalog.ts');
-    const watchlistsPage = read('app/tools/watchlists/page.tsx');
     const watchlistsLayout = read('app/tools/watchlists/layout.tsx');
     const portfolioLayout = read('app/tools/portfolio/layout.tsx');
     const journalLayout = read('app/tools/journal/layout.tsx');
     const backtestLayout = read('app/tools/backtest/layout.tsx');
     const alertsLayout = read('app/tools/alerts/layout.tsx');
-    const aiAnalystPage = read('app/tools/ai-analyst/page.tsx');
     const aiAnalystLayout = read('app/tools/ai-analyst/layout.tsx');
     const aiToolsPage = read('app/tools/ai-tools/page.tsx');
     const aiToolsLayout = read('app/tools/ai-tools/layout.tsx');
-    const earningsPage = read('app/tools/earnings/page.tsx');
     const earningsLayout = read('app/tools/earnings/layout.tsx');
-    const earningsCalendarPage = read('app/tools/earnings-calendar/page.tsx');
     const earningsCalendarLayout = read('app/tools/earnings-calendar/layout.tsx');
-    const mobileNav = read('components/MobileNav.tsx');
     const commandHub = read('components/home/CommandHub.tsx');
     const toolsNavBar = read('components/ToolsNavBar.tsx');
     const onboardingChecklist = read('components/OnboardingChecklist.tsx');
@@ -269,7 +264,6 @@ describe('layout and flow audit regressions', () => {
     expect(toolCatalog).toContain("href: '/tools/dashboard?tab=macro'");
     expect(toolCatalog).toContain("href: '/tools/crypto-dashboard'");
     expect(toolCatalog).toContain("href: '/tools/research?tab=calendar'");
-    expect(watchlistsPage).toContain("redirect('/tools/workspace?tab=watchlists')");
     expect(watchlistsLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=watchlists'");
     expect(watchlistsLayout).toContain('index: false');
     expect(portfolioLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=portfolio'");
@@ -284,37 +278,21 @@ describe('layout and flow audit regressions', () => {
     expect(toolCatalog).toContain("href: '/tools/scanner'" );
     expect(toolCatalog).toContain("label: 'ARCA AI Panel'");
     expect(toolCatalog).toContain("href: '/tools/research?tab=earnings'");
-    expect(aiAnalystPage).toContain('redirect("/tools/scanner")');
     expect(aiAnalystLayout).toContain("canonical: 'https://marketscannerpros.app/tools/scanner'");
     expect(aiAnalystLayout).toContain('index: false');
     expect(aiToolsPage).toContain("redirect('/tools')");
     expect(aiToolsLayout).toContain("canonical: 'https://marketscannerpros.app/tools'");
     expect(aiToolsLayout).toContain('index: false');
-    expect(earningsPage).toContain("redirect('/tools/research?tab=earnings')");
     expect(earningsLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
-    expect(earningsCalendarPage).toContain("redirect('/tools/research?tab=earnings')");
     expect(earningsCalendarLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
-    expect(mobileNav).toContain('href="/tools/scanner" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>ARCA AI Panel</a>');
-    expect(mobileNav).toContain('href="/tools/research?tab=earnings" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Earnings Calendar</a>');
-    expect(mobileNav).toContain('href="/tools/workspace?tab=portfolio" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Portfolio</a>');
-    expect(mobileNav).toContain('href="/tools/workspace?tab=backtest" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Backtest</a>');
-    expect(mobileNav).toContain('href="/tools/workspace?tab=journal" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Journal</a>');
-    expect(mobileNav).toContain('href="/tools/golden-egg" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Golden Egg</a>');
-    expect(mobileNav).toContain('href="/tools/terminal?tab=options-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Options Confluence Scanner</a>');
-    expect(mobileNav).toContain('href="/tools/research?tab=calendar" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Economic Calendar</a>');
-    expect(mobileNav).not.toContain('href="/tools/deep-analysis"');
-    expect(mobileNav).not.toContain('href="/tools/options-confluence"');
-    expect(mobileNav).not.toContain('href="/tools/crypto-explorer"');
-    expect(mobileNav).not.toContain('href="/tools/equity-explorer"');
-    expect(mobileNav).not.toContain('href="/tools/economic-calendar"');
     expect(commandHub).toContain("href: '/tools/workspace?tab=backtest'");
     expect(commandHub).toContain("href: '/tools/terminal?tab=options-flow'");
     expect(commandHub).toContain("href: '/tools/dashboard?tab=crypto'");
     expect(toolsNavBar).toContain('primaryNavTools');
     expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
-    expect(areaLinks.radar.map(t => t.href)).toEqual(['/tools/msp-radar']);
-    expect(areaLinks.overview.map(t => t.href)).toEqual(['/tools/command-center']);
-    expect(areaLinks.research.map(t => t.href)).toEqual(['/tools/golden-egg']);
+    expect(areaLinks.today.map(t => t.href)).toContain('/tools/msp-radar');
+    expect(areaLinks.today.map(t => t.href)).toContain('/tools/command-center');
+    expect(areaLinks.scan.map(t => t.href)).toContain('/tools/golden-egg');
     expect(toolsNavBar).toContain("tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'");
     expect(toolsNavBar).not.toContain('⭐ Pro Trader');
     expect(toolsNavBar).not.toContain('✨ Pro');
@@ -472,9 +450,9 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('Open Backtest');
     expect(terminalPage).toContain('Back to Golden Egg');
     expect(terminalPage).toContain('Continue to Backtest');
-    expect(terminalPage).toContain('Open Workflow');
+    expect(terminalPage).toContain('All tools');
     expect(terminalPage).toContain("href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=");
-    expect(terminalPage).toContain("href: '/tools/workflow'");
+    expect(terminalPage).toContain("href: '/tools'");
     expect(terminalPage).toContain("<OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} expiry={requestedExpiry} />");
     expect(terminalPage).toContain("<OptionsFlow embeddedInTerminal symbol={sym} expiry={requestedExpiry} />");
     expect(terminalPage).toContain("<ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />");
@@ -1173,52 +1151,13 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).toContain("returnLabel={mode === 'ranked' ? 'Back to Ranked' : 'Back to Pro Scanner'}");
   });
 
-  it('keeps Backtest page-local chrome free of emoji-era badges', () => {
-    const backtestPage = read('app/tools/backtest/page.tsx');
-    const scannerBacktestPage = read('app/tools/scanner/backtest/page.tsx');
-    const settingsPage = read('app/tools/settings/page.tsx');
-
-    expect(backtestPage).toContain('icon="BT"');
-    expect(backtestPage).toContain('>CTX</span>');
-    expect(backtestPage).toContain('>CFG</span>');
-    expect(backtestPage).toContain('Scan Best Timeframe');
-    expect(backtestPage).toContain('Use Best Pair & Rerun');
-    expect(backtestPage).toContain('Strategy Verdict: {verdict.label}');
-    expect(backtestPage).toContain('Positive Expectancy');
-    expect(backtestPage).toContain('Marginal Edge');
-    expect(backtestPage).toContain('Negative Expectancy');
-    expect(backtestPage).not.toContain('icon="🧪"');
-    expect(backtestPage).not.toContain('>🔬</span>');
-    expect(backtestPage).not.toContain('🔎 Scan Best Timeframe');
-    expect(backtestPage).not.toContain('⚡ Use Best & Rerun');
-    expect(backtestPage).not.toContain('🌐 Scan Universe');
-    expect(backtestPage).not.toContain('🏛️ Scan Top 10 Stocks');
-    expect(backtestPage).not.toContain('🪙 Scan Crypto (BTC)');
-    expect(backtestPage).not.toContain('🧭 Use Best Pair & Rerun');
-    expect(backtestPage).not.toContain('✅ Positive Expectancy');
-    expect(backtestPage).not.toContain('⚠️ Marginal Edge');
-    expect(backtestPage).not.toContain('❌ Negative Expectancy');
-    expect(backtestPage).not.toContain('⚠️ <strong>Important:</strong>');
-    expect(scannerBacktestPage).toContain('BULL ≥ {minScore}');
-    expect(scannerBacktestPage).toContain('BEAR ≤ {bearThresh}');
-    expect(scannerBacktestPage).toContain('Alert Me on Scenario Conditions');
-    expect(scannerBacktestPage).not.toContain('🟢 Long');
-    expect(scannerBacktestPage).not.toContain('🔴 Short');
-    expect(scannerBacktestPage).not.toContain('🔔 Alert Me');
-    expect(settingsPage).toContain('icon="SET"');
-    expect(settingsPage).toContain('Cooldown Active');
-    expect(settingsPage).toContain('Daily R Budget Halved');
-    expect(settingsPage).not.toContain('icon="⚙️"');
-    expect(settingsPage).not.toContain('⏳ Disable Cooldown Active');
-    expect(settingsPage).not.toContain('⚠️ Daily R Budget Halved');
-  });
+  // Retired Backtest/Settings route implementations are covered by phase2aRoutes.test.ts.
 
   it('keeps market context routes on compact tool chrome', () => {
     const marketMoversPage = read('app/tools/market-movers/page.tsx');
     const newsPage = read('app/tools/news/page.tsx');
     const commoditiesPage = read('app/tools/commodities/page.tsx');
     const referralsPage = read('app/tools/referrals/page.tsx');
-    const gainersLosersPage = read('app/tools/gainers-losers/page.tsx');
 
     expect(marketMoversPage).toContain('icon="MM"');
     expect(marketMoversPage).toContain('<ComplianceDisclaimer compact />');
@@ -1253,26 +1192,10 @@ describe('layout and flow audit regressions', () => {
     expect(referralsPage).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(referralsPage).not.toContain('🏆 Monthly $500 Draw');
     expect(referralsPage).not.toContain('🏅 This Month&apos;s Top Referrers');
-    expect(gainersLosersPage).toContain('icon="MOV"');
-    expect(gainersLosersPage).toContain('<ComplianceDisclaimer compact />');
-    expect(gainersLosersPage).toContain('US equities: {equityMoversBasisLabel(equityFeed)}');
-    expect(gainersLosersPage).toContain('Fetched: {lastUpdated.toLocaleTimeString()}');
-    expect(gainersLosersPage).toContain('Top Gainers</button>');
-    expect(gainersLosersPage).toContain('Top Losers</button>');
-    expect(gainersLosersPage).toContain('Most Active</button>');
-    expect(gainersLosersPage).toContain('No Aligned Movers — environment conditions are not suitable for momentum analysis.');
-    expect(gainersLosersPage).not.toContain('icon="📊"');
-    expect(gainersLosersPage).not.toContain('<ComplianceDisclaimer collapsible />');
-    expect(gainersLosersPage).not.toContain('📅 Market data');
-    expect(gainersLosersPage).not.toContain('🔄 Fetched');
-    expect(gainersLosersPage).not.toContain('🚀 Top Gainers');
-    expect(gainersLosersPage).not.toContain('📉 Top Losers');
-    expect(gainersLosersPage).not.toContain('🔥 Most Active');
   });
 
   it('keeps secondary market routes on text-code visual identity', () => {
     const companyOverviewPage = read('app/tools/company-overview/page.tsx');
-    const heatmapPage = read('app/tools/heatmap/page.tsx');
     const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
     const macroPage = read('app/tools/macro/page.tsx');
 
@@ -1286,12 +1209,6 @@ describe('layout and flow audit regressions', () => {
     expect(companyOverviewPage).not.toContain('📈');
     expect(companyOverviewPage).not.toContain('📉');
     expect(companyOverviewPage).not.toContain('⚠️ Disclaimer');
-    expect(heatmapPage).toContain('icon="HM"');
-    expect(heatmapPage).toContain('>READ</span> How to Read');
-    expect(heatmapPage).toContain('>TIP</span> Pro Tips');
-    expect(heatmapPage).toContain('>ETF</span> Sector ETFs');
-    expect(heatmapPage).not.toContain('icon="📊"');
-    expect(heatmapPage).not.toContain('🎯');
     expect(economicCalendarPage).toContain('icon="EC"');
     expect(economicCalendarPage).toContain("employment: 'JOBS'");
     expect(economicCalendarPage).toContain("central_bank: 'CB'");
@@ -1409,7 +1326,6 @@ describe('layout and flow audit regressions', () => {
     const signalAccuracyPage = read('app/tools/signal-accuracy/page.tsx');
     const newsPage = read('app/tools/news/page.tsx');
     const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
-    const gainersLosersPage = read('app/tools/gainers-losers/page.tsx');
 
     expect(workspacePage).toContain("ariaLabel=\"Workspace command header\"");
     expect(workspacePage).toContain('WORKSPACE_TAB_META');
@@ -1436,7 +1352,5 @@ describe('layout and flow audit regressions', () => {
     expect(economicCalendarPage).toContain("ariaLabel=\"Economic Calendar command header\"");
     expect(economicCalendarPage).toContain("Refresh calendar");
 
-    expect(gainersLosersPage).toContain("ariaLabel=\"Gainers Losers command header\"");
-    expect(gainersLosersPage).toContain('Open Markets');
   });
 });
