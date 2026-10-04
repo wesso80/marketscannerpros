@@ -422,6 +422,9 @@ export interface OptionsSetup {
   symbol: string;
   currentPrice: number;
   direction: 'bullish' | 'bearish' | 'neutral';
+  directionStatus?: 'determined' | 'unknown';
+  directionReason?: string;
+  unmeasuredTFs?: string[];
   assetType: AssetType;      // Explicit asset type (not inferred from symbol)
   
   // Confluence data
@@ -1824,6 +1827,43 @@ export function calculateTradeLevels(
  * 
  * Confidence = weighted agreement of directional signals with final direction
  */
+export function resolveOptionsDirection(input: {
+  pcRatio: number | null; maxPain: number | null; price: number; dte: number;
+  hasMeaningfulOI: boolean; maxPainReliable: boolean;
+}): {direction: 'bullish' | 'bearish' | 'neutral'; score: number; evidence: number; components: SignalComponent[]; reason: string} {
+  const components: SignalComponent[] = [];
+  const clamp = (n: number, limit: number) => Math.max(-limit, Math.min(limit, n));
+  if (input.pcRatio != null && Number.isFinite(input.pcRatio)) {
+    const score = clamp(-(input.pcRatio - 0.85) * 250, 80);
+    const direction = score > 20 ? 'bullish' : score < -20 ? 'bearish' : 'neutral';
+    components.push({name: 'O/I Sentiment', kind: 'directional', direction,
+      weight: input.hasMeaningfulOI ? 0.08 : 0.02, score,
+      reason: `P/C: ${input.pcRatio.toFixed(2)} (${direction === 'bullish' ? 'call-heavy' : direction === 'bearish' ? 'put-heavy' : 'balanced'})`});
+  }
+  const dte = input.dte;
+  const weight = !input.hasMeaningfulOI || !input.maxPainReliable ? 0 :
+    dte <= 3 ? 0.10 : dte <= 7 ? 0.10 * (1 - (dte - 3) / 8) :
+    dte <= 14 ? 0.03 * (1 - (dte - 7) / 14) : 0;
+  if (input.maxPain != null && input.maxPain > 0 && Number.isFinite(input.price) && input.price > 0 && weight > 0) {
+    const distance = (input.price - input.maxPain) / input.maxPain * 100;
+    const score = Math.abs(distance) < 1.5 ? 0 : clamp(-distance * 10, 100);
+    const direction = score > 0 ? 'bullish' : score < 0 ? 'bearish' : 'neutral';
+    components.push({name: 'Max Pain Position', kind: 'directional', direction, weight, score,
+      reason: `${distance > 0 ? 'Above' : 'Below'} max pain ($${input.maxPain.toFixed(2)}) by ${Math.abs(distance).toFixed(1)}% [DTE: ${dte}]`});
+  }
+  const totalWeight = components.reduce((sum,c) => sum + c.weight, 0);
+  const score = totalWeight ? components.reduce((sum,c) => sum + c.weight*c.score, 0)/totalWeight : 0;
+  const evidence = components.filter(c => c.direction !== 'neutral').reduce((sum,c) => sum + c.weight*Math.abs(c.score)/100, 0);
+  // Untested policy floor: both chain inputs must agree; neither can reach 0.12 alone.
+  const agree = components.length === 2 && components.every(c => c.direction !== 'neutral' && c.direction === components[0].direction);
+  const direction = agree && evidence >= 0.12 && Math.abs(score) > 15 ? (score > 0 ? 'bullish' : 'bearish') : 'neutral';
+  const reason = direction !== 'neutral'
+    ? `Open interest put/call and max pain agree ${direction}; evidence ${evidence.toFixed(3)} meets the 0.12 policy floor (untested).`
+    : dte > 14 ? 'Direction unknown: max pain is not used beyond 14 days to expiry.'
+    : 'Direction unknown: open interest put/call and max pain do not both provide enough agreeing evidence.';
+  return {direction, score, evidence, components, reason};
+}
+
 export function calculateCompositeScore(
   confluenceResult: HierarchicalScanResult,
   oiAnalysis: OISummary | null,
@@ -1843,103 +1883,12 @@ export function calculateCompositeScore(
   // TRACK A: DIRECTION SCORE (only directional signals)
   // ═══════════════════════════════════════════════════════════════════════
   
-  let directionWeightedScore = 0;
-  let directionTotalWeight = 0;
-
-  // 0. STRUCTURE SCORE (40% of direction) - primary directional layer
-  const structureWeight = 0.40;
-  let structureScore = 0;
-  let structureDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  const directionScore = confluenceResult?.scoreBreakdown?.directionScore ?? 0;
-  const clusterScore = confluenceResult?.scoreBreakdown?.clusterScore ?? 50;
-  const activeTFs = confluenceResult?.scoreBreakdown?.activeTFs ?? 0;
-  const hasHigherTF = confluenceResult?.scoreBreakdown?.hasHigherTF ?? false;
-  const dominantClusterRatio = confluenceResult?.scoreBreakdown?.dominantClusterRatio ?? 0;
-
-  const structureQualityMultiplier = clamp(
-    (0.6 + (clusterScore / 100) * 0.25 + (hasHigherTF ? 0.15 : 0.05)),
-    0.65,
-    1.0
-  );
-
-  const derivedStructureScore = clamp(directionScore * structureQualityMultiplier, -100, 100);
-  const upstreamStructureScore = confluenceResult?.structure?.structureScore;
-  const blendedStructureAbs = typeof upstreamStructureScore === 'number'
-    ? clamp((Math.abs(derivedStructureScore) * 0.65) + (upstreamStructureScore * 0.35), 0, 100)
-    : Math.abs(derivedStructureScore);
-
-  if (derivedStructureScore > 12) {
-    structureDirection = 'bullish';
-    structureScore = blendedStructureAbs;
-  } else if (derivedStructureScore < -12) {
-    structureDirection = 'bearish';
-    structureScore = -blendedStructureAbs;
-  } else {
-    const patternVotes = confluenceResult?.structure?.patterns ?? [];
-    const bullishVotes = patternVotes.filter(p => p.bias === 'bullish').length;
-    const bearishVotes = patternVotes.filter(p => p.bias === 'bearish').length;
-    if (bullishVotes > bearishVotes && bullishVotes > 0) {
-      structureDirection = 'bullish';
-      structureScore = blendedStructureAbs * 0.5;
-    } else if (bearishVotes > bullishVotes && bearishVotes > 0) {
-      structureDirection = 'bearish';
-      structureScore = -blendedStructureAbs * 0.5;
-    } else {
-      structureDirection = 'neutral';
-      structureScore = 0;
-    }
+  // Keep the timeframe rows for display; they contribute no direction or grade points.
+  for (const name of ['Structure Score', 'Pattern State']) {
+    components.push({name, kind: 'meta', direction: 'neutral', weight: 0, score: 0,
+      reason: `Timeframe pull: ${confluenceResult?.decompression?.netPullDirection ?? 'neutral'}, bias ${confluenceResult?.decompression?.pullBias ?? 0} (display only, no tested edge)`});
   }
 
-  structureScore = clamp(structureScore, -100, 100);
-
-  components.push({
-    name: 'Structure Score',
-    kind: 'directional',
-    direction: structureDirection,
-    weight: structureWeight,
-    score: structureScore,
-    reason: `Dir ${directionScore.toFixed(0)}, cluster ${clusterScore.toFixed(0)}, structure ${typeof upstreamStructureScore === 'number' ? upstreamStructureScore.toFixed(0) : 'n/a'}, active TFs ${activeTFs}, dominant ${(dominantClusterRatio * 100).toFixed(0)}%`
-  });
-
-  directionWeightedScore += structureScore * structureWeight;
-  directionTotalWeight += structureWeight;
-
-  // 0b. PATTERN STATE (25% of direction) - compression/expansion momentum layer
-  const patternWeight = 0.25;
-  let patternScore = 0;
-  let patternDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  const decompScore = confluenceResult?.scoreBreakdown?.decompressionScore ?? 0;
-  const predictionDirection = confluenceResult?.prediction?.direction ?? 'neutral';
-
-  if (predictionDirection === 'bullish') {
-    patternDirection = 'bullish';
-    patternScore = decompScore;
-  } else if (predictionDirection === 'bearish') {
-    patternDirection = 'bearish';
-    patternScore = -decompScore;
-  }
-
-  const signalStrength = confluenceResult?.signalStrength ?? 'weak';
-  if (signalStrength === 'weak' || signalStrength === 'no_signal') {
-    patternScore *= 0.7;
-  } else if (signalStrength === 'strong') {
-    patternScore *= 1.05;
-  }
-
-  patternScore = clamp(patternScore, -100, 100);
-
-  components.push({
-    name: 'Pattern State',
-    kind: 'directional',
-    direction: patternDirection,
-    weight: patternWeight,
-    score: patternScore,
-    reason: `${signalStrength.toUpperCase()} state, decompression ${decompScore.toFixed(0)}`
-  });
-
-  directionWeightedScore += patternScore * patternWeight;
-  directionTotalWeight += patternWeight;
-  
   // Helper: Smooth score mapping with clamping
   // 1. HIGH VOLUME VS OPEN INTEREST — info only, NOT a direction vote. The chain has no buy/sell side
   // (calls can be sold, puts bought as hedges), so it adds no points to bullish or bearish.
@@ -1958,141 +1907,16 @@ export function calculateCompositeScore(
     });
   }
 
-  const meaningfulOI = qualityContext?.hasMeaningfulOI ?? true;
-
-  // 2. O/I SENTIMENT - Put/Call Ratio (8% of direction, near-zero when OI quality is weak)
-  const oiWeight = meaningfulOI ? 0.08 : 0.02;
-  let oiScore = 0;
-  let oiDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  
-  if (oiAnalysis && Number.isFinite(oiAnalysis.pcRatio)) {
-    const pcRatio = oiAnalysis.pcRatio;
-    
-    // Use z-score-like mapping:
-    // P/C 0.5 or less = strongly bullish (+80)
-    // P/C 0.7 = moderately bullish (+40)
-    // P/C 0.85 = neutral (0)
-    // P/C 1.0 = moderately bearish (-40)
-    // P/C 1.3+ = strongly bearish (-80)
-    
-    const neutralPC = 0.85; // Typical baseline
-    const deviation = pcRatio - neutralPC;
-    
-    // Smooth mapping: each 0.1 deviation = ~25 points
-    oiScore = -deviation * 250; // Negative because high P/C = bearish
-    oiScore = Math.max(-80, Math.min(80, oiScore)); // Cap at ±80
-    
-    if (oiScore > 20) {
-      oiDirection = 'bullish';
-    } else if (oiScore < -20) {
-      oiDirection = 'bearish';
-    } else {
-      oiDirection = 'neutral';
-    }
-    
-    components.push({
-      name: 'O/I Sentiment',
-      kind: 'directional',
-      direction: oiDirection,
-      weight: oiWeight,
-      score: oiScore,
-      reason: `P/C: ${pcRatio.toFixed(2)} (${oiDirection === 'bullish' ? 'call-heavy' : oiDirection === 'bearish' ? 'put-heavy' : 'balanced'})`
-    });
-    
-    directionWeightedScore += oiScore * oiWeight;
-    directionTotalWeight += oiWeight;
-  }
-
-  // 3. TIME CONFLUENCE (non-directional) - timing accelerator only
-  const confluenceWeight = 0.15;
-  let confluenceScore = 0;
-  let confluenceDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  const candleConfluenceScore = confluenceResult?.candleCloseConfluence?.confluenceScore ?? 0;
-  const clusteredCount = confluenceResult?.decompression?.clusteredCount ?? 0;
-  const timingActivation = clamp(candleConfluenceScore * 0.8 + Math.min(20, clusteredCount * 5), 0, 100);
-
-  components.push({
-    name: 'Time Confluence',
-    kind: 'meta',
-    direction: confluenceDirection,
-    weight: confluenceWeight,
-    score: 0,
-    reason: `Close calendar (clock only, display): ${candleConfluenceScore.toFixed(0)}`
-  });
-
-  // 4. MAX PAIN POSITION (dynamic micro-structure modifier by DTE)
-  // Pinning effects are strongest 0-7 DTE, weak beyond 14 DTE
-  const effectiveDte = dte ?? 14; // Default to 14 if not provided
-  let maxPainWeight = meaningfulOI ? 0.10 : 0;
-  
-  // Dynamic weight: full weight at DTE 0-3, half at 7, near-zero at 14+
-  if (effectiveDte <= 3) {
-    maxPainWeight = 0.10;
-  } else if (effectiveDte <= 7) {
-    maxPainWeight = 0.10 * (1 - (effectiveDte - 3) / 8); // Linear decay
-  } else if (effectiveDte <= 14) {
-    maxPainWeight = 0.03 * (1 - (effectiveDte - 7) / 14);
-  } else {
-    maxPainWeight = 0; // Ignore max pain for longer-dated
-  }
-  
-  let maxPainScore = 0;
-  let maxPainDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  
-  if (maxPainData && maxPainData.maxPain > 0 && maxPainWeight > 0) {
-    const priceDiffPercent = ((maxPainData.currentPrice - maxPainData.maxPain) / maxPainData.maxPain) * 100;
-    
-    // Price below max pain = pull upward (bullish)
-    // Price above max pain = pull downward (bearish)
-    // Smooth mapping: ±10% from max pain = ±100 score
-    maxPainScore = -priceDiffPercent * 10; // Negative because above max pain = bearish pull
-    maxPainScore = Math.max(-100, Math.min(100, maxPainScore));
-    
-    // Dead zone: if within 1.5% of max pain, consider neutral
-    if (Math.abs(priceDiffPercent) < 1.5) {
-      maxPainScore = 0;
-      maxPainDirection = 'neutral';
-    } else if (maxPainScore > 0) {
-      maxPainDirection = 'bullish';
-    } else {
-      maxPainDirection = 'bearish';
-    }
-    
-    components.push({
-      name: 'Max Pain Position',
-      kind: 'directional',
-      direction: maxPainDirection,
-      weight: maxPainWeight,
-      score: maxPainScore,
-      reason: `${priceDiffPercent > 0 ? 'Above' : 'Below'} max pain ($${maxPainData.maxPain.toFixed(2)}) by ${Math.abs(priceDiffPercent).toFixed(1)}% [DTE: ${effectiveDte}]`
-    });
-    
-    if (maxPainWeight > 0) {
-      directionWeightedScore += maxPainScore * maxPainWeight;
-      directionTotalWeight += maxPainWeight;
-    }
-  }
-
-  // Calculate normalized direction score
-  const normalizedDirectionScore = directionTotalWeight > 0 
-    ? directionWeightedScore / directionTotalWeight 
-    : 0;
-
-  const directionalEvidenceStrength = components
-    .filter(c => c.kind === 'directional' && c.direction !== 'neutral')
-    .reduce((sum, c) => sum + c.weight * (Math.abs(c.score) / 100), 0);
-  
-  // Determine final direction based on direction score only
-  let finalDirection: 'bullish' | 'bearish' | 'neutral';
-  if (directionalEvidenceStrength < 0.25) {
-    finalDirection = 'neutral';
-  } else if (normalizedDirectionScore > 15) {
-    finalDirection = 'bullish';
-  } else if (normalizedDirectionScore < -15) {
-    finalDirection = 'bearish';
-  } else {
-    finalDirection = 'neutral';
-  }
+  const resolved = resolveOptionsDirection({pcRatio: oiAnalysis?.pcRatio ?? null,
+    maxPain: maxPainData?.maxPain ?? null, price: maxPainData?.currentPrice ?? confluenceResult.currentPrice,
+    dte: dte ?? 14, hasMeaningfulOI: qualityContext?.hasMeaningfulOI ?? true,
+    maxPainReliable: !!maxPainData});
+  components.push(...resolved.components);
+  const candleScore = confluenceResult?.candleCloseConfluence?.confluenceScore ?? 0;
+  components.push({name: 'Time Confluence', kind: 'meta', direction: 'neutral', weight: 0, score: 0,
+    reason: `Close calendar (clock only, display): ${candleScore.toFixed(0)}`});
+  const normalizedDirectionScore = resolved.score;
+  const finalDirection = resolved.direction;
 
   // ═══════════════════════════════════════════════════════════════════════
   // TRACK B: SETUP QUALITY SCORE (non-directional factors)
@@ -2208,8 +2032,8 @@ export function calculateCompositeScore(
     ? (alignedWeightedStrength / totalWeightedStrength) * 100 
     : 50; // Default to 50% if no directional signals
 
-  if (directionalComponents.length < 3) {
-    normalizedAgreement = Math.max(0, normalizedAgreement - (3 - directionalComponents.length) * 10);
+  if (directionalComponents.length < 2) {
+    normalizedAgreement = Math.max(0, normalizedAgreement - (2 - directionalComponents.length) * 10);
   }
   
   qualityScore += normalizedAgreement * agreementWeight;
@@ -2241,15 +2065,8 @@ export function calculateCompositeScore(
     ? Math.max(0, Math.min(100, (confidenceNumerator / confidenceDenominator) * 100))
     : 50;
 
-  const structureEdge = typeof upstreamStructureScore === 'number'
-    ? clamp(upstreamStructureScore, 0, 100)
-    : clamp(Math.abs(structureScore), 0, 100);
-  const timeEdge = clamp(timingActivation, 0, 100);
-  // High volume vs OI is info only (no buy/sell side) and contributes 0 to the flow edge.
-  const flowEdge = clamp(Math.abs(oiScore) / 2, 0, 100);
-  const edgeBlendConfidence = (structureEdge * 0.35 + flowEdge * 0.25) / 0.60;
-  confidence = clamp(confidence * 0.60 + edgeBlendConfidence * 0.40, 0, 100);
-  
+  // Confidence is weighted agreement only; timeframe and clock scores are display only.
+
   // If neutral direction, confidence is low by definition
   if (finalDirection === 'neutral') {
     confidence = Math.min(confidence, 40);
@@ -3758,22 +3575,15 @@ function generateGreeksAdvice(
     thetaWarning = '⚡ Moderate theta: Consider closing before last 2 DTE if target not hit. Theta units are $/day equivalent.';
   }
   
-  let vegaConsideration: string | null = null;
-  if (signalStrength === 'strong') {
-    vegaConsideration = 'IV crush risk if playing earnings or events. Vega shown as sensitivity per 1% IV move.';
-  }
-  
+  const vegaConsideration: string | null = null;
+
   let gammaAdvice: string | null = null;
   if (expirationDte <= 3) {
     gammaAdvice = 'High gamma = fast P/L swings. Be ready to exit quickly on target or stop.';
   }
   
-  const overallAdvice = signalStrength === 'strong'
-    ? `Target delta ${deltaConfig.label}. Strong confluence supports aggressive positioning.`
-    : signalStrength === 'moderate'
-    ? `Target delta ${deltaConfig.label}. Consider smaller position due to moderate signal.`
-    : `Wait for better signal quality or use defined-risk spreads.`;
-  
+  const overallAdvice = 'Wait for better signal quality or use defined-risk spreads.';
+
   return {
     deltaTarget: deltaConfig.label,
     thetaWarning,
@@ -3937,8 +3747,7 @@ export class OptionsConfluenceAnalyzer {
       dataConfidenceCaps.push(`Asset type ${assetType} - no options analysis available`);
     }
     
-    // Determine baseline confluence direction
-    const direction = decompression.netPullDirection;
+    // Direction is resolved from chain facts after the selected expiry is known.
     
     // Setup quality is assigned after chain-quality caps below.
     
@@ -3956,6 +3765,14 @@ export class OptionsConfluenceAnalyzer {
       alternativeExpirations = allExpirations.slice(1);
     }
     
+    const directionRead = resolveOptionsDirection({
+      pcRatio: openInterestAnalysis?.pcRatio ?? null, maxPain: openInterestAnalysis?.maxPainStrike ?? null,
+      price: currentPrice, dte: primaryExpiration?.dte ?? 14,
+      hasMeaningfulOI: dataQuality.hasMeaningfulOI,
+      maxPainReliable: openInterestAnalysis?.maxPainReliability.reliable ?? false,
+    });
+    const direction = directionRead.direction;
+
     // Entry timing - now factors in candle close confluence score
     const entryTiming = calculateEntryTiming(confluenceResult, candleCloseConfluence);
     
@@ -3973,14 +3790,9 @@ export class OptionsConfluenceAnalyzer {
       (direction === 'bearish' && openInterestAnalysis.sentiment === 'bearish')
     );
     
-    const stopLossStrategy = signalStrength === 'strong'
-      ? 'Common risk threshold: 50% of premium loss or price crossing against the 50% level'
-      : 'Tighter threshold: 35% of premium loss is often used in weaker setups';
-    
-    const profitTargetStrategy = signalStrength === 'strong'
-      ? 'Typical target range: 100-150% of premium at nearest 50% level cluster'
-      : 'Typical range: 50-80% of premium captured';
-    
+    const stopLossStrategy = 'Tighter threshold: 35% of premium loss is often used in weaker setups';
+    const profitTargetStrategy = 'Typical range: 50-80% of premium captured';
+
     // PRO TRADER: Calculate specific entry/exit levels
     const tradeLevels = calculateTradeLevels(
       confluenceResult,
@@ -4005,7 +3817,7 @@ export class OptionsConfluenceAnalyzer {
           maxPain: openInterestAnalysis.maxPainStrike || 0,
           currentPrice
         } : undefined,
-        primaryExpiration?.dte || 14,  // Pass DTE for dynamic max pain weighting
+        primaryExpiration?.dte ?? 14,  // Pass DTE for dynamic max pain weighting
         { hasMeaningfulOI: dataQuality.hasMeaningfulOI }
       );
     } catch (error) {
@@ -4059,7 +3871,7 @@ export class OptionsConfluenceAnalyzer {
     } else if (compositeScore.confidence >= 50) {
       finalDirection = compositeScore.finalDirection;
     } else {
-      finalDirection = compositeScore.finalDirection || direction;
+      finalDirection = compositeScore.finalDirection;
     }
 
     const isCallDirection = finalDirection === 'bullish';
@@ -4316,6 +4128,9 @@ export class OptionsConfluenceAnalyzer {
       tradeSnapshot,
       locationContext,
       direction: finalDirection,
+      directionStatus: finalDirection === 'neutral' ? 'unknown' : 'determined',
+      directionReason: finalDirection === 'neutral' && directionRead.direction !== 'neutral' ? 'Direction unknown: chain quality or conflicting evidence prevents a direction.' : directionRead.reason,
+      unmeasuredTFs: decompression.unmeasuredTFs ?? [],
       confluenceStack: realConfluenceCount,
       decompressingTFs: clusteredDecompressingTFs.length > 0 
         ? clusteredDecompressingTFs 

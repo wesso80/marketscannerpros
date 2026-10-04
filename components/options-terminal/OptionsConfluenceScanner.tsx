@@ -378,6 +378,9 @@ interface TradeSnapshot {
 }
 
 interface OptionsSetup {
+  directionStatus?: 'determined' | 'unknown';
+  directionReason?: string;
+  unmeasuredTFs?: string[];
   symbol: string;
   currentPrice: number;
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -2316,11 +2319,17 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
         {result && !optionsAnalysisBlocked && (
           <DecisionCockpit
-            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.directionStatus === 'unknown' ? 'Direction: unknown' : thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
             center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'SCENARIO ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WATCH'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted" title="Canonical engine verdict for the underlying on daily bars (primary setup grade)">Canonical (daily): {result.canonicalVerdict ? <span className="font-bold text-[var(--msp-text)]">{result.canonicalVerdict.permission} · {result.canonicalVerdict.grade} · {result.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()}{result.canonicalVerdict.direction !== 'neutral' ? ` ${result.canonicalVerdict.direction}` : ''}</span> : 'unavailable'}</div><div className="msp-muted">Options confluence (secondary): {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
+
+        {result && <div className="text-sm text-slate-400">
+          <p>{result.directionStatus === 'unknown' ? 'Direction: unknown' : `Direction: ${result.direction}`} — {result.directionReason}</p>
+          {!!result.unmeasuredTFs?.length && <p>Not measured on this data: {result.unmeasuredTFs.join(', ')}</p>}
+          <p>Timeframe pull (display only, no tested edge)</p>
+        </div>}
 
         {result && !optionsAnalysisBlocked && (
           <SignalRail
@@ -2540,7 +2549,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                     <div className="min-w-0">
                       <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Scenario</div>
                       <div className="mt-[0.2rem] text-[1rem] font-black text-slate-100">
-                        {result.symbol} • {thesisDirection.toUpperCase()} • {researchStateLabel}
+                        {result.symbol} • {result.directionStatus === 'unknown' ? 'Direction: unknown' : thesisDirection.toUpperCase()} • {researchStateLabel}
                       </div>
                       <div className="mt-[0.25rem] text-[0.76rem] text-slate-400">
                         {result.tradeSnapshot?.oneLine || `${setupLabel || 'Options setup'} with ${unifiedConfidence}% confluence.`}
