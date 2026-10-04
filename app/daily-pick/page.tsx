@@ -5,6 +5,7 @@ import { canonicalLabel } from '@/lib/scoring/canonical/dailyPick';
 import { formatSessionDate } from '@/lib/time/usSession';
 import { formatFloat, loadLatestDailyPicks as loadLatest } from '@/lib/og/dailyPicksLatest';
 import { scanOgImageUrl } from '@/lib/og/scanOg';
+import { sessionChangeBarWidths } from '@/lib/overview/pickBars';
 
 export const runtime = 'nodejs';
 // Database-backed observations are resolved at request time, not during builds.
@@ -94,7 +95,7 @@ export default async function DailyPickPage() {
         </p>
 
         <div data-pick-cards style={{ marginTop: 28, display: 'grid', gap: 12 }}>
-          {data.picks.slice(0, 3).map((p) => {
+          {data.picks.slice(0, 3).map((p, index, cards) => {
             const side = p.direction === 'bullish' ? 'Up-side evidence' : p.direction === 'bearish' ? 'Down-side evidence' : 'Mixed evidence';
             const sideColor = p.direction === 'bullish' ? 'var(--msp-bull)' : p.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)';
             const twins = data.picks.filter((other) => other.score === p.score);
@@ -103,7 +104,7 @@ export default async function DailyPickPage() {
               p.sector,
               formatFloat(p.shares_float) ? `float ${formatFloat(p.shares_float)}` : null,
             ].filter(Boolean).join(', ');
-            const width = p.change_percent != null && Number.isFinite(p.change_percent) ? Math.min(100, Math.abs(p.change_percent)) : null;
+            const width = sessionChangeBarWidths(cards.map((row) => row.change_percent))[index];
             return (
               <Link key={`card-${p.asset_class}-${p.symbol}`} href={`/share/scan/${p.symbol}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>

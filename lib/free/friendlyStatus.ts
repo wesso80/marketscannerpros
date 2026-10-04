@@ -5,6 +5,7 @@ export function friendlyStatus(value: string | null | undefined, loading = false
   if (value === 'CHECKING') return FREE_COPY.loading;
   if (value === 'MOCK') return 'Example data';
   if (value === 'NOT ENABLED') return 'Not enabled';
+  if (value === 'Unknown') return 'Unknown';
   if (value === 'LIVE') return 'Live data';
   if (value?.startsWith('LIVE ·')) return 'Partial data';
   if (!value || /^(?:N\/A|—+|\$0\.00|0\.00x)$/i.test(value.trim()) || /unknown|awaiting|pending|missing|unavailable/i.test(value)) return FREE_COPY.unavailable;

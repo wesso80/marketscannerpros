@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
   // Stored VIX/SPY regime is public. Account signals stay behind a session.
   if (!session?.workspaceId) {
     const updatedAt = new Date().toISOString();
-    const headers = { 'Cache-Control': 'public, max-age=60' };
+    const headers = { 'Cache-Control': 'private, no-store' };
     if (market.available) {
       const marketSignal = marketSignalFrom(market);
       const riskLevel = deriveRiskLevel(market.regime);
@@ -218,7 +218,7 @@ export async function GET(req: NextRequest) {
       }
     } catch { /* journal may not exist */ }
 
-    const headers = { 'Cache-Control': 'private, max-age=15, stale-while-revalidate=30' };
+    const headers = { 'Cache-Control': 'private, no-store' };
     const updatedAt = new Date().toISOString();
 
     if (market.available) {
@@ -289,6 +289,6 @@ export async function GET(req: NextRequest) {
       reason: 'Regime could not be computed.',
       updatedAt: new Date().toISOString(),
       error: 'Failed to compute regime',
-    }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }, { status: 503, headers: { 'Cache-Control': 'private, no-store' } });
   }
 }

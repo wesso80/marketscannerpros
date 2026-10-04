@@ -313,14 +313,14 @@ export default function CommandCenterPage() {
 
       <ViewerDate />
       <DataStatusRow items={[
-        {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Check':'Degraded',notes:[formatMarketTime(reg.asOf)??''],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
-        {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Check',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'']},
+        {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??''],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
+        {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'']},
         {label:'Crypto overview',statusLabel:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status,status:trustBadgeState({status:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status}).normalized,source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'']},
-        {label:'Quotes',statusLabel:quotes.loading?'Check':quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Check',source:'stored quotes',notes:['Per-symbol observation times in the pulse']},
+        {label:'Quotes',statusLabel:quotes.loading?'Loading':quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Unknown',source:'stored quotes',notes:['Per-symbol observation times in the pulse']},
         {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status,status:trustBadgeState({status:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status}).normalized,source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'']},
-        {label:'Daily picks',statusLabel:picks.error?'Degraded':'Check',source:'stored daily scan',notes:['Per-row trust and dates in Daily Picks']},
-        {label:'Movers',statusLabel:movers.error?'Degraded':'Check',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'']},
-        {label:'Event clock',statusLabel:calendarWarning?'Degraded':'Check',source:'economic calendar',notes:['schedule only'],warnings:calendarWarning?[calendarWarning]:[]},
+        {label:'Daily picks',statusLabel:picks.error?'Degraded':'Unknown',source:'stored daily scan',notes:['Per-row trust and dates in Daily Picks']},
+        {label:'Movers',statusLabel:movers.error?'Degraded':'Unknown',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'']},
+        {label:'Event clock',statusLabel:calendarWarning?'Degraded':'Unknown',source:'economic calendar',notes:['schedule only'],warnings:calendarWarning?[calendarWarning]:[]},
       ]}/>
 
       <section data-regime-box className="space-y-4 rounded-lg border p-4" style={{ borderColor: stanceColor(reg.stance) }}>
