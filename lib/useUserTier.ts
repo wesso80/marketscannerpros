@@ -37,7 +37,7 @@ export const canAccessUnlimitedScanning = (tier: UserTier) => isPaid(tier);
 export { FREE_DAILY_SCAN_LIMIT } from './free/limits';
 export const canExportCSV = (tier: UserTier) => isPaid(tier);
 export const canAccessAdvancedJournal = (tier: UserTier) => isPaid(tier);
-export const canAccessJournal = (tier: UserTier) => isPaid(tier);
+export const canAccessJournal = (tier: UserTier) => tier === "free" || isPaid(tier);
 export const canAccessJournalIntelligence = (tier: UserTier) => isPaid(tier);
 export const canAccessPortfolioInsights = (tier: UserTier) => isPaid(tier);
 export const canAccessCryptoCommandCenter = (tier: UserTier) => isPaid(tier);

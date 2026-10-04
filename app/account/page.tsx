@@ -1,5 +1,9 @@
 "use client";
 
+import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { WATCHLIST_LIMITS } from '@/lib/tiers';
+import { FREE_COPY } from '@/components/free/copy';
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUserTier } from "@/lib/useUserTier";
@@ -66,7 +70,7 @@ export default function AccountPage() {
         if (res.ok) {
           const d = await res.json();
           const lists = Array.isArray(d?.watchlists) ? d.watchlists : [];
-          return lists.reduce((sum: number, w: any) => sum + (Array.isArray(w?.items) ? w.items.length : 0), 0);
+          return lists.length;
         }
         return 0;
       }).catch(() => 0),
@@ -186,8 +190,8 @@ export default function AccountPage() {
 
   const usage: UsageMetric[] = [
     { label: "MSP AI Analyst", used: aiUsed, limit: aiLimit },
-    { label: "Saved Alerts", used: realUsage?.alertCount ?? 0, limit: isPaid ? 25 : 10 },
-    { label: "Watchlist Symbols", used: realUsage?.watchlistCount ?? 0, limit: isPaid ? 100 : 20 },
+    { label: "Saved Alerts", used: realUsage?.alertCount ?? 0, limit: isPaid ? ALERT_LIMITS.pro : ALERT_LIMITS.free },
+    { label: "Watchlists", used: realUsage?.watchlistCount ?? 0, limit: isPaid ? WATCHLIST_LIMITS.pro.watchlists : WATCHLIST_LIMITS.free.watchlists },
   ];
 
   const planFeatures = useMemo(() => {
@@ -203,7 +207,7 @@ export default function AccountPage() {
     return [
       "Core scanner (limited daily runs)",
       "Watchlists, markets and macro dashboards",
-      "Selected delayed / basic intelligence views",
+      FREE_COPY.pricing.macro,
       "Basic portfolio tracker and journal",
       "Educational content and platform guides",
     ];
@@ -298,6 +302,7 @@ export default function AccountPage() {
 
             <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
               <h2 className="text-sm font-semibold mb-4">Usage</h2>
+              <p className="mb-3 text-xs">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
               {usage.map((metric) => (
                 <UsageBar key={metric.label} label={metric.label} used={metric.used} limit={metric.limit} />
               ))}

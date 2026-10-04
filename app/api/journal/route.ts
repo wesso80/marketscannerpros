@@ -1,3 +1,6 @@
+import { assertJournalQuota, JournalQuotaError, journalQuotaResponse } from '@/lib/free/journalQuota';
+import { getEffectiveTier } from '@/lib/entitlements';
+import { isPaidTier } from '@/lib/tiers';
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { tx } from "@/lib/db";
@@ -445,6 +448,8 @@ export async function POST(req: NextRequest) {
     await ensureJournalSchema();
 
     const incomingEntries = Array.isArray(entries) ? entries : [];
+    const paid = isPaidTier(await getEffectiveTier(workspaceId, session.tier, session.cid, q));
+    if (!paid) assertJournalQuota(incomingEntries.filter((entry: any) => entry.isOpen !== false).length);
 
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
     const runtimeSnapshotInput = await getRuntimeRiskSnapshotInput(workspaceId).catch(() => null);
@@ -622,6 +627,7 @@ export async function POST(req: NextRequest) {
 
     // Clear and re-insert atomically to avoid transient not-found windows during close requests.
     await tx(async (client) => {
+      if (!paid) await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`journal-quota:${workspaceId}`]);
       const existingIdRows = await client.query<{ id: number }>(
         `SELECT id FROM journal_entries WHERE workspace_id = $1`,
         [workspaceId]
@@ -814,6 +820,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof JournalQuotaError) return NextResponse.json(journalQuotaResponse(), { status: 403 });
     console.error("Journal POST error:", error);
     return NextResponse.json({ error: "Failed to save journal" }, { status: 500 });
   }

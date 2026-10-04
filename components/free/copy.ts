@@ -1,9 +1,16 @@
+import { FREE_DAILY_SCAN_LIMIT, FREE_JOURNAL_LIMIT } from '@/lib/free/limits';
+import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { WATCHLIST_LIMITS } from '@/lib/tiers';
+
 /** All new free-tier customer copy lives here. Example values are never live claims. */
 export const FREE_COPY = {
   olderData: 'Some data is older; check its date before researching further.',
   details: 'Details', savedList: 'Latest saved list', scanner: 'Scanner', macro: 'Macro summary',
   research: 'Research and education only. Not a trade instruction.',
   source: 'Daily picks database', basis: 'Saved daily snapshot', stampUnavailable: 'Time not supplied',
+  journalLimit: (n: number) => `Free keeps ${n} open journal entries. Close an entry or unlock Pro.`,
+  journalCount: (n: number) => `${n} of ${FREE_JOURNAL_LIMIT} open entries`,
+  pricing: { scans: `${FREE_DAILY_SCAN_LIMIT} scans a day`, picks: 'Today’s top picks', alerts: `${ALERT_LIMITS.free} price alerts`, watchlists: `${WATCHLIST_LIMITS.free.watchlists} watchlists of ${WATCHLIST_LIMITS.free.items} symbols`, journal: `Journal (${FREE_JOURNAL_LIMIT} open entries)`, macro: 'Macro summary' },
   disclosure: 'Research and education only. Not financial advice.', readDisclosure: 'Read the disclosure',
   exampleBasis: 'Illustrative layout · no live market values', lockedDescription: 'Explore the complete research view and its supporting evidence.',
   optionsDescription: 'Options chain, flow and confluence for each researched symbol.', journalDescription: 'Unlimited journal entries with AI review.',

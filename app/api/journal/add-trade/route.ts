@@ -1,5 +1,8 @@
+import { assertJournalQuota, JournalQuotaError, journalQuotaResponse } from '@/lib/free/journalQuota';
+import { getEffectiveTier } from '@/lib/entitlements';
+import { isPaidTier } from '@/lib/tiers';
 import { NextRequest, NextResponse } from 'next/server';
-import { q } from '@/lib/db';
+import { q, atomicQueries } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { getKillSwitchState } from '@/lib/universe/personalUniverse';
 import { resolveEntryLevels } from '@/lib/journal/entryLevels';
@@ -100,7 +103,8 @@ export async function POST(req: NextRequest) {
     // Leverage for Futures / Margin
     const leverage = (tradeType === 'Futures' || tradeType === 'Margin') && body.leverage ? parseFloat(body.leverage) : null;
 
-    const result = await q(
+    const paid = isPaidTier(await getEffectiveTier(workspaceId, session.tier, session.cid, q));
+    const insert = async () => q(
       `INSERT INTO journal_entries (
         workspace_id, trade_date, symbol, side, trade_type, asset_class,
         quantity, entry_price, stop_loss, target, risk_amount, planned_rr,
@@ -137,6 +141,12 @@ export async function POST(req: NextRequest) {
       ]
     );
 
+    const result = paid ? await insert() : await atomicQueries(async () => {
+      await q('SELECT pg_advisory_xact_lock(hashtext($1))', [`journal-quota:${workspaceId}`]);
+      const counts = await q<{ count: string }>('SELECT COUNT(*)::text AS count FROM journal_entries WHERE workspace_id = $1 AND is_open = true', [workspaceId]);
+      assertJournalQuota(Number(counts[0]?.count ?? 0) + 1);
+      return insert();
+    });
     const newId = result?.[0]?.id;
 
     // ── Auto-sync to portfolio: create open position ──
@@ -156,6 +166,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, id: newId }, { status: 201 });
   } catch (error) {
+    if (error instanceof JournalQuotaError) return NextResponse.json(journalQuotaResponse(), { status: 403 });
     console.error('Journal add-trade error:', error);
     return NextResponse.json({ error: 'Failed to create trade' }, { status: 500 });
   }

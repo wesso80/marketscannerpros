@@ -1,5 +1,6 @@
 'use client';
 
+import { FREE_COPY } from '@/components/free/copy';
 import {journalLinkAsset} from '@/lib/market/symbolSnapshot';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -198,6 +199,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
   return (
     <div className={`${embeddedInWorkspace ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-slate-100`}>
       <main className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-4 md:px-6'}`}>
+        {tier === "free" && <p>{FREE_COPY.journalCount(allTrades.filter(trade => trade.status !== "CLOSED").length)}</p>}
         <JournalLayout
           embeddedInWorkspace={embeddedInWorkspace}
           header={payload?.header}
@@ -215,7 +217,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
           onSort={onSort}
           loading={loading}
           error={error}
-          equityCurve={payload?.equityCurve}
+          equityCurve={isProTrader ? payload?.equityCurve : undefined}
           dockSummary={isProTrader ? payload?.dockSummary : undefined}
           dockModules={isProTrader ? payload?.dockModules : undefined}
           dockOpen={dockOpen}
