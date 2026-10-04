@@ -10,6 +10,8 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import SourceLine from '@/components/visual/SourceLine';
+import StatTile from '@/components/visual/StatTile';
 import { equityMoversBasisLabel, formatEasternAsOf, moversDataChipLabel } from '@/lib/alphaVantageEntitlement';
 import { moverResearchLink } from '@/lib/options/journey';
 
@@ -108,6 +110,35 @@ function toTitleCluster(cluster: Cluster) {
   if (cluster === 'microcap') return 'Microcap';
   if (cluster === 'high_beta') return 'High Beta';
   return 'Defensive';
+}
+
+function displayMovers(list: Mover[] | undefined, medianVol: number) {
+  const base = medianVol > 0 ? medianVol : 1;
+  return (list ?? []).filter((mover) => {
+    if (!Number.isFinite(mover.changePercent)) return false;
+    const rel = mover.volume / base;
+    return Number.isFinite(rel) && rel.toFixed(2) !== '0.00';
+  }).slice(0, 8);
+}
+
+function MoverBars({ title, rows }: { title: string; rows: Mover[] }) {
+  const max = Math.max(1, ...rows.map((row) => Math.abs(row.changePercent)));
+  return (
+    <div data-mover-bars={title}>
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+      {rows.length === 0 ? <p className="text-xs text-slate-400">No readings in this list.</p> : (
+        <ul className="space-y-1">
+          {rows.map((row) => (
+            <li key={`${title}-${row.ticker}`} className="grid min-h-10 grid-cols-[4.5rem_1fr_4.5rem] items-center gap-2 text-xs">
+              <span>{row.ticker}</span>
+              <span className="h-2 rounded bg-white/10" aria-hidden="true"><span className="block h-2 rounded" style={{ width: `${Math.min(100, (Math.abs(row.changePercent) / max) * 100)}%`, background: row.changePercent >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }} /></span>
+              <span>{row.changePercent >= 0 ? '+' : ''}{row.changePercent.toFixed(2)}%</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function toReasonLabel(reason: string) {
@@ -477,6 +508,7 @@ export default function MarketMoversPage() {
     () => evaluatedRows.filter((row) => row.deployment === 'eligible').length,
     [evaluatedRows]
   );
+  const shownRows = evaluatedRows.filter((row) => Number.isFinite(row.changePercent) && row.relVolume.toFixed(2) !== '0.00');
 
   useEffect(() => {
     if (!data || !evaluatedRows.length) return;
@@ -544,7 +576,7 @@ export default function MarketMoversPage() {
     const top = data?.summary;
     return {
       alerts: [
-        { t: '09:31', e: `Top mover alert: ${first?.ticker || 'N/A'}`, d: 'Adaptive threshold evaluation completed for lead mover.' },
+        { t: '09:31', e: `Top mover alert: ${first?.ticker || 'No reading'}`, d: 'Adaptive threshold evaluation completed for lead mover.' },
         { t: '09:58', e: 'Liquidity watch', d: 'Spread widening detected on lower-ranked names.' },
       ],
       regime: [
@@ -552,8 +584,8 @@ export default function MarketMoversPage() {
         { t: '10:07', e: 'Leadership stable', d: 'Top ranks remained concentrated in current basket.' },
       ],
       scanner: [
-        { t: '09:42', e: `${top?.topGainerTicker || 'N/A'} scanner handoff`, d: 'Forwarded to setup scanner for confirmation.' },
-        { t: '10:11', e: `${top?.topLoserTicker || 'N/A'} weakness stack`, d: 'Continuation probability improved on volume.' },
+        { t: '09:42', e: `${top?.topGainerTicker || 'No reading'} scanner handoff`, d: 'Forwarded to setup scanner for confirmation.' },
+        { t: '10:11', e: `${top?.topLoserTicker || 'No reading'} weakness stack`, d: 'Continuation reading improved on volume.' },
       ],
       notrade: [
         { t: '09:47', e: 'No-trade: eligibility block', d: 'Rows blocked by adaptive liquidity or confluence floor.' },
@@ -567,7 +599,7 @@ export default function MarketMoversPage() {
   }, [data, loading, evaluatedRows, environment]);
 
   const formatVolume = (vol: number) => {
-    if (!Number.isFinite(vol)) return 'N/A';
+    if (!Number.isFinite(vol)) return 'No reading';
     if (vol >= 1e9) return `${(vol / 1e9).toFixed(1)}B`;
     if (vol >= 1e6) return `${(vol / 1e6).toFixed(1)}M`;
     if (vol >= 1e3) return `${(vol / 1e3).toFixed(1)}K`;
@@ -595,10 +627,10 @@ export default function MarketMoversPage() {
             ['Liquidity', environment.liquidityState],
             ['Volatility', environment.volatilityState],
             ['Status', environment.deploymentMode],
-            ['Top Gainer', data?.summary?.topGainerTicker || 'N/A'],
-            ['Top Loser', data?.summary?.topLoserTicker || 'N/A'],
+            ['Top Gainer', data?.summary?.topGainerTicker || 'No reading'],
+            ['Top Loser', data?.summary?.topLoserTicker || 'No reading'],
             ['Data', loading ? 'Refreshing' : error ? 'Degraded' : moversDataChipLabel(data?.equityFeed)],
-            ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : '—'],
+            ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : 'No reading'],
             ['US equities', `${equityMoversBasisLabel(data?.equityFeed)}${formatEasternAsOf(data?.equityAsOf) ? `, ${formatEasternAsOf(data?.equityAsOf)}` : ''}`],
           ].map(([k, v]) => (
             <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
@@ -621,6 +653,14 @@ export default function MarketMoversPage() {
           </div>
         ) : data ? (
           <>
+            <section data-movers-visual className="space-y-3 rounded-lg border border-slate-700 bg-slate-900 p-3">
+              <StatTile label="Eligible" value={permissionedCount} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <MoverBars title="Gainers" rows={displayMovers(data.topGainers, environment.medianVol)} />
+                <MoverBars title="Losers" rows={displayMovers(data.topLosers, environment.medianVol)} />
+              </div>
+              <SourceLine source={equityMoversBasisLabel(data.equityFeed) || 'Market movers'} asOf={data.equityAsOf || data.lastUpdated} basis="US equities and crypto cohort" />
+            </section>
             <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
               <div className="grid gap-2 xl:grid-cols-[1.1fr_1fr]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -695,7 +735,7 @@ export default function MarketMoversPage() {
                         onClick={() => setAssetFilter(id)}
                         className={`rounded-full border px-2 py-0.5 text-[11px] ${
                           assetFilter === id
-                            ? 'border-cyan-400 bg-cyan-500/10 text-cyan-200'
+                            ? 'border-amber-400 bg-amber-500/10 text-amber-200'
                             : 'border-slate-700 text-slate-400'
                         }`}
                       >
@@ -735,7 +775,7 @@ export default function MarketMoversPage() {
 
                 {/* Row count indicator */}
                 <div className="mb-1.5 flex items-center gap-2 text-xs text-slate-400">
-                  <span>Showing <span className="font-semibold text-white">{evaluatedRows.length}</span> movers</span>
+                  <span>Showing <span className="font-semibold text-white">{shownRows.length}</span> movers</span>
                   {permissionedCount > 0 && (
                     <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
                       {permissionedCount} aligned
@@ -743,15 +783,17 @@ export default function MarketMoversPage() {
                   )}
                 </div>
 
-                {evaluatedRows.length === 0 && (
+                {shownRows.length === 0 && (
                   <div className="flex h-40 items-center justify-center rounded-md border border-slate-700 bg-slate-950/60">
-                    <p className="text-sm text-slate-400">No movers data available — try refreshing.</p>
+                    <p className="text-sm text-slate-400">No movers data available. Try refreshing.</p>
                   </div>
                 )}
 
+                <details className="mt-2">
+                  <summary className="min-h-10 cursor-pointer text-sm">Show all</summary>
                 {/* ── Mobile: expandable card list (small screens only) ── */}
                 <div className="space-y-1.5" style={{ display: 'none' }} data-mobile-cards>
-                  {evaluatedRows.map((mover, idx) => (
+                  {shownRows.map((mover, idx) => (
                     <details key={`m-${mover.ticker}-${idx}`} className={`group rounded-md border border-slate-700 bg-slate-950/60 ${mover.deployment === 'blocked' ? 'opacity-55' : ''}`}>
                       <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2">
                         <div className="flex items-center gap-2">
@@ -783,7 +825,7 @@ export default function MarketMoversPage() {
                           <div className="text-slate-400">EMA200 Dist</div><div className="text-slate-200">{mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : '—'}</div>
                           <div className="text-slate-400">RS vs Index</div><div className={mover.rsLabel === 'Strong' ? 'text-emerald-300' : mover.rsLabel === 'Weak' ? 'text-rose-300' : 'text-slate-200'}>{mover.rsLabel || '—'} {mover.rs_vs_index != null ? `(${mover.rs_vs_index >= 0 ? '+' : ''}${mover.rs_vs_index.toFixed(1)}%)` : ''}</div>
                           <div className="text-slate-400">Momentum</div><div className={mover.accelLabel === 'High' ? 'text-amber-300' : mover.accelLabel === 'Rising' ? 'text-emerald-300' : 'text-slate-200'}>{mover.accelLabel || '—'}</div>
-                          <div className="text-slate-400">CRCS</div><div className="text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</div>
+                          <div className="text-slate-400">CRCS</div><div className="text-amber-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : 'No reading'}</div>
                           <div className="text-slate-400">Confluence</div><div className="text-slate-200">{mover.confluenceScore}</div>
                         </div>
                         <div className="mt-2">
@@ -823,7 +865,7 @@ export default function MarketMoversPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                      {evaluatedRows.map((mover, idx) => (
+                      {shownRows.map((mover, idx) => (
                         <tr key={`${mover.ticker}-${idx}`} className={`hover:bg-slate-800/50 ${mover.deployment === 'blocked' ? 'opacity-70' : ''}`} title={mover.blockReason || ''}>
                           <td className="px-2.5 py-2 font-semibold text-white">
                             <div className="flex items-center gap-1">
@@ -878,7 +920,7 @@ export default function MarketMoversPage() {
                               }`}>{mover.accelLabel}</span>
                             ) : <span className="text-slate-500">—</span>}
                           </td>
-                          <td className="px-2.5 py-2 text-right text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</td>
+                          <td className="px-2.5 py-2 text-right text-amber-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</td>
                           <td className="px-2.5 py-2 text-right text-slate-200">{mover.confluenceScore}</td>
                           <td className="px-2.5 py-2 text-center">
                             <span
@@ -917,6 +959,7 @@ export default function MarketMoversPage() {
                     </tbody>
                   </table>
                 </div>
+                </details>
               </div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
@@ -933,7 +976,7 @@ export default function MarketMoversPage() {
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-400">Adaptive Threshold Base</p>
-                    <p className="text-sm font-bold text-cyan-300">{formatVolume(environment.medianVol)}</p>
+                    <p className="text-sm font-bold text-amber-300">{formatVolume(environment.medianVol)}</p>
                     <p className="text-[11px] text-slate-300">median tape volume baseline</p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -954,7 +997,7 @@ export default function MarketMoversPage() {
               </div>
             </section>
 
-            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2" open>
+            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 3 • Audit / Log</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
