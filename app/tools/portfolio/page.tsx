@@ -1,5 +1,7 @@
 'use client';
 
+import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
+
 import PriceStamp from '@/components/market/PriceStamp';
 import {symbolHref} from '@/lib/market/links';
 import { Suspense, useState, useEffect, useRef } from 'react';
@@ -563,6 +565,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const { isLocked: riskLocked } = useRiskPermission();
   const tradeExecutionEventMapRef = useRef<Record<number, string>>({});
 
+  const upgrade = useUpgradeMoment();
   const { tier, isLoading: tierLoading } = useUserTier();
   const portfolioLimit = getPortfolioLimit(tier);
   const [mounted, setMounted] = useState(false);
@@ -1122,7 +1125,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const addPosition = () => {
     // Check portfolio limit for free tier
     if (positions.length >= portfolioLimit) {
-      alert(`Free tier is limited to ${portfolioLimit} positions. Upgrade to Pro for unlimited portfolio tracking.`);
+      upgrade.show('portfolio');
       return;
     }
     
@@ -1199,7 +1202,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       return;
     }
     if (positions.length >= portfolioLimit) {
-      alert(`Free tier is limited to ${portfolioLimit} positions. Upgrade to Pro for higher capacity.`);
+      upgrade.show('portfolio');
       return;
     }
 
@@ -1910,6 +1913,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           <button type="button" onClick={() => setSyncError(null)} className="ml-4 text-xs font-semibold uppercase text-amber-400 hover:text-white">Close</button>
         </div>
       )}
+      {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
       {embeddedInWorkspace ? (
         <PageHero
           ariaLabel="Portfolio command header"

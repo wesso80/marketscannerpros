@@ -1,5 +1,7 @@
 'use client';
 
+import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
+
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
 import { avgRetriggerInterval, pushBadgeState, triggersLast24h, type PushBadgeState } from '@/lib/alerts/summaryStats';
@@ -93,6 +95,7 @@ const avgTriggerInterval = avgRetriggerInterval;
 const CONSOLE_ROW_LIMIT = 12;
 
 export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
+  const upgrade = useUpgradeMoment();
   const { tier, isLoading } = useUserTier();
   const { isLocked: riskLocked } = useRiskPermission();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -335,8 +338,9 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
   return (
     <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
+      {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
       {embeddedInWorkspace && (
-        <PageHero
+      <PageHero
           ariaLabel="Alerts command header"
           eyebrow="Alerts review"
           badges={[
@@ -346,8 +350,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           title="Alert radar console"
           subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
           actions={[
-            { label: 'New alert', variant: 'primary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
-            { label: 'Quick alert', variant: 'secondary', onClick: () => { setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'New alert', variant: 'primary', onClick: () => { if (tier === 'free' && activeAlerts.length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
+            { label: 'Quick alert', variant: 'secondary', onClick: () => { if (tier === 'free' && activeAlerts.length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
             { label: 'Open Workflow', variant: 'ghost', href: '/tools/workflow' },
           ]}
           metrics={[

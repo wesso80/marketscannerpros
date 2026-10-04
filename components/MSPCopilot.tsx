@@ -5,6 +5,8 @@
 
 'use client';
 
+import { FREE_COPY } from '@/components/free/copy';
+
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import type { 
@@ -812,6 +814,7 @@ export default function MSPCopilot({
               }}
             >
               {msg.content}
+              {msg.role === "assistant" && /daily.*limit|limit.*reached|allowance.*used/i.test(msg.content) && <a href="/pricing" className="block min-h-10 underline">{FREE_COPY.upgrade}</a>}
               
               {/* Sources */}
               {msg.sources && msg.sources.length > 0 && (

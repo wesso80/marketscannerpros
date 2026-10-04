@@ -721,7 +721,7 @@ const fmtMove = (v: number | null) => (v === null ? 'n/a' : `${v >= 0 ? '+' : ''
       {dashTab === 'Command Center' && <>
       {!isPro && (
         <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
-          <span className="text-emerald-400 font-semibold">Pro required:</span> upgrade to interact with the Command Center
+          <a href="/pricing" className="inline-flex min-h-10 items-center underline">{FREE_COPY.upgrade}</a>
         </div>
       )}
       <div className={!isPro ? 'pointer-events-none select-none' : undefined}>

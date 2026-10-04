@@ -5,9 +5,11 @@ import type { ScanResult } from '@/app/v2/_lib/api';
 import { FREE_DAILY_SCAN_LIMIT } from '@/lib/free/limits';
 import Stamp, { localStamp } from './Stamp';
 import { scoreTone } from './SavedPicks';
+import UpgradeMoment, { useUpgradeMoment } from './UpgradeMoment';
 import { FREE_COPY } from './copy';
 export type Usage = { used: number; limit: number; resetsAt: string };
 export default function DemoScan() {
+  const upgrade = useUpgradeMoment();
   const [usage, setUsage] = useState<Usage | null>(null);
   const [row, setRow] = useState<ScanResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +30,7 @@ export default function DemoScan() {
       if (!usage) await refreshUsage();
       const response = await fetch('/api/scanner/run', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: symbol === 'BTC' ? 'crypto' : 'equity', symbols: [symbol], timeframe: 'daily', minScore: 0 }) });
       const data = await response.json();
-      if (response.status === 429 && data.limitReached) { setLimitHit(true); return; }
+      if (response.status === 429 && data.limitReached) { setLimitHit(true); upgrade.show('scan'); return; }
       if (!response.ok) throw new Error();
       const result = data.results?.find((item: ScanResult) => item.symbol?.replace(/USD[T]?$/, '') === symbol);
       if (!result || !Number.isFinite(result.score)) throw new Error();
@@ -39,6 +41,7 @@ export default function DemoScan() {
   const remaining = usage ? Math.max(0, usage.limit - usage.used) : null;
   const score = row?.canonical?.score ?? row?.score;
   return <section className="min-w-0 space-y-3 rounded-xl border border-white/10 p-4" aria-busy={busy}>
+    {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
     <h2 className="text-lg font-semibold">{FREE_COPY.demoTitle}</h2>
     <p className="text-sm" aria-live="polite">{usage ? `${remaining} ${FREE_COPY.of} ${usage.limit} ${FREE_COPY.scansLeft} · ${FREE_COPY.resets} ${localStamp(usage.resetsAt)}` : FREE_COPY.loading}</p>
     {limitHit || remaining === 0 ? <div><p>{FREE_COPY.scanLimit(FREE_DAILY_SCAN_LIMIT)}</p><Link className="inline-flex min-h-10 items-center underline" href="/pricing">{FREE_COPY.upgrade}</Link></div> : <div className="flex flex-wrap items-center gap-3">
