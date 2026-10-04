@@ -27,7 +27,7 @@ export function formatMarketTime(value: unknown, timeZone = 'UTC'): string | nul
   return `${get('hour')}:${get('minute')} ${get('timeZoneName')} ${get('weekday')} ${get('day')} ${get('month')}`;
 }
 export function priceText(price: number | null | undefined): string {
-  return validNumber(price) ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:Math.abs(price)<1?8:2}).format(price) : 'price unavailable';
+  return validNumber(price) && price>0 ? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:Math.abs(price)<1?8:2}).format(price) : 'no quote';
 }
 /** Observation time is evidence. fetchedAt alone never proves when a price was observed. */
 export function formatPriceStamp(input: PriceStampInput, options: PriceStampOptions = {}) {
@@ -53,3 +53,6 @@ export function formatPriceStamp(input: PriceStampInput, options: PriceStampOpti
   if(input.spot)parts.push(`spot ${priceText(input.spot.price)} last close ${input.spot.latestDay?dayLabel(input.spot.latestDay):'time unknown'}`);
   return {text:parts.filter(Boolean).join(' · '),timeLabel,basisLabel,warning:missingTime || !!input.stale,missingTime};
 }
+
+/** Unknown market status cannot establish closure. */
+export function noQuoteLabel(isOpen:boolean|null|undefined){return isOpen===false?'market closed, no quote':'no quote';}

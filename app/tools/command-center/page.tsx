@@ -26,6 +26,8 @@ import BuildingInterestPanel from '@/components/analysis/BuildingInterestPanel';
 import CrossAssetPanel from '@/components/analysis/CrossAssetPanel';
 import Link from 'next/link';
 import PriceStamp from '@/components/market/PriceStamp';
+import {freshness} from '@/lib/crypto/breakdown/freshness';
+import {trustBadgeState} from '@/components/market/TrustBadge';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import {OverviewPicks} from '@/components/market/OverviewPicks';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -298,9 +300,9 @@ export default function CommandCenterPage() {
       <MarketStatusStrip items={[
         {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??'time unknown'],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
         {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'time unknown']},
-        {label:'Crypto overview',statusLabel:crypto.error?'Degraded':'Unknown',source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'time unknown']},
+        {label:'Crypto overview',statusLabel:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status,status:trustBadgeState({status:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status}).normalized,source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'time unknown']},
         {label:'Quotes',statusLabel:quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Unknown',source:'stored quotes',notes:['Per-symbol observation times below']},
-        {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':'Unknown',source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'time unknown']},
+        {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status,status:trustBadgeState({status:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status}).normalized,source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'time unknown']},
         {label:'Daily picks',statusLabel:picks.error?'Degraded':'Unknown',source:'stored daily scan',notes:['Per-row trust and dates below']},
         {label:'Movers',statusLabel:movers.error?'Degraded':'Unknown',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'time unknown']},
         {label:'Event clock',statusLabel:calendarWarning?'Degraded':'Unknown',source:'economic calendar',notes:['schedule only'],warnings:calendarWarning?[calendarWarning]:[]},
@@ -380,7 +382,7 @@ export default function CommandCenterPage() {
           <SectionTitle n="03" title="Crypto Participation" />
           <div className="text-lg font-black" style={{ color: stanceColor(flow.stance) }}>{flow.label}</div>
           <p className="mt-1 text-sm text-slate-300">{flow.note}</p>
-          <Link className="text-emerald-300" href="/tools/crypto-dashboard?symbol=BTC">Derivatives detail</Link>
+          <Link className="text-emerald-300" href="/tools/crypto-dashboard">Market-wide derivatives</Link>
         </Card>
       </div>
 

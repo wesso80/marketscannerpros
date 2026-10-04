@@ -15,3 +15,10 @@ export function symbolQuoteStamp(symbol:string,asset:'crypto'|'equity',quote?:{p
 export function journalLinkAsset(tradeType:string|null,assetClass:string|null){
  return {tradeType:tradeType==='Crypto'?'Spot':tradeType,assetClass:tradeType==='Crypto'?'crypto':assetClass==='crypto'?'crypto':assetClass==='commodity'?'commodity':'equity'} as const;
 }
+
+/** Draft text only; no strategy identifier, execution or persistence. */
+export function cryptoResearchNote(stage:string,facts:{asOf:string|null;rangePct:number|null;volumeRatio:number|null;distancePct:number|null}){
+ const n=(v:number|null)=>v!=null&&Number.isFinite(v)?v.toFixed(2):'unavailable';
+ const day=facts.asOf&&Number.isFinite(Date.parse(facts.asOf))?new Date(facts.asOf).toISOString().slice(0,10):'date unavailable';
+ return `Research note ${day} UTC: locked v1 rule check = ${stage}. Base range ${n(facts.rangePct)}%, volume ratio ${n(facts.volumeRatio)}x, distance to base high ${n(facts.distancePct)}%. Not a trade instruction.`;
+}

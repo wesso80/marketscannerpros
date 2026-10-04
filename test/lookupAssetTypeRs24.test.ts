@@ -47,9 +47,9 @@ describe('lookup handlers use the new symbol, not the current page asset', () =>
     expect(src).toContain('selectSymbol(s, { assetType: detectMarketPath(s) })');
     expect(src).not.toContain('selectSymbol(s, { assetType: marketPath })');
   });
-  it('Golden Egg lookup detects from the typed symbol with pair normalisation', () => {
+  it('Golden Egg preserves explicit crypto mode, otherwise detects the typed symbol', () => {
     const src = read('app/tools/golden-egg/page.tsx');
-    expect(src).toContain('selectSymbol(next, { timeframe, assetType: lookupAssetType(next, CRYPTO_SET) })');
+    expect(src).toContain("selectSymbol(next, { timeframe, assetType: assetType === 'crypto' ? 'crypto' : lookupAssetType(next, CRYPTO_SET) })");
     expect(src).toContain("const isCryptoSymbol = lookupAssetType(sym, CRYPTO_SET) === 'crypto';");
     expect(src).not.toContain('CRYPTO_SET.has(symbolInput.trim().toUpperCase())');
   });

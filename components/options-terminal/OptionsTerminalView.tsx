@@ -9,6 +9,8 @@
 
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import {noQuoteLabel} from '@/lib/market/priceStamp';
+import {isMarketOpenForSession} from '@/lib/time/sessionCloseEngine';
 import PriceStamp from '@/components/market/PriceStamp';
 import {trustBadgeState} from '@/components/market/TrustBadge';
 import EvidenceStack from '@/components/market/EvidenceStack';
@@ -175,6 +177,8 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
     setSelected(null);
   }, [searchParams, router, pathname]);
 
+  const [marketOpen,setMarketOpen]=useState<boolean|null>(null);
+  useEffect(()=>{setMarketOpen(isMarketOpenForSession(new Date(),'regular'));},[]);
   const spot = chain.underlyingPrice;
   const updatedLabel = chain.loading ? 'Loading…' : quoteDateLabel(chain.quoteBasis, chain.asOfDate);
   const quality = chainQuality(chain.contracts, spot, chain.quoteBasis, chain.asOfDate);
@@ -360,7 +364,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 w-full lg:w-auto">
               <div className="space-y-0.5">
                 <div className="text-[11px] uppercase tracking-wide text-zinc-400">Underlying</div>
-                <PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf?'last_close':'unknown'} source={chain.provider}/>
+                {(chain.spotObservation?.price??spot)>0?<PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf?'last_close':'unknown'} source={chain.provider}/>:<span className="text-amber-300">{ticker} · {noQuoteLabel(marketOpen)}</span>}
               </div>
               <div className="text-xs text-zinc-400"><PriceStamp symbol={selectedContract?`${selectedContract.strike}${selectedContract.type==='call'?'C':'P'} ask`:'Chain · select a contract'} assetType="option" price={selectedContract?.ask} priceBasis={chain.quoteBasis} latestDay={chain.asOfDate} source={chain.provider}/></div>
               <Badge tone="neutral">
