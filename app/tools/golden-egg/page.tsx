@@ -5,7 +5,7 @@
    Real API data: /api/golden-egg + /api/dve + /api/quote
    --------------------------------------------------------------------------- */
 
-import { INDICATOR_COMPOSITE_LABEL, INDICATOR_COMPOSITE_TOOLTIP, TIMEFRAME_PULL_LABEL, CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
+import { CANONICAL_SETUP_TOOLTIP, INDICATOR_COMPOSITE_LABEL, INDICATOR_COMPOSITE_TOOLTIP, TIMEFRAME_PULL_LABEL, CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { parseResearchTimeframe } from '@/lib/researchContext';
@@ -929,7 +929,7 @@ export default function GoldenEggPage() {
                     <div className="text-[11px] text-slate-500 uppercase">Assessment</div>
                   </div>
                   {geEngine ? (
-                    <div className="text-center max-w-xs" title={INDICATOR_COMPOSITE_TOOLTIP}>
+                    <div className="text-center max-w-xs" title={CANONICAL_SETUP_TOOLTIP}>
                       {geNoSetup ? (
                         <>
                           <div className="text-xl font-bold" style={{ color: geNoQualifyingSetup ? 'var(--msp-text-muted)' : verdictColor(geAssessment || 'WATCH') }} data-testid="ge-no-setup">{geNoSetup.headline}</div>
