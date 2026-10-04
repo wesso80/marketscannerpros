@@ -25,6 +25,7 @@ import { PageHero } from '@/components/ui';
 import BuildingInterestPanel from '@/components/analysis/BuildingInterestPanel';
 import CrossAssetPanel from '@/components/analysis/CrossAssetPanel';
 import Link from 'next/link';
+import RadarReportCard from '@/components/overview/RadarReportCard';
 import PriceStamp from '@/components/market/PriceStamp';
 import {freshness} from '@/lib/crypto/breakdown/freshness';
 import {trustBadgeState} from '@/components/market/TrustBadge';
@@ -295,6 +296,8 @@ export default function CommandCenterPage() {
           { label: 'Research Dashboard', variant: 'ghost', href: '/tools/dashboard' },
         ]}
       />
+
+      <div className="grid gap-3 lg:grid-cols-3"><div className="lg:col-start-3"><RadarReportCard /></div></div>
 
       <p className="text-xs text-slate-500">{new Intl.DateTimeFormat('en-AU',{dateStyle:'full',timeZone:'UTC'}).format(sessionNow)} (UTC)</p>
       <MarketStatusStrip items={[
