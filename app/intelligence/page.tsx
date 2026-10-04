@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
-import { LastUpdatedBadge, SectionHeader } from '@/components/intelligence/primitives';
+import ChipRow from '@/components/visual/ChipRow';
+import SourceLine from '@/components/visual/SourceLine';
+import StatTile from '@/components/visual/StatTile';
+import { friendlyStatus } from '@/lib/free/friendlyStatus';
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import type { GlobalM2Dto } from '@/app/api/intelligence/global-m2/route';
 import type { FragilityResult } from '@/lib/intelligence/types';
@@ -100,7 +103,7 @@ export default function IntelligenceHome() {
             color: 'var(--msp-text)',
           }}
         >
-          MarketScannerPros Intelligence
+          Intelligence
         </h1>
         <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--msp-text-muted)' }}>
           Native cross-asset research. Only Global M2, Fragility and Liquidity Transmission are
@@ -108,11 +111,9 @@ export default function IntelligenceHome() {
         </p>
       </header>
 
-      <SectionHeader
-        title="Live Now"
-        subtitle="Native engines with live provider data. Parity marked DATA_PARITY_PENDING where source deltas apply."
-        right={<LastUpdatedBadge timestamp={lastUpdated} />}
-      />
+      <div className="my-4 max-w-xs"><StatTile label="Research modules" value={liveModules.length} /></div>
+      <ChipRow items={liveModules.map(module => ({ id: module.href.split('/').pop()!, label: module.title, warning: module.status !== 'LIVE', detail: friendlyStatus(module.status) }))} />
+      <SourceLine source="Intelligence modules" asOf={lastUpdated} basis="Latest module response; coverage varies by module" />
       <ModuleGrid modules={liveModules} />
 
       <CollapsibleSection title="Coming soon" summary="Modules in development">
@@ -149,7 +150,7 @@ function ModuleTile({ module: m }: { module: ModuleCard }) {
         display: 'block',
         padding: '14px 14px',
         borderRadius: 'var(--msp-radius-card)',
-        border: `1px solid ${live ? 'var(--msp-border)' : 'var(--msp-warn, #d97706)'}`,
+        border: `1px solid ${live ? 'var(--msp-border)' : 'var(--msp-warn)'}`,
         background: 'var(--msp-panel)',
         textDecoration: 'none',
         color: 'inherit',
@@ -165,7 +166,7 @@ function ModuleTile({ module: m }: { module: ModuleCard }) {
         >
           {m.title}
         </span>
-        <StatusBadge status={m.status} />
+
       </div>
       <p
         style={{
@@ -178,34 +179,5 @@ function ModuleTile({ module: m }: { module: ModuleCard }) {
         {m.summary}
       </p>
     </Link>
-  );
-}
-
-function StatusBadge({ status }: { status: ModuleCard['status'] }) {
-  const style =
-    status === 'LIVE'
-      ? { fg: '#6EE7B7', bg: 'rgba(16,185,129,0.20)', border: 'rgba(16,185,129,0.38)' }
-      : status.startsWith('LIVE ·')
-      ? { fg: '#34D399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.28)' }
-      : status === 'CHECKING'
-      ? { fg: '#94A3B8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.25)' }
-      : { fg: '#F5B14C', bg: 'rgba(245,177,76,0.15)', border: 'rgba(245,177,76,0.32)' };
-  return (
-    <span
-      style={{
-        padding: '2px 8px',
-        borderRadius: 6,
-        fontSize: '0.68rem',
-        letterSpacing: '0.04em',
-        fontWeight: 700,
-        color: style.fg,
-        background: style.bg,
-        border: `1px solid ${style.border}`,
-        textTransform: 'uppercase',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {status}
-    </span>
   );
 }

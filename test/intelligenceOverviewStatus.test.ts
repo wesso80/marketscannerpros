@@ -36,7 +36,6 @@ describe('Intelligence overview tiles use the pages\' status rules (RS-10)', () 
     expect(overview).toContain('globalM2StatusLabel(');
     expect(overview).toContain('fragilityStatusLabel(');
     expect(overview).toContain('liquidityStatusLabel(');
-    expect(overview).toMatch(/<LastUpdatedBadge timestamp=\{lastUpdated\} \/>/);
     expect(readFileSync('app/intelligence/fragility/page.tsx', 'utf8')).toContain('fragilityStatusLabel(meta)');
   });
 });
