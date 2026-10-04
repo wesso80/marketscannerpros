@@ -27,6 +27,10 @@ export class AuthError extends Error {
   }
 }
 
+export class UpgradeRequiredError extends AuthError {
+  constructor(url: string) { super(url); this.name = 'UpgradeRequiredError'; this.message = 'Upgrade required'; }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Generic fetcher                                                    */
 /* ------------------------------------------------------------------ */
@@ -37,7 +41,8 @@ async function apiFetch<T>(url: string, options?: RequestInit, timeoutMs?: numbe
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   }, timeoutMs);
-  if (res.status === 401 || res.status === 403) throw new AuthError(url);
+  if (res.status === 401) throw new AuthError(url);
+  if (res.status === 403) throw new UpgradeRequiredError(url);
   if (!res.ok) {
     const detail = body?.error || body?.message || '';
     throw new Error(detail ? `${detail}` : `API ${res.status}: ${url}`);
