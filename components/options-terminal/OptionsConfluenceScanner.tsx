@@ -25,6 +25,7 @@ import Pill from "@/components/terminal/Pill";
 import DepthCard from "@/components/DepthCard";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { writeOperatorState } from "@/lib/operatorState";
+import { optionsPageCommand } from "@/lib/options/pageCommand";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence, qualityTierFromConfidence } from "@/lib/workflow/scoring";
@@ -258,6 +259,7 @@ interface DataQuality {
 
 // AI Market State from backend
 interface AIMarketState {
+  tradeQualityGate?: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT';
   regime: {
     type: 'trending' | 'ranging' | 'breakout' | 'reversal' | 'uncertain';
     confidence: number;
@@ -818,11 +820,13 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       ? 'BEARISH'
       : 'NEUTRAL';
 
-    const action: 'WAIT' | 'PREP' | 'EXECUTE' = result.entryTiming.urgency === 'no_trade'
-      ? 'WAIT'
-      : result.tradeLevels && edge >= 60
-      ? 'PREP'
-      : 'PREP';
+    const pageCommand = optionsPageCommand({
+      verdict: result.tradeSnapshot?.verdict,
+      tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+      hasExecutionLevels: !!result.tradeLevels,
+      confidence: result.compositeScore?.confidence,
+    });
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = pageCommand.action;
 
     const expectedMoveRisk = result.expectedMove?.selectedExpiryPercent ?? 0;
     const risk: 'LOW' | 'MODERATE' | 'HIGH' = result.institutionalFilter?.noTrade
@@ -833,8 +837,8 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
       ? 'MODERATE'
       : 'LOW';
 
-    const next = result.entryTiming.urgency === 'no_trade'
-      ? (result.entryTiming.reason || 'Wait for cleaner options structure')
+    const next = pageCommand.noTrade
+      ? (result.tradeSnapshot?.oneLine || result.entryTiming.reason || 'Wait for cleaner options structure')
       : (result.tradeSnapshot?.action?.entryTrigger || result.entryTiming.reason || 'Analyze with defined levels');
 
     writeOperatorState({
@@ -1295,7 +1299,12 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
     const hasExecutionLevels = !!result.tradeLevels;
     const hasEntryZone = !!result.tradeLevels?.entryZone;
-    const isNoTrade = result.entryTiming.urgency === 'no_trade';
+    const isNoTrade = optionsPageCommand({
+      verdict: result.tradeSnapshot?.verdict,
+      tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+      hasExecutionLevels,
+      confidence: result.compositeScore?.confidence,
+    }).noTrade;
     const executionZone: LadderState = (isNoTrade || !hasExecutionLevels)
       ? 'fail'
       : (hasEntryZone ? 'valid' : 'partial');
@@ -1349,13 +1358,16 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         ? 'MODERATE'
         : 'LOW';
 
-  const executionState = !result
+  const pageCommand = result ? optionsPageCommand({
+    verdict: result.tradeSnapshot?.verdict,
+    tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+    hasExecutionLevels: !!result.tradeLevels,
+    confidence: result.compositeScore?.confidence,
+  }) : null;
+
+  const executionState = !pageCommand
     ? 'WAIT'
-    : result.entryTiming.urgency === 'no_trade'
-      ? 'NO TRADE'
-      : result.tradeLevels
-        ? 'READY'
-        : 'WAIT';
+    : pageCommand.executionState;
 
   const heatSignalStrip = result ? [
     {
@@ -1385,13 +1397,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
     },
   ] : [];
 
-  const commandStatus: 'ACTIVE' | 'WAIT' | 'NO TRADE' = !result
-    ? 'WAIT'
-    : result.entryTiming.urgency === 'no_trade'
-      ? 'NO TRADE'
-      : (result.tradeLevels && (result.compositeScore?.confidence ?? 0) >= 60)
-        ? 'ACTIVE'
-        : 'WAIT';
+  const commandStatus: 'ACTIVE' | 'WAIT' | 'NO TRADE' = pageCommand?.commandStatus ?? 'WAIT';
 
   const institutionalFlowState = !result
     ? 'UNKNOWN'
@@ -1568,7 +1574,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         tradePermission === 'BLOCKED' ? 'Institutional filter is blocking this scenario.' : null,
         commandStatus !== 'ACTIVE' ? 'Scenario is still waiting for confirmation.' : null,
         !result.tradeLevels ? 'No clean reference zone is available yet.' : null,
-        result.entryTiming.urgency === 'no_trade' ? (result.entryTiming.reason || 'Timing model says wait.') : null,
+        pageCommand?.noTrade ? (result.tradeSnapshot?.oneLine || 'Verdict is WAIT.') : null,
         (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'Expected move is elevated; option premium may be less forgiving.' : null,
         dataHealth === 'DELAYED' || dataHealth === 'EOD' || dataHealth === 'STALE' ? 'Data freshness is capped, so size the conclusion down.' : null,
       ].filter(Boolean).slice(0, 3)

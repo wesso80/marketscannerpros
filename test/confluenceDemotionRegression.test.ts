@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.hoisted(() => { process.env.ALPHA_VANTAGE_API_KEY = 'mock-only'; });
 vi.mock('@/lib/db', () => ({ q: vi.fn() }));
@@ -101,4 +102,71 @@ it('a weak timeframe scan cannot veto a strong chain and measured levels', async
   expect(['A+','A','B']).toContain(result.optionsGrade);
   expect(result.tradeSnapshot?.verdict).not.toBe('WAIT');
   expect(result.primaryStrike?.strike).toBeGreaterThan(0);
+});
+
+it('a neutral timeframe scan on the bullish A-grade chain is a clock note, not NO TRADE', async () => {
+  const { fetchSharedOptionsChain } = await import('@/lib/options/chainCache');
+  const { mockChain } = await import('./fixtures/confluenceDemotion');
+  const { optionsPageCommand } = await import('@/lib/options/pageCommand');
+  const shift = () => {
+    const chain = mockChain();
+    chain.rows = chain.rows.map(row => ({ ...row, strike: String(Number(row.strike) + 12) }));
+    return chain;
+  };
+  const base = await makeScanFixture();
+  Object.assign(base, measuredFixture());
+  const original = await makeScanFixture();
+  const neutral = structuredClone(base);
+  neutral.decompression = { ...original.decompression, clusteredCount: 0, pullBias: 0, netPullDirection: 'neutral' };
+  neutral.prediction = { ...original.prediction, confidence: 0, direction: 'neutral' };
+  neutral.signalStrength = 'no_signal';
+  neutral.clusters = [];
+  const strong = structuredClone(base);
+  strong.decompression = { ...original.decompression, clusteredCount: 4, pullBias: 80, netPullDirection: 'bullish' };
+  strong.prediction = { ...original.prediction, confidence: 90, direction: 'bullish' };
+  strong.signalStrength = 'strong';
+  const lowCalendar = varyCalendar(strong, false);
+  const highCalendar = varyCalendar(strong, true);
+  vi.mocked(fetchSharedOptionsChain)
+    .mockResolvedValueOnce(shift() as any)
+    .mockResolvedValueOnce(shift() as any)
+    .mockResolvedValueOnce(shift() as any);
+  vi.spyOn((optionsAnalyzer as any).confluenceAgent, 'scanHierarchical')
+    .mockResolvedValueOnce(neutral)
+    .mockResolvedValueOnce(lowCalendar)
+    .mockResolvedValueOnce(highCalendar);
+  const result = await optionsAnalyzer.analyzeForOptions('AAPL', 'intraday_1h', '2026-10-09');
+  const low = await optionsAnalyzer.analyzeForOptions('AAPL', 'intraday_1h', '2026-10-09');
+  const high = await optionsAnalyzer.analyzeForOptions('AAPL', 'intraday_1h', '2026-10-09');
+  expect(result.directionStatus).toBe('determined');
+  expect(result.direction).toBe('bullish');
+  expect(result.optionsGrade).toBe('A');
+  expect(result.primaryStrike?.strike).toBe(102);
+  expect(result.tradeSnapshot?.verdict).not.toBe('WAIT');
+  expect(result.entryTiming.urgency).not.toBe('no_trade');
+  expect(result.entryTiming.reason).toMatch(/Timing note \(clock only\)/);
+  expect(result.entryTiming.reason).not.toMatch(/confluence|directional signal/i);
+  const page = optionsPageCommand({
+    verdict: result.tradeSnapshot?.verdict,
+    tradeQualityGate: result.aiMarketState?.tradeQualityGate,
+    hasExecutionLevels: !!result.tradeLevels,
+    confidence: result.compositeScore?.confidence,
+  });
+  expect(page.noTrade).toBe(false);
+  expect(page.executionState).not.toBe('NO TRADE');
+  expect(page.commandStatus).not.toBe('NO TRADE');
+  expect(page.executionStep).not.toBe('fail');
+  expect(page.action).not.toBe('WAIT');
+  expect(low.entryTiming.urgency).toBe(high.entryTiming.urgency);
+  expect(low.entryTiming.urgency).not.toBe('no_trade');
+  expect(high.entryTiming.urgency).not.toBe('no_trade');
+  expect(readFileSync('components/options-terminal/OptionsConfluenceScanner.tsx', 'utf8')).not.toContain("urgency === 'no_trade'");
+});
+
+it('NO TRADE on the options page comes from the verdict or gate, not a scan urgency', async () => {
+  const { optionsPageCommand } = await import('@/lib/options/pageCommand');
+  const bullish = optionsPageCommand({ verdict: 'BULLISH_EDGE', tradeQualityGate: 'HIGH', hasExecutionLevels: true, confidence: 80 });
+  expect(bullish).toMatchObject({ noTrade: false, executionStep: 'ready', executionState: 'READY', commandStatus: 'ACTIVE', action: 'PREP' });
+  const gated = optionsPageCommand({ verdict: 'WAIT', tradeQualityGate: 'WAIT', hasExecutionLevels: true, confidence: 80 });
+  expect(gated).toMatchObject({ noTrade: true, executionStep: 'fail', executionState: 'NO TRADE', commandStatus: 'NO TRADE', action: 'WAIT' });
 });

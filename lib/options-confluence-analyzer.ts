@@ -3395,31 +3395,16 @@ export function gradeOptionsSetup(input: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ENTRY TIMING BASED ON CONFLUENCE WINDOWS
+// ENTRY TIMING — SESSION CLOCK ONLY
+// The timeframe scan and the close-calendar score are not read. no_trade is
+// never set here; the options verdict/gate is the only NO TRADE source.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function calculateEntryTiming(
-  confluenceResult: HierarchicalScanResult,
-  candleCloseConfluence?: CandleCloseConfluence | null
-): EntryTimingAdvice {
+function calculateEntryTiming(): EntryTimingAdvice {
   const now = new Date();
   const nyTime = getNYTimeParts(now);
   const estTimeDecimal = nyTime.hour + nyTime.minute / 60;
-  
-  // Use clusteredCount (TFs closing together) for real confluence
-  const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
-  const activeDecomps = confluenceResult.decompression.decompressions.filter(d => d.isDecompressing);
-  
-  // Get cluster info for display
-  const clusterTimeframes = confluenceResult.decompression.temporalCluster?.timeframes || [];
-  const clusterMinsToClose = confluenceResult.decompression.temporalCluster?.clusterCenter || 0;
-  
-  // Find nearest decompression close from clustered TFs
-  const nearestClose = clusterMinsToClose > 0 ? clusterMinsToClose : activeDecomps
-    .map(d => d.minsToClose)
-    .filter(m => m > 0)
-    .sort((a, b) => a - b)[0];
-  
+
   const avoidWindows: string[] = [];
   
   // ═══════════════════════════════════════════════════════════════════════
@@ -3467,81 +3452,32 @@ function calculateEntryTiming(
     avoidWindows.push('😴 Lunch lull (12-2pm EST) - Lower volume, choppy price action');
   }
   
-  // Get candle close confluence score (0-100)
-  const candleScore = candleCloseConfluence?.confluenceScore || 0;
-  const hasStrongCandleConfluence = candleScore >= 25;
-  const hasWeakCandleConfluence = candleScore < 15;
-  
-  // Determine urgency - now factors in candle close confluence AND market session
-  let urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade' = 'wait';
-  let reason = '';
-  let idealWindow = '';
-  
-  // ═══════════════════════════════════════════════════════════════════════
-  // EXTENDED HOURS OVERRIDE - downgrade urgency outside regular hours
-  // ═══════════════════════════════════════════════════════════════════════
-  const isExtendedHours = marketSession !== 'regular';
-  const isMarketClosed = marketSession === 'closed';
-  
-  if (isMarketClosed) {
-    // Market fully closed - no trading
+  // Urgency is a clock note. It is never no_trade; that status belongs to the verdict/gate.
+  let urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade' = 'within_hour';
+  let reason = 'Timing note (clock only): regular session (9:30am-4:00pm ET).';
+  let idealWindow = 'Regular session (9:30am-4:00pm ET)';
+
+  if (marketSession === 'closed') {
     urgency = 'wait';
-    reason = 'Market closed - prepare order for next session';
-    idealWindow = 'Next regular market open (9:30am EST)';
-  } else if (confluenceResult.signalStrength === 'no_signal' || 
-      confluenceResult.decompression.netPullDirection === 'neutral') {
-    urgency = 'no_trade';
-    reason = 'No clear directional signal - wait for confluence';
-    idealWindow = 'Wait for TFs to align';
-  } else if (hasWeakCandleConfluence && decompCount < 3) {
-    // LOW CANDLE CONFLUENCE - suppress urgency even if other signals good
+    reason = 'Timing note (clock only): market closed. Next regular session is 9:30am ET.';
+    idealWindow = 'Next regular market open (9:30am ET)';
+  } else if (marketSession === 'premarket') {
     urgency = 'wait';
-    reason = `Low candle confluence (${candleScore}%) - wait for multiple TF closes to align`;
-    // Format the best entry window from the object
-    const bestWindow = candleCloseConfluence?.bestEntryWindow;
-    idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Wait for TF alignment';
-    avoidWindows.push(`⚠️ Candle Close Score only ${candleScore}% - higher probability when TFs close together`);
-  } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60 && hasStrongCandleConfluence) {
-    // Prime conditions - but check extended hours
-    if (isExtendedHours) {
-      urgency = 'wait';
-      reason = `Strong confluence but in ${marketSession === 'premarket' ? 'pre-market' : 'after-hours'} - wait for regular hours for options liquidity`;
-      idealWindow = marketSession === 'premarket' ? 'At market open (9:30am EST)' : 'Tomorrow at open';
-    } else {
-      urgency = 'immediate';
-      reason = `${decompCount} TFs closing together + ${candleScore}% candle confluence - prime entry window`;
-      idealWindow = nearestClose ? `Before ${nearestClose}m TF close` : 'Now';
-    }
-  } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60) {
-    // Good decompression but weak candle confluence - downgrade to within_hour
-    if (isExtendedHours) {
-      urgency = 'wait';
-      reason = `Good confluence but in ${marketSession === 'premarket' ? 'pre-market' : 'after-hours'} - options lack liquidity`;
-      idealWindow = marketSession === 'premarket' ? 'At market open (9:30am EST)' : 'Tomorrow at open';
-    } else {
-      urgency = 'within_hour';
-      reason = `${decompCount} TFs closing together but candle confluence only ${candleScore}% - wait for better alignment`;
-      const bestWindow = candleCloseConfluence?.bestEntryWindow;
-      idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Within 30 minutes';
-    }
-  } else if (decompCount >= 2) {
-    if (isExtendedHours) {
-      urgency = 'wait';
-      reason = `Confluence building but ${marketSession === 'premarket' ? 'pre-market' : 'after-hours'} session - prepare for regular hours`;
-      idealWindow = marketSession === 'premarket' ? 'At or after 9:30am EST' : 'Tomorrow';
-    } else {
-      urgency = 'within_hour';
-      reason = 'Good confluence building - enter on slight pullback';
-      idealWindow = nearestClose ? `Within ${Math.min(nearestClose, 30)} minutes` : 'Within 30 minutes';
-    }
-  } else if (nearestClose && nearestClose <= 15) {
-    urgency = 'within_hour';
-    reason = `TF close in ${nearestClose}m - wait for post-close confirmation`;
-    idealWindow = `${nearestClose + 2}-${nearestClose + 10}m from now`;
-  } else {
+    reason = 'Timing note (clock only): pre-market (4:00-9:30am ET). Options liquidity is limited until the regular session.';
+    idealWindow = 'Regular session open (9:30am ET)';
+  } else if (marketSession === 'afterhours') {
     urgency = 'wait';
-    reason = 'Low confluence - wait for more TFs to decompress';
-    idealWindow = 'Monitor for confluence buildup';
+    reason = 'Timing note (clock only): after-hours (4:00-8:00pm ET). Options liquidity is limited until the next regular session.';
+    idealWindow = 'Next regular session (9:30am ET)';
+  } else if (estTimeDecimal >= 9.5 && estTimeDecimal < 10) {
+    reason = 'Timing note (clock only): opening window (9:30-10:00am ET).';
+    idealWindow = 'After 10:00am ET';
+  } else if (estTimeDecimal >= 15.5 && estTimeDecimal < 16) {
+    reason = 'Timing note (clock only): power hour (3:30-4:00pm ET), approaching the cash close.';
+    idealWindow = 'Before the 4:00pm ET close';
+  } else if (estTimeDecimal >= 12 && estTimeDecimal < 14) {
+    reason = 'Timing note (clock only): midday session (12:00-2:00pm ET).';
+    idealWindow = 'Regular session (9:30am-4:00pm ET)';
   }
   
   return {
@@ -3773,8 +3709,8 @@ export class OptionsConfluenceAnalyzer {
     });
     const direction = directionRead.direction;
 
-    // Entry timing - now factors in candle close confluence score
-    const entryTiming = calculateEntryTiming(confluenceResult, candleCloseConfluence);
+    // Clock note only. The scan and close-calendar score are not inputs.
+    const entryTiming = calculateEntryTiming();
     
     // Greeks advice
     const greeksAdvice = generateGreeksAdvice(
