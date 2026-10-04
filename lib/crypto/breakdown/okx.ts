@@ -10,11 +10,18 @@ export function section(metrics:Metric[],notes:string[]=[],stage?:string):Sectio
  const status=data.length===0?'Unknown':data.some(m=>m.status==='Stale')?'Stale':data.some(m=>m.status==='Unknown'||m.status==='Degraded')||data.length<metrics.length?'Degraded':data.every(m=>m.status==='Last close')?'Last close':'Live';
  return {value:{metrics,notes,stage},source:[...new Set(metrics.map(m=>m.source))].join(' + ')||'unavailable',asOf:times[0]??null,basis:[...new Set(metrics.map(m=>m.basis))].join(' · '),status,reason:status==='Unknown'?'Source unavailable or time unknown':status==='Degraded'?'Some observations are delayed, missing or have unknown time':'Per-value observations shown below'};
 }
+class OkxCodeError extends Error {constructor(readonly code:string){super(`OKX code ${code}`);this.name='OkxCodeError';}}
+const notListed=(error:unknown)=>error instanceof OkxCodeError&&error.code==='51001';
 export async function okxGet(path:string):Promise<Record<string,any>[]>{
  const r=await fetch(`https://www.okx.com/api/v5/${path}`,{cache:'no-store',signal:AbortSignal.timeout(7500)});
- if(!r.ok)throw Error(`OKX HTTP ${r.status}`);const b=await r.json();if(b.code!=='0'||!Array.isArray(b.data))throw Error(`OKX code ${b.code??'unknown'}`);return b.data;
+ if(!r.ok)throw Error(`OKX HTTP ${r.status}`);const b=await r.json();
+ if(String(b?.code)==='51001')throw new OkxCodeError('51001');
+ if(b.code!=='0'||!Array.isArray(b.data))throw Error(`OKX code ${b.code??'unknown'}`);return b.data;
 }
-export async function okxSpot(base:string){return cachedPart(`okx-spot:${base}`,60,0,async()=>{const a=await okxGet(`market/ticker?instId=${encodeURIComponent(base+'-USDT')}`);const p=a[0];if(!p)throw Error('OKX spot unavailable');return {name:'OKX',price:number(p.last),asOf:iso(p.ts),basis:`${base}-USDT spot; USDT pair, not USD`};});}
+export async function okxSpot(base:string){return cachedPart(`okx-spot:${base}`,60,0,async()=>{
+ try{const a=await okxGet(`market/ticker?instId=${encodeURIComponent(base+'-USDT')}`);const p=a[0];if(!p)throw Error('OKX spot unavailable');return {name:'OKX',price:number(p.last),asOf:iso(p.ts),basis:`${base}-USDT spot; USDT pair, not USD`};}
+ catch(error){if(!notListed(error))throw error;return {name:'OKX',price:null,asOf:null,basis:`No OKX ${base}-USDT spot listed`};}
+});}
 export function oiChange(current:number|null,asOf:string|null,rows:unknown[][],hours:number){
  if(!current||!asOf)return null;const target=Date.parse(asOf)-hours*3600000;
  const old=rows.map(r=>({t:number(r[0]),v:number(r[3])})).filter(r=>r.t!=null&&r.v!=null&&r.v>0&&r.t<=target&&target-r.t<=3600000).sort((a,b)=>b.t!-a.t!)[0];
@@ -23,8 +30,8 @@ export function oiChange(current:number|null,asOf:string|null,rows:unknown[][],h
 export async function loadOkx(base:string,now=Date.now()):Promise<Section>{
  const inst=`${base}-USDT-SWAP`,scope=`OKX ${inst} only (one venue). Not the whole market.`;
  const instrument=await cachedPart(`okx-instrument:${base}`,86400,0,async()=>{
-  const rows=await okxGet(`public/instruments?instType=SWAP&instId=${encodeURIComponent(inst)}`);
-  return {listed:rows.some(r=>r.instId===inst),checkedAt:new Date().toISOString()};
+  try{const rows=await okxGet(`public/instruments?instType=SWAP&instId=${encodeURIComponent(inst)}`);return {listed:rows.some(r=>r.instId===inst),checkedAt:new Date().toISOString()};}
+  catch(error){if(!notListed(error))throw error;return {listed:false,checkedAt:new Date().toISOString()};}
  });
  if(!instrument.listed)return section([metric('Perpetual listed',false,'OKX instrument directory',instrument.checkedAt,'Directory checked at; not price observation','slow',undefined,now)],[`No OKX perpetual listed for ${base}. Funding and open interest not shown.`]);
  const names=['funding','oi','history','ticker'] as const;
