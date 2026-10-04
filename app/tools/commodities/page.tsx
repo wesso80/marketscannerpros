@@ -186,6 +186,25 @@ function sparklineBars(history: { date: string; value: number }[], isPositive: b
   );
 }
 
+const COMMODITY_CACHE_MS = 5 * 60 * 1000;
+let commodityCache: { at: number; data: CommoditiesResponse; macro: EconomicIndicatorsResponse | null } | null = null;
+
+function CommoditySkeleton({ embedded }: { embedded: boolean }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const started = Date.now();
+    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <div data-commodity-skeleton className={embedded ? 'space-y-3 p-4' : 'mx-auto max-w-5xl space-y-3 p-6'} aria-busy="true">
+      <div className="h-24 animate-pulse rounded-xl bg-white/5" />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-white/5" />)}</div>
+      <p className="text-sm text-white/60">EN · MT · AG · Loading commodity data… {elapsed}s</p>
+    </div>
+  );
+}
+
 export default function CommoditiesPage({ embedded = false }: { embedded?: boolean }) {
   const { tier } = useUserTier();
   const { setPageData } = useAIPageContext();
@@ -197,6 +216,12 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const fetchCommodities = useCallback(async () => {
+    if (commodityCache && Date.now() - commodityCache.at < COMMODITY_CACHE_MS) {
+      setData(commodityCache.data);
+      setMacroInputs(commodityCache.macro);
+      setLoading(false);
+      return;
+    }
     try {
       setError(null);
       const [commoditiesRes, indicatorsRes] = await Promise.all([
@@ -219,6 +244,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
       
       setData(json);
       setMacroInputs(indicatorsJson);
+      commodityCache = { at: Date.now(), data: json, macro: indicatorsJson };
     } catch (err: any) {
       console.error('Failed to fetch commodities:', err);
       setError(err.message || 'Failed to load commodity data');
@@ -487,16 +513,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
   }
 
   if (loading) {
-    if (embedded) {
-      return (
-        <div className="flex h-[30vh] items-center justify-center text-white">
-          <div className="text-center">
-            <div className="mb-4 text-xs font-black uppercase tracking-[0.18em] text-emerald-300 animate-pulse">EN · MT · AG</div>
-            <div className="text-white/60">Loading commodity data...</div>
-          </div>
-        </div>
-      );
-    }
+    if (embedded) return <CommoditySkeleton embedded />;
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] p-6 text-white">
         <ToolsPageHeader 
@@ -505,12 +522,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
           subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
           icon="CMD"
         />
-        <div className="flex h-[50vh] items-center justify-center">
-          <div className="text-center">
-            <div className="mb-4 text-xs font-black uppercase tracking-[0.18em] text-emerald-300 animate-pulse">EN · MT · AG</div>
-            <div className="text-white/60">Loading commodity data...</div>
-          </div>
-        </div>
+        <CommoditySkeleton embedded={false} />
       </div>
     );
   }
