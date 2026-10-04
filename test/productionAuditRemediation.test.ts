@@ -1,3 +1,4 @@
+import { getToolByKey } from '@/lib/toolCatalog';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -61,12 +62,11 @@ describe('2026-09-21 production audit remediations', () => {
 
   it('keeps specialist routes on their real pages and points Macro to the real lens', () => {
     const config = read('next.config.mjs');
-    const catalog = read('lib/toolCatalog.ts');
 
     expect(config).not.toContain("{ source: '/tools/volatility-engine', destination: '/tools/golden-egg'");
     expect(config).not.toContain("{ source: '/tools/liquidity-sweep', destination: '/tools/golden-egg'");
     expect(config).toContain("{ source: '/tools/macro', destination: '/tools/dashboard?tab=macro'");
-    expect(catalog).toContain("href: '/tools/dashboard?tab=macro', label: 'Macro Dashboard'");
+    expect(getToolByKey('macro')?.href).toBe('/tools/dashboard?tab=macro');
   });
 
   it('preserves options deep links instead of resetting them under the default crypto symbol', () => {

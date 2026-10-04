@@ -33,6 +33,8 @@ it("every seven-group navigation destination resolves directly without duplicate
 });
 
 it.each([
+  ["/tools/crypto-terminal", "/tools/terminal?tab=crypto-terminal"],
+  ["/tools/journal", "/tools/workspace?tab=Journal"],
   ["/v2/scanner", "/tools/scanner"],
   ["/v2", "/tools/dashboard"],
   ["/tools/options-terminal", "/tools/options"],
@@ -108,4 +110,22 @@ it("preserves the shared v2 library and embedded pages while retiring the middle
   const middleware = readFileSync("middleware.ts", "utf8");
   expect(middleware).toContain("pathname.startsWith('/quant')");
   expect(middleware).toContain("'/admin/quant'");
+});
+
+it('accounts for every current public static content route in the seven-group map', async () => {
+  const { readdirSync } = await import('node:fs');
+  const paths = new Set(Object.values(areaLinks).flat().map(link => link.href.split('?')[0]));
+  const redirects = new Set((await config.redirects()).map(rule => rule.source));
+  const intentionallyUnlisted = new Set(['/reviews', '/partners/demo', '/after-checkout', '/auth/verify', '/intelligence/lead-lag', '/intelligence/nq-pressure', '/intelligence/auction', '/intelligence/master', '/intelligence/history']);
+  const pages: string[] = [];
+  const walk = (dir: string) => { for (const item of readdirSync(dir, {withFileTypes:true})) { const file=path.join(dir,item.name);if(item.isDirectory()) walk(file);else if(item.name==='page.tsx') pages.push(file); } };
+  walk('app');
+  for(const file of pages) {
+    const route='/' + path.dirname(file).replace(/^app\/?/, '');
+    if(/^\/(admin|operator)(\/|$)/.test(route) || route.includes('[') || intentionallyUnlisted.has(route) || redirects.has(route)) continue;
+    // Page-level redirects expose no separate content; their destinations are the catalog pages.
+    const code=readFileSync(file,'utf8');
+    if(/\bredirect\(|router\.replace\(/.test(code)) continue;
+    expect(paths.has(route), `Uncatalogued content route: ${route}`).toBe(true);
+  }
 });

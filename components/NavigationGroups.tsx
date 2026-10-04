@@ -155,6 +155,7 @@ export default function NavigationGroups({
                         item.href,
                         pathname,
                         params.get("tab") || "",
+                        params.get("section") || "",
                       )
                         ? "page"
                         : undefined

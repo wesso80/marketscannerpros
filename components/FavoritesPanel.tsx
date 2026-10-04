@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useFavorites } from '@/hooks/useFavorites';
-import { TOOL_CATALOG, TOOL_CATEGORIES, type ToolPage } from '@/lib/toolCatalog';
+import { TOOL_CATALOG, TOOL_CATEGORIES, getToolByKey, resolveFavoriteTools, type ToolPage } from '@/lib/toolCatalog';
 
 function MyPagesMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
@@ -16,13 +16,18 @@ function MyPagesMetric({ label, value, tone = 'var(--msp-text)', detail }: { lab
 }
 
 export default function FavoritesPanel({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
-  const { favorites, loading, error, degraded, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, loading, error, degraded, toggleFavorite: toggleStoredFavorite } = useFavorites();
   const [showBrowser, setShowBrowser] = useState(false);
   const [filterCat, setFilterCat] = useState<string | null>(null);
 
-  const favoriteTools = favorites
-    .map(k => TOOL_CATALOG.find(t => t.key === k))
-    .filter(Boolean) as ToolPage[];
+  const favoriteTools = resolveFavoriteTools(favorites);
+  const storedKeysFor = (key: string) => favorites.filter(saved => getToolByKey(saved)?.key === key);
+  const isFavorite = (key: string) => storedKeysFor(key).length > 0;
+  const toggleFavorite = async (key: string) => {
+    const stored = storedKeysFor(key);
+    if (stored.length) await Promise.all(stored.map(toggleStoredFavorite));
+    else await toggleStoredFavorite(key);
+  };
 
   if (loading) {
     return (

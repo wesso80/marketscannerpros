@@ -6,13 +6,13 @@ export type NavigationLink = { href: string; label: string };
 const link = (href: string, label: string): NavigationLink => ({href, label});
 /** One destination map for desktop, phone and the workflow sub-bar. Entitlements stay at the page/API. */
 export const areaLinks: Record<WorkflowArea, NavigationLink[]> = {
-  today: [link('/tools/command-center','Overview'), link('/tools/msp-radar','Daily Radar'), link('/daily-pick','Daily Picks'), link('/tools','All tools')],
-  scan: [link('/tools/scanner','Scanner'),link('/tools/golden-egg','Symbol'),link('/tools/options','Options'),link('/tools/terminal','Terminal'),link('/tools/liquidity-sweep','Liquidity Sweep'),link('/tools/scalper','Scalper'),link('/tools/volatility-engine','Volatility')],
-  markets: [link('/tools/explorer','Explorer'),link('/tools/research','Research'),link('/tools/dashboard?tab=macro','Macro'),link('/tools/crypto-dashboard','Crypto Derivatives')],
+  today: [link('/tools/command-center','Overview'), link('/tools/msp-radar','Daily Radar'), link('/daily-pick','Daily Picks'), link('/tools','All tools'), link('/tools/start','Free Today')],
+  scan: [link('/tools/scanner','Scanner'),link('/tools/golden-egg','Symbol'),link('/tools/options','Options'),link('/tools/terminal','Terminal'),link('/tools/liquidity-sweep','Liquidity Sweep'),link('/tools/scalper','Scalper'),link('/tools/volatility-engine','Volatility'),link('/tools/terminal?tab=time-confluence','Time Confluence'),link('/tools/terminal?tab=time-scanner','Time Scanner'),link('/tools/terminal?tab=crypto-terminal','Crypto Terminal')],
+  markets: [link('/tools/explorer','Explorer'),link('/tools/research','Research'),link('/tools/dashboard?tab=macro','Macro'),link('/tools/crypto-dashboard','Crypto Derivatives'),link('/tools/explorer?tab=movers','Market Movers'),link('/tools/explorer?tab=heatmap','Heatmap'),link('/tools/explorer?tab=commodities','Commodities'),link('/tools/explorer?tab=crypto-command','Crypto Overview'),link('/tools/explorer?tab=crypto-command&section=heatmap','Crypto Heatmap'),link('/tools/explorer?tab=crypto-intel','Crypto Intelligence'),link('/tools/research?tab=earnings','Earnings'),link('/tools/research?tab=calendar','Economic Calendar')],
   intelligence: [link('/intelligence','Overview'),link('/intelligence/global-m2','Global M2'),link('/intelligence/fragility','Fragility'),link('/intelligence/liquidity','Liquidity')],
   track: [link('/tools/workspace?tab=journal','Journal'),link('/tools/workspace?tab=portfolio','Portfolio'),link('/tools/workspace?tab=watchlists','Watchlists'),link('/tools/workspace?tab=alerts','Alerts'),link('/tools/workspace?tab=backtest','Backtest'),link('/tools/workspace?tab=learning','Learning'),link('/tools/workspace?tab=settings','Settings'),link('/tools/signal-accuracy','Signal Accuracy'),link('/tools/dashboard?tab=pages','My Pages')],
-  learn: [link('/guide','Guide'),link('/methodology','Methodology'),link('/blog','Blog'),link('/about','About'),link('/contact','Contact'),link('/partners','Partners')],
-  account: [link('/account','Account'),link('/pricing','Pricing'),link('/tools/referrals','Referrals'),link('/compliance-hub','Compliance Hub'),link('/privacy','Privacy'),link('/terms','Terms'),link('/cookie-policy','Cookies'),link('/refund-policy','Refund policy'),link('/disclaimer','Disclaimer')],
+  learn: [link('/guide','Guide'),link('/methodology','Methodology'),link('/blog','Blog'),link('/about','About'),link('/contact','Contact'),link('/partners','Partners'),link('/guide/open-interest','Open Interest Guide'),link('/','Home')],
+  account: [link('/account','Account'),link('/auth','Sign In'),link('/pricing','Pricing'),link('/tools/referrals','Referrals'),link('/compliance-hub','Compliance Hub'),link('/privacy','Privacy'),link('/terms','Terms'),link('/cookie-policy','Cookies'),link('/refund-policy','Refund policy'),link('/disclaimer','Disclaimer')],
 };
 export const primaryNavTools = [
   {id:'today',href:'/tools/command-center',label:'Today'},
@@ -36,12 +36,19 @@ export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
   if (/\/(scanner|golden-egg|options|terminal|liquidity-sweep|scalper|volatility-engine)(\/|$)/.test(pathname)) return 'scan';
   return null;
 }
-export function isNavigationLinkActive(href: string, pathname: string, tab = '') {
+export function isNavigationLinkActive(href: string, pathname: string, tab = '', section = '') {
   const [path, query = ''] = href.split('?');
   if (path !== pathname) return false;
-  const expectedTab = new URLSearchParams(query).get('tab');
+  const params = new URLSearchParams(query);
+  const expectedTab = params.get('tab');
   const actual = tab.toLowerCase() || (pathname === '/tools/workspace' ? 'journal' : pathname === '/tools/dashboard' ? 'command' : '');
-  return !expectedTab || actual === expectedTab;
+  if (expectedTab) return expectedTab === actual && (params.get('section') ?? '') === section;
+  // The parent page is current only when no named tab destination matches.
+  return !Object.values(areaLinks).flat().some(item => {
+    const [candidate, search = ''] = item.href.split('?');
+    const named = new URLSearchParams(search);
+    return candidate === pathname && named.has('tab') && named.get('tab') === actual;
+  });
 }
 
 const tool = (href: string, label: string, description: string, tier: ToolTier = 'pro', role: WorkflowTool['role'] = 'advanced'): WorkflowTool => ({ href, label, description, tier, role });

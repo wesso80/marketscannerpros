@@ -71,7 +71,7 @@ export default function ToolsLayoutClient({
   const containerVariant = getToolsContainerVariant(pathname);
   // Extract page key from pathname for favorites (e.g. /tools/scanner → scanner)
   const pageKey = pathname.replace(/^\/tools\//, '').replace(/\/.*$/, '') || 'dashboard';
-  const showFavoriteButton = pageKey !== 'dashboard' && pathname !== '/tools/terminal' && pathname !== '/tools/scanner';
+  const showFavoriteButton = pathname !== '/tools' && pageKey !== 'dashboard' && pathname !== '/tools/terminal' && pathname !== '/tools/scanner';
   const wrappedChildren = layoutMode === 'terminal'
     ? <TerminalLayout containerVariant={containerVariant}>{children}</TerminalLayout>
     : <CommandLayout>{children}</CommandLayout>;
@@ -85,7 +85,7 @@ export default function ToolsLayoutClient({
       <AIPageProvider>
         <WorkflowNavigation />
         <ErrorBoundary fallback={null}>
-          <RegimeBar />
+          {pathname !== '/tools' && <RegimeBar />}
         </ErrorBoundary>
 
         <ErrorBoundary>

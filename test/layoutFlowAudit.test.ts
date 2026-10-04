@@ -164,10 +164,8 @@ describe('layout and flow audit regressions', () => {
     expect(platformKnowledge).not.toContain('control tower');
   });
 
-  it('keeps the Tools page discoverable while preserving the guided workflow', () => {
-    const toolsPage = read('app/tools/page.tsx');
+  it('keeps remaining workflow handoffs valid (catalog rendering covered by phase2aCatalog)', () => {
     const workflows = read('lib/toolWorkflows.ts');
-    const toolCatalog = read('lib/toolCatalog.ts');
     const watchlistsLayout = read('app/tools/watchlists/layout.tsx');
     const portfolioLayout = read('app/tools/portfolio/layout.tsx');
     const journalLayout = read('app/tools/journal/layout.tsx');
@@ -204,66 +202,19 @@ describe('layout and flow audit regressions', () => {
     const sitemap = read('app/sitemap.ts');
     const staticToolsPreview = read('public/tools-preview.html');
 
-    expect(toolsPage).toContain('Your MSP research workflow.');
-    expect(toolsPage).toContain('Workflow map');
-    expect(toolsPage).toContain('Open Tool Directory');
-    expect(toolsPage).toContain('Tool directory');
-    expect(toolsPage).toContain('Tool directory for direct access.');
-    expect(toolsPage).toContain('Access does not depend on My Pages');
-    expect(toolsPage).toContain('const featuredDirectoryKeys = new Set');
-    expect(toolsPage).toContain('TOOL_CATALOG.filter');
-    expect(toolsPage).toContain('TOOL_CATEGORIES.map');
-    expect(toolsPage).toContain('function DirectoryToolCard');
-    expect(toolsPage).toContain('h-8 w-8 shrink-0 items-center justify-center rounded-md');
-    expect(toolsPage).toContain('h-6 w-6 shrink-0 items-center justify-center rounded');
-    expect(toolCatalog).toContain('short visual code for quick scanning');
-    expect(toolCatalog).toContain("icon: 'DB'");
-    expect(toolCatalog).toContain("icon: 'GE'");
-    expect(toolCatalog).toContain("icon: 'BT'");
-    expect(toolCatalog).not.toContain("icon: '🥚'");
-    expect(toolCatalog).not.toContain("icon: '📊'");
-    expect(toolCatalog).not.toContain("icon: '🧪'");
     expect(partnerDemo).toContain('icon: "SCAN"');
     expect(partnerDemo).toContain('icon: "AI"');
     expect(partnerDemo).toContain('Completed: no execution capability, broker connections, or order submission');
     expect(partnerDemo).not.toContain('icon: "📊"');
     expect(partnerDemo).not.toContain('✅ 350+ text changes');
-    expect(toolsPage.indexOf('id="workflow"')).toBeLessThan(toolsPage.indexOf('id="all-tools"'));
-    expect(toolsPage).toContain("label=\"Start here\" value=\"Overview\"");
-    expect(toolsPage).toContain('Start here');
-    expect(toolsPage).toContain('Recommended next:');
-    expect(toolsPage).toContain('aria-label="Workflow command header"');
-    expect(toolsPage).toContain('function WorkflowMetric');
     expect(toolWorkflows.map(w => w.title)).toEqual(['1. Overview', '2. Scanner', '3. Research', '4. Backtest', '5. Track']);
-    expect(toolsPage).toContain('label="Tools"');
-    expect(toolsPage).toContain('label="Categories"');
-    expect(toolsPage).toContain('label="Next Check"');
-    expect(toolsPage).toContain('Open Market Scanner');
-    expect(toolsPage).not.toContain('text-4xl font-black tracking-tight sm:text-5xl');
     expect(workflows).toContain("3. Research");
-    expect(toolsPage).toContain("mechanics: 'Next: test the research idea in Backtest.'");
-    expect(toolsPage).toContain('<details id="advanced"');
-    expect(toolsPage).toContain('Specialist tools after the core workflow is clear.');
     const researchTools = toolWorkflows.find(w => w.id === 'mechanics')!.tools;
     expect(researchTools.map(t => t.href).slice(0, 2)).toEqual(['/tools/golden-egg', '/tools/terminal']);
     expect(toolWorkflows.findIndex(w => w.id === 'mechanics')).toBeLessThan(toolWorkflows.findIndex(w => w.id === 'test'));
     expect(workflows).toContain("id: 'mechanics'");
     expect(workflows).toContain("3. Research");
     expect(researchTools).toContainEqual(expect.objectContaining({ href: '/tools/terminal', tier: 'pro' }));
-    expect(toolCatalog).toContain("href: '/tools/workspace?tab=watchlists'");
-    expect(toolCatalog).toContain("href: '/tools/workspace?tab=portfolio'");
-    expect(toolCatalog).toContain("href: '/tools/workspace?tab=journal'");
-    expect(toolCatalog).toContain("href: '/tools/workspace?tab=backtest'");
-    expect(toolCatalog).toContain("href: '/tools/workspace?tab=alerts'");
-    expect(toolCatalog).toContain("href: '/tools/options'");
-    expect(toolCatalog).toContain("href: '/tools/options'");
-    expect(toolCatalog).toContain("href: '/tools/options'");
-    expect(toolCatalog).toContain("href: '/tools/explorer?tab=movers'");
-    expect(toolCatalog).toContain("href: '/tools/explorer?tab=heatmap'");
-    expect(toolCatalog).not.toContain("key: 'crypto-explorer'");
-    expect(toolCatalog).toContain("href: '/tools/dashboard?tab=macro'");
-    expect(toolCatalog).toContain("href: '/tools/crypto-dashboard'");
-    expect(toolCatalog).toContain("href: '/tools/research?tab=calendar'");
     expect(watchlistsLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=watchlists'");
     expect(watchlistsLayout).toContain('index: false');
     expect(portfolioLayout).toContain("canonical: 'https://marketscannerpros.app/tools/workspace?tab=portfolio'");
@@ -275,9 +226,6 @@ describe('layout and flow audit regressions', () => {
     expect(backtestLayout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
     expect(alertsLayout).toMatch(/robots:\s*\{\s*index:\s*false,\s*follow:\s*(?:true|false)\s*\}/);
     expect(sitemap).not.toContain("'/tools/watchlists'");
-    expect(toolCatalog).toContain("href: '/tools/scanner'" );
-    expect(toolCatalog).toContain("label: 'ARCA AI Panel'");
-    expect(toolCatalog).toContain("href: '/tools/research?tab=earnings'");
     expect(aiAnalystLayout).toContain("canonical: 'https://marketscannerpros.app/tools/scanner'");
     expect(aiAnalystLayout).toContain('index: false');
     expect(aiToolsPage).toContain("redirect('/tools')");
@@ -390,7 +338,6 @@ describe('layout and flow audit regressions', () => {
     expect(sitemap).not.toContain("'/tools/heatmap'");
     expect(sitemap).not.toContain("'/tools/crypto-dashboard'");
     expect(sitemap).not.toContain("'/tools/equity-explorer'");
-    expect(toolsPage).not.toContain('rounded-3xl border border-white/10 bg-slate-900/70');
     expect(staticToolsPreview).toContain('<meta name="robots" content="noindex, follow" />');
     expect(staticToolsPreview).toContain('<meta http-equiv="refresh" content="0; url=/tools" />');
     expect(staticToolsPreview).toContain('Tools Preview Moved');
@@ -459,7 +406,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).not.toContain('<SectionHeader title="Terminal"');
     expect(terminalPage).not.toContain('ComplianceDisclaimer collapsible variant');
     expect(terminalPage).not.toContain("'? Refresh'");
-    expect(toolsLayoutClient).toContain("const showFavoriteButton = pageKey !== 'dashboard' && pathname !== '/tools/terminal' && pathname !== '/tools/scanner';");
+    expect(toolsLayoutClient).toContain("const showFavoriteButton = pathname !== '/tools' && pageKey !== 'dashboard' && pathname !== '/tools/terminal' && pathname !== '/tools/scanner';");
     expect(toolsLayoutClient).not.toContain("'/tools/terminal',");
     expect(terminalShell).toContain('embedded?: boolean');
     expect(terminalShell).toContain("{!embedded && <header");
@@ -560,14 +507,11 @@ describe('layout and flow audit regressions', () => {
   it('keeps Workspace Journal compact with a focused drawer', () => {
     const workspacePage = read('app/tools/workspace/page.tsx');
     const journalPage = read('components/journal/JournalPage.tsx');
-    const journalRoute = read('app/tools/journal/page.tsx');
     const journalLayout = read('components/journal/layout/JournalLayout.tsx');
     const journalCommand = read('components/journal/layer1/JournalCommandBar.tsx');
     const tradeDrawer = read('components/journal/drawer/TradeDrawer.tsx');
 
     expect(workspacePage).toContain('<JournalPageV1 tier={tier} embeddedInWorkspace />');
-    expect(journalRoute).toContain('<ComplianceDisclaimer compact />');
-    expect(journalRoute).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(journalPage).toContain('embeddedInWorkspace = false');
     expect(journalPage).toContain("embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-4 md:px-6'");
     expect(journalPage).toContain('embeddedInWorkspace={embeddedInWorkspace}');
