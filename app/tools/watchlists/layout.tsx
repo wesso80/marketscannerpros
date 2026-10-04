@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Watchlists | Workspace',
+  title: 'Watchlists',
   description:
     'Watchlists now live inside Workspace for saved research, alerts, journal notes, and workflow organization.',
   openGraph: {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Macro Dashboard | MarketScanner Pros',
+  title: 'Macro',
   description:
     'Comprehensive macro economic dashboard showing indices, rates, commodities, crypto, and volatility in real-time.',
   robots: { index: false, follow: false },

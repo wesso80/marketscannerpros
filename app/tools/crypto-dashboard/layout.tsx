@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Crypto Dashboard | MarketScanner Pros',
+  title: 'Crypto Derivatives',
   description:
     'Monitor crypto market structure, derivatives context, and momentum signals in one actionable dashboard.',
   robots: { index: false, follow: false },

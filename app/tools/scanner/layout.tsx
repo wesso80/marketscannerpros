@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Market Scanner',
+  title: 'Scanner',
   description:
     'Scan equities and crypto with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
   openGraph: {

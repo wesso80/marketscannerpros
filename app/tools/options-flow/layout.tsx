@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Options Flow | MarketScanner Pros',
+  title: 'Options Flow',
   description: 'Educational options premium flow and IV skew context.',
   robots: { index: false, follow: false },
 };

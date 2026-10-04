@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   alternates: { canonical: 'https://marketscannerpros.app/tools/options' },
-  title: 'Options Terminal | MarketScanner Pros',
+  title: 'Options',
   description:
     'Professional options trading terminal with chains, Greeks, and advanced strategy analysis.',
   robots: { index: false, follow: false },

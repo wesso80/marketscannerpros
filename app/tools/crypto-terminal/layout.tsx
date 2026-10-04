@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Crypto Terminal | MarketScanner Pros',
+  title: 'Crypto Terminal',
   description:
     'Professional crypto trading terminal with real-time data, charts, and market analysis tools.',
   robots: { index: false, follow: true },

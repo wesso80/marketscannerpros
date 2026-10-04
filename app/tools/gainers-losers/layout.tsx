@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Top Gainers & Losers | MarketScanner Pros',
+  title: 'Market Movers',
   description:
     'Track the top gaining, losing, and most actively traded stocks in real-time with market context.',
   robots: { index: false, follow: true },

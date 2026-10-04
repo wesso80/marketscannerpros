@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Markets Dashboard | MarketScanner Pros",
+  title: "Explorer",
   description:
     "Institutional-style markets flow: regime context, heatmap, benchmark compare, flow intelligence, watchlist, news, calendar, and alerts.",
   robots: { index: false, follow: false },

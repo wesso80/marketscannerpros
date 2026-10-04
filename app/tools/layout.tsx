@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Workflow',
-    template: '%s | Workflow | MarketScanner Pros',
+    default: 'All tools',
+    template: '%s | MarketScanner Pros',
   },
   description:
     'The MSP market research workflow: scan, validate, test, journal, monitor alerts, and review macro context. Educational tools only — no advice or execution.',
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: 'https://marketscannerpros.app/tools',
-    title: 'Workflow | MarketScanner Pros',
+    title: 'All tools | MarketScanner Pros',
     description:
       'Use the guided research sequence: find scenarios, validate evidence, test safely, track outcomes, and open specialist tools only when needed.',
     siteName: 'MarketScanner Pros',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Workflow | MarketScanner Pros',
+    title: 'All tools | MarketScanner Pros',
     description:
       'Use the guided research sequence: find scenarios, validate evidence, test safely, and track outcomes.',
     images: ['/scan-banner.png'],

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   alternates: { canonical: 'https://marketscannerpros.app/tools/workspace?tab=journal' },
-  title: 'Trade Journal',
+  title: 'Journal',
   description:
     'Educational trade journal for logging decisions, reviewing outcomes, tracking risk metrics, equity curves, and syncing process notes across devices.',
   openGraph: {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Crypto Command Center | MarketScanner Pros',
+  title: 'Crypto',
   description:
     'Real-time crypto intelligence dashboard with analysis gate, market overview, trending coins, DEX pools, DeFi stats, heatmaps, and sector rotation analysis.',
   robots: { index: false, follow: false },

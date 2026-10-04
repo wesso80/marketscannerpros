@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Research Dashboard | MarketScanner Pros',
+  title: 'Dashboard',
   description: 'Research Dashboard: the canonical ranked research queue, movers, macro events, news, and educational workflow context.',
   robots: { index: false, follow: false },
   openGraph: {
