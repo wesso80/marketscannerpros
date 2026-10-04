@@ -113,5 +113,6 @@ it('folds crypto derivatives and hides an empty feed wall', () => {
   const page = readFileSync('app/tools/crypto-dashboard/page.tsx', 'utf8');
   expect(page).toContain('title="More detail"');
   expect(page).toContain('Some feeds are not available right now');
+  expect(page.indexOf('Displayed values may be incomplete or from a prior snapshot.')).toBeLessThan(page.indexOf('title="More detail"'));
   expect(page).toContain('Object.keys(data.prices).length > 0');
 });

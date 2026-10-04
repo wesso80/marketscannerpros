@@ -369,9 +369,9 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 w-full lg:w-auto">
               <div className="space-y-0.5">
                 <div className="text-[11px] uppercase tracking-wide text-zinc-400">Underlying</div>
-                {(chain.spotObservation?.price??spot)>0?<PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis="last_close" source="Options chain"/>:<span className="text-amber-300">{ticker} · {noQuoteLabel(marketOpen)}</span>}
+                {(chain.spotObservation?.price??spot)>0?<PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf ? 'last_close' : 'unknown'} source="Options chain"/>:<span className="text-amber-300">{ticker} · {noQuoteLabel(marketOpen)}</span>}
               </div>
-              <div className="text-xs text-zinc-400">{selectedContract ? `${selectedContract.strike}${selectedContract.type === 'call' ? 'C' : 'P'} ask` : 'Chain · select a contract'}</div>
+              <PriceStamp symbol={selectedContract ? `${selectedContract.strike}${selectedContract.type === 'call' ? 'C' : 'P'} ask` : 'Chain · select a contract'} assetType="option" price={selectedContract?.ask} priceBasis={chain.quoteBasis} latestDay={chain.asOfDate} source="Options chain"/>
               <Badge tone="neutral">
                 {chain.quoteBasis === 'realtime'
                   ? 'Live bid and ask'
@@ -587,9 +587,9 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                         const isSelPut = selected?.side === 'PUT' && selected.strike === g.strike;
 
                         return (
+                          <React.Fragment key={g.strike}>
                           <tr
                             data-atm={g.isAtm}
-                            key={g.strike}
                             className={`border-t border-zinc-900 ${g.isAtm ? 'bg-zinc-900/40' : ''}`}
                           >
                             {/* Call side */}
@@ -641,6 +641,16 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                               </>
                             )}
                           </tr>
+                          {((c && !twoSided(c)) || (p && !twoSided(p))) && (
+                            <tr className="border-t border-zinc-900/60">
+                              <td colSpan={99} className="px-3 py-2">
+                                <span data-testid="no-two-sided-quote" className="inline-flex rounded-full border border-amber-400/40 px-2 py-0.5 text-xs font-semibold text-amber-200">
+                                  No two-sided quote{c && !twoSided(c) && p && !twoSided(p) ? '' : c && !twoSided(c) ? ' · call' : ' · put'}
+                                </span>
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
                         );
                       })}
 
@@ -1075,23 +1085,25 @@ function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
 }
 
 /* ─── Formatting helpers ─────────────────────────────────────── */
+function missingNumber(n?: number) {
+  return n === null || n === undefined || Number.isNaN(n);
+}
 function fmt(n?: number, decimals: number = 2) {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '';
+  if (missingNumber(n)) return '-';
   return n.toFixed(decimals);
 }
 function fmtInt(n?: number) {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '';
+  if (missingNumber(n)) return '-';
   return Math.round(n).toLocaleString();
 }
 function fmtPct(n?: number) {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return '';
+  if (missingNumber(n)) return '-';
   return `${(n * 100).toFixed(1)}%`;
 }
 function twoSided(contract?: OptionsContract) {
   return !!contract && contract.bid > 0 && contract.ask >= contract.bid;
 }
 function quoteCell(contract: OptionsContract | undefined, side: 'bid' | 'ask') {
-  if (!contract) return '';
-  if (!twoSided(contract)) return side === 'bid' ? 'No two-sided quote' : '';
+  if (!contract) return '-';
   return fmt(side === 'bid' ? contract.bid : contract.ask);
 }

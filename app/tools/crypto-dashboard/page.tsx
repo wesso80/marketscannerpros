@@ -447,6 +447,13 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         <p className="mb-4 text-sm text-[var(--msp-warn)]">Some feeds are not available right now.</p>
       )}
 
+      {fetchErrors.length > 0 && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+          <span className="font-semibold">Some data feeds unavailable:</span>{' '}
+          {fetchErrors.join(' · ')}. Displayed values may be incomplete or from a prior snapshot.
+        </div>
+      )}
+
       <CollapsibleSection title="More detail" summary="Decision row, venue sample, and context">
       <div className="mb-4">
         <CryptoMorningDecisionCard />
