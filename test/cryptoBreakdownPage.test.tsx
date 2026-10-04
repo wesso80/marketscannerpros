@@ -13,7 +13,9 @@ it('renders eleven stamped sections, one read on load and no forbidden forecast 
  const {container}=render(<CryptoBreakdown symbol="LINK-USD" timeframe="daily"/>);await screen.findByText('Chainlink');
  expect(container.querySelectorAll('[data-crypto-section]')).toHaveLength(11);expect(f).toHaveBeenCalledTimes(1);expect(String(f.mock.calls[0][0])).toContain('symbol=LINK');
  expect(container.textContent).not.toMatch(/\b(buy|sell|likely|probability)\b|about to|expected to|entry signal/i);
- const walk=document.createTreeWalker(container,NodeFilter.SHOW_TEXT);while(walk.nextNode()){if(/\d/.test(walk.currentNode.textContent??''))expect(walk.currentNode.parentElement?.closest('[data-crypto-section], [data-price-stamp]')).not.toBeNull();}
+ const walk=document.createTreeWalker(container,NodeFilter.SHOW_TEXT);while(walk.nextNode()){if(/\d/.test(walk.currentNode.textContent??''))expect(walk.currentNode.parentElement?.closest('[data-crypto-section], [data-price-stamp], [data-crypto-top]')).not.toBeNull();}
+ const top=container.querySelector('[data-crypto-top]')!;const topWalk=document.createTreeWalker(top,NodeFilter.SHOW_TEXT);
+ while(topWalk.nextNode()){if(/\d/.test(topWalk.currentNode.textContent??''))expect(topWalk.currentNode.parentElement?.closest('[data-top-number]')?.querySelector('[data-top-source], [data-price-stamp]')).toBeTruthy();}
  expect(screen.getAllByText(/OKX LINK-USDT-SWAP only/).length).toBeGreaterThan(0);
  fireEvent.click(screen.getByRole('button',{name:'Refresh'}));await waitFor(()=>expect(f).toHaveBeenCalledTimes(2));
 });
