@@ -54,3 +54,36 @@ it('retains all eleven sections with only Rule check expanded and one breakdown 
  expect(Array.from(headers).filter(e=>e.getAttribute('aria-expanded')==='true').map(e=>e.closest('[data-crypto-section]')?.getAttribute('data-crypto-section'))).toEqual(['ruleCheck']);
  fireEvent.click(screen.getByRole('button',{name:/Sources check/}));expect(screen.getByText(/Single source means fewer/)).toBeTruthy();expect(fetcher).toHaveBeenCalledTimes(1);
 });
+
+import {V1} from '@/lib/crypto/breakdown/baseBreakoutV1';
+import {ruleChips} from '@/lib/crypto/breakdown/top';
+import {within} from '@testing-library/react';
+it('LINK-like top reports NO BASE and rule-matching rounded values without prediction language',()=>{
+ const d=fixture(),r={...d.top!.rule,stage:'NO BASE' as const,rangePct:91.5633,volumeRatio:.5759,closeRatio:.91386,extension:-1.6225,passes:[false,false,false,true]};d.top!.rule=r;d.top!.stage=r.stage;
+ const {container}=render(<CryptoTop data={d}/>);expect(container.querySelector('[data-stage-badge]')?.textContent).toBe(r.stage);expect(container.textContent).toContain('No base: range 91.6%');expect(container.textContent).toContain('Volume 0.58x');
+ const chips=container.querySelectorAll('[data-rule-chip]');expect(chips).toHaveLength(4);
+ ruleChips(r).forEach((chip,i)=>{expect(chips[i].textContent).toContain(chip.value);expect(chips[i].getAttribute('aria-label')).toContain(chip.pass?'meets rule':'does not meet rule');});
+ const walker=document.createTreeWalker(container,NodeFilter.SHOW_TEXT);let node:Node|null;while((node=walker.nextNode())){
+  if(!/\d/.test(node.textContent??''))continue;
+  const card=node.parentElement?.closest('[data-top-number]');expect(card?.querySelector('[data-top-source], [data-price-stamp]')).toBeTruthy();
+ }
+});
+it('synthetic WATCH keeps the rule extension tick below the base high and states distance',()=>{
+ const d=fixture(),a=daily.map(b=>({...b}));a[a.length-1].close=9.8;const r=baseBreakoutV1(a);d.top!.rule=r;d.top!.stage=r.stage;
+ const {container}=render(<CryptoTop data={d}/>);expect(container.querySelector('[data-stage-badge]')?.textContent).toBe('WATCH');expect(container.textContent).toContain('2.0% below the base high');expect(container.textContent).toContain('$10.20');expect(container.querySelectorAll('[data-rule-chip]')[3].textContent).toContain('✓');
+});
+it('insufficient data renders four dashes and never failed-rule crosses',()=>{
+ const d=fixture();d.top!.rule=baseBreakoutV1([]);d.top!.stage=d.top!.rule.stage;d.top!.chart.bars=[];
+ const {container}=render(<CryptoTop data={d}/>);container.querySelectorAll('[data-rule-chip]').forEach(chip=>{expect(chip.textContent).toContain('—');expect(chip.textContent).not.toContain('✗');expect(chip.textContent).toContain('not enough data');});
+});
+it('chart base box covers the base bars and its SVG and caption use the same observation',()=>{
+ const t=fixture().top!,network=vi.fn();vi.stubGlobal('fetch',network);const {container}=render(<BaseChart top={t} zone="Australia/Sydney"/>);
+ expect(container.querySelector('[data-base-box]')).toBeTruthy();const svg=screen.getByRole('img');expect(svg.getAttribute('aria-label')).toContain(t.chart.bars.at(-1)!.t.slice(0,10));expect(svg.getAttribute('aria-label')).toContain(`${V1.baseDays}-day base`);expect(network).not.toHaveBeenCalled();
+});
+it('shows the spot freshness status including Degraded without changing funding/OI tones',()=>{
+ const d=fixture();d.top!.spot!.status='Degraded';const {container}=render(<CryptoTop data={d}/>);expect(within(container).getByText('Degraded')).toBeTruthy();expect(container.textContent).not.toMatch(/\b(buy|sell|likely|probability|bullish|bearish|will|should)\b|entry signal|about to|expected to/i);
+});
+it('states the actual chart observation count when fewer than ninety bars are available',()=>{
+ const t=fixture().top!;t.chart.bars=t.chart.bars.slice(-2);render(<BaseChart top={t} zone="UTC"/>);
+ expect(screen.getByRole('img').getAttribute('aria-label')).toContain('2 shown');
+});

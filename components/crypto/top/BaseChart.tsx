@@ -21,7 +21,7 @@ export default function BaseChart({top,zone}:{top?:TopFacts;zone:string}){
  const groups:typeof bars[]=[];
  bars.forEach((b,i)=>{if(!i||Date.parse(b.t)-Date.parse(bars[i-1].t)!==DAY)groups.push([]);groups.at(-1)!.push(b);});
  const base=bars.slice(-(V1.baseDays+1),-1),box=base.length===V1.baseDays&&chart.baseHigh!=null&&chart.baseLow!=null;
- const date=bars.at(-1)!.t.slice(0,10),caption=c.chartCaption(date,V1.baseDays);
+ const date=bars.at(-1)!.t.slice(0,10),caption=c.chartCaption(date,V1.baseDays,bars.length);
  // Keep level labels readable when their prices are close; the connector retains the true level.
  const labels=levels.map(l=>({...l,at:y(l.value)})).sort((a,b)=>a.at-b.at);
  labels.forEach((l,i)=>{l.at=Math.max(l.at,i?labels[i-1].at+14:16);});

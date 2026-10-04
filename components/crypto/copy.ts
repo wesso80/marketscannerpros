@@ -11,7 +11,7 @@ export const COPY={
   volumeBasis:(days:number)=>`Last day vs ${days}-day base median`,
   chartUnavailable:'Chart unavailable: daily bars missing.',baseLowUnavailable:'Base low unavailable',
   baseHigh:'Base high',baseLow:'Base low',ruleStop:'Rule stop',
-  chartCaption:(date:string,baseDays:number)=>`Daily closes, last 90 completed UTC days · CoinGecko aggregate daily OHLC · last bar ${date}. Box = the ${baseDays}-day base the rule uses. Rule stop is the rule's definition, not a recommendation.`,
+  chartCaption:(date:string,baseDays:number,count:number)=>`Daily closes, up to 90 completed UTC daily bars (${count} shown) · CoinGecko aggregate daily OHLC · last bar ${date}. Box = the ${baseDays}-day base the rule uses. Rule stop is the rule's definition, not a recommendation.`,
   chartLevel:(name:string,price:string)=>`${name} ${price}`,
   chipNames:['Base','Volume','Breakout','Extension'],met:'meets rule',notMet:'does not meet rule',insufficient:'not enough data',
   percent:(v:number)=>`${v.toFixed(1)}%`,multiple:(v:number)=>`${v.toFixed(2)}x`,atr:(v:number)=>`${v.toFixed(2)} ATR`,ratio:(v:number)=>v.toFixed(3),

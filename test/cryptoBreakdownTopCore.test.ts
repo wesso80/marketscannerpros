@@ -37,3 +37,23 @@ it('keeps top components fluid and section header tap targets at least forty pix
  }
  expect(fs.readFileSync('components/crypto/SectionShell.tsx','utf8')).toContain('min-h-10');
 });
+
+import {COPY} from '@/components/crypto/copy';
+import {STAGE_TONE,topNumber,type TopRule} from '@/lib/crypto/breakdown/top';
+it('keeps all stages, null verdicts and centralized top copy factual',()=>{
+ const banned=/\b(buy|sell|likely|probability|bullish|bearish|will|should|yet)\b|entry signal|about to|expected to/i;
+ const check=(v:unknown)=>{if(typeof v==='string')expect(v).not.toMatch(banned);else if(typeof v==='function')expect(String(v)).not.toMatch(banned);else if(v&&typeof v==='object')Object.values(v).forEach(check);};check(COPY.top);
+ for(const stage of Object.keys(STAGE_TONE) as TopRule['stage'][]){
+  const r={...input().rule,stage};check(verdictLine(r));check(verdictLine({...r,asOf:null,rangePct:null,volumeRatio:null,closeRatio:null,extension:null,requiredClose:null,distancePct:null}));
+ }
+ expect(Object.values(STAGE_TONE).join()).not.toMatch(/bull|bear/);expect(STAGE_TONE.WATCH).toBe('var(--msp-info)');
+});
+it('reports each failed breakout rule and leaves missing evidence unavailable',()=>{
+ const r={...input().rule,stage:'BROKE OUT, RULE NOT MET' as const,rangePct:20,volumeRatio:1,closeRatio:1.01,extension:null,passes:[true,false,false,false]};
+ const text=verdictLine(r);expect(text).toContain('Volume 1.00x');expect(text).toContain(`≥ ${topNumber(V1.volMultiple,'multiple')}`);expect(text).toContain(`≥ ${topNumber(V1.closeMultiple,'ratio')}`);expect(text).toContain('Extension —');expect(text).not.toContain('Base 20');
+});
+it('does not mutate or duplicate the locked constants',()=>{
+ expect(Object.isFrozen(V1)).toBe(true);const source=fs.readFileSync('lib/crypto/breakdown/top.ts','utf8');expect(source).toContain("import {V1}");
+ for(const field of ['maxRangePct','volMultiple','closeMultiple','atrCap'])expect(source).toContain(`V1.${field}`);
+ expect(ruleChips(input().rule).map(c=>c.limit)).toEqual([`≤ ${V1.maxRangePct.toFixed(1)}%`,`≥ ${V1.volMultiple.toFixed(2)}x`,`≥ ${V1.closeMultiple.toFixed(3)}`,`≤ ${V1.atrCap.toFixed(2)} ATR`]);
+});
