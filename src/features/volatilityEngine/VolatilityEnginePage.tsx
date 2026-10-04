@@ -43,7 +43,7 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 
 export default function VolatilityEnginePage() {
   const params = useSearchParams();
-  const requestedSymbol = params.get('symbol')?.toUpperCase() || '';
+  const requestedSymbol = params.get('symbol')?.toUpperCase() || 'SPY';
   const [symbol, setSymbol] = useState(requestedSymbol);
   const [reading, setReading] = useState<DVEReading | null>(null);
   const [currentPrice, setCurrentPrice] = useState(0);

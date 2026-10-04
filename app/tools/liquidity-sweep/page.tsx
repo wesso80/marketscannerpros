@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
 import { useUserTier, canAccessScanner } from '@/lib/useUserTier';
@@ -98,6 +98,13 @@ export default function LiquiditySweepPage() {
     }
   }, [scanType]);
 
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || !canAccessScanner(tier)) return;
+    started.current = true;
+    void runScan();
+  }, [runScan, tier]);
+
   if (!canAccessScanner(tier)) {
     return <UpgradeGate requiredTier="pro" feature="Liquidity Sweep Scanner" />;
   }
@@ -108,7 +115,7 @@ export default function LiquiditySweepPage() {
     return true;
   }) ?? [];
 
-  const lastUpdated = data ? new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const lastUpdated = data ? new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : 'Example';
 
   return (
     <ToolPageLayout
@@ -129,7 +136,7 @@ export default function LiquiditySweepPage() {
           ]}
           metrics={[
             { label: 'Mode', value: scanType === 'crypto' ? 'Crypto' : 'Equity', tone: scanType === 'crypto' ? 'warn' : 'info', detail: 'Sweep detection' },
-            { label: 'Sweeps', value: data ? String(data.sweepCount) : '—', tone: 'bull', detail: 'Latest completed candle observations' },
+            { label: 'Sweeps', value: data ? String(data.sweepCount) : 'Example', tone: 'bull', detail: 'Latest completed candle observations' },
             { label: 'Filter', value: filter === 'sweep' ? 'Sweeps only' : filter === 'near' ? 'Near level' : 'All', tone: 'info', detail: 'Result filter applied' },
             { label: 'Updated', value: lastUpdated, tone: 'info', detail: 'Local time' },
           ]}
@@ -199,6 +206,13 @@ export default function LiquiditySweepPage() {
               borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: 'var(--msp-bear)',
             }}>
               {error}
+            </div>
+          )}
+
+          {!loading && !data && !error && (
+            <div data-liquidity-example style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '32px', color: 'var(--msp-text-muted)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-warn)' }}>Example</div>
+              <div style={{ marginTop: '8px', fontSize: '14px' }}>A default equity sweep check starts on open. This sample stays visible until that result arrives.</div>
             </div>
           )}
 
