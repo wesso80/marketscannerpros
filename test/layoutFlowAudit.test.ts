@@ -235,7 +235,7 @@ describe('layout and flow audit regressions', () => {
     expect(earningsCalendarLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
     expect(commandHub).toContain("href: '/tools/workspace?tab=backtest'");
     expect(commandHub).toContain("href: '/tools/terminal?tab=options-flow'");
-    expect(commandHub).toContain("href: '/tools/dashboard?tab=crypto'");
+    expect(commandHub).toContain("href: '/tools/crypto-dashboard'");
     expect(toolsNavBar).toContain('primaryNavTools');
     expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
     expect(areaLinks.today.map(t => t.href)).toContain('/tools/msp-radar');
@@ -317,7 +317,7 @@ describe('layout and flow audit regressions', () => {
     expect(platformKnowledge).toContain('/tools/workspace?tab=journal — Trade Journal');
     expect(platformKnowledge).toContain('/tools/workspace?tab=alerts — Alerts');
     expect(platformKnowledge).toContain('/tools/terminal?tab=options-confluence — Options Confluence Scanner');
-    expect(platformKnowledge).toContain('/tools/dashboard?tab=crypto — Crypto Derivatives Dashboard');
+    expect(platformKnowledge).toContain('/tools/crypto-dashboard — Crypto Derivatives');
     expect(platformKnowledge).toContain('/tools/explorer?tab=equity — Equity Explorer');
     expect(platformKnowledge).toContain('/tools/research?tab=calendar — Economic Calendar');
     expect(nextConfig).toContain("{ source: '/tools/earnings', destination: '/tools/research?tab=earnings', permanent: true }");
@@ -567,7 +567,8 @@ describe('layout and flow audit regressions', () => {
   });
 
   it('keeps Dashboard as a morning research start page with compact secondary lenses', () => {
-    const dashboardPage = read('app/tools/dashboard/page.tsx');
+    const dashboardShell = read('app/tools/dashboard/page.tsx');
+    const dashboardPage = `${read('components/desk/DeskFolds.tsx')}\n${dashboardShell}`;
     const explorerPage = read('app/tools/explorer/page.tsx');
     const favoritesPanel = read('components/FavoritesPanel.tsx');
     const edgeInsightCards = read('components/intelligence/EdgeInsightCards.tsx');
@@ -591,9 +592,9 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('Top focus: ${topQueueSymbol}');
     expect(dashboardPage).toContain('href="/tools/workspace?tab=backtest"');
     expect(dashboardPage).toContain('href="/tools/workspace?tab=journal"');
-    expect(dashboardPage).toContain('const DASH_TAB_PARAM_MAP');
-    expect(dashboardPage).toContain("crypto: 'Crypto Derivatives'");
-    expect(dashboardPage).toContain('if (requestedTab && requestedTab !== dashTab) setDashTab(requestedTab);');
+    expect(dashboardShell).not.toContain('const DASH_TAB_PARAM_MAP');
+    expect(dashboardShell).not.toContain("crypto: 'Crypto Derivatives'");
+    expect(dashboardShell).toContain("if (tab === 'command') router.replace('/tools/command-center')");
     expect(explorerPage).toContain('const EXPLORER_TAB_PARAM_MAP');
     expect(explorerPage).toContain('Cross-market map');
     expect(explorerPage).toContain('Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.');
@@ -631,10 +632,11 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('News context');
     expect(dashboardPage).toContain('eqGainers.slice(0, 4)');
     expect(dashboardPage).toContain('crLosers.slice(0, 4)');
-    expect(dashboardPage).toContain('Dashboard lens');
-    expect(dashboardPage).toContain('Switch between saved pages, live market desk, derivatives, and macro context.');
-    expect(dashboardPage).toContain("role=\"tablist\" aria-label=\"Dashboard lens\"");
-    expect(dashboardPage).toContain("className={isPro ? 'grid items-start gap-3 xl:grid-cols-[minmax(16rem,0.55fr)_minmax(0,1.45fr)]' : ''}");
+    expect(dashboardShell).toContain('label="Dashboard lens"');
+    expect(dashboardShell).toContain('My Pages');
+    expect(dashboardShell).toContain("label: 'Macro'");
+    expect(dashboardShell).not.toContain('Command Center');
+    expect(dashboardPage).toContain('{isPro && <EdgeInsightCards compact />}');
     expect(dashboardPage).toContain('<EdgeInsightCards compact />');
     expect(dashboardPage).toContain('grid gap-x-4 gap-y-1 xl:grid-cols-2');
     expect(dashboardPage).not.toContain('grid grid-cols-[5rem_1fr_6rem]');

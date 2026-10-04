@@ -8,6 +8,17 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import { FREE_COPY } from '@/components/free/copy';
 import Stamp from '@/components/free/Stamp';
 import { useUserTier } from '@/lib/useUserTier';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import StatTile from '@/components/visual/StatTile';
+import { openMacroAnchor } from '@/lib/overview/macroAnchor';
+
+function followMacroAnchor(event: { preventDefault(): void; currentTarget: { getAttribute(name: string): string | null } }) {
+  event.preventDefault();
+  const href = event.currentTarget.getAttribute('href') || '';
+  if (href.startsWith('#')) window.history.pushState(null, '', href);
+  openMacroAnchor(href);
+}
 
 type Permission = 'yes' | 'conditional' | 'no';
 type RiskState = 'risk_on' | 'neutral' | 'risk_off';
@@ -304,6 +315,13 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const gate = useMemo(() => computeMacroGate(data), [data]);
 
   useEffect(() => {
+    openMacroAnchor(window.location.hash);
+    const onHash = () => openMacroAnchor(window.location.hash);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [data, gate, loading]);
+
+  useEffect(() => {
     if (!data || !gate) return;
 
     setPageData({
@@ -331,7 +349,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     });
   }, [data, gate, setPageData]);
 
-  if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main className="space-y-4 p-4">
+  if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main id="macro-summary" className="space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
     {tierLoading || loading ? <p>{FREE_COPY.loading}</p> : !data ? <p>{FREE_COPY.unavailable}</p> : <div className="grid gap-4 sm:grid-cols-2">
       {[[FREE_COPY.treasury, data.rates.treasury10y], [FREE_COPY.inflation, data.inflation.inflationRate]].map(([label, observation]) => {
@@ -344,7 +362,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
 
   return (
     <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
-      {embeddedInDashboard ? (
+      {!embeddedInDashboard && (<>
         <section
           className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
           aria-label="Macro command header"
@@ -370,9 +388,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Global regime gate for liquidity, rates, growth, and cross-asset context.</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Macro evidence compressed into a single permission gate. Educational only; not a trade signal.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a href="#decision" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Decision</a>
-                <a href="#commodities" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Commodities</a>
-                <a href="#sentiment" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Sentiment</a>
+                <a href="#decision" onClick={followMacroAnchor} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Decision</a>
+                <a href="#commodities" onClick={followMacroAnchor} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Commodities</a>
+                <a href="#sentiment" onClick={followMacroAnchor} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Sentiment</a>
               </div>
               {lastRefresh && (
                 <p className="mt-2 text-[11px] text-slate-500">US ET · Last refresh {lastRefresh}</p>
@@ -403,14 +421,13 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             </div>
           </div>
         </section>
-      ) : (
         <ToolsPageHeader
           title="Macro Dashboard"
           subtitle="Global regime layer for analysis, sizing, and cross-asset assessment"
           badge="Economic Data"
           icon="MAC"
         />
-      )}
+      </>)}
 
       <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInDashboard ? 'px-0 pb-6 pt-3' : 'px-4 pb-24 pt-6 md:px-6'}`}>
         <div className={`${embeddedInDashboard ? 'rounded-lg' : 'sticky top-2 z-20 rounded-xl'} border border-white/10 bg-slate-950/95 p-3 backdrop-blur`}>
@@ -427,7 +444,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 </label>
               )}
               {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
-                <a key={tab} href={`#${tab}`} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
+                <a key={tab} href={`#${tab}`} onClick={followMacroAnchor} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </a>
               ))}
@@ -436,14 +453,106 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
         </div>
 
         {loading ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-4">
-            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-emerald-500" />
-            <p className="text-slate-400">Finding macro regime data...</p>
+          <div data-macro-skeleton className="space-y-3" aria-busy="true">
+            <div className="h-28 animate-pulse rounded-xl bg-white/5" />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-white/5" />)}</div>
+            <div className="h-36 animate-pulse rounded-xl bg-white/5" />
+            <p className="text-sm text-slate-400">Loading macro regime…</p>
           </div>
         ) : error ? (
           <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-6 text-center text-red-400"><span className="font-bold text-red-200">WARN</span> {error}</div>
         ) : data && gate ? (
           <>
+            <section data-global-regime className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <h2 className="text-xl font-semibold">Global regime</h2>
+              <div data-verdict-box className="rounded-xl border border-white/10 p-3">
+                <p className="text-3xl font-semibold" style={{ color: gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{gate.permission === 'yes' ? 'Aligned' : gate.permission === 'conditional' ? 'Mixed' : 'Not aligned'}</p>
+                <p className="text-sm text-white/70">Score {gate.score >= 0 ? '+' : ''}{gate.score} · {gate.riskState.replace('_', ' ')}</p>
+                <p className="mt-2 text-sm text-white/60">{gate.notes}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div data-macro-tile><StatTile label="Rates" value={typeof data.rates.treasury10y.value === 'number' ? toPct(data.rates.treasury10y.value) : null} /></div>
+                <div data-macro-tile><StatTile label="Curve" value={typeof data.rates.yieldCurve.value === 'number' ? toPct(data.rates.yieldCurve.value) : null} /></div>
+                <div data-macro-tile><StatTile label="Inflation" value={typeof data.inflation.inflationRate.value === 'number' ? toPct(data.inflation.inflationRate.value, 1) : null} /></div>
+                <div data-macro-tile><StatTile label="Growth" value={typeof data.growth.realGDP.value === 'number' ? `$${(safeNumber(data.growth.realGDP.value) / 1000).toFixed(1)}T` : null} /></div>
+              </div>
+              <div data-macro-charts className="grid gap-3 md:grid-cols-2">
+                <p className="text-sm text-white/60">Commodities with a measured change:</p>
+                <ul className="space-y-2">
+                  {(commodities ?? []).filter((c) => typeof c.changePercent === 'number' && Number.isFinite(c.changePercent)).slice(0, 4).map((c) => (
+                    <li key={c.symbol || c.name} className="text-sm">
+                      <span>{c.name || c.symbol}</span>
+                      <span className="ml-2" style={{ color: c.changePercent >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>{c.changePercent >= 0 ? '+' : ''}{c.changePercent.toFixed(1)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <SourceLine source="Macro database" asOf={data.timestamp} basis="Published observations" />
+            </section>
+
+            {/* ─── Yield Curve ─── */}
+            <section id="yieldcurve" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <div className="text-sm font-semibold text-white">Treasury Yield Curve</div>
+              <div className="mt-1 text-xs text-white/50">Full maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y</div>
+              <div className="mt-3">
+                {(() => {
+                  const points = [
+                    { label: '3M', value: data.rates.treasury3m?.value ?? null },
+                    { label: '2Y', value: data.rates.treasury2y.value },
+                    { label: '5Y', value: data.rates.treasury5y?.value ?? null },
+                    { label: '10Y', value: data.rates.treasury10y.value },
+                    { label: '30Y', value: data.rates.treasury30y?.value ?? null },
+                  ].filter(p => p.value !== null) as { label: string; value: number }[];
+                  if (points.length < 2) return <div className="text-xs text-white/40">Yield data loading…</div>;
+                  const minY = Math.min(...points.map(p => p.value)) - 0.2;
+                  const maxY = Math.max(...points.map(p => p.value)) + 0.2;
+                  const rangeY = maxY - minY || 1;
+                  const w = 400;
+                  const h = 120;
+                  const pad = { l: 40, r: 20, t: 10, b: 25 };
+                  const pw = w - pad.l - pad.r;
+                  const ph = h - pad.t - pad.b;
+                  const svgPoints = points.map((p, i) => ({
+                    x: pad.l + (i / (points.length - 1)) * pw,
+                    y: pad.t + ph - ((p.value - minY) / rangeY) * ph,
+                    ...p,
+                  }));
+                  const pathD = svgPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+                  const inverted = (data.rates.treasury3m?.value ?? 0) > (data.rates.treasury10y.value ?? 0);
+                  return (
+                    <div>
+                      <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-[500px]" style={{ height: 140 }}>
+                        {/* grid lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map(frac => {
+                          const y = pad.t + ph - frac * ph;
+                          const val = minY + frac * rangeY;
+                          return <g key={frac}><line x1={pad.l} y1={y} x2={w - pad.r} y2={y} stroke="rgba(255,255,255,0.08)" /><text x={pad.l - 4} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="9">{val.toFixed(1)}%</text></g>;
+                        })}
+                        {/* curve line */}
+                        <path d={pathD} fill="none" stroke={inverted ? 'var(--msp-bear)' : 'var(--msp-warn)'} strokeWidth="2" />
+                        {/* dots + labels */}
+                        {svgPoints.map(p => (
+                          <g key={p.label}>
+                            <circle cx={p.x} cy={p.y} r="4" fill={inverted ? 'var(--msp-bear)' : 'var(--msp-warn)'} />
+                            <text x={p.x} y={p.y - 8} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">{p.value.toFixed(2)}%</text>
+                            <text x={p.x} y={h - 5} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">{p.label}</text>
+                          </g>
+                        ))}
+                      </svg>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                        <span className="text-white/60">2s10s Spread: <span className={data.rates.yieldCurve.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve.value)} {data.rates.yieldCurve.label}</span></span>
+                        {data.rates.yieldCurve3m10y && (
+                          <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {data.rates.yieldCurve3m10y.label}</span></span>
+                        )}
+                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </section>
+
+            <CollapsibleSection title="Decision detail" summary={gate.permission}>
             <section id="decision" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_420px]">
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -510,7 +619,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 </div>
               </div>
             </section>
+            </CollapsibleSection>
 
+            <CollapsibleSection title="Rates, inflation, growth, employment" summary="One line per measured series">
             <section id="rates" className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
                 <div className="mb-2 flex items-center justify-between">
@@ -548,70 +659,10 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 <div className="mt-1 text-xs text-white/60">Unemployment • {data.employment.trend}</div>
               </div>
             </section>
-
-            {/* ─── Yield Curve ─── */}
-            <section id="yieldcurve" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-              <div className="text-sm font-semibold text-white">Treasury Yield Curve</div>
-              <div className="mt-1 text-xs text-white/50">Full maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y</div>
-              <div className="mt-3">
-                {(() => {
-                  const points = [
-                    { label: '3M', value: data.rates.treasury3m?.value ?? null },
-                    { label: '2Y', value: data.rates.treasury2y.value },
-                    { label: '5Y', value: data.rates.treasury5y?.value ?? null },
-                    { label: '10Y', value: data.rates.treasury10y.value },
-                    { label: '30Y', value: data.rates.treasury30y?.value ?? null },
-                  ].filter(p => p.value !== null) as { label: string; value: number }[];
-                  if (points.length < 2) return <div className="text-xs text-white/40">Yield data loading…</div>;
-                  const minY = Math.min(...points.map(p => p.value)) - 0.2;
-                  const maxY = Math.max(...points.map(p => p.value)) + 0.2;
-                  const rangeY = maxY - minY || 1;
-                  const w = 400;
-                  const h = 120;
-                  const pad = { l: 40, r: 20, t: 10, b: 25 };
-                  const pw = w - pad.l - pad.r;
-                  const ph = h - pad.t - pad.b;
-                  const svgPoints = points.map((p, i) => ({
-                    x: pad.l + (i / (points.length - 1)) * pw,
-                    y: pad.t + ph - ((p.value - minY) / rangeY) * ph,
-                    ...p,
-                  }));
-                  const pathD = svgPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-                  const inverted = (data.rates.treasury3m?.value ?? 0) > (data.rates.treasury10y.value ?? 0);
-                  return (
-                    <div>
-                      <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-[500px]" style={{ height: 140 }}>
-                        {/* grid lines */}
-                        {[0, 0.25, 0.5, 0.75, 1].map(frac => {
-                          const y = pad.t + ph - frac * ph;
-                          const val = minY + frac * rangeY;
-                          return <g key={frac}><line x1={pad.l} y1={y} x2={w - pad.r} y2={y} stroke="rgba(255,255,255,0.08)" /><text x={pad.l - 4} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="9">{val.toFixed(1)}%</text></g>;
-                        })}
-                        {/* curve line */}
-                        <path d={pathD} fill="none" stroke={inverted ? 'var(--msp-bear)' : 'var(--msp-info)'} strokeWidth="2" />
-                        {/* dots + labels */}
-                        {svgPoints.map(p => (
-                          <g key={p.label}>
-                            <circle cx={p.x} cy={p.y} r="4" fill={inverted ? 'var(--msp-bear)' : 'var(--msp-info)'} />
-                            <text x={p.x} y={p.y - 8} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">{p.value.toFixed(2)}%</text>
-                            <text x={p.x} y={h - 5} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">{p.label}</text>
-                          </g>
-                        ))}
-                      </svg>
-                      <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                        <span className="text-white/60">2s10s Spread: <span className={data.rates.yieldCurve.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve.value)} {data.rates.yieldCurve.label}</span></span>
-                        {data.rates.yieldCurve3m10y && (
-                          <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {data.rates.yieldCurve3m10y.label}</span></span>
-                        )}
-                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span></span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </section>
+            </CollapsibleSection>
 
             {/* ─── Commodities ─── */}
+            <CollapsibleSection title="Commodities" summary="Top 4, then the rest">
             <section id="commodities" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Commodities Monitor</div>
               <div className="mt-1 text-xs text-white/50">Oil, metals, agriculture — growth proxy and inflation signals</div>
@@ -625,7 +676,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               )}
               {commodities && commodities.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
-                  {commodities.map((c: any) => (
+                  {commodities.slice(0, 4).map((c: any) => (
                     <div key={c.symbol || c.name} className={`rounded-lg border p-2 ${c.eligibleForGate === false ? 'border-rose-500/25 bg-rose-500/5' : 'border-white/10 bg-black/20'}`}>
                       <div className="flex items-center justify-between gap-2 text-[11px] text-white/50">
                         <span>{c.name || c.symbol}</span>
@@ -639,7 +690,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                       </div>
                       <div className="text-[11px] text-white/40">{c.category} · {c.unit || 'unit unavailable'}</div>
                       <div className="mt-1 text-[10px] text-white/35">
-                        Source date {c.date || 'unknown'}{Number.isFinite(c.dataAgeDays) ? ` · age ${c.dataAgeDays}d` : ''}{c.sourceSymbol ? ` · proxy ${c.sourceSymbol}` : ''}
+                        Observation {c.date || 'not dated'}{Number.isFinite(c.dataAgeDays) ? ` · age ${c.dataAgeDays}d` : ''}{c.sourceSymbol ? ` · proxy ${c.sourceSymbol}` : ''}
                       </div>
                     </div>
                   ))}
@@ -649,8 +700,23 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   {commoditiesError ? `Feed unavailable: ${commoditiesError}` : commodities === null ? 'Loading commodities data…' : 'No commodity data available'}
                 </div>
               )}
+              {commodities && commodities.length > 4 ? (
+                <details className="mt-3">
+                  <summary className="min-h-10 cursor-pointer text-sm">Show all {commodities.length}</summary>
+                  <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+                    {commodities.slice(4).map((c: any) => (
+                      <div key={`rest-${c.symbol || c.name}`} className="rounded-lg border border-white/10 bg-black/20 p-2 text-sm">
+                        <div>{c.name || c.symbol}</div>
+                        {typeof c.changePercent === 'number' ? <div>{c.changePercent >= 0 ? '+' : ''}{c.changePercent.toFixed(1)}%</div> : null}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
             </section>
+            </CollapsibleSection>
 
+            <CollapsibleSection title="More macro detail" summary="Correlation, sentiment, and implications">
             {/* ─── Correlation Regime ─── */}
             <section id="correlation" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Cross-Asset Correlation Regime</div>
@@ -807,6 +873,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               </div>
               <p className="mt-2 text-[11px] text-white/40 text-center">Check an economic calendar for exact dates and times.</p>
             </section>
+            </CollapsibleSection>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Rates</summary>

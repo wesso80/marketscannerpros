@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Company Overview | MarketScanner Pros',
+  title: 'Company Overview',
   description:
     'Fundamental analysis and company overview with key financials, valuation metrics, and earnings data.',
 };

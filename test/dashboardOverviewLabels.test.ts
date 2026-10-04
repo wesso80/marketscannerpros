@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const page = readFileSync(resolve(__dirname, '../app/tools/dashboard/page.tsx'), 'utf8');
+const page = readFileSync(resolve(__dirname, '../components/desk/DeskFolds.tsx'), 'utf8');
 
 describe('Market dashboard labels (OV-5, OV-8, OV-10)', () => {
   it('OV-5: the VIXY tile is labelled as a VIX futures ETF, and the footnote matches the live quotes', () => {

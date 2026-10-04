@@ -18,6 +18,7 @@ export const TOOL_IMAGES: Record<string, string> = {
   '/tools/research': '/assets/platform-tools/news-sentiment.png',
   '/tools/explorer?tab=heatmap': '/assets/platform-tools/sector-heatmap.png',
   '/tools/crypto-heatmap': '/assets/platform-tools/crypto-heatmap.png',
+  '/tools/crypto-dashboard': '/assets/platform-tools/crypto-derivatives.png',
   '/tools/dashboard?tab=crypto': '/assets/platform-tools/crypto-derivatives.png',
   '/tools/explorer?tab=commodities': '/assets/platform-tools/commodities.png',
   '/tools/dashboard?tab=macro': '/assets/platform-tools/macro-dashboard.png',

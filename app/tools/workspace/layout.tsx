@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Workspace',
+  title: 'Track',
   description: 'Command workspace for watchlists, journal notes, portfolio research, alerts, and educational workflow organization.',
   robots: { index: false, follow: false },
   openGraph: {

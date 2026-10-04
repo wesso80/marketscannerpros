@@ -4,6 +4,7 @@ import StampLine, { type StampLineProps } from './StampLine';
 import { COPY } from './copy';
 export default function HeatStrip({ cells, stamp }: { cells: ReturnType<typeof sectorCells>; stamp: StampLineProps }) {
   return <figure className="min-w-0 space-y-3">
+    <h3 className="text-sm font-semibold text-[var(--msp-text)]">{COPY.today.sectors}</h3>
     {cells.length ? <div role="img" aria-label={`${COPY.today.sectors}: ${cells.map(c => `${c.symbol} ${c.valueLabel}`).join(', ')}`} className="flex">
       {cells.map(cell => <div key={cell.symbol} data-sector-cell={cell.symbol} title={`${cell.name} (${cell.symbol}): ${cell.valueLabel}`}
         className="relative min-w-0 flex-1 overflow-hidden border border-[var(--msp-panel)] py-4 text-center" style={{ color: cell.tone.color }}>
@@ -12,6 +13,6 @@ export default function HeatStrip({ cells, stamp }: { cells: ReturnType<typeof s
         <span aria-hidden="true" className={`relative text-[9px] ${cell.changePercent === null ? 'block' : 'hidden sm:block'}`}>{cell.valueLabel}</span>
       </div>)}
     </div> : <p>{COPY.today.noSectors}</p>}
-    <figcaption><p className="text-xs text-[var(--msp-text-muted)]">{COPY.today.sectors}</p><StampLine {...stamp} /></figcaption>
+    <figcaption><StampLine {...stamp} /></figcaption>
   </figure>;
 }

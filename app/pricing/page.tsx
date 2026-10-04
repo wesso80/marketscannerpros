@@ -160,7 +160,7 @@ export default function PricingPage() {
         {
           group: "Validate",
           lines: [
-            "Production Intelligence — Global M2, Liquidity Transmission and Fragility",
+            "Live with Pro: Global M2, Liquidity Transmission and Market Fragility",
             "Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not included as live features today",
             "Deep Analysis, Options Terminal, Options Confluence",
             "Time Confluence Scanner and Volatility Engine",
@@ -197,7 +197,7 @@ export default function PricingPage() {
     },
     {
       q: "What does Pro include?",
-      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the entire Intelligence suite (Global M2, Liquidity, Fragility, Lead/Lag, NQ Pressure, Auction, Master / Command Centre), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support.",
+      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support. Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not live today.",
     },
     {
       q: "Can I cancel anytime?",

@@ -26,7 +26,7 @@ export default function CrossAssetPanel({
   vix?: VixRegimeReading;
 }) {
   if (!readings.length && !vix) {
-    return <p className="text-sm text-slate-500">Cross-asset data unavailable.</p>;
+    return <p className="text-sm text-slate-500">Cross-asset data is not available right now.</p>;
   }
   return (
     <div className="space-y-2">
@@ -34,9 +34,9 @@ export default function CrossAssetPanel({
         <div key={r.pair} className={`rounded-md border p-3 ${movementClass(r)}`}>
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-bold text-slate-200">{r.pair}</span>
-            <span className={`text-xs font-black ${r.diverging ? 'text-amber-300' : 'text-slate-400'}`}>{r.label}</span>
+            <span className={`text-xs font-black ${r.diverging ? 'text-amber-300' : 'text-slate-400'}`}>{r.label.replace(/unavailable/gi, 'not available right now')}</span>
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-400">{r.interpretation}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">{r.interpretation.replace(/unavailable/gi, 'not available right now')}</p>
         </div>
       ))}
       {vix ? (

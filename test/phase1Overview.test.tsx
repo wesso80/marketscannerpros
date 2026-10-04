@@ -12,7 +12,8 @@ describe('Symbol header hierarchy', () => {
   });
   it('removes header composite displays but retains the lower evidence block', () => {
     const source = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
-    const header = source.slice(source.indexOf('      <PageHero'), source.indexOf('      <section', source.indexOf('      <PageHero')));
+    const start = source.indexOf('<PageHero');
+    const header = source.slice(start, source.indexOf('/>', start));
     expect(header).toContain('titleAs="h2"');
     expect(header).not.toMatch(/Indicator composite|INDICATOR_COMPOSITE_LABEL|geConfluenceScore/);
     expect(source.slice(source.indexOf(header) + header.length)).toContain('INDICATOR_COMPOSITE_LABEL');
@@ -32,7 +33,7 @@ const tier = vi.hoisted(() => ({ tier: 'pro', isAdmin: false, isLoading: false, 
 vi.mock('@/lib/useUserTier', () => ({ useUserTier: () => tier }));
 vi.mock('next/link', () => ({ default: ({ children, ...props }: any) => <a {...props}>{children}</a> }));
 let root: Root, container: HTMLDivElement;
-const payload = { sessionDate: '2026-10-02', status: 'COMPLETE', healthStatus: 'NORMAL', generatedAt: '2026-10-02T21:05:00Z', headline: 'SECRET HEADLINE', ops: { runId: 'PRIVATE_RUN', emailStatus: 'PRIVATE_EMAIL' }, report: { candidates: Array(12).fill({ symbol: 'SECRET_COIN', score: 987654 }) } };
+const payload = { sessionDate: '2026-10-02', status: 'COMPLETE', healthStatus: 'NORMAL', generatedAt: '2026-10-02T21:05:00Z', headline: 'SECRET HEADLINE', ops: { runId: 'PRIVATE_RUN', emailStatus: 'PRIVATE_EMAIL' }, report: { candidates: Array(12).fill({ symbol: 'AAPL', setupType: 'EARLY', score: 987654 }) } };
 const fetcher = vi.fn();
 beforeEach(() => {
   Object.assign(tier, { tier: 'pro', isAdmin: false, isLoading: false, isLoggedIn: true });
@@ -59,7 +60,7 @@ describe('Radar access and response states', () => {
     tier.tier = value === 'admin' ? 'free' : value; tier.isAdmin = value === 'admin';
     await render(<RadarReportCard />);
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(fetcher).toHaveBeenCalledWith('/api/msp-radar/daily', expect.objectContaining({ cache: 'no-store', credentials: 'include', signal: expect.any(AbortSignal) }));
+    expect(fetcher).toHaveBeenCalledWith('/api/msp-radar/daily?view=card', expect.objectContaining({ cache: 'no-store', credentials: 'include', signal: expect.any(AbortSignal) }));
     expect(container.textContent).toMatch(/Fri 2 Oct/); expect(container.textContent).toContain('12 candidates'); expect(container.textContent).toContain('COMPLETE');
     expect(container.innerHTML).not.toMatch(/SECRET|PRIVATE|987654|NORMAL/);
     await render(<RadarReportCard />); expect(fetcher).toHaveBeenCalledTimes(1);
@@ -99,15 +100,15 @@ describe('Today data presentation', () => {
   it('renders 11 sorted cells, an accessible text equivalent, and zero SPY as no quote', async () => {
     await render(<TodayStrip {...props} />);
     const cells = [...container.querySelectorAll('[data-sector-cell]')];
-    expect(cells).toHaveLength(11); expect(cells[0].getAttribute('data-sector-cell')).toBe('XLU'); expect(cells[10].textContent).toContain('n/a');
-    expect(container.querySelector('[role="img"]')?.getAttribute('aria-label')).toContain('XLK n/a');
+    expect(cells).toHaveLength(11); expect(cells[0].getAttribute('data-sector-cell')).toBe('XLU'); expect(cells[10].textContent).toContain('No reading');
+    expect(container.querySelector('[role="img"]')?.getAttribute('aria-label')).toContain('XLK No reading');
     expect(container.textContent).toContain('no quote'); expect(container.textContent).not.toContain('$0.00');
     for (const card of container.querySelectorAll('[data-stat-card], figure')) expect(card.querySelector('[data-stamp-line]')).not.toBeNull();
     expect(container.querySelectorAll('[data-stat-card]')).toHaveLength(4);
     expect(container.textContent).toContain('5 / 10'); // Missing sector excluded by the existing strength model.
   });
   it.each([
-    [true, false, false, false, 'Loading'], [false, false, false, false, 'Unavailable'],
+    [true, false, false, false, 'Loading'], [false, false, false, false, 'Not available right now'],
     [false, true, true, true, 'Stale inputs'], [false, true, true, false, 'Current'],
   ])('uses the existing regime freshness precedence', async (loading, hasRegimeData, available, stale, expected) => {
     await render(<TodayStrip {...props} loading={loading} hasRegimeData={hasRegimeData} regime={{ ...props.regime, available, stale }} />);
@@ -117,8 +118,9 @@ describe('Today data presentation', () => {
     const items = Array.from({ length: 8 }, (_, i) => ({ label: `Feed ${i}`, statusLabel: i === 0 ? 'Degraded' : i < 3 ? 'Stale' : 'Unknown', notes: i < 3 ? ['12:00 UTC Fri 2 Oct'] : ['time unknown'] }));
     await render(<DataStatusRow items={items} />);
     expect(container.querySelector('details')?.open).toBe(false);
-    expect(container.querySelector('summary')?.textContent).toContain('1 degraded · 2 stale · 5 not timed');
-    expect(container.querySelectorAll('summary')).toHaveLength(1);
-    for (const item of items) expect(container.textContent).toContain(`${item.label} Data Truth`);
+    expect(container.querySelector('summary')?.textContent).toContain('1 needs a check · 2 stale · 5 not timed');
+    expect(container.querySelector('summary')?.textContent).toContain('Show');
+    expect(container.textContent).toContain('Feed 0 · Some data is older');
+    expect(container.textContent).toContain('Feed 3 · Unknown');
   });
 });

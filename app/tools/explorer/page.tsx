@@ -133,8 +133,7 @@ export default function ExplorerPage() {
 
   if (tierLoading) return <FreeLoading />;
 
-  return (
-    <div className="space-y-3">
+  const hero = (
       <PageHero
         ariaLabel="Markets command header"
         eyebrow="Cross-market map"
@@ -157,6 +156,11 @@ export default function ExplorerPage() {
           { label: 'Next check', value: tab, tone: 'warn', detail: 'Pick one lens, then drop into Scanner or Golden Egg' },
         ]}
       />
+  );
+
+  return (
+    <div className="space-y-3">
+      {tab !== 'Movers' && hero}
 
       {/* Tabs */}
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
@@ -492,7 +496,7 @@ export default function ExplorerPage() {
                     <span className="text-sm font-semibold text-white">{cm.from}</span>
                     <span className="text-xs text-slate-400 ml-2">{cm.condition}</span>
                   </div>
-                  <Badge label={cm.effect.length > 30 ? cm.effect.slice(0, 30) + '...' : cm.effect} color="#6366F1" small />
+                  <Badge label={cm.effect.length > 30 ? cm.effect.slice(0, 30) + '...' : cm.effect} color="#F59E0B" small />
                 </div>
               </div>
             ))}
@@ -531,7 +535,7 @@ export default function ExplorerPage() {
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-base" aria-hidden="true">📰</div>
               <div>
-                <h1 className="text-lg font-bold text-teal-300">Crypto Intel</h1>
+                <h1 className="text-lg font-bold text-emerald-300">Crypto Intel</h1>
                 <p className="text-xs text-slate-400">Live news, guides, and institutional treasury holdings for crypto markets.</p>
               </div>
             </div>
@@ -557,6 +561,7 @@ export default function ExplorerPage() {
       {tab === 'Movers' && (
         <MarketMoversV1 />
       )}
+      {tab === 'Movers' && hero}
 
       </div>
     </div>

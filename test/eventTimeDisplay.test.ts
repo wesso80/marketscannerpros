@@ -56,11 +56,11 @@ describe('OV-4: event times carry a time zone', () => {
 
   it('dashboard and Research calendar render through the zone-aware helper', () => {
     const read = (p: string) => readFileSync(path.join(__dirname, '..', p), 'utf8');
-    for (const file of ['app/tools/dashboard/page.tsx', 'app/tools/research/page.tsx']) {
+    for (const file of ['components/desk/DeskFolds.tsx', 'app/tools/research/page.tsx']) {
       const src = read(file);
       expect(src).toMatch(/from '@\/lib\/eventTimeDisplay'/);
       expect(src).not.toMatch(/\{e\.time \|\| '—'\}/);
-      expect(src).toMatch(/\{shown\.time \|\| '—'\}/);
+      expect(src).toMatch(/\{shown\.time \|\| /);
     }
     expect(read('app/tools/research/page.tsx')).toMatch(/Time \(your zone\)/);
     expect(read('app/tools/command-center/page.tsx')).toMatch(/title=\{e\.whenTitle\}/);

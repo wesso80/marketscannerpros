@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Earnings | Research',
+  title: 'Earnings',
   description:
     'Legacy earnings route. Earnings now live inside Market Intelligence for catalyst and event research.',
   robots: { index: false, follow: true },

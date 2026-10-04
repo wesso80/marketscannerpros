@@ -32,6 +32,9 @@ import {trustBadgeState} from '@/components/market/TrustBadge';
 import DataStatusRow from '@/components/overview/DataStatusRow';
 import TodayStrip from '@/components/overview/TodayStrip';
 import ViewerDate from '@/components/visual/ViewerDate';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import DeskFolds from '@/components/desk/DeskFolds';
 import { COPY } from '@/components/visual/copy';
 import {OverviewPicks} from '@/components/market/OverviewPicks';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -109,6 +112,9 @@ function deltaColor(kind: 'regime' | 'risk' | 'sector' | 'crypto' | 'building' |
   }
 }
 
+function plainLabel(value: string) {
+  return value.replace(/unavailable/gi, 'not available right now').replace(/\bunknown\b/gi, 'not available right now').replace(/\bdegraded\b/gi, 'needs a check').replace(/\bN\/A\b/g, 'No reading');
+}
 function SectionTitle({ n, title, hint }: { n: string; title: string; hint?: string }) {
   return (
     <div className="mb-2 flex items-center gap-2">
@@ -286,7 +292,7 @@ export default function CommandCenterPage() {
         ariaLabel="Overview header"
         eyebrow="Market intelligence"
         badges={[
-          { label: regime.loading && !regime.data ? 'Regime loading' : reg.available ? `Regime ${reg.regimeLabel}` : 'Regime unavailable' },
+          { label: regime.loading && !regime.data ? 'Regime loading' : reg.available ? `Regime ${reg.regimeLabel}` : 'Regime not available right now' },
           { label: `Evidence ${evidence.level}` },
           ...(reg.changed ? [{ label: 'Regime changed' }] : []),
           ...(anyLoading ? [{ label: 'Updating…' }] : []),
@@ -301,87 +307,92 @@ export default function CommandCenterPage() {
       />
 
       <div className="grid gap-3 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2"><TodayStrip regime={reg} loading={regime.loading} hasRegimeData={Boolean(regime.data)} regimeColor={stanceColor(reg.stance)} sectors={sectorData} sectorTime={sectors.data?.asOf} sectorDay={sectors.data?.asOfTradingDay} strength={strength} quotes={quotes.data?.quotes} /></div>
+        <div className="min-w-0 lg:col-span-2"><TodayStrip regime={reg} loading={regime.loading} hasRegimeData={Boolean(regime.data)} regimeColor={stanceColor(reg.stance)} sectors={sectorData} sectorTime={sectors.data?.asOf} sectorDay={sectors.data?.asOfTradingDay} strength={strength} quotes={quotes.data?.quotes} quotesLoading={quotes.loading} /></div>
         <RadarReportCard />
       </div>
 
       <ViewerDate />
       <DataStatusRow items={[
-        {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??'time unknown'],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
-        {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'time unknown']},
-        {label:'Crypto overview',statusLabel:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status,status:trustBadgeState({status:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status}).normalized,source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'time unknown']},
-        {label:'Quotes',statusLabel:quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Unknown',source:'stored quotes',notes:['Per-symbol observation times below']},
-        {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status,status:trustBadgeState({status:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status}).normalized,source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'time unknown']},
-        {label:'Daily picks',statusLabel:picks.error?'Degraded':'Unknown',source:'stored daily scan',notes:['Per-row trust and dates below']},
-        {label:'Movers',statusLabel:movers.error?'Degraded':'Unknown',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'time unknown']},
+        {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??''],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
+        {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'']},
+        {label:'Crypto overview',statusLabel:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status,status:trustBadgeState({status:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status}).normalized,source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'']},
+        {label:'Quotes',statusLabel:quotes.loading?'Loading':quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Unknown',source:'stored quotes',notes:['Per-symbol observation times in the pulse']},
+        {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status,status:trustBadgeState({status:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status}).normalized,source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'']},
+        {label:'Daily picks',statusLabel:picks.error?'Degraded':'Unknown',source:'stored daily scan',notes:['Per-row trust and dates in Daily Picks']},
+        {label:'Movers',statusLabel:movers.error?'Degraded':'Unknown',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'']},
         {label:'Event clock',statusLabel:calendarWarning?'Degraded':'Unknown',source:'economic calendar',notes:['schedule only'],warnings:calendarWarning?[calendarWarning]:[]},
       ]}/>
 
-      {/* LAYER 1 — MARKET REGIME (dominant) */}
-      <Card className="p-4" style={{ borderColor: stanceColor(reg.stance), borderWidth: 1 }}>
+      <section data-regime-box className="space-y-4 rounded-lg border p-4" style={{ borderColor: stanceColor(reg.stance) }}>
         <SectionTitle n="01" title="Market Regime" hint={reg.available && reg.stale ? 'contains stale inputs' : undefined} />
         <div className="flex flex-wrap items-center gap-3">
-          <div className="text-2xl font-black" style={{ color: stanceColor(reg.stance) }}>{reg.regimeLabel}</div>
-          <Badge label={reg.riskLabel} color="var(--msp-text-muted)" small />
+          <div className="text-2xl font-black" style={{ color: stanceColor(reg.stance) }}>{plainLabel(reg.regimeLabel)}</div>
+          <Badge label={plainLabel(reg.riskLabel)} color="var(--msp-text-muted)" small />
           {reg.changed && reg.previousLabel ? <Badge label={`Was: ${reg.previousLabel}`} color="var(--msp-warn)" small /> : null}
           {regime.loading && !regime.data
-            ? <Badge label="Loading" color="var(--msp-text-muted)" small />
+            ? <Badge label="Loading…" color="var(--msp-text-muted)" small />
             : !reg.available
-              ? <Badge label="Unavailable" color="var(--msp-text-muted)" small />
+              ? <Badge label="Not available right now" color="var(--msp-text-muted)" small />
               : reg.stale
                 ? <Badge label="Stale inputs" color="var(--msp-bear)" small />
                 : <Badge label="Current" color="var(--msp-bull)" small />}
           {reg.asOf ? <span className="text-[11px] text-slate-500">Data as of {new Date(reg.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}</span> : null}
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-300">{reg.summary}</p>
-      </Card>
-
-      {/* MARKET DRIVERS — cross-asset relationships (association, not causation) */}
-      <Card className="p-4">
-        <SectionTitle n="02b" title="Market Drivers" hint="association, not causation" />
-        <CrossAssetPanel readings={crossReadings} />
-      </Card>
-
-      {/* LAYER 6 — RISK / EVENT CLOCK */}
-      <Card className="p-4">
-        <SectionTitle n="06" title="Risk / Event Clock" hint="schedule only — outcomes not predicted" />
-        {eventClock.length ? (
-          <ul className="divide-y divide-white/5">
-            {eventClock.map((e, i) => (
-              <li key={`${e.event}-${i}`} className="flex items-center justify-between gap-3 py-1.5 text-sm">
-                <span className="min-w-0 truncate text-slate-200">{e.event}</span>
-                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400">
-                  <span>{e.market}</span>
-                  <span title={e.whenTitle}>{e.when}</span>
-                  <Badge label={e.importance.toUpperCase()} small color={e.importance === 'high' ? 'var(--msp-bear)' : e.importance === 'medium' ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="text-sm text-slate-500">No scheduled events available.</p>}
-      </Card>
+        <p className="text-sm leading-6 text-slate-300">{plainLabel(reg.summary)}</p>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Market Drivers</h3>
+          <p className="mb-2 text-xs text-slate-500">Association, not causation.</p>
+          <CrossAssetPanel readings={crossReadings} />
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Risk / Event Clock</h3>
+          <p className="mb-2 text-xs text-slate-500">Schedule only. Outcomes are not predicted.</p>
+          {eventClock.length ? (
+            <ul className="divide-y divide-white/5">
+              {eventClock.map((e, i) => (
+                <li key={`${e.event}-${i}`} className="flex items-center justify-between gap-3 py-1.5 text-sm">
+                  <span className="min-w-0 truncate text-slate-200">{e.event}</span>
+                  <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400">
+                    <span>{e.market}</span>
+                    <span title={e.whenTitle}>{e.when}</span>
+                    <Badge label={e.importance.toUpperCase()} small color={e.importance === 'high' ? 'var(--msp-bear)' : e.importance === 'medium' ? 'var(--msp-warn)' : 'var(--msp-flat)'} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-sm text-slate-500">No scheduled events in the current calendar.</p>}
+        </div>
+      </section>
 
       <section className="space-y-3 rounded-lg border border-white/10 p-4">
         <h2 className="text-lg font-bold">Market pulse</h2>
         <div role="tablist" aria-label="Market pulse" className="flex gap-2">{(['crypto','equity'] as const).map(type=><button key={type} role="tab" aria-selected={asset===type} onClick={()=>setAsset(type)} className={`rounded border px-4 py-2 ${asset===type?'text-emerald-300 border-emerald-400':'border-slate-700'}`}>{type==='crypto'?'Crypto':'Stocks'}</button>)}</div>
         {quotes.error&&<p className="text-amber-300">{quotes.error}</p>}
-        <div className="grid gap-3 md:grid-cols-2">{(asset==='crypto'?['BTC','ETH','SOL']:['SPY','QQQ','IWM','DIA']).map(symbol=><Link key={symbol} href={symbolHref(symbol,asset)} className="rounded border border-white/10 p-3"><PriceStamp {...quoteStamp(symbol,asset,quotes.data?.quotes[symbol])}/></Link>)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{(asset==='crypto'?['BTC','ETH','SOL']:['SPY','QQQ','IWM','DIA']).map(symbol => {
+          const reading = quoteStamp(symbol, asset, quotes.data?.quotes?.[symbol]);
+          const measured = typeof reading.price === 'number' && Number.isFinite(reading.price) && reading.price !== 0;
+          return <Link key={symbol} href={symbolHref(symbol, asset)} className="rounded border border-white/10 p-3">{measured ? <PriceStamp {...reading} /> : <span>{symbol} {COPY.today.unavailable}</span>}</Link>;
+        })}</div>
         {asset==='crypto'?<>
-          <p>BTC dominance {cryptoData?.btcDominance??'—'}% · Market cap {cryptoData?.totalMarketCapFormatted??'unavailable'} · CoinGecko as of {formatMarketTime(crypto.data?.asOf)??'time unknown'}</p>
-          <div>Funding (OKX, 8h equivalent) · {formatMarketTime(funding.data?.timestamp)??'time unknown'}
-            {funding.error?<p className="text-amber-300">{funding.error}</p>:['BTC','ETH','SOL'].map(symbol=><p key={symbol}>{symbol}: {funding.data?.coins.find(c=>c.symbol===symbol)?.fundingRatePercent??'unavailable'}%</p>)}
-          </div>
+          {cryptoData ? <p>BTC dominance {cryptoData.btcDominance}% · Market cap {cryptoData.totalMarketCapFormatted}</p> : null}
+          <SourceLine source="CoinGecko" asOf={crypto.data?.asOf} basis="crypto market snapshot" />
+          <CollapsibleSection title="Funding" summary="OKX 8h equivalent">
+            {funding.error?<p className="text-amber-300">{funding.error}</p>:['BTC','ETH','SOL'].map(symbol=>{
+              const rate = funding.data?.coins.find(c=>c.symbol===symbol)?.fundingRatePercent;
+              return typeof rate === 'number' ? <p key={symbol}>{symbol}: {rate}%</p> : null;
+            })}
+          </CollapsibleSection>
       <div className="grid gap-3 md:grid-cols-2">
         {/* LAYER 2 — RISK TONE / DRIVERS */}
         <Card className="p-4">
           <SectionTitle n="02" title="Risk Tone" hint="breadth + crypto participation" />
-          <div className="text-lg font-black" style={{ color: toneColor(riskTone.tone) }}>{riskTone.label}</div>
-          <p className="mt-1 text-sm text-slate-300">{riskTone.note}</p>
+          <div className="text-lg font-black" style={{ color: toneColor(riskTone.tone) }}>{plainLabel(riskTone.label)}</div>
+          <p className="mt-1 text-sm text-slate-300">{plainLabel(riskTone.note)}</p>
           <div className="mt-2 text-xs text-slate-500">
             Sector breadth: {(strength.greenRatio * 100).toFixed(0)}% positive ({strength.total} sampled).
             {typeof cryptoData?.marketCapChange24h === 'number'
               ? ` Crypto cap ${cryptoData.marketCapChange24h >= 0 ? '+' : ''}${cryptoData.marketCapChange24h.toFixed(1)}% (24h).`
-              : ' Crypto participation unavailable.'}
+              : ' Crypto participation is not in this snapshot.'}
           </div>
           <p className="mt-2 text-[11px] italic text-slate-500">Cross-asset relationships are described as associations, not causation. Delayed data is labelled where applicable.</p>
         </Card>
@@ -389,22 +400,26 @@ export default function CommandCenterPage() {
         {/* LAYER 4 — CRYPTO PARTICIPATION */}
         <Card className="p-4">
           <SectionTitle n="03" title="Crypto Participation" />
-          <div className="text-lg font-black" style={{ color: stanceColor(flow.stance) }}>{flow.label}</div>
-          <p className="mt-1 text-sm text-slate-300">{flow.note}</p>
+          <div className="text-lg font-black" style={{ color: stanceColor(flow.stance) }}>{plainLabel(flow.label)}</div>
+          <p className="mt-1 text-sm text-slate-300">{plainLabel(flow.note)}</p>
           <Link className="text-emerald-300" href="/tools/crypto-dashboard">Market-wide derivatives</Link>
         </Card>
       </div>
 
-        </>:<ul className="grid gap-2 md:grid-cols-2">{sectorData.map(sector=><li key={sector.symbol}>{sector.name}: {sector.changePercent?.toFixed(2)??'—'}% vs prior close · {sectors.data?.asOfTradingDay??'time unknown'}</li>)}</ul>}
+        </>:<ul className="grid gap-2 md:grid-cols-2">{sectorData.filter(sector => typeof sector.changePercent === 'number').map(sector=><li key={sector.symbol}>{sector.name}: {sector.changePercent!.toFixed(2)}% vs prior close</li>)}</ul>}
       </section>
-      <Card className="p-4">
-        <h2 className="text-lg font-bold">Today's top picks · {asset==='crypto'?'Crypto':'Stocks'}</h2>
-        {picks.loading?<p>Loading stored picks…</p>:picks.error?<p className="text-amber-300">{picks.error}</p>:rows.length?<OverviewPicks rows={rows} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
-        <Link className="text-emerald-300" href={`/tools/scanner?type=${asset}`}>See all in Scanner</Link>
+      <Card className="p-3">
+        <h2 className="text-sm font-bold">Daily Picks · {asset==='crypto'?'Crypto':'Stocks'}</h2>
+        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">{picks.error}</p>:rows.length?<OverviewPicks rows={rows.slice(0,3)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
+        <div className="mt-2 flex flex-wrap gap-3 text-sm">
+          <Link className="inline-flex min-h-10 items-center text-emerald-300" href="/daily-pick">Open Daily Picks</Link>
+          <Link className="inline-flex min-h-10 items-center text-emerald-300" href={`/tools/scanner?type=${asset}`}>See all in Scanner</Link>
+        </div>
       </Card>
-      <section className="space-y-2 rounded border border-white/10 p-4">
+      <CollapsibleSection title="What changed" summary="Previous scan and last visit">
+      <section className="space-y-2">
         <h2 className="text-lg font-bold">What changed since the previous scan</h2>
-        {previous.loading?<p>Loading earlier scan…</p>:previous.error?<p className="text-amber-300">Earlier scan unavailable: {previous.error}</p>:!changes.hasPrevious?<p>No earlier scan stored{previousDate?` for ${previousDate}`:''}.</p>:<>
+        {previous.loading?<p>Loading…</p>:previous.error?<p className="text-amber-300">Earlier scan is not available right now.</p>:!changes.hasPrevious?<p>No earlier scan stored{previousDate?` for ${previousDate}`:''}.</p>:<>
           <p>vs {previousDate} scan · {asset==='crypto'?'UTC':'New York market date'}</p>
           <p>New: {changes.added.map(p=>p.symbol).join(', ')||'none'} · Dropped: {changes.dropped.map(p=>p.symbol).join(', ')||'none'}</p>
           <p>Grade changes: {changes.gradeChanges.map(p=>`${p.symbol} ${p.from} → ${p.to}`).join(', ')||'none'}</p>
@@ -426,12 +441,14 @@ export default function CommandCenterPage() {
               ))}
             </ul>
           )}
-          <p className="mt-2 text-[11px] italic text-slate-500">Descriptive changes in the observed environment since your previous visit — not trade instructions or predictions.</p>
+          <p className="mt-2 text-[11px] italic text-slate-500">Descriptive changes in the observed environment since your previous visit. Not trade instructions or predictions.</p>
         </Card>
       ) : null}
 
       </section>
-      <details className="rounded border border-white/10 p-4"><summary className="cursor-pointer font-bold">More</summary><div className="mt-3 space-y-3">
+      </CollapsibleSection>
+      <CollapsibleSection title="More detail" summary="Relative strength and areas to research">
+      <div className="space-y-3">
       {/* LAYER 3 — STRENGTH / WEAKNESS */}
       <div className="grid gap-3 md:grid-cols-2">
         <Card className="p-4">
@@ -445,7 +462,7 @@ export default function CommandCenterPage() {
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-slate-500">Sector data unavailable.</p>}
+          ) : <p className="text-sm text-slate-500">Sector data is not in this snapshot.</p>}
         </Card>
         <Card className="p-4">
           <SectionTitle n="05" title="Relative Weakness" hint="ranked by observed change" />
@@ -458,28 +475,30 @@ export default function CommandCenterPage() {
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-slate-500">Sector data unavailable.</p>}
+          ) : <p className="text-sm text-slate-500">Sector data is not in this snapshot.</p>}
         </Card>
       </div>
 
       {/* LAYER 7 — AREAS DESERVING RESEARCH (Building / Early engine) */}
       <Card className="p-4">
-        <SectionTitle n="07" title="Areas Deserving Further Research" hint="developing activity — not trade instructions" />
+        <SectionTitle n="07" title="Areas Deserving Further Research" hint="developing activity, not trade instructions" />
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <div className="mb-1.5 text-xs font-black uppercase tracking-widest text-slate-500">Equities — building / expanding</div>
+            <div className="mb-1.5 text-xs font-black uppercase tracking-widest text-slate-500">Equities, building or expanding</div>
             <BuildingInterestPanel items={buildingEquity} emptyText="No developing equity activity in the current mover sample." />
           </div>
           <div>
-            <div className="mb-1.5 text-xs font-black uppercase tracking-widest text-slate-500">Crypto — building / expanding</div>
+            <div className="mb-1.5 text-xs font-black uppercase tracking-widest text-slate-500">Crypto, building or expanding</div>
             <BuildingInterestPanel items={buildingCrypto} emptyText="No developing crypto activity in the current mover sample." />
           </div>
         </div>
-        <p className="mt-2 text-[11px] italic text-slate-500">Volume is measured relative to today&rsquo;s mover cohort (a transparent proxy when a per-symbol historical baseline is unavailable). Per-symbol volatility and positioning inputs, where available, further refine these states in the dedicated tools.</p>
+        <p className="mt-2 text-[11px] italic text-slate-500">Volume is measured relative to today&rsquo;s mover cohort (a transparent proxy when a per-symbol historical baseline is not in this snapshot). Per-symbol volatility and positioning inputs, where present, further refine these states in the dedicated tools.</p>
       </Card>
 
-      </div></details>
-      {/* EVIDENCE QUALITY FOOTER */}
+      </div>
+      </CollapsibleSection>
+      <DeskFolds />
+      <CollapsibleSection title="Evidence quality" summary={evidence.level}>
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-black uppercase tracking-widest text-slate-500">Evidence quality</span>
@@ -487,10 +506,11 @@ export default function CommandCenterPage() {
           <span className="text-xs text-slate-400">{Math.round(evidence.completeness * 100)}% of layers available</span>
         </div>
         <ul className="mt-2 list-disc pl-5 text-xs text-slate-500">
-          {evidence.reasons.map((r, i) => <li key={i}>{r}</li>)}
+          {evidence.reasons.map((r, i) => <li key={i}>{plainLabel(r)}</li>)}
         </ul>
-        <p className="mt-2 text-[11px] text-slate-600">Covers the layers on this page (regime, sectors, crypto, movers, calendar). Scanner feed health is shown in the Market dashboard&rsquo;s Data health strip.</p>
+        <p className="mt-2 text-[11px] text-slate-600">Covers the layers on this page (regime, sectors, crypto, movers, calendar). Scanner feed health is in the folded research context.</p>
       </Card>
+      </CollapsibleSection>
 
       <p className="px-1 text-[11px] text-slate-600">{EDUCATIONAL_DISCLOSURE}</p>
       <ComplianceDisclaimer/>

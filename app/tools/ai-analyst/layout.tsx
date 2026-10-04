@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AI Analyst | Scanner',
+  title: 'ARCA',
   description:
     'AI Analyst is available as the ARCA panel across the platform. This legacy page redirects to Scanner for live research context.',
   alternates: { canonical: 'https://marketscannerpros.app/tools/scanner' },

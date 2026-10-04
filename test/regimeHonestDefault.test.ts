@@ -53,13 +53,14 @@ describe('GET /api/regime (OV-1)', () => {
   });
   const call = async () => {
     const res = await GET(new NextRequest('http://localhost/api/regime'));
-    return { status: res.status, body: await res.json() };
+    return { status: res.status, body: await res.json(), cache: res.headers.get('Cache-Control') };
   };
 
   it('returns an explicit unavailable state instead of RANGE_NEUTRAL / low / full', async () => {
-    const { status, body } = await call();
+    const { status, body, cache } = await call();
     vi.useRealTimers();
     expect(status).toBe(200);
+    expect(cache).toBe('private, no-store');
     expect(body).toMatchObject({ available: false, regime: null, riskLevel: null, permission: null, signals: [], asOf: null });
     expect(body.reason).toContain('Market data unavailable');
     expect(body).not.toHaveProperty('sizing');
@@ -78,6 +79,28 @@ describe('GET /api/regime (OV-1)', () => {
     expect(body.signals[0]).toMatchObject({ source: 'market_data', kind: 'market', counted: true, stale: false });
     expect(body.signals[1]).toMatchObject({ source: 'operator_context', kind: 'workspace', counted: false });
     expect(body).not.toHaveProperty('sizing');
+  });
+
+  it('returns the stored market regime to signed-out viewers and skips account signals', async () => {
+    mocks.session.mockResolvedValue(null);
+    mocks.overlay.mockResolvedValue(inputs());
+    mocks.q.mockClear();
+    const { status, body, cache } = await call();
+    vi.useRealTimers();
+    expect(status).toBe(200);
+    expect(cache).toBe('private, no-store');
+    expect(body).toMatchObject({ available: true, basis: 'market', regime: 'TREND_UP' });
+    expect(body.signals).toEqual([expect.objectContaining({ kind: 'market', counted: true })]);
+    expect(mocks.q).not.toHaveBeenCalled();
+  });
+
+  it('signed-out with no stored market data is a plain unavailable response', async () => {
+    mocks.session.mockResolvedValue(null);
+    const { status, body } = await call();
+    vi.useRealTimers();
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ available: false, regime: null });
+    expect(body.reason).toContain('Market data unavailable');
   });
 
   it('falls back to account signals only when market data is unavailable', async () => {
@@ -116,10 +139,10 @@ describe('regime consumers (OV-1)', () => {
 
   it('the command center, dashboard, explorer and regime bar say "unavailable" and drop sizing', () => {
     const cc = readFileSync('app/tools/command-center/page.tsx', 'utf8');
-    expect(cc).toContain('<Badge label="Unavailable"');
+    expect(cc).toContain('<Badge label="Not available right now"');
     expect(cc).toContain("!reg.available");
-    const dash = readFileSync('app/tools/dashboard/page.tsx', 'utf8');
-    expect(dash).toContain('regime unavailable');
+    const dash = readFileSync('components/desk/DeskFolds.tsx', 'utf8');
+    expect(dash).toContain('regime not available right now');
     expect(dash).not.toMatch(/sizing/i);
     const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8');
     expect(explorer).toContain('Regime unavailable');

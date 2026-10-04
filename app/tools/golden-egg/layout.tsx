@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Golden Egg",
+  title: "Symbol",
   description:
     "Single-symbol educational confluence view: regime, bias, volatility, scenario levels, and data-quality context.",
   robots: { index: false, follow: false },

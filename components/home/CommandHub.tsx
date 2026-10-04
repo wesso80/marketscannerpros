@@ -16,7 +16,7 @@ const guidedPaths = [
   { goal: 'Review options flow', href: '/tools/terminal?tab=options-flow', tool: 'Options Flow', detail: 'Large-flow estimates, IV skew, and chain context.' },
   { goal: 'Test a strategy', href: '/tools/workspace?tab=backtest', tool: 'Backtest', detail: 'Historical paper simulation with overfitting warnings.' },
   { goal: 'Track process and outcomes', href: '/tools/workspace', tool: 'Workspace', detail: 'Journal, portfolio, watchlists, and alerts.' },
-  { goal: 'Study crypto derivatives', href: '/tools/dashboard?tab=crypto', tool: 'Crypto Dashboard', detail: 'Funding, OI, liquidations, and long/short context.' },
+  { goal: 'Study crypto derivatives', href: '/tools/crypto-dashboard', tool: 'Crypto Derivatives', detail: 'Funding, OI, liquidations, and long/short context.' },
 ];
 
 const workflowSteps = [

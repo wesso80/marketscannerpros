@@ -24,12 +24,12 @@ export default function RegimeBar() {
     <div className="flex items-center gap-3 px-4 py-2 bg-[var(--msp-panel-2)] border-b border-[var(--msp-border)] overflow-x-auto">
       <span className="text-[10px] uppercase tracking-wider text-slate-500 whitespace-nowrap">Market Regime</span>
       {loading ? (
-        <span className="text-[10px] text-slate-600 animate-pulse">Loading...</span>
+        <span className="text-[10px] text-slate-600 animate-pulse">Loading</span>
       ) : (
         <>
           {regimeLabel
             ? <Badge label={humanizeEnum(regimeLabel)} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
-            : <Badge label="Unavailable" color="var(--msp-text-muted)" small />}
+            : <Badge label="Not available right now" color="var(--msp-text-muted)" small />}
           {nonStaleSignals.length > 0 && (
             <>
               <div className="h-3 w-px bg-slate-700" />

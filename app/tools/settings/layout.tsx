@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Settings | MarketScanner Pros',
+  title: 'Account settings',
   description:
     'Configure your MarketScanner Pros workspace settings, preferences, and display options.',
 };

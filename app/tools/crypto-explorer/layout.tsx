@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Crypto Explorer | MarketScanner Pros',
+  title: 'Crypto Explorer',
   description:
     'Explore cryptocurrency assets with real-time prices, charts, and market data powered by CoinGecko.',
   robots: { index: false, follow: true },

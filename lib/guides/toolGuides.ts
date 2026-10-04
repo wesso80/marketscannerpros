@@ -310,9 +310,9 @@ export const TOOL_GUIDES: ToolGuide[] = [
     tips: ['Respect funding and liquidation risk during spikes.', 'Use smaller size in unstable regime transitions.'],
   },
   {
-    route: '/tools/dashboard?tab=crypto',
-    badge: 'Crypto Dashboard',
-    title: 'Crypto Dashboard',
+    route: '/tools/crypto-dashboard',
+    badge: 'Crypto Derivatives',
+    title: 'Crypto Derivatives',
     summary: 'Central view for crypto momentum, derivatives sentiment, and risk context.',
     steps: ['Check dominance/funding/open-interest context.', 'Confirm directional consensus.', 'Review only when context and setup align.'],
     tips: ['Derivatives extremes often precede reversals.', 'Treat dashboard as context layer, not direct trigger.'],

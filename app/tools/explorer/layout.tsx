@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Market Explorer',
+  title: 'Explorer',
   description: 'Sector heatmaps, market movers, commodities, and cross-market analysis.',
   robots: { index: false, follow: false },
 };

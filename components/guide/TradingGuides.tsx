@@ -19,7 +19,7 @@ const GUIDES = [
     summary: "Confirm where flows are rotating before positioning size.",
     checks: ["Crypto market dashboard", "Category performance", "Relative strength"],
     links: [
-      { label: "Crypto Derivatives", href: "/tools/dashboard?tab=crypto" },
+      { label: "Crypto Derivatives", href: "/tools/crypto-dashboard" },
       { label: "Crypto Explorer", href: "/tools/explorer?tab=crypto" },
     ],
   },
@@ -30,7 +30,7 @@ const GUIDES = [
     checks: ["Economic calendar", "Funding / OI pressure", "Liquidation clusters"],
     links: [
       { label: "Economic Calendar", href: "/tools/research?tab=calendar" },
-      { label: "Crypto Derivatives", href: "/tools/dashboard?tab=crypto" },
+      { label: "Crypto Derivatives", href: "/tools/crypto-dashboard" },
     ],
   },
   {

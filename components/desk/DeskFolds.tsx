@@ -1,0 +1,860 @@
+'use client';
+import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
+import { formatEventTime } from '@/lib/eventTimeDisplay';
+import { equityMoversBasisLabel, formatEasternAsOf } from '@/lib/alphaVantageEntitlement';
+
+/* ---------------------------------------------------------------------------
+   SURFACE 1: DASHBOARD — Command Center
+   Real API data from v1 endpoints.
+   --------------------------------------------------------------------------- */
+
+import { useState, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useV2 } from '@/app/v2/_lib/V2Context';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import { isElevatedRisk, regimeDataQuality } from '@/lib/regime/riskLevel';
+import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
+import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
+import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '@/components/ui';
+import { FREE_COPY } from '@/components/free/copy';
+import FreeLoading from '@/components/free/Loading';
+import { useUserTier } from '@/lib/useUserTier';
+import { useRankedQueue } from '@/hooks/useRankedQueue';
+import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
+import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { proDisplaySymbol } from '@/lib/scanner/proDisplay';
+import type { ResearchAsset } from '@/lib/researchContext';
+
+/* ─── Dynamic imports: v1 deep-dive components ─── */
+const EdgeInsightCards = dynamic(() => import('@/components/intelligence/EdgeInsightCards'), { ssr: false, loading: () => <div className="h-32 bg-slate-800/30 rounded-xl animate-pulse" /> });
+
+/* ─── Magnificent 7 ─── */
+const MAG7_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'] as const;
+interface Mag7Quote {
+  symbol: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  error?: string;
+}
+
+/* ─── Major Indices ─── */
+// Tradable ETF proxies for realtime index levels (Alpha Vantage GLOBAL_QUOTE realtime).
+// Alpha Vantage's INDEX_DATA endpoint is EOD-only, so we use liquid ETFs for live tiles.
+const INDEX_PROXIES = [
+  { etf: 'SPY', label: 'S&P 500', index: 'SPX' },
+  { etf: 'DIA', label: 'Dow Jones', index: 'DJI' },
+  { etf: 'QQQ', label: 'Nasdaq 100', index: 'NDX' },
+  { etf: 'IWM', label: 'Russell 2000', index: 'RUT' },
+  // VIXY is a VIX futures ETF, not the VIX index: it can move quite differently intraday (OV-5).
+  { etf: 'VIXY', label: 'VIX futures ETF', index: 'VIX' },
+] as const;
+const INDEX_SYMBOLS = INDEX_PROXIES.map((i) => i.etf);
+interface IndexQuote {
+  symbol: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  error?: string;
+}
+
+// TradingView-style heat color: intensity scales with magnitude of move (caps at ±5%).
+function heatColor(changePercent: number | null): string {
+  if (changePercent == null) return 'rgb(44, 49, 58)';
+  const intensity = Math.min(Math.abs(changePercent) / 5, 1);
+  if (changePercent > 0) {
+    const base = Math.round(30 + intensity * 25);
+    const green = Math.round(120 + intensity * 110);
+    return `rgb(${base}, ${green}, ${Math.round(base * 1.4)})`;
+  }
+  if (changePercent < 0) {
+    const base = Math.round(30 + intensity * 25);
+    const red = Math.round(120 + intensity * 110);
+    return `rgb(${red}, ${base}, ${Math.round(base * 1.4)})`;
+  }
+  return 'rgb(44, 49, 58)';
+}
+
+/* -- helpers -------------------------------------------------------------- */
+function directionColor(d?: string) {
+  if (d === 'bullish') return 'var(--msp-bull)';
+  if (d === 'bearish') return 'var(--msp-bear)';
+  return 'var(--msp-warn)';
+}
+function pctColor(v: number) {
+  if (v > 0) return 'text-emerald-400';
+  if (v < 0) return 'text-red-400';
+  return 'text-slate-400';
+}
+function fmtPrice(p: number) {
+  const abs = Math.abs(p);
+  const dec = abs >= 100 ? 2 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return '$' + p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: dec });
+}
+function parseChangePct(raw: string) {
+  return parseFloat((raw || '0').replace('%', ''));
+}
+
+/* -- Loading skeleton ----------------------------------------------------- */
+function Skeleton({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
+  return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
+}
+function CardSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <Card>
+      <Skeleton h="h-4" w="w-32" />
+      <div className="mt-3 space-y-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <Skeleton key={i} h="h-6" />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// Design-system helpers: sentence-case labels, tabular numbers, magnitude bars.
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>
+      {children}
+    </div>
+  );
+}
+
+function MetricCol({ label, value, tone = 'var(--msp-text)', align = 'left' }: { label: string; value: React.ReactNode; tone?: string; align?: 'left' | 'right' }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start', gap: 2 }}>
+      <span style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</span>
+      <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{value}</span>
+    </div>
+  );
+}
+
+function MagnitudeBar({ value, max = 100, color = 'var(--msp-flat)', height = 3 }: { value: number; max?: number; color?: string; height?: number }) {
+  const pct = Math.min(100, Math.max(0, (Math.abs(value) / max) * 100));
+  return (
+    <div style={{ width: '100%', height, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }} aria-hidden="true">
+      <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width 200ms ease' }} />
+    </div>
+  );
+}
+
+function DashboardMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, minHeight: '3.5rem', minWidth: 0 }}>
+      <span style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</span>
+      <span style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>{value}</span>
+      {/* Wraps instead of a single no-wrap line: a long detail (e.g. the degraded-feed list) used to force the hero wider than a phone screen (OV-11). */}
+      <span style={{ fontSize: 11, color: 'var(--msp-text-faint)', overflowWrap: 'anywhere' }} title={detail}>{detail}</span>
+    </div>
+  );
+}
+
+function PanelHeader({ title, eyebrow, action }: { title: string; eyebrow?: string; action?: React.ReactNode }) {
+  return (
+    <div className="mb-2 flex items-start justify-between gap-3">
+      <div>
+        {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
+        <h3 style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: eyebrow ? 2 : 0 }}>{title}</h3>
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up' | 'down'; onOpen: () => void; onKeyOpen: (event: React.KeyboardEvent) => void }) {
+  const pct = parseChangePct(mover.change_percentage);
+  const barColor = tone === 'up' ? 'var(--msp-bull)' : 'var(--msp-bear)';
+  const sign = pct >= 0 ? '+' : '';
+  // Crypto movers carry the -USD suffix so a coin such as HOOD is not read as the US stock of the same ticker.
+  const label = proDisplaySymbol(mover.ticker, mover.asset_class);
+  return (
+    <button
+      type="button"
+      aria-label={`Open Golden Egg for ${label}`}
+      className="w-full rounded-md px-2 py-1.5 text-xs hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+      onClick={onOpen}
+      onKeyDown={onKeyOpen}
+    >
+      <div className="grid grid-cols-[5.5rem_1fr_5.5rem] items-center gap-2">
+        <span className="truncate text-left" title={label} style={{ fontWeight: 500, color: 'var(--msp-text)' }}>{label}</span>
+        <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--msp-text-muted)' }}>{fmtPrice(parseFloat(mover.price))}</span>
+        <span className="text-right" style={{ fontVariantNumeric: 'tabular-nums', color: barColor, fontWeight: 500 }}>{sign}{Number.isFinite(pct) ? `${pct.toFixed(2)}%` : mover.change_percentage}</span>
+      </div>
+      <div className="mt-1">
+        <MagnitudeBar value={pct} max={10} color={barColor} height={2} />
+      </div>
+    </button>
+  );
+}
+
+export default function DeskFolds() {
+  const { navigateTo, selectSymbol } = useV2();
+  const { tier, isLoading: tierLoading } = useUserTier();
+  const isPro = tier === 'pro' || tier === 'pro_trader';
+
+  /* -- Real API calls --------------------------------------------------- */
+  const regime = useRegime();
+  // Stale inputs are a data-quality caution, separate from the value-based risk level (OV-12).
+  const regimeQuality = regimeDataQuality(regime.data);
+  const movers = useMarketMovers();
+  const news = useNews();
+  const calendar = useEconomicCalendar();
+  // Canonical research queue — identical source, score and order to Scanner's ranked mode.
+  const ranked = useRankedQueue('daily');
+  // Adapter kept so the existing panels below read the same shape they always did.
+type CachedSymbol = { symbol: string; score: number; direction: string; price: number; changePct: number | null; rsi: number | null; adx: number | null; type: string };
+const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price ?? 0, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
+const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
+  const cached = useMemo(() => ({
+    equity: ranked.equity.map(toCached),
+    crypto: ranked.crypto.map(toCached),
+    all: ranked.rows.map(toCached),
+    loading: ranked.loading,
+    error: ranked.error,
+    stale: ranked.stale,
+    ageMinutes: ranked.ageMinutes,
+  }), [ranked.equity, ranked.crypto, ranked.rows, ranked.loading, ranked.error, ranked.stale, ranked.ageMinutes]);
+  const { stale: cacheStale, ageMinutes: cacheAgeMinutes } = cached;
+
+  /* -- Magnificent 7 live quotes ---------------------------------------- */
+  const [mag7, setMag7] = useState<Mag7Quote[]>([]);
+  const [mag7Loading, setMag7Loading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMag7() {
+      try {
+        const res = await fetch('/api/scanner/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols: [...MAG7_SYMBOLS] }),
+        });
+        if (!res.ok) throw new Error('quotes fetch failed');
+        const data = await res.json();
+        if (cancelled) return;
+        const bySymbol = new Map<string, Mag7Quote>((data.quotes || []).map((q: Mag7Quote) => [q.symbol, q]));
+        setMag7(MAG7_SYMBOLS.map(sym => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
+      } catch {
+        if (!cancelled) setMag7(MAG7_SYMBOLS.map(sym => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
+      } finally {
+        if (!cancelled) setMag7Loading(false);
+      }
+    }
+    loadMag7();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* -- Major Indices live quotes ---------------------------------------- */
+  const [indices, setIndices] = useState<IndexQuote[]>([]);
+  const [indicesLoading, setIndicesLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadIndices() {
+      try {
+        const res = await fetch('/api/scanner/quotes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols: [...INDEX_SYMBOLS] }),
+        });
+        if (!res.ok) throw new Error('quotes fetch failed');
+        const data = await res.json();
+        if (cancelled) return;
+        const bySymbol = new Map<string, IndexQuote>((data.quotes || []).map((q: IndexQuote) => [q.symbol, q]));
+        setIndices(INDEX_SYMBOLS.map((sym) => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
+      } catch {
+        if (!cancelled) setIndices(INDEX_SYMBOLS.map((sym) => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
+      } finally {
+        if (!cancelled) setIndicesLoading(false);
+      }
+    }
+    loadIndices();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* -- Derived data ----------------------------------------------------- */
+  const highImpactEvents = useMemo(
+    () => upcomingConfirmedEvents(calendar.data?.events || []).filter((e: EconomicEvent) => e.impact === 'high').slice(0, 5),
+    [calendar.data]
+  );
+  const allGainers = movers.data?.topGainers || [];
+  const allLosers = movers.data?.topLosers || [];
+  const eqGainers = allGainers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 5);
+  const eqLosers = allLosers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 5);
+  const crGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
+  const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
+  const articles = (news.data?.articles || []).slice(0, 3);
+  // Top 5 of the canonical ranked queue — same order a user sees on Scanner. Movers are context, not the queue.
+  const scannerQueue = cached.all.slice(0, 5);
+  const moverQueue: Mover[] = [];
+  // Same degraded-feed rule and wording as the Session overview (lib/analysis/sessionDataHealth.ts).
+  const degradedFeeds = degradedFeedList({
+    scanner: { warnings: ranked.qualityWarnings, error: cached.error, stale: cacheStale, ageMinutes: cacheAgeMinutes },
+    feeds: [
+      { label: 'Movers', error: movers.error },
+      { label: 'News', error: news.error },
+      { label: 'Calendar', error: calendar.error },
+    ],
+    calendarWarning: !calendar.loading ? calendarDataWarning(calendar.data?.events) : null,
+  });
+  const loadingFeeds = [cached.loading, movers.loading, news.loading, calendar.loading].filter(Boolean).length;
+  const researchQueueCount = scannerQueue.length + moverQueue.length;
+  const highImpactEventCount = highImpactEvents.length;
+  const headlineCount = articles.length;
+  const dataHealthLabel = degradedFeeds.length ? `${degradedFeeds.length} issue${degradedFeeds.length === 1 ? '' : 's'}` : loadingFeeds ? `${loadingFeeds} loading` : 'Ready';
+  const dataHealthTone = degradedFeeds.length ? 'var(--msp-warn)' : loadingFeeds ? 'var(--msp-flat)' : 'var(--msp-bull)';
+  const topQueueSymbol = scannerQueue[0]?.symbol || moverQueue[0]?.ticker || 'None';
+  const hasQueue = researchQueueCount > 0;
+  const nextCheckValue = hasQueue ? `Validate ${topQueueSymbol}` : loadingFeeds ? 'Loading feeds…' : 'Run Scanner first';
+  const nextCheckDetail = hasQueue ? 'Open Golden Egg from queue below' : loadingFeeds ? 'Cached scanner data syncing' : 'No cached candidates yet';
+  const nextCheckTone = hasQueue ? 'var(--msp-warn)' : 'var(--msp-flat)';
+  const topSymbolHref = hasQueue ? `/tools/golden-egg?symbol=${encodeURIComponent(topQueueSymbol)}` : '/tools/golden-egg';
+
+  // Show sign-in prompt if all data hooks report auth errors
+  const allAuthError = movers.isAuthError && news.isAuthError;
+  if (allAuthError) {
+    return <Card><AuthPrompt /></Card>;
+  }
+
+  // Pass the row's asset class when known: Golden Egg reads ?type=crypto|equity (as the scanner hand-off does), so a
+  // crypto mover such as HOOD opens the coin rather than the US stock with the same ticker.
+  function openGoldenEgg(symbol: string, assetType?: ResearchAsset) {
+    const selection = assetType ? { assetType } : {};
+    selectSymbol(symbol, selection);
+    navigateTo('golden-egg', symbol, selection);
+  }
+
+  function onSymbolRowKey(event: React.KeyboardEvent, symbol: string, assetType?: ResearchAsset) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openGoldenEgg(symbol, assetType);
+    }
+  }
+
+  if (tierLoading) return <FreeLoading />;
+
+  return (
+    <div className="space-y-4" data-desk-folds>
+      <CollapsibleSection title="Research context" summary="Queue, trend strength, time confluence, and research notes">
+      <section style={{ background: 'var(--msp-panel)', borderRadius: 'var(--msp-radius-card)', padding: 16 }} aria-label="Dashboard command header">
+        {/* minmax(0,1fr) + min-w-0 keep the hero inside the viewport on phones (OV-11). */}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>
+              <span>Research dashboard · <a href="/tools/command-center" style={{ color: 'var(--msp-accent)' }}>market overview in Command Center</a></span>
+              {regime.data && (
+                <span className="inline-flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
+                  <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : 'var(--msp-info)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()}</span>
+                  <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                  <span>risk <span style={{ color: regime.data.riskLevel === 'low' ? 'var(--msp-bull)' : regime.data.riskLevel === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{regime.data.riskLevel}</span></span>
+                  {regime.data.asOf ? (
+                    <>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                      <span>as of {new Date(regime.data.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+                    </>
+                  ) : null}
+                  {regimeQuality.stale ? (
+                    <>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>·</span>
+                      <span style={{ color: 'var(--msp-warn)' }} title={regimeQuality.note ?? undefined}>stale inputs</span>
+                    </>
+                  ) : null}
+                </span>
+              )}
+              {!regime.data && !regime.loading && (
+                <span className="inline-flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
+                  <span style={{ color: 'var(--msp-text-muted)' }}>regime not available right now</span>
+                </span>
+              )}
+            </div>
+            <h1 className="mt-1" style={{ fontSize: 'var(--msp-text-h1)', fontWeight: 500, color: 'var(--msp-text)', lineHeight: 1.25, overflowWrap: 'anywhere' }}>Open the research queue, then validate one symbol.</h1>
+            <p className="mt-1 max-w-3xl" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
+              Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <DSButton variant="primary" size="sm" onClick={() => navigateTo('scanner')}>Start scanner</DSButton>
+              <DSButton variant="secondary" size="sm" onClick={() => { window.location.href = topSymbolHref; }}>{hasQueue ? `Validate ${topQueueSymbol}` : 'Validate symbol'}</DSButton>
+              <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/workspace?tab=journal'; }}>Open journal</DSButton>
+            </div>
+          </div>
+
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] self-start gap-1.5 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+            <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail={hasQueue ? `Top focus: ${topQueueSymbol}` : 'Run Scanner to populate'} />
+            <DashboardMetric label="Data health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.map((feed) => feed.replace(/unavailable/gi, 'not available right now').replace(/\bdegraded\b/gi, 'needs a check')).join(', ') : loadingFeeds ? 'Feeds syncing' : 'No feed errors reported'} />
+            <DashboardMetric label="High impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? 'var(--msp-warn)' : 'var(--msp-flat)'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
+            <DashboardMetric label="Next check" value={nextCheckValue} tone={nextCheckTone} detail={nextCheckDetail} />
+          </div>
+        </div>
+      </section>
+
+      <ComplianceDisclaimer compact />
+
+      {/* ─── Morning Research Start ----------------------------------- */}
+      <section className="grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.72fr)]" aria-label="Morning research start">
+        <DSCard>
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <SectionEyebrow>Today&apos;s research queue · Ranked queue (not yet validated)</SectionEyebrow>
+              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of the Scanner&apos;s ranked queue.</h2>
+              <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Golden Egg. Review context only; no trade instructions.</p>
+            </div>
+            <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
+          </div>
+
+          {scannerQueue.length === 0 && moverQueue.length === 0 ? (
+            <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '20px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>
+              No queue yet. Run Scanner or review movers to create a research list.
+            </div>
+          ) : (() => {
+            const combined: Array<{ kind: 'cached'; row: CachedSymbol } | { kind: 'mover'; row: Mover }> = [
+              ...scannerQueue.map(row => ({ kind: 'cached' as const, row })),
+              ...moverQueue.map(row => ({ kind: 'mover' as const, row })),
+            ];
+            return (
+              <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+                {combined.map((item, idx) => {
+                  const isFocal = idx === 0;
+                  if (item.kind === 'cached') {
+                    const row = item.row;
+                    const moveColor = row.changePct === null ? 'var(--msp-text-muted)' : row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
+                    const biasLabel = row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias';
+                    const biasTone: 'bull' | 'bear' | 'neutral' = row.direction === 'bullish' ? 'bull' : row.direction === 'bearish' ? 'bear' : 'neutral';
+                    return (
+                      <button
+                        key={`queue-${row.symbol}`}
+                        type="button"
+                        aria-label={`Validate ${row.symbol} in Golden Egg`}
+                        onClick={() => openGoldenEgg(row.symbol)}
+                        style={{
+                          textAlign: 'left',
+                          background: isFocal ? 'var(--msp-card-2)' : 'var(--msp-card)',
+                          borderRadius: 'var(--msp-radius-control)',
+                          borderLeft: isFocal ? '2px solid var(--msp-accent)' : '2px solid transparent',
+                          padding: 12,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                          transition: 'background 120ms ease',
+                        }}
+                        className="hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{row.symbol}</span>
+                          <DSBadge tone={biasTone}>{biasLabel}</DSBadge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <MetricCol label="Score" value={row.score} />
+                          <MetricCol label="Price" value={fmtPrice(row.price)} align="right" />
+                          <MetricCol label="Last bar" value={fmtMove(row.changePct)} tone={moveColor} align="right" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <MagnitudeBar value={row.score} max={100} color="var(--msp-accent-dim)" height={3} />
+                          <MagnitudeBar value={row.changePct ?? 0} max={10} color={moveColor} height={2} />
+                        </div>
+                        <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Golden Egg</div>
+                      </button>
+                    );
+                  } else {
+                    const m = item.row;
+                    const movePct = parseChangePct(m.change_percentage);
+                    const moveColor = movePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
+                    return (
+                      <button
+                        key={`mover-queue-${m.ticker}`}
+                        type="button"
+                        aria-label={`Validate ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}
+                        onClick={() => openGoldenEgg(m.ticker, m.asset_class)}
+                        style={{
+                          textAlign: 'left',
+                          background: isFocal ? 'var(--msp-card-2)' : 'var(--msp-card)',
+                          borderRadius: 'var(--msp-radius-control)',
+                          borderLeft: isFocal ? '2px solid var(--msp-accent)' : '2px solid transparent',
+                          padding: 12,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}
+                        className="hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{proDisplaySymbol(m.ticker, m.asset_class)}</span>
+                          <DSBadge tone="info">Mover evidence</DSBadge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <MetricCol label="Price" value={fmtPrice(parseFloat(m.price))} />
+                          <MetricCol label="Move" value={`${movePct >= 0 ? '+' : ''}${Number.isFinite(movePct) ? movePct.toFixed(2) + '%' : m.change_percentage}`} tone={moveColor} align="right" />
+                        </div>
+                        <MagnitudeBar value={movePct} max={10} color={moveColor} height={2} />
+                        <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: validate movement context</div>
+                      </button>
+                    );
+                  }
+                })}
+              </div>
+            );
+          })()}
+        </DSCard>
+
+        <div className="grid gap-3">
+          <DSCard>
+            <SectionEyebrow>Data health strip</SectionEyebrow>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: 12 }}>
+                <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Loading feeds</div>
+                <div style={{ marginTop: 4, fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', fontVariantNumeric: 'tabular-nums' }}>{loadingFeeds}</div>
+              </div>
+              <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: 12 }}>
+                <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Feeds to review</div>
+                <div style={{ marginTop: 4, fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: degradedFeeds.length ? 'var(--msp-warn)' : 'var(--msp-bull)', fontVariantNumeric: 'tabular-nums' }}>{degradedFeeds.length}</div>
+              </div>
+            </div>
+            {cacheAgeMinutes != null && !cached.error && (
+              <div className="mt-2 flex items-center gap-1.5" style={{ fontSize: 11, color: cacheStale ? 'var(--msp-warn)' : 'var(--msp-text-faint)' }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: cacheStale ? 'var(--msp-warn)' : 'var(--msp-bull)' }} aria-hidden="true" />
+                Scanner data: {cacheAgeMinutes < 60 ? `${cacheAgeMinutes}m` : `${Math.round(cacheAgeMinutes / 60)}h`} old{cacheStale ? ' — stale' : ' — fresh'}
+              </div>
+            )}
+            <p className="mt-2" style={{ fontSize: 11, color: 'var(--msp-text-faint)', lineHeight: 1.5 }}>{degradedFeeds.length ? `Review feed issues: ${degradedFeeds.map((feed) => feed.replace(/unavailable/gi, 'not available right now').replace(/\bdegraded\b/gi, 'needs a check')).join(', ')}.` : 'Scanner, movers, news, and calendar feeds have no reported errors.'}</p>
+          </DSCard>
+
+          <DSCard>
+            <SectionEyebrow>Continue workflow</SectionEyebrow>
+            <div className="mt-3 grid gap-2">
+              <button type="button" onClick={() => navigateTo('scanner')} style={{ background: hasQueue ? 'var(--msp-card-2)' : 'var(--msp-card)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: hasQueue ? 'var(--msp-bull)' : 'var(--msp-text-muted)', borderLeft: hasQueue ? '2px solid var(--msp-bull)' : '2px solid transparent' }}>{hasQueue ? `✓ ${researchQueueCount} scenarios queued` : '1. Find scenarios in Scanner'}</button>
+              <a href={topSymbolHref} style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>{hasQueue ? `2. Validate ${topQueueSymbol} in Golden Egg` : '2. Validate one symbol in Golden Egg'}</a>
+              <a href="/tools/workspace?tab=backtest" style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>3. Test history in Backtest</a>
+              <a href="/tools/workspace?tab=journal" style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>4. Save notes in Journal</a>
+            </div>
+          </DSCard>
+        </div>
+      </section>
+
+      {/* ─── Trend strength (ADX) + Time Confluence + ARCA Summary ─── */}
+      <section className="grid gap-3 md:grid-cols-3" aria-label="Trend strength and research context panels">
+        {/* Trend strength (ADX). ADX measures trend strength, not volatility compression/expansion (OV-10). */}
+        <DSCard>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <SectionEyebrow>Trend strength</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>ADX readings (top of the queue)</div>
+            </div>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/volatility-engine'; }} aria-label="Open Dynamic Volatility Engine for compression and expansion">DVE ›</DSButton>
+          </div>
+          {cached.loading ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <div key={i} className="h-6 animate-pulse rounded" style={{ background: 'var(--msp-card-2)' }} />)}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {/* High ADX = strong trend; low ADX = weak trend or range (not a volatility measure) */}
+              {(cached.all.slice(0, 5) as CachedSymbol[])
+                .sort((a, b) => Math.abs(b.adx ?? -1) - Math.abs(a.adx ?? -1))
+                .slice(0, 4)
+                .map((r: CachedSymbol) => {
+                  const phase = r.adx === null ? 'ADX unavailable' : r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Weak trend';
+                  const phaseTone: 'bull' | 'warn' | 'info' = r.adx !== null && r.adx >= 30 ? 'bull' : r.adx !== null && r.adx >= 20 ? 'warn' : 'info';
+                  return (
+                    <button
+                      key={`vol-${r.symbol}`}
+                      type="button"
+                      aria-label={`Open Golden Egg for ${r.symbol}`}
+                      onClick={() => openGoldenEgg(r.symbol)}
+                      style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '6px 10px', width: '100%' }}
+                      className="flex items-center justify-between hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+                    >
+                      <span style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>{r.symbol}</span>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', fontVariantNumeric: 'tabular-nums' }}>ADX {r.adx === null ? 'No reading' : Math.round(r.adx)}</span>
+                        <DSBadge tone={phaseTone}>{phase}</DSBadge>
+                      </div>
+                    </button>
+                  );
+                })}
+              {cached.all.length === 0 && (
+                <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>Run Scanner to populate trend strength</div>
+              )}
+              <div className="pt-1" style={{ fontSize: 10, color: 'var(--msp-text-faint)' }}>ADX ≥ 30 trending · 20–29 developing · &lt;20 weak trend or range. ADX measures trend strength, not volatility; see DVE for compression and expansion. Heuristic only.</div>
+            </div>
+          )}
+        </DSCard>
+
+        {/* Time Confluence Watch */}
+        <DSCard>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <SectionEyebrow>Time confluence watch</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Upcoming close clusters</div>
+            </div>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/time-scanner'; }} aria-label="Open Time Scanner">Time ›</DSButton>
+          </div>
+          <div className="space-y-2">
+            {regime.data ? (
+              <>
+                <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px' }}>
+                  <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>Regime context</div>
+                  <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()} · risk {regime.data.riskLevel}</div>
+                  {regimeQuality.note ? <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-warn)' }}>{regimeQuality.note}</div> : null}
+                </div>
+                <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>What to check</div>
+                  <div>· Weekly/monthly closes within next 3 sessions</div>
+                  <div>· High-impact calendar events ({highImpactEventCount} queued)</div>
+                  <div>· Crypto: UTC Saturday close risk</div>
+                </div>
+              </>
+            ) : (
+              <div className="py-3 text-center" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-faint)' }}>{regime.loading ? 'Regime loading…' : 'Regime not available right now'}</div>
+            )}
+            <a href="/tools/time-scanner" style={{ display: 'block', background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-info)', textDecoration: 'none', fontWeight: 500 }}>
+              Open Time Scanner for close calendar ›
+            </a>
+          </div>
+        </DSCard>
+
+        {/* ARCA Research Summary */}
+        <DSCard>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <SectionEyebrow>ARCA research context</SectionEyebrow>
+              <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>AI analyst briefing</div>
+            </div>
+            <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/ai-analyst'; }} aria-label="Open MSP Analyst">Ask ›</DSButton>
+          </div>
+          <div className="space-y-2">
+            <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px' }}>
+              <div style={{ fontSize: 'var(--msp-text-body-sm)', fontWeight: 500, color: 'var(--msp-text)' }}>MSP Analyst</div>
+              <div style={{ marginTop: 4, fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)' }}>
+                {regime.data
+                  ? `Regime is ${regime.data.regime.replace(/_/g, ' ').toLowerCase()}. ${isElevatedRisk(regime.data.riskLevel) ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}${regimeQuality.stale ? ' Regime inputs are stale — treat this as a caution.' : ''}`
+                  : regime.loading ? 'Loading regime context…' : 'Regime not available right now. Review evidence for each queued symbol.'}
+              </div>
+            </div>
+            <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
+              <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>Today&apos;s research questions</div>
+              <div>· Which symbols have the most aligned evidence?</div>
+              <div>· What invalidates the top setup?</div>
+              <div>· What does the volatility phase suggest?</div>
+            </div>
+            <a href="/tools/ai-analyst" style={{ display: 'block', background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'center', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-accent)', textDecoration: 'none', fontWeight: 500 }}>
+              Open MSP Analyst ›
+            </a>
+          </div>
+        </DSCard>
+      </section>
+      {isPro && <EdgeInsightCards compact />}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Heatmaps" summary="Mega-cap and index proxies">
+      {/* -- Magnificent 7 -------------------------------------------- */}
+      <Card>
+        <PanelHeader title="Magnificent 7" eyebrow="Mega-cap heatmap" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Scan all ›</button>} />
+        {mag7Loading ? (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+            {MAG7_SYMBOLS.map(sym => <Skeleton key={sym} h="h-[5.5rem]" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+            {mag7.map(q => {
+              const pct = q.changePercent;
+              const bg = heatColor(pct);
+              const noData = pct == null;
+              return (
+                <button
+                  key={q.symbol}
+                  type="button"
+                  aria-label={`Open Golden Egg for ${q.symbol}`}
+                  onClick={() => openGoldenEgg(q.symbol)}
+                  onKeyDown={(e) => onSymbolRowKey(e, q.symbol)}
+                  className="flex h-[5.5rem] flex-col items-center justify-center rounded-md px-1 text-center transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  style={{ background: bg, border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>{q.symbol}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#fff', marginTop: 2 }}>
+                    {noData ? 'No reading' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
+                  </div>
+                  <div style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                    {noData ? 'No data' : q.price == null ? '' : fmtPrice(q.price)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* -- Major Indices -------------------------------------------- */}
+      <Card>
+        <PanelHeader title="Major indices" eyebrow="Index heatmap" action={<button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">Markets ›</button>} />
+        {indicesLoading ? (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+            {INDEX_PROXIES.map((i) => <Skeleton key={i.etf} h="h-[5.5rem]" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+            {indices.map((q) => {
+              const meta = INDEX_PROXIES.find((i) => i.etf === q.symbol);
+              const pct = q.changePercent;
+              const noData = pct == null;
+              const bg = heatColor(pct);
+              return (
+                <button
+                  key={q.symbol}
+                  type="button"
+                  aria-label={`Open Golden Egg for ${meta?.label || q.symbol}`}
+                  onClick={() => openGoldenEgg(q.symbol)}
+                  onKeyDown={(e) => onSymbolRowKey(e, q.symbol)}
+                  className="flex h-[5.5rem] flex-col items-center justify-center rounded-md px-1 text-center transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  style={{ background: bg, border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>{meta?.label || q.symbol}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#fff', marginTop: 2 }}>
+                    {noData ? 'No reading' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`}
+                  </div>
+                  <div style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                    {noData ? 'No data' : `${q.symbol}${q.price == null ? '' : ` · ${fmtPrice(q.price)}`}`}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <p className="mt-2 text-[10px] text-slate-600">Tiles show ETF prices standing in for the indices (SPY, DIA, QQQ, IWM), not index levels: realtime Alpha Vantage quotes (the last close while the US market is shut). VIXY is a VIX futures ETF and can move differently from the VIX itself.</p>
+      </Card>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Movers" summary="Equity and crypto gainers and losers">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* -- Equity Movers -------------------------------------------- */}
+        {movers.loading ? <CardSkeleton rows={5} /> : (
+          <Card>
+            <PanelHeader title="Equity movers" eyebrow={equityMoversBasisLabel(movers.data?.equityFeed)} action={formatEasternAsOf(movers.data?.equityAsOf) ? <span className="text-[10px] text-slate-500" title={movers.data?.equityNote ?? undefined}>{formatEasternAsOf(movers.data?.equityAsOf)}</span> : null} />
+            <div className="space-y-1">
+              <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
+              {eqGainers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1" title={movers.data?.equityNote ?? undefined}>No equity data</div>
+              ) : eqGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`eg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
+              <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
+              {eqLosers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No equity data</div>
+              ) : eqLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`el-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
+            </div>
+          </Card>
+        )}
+
+        {/* -- Crypto Movers -------------------------------------------- */}
+        {movers.loading ? <CardSkeleton rows={5} /> : (
+          <Card>
+            <PanelHeader title="Crypto movers" eyebrow="Live movement" />
+            <div className="space-y-1">
+              <div className="mb-1" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Gainers</div>
+              {crGainers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No crypto data</div>
+              ) : crGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`cg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
+              <div className="mb-1 mt-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Losers</div>
+              {crLosers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No crypto data</div>
+              ) : crLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`cl-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker, m.asset_class)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker, m.asset_class)} />)}
+            </div>
+          </Card>
+        )}
+
+        {/* -- Economic Calendar ---------------------------------------- */}
+        {calendar.loading ? <CardSkeleton rows={4} /> : (
+          <Card>
+            <PanelHeader title="Upcoming events" eyebrow="Calendar risk" />
+            {highImpactEvents.length === 0 ? (
+              <div className="text-xs text-slate-500 py-4 text-center">No high-impact events this period</div>
+            ) : (
+              <div className="space-y-2">
+                {highImpactEvents.map((e: EconomicEvent, i: number) => {
+                  const shown = formatEventTime(e);
+                  return (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1 min-w-0">
+                      <ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />
+                      <span className="text-white truncate">{e.event}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 text-slate-500" title={shown.title}>
+                      <span>{shown.date}</span>
+                      <span>{shown.time || 'No reading'}</span>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+            <button type="button" onClick={() => navigateTo('research')} className="mt-2 block text-[11px] text-emerald-400 hover:underline">Full Calendar &#x203A;</button>
+          </Card>
+        )}
+
+        {/* -- Cross-Market --------------------------------------------- */}
+        <Card>
+          <PanelHeader title="Cross-market influence" eyebrow="Context map" />
+          <div className="space-y-2">
+            {CROSS_MARKET.slice(0, 5).map(cm => (
+              <div key={cm.from} className="flex items-center justify-between text-xs">
+                <span className="text-slate-300">{cm.from} {cm.condition}</span>
+                <span className="text-slate-500 text-right">{cm.effect}</span>
+              </div>
+            ))}
+            <button type="button" onClick={() => navigateTo('explorer')} className="mt-1 block text-[11px] text-emerald-400 hover:underline">Market Explorer &#x203A;</button>
+          </div>
+          <p className="mt-2 text-[10px] text-slate-600">Educational context only — static heuristics, not live readings.</p>
+        </Card>
+      </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Headlines" summary={articles.length ? `${articles.length} headlines` : 'No recent headlines'}>
+      {/* -- Latest News ------------------------------------------------ */}
+      {news.loading ? <CardSkeleton rows={4} /> : (
+        <Card>
+          <PanelHeader title="Latest headlines" eyebrow="News context" action={<button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All news ›</button>} />
+          {articles.length === 0 ? (
+            <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
+          ) : (
+            <div className="grid gap-x-4 gap-y-1 xl:grid-cols-2">
+              {articles.map((n: NewsArticle, i: number) => (
+                <div key={i} className="flex min-w-0 items-start gap-2 rounded-md px-1 py-1 text-xs hover:bg-slate-800/35">
+                  <ImpactDot impact={n.sentiment.score > 0.2 ? 'high' : n.sentiment.score > 0 ? 'medium' : 'low'} />
+                  <div className="flex-1 min-w-0">
+                    <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-white hover:text-emerald-400 transition-colors line-clamp-1">
+                      {n.title}
+                    </a>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-slate-600">{n.source}</span>
+                      {n.tickerSentiments?.slice(0, 3).map(ts => (
+                        <button key={ts.ticker} type="button" className="text-emerald-400 cursor-pointer hover:underline" onClick={() => openGoldenEgg(ts.ticker)}>{ts.ticker}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <span className={`flex-shrink-0 ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                    {n.sentiment.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+      </CollapsibleSection>
+
+      {/* -- Error / debug (collapsed) -------------------------------- */}
+      {(() => {
+        const errs = [
+          cached.error && `Scanner queue: ${cached.error}`,
+          movers.error && `Movers: ${movers.error}`,
+          news.error && `News: ${news.error}`,
+          calendar.error && `Calendar: ${calendar.error}`,
+        ].filter(Boolean) as string[];
+        if (!errs.length) return null;
+        return (
+          <details className="rounded-lg border border-red-900/20 p-2 text-[11px] text-red-400/40">
+            <summary className="cursor-pointer hover:text-red-400/60">{errs.length} API issue{errs.length > 1 ? 's' : ''} — click to expand</summary>
+            <div className="mt-1 space-y-0.5 pl-3">{errs.map((e, i) => <div key={i}>{e}</div>)}</div>
+          </details>
+        );
+      })()}
+    </div>
+  );
+}

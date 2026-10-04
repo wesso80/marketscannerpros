@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Options Scanner | MarketScanner Pros',
+  title: 'Options',
   description:
     'Scan options flow and unusual activity with real-time data and professional-level analytics.',
   robots: { index: false, follow: true },

@@ -79,29 +79,70 @@ function mapToCanonicalRegime(riskEnv: string): Regime {
   return 'RANGE_NEUTRAL';
 }
 
+function marketSignalFrom(market: Extract<MarketRegimeResult, { available: true }>): RegimeSignal {
+  return {
+    source: 'market_data',
+    regime: market.regime,
+    weight: 1,
+    stale: market.stale,
+    kind: 'market',
+    counted: true,
+    asOf: market.asOf,
+    detail: market.reasons.join('; '),
+  };
+}
+
 export async function GET(req: NextRequest) {
+  const now = Date.now();
+  let market: MarketRegimeResult;
+  try {
+    market = classifyMarketRegime(await loadRegimeOverlayInputs(), now);
+  } catch (err) {
+    console.warn('[regime] market inputs unavailable:', err);
+    market = { available: false, reason: 'Market data unavailable: stored VIX/SPY series could not be read.' };
+  }
+
   const session = await getSessionFromCookie();
+  // Stored VIX/SPY regime is public. Account signals stay behind a session.
   if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const updatedAt = new Date().toISOString();
+    const headers = { 'Cache-Control': 'private, no-store' };
+    if (market.available) {
+      const marketSignal = marketSignalFrom(market);
+      const riskLevel = deriveRiskLevel(market.regime);
+      const response: UnifiedRegimeResponse = {
+        available: true,
+        basis: 'market',
+        regime: market.regime,
+        riskLevel,
+        permission: derivePermission(riskLevel),
+        dataQuality: deriveDataQuality([marketSignal]),
+        signals: [marketSignal],
+        asOf: market.asOf,
+        updatedAt,
+      };
+      return NextResponse.json(response, { headers });
+    }
+    const response: UnifiedRegimeResponse = {
+      available: false,
+      regime: null,
+      riskLevel: null,
+      permission: null,
+      signals: [],
+      asOf: null,
+      reason: market.reason,
+      updatedAt,
+    };
+    return NextResponse.json(response, { headers });
   }
 
   try {
     const workspaceSignals: RegimeSignal[] = [];
-    const now = Date.now();
     const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
     const iso = (value: unknown) => {
       const d = value ? new Date(value as string) : null;
       return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
     };
-
-    // Market data (shared, cached 15 minutes; reads only stored series).
-    let market: MarketRegimeResult;
-    try {
-      market = classifyMarketRegime(await loadRegimeOverlayInputs(), now);
-    } catch (err) {
-      console.warn('[regime] market inputs unavailable:', err);
-      market = { available: false, reason: 'Market data unavailable: stored VIX/SPY series could not be read.' };
-    }
 
     // Signal 1: Operator context state (from DB — written by tools like Macro, Commodities, etc.)
     try {
@@ -177,21 +218,12 @@ export async function GET(req: NextRequest) {
       }
     } catch { /* journal may not exist */ }
 
-    const headers = { 'Cache-Control': 'private, max-age=15, stale-while-revalidate=30' };
+    const headers = { 'Cache-Control': 'private, no-store' };
     const updatedAt = new Date().toISOString();
 
     if (market.available) {
       // Market data decides the market regime; account signals are context only.
-      const marketSignal: RegimeSignal = {
-        source: 'market_data',
-        regime: market.regime,
-        weight: 1,
-        stale: market.stale,
-        kind: 'market',
-        counted: true,
-        asOf: market.asOf,
-        detail: market.reasons.join('; '),
-      };
+      const marketSignal = marketSignalFrom(market);
       const signals = [marketSignal, ...workspaceSignals.map((sig) => ({ ...sig, counted: false }))];
       const riskLevel = deriveRiskLevel(market.regime);
       const response: UnifiedRegimeResponse = {
@@ -257,6 +289,6 @@ export async function GET(req: NextRequest) {
       reason: 'Regime could not be computed.',
       updatedAt: new Date().toISOString(),
       error: 'Failed to compute regime',
-    }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }, { status: 503, headers: { 'Cache-Control': 'private, no-store' } });
   }
 }

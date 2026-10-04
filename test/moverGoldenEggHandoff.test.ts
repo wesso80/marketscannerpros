@@ -15,7 +15,7 @@ describe('crypto movers open the coin in Golden Egg', () => {
     expect(researchHref('/tools/golden-egg', 'HOOD', { assetType: 'equity' })).toBe('/tools/golden-egg?symbol=HOOD&type=equity');
   });
 
-  for (const file of ['app/tools/dashboard/page.tsx', 'app/tools/explorer/page.tsx']) {
+  for (const file of ['components/desk/DeskFolds.tsx', 'app/tools/explorer/page.tsx']) {
     it(`${file}: every mover click passes m.asset_class through to navigateTo`, () => {
       const src = readFileSync(file, 'utf8');
       expect(src).not.toMatch(/openGoldenEgg\(m\.ticker\)/);
@@ -27,7 +27,7 @@ describe('crypto movers open the coin in Golden Egg', () => {
   }
 
   it('dashboard keyboard open and the mover queue card use the asset class too', () => {
-    const src = readFileSync('app/tools/dashboard/page.tsx', 'utf8');
+    const src = readFileSync('components/desk/DeskFolds.tsx', 'utf8');
     expect(src).not.toMatch(/onSymbolRowKey\(e, m\.ticker\)/);
     expect(src).toMatch(/\{proDisplaySymbol\(m\.ticker, m\.asset_class\)\}<\/span>/);
   });

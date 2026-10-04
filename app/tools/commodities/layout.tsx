@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Commodities Dashboard | MarketScanner Pros',
+  title: 'Commodities',
   description:
     'Track real-time commodity prices across energy, metals, and agriculture with technical analysis overlays.',
   robots: { index: false, follow: false },

@@ -18,6 +18,9 @@ export default function SectorEtfHoldings({ etfs }: { etfs: Array<{ symbol: stri
   useEffect(() => {
     if (!selected || profiles[selected]) return;
     let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (!cancelled) setProfiles((p) => (p[selected] ? p : { ...p, [selected]: { status: 'error', reason: 'timed out' } }));
+    }, 12000);
     fetch(`/api/sectors/etf-profile?symbol=${encodeURIComponent(selected)}`)
       .then(async (r) => {
         const j = await r.json().catch(() => ({}));
@@ -25,7 +28,7 @@ export default function SectorEtfHoldings({ etfs }: { etfs: Array<{ symbol: stri
         setProfiles((p) => ({ ...p, [selected]: r.ok ? (j as EtfProfileResult) : { status: 'error', reason: j?.error || `HTTP ${r.status}` } }));
       })
       .catch((e) => { if (!cancelled) setProfiles((p) => ({ ...p, [selected]: { status: 'error', reason: e instanceof Error ? e.message : 'network error' } })); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [selected, profiles]);
 
   if (!etfs.length) return null;
@@ -52,7 +55,7 @@ export default function SectorEtfHoldings({ etfs }: { etfs: Array<{ symbol: stri
         ))}
       </div>
       {!prof && <div className="text-xs text-slate-500 animate-pulse">Loading {selected} holdings…</div>}
-      {prof && prof.status !== 'ok' && <div className="text-xs text-slate-500">{selected}{name ? ` (${name})` : ''}: Unavailable ({prof.reason})</div>}
+      {prof && prof.status !== 'ok' && <div className="text-xs text-slate-500">{selected}{name ? ` (${name})` : ''}: Not available right now</div>}
       {prof && prof.status === 'ok' && (
         <div className="grid gap-3 md:grid-cols-2">
           <div>

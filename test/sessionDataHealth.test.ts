@@ -88,6 +88,6 @@ describe('OV-3: audit scenario (4 of 5 layers, 3 degraded feeds on the dashboard
     expect(cc).toMatch(/freshness: sessionFreshness\.freshness/);
     expect(cc).toMatch(/applyFeedHealth\(/);
     expect(cc).toMatch(/degradedFeedList\(/);
-    expect(read('app/tools/dashboard/page.tsx')).toMatch(/const degradedFeeds = degradedFeedList\(/);
+    expect(read('components/desk/DeskFolds.tsx')).toMatch(/const degradedFeeds = degradedFeedList\(/);
   });
 });

@@ -38,7 +38,7 @@ describe('OV-13: crypto movers read as coins, not US stocks', () => {
   });
 
   it('dashboard and explorer mover rows use the display symbol', () => {
-    const dash = readFileSync('app/tools/dashboard/page.tsx', 'utf8');
+    const dash = readFileSync('components/desk/DeskFolds.tsx', 'utf8');
     expect(dash).toMatch(/const label = proDisplaySymbol\(mover\.ticker, mover\.asset_class\)/);
     expect(dash).not.toMatch(/>\{mover\.ticker\}</);
     const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8');

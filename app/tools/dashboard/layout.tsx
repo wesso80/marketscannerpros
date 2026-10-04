@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Research Dashboard | MarketScanner Pros',
-  description: 'Research Dashboard: the canonical ranked research queue, movers, macro events, news, and educational workflow context.',
+  title: 'Dashboard',
+  description: 'Dashboard with My Pages and Macro. Overview is the market home.',
   robots: { index: false, follow: false },
   openGraph: {
-    title: 'Research Dashboard | MarketScanner Pros',
-    description: 'Research Dashboard with the ranked research queue, movers, macro events, and news context.',
+    title: 'Dashboard | MarketScanner Pros',
+    description: 'Dashboard with My Pages and Macro. Overview is the market home.',
     url: 'https://marketscannerpros.app/tools/dashboard',
     type: 'website',
     images: [
@@ -14,14 +14,14 @@ export const metadata: Metadata = {
         url: '/scan-banner.png',
         width: 1200,
         height: 630,
-        alt: 'MarketScanner Pros — Command Center Dashboard',
+        alt: 'MarketScanner Pros — Dashboard',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Command Center | MarketScanner Pros',
-    description: 'Command Center dashboard for educational market research workflows.',
+    title: 'Dashboard | MarketScanner Pros',
+    description: 'Dashboard with My Pages and Macro. Overview is the market home.',
     images: ['/scan-banner.png'],
   },
 };
