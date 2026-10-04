@@ -1570,7 +1570,7 @@ function ScannerContent() {
         onClick={() => { selectScannerMode('pro'); void runProScan(); }}
         disabled={proScanLoading}
         aria-disabled={proScanLoading}
-        className={`min-h-10 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:w-auto sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
+        className={`mt-4 w-full break-normal rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.04em] transition-colors sm:tracking-[0.1em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
           proScanLoading
             ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
             : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
