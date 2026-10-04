@@ -481,7 +481,7 @@ function CryptoCommandCenterContent() {
           actions={[
             { label: 'Refresh evidence', variant: 'primary', onClick: () => void fetchOverview() },
             { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner?asset=crypto' },
-            { label: 'Open Crypto Derivatives', variant: 'secondary', href: '/tools/dashboard?tab=crypto' },
+            { label: 'Open Crypto Derivatives', variant: 'secondary', href: '/tools/crypto-dashboard' },
             { label: 'Open Macro Lens', variant: 'ghost', href: '/tools/dashboard?tab=macro' },
           ]}
           metrics={[
@@ -648,7 +648,7 @@ function CryptoCommandCenterContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-1.5">
-                <Link href="/tools/dashboard?tab=crypto" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Derivatives</Link>
+                <Link href="/tools/crypto-dashboard" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Derivatives</Link>
                 <Link href="/tools/explorer?tab=crypto-command&section=heatmap" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Full Heatmap</Link>
                 <Link href="/tools/explorer?tab=crypto" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Explorer</Link>
                 <Link href="/tools/workspace?tab=alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>

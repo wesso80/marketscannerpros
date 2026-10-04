@@ -64,7 +64,7 @@ MARKETS & DATA (Research & Monitoring)
    Crypto market overview: trending coins, top movers, category heatmap, DeFi stats.
    Funding rates, liquidations, market cap data via CoinGecko API.
 
-10. /tools/dashboard?tab=crypto — Crypto Derivatives Dashboard
+10. /tools/crypto-dashboard — Crypto Derivatives
     Real-time crypto derivatives: funding rates, long/short ratios, open interest, liquidations.
     Binance Futures data for derivatives analysis.
 
@@ -171,9 +171,9 @@ COMMON QUESTION MAPPING
 -------------------------
 "Where is GEX?" → /tools/terminal?tab=options-confluence (Gamma Exposure analysis with dealer positioning)
 "Show me options flow" → /tools/terminal?tab=options-flow (Options flow detection)
-"Where are funding rates?" → /tools/dashboard?tab=crypto (Crypto derivatives with funding rates)
+"Where are funding rates?" → /tools/crypto-dashboard (Crypto derivatives with funding rates)
 "How do I backtest?" → /tools/workspace?tab=backtest (Strategy backtester, requires Pro)
-"Where is open interest?" → /tools/dashboard?tab=crypto (Crypto OI) or /tools/terminal?tab=options-confluence (Equity options OI)
+"Where is open interest?" → /tools/crypto-dashboard (Crypto OI) or /tools/terminal?tab=options-confluence (Equity options OI)
 "Where do I track my trades?" → /tools/workspace?tab=portfolio (Position tracking) and /tools/workspace?tab=journal (Trade logging)
 "What sectors are strong?" → /tools/explorer?tab=heatmap (Sector performance heatmap)
 "Show me macro data" → /tools/explorer?tab=macro (Treasury yields, CPI, employment, risk state)

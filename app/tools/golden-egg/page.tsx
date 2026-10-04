@@ -850,7 +850,7 @@ export default function GoldenEggPage() {
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link href={`/tools/explorer?tab=crypto-command&symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Command ›</Link>
-                <Link href={`/tools/dashboard?tab=crypto&symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Derivatives lens ›</Link>
+                <Link href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Derivatives lens ›</Link>
               </div>
             </Card>
           ) : (

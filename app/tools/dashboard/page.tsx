@@ -17,39 +17,46 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = (searchParams.get('tab') || '').toLowerCase();
-  const { tier, isLoading: tierLoading } = useUserTier();
-  const isPro = tier === 'pro' || tier === 'pro_trader';
+  const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
+  const isPro = isAdmin || tier === 'pro' || tier === 'pro_trader';
 
   useEffect(() => {
     if (tab === 'command') router.replace('/tools/command-center');
+    if (tab === 'crypto') router.replace('/tools/crypto-dashboard');
   }, [tab, router]);
 
   if (tab === 'command') return <p>Opening Overview…</p>;
+  if (tab === 'crypto') return <p>Opening Crypto Derivatives…</p>;
   if (tierLoading) return <FreeLoading />;
 
   const active = tab === 'macro' ? 'macro' : 'pages';
+  const macroView = active === 'macro';
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <TabBar
-        label="Dashboard lens"
-        activeId={active}
-        items={[
-          { id: 'pages', label: 'My Pages', href: '/tools/dashboard?tab=pages' },
-          { id: 'macro', label: 'Macro', href: '/tools/dashboard?tab=macro' },
-        ]}
-      />
-      <p className="text-sm"><a href="/tools/crypto-dashboard">Crypto Derivatives</a></p>
-      <ComplianceDisclaimer compact />
+      {!macroView && (
+        <>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <TabBar
+            label="Dashboard lens"
+            activeId={active}
+            items={[
+              { id: 'pages', label: 'My Pages', href: '/tools/dashboard?tab=pages' },
+              { id: 'macro', label: 'Macro', href: '/tools/dashboard?tab=macro' },
+            ]}
+          />
+          <p className="text-sm"><a href="/tools/crypto-dashboard">Crypto Derivatives</a></p>
+        </>
+      )}
+      {!macroView && <ComplianceDisclaimer compact />}
       {active === 'pages' && <FavoritesPanel embeddedInDashboard />}
-      {active === 'macro' && (!isPro ? (
-        <div>
-          <div className="mb-3 rounded-lg border border-slate-700/30 bg-slate-800/50 px-3 py-2 text-center text-xs text-slate-400">
-            <a className="inline-flex min-h-10 items-center underline" href="/tools/macro">{FREE_COPY.freeMacro}</a>
-          </div>
-          <MacroDashboard embeddedInDashboard />
+      {macroView && <MacroDashboard embeddedInDashboard />}
+      {macroView && !isPro && (
+        <div className="rounded-lg border border-slate-700/30 bg-slate-800/50 px-3 py-2 text-center text-xs text-slate-400">
+          <a className="inline-flex min-h-10 items-center underline" href="#macro-summary">{FREE_COPY.freeMacro}</a>
         </div>
-      ) : <MacroDashboard embeddedInDashboard />)}
+      )}
+      {macroView && <p className="text-sm"><a href="/tools/dashboard?tab=pages">My Pages</a></p>}
+      {macroView && <ComplianceDisclaimer compact />}
     </div>
   );
 }
