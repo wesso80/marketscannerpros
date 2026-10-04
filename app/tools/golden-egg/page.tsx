@@ -34,7 +34,8 @@ import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noS
 import {optionsHref} from '@/lib/market/links';
 import { lookupAssetType } from '@/lib/lookupAssetType';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
-import {SymbolCryptoContext,SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
+import CryptoBreakdown from '@/components/crypto/CryptoBreakdown';
+import {SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
 import {findSymbolPick,symbolQuoteStamp} from '@/lib/market/symbolSnapshot';
 import type {PicksResponse} from '@/lib/market/overview';
@@ -552,7 +553,7 @@ export default function GoldenEggPage() {
       // A typed symbol is a new instrument: detect its type from the symbol (BTC-USD → crypto), not from the toggle,
       // which reflects the previous symbol's type param (RS-24). The toggle can still override it afterwards.
       const next = symbolInput.trim().toUpperCase();
-      selectSymbol(next, { timeframe, assetType: lookupAssetType(next, CRYPTO_SET) });
+      selectSymbol(next, { timeframe, assetType: assetType === 'crypto' ? 'crypto' : lookupAssetType(next, CRYPTO_SET) });
       setSymbolInput('');
     }
   }
@@ -767,7 +768,7 @@ export default function GoldenEggPage() {
       )}
 
       {/* ─── Tab Bar ─── */}
-      {!isAuthBlocked && (quoteType==='crypto'?<SymbolCryptoContext symbol={sym}/>:<SymbolOptionsContext symbol={sym} expiry={searchParams.get('expiry')??undefined}/>)}
+      {!isAuthBlocked && (quoteType==='crypto'?<CryptoBreakdown symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>:<SymbolOptionsContext symbol={sym} expiry={searchParams.get('expiry')??undefined}/>)}
       {!isAuthBlocked && <GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}

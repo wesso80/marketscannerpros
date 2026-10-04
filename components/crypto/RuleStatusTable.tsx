@@ -1,0 +1,3 @@
+import {RULE_STATUS,RULE_STATUS_HEADER} from '@/lib/crypto/breakdown/ruleStatus';
+import {COPY} from './copy';
+export default function RuleStatusTable(){return <div className="space-y-2 overflow-x-auto"><h3 className="font-semibold">{COPY.statusTitle}</h3><p className="text-sm text-amber-200">{RULE_STATUS_HEADER}</p><table className="w-full text-left text-xs"><thead><tr>{COPY.statusHeaders.map(h=><th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{RULE_STATUS.map(r=><tr key={r.name} className="border-t border-white/10"><td className="p-2">{r.name}</td><td className="p-2">{r.verdict}</td><td className="p-2">{r.reason}<div className="text-slate-400">{r.date} UTC · {r.sourceFile}</div></td></tr>)}</tbody></table></div>;}
