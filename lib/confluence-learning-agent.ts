@@ -1,3 +1,4 @@
+import { isMeasuredLevel } from './confluenceMeasured';
 import { directionalRiskReward } from '@/lib/scanner/researchValidity';
 /**
  * Confluence Learning Agent v2
@@ -372,6 +373,7 @@ interface TemporalCluster {
 }
 
 interface DecompressionAnalysis {
+  unmeasuredTFs?: string[]; // Additive: older stored scans may omit this field.
   decompressions: DecompressionPull[];
   activeCount: number;                     // LEGACY: All TFs in decompression window
   
@@ -2389,6 +2391,7 @@ export class ConfluenceLearningAgent {
 
   analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto', sessionMode: SessionMode = 'extended'): DecompressionAnalysis {
     const decompressions: DecompressionPull[] = [];
+    const unmeasuredTFs: string[] = [];
     const now = new Date(currentTime);
 
     // Detect actual base bar resolution (gap between bars)
@@ -2416,14 +2419,17 @@ export class ConfluenceLearningAgent {
       
       // Get resampled bars for this TF
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
-      if (tfBars.length < 2) continue;
+
       
       // Get prior candle's 50% level (only meaningful when TF > base bar size
       // AND we have enough data for a reliable prior bar)
       const canResample = tfConfig.minutes > baseBarMins
         && tfBars.length >= 3
         && decompDataSpanMins >= tfConfig.minutes * 3;
-      const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
+      // Level 0 is a sentinel for unmeasured, never a price.
+      if (!canResample) { unmeasuredTFs.push(tfConfig.label); continue; }
+      const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
+      if (!isMeasuredLevel(mid50Level)) { unmeasuredTFs.push(tfConfig.label); continue; }
       const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
       // Check if this TF is in decompression window
@@ -2600,6 +2606,7 @@ export class ConfluenceLearningAgent {
     
     return {
       decompressions,
+      unmeasuredTFs,
       activeCount,
       
       // NEW: Temporal clustering data
@@ -2643,6 +2650,7 @@ export class ConfluenceLearningAgent {
     
     // Analyze decompression for included TFs only
     const allDecomps: DecompressionPull[] = [];
+    const unmeasuredTFs: string[] = [];
     const mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[] = [];
     const resampledBarsByTf: Record<string, OHLCV[]> = {};
     
@@ -2684,14 +2692,17 @@ export class ConfluenceLearningAgent {
       const tfId = this.getCanonicalTimeframeId(tfConfig);
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
       resampledBarsByTf[tfId] = tfBars;
-      if (tfBars.length < 2) continue;
+
       
       // Quality gate: need TF > base bar size, ≥ 3 resampled bars, and
       // enough data span (2× TF period) for a reliable prior candle
       const canResample = tfConfig.minutes > baseBarMins
         && tfBars.length >= 3
         && scanDataSpanMins >= tfConfig.minutes * 2;
-      const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
+      // Level 0 is a sentinel for unmeasured, never a price.
+      if (!canResample) { unmeasuredTFs.push(tfConfig.label); continue; }
+      const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
+      if (!isMeasuredLevel(mid50Level)) { unmeasuredTFs.push(tfConfig.label); continue; }
       const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
       // For stocks on weekend/closed hours: use PROXIMITY-based analysis instead of timing
@@ -2876,6 +2887,7 @@ export class ConfluenceLearningAgent {
     
     const decompression: DecompressionAnalysis = {
       decompressions: allDecomps,
+      unmeasuredTFs,
       activeCount: activeDecomps.length,
       
       // NEW: Temporal clustering data

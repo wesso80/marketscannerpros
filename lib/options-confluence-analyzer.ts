@@ -1,3 +1,4 @@
+import { isMeasuredLevel } from './confluenceMeasured';
 import { atr as measuredAtr } from '@/lib/indicators';
 import { atmStrike } from '@/lib/options/atmStrike';
 import { atmImpliedVol } from '@/lib/goldenEgg/optionsChain';
@@ -1682,7 +1683,7 @@ export function calculateTradeLevels(
   };
   
   // Stop Loss: Below/above nearest support/resistance or 50% level
-  const opposingLevels = mid50Levels
+  const opposingLevels = mid50Levels.filter(l => isMeasuredLevel(l.level))
     .filter(l => isLong ? l.level < currentPrice : l.level > currentPrice)
     .sort((a, b) => isLong 
       ? b.level - a.level  // Closest below for longs
@@ -1705,7 +1706,7 @@ export function calculateTradeLevels(
   // Require targets to be at least 0.5% away from current price to avoid
   // near-zero R:R ratios (e.g. SPY target 1 cent from entry)
   const minTargetDistance = atr * 0.25;
-  const targetLevels = mid50Levels
+  const targetLevels = mid50Levels.filter(l => isMeasuredLevel(l.level))
     .filter(l => {
       const dist = Math.abs(l.level - currentPrice);
       if (dist < minTargetDistance) return false;  // Too close to be useful
@@ -3414,9 +3415,8 @@ export function selectStrikesFromConfluence(
   const { currentPrice, decompression, prediction } = confluenceResult;
   // The agent emits level 0 for timeframes it could not resample (5m-30m on 30m equity bars, or too little history).
   // That is "unmeasured", not a price: never map it to a strike.
-  const measuredLevel = (n: number) => Number.isFinite(n) && n > 0;
-  const mid50Levels = confluenceResult.mid50Levels.filter(l => measuredLevel(l.level));
-  const clusters = confluenceResult.clusters.filter(c => measuredLevel(c.avgLevel));
+  const mid50Levels = confluenceResult.mid50Levels.filter(l => isMeasuredLevel(l.level));
+  const clusters = confluenceResult.clusters.filter(c => isMeasuredLevel(c.avgLevel));
   const recommendations: StrikeRecommendation[] = [];
   
   // Get sorted 50% levels in direction of trade
