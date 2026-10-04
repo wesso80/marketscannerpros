@@ -124,7 +124,7 @@ describe('regime cards stay consistent (OV-12)', () => {
   });
 
   it('dashboard reads risk from the actual levels and shows staleness as a caution', () => {
-    const src = readFileSync('app/tools/dashboard/page.tsx', 'utf8');
+    const src = readFileSync('components/desk/DeskFolds.tsx', 'utf8');
     // riskLevel is never 'high'; the old check always printed "Normal risk conditions" next to "risk elevated".
     expect(src).not.toContain("riskLevel === 'high'");
     expect(src).toContain('isElevatedRisk(regime.data.riskLevel)');

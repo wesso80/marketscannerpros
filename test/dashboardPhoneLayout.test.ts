@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const page = readFileSync(resolve(__dirname, '../app/tools/dashboard/page.tsx'), 'utf8');
+const page = readFileSync(resolve(__dirname, '../components/desk/DeskFolds.tsx'), 'utf8');
 
 describe('Market dashboard hero fits a phone screen (OV-11)', () => {
   it('hero grid columns can shrink below their content width', () => {

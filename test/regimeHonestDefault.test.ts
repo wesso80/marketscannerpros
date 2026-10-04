@@ -116,10 +116,10 @@ describe('regime consumers (OV-1)', () => {
 
   it('the command center, dashboard, explorer and regime bar say "unavailable" and drop sizing', () => {
     const cc = readFileSync('app/tools/command-center/page.tsx', 'utf8');
-    expect(cc).toContain('<Badge label="Unavailable"');
+    expect(cc).toContain('<Badge label="Not available right now"');
     expect(cc).toContain("!reg.available");
-    const dash = readFileSync('app/tools/dashboard/page.tsx', 'utf8');
-    expect(dash).toContain('regime unavailable');
+    const dash = readFileSync('components/desk/DeskFolds.tsx', 'utf8');
+    expect(dash).toContain('regime not available right now');
     expect(dash).not.toMatch(/sizing/i);
     const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8');
     expect(explorer).toContain('Regime unavailable');

@@ -204,7 +204,9 @@ describe("price display helpers", () => {
   it("Overview quote tiles use the shared USD stamp", () => {
     expect(formatUsdPrice(65432.1)).toBe("$65,432.10");
     expect(formatUsdPrice(undefined)).toBeNull();
-    expect(src("app/tools/command-center/page.tsx")).toContain('<PriceStamp {...quoteStamp(symbol,asset,quotes.data?.quotes[symbol])}/>');
+    const overview = src("app/tools/command-center/page.tsx");
+    expect(overview).toContain("quoteStamp(symbol, asset, quotes.data?.quotes?.[symbol])");
+    expect(overview).toContain("<PriceStamp {...reading} />");
   });
 });
 

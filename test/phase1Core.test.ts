@@ -4,8 +4,9 @@ const now = new Date('2026-10-04T12:00:00Z');
 const report = { sessionDate: '2026-10-02', status: 'COMPLETE', healthStatus: 'NORMAL', generatedAt: '2026-10-02T21:05:00Z', report: { candidates: Array(12).fill({ symbol: 'PRIVATE' }) }, headline: 'PRIVATE headline', ops: { runId: 'secret-id' } };
 describe('Radar card model', () => {
   it('projects only date, status, health, count and time', () => {
-    expect(radarCardModel(report, now)).toMatchObject({ sessionDate: '2026-10-02', status: 'COMPLETE', count: 12, older: false, health: null });
-    expect(JSON.stringify(radarCardModel(report, now))).not.toMatch(/PRIVATE|secret-id|headline|ops/);
+    const model = radarCardModel(report, now);
+    expect(model).toMatchObject({ sessionDate: '2026-10-02', status: 'COMPLETE', count: 12, older: false, health: null, chips: [{ symbol: 'PRIVATE', label: '' }, { symbol: 'PRIVATE', label: '' }, { symbol: 'PRIVATE', label: '' }] });
+    expect(JSON.stringify(model)).not.toMatch(/secret-id|headline|"ops"/);
   });
   it('hides the count on failure and handles older reports', () => {
     expect(radarCardModel({ ...report, status: 'FAILED', sessionDate: '2026-10-01' }, now)).toMatchObject({ count: null, older: true });
@@ -20,7 +21,7 @@ import { sectorCells, sectorTone, dataStatusSummary } from '@/lib/overview/today
 it('sorts known sector moves first and preserves a missing change', () => {
   const cells = sectorCells([{ symbol: 'XLK', name: 'Tech', changePercent: null }, { symbol: 'XLU', name: 'Utilities', changePercent: -1 }, { symbol: 'XLF', name: 'Financials', changePercent: 2 }]);
   expect(cells.map(c => c.symbol)).toEqual(['XLF', 'XLU', 'XLK']);
-  expect(cells[2].valueLabel).toBe('n/a');
+  expect(cells[2].valueLabel).toBe('No reading');
   expect(sectorTone(null)).not.toEqual(sectorTone(2));
   expect(sectorTone(0.1)).not.toEqual(sectorTone(2));
 });
@@ -50,7 +51,7 @@ it('uses CSS variable tones and no chart packages or network in shared visuals',
 });
 it('handles zero and nonfinite sectors without painting missing data as positive', () => {
   expect(sectorTone(NaN)).toEqual(sectorTone(null));
-  expect(sectorCells([{ symbol: 'XLU', name: 'Utilities', changePercent: NaN }])[0].valueLabel).toBe('n/a');
+  expect(sectorCells([{ symbol: 'XLU', name: 'Utilities', changePercent: NaN }])[0].valueLabel).toBe('No reading');
   expect(sectorCells([{ symbol: 'XLU', name: 'Utilities', changePercent: 0 }])[0].valueLabel).toBe('0.00%');
 });
 it('keeps the phone layout shrinkable and the drawer/account tap targets at least 40px', () => {
