@@ -1,0 +1,597 @@
+{
+  "fixtureOnly": true,
+  "now": "2026-10-05T13:45:00.000Z",
+  "missingHistorySymbol": "FIXTURE",
+  "exchange": {
+    "source": "https://example.test/fixture-exchange-not-live",
+    "observedAt": "2026-10-05T13:44:00.000Z",
+    "contracts": [
+      {
+        "symbol": "AAPL",
+        "expiry": "2026-10-09",
+        "strike": 330,
+        "type": "call",
+        "openInterest": 10,
+        "oiAsOfDate": "2026-10-05"
+      },
+      {
+        "symbol": "AAPL",
+        "expiry": "2026-10-09",
+        "strike": 325,
+        "type": "put",
+        "openInterest": 5,
+        "oiAsOfDate": "2026-10-05"
+      }
+    ]
+  },
+  "responses": {
+    "AAPL:REALTIME_OPTIONS": {
+      "data": [
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C325",
+          "expiration": "2026-10-09",
+          "strike": "325",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P325",
+          "expiration": "2026-10-09",
+          "strike": "325",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "5",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C330",
+          "expiration": "2026-10-09",
+          "strike": "330",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "10",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P330",
+          "expiration": "2026-10-09",
+          "strike": "330",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C335",
+          "expiration": "2026-10-09",
+          "strike": "335",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P335",
+          "expiration": "2026-10-09",
+          "strike": "335",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C325",
+          "expiration": "2026-10-16",
+          "strike": "325",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P325",
+          "expiration": "2026-10-16",
+          "strike": "325",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "5",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C330",
+          "expiration": "2026-10-16",
+          "strike": "330",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "10",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P330",
+          "expiration": "2026-10-16",
+          "strike": "330",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C335",
+          "expiration": "2026-10-16",
+          "strike": "335",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P335",
+          "expiration": "2026-10-16",
+          "strike": "335",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        }
+      ]
+    },
+    "AAPL:HISTORICAL_OPTIONS": {
+      "data": [
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C325",
+          "expiration": "2026-10-09",
+          "strike": "325",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P325",
+          "expiration": "2026-10-09",
+          "strike": "325",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "5",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C330",
+          "expiration": "2026-10-09",
+          "strike": "330",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "10",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P330",
+          "expiration": "2026-10-09",
+          "strike": "330",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C335",
+          "expiration": "2026-10-09",
+          "strike": "335",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P335",
+          "expiration": "2026-10-09",
+          "strike": "335",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C325",
+          "expiration": "2026-10-16",
+          "strike": "325",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P325",
+          "expiration": "2026-10-16",
+          "strike": "325",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "5",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C330",
+          "expiration": "2026-10-16",
+          "strike": "330",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "10",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P330",
+          "expiration": "2026-10-16",
+          "strike": "330",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C335",
+          "expiration": "2026-10-16",
+          "strike": "335",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P335",
+          "expiration": "2026-10-16",
+          "strike": "335",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        }
+      ]
+    },
+    "AAPL:GLOBAL_QUOTE": {
+      "Global Quote": {
+        "01. symbol": "AAPL",
+        "05. price": "329",
+        "07. latest trading day": "2026-10-05",
+        "09. change": "1",
+        "10. change percent": "0.3%"
+      }
+    },
+    "AAPL:TIME_SERIES_DAILY": {
+      "Time Series (Daily)": {
+        "2026-08-31": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-01": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-02": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-03": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-04": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-05": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-06": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-07": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-08": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-09": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-10": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-11": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-12": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-13": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-14": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-15": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-16": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-17": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-18": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-19": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-20": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-21": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-22": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-23": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-24": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        }
+      }
+    },
+    "FIXTURE:GLOBAL_QUOTE": {
+      "Global Quote": {
+        "01. symbol": "FIXTURE",
+        "05. price": "100",
+        "07. latest trading day": "2026-10-05",
+        "09. change": "1",
+        "10. change percent": "0.3%"
+      }
+    },
+    "FIXTURE:TIME_SERIES_DAILY": {
+      "Time Series (Daily)": {}
+    }
+  }
+}
