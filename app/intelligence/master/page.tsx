@@ -1,8 +1,10 @@
+import { redirect } from 'next/navigation';
 import IntelligenceUnderConstruction from '@/components/intelligence/IntelligenceUnderConstruction';
 
 export const dynamic = 'force-static';
 
 export default function MasterCommandCentre() {
+  redirect('/intelligence');
   return (
     <IntelligenceUnderConstruction
       moduleName="Master Command Centre"

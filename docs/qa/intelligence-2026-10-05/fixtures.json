@@ -1,0 +1,669 @@
+{
+  "fragility": {
+    "timestamp": "2026-10-05T12:00:00Z",
+    "health": "67.8 \u00b7 HEALTHY",
+    "healthSemantic": "positive",
+    "fragility": "17.71",
+    "transition": "7.97",
+    "divergence": "0",
+    "rotation": "MIXED ROTATION",
+    "verdict": "RISK-ON",
+    "verdictSemantic": "strong-positive",
+    "components": [
+      {
+        "label": "Breadth",
+        "value": 66.55,
+        "semantic": "positive"
+      },
+      {
+        "label": "Credit",
+        "value": 45.87,
+        "semantic": "neutral"
+      },
+      {
+        "label": "Vol",
+        "value": 98.12,
+        "semantic": "strong-positive"
+      },
+      {
+        "label": "USD/Rates",
+        "value": 59.79,
+        "semantic": "positive"
+      },
+      {
+        "label": "Leadership",
+        "value": 66.48,
+        "semantic": "positive"
+      },
+      {
+        "label": "Trend",
+        "value": 83.33,
+        "semantic": "strong-positive"
+      }
+    ],
+    "warnings": [
+      {
+        "label": "Warnings",
+        "state": "0/5",
+        "semantic": "strong-positive"
+      },
+      {
+        "label": "Breadth",
+        "state": "CLEAR",
+        "semantic": "strong-positive"
+      },
+      {
+        "label": "Credit",
+        "state": "CLEAR",
+        "semantic": "strong-positive"
+      },
+      {
+        "label": "Vol",
+        "state": "CLEAR",
+        "semantic": "strong-positive"
+      },
+      {
+        "label": "USD/Rates",
+        "state": "CLEAR",
+        "semantic": "strong-positive"
+      },
+      {
+        "label": "Lead",
+        "state": "CLEAR",
+        "semantic": "strong-positive"
+      }
+    ],
+    "path": "RISK-ON STABLE",
+    "playbook": "FAVOR PULLBACKS",
+    "confidence": "80.06 \u00b7 HIGH",
+    "rot1": "CRYPTO 90.14",
+    "rot2": "METALS 80.25",
+    "rot3": "EM 73",
+    "internals": [
+      {
+        "metric": "Equal Weight / SPY",
+        "value": "-1.15%",
+        "state": "NEUTRAL",
+        "semantic": "neutral",
+        "risk": "OK",
+        "detail": "RSP breadth",
+        "trend": "BULL"
+      },
+      {
+        "metric": "Small Caps / SPY",
+        "value": "-1.5%",
+        "state": "NEUTRAL",
+        "semantic": "neutral",
+        "risk": "OK",
+        "detail": "IWM participation",
+        "trend": "BULL"
+      },
+      {
+        "metric": "Semis / Nasdaq",
+        "value": "-0.37%",
+        "state": "NEUTRAL",
+        "semantic": "neutral",
+        "risk": "OK",
+        "detail": "SOX leadership",
+        "trend": "MIXED"
+      },
+      {
+        "metric": "High Yield / IG",
+        "value": "+0.2%",
+        "state": "CONFIRM",
+        "semantic": "positive",
+        "risk": "OK",
+        "detail": "HYG 20D 0.5%",
+        "trend": "MIXED"
+      },
+      {
+        "metric": "VIX Term",
+        "value": "+17.37%",
+        "state": "CONTANGO",
+        "semantic": "positive",
+        "risk": "OK",
+        "detail": "VIX 5D -9.37%",
+        "trend": "BEAR"
+      },
+      {
+        "metric": "Dollar",
+        "value": "-0.84%",
+        "state": "TAILWIND",
+        "semantic": "positive",
+        "risk": "OK",
+        "detail": "DXY 20D",
+        "trend": "MIXED"
+      },
+      {
+        "metric": "US 10Y Shock",
+        "value": "+0.3bp",
+        "state": "OK",
+        "semantic": "strong-positive",
+        "risk": "OK",
+        "detail": "2s10s +44.2bp",
+        "trend": "RATES"
+      },
+      {
+        "metric": "Cyclical / Defensive",
+        "value": "+3.56%",
+        "state": "LEADING",
+        "semantic": "strong-positive",
+        "risk": "OK",
+        "detail": "XLY vs XLP",
+        "trend": "MIXED"
+      },
+      {
+        "metric": "Price vs Internals",
+        "value": "PRICE STRONG",
+        "state": "ALIGNED",
+        "semantic": "strong-positive",
+        "risk": "0",
+        "detail": "Health \u03945 0",
+        "trend": "\u039420 0"
+      }
+    ],
+    "radar": [
+      {
+        "sector": "Growth",
+        "score": 66.89,
+        "state": "BUILDING",
+        "semantic": "positive",
+        "representative": "QQQ / SOX / XLK",
+        "m20": "5.49%",
+        "relSpy": "+1.53%"
+      },
+      {
+        "sector": "Small Caps",
+        "score": 63.58,
+        "state": "BUILDING",
+        "semantic": "positive",
+        "representative": "IWM",
+        "m20": "2.47%",
+        "relSpy": "-1.5%"
+      },
+      {
+        "sector": "Cyclicals",
+        "score": 57.37,
+        "state": "MIXED",
+        "semantic": "neutral",
+        "representative": "XLI / XLY / XLF",
+        "m20": "0.23%",
+        "relSpy": "-3.74%"
+      },
+      {
+        "sector": "EM",
+        "score": 73,
+        "state": "STRONG",
+        "semantic": "strong-positive",
+        "representative": "EEM",
+        "m20": "6.32%",
+        "relSpy": "+2.36%"
+      },
+      {
+        "sector": "Crypto",
+        "score": 90.14,
+        "state": "STRONG",
+        "semantic": "strong-positive",
+        "representative": "BTC / ETH / TOTAL3",
+        "m20": "23.74%",
+        "relSpy": "+19.77%"
+      },
+      {
+        "sector": "Metals",
+        "score": 80.25,
+        "state": "STRONG",
+        "semantic": "strong-positive",
+        "representative": "GOLD / SILVER",
+        "m20": "12.16%",
+        "relSpy": "ABS"
+      },
+      {
+        "sector": "Commodities",
+        "score": 65.81,
+        "state": "BUILDING",
+        "semantic": "positive",
+        "representative": "COPPER / OIL",
+        "m20": "1.78%",
+        "relSpy": "ABS"
+      },
+      {
+        "sector": "Bonds",
+        "score": 43.92,
+        "state": "WEAK",
+        "semantic": "warning",
+        "representative": "TLT",
+        "m20": "0.4%",
+        "relSpy": "-3.57%"
+      },
+      {
+        "sector": "Defensive",
+        "score": 37.53,
+        "state": "WEAK",
+        "semantic": "warning",
+        "representative": "XLP / XLU",
+        "m20": "-0.46%",
+        "relSpy": "-4.42%"
+      }
+    ],
+    "meta": {
+      "isLive": true,
+      "sourceStatus": "PARTIAL",
+      "calculatedAt": "2026-10-05T12:00:00Z",
+      "dataAsOf": "2026-10-05T12:00:00Z",
+      "isStale": false,
+      "providersUsed": [],
+      "dataQuality": {
+        "coveragePercent": 94.4,
+        "exactSeriesCount": 0,
+        "proxySeriesCount": 0,
+        "missingSeriesCount": 1,
+        "proxySymbols": [],
+        "missingSymbols": [],
+        "parityStatus": "DATA_PARITY_PENDING"
+      }
+    }
+  },
+  "liquidity": {
+    "enabled": true,
+    "available": true,
+    "status": "PARTIAL",
+    "statusLabel": "LIVE \u00b7 PARTIAL UPSTREAM",
+    "parityStatus": "DATA_PARITY_PENDING",
+    "environmentLabel": "LOCAL LIVE",
+    "calculatedAt": "2026-09-07T00:00:00Z",
+    "headline": {
+      "masterLink": 55.22,
+      "validated": 58.03,
+      "downstream": 72.5,
+      "riskLiquidityGap": 17.28,
+      "flow": "TRANSITION",
+      "clock": "8/8",
+      "clockStage": 8,
+      "clockName": "LATE-CYCLE / DIVERGENCE",
+      "clockContext": "8/8 LATE-CYCLE / DIVERGENCE \u00b7 DECELERATION",
+      "liquidityCycle": "DECELERATION",
+      "lateCycleScore": 70,
+      "lateCycleState": "WARNING",
+      "earlyWarningRisk": 70,
+      "earlyWarningState": "WARNING",
+      "stage8Active": true,
+      "confidence": 91,
+      "confidenceLabel": "HIGH",
+      "dominantRiskOn": true,
+      "divergenceState": "DIVERGENCE",
+      "cryptoDelayWindow": "INACTIVE",
+      "m2BiasScore": 50
+    },
+    "playbook": "TRANSITION \u00b7 LATE-CYCLE / DIVERGENCE. Early-warning risk. Divergence: DIVERGENCE.",
+    "alerts": {
+      "broadRiskOn": false,
+      "broadRiskOff": false,
+      "divergenceWarning": true,
+      "earlyWarningElevated": true,
+      "earlyWarningHigh": true,
+      "cryptoWindowActive": false,
+      "activeCount": 3
+    },
+    "stage8Explanation": {
+      "active": true,
+      "headline": "Downstream risk assets are running materially ahead of validated liquidity support.",
+      "conditions": [
+        {
+          "label": "Downstream extended",
+          "triggered": true,
+          "detail": "Downstream risk-on 72.5/100"
+        },
+        {
+          "label": "Risk\u2013liquidity gap elevated",
+          "triggered": true,
+          "detail": "Gap +17.28"
+        },
+        {
+          "label": "M2 cycle slowing",
+          "triggered": true,
+          "detail": "Liquidity cycle: DECELERATION"
+        },
+        {
+          "label": "Validated liquidity below threshold",
+          "triggered": true,
+          "detail": "Validated 58.03/100 (threshold 62)"
+        }
+      ],
+      "guidance": "Late-cycle/divergence risk elevated. Research signal only; watch for reset or new cycle."
+    },
+    "stages": [
+      {
+        "stage": 1,
+        "name": "Liquidity Ignition",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 50,
+        "state": "MIXED",
+        "gate": "PARTIAL",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 2,
+        "name": "USD Release",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 50.22,
+        "state": "MIXED",
+        "gate": "PARTIAL",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 3,
+        "name": "Credit Easing",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 30.42,
+        "state": "OPPOSING",
+        "gate": "FAIL",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 4,
+        "name": "Cyclical / Global Breadth",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 64.66,
+        "state": "SUPPORTIVE",
+        "gate": "PARTIAL",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 5,
+        "name": "US Risk Transmission",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 51.09,
+        "state": "MIXED",
+        "gate": "PARTIAL",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 6,
+        "name": "Crypto Majors",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 94.29,
+        "state": "CONFIRMED",
+        "gate": "PASS",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 7,
+        "name": "Alt Expansion",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 93.54,
+        "state": "CONFIRMED",
+        "gate": "PASS",
+        "active": false,
+        "cumulative": 60,
+        "role": "role text",
+        "next": "next text"
+      },
+      {
+        "stage": 8,
+        "name": "Late-Cycle / Divergence",
+        "driver": "test driver",
+        "grade": "A",
+        "score": 70,
+        "state": "WARNING",
+        "gate": "ACTIVE",
+        "active": true,
+        "cumulative": null,
+        "role": "role text",
+        "next": "next text"
+      }
+    ],
+    "m2Upstream": {
+      "status": "LIVE/PARTIAL UPSTREAM",
+      "parityStatus": "DATA_PARITY_PENDING",
+      "interpretationThreshold": 95,
+      "interpretationEligible": false,
+      "blocsAvailable": 9,
+      "blocsTotal": 11,
+      "blocAvailabilityPercent": 81.82,
+      "estimatedWeightedCoveragePercent": 94.4,
+      "coverageExcludedBlocs": [],
+      "missingBlocs": [
+        "india",
+        "south-korea"
+      ],
+      "providersUsed": [
+        "fred",
+        "ecb"
+      ],
+      "stale": false
+    },
+    "quality": {
+      "coveragePercent": 100,
+      "exactInputCount": 5,
+      "alternativeInputCount": 2,
+      "proxyInputCount": 6,
+      "derivedInputCount": 1,
+      "missingInputCount": 0,
+      "staleInputCount": 0,
+      "providersUsed": [
+        "alpha-vantage",
+        "fred",
+        "coingecko",
+        "derived"
+      ],
+      "sources": [
+        {
+          "key": "dxy",
+          "pineSymbol": "PINE:DXY",
+          "providerSymbol": "DXY",
+          "provider": "alpha-vantage",
+          "sourceName": "dxy source",
+          "classification": "PROXY",
+          "reason": "ICE DXY not licensed \u2014 UUP ETF proxy",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "copper",
+          "pineSymbol": "PINE:COPPER",
+          "providerSymbol": "COPPER",
+          "provider": "alpha-vantage",
+          "sourceName": "copper source",
+          "classification": "PROXY",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "eem",
+          "pineSymbol": "PINE:EEM",
+          "providerSymbol": "EEM",
+          "provider": "alpha-vantage",
+          "sourceName": "eem source",
+          "classification": "EXACT",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "vgk",
+          "pineSymbol": "PINE:VGK",
+          "providerSymbol": "VGK",
+          "provider": "alpha-vantage",
+          "sourceName": "vgk source",
+          "classification": "EXACT",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "hyg",
+          "pineSymbol": "PINE:HYG",
+          "providerSymbol": "HYG",
+          "provider": "alpha-vantage",
+          "sourceName": "hyg source",
+          "classification": "EXACT",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "lqd",
+          "pineSymbol": "PINE:LQD",
+          "providerSymbol": "LQD",
+          "provider": "alpha-vantage",
+          "sourceName": "lqd source",
+          "classification": "EXACT",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "gold",
+          "pineSymbol": "PINE:GOLD",
+          "providerSymbol": "GOLD",
+          "provider": "alpha-vantage",
+          "sourceName": "gold source",
+          "classification": "PROXY",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "silver",
+          "pineSymbol": "PINE:SILVER",
+          "providerSymbol": "SILVER",
+          "provider": "alpha-vantage",
+          "sourceName": "silver source",
+          "classification": "PROXY",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "vix",
+          "pineSymbol": "PINE:VIX",
+          "providerSymbol": "VIX",
+          "provider": "fred",
+          "sourceName": "vix source",
+          "classification": "EXACT",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "spx",
+          "pineSymbol": "PINE:SPX",
+          "providerSymbol": "SPX",
+          "provider": "alpha-vantage",
+          "sourceName": "spx source",
+          "classification": "PROXY",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "ndx",
+          "pineSymbol": "PINE:NDX",
+          "providerSymbol": "NDX",
+          "provider": "alpha-vantage",
+          "sourceName": "ndx source",
+          "classification": "PROXY",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "btc",
+          "pineSymbol": "PINE:BTC",
+          "providerSymbol": "BTC",
+          "provider": "coingecko",
+          "sourceName": "btc source",
+          "classification": "ALTERNATIVE",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "eth",
+          "pineSymbol": "PINE:ETH",
+          "providerSymbol": "ETH",
+          "provider": "coingecko",
+          "sourceName": "eth source",
+          "classification": "ALTERNATIVE",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250
+        },
+        {
+          "key": "total2",
+          "pineSymbol": "PINE:TOTAL2",
+          "providerSymbol": "TOTAL2",
+          "provider": "derived",
+          "sourceName": "total2 source",
+          "classification": "DERIVED",
+          "reason": "Derived from CoinGecko global mcap minus BTC mcap",
+          "status": "OK",
+          "missing": false,
+          "stale": false,
+          "latestDaily": "2026-09-05",
+          "observationCount": 250,
+          "note": "Derived from CoinGecko global crypto market capitalization minus Bitcoin market capitalization. This may differ slightly from TradingView CRYPTOCAP:TOTAL2 due to source composition and timestamp differences."
+        }
+      ]
+    },
+    "history": {
+      "previousObservedOn": null,
+      "previousMasterLink": null,
+      "masterLinkDelta": null,
+      "historyBuilding": true
+    }
+  }
+}

@@ -1,10 +1,13 @@
 'use client';
 
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
-import CommandStrip from '@/components/intelligence/CommandStrip';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { EvidenceBars, EvidenceMetrics as CommandStrip, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
+
 import IntelligenceTable, { type IntelColumn, type IntelRow } from '@/components/intelligence/IntelligenceTable';
 import {
-  StateCell, ScoreCell, MetricCell, SectionHeader, LastUpdatedBadge,
+  StateCell, ScoreCell, MetricCell, SectionHeader,
 } from '@/components/intelligence/primitives';
 import { orientationToSemantic, riskToSemantic } from '@/lib/intelligence/states';
 import type { SemanticState } from '@/lib/intelligence/types';
@@ -15,7 +18,7 @@ import type {
   StageGate,
 } from '@/lib/intelligence/liquidityTransmissionPageMapper';
 
-// Phase 4D — Native Liquidity Transmission page. Zero mock, zero hard-coded
+// Phase 4D — Liquidity Transmission page. Zero mock, zero hard-coded
 // live-looking values. All numbers come from resolveLiquidityTransmission()
 // via the pure page mapper. Parity is always DATA_PARITY_PENDING.
 
@@ -45,15 +48,15 @@ export default function LiquidityPage() {
     <div>
       <header style={{ marginBottom: 4 }}>
         <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--msp-text)' }}>
-          Native Liquidity Transmission
+          Liquidity Transmission
         </h1>
         <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--msp-text-muted)' }}>
           Cross-asset validated liquidity, the 8-stage rotation clock, and downstream risk appetite &mdash; all from the
-          native engine. Research-only; some inputs use proxies, alternatives or derived data (see Data Quality).
+          existing observations. Research-only; some inputs use proxies, alternatives or derived data (see Data Quality).
         </p>
       </header>
 
-      {loading && <Note>Loading Native Liquidity Transmission&hellip;</Note>}
+      {loading && <Note>Loading Liquidity Transmission&hellip;</Note>}
       {error && <Note tone="error">Could not load: {error}</Note>}
 
       {data && <PageBody data={data} updatedAt={updatedAt} />}
@@ -62,85 +65,34 @@ export default function LiquidityPage() {
 }
 
 function PageBody({ data, updatedAt }: { data: LiquidityTransmissionPageDto; updatedAt: string | null }) {
-  return (
-    <>
-      <StatusBanner data={data} />
-
-      {!data.available ? (
-        <UnavailablePanel data={data} />
-      ) : (
-        <>
-          <HeadlinePanel data={data} updatedAt={updatedAt} />
-          <AlertsRow data={data} />
-          <Stage8Panel data={data} />
-          <StageClockPanel data={data} />
-          <DownstreamVsValidatedPanel data={data} />
-          <M2UpstreamPanel data={data} />
-          <PlaybookPanel data={data} />
-          <HistoryPanel data={data} />
-          <QualityPanel data={data} />
-        </>
-      )}
-    </>
-  );
-}
-
-/* ── Status banner ────────────────────────────────────────────────────────── */
-
-function StatusBanner({ data }: { data: LiquidityTransmissionPageDto }) {
-  const isLive = data.status === 'OK' || data.status === 'PARTIAL';
-  return (
-    <div
-      style={{
-        margin: '10px 0 12px', padding: '10px 12px', borderRadius: 'var(--msp-radius-card)',
-        border: `1px solid ${isLive ? 'var(--msp-border)' : 'var(--msp-warn, #d97706)'}`,
-        background: 'var(--msp-panel)',
-        display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between',
-        fontSize: '0.78rem',
-      }}
-    >
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Chip label={data.statusLabel} tone={isLive ? 'positive' : 'warning'} />
-        <Chip
-          label={data.parityStatus}
-          tone="warning"
-          title="Data-parity vs. TradingView remains pending. Proxies, alternatives and derived inputs create source deltas."
-        />
-        <Chip label={data.environmentLabel} tone="neutral" />
-      </div>
-      {data.reason && (
-        <span style={{ color: 'var(--msp-text-faint)', fontSize: '0.75rem' }}>
-          Reason: {data.reason}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* ── Unavailable panel ────────────────────────────────────────────────────── */
-
-function UnavailablePanel({ data }: { data: LiquidityTransmissionPageDto }) {
-  return (
-    <div
-      style={{
-        padding: '18px 16px', borderRadius: 'var(--msp-radius-card)',
-        border: '1px solid var(--msp-warn, #d97706)', background: 'var(--msp-panel)',
-        fontSize: '0.85rem', color: 'var(--msp-text-muted)', lineHeight: 1.5,
-      }}
-    >
-      <strong style={{ color: 'var(--msp-text)' }}>DATA TEMPORARILY UNAVAILABLE.</strong>{' '}
-      The native Liquidity Transmission engine could not produce a result on this cycle. No stale numbers are
-      being displayed as current truth. {data.reason && <>Provider status: {data.reason}.</>}
-      <div style={{ marginTop: 10, display: 'grid', gap: 6, fontSize: '0.78rem' }}>
-        <div><strong style={{ color: 'var(--msp-text)' }}>Providers used:</strong>{' '}
-          {data.quality.providersUsed.length > 0 ? data.quality.providersUsed.join(' · ') : '—'}</div>
-        <div><strong style={{ color: 'var(--msp-text)' }}>Missing inputs:</strong>{' '}
-          {data.quality.missingInputCount} of {data.quality.sources.length || '14'}</div>
-        <div><strong style={{ color: 'var(--msp-text)' }}>Upstream M2 status:</strong>{' '}
-          {data.m2Upstream.status}</div>
-      </div>
-    </div>
-  );
+  const h = data.headline;
+  return <>
+    <EvidenceVerdict>{data.available && h ? evidenceLabel(h.clockContext) : 'Liquidity observations could not be collected.'}</EvidenceVerdict>
+    {data.available && h && <>
+      <CommandStrip items={[
+        { label: 'Transmission', value: h.masterLink },
+        { label: 'Validated', value: h.validated },
+        { label: 'Downstream', value: h.downstream },
+        { label: 'Evidence quality', value: h.confidence },
+      ]} />
+      <EvidenceBars title="Eight-stage rotation · score / 100" rows={data.stages.map(s => ({ label: `${s.stage}. ${shortStageName(s.name, s.stage)}`, value: s.score }))} maximum={100} />
+    </>}
+    <EvidenceWarning>{data.quality.missingInputCount} inputs not collected · {evidenceLabel(data.parityStatus)}{data.m2Upstream.missingBlocs.length ? ` · M2 blocs not collected: ${data.m2Upstream.missingBlocs.map(b => b === 'IN' || b === 'india' ? 'India' : b === 'KR' || b === 'south-korea' ? 'South Korea' : evidenceLabel(b)).join(', ')}` : ''}{data.quality.staleInputCount ? ` · ${data.quality.staleInputCount} inputs use older observations` : ''}{data.reason ? ` · ${evidenceLabel(data.reason)}` : ''}</EvidenceWarning>
+    <CollapsibleSection title="Transmission evidence" summary={`${data.stages.length} stages · ${data.quality.coveragePercent.toFixed(1)}% input coverage`}>
+      {data.available && h && <>
+        <HeadlinePanel data={data} updatedAt={updatedAt} />
+        {data.alerts && <AlertsRow data={data} />}
+        {data.stage8Explanation && <Stage8Panel data={data} />}
+        <StageClockPanel data={data} />
+        <DownstreamVsValidatedPanel data={data} />
+        <M2UpstreamPanel data={data} />
+        <PlaybookPanel data={data} />
+        <HistoryPanel data={data} />
+      </>}
+      <QualityPanel data={data} />
+    </CollapsibleSection>
+    <SourceLine source={evidenceLabel(data.quality.providersUsed.join(', ') || 'Source not collected')} asOf={data.calculatedAt} basis="Calculation time · confirmed daily observations and monthly M2 · source observation dates in details" />
+  </>;
 }
 
 /* ── Headline panel ───────────────────────────────────────────────────────── */
@@ -151,13 +103,13 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
     <>
       <SectionHeader
         title="Transmission Headline"
-        right={<LastUpdatedBadge timestamp={updatedAt ?? undefined} />}
+
       />
       <CommandStrip
         items={[
           {
             label: 'Master Link',
-            value: h.masterLink.toFixed(2),
+            value: h.masterLink.toFixed(1),
             semantic: orientationToSemantic(h.masterLink),
             tooltip: 'Native transmissionRiskOn — 0.35·m2Bias + 0.65·validated.',
           },
@@ -170,18 +122,18 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
           { label: 'Cycle', value: h.liquidityCycle, semantic: 'neutral' },
           {
             label: 'Validated',
-            value: h.validated.toFixed(2),
+            value: h.validated.toFixed(1),
             semantic: orientationToSemantic(h.validated),
             tooltip: 'Cross-asset confirmation from Grade A + Grade B validated drivers.',
           },
           {
             label: 'Downstream',
-            value: h.downstream.toFixed(2),
+            value: h.downstream.toFixed(1),
             semantic: orientationToSemantic(h.downstream),
           },
           {
             label: 'Gap',
-            value: `${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(2)}`,
+            value: `${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(1)}`,
             semantic: riskToSemantic(Math.abs(h.riskLiquidityGap) + 30),
             tooltip: 'Downstream − Master Link (0.35 × M2 bias + 0.65 × validated). Positive = risk appetite ahead of transmission.',
           },
@@ -192,12 +144,12 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
         items={[
           {
             label: 'Late-cycle',
-            value: `${h.lateCycleScore.toFixed(2)} ${h.lateCycleState}`,
+            value: `${h.lateCycleScore.toFixed(1)} ${h.lateCycleState}`,
             semantic: riskToSemantic(h.lateCycleScore),
           },
           {
             label: 'Early warning',
-            value: `${h.earlyWarningRisk.toFixed(2)} ${h.earlyWarningState}`,
+            value: `${h.earlyWarningRisk.toFixed(1)} ${h.earlyWarningState}`,
             semantic: riskToSemantic(h.earlyWarningRisk),
           },
           {
@@ -212,7 +164,7 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
           },
           {
             label: 'M2 bias',
-            value: h.m2BiasScore.toFixed(2),
+            value: h.m2BiasScore.toFixed(1),
             semantic: orientationToSemantic(h.m2BiasScore),
           },
           {
@@ -243,11 +195,11 @@ function AlertsRow({ data }: { data: LiquidityTransmissionPageDto }) {
     <>
       <SectionHeader
         title="Alerts"
-        subtitle={`${a.activeCount} active · engine-generated only`}
+        subtitle={`${a.activeCount} active · calculated conditions`}
       />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {chips.map((c) => (
-          <Chip key={c.label} label={c.label} tone={c.active ? c.tone : 'muted'} muted={!c.active} />
+          <Chip key={evidenceLabel(c.label)} label={evidenceLabel(c.label)} tone={c.active ? c.tone : 'muted'} muted={!c.active} />
         ))}
       </div>
     </>
@@ -277,7 +229,7 @@ function Stage8Panel({ data }: { data: LiquidityTransmissionPageDto }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
           {s8.conditions.map((c) => (
             <div
-              key={c.label}
+              key={evidenceLabel(c.label)}
               style={{
                 padding: '8px 10px', borderRadius: 6,
                 border: `1px solid ${c.triggered ? 'var(--msp-warn, #d97706)' : 'var(--msp-border)'}`,
@@ -292,12 +244,12 @@ function Stage8Panel({ data }: { data: LiquidityTransmissionPageDto }) {
               >
                 {c.triggered ? 'Triggered' : 'Not triggered'}
               </div>
-              <div style={{ fontWeight: 600, marginTop: 2 }}>{c.label}</div>
-              <div style={{ fontSize: '0.76rem', color: 'var(--msp-text-muted)', marginTop: 2 }}>{c.detail}</div>
+              <div style={{ fontWeight: 600, marginTop: 2 }}>{evidenceLabel(c.label)}</div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--msp-text-muted)', marginTop: 2 }}>{evidenceLabel(c.detail)}</div>
             </div>
           ))}
         </div>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>{s8.guidance}</p>
+        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>{s8.active ? 'Late-cycle/divergence risk elevated. Research signal only; a reset or new cycle has not been confirmed.' : evidenceLabel(s8.guidance)}</p>
       </div>
     </>
   );
@@ -310,12 +262,12 @@ function StageClockPanel({ data }: { data: LiquidityTransmissionPageDto }) {
     id: `stage-${s.stage}`,
     cells: [
       <MetricCell key="st" align="left" strong>{s.stage}. {shortStageName(s.name, s.stage)}</MetricCell>,
-      <MetricCell key="dr" align="left" muted>{s.driver}</MetricCell>,
-      <MetricCell key="gr" align="left">{s.grade}</MetricCell>,
-      <ScoreCell key="sc" value={s.score.toFixed(2)} semantic={stageSemantic(s)} suffix="/100" />,
-      <StateCell key="sta" label={s.state} semantic={stageSemantic(s)} />,
-      <StateCell key="ga" label={s.gate} semantic={gateSemantic(s.gate)} />,
-      <MetricCell key="ac" align="center" muted>{s.active ? '● ACTIVE' : '—'}</MetricCell>,
+      <MetricCell key="dr" align="left" muted>{evidenceLabel(s.driver)}</MetricCell>,
+      <MetricCell key="gr" align="left">{evidenceLabel(s.grade)}</MetricCell>,
+      <ScoreCell key="sc" value={s.score.toFixed(1)} semantic={stageSemantic(s)} suffix="/100" />,
+      <StateCell key="sta" label={evidenceLabel(s.state)} semantic={stageSemantic(s)} />,
+      <StateCell key="ga" label={evidenceLabel(s.gate)} semantic={gateSemantic(s.gate)} />,
+      <MetricCell key="ac" align="center" muted>{s.active ? 'Active' : 'Inactive'}</MetricCell>,
     ],
   }));
   return (
@@ -345,11 +297,11 @@ function DownstreamVsValidatedPanel({ data }: { data: LiquidityTransmissionPageD
     <>
       <SectionHeader title="Downstream vs Master Link" subtitle="Gap = Downstream − Master Link; the validated component is shown separately in the headline." />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-        <Metric label="Master Link" value={h.masterLink.toFixed(2)} tone={orientationToSemantic(h.masterLink)} />
-        <Metric label="Downstream" value={h.downstream.toFixed(2)} tone={orientationToSemantic(h.downstream)} />
+        <Metric label="Master Link" value={h.masterLink.toFixed(1)} tone={orientationToSemantic(h.masterLink)} />
+        <Metric label="Downstream" value={h.downstream.toFixed(1)} tone={orientationToSemantic(h.downstream)} />
         <Metric
           label="Risk–Liquidity Gap"
-          value={`${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(2)}`}
+          value={`${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(1)}`}
           tone={Math.abs(h.riskLiquidityGap) >= 15 ? 'warning' : 'neutral'}
         />
         <Metric
@@ -383,18 +335,18 @@ function M2UpstreamPanel({ data }: { data: LiquidityTransmissionPageDto }) {
         />
         <Metric
           label="Estimated weighted coverage"
-          value={weighted == null ? '—' : `${weighted.toFixed(1)}%`}
+          value={weighted == null ? 'Not collected' : `${weighted.toFixed(1)}%`}
           hint={`Threshold ${m.interpretationThreshold}% for interpretation${m.coverageExcludedBlocs?.length ? ` · excl. ${m.coverageExcludedBlocs.join(', ')} (sources unavailable)` : ''}`}
           tone={weighted != null && weighted >= m.interpretationThreshold ? 'positive' : 'warning'}
         />
         <Metric label="Upstream status" value={m.status} tone="neutral" />
-        <Metric label="Parity" value={m.parityStatus} tone="warning" />
+        <Metric label="Source checks" value={m.parityStatus} tone="warning" />
       </div>
       {(m.missingBlocs.length > 0 || m.providersUsed.length > 0) && (
         <div style={{ marginTop: 8, fontSize: '0.76rem', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
           {m.missingBlocs.length > 0 && (
             <div>
-              <strong style={{ color: 'var(--msp-text)' }}>Missing blocs:</strong>{' '}
+              <strong style={{ color: 'var(--msp-text)' }}>Blocs not collected:</strong>{' '}
               {m.missingBlocs.join(', ')}
             </div>
           )}
@@ -416,7 +368,7 @@ function PlaybookPanel({ data }: { data: LiquidityTransmissionPageDto }) {
   if (!data.playbook) return null;
   return (
     <>
-      <SectionHeader title="Playbook" subtitle="Engine-generated · research language" />
+      <SectionHeader title="Research context" subtitle="Calculated · research language" />
       <div
         style={{
           padding: '12px 14px', borderRadius: 'var(--msp-radius-card)',
@@ -424,7 +376,7 @@ function PlaybookPanel({ data }: { data: LiquidityTransmissionPageDto }) {
           fontSize: '0.83rem', color: 'var(--msp-text)', lineHeight: 1.55,
         }}
       >
-        {data.playbook}
+        {evidenceLabel(data.playbook)}
       </div>
     </>
   );
@@ -439,17 +391,17 @@ function HistoryPanel({ data }: { data: LiquidityTransmissionPageDto }) {
     <>
       <SectionHeader
         title="History"
-        subtitle={h.historyBuilding ? 'HISTORY BUILDING' : 'Master Link Δ vs prior confirmed bar'}
+        subtitle={h.historyBuilding ? 'History building' : 'Master Link Δ vs prior confirmed bar'}
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
         <Metric
           label="Current Master Link"
-          value={current != null ? current.toFixed(2) : '—'}
+          value={current != null ? current.toFixed(1) : 'Not collected'}
           tone="neutral"
         />
         <Metric
           label="Previous Master Link"
-          value={h.previousMasterLink != null ? h.previousMasterLink.toFixed(2) : '—'}
+          value={h.previousMasterLink != null ? h.previousMasterLink.toFixed(1) : 'Not collected'}
           hint={h.previousObservedOn ? `Observed ${h.previousObservedOn}` : 'No prior observation'}
           tone="neutral"
         />
@@ -457,8 +409,8 @@ function HistoryPanel({ data }: { data: LiquidityTransmissionPageDto }) {
           label="Δ (5D)"
           value={
             h.masterLinkDelta != null
-              ? `${h.masterLinkDelta >= 0 ? '+' : ''}${h.masterLinkDelta.toFixed(2)}`
-              : 'HISTORY BUILDING'
+              ? `${h.masterLinkDelta >= 0 ? '+' : ''}${h.masterLinkDelta.toFixed(1)}`
+              : 'History building'
           }
           tone={
             h.masterLinkDelta == null
@@ -486,14 +438,14 @@ function QualityPanel({ data }: { data: LiquidityTransmissionPageDto }) {
       </MetricCell>,
       <StateCell
         key="c"
-        label={src.classification}
+        label={evidenceLabel(src.classification)}
         semantic={classSemantic(src)}
         title={src.classification === 'DERIVED' ? src.note : src.reason}
       />,
       <MetricCell key="st" align="left" muted>
-        {src.missing ? 'MISSING' : src.stale ? 'STALE' : src.status}
+        {src.missing ? 'Not collected' : src.stale ? 'Older observation' : evidenceLabel(src.status)}
       </MetricCell>,
-      <MetricCell key="lb" align="right" muted>{src.latestDaily ?? '—'}</MetricCell>,
+      <MetricCell key="lb" align="right" muted>{src.latestDaily ?? 'Not collected'}</MetricCell>,
     ],
   }));
   return (
@@ -515,12 +467,12 @@ function QualityPanel({ data }: { data: LiquidityTransmissionPageDto }) {
           <MiniStat label="Missing" value={q.missingInputCount} />
           <MiniStat label="Stale" value={q.staleInputCount} />
           <MiniStat label="Coverage" value={`${q.coveragePercent.toFixed(1)}%`} />
-          <MiniStat label="Providers" value={q.providersUsed.length > 0 ? q.providersUsed.join(', ') : '—'} />
+          <MiniStat label="Providers" value={q.providersUsed.length > 0 ? q.providersUsed.join(', ') : 'Not collected'} />
         </div>
         <IntelligenceTable columns={SOURCE_COLUMNS} rows={rows} minWidth={680} />
         {q.sources.some((s) => s.classification === 'DERIVED') && (
           <p style={{ marginTop: 10, fontSize: '0.74rem', color: 'var(--msp-text-faint)', lineHeight: 1.5 }}>
-            <strong style={{ color: 'var(--msp-text-muted)' }}>TOTAL2 · DERIVED:</strong>{' '}
+            <strong style={{ color: 'var(--msp-text-muted)' }}>TOTAL2 · Derived:</strong>{' '}
             {q.sources.find((s) => s.classification === 'DERIVED')?.note}
           </p>
         )}
@@ -557,7 +509,7 @@ function Chip({
         color: s.fg, background: s.bg, border: `1px solid ${s.border}`,
       }}
     >
-      {label}
+      {evidenceLabel(label)}
     </span>
   );
 }
@@ -579,7 +531,7 @@ function Metric({
       }}
     >
       <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--msp-text-faint)' }}>
-        {label}
+        {evidenceLabel(label)}
       </div>
       <div
         style={{
@@ -587,10 +539,10 @@ function Metric({
           fontVariantNumeric: 'tabular-nums', marginTop: 2,
         }}
       >
-        {value}
+        {evidenceLabel(value)}
       </div>
       {hint && (
-        <div style={{ fontSize: '0.7rem', color: 'var(--msp-text-faint)', marginTop: 2 }}>{hint}</div>
+        <div style={{ fontSize: '0.7rem', color: 'var(--msp-text-faint)', marginTop: 2 }}>{evidenceLabel(hint)}</div>
       )}
     </div>
   );
@@ -605,7 +557,7 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
       }}
     >
       <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--msp-text-faint)' }}>
-        {label}
+        {evidenceLabel(label)}
       </div>
       <div
         style={{
@@ -613,7 +565,7 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
           marginTop: 2, fontVariantNumeric: 'tabular-nums',
         }}
       >
-        {value}
+        {evidenceLabel(value)}
       </div>
     </div>
   );
