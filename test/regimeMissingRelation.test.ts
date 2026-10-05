@@ -14,14 +14,12 @@ describe('GET /api/regime missing relations', () => {
     mocks.overlay.mockResolvedValue({ asOf: null, vix: null, spy: null, qqq: null });
   });
 
-  it('reads operator_state and does not log a missing risk_governor_snapshots table', async () => {
+  it('reads operator_state and does not query a risk governor snapshot table', async () => {
     await GET(new NextRequest('http://localhost/api/regime'));
-    const calls = mocks.q.mock.calls.map((call) => ({
-      sql: String(call[0]).replace(/\s+/g, ' '),
-      opts: call[2],
-    }));
-    expect(calls.some((call) => call.sql.includes('FROM operator_state'))).toBe(true);
-    expect(calls.some((call) => call.sql.includes('FROM context_state'))).toBe(false);
-    expect(calls.find((call) => call.sql.includes('FROM risk_governor_snapshots'))?.opts).toEqual({ suppressCodes: ['42P01'] });
+    const sql = mocks.q.mock.calls.map((call) => String(call[0]).replace(/\s+/g, ' '));
+    expect(sql.some((text) => text.includes('FROM operator_state'))).toBe(true);
+    expect(sql.some((text) => text.includes('FROM context_state'))).toBe(false);
+    expect(sql.some((text) => text.includes('risk_governor_snapshots'))).toBe(false);
+    expect(sql).toHaveLength(1);
   });
 });

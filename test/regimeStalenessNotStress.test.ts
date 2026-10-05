@@ -104,14 +104,15 @@ describe('GET /api/regime with stale inputs (OV-12)', () => {
     expect(stale).toMatchObject({ regime: 'VOL_EXPANSION', riskLevel: 'elevated', permission: 'CONDITIONAL', dataQuality: { stale: true } });
   });
 
-  it('stale account signals (market data unavailable) no longer raise risk to elevated', async () => {
+  it('a stale operator_state row cannot invent a regime when market data is unavailable', async () => {
     mocks.overlay.mockResolvedValue({ asOf: null, vix: null, spy: null, qqq: null });
     mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM operator_state')
-      ? [{ risk_environment: 'trend_up', context_state: {}, updated_at: new Date(NOW - 24 * 3_600_000).toISOString() }]
+      ? [{ risk_environment: 'LOW', updated_at: new Date(NOW - 24 * 3_600_000).toISOString() }]
       : []);
     const body = await call();
-    expect(body).toMatchObject({ available: true, basis: 'workspace', regime: 'TREND_UP', riskLevel: 'low', permission: 'YES' });
-    expect(body.dataQuality).toMatchObject({ stale: true, staleSources: ['operator_context'] });
+    expect(body).toMatchObject({ available: false, regime: null, riskLevel: null, permission: null, signals: [] });
+    expect(body.operatorContext).toMatchObject({ riskEnvironment: 'LOW', stale: true });
+    expect(body).not.toHaveProperty('dataQuality');
   });
 });
 

@@ -40,7 +40,7 @@ interface RegimeContextValue {
   data: UnifiedRegime | null;
   loading: boolean;
   error: string | null;
-  /** Set when the regime is unavailable (no market data and no account signals, or an error). */
+  /** Set when the market regime is unavailable, or the request failed. Account context is not a regime. */
   unavailableReason: string | null;
   refresh: () => void;
 }
