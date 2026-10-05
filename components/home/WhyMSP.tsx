@@ -26,7 +26,7 @@ const pillars = [
       </svg>
     ),
     title: 'AI Intelligence',
-    description: 'ARCxA engine processes market data, options flow, and sentiment — surfacing educational scenario analysis automatically.',
+    description: 'MSP AI processes market data, options flow, and sentiment — surfacing educational scenario analysis automatically.',
   },
 ];
 

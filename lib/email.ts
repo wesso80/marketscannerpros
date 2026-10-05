@@ -195,7 +195,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
   const quickLinks = [
     ['Scanner', '/tools/scanner'],
     ['Portfolio', '/tools/workspace?tab=portfolio'],
-    ['ARCA AI Panel', '/tools/scanner'],
+    ['MSP AI', '/tools/scanner'],
     ['Journal', '/tools/workspace?tab=journal'],
     ['Backtester', '/tools/workspace?tab=backtest'],
   ]

@@ -171,7 +171,7 @@ export default function PricingPage() {
           lines: [
             "Every research and intelligence dashboard, unrestricted",
             "Crypto Command Centre + derivatives tools",
-            "Priority ARCA AI Analyst",
+            "Priority MSP AI",
           ],
         },
         {

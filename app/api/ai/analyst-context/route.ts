@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
   // Tier gate: must be pro or above
   if (tier === 'free' && !freeForAll) {
     return NextResponse.json(
-      { error: 'ARCA AI requires Pro or higher subscription.' },
+      { error: 'MSP AI requires Pro or higher subscription.' },
       { status: 403 },
     );
   }
