@@ -22,11 +22,13 @@ vi.mock('@/lib/useUserTier', () => ({
   }),
   canAccessOptionsTerminal: (tier: string) => tier === 'pro' || tier === 'pro_trader',
   canAccessTimeScanner: (tier: string) => tier === 'pro' || tier === 'pro_trader',
+  canAccessConfluenceScanner: (tier: string) => tier === 'pro' || tier === 'pro_trader',
 }));
 
 import OptionsFlowPage from '@/components/options-terminal/OptionsFlowView';
 import TerminalCryptoDesk from '@/components/terminal/TerminalCryptoDesk';
 import TimeScannerPage from '@/components/time/TimeScannerPage';
+import ConfluenceScannerPage from '@/app/tools/confluence-scanner/page';
 import { selectCryptoDeskTiles } from '@/lib/terminal/cryptoDeskTiles';
 
 const calls: string[] = [];
@@ -143,6 +145,18 @@ describe('Time Confluence before a run', () => {
     expect(text).not.toMatch(/UNKNOWN/);
     expect(text).not.toMatch(/\bLOW\b/);
     expect(text).not.toMatch(/Run scan to assess/);
+    expect(screen.queryByText('0')).toBeNull();
+  });
+
+  it('shows one unlock card for free users inside Terminal', async () => {
+    tierState.tier = 'free';
+    render(<ConfluenceScannerPage embeddedInTerminal symbol="btcusd" assetType="crypto" />);
+    expect(await screen.findByRole('heading', { name: 'Time Confluence for BTCUSD' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Unlock Time Confluence' })).toBeTruthy();
+    const text = document.body.textContent || '';
+    expect(text).not.toMatch(/Unavailable/);
+    expect(text).not.toMatch(/UNKNOWN/);
+    expect(text).not.toMatch(/Golden Egg/);
     expect(screen.queryByText('0')).toBeNull();
   });
 });

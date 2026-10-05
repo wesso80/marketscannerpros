@@ -231,10 +231,10 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
   const lastUpdated = data ? new Date(data.timestamp).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '—';
 
   const primaryContent = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '100%' }}>
           {!embeddedInTerminal && <ComplianceDisclaimer variant="options" />}
           <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', color: '#BFDBFE', lineHeight: 1.55 }}>
-            Figures are estimates from options-chain snapshots, not trade prints. They do not show who bought or sold, institutional positioning, hedging intent, or future price direction.
+            Figures are estimates from options-chain snapshots, not trade prints. They do not name either side, institutional positioning, hedging intent, or a future price path.
           </div>
 
           {/* Symbol input + scan */}
@@ -275,7 +275,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
               )}
               {data?.quoteBasis === 'previous_session' && (
                 <span style={{ fontSize: '11px', color: 'var(--msp-warn, #f59e0b)', width: '100%' }}>
-                  Live option quotes unavailable — this is the previous session&apos;s flow (close as of {data.asOfDate ?? 'unknown date'}), not live flow.
+                  Quotes are from the previous session (close as of {data.asOfDate ?? 'the last close'}), not the live session.
                 </span>
               )}
               {data?.expiryNote && (
@@ -338,7 +338,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   <div style={{ maxWidth: '420px', textAlign: 'right' }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--msp-text-muted)' }}>{DIRECTION_NOT_INFERRED}</div>
                     <div style={{ fontSize: '11px', color: 'var(--msp-text-faint)', lineHeight: 1.4, marginTop: '2px' }}>
-                      Chain snapshots are not trade prints, so no buy/sell conviction, sweep/block or large-order calls are made.
+                      Chain snapshots are not trade prints, so no side, sweep/block or large-order calls are made.
                     </div>
                   </div>
                   )}
@@ -495,7 +495,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
                     {inferred ? 'Top Flows by Premium' : `Top Contracts by Premium · ${factsLabel}`}
                   </div>
-                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%', minWidth: 0 }}>
                     <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--msp-border)' }}>
@@ -578,7 +578,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
   );
 
   if (embeddedInTerminal) {
-    return <div className="space-y-4">{primaryContent}{footerContent}</div>;
+    return <div className="min-w-0 max-w-full space-y-4">{primaryContent}{footerContent}</div>;
   }
 
   return (
