@@ -3,7 +3,7 @@ import {spawnSync} from 'node:child_process';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {compareOi,observedInteger,inAcceptanceWindow} from '@/scripts/options-validation/evidence';
+import {compareOi,observedInteger,inAcceptanceWindow,liveQuoteBasisAccepted} from '@/scripts/options-validation/evidence';
 const fixture=JSON.parse(readFileSync('scripts/options-validation/fixture.json','utf8'));
 const rows=fixture.responses['AAPL:REALTIME_OPTIONS'].data.filter((r:any)=>r.expiration==='2026-10-09');
 const compare=(r=rows,ref=fixture.exchange)=>compareOi(r,'2026-10-09',ref,'2026-10-05',fixture.now);
@@ -33,6 +33,15 @@ describe('Options live evidence checks (no network)',()=>{
   }
   expect(compare(rows,null).filter(c=>c.id.includes('EXCHANGE')).every(c=>!c.pass)).toBe(true);
  });
+ it('accepts an FMV chain dated today, including marks-only, and rejects the historical fallback',()=>{
+  expect(liveQuoteBasisAccepted({provider:'REALTIME_OPTIONS_FMV',quoteBasis:'marks_only',asOfDate:'2026-10-05'},'2026-10-05')).toBe(true);
+  expect(liveQuoteBasisAccepted({provider:'REALTIME_OPTIONS_FMV',quoteBasis:'realtime',asOfDate:'2026-10-05'},'2026-10-05')).toBe(true);
+  expect(liveQuoteBasisAccepted({provider:'REALTIME_OPTIONS',quoteBasis:'realtime',asOfDate:'2026-10-05'},'2026-10-05')).toBe(true);
+  expect(liveQuoteBasisAccepted({provider:'REALTIME_OPTIONS_FMV',quoteBasis:'marks_only',asOfDate:'2026-10-02'},'2026-10-05')).toBe(false);
+  expect(liveQuoteBasisAccepted({provider:'HISTORICAL_OPTIONS',quoteBasis:'previous_session',asOfDate:'2026-10-05'},'2026-10-05')).toBe(false);
+  expect(liveQuoteBasisAccepted({provider:'HISTORICAL_OPTIONS',quoteBasis:'marks_only',asOfDate:'2026-10-02'},'2026-10-05')).toBe(false);
+  expect(liveQuoteBasisAccepted(null,'2026-10-05')).toBe(false);
+ });
  it('uses the exact scheduled AEDT/UTC window',()=>{
   expect(inAcceptanceWindow('2026-10-06T00:30:00+11:00')).toBe(true);
   expect(inAcceptanceWindow('2026-10-06T02:00:00+11:00')).toBe(true);
@@ -59,19 +68,68 @@ describe('Options live evidence checks (no network)',()=>{
    const missing=JSON.parse(readFileSync(join(temp,'capture/missing-history.json'),'utf8'));
    expect(missing.controlled.atr).toBeNull();expect(missing.controlled.upsideLevels).toBeNull();expect(missing.controlled.downsideLevels).toBeNull();
    expect(missing.natural.symbolPayload).toEqual({atr:null,invalidation:null,scenarioInvalidation:null,reactionZones:[]});
+   expect(report.providerOrder).toEqual(['REALTIME_OPTIONS_FMV','HISTORICAL_OPTIONS']);
+   expect(report.requests.map((r:any)=>r.function)).toEqual(['REALTIME_OPTIONS_FMV','GLOBAL_QUOTE','TIME_SERIES_DAILY','GLOBAL_QUOTE','TIME_SERIES_DAILY']);
+   expect(report.requests.every((r:any)=>!String(r.url).includes('function=REALTIME_OPTIONS&'))).toBe(true);
+   const basis=report.checks.find((c:any)=>c.id==='LIVE_QUOTE_BASIS');
+   expect(basis.pass).toBe(true);
+   expect(basis.evidence).toMatchObject({provider:'REALTIME_OPTIONS_FMV',quoteBasis:'marks_only',asOfDate:'2026-10-05'});
+   expect(report.checks.find((c:any)=>c.id==='AAPL_330C_PROVIDER_VALUE').evidence.openInterest).toBe(10);
    expect(report.requests.every((r:any)=>r.startedAt&&r.finishedAt&&r.method==='GET')).toBe(true);
   }finally{rmSync(temp,{recursive:true,force:true});}
  },30000);
  it('CLI returns nonzero and preserves evidence for 9x fixture failure',()=>{
   const temp=mkdtempSync(join(tmpdir(),'options-validation-fail-'));
   try{
-   const changed=structuredClone(fixture);changed.responses['AAPL:REALTIME_OPTIONS'].data.find((r:any)=>r.expiration==='2026-10-09'&&r.strike==='330'&&r.type==='call').open_interest='90';
+   const changed=structuredClone(fixture);changed.responses['AAPL:REALTIME_OPTIONS_FMV'].data.find((r:any)=>r.expiration==='2026-10-09'&&r.strike==='330'&&r.type==='call').open_interest='90';
    writeFileSync(join(temp,'fixture.json'),JSON.stringify(changed));
    const result=spawnSync(process.execPath,['scripts/options-live-validation.mjs','--fixture',join(temp,'fixture.json'),'--out',join(temp,'capture')],{encoding:'utf8',timeout:30000});
    expect(result.status).toBe(1);
    const report=JSON.parse(readFileSync(join(temp,'capture/report.json'),'utf8'));
    expect(report.checks.find((c:any)=>c.id==='AAPL_330C_EXCHANGE_COMPARISON').evidence.ratio).toBe(9);
    expect(report.liveAcceptance).toBe(false);
+  }finally{rmSync(temp,{recursive:true,force:true});}
+ },30000);
+ it('not-entitled FMV falls back to historical and does not invent open interest',()=>{
+  const temp=mkdtempSync(join(tmpdir(),'options-validation-fmv-fallback-'));
+  try{
+   const changed=structuredClone(fixture);
+   changed.responses['AAPL:REALTIME_OPTIONS_FMV']={message:'This is a premium endpoint. ***THE SAMPLE DATA SCHEMA BELOW IS ARTIFICIAL AND FOR ILLUSTRATION PURPOSES ONLY***.',data:[{symbol:'XXYYZZ',contractID:'XXYYZZ999999C00020000',expiration:'2099-99-99',strike:'20',type:'call',open_interest:'999',date:'2099-99-99',bid:'1',ask:'1.1'}]};
+   for(const row of changed.responses['AAPL:HISTORICAL_OPTIONS'].data){
+    row.date='2026-10-02';
+    if(row.expiration==='2026-10-09'&&row.strike==='330'&&row.type==='call')row.open_interest='4';
+   }
+   writeFileSync(join(temp,'fixture.json'),JSON.stringify(changed));
+   const result=spawnSync(process.execPath,['scripts/options-live-validation.mjs','--fixture',join(temp,'fixture.json'),'--out',join(temp,'capture')],{encoding:'utf8',timeout:30000});
+   expect(result.status).toBe(1);
+   const report=JSON.parse(readFileSync(join(temp,'capture/report.json'),'utf8'));
+   expect(report.requests.map((r:any)=>r.function).slice(0,2)).toEqual(['REALTIME_OPTIONS_FMV','HISTORICAL_OPTIONS']);
+   expect(report.requests.length).toBeLessThanOrEqual(6);
+   expect(report.requests.some((r:any)=>r.function==='REALTIME_OPTIONS')).toBe(false);
+   const basis=report.checks.find((c:any)=>c.id==='LIVE_QUOTE_BASIS');
+   expect(basis.pass).toBe(false);
+   expect(basis.evidence).toMatchObject({provider:'HISTORICAL_OPTIONS',quoteBasis:'previous_session',asOfDate:'2026-10-02'});
+   const oi=report.checks.find((c:any)=>c.id==='AAPL_330C_PROVIDER_VALUE').evidence;
+   expect(oi.openInterest).toBe(4);
+   expect(oi.rawOpenInterest).toBe('4');
+   expect(report.checks.find((c:any)=>c.id==='AAPL_330C_EXCHANGE_COMPARISON').pass).toBe(false);
+  }finally{rmSync(temp,{recursive:true,force:true});}
+ },30000);
+ it('a fair-value row with no open interest stays missing',()=>{
+  const temp=mkdtempSync(join(tmpdir(),'options-validation-fmv-missing-oi-'));
+  try{
+   const changed=structuredClone(fixture);
+   const row=changed.responses['AAPL:REALTIME_OPTIONS_FMV'].data.find((r:any)=>r.expiration==='2026-10-09'&&r.strike==='330'&&r.type==='call');
+   delete row.open_interest;
+   writeFileSync(join(temp,'fixture.json'),JSON.stringify(changed));
+   const result=spawnSync(process.execPath,['scripts/options-live-validation.mjs','--fixture',join(temp,'fixture.json'),'--out',join(temp,'capture')],{encoding:'utf8',timeout:30000});
+   expect(result.status).toBe(1);
+   const report=JSON.parse(readFileSync(join(temp,'capture/report.json'),'utf8'));
+   const oi=report.checks.find((c:any)=>c.id==='AAPL_330C_PROVIDER_VALUE');
+   expect(oi.pass).toBe(false);
+   expect(oi.evidence.openInterest).toBeNull();
+   expect(oi.evidence.rawOpenInterest).toBeNull();
+   expect(report.checks.find((c:any)=>c.id==='LIVE_QUOTE_BASIS').pass).toBe(true);
   }finally{rmSync(temp,{recursive:true,force:true});}
  },30000);
 });
