@@ -616,7 +616,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
         <DSCard>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <SectionEyebrow>ARCA research context</SectionEyebrow>
+              <SectionEyebrow>MSP AI</SectionEyebrow>
               <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>AI analyst briefing</div>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/ai-analyst'; }} aria-label="Open MSP Analyst">Ask ›</DSButton>

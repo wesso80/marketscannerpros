@@ -139,7 +139,7 @@ it("keeps both collapsed copilot controls in their own normal-flow slot, with 40
   expect(row.className).not.toMatch(/fixed|sticky|absolute/);
   expect(row.className).toContain("relative");
   const hide = el.querySelector<HTMLButtonElement>(
-    '[title="Minimize ARCA AI"]',
+    '[title="Minimize MSP AI"]',
   )!;
   expect(hide.style.width).toBe("2.5rem");
   act(() => hide.click());
