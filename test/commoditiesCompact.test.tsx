@@ -13,7 +13,7 @@ const rows = [
  {symbol:'SUGAR',name:'Sugar',category:'Agriculture',price:20,change:1,changePercent:1,unit:'cents/lb',date:'unreadable-date',history:[],source:'LEGACY_MONTHLY',freshnessStatus:'STALE',dataAgeDays:277,eligibleForGate:false},
 ];
 const fixture = {success:true,commodities:rows,byCategory:{Energy:[rows[1]],Metals:[rows[0]],Agriculture:[rows[2]]},summary:{totalCommodities:3,gainers:1,losers:1,avgChange:0,topGainer:rows[0],topLoser:rows[1]},dataHealth:{gateReady:true,eligibleCount:2,totalCount:3,staleSymbols:['SUGAR']},sourceAsOf:'2026-10-02',lastUpdate:'2026-10-05T00:00:00Z'};
-afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
 it('folds excluded rows, keeps prices readable, and has one verdict, source and legend without changing feed values',async()=>{
  const fetchMock=vi.fn(async()=>({ok:true,json:async()=>fixture}));vi.stubGlobal('fetch',fetchMock);
  const original=JSON.stringify(fixture);
@@ -31,4 +31,11 @@ it('folds excluded rows, keeps prices readable, and has one verdict, source and 
  expect(container.querySelectorAll('[data-commodity-card]')).toHaveLength(0);
  expect(screen.getByText('No included observations in this category.')).toBeTruthy();
  expect(fetchMock).toHaveBeenCalledTimes(2);expect(JSON.stringify(fixture)).toBe(original);
+});
+
+it('names stale data when the assessment gate is not ready',async()=>{
+ vi.spyOn(Date,'now').mockReturnValue(10000000000000);
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({...fixture,dataHealth:{...fixture.dataHealth,gateReady:false}})})));
+ const {container}=render(<CommoditiesPage embedded/>);fireEvent.click(await screen.findByRole('button',{name:'Refresh'}));await screen.findByText('Stale data limits this assessment; excluded observations are not used.');
+ expect(container.textContent).not.toMatch(/Long:|Short:|Long =|Short =/);expect(container.textContent).toContain('Fri 2 Oct');
 });

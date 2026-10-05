@@ -573,15 +573,16 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
       {!embedded && <ToolsPageHeader badge="Markets" title="Commodities" subtitle="Commodity observations and market context" icon="CMD" />}
       <main className={embedded ? 'space-y-3' : 'mx-auto max-w-6xl space-y-3 p-4'}>
         <section className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <h2 className="text-sm text-white/60">Commodities overview</h2>
+          <p className="text-sm text-white/60">Commodities overview</p>
           <p data-commodity-verdict className="mt-1 text-lg font-semibold">{derivedState ? (derivedState.reviewState === 'YES' ? 'Broad participation observed' : derivedState.reviewState === 'CONDITIONAL' ? 'Mixed commodity evidence' : 'Limited commodity alignment') : 'Insufficient current observations'}</p>
           <p className="mt-1 text-sm text-white/65">{derivedState ? `${derivedState.rotationLeader} leads · ${derivedState.breadthScore}% advancing · ${plain(derivedState.impulseType)} conditions` : 'The available data does not support a combined market assessment.'}</p>
         </section>
+        {data?.dataHealth?.gateReady === false && <p data-commodity-warning className="text-sm text-amber-200">Stale data limits this assessment; excluded observations are not used.</p>}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label className="text-xs text-white/65">Category <select aria-label="Commodity category" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value as typeof selectedCategory)} className="ml-2 rounded border border-white/15 bg-slate-900 p-2 text-white"><option value="all">All commodities</option>{(['Energy', 'Metals', 'Agriculture'] as const).map(cat => <option key={cat}>{cat}</option>)}</select></label>
           <button type="button" onClick={fetchCommodities} className="rounded border border-white/15 px-3 py-2 text-xs">Refresh</button>
         </div>
-        {derivedState && <p data-commodity-legend className="text-xs text-white/60">Evidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.</p>}
+        {derivedState && <p data-commodity-legend className="text-xs text-white/60">Evidence legend: Upside case = rising-price conditions; Downside case = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.</p>}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {eligible.map(commodity => {
             const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
@@ -592,7 +593,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
               <div className="mt-1 flex justify-between gap-2 text-xs text-white/60"><span>{commodity.category}</span><span>{signed(commodity.changePercent)}</span></div>
               <details className="mt-2 text-xs text-white/60"><summary className="cursor-pointer">Observation details</summary>
                 <p className="mt-2">{commodity.unit}</p>
-                {derivedState && <p className="mt-1">Long: {longAllowed ? 'Clear' : 'Limited'} · Short: {shortAllowed ? 'Clear' : 'Limited'}</p>}
+                {derivedState && <p className="mt-1">Upside case: {longAllowed ? 'Clear' : 'Limited'} · Downside case: {shortAllowed ? 'Clear' : 'Limited'}</p>}
                       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/40">
                         <span className={commodity.freshnessStatus === 'STALE' ? 'text-rose-300' : commodity.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>
                           {commodity.cadence === 'monthly' && commodity.freshnessStatus !== 'STALE' ? 'MONTHLY' : commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
@@ -624,7 +625,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
             <dt>Copper vs gold</dt><dd>{signed(derivedState.relative.copperVsGold)}</dd>
           </dl>
         </details>}
-        <p data-commodity-source className="text-xs text-white/45">Source: Alpha Vantage · {data?.sourceAsOf ? `Latest included observation: ${data.sourceAsOf}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU')}` : ''} · Individual dates and proxy units in observation details.</p>
+        <p data-commodity-source className="text-xs text-white/45">Source: Alpha Vantage · {data?.sourceAsOf ? `Latest included observation: ${new Date(`${data.sourceAsOf}T12:00:00Z`).toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '')}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU', {timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}` : ''} · Individual dates and proxy units in observation details.</p>
         <ComplianceDisclaimer compact />
       </main>
     </div>
