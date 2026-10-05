@@ -1,0 +1,8 @@
+const fs=require('node:fs'),cp=require('node:child_process'),crypto=require('node:crypto'),ts=require(process.cwd()+'/node_modules/typescript');
+const base='c4841fb565e003daff42d4d2111fee0d951b32c8',results=[];
+const read=path=>[cp.execFileSync('git',['show',base+':'+path],{encoding:'utf8'}),fs.readFileSync(path,'utf8')];
+function record(path,name,before,after){if(!before||before!==after)throw Error('Changed '+name);results.push({path,name,identical:true,sha256:crypto.createHash('sha256').update(after).digest('hex')});}
+let path='app/tools/command-center/page.tsx';let [before,after]=read(path);const segment=s=>s.slice(s.indexOf('  const regime = useRegime();'),s.indexOf('  return (\n    <div className="space-y-3">'));record(path,'Overview calculations, effects and snapshot handling',segment(before),segment(after));
+path='components/free/DemoScan.tsx';[before,after]=read(path);function extract(src,name){const file=ts.createSourceFile('p.tsx',src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let out;function visit(n){if(ts.isFunctionDeclaration(n)&&n.name?.getText(file)===name)out=n.body.getText(file);ts.forEachChild(n,visit);}visit(file);return out;}for(const name of ['scan','refreshUsage'])record(path,name,extract(before,name),extract(after,name));
+for(path of ['components/free/SavedPicks.tsx','components/free/RadarPreview.tsx']){[before,after]=read(path);const effect=s=>s.slice(s.indexOf('  useEffect(() => {'),s.indexOf('  return <section'));record(path,'data effect',effect(before),effect(after));}
+fs.writeFileSync('docs/qa/today-2026-10-05/calculation-parity.json',JSON.stringify({base,results},null,2));console.log(results.length+' calculation/request blocks are byte-identical');

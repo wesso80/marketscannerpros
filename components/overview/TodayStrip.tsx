@@ -1,5 +1,5 @@
 import React from 'react';
-import HeroStrip from '@/components/visual/HeroStrip';
+import { marketText } from '@/lib/marketsPresentation';
 import HeatStrip from '@/components/visual/HeatStrip';
 import StatCard from '@/components/visual/StatCard';
 import { COPY } from '@/components/visual/copy';
@@ -14,20 +14,18 @@ export default function TodayStrip({ regime, loading, hasRegimeData, regimeColor
   strength: StrengthRanking; quotes?: Record<string, DisplayQuote>; quotesLoading?: boolean;
 }) {
   const c = COPY.today;
-  const freshness = loading && !hasRegimeData ? c.loading : !regime.available ? c.unavailable : regime.stale ? c.stale : c.current;
   const sectorStamp = { source: c.sectorSource, asOf: sectorTime, tradingDay: sectorDay, basis: c.lastClose };
-  return <section data-today-strip className="min-w-0 space-y-3 border border-white/10 bg-[var(--msp-panel)] p-4" style={{ borderRadius: 'var(--msp-radius-card)' }}>
-    <HeroStrip subject={c.overview} headline={regime.regimeLabel} color={regimeColor} freshness={freshness} stamp={{ source: c.regime, asOf: regime.asOf, basis: c.snapshot }} />
-    <HeatStrip cells={sectorCells(sectors)} stamp={sectorStamp} />
+  return <section aria-label={c.overview} data-today-strip className="min-w-0 space-y-3 border border-white/10 bg-[var(--msp-panel)] p-4" style={{ borderRadius: 'var(--msp-radius-card)' }}>
+    <p data-today-verdict className="text-2xl font-bold" style={{ color: regimeColor }}>{regime.available ? marketText(regime.regimeLabel) : "Market assessment not collected"}</p>
+    <HeatStrip cells={sectorCells(sectors)} stamp={sectorStamp} hideStamp />
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {([c.btc, c.eth, c.spy] as const).map(symbol => {
         const raw = quotes?.[symbol];
         const quote = quoteStamp(symbol, symbol === c.spy ? 'equity' : 'crypto', raw);
         const measured = typeof raw?.price === 'number' && Number.isFinite(raw.price) && raw.price !== 0;
-        const waiting = quotesLoading && !raw;
-        return <StatCard key={symbol} label={symbol} value={waiting ? c.loading : measured || raw ? priceText(quote.price) : c.unavailable} stamp={waiting ? undefined : measured || raw ? { quote } : { source: 'stored quote', basis: symbol === c.spy ? c.lastClose : 'spot' }} />;
+        return measured ? <StatCard key={symbol} label={symbol} value={priceText(quote.price)} /> : null;
       })}
-      <StatCard label={c.sectorsUp} value={strength.total ? `${Math.round(strength.greenRatio * strength.total)} / ${strength.total}` : c.na} stamp={sectorStamp} />
+      <StatCard label={c.sectorsUp} value={strength.total ? `${Math.round(strength.greenRatio * strength.total)} / ${strength.total}` : "Not collected"} />
     </div>
   </section>;
 }

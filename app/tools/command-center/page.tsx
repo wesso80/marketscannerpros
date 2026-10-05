@@ -29,7 +29,8 @@ import RadarReportCard from '@/components/overview/RadarReportCard';
 import PriceStamp from '@/components/market/PriceStamp';
 import {freshness} from '@/lib/crypto/breakdown/freshness';
 import {trustBadgeState} from '@/components/market/TrustBadge';
-import DataStatusRow from '@/components/overview/DataStatusRow';
+import ChipRow from '@/components/visual/ChipRow';
+import { marketText } from '@/lib/marketsPresentation';
 import TodayStrip from '@/components/overview/TodayStrip';
 import ViewerDate from '@/components/visual/ViewerDate';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
@@ -113,7 +114,7 @@ function deltaColor(kind: 'regime' | 'risk' | 'sector' | 'crypto' | 'building' |
 }
 
 function plainLabel(value: string) {
-  return value.replace(/unavailable/gi, 'not available right now').replace(/\bunknown\b/gi, 'not available right now').replace(/\bdegraded\b/gi, 'needs a check').replace(/\bN\/A\b/g, 'No reading');
+  return marketText(value);
 }
 function SectionTitle({ n, title, hint }: { n: string; title: string; hint?: string }) {
   return (
@@ -288,23 +289,7 @@ export default function CommandCenterPage() {
 
   return (
     <div className="space-y-3">
-      <PageHero
-        ariaLabel="Overview header"
-        eyebrow="Market intelligence"
-        badges={[
-          { label: regime.loading && !regime.data ? 'Regime loading' : reg.available ? `Regime ${reg.regimeLabel}` : 'Regime not available right now' },
-          { label: `Evidence ${evidence.level}` },
-          ...(reg.changed ? [{ label: 'Regime changed' }] : []),
-          ...(anyLoading ? [{ label: 'Updating…' }] : []),
-        ]}
-        title="Overview"
-        subtitle={COPY.today.subtitle}
-        actions={[
-          { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
-          { label: 'Open Symbol', variant: 'secondary', href: '/tools/golden-egg' },
-          { label: 'Research Dashboard', variant: 'ghost', href: '/tools/dashboard' },
-        ]}
-      />
+      <h1 className="text-2xl font-semibold">Overview</h1>
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2"><TodayStrip regime={reg} loading={regime.loading} hasRegimeData={Boolean(regime.data)} regimeColor={stanceColor(reg.stance)} sectors={sectorData} sectorTime={sectors.data?.asOf} sectorDay={sectors.data?.asOfTradingDay} strength={strength} quotes={quotes.data?.quotes} quotesLoading={quotes.loading} /></div>
@@ -312,16 +297,20 @@ export default function CommandCenterPage() {
       </div>
 
       <ViewerDate />
-      <DataStatusRow items={[
-        {label:'Regime',statusLabel:reg.stale?'Stale':reg.available?'Unknown':'Degraded',notes:[formatMarketTime(reg.asOf)??''],warnings:regime.error?[String(regime.error)]:[],source:'regime'},
-        {label:'Sectors',statusLabel:sectors.error?'Degraded':sectors.data?.asOfTradingDay?'Last close':'Unknown',source:'Alpha Vantage',notes:[sectors.data?.asOfTradingDay??formatMarketTime(sectors.data?.asOf)??'']},
-        {label:'Crypto overview',statusLabel:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status,status:trustBadgeState({status:crypto.error?'Degraded':freshness('spot',crypto.data?.asOf).status}).normalized,source:'CoinGecko',notes:[formatMarketTime(crypto.data?.asOf)??'']},
-        {label:'Quotes',statusLabel:quotes.loading?'Loading':quotes.error?'Degraded':Object.values(quotes.data?.quotes??{}).some(q=>q.stale)?'Stale':'Unknown',source:'stored quotes',notes:['Per-symbol observation times in the pulse']},
-        {label:'Funding',statusLabel:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status,status:trustBadgeState({status:funding.error?'Degraded':funding.data?.freshnessStatus==='stale'?'Stale':freshness('okx',funding.data?.timestamp).status}).normalized,source:'OKX',notes:[formatMarketTime(funding.data?.timestamp)??'']},
-        {label:'Daily picks',statusLabel:picks.error?'Degraded':'Unknown',source:'stored daily scan',notes:['Per-row trust and dates in Daily Picks']},
-        {label:'Movers',statusLabel:movers.error?'Degraded':'Unknown',source:'stored movers',notes:[formatMarketTime(movers.data?.equityAsOf)??'']},
-        {label:'Event clock',statusLabel:calendarWarning?'Degraded':'Unknown',source:'economic calendar',notes:['schedule only'],warnings:calendarWarning?[calendarWarning]:[]},
-      ]}/>
+      <ChipRow items={[{id: 'feed-health', label: (degradedFeeds.length || quotes.error || funding.error || picks.error) ? 'Some feeds need a check' : 'Observation coverage', warning: Boolean(degradedFeeds.length || quotes.error || funding.error || picks.error), detail: <ul className="space-y-1 text-sm">{[
+        ['Regime', regime.error ? 'Could not load' : reg.stale ? 'Older observations' : reg.available ? 'Collected' : 'Not collected'],
+        ['Sectors', sectors.error ? 'Could not load' : sectorData.length ? 'Collected' : 'Not collected'],
+        ['Crypto overview', crypto.error ? 'Could not load' : cryptoData ? 'Collected' : 'Not collected'],
+        ['Quotes', quotes.error ? 'Could not load' : Object.keys(quotes.data?.quotes ?? {}).length ? 'Collected' : 'Not collected'],
+        ['Funding', funding.error ? 'Could not load' : funding.data?.coins.length ? 'Collected' : 'Not collected'],
+        ['Daily picks', picks.error ? 'Could not load' : rows.length ? 'Stored scan' : 'Not collected'],
+        ['Movers', movers.error ? 'Could not load' : moverList.length ? 'Collected' : 'Not collected'],
+        ['Event clock', calendarWarning ? 'Schedule needs a check' : 'Schedule only'],
+      ].map(([label,status]) => <li key={label}>{label}: {status}</li>)}</ul>}]} />
+      <SourceLine source="Stored market feeds" asOf={reg.asOf || crypto.data?.asOf || sectors.data?.asOf} basis="Independent observations · dates in research detail" />
+      <CollapsibleSection title="Market evidence" summary={`${strength.total} sectors · ${rows.length} stored picks`}>
+      <div className="space-y-3">
+
 
       <section data-regime-box className="space-y-4 rounded-lg border p-4" style={{ borderColor: stanceColor(reg.stance) }}>
         <SectionTitle n="01" title="Drivers and risk clock" hint={reg.available && reg.stale ? 'contains stale inputs' : undefined} />
@@ -367,19 +356,19 @@ export default function CommandCenterPage() {
       <section className="space-y-3 rounded-lg border border-white/10 p-4">
         <h2 className="text-lg font-bold">Market pulse</h2>
         <div role="tablist" aria-label="Market pulse" className="flex gap-2">{(['crypto','equity'] as const).map(type=><button key={type} role="tab" aria-selected={asset===type} onClick={()=>setAsset(type)} className={`rounded border px-4 py-2 ${asset===type?'text-emerald-300 border-emerald-400':'border-slate-700'}`}>{type==='crypto'?'Crypto':'Stocks'}</button>)}</div>
-        {quotes.error&&<p className="text-amber-300">{quotes.error}</p>}
+        {quotes.error&&<p className="text-amber-300">Quotes could not be loaded.</p>}
         <div className="grid gap-3 md:grid-cols-2">{(asset==='crypto'?['BTC','ETH','SOL']:['SPY','QQQ','IWM','DIA']).map(symbol => {
           const reading = quoteStamp(symbol, asset, quotes.data?.quotes?.[symbol]);
           const measured = typeof reading.price === 'number' && Number.isFinite(reading.price) && reading.price !== 0;
-          return <Link key={symbol} href={symbolHref(symbol, asset)} className="rounded border border-white/10 p-3">{measured ? <PriceStamp {...reading} /> : <span>{symbol} {COPY.today.unavailable}</span>}</Link>;
+          return <Link key={symbol} href={symbolHref(symbol, asset)} className="rounded border border-white/10 p-3">{measured ? <PriceStamp plain {...reading} /> : <span>{symbol} {COPY.today.unavailable}</span>}</Link>;
         })}</div>
         {asset==='crypto'?<>
-          {cryptoData ? <p>BTC dominance {cryptoData.btcDominance}% · Market cap {cryptoData.totalMarketCapFormatted}</p> : null}
-          <SourceLine source="CoinGecko" asOf={crypto.data?.asOf} basis="crypto market snapshot" />
+          {cryptoData ? <p>BTC dominance {cryptoData.btcDominance.toFixed(1)}% · Market cap {cryptoData.totalMarketCapFormatted}</p> : null}
+          <p className="text-xs text-slate-400">Crypto market snapshot · {formatMarketTime(crypto.data?.asOf) || "Observation time not supplied"}</p>
           <CollapsibleSection title="Funding" summary="OKX 8h equivalent">
-            {funding.error?<p className="text-amber-300">{funding.error}</p>:['BTC','ETH','SOL'].map(symbol=>{
+            {funding.error?<p className="text-amber-300">Funding could not be loaded.</p>:['BTC','ETH','SOL'].map(symbol=>{
               const rate = funding.data?.coins.find(c=>c.symbol===symbol)?.fundingRatePercent;
-              return typeof rate === 'number' ? <p key={symbol}>{symbol}: {rate}%</p> : null;
+              return typeof rate === 'number' ? <p key={symbol}>{symbol}: {rate.toFixed(4)}%</p> : null;
             })}
           </CollapsibleSection>
       <div className="grid gap-3 md:grid-cols-2">
@@ -410,7 +399,7 @@ export default function CommandCenterPage() {
       </section>
       <Card className="p-3">
         <h2 className="text-sm font-bold">Daily Picks · {asset==='crypto'?'Crypto':'Stocks'}</h2>
-        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">{picks.error}</p>:rows.length?<OverviewPicks rows={rows.slice(0,5)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
+        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">Stored picks could not be loaded.</p>:rows.length?<OverviewPicks rows={rows.slice(0,5)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
         <div className="mt-2 flex flex-wrap gap-3 text-sm">
           <Link className="inline-flex min-h-10 items-center text-emerald-300" href="/daily-pick">Open Daily Picks</Link>
           <Link className="inline-flex min-h-10 items-center text-emerald-300" href={`/tools/scanner?type=${asset}`}>See all in Scanner</Link>
@@ -512,6 +501,8 @@ export default function CommandCenterPage() {
       </Card>
       </CollapsibleSection>
 
+      </div>
+      </CollapsibleSection>
       <p className="px-1 text-[11px] text-slate-600">{EDUCATIONAL_DISCLOSURE}</p>
       <ComplianceDisclaimer/>
     </div>

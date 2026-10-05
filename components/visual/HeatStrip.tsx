@@ -2,7 +2,7 @@ import React from 'react';
 import type { sectorCells } from '@/lib/overview/today';
 import StampLine, { type StampLineProps } from './StampLine';
 import { COPY } from './copy';
-export default function HeatStrip({ cells, stamp }: { cells: ReturnType<typeof sectorCells>; stamp: StampLineProps }) {
+export default function HeatStrip({ cells, stamp, hideStamp = false }: { hideStamp?: boolean; cells: ReturnType<typeof sectorCells>; stamp: StampLineProps }) {
   return <figure className="min-w-0 space-y-3">
     <h3 className="text-sm font-semibold text-[var(--msp-text)]">{COPY.today.sectors}</h3>
     {cells.length ? <div role="img" aria-label={`${COPY.today.sectors}: ${cells.map(c => `${c.symbol} ${c.valueLabel}`).join(', ')}`} className="flex">
@@ -13,6 +13,6 @@ export default function HeatStrip({ cells, stamp }: { cells: ReturnType<typeof s
         <span aria-hidden="true" className={`relative text-[9px] ${cell.changePercent === null ? 'block' : 'hidden sm:block'}`}>{cell.valueLabel}</span>
       </div>)}
     </div> : <p>{COPY.today.noSectors}</p>}
-    <figcaption><StampLine {...stamp} /></figcaption>
+    {!hideStamp && <figcaption><StampLine {...stamp} /></figcaption>}
   </figure>;
 }

@@ -25,6 +25,6 @@ describe('L-5 Overview',()=>{
   const src=readFileSync('app/tools/command-center/page.tsx','utf8');
   expect(src).not.toMatch(/fear-greed-custom|open-interest|useCryptoDerivatives|Forex/);
   expect(src.match(/const regime = useRegime\(\)/g)).toHaveLength(1);
-  expect(src).toContain('schedule only');expect(src).toContain('ComplianceDisclaimer');
+  expect(src).toMatch(/schedule only/i);expect(src).toContain('ComplianceDisclaimer');
  });
 });

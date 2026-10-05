@@ -60,10 +60,10 @@ export default function DemoScan() {
     </div>}
     {error && <p role="alert">{FREE_COPY.unavailable} <button className="min-h-10 underline" onClick={() => void (usage ? scan('AAPL') : refreshUsage().catch(() => setError(true)))}>{FREE_COPY.retry}</button></p>}
     {row && score != null && <div aria-live="polite">
-      <p>{row.symbol}</p><p className="text-6xl font-semibold" style={{ color: scoreTone(score) }}>{score}</p>
+      <p>{row.symbol}</p><p className="text-6xl font-semibold" style={{ color: scoreTone(score) }}>{score.toLocaleString(undefined, { maximumFractionDigits: 1 })}</p>
       <Stamp at={row.dataBasis?.lastCompletedBarAt || row.lastCandleTime} source={row.dataBasis?.source || FREE_COPY.scanSource} basis={FREE_COPY.lastBar} />
       <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {[[FREE_COPY.price, row.price], [FREE_COPY.rsi, row.rsi], [FREE_COPY.coverage, row.canonical?.coverage == null ? null : `${Math.round(row.canonical.coverage * 100)}%`]].map(([label,value]) => <div key={String(label)}><dt className="text-xs">{label}</dt><dd>{value ?? FREE_COPY.unavailable}</dd></div>)}
+        {[[FREE_COPY.price, row.price], [FREE_COPY.rsi, row.rsi], [FREE_COPY.coverage, row.canonical?.coverage == null ? null : `${Math.round(row.canonical.coverage * 100)}%`]].map(([label,value]) => <div key={String(label)}><dt className="text-xs">{label}</dt><dd>{typeof value === 'number' ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : value ?? FREE_COPY.unavailable}</dd></div>)}
       </dl>
       <Link className="mt-3 inline-flex min-h-10 items-center underline" href={`/tools/golden-egg?symbol=${encodeURIComponent(row.symbol)}`}>{FREE_COPY.fullAnalysis}</Link>
     </div>}

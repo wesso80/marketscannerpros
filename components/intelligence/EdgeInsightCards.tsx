@@ -161,7 +161,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
     return (
       <div className="rounded-md border border-slate-800/60 bg-[var(--msp-panel)] px-3 py-1.5 flex items-center justify-between gap-3 text-xs">
         <span className="font-semibold text-slate-300">Edge Profile</span>
-        <span className="text-[11px] text-slate-500">Unavailable right now (couldn&apos;t load your closed trades)</span>
+        <span className="text-[11px] text-slate-500">Closed trades could not be loaded.</span>
       </div>
     );
   }

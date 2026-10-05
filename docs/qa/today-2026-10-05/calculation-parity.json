@@ -1,0 +1,35 @@
+{
+  "base": "c4841fb565e003daff42d4d2111fee0d951b32c8",
+  "results": [
+    {
+      "path": "app/tools/command-center/page.tsx",
+      "name": "Overview calculations, effects and snapshot handling",
+      "identical": true,
+      "sha256": "9ba81427ace972f1efb6cd98203665e29883f6aa6d0d2b252940f0144b06201a"
+    },
+    {
+      "path": "components/free/DemoScan.tsx",
+      "name": "scan",
+      "identical": true,
+      "sha256": "c9dfa7240940233039e46037bf00800f8f0dbb934552f420dc1f63ccb0c6e48b"
+    },
+    {
+      "path": "components/free/DemoScan.tsx",
+      "name": "refreshUsage",
+      "identical": true,
+      "sha256": "0ab7c61a04947d70d8741c01f750cf26b4cee0752a980417176bb97326e46c48"
+    },
+    {
+      "path": "components/free/SavedPicks.tsx",
+      "name": "data effect",
+      "identical": true,
+      "sha256": "8ffbddc424f9ad5b1a5405db073f215af9cabbe5b1cc61d62e19efb6124b5f6b"
+    },
+    {
+      "path": "components/free/RadarPreview.tsx",
+      "name": "data effect",
+      "identical": true,
+      "sha256": "1b61b5c2243e6a5a81b17be2da8291d1f79ebbfa71cd9693d138d5a099af0241"
+    }
+  ]
+}
