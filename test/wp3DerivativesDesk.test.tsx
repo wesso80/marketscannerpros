@@ -78,7 +78,7 @@ function installFetch(mode: 'empty' | 'three') {
   }));
 }
 
-beforeEach(() => { calls.length = 0; });
+beforeEach(() => { calls.length = 0; vi.stubGlobal('React', React); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('crypto derivatives desk', () => {
@@ -93,6 +93,9 @@ describe('crypto derivatives desk', () => {
     expect(document.body.textContent).not.toContain('Wait for complete data');
     expect(document.body.textContent).not.toContain('Trade Ideas');
     expect(document.body.textContent).not.toContain('Playbook');
+    expect(screen.getByRole('status').textContent).toContain('Not enough feed coverage');
+    expect(document.querySelectorAll('[data-derivatives-summary]')).toHaveLength(1);
+    expect(document.querySelectorAll('details[open]')).toHaveLength(0);
   });
 
   it('renders the conditions row from funding, long/short and open interest with the 3 of 4 label', async () => {
@@ -101,6 +104,15 @@ describe('crypto derivatives desk', () => {
     expect(await screen.findByText('Based on 3 of 4 feeds · liquidations not collected')).toBeTruthy();
     const conditions = screen.getByRole('region', { name: 'Conditions' });
     expect(conditions.textContent).toMatch(/Conditions/);
+    expect(document.querySelectorAll('[data-derivatives-summary]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-source-line]')).toHaveLength(1);
+    expect(document.querySelectorAll('details[open]')).toHaveLength(0);
+    const charts=screen.getByText('Funding and account-ratio charts');
+    expect(conditions.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const source=document.querySelector('[data-source-line]')!;
+    expect(source.textContent).toContain('Last response with data received');
+    expect(source.textContent).toContain('request completion, not a provider observation time');
+    expect(source.textContent).toContain('no shared provider observation time supplied');
     expect(screen.getAllByRole('button', { name: /Liquidations: not collected/ })).toHaveLength(1);
     expect(screen.getAllByText('Show all 4').length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/Unavailable/);
