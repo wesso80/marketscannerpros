@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
-import { sendAlertEmail } from '@/lib/email';
+import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
+import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/registry';
@@ -265,12 +266,19 @@ async function checkStrategyAlerts(req: NextRequest) {
                   `, [alert.workspace_id]);
                   
                   if (users[0]?.email) {
-                    await sendAlertEmail({
+                    const content = buildTriggeredAlertContent({
                       to: users[0].email,
                       alertName,
                       symbol,
                       message: alertMessage,
                       alertType: 'smart'
+                    });
+                    await deliverUserAlertEmail({
+                      workspaceId: alert.workspace_id,
+                      to: users[0].email,
+                      subject: content.subject,
+                      html: content.html,
+                      line: `${symbol}: ${alertMessage}`,
                     });
                   }
                 } catch (emailErr) {

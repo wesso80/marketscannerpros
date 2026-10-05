@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
-import { sendAlertEmail } from '@/lib/email';
+import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
+import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 
@@ -401,16 +402,24 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
   // Send email notification
   if (alert.notify_email && userEmail) {
     try {
-      await sendAlertEmail({
+      const signalMessage = result.message || `Scanner signal triggered: ${alert.condition_type.replace(/_/g, ' ')}`;
+      const content = buildTriggeredAlertContent({
         to: userEmail,
         symbol: alert.symbol,
         alertName: alert.name || 'Signal Alert',
-        message: result.message || `Scanner signal triggered: ${alert.condition_type.replace(/_/g, ' ')}`,
+        message: signalMessage,
         value: result.value || scan.score,
         threshold: result.threshold || Number(alert.condition_value),
         alertType: 'smart',
       });
-      console.log(`📧 Email sent for signal alert: ${alert.name || alert.condition_type}`);
+      const delivered = await deliverUserAlertEmail({
+        workspaceId: alert.workspace_id,
+        to: userEmail,
+        subject: content.subject,
+        html: content.html,
+        line: `${alert.symbol}: ${signalMessage}`,
+      });
+      console.log(`📧 Signal alert email ${delivered.action} (${delivered.reason}): ${alert.name || alert.condition_type}`);
     } catch (emailErr) {
       console.error('Failed to send signal alert email:', emailErr);
     }

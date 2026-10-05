@@ -8,6 +8,11 @@ vi.mock('@/lib/db', () => ({ q: mocks.q }));
 vi.mock('@/lib/coingecko', () => ({ getPriceBySymbol: mocks.crypto }));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 vi.mock('@/lib/email', () => ({ sendAlertEmail: mocks.email }));
+vi.mock('@/lib/alerts/emailControls', () => ({
+  deliverUserAlertEmail: (...args: unknown[]) => mocks.email(...args),
+  getStoredAlertEmailMode: async () => 'digest',
+  setAlertEmailMode: async () => 'ok',
+}));
 vi.mock('@/lib/pushServer', () => ({ sendPushToUser: mocks.push, PushTemplates: {} }));
 vi.mock('@/lib/discord-bridge', () => ({ postToDiscord: mocks.bridge, postToDiscordDetailed: mocks.bridge, buildAlertEmbed: (x: unknown) => x }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: mocks.session }));

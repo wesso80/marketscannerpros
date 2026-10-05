@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { recordWebhookSuppression } from "@/lib/alerts/emailControls";
 import { maskEmail } from "@/lib/maskEmail";
 import { RESEND_WEBHOOK_EVENTS, verifyResendWebhookSignature, type ResendWebhookEventType } from "@/lib/resendWebhook";
 
@@ -60,5 +61,8 @@ export async function POST(req: NextRequest) {
   const reason = bounceReason(data);
 
   console.log(`[resend-webhook] id=${emailId} type=${type} to=${masked}${reason ? ` reason=${reason}` : ""}`);
+  if (type === "email.complained" || type === "email.bounced") {
+    await recordWebhookSuppression(type, data);
+  }
   return NextResponse.json({ ok: true });
 }
