@@ -1,0 +1,2237 @@
+{
+  "mocked": true,
+  "offSession": true,
+  "results": [
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:18.915Z",
+      "height": 800,
+      "scrollHeight": 1848,
+      "scrollWidth": 1280,
+      "screens": 2.31,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nBoth\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:21.715Z",
+      "height": 844,
+      "scrollHeight": 2883,
+      "scrollWidth": 360,
+      "screens": 3.4158767772511847,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "legacyHeaders": [
+        "Bid",
+        "Ask",
+        "Vol",
+        "OI",
+        "IV",
+        "Delta",
+        "Strike",
+        "Delta",
+        "IV",
+        "OI",
+        "Vol",
+        "Bid",
+        "Ask"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 360,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:25.381Z",
+      "height": 844,
+      "scrollHeight": 2805,
+      "scrollWidth": 390,
+      "screens": 3.3234597156398102,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "legacyHeaders": [
+        "Bid",
+        "Ask",
+        "Vol",
+        "OI",
+        "IV",
+        "Delta",
+        "Strike",
+        "Delta",
+        "IV",
+        "OI",
+        "Vol",
+        "Bid",
+        "Ask"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:29.164Z",
+      "height": 844,
+      "scrollHeight": 2683,
+      "scrollWidth": 430,
+      "screens": 3.178909952606635,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "legacyHeaders": [
+        "Bid",
+        "Ask",
+        "Vol",
+        "OI",
+        "IV",
+        "Delta",
+        "Strike",
+        "Delta",
+        "IV",
+        "OI",
+        "Vol",
+        "Bid",
+        "Ask"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 430,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:32.215Z",
+      "height": 844,
+      "scrollHeight": 2583,
+      "scrollWidth": 485,
+      "screens": 3.06042654028436,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "legacyHeaders": [
+        "Bid",
+        "Ask",
+        "Vol",
+        "OI",
+        "IV",
+        "Delta",
+        "Strike",
+        "Delta",
+        "IV",
+        "OI",
+        "Vol",
+        "Bid",
+        "Ask"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 485,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:35.815Z",
+      "height": 844,
+      "scrollHeight": 2467,
+      "scrollWidth": 639,
+      "screens": 2.9229857819905214,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "legacyHeaders": [
+        "Bid",
+        "Ask",
+        "Vol",
+        "OI",
+        "IV",
+        "Delta",
+        "Strike",
+        "Delta",
+        "IV",
+        "OI",
+        "Vol",
+        "Bid",
+        "Ask"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 639,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "missing": true,
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:39.115Z",
+      "height": 800,
+      "scrollHeight": 1353,
+      "scrollWidth": 1280,
+      "screens": 1.69125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL · no quote\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\nNot available right now\n1-SIGMA MOVE TO EXPIRY\nNot available right now\nATM STRADDLE MID\nNot available right now\nEM %\nNot available right now\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nLoad a chain to see auto-computed notable strikes.\nOpen chain0 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL · no quote\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\nNot available right now\n1-SIGMA MOVE TO EXPIRY\nNot available right now\nATM STRADDLE MID\nNot available right now\nEM %\nNot available right now\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nLoad a chain to see auto-computed notable strikes.\nOpen chain0 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n0 strikes\nBoth\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\nNo quoted strikes pass these filters. Check the chain coverage warning above.\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\nLoad a chain to see OI heatmap\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "tier": "pro",
+      "symbol": "MU",
+      "url": "/tools/terminal?tab=options&symbol=MU&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:41.997Z",
+      "height": 800,
+      "scrollHeight": 2101,
+      "scrollWidth": 1280,
+      "screens": 2.62625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Terminal · Change view\nTICKER\nOptions Terminal\nUNDERLYING\nMU $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "MU",
+          "label": "Terminal symbol"
+        },
+        {
+          "value": "MU",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nOptions Terminal · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nTICKER\nOptions Terminal\nUNDERLYING\nMU $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nBoth\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use MU · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "tier": "free",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:44.981Z",
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "tier": "anonymous",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:47.047Z",
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "tier": "pro",
+      "symbol": "AAPL",
+      "missing": true,
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:49.180Z",
+      "height": 844,
+      "scrollHeight": 2074,
+      "scrollWidth": 390,
+      "screens": 2.457345971563981,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL · no quote\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\nNot available right now\n1-SIGMA MOVE TO EXPIRY\nNot available right now\nATM STRADDLE MID\nNot available right now\nEM %\nNot available right now\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nLoad a chain to see auto-computed notable strikes.\nOpen chain0 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nTICKER\nOptions Terminal\nUNDERLYING\nAAPL · no quote\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\nNot available right now\n1-SIGMA MOVE TO EXPIRY\nNot available right now\nATM STRADDLE MID\nNot available right now\nEM %\nNot available right now\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nLoad a chain to see auto-computed notable strikes.\nOpen chain0 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n0 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\nNo quoted strikes pass these filters. Check the chain coverage warning above.\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\nLoad a chain to see OI heatmap\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use AAPL · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "tier": "pro",
+      "symbol": "MU",
+      "url": "/tools/terminal?tab=options&symbol=MU&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:51.581Z",
+      "height": 844,
+      "scrollHeight": 3125,
+      "scrollWidth": 390,
+      "screens": 3.7026066350710902,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Terminal · Change view\nTICKER\nOptions Terminal\nUNDERLYING\nMU $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [
+        {
+          "value": "MU",
+          "label": "Terminal symbol"
+        },
+        {
+          "value": "MU",
+          "label": null
+        },
+        {
+          "value": "20",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "0",
+          "label": null
+        },
+        {
+          "value": "50",
+          "label": null
+        }
+      ],
+      "legacyHeaders": [
+        "Bid",
+        "Ask",
+        "Vol",
+        "OI",
+        "IV",
+        "Delta",
+        "Strike",
+        "Delta",
+        "IV",
+        "OI",
+        "Vol",
+        "Bid",
+        "Ask"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nOptions Terminal · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nTICKER\nOptions Terminal\nUNDERLYING\nMU $332.50 · last close · Mon 5 Oct (New York) · +0.33% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n302.04 to 362.96\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n260\n265\n270\n275\n280\n285\n290\n295\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$30.46\nATM STRADDLE MID\n$2.83\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$330.00\nΔ 0.50\nATM PUT\n$330.00\nΔ -0.50\n25Δ CALL\n$260.00\nΔ 0.50\n25Δ PUT\n$260.00\nΔ -0.50\nTOP OI CALL\n$400.00\nOI 12,800\nTOP OI PUT\n$260.00\nOI 12,900\nOpen chain26 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n26 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.22\t1.37\t1,236\t10,200\t25.0%\t0.50\t\n270.00\n-62.50 (-18.8%)\n\t-0.50\t25.0%\t12,700\t1,236\t1.22\t1.37\n1.23\t1.38\t1,237\t10,300\t25.0%\t0.50\t\n275.00\n-57.50 (-17.3%)\n\t-0.50\t25.0%\t12,600\t1,237\t1.23\t1.38\n1.24\t1.39\t1,238\t10,400\t25.0%\t0.50\t\n280.00\n-52.50 (-15.8%)\n\t-0.50\t25.0%\t12,500\t1,238\t1.24\t1.39\n1.25\t1.40\t1,239\t10,500\t25.0%\t0.50\t\n285.00\n-47.50 (-14.3%)\n\t-0.50\t25.0%\t12,400\t1,239\t1.25\t1.40\n1.26\t1.41\t1,240\t10,600\t25.0%\t0.50\t\n290.00\n-42.50 (-12.8%)\n\t-0.50\t25.0%\t12,300\t1,240\t1.26\t1.41\n1.27\t1.42\t1,241\t10,700\t25.0%\t0.50\t\n295.00\n-37.50 (-11.3%)\n\t-0.50\t25.0%\t12,200\t1,241\t1.27\t1.42\n1.28\t1.43\t1,242\t10,800\t25.0%\t0.50\t\n300.00\n-32.50 (-9.8%)\n\t-0.50\t25.0%\t12,100\t1,242\t1.28\t1.43\n1.29\t1.44\t1,243\t10,900\t25.0%\t0.50\t\n305.00\n-27.50 (-8.3%)\n\t-0.50\t25.0%\t12,000\t1,243\t1.29\t1.44\n1.30\t1.45\t1,244\t11,000\t25.0%\t0.50\t\n310.00\n-22.50 (-6.8%)\n\t-0.50\t25.0%\t11,900\t1,244\t1.30\t1.45\n1.31\t1.46\t1,245\t11,100\t25.0%\t0.50\t\n315.00\n-17.50 (-5.3%)\n\t-0.50\t25.0%\t11,800\t1,245\t1.31\t1.46\n1.32\t1.47\t1,246\t11,200\t25.0%\t0.50\t\n320.00\n-12.50 (-3.8%)\n\t-0.50\t25.0%\t11,700\t1,246\t1.32\t1.47\n1.33\t1.48\t1,247\t11,300\t25.0%\t0.50\t\n325.00\n-7.50 (-2.3%)\n\t-0.50\t25.0%\t11,600\t1,247\t1.33\t1.48\n1.34\t1.49\t1,248\t11,400\t25.0%\t0.50\t\n330.00 ATM\n-2.50 (-0.8%)\n\t-0.50\t25.0%\t11,500\t1,248\t1.34\t1.49\n1.35\t1.50\t1,249\t11,500\t25.0%\t0.50\t\n335.00\n+2.50 (+0.8%)\n\t-0.50\t25.0%\t11,400\t1,249\t1.35\t1.50\n1.36\t1.51\t1,250\t11,600\t25.0%\t0.50\t\n340.00\n+7.50 (+2.3%)\n\t-0.50\t25.0%\t11,300\t1,250\t1.36\t1.51\n1.37\t1.52\t1,251\t11,700\t25.0%\t0.50\t\n345.00\n+12.50 (+3.8%)\n\t-0.50\t25.0%\t11,200\t1,251\t1.37\t1.52\n1.38\t1.53\t1,252\t11,800\t25.0%\t0.50\t\n350.00\n+17.50 (+5.3%)\n\t-0.50\t25.0%\t11,100\t1,252\t1.38\t1.53\n1.39\t1.54\t1,253\t11,900\t25.0%\t0.50\t\n355.00\n+22.50 (+6.8%)\n\t-0.50\t25.0%\t11,000\t1,253\t1.39\t1.54\n1.40\t1.55\t1,254\t12,000\t25.0%\t0.50\t\n360.00\n+27.50 (+8.3%)\n\t-0.50\t25.0%\t10,900\t1,254\t1.40\t1.55\n1.41\t1.56\t1,255\t12,100\t25.0%\t0.50\t\n365.00\n+32.50 (+9.8%)\n\t-0.50\t25.0%\t10,800\t1,255\t1.41\t1.56\n1.42\t1.57\t1,256\t12,200\t25.0%\t0.50\t\n370.00\n+37.50 (+11.3%)\n\t-0.50\t25.0%\t10,700\t1,256\t1.42\t1.57\n1.43\t1.58\t1,257\t12,300\t25.0%\t0.50\t\n375.00\n+42.50 (+12.8%)\n\t-0.50\t25.0%\t10,600\t1,257\t1.43\t1.58\n1.44\t1.59\t1,258\t12,400\t25.0%\t0.50\t\n380.00\n+47.50 (+14.3%)\n\t-0.50\t25.0%\t10,500\t1,258\t1.44\t1.59\n1.45\t1.60\t1,259\t12,500\t25.0%\t0.50\t\n385.00\n+52.50 (+15.8%)\n\t-0.50\t25.0%\t10,400\t1,259\t1.45\t1.60\n1.46\t1.61\t1,260\t12,600\t25.0%\t0.50\t\n390.00\n+57.50 (+17.3%)\n\t-0.50\t25.0%\t10,300\t1,260\t1.46\t1.61\n1.47\t1.62\t1,261\t12,700\t25.0%\t0.50\t\n395.00\n+62.50 (+18.8%)\n\t-0.50\t25.0%\t10,200\t1,261\t1.47\t1.62\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $332.50 · window ±3 moves; shaded 1-sigma band $302.04–$362.96\n\n260\n265\n270\n275\n280\n285\n290\n295\n300\n305\n310\n315\n320\n325\n330\nSpot $332.50\n335\n340\n345\n350\n355\n360\n365\n370\n375\n380\n385\n390\n395\n400\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use MU · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\nFlow estimate\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask",
+      "expandedWidth": 390,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "tier": "free",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:54.630Z",
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "tier": "anonymous",
+      "symbol": "AAPL",
+      "url": "/tools/options?symbol=AAPL&expiry=2026-11-20",
+      "observedAt": "2026-10-05T16:38:56.747Z",
+      "height": 844,
+      "scrollHeight": 862,
+      "scrollWidth": 390,
+      "screens": 1.0213270142180095,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nOptions\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nExplore the complete research view and its supporting evidence.\n\nUnlock with Pro\n\n7-day money-back guarantee\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0
+    }
+  ],
+  "requests": [
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.432Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.435Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.435Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.439Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.440Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.443Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.536Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.537Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.538Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.540Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.540Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.540Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:17.542Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.118Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.119Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.119Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.124Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.124Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.125Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.196Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.197Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.198Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.201Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.202Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.242Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 360,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:20.243Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:23.923Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:23.923Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:23.923Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:23.939Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.025Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.026Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.027Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.028Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.029Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.030Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.083Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.084Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:24.084Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.634Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.635Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.636Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.639Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.640Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.641Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.712Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.713Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.714Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.714Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.715Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.754Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 430,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:27.755Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.618Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.619Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.619Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.629Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.630Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.630Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.784Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.784Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.785Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.786Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.788Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.791Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 485,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:30.791Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.122Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.123Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.124Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.124Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.125Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.126Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.203Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.204Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.204Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.205Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.205Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.252Z"
+    },
+    {
+      "name": "options-loaded",
+      "width": 639,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:34.259Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.562Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.563Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.564Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.578Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.579Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.580Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.581Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.654Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.655Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.656Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.656Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.658Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:37.658Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.291Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.292Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.292Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.307Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.308Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.309Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.309Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.336Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/scanner/top-cached",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.336Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.336Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/flow",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.338Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.338Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.338Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.340Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 1280,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:40.386Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.555Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.556Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.556Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.574Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.574Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.577Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.577Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.654Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.655Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.657Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.657Z"
+    },
+    {
+      "name": "options-free",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:43.657Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.661Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.662Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.662Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.677Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.677Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.678Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.678Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.751Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.752Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.752Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.753Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:45.755Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.737Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.738Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.739Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.742Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.744Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.744Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.846Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.854Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.855Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.856Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.857Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.858Z"
+    },
+    {
+      "name": "options-missing",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:47.858Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.238Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.239Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.240Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.253Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.253Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.254Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.254Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.274Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/scanner/top-cached",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.278Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.279Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/flow",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.282Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.282Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.282Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.284Z"
+    },
+    {
+      "name": "terminal-loaded",
+      "width": 390,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:50.330Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.381Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.384Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.384Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.417Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.500Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.501Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.503Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.504Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.505Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.530Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.531Z"
+    },
+    {
+      "name": "options-free",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:53.531Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.199Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.201Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.202Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.295Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.297Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.297Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.298Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.308Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.309Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.309Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.310Z"
+    },
+    {
+      "name": "options-anonymous",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:38:55.311Z"
+    }
+  ],
+  "errors": []
+}
