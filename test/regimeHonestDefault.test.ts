@@ -68,7 +68,7 @@ describe('GET /api/regime (OV-1)', () => {
 
   it('uses market data when stored, and lists account signals as context only', async () => {
     mocks.overlay.mockResolvedValue(inputs());
-    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM context_state')
+    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM operator_state')
       ? [{ risk_environment: 'risk_off', context_state: {}, updated_at: new Date(NOW - 60_000).toISOString() }]
       : []);
     const { status, body } = await call();

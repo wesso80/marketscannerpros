@@ -144,11 +144,11 @@ export async function GET(req: NextRequest) {
       return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
     };
 
-    // Signal 1: Operator context state (from DB — written by tools like Macro, Commodities, etc.)
+    // Signal 1: Operator context (column on operator_state — there is no context_state table).
     try {
       const rows = await q(
         `SELECT risk_environment, context_state, updated_at 
-         FROM context_state 
+         FROM operator_state 
          WHERE workspace_id = $1 
          ORDER BY updated_at DESC LIMIT 1`,
         [session.workspaceId]
@@ -167,16 +167,17 @@ export async function GET(req: NextRequest) {
           asOf: iso(row.updated_at),
         });
       }
-    } catch { /* context_state table may not exist */ }
+    } catch { /* operator context is optional */ }
 
-    // Signal 2: Risk governor snapshot (from risk preferences/cookies — lightweight)
+    // Signal 2: Risk governor snapshot. The table is optional until migration 117 is applied.
     try {
       const riskRows = await q(
         `SELECT risk_mode, data_health, updated_at 
          FROM risk_governor_snapshots 
          WHERE workspace_id = $1 
          ORDER BY updated_at DESC LIMIT 1`,
-        [session.workspaceId]
+        [session.workspaceId],
+        { suppressCodes: ['42P01'] },
       );
       if (riskRows.length > 0) {
         const row = riskRows[0];

@@ -106,7 +106,7 @@ describe('GET /api/regime with stale inputs (OV-12)', () => {
 
   it('stale account signals (market data unavailable) no longer raise risk to elevated', async () => {
     mocks.overlay.mockResolvedValue({ asOf: null, vix: null, spy: null, qqq: null });
-    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM context_state')
+    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM operator_state')
       ? [{ risk_environment: 'trend_up', context_state: {}, updated_at: new Date(NOW - 24 * 3_600_000).toISOString() }]
       : []);
     const body = await call();
