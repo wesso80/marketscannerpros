@@ -98,7 +98,7 @@ function HeaderContent() {
     </Link>
   );
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-[var(--msp-border)] bg-[var(--msp-bg)]">
+    <header className="sticky top-0 z-[100] w-full overflow-visible border-b border-[var(--msp-border)] bg-[var(--msp-bg)]">
       <div className="flex h-14 items-center gap-3 px-3">
         <Link
           href={isLoggedIn ? "/tools/command-center" : "/"}
